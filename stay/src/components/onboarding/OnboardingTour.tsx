@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { driver, type DriveStep, type Driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import { useOnboardingStore } from '../../store/onboardingStore';
+import { useAppStore } from '../../store/appStore';
 import { useNavigate } from 'react-router-dom';
 
 const TOUR_STEPS: DriveStep[] = [
@@ -109,6 +110,12 @@ export default function OnboardingTour() {
       navigate('/front-desk');
     }
 
+    const { sidebarCompact, setSidebarCompact } = useAppStore.getState();
+    const wasCompact = sidebarCompact;
+    if (!isMobile && wasCompact) {
+      setSidebarCompact(false);
+    }
+
     const steps = TOUR_STEPS.filter((step) => {
       if (!step.element) return true;
       return document.querySelector(step.element as string);
@@ -121,7 +128,7 @@ export default function OnboardingTour() {
       prevBtnText: '← Sebelumnya',
       doneBtnText: 'Lengkapi Setup →',
       allowKeyboardControl: true,
-      overlayColor: 'rgba(0,0,0,0.7)',
+      overlayColor: 'rgba(0,0,0,0.55)',
       stagePadding: 8,
       stageRadius: 12,
       popoverClass: 'stay-onboarding-popover',
@@ -140,11 +147,14 @@ export default function OnboardingTour() {
 
     const timer = window.setTimeout(() => {
       instance.drive();
-    }, 400);
+    }, wasCompact && !isMobile ? 320 : 400);
 
     return () => {
       clearTimeout(timer);
       instance.destroy();
+      if (!isMobile && wasCompact) {
+        setSidebarCompact(true);
+      }
     };
   }, [tourActive, navigate, finishWithSetup, handleSkip]);
 
