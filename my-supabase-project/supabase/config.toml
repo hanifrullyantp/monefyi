@@ -394,7 +394,7 @@ entrypoint = "./functions/asfin-parse-transaction/index.ts"
 
 [functions.lynk-webhook]
 enabled = true
-verify_jwt = true
+verify_jwt = false
 import_map = "./functions/lynk-webhook/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
@@ -405,7 +405,7 @@ entrypoint = "./functions/lynk-webhook/index.ts"
 
 [functions.monefyi-landing-config]
 enabled = true
-verify_jwt = true
+verify_jwt = false
 import_map = "./functions/monefyi-landing-config/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx

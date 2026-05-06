@@ -2,6 +2,9 @@
   "name": "monefyi",
   "private": true,
   "description": "Monefyi PWA — static HTML/CSS/JS + Supabase",
+  "engines": {
+    "node": ">=20.x"
+  },
   "devDependencies": {
     "vite": "^7.1.0"
   },
@@ -9,6 +12,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "refactor": "node scripts/refactor.cjs"
+    "refactor": "node scripts/refactor.cjs",
+    "smoke": "node scripts/smoke.cjs",
+    "benchmark:parser": "node scripts/batch-parser-benchmark.cjs"
   }
 }

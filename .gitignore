@@ -1,4 +1,5 @@
 .DS_Store
+.vercel/
 node_modules/
 *.log
 # Jangan commit salinan config produksi berisi secret tambahan

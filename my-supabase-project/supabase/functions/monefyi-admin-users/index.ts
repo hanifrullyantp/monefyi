@@ -21,8 +21,9 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const jsonHeaders = { "Content-Type": "application/json" };
+const APP_CORS_ORIGIN = Deno.env.get("APP_CORS_ORIGIN") || "*";
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*", // produksi: ganti ke origin app jika mau
+  "Access-Control-Allow-Origin": APP_CORS_ORIGIN,
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",

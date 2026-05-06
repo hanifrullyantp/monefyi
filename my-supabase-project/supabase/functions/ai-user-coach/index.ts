@@ -21,8 +21,9 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const jsonHeaders = { "Content-Type": "application/json" };
+const APP_CORS_ORIGIN = Deno.env.get("APP_CORS_ORIGIN") || "*";
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": APP_CORS_ORIGIN,
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
@@ -70,9 +71,55 @@ function groupExpenseByCategory(rows: any[]) {
     .sort((a, b) => b.amount - a.amount);
 }
 
-async function checkQuota(_userId: string) {
-  // TODO: implement ai_usage daily limit.
-  return { ok: true, remaining: null, limit: null, used: null };
+function getTodayWIB() {
+  const nowUtc = new Date();
+  const wib = new Date(nowUtc.getTime() + 7 * 60 * 60 * 1000);
+  return new Date(Date.UTC(wib.getUTCFullYear(), wib.getUTCMonth(), wib.getUTCDate(), 0, 0, 0))
+    .toISOString()
+    .slice(0, 10);
+}
+
+function defaultLimitByPlan(planType: string) {
+  if (planType === "lifetime") return 50;
+  if (planType === "monthly") return 20;
+  return 0;
+}
+
+async function getQuotaState(adminClient: any, userId: string) {
+  const usageDate = getTodayWIB();
+
+  const { data: planRow } = await adminClient
+    .from("user_plans")
+    .select("plan_type, ai_daily_limit")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const planType = String(planRow?.plan_type || "none");
+  const limit =
+    typeof planRow?.ai_daily_limit === "number"
+      ? Number(planRow.ai_daily_limit)
+      : defaultLimitByPlan(planType);
+
+  const { data: usageRow } = await adminClient
+    .from("ai_usage")
+    .select("requests_count")
+    .eq("user_id", userId)
+    .eq("usage_date", usageDate)
+    .maybeSingle();
+
+  const used = Number(usageRow?.requests_count || 0);
+  const remaining = Math.max(0, limit - used);
+  return { usageDate, planType, limit, used, remaining, canUse: remaining > 0 };
+}
+
+async function incrementQuota(adminClient: any, userId: string, usageDate: string, nextCount: number) {
+  const { error } = await adminClient.from("ai_usage").upsert(
+    { user_id: userId, usage_date: usageDate, requests_count: nextCount, updated_at: new Date().toISOString() },
+    { onConflict: "user_id,usage_date" },
+  );
+  if (error) {
+    console.error("incrementQuota error:", error);
+  }
 }
 
 function buildSystemPrompt(summary: any) {
@@ -154,14 +201,18 @@ serve(async (req) => {
   try {
     const SUPABASE_URL = pickEnv("SUPABASE_URL");
     const SUPABASE_ANON_KEY = pickEnv("SUPABASE_ANON_KEY");
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-      return new Response(JSON.stringify({ error: "Missing SUPABASE_URL / SUPABASE_ANON_KEY" }), { status: 500, headers: { ...corsHeaders, ...jsonHeaders } });
+    const SUPABASE_SERVICE_ROLE_KEY = pickEnv("SUPABASE_SERVICE_ROLE_KEY");
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
+      return new Response(JSON.stringify({ error: "Missing SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY" }), { status: 500, headers: { ...corsHeaders, ...jsonHeaders } });
     }
 
     const authHeader = req.headers.get("Authorization") || "";
     if (!authHeader) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, ...jsonHeaders } });
 
     const supa = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { headers: { Authorization: authHeader } } });
+    const supaAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
 
     const { data: userData, error: userErr } = await supa.auth.getUser();
     if (userErr || !userData?.user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, ...jsonHeaders } });
@@ -171,10 +222,17 @@ serve(async (req) => {
     const question = String(body?.message || "").trim();
     if (!question) return new Response(JSON.stringify({ error: "message is required" }), { status: 400, headers: { ...corsHeaders, ...jsonHeaders } });
 
-    // quota stub
-    const q = await checkQuota(user.id);
-    if (!q.ok) {
-      return new Response(JSON.stringify({ reply: "Kuota AI hari ini sudah habis. Coba lagi besok ya." }), { status: 200, headers: { ...corsHeaders, ...jsonHeaders } });
+    const q = await getQuotaState(supaAdmin, user.id);
+    if (!q.canUse) {
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          error_code: "DAILY_QUOTA_EXCEEDED",
+          reply: "Kuota AI hari ini sudah habis. Coba lagi besok ya.",
+          quota: { limit: q.limit, usedToday: q.used, remaining: q.remaining, planType: q.planType },
+        }),
+        { status: 200, headers: { ...corsHeaders, ...jsonHeaders } },
+      );
     }
 
     // Determine period: allow optional start/end from client (ISO date)
@@ -317,10 +375,14 @@ serve(async (req) => {
       throw err;
     }
 
+    // Count only successful AI responses.
+    await incrementQuota(supaAdmin, user.id, q.usageDate, q.used + 1);
+
     return new Response(JSON.stringify({ 
       ok: true, 
       reply, 
-      meta: { period: { start: startISO, end: endISO }, budgetMonth } 
+      meta: { period: { start: startISO, end: endISO }, budgetMonth },
+      quota: { limit: q.limit, usedToday: q.used + 1, remaining: Math.max(0, q.limit - (q.used + 1)), planType: q.planType },
     }), {
       status: 200,
       headers: { ...corsHeaders, ...jsonHeaders },

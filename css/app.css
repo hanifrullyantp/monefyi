@@ -122,6 +122,122 @@ html, body {
     .sheet { transform: translateY(16px); opacity: 0; pointer-events: none; transition: transform .18s ease, opacity .18s ease; }
     .sheet.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
 
+    .nav-item.active {
+      color: rgba(16,185,129,.95) !important;
+      position: relative;
+    }
+    .nav-item.active::after {
+      content: "";
+      position: absolute;
+      bottom: -2px;
+      width: 22px;
+      height: 2px;
+      border-radius: 999px;
+      background: rgba(16,185,129,.95);
+    }
+    .tx-chip.active {
+      background: rgba(16,185,129,.16);
+      color: rgba(167,243,208,.95);
+      border-color: rgba(16,185,129,.32);
+    }
+    .period-preset.active {
+      background: rgba(16,185,129,.16) !important;
+      color: rgba(167,243,208,.95) !important;
+      border-color: rgba(16,185,129,.32) !important;
+    }
+    .tx-row-actions {
+      opacity: .92;
+      transition: opacity .16s ease, transform .16s ease;
+    }
+    .tx-row-actions:hover {
+      opacity: 1;
+      transform: translateY(-1px);
+    }
+    .tx-view-btn.active {
+      background: rgba(16,185,129,.18);
+      color: rgba(167,243,208,.95);
+      border: 1px solid rgba(16,185,129,.30);
+    }
+    .tx-table-scroll {
+      overflow: auto;
+      max-height: 62dvh;
+      border: 1px solid var(--app-border);
+      border-radius: 12px;
+    }
+    .tx-table {
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 980px;
+    }
+    .tx-table th,
+    .tx-table td {
+      border-bottom: 1px solid var(--app-border);
+      border-right: 1px solid var(--app-border);
+      padding: 6px;
+      vertical-align: middle;
+      background: color-mix(in srgb, var(--app-sheet) 94%, transparent);
+    }
+    .tx-table th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .tx-table th:first-child,
+    .tx-table td:first-child { border-left: 1px solid var(--app-border); }
+    .tx-cell-input,
+    .tx-cell-select {
+      width: 100%;
+      min-width: 100px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 4px 6px;
+      background: color-mix(in srgb, var(--app-surface2) 86%, transparent);
+      color: var(--app-text);
+      font-size: 12px;
+    }
+    .tx-cell-input:focus,
+    .tx-cell-select:focus {
+      outline: none;
+      border-color: rgba(16,185,129,.42);
+      box-shadow: 0 0 0 2px rgba(16,185,129,.12);
+    }
+    .batch-item {
+      border: 1px solid var(--app-border);
+      border-radius: 12px;
+      padding: 8px;
+      background: color-mix(in srgb, var(--app-surface2) 86%, transparent);
+    }
+    .batch-item.review {
+      border-color: rgba(245,158,11,.45);
+      background: rgba(245,158,11,.08);
+    }
+
+    .toast {
+      border-radius: 12px;
+      border: 1px solid var(--app-border);
+      padding: 10px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 8px;
+      transform: translateY(8px);
+      opacity: 0;
+      animation: toast-in .18s ease forwards;
+      pointer-events: auto;
+    }
+    .toast.success { background: rgba(16,185,129,.20); color: rgba(167,243,208,.95); border-color: rgba(16,185,129,.35); }
+    .toast.warn { background: rgba(245,158,11,.18); color: rgba(253,230,138,.95); border-color: rgba(245,158,11,.35); }
+    .toast.error { background: rgba(244,63,94,.18); color: rgba(254,202,202,.95); border-color: rgba(244,63,94,.35); }
+    @keyframes toast-in { to { transform: translateY(0); opacity: 1; } }
+
+    .skeleton-green {
+      border-radius: 10px;
+      background: linear-gradient(90deg, rgba(16,185,129,.16) 25%, rgba(16,185,129,.32) 40%, rgba(16,185,129,.16) 60%);
+      background-size: 240% 100%;
+      animation: shimmer 1.2s infinite;
+    }
+
     /* Initial Loading Overlay */
     #loadingOverlay {
       position: fixed; inset: 0; z-index: 100;
@@ -279,6 +395,21 @@ html, body {
     @media (prefers-reduced-motion: reduce) {
       .sheet-backdrop, .sheet { transition: none; }
       .skeleton { animation: none; }
+    }
+
+    @media (max-width: 767px) {
+      #budgetSheet .sheet-panel,
+      #advisorSheet .sheet-panel {
+        max-height: 100dvh;
+        min-height: 100dvh;
+        border-radius: 0 !important;
+      }
+      #budgetSheet.sheet,
+      #advisorSheet.sheet {
+        left: 0;
+        right: 0;
+        bottom: 0;
+      }
     }
 
     /* PWA standalone tweaks */

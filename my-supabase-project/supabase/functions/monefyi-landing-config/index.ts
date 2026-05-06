@@ -3,25 +3,61 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_ROLE_KEY = Deno.env.get("SERVICE_ROLE_KEY")!;
-const ADMIN_USER = Deno.env.get("ADMIN_USER")!;
-const ADMIN_PASS = Deno.env.get("ADMIN_PASS")!;
+const SERVICE_ROLE_KEY =
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
+  Deno.env.get("SERVICE_ROLE_KEY") ??
+  "";
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 
 const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
 function jsonResponse(body: unknown, status = 200) {
+  const APP_CORS_ORIGIN = Deno.env.get("APP_CORS_ORIGIN") || "*";
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": APP_CORS_ORIGIN,
       "Access-Control-Allow-Headers":
-        "Content-Type, X-Admin-User, X-Admin-Pass",
+        "Content-Type, Authorization, apikey, x-client-info",
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     },
   });
+}
+
+async function assertAdminFromBearer(authHeader: string): Promise<{
+  ok: boolean;
+  status: number;
+  error?: string;
+}> {
+  if (!SUPABASE_ANON_KEY) {
+    return { ok: false, status: 500, error: "Missing SUPABASE_ANON_KEY" };
+  }
+  if (!authHeader) {
+    return { ok: false, status: 401, error: "Missing Authorization header" };
+  }
+  const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: authHeader } },
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { data: authData, error: authErr } = await userClient.auth.getUser();
+  if (authErr || !authData?.user?.id) {
+    return { ok: false, status: 401, error: "Unauthorized" };
+  }
+  const { data: profile, error: profileErr } = await supabaseAdmin
+    .from("profiles")
+    .select("role")
+    .eq("id", authData.user.id)
+    .maybeSingle();
+  if (profileErr) {
+    return { ok: false, status: 500, error: "Failed to validate profile role" };
+  }
+  if (String(profile?.role || "").toLowerCase() !== "admin") {
+    return { ok: false, status: 403, error: "Forbidden (admin only)" };
+  }
+  return { ok: true, status: 200 };
 }
 
 Deno.serve(async (req) => {
@@ -55,12 +91,11 @@ Deno.serve(async (req) => {
   }
 
   if (req.method === "POST") {
-    // Validasi admin lewat header
-    const hUser = req.headers.get("X-Admin-User") || "";
-    const hPass = req.headers.get("X-Admin-Pass") || "";
-
-    if (hUser !== ADMIN_USER || hPass !== ADMIN_PASS) {
-      return jsonResponse({ error: "Unauthorized" }, 401);
+    const authResult = await assertAdminFromBearer(
+      req.headers.get("Authorization") || "",
+    );
+    if (!authResult.ok) {
+      return jsonResponse({ error: authResult.error || "Unauthorized" }, authResult.status);
     }
 
     let body: any;
