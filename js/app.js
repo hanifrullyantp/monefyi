@@ -5146,6 +5146,8 @@ $('#btnSaveBudget').addEventListener('click', async () => {
         <div>⚠ Review: ${Number(s.needs_review_count || 0)} • AI: ${Number(s.ai_resolved_count || 0)} • Split: ${Number(s.split_payments || 0)}</div>
       `;
       const review = draft.transactions.filter((x) => x.needs_review).slice(0, 20);
+      const btnSaveAll = $('#btnBatchSaveAll');
+      if (btnSaveAll) btnSaveAll.disabled = review.length > 0;
       rqEl.innerHTML = review.map((tx, i) => `
         <div class="batch-item review text-xs">
           <div class="font-semibold">⚠ Review #${i + 1}</div>
@@ -5211,10 +5213,20 @@ $('#btnSaveBudget').addEventListener('click', async () => {
         showToast('Tidak ada transaksi untuk disimpan', 'warn');
         return;
       }
+      if (!onlyValid && source.some((x) => x.needs_review)) {
+        showToast('Masih ada item perlu review. Gunakan "Simpan yang Valid".', 'warn');
+        return;
+      }
+      let saved = 0;
+      let skippedDup = 0;
+      let failed = 0;
       for (let i = 0; i < source.length; i++) {
         const tx = source[i];
         if (status) status.textContent = `Menyimpan ${i + 1}/${source.length}...`;
-        if (findPotentialDuplicate(tx)) continue;
+        if (findPotentialDuplicate(tx)) {
+          skippedDup += 1;
+          continue;
+        }
         const payload = {
           id: tx.id || uuid(),
           date: tx.date || toISODate(new Date()),
@@ -5238,7 +5250,13 @@ $('#btnSaveBudget').addEventListener('click', async () => {
             project_tag: tx.project_tag || null
           }
         };
-        await upsertTransaction(payload);
+        try {
+          await upsertTransaction(payload);
+          saved += 1;
+        } catch (e) {
+          failed += 1;
+          console.warn('batch save item failed', e);
+        }
       }
       // Learning update: description pattern -> category and account aliases.
       const learn = STATE.settings.batchParserLearning && typeof STATE.settings.batchParserLearning === 'object'
@@ -5263,7 +5281,7 @@ $('#btnSaveBudget').addEventListener('click', async () => {
       await saveSettings().catch(()=>{});
       if (status) status.textContent = '';
       renderBatchPreview();
-      showToast(`Batch tersimpan (${source.length} item diproses)`, 'success');
+      showToast(`Batch selesai: ${saved} tersimpan, ${skippedDup} duplikat, ${failed} gagal`, failed ? 'warn' : 'success');
       refreshAllUI();
       refreshAppSchedules();
       closeAddSheet();

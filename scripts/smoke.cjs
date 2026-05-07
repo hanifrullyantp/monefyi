@@ -40,6 +40,14 @@ function main() {
     "APP_CORS_ORIGIN",
   );
   assertContains(
+    `${supabaseDir}/supabase/functions/asfin-parse-transaction/index.ts`,
+    "mode === \"text\"",
+  );
+  assertContains(
+    `${supabaseDir}/supabase/functions/asfin-parse-transaction/index.ts`,
+    "parse_session_id",
+  );
+  assertContains(
     `${supabaseDir}/supabase/functions/lynk-webhook/index.ts`,
     "APP_CORS_ORIGIN",
   );
@@ -70,6 +78,10 @@ function main() {
   assertContains(
     `${root}/js/app.js`,
     "functions/v1/ai-quota-status",
+  );
+  assertContains(
+    `${root}/js/app.js`,
+    "mode: 'batch'",
   );
 
   console.log("[smoke] Static guards OK.");

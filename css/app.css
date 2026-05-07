@@ -79,6 +79,33 @@ html, body {
       #sheet.sheet.open, #budgetSheet.sheet.open, #advisorSheet.sheet.open, #menuSheet.sheet.open, #userSheet.sheet.open, #accountsSheet.sheet.open, #accountDetailSheet.sheet.open, #adminSheet.sheet.open {
         transform: translateY(0);
       }
+
+      /* Desktop: Budgeting + Monevisor AI use right-side panel (not centered popup). */
+      #budgetBackdrop,
+      #advisorBackdrop {
+        display: flex;
+        justify-content: flex-end;
+        align-items: stretch;
+      }
+      #budgetSheet.sheet,
+      #advisorSheet.sheet {
+        inset: 0 0 0 auto;
+        height: 100dvh;
+        width: min(520px, 44vw);
+        max-width: 100%;
+        transform: translateX(20px);
+      }
+      #budgetSheet.sheet.open,
+      #advisorSheet.sheet.open {
+        transform: translateX(0);
+      }
+      #budgetSheet .sheet-panel,
+      #advisorSheet .sheet-panel {
+        width: 100%;
+        max-height: 100dvh;
+        border-radius: 0 !important;
+        border-left: 1px solid var(--app-border);
+      }
     }
     
     .budget-progress-bg {

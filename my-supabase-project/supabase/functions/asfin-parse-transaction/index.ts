@@ -116,6 +116,24 @@ function cleanAccountName(raw: string): string {
     .map((x) => x.charAt(0).toUpperCase() + x.slice(1))
     .join(" ");
 }
+function levenshtein(a: string, b: string) {
+  const s = normalizeText(a);
+  const t = normalizeText(b);
+  const m = s.length;
+  const n = t.length;
+  if (!m) return n;
+  if (!n) return m;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = s[i - 1] === t[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+    }
+  }
+  return dp[m][n];
+}
 function normalizeDate(dayNameRaw: string, dd: number, mm: number, yyyy: number) {
   const d = new Date(yyyy, mm - 1, dd);
   const dayMap = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
@@ -293,6 +311,16 @@ function resolveAccount(raw: string, userAccounts: string[], aliases: Record<str
   if (!dict["kantong utama/kas"] && userAccounts.length) dict["kantong utama/kas"] = userAccounts[0];
   const exact = dict[key];
   if (exact) return { accountName: exact, unknown: false };
+  let fuzzy: string | null = null;
+  let fuzzyDist = 99;
+  for (const candidate of userAccounts) {
+    const d = levenshtein(key, normalizeText(candidate));
+    if (d < fuzzyDist) {
+      fuzzyDist = d;
+      fuzzy = candidate;
+    }
+  }
+  if (fuzzy && fuzzyDist <= 2) return { accountName: fuzzy, unknown: false };
   const fallback = cleanAccountName(raw);
   return { accountName: fallback, unknown: true };
 }
@@ -439,6 +467,7 @@ serve(async (req) => {
       }
     }
 
+    const aiLearnedPatterns: Record<string, { id: string; name: string; emoji: string }> = {};
     if (unresolved.length && geminiKey) {
       try {
         const ai = await parseViaGeminiBatch(geminiKey, unresolved.slice(0, 20), userAccounts);
@@ -452,6 +481,11 @@ serve(async (req) => {
           finals[idx].confidence = Math.max(finals[idx].confidence, Number(row.confidence || 0.86));
           if (!finals[idx].flags.includes("ai_resolved")) finals[idx].flags.push("ai_resolved");
           finals[idx].needs_review = finals[idx].confidence < 0.85;
+          aiLearnedPatterns[normalizeText(finals[idx].description || finals[idx].notes || "")] = {
+            id: finals[idx].category_id,
+            name: finals[idx].category_name,
+            emoji: finals[idx].category_emoji,
+          };
         }
       } catch (e) {
         console.warn("batch AI resolver fallback:", (e as Error).message);
@@ -476,6 +510,8 @@ serve(async (req) => {
       total_income: x.income,
       total_expense: x.expense,
     }));
+    const accountsAutoCreated = [...new Set(finals.filter((x) => x.flags.includes("unknown_account")).map((x) => x.account_name))]
+      .map((name) => ({ name, type: "other", detected_from: "batch_parse", suggested: true, pending_user_confirmation: true }));
     const review_queue = finals
       .filter((x) => x.needs_review)
       .slice(0, 25)
@@ -503,9 +539,33 @@ serve(async (req) => {
         needs_review_count: sums.review,
       },
       projects_detected: projectsDetected,
+      accounts_auto_created: accountsAutoCreated,
       review_queue,
       transactions: finals,
     };
+
+    if (Object.keys(aiLearnedPatterns).length) {
+      try {
+        const mergedLearning = {
+          ...learning,
+          description_patterns: {
+            ...(descPatterns || {}),
+            ...aiLearnedPatterns,
+          },
+          account_aliases: {
+            ...(accountAliases || {}),
+          },
+          project_registry: knownProjects,
+        };
+        const nextSettings = {
+          ...(settings || {}),
+          batch_parser_learning: mergedLearning,
+        };
+        await supa.from("profiles").update({ settings: nextSettings }).eq("id", userData.user.id);
+      } catch (e) {
+        console.warn("learning update skipped:", (e as Error).message);
+      }
+    }
 
     if (mode === "text") {
       const one = finals[0];
