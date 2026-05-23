@@ -7,5 +7,9 @@
     fnAnalyze: "planner-analyze",
     adminEmails: ["admin@asfin.app", "hanif.rullyant@gmail.com"],
     basePath: "",
+    /** "Masuk cepat" — must match my-supabase migration planner_seed_auth_email_users */
+    bypassLoginEnabled: true,
+    bypassEmail: "planner-bypass@monefyi.app",
+    bypassPassword: "PlannerBypass2026!",
   };
 })();

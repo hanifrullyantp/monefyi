@@ -92,6 +92,22 @@
     document.getElementById("appShell").classList.add("hidden");
   }
 
+  /** Human-readable Supabase Auth errors (400 / invalid_grant / email not confirmed). */
+  function authUserMessage(err) {
+    if (!err) return "Autentikasi gagal.";
+    const msg = String(err.message || "");
+    const low = (msg + " " + String(err.code || "") + " " + String(err.status || "")).toLowerCase();
+    if (low.includes("email_not_confirmed") || low.includes("email not confirmed")) {
+      return "Email belum diverifikasi. Supabase → Authentication → Providers → Email: nonaktifkan \"Confirm email\", atau buka link verifikasi di inbox.";
+    }
+    if (low.includes("user_not_found") || low.includes("invalid login") || low.includes("invalid_credentials")) {
+      return "Email/password tidak cocok atau akun belum siap. Jalankan migrasi `20260524120000_planner_seed_auth_email_users.sql` lalu `supabase db push`. " + (msg ? "(" + msg + ")" : "");
+    }
+    if (low.includes("invalid_grant")) return "Server menolak login: " + (msg || "invalid_grant");
+    if (String(err.status) === "400") return "Login ditolak (400): " + (msg || "bad request");
+    return msg || "Autentikasi gagal.";
+  }
+
   async function bootstrapAuth() {
     document.getElementById("authOverlay").classList.remove("active");
     document.getElementById("appShell").classList.remove("hidden");
@@ -122,7 +138,10 @@
       showLoading(true);
       try {
         const { error } = await sb.auth.signInWithPassword({ email, password });
-        if (error) return toast("Login gagal: " + error.message);
+        if (error) {
+          console.warn("[planner-auth] login", error);
+          return toast(authUserMessage(error));
+        }
       } catch (err) {
         console.error(err);
         toast("Login gagal: " + (err.message || "Terjadi kesalahan"));
@@ -149,17 +168,19 @@
         });
         if (error) {
           const em = (error.message || "").toLowerCase();
+          console.warn("[planner-auth] register signUp", error);
           if (em.includes("registered") || em.includes("already")) {
             const signIn = await sb.auth.signInWithPassword({ email, password });
             if (!signIn.error) {
               toast("Akun sudah ada — masuk…");
               return;
             }
-            toast("Email sudah terdaftar. Gunakan Masuk atau reset password.");
+            console.warn("[planner-auth] register signIn after exists", signIn.error);
+            toast(authUserMessage(signIn.error) + " Gunakan Masuk atau reset password.");
             showAuthView("login");
             return;
           }
-          toast("Registrasi gagal: " + error.message);
+          toast("Registrasi gagal: " + authUserMessage(error));
           return;
         }
         if (data?.session) {
@@ -172,9 +193,10 @@
             toast("Masuk…");
             return;
           }
+          console.warn("[planner-auth] register post-signup signIn", signIn.error);
           toast(
-            "Akun dibuat. Jika Supabase meminta verifikasi email, buka link di inbox dulu. " +
-              "Untuk langsung masuk setelah daftar: matikan \"Confirm email\" di Auth settings Supabase.",
+            authUserMessage(signIn.error) +
+              " Setelah migrasi seed auth, coba lagi. Atau matikan Confirm email di Supabase.",
           );
           showAuthView("login");
         }
@@ -2041,6 +2063,33 @@
     document.getElementById("loginForm").classList.toggle("hidden", view !== "login");
     document.getElementById("registerForm").classList.toggle("hidden", view !== "register");
     document.getElementById("forgotForm").classList.toggle("hidden", view !== "forgot");
+    const bypassRow = document.getElementById("authBypassRow");
+    if (bypassRow) bypassRow.classList.toggle("hidden", view === "forgot");
+  };
+
+  window.plannerBypassLogin = async function () {
+    if (!CFG.bypassLoginEnabled) {
+      toast("Bypass login dimatikan di config.");
+      return;
+    }
+    showLoading(true);
+    try {
+      const { error } = await sb.auth.signInWithPassword({
+        email: CFG.bypassEmail,
+        password: CFG.bypassPassword,
+      });
+      if (error) {
+        console.warn("[planner-auth] bypass", error);
+        toast(authUserMessage(error) + " Pastikan migrasi seed auth sudah di-push ke Supabase.");
+        return;
+      }
+      toast("Masuk sebagai demo…");
+    } catch (err) {
+      console.error(err);
+      toast("Bypass gagal: " + (err.message || String(err)));
+    } finally {
+      showLoading(false);
+    }
   };
 
   /* ============================================================

@@ -79,6 +79,16 @@
         <a href="#" onclick="showAuthView('login');return false">Kembali ke login</a>
       </div>
     </form>
+
+    <div id="authBypassRow" class="auth-bypass">
+      <button type="button" class="btn btn-ghost btn-full" onclick="plannerBypassLogin()">
+        Masuk cepat (demo, tanpa daftar)
+      </button>
+      <p class="auth-bypass-hint">
+        Akun demo dari migrasi SQL <code>planner_seed_auth_email_users</code>. Matikan di production: set
+        <code>bypassLoginEnabled: false</code> di <code>js/config.js</code>.
+      </p>
+    </div>
   </div>
 </div>
 
