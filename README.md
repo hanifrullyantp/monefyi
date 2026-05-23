@@ -4,7 +4,8 @@ Aplikasi keuangan pribadi (PWA) — HTML + CSS + JavaScript, backend Supabase.
 
 ## Cabang Git & produksi
 
-- **`main`** adalah **cabang default** repository. Push ke `main` memicu deploy **production** pada project Vercel yang mengaitkan branch production ke `main` (termasuk domain utama yang Anda pasang di Vercel).
+- **`main`** adalah **cabang default** repository (setelah Anda mengaturnya di GitHub). Push ke `main` memicu deploy **production** pada project Vercel yang mengaitkan branch production ke `main` (termasuk domain utama yang Anda pasang di Vercel).
+- **Pemilik repo:** cabang `main` sudah didorong ke GitHub. Jika default masih `migration-vercel-prep`, ubah di **Settings → General → Default branch** lalu pilih **`main`** dan konfirmasi.
 - **`migration-vercel-prep`** dan cabang `cursor/*` dipakai untuk pekerjaan migrasi atau fitur; gabungkan ke `main` bila siap rilis.
 
 **Monefyi Planner** (app terpisah) berada di folder **`planner/`**. Panduan deploy Vercel khusus Planner: lihat [`planner/README.md`](planner/README.md).
