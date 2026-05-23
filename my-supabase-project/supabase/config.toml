@@ -413,3 +413,15 @@ entrypoint = "./functions/monefyi-landing-config/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/monefyi-landing-config/*.html" ]
+
+# ── Monefyi Planner Edge Functions ──
+
+[functions.planner-parse-command]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/planner-parse-command/index.ts"
+
+[functions.planner-analyze]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/planner-analyze/index.ts"
