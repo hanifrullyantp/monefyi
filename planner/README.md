@@ -12,6 +12,14 @@ PWA manajemen proyek (Vite + HTML/CSS/JS). Deploy terpisah dari app Monefyi di r
 6. **Node.js:** pakai **20.x** atau lebih baru (`engines` di `package.json`).
 7. Deploy, lalu tambahkan domain di project Vercel ini.
 
+### Preview: `manifest.webmanifest` 401 + “Syntax error” di Console
+
+URL bertipe **`…-git-main-….vercel.app`** (preview) sering memakai **Deployment Protection** (Vercel Authentication). Permintaan tanpa sesi mendapat **401** berupa halaman HTML; browser lalu mencoba mem-parse itu sebagai manifest → **Syntax error baris 1**.
+
+**Solusi:** di Vercel → project Planner → **Settings** → **Deployment Protection** — nonaktifkan proteksi untuk **Preview**, atau uji di **domain production** yang tidak dilindungi. Bukan bug di file manifest itu sendiri.
+
+Repo ini **tidak lagi memakai rewrite** `/(.*) → /index.html` di `vercel.json` (app satu halaman; tidak perlu fallback SPA), agar aset statis tidak pernah tertukar dengan `index.html`.
+
 Supabase (database + Edge Functions) dipakai bersama project Supabase utama repo ini.
 
 ### Migrasi SQL (Planner)
