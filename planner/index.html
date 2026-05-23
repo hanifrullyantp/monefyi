@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <meta name="theme-color" content="#2563EB" />
+  <meta name="description" content="Monefyi Planner — AI-Powered Project Management" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Monefyi Planner</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon-192.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/icon-192.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+
+<!-- ============ AUTH OVERLAY ============ -->
+<div id="authOverlay" class="overlay active">
+  <div class="auth-container">
+    <div class="auth-logo">
+      <svg viewBox="0 0 48 48" width="56" height="56"><rect width="48" height="48" rx="12" fill="#2563EB"/><g transform="translate(24,24)"><path d="M-12,-8 L-12,12 L12,12 L12,-8 Z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M-12,-8 L0,-16 L12,-8" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><rect x="-6" y="2" width="5" height="10" rx="1" fill="#93C5FD"/><rect x="1" y="-4" width="5" height="16" rx="1" fill="#fff"/><circle cx="0" cy="-16" r="3" fill="#8B5CF6"/></g></svg>
+      <h1>Monefyi Planner</h1>
+      <p class="auth-subtitle">Manajemen Proyek Cerdas</p>
+    </div>
+
+    <!-- Login Form -->
+    <form id="loginForm" class="auth-form" autocomplete="on">
+      <div class="form-group">
+        <label for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" placeholder="email@contoh.com" required autocomplete="email" />
+      </div>
+      <div class="form-group">
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" placeholder="Masukkan password" required autocomplete="current-password" />
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">Masuk</button>
+      <div class="auth-links">
+        <a href="#" onclick="showAuthView('register');return false">Daftar akun baru</a>
+        <a href="#" onclick="showAuthView('forgot');return false">Lupa password?</a>
+      </div>
+    </form>
+
+    <!-- Register Form -->
+    <form id="registerForm" class="auth-form hidden" autocomplete="on">
+      <div class="form-group">
+        <label for="regName">Nama Lengkap</label>
+        <input type="text" id="regName" placeholder="Nama Anda" required autocomplete="name" />
+      </div>
+      <div class="form-group">
+        <label for="regEmail">Email</label>
+        <input type="email" id="regEmail" placeholder="email@contoh.com" required autocomplete="email" />
+      </div>
+      <div class="form-group">
+        <label for="regPassword">Password</label>
+        <input type="password" id="regPassword" placeholder="Min 6 karakter" required minlength="6" autocomplete="new-password" />
+      </div>
+      <div class="form-group">
+        <label for="regOrgName">Nama Organisasi / Bisnis</label>
+        <input type="text" id="regOrgName" placeholder="CV Maju Jaya" required />
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">Daftar</button>
+      <div class="auth-links">
+        <a href="#" onclick="showAuthView('login');return false">Sudah punya akun? Masuk</a>
+      </div>
+    </form>
+
+    <!-- Forgot Password -->
+    <form id="forgotForm" class="auth-form hidden">
+      <div class="form-group">
+        <label for="forgotEmail">Email</label>
+        <input type="email" id="forgotEmail" placeholder="email@contoh.com" required />
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">Kirim Link Reset</button>
+      <div class="auth-links">
+        <a href="#" onclick="showAuthView('login');return false">Kembali ke login</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ APP SHELL ============ -->
+<div id="appShell" class="hidden">
+
+  <!-- Top Bar -->
+  <header id="topBar">
+    <div class="topbar-left">
+      <h2 id="pageTitle">Dashboard</h2>
+    </div>
+    <div class="topbar-right">
+      <button id="btnNotif" class="icon-btn" onclick="openSheet('notifSheet')" aria-label="Notifikasi">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/></svg>
+        <span id="notifBadge" class="badge hidden">0</span>
+      </button>
+      <button id="btnProfile" class="icon-btn avatar-btn" onclick="openSheet('profileSheet')" aria-label="Profil">
+        <span id="avatarInitial">U</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ============ PAGE: HOME / DASHBOARD ============ -->
+  <main id="pageHome" class="page active">
+    <div class="page-content">
+      <!-- Greeting -->
+      <div class="greeting-card">
+        <div>
+          <p class="greeting-label" id="greetingText">Selamat Pagi</p>
+          <h3 id="userName">User</h3>
+        </div>
+        <div class="greeting-date" id="todayDate"></div>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="stats-grid">
+        <div class="stat-card stat-projects">
+          <div class="stat-icon">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M3 9h14"/><path d="M9 3v14"/></svg>
+          </div>
+          <div class="stat-value" id="statTotalProjects">0</div>
+          <div class="stat-label">Total Proyek</div>
+        </div>
+        <div class="stat-card stat-active">
+          <div class="stat-icon">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="stat-value" id="statActiveProjects">0</div>
+          <div class="stat-label">Aktif</div>
+        </div>
+        <div class="stat-card stat-budget">
+          <div class="stat-icon">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <div class="stat-value" id="statTotalBudget">Rp 0</div>
+          <div class="stat-label">Total Budget</div>
+        </div>
+        <div class="stat-card stat-progress">
+          <div class="stat-icon">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          </div>
+          <div class="stat-value" id="statAvgProgress">0%</div>
+          <div class="stat-label">Rata-rata Progress</div>
+        </div>
+      </div>
+
+      <!-- Active Projects -->
+      <div class="section-header">
+        <h3>Proyek Aktif</h3>
+        <button class="btn btn-sm btn-ghost" onclick="switchTab('project')">Lihat Semua</button>
+      </div>
+      <div id="homeProjectList" class="project-cards">
+        <div class="empty-state" id="homeEmptyState">
+          <svg width="48" height="48" fill="none" stroke="var(--text-secondary)" stroke-width="1.5"><rect x="6" y="6" width="36" height="36" rx="6"/><path d="M18 24h12M24 18v12"/></svg>
+          <p>Belum ada proyek</p>
+          <button class="btn btn-primary btn-sm" onclick="openSheet('projectFormSheet')">Buat Proyek Pertama</button>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="section-header">
+        <h3>Aktivitas Terbaru</h3>
+      </div>
+      <div id="recentActivity" class="activity-list">
+        <p class="text-secondary text-sm">Belum ada aktivitas</p>
+      </div>
+
+      <!-- Recommendations -->
+      <div class="section-header" id="recoSection" style="display:none">
+        <h3>Rekomendasi</h3>
+      </div>
+      <div id="homeRecommendations"></div>
+    </div>
+  </main>
+
+  <!-- ============ PAGE: PROJECTS ============ -->
+  <main id="pageProject" class="page">
+    <div class="page-content">
+      <div class="page-toolbar">
+        <div class="search-box">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="6"/><path d="M14 14l4 4"/></svg>
+          <input type="search" id="projectSearch" placeholder="Cari proyek..." oninput="filterProjects()" />
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openSheet('projectFormSheet')">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v12M2 8h12"/></svg>
+          Baru
+        </button>
+      </div>
+
+      <!-- Filter tabs -->
+      <div class="filter-tabs">
+        <button class="filter-tab active" data-filter="all" onclick="filterProjectsByStatus('all',this)">Semua</button>
+        <button class="filter-tab" data-filter="planning" onclick="filterProjectsByStatus('planning',this)">Planning</button>
+        <button class="filter-tab" data-filter="active" onclick="filterProjectsByStatus('active',this)">Aktif</button>
+        <button class="filter-tab" data-filter="completed" onclick="filterProjectsByStatus('completed',this)">Selesai</button>
+      </div>
+
+      <div id="projectList" class="project-cards"></div>
+    </div>
+  </main>
+
+  <!-- ============ PAGE: FINANCE ============ -->
+  <main id="pageFinance" class="page">
+    <div class="page-content">
+      <div class="finance-header">
+        <h3>Keuangan Proyek</h3>
+        <select id="financeProjectFilter" class="select-sm" onchange="loadFinanceData()">
+          <option value="all">Semua Proyek</option>
+        </select>
+      </div>
+
+      <!-- Finance Summary Cards -->
+      <div class="finance-summary">
+        <div class="fin-card fin-budget">
+          <span class="fin-label">Total RAP</span>
+          <span class="fin-value" id="finTotalBudget">Rp 0</span>
+        </div>
+        <div class="fin-card fin-spent">
+          <span class="fin-label">Total Realisasi</span>
+          <span class="fin-value" id="finTotalSpent">Rp 0</span>
+        </div>
+        <div class="fin-card fin-remaining">
+          <span class="fin-label">Sisa Budget</span>
+          <span class="fin-value" id="finRemaining">Rp 0</span>
+        </div>
+        <div class="fin-card fin-variance">
+          <span class="fin-label">Varians</span>
+          <span class="fin-value" id="finVariance">0%</span>
+        </div>
+      </div>
+
+      <!-- Budget vs Actual chart area -->
+      <div class="chart-container">
+        <h4>Budget vs Realisasi per Kategori</h4>
+        <canvas id="chartBudgetVsActual" height="220"></canvas>
+      </div>
+
+      <!-- Cost list -->
+      <div class="section-header">
+        <h3>Realisasi Biaya Terbaru</h3>
+        <button class="btn btn-sm btn-ghost" onclick="openSheet('costFormSheet')">+ Catat</button>
+      </div>
+      <div id="costRealizationList" class="cost-list"></div>
+    </div>
+  </main>
+
+  <!-- ============ PAGE: SETTINGS ============ -->
+  <main id="pageSettings" class="page">
+    <div class="page-content">
+      <div class="settings-section">
+        <h3>Profil</h3>
+        <div class="setting-item" onclick="openSheet('profileSheet')">
+          <span>Profil & Akun</span>
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3l6 6-6 6"/></svg>
+        </div>
+      </div>
+      <div class="settings-section">
+        <h3>Organisasi</h3>
+        <div class="setting-item" onclick="openSheet('orgSheet')">
+          <span>Kelola Organisasi</span>
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3l6 6-6 6"/></svg>
+        </div>
+        <div class="setting-item" onclick="openSheet('memberSheet')">
+          <span>Anggota Tim</span>
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3l6 6-6 6"/></svg>
+        </div>
+      </div>
+      <div class="settings-section">
+        <h3>Tampilan</h3>
+        <div class="setting-item">
+          <span>Mode Gelap</span>
+          <label class="toggle">
+            <input type="checkbox" id="darkModeToggle" onchange="toggleDarkMode()" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="setting-item">
+          <span>Bahasa</span>
+          <select id="langSelect" class="select-sm" onchange="changeLanguage(this.value)">
+            <option value="id">Indonesia</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+      </div>
+      <div class="settings-section" id="adminSection" style="display:none">
+        <h3>Admin</h3>
+        <div class="setting-item" onclick="openSheet('adminSheet')">
+          <span>Panel Admin</span>
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3l6 6-6 6"/></svg>
+        </div>
+      </div>
+      <div class="settings-section">
+        <button class="btn btn-danger btn-full" onclick="signOut()">Keluar</button>
+      </div>
+      <p class="text-center text-secondary text-xs" style="margin-top:1rem">Monefyi Planner v1.0.0</p>
+    </div>
+  </main>
+
+  <!-- ============ PROJECT DETAIL VIEW ============ -->
+  <div id="projectDetailView" class="detail-view hidden">
+    <header class="detail-header">
+      <button class="icon-btn" onclick="closeProjectDetail()" aria-label="Kembali">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <h2 id="detailProjectName">Proyek</h2>
+      <button class="icon-btn" onclick="openSheet('projectMenuSheet')" aria-label="Menu">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="5" r="1.5"/><circle cx="11" cy="11" r="1.5"/><circle cx="11" cy="17" r="1.5"/></svg>
+      </button>
+    </header>
+
+    <!-- Project Detail Tabs -->
+    <div class="detail-tabs">
+      <button class="detail-tab active" data-tab="overview" onclick="switchDetailTab('overview',this)">Overview</button>
+      <button class="detail-tab" data-tab="rap" onclick="switchDetailTab('rap',this)">RAP</button>
+      <button class="detail-tab" data-tab="timeline" onclick="switchDetailTab('timeline',this)">Timeline</button>
+      <button class="detail-tab" data-tab="realization" onclick="switchDetailTab('realization',this)">Realisasi</button>
+      <button class="detail-tab" data-tab="report" onclick="switchDetailTab('report',this)">Laporan</button>
+    </div>
+
+    <!-- Tab: Overview -->
+    <div id="tabOverview" class="detail-tab-content active">
+      <div class="detail-content">
+        <!-- Project summary cards -->
+        <div class="overview-grid">
+          <div class="ov-card">
+            <span class="ov-label">Status</span>
+            <span class="ov-value" id="ovStatus">Planning</span>
+          </div>
+          <div class="ov-card">
+            <span class="ov-label">Progress</span>
+            <div class="progress-ring-wrap">
+              <canvas id="ovProgressRing" width="80" height="80"></canvas>
+              <span class="progress-ring-text" id="ovProgressText">0%</span>
+            </div>
+          </div>
+          <div class="ov-card">
+            <span class="ov-label">Durasi</span>
+            <span class="ov-value" id="ovDuration">0 hari</span>
+            <span class="ov-sub" id="ovDateRange"></span>
+          </div>
+          <div class="ov-card">
+            <span class="ov-label">Budget</span>
+            <span class="ov-value" id="ovBudget">Rp 0</span>
+            <span class="ov-sub" id="ovSpent"></span>
+          </div>
+        </div>
+
+        <!-- EVM Indicators -->
+        <div class="evm-section">
+          <h4>Performa Proyek (EVM)</h4>
+          <div class="evm-grid">
+            <div class="evm-card">
+              <span class="evm-label">SPI</span>
+              <span class="evm-value" id="evmSPI">-</span>
+              <span class="evm-desc">Schedule Performance</span>
+            </div>
+            <div class="evm-card">
+              <span class="evm-label">CPI</span>
+              <span class="evm-value" id="evmCPI">-</span>
+              <span class="evm-desc">Cost Performance</span>
+            </div>
+            <div class="evm-card">
+              <span class="evm-label">EAC</span>
+              <span class="evm-value" id="evmEAC">-</span>
+              <span class="evm-desc">Est. Total Cost</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- S-Curve -->
+        <div class="chart-container">
+          <h4>Kurva S</h4>
+          <canvas id="chartSCurve" height="200"></canvas>
+        </div>
+
+        <!-- Recommendations -->
+        <div class="reco-section">
+          <h4>Rekomendasi</h4>
+          <div id="projectRecommendations" class="reco-list">
+            <p class="text-secondary text-sm">Memuat analisa...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: RAP -->
+    <div id="tabRap" class="detail-tab-content">
+      <div class="detail-content">
+        <div class="rap-header">
+          <div class="rap-total">
+            <span class="rap-total-label">Total RAP</span>
+            <span class="rap-total-value" id="rapTotal">Rp 0</span>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openSheet('rapItemFormSheet')">+ Item</button>
+        </div>
+
+        <!-- RAP Categories -->
+        <div id="rapCategoryList" class="rap-categories">
+          <div class="rap-category" data-type="material">
+            <div class="rap-cat-header" onclick="toggleRapCategory('material')">
+              <span class="rap-cat-icon">&#128230;</span>
+              <span class="rap-cat-name">Bahan</span>
+              <span class="rap-cat-total" id="rapMaterialTotal">Rp 0</span>
+              <svg class="rap-cat-chevron" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6l4 4 4-4"/></svg>
+            </div>
+            <div class="rap-cat-items" id="rapMaterialItems"></div>
+          </div>
+          <div class="rap-category" data-type="labor">
+            <div class="rap-cat-header" onclick="toggleRapCategory('labor')">
+              <span class="rap-cat-icon">&#128119;</span>
+              <span class="rap-cat-name">Tenaga</span>
+              <span class="rap-cat-total" id="rapLaborTotal">Rp 0</span>
+              <svg class="rap-cat-chevron" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6l4 4 4-4"/></svg>
+            </div>
+            <div class="rap-cat-items" id="rapLaborItems"></div>
+          </div>
+          <div class="rap-category" data-type="equipment">
+            <div class="rap-cat-header" onclick="toggleRapCategory('equipment')">
+              <span class="rap-cat-icon">&#128295;</span>
+              <span class="rap-cat-name">Peralatan</span>
+              <span class="rap-cat-total" id="rapEquipmentTotal">Rp 0</span>
+              <svg class="rap-cat-chevron" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6l4 4 4-4"/></svg>
+            </div>
+            <div class="rap-cat-items" id="rapEquipmentItems"></div>
+          </div>
+          <div class="rap-category" data-type="other">
+            <div class="rap-cat-header" onclick="toggleRapCategory('other')">
+              <span class="rap-cat-icon">&#128203;</span>
+              <span class="rap-cat-name">Lainnya</span>
+              <span class="rap-cat-total" id="rapOtherTotal">Rp 0</span>
+              <svg class="rap-cat-chevron" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6l4 4 4-4"/></svg>
+            </div>
+            <div class="rap-cat-items" id="rapOtherItems"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Timeline -->
+    <div id="tabTimeline" class="detail-tab-content">
+      <div class="detail-content">
+        <div class="timeline-header">
+          <div>
+            <span class="text-secondary text-sm" id="tlDateRange"></span>
+            <span class="text-secondary text-sm" id="tlDuration"></span>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openSheet('workItemFormSheet')">+ Pekerjaan</button>
+        </div>
+        <div id="workItemList" class="work-items">
+          <div class="empty-state">
+            <p>Belum ada item pekerjaan</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Realization -->
+    <div id="tabRealization" class="detail-tab-content">
+      <div class="detail-content">
+        <!-- Sub-tabs -->
+        <div class="sub-tabs">
+          <button class="sub-tab active" onclick="switchRealSubTab('cost',this)">Biaya</button>
+          <button class="sub-tab" onclick="switchRealSubTab('progress',this)">Progress</button>
+        </div>
+
+        <!-- Cost Realization -->
+        <div id="realCostSection" class="real-section">
+          <div class="real-summary">
+            <div class="real-sum-item">
+              <span>RAP</span>
+              <span id="realRapTotal">Rp 0</span>
+            </div>
+            <div class="real-sum-item">
+              <span>Realisasi</span>
+              <span id="realSpentTotal">Rp 0</span>
+            </div>
+            <div class="real-sum-item highlight">
+              <span>Selisih</span>
+              <span id="realDiffTotal">Rp 0</span>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="openSheet('costFormSheet')" style="margin-bottom:1rem">+ Catat Biaya</button>
+          <div id="realCostList" class="cost-list"></div>
+        </div>
+
+        <!-- Progress Realization -->
+        <div id="realProgressSection" class="real-section hidden">
+          <button class="btn btn-primary btn-full" onclick="openSheet('dailyLogFormSheet')" style="margin-bottom:1rem">+ Log Harian</button>
+          <div id="dailyLogList" class="daily-log-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Report -->
+    <div id="tabReport" class="detail-tab-content">
+      <div class="detail-content">
+        <div class="report-actions">
+          <button class="btn btn-primary btn-sm" onclick="generateReport()">Generate Laporan</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportReportPDF()">Export PDF</button>
+        </div>
+        <div id="reportContent" class="report-content">
+          <p class="text-secondary text-sm">Klik "Generate Laporan" untuk membuat laporan terbaru.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ BOTTOM NAVBAR ============ -->
+  <nav id="bottomNav">
+    <button class="nav-item active" data-tab="home" onclick="switchTab('home')">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9.5L11 3l8 6.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M9 21V13h4v8"/></svg>
+      <span>Home</span>
+    </button>
+    <button class="nav-item" data-tab="project" onclick="switchTab('project')">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="16" height="16" rx="2"/><path d="M3 9h16"/><path d="M9 3v16"/></svg>
+      <span>Proyek</span>
+    </button>
+    <button class="nav-item nav-center" id="smartBtn" onclick="openSmartButton()">
+      <div class="smart-btn-circle">
+        <svg viewBox="0 0 48 48" width="28" height="28"><rect width="48" height="48" rx="12" fill="#fff"/><g transform="translate(24,24)"><path d="M-12,-8 L-12,12 L12,12 L12,-8 Z" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linejoin="round"/><path d="M-12,-8 L0,-16 L12,-8" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linejoin="round"/><rect x="-6" y="2" width="5" height="10" rx="1" fill="#93C5FD"/><rect x="1" y="-4" width="5" height="16" rx="1" fill="#2563EB"/><circle cx="0" cy="-16" r="3" fill="#8B5CF6"/></g></svg>
+      </div>
+    </button>
+    <button class="nav-item" data-tab="finance" onclick="switchTab('finance')">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <span>Keuangan</span>
+    </button>
+    <button class="nav-item" data-tab="settings" onclick="switchTab('settings')">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="3"/><path d="M19.4 14.8a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+      <span>Setting</span>
+    </button>
+  </nav>
+
+  <!-- ============ SMART BUTTON OVERLAY ============ -->
+  <div id="smartOverlay" class="smart-overlay hidden">
+    <div class="smart-overlay-bg" onclick="closeSmartButton()"></div>
+    <div class="smart-panel">
+      <div class="smart-handle" onclick="closeSmartButton()"><span></span></div>
+      <div class="smart-header">
+        <h3>Monefyi Command</h3>
+        <p class="text-secondary text-sm">Ketik atau ucapkan perintah</p>
+      </div>
+
+      <!-- Smart command output -->
+      <div id="smartOutput" class="smart-output hidden">
+        <div id="smartOutputContent"></div>
+        <div class="smart-output-actions">
+          <button class="btn btn-primary btn-sm" id="smartConfirmBtn" onclick="confirmSmartCommand()">Benar</button>
+          <button class="btn btn-ghost btn-sm" onclick="rejectSmartCommand()">Koreksi</button>
+        </div>
+      </div>
+
+      <!-- Quick Commands -->
+      <div id="quickCommands" class="quick-commands">
+        <button class="quick-cmd" onclick="fillSmartInput('catat beli ')">&#128230; Catat Beli</button>
+        <button class="quick-cmd" onclick="fillSmartInput('progress hari ini ')">&#128200; Log Progress</button>
+        <button class="quick-cmd" onclick="fillSmartInput('cek budget ')">&#128176; Cek Budget</button>
+        <button class="quick-cmd" onclick="fillSmartInput('laporan ')">&#128203; Laporan</button>
+        <button class="quick-cmd" onclick="fillSmartInput('rekomendasi ')">&#129504; Rekomendasi</button>
+        <button class="quick-cmd" onclick="fillSmartInput('buka project ')">&#128194; Buka Project</button>
+      </div>
+
+      <!-- Input -->
+      <div class="smart-input-wrap">
+        <textarea id="smartInput" rows="2" placeholder="Contoh: beli semen 20 sak harga 62 ribu project rumah A" oninput="autoResizeSmartInput()"></textarea>
+        <div class="smart-input-actions">
+          <button class="icon-btn smart-mic-btn" id="smartMicBtn" onclick="toggleVoiceInput()">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2" width="8" height="12" rx="4"/><path d="M5 10a6 6 0 0 0 12 0"/><path d="M11 18v4M7 22h8"/></svg>
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="executeSmartCommand()">Kirim</button>
+        </div>
+      </div>
+
+      <!-- Listening indicator -->
+      <div id="listeningIndicator" class="listening-indicator hidden">
+        <div class="pulse-ring"></div>
+        <span>Mendengarkan...</span>
+        <button class="btn btn-ghost btn-sm" onclick="stopVoiceInput()">Stop</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ BOTTOM SHEETS ============ -->
+
+  <!-- Sheet: Project Form -->
+  <div id="projectFormSheet" class="sheet hidden">
+    <div class="sheet-bg" onclick="closeSheet('projectFormSheet')"></div>
+    <div class="sheet-content">
+      <div class="sheet-handle" onclick="closeSheet('projectFormSheet')"><span></span></div>
+      <h3 id="projectFormTitle">Proyek Baru</h3>
+      <form id="projectForm" onsubmit="saveProject(event)">
+        <input type="hidden" id="pfId" />
+        <div class="form-group">
+          <label>Nama Proyek *</label>
+          <input type="text" id="pfName" required placeholder="Rumah Bpk Ahmad" />
+        </div>
+        <div class="form-group">
+          <label>Deskripsi</label>
+          <textarea id="pfDesc" rows="2" placeholder="Deskripsi singkat proyek"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Klien</label>
+          <input type="text" id="pfClient" placeholder="Nama klien" />
+        </div>
+        <div class="form-group">
+          <label>Lokasi</label>
+          <input type="text" id="pfLocation" placeholder="Alamat lokasi proyek" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Mulai *</label>
+            <input type="date" id="pfStartDate" required />
+          </div>
+          <div class="form-group">
+            <label>Selesai *</label>
+            <input type="date" id="pfEndDate" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="pfStatus">
+            <option value="planning">Planning</option>
+            <option value="active">Aktif</option>
+            <option value="paused">Pause</option>
+            <option value="completed">Selesai</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Simpan</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Sheet: RAP Item Form -->
+  <div id="rapItemFormSheet" class="sheet hidden">
+    <div class="sheet-bg" onclick="closeSheet('rapItemFormSheet')"></div>
+    <div class="sheet-content">
+      <div class="sheet-handle" onclick="closeSheet('rapItemFormSheet')"><span></span></div>
+      <h3 id="rapItemFormTitle">Tambah Item RAP</h3>
+      <form id="rapItemForm" onsubmit="saveRapItem(event)">
+        <input type="hidden" id="riId" />
+        <div class="form-group">
+          <label>Tipe *</label>
+          <select id="riType" required>
+            <option value="material">Bahan</option>
+            <option value="labor">Tenaga</option>
+            <option value="equipment">Peralatan</option>
+            <option value="other">Lainnya</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Nama Item *</label>
+          <input type="text" id="riName" required placeholder="Semen Portland" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Volume *</label>
+            <input type="number" id="riQty" required step="0.001" min="0" placeholder="50" />
+          </div>
+          <div class="form-group">
+            <label>Satuan *</label>
+            <input type="text" id="riUnit" required placeholder="sak" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Harga Satuan (Rp) *</label>
+          <input type="number" id="riPrice" required step="1" min="0" placeholder="65000" />
+        </div>
+        <div class="form-group ri-total-display">
+          <label>Total</label>
+          <span id="riTotal">Rp 0</span>
+        </div>
+        <div class="form-group">
+          <label>Supplier</label>
+          <input type="text" id="riSupplier" placeholder="Nama supplier (opsional)" />
+        </div>
+        <div class="form-group">
+          <label>Catatan</label>
+          <textarea id="riNotes" rows="2" placeholder="Catatan tambahan"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Simpan</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Sheet: Work Item Form -->
+  <div id="workItemFormSheet" class="sheet hidden">
+    <div class="sheet-bg" onclick="closeSheet('workItemFormSheet')"></div>
+    <div class="sheet-content">
+      <div class="sheet-handle" onclick="closeSheet('workItemFormSheet')"><span></span></div>
+      <h3 id="workItemFormTitle">Tambah Pekerjaan</h3>
+      <form id="workItemForm" onsubmit="saveWorkItem(event)">
+        <input type="hidden" id="wiId" />
+        <div class="form-group">
+          <label>Nama Pekerjaan *</label>
+          <input type="text" id="wiName" required placeholder="Galian pondasi" />
+        </div>
+        <div class="form-group">
+          <label>Deskripsi</label>
+          <textarea id="wiDesc" rows="2" placeholder="Deskripsi pekerjaan"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Mulai *</label>
+            <input type="date" id="wiStart" required />
+          </div>
+          <div class="form-group">
+            <label>Selesai *</label>
+            <input type="date" id="wiEnd" required />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Bobot (%)</label>
+            <input type="number" id="wiWeight" step="0.1" min="0" max="100" placeholder="10" />
+          </div>
+          <div class="form-group">
+            <label>Pekerja</label>
+            <input type="number" id="wiWorkers" min="1" placeholder="2" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="wiStatus">
+            <option value="pending">Belum mulai</option>
+            <option value="in_progress">Sedang dikerjakan</option>
+            <option value="completed">Selesai</option>
+            <option value="delayed">Terlambat</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Simpan</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Sheet: Cost Realization Form -->
+  <div id="costFormSheet" class="sheet hidden">
+    <div class="sheet-bg" onclick="closeSheet('costFormSheet')"></div>
+    <div class="sheet-content">
+      <div class="sheet-handle" onclick="closeSheet('costFormSheet')"><span></span></div>
+      <h3>Catat Biaya</h3>
+      <form id="costForm" onsubmit="saveCostRealization(event)">
+        <input type="hidden" id="cfId" />
+        <div class="form-group">
+          <label>Proyek *</label>
+          <select id="cfProject" required onchange="loadCostRapItems()">
+            <option value="">Pilih proyek</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Item RAP</label>
+          <select id="cfRapItem">
+            <option value="">Pilih item (opsional)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tanggal *</label>
+          <input type="date" id="cfDate" required />
+        </div>
+        <div class="form-group">
+          <label>Keterangan *</label>
+          <input type="text" id="cfDesc" required placeholder="Beli semen 20 sak" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Qty</label>
+            <input type="number" id="cfQty" step="0.001" min="0" placeholder="20" />
+          </div>
+          <div class="form-group">
+            <label>Harga Satuan</label>
+            <input type="number" id="cfUnitPrice" step="1" min="0" placeholder="62000" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Total (Rp) *</label>
+          <input type="number" id="cfTotal" required step="1" min="0" placeholder="1240000" />
+        </div>
+        <div class="form-group">
+          <label>Supplier</label>
+          <input type="text" id="cfSupplier" placeholder="Nama supplier" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Simpan</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Sheet: Daily Log Form -->
+  <div id="dailyLogFormSheet" class="sheet hidden">
+    <div class="sheet-bg" onclick="closeSheet('dailyLogFormSheet')"></div>
+    <div class="sheet-content">
+      <div class="sheet-handle" onclick="closeSheet('dailyLogFormSheet')"><span></span></div>
+      <h3>Log Harian</h3>
+      <form id="dailyLogForm" onsubmit="saveDailyLog(event)">
+        <div class="form-group">
+          <label>Tanggal *</label>
+          <input type="date" id="dlDate" required />
+        </div>
+        <div class="form-group">
+          <label>Pekerjaan *</label>
+          <select id="dlWorkItem" required>
+            <option value="">Pilih pekerjaan</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Apa yang dikerjakan *</label>
+          <textarea id="dlDesc" rows="3" required placeholder="Lanjutan galian pondasi sisi timur"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Progress (%)</label>
+            <input type="number" id="dlProgress" min="0" max="100" step="1" placeholder="15" />
+          </div>
+          <div class="form-group">
+            <label>Pekerja hadir</label>
+            <input type="number" id="dlWorkers" min="0" placeholder="4" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Cuaca</label>
+          <select id="dlWeather">
+            <option value="sunny">Cerah</option>
+            <option value="cloudy">Berawan</option>
+            <option value="rainy">Hujan</option>
+            <option value="stormy">Badai</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Simpan</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Sheet: Profile -->
+  <div id="profileSheet" class="sheet hidden">
+    <div class="sheet-bg" onclick="closeSheet('profileSheet')"></div>
+    <div class="sheet-content">
+      <div class="sheet-handle" onclick="closeSheet('profileSheet')"><span></span></div>
+      <h3>Profil</h3>
+      <form id="profileForm" onsubmit="saveProfile(event)">
+        <div class="form-group">
+          <label>Nama</label>
+          <input type="text" id="prfName" placeholder="Nama Anda" />
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="prfEmail" disabled />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Simpan</button>
+      </form>
+      <hr />
+      <h4>Ganti Password</h4>
+      <form id="passwordForm" onsubmit="changePassword(event)">
+        <div class="form-group">
+          <label>Password Baru</label>
+          <input type="password" id="newPwd" minlength="6" required placeholder="Min 6 karakter" />
+        </div>
+        <button type="submit" class="btn btn-ghost btn-full">Update Password</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Sheet: Organization -->
+  <div id="orgSheet" class="sheet hidden">
+    <div class="sheet-bg" onclick="closeSheet('orgSheet')"></div>
+    <div class="sheet-content">
+      <div class="sheet-handle" onclick="closeSheet('orgSheet')"><span></span></div>
+      <h3>Organisasi</h3>
+      <form id="orgForm" onsubmit="saveOrg(event)">
+        <div class="form-group">
+          <label>Nama Organisasi</label>
+          <input type="text" id="orgName" required placeholder="CV Maju Jaya" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Simpan</button>
+      </form>
+      <div id="orgInfo" class="org-info"></div>
+    </div>
+  </div>
+
+  <!-- Sheet: Members -->
+  <div id="memberSheet" class="sheet hidden">
+    <div class="sheet-bg" onclick="closeSheet('memberSheet')"></div>
+    <div class="sheet-content">
+      <div class="sheet-handle" onclick="closeSheet('memberSheet')"><span></span></div>
+      <h3>Anggota Tim</h3>
+      <div class="member-invite">
+        <input type="email" id="inviteEmail" placeholder="Email anggota baru" />
+        <button class="btn btn-primary btn-sm" onclick="inviteMember()">Undang</button>
+      </div>
+      <div id="memberList" class="member-list"></div>
+    </div>
+  </div>
+
+  <!-- Sheet: Notifications -->
+  <div id="notifSheet" class="sheet hidden">
+    <div class="sheet-bg" onclick="closeSheet('notifSheet')"></div>
+    <div class="sheet-content">
+      <div class="sheet-handle" onclick="closeSheet('notifSheet')"><span></span></div>
+      <h3>Notifikasi</h3>
+      <div id="notifList" class="notif-list">
+        <p class="text-secondary text-sm">Tidak ada notifikasi</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sheet: Admin Panel -->
+  <div id="adminSheet" class="sheet hidden">
+    <div class="sheet-bg" onclick="closeSheet('adminSheet')"></div>
+    <div class="sheet-content sheet-fullheight">
+      <div class="sheet-handle" onclick="closeSheet('adminSheet')"><span></span></div>
+      <h3>Admin Panel</h3>
+      <div class="admin-stats">
+        <div class="stat-card"><div class="stat-value" id="adminTotalUsers">0</div><div class="stat-label">Users</div></div>
+        <div class="stat-card"><div class="stat-value" id="adminTotalOrgs">0</div><div class="stat-label">Orgs</div></div>
+        <div class="stat-card"><div class="stat-value" id="adminTotalProjects">0</div><div class="stat-label">Projects</div></div>
+      </div>
+      <div class="form-group">
+        <input type="search" id="adminSearch" placeholder="Cari user / org..." oninput="searchAdminUsers()" />
+      </div>
+      <div id="adminUserList" class="admin-user-list"></div>
+    </div>
+  </div>
+
+  <!-- Sheet: Project Menu -->
+  <div id="projectMenuSheet" class="sheet hidden">
+    <div class="sheet-bg" onclick="closeSheet('projectMenuSheet')"></div>
+    <div class="sheet-content sheet-compact">
+      <div class="sheet-handle" onclick="closeSheet('projectMenuSheet')"><span></span></div>
+      <div class="menu-list">
+        <button class="menu-item" onclick="editCurrentProject()">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit Proyek
+        </button>
+        <button class="menu-item" onclick="duplicateProject()">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="8" width="10" height="10" rx="2"/><path d="M4 14H3a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Duplikat Proyek
+        </button>
+        <button class="menu-item text-danger" onclick="deleteCurrentProject()">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h16M8 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          Hapus Proyek
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /appShell -->
+
+<!-- Toast -->
+<div id="toast" class="toast hidden"></div>
+
+<!-- Loading -->
+<div id="loadingOverlay" class="loading-overlay hidden">
+  <div class="spinner"></div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
