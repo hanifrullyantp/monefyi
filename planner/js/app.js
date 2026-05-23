@@ -11,6 +11,9 @@
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
   });
 
+  /** Single-flight bootstrap (getSession + INITIAL_SESSION can both fire). */
+  let bootstrapPromise = null;
+
   /* ============================================================
      STATE
      ============================================================ */
@@ -54,12 +57,17 @@
     registerSW();
 
     sb.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        STATE.user = session.user;
-        await bootstrapAuth();
-      } else {
+      // Token refresh must NOT re-run bootstrap (showLoading loop / duplicate fetches).
+      if (event === "TOKEN_REFRESHED") return;
+
+      if (!session?.user) {
         STATE.user = null;
         showAuth();
+        return;
+      }
+      STATE.user = session.user;
+      if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "PASSWORD_RECOVERY") {
+        await bootstrapAuth();
       }
     });
 
@@ -109,25 +117,33 @@
   }
 
   async function bootstrapAuth() {
-    document.getElementById("authOverlay").classList.remove("active");
-    document.getElementById("appShell").classList.remove("hidden");
-    showLoading(true);
-
+    if (bootstrapPromise) return await bootstrapPromise;
+    bootstrapPromise = (async () => {
+      document.getElementById("authOverlay").classList.remove("active");
+      document.getElementById("appShell").classList.remove("hidden");
+      showLoading(true);
+      try {
+        await loadProfile();
+        await loadOrg();
+        await loadProjects();
+        await loadNotifications();
+        renderHome();
+        renderProjectList();
+        updateFinanceProjectFilter();
+        checkAdmin();
+        updateGreeting();
+      } catch (e) {
+        console.error("Bootstrap error:", e);
+        toast("Gagal memuat data: " + e.message);
+      } finally {
+        showLoading(false);
+      }
+    })();
     try {
-      await loadProfile();
-      await loadOrg();
-      await loadProjects();
-      await loadNotifications();
-      renderHome();
-      renderProjectList();
-      updateFinanceProjectFilter();
-      checkAdmin();
-      updateGreeting();
-    } catch (e) {
-      console.error("Bootstrap error:", e);
-      toast("Gagal memuat data: " + e.message);
+      await bootstrapPromise;
+    } finally {
+      bootstrapPromise = null;
     }
-    showLoading(false);
   }
 
   function initForms() {
@@ -251,6 +267,11 @@
       };
       cfQty.addEventListener("input", autoFillCostTotal);
       cfUnit.addEventListener("input", autoFillCostTotal);
+    }
+
+    const projectForm = document.getElementById("projectForm");
+    if (projectForm) {
+      projectForm.addEventListener("submit", (e) => window.saveProject(e));
     }
   }
 
@@ -425,14 +446,21 @@
   function renderProjectList() {
     const el = document.getElementById("projectList");
     const homeEl = document.getElementById("homeProjectList");
-    const emptyEl = document.getElementById("homeEmptyState");
     const filtered = STATE.projects;
 
     if (!filtered.length) {
       el.innerHTML = '<div class="empty-state"><p>Belum ada proyek</p><button class="btn btn-primary btn-sm" onclick="openSheet(\'projectFormSheet\')">+ Buat Proyek</button></div>';
-      if (emptyEl) emptyEl.style.display = "";
+      if (homeEl) {
+        homeEl.innerHTML = `
+          <div class="empty-state" id="homeEmptyState">
+            <svg width="48" height="48" fill="none" stroke="var(--text-secondary)" stroke-width="1.5"><rect x="6" y="6" width="36" height="36" rx="6"/><path d="M18 24h12M24 18v12"/></svg>
+            <p>Belum ada proyek</p>
+            <button class="btn btn-primary btn-sm" onclick="openSheet('projectFormSheet')">Buat Proyek Pertama</button>
+          </div>`;
+      }
       return;
     }
+    const emptyEl = document.getElementById("homeEmptyState");
     if (emptyEl) emptyEl.style.display = "none";
 
     const cards = filtered.map((p) => projectCardHTML(p)).join("");
@@ -484,6 +512,11 @@
 
   window.saveProject = async function (e) {
     e.preventDefault();
+    if (!STATE.org || !STATE.org.id) {
+      toast("Organisasi belum siap. Muat ulang halaman atau hubungi admin.");
+      console.error("[planner] saveProject: STATE.org missing", STATE.org);
+      return;
+    }
     const id = document.getElementById("pfId").value;
     const data = {
       name: document.getElementById("pfName").value.trim(),
@@ -496,24 +529,36 @@
       org_id: STATE.org.id,
       created_by: STATE.user.id,
     };
-    if (!data.name || !data.planned_start || !data.planned_end) return toast("Lengkapi field wajib");
+    if (!data.name || !data.planned_start || !data.planned_end) {
+      toast("Lengkapi field wajib");
+      return;
+    }
 
     showLoading(true);
-    let res;
-    if (id) {
-      res = await sb.from("planner_projects").update(data).eq("id", id).select().single();
-    } else {
-      res = await sb.from("planner_projects").insert(data).select().single();
+    try {
+      let res;
+      if (id) {
+        res = await sb.from("planner_projects").update(data).eq("id", id).select().single();
+      } else {
+        res = await sb.from("planner_projects").insert(data).select().single();
+      }
+      if (res.error) {
+        console.error("[planner] saveProject", res.error);
+        toast("Gagal simpan proyek: " + res.error.message);
+        return;
+      }
+      await loadProjects();
+      renderProjectList();
+      closeSheet("projectFormSheet");
+      toast(id ? "Proyek diperbarui" : "Proyek dibuat");
+      document.getElementById("projectForm").reset();
+      document.getElementById("pfId").value = "";
+    } catch (err) {
+      console.error("[planner] saveProject", err);
+      toast("Gagal simpan proyek: " + (err.message || String(err)));
+    } finally {
+      showLoading(false);
     }
-    showLoading(false);
-    if (res.error) return toast("Gagal: " + res.error.message);
-
-    await loadProjects();
-    renderProjectList();
-    closeSheet("projectFormSheet");
-    toast(id ? "Proyek diperbarui" : "Proyek dibuat");
-    document.getElementById("projectForm").reset();
-    document.getElementById("pfId").value = "";
   };
 
   window.filterProjects = function () {
@@ -1412,15 +1457,23 @@
      ============================================================ */
   function updateFinanceProjectFilter() {
     const sel = document.getElementById("financeProjectFilter");
-    sel.innerHTML = '<option value="all">Semua Proyek</option>' +
-      STATE.projects.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join("");
+    if (sel) {
+      sel.innerHTML = '<option value="all">Semua Proyek</option>' +
+        STATE.projects.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join("");
+    }
     const cfSel = document.getElementById("cfProject");
-    cfSel.innerHTML = '<option value="">Pilih proyek</option>' +
-      STATE.projects.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join("");
+    if (cfSel) {
+      cfSel.innerHTML = '<option value="">Pilih proyek</option>' +
+        STATE.projects.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join("");
+    }
   }
 
   window.loadFinanceData = async function () {
-    const filter = document.getElementById("financeProjectFilter").value;
+    const finB = document.getElementById("finTotalBudget");
+    if (!finB) return;
+
+    const sel = document.getElementById("financeProjectFilter");
+    const filter = sel ? sel.value : "all";
     let totalBudget = 0, totalSpent = 0;
 
     if (filter === "all") {
@@ -1445,6 +1498,7 @@
 
   function renderBudgetVsActualChart(filter) {
     const canvas = document.getElementById("chartBudgetVsActual");
+    if (!canvas) return;
     if (STATE.charts.budgetVsActual) STATE.charts.budgetVsActual.destroy();
 
     let projects = filter === "all" ? STATE.projects.slice(0, 8) : STATE.projects.filter((p) => p.id === filter);
