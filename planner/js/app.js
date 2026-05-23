@@ -48,6 +48,11 @@
     const darkToggle = document.getElementById("darkModeToggle");
     if (darkToggle) darkToggle.checked = STATE.ui.darkMode;
 
+    // Attach auth & form handlers before any awaited Supabase work so login/register
+    // stay responsive even if getSession(), token refresh, or bootstrapAuth is slow.
+    initForms();
+    registerSW();
+
     sb.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         STATE.user = session.user;
@@ -58,16 +63,19 @@
       }
     });
 
-    const { data: { session } } = await sb.auth.getSession();
-    if (session?.user) {
-      STATE.user = session.user;
-      await bootstrapAuth();
-    } else {
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session?.user) {
+        STATE.user = session.user;
+        await bootstrapAuth();
+      } else {
+        showAuth();
+      }
+    } catch (err) {
+      console.error("Auth init error:", err);
       showAuth();
+      toast("Tidak dapat menghubungi server. Periksa koneksi lalu coba lagi.");
     }
-
-    initForms();
-    registerSW();
   }
 
   function registerSW() {
@@ -112,9 +120,15 @@
       const email = document.getElementById("loginEmail").value.trim();
       const password = document.getElementById("loginPassword").value;
       showLoading(true);
-      const { error } = await sb.auth.signInWithPassword({ email, password });
-      showLoading(false);
-      if (error) return toast("Login gagal: " + error.message);
+      try {
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if (error) return toast("Login gagal: " + error.message);
+      } catch (err) {
+        console.error(err);
+        toast("Login gagal: " + (err.message || "Terjadi kesalahan"));
+      } finally {
+        showLoading(false);
+      }
     });
 
     document.getElementById("registerForm").addEventListener("submit", async (e) => {
@@ -124,15 +138,23 @@
       const password = document.getElementById("regPassword").value;
       const orgName = document.getElementById("regOrgName").value.trim();
       showLoading(true);
-      const { data, error } = await sb.auth.signUp({
-        email, password,
-        options: { data: { name, org_name: orgName } },
-      });
-      showLoading(false);
-      if (error) return toast("Registrasi gagal: " + error.message);
-      if (data?.user && !data.session) {
-        toast("Cek email untuk verifikasi akun");
-        showAuthView("login");
+      try {
+        const { data, error } = await sb.auth.signUp({
+          email, password,
+          options: { data: { name, org_name: orgName } },
+        });
+        if (error) return toast("Registrasi gagal: " + error.message);
+        if (data?.user && !data.session) {
+          toast("Cek email untuk verifikasi akun");
+          showAuthView("login");
+        } else if (data?.user) {
+          toast("Registrasi berhasil, memuat aplikasi…");
+        }
+      } catch (err) {
+        console.error(err);
+        toast("Registrasi gagal: " + (err.message || "Terjadi kesalahan"));
+      } finally {
+        showLoading(false);
       }
     });
 
@@ -140,35 +162,46 @@
       e.preventDefault();
       const email = document.getElementById("forgotEmail").value.trim();
       showLoading(true);
-      const { error } = await sb.auth.resetPasswordForEmail(email, {
-        redirectTo: location.origin + location.pathname,
-      });
-      showLoading(false);
-      if (error) return toast("Gagal: " + error.message);
-      toast("Link reset password dikirim ke email");
-      showAuthView("login");
+      try {
+        const { error } = await sb.auth.resetPasswordForEmail(email, {
+          redirectTo: location.origin + location.pathname,
+        });
+        if (error) return toast("Gagal: " + error.message);
+        toast("Link reset password dikirim ke email");
+        showAuthView("login");
+      } catch (err) {
+        console.error(err);
+        toast("Gagal: " + (err.message || "Terjadi kesalahan"));
+      } finally {
+        showLoading(false);
+      }
     });
 
     const riQty = document.getElementById("riQty");
     const riPrice = document.getElementById("riPrice");
-    const updateRiTotal = () => {
-      const q = parseFloat(riQty.value) || 0;
-      const p = parseFloat(riPrice.value) || 0;
-      document.getElementById("riTotal").textContent = formatCurrency(q * p);
-    };
-    riQty.addEventListener("input", updateRiTotal);
-    riPrice.addEventListener("input", updateRiTotal);
+    if (riQty && riPrice) {
+      const updateRiTotal = () => {
+        const q = parseFloat(riQty.value) || 0;
+        const p = parseFloat(riPrice.value) || 0;
+        const riTotal = document.getElementById("riTotal");
+        if (riTotal) riTotal.textContent = formatCurrency(q * p);
+      };
+      riQty.addEventListener("input", updateRiTotal);
+      riPrice.addEventListener("input", updateRiTotal);
+    }
 
     const cfQty = document.getElementById("cfQty");
     const cfUnit = document.getElementById("cfUnitPrice");
     const cfTotal = document.getElementById("cfTotal");
-    const autoFillCostTotal = () => {
-      const q = parseFloat(cfQty.value) || 0;
-      const p = parseFloat(cfUnit.value) || 0;
-      if (q && p) cfTotal.value = q * p;
-    };
-    cfQty.addEventListener("input", autoFillCostTotal);
-    cfUnit.addEventListener("input", autoFillCostTotal);
+    if (cfQty && cfUnit && cfTotal) {
+      const autoFillCostTotal = () => {
+        const q = parseFloat(cfQty.value) || 0;
+        const p = parseFloat(cfUnit.value) || 0;
+        if (q && p) cfTotal.value = q * p;
+      };
+      cfQty.addEventListener("input", autoFillCostTotal);
+      cfUnit.addEventListener("input", autoFillCostTotal);
+    }
   }
 
   /* ============================================================
