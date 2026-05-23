@@ -137,18 +137,46 @@
       const email = document.getElementById("regEmail").value.trim();
       const password = document.getElementById("regPassword").value;
       const orgName = document.getElementById("regOrgName").value.trim();
+      if (!name || !email || !password || !orgName) {
+        toast("Lengkapi semua field");
+        return;
+      }
       showLoading(true);
       try {
-        const { data, error } = await sb.auth.signUp({
+        let { data, error } = await sb.auth.signUp({
           email, password,
           options: { data: { name, org_name: orgName } },
         });
-        if (error) return toast("Registrasi gagal: " + error.message);
+        if (error) {
+          const em = (error.message || "").toLowerCase();
+          if (em.includes("registered") || em.includes("already")) {
+            const signIn = await sb.auth.signInWithPassword({ email, password });
+            if (!signIn.error) {
+              toast("Akun sudah ada — masuk…");
+              return;
+            }
+            toast("Email sudah terdaftar. Gunakan Masuk atau reset password.");
+            showAuthView("login");
+            return;
+          }
+          toast("Registrasi gagal: " + error.message);
+          return;
+        }
+        if (data?.session) {
+          toast("Berhasil, memuat…");
+          return;
+        }
         if (data?.user && !data.session) {
-          toast("Cek email untuk verifikasi akun");
+          const signIn = await sb.auth.signInWithPassword({ email, password });
+          if (!signIn.error) {
+            toast("Masuk…");
+            return;
+          }
+          toast(
+            "Akun dibuat. Jika Supabase meminta verifikasi email, buka link di inbox dulu. " +
+              "Untuk langsung masuk setelah daftar: matikan \"Confirm email\" di Auth settings Supabase.",
+          );
           showAuthView("login");
-        } else if (data?.user) {
-          toast("Registrasi berhasil, memuat aplikasi…");
         }
       } catch (err) {
         console.error(err);
@@ -208,17 +236,24 @@
      PROFILE
      ============================================================ */
   async function loadProfile() {
-    const { data } = await sb.from("profiles").select("*").eq("id", STATE.user.id).single();
+    const { data, error: selErr } = await sb.from("profiles").select("*").eq("id", STATE.user.id).maybeSingle();
+    if (selErr) console.warn("profiles select:", selErr);
     if (data) {
       STATE.profile = data;
     } else {
       const meta = STATE.user.user_metadata || {};
-      const { data: newProfile } = await sb.from("profiles").upsert({
+      const { data: newProfile, error: upErr } = await sb.from("profiles").upsert({
         id: STATE.user.id,
         name: meta.name || STATE.user.email?.split("@")[0] || "User",
         settings: {},
       }).select().single();
-      STATE.profile = newProfile || { name: "User" };
+      if (upErr) {
+        console.error("profiles upsert:", upErr);
+        throw new Error(
+          "Tabel profil belum siap di database (" + upErr.message + "). Jalankan migrasi Supabase untuk Planner.",
+        );
+      }
+      STATE.profile = newProfile || { name: meta.name || STATE.user.email?.split("@")[0] || "User" };
     }
     const name = STATE.profile?.name || "User";
     document.getElementById("userName").textContent = name;
@@ -262,11 +297,12 @@
      ORGANIZATION
      ============================================================ */
   async function loadOrg() {
-    const { data: membership } = await sb.from("planner_org_members")
+    const { data: membership, error: membershipErr } = await sb.from("planner_org_members")
       .select("org_id, role, planner_organizations(*)")
       .eq("user_id", STATE.user.id)
       .limit(1)
-      .single();
+      .maybeSingle();
+    if (membershipErr) console.warn("planner_org_members:", membershipErr);
 
     if (membership) {
       STATE.org = membership.planner_organizations;
@@ -276,14 +312,25 @@
       const orgName = meta.org_name || "Organisasi Saya";
       const slug = orgName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") + "-" + Date.now().toString(36);
 
-      const { data: newOrg } = await sb.from("planner_organizations").insert({
+      const { data: newOrg, error: orgInsErr } = await sb.from("planner_organizations").insert({
         name: orgName, slug, owner_id: STATE.user.id,
       }).select().single();
 
+      if (orgInsErr) {
+        console.error("planner_organizations insert:", orgInsErr);
+        throw new Error(
+          "Gagal membuat organisasi: " + orgInsErr.message + ". Pastikan migrasi SQL Planner sudah dijalankan di Supabase.",
+        );
+      }
+
       if (newOrg) {
-        await sb.from("planner_org_members").insert({
+        const { error: memInsErr } = await sb.from("planner_org_members").insert({
           org_id: newOrg.id, user_id: STATE.user.id, role: "owner", accepted_at: new Date().toISOString(),
         });
+        if (memInsErr) {
+          console.error("planner_org_members insert:", memInsErr);
+          throw new Error("Gagal menambahkan keanggotaan: " + memInsErr.message);
+        }
         STATE.org = newOrg;
         STATE.orgRole = "owner";
       }

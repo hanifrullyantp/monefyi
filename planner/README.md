@@ -20,6 +20,10 @@ URL bertipe **`…-git-main-….vercel.app`** (preview) sering memakai **Deploym
 
 Repo ini **tidak lagi memakai rewrite** `/(.*) → /index.html` di `vercel.json` (app satu halaman; tidak perlu fallback SPA), agar aset statis tidak pernah tertukar dengan `index.html`.
 
+**Login langsung setelah Daftar:** aplikasi mencoba **Masuk otomatis** setelah `signUp` jika Supabase mengizinkan (biasanya **Confirm email** dimatikan: Supabase → **Authentication** → **Providers** → **Email** → nonaktifkan *Confirm email*).
+
+**Admin panel:** email di `js/config.js` → `adminEmails` mendapat akses panel admin. **Jangan** menyimpan password di Git; buat pengguna di **Supabase Dashboard → Authentication → Users** (atau daftar lewat UI), lalu set password di sana.
+
 Supabase (database + Edge Functions) dipakai bersama project Supabase utama repo ini.
 
 ### Migrasi SQL (Planner)
