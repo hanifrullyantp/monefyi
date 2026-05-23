@@ -12,7 +12,36 @@ PWA manajemen proyek (Vite + HTML/CSS/JS). Deploy terpisah dari app Monefyi di r
 6. **Node.js:** pakai **20.x** atau lebih baru (`engines` di `package.json`).
 7. Deploy, lalu tambahkan domain di project Vercel ini.
 
-Supabase Edge Functions khusus planner ada di `planner/supabase/` — deploy function lewat Supabase CLI/Dashboard, bukan lewat Vercel.
+Supabase (database + Edge Functions) dipakai bersama project Supabase utama repo ini.
+
+### Migrasi SQL (Planner)
+
+File sumber skema: `planner/supabase/migrations/001_planner_core_schema.sql` (dokumentasi / rujukan).  
+**Yang dijalankan CLI** adalah salinan berversi di:
+
+`my-supabase-project/supabase/migrations/20260523120000_planner_core_schema.sql`
+
+Dari root repo, set token lalu push migrasi + deploy function:
+
+```bash
+export SUPABASE_ACCESS_TOKEN="sbp_..."   # Dashboard Supabase → Account → Access Tokens
+export SUPABASE_PROJECT_REF="..."        # Settings → General → Reference ID (wajib jika belum pernah `supabase link`)
+./scripts/deploy-planner-supabase.sh
+```
+
+Atau manual:
+
+```bash
+cd my-supabase-project
+npx supabase@latest link --project-ref "$SUPABASE_PROJECT_REF"
+npx supabase@latest db push
+npx supabase@latest functions deploy planner-analyze
+npx supabase@latest functions deploy planner-parse-command
+```
+
+**Secret function:** di Supabase → **Edge Functions** → **Secrets**, tambahkan `GEMINI_API_KEY` agar `planner-parse-command` bisa memanggil Gemini (opsional; tanpa secret, parser mengembalikan pesan “not configured”).
+
+Kode function yang dipakai deploy ada di `my-supabase-project/supabase/functions/planner-*` (disinkronkan dari `planner/supabase/functions/`).
 
 ## Lokal
 

@@ -1,0 +1,40 @@
+# Run from GitHub → Actions → "Supabase Planner migrate & deploy" → Run workflow.
+# Required repository secrets:
+#   SUPABASE_ACCESS_TOKEN  — https://supabase.com/dashboard/account/tokens
+#   SUPABASE_PROJECT_REF   — Project Settings → General → Reference ID
+
+name: Supabase Planner migrate & deploy
+
+on:
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: my-supabase-project
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
+
+      - name: Push database migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase db push
+
+      - name: Deploy Planner Edge Functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase functions deploy planner-analyze
+          supabase functions deploy planner-parse-command
