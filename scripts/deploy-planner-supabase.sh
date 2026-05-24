@@ -24,8 +24,11 @@ if [[ -n "${SUPABASE_PROJECT_REF:-}" ]]; then
   npx --yes supabase@latest link --project-ref "$SUPABASE_PROJECT_REF"
 fi
 
+echo "==> Repairing orphan remote migration markers (if any; safe to skip if versions absent)..."
+npx --yes supabase@latest migration repair --status reverted --linked 20260507151500 20260507162500 2>/dev/null || true
+
 echo "==> Pushing database migrations (includes Planner core schema)..."
-npx --yes supabase@latest db push
+npx --yes supabase@latest db push --yes
 
 echo "==> Deploying Edge Functions: planner-analyze, planner-parse-command..."
 npx --yes supabase@latest functions deploy planner-analyze

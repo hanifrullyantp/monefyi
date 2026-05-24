@@ -58,10 +58,15 @@ Atau manual:
 ```bash
 cd my-supabase-project
 npx supabase@latest link --project-ref "$SUPABASE_PROJECT_REF"
-npx supabase@latest db push
+npx supabase@latest migration repair --status reverted --linked 20260507151500 20260507162500 || true
+npx supabase@latest db push --yes
 npx supabase@latest functions deploy planner-analyze
 npx supabase@latest functions deploy planner-parse-command
 ```
+
+**Jika `db push` gagal:** (1) Nama file di `my-supabase-project/supabase/migrations/` harus pola **`YYYYMMDDHHMMSS_nama.sql`** — file lain di-skip CLI. (2) Pesan **Remote migration versions not found in local** artinya tabel riwayat di project remote punya versi yang **tidak ada file-nya** di repo (mis. migrasi lama dari mesin lain). Jalankan `migration repair --status reverted --linked <versi...>` untuk versi yang disebut log, lalu `db push` lagi. Workflow GitHub **Supabase Planner migrate & deploy** sudah mencoba repair untuk `20260507151500` dan `20260507162500` sebelum push; jika log Anda menyebut versi lain, tambahkan ke perintah repair atau ke step workflow.
+
+**Setelah push:** di SQL Editor, `select to_regclass('public.planner_organizations');` harus **bukan** `null`.
 
 **Secret function:** di Supabase → **Edge Functions** → **Secrets**, tambahkan `GEMINI_API_KEY` agar `planner-parse-command` bisa memanggil Gemini (opsional; tanpa secret, parser mengembalikan pesan “not configured”).
 
