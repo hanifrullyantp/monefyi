@@ -3702,6 +3702,8 @@ function openTutorialTopic(id) {
 
       openSheet(affBackdrop, affSheet);
     }
+    window.openAffiliate = openAffModal;
+
     function closeAffModal(){ closeSheet(affBackdrop, affSheet); }
     affBackdrop.addEventListener('click', (e)=>{
       if (e.target?.dataset?.closeAff === 'true') closeAffModal();

@@ -74,13 +74,64 @@
     }
 
     function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+    function showToast(message, kind='success'){
+      const root = $('#toastRoot');
+      if (!root) return;
+      const el = document.createElement('div');
+      el.className = `toast ${kind}`;
+      el.textContent = String(message || '');
+      root.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(6px)';
+        setTimeout(() => el.remove(), 180);
+      }, 3000);
+    }
 
     function parseNumberInput(v){
       return Number(String(v||'').replace(/[^0-9]/g,'')) || 0;
     }
+    function parseAmountFlexible(v){
+      if (typeof v === 'number' && Number.isFinite(v)) return Math.round(v);
+      let s = String(v ?? '').trim();
+      if (!s) return 0;
+      s = s.replace(/[^\d,.-]/g, '');
+      if (!s) return 0;
+      const hasComma = s.includes(',');
+      const hasDot = s.includes('.');
+      if (hasComma && hasDot) {
+        if (s.lastIndexOf(',') > s.lastIndexOf('.')) s = s.replace(/\./g, '').replace(',', '.');
+        else s = s.replace(/,/g, '');
+      } else if (hasComma) {
+        const parts = s.split(',');
+        if (parts.length === 2 && parts[1].length <= 2) s = `${parts[0]}.${parts[1]}`;
+        else s = s.replace(/,/g, '');
+      } else if (hasDot) {
+        const parts = s.split('.');
+        if (!(parts.length === 2 && parts[1].length <= 2)) s = s.replace(/\./g, '');
+      }
+      const n = Number(s);
+      if (!Number.isFinite(n)) return parseNumberInput(v);
+      return Math.round(n);
+    }
 
     function normalizeText(t){
       return (t||'').toLowerCase().replace(/\s+/g,' ').trim();
+    }
+    function categoryEmoji(cat){
+      const c = normalizeText(cat);
+      if (c.includes('makan') || c.includes('minum')) return '🍔';
+      if (c.includes('belanja') || c.includes('grocer')) return '🛒';
+      if (c.includes('transport')) return '🚗';
+      if (c.includes('rumah') || c.includes('utilit')) return '🏠';
+      if (c.includes('kesehatan')) return '💊';
+      if (c.includes('hiburan') || c.includes('hobi')) return '🎮';
+      if (c.includes('pendidikan')) return '📚';
+      if (c.includes('pakaian') || c.includes('gaya')) return '👗';
+      if (c.includes('tabung') || c.includes('invest')) return '💰';
+      if (c.includes('bisnis') || c.includes('kerja')) return '💼';
+      if (c.includes('hadiah') || c.includes('donasi')) return '🎁';
+      return '➕';
     }
 async function loadBudgets(){
   // Pastikan koneksi database aktif
@@ -789,6 +840,7 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
       },
       filters: { q:'', type:'', category:'', account:'' },
       parsedDraft: null,
+      batchDraft: null,
       receiptDraft: null,
       editId: null,
       focusCategory: null,
@@ -798,6 +850,7 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
         receiptPickerOpened: false,
         receiptOcrRunning: false,
         accountDetailOpen: false,
+        txView: 'card',
       },
       accountDetail: {
         account: null,
@@ -851,6 +904,24 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
       const mnEn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
       const mn = (lang === 'en') ? mnEn[m-1] : mnId[m-1];
       return `${mn} ${y}`;
+    }
+
+    function humanPeriodLabel() {
+      const preset = STATE.period?.preset || '';
+      if (preset === 'this_week') return (STATE.settings?.lang === 'en') ? 'This week' : 'Minggu ini';
+      if (preset === 'today') return (STATE.settings?.lang === 'en') ? 'Today' : 'Hari ini';
+      if (preset === 'yesterday') return (STATE.settings?.lang === 'en') ? 'Yesterday' : 'Kemarin';
+      if (preset === 'this_month' || preset === 'last_month') return STATE.period.label || monthLabel(toMonthKey(STATE.period.end));
+      if (preset === 'three_months') return (STATE.settings?.lang === 'en') ? 'Last 3 months' : '3 Bulan';
+      if (preset === 'six_months') return (STATE.settings?.lang === 'en') ? 'Last 6 months' : '6 Bulan';
+      if (preset === 'this_year') return (STATE.settings?.lang === 'en') ? 'This year' : `Tahun ${new Date().getFullYear()}`;
+      return STATE.period.label || monthLabel(toMonthKey(STATE.period.end));
+    }
+    function syncPresetChipActive() {
+      const current = String(STATE.period?.preset || 'this_month');
+      $$('.period-preset').forEach((el) => {
+        el.classList.toggle('active', String(el.getAttribute('data-preset') || '') === current);
+      });
     }
 
     function dateLabelRange(startISO, endISO){
@@ -2190,12 +2261,7 @@ async function upsertTransaction_legacy_local(tx) {
 const endISO = STATE.period.end;
 const startISO = STATE.period.start;
 
-const compact =
-  (toMonthKey(startISO) === toMonthKey(endISO) &&
-    startISO === toISODate(startOfMonth(mk)) &&
-    endISO === toISODate(endOfMonth(mk)))
-    ? mkLabel
-    : (startISO === endISO ? startISO : `${startISO}–${endISO}`);
+const compact = humanPeriodLabel();
 
 ['#saldoMonth', '#saldoMonthDesktop'].forEach((sel) => {
   const el = $(sel);
@@ -2221,6 +2287,11 @@ const compact =
       $('#userBadge').textContent = (STATE.user.name||'U').trim().slice(0,1).toUpperCase();
       $('#uName').value = STATE.user.name || '';
       $('#uEmail').value = STATE.user.email || '';
+      $$('.tx-chip').forEach((c) => {
+        c.classList.toggle('active', (c.getAttribute('data-type') || '') === String(STATE.filters.type || ''));
+      });
+      syncPresetChipActive();
+      syncTxViewToggle();
 
       // Top badge next to user: admin / lifetime / exp: d/m/yy
       const badge = $('#userPlanBadge');
@@ -2340,8 +2411,30 @@ renderAccountsSettings();
     const el = $(sel);
     if (!el) return;
 
-    el.textContent = saldoText;
-    el.className = 'mt-1 text-2xl font-semibold';
+    if (isCalculating) {
+      el.textContent = '';
+      el.className = 'mt-1 text-2xl font-semibold skeleton-green';
+      el.style.minHeight = '32px';
+      el.style.minWidth = '180px';
+      el.style.display = 'inline-block';
+    } else {
+      const prev = Number(STATE.ui.lastSaldoAnimated ?? 0);
+      const next = Number(saldo || 0);
+      const startAt = performance.now();
+      const duration = 360;
+      el.className = 'mt-1 text-3xl font-bold';
+      el.style.minHeight = '';
+      el.style.minWidth = '';
+      el.style.display = '';
+      const step = (ts) => {
+        const p = Math.min(1, (ts - startAt) / duration);
+        const val = Math.round(prev + ((next - prev) * p));
+        el.textContent = formatIDR(val);
+        if (p < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+      STATE.ui.lastSaldoAnimated = next;
+    }
 
     if (!document.body.classList.contains('theme-light')) {
       el.style.color =
@@ -2358,9 +2451,7 @@ renderAccountsSettings();
   const s = sumByType(txs);
   const netStr = formatCompactIDR(s.net);
 
-  const subText = STATE.ui.dashboardOpen
-    ? t('saldo.period_net_close', { net: netStr })
-    : t('saldo.period_net_open', { net: netStr });
+  const subText = `Bulan ini: +${formatCompactIDR(s.income)} (income) | −${formatCompactIDR(s.expense)} (expense)`;
 
   // Update subtext saldo (mobile + desktop)
   ['#kpiSaldoSub', '#kpiSaldoSubDesktop'].forEach((sel) => {
@@ -2368,6 +2459,24 @@ renderAccountsSettings();
     if (!el) return;
     el.textContent = subText;
   });
+
+  const savingRate = s.income > 0 ? Math.round(((s.income - s.expense) / s.income) * 100) : 0;
+  const budgetRow = budgetForPeriod();
+  const planned = Number(budgetRow?.planned || 0);
+  const budgetCompliance = planned > 0 ? Math.max(0, 100 - Math.round((Math.max(0, s.expense - planned) / planned) * 100)) : 60;
+  const healthScore = Math.max(0, Math.min(100, Math.round((savingRate * 0.5) + (budgetCompliance * 0.5))));
+  const gauge = $('#healthScoreGauge');
+  const text = $('#healthScoreText');
+  if (gauge) {
+    let col = 'rgba(16,185,129,.95)';
+    if (healthScore < 45) col = 'rgba(244,63,94,.95)';
+    else if (healthScore < 70) col = 'rgba(245,158,11,.95)';
+    gauge.style.background = col;
+  }
+  if (text) {
+    const label = healthScore >= 70 ? 'Baik' : (healthScore >= 45 ? 'Waspada' : 'Perlu perhatian');
+    text.textContent = `Skor: ${healthScore} · ${label}`;
+  }
 }
     function renderKPIs(){
       const txs = getTransactionsInPeriod();
@@ -2402,6 +2511,7 @@ renderAccountsSettings();
             icon: "/icons/icon-192.svg"
           });
           localStorage.setItem('last_budget_notif', today);
+          showToast(`Budget hampir habis (${pct.toFixed(0)}%)`, 'warn');
         }
       }
     }
@@ -2506,8 +2616,15 @@ function generateSmartBudgetRecommendation() {
         $('#budgetPct').textContent = '—';
         $('#budgetBar').style.width = '0%';
         $('#budgetHint').textContent = t('budget.set_hint');
+        const donut = $('#budgetDonut');
+        if (donut) donut.style.background = 'conic-gradient(rgba(16,185,129,.85) 0 100%)';
+        $('#budgetDonutText') && ($('#budgetDonutText').textContent = 'Set');
+        $('#budgetRemainingLabel') && ($('#budgetRemainingLabel').textContent = 'Budget belum diatur');
+        $('#budgetTopCats') && ($('#budgetTopCats').innerHTML = `<div class="rounded-xl app-chip p-2">Atur budget untuk melihat progres kategori.</div>`);
+        $('#budgetEmptyCta')?.classList.remove('hidden');
         return;
       }
+      $('#budgetEmptyCta')?.classList.add('hidden');
 
       const diff = planned - actual;
       const pct = planned > 0 ? clamp((actual / planned) * 100, 0, 999) : 0;
@@ -2523,6 +2640,28 @@ function generateSmartBudgetRecommendation() {
       $('#budgetDiff').style.color = diff >= 0 ? 'rgba(167,243,208,.95)' : 'rgba(254,202,202,.95)';
 
       $('#budgetHint').textContent = `Sisa budget: ${formatIDR(Math.max(0, planned-actual))}.`;
+
+      const remaining = Math.max(0, planned - actual);
+      const usedPct = Math.max(0, Math.min(100, (actual / planned) * 100));
+      const donut = $('#budgetDonut');
+      if (donut) donut.style.background = `conic-gradient(rgba(244,63,94,.85) 0 ${usedPct}%, rgba(16,185,129,.85) ${usedPct}% 100%)`;
+      $('#budgetDonutText') && ($('#budgetDonutText').textContent = `${Math.max(0, 100 - Math.round(usedPct))}%`);
+      $('#budgetRemainingLabel') && ($('#budgetRemainingLabel').textContent = `Sisa ${formatCompactIDR(remaining)}`);
+
+      const byCat = groupExpenseByCategory(txs).slice(0,3);
+      const top = $('#budgetTopCats');
+      if (top) {
+        top.innerHTML = byCat.length ? byCat.map((c) => {
+          const catBudget = Number((budgetForPeriod().categories || {})[c.category] || 0);
+          const rpct = catBudget > 0 ? Math.min(100, Math.round((c.amount / catBudget) * 100)) : 0;
+          const left = Math.max(0, catBudget - c.amount);
+          return `<div>
+            <div class="flex items-center justify-between gap-2"><span class="truncate">${escapeHtml(c.category)}</span><span>${rpct}%</span></div>
+            <div class="h-1.5 rounded-full mt-1" style="background: color-mix(in srgb, var(--app-border) 40%, transparent)"><div class="h-1.5 rounded-full" style="width:${Math.min(100,rpct)}%;background:${rpct>=100?'rgba(244,63,94,.8)':'rgba(16,185,129,.8)'}"></div></div>
+            <div class="text-[11px] app-muted2 mt-0.5">${left>0?`${formatCompactIDR(left)} sisa`:'Over'}</div>
+          </div>`;
+        }).join('') : `<div class="text-[11px] app-muted2">Belum ada realisasi kategori.</div>`;
+      }
     }
 
     function renderCharts(){
@@ -2750,14 +2889,145 @@ function generateSmartBudgetRecommendation() {
       return `${wd}, ${iso}`;
     }
 
-    function renderTransactions(){
-      const txs = getFilteredTransactions();
-      $('#txCount').textContent = t('tx.count', { n: txs.length }) + (STATE.focusCategory ? t('tx.focus', { cat: STATE.focusCategory }) : '');
+    const TX_TABLE_COLUMNS = ['date','type','category','account','payment_method','merchant','notes','amount'];
+    let txInlineRefreshTimer = null;
+    function isDesktopViewport(){
+      return window.matchMedia('(min-width: 768px)').matches;
+    }
+    function syncTxViewToggle(){
+      const current = String(STATE.ui.txView || 'card');
+      $$('.tx-view-btn').forEach((btn) => {
+        btn.classList.toggle('active', (btn.getAttribute('data-view') || 'card') === current);
+      });
+    }
+    function scheduleInlineRefresh(){
+      if (txInlineRefreshTimer) clearTimeout(txInlineRefreshTimer);
+      txInlineRefreshTimer = setTimeout(() => {
+        updateSaldoAsync().catch(()=>{});
+      }, 450);
+    }
+    function normalizeTxCellValue(col, raw){
+      const val = String(raw ?? '').trim();
+      if (col === 'amount') return parseAmountFlexible(val);
+      if (col === 'type') return ['income','expense','transfer'].includes(val) ? val : 'expense';
+      if (col === 'date') return /^\d{4}-\d{2}-\d{2}$/.test(val) ? val : toISODate(new Date());
+      if (col === 'category') return val || 'Lainnya';
+      if (col === 'account') return val || 'Cash';
+      if (col === 'payment_method') return val || 'Cash';
+      return val;
+    }
+    async function persistInlineTransaction(tx){
+      tx.updated_at = new Date().toISOString();
+      if (STATE.db.enabled && STATE.db.user) await dbUpsertTransaction(tx);
+      ensureAccountRegistered(tx.account);
+      scheduleInlineRefresh();
+    }
+    async function handleTxTablePaste(event, txs){
+      const target = event.target;
+      const startRow = Number(target?.getAttribute('data-row'));
+      const startCol = Number(target?.getAttribute('data-col'));
+      if (!Number.isFinite(startRow) || !Number.isFinite(startCol)) return;
+      const text = event.clipboardData?.getData('text/plain') || '';
+      if (!text || !text.includes('\t')) return;
+      event.preventDefault();
 
+      const rows = text.replace(/\r/g, '').split('\n').filter(Boolean).map(r => r.split('\t'));
+      const touched = new Set();
+      for (let r = 0; r < rows.length; r++) {
+        const tx = txs[startRow + r];
+        if (!tx) continue;
+        for (let c = 0; c < rows[r].length; c++) {
+          const colName = TX_TABLE_COLUMNS[startCol + c];
+          if (!colName) continue;
+          tx[colName] = normalizeTxCellValue(colName, rows[r][c]);
+        }
+        touched.add(tx);
+      }
+
+      for (const tx of touched) {
+        try { await persistInlineTransaction(tx); } catch (e) { console.warn('inline paste save failed', e); }
+      }
+      renderTransactionsTable(getFilteredTransactions());
+      showToast('Paste tabel berhasil diproses', 'success');
+    }
+    function renderTransactionsTable(txs){
+      const table = $('#txTable');
+      if (!table) return;
+      const hint = $('#txTableHint');
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>Tanggal</th>
+            <th>Tipe</th>
+            <th>Kategori</th>
+            <th>Akun</th>
+            <th>Metode</th>
+            <th>Merchant</th>
+            <th>Catatan</th>
+            <th class="text-right">Nominal</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${txs.map((tx, rowIdx) => `
+            <tr data-tx-id="${escapeHtmlAttr(tx.id)}">
+              <td><input class="tx-cell-input" data-row="${rowIdx}" data-col="0" data-col-name="date" value="${escapeHtmlAttr(tx.date || '')}" /></td>
+              <td>
+                <select class="tx-cell-select" data-row="${rowIdx}" data-col="1" data-col-name="type">
+                  <option value="income" ${tx.type==='income'?'selected':''}>income</option>
+                  <option value="expense" ${tx.type==='expense'?'selected':''}>expense</option>
+                  <option value="transfer" ${tx.type==='transfer'?'selected':''}>transfer</option>
+                </select>
+              </td>
+              <td><input class="tx-cell-input" data-row="${rowIdx}" data-col="2" data-col-name="category" value="${escapeHtmlAttr(tx.category || '')}" /></td>
+              <td><input class="tx-cell-input" data-row="${rowIdx}" data-col="3" data-col-name="account" value="${escapeHtmlAttr(tx.account || '')}" /></td>
+              <td><input class="tx-cell-input" data-row="${rowIdx}" data-col="4" data-col-name="payment_method" value="${escapeHtmlAttr(tx.payment_method || '')}" /></td>
+              <td><input class="tx-cell-input" data-row="${rowIdx}" data-col="5" data-col-name="merchant" value="${escapeHtmlAttr(tx.merchant || '')}" /></td>
+              <td><input class="tx-cell-input" data-row="${rowIdx}" data-col="6" data-col-name="notes" value="${escapeHtmlAttr(tx.notes || '')}" /></td>
+              <td><input class="tx-cell-input text-right" data-row="${rowIdx}" data-col="7" data-col-name="amount" value="${escapeHtmlAttr(String(Number(tx.amount || 0)))}" /></td>
+              <td>
+                <button class="tap rounded-lg px-2 py-1 text-[11px]" data-inline-edit="${escapeHtmlAttr(tx.id)}" style="background: rgba(99,102,241,.14); border:1px solid rgba(99,102,241,.25); color: rgba(199,210,254,.95)">Detail</button>
+                <button class="tap rounded-lg px-2 py-1 text-[11px]" data-inline-del="${escapeHtmlAttr(tx.id)}" style="background: rgba(244,63,94,.14); border:1px solid rgba(244,63,94,.25); color: rgba(254,202,202,.95)">Hapus</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      `;
+      if (hint) hint.textContent = `Mode tabel desktop aktif • ${txs.length} baris`;
+
+      table.querySelectorAll('.tx-cell-input, .tx-cell-select').forEach((el) => {
+        const saveCell = async () => {
+          const row = Number(el.getAttribute('data-row'));
+          const col = String(el.getAttribute('data-col-name') || '');
+          const tx = txs[row];
+          if (!tx || !col) return;
+          tx[col] = normalizeTxCellValue(col, el.value);
+          if (col === 'amount') el.value = String(Number(tx.amount || 0));
+          try {
+            await persistInlineTransaction(tx);
+            if (hint) hint.textContent = 'Tersimpan';
+          } catch (e) {
+            console.warn('inline save failed', e);
+            if (hint) hint.textContent = 'Gagal simpan. Cek koneksi.';
+          }
+        };
+        if (el.classList.contains('tx-cell-select')) el.addEventListener('change', saveCell);
+        else el.addEventListener('blur', saveCell);
+        el.addEventListener('paste', (e) => { handleTxTablePaste(e, txs).catch(console.warn); });
+      });
+
+      table.querySelectorAll('[data-inline-edit]').forEach((btn) => {
+        btn.addEventListener('click', () => openEdit(btn.getAttribute('data-inline-edit')));
+      });
+      table.querySelectorAll('[data-inline-del]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          await deleteTransaction(btn.getAttribute('data-inline-del'));
+        });
+      });
+    }
+    function renderTransactionsCards(txs){
       const list = $('#txList');
       list.innerHTML = '';
-      $('#txEmpty').classList.toggle('hidden', txs.length !== 0);
-
       const groups = new Map();
       for (const tx of txs) {
         if (!groups.has(tx.date)) groups.set(tx.date, []);
@@ -2789,8 +3059,8 @@ function generateSmartBudgetRecommendation() {
 
           row.innerHTML = `
             <div class="flex items-start gap-3">
-              <div class="mt-0.5 w-10 h-10 rounded-2xl flex items-center justify-center text-xs font-semibold" style="border: 1px solid var(--app-border); background: color-mix(in srgb, var(--app-surface2) 85%, transparent)">
-                ${escapeHtml((tx.category||'').split(' ')[0].slice(0,2).toUpperCase() || 'TX')}
+              <div class="mt-0.5 w-10 h-10 rounded-2xl flex items-center justify-center text-base font-semibold" style="border: 1px solid var(--app-border); background: color-mix(in srgb, var(--app-surface2) 85%, transparent)">
+                ${escapeHtml(categoryEmoji(tx.category))}
               </div>
               <div class="min-w-0 flex-1">
                 <div class="flex items-start justify-between gap-3">
@@ -2806,11 +3076,37 @@ function generateSmartBudgetRecommendation() {
                 </div>
               </div>
             </div>
+            <div class="mt-2 flex items-center justify-end gap-2 tx-row-actions">
+              <button class="tap rounded-lg app-chip px-2 py-1 text-[11px]" data-tx-edit="${escapeHtmlAttr(tx.id)}">Edit</button>
+              <button class="tap rounded-lg px-2 py-1 text-[11px]" style="background: rgba(244,63,94,.14); border:1px solid rgba(244,63,94,.25); color: rgba(254,202,202,.95)" data-tx-del="${escapeHtmlAttr(tx.id)}">Hapus</button>
+            </div>
           `;
           row.addEventListener('click', () => openEdit(tx.id));
+          row.querySelector('[data-tx-edit]')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openEdit(tx.id);
+          });
+          row.querySelector('[data-tx-del]')?.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            await deleteTransaction(tx.id);
+          });
           list.appendChild(row);
         }
       }
+    }
+    function renderTransactions(){
+      const txs = getFilteredTransactions();
+      $('#txCount').textContent = t('tx.count', { n: txs.length }) + (STATE.focusCategory ? t('tx.focus', { cat: STATE.focusCategory }) : '');
+
+      const list = $('#txList');
+      const tableWrap = $('#txTableWrap');
+      const useTable = isDesktopViewport() && String(STATE.ui.txView || 'card') === 'table';
+      list.classList.toggle('hidden', useTable);
+      if (tableWrap) tableWrap.classList.toggle('hidden', !useTable);
+      $('#txEmpty').classList.toggle('hidden', txs.length !== 0);
+      if (txs.length === 0) return;
+      if (useTable) renderTransactionsTable(txs);
+      else renderTransactionsCards(txs);
     }
 
   function rerender(){
@@ -3002,6 +3298,9 @@ function openBudget(){
   // Render & Buka Popup
   renderBudgetSheet();
   openSheet(budgetBackdrop, budgetSheet);
+  $$('.nav-item[data-nav]').forEach((el) => {
+    el.classList.toggle('active', el.getAttribute('data-nav') === 'budget');
+  });
   
   // Auto focus ke income jika masih kosong
   if(income === 0) {
@@ -3016,7 +3315,12 @@ function openBudget(){
     // Advisor sheet
     const advisorBackdrop = $('#advisorBackdrop');
     const advisorSheet = $('#advisorSheet');
-    function openAdvisor(){ openSheet(advisorBackdrop, advisorSheet); }
+    function openAdvisor(){
+      openSheet(advisorBackdrop, advisorSheet);
+      $$('.nav-item[data-nav]').forEach((el) => {
+        el.classList.toggle('active', el.getAttribute('data-nav') === 'advisor');
+      });
+    }
     function closeAdvisor(){ closeSheet(advisorBackdrop, advisorSheet); }
     advisorBackdrop.addEventListener('click', (e)=>{
       if (e.target?.dataset?.closeAdvisor === 'true') closeAdvisor();
@@ -3306,19 +3610,61 @@ function openTutorialTopic(id) {
       }
     });
 
+    async function callAdminUsersFunction({ q='', plan='all', status='all' } = {}){
+      if (!STATE.db.enabled || !STATE.db.session?.access_token) throw new Error('Not authed');
+      const url = `${SUPABASE_URL.replace(/\/+$/,'')}/functions/v1/monefyi-admin-users`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${STATE.db.session.access_token}`,
+        },
+        body: JSON.stringify({ q, plan, status, page: 1, pageSize: 100 }),
+      });
+      const txt = await res.text().catch(()=> '');
+      if (!res.ok) throw new Error(txt || `HTTP ${res.status}`);
+      return JSON.parse(txt || '{}');
+    }
+
     async function adminFetchUsers(){
       const q = ($('#adminUserSearch').value || '').trim();
-      const plan = ($('#adminPlanFilter').value || '').trim();
-      const status = ($('#adminStatusFilter').value || '').trim();
+      const plan = ($('#adminPlanFilter').value || 'all').trim();
+      const status = ($('#adminStatusFilter').value || 'all').trim();
       $('#adminUsersStatus').textContent = 'Memuat…';
-      await sleep(200);
-      $('#adminUsersList').innerHTML = `
-        <div class="rounded-2xl app-card p-4 text-sm app-muted">
-          Endpoint admin belum ada. Buat Edge Function <span class="font-semibold">monefyi-admin-users</span> untuk mengambil daftar user & plan.
-          <div class="mt-2 text-xs app-muted2">Filter: q=${escapeHtml(q||'—')} • plan=${escapeHtml(plan||'—')} • status=${escapeHtml(status||'—')}</div>
-        </div>
-      `;
-      $('#adminUsersStatus').textContent = '—';
+      try {
+        const out = await callAdminUsersFunction({ q, plan, status });
+        const items = Array.isArray(out?.items) ? out.items : [];
+        if (!items.length) {
+          $('#adminUsersList').innerHTML = `<div class="rounded-2xl app-card p-4 text-sm app-muted">Tidak ada user sesuai filter.</div>`;
+          $('#adminUsersStatus').textContent = '0 user';
+          return;
+        }
+        $('#adminUsersList').innerHTML = items.map((u)=>{
+          const role = String(u.profile_role || 'user');
+          const planType = String(u.plan_type || 'none');
+          const planStatus = String(u.plan_status || 'none');
+          const expiry = u.expires_at ? new Date(u.expires_at).toLocaleDateString('id-ID') : '—';
+          return `
+            <div class="rounded-2xl app-card p-3 text-sm mb-2">
+              <div class="flex items-center justify-between gap-2">
+                <div class="font-semibold">${escapeHtml(u.name || u.email || 'User')}</div>
+                <div class="text-xs app-muted2">${escapeHtml(role)}</div>
+              </div>
+              <div class="mt-1 text-xs app-muted">${escapeHtml(u.email || '-')}</div>
+              <div class="mt-2 text-xs app-muted2">
+                Plan: <span class="font-semibold">${escapeHtml(planType)}</span> •
+                Status: <span class="font-semibold">${escapeHtml(planStatus)}</span> •
+                Exp: ${escapeHtml(expiry)}
+              </div>
+            </div>
+          `;
+        }).join('');
+        $('#adminUsersStatus').textContent = `${items.length} user`;
+      } catch (e) {
+        console.error('adminFetchUsers failed:', e);
+        $('#adminUsersList').innerHTML = `<div class="rounded-2xl app-card p-4 text-sm app-muted">Gagal memuat user admin.</div>`;
+        $('#adminUsersStatus').textContent = 'Gagal.';
+      }
     }
 
     $('#btnAdminRefreshUsers')?.addEventListener('click', adminFetchUsers);
@@ -3356,6 +3702,8 @@ function openTutorialTopic(id) {
 
       openSheet(affBackdrop, affSheet);
     }
+    window.openAffiliate = openAffModal;
+
     function closeAffModal(){ closeSheet(affBackdrop, affSheet); }
     affBackdrop.addEventListener('click', (e)=>{
       if (e.target?.dataset?.closeAff === 'true') closeAffModal();
@@ -3677,8 +4025,11 @@ function openTutorialTopic(id) {
       if (typeof updateSaldoAsync === 'function') updateSaldoAsync();
     } catch (e) {
       console.error("DB Save failed:", e);
+      showToast('Gagal menyimpan. Coba lagi', 'error');
+      return;
     }
   }
+  showToast('Transaksi tersimpan', 'success');
 }
 
    async function deleteTransaction(id) {
@@ -3698,8 +4049,11 @@ function openTutorialTopic(id) {
       await dbDeleteTransaction(id);
     } catch (e) {
       console.error("Gagal hapus di database", e);
+      showToast('Gagal menghapus transaksi', 'error');
+      return;
     }
   }
+  showToast('Transaksi dihapus', 'success');
 }
 
     function getLastUsedAccount(){
@@ -4763,6 +5117,177 @@ $('#btnSaveBudget').addEventListener('click', async () => {
         .map(s => s.replace(/^\s*(?:\d+[\).]\s*)?/,'').trim())
         .filter(Boolean);
     }
+    function normalizeDescForDuplicate(s){
+      return normalizeText(String(s || '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim());
+    }
+    function findPotentialDuplicate(tx){
+      const desc = normalizeDescForDuplicate(tx.description || tx.notes || tx.merchant || '');
+      return STATE.transactions.find((x) => {
+        if (String(x.date || '') !== String(tx.date || '')) return false;
+        if (Number(x.amount || 0) !== Number(tx.amount || 0)) return false;
+        const dx = normalizeDescForDuplicate(x.notes || x.merchant || x.category || '');
+        return desc && dx && (desc.includes(dx) || dx.includes(desc));
+      }) || null;
+    }
+    function renderBatchPreview(){
+      const draft = STATE.batchDraft;
+      const sumEl = $('#batchSummary');
+      const rqEl = $('#batchReviewQueue');
+      const listEl = $('#batchTxList');
+      if (!sumEl || !rqEl || !listEl) return;
+      if (!draft || !Array.isArray(draft.transactions)) {
+        sumEl.textContent = 'Belum ada hasil parse.';
+        rqEl.innerHTML = '';
+        listEl.innerHTML = '';
+        return;
+      }
+      const s = draft.summary || {};
+      sumEl.innerHTML = `
+        <div>📅 ${escapeHtml(draft.date_range?.from || '—')} s/d ${escapeHtml(draft.date_range?.to || '—')}</div>
+        <div>↓ Keluar: ${formatIDR(Number(s.total_expense || 0))} • ↑ Masuk: ${formatIDR(Number(s.total_income || 0))}</div>
+        <div>⚠ Review: ${Number(s.needs_review_count || 0)} • AI: ${Number(s.ai_resolved_count || 0)} • Split: ${Number(s.split_payments || 0)}</div>
+      `;
+      const review = draft.transactions.filter((x) => x.needs_review).slice(0, 20);
+      const btnSaveAll = $('#btnBatchSaveAll');
+      if (btnSaveAll) btnSaveAll.disabled = review.length > 0;
+      rqEl.innerHTML = review.map((tx, i) => `
+        <div class="batch-item review text-xs">
+          <div class="font-semibold">⚠ Review #${i + 1}</div>
+          <div>${escapeHtml(tx.description || tx.notes || '')}</div>
+          <div class="app-muted">${escapeHtml(tx.date)} • ${formatIDR(Number(tx.amount || 0))} • ${(Number(tx.confidence || 0) * 100).toFixed(0)}%</div>
+        </div>
+      `).join('');
+      listEl.innerHTML = draft.transactions.slice(0, 200).map((tx, idx) => `
+        <div class="batch-item ${tx.needs_review ? 'review' : ''}" data-batch-idx="${idx}">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-1 text-xs">
+            <input class="tx-cell-input batch-edit" data-k="date" value="${escapeHtmlAttr(tx.date || '')}" />
+            <input class="tx-cell-input batch-edit" data-k="amount" value="${escapeHtmlAttr(String(Number(tx.amount || 0)))}" />
+            <input class="tx-cell-input batch-edit" data-k="category_name" value="${escapeHtmlAttr(tx.category_name || '')}" />
+            <input class="tx-cell-input batch-edit" data-k="account_name" value="${escapeHtmlAttr(tx.account_name || '')}" />
+          </div>
+          <input class="tx-cell-input batch-edit mt-1" data-k="description" value="${escapeHtmlAttr(tx.description || '')}" />
+          <div class="mt-1 text-[11px] app-muted">${escapeHtml(tx.type || 'expense')} • ${(Number(tx.confidence || 0) * 100).toFixed(0)}%${tx.project_tag ? ` • project: ${escapeHtml(tx.project_tag)}` : ''}</div>
+        </div>
+      `).join('');
+      $$('.batch-item[data-batch-idx]').forEach((box) => {
+        const i = Number(box.getAttribute('data-batch-idx'));
+        const tx = draft.transactions[i];
+        if (!tx) return;
+        box.querySelectorAll('.batch-edit').forEach((inp) => {
+          inp.addEventListener('change', () => {
+            const k = inp.getAttribute('data-k') || '';
+            if (k === 'amount') tx.amount = parseAmountFlexible(inp.value);
+            else tx[k] = inp.value;
+            tx.needs_review = false;
+            tx.confidence = Math.max(Number(tx.confidence || 0.7), 0.9);
+            if (!draft.summary) draft.summary = {};
+            draft.summary.needs_review_count = draft.transactions.filter((x) => x.needs_review).length;
+            renderBatchPreview();
+          });
+        });
+      });
+    }
+    async function parseBatchText(raw){
+      const lines = splitMultiTransactions(raw || '');
+      if (!lines.length) throw new Error('Input kosong');
+      if (!STATE.db.enabled || !STATE.db.session?.access_token) throw new Error('Harus login terlebih dahulu');
+      const url = `${SUPABASE_URL.replace(/\/+$/,'')}/functions/v1/${SUPABASE_FN_PARSE}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${STATE.db.session.access_token}`
+        },
+        body: JSON.stringify({ text: raw, timezone: TZ, mode: 'batch' })
+      });
+      if (!res.ok) {
+        const msg = await res.text().catch(()=>String(res.status));
+        throw new Error(`Batch parse error: ${res.status} ${msg}`);
+      }
+      return await res.json();
+    }
+    async function saveBatchTransactions(onlyValid = false){
+      const draft = STATE.batchDraft;
+      if (!draft || !Array.isArray(draft.transactions) || !draft.transactions.length) return;
+      const status = $('#batchStatus');
+      const source = onlyValid ? draft.transactions.filter((x) => !x.needs_review) : draft.transactions.slice();
+      if (!source.length) {
+        showToast('Tidak ada transaksi untuk disimpan', 'warn');
+        return;
+      }
+      if (!onlyValid && source.some((x) => x.needs_review)) {
+        showToast('Masih ada item perlu review. Gunakan "Simpan yang Valid".', 'warn');
+        return;
+      }
+      let saved = 0;
+      let skippedDup = 0;
+      let failed = 0;
+      for (let i = 0; i < source.length; i++) {
+        const tx = source[i];
+        if (status) status.textContent = `Menyimpan ${i + 1}/${source.length}...`;
+        if (findPotentialDuplicate(tx)) {
+          skippedDup += 1;
+          continue;
+        }
+        const payload = {
+          id: tx.id || uuid(),
+          date: tx.date || toISODate(new Date()),
+          type: tx.type || 'expense',
+          amount: Number(tx.amount || 0),
+          currency: 'IDR',
+          category: tx.category_name || tx.category || 'Lainnya',
+          subcategory: '',
+          account: tx.account_name || 'Cash',
+          merchant: tx.description || '',
+          payment_method: tx.account_name || 'Cash',
+          notes: tx.notes || tx.description || '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          meta: {
+            source: 'parsed_batch',
+            batch_id: draft.parse_session_id,
+            confidence: tx.confidence,
+            flags: tx.flags || [],
+            split_group_id: tx.split_group_id || null,
+            project_tag: tx.project_tag || null
+          }
+        };
+        try {
+          await upsertTransaction(payload);
+          saved += 1;
+        } catch (e) {
+          failed += 1;
+          console.warn('batch save item failed', e);
+        }
+      }
+      // Learning update: description pattern -> category and account aliases.
+      const learn = STATE.settings.batchParserLearning && typeof STATE.settings.batchParserLearning === 'object'
+        ? STATE.settings.batchParserLearning
+        : { description_patterns: {}, account_aliases: {}, project_registry: [] };
+      source.forEach((tx) => {
+        const key = normalizeText(tx.description || tx.notes || '');
+        if (key) learn.description_patterns[key] = {
+          id: tx.category_id || normalizeText(tx.category_name || 'cat_lainnya'),
+          name: tx.category_name || 'Lainnya',
+          emoji: tx.category_emoji || '🧾'
+        };
+        const acc = normalizeText(tx.account_name || '');
+        if (acc) learn.account_aliases[acc] = tx.account_name;
+        if (tx.project_tag) {
+          const arr = Array.isArray(learn.project_registry) ? learn.project_registry : [];
+          if (!arr.includes(tx.project_tag)) arr.push(tx.project_tag);
+          learn.project_registry = arr;
+        }
+      });
+      STATE.settings.batchParserLearning = learn;
+      await saveSettings().catch(()=>{});
+      if (status) status.textContent = '';
+      renderBatchPreview();
+      showToast(`Batch selesai: ${saved} tersimpan, ${skippedDup} duplikat, ${failed} gagal`, failed ? 'warn' : 'success');
+      refreshAllUI();
+      refreshAppSchedules();
+      closeAddSheet();
+    }
 
     async function parseOneLineToTx(line){
       // Use AI if enabled (via Supabase Edge Function), else heuristic
@@ -4819,6 +5344,42 @@ $('#btnSaveBudget').addEventListener('click', async () => {
       $('#parseStatus').textContent = '';
       STATE.parsedDraft = null;
     });
+    $('#btnQuickGoBatch')?.addEventListener('click', () => {
+      setTab('batch');
+    });
+    $('#btnBatchPaste')?.addEventListener('click', async () => {
+      try {
+        const txt = await navigator.clipboard.readText();
+        $('#batchText').value = txt || '';
+      } catch {
+        showToast('Clipboard tidak tersedia', 'warn');
+      }
+    });
+    $('#btnBatchParse')?.addEventListener('click', async () => {
+      const raw = $('#batchText')?.value || '';
+      const btn = $('#btnBatchParse');
+      const status = $('#batchStatus');
+      btn.disabled = true;
+      if (status) status.textContent = 'Parsing...';
+      try {
+        const parsed = await parseBatchText(raw);
+        STATE.batchDraft = parsed;
+        renderBatchPreview();
+        if (status) status.textContent = 'Siap direview';
+      } catch (e) {
+        console.warn(e);
+        if (status) status.textContent = 'Gagal parse';
+        showToast('Gagal parse batch', 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+    $('#btnBatchSaveAll')?.addEventListener('click', async () => {
+      await saveBatchTransactions(false);
+    });
+    $('#btnBatchSaveValid')?.addEventListener('click', async () => {
+      await saveBatchTransactions(true);
+    });
 
     // =========================
     // Manual flow
@@ -4835,7 +5396,16 @@ $('#btnSaveBudget').addEventListener('click', async () => {
 
   $('#btnSaveManual').onclick = async () => {
   const amt = parseNumberInput($('#mAmount').value);
-  if (!amt) return alert("Isi jumlah uang!");
+  if (!amt) {
+    showToast('Isi jumlah uang terlebih dahulu', 'warn');
+    return;
+  }
+  const saveBtn = $('#btnSaveManual');
+  const oldText = saveBtn?.textContent || 'Simpan';
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Menyimpan…';
+  }
 
   const tx = {
     id: uuid(), // atau generate id baru
@@ -4852,10 +5422,15 @@ $('#btnSaveBudget').addEventListener('click', async () => {
   };
 
   // Panggil fungsi yang sudah kita perbaiki di atas
-  await upsertTransaction(tx);
-
-  // Berikan feedback visual
-  $('#manualStatus').textContent = 'Berhasil disimpan!';
+  try {
+    await upsertTransaction(tx);
+    $('#manualStatus').textContent = 'Berhasil disimpan!';
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = oldText;
+    }
+  }
   
   // Tutup sheet
   setTimeout(() => {
@@ -5076,6 +5651,13 @@ $('#btnSaveBudget').addEventListener('click', async () => {
       // We still show planned values, but add note in bullets if utilities detected.
 
       $('#advisorSummary').textContent = ins.summary;
+      const m = ins.metrics || {};
+      $('#advisorMetrics').innerHTML = `
+        <div class="rounded-xl app-chip p-2"><div class="text-[11px] app-muted">Income</div><div class="font-semibold">${formatCompactIDR(m.income||0)}</div></div>
+        <div class="rounded-xl app-chip p-2"><div class="text-[11px] app-muted">Expense</div><div class="font-semibold">${formatCompactIDR(m.expense||0)}</div></div>
+        <div class="rounded-xl app-chip p-2"><div class="text-[11px] app-muted">Net</div><div class="font-semibold">${formatCompactIDR(m.net||0)}</div></div>
+        <div class="rounded-xl app-chip p-2"><div class="text-[11px] app-muted">Saving</div><div class="font-semibold">${m.income>0?Math.round((m.net/m.income)*100):0}%</div></div>
+      `;
 
       const bullets = [];
       bullets.push(...(ins.top_spending_categories?.[0] ? [`Kategori top: ${ins.top_spending_categories[0].category} (${formatIDR(ins.top_spending_categories[0].amount)})`] : []));
@@ -5102,8 +5684,8 @@ $('#btnSaveBudget').addEventListener('click', async () => {
       }
 
       $('#advisorBullets').innerHTML = bullets.length
-        ? bullets.map(b=>`<li>${escapeHtml(b)}</li>`).join('')
-        : '<li class="app-muted">Belum cukup data untuk insight.</li>';
+        ? bullets.map((b, i)=>`<div class="rounded-xl app-chip p-3"><div class="font-semibold text-xs">Insight ${i+1}</div><div class="mt-1">${escapeHtml(b)}</div></div>`).join('')
+        : '<div class="rounded-xl app-chip p-3 app-muted">Belum cukup data untuk insight.</div>';
 
       const b = ins.budget_recommendations;
       const by = b?.by_category || [];
@@ -5222,9 +5804,54 @@ $('#btnSaveBudget').addEventListener('click', async () => {
       }
       renderCoachMessages();
 
-      // Quota UI (stub for now)
-      const q = $('#coachQuota');
-      if (q) q.textContent = ' '; // will be filled when quota implemented
+      refreshCoachQuotaUI();
+      $$('.coach-prompt').forEach((btn) => {
+        btn.onclick = () => {
+          const inp = $('#coachInput');
+          if (!inp) return;
+          inp.value = btn.textContent || '';
+          inp.focus();
+        };
+      });
+
+      if (!STATE.settings.useGemini && !STATE.settings.geminiKey) {
+        $('#coachStatus') && ($('#coachStatus').textContent = 'Aktifkan Monevisor AI di tab Pengaturan untuk pengalaman penuh.');
+        $('#advisorAiEmptyCta')?.classList.remove('hidden');
+      } else {
+        $('#advisorAiEmptyCta')?.classList.add('hidden');
+      }
+    }
+
+    async function fetchCoachQuotaStatus(){
+      if (!STATE.db.enabled || !STATE.db.session?.access_token) throw new Error('Not authed');
+      const url = `${SUPABASE_URL.replace(/\/+$/,'')}/functions/v1/ai-quota-status`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${STATE.db.session.access_token}`
+        },
+        body: JSON.stringify({})
+      });
+      const txt = await res.text().catch(()=> '');
+      if (!res.ok) throw new Error(txt || `HTTP ${res.status}`);
+      return JSON.parse(txt || '{}');
+    }
+
+    async function refreshCoachQuotaUI(){
+      const qEl = $('#coachQuota');
+      if (!qEl) return;
+      qEl.textContent = 'Memuat kuota…';
+      try {
+        const out = await fetchCoachQuotaStatus();
+        const remaining = Number(out?.remaining ?? 0);
+        const limit = Number(out?.limit ?? 0);
+        const used = Number(out?.usedToday ?? 0);
+        qEl.textContent = `Kuota hari ini: ${remaining}/${limit} tersisa (terpakai ${used})`;
+      } catch (e) {
+        console.warn('quota status failed:', e);
+        qEl.textContent = 'Kuota AI tidak tersedia';
+      }
     }
 
     async function callCoachEdgeFunction(message){
@@ -5273,6 +5900,7 @@ $('#btnSaveBudget').addEventListener('click', async () => {
           COACH.messages[idx] = { role:'assistant', text: finalReply, at: Date.now() };
         }
         $('#coachStatus').textContent = '';
+        refreshCoachQuotaUI();
       } catch (e) {
         console.error("Coach send failed:", e);
         const idx = COACH.messages.findIndex(m => m.pending);
@@ -5970,8 +6598,9 @@ $('#btnSaveBudget').addEventListener('click', async () => {
     // =========================
     // Data: CSV
     // =========================
+    const TX_EXPORT_COLS = ['id','date','type','amount','currency','category','subcategory','account','merchant','payment_method','notes','created_at','updated_at'];
     function txToCSVRow(tx){
-      const cols = ['id','date','type','amount','currency','category','subcategory','account','merchant','payment_method','notes','created_at','updated_at'];
+      const cols = TX_EXPORT_COLS;
       const values = cols.map(k => {
         const v = (tx[k] ?? '').toString();
         const escaped = v.replace(/"/g,'""');
@@ -5981,7 +6610,7 @@ $('#btnSaveBudget').addEventListener('click', async () => {
     }
 
     async function exportCSV(){
-      const cols = ['id','date','type','amount','currency','category','subcategory','account','merchant','payment_method','notes','created_at','updated_at'];
+      const cols = TX_EXPORT_COLS;
       const header = cols.join(',');
 
       let rowsTx = STATE.transactions.slice();
@@ -6008,6 +6637,33 @@ $('#btnSaveBudget').addEventListener('click', async () => {
       a.click();
       a.remove();
       setTimeout(()=>URL.revokeObjectURL(url), 500);
+    }
+    async function exportExcel(){
+      if (!window.XLSX) {
+        showToast('Library Excel belum siap. Coba refresh halaman.', 'warn');
+        return;
+      }
+      let rowsTx = STATE.transactions.slice();
+      if (STATE.db.enabled && STATE.db.user) {
+        const { data, error } = await STATE.db.supa
+          .from('transactions')
+          .select('*')
+          .order('date', { ascending: true });
+        if (!error && Array.isArray(data)) rowsTx = data.map(t => ({...t, amount:Number(t.amount||0)}));
+      }
+      const normalized = rowsTx
+        .slice()
+        .sort((a,b) => (a.date.localeCompare(b.date)) || ((a.created_at||'').localeCompare(b.created_at||'')))
+        .map((tx) => {
+          const out = {};
+          TX_EXPORT_COLS.forEach((k) => { out[k] = tx[k] ?? ''; });
+          return out;
+        });
+      const ws = window.XLSX.utils.json_to_sheet(normalized, { header: TX_EXPORT_COLS });
+      const wb = window.XLSX.utils.book_new();
+      window.XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
+      window.XLSX.writeFile(wb, `monefyi_transactions_${new Date().toISOString().slice(0,10)}.xlsx`);
+      showToast('Export Excel berhasil', 'success');
     }
 
     function splitCSVLine(line){
@@ -6051,43 +6707,114 @@ $('#btnSaveBudget').addEventListener('click', async () => {
       }
       return rows;
     }
+    function normalizeImportedRow(obj){
+      const out = { ...(obj || {}) };
+      out.amount = parseAmountFlexible(out.amount) || 0;
+      if (!out.id) out.id = uuid();
+      if (!out.date) out.date = toISODate(new Date());
+      if (!out.type) out.type = 'expense';
+      if (!out.currency) out.currency = 'IDR';
+      if (!out.category) out.category = 'Lainnya';
+      if (!out.account) out.account = 'Cash';
+      if (!out.payment_method) out.payment_method = out.account || 'Cash';
+      if (!out.created_at) out.created_at = new Date().toISOString();
+      if (!out.updated_at) out.updated_at = new Date().toISOString();
+      return out;
+    }
+    function parseExcelRows(binary){
+      if (!window.XLSX) throw new Error('Library XLSX tidak tersedia');
+      const wb = window.XLSX.read(binary, { type: 'array' });
+      const firstSheet = wb.SheetNames?.[0];
+      if (!firstSheet) return [];
+      const ws = wb.Sheets[firstSheet];
+      const rows = window.XLSX.utils.sheet_to_json(ws, { defval: '' });
+      return rows.map((r) => normalizeImportedRow(r));
+    }
+    async function importRowsToDatabase(rows){
+      const payload = rows.map(r => ({
+        ...r,
+        user_id: STATE.db.user.id,
+        amount: Number(r.amount||0),
+        meta: (r.meta && typeof r.meta === 'object') ? r.meta : {}
+      }));
 
+      const CHUNK = 300;
+      for (let i=0;i<payload.length;i+=CHUNK) {
+        const slice = payload.slice(i, i+CHUNK);
+        const { error } = await STATE.db.supa.from('transactions').upsert(slice, { onConflict: 'id' });
+        if (error) throw error;
+      }
+    }
+    function validateImportRows(rows){
+      const valid = [];
+      const invalid = [];
+      rows.forEach((r, idx) => {
+        const reasons = [];
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(String(r.date || ''))) reasons.push('date bukan format YYYY-MM-DD');
+        if (!['income','expense','transfer'].includes(String(r.type || ''))) reasons.push('type harus income/expense/transfer');
+        if (!Number.isFinite(Number(r.amount)) || Number(r.amount) < 0) reasons.push('amount tidak valid');
+        if (!String(r.category || '').trim()) reasons.push('category kosong');
+        if (!String(r.account || '').trim()) reasons.push('account kosong');
+        if (reasons.length) invalid.push({ row: idx + 2, reasons, data: r });
+        else valid.push(r);
+      });
+      return { valid, invalid };
+    }
+    function confirmImportPreview(fileName, validCount, invalidRows){
+      const top = invalidRows.slice(0, 5)
+        .map((x) => `- Baris ${x.row}: ${x.reasons.join(', ')}`)
+        .join('\n');
+      const msg = [
+        `Preview import: ${fileName}`,
+        `Valid: ${validCount} baris`,
+        `Invalid: ${invalidRows.length} baris`,
+        invalidRows.length ? '\nContoh error:\n' + top : '',
+        '\nLanjut import hanya baris valid?'
+      ].join('\n');
+      return window.confirm(msg);
+    }
+
+    $('#btnExportExcel')?.addEventListener('click', () => { exportExcel().catch(console.warn); });
     $('#btnExportCSV').addEventListener('click', exportCSV);
     $('#fileImportCSV').addEventListener('change', async () => {
       const f = $('#fileImportCSV').files?.[0];
       if (!f) return;
       if (!STATE.db.enabled || !STATE.db.user) {
-        alert('Harus login untuk import CSV.');
+        alert('Harus login untuk import Excel/CSV.');
         $('#fileImportCSV').value = '';
         return;
       }
       try {
-        const text = await f.text();
-        const rows = parseCSV(text);
-
-        const payload = rows.map(r => ({
-          ...r,
-          user_id: STATE.db.user.id,
-          amount: Number(r.amount||0),
-          // meta is jsonb in DB; we keep it empty unless you export/import meta explicitly
-          meta: (r.meta && typeof r.meta === 'object') ? r.meta : {}
-        }));
-
-        // upsert in chunks to avoid request size limits
-        const CHUNK = 300;
-        for (let i=0;i<payload.length;i+=CHUNK) {
-          const slice = payload.slice(i, i+CHUNK);
-          const { error } = await STATE.db.supa.from('transactions').upsert(slice, { onConflict: 'id' });
-          if (error) throw error;
+        const lower = String(f.name || '').toLowerCase();
+        let rows = [];
+        if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
+          const binary = await f.arrayBuffer();
+          rows = parseExcelRows(binary);
+        } else {
+          const text = await f.text();
+          rows = parseCSV(text).map((r) => normalizeImportedRow(r));
         }
+        const checked = validateImportRows(rows);
+        if (!checked.valid.length) {
+          alert('Tidak ada baris valid untuk diimport. Cek format data (date/type/amount/category/account).');
+          return;
+        }
+        const ok = confirmImportPreview(f.name || 'file', checked.valid.length, checked.invalid);
+        if (!ok) return;
+        await importRowsToDatabase(checked.valid);
 
         await refreshTransactionsRange();
         for (const t of STATE.transactions) ensureAccountRegistered(t.account);
         rerender();
         closeMenu();
+        if (checked.invalid.length) {
+          showToast(`Import selesai: ${checked.valid.length} valid, ${checked.invalid.length} invalid`, 'warn');
+        } else {
+          showToast(`Import data berhasil (${checked.valid.length} baris)`, 'success');
+        }
       } catch (e) {
         console.warn(e);
-        alert('Gagal import CSV. Pastikan format header sesuai dan file tidak rusak.');
+        alert('Gagal import Excel/CSV. Pastikan header sesuai dan file tidak rusak.');
       } finally {
         $('#fileImportCSV').value = '';
       }
@@ -6243,6 +6970,11 @@ function toggleNav_legacy(mode) {
       } else if (view === 'dash') {
         STATE.ui.dashboardOpen = true;
       }
+      const map = { dash: 'beranda', list: 'transaksi' };
+      const active = map[view] || '';
+      $$('.nav-item[data-nav]').forEach((el) => {
+        el.classList.toggle('active', el.getAttribute('data-nav') === active);
+      });
       rerender();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -6317,6 +7049,21 @@ function toggleNav_legacy(mode) {
         const d = new Date(now); d.setMonth(d.getMonth()-1);
         const mk = toMonthKey(d);
         setPeriod({ preset, startISO: toISODate(startOfMonth(mk)), endISO: toISODate(endOfMonth(mk)), label: monthLabel(mk) });
+      } else if (preset === 'three_months') {
+        const end = new Date(now);
+        const start = new Date(now);
+        start.setMonth(start.getMonth() - 2);
+        setPeriod({ preset, startISO: toISODate(startOfMonth(toMonthKey(start))), endISO: toISODate(end), label: '3 Bulan' });
+      } else if (preset === 'six_months') {
+        const end = new Date(now);
+        const start = new Date(now);
+        start.setMonth(start.getMonth() - 5);
+        setPeriod({ preset, startISO: toISODate(startOfMonth(toMonthKey(start))), endISO: toISODate(end), label: '6 Bulan' });
+      } else if (preset === 'this_year') {
+        const y = now.getFullYear();
+        const s = new Date(y, 0, 1);
+        const e = new Date(y, 11, 31);
+        setPeriod({ preset, startISO: toISODate(s), endISO: toISODate(e), label: `Tahun ${y}` });
       }
     }
 
@@ -6336,6 +7083,19 @@ function toggleNav_legacy(mode) {
       setMonthPopover(false);
     });
 
+    $('#btnPresetThisMonth')?.addEventListener('click', () => applyPreset('this_month'));
+    $('#btnPresetLastMonth')?.addEventListener('click', () => applyPreset('last_month'));
+    $('#btnPresetThisWeek')?.addEventListener('click', () => applyPreset('this_week'));
+    $('#btnPresetThreeMonths')?.addEventListener('click', () => applyPreset('three_months'));
+    $('#btnPresetSixMonths')?.addEventListener('click', () => applyPreset('six_months'));
+    $('#btnPresetThisYear')?.addEventListener('click', () => applyPreset('this_year'));
+    $('#btnPresetCustom')?.addEventListener('click', () => {
+      $('#presetSelect').value = 'custom';
+      STATE.period.preset = 'custom';
+      $('#rangeCard').classList.remove('hidden');
+      $('#presetHint').textContent = 'Pilih tanggal mulai & sampai.';
+    });
+
     $('#btnApplyRange').addEventListener('click', () => {
       const s = $('#rangeStart').value;
       const e = $('#rangeEnd').value;
@@ -6351,13 +7111,32 @@ function toggleNav_legacy(mode) {
       STATE.filters = { q:'', type:'', category:'', account:'' };
       STATE.focusCategory = null;
       $('#qSearch').value = '';
+      $('#txSearchInput') && ($('#txSearchInput').value = '');
       $('#fType').value = '';
       $('#fCategory').value = '';
       $('#fAccount').value = '';
+      $$('.tx-chip').forEach((c) => c.classList.toggle('active', (c.getAttribute('data-type') || '') === ''));
       rerender();
     });
 
     $('#qSearch').addEventListener('input', () => { STATE.filters.q = $('#qSearch').value; rerender(); });
+    $('#txSearchInput')?.addEventListener('input', () => {
+      const v = $('#txSearchInput').value;
+      STATE.filters.q = v;
+      if ($('#qSearch')) $('#qSearch').value = v;
+      rerender();
+    });
+    $('#btnTxSearchToggle')?.addEventListener('click', () => {
+      $('#txSearchWrap')?.classList.toggle('hidden');
+      if (!$('#txSearchWrap')?.classList.contains('hidden')) $('#txSearchInput')?.focus();
+    });
+    $$('.tx-view-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        STATE.ui.txView = btn.getAttribute('data-view') || 'card';
+        syncTxViewToggle();
+        renderTransactions();
+      });
+    });
     $('#fType').addEventListener('change', () => { STATE.filters.type = $('#fType').value; rerender(); });
     $('#fCategory').addEventListener('change', () => {
       STATE.filters.category = $('#fCategory').value;
@@ -6365,6 +7144,15 @@ function toggleNav_legacy(mode) {
       rerender();
     });
     $('#fAccount').addEventListener('change', () => { STATE.filters.account = $('#fAccount').value; rerender(); });
+    $$('.tx-chip').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const type = chip.getAttribute('data-type') || '';
+        STATE.filters.type = type;
+        if ($('#fType')) $('#fType').value = type;
+        $$('.tx-chip').forEach((c) => c.classList.toggle('active', c === chip));
+        rerender();
+      });
+    });
 
     $('#btnFocusCategory').addEventListener('click', () => { STATE.focusCategory = null; rerender(); });
 
@@ -6412,6 +7200,12 @@ function toggleNav_legacy(mode) {
     $('#btnOpenBudget').addEventListener('click', () => { closeMenu(); openBudget(); });
 
     $('#btnMoreAccounts').addEventListener('click', () => openAccounts());
+    $('#btnTxEmptyAdd')?.addEventListener('click', () => openManualAdd());
+    $('#btnBudgetEmptySetup')?.addEventListener('click', () => openBudget());
+    $('#btnEnableAiFromAdvisor')?.addEventListener('click', () => {
+      const keyInput = $('#geminiKey');
+      if (keyInput) keyInput.focus();
+    });
 
     // Budget button
     $('#btnEditBudget').addEventListener('click', openBudget);
