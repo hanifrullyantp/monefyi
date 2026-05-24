@@ -41,7 +41,40 @@
       recognition: null,
     },
     charts: {},
+    /** True when PostgREST reports Planner tables missing (migration not applied). */
+    plannerSchemaMissing: false,
   };
+
+  let plannerSchemaMissingToastShown = false;
+
+  function isPlannerSchemaMissingError(err) {
+    if (!err) return false;
+    if (String(err.code || "") === "PGRST205") return true;
+    const msg = String(err.message || "").toLowerCase();
+    if (msg.includes("schema cache")) return true;
+    if (msg.includes("planner_organizations") || msg.includes("planner_org_members")) return true;
+    return false;
+  }
+
+  function notifyPlannerSchemaMissingOnce() {
+    STATE.plannerSchemaMissing = true;
+    STATE.org = null;
+    STATE.orgMembers = [];
+    STATE.orgRole = null;
+    if (!plannerSchemaMissingToastShown) {
+      plannerSchemaMissingToastShown = true;
+      toast(
+        "Tabel Planner belum ada di Supabase. Jalankan migrasi `20260523120000_planner_core_schema.sql` atau `supabase db push` pada project yang sama dengan `js/config.js`, lalu muat ulang halaman.",
+        8000,
+      );
+    }
+  }
+
+  function syncPlannerSchemaBanner() {
+    const b = document.getElementById("plannerSchemaBanner");
+    if (!b) return;
+    b.classList.toggle("hidden", !STATE.plannerSchemaMissing);
+  }
 
   /* ============================================================
      INIT
@@ -96,6 +129,9 @@
      AUTH
      ============================================================ */
   function showAuth() {
+    STATE.plannerSchemaMissing = false;
+    plannerSchemaMissingToastShown = false;
+    syncPlannerSchemaBanner();
     document.getElementById("authOverlay").classList.add("active");
     document.getElementById("appShell").classList.add("hidden");
   }
@@ -345,11 +381,19 @@
       .eq("user_id", STATE.user.id)
       .limit(1)
       .maybeSingle();
-    if (membershipErr) console.warn("planner_org_members:", membershipErr);
+    if (membershipErr) {
+      console.warn("planner_org_members:", membershipErr);
+      if (isPlannerSchemaMissingError(membershipErr)) {
+        notifyPlannerSchemaMissingOnce();
+        return;
+      }
+    }
 
     if (membership) {
       STATE.org = membership.planner_organizations;
       STATE.orgRole = membership.role;
+      STATE.plannerSchemaMissing = false;
+      plannerSchemaMissingToastShown = false;
     } else {
       const meta = STATE.user.user_metadata || {};
       const orgName = meta.org_name || "Organisasi Saya";
@@ -361,6 +405,10 @@
 
       if (orgInsErr) {
         console.error("planner_organizations insert:", orgInsErr);
+        if (isPlannerSchemaMissingError(orgInsErr)) {
+          notifyPlannerSchemaMissingOnce();
+          return;
+        }
         throw new Error(
           "Gagal membuat organisasi: " + orgInsErr.message + ". Pastikan migrasi SQL Planner sudah dijalankan di Supabase.",
         );
@@ -372,10 +420,16 @@
         });
         if (memInsErr) {
           console.error("planner_org_members insert:", memInsErr);
+          if (isPlannerSchemaMissingError(memInsErr)) {
+            notifyPlannerSchemaMissingOnce();
+            return;
+          }
           throw new Error("Gagal menambahkan keanggotaan: " + memInsErr.message);
         }
         STATE.org = newOrg;
         STATE.orgRole = "owner";
+        STATE.plannerSchemaMissing = false;
+        plannerSchemaMissingToastShown = false;
       }
     }
 
@@ -513,7 +567,11 @@
   window.saveProject = async function (e) {
     e.preventDefault();
     if (!STATE.org || !STATE.org.id) {
-      toast("Organisasi belum siap. Muat ulang halaman atau hubungi admin.");
+      if (STATE.plannerSchemaMissing) {
+        toast("Skema Planner belum di Supabase — ikuti banner kuning di atas, lalu muat ulang.");
+      } else {
+        toast("Organisasi belum siap. Muat ulang halaman atau hubungi admin.");
+      }
       console.error("[planner] saveProject: STATE.org missing", STATE.org);
       return;
     }
@@ -2043,11 +2101,19 @@
      ============================================================ */
   async function loadNotifications() {
     if (!STATE.user) return;
-    const { data } = await sb.from("planner_notifications")
+    const { data, error } = await sb.from("planner_notifications")
       .select("*")
       .eq("user_id", STATE.user.id)
       .order("created_at", { ascending: false })
       .limit(20);
+    if (error) {
+      if (isPlannerSchemaMissingError(error)) {
+        STATE.notifications = [];
+        renderNotifications();
+        return;
+      }
+      console.warn("planner_notifications:", error);
+    }
     STATE.notifications = data || [];
     renderNotifications();
   }
@@ -2279,6 +2345,7 @@
   }
 
   function renderHome() {
+    syncPlannerSchemaBanner();
     renderProjectList();
     updateGreeting();
     loadFinanceData();
