@@ -467,19 +467,82 @@
   window.saveOrg = async function (e) {
     e.preventDefault();
     const name = document.getElementById("orgName").value.trim();
-    if (!name || !STATE.org) return;
+    if (!name) return toast("Nama organisasi tidak boleh kosong");
+
+    if (!STATE.org) {
+      if (STATE.plannerSchemaMissing) {
+        toast(
+          "Tabel Planner belum ada di Supabase. Pasang migrasi dulu (banner di atas / README), lalu muat ulang halaman.",
+        );
+        return;
+      }
+      showLoading(true);
+      try {
+        const slug = name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") + "-" + Date.now().toString(36);
+        const { data: newOrg, error: orgInsErr } = await sb.from("planner_organizations").insert({
+          name, slug, owner_id: STATE.user.id,
+        }).select().single();
+        if (orgInsErr) {
+          console.error("planner_organizations insert (saveOrg):", orgInsErr);
+          if (isPlannerSchemaMissingError(orgInsErr)) {
+            notifyPlannerSchemaMissingOnce();
+            return;
+          }
+          toast("Gagal membuat organisasi: " + orgInsErr.message);
+          return;
+        }
+        const { error: memInsErr } = await sb.from("planner_org_members").insert({
+          org_id: newOrg.id, user_id: STATE.user.id, role: "owner", accepted_at: new Date().toISOString(),
+        });
+        if (memInsErr) {
+          console.error("planner_org_members insert (saveOrg):", memInsErr);
+          if (isPlannerSchemaMissingError(memInsErr)) {
+            notifyPlannerSchemaMissingOnce();
+            return;
+          }
+          toast("Gagal menambahkan keanggotaan: " + memInsErr.message);
+          return;
+        }
+        STATE.org = newOrg;
+        STATE.orgRole = "owner";
+        STATE.plannerSchemaMissing = false;
+        plannerSchemaMissingToastShown = false;
+        await loadOrgMembers();
+        syncPlannerSchemaBanner();
+        toast("Organisasi dibuat");
+        closeSheet("orgSheet");
+        await loadProjects();
+        renderProjectList();
+        renderHome();
+      } finally {
+        showLoading(false);
+      }
+      return;
+    }
+
     showLoading(true);
-    const { error } = await sb.from("planner_organizations").update({ name }).eq("id", STATE.org.id);
-    showLoading(false);
-    if (error) return toast("Gagal: " + error.message);
-    STATE.org.name = name;
-    toast("Organisasi disimpan");
-    closeSheet("orgSheet");
+    try {
+      const { error } = await sb.from("planner_organizations").update({ name }).eq("id", STATE.org.id);
+      if (error) return toast("Gagal: " + error.message);
+      STATE.org.name = name;
+      toast("Organisasi disimpan");
+      closeSheet("orgSheet");
+    } finally {
+      showLoading(false);
+    }
   };
 
   window.inviteMember = async function () {
     const email = document.getElementById("inviteEmail").value.trim();
-    if (!email || !STATE.org) return;
+    if (!email) return toast("Masukkan email");
+    if (!STATE.org) {
+      if (STATE.plannerSchemaMissing) {
+        toast("Organisasi belum bisa dibuat — pasang migrasi Planner di Supabase dulu.");
+      } else {
+        toast("Belum ada organisasi. Simpan nama organisasi di Pengaturan → Kelola Organisasi.");
+      }
+      return;
+    }
     toast("Fitur undang anggota akan tersedia segera");
     document.getElementById("inviteEmail").value = "";
   };
@@ -2246,6 +2309,16 @@
         if (STATE.currentProject) {
           document.getElementById("wiStart").value = STATE.currentProject.planned_start;
           document.getElementById("wiEnd").value = STATE.currentProject.planned_end;
+        }
+      }
+      if (id === "orgSheet") {
+        const inp = document.getElementById("orgName");
+        if (inp) {
+          if (STATE.org) inp.value = STATE.org.name || "";
+          else {
+            const meta = STATE.user?.user_metadata || {};
+            if (!inp.value.trim()) inp.value = meta.org_name || "";
+          }
         }
       }
     }
