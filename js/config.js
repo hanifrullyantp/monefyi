@@ -14,5 +14,7 @@
     adminEmails: ["admin@asfin.app"],
     /** Deploy di subpath? Contoh: '/monefyi' (tanpa slash akhir). Kosongkan jika di root domain. */
     basePath: "",
+    /** Logo Monefyi bawaan jika admin belum set `app_config.logo_url`. */
+    defaultLogoUrl: "icons/icon-192.svg",
   };
 })();
