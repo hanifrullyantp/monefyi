@@ -35,8 +35,8 @@
 
     <!-- Loading Screen -->
     <div id="loadingOverlay">
-      <div class="loading-logo overflow-hidden">
-        <img id="loadingLogoImg" class="h-full w-full object-contain p-3" src="icons/icon-192.svg" alt="Monefyi" />
+      <div class="loading-logo">
+        <span class="text-4xl font-bold text-white">M</span>
       </div>
       <div class="mt-6 text-sm app-muted animate-pulse">Initializing Monefyi...</div>
     </div>
@@ -71,7 +71,8 @@
           <div class="rounded-3xl app-card-opaque p-5">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 rounded-2xl overflow-hidden flex items-center justify-center font-bold" style="background: rgba(99,102,241,.15); color: rgba(99,102,241,.95); border: 1px solid rgba(99,102,241,.25)">
-                <img id="authLogoImg" class="h-full w-full object-contain p-1.5" src="icons/icon-192.svg" alt="Logo Monefyi" />
+                <img id="authLogoImg" class="w-full h-full object-cover hidden" alt="Logo" />
+                <span id="authLogoFallback">A</span>
               </div>
               <div>
                 <div class="text-xs app-muted">Monefyi</div>
@@ -176,8 +177,8 @@
           <div class="flex items-center gap-2 min-w-0">
             <button id="btnLogo" class="tap flex items-center gap-2 text-left" title="Monefyi Advisor">
               <div id="appLogo" class="w-10 h-10 rounded-2xl app-card flex items-center justify-center overflow-hidden">
-                <img id="appLogoImg" class="h-full w-full object-contain p-1" src="icons/icon-192.svg" alt="Logo Monefyi" />
-                <span id="appLogoFallback" class="font-bold hidden">M</span>
+                <img id="appLogoImg" class="w-full h-full object-cover hidden" alt="Logo Monefyi" />
+                <span id="appLogoFallback" class="font-bold">M</span>
               </div>
             </button>
 
@@ -212,7 +213,7 @@
               <div class="min-w-0">
                 <div id="saldoTitle" class="text-xs app-muted">Total Saldo</div>
                 <div id="kpiSaldo" class="mt-1 text-3xl font-bold">—</div>
-                <div id="kpiSaldoSubMobile" class="mt-1 text-xs app-muted">Bulan ini: +Rp 0 (income) | −Rp 0 (expense)</div>
+                <div id="kpiSaldoSub" class="mt-1 text-xs app-muted">Bulan ini: +Rp 0 (income) | −Rp 0 (expense)</div>
                 <div id="healthScorePill" class="mt-2 inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[11px] font-semibold app-chip">
                   <span id="healthScoreGauge" class="w-2.5 h-2.5 rounded-full" style="background: rgba(16,185,129,.95)"></span>
                   <span id="healthScoreText">Skor: 0 · Perlu perhatian</span>
@@ -228,9 +229,11 @@
             </div>
           </div>
         </div>
+      </div>
+    </header>
+<!-- PEMBUNGKUS UTAMA — panel periode di luar header agar tetap terlihat di breakpoint md+ -->
 
-<!--======================================================================== -->
-
+    <div id="periodPanelHost" class="max-w-xl mx-auto px-4 w-full md:max-w-full">
         <!-- Periode popover (dropdown + range) -->
         <div id="monthPopover" class="mt-2 hidden rounded-2xl app-card-opaque p-3">
           <div id="periodFilterTitle" class="text-xs app-muted">Filter periode</div>
@@ -316,9 +319,7 @@
             </div>
           </div>
         </div>
-      </div>
-    </header>
-<!-- PEMBUNGKUS UTAMA -->
+    </div>
 
 <main id="appShell" class="w-full max-w-full mx-auto px-4 pb-32 md:pb-8 md:pt-8 safe-bottom md:h-dvh md:overflow-hidden">
   <div class="flex flex-col md:flex-row gap-8 items-start w-full md:h-full">   
@@ -331,9 +332,9 @@
       <!-- Logo Brand (desktop) -->
 <div class="flex items-center gap-3 px-2 mb-2">
   <div class="w-10 h-10 rounded-2xl app-card flex items-center justify-center overflow-hidden shadow-lg border border-slate-800">
-    <img id="sidebarLogoImg" class="h-full w-full object-contain p-1" src="icons/icon-192.svg" alt="Logo Monefyi" />
+    <img id="sidebarLogoImg" class="w-full h-full object-cover hidden" alt="Logo Monefyi" />
     
-    <span id="sidebarLogoFallback" class="font-bold text-white text-xl hidden">M</span>
+    <span id="sidebarLogoFallback" class="font-bold text-white text-xl">M</span>
   </div>
   <div>
     <h1 class="font-bold text-white leading-none">Monefyi</h1>
@@ -387,14 +388,14 @@
 </div>
       <!-- Navigasi Menu -->
       <nav class="flex flex-col gap-1">
-        <button onclick="toggleNav('dash', event)" class="sidebar-item flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-slate-800/50 transition-all tap group">
+        <button onclick="toggleNav('dash')" class="sidebar-item flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-slate-800/50 transition-all tap group">
           <span class="text-white group-hover:scale-110 transition-transform">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
           </span>
           <span class="font-semibold text-sm">Dashboard</span>
         </button>
 
-        <button onclick="toggleNav('list', event)" class="sidebar-item flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-slate-800/50 transition-all tap group">
+        <button onclick="toggleNav('list')" class="sidebar-item flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-slate-800/50 transition-all tap group">
           <span class="text-white group-hover:scale-110 transition-transform">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
           </span>
@@ -458,7 +459,7 @@
       <div class="hidden md:flex justify-between items-end mb-8 flex-none">
         <div>
           <h2 class="text-3xl font-bold text-white tracking-tight">Transaksi</h2>
-          <p class="text-slate-500 mt-1" id="txDesktopPageSubtitle">Tap kartu saldo untuk detail lengkap.</p>
+          <p class="text-slate-500 mt-1" id="kpiSaldoSub">Tap kartu saldo untuk detail lengkap.</p>
         </div>
         <button onclick="openAddSheet('manual')" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-6 py-3 rounded-2xl transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
@@ -613,7 +614,7 @@
               <div id="txCount" class="text-xs app-muted">—</div>
             </div>
             <div class="flex items-center gap-2">
-              <div id="txViewToggle" class="flex items-center gap-1 rounded-xl app-chip p-1">
+              <div id="txViewToggle" class="hidden md:flex items-center gap-1 rounded-xl app-chip p-1">
                 <button id="btnTxViewCard" class="tap rounded-lg px-2 py-1 text-xs tx-view-btn active" data-view="card">Card</button>
                 <button id="btnTxViewTable" class="tap rounded-lg px-2 py-1 text-xs tx-view-btn" data-view="table">Tabel</button>
               </div>
@@ -658,14 +659,14 @@
   <!-- Nav Bar Mobile -->
  <nav class="fixed bottom-0 left-0 right-0 z-10 nav-bar safe-bottom block md:hidden">
     <div class="flex items-center justify-around h-16 px-2">
-      <button onclick="toggleNav('dash', event)" class="nav-item flex flex-col items-center gap-1 tap text-white" data-nav="beranda">
+      <button onclick="toggleNav('dash')" class="nav-item flex flex-col items-center gap-1 tap text-white" data-nav="beranda">
         <span class="text-xl">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
         </span>
         <span class="text-[10px] uppercase font-bold opacity-70">Beranda</span>
       </button>
       
-      <button onclick="toggleNav('list', event)" class="nav-item flex flex-col items-center gap-1 tap text-white" data-nav="transaksi">
+      <button onclick="toggleNav('list')" class="nav-item flex flex-col items-center gap-1 tap text-white" data-nav="transaksi">
         <span class="text-xl">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
         </span>

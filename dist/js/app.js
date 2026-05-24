@@ -3702,8 +3702,6 @@ function openTutorialTopic(id) {
 
       openSheet(affBackdrop, affSheet);
     }
-    window.openAffiliate = openAffModal;
-
     function closeAffModal(){ closeSheet(affBackdrop, affSheet); }
     affBackdrop.addEventListener('click', (e)=>{
       if (e.target?.dataset?.closeAff === 'true') closeAffModal();
@@ -5003,39 +5001,6 @@ if (btnApplyAI) {
     };
 }
 
-// --- LOGIC TOGGLE PANEL PERIODE ---
-
-// 1. Tombol Buka (Jan 2026 ▾)
-const btnPeriodToggle = document.getElementById('btnPeriodToggle');
-if (btnPeriodToggle) {
-  btnPeriodToggle.onclick = (e) => {
-    e.preventDefault();
-    e.stopPropagation(); // Mencegah konflik klik dengan elemen induk
-    
-    const popover = document.getElementById('monthPopover');
-    const filters = document.getElementById('filtersWrap');
-    
-    // Toggle (Buka/Tutup)
-    const isHidden = popover.classList.contains('hidden');
-    if (isHidden) {
-      popover.classList.remove('hidden');
-      filters.classList.remove('hidden');
-      console.log("Panel Periode Dibuka");
-    } else {
-      popover.classList.add('hidden');
-      filters.classList.add('hidden');
-    }
-  };
-}
-
-// 2. Tombol Tutup di dalam panel
-const btnMonthClose = document.getElementById('btnMonthClose');
-if (btnMonthClose) {
-  btnMonthClose.onclick = () => {
-    document.getElementById('monthPopover').classList.add('hidden');
-    document.getElementById('filtersWrap').classList.add('hidden');
-  };
-}
 // ============================================================
 // 2. TOMBOL RESET (JANGAN DIHAPUS)
 // ============================================================
@@ -6999,7 +6964,7 @@ function toggleNav_legacy(mode) {
 
   el.addEventListener('click', (e) => {
     e.stopPropagation();
-    toggleMonthPopover();   // fungsi lama tetap dipakai
+    setMonthPopover(!STATE.ui.monthPopoverOpen);
   });
 });
 
