@@ -6,6 +6,7 @@
     const SUPABASE_ANON_KEY = String(CFG.supabaseAnonKey || '').trim();
     const SUPABASE_FN_PARSE = CFG.fnParse || 'asfin-parse-transaction';
     const SUPABASE_FN_COACH = CFG.fnCoach || 'ai-user-coach';
+    const SUPABASE_FN_ADMIN_APP_CONFIG = CFG.fnAdminAppConfig || 'monefyi-admin-app-config';
 
     // Checkout links (fallback jika app_config tidak set)
     const MONTHLY_CHECKOUT_URL = String(CFG.checkoutMonthly || 'https://lynk.id/asfin-ai/9zexz9z5wom1/checkout');
@@ -882,6 +883,31 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
       }
     };
 
+    /** Header wajib untuk invoke Supabase Edge Functions dari browser (apikey + JWT). */
+    function supabaseEdgeHeaders(extra = {}) {
+      const headers = { apikey: SUPABASE_ANON_KEY, ...extra };
+      const tok = STATE.db?.session?.access_token;
+      if (tok) headers.Authorization = `Bearer ${tok}`;
+      return headers;
+    }
+
+    /** Admin-only: merge + upsert app_config baris global lewat Edge Function. */
+    async function upsertAppConfigAdmin(patch) {
+      if (!STATE.db.enabled || !STATE.db.session?.access_token) throw new Error('Not authed');
+      const url = `${SUPABASE_URL.replace(/\/+$/,'')}/functions/v1/${SUPABASE_FN_ADMIN_APP_CONFIG}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: supabaseEdgeHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(patch && typeof patch === 'object' ? patch : {}),
+      });
+      const txt = await res.text().catch(() => '');
+      if (!res.ok) throw new Error(txt || `HTTP ${res.status}`);
+      let out = {};
+      try { out = JSON.parse(txt || '{}'); } catch { throw new Error(txt || 'Invalid JSON'); }
+      if (!out?.ok || !out?.appConfig) throw new Error(out?.error || 'Invalid response');
+      return out.appConfig;
+    }
+
     function applyTheme(){
       document.body.classList.toggle('theme-light', STATE.settings.theme === 'light');
       destroyCharts();
@@ -1006,54 +1032,6 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
         showAuth();
       }
     }
-async function loadBrandingFromConfig() {
-  try {
-    // sesuaikan nama tabel & kolom dengan yang kamu pakai
-    const { data, error } = await supabase
-      .from('app_config')
-      .select('logo_url')
-      .eq('id', 'global')
-      .maybeSingle();
-
-    if (error) {
-      console.warn('Gagal load branding:', error.message);
-      return;
-    }
-
-    const logoUrl = data?.logo_url;
-    if (!logoUrl) return;
-
-    // Set ke semua logo img
-    const imgIds = ['appLogoImg', 'authLogoImg', 'sidebarLogoImg'];
-    imgIds.forEach((id) => {
-      const img = document.getElementById(id);
-      if (img) {
-        img.src = logoUrl;
-        img.classList.remove('hidden');
-      }
-    });
-function applyAdminUI() {
-  // Kalau STATE / STATE.db belum ada, jangan lakukan apa-apa dulu
-  if (!window.STATE || !STATE.db) return;
-
-  const admin = isAdmin();
-
-  const branding = document.getElementById('adminBrandingCard');
-  if (branding) branding.classList.toggle('hidden', !admin);
-
-  const launcher = document.getElementById('adminPanelLauncher');
-  if (launcher) launcher.classList.toggle('hidden', !admin);
-}
-    // Sembunyikan fallback huruf
-    const fallbackIds = ['appLogoFallback', 'authLogoFallback', 'sidebarLogoFallback'];
-    fallbackIds.forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) el.classList.add('hidden');
-    });
-  } catch (e) {
-    console.error('Error loadBrandingFromConfig:', e);
-  }
-}
     async function ensureProfile(){
       const supa = STATE.db.supa;
       const u = STATE.db.user;
@@ -1138,23 +1116,27 @@ function applyAdminUI() {
   show($('#sidebarLogoImg'), $('#sidebarLogoFallback'));
 }
 
+    function applyAdminUI() {
+      if (typeof window !== 'undefined') window.STATE = STATE;
+      if (!STATE.db) return;
+      const admin = isAdmin();
+      const branding = document.getElementById('adminBrandingCard');
+      if (branding) branding.classList.toggle('hidden', !admin);
+      const launcher = document.getElementById('adminPanelLauncher');
+      if (launcher) launcher.classList.toggle('hidden', !admin);
+    }
+
     function isAdmin(){
-  const role = String(STATE?.db?.profile?.role || '').toLowerCase();
-  if (role === 'admin') return true;
+      const role = String(STATE?.db?.profile?.role || '').toLowerCase();
+      if (role === 'admin') return true;
 
-  const email = (STATE?.db?.user?.email || '').toLowerCase();
-  if (!email || !Array.isArray(ADMIN_EMAILS)) return false;
+      const email = (STATE?.db?.user?.email || '').toLowerCase();
+      if (!email || !Array.isArray(ADMIN_EMAILS)) return false;
 
-  return ADMIN_EMAILS.some(e => e.toLowerCase() === email);
-}
+      return ADMIN_EMAILS.some(e => e.toLowerCase() === email);
+    }
 
-async function initApp() {
-  // ... kode inisialisasi lain (cek auth, load data, dsb)
-  await loadBrandingFromConfig();
-  // ... lanjut rerender dashboard / 
-  applyAdminUI();
-}
-    function computeSubscriptionStatus(profile){
+function computeSubscriptionStatus(profile){
       const planType = (profile?.plan_type || 'none');
       const expiresRaw = profile?.plan_expires_at || null;
       const planExpiresAt = expiresRaw ? new Date(expiresRaw) : null;
@@ -3591,21 +3573,32 @@ function openTutorialTopic(id) {
 
       $('#adminConfigStatus').textContent = 'Menyimpan…';
       try {
-        const payload = {
-          id: 'global',
+        const patch = {
           checkout_monthly_url: monthlyUrl,
           checkout_lifetime_url: lifetimeUrl,
           affiliate_commission: commission,
           logo_url: STATE.appConfig?.logo_url || null,
           tutorial: { videoUrl, steps: STATE.appConfig?.tutorial?.steps || [] },
           notif_threshold: threshold,
-          updated_at: new Date().toISOString(),
         };
-        const { data, error } = await STATE.db.supa.from('app_config').upsert(payload).select('*').single();
-        if (error) throw error;
+        let data = null;
+        try {
+          data = await upsertAppConfigAdmin(patch);
+        } catch (e1) {
+          console.warn('upsertAppConfigAdmin failed, fallback client', e1);
+          const payload = {
+            id: 'global',
+            ...patch,
+            updated_at: new Date().toISOString(),
+          };
+          const r = await STATE.db.supa.from('app_config').upsert(payload).select('*').single();
+          if (r.error) throw r.error;
+          data = r.data;
+        }
         STATE.appConfig = data;
         $('#adminConfigStatus').textContent = 'Tersimpan.';
-      } catch {
+      } catch (e) {
+        console.warn(e);
         $('#adminConfigStatus').textContent = 'Gagal (perlu policy/Edge Function).';
       }
     });
@@ -3615,10 +3608,7 @@ function openTutorialTopic(id) {
       const url = `${SUPABASE_URL.replace(/\/+$/,'')}/functions/v1/monefyi-admin-users`;
       const res = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${STATE.db.session.access_token}`,
-        },
+        headers: supabaseEdgeHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ q, plan, status, page: 1, pageSize: 100 }),
       });
       const txt = await res.text().catch(()=> '');
@@ -6008,9 +5998,7 @@ $('#btnSaveBudget').addEventListener('click', async () => {
 
       const res = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${STATE.db.session.access_token}`
-        },
+        headers: supabaseEdgeHeaders(),
         body: fd,
       });
 
@@ -6050,6 +6038,16 @@ $('#btnSaveBudget').addEventListener('click', async () => {
       if (!STATE.db.enabled || !STATE.db.user) throw new Error('Not logged in');
       if (!isAdmin()) throw new Error('Not admin');
       const supa = STATE.db.supa;
+
+      const patch = { logo_url: logoUrl || null };
+      try {
+        const data = await upsertAppConfigAdmin(patch);
+        STATE.appConfig = data;
+        applyAppBranding();
+        return data;
+      } catch (e1) {
+        console.warn('saveLogoUrlToConfig edge failed, fallback client', e1);
+      }
 
       const payload = {
         id: 'global',
