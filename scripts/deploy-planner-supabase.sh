@@ -1,31 +1,66 @@
 #!/usr/bin/env bash
 # Deploy Planner schema + Edge Functions to the linked Supabase project.
-# Prerequisites:
-#   - Supabase CLI (or use: npx supabase@latest ...)
-#   - SUPABASE_ACCESS_TOKEN from https://supabase.com/dashboard/account/tokens
-#   - SUPABASE_PROJECT_REF (Settings → General → Reference ID), or rely on existing link
 #
-# Usage (from repo root):
-#   export SUPABASE_ACCESS_TOKEN="sbp_9e8a97b33bae4b4263c08b7097e798d0b74bb909"
-#   export SUPABASE_PROJECT_REF="zzwqfmdyncxbolestkqp"   # optional if already linked
+# JANGAN menaruh token di file ini — token yang ter-commit harus dicabut di Supabase Dashboard
+# (Account → Access Tokens) dan diganti yang baru.
+#
+# Cara pakai:
+#   cp scripts/env.supabase.local.example scripts/.env.supabase.local
+#   # isi SUPABASE_ACCESS_TOKEN=... di .env.supabase.local
 #   ./scripts/deploy-planner-supabase.sh
+#
+# Atau export di shell:
+#   export SUPABASE_ACCESS_TOKEN="sbp_..."
+#   export SUPABASE_PROJECT_REF="zzwqfmdyncxbolestkqp"
 
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Muat kredensial dari file lokal (disarankan; tidak ikut ke git)
+if [[ -f "$SCRIPT_DIR/.env.supabase.local" ]]; then
+  set -a
+  # shellcheck source=/dev/null
+  source "$SCRIPT_DIR/.env.supabase.local"
+  set +a
+  echo "==> Loaded $SCRIPT_DIR/.env.supabase.local"
+fi
+
 cd "$ROOT/my-supabase-project"
 
 if [[ -z "${SUPABASE_ACCESS_TOKEN:-}" ]]; then
-  echo "Error: set SUPABASE_ACCESS_TOKEN (Supabase dashboard → Account → Access Tokens)." >&2
+  echo "Error: set SUPABASE_ACCESS_TOKEN (mis. di scripts/.env.supabase.local — lihat scripts/env.supabase.local.example)." >&2
   exit 1
 fi
 
 if [[ -n "${SUPABASE_PROJECT_REF:-}" ]]; then
+  echo "==> Linking project $SUPABASE_PROJECT_REF..."
   npx --yes supabase@latest link --project-ref "$SUPABASE_PROJECT_REF"
 fi
 
-echo "==> Repairing orphan remote migration markers (if any; safe to skip if versions absent)..."
-npx --yes supabase@latest migration repair --status reverted --linked 20260507151500 20260507162500 2>/dev/null || true
+# Tarik file migrasi yang ada di riwayat remote tapi belum ada di folder lokal
+# (mengatasi "Remote migration versions not found in local migrations directory").
+echo "==> Fetching remote migration files missing locally (migration fetch)..."
+set +e
+npx --yes supabase@latest migration fetch --linked --yes
+fetch_rc=$?
+set -e
+if [[ "$fetch_rc" -ne 0 ]]; then
+  echo "    (migration fetch exited $fetch_rc — lanjut; mungkin sudah sinkron.)"
+fi
+
+# Tandai reverted untuk versi orphan yang tidak punya konten di history (fallback).
+ORPHANS="${SUPABASE_ORPHAN_MIGRATION_VERSIONS:-20260507151500 20260507162500}"
+echo "==> Repair orphan remote markers (reverted), if present: $ORPHANS"
+for v in $ORPHANS; do
+  [[ -n "${v// }" ]] || continue
+  echo "    repair reverted $v"
+  npx --yes supabase@latest migration repair --status reverted --linked "$v" 2>/dev/null || true
+done
+
+echo "==> Migration list (linked) — cek Local vs Remote:"
+npx --yes supabase@latest migration list --linked || true
 
 echo "==> Pushing database migrations (includes Planner core schema)..."
 npx --yes supabase@latest db push --yes

@@ -45,26 +45,31 @@ File sumber skema: `planner/supabase/migrations/001_planner_core_schema.sql` (do
 
 `my-supabase-project/supabase/migrations/20260523120000_planner_core_schema.sql`
 
-Dari root repo, set token lalu push migrasi + deploy function:
+Dari root repo (disarankan: salin `scripts/env.supabase.local.example` → `scripts/.env.supabase.local`, isi token — **file `.env.supabase.local` di-gitignore, jangan commit**):
 
 ```bash
-export SUPABASE_ACCESS_TOKEN="sbp_..."   # Dashboard Supabase → Account → Access Tokens
-export SUPABASE_PROJECT_REF="..."        # Settings → General → Reference ID (wajib jika belum pernah `supabase link`)
+cp scripts/env.supabase.local.example scripts/.env.supabase.local
+# edit scripts/.env.supabase.local — isi SUPABASE_ACCESS_TOKEN dan SUPABASE_PROJECT_REF
 ./scripts/deploy-planner-supabase.sh
 ```
+
+Skrip otomatis: **`migration fetch --linked`** (menarik file migrasi yang ada di remote tapi belum ada lokal), **`migration repair`** untuk versi orphan (fallback), lalu **`db push --yes`** dan deploy function.
 
 Atau manual:
 
 ```bash
 cd my-supabase-project
 npx supabase@latest link --project-ref "$SUPABASE_PROJECT_REF"
+npx supabase@latest migration fetch --linked --yes || true
 npx supabase@latest migration repair --status reverted --linked 20260507151500 20260507162500 || true
 npx supabase@latest db push --yes
 npx supabase@latest functions deploy planner-analyze
 npx supabase@latest functions deploy planner-parse-command
 ```
 
-**Jika `db push` gagal:** (1) Nama file di `my-supabase-project/supabase/migrations/` harus pola **`YYYYMMDDHHMMSS_nama.sql`** — file lain di-skip CLI. (2) Pesan **Remote migration versions not found in local** artinya tabel riwayat di project remote punya versi yang **tidak ada file-nya** di repo (mis. migrasi lama dari mesin lain). Jalankan `migration repair --status reverted --linked <versi...>` untuk versi yang disebut log, lalu `db push` lagi. Workflow GitHub **Supabase Planner migrate & deploy** sudah mencoba repair untuk `20260507151500` dan `20260507162500` sebelum push; jika log Anda menyebut versi lain, tambahkan ke perintah repair atau ke step workflow.
+**Jangan pernah** menaruh token Supabase di `deploy-planner-supabase.sh` atau file lain yang di-commit. Jika token pernah ter-commit, **cabut token** di Supabase Dashboard dan buat token baru.
+
+**Jika `db push` gagal:** (1) Nama file migrasi harus pola **`YYYYMMDDHHMMSS_nama.sql`**. (2) **Remote migration versions not found in local** — jalankan `migration fetch --linked` dulu; jika masih gagal, `migration repair --status reverted --linked` untuk tiap versi yang disebut log. Di GitHub Actions, secret opsional **`SUPABASE_ORPHAN_MIGRATION_VERSIONS`** (spasi-separated) menambah versi ke repair.
 
 **Setelah push:** di SQL Editor, `select to_regclass('public.planner_organizations');` harus **bukan** `null`.
 
