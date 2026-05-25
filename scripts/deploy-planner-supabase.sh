@@ -6,8 +6,8 @@
 #   - SUPABASE_PROJECT_REF (Settings → General → Reference ID), or rely on existing link
 #
 # Usage (from repo root):
-#   export SUPABASE_ACCESS_TOKEN="sbp_..."
-#   export SUPABASE_PROJECT_REF="your_project_ref"   # optional if already linked
+#   export SUPABASE_ACCESS_TOKEN="sbp_9e8a97b33bae4b4263c08b7097e798d0b74bb909"
+#   export SUPABASE_PROJECT_REF="zzwqfmdyncxbolestkqp"   # optional if already linked
 #   ./scripts/deploy-planner-supabase.sh
 
 set -euo pipefail
