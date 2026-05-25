@@ -1396,6 +1396,11 @@ async function upsertTransaction_legacy_local(tx) {
 }
 
     async function saveBudgetMonth(mk, income, categories){
+      if (!STATE.db.enabled || !STATE.db.supa || !STATE.db.user) {
+        const err = new Error('LOGIN_REQUIRED');
+        err.code = 'LOGIN_REQUIRED';
+        throw err;
+      }
       const supa = STATE.db.supa;
       const row = {
         user_id: STATE.db.user.id,
@@ -3990,24 +3995,22 @@ function openTutorialTopic(id) {
     async function upsertTransaction(tx) {
   console.log("Upserting transaction:", tx);
 
-  // 1. Pastikan STATE.transactions adalah array
   if (!Array.isArray(STATE.transactions)) STATE.transactions = [];
 
-  // 2. Update Memori Lokal (STATE)
-  const index = STATE.transactions.findIndex(t => t.id === tx.id);
+  const id = tx.id;
+  const prev = STATE.transactions.find((t) => t.id === id);
+  const prevCopy = prev ? { ...prev } : null;
+  const existed = !!prev;
+
+  const index = STATE.transactions.findIndex((t) => t.id === id);
   if (index >= 0) {
-    // Jika edit, timpa data lama
     STATE.transactions[index] = { ...tx };
   } else {
-    // Jika baru, tambahkan ke paling depan (paling atas)
     STATE.transactions.unshift({ ...tx });
   }
 
-  // 3. Sortir Ulang (Terbaru di atas berdasarkan tanggal)
   STATE.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  // 4. JALANKAN RERENDER ASLI (PENTING!)
-  // Kita beri jeda 50ms agar browser sempat memproses data di memori
   setTimeout(() => {
     if (typeof rerender === 'function') {
       rerender();
@@ -4015,14 +4018,20 @@ function openTutorialTopic(id) {
     }
   }, 50);
 
-  // 5. Simpan ke Database di Background
   if (STATE.db.enabled && STATE.db.user) {
     try {
       await dbUpsertTransaction(tx);
-      // Update saldo dashboard secara async
       if (typeof updateSaldoAsync === 'function') updateSaldoAsync();
     } catch (e) {
       console.error("DB Save failed:", e);
+      if (existed && prevCopy) {
+        const i = STATE.transactions.findIndex((t) => t.id === id);
+        if (i >= 0) STATE.transactions[i] = prevCopy;
+      } else {
+        STATE.transactions = STATE.transactions.filter((t) => t.id !== id);
+      }
+      STATE.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+      if (typeof rerender === 'function') rerender();
       showToast('Gagal menyimpan. Coba lagi', 'error');
       return;
     }
@@ -4774,7 +4783,7 @@ function closeBudgetDetail() {
 
     $('#bIncome').addEventListener('input', () => {
       if (!STATE.budgetDraft) return;
-      STATE.budgetDraft.income = parseNumberInput($('#bIncome').value);
+      STATE.budgetDraft.income = parseAmountFlexible($('#bIncome').value);
       updateBudgetSheetDerived();
     });
 
@@ -5048,16 +5057,27 @@ $('#btnResetBudgetDraft').addEventListener('click', () => {
 // ============================================================
 $('#btnSaveBudget').addEventListener('click', async () => {
     const d = STATE.budgetDraft;
-    if (!d) return;
+    if (!d) {
+      showToast('Buka budgeting dulu (menu atau kartu budget).', 'warn');
+      return;
+    }
 
-    // Validasi
-    // Asumsi fungsi validateAndNormalizeBudgetDraft ada di file Anda
-    // Jika tidak ada, bisa pakai validasi manual sederhana
+    const incRaw = ($('#bIncome')?.value ?? '').trim();
+    if (incRaw) d.income = parseAmountFlexible(incRaw);
+    d.income = Number(d.income || 0);
+    if (!Number.isFinite(d.income) || d.income <= 0) {
+      $('#bStatus').textContent = 'Isi income (angka > 0).';
+      showToast('Isi income budget dulu.', 'warn');
+      return;
+    }
+
     let normalized = { income: d.income, categories: {}, total: 0 };
-    
-    // Validasi Manual (Safe Mode)
-    if (!d.income) { $('#bStatus').textContent = 'Income wajib diisi.'; return; }
-    if (!d.rows || d.rows.length === 0) { $('#bStatus').textContent = 'Tambah minimal 1 kategori.'; return; }
+
+    if (!d.rows || d.rows.length === 0) {
+      $('#bStatus').textContent = 'Tambah minimal 1 kategori (+ Kategori).';
+      showToast('Tambah minimal satu kategori budget.', 'warn');
+      return;
+    }
     
     // Susun data untuk DB
     const cleanRows = d.rows.map(r => ({
@@ -5087,7 +5107,11 @@ $('#btnSaveBudget').addEventListener('click', async () => {
         }, 500);
     } catch (e) {
         console.error(e);
-        $('#bStatus').textContent = 'Gagal simpan. Coba lagi.';
+        const msg = (e && e.code === 'LOGIN_REQUIRED')
+          ? 'Harus masuk dulu untuk menyimpan.'
+          : 'Gagal simpan. Coba lagi.';
+        $('#bStatus').textContent = msg;
+        showToast(msg, 'error');
         $('#btnSaveBudget').innerText = 'Simpan Budget';
     }
 });
@@ -5393,7 +5417,7 @@ $('#btnSaveBudget').addEventListener('click', async () => {
     $('#mType').addEventListener('change', syncManualTransferUI);
 
   $('#btnSaveManual').onclick = async () => {
-  const amt = parseNumberInput($('#mAmount').value);
+  const amt = parseAmountFlexible($('#mAmount').value);
   if (!amt) {
     showToast('Isi jumlah uang terlebih dahulu', 'warn');
     return;
@@ -7358,6 +7382,7 @@ function toggleNav_legacy(mode) {
       function hideLoadingOverlay() {
         const loader = $('#loadingOverlay');
         if (!loader) return;
+        loader.style.pointerEvents = 'none';
         loader.style.opacity = '0';
         setTimeout(() => { loader.style.visibility = 'hidden'; }, 500);
       }

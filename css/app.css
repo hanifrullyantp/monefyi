@@ -148,6 +148,9 @@ html, body {
     .sheet-backdrop.open { opacity: 1; pointer-events: auto; }
     .sheet { transform: translateY(16px); opacity: 0; pointer-events: none; transition: transform .18s ease, opacity .18s ease; }
     .sheet.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
+    /* Full-screen tap target sits before .sheet in DOM; keep it under the panel for reliable clicks */
+    .sheet-backdrop > .absolute.inset-0 { z-index: 0; }
+    .sheet-backdrop > .sheet { z-index: 1; }
 
     .nav-item.active {
       color: rgba(16,185,129,.95) !important;
