@@ -49,7 +49,7 @@ npx --yes serve . -p 5173
 
 Frontend ini di-build dengan **Vite** menjadi aset statis di `dist/`. Di Vercel, **Node.js hanya dipakai saat build** (`npm run build`).
 
-**Catatan penting:** repo ini juga memiliki **Supabase Edge Functions** di `my-supabase-project/supabase/functions/*`. Fungsi tersebut tetap berjalan di Supabase (bukan Vercel).
+**Catatan penting:** repo ini juga memiliki **Supabase Edge Functions** di `my-supabase-project/supabase/functions/*`. Fungsi tersebut tetap berjalan di Supabase (bukan Vercel). Panduan deploy (CLI, secrets, migrasi) ada di **[`my-supabase-project/README.md`](my-supabase-project/README.md)** — **satu-satunya lokasi** kode function & migrasi; jangan menaruh salinan di folder lain.
 
 **Catatan stack:** kode UI saat ini adalah HTML + JavaScript (bukan React). Jika nanti migrasi ke React, tetap bisa memakai preset Vite + React di Vercel dengan pola serupa.
 

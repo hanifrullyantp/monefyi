@@ -56,6 +56,14 @@ function main() {
     "assertAdminFromBearer",
   );
   assertContains(
+    `${supabaseDir}/supabase/functions/monefyi-admin-app-config/index.ts`,
+    "ALLOWED_KEYS",
+  );
+  assertContains(
+    `${supabaseDir}/supabase/functions/monefyi-upload-logo/index.ts`,
+    "APP_CORS_ORIGIN",
+  );
+  assertContains(
     `${supabaseDir}/supabase/config.toml`,
     "[functions.lynk-webhook]",
   );
