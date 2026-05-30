@@ -8,7 +8,12 @@ Aplikasi keuangan pribadi (PWA) — HTML + CSS + JavaScript, backend Supabase.
 - **Pemilik repo:** cabang `main` sudah didorong ke GitHub. Jika default masih `migration-vercel-prep`, ubah di **Settings → General → Default branch** lalu pilih **`main`** dan konfirmasi.
 - **`migration-vercel-prep`** dan cabang `cursor/*` dipakai untuk pekerjaan migrasi atau fitur; gabungkan ke `main` bila siap rilis.
 
-**Monefyi Planner** (app terpisah) berada di folder **`planner/`**. Panduan deploy Vercel khusus Planner: lihat [`planner/README.md`](planner/README.md).
+**Monefyi Planner** ada dua frontend terpisah:
+
+| Folder | Stack | Deploy Vercel |
+|--------|-------|---------------|
+| [`planner/`](planner/README.md) | Vite + HTML/CSS/JS (PWA) | Root Directory: **`planner`** |
+| [`monefyi_planner/`](monefyi_planner/README.md) | React + Vite + Tailwind | Root Directory: **`monefyi_planner`** |
 
 ## Struktur
 
