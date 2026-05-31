@@ -6,7 +6,7 @@ import {
   TrendingUp, Users, Wallet, Zap, ArrowRight, Star,
   Building2, ChevronRight, PlayCircle
 } from 'lucide-react';
-import { useAppStore } from '../store/appStore';
+import { Link } from 'react-router-dom';
 
 const features = [
   {
@@ -118,11 +118,11 @@ const plans = [
 ];
 
 interface LandingPageProps {
-  onLogin: () => void;
-  onSignup: () => void;
+  onLogin?: () => void;
+  onSignup?: () => void;
 }
 
-export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
+export default function LandingPage({ onLogin, onSignup }: LandingPageProps = {}) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -148,12 +148,12 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
             <a href="#pricing" className="text-sm text-slate-600 hover:text-slate-900 transition-colors">Harga</a>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={onLogin} className="text-sm font-medium text-slate-700 hover:text-indigo-600 transition-colors px-3 py-2">
+            <Link to="/login" className="text-sm font-medium text-slate-700 hover:text-indigo-600 transition-colors px-3 py-2">
               Masuk
-            </button>
-            <button onClick={onSignup} className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors shadow-sm">
+            </Link>
+            <Link to="/signup" className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors shadow-sm">
               Mulai Gratis
-            </button>
+            </Link>
           </div>
         </div>
       </nav>
@@ -203,21 +203,21 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
               transition={{ duration: 0.5, delay: 0.3 }}
               className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16"
             >
-              <button
-                onClick={onSignup}
+              <Link
+                to="/signup"
                 className="group flex items-center gap-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-4 rounded-2xl text-lg shadow-lg shadow-indigo-200 hover:shadow-xl hover:shadow-indigo-200 transition-all"
               >
                 <Sparkles className="w-5 h-5" />
                 Mulai Gratis Sekarang
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </button>
-              <button
-                onClick={onLogin}
+              </Link>
+              <Link
+                to="/login"
                 className="flex items-center gap-2 text-slate-700 hover:text-indigo-600 font-semibold px-6 py-4 rounded-2xl border border-slate-200 hover:border-indigo-200 transition-all bg-white shadow-sm"
               >
                 <PlayCircle className="w-5 h-5" />
-                Lihat Demo
-              </button>
+                Masuk
+              </Link>
             </motion.div>
 
             {/* Stats */}
@@ -253,7 +253,7 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
                 </div>
                 <div className="flex-1 text-center text-xs text-slate-400 font-mono">planner.monefyi.com</div>
               </div>
-              <DashboardPreview onEnterApp={onLogin} />
+              <DashboardPreview />
             </div>
           </motion.div>
         </div>
@@ -460,15 +460,15 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
                     </li>
                   ))}
                 </ul>
-                <button
-                  onClick={onSignup}
-                  className={`w-full py-3 rounded-xl font-bold text-sm transition-all ${plan.highlight
+                <Link
+                  to="/signup"
+                  className={`w-full py-3 rounded-xl font-bold text-sm transition-all block text-center ${plan.highlight
                     ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200'
                     : 'bg-slate-100 hover:bg-slate-200 text-slate-900'
                     }`}
                 >
                   {plan.cta}
-                </button>
+                </Link>
               </motion.div>
             ))}
           </div>
@@ -492,13 +492,13 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
             <p className="text-lg text-indigo-100 mb-10 max-w-xl mx-auto">
               Bergabung dengan ribuan kontraktor dan PM yang sudah pakai Monefyi Planner. Gratis untuk memulai.
             </p>
-            <button
-              onClick={onSignup}
+            <Link
+              to="/signup"
               className="bg-white text-indigo-700 font-bold px-10 py-4 rounded-2xl text-lg shadow-xl hover:shadow-2xl hover:bg-indigo-50 transition-all inline-flex items-center gap-2"
             >
               Mulai Gratis — Tidak Perlu Kartu Kredit
               <ArrowRight className="w-5 h-5" />
-            </button>
+            </Link>
           </motion.div>
         </div>
       </section>
@@ -514,10 +514,11 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
               <span className="text-white font-bold">Monefyi Planner</span>
             </div>
             <p className="text-sm text-center">© 2025 Monefyi. "Simple di depan, jenius di dalam."</p>
-            <div className="flex gap-6 text-sm">
-              <a href="#" className="hover:text-white transition-colors">Privacy</a>
-              <a href="#" className="hover:text-white transition-colors">Terms</a>
-              <a href="#" className="hover:text-white transition-colors">Contact</a>
+            <div className="flex gap-6 text-sm flex-wrap justify-center">
+              <a href="/join" className="hover:text-white transition-colors">Punya undangan?</a>
+              <a href="/privacy" className="hover:text-white transition-colors">Privacy</a>
+              <a href="/terms" className="hover:text-white transition-colors">Terms</a>
+              <a href="/contact" className="hover:text-white transition-colors">Contact</a>
             </div>
           </div>
         </div>
@@ -526,7 +527,7 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
   );
 }
 
-function DashboardPreview({ onEnterApp }: { onEnterApp: () => void }) {
+function DashboardPreview() {
   const projects = [
     { name: 'Rumah Pak Ahmad', progress: 67, planned: 72, budget: 62, health: 'at_risk', status: 'active' },
     { name: 'Gudang Logistik PT Maju', progress: 45, planned: 42, budget: 40, health: 'on_track', status: 'active' },
@@ -546,9 +547,9 @@ function DashboardPreview({ onEnterApp }: { onEnterApp: () => void }) {
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-xs text-emerald-700 font-medium">Tersinkron</span>
           </div>
-          <button onClick={onEnterApp} className="flex items-center gap-1 text-xs text-indigo-600 font-medium hover:underline">
+          <Link to="/login" className="flex items-center gap-1 text-xs text-indigo-600 font-medium hover:underline">
             Masuk ke App <ChevronRight className="w-3 h-3" />
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -598,12 +599,12 @@ function DashboardPreview({ onEnterApp }: { onEnterApp: () => void }) {
       {/* Monefyi Button Preview */}
       <div className="mt-6 flex justify-center">
         <div className="relative">
-          <button
-            onClick={onEnterApp}
+          <Link
+            to="/signup"
             className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 shadow-xl shadow-indigo-300 flex items-center justify-center animate-breathe relative"
           >
             <Sparkles className="w-6 h-6 text-white" />
-          </button>
+          </Link>
           <div className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap bg-slate-900 text-white text-xs px-3 py-1.5 rounded-full">
             Monefyi Button ✦
           </div>

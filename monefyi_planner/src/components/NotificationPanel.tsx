@@ -1,5 +1,7 @@
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Bell, X, CheckCheck, AlertTriangle, Lightbulb, TrendingUp, Users, Settings } from 'lucide-react';
+import { markNotificationRead as markReadDb, markAllNotificationsRead as markAllReadDb } from '../services/notificationService';
 import { useAppStore } from '../store/appStore';
 
 interface Props {
@@ -32,7 +34,32 @@ function timeAgo(dateStr: string) {
 }
 
 export default function NotificationPanel({ onClose }: Props) {
-  const { notifications, markNotificationRead, markAllNotificationsRead } = useAppStore();
+  const { notifications, markNotificationRead, markAllNotificationsRead, user } = useAppStore();
+  const navigate = useNavigate();
+
+  const handleRead = async (id: string, actionUrl?: string) => {
+    markNotificationRead(id);
+    try {
+      await markReadDb(id);
+    } catch (e) {
+      console.error(e);
+    }
+    if (actionUrl) {
+      navigate(actionUrl.startsWith('/') ? actionUrl : `/app${actionUrl}`);
+      onClose();
+    }
+  };
+
+  const handleReadAll = async () => {
+    markAllNotificationsRead();
+    if (user?.id) {
+      try {
+        await markAllReadDb(user.id);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  };
 
   return (
     <>
@@ -56,7 +83,7 @@ export default function NotificationPanel({ onClose }: Props) {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={markAllNotificationsRead}
+              onClick={handleReadAll}
               className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
             >
               <CheckCheck className="w-3.5 h-3.5" /> Baca semua
@@ -80,7 +107,7 @@ export default function NotificationPanel({ onClose }: Props) {
               return (
                 <button
                   key={notif.id}
-                  onClick={() => markNotificationRead(notif.id)}
+                  onClick={() => handleRead(notif.id, notif.action_url)}
                   className={`w-full flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left border-b border-slate-50 ${!notif.read ? 'bg-indigo-50/30' : ''}`}
                 >
                   <div className={`w-8 h-8 rounded-full ${config.bg} flex items-center justify-center shrink-0 mt-0.5`}>

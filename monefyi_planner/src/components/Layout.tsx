@@ -1,13 +1,15 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, FolderOpen, Wallet, Settings, Bell, Menu, X,
   Sparkles, Wifi, WifiOff, Clock, Users,
-  BarChart3, ChevronRight, LogOut, User, Shield
+  BarChart3, ChevronRight, LogOut, User
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import CommandModal from './CommandModal';
 import NotificationPanel from './NotificationPanel';
+import ToastHost from './ToastHost';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -17,8 +19,9 @@ export default function Layout({ children }: LayoutProps) {
   const {
     user, tenant, activeTab, setActiveTab, syncStatus, pendingSyncCount,
     isOnline, lastSynced, unreadCount, commandModalOpen, setCommandModalOpen,
-    sidebarOpen, setSidebarOpen, logout, setCurrentView
+    sidebarOpen, setSidebarOpen, logout
   } = useAppStore();
+  const navigate = useNavigate();
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -44,13 +47,29 @@ export default function Layout({ children }: LayoutProps) {
   const tabs = isWorker ? workerTabs : ownerTabs;
 
   const ownerSidebarItems = [
-    { id: 'home', label: 'Dashboard', icon: Home, section: null },
-    { id: 'projects', label: 'Proyek', icon: FolderOpen, section: 'PROJECT' },
-    { id: 'finance', label: 'Keuangan', icon: Wallet, section: 'FINANCE' },
-    { id: 'hr', label: 'HR & Karyawan', icon: Users, section: 'HR' },
-    { id: 'admin', label: 'Admin Panel', icon: Shield, section: 'ADMIN' },
-    { id: 'settings', label: 'Pengaturan', icon: Settings, section: null },
+    { id: 'home', label: 'Dashboard', icon: Home },
+    { id: 'projects', label: 'Proyek', icon: FolderOpen },
+    { id: 'finance', label: 'Keuangan', icon: Wallet },
+    ...(user?.role === 'owner' || user?.role === 'manager'
+      ? [{ id: 'hr', label: 'HR & Karyawan', icon: Users }]
+      : []),
+    { id: 'settings', label: 'Pengaturan', icon: Settings },
   ];
+
+  const workerSidebarItems = [
+    { id: 'home', label: 'Home', icon: Home },
+    { id: 'attendance', label: 'Absensi', icon: Clock },
+    { id: 'payroll', label: 'Payroll', icon: Wallet },
+    { id: 'todos', label: 'Todo', icon: BarChart3 },
+  ];
+
+  const sidebarItems = isWorker ? workerSidebarItems : ownerSidebarItems;
+
+  const handleLogout = async () => {
+    setProfileOpen(false);
+    await logout();
+    navigate('/login');
+  };
 
   const getSyncIndicator = () => {
     switch (syncStatus) {
@@ -89,7 +108,7 @@ export default function Layout({ children }: LayoutProps) {
 
         {/* Nav Items */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {ownerSidebarItems.map((item) => (
+          {sidebarItems.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
@@ -156,7 +175,7 @@ export default function Layout({ children }: LayoutProps) {
                     <User className="w-4 h-4" /> Profil Saya
                   </button>
                   <button
-                    onClick={() => { logout(); setCurrentView('landing'); }}
+                    onClick={handleLogout}
                     className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-rose-600 hover:bg-rose-50"
                   >
                     <LogOut className="w-4 h-4" /> Keluar
@@ -202,7 +221,7 @@ export default function Layout({ children }: LayoutProps) {
               </div>
 
               <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-                {ownerSidebarItems.map((item) => (
+                {sidebarItems.map((item) => (
                   <button
                     key={item.id}
                     onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
@@ -220,7 +239,7 @@ export default function Layout({ children }: LayoutProps) {
 
               <div className="p-4 border-t border-slate-100">
                 <button
-                  onClick={() => { logout(); setCurrentView('landing'); }}
+                  onClick={handleLogout}
                   className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-rose-600 hover:bg-rose-50 rounded-xl"
                 >
                   <LogOut className="w-4 h-4" /> Keluar
@@ -247,9 +266,7 @@ export default function Layout({ children }: LayoutProps) {
                 {activeTab === 'home' ? 'Dashboard' :
                   activeTab === 'projects' ? 'Manajemen Proyek' :
                     activeTab === 'finance' ? 'Keuangan' :
-                      activeTab === 'hr' ? 'HR & Karyawan' :
-                        activeTab === 'admin' ? 'Admin Panel' :
-                          activeTab === 'settings' ? 'Pengaturan' : activeTab}
+                      activeTab === 'settings' ? 'Pengaturan' : activeTab}
               </div>
             </div>
             <div className="lg:hidden flex items-center gap-2">
@@ -287,9 +304,14 @@ export default function Layout({ children }: LayoutProps) {
             </div>
 
             {/* User Avatar - Mobile */}
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold lg:hidden">
+            <button
+              type="button"
+              onClick={() => { setActiveTab('settings'); setProfileOpen(false); }}
+              className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold lg:hidden"
+              aria-label="Profil"
+            >
               {user?.name.charAt(0) || 'U'}
-            </div>
+            </button>
           </div>
         </header>
 
@@ -354,6 +376,7 @@ export default function Layout({ children }: LayoutProps) {
       <AnimatePresence>
         {commandModalOpen && <CommandModal />}
       </AnimatePresence>
+      <ToastHost />
     </div>
   );
 }

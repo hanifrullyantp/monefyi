@@ -1,330 +1,581 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  User, Building2, Clock, Users, Wallet, Tag, Bell, Mic,
-  Shield, CreditCard, ChevronRight, Camera, Edit3, Check,
-  MapPin, Smartphone, Globe, LogOut, Sparkles
+  User, Globe, LogOut, Edit3, Check, Building2, Bell, Shield,
+  Info, RefreshCw, Loader2, ChevronRight, Lock, Users, Wifi, WifiOff,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
+import { showToast } from '../store/uiStore';
+import { updateProfileName, loadProfileWithSettings, updateProfileSettings } from '../services/profileService';
+import { loadOrgDetails, updateOrgFields, mergeOrgSettingsJson } from '../services/orgService';
+import { signOutGlobal, updatePassword } from '../services/authService';
+import { validatePassword } from '../lib/validators';
+import {
+  loadNotificationPrefs, saveNotificationPrefs, type NotificationPrefs,
+} from '../services/settingsPrefsService';
 
-const settingsMenu = [
-  { id: 'profile', icon: User, label: 'Profil Saya', desc: 'Foto, nama, kontak, password' },
-  { id: 'organization', icon: Building2, label: 'Organisasi', desc: 'Info bisnis, logo, NPWP' },
-  { id: 'work-hours', icon: Clock, label: 'Jam & Hari Kerja', desc: 'Jadwal kerja, lembur, libur' },
-  { id: 'employees', icon: Users, label: 'Karyawan & HR', desc: 'Kelola tim, role, payroll' },
-  { id: 'accounts', icon: Wallet, label: 'Akun Keuangan', desc: 'Kas, bank, e-wallet' },
-  { id: 'categories', icon: Tag, label: 'Kategori', desc: 'Income, expense, RAP' },
-  { id: 'notifications', icon: Bell, label: 'Notifikasi', desc: 'Channel, rules, push' },
-  { id: 'voice', icon: Mic, label: 'Voice & Command', desc: 'Bahasa, shortcut, history' },
-  { id: 'subscription', icon: CreditCard, label: 'Subscription', desc: 'Plan, usage, upgrade' },
-  { id: 'admin', icon: Shield, label: 'Admin Panel', desc: 'Monitor, audit, parsing rules' },
+type SettingsTab = 'profil' | 'organisasi' | 'notifikasi' | 'keamanan' | 'tentang';
+
+const TIMEZONES = [
+  'Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura', 'Asia/Singapore', 'UTC',
 ];
 
-const employees = [
-  { name: 'Budi Santoso', role: 'owner', dept: 'Management', status: 'active', checkedIn: true, type: 'full_time' },
-  { name: 'Sari Dewi', role: 'manager', dept: 'Operations', status: 'active', checkedIn: true, type: 'full_time' },
-  { name: 'Ahmad Rizky', role: 'worker', dept: 'Field', status: 'active', checkedIn: true, type: 'contract' },
-  { name: 'Rudi Hartono', role: 'staff', dept: 'Field', status: 'active', checkedIn: false, type: 'daily' },
-  { name: 'Siti Aminah', role: 'worker', dept: 'Field', status: 'active', checkedIn: true, type: 'daily' },
-  { name: 'Deni Kusuma', role: 'worker', dept: 'Field', status: 'inactive', checkedIn: false, type: 'contract' },
+const CURRENCIES = [
+  { value: 'IDR', label: 'Rupiah (IDR)' },
+  { value: 'USD', label: 'US Dollar (USD)' },
+  { value: 'SGD', label: 'Singapore Dollar (SGD)' },
 ];
 
-function ProfileSection() {
-  const { user, tenant } = useAppStore();
-  return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-        <h3 className="font-bold text-slate-800 mb-5">Profil Saya</h3>
-        <div className="flex items-center gap-5 mb-6">
-          <div className="relative">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-2xl font-black">
-              {user?.name.charAt(0)}
-            </div>
-            <button className="absolute -bottom-1 -right-1 w-7 h-7 bg-white border-2 border-slate-200 rounded-full flex items-center justify-center shadow-sm hover:bg-slate-50">
-              <Camera className="w-3.5 h-3.5 text-slate-600" />
-            </button>
-          </div>
-          <div>
-            <div className="font-black text-xl text-slate-900">{user?.name}</div>
-            <div className="text-sm text-slate-500">{user?.email}</div>
-            <div className="flex items-center gap-2 mt-1.5">
-              <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold capitalize">{user?.role}</span>
-              <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full text-xs">{user?.position}</span>
-            </div>
-          </div>
-        </div>
-        <div className="space-y-4">
-          {[
-            { label: 'Nama Lengkap', value: user?.name, icon: User },
-            { label: 'Email', value: user?.email, icon: Globe },
-            { label: 'Department', value: user?.department, icon: Building2 },
-            { label: 'Jabatan', value: user?.position, icon: Tag },
-          ].map((field, i) => (
-            <div key={i} className="flex items-center justify-between py-3 border-b border-slate-100 last:border-0">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center">
-                  <field.icon className="w-4 h-4 text-slate-500" />
-                </div>
-                <div>
-                  <div className="text-xs text-slate-400">{field.label}</div>
-                  <div className="text-sm font-medium text-slate-800">{field.value || '-'}</div>
-                </div>
-              </div>
-              <button className="p-1.5 hover:bg-slate-100 rounded-lg">
-                <Edit3 className="w-3.5 h-3.5 text-slate-400" />
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
+const INDUSTRIES = [
+  'Konstruksi', 'Manufaktur', 'IT & Software', 'Event', 'Jasa', 'Retail', 'Lainnya',
+];
 
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-        <h3 className="font-bold text-slate-800 mb-4">Preferensi</h3>
-        <div className="space-y-4">
-          {[
-            { label: 'Bahasa Aplikasi', value: 'Bahasa Indonesia', icon: Globe },
-            { label: 'Tema', value: 'Terang (Light)', icon: Smartphone },
-            { label: 'Timezone', value: 'WIB (Asia/Jakarta)', icon: Clock },
-          ].map((pref, i) => (
-            <div key={i} className="flex items-center justify-between py-2.5 border-b border-slate-100 last:border-0">
-              <div className="flex items-center gap-3">
-                <pref.icon className="w-4 h-4 text-slate-400" />
-                <div>
-                  <div className="text-xs text-slate-400">{pref.label}</div>
-                  <div className="text-sm font-medium text-slate-800">{pref.value}</div>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-slate-300" />
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
+const BUSINESS_TYPES = [
+  { value: 'construction', label: 'Konstruksi / Proyek' },
+  { value: 'manufacturing', label: 'Manufaktur' },
+  { value: 'it', label: 'IT & Software' },
+  { value: 'service', label: 'Jasa' },
+  { value: 'other', label: 'Lainnya' },
+];
 
-function EmployeesSection() {
-  const roleColors: Record<string, string> = {
-    owner: 'bg-violet-100 text-violet-700',
-    admin: 'bg-indigo-100 text-indigo-700',
-    manager: 'bg-blue-100 text-blue-700',
-    staff: 'bg-emerald-100 text-emerald-700',
-    worker: 'bg-amber-100 text-amber-700',
+function roleLabel(role?: string) {
+  const map: Record<string, string> = {
+    owner: 'Owner', manager: 'Manager', worker: 'Karyawan', staff: 'Staff', admin: 'Admin',
   };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="font-bold text-slate-800">Karyawan & Tim</h3>
-        <button className="flex items-center gap-1.5 bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-bold hover:bg-indigo-700 transition-colors">
-          + Undang Karyawan
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3">
-        {employees.map((emp, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className="bg-white border border-slate-100 rounded-2xl p-4 flex items-center gap-4 hover:shadow-sm transition-all"
-          >
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shrink-0 ${
-              emp.status === 'inactive' ? 'bg-slate-400' :
-                emp.checkedIn ? 'bg-emerald-500' : 'bg-amber-500'
-            }`}>
-              {emp.name.charAt(0)}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-slate-800 text-sm">{emp.name}</span>
-                {emp.checkedIn && <div className="w-2 h-2 rounded-full bg-emerald-500" />}
-              </div>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${roleColors[emp.role] || 'bg-slate-100 text-slate-600'}`}>
-                  {emp.role}
-                </span>
-                <span className="text-xs text-slate-400">{emp.dept}</span>
-                <span className="text-xs text-slate-400">· {emp.type.replace('_', ' ')}</span>
-              </div>
-            </div>
-            <div className="text-right shrink-0">
-              <div className={`text-xs font-medium ${emp.status === 'inactive' ? 'text-slate-400' : emp.checkedIn ? 'text-emerald-600' : 'text-amber-600'}`}>
-                {emp.status === 'inactive' ? 'Nonaktif' : emp.checkedIn ? '✓ Hadir' : '⚠ Belum Absen'}
-              </div>
-              <button className="text-xs text-indigo-500 hover:text-indigo-700 mt-0.5">Kelola</button>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4">
-        <h4 className="font-bold text-indigo-800 text-sm mb-2">Pengaturan Absensi</h4>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          {[
-            { label: 'Jam Masuk', value: '08:00' },
-            { label: 'Jam Pulang', value: '17:00' },
-            { label: 'Toleransi Terlambat', value: '15 menit' },
-            { label: 'Radius GPS', value: '100 meter' },
-            { label: 'Rate Lembur', value: '1.5×' },
-            { label: 'Threshold Lembur', value: '30 menit' },
-          ].map((s, i) => (
-            <div key={i} className="flex justify-between py-1.5 border-b border-indigo-100 last:border-0">
-              <span className="text-indigo-600 text-xs">{s.label}</span>
-              <span className="font-bold text-indigo-800 text-xs">{s.value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+  return map[role || ''] || role || '—';
 }
 
-function AdminSection() {
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[
-          { label: 'Total User', value: '8', icon: Users, color: 'bg-indigo-50 text-indigo-600' },
-          { label: 'Sync Queue', value: '0', icon: Check, color: 'bg-emerald-50 text-emerald-600' },
-          { label: 'AI Commands', value: '47', icon: Sparkles, color: 'bg-violet-50 text-violet-600' },
-          { label: 'Storage', value: '128MB', icon: Shield, color: 'bg-amber-50 text-amber-600' },
-        ].map((stat, i) => (
-          <div key={i} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 text-center">
-            <div className={`w-10 h-10 rounded-xl ${stat.color} flex items-center justify-center mx-auto mb-2`}>
-              <stat.icon className="w-5 h-5" />
-            </div>
-            <div className="font-black text-2xl text-slate-900">{stat.value}</div>
-            <div className="text-xs text-slate-400">{stat.label}</div>
-          </div>
-        ))}
-      </div>
+function roleBadgeClass(role?: string) {
+  const map: Record<string, string> = {
+    owner: 'bg-violet-100 text-violet-700',
+    manager: 'bg-indigo-100 text-indigo-700',
+    worker: 'bg-emerald-100 text-emerald-700',
+  };
+  return map[role || ''] || 'bg-slate-100 text-slate-600';
+}
 
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-        <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-indigo-600" /> AI Parsing Analytics
-        </h3>
-        <div className="space-y-3">
-          {[
-            { layer: 'Layer 1: Rule-Based', rate: 78, color: 'bg-emerald-500' },
-            { layer: 'Layer 2: Fuzzy Match', rate: 17, color: 'bg-blue-500' },
-            { layer: 'Layer 3: GPT-4o', rate: 5, color: 'bg-violet-500' },
-          ].map((layer, i) => (
-            <div key={i}>
-              <div className="flex justify-between text-xs text-slate-500 mb-1.5">
-                <span className="font-medium">{layer.layer}</span>
-                <span className="font-bold">{layer.rate}% hit rate</span>
-              </div>
-              <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                <div className={`h-full ${layer.color} rounded-full`} style={{ width: `${layer.rate}%` }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-        <h3 className="font-bold text-slate-800 mb-3">Audit Log Terbaru</h3>
-        <div className="space-y-2">
-          {[
-            { action: 'Catat biaya: Semen Rp 3.25jt', user: 'Budi S.', time: '10:30', icon: '💰' },
-            { action: 'Update progress Pondasi 75%', user: 'Ahmad R.', time: '09:45', icon: '📊' },
-            { action: 'Check in Absensi', user: 'Rudi H.', time: '09:32', icon: '🕐' },
-            { action: 'Request Bon Rp 500rb', user: 'Siti A.', time: '08:15', icon: '💵' },
-          ].map((log, i) => (
-            <div key={i} className="flex items-center gap-3 py-2.5 border-b border-slate-50 last:border-0">
-              <span className="text-lg">{log.icon}</span>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-slate-800 truncate">{log.action}</div>
-                <div className="text-xs text-slate-400">{log.user} · Hari ini {log.time}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+function planLabel(plan?: string) {
+  const map: Record<string, string> = {
+    free: 'Gratis', pro: 'Pro', enterprise: 'Enterprise',
+  };
+  return map[plan || 'free'] || plan || 'Gratis';
 }
 
 export default function Settings() {
-  const [activeSection, setActiveSection] = useState<string | null>(null);
-  const { logout, setCurrentView } = useAppStore();
+  const navigate = useNavigate();
+  const {
+    user, tenant, logout, setUser, setTenant, setActiveTab,
+    syncStatus, isOnline, lastSynced, isDemoMode, projects,
+  } = useAppStore();
 
-  const renderSection = () => {
-    switch (activeSection) {
-      case 'profile': return <ProfileSection />;
-      case 'employees': return <EmployeesSection />;
-      case 'admin': return <AdminSection />;
-      default: return (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-indigo-100 flex items-center justify-center mx-auto mb-3">
-            {settingsMenu.find(m => m.id === activeSection) && (() => {
-              const Icon = settingsMenu.find(m => m.id === activeSection)!.icon;
-              return <Icon className="w-7 h-7 text-indigo-600" />;
-            })()}
-          </div>
-          <p className="text-sm text-slate-400 max-w-xs">
-            Konfigurasi <strong className="text-slate-600 capitalize">{settingsMenu.find(m => m.id === activeSection)?.label}</strong> tersedia di versi produksi.
-          </p>
-        </div>
-      );
+  const isOwner = user?.role === 'owner';
+  const canEditOrg = isOwner;
+
+  const [tab, setTab] = useState<SettingsTab>('profil');
+  const [loading, setLoading] = useState(true);
+
+  const [name, setName] = useState(user?.name || '');
+  const [position, setPosition] = useState('');
+  const [phone, setPhone] = useState('');
+  const [department, setDepartment] = useState('');
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  const [orgName, setOrgName] = useState(tenant?.name || '');
+  const [industry, setIndustry] = useState('');
+  const [timezone, setTimezone] = useState(tenant?.timezone || 'Asia/Jakarta');
+  const [currency, setCurrency] = useState(tenant?.currency || 'IDR');
+  const [businessType, setBusinessType] = useState(tenant?.business_type || 'construction');
+  const [brandColor, setBrandColor] = useState('#6366f1');
+  const [savingOrg, setSavingOrg] = useState(false);
+
+  const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs>(loadNotificationPrefs());
+  const [notifSaved, setNotifSaved] = useState(true);
+
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    try {
+      const profile = await loadProfileWithSettings(user.id);
+      const settings = (profile?.settings || {}) as Record<string, string>;
+      setName(profile?.name || user.name || '');
+      setPosition(settings.position || user.position || '');
+      setPhone(settings.phone || '');
+      setDepartment(settings.department || user.department || '');
+
+      if (tenant?.id && canEditOrg) {
+        const org = await loadOrgDetails(tenant.id);
+        const orgSettings = (org.settings || {}) as Record<string, string>;
+        setOrgName(org.name);
+        setIndustry(org.industry || '');
+        setTimezone(org.timezone || 'Asia/Jakarta');
+        setCurrency(orgSettings.currency || tenant.currency || 'IDR');
+        setBusinessType(orgSettings.business_type || tenant.business_type || 'construction');
+        setBrandColor(org.brand_color || '#6366f1');
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, user?.name, user?.position, user?.department, tenant?.id, canEditOrg, tenant?.currency, tenant?.business_type]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleSaveProfile = async () => {
+    if (!user || !name.trim()) return;
+    setSavingProfile(true);
+    try {
+      const { error: nameErr } = await updateProfileName(user.id, name.trim());
+      if (nameErr) throw new Error(nameErr.message);
+
+      const { error: settingsErr } = await updateProfileSettings(user.id, {
+        position: position.trim(),
+        phone: phone.trim(),
+        department: department.trim(),
+      });
+      if (settingsErr) throw new Error(settingsErr.message);
+
+      setUser({
+        ...user,
+        name: name.trim(),
+        position: position.trim() || undefined,
+        department: department.trim() || undefined,
+      });
+      setEditingProfile(false);
+      showToast('Profil disimpan', 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal menyimpan profil', 'error');
+    } finally {
+      setSavingProfile(false);
     }
   };
 
-  if (activeSection) {
-    const section = settingsMenu.find(m => m.id === activeSection);
+  const handleSaveOrg = async () => {
+    if (!tenant?.id || !canEditOrg) return;
+    setSavingOrg(true);
+    try {
+      const { error: fieldsErr } = await updateOrgFields(tenant.id, {
+        name: orgName.trim(),
+        timezone,
+        brand_color: brandColor,
+        industry: industry || undefined,
+      });
+      if (fieldsErr) throw new Error(fieldsErr.message);
+
+      const { error: settingsErr } = await mergeOrgSettingsJson(tenant.id, {
+        currency,
+        business_type: businessType,
+      });
+      if (settingsErr) throw new Error(settingsErr.message);
+
+      setTenant({
+        ...tenant,
+        name: orgName.trim(),
+        timezone,
+        currency,
+        business_type: businessType,
+      });
+      showToast('Pengaturan organisasi disimpan', 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal menyimpan organisasi', 'error');
+    } finally {
+      setSavingOrg(false);
+    }
+  };
+
+  const handleSaveNotif = () => {
+    saveNotificationPrefs(notifPrefs);
+    setNotifSaved(true);
+    showToast('Preferensi notifikasi disimpan', 'success');
+  };
+
+  const handleNotifChange = (key: keyof NotificationPrefs, value: boolean) => {
+    setNotifPrefs(p => ({ ...p, [key]: value }));
+    setNotifSaved(false);
+  };
+
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      showToast('Konfirmasi password tidak cocok', 'error');
+      return;
+    }
+    const validation = validatePassword(newPassword);
+    if (!validation.valid) {
+      showToast(validation.errors[0], 'error');
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      const { error } = await updatePassword(newPassword);
+      if (error) throw new Error(error.message);
+      setNewPassword('');
+      setConfirmPassword('');
+      showToast('Password berhasil diubah', 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal mengubah password', 'error');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
+  const handleLogoutAll = async () => {
+    await signOutGlobal();
+    await logout();
+    navigate('/login');
+  };
+
+  const goToHr = () => {
+    setActiveTab('hr');
+    navigate('/app?tab=hr');
+  };
+
+  const tabs: { id: SettingsTab; label: string; icon: typeof User; show: boolean }[] = [
+    { id: 'profil', label: 'Profil', icon: User, show: true },
+    { id: 'organisasi', label: 'Organisasi', icon: Building2, show: canEditOrg },
+    { id: 'notifikasi', label: 'Notifikasi', icon: Bell, show: true },
+    { id: 'keamanan', label: 'Keamanan', icon: Shield, show: true },
+    { id: 'tentang', label: 'Tentang', icon: Info, show: true },
+  ];
+
+  if (loading && !name) {
     return (
-      <div className="p-4 md:p-6 max-w-3xl mx-auto">
-        <div className="flex items-center gap-3 mb-6">
-          <button
-            onClick={() => setActiveSection(null)}
-            className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
-          >
-            <ChevronRight className="w-5 h-5 text-slate-500 rotate-180" />
-          </button>
-          <div>
-            <h1 className="font-black text-xl text-slate-900">{section?.label}</h1>
-            <p className="text-xs text-slate-400">{section?.desc}</p>
-          </div>
-        </div>
-        {renderSection()}
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
       </div>
     );
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-3xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-xl md:text-2xl font-black text-slate-900">Pengaturan</h1>
-        <p className="text-sm text-slate-500">Konfigurasi akun, bisnis, dan tim kamu</p>
+    <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-black text-slate-900">Pengaturan</h1>
+          <p className="text-sm text-slate-500">Kelola profil, organisasi, dan preferensi akun.</p>
+        </div>
+        <button type="button" onClick={load} className="p-2.5 border border-slate-200 rounded-xl hover:bg-slate-50 self-start" aria-label="Refresh">
+          <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
+        </button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-4">
-        {settingsMenu.map((item, i) => (
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Role', value: roleLabel(user?.role), sub: user?.email },
+          { label: 'Organisasi', value: tenant?.name || '—', sub: tenant?.slug },
+          { label: 'Paket', value: planLabel(tenant?.plan), sub: `${projects.length} proyek` },
+          { label: 'Status', value: isOnline ? 'Online' : 'Offline', sub: syncStatus },
+        ].map((kpi, i) => (
+          <motion.div key={kpi.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+            className="bg-white rounded-2xl border border-slate-100 p-4">
+            <div className="text-xs text-slate-500">{kpi.label}</div>
+            <div className="font-black text-slate-900 truncate">{kpi.value}</div>
+            <div className="text-xs text-slate-400 truncate">{kpi.sub}</div>
+          </motion.div>
+        ))}
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {tabs.filter(t => t.show).map(t => (
           <button
-            key={item.id}
-            onClick={() => setActiveSection(item.id)}
-            className="w-full flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 group"
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap ${tab === t.id ? 'bg-indigo-100 text-indigo-700' : 'bg-white text-slate-600 border border-slate-100'}`}
           >
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
-              <item.icon className="w-4.5 h-4.5 text-indigo-600" />
-            </div>
-            <div className="flex-1 text-left">
-              <div className="font-semibold text-slate-800 text-sm">{item.label}</div>
-              <div className="text-xs text-slate-400">{item.desc}</div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 transition-colors" />
+            <t.icon className="w-3.5 h-3.5" />
+            {t.label}
           </button>
         ))}
       </div>
 
-      <button
-        onClick={() => { logout(); setCurrentView('landing'); }}
-        className="w-full flex items-center justify-center gap-2 py-3.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-2xl border border-rose-200 transition-colors"
-      >
-        <LogOut className="w-4 h-4" /> Keluar dari Akun
-      </button>
+      {tab === 'profil' && (
+        <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-5">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-2xl font-black shrink-0">
+                {name?.charAt(0)?.toUpperCase() || '?'}
+              </div>
+              <div>
+                <div className="font-black text-xl text-slate-900">{name || '—'}</div>
+                <div className="text-sm text-slate-500">{user?.email}</div>
+                <span className={`inline-block mt-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${roleBadgeClass(user?.role)}`}>
+                  {roleLabel(user?.role)}
+                </span>
+              </div>
+            </div>
+            {!editingProfile ? (
+              <button type="button" onClick={() => setEditingProfile(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-indigo-600 hover:bg-indigo-50 rounded-lg">
+                <Edit3 className="w-3.5 h-3.5" /> Edit
+              </button>
+            ) : (
+              <button type="button" onClick={handleSaveProfile} disabled={savingProfile} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-emerald-600 hover:bg-emerald-50 rounded-lg disabled:opacity-50">
+                {savingProfile ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                Simpan
+              </button>
+            )}
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Field label="Nama Lengkap" icon={User}>
+              {editingProfile ? (
+                <input value={name} onChange={e => setName(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" />
+              ) : (
+                <span className="text-sm font-medium text-slate-800">{name || '—'}</span>
+              )}
+            </Field>
+            <Field label="Email" icon={Globe}>
+              <span className="text-sm font-medium text-slate-800">{user?.email || '—'}</span>
+              <p className="text-xs text-slate-400 mt-0.5">Email tidak dapat diubah di sini.</p>
+            </Field>
+            <Field label="Jabatan / Posisi">
+              {editingProfile ? (
+                <input value={position} onChange={e => setPosition(e.target.value)} placeholder="Site Manager" className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" />
+              ) : (
+                <span className="text-sm font-medium text-slate-800">{position || '—'}</span>
+              )}
+            </Field>
+            <Field label="Departemen">
+              {editingProfile ? (
+                <input value={department} onChange={e => setDepartment(e.target.value)} placeholder="Operasional" className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" />
+              ) : (
+                <span className="text-sm font-medium text-slate-800">{department || '—'}</span>
+              )}
+            </Field>
+            <Field label="Telepon">
+              {editingProfile ? (
+                <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+62..." className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" />
+              ) : (
+                <span className="text-sm font-medium text-slate-800">{phone || '—'}</span>
+              )}
+            </Field>
+            <Field label="Organisasi">
+              <span className="text-sm font-medium text-slate-800">{tenant?.name || '—'}</span>
+            </Field>
+          </div>
+
+          {editingProfile && (
+            <button type="button" onClick={() => { setEditingProfile(false); load(); }} className="text-sm text-slate-500 hover:text-slate-700">
+              Batal
+            </button>
+          )}
+        </div>
+      )}
+
+      {tab === 'organisasi' && canEditOrg && (
+        <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-5">
+          <div>
+            <h3 className="font-bold text-slate-800">Profil Organisasi</h3>
+            <p className="text-sm text-slate-500">Pengaturan perusahaan yang terlihat di seluruh aplikasi.</p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Nama Perusahaan</label>
+              <input value={orgName} onChange={e => setOrgName(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Industri</label>
+              <select value={industry} onChange={e => setIndustry(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+                <option value="">Pilih industri</option>
+                {INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Tipe Bisnis</label>
+              <select value={businessType} onChange={e => setBusinessType(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+                {BUSINESS_TYPES.map(b => <option key={b.value} value={b.value}>{b.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Zona Waktu</label>
+              <select value={timezone} onChange={e => setTimezone(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+                {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Mata Uang Default</label>
+              <select value={currency} onChange={e => setCurrency(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+                {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Warna Brand</label>
+              <div className="flex items-center gap-3">
+                <input type="color" value={brandColor} onChange={e => setBrandColor(e.target.value)} className="w-12 h-10 rounded-lg border border-slate-200 cursor-pointer" />
+                <input value={brandColor} onChange={e => setBrandColor(e.target.value)} className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-sm font-mono" />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-3 pt-2">
+            <button type="button" onClick={handleSaveOrg} disabled={savingOrg} className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-2">
+              {savingOrg && <Loader2 className="w-4 h-4 animate-spin" />}
+              Simpan Organisasi
+            </button>
+            <button type="button" onClick={goToHr} className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 flex items-center gap-1.5 hover:bg-slate-50">
+              <Users className="w-4 h-4" /> HR & Karyawan
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-500">
+            Kelola anggota, undangan, dan akses join di halaman <button type="button" onClick={goToHr} className="text-indigo-600 font-semibold">HR & Karyawan</button>.
+            Billing dan upgrade paket akan tersedia di versi berikutnya.
+          </div>
+        </div>
+      )}
+
+      {tab === 'notifikasi' && (
+        <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-5">
+          <div>
+            <h3 className="font-bold text-slate-800">Preferensi Notifikasi</h3>
+            <p className="text-sm text-slate-500">Atur jenis notifikasi yang ingin kamu terima.</p>
+          </div>
+
+          <div className="space-y-1">
+            <NotifGroup title="Email">
+              {[
+                { key: 'email_invitation' as const, label: 'Undangan & welcome email' },
+                { key: 'email_role_change' as const, label: 'Perubahan role & akses' },
+              ].map(item => (
+                <ToggleRow key={item.key} label={item.label} checked={notifPrefs[item.key]} onChange={v => handleNotifChange(item.key, v)} />
+              ))}
+            </NotifGroup>
+            <NotifGroup title="In-App">
+              {[
+                { key: 'inapp_join_request' as const, label: 'Permintaan join tim' },
+                { key: 'inapp_project' as const, label: 'Proyek & task update' },
+                { key: 'inapp_hr' as const, label: 'HR & absensi' },
+                { key: 'inapp_finance' as const, label: 'Keuangan & budget alert' },
+              ].map(item => (
+                <ToggleRow key={item.key} label={item.label} checked={notifPrefs[item.key]} onChange={v => handleNotifChange(item.key, v)} />
+              ))}
+            </NotifGroup>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={handleSaveNotif} disabled={notifSaved} className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold disabled:opacity-50">
+              Simpan Preferensi
+            </button>
+            {!notifSaved && <span className="text-xs text-amber-600">Ada perubahan belum disimpan</span>}
+          </div>
+          <p className="text-xs text-slate-400">Disimpan lokal per perangkat. Sinkron ke cloud — coming soon.</p>
+        </div>
+      )}
+
+      {tab === 'keamanan' && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <Lock className="w-5 h-5 text-indigo-500" />
+              <h3 className="font-bold text-slate-800">Ubah Password</h3>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-500 mb-1 block">Password Baru</label>
+                <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Min. 8 karakter" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-500 mb-1 block">Konfirmasi Password</label>
+                <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
+              </div>
+            </div>
+            <p className="text-xs text-slate-400">Minimal 8 karakter, huruf besar, angka, dan simbol.</p>
+            <button type="button" onClick={handleChangePassword} disabled={changingPassword || !newPassword} className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-2">
+              {changingPassword && <Loader2 className="w-4 h-4 animate-spin" />}
+              Update Password
+            </button>
+          </div>
+
+          <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 py-3.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-2xl border border-rose-200 transition-colors">
+            <LogOut className="w-4 h-4" /> Keluar dari perangkat ini
+          </button>
+          <button onClick={handleLogoutAll} className="w-full flex items-center justify-center gap-2 py-3 text-sm text-slate-600 hover:bg-slate-100 rounded-2xl border border-slate-200 transition-colors">
+            Keluar dari semua perangkat
+          </button>
+        </div>
+      )}
+
+      {tab === 'tentang' && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4">
+            <h3 className="font-bold text-slate-800">Tentang Aplikasi</h3>
+            <div className="grid sm:grid-cols-2 gap-3 text-sm">
+              <AboutRow label="Aplikasi" value="Monefyi Planner" />
+              <AboutRow label="Versi" value="0.1.0 MVP" />
+              <AboutRow label="Mode" value={isDemoMode ? 'Demo' : 'Production'} />
+              <AboutRow label="Paket" value={planLabel(tenant?.plan)} />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-3">
+            <h3 className="font-bold text-slate-800">Status Sinkronisasi</h3>
+            <div className="flex items-center gap-3 text-sm">
+              {isOnline ? <Wifi className="w-4 h-4 text-emerald-500" /> : <WifiOff className="w-4 h-4 text-slate-400" />}
+              <span className="font-medium capitalize">{syncStatus}</span>
+              {lastSynced && (
+                <span className="text-slate-400">
+                  · Terakhir sync {lastSynced.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-5 text-sm text-indigo-800">
+            <p className="font-semibold mb-1">Butuh bantuan?</p>
+            <p className="text-indigo-700">Hubungi admin organisasi atau kunjungi dokumentasi onboarding di repo proyek.</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Field({ label, icon: Icon, children }: { label: string; icon?: typeof User; children: React.ReactNode }) {
+  return (
+    <div className="py-3 border-b border-slate-50 last:border-0">
+      <div className="flex items-center gap-2 mb-1">
+        {Icon && <Icon className="w-3.5 h-3.5 text-slate-400" />}
+        <div className="text-xs font-semibold text-slate-500">{label}</div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function NotifGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="py-3">
+      <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">{title}</div>
+      <div className="space-y-1">{children}</div>
+    </div>
+  );
+}
+
+function ToggleRow({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label className="flex items-center justify-between py-2.5 px-3 rounded-xl hover:bg-slate-50 cursor-pointer">
+      <span className="text-sm text-slate-700">{label}</span>
+      <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} className="w-4 h-4 accent-indigo-600" />
+    </label>
+  );
+}
+
+function AboutRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between py-2 border-b border-slate-50">
+      <span className="text-slate-500">{label}</span>
+      <span className="font-medium text-slate-800">{value}</span>
     </div>
   );
 }

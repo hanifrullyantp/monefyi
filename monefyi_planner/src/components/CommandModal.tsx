@@ -1,10 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Sparkles, Mic, MicOff, Send, CheckCircle, AlertCircle,
   Wallet, BarChart3, FileText, CheckSquare, Clock, Plus,
   RotateCcw, MessageSquare
 } from 'lucide-react';
+import { parseCommand, aiParseCommand } from '../lib/commandParser';
+import { executeIntent } from '../lib/intentExecutor';
+import { logCommand, loadCommandLogs } from '../services/commandService';
+import { loadWorkItems } from '../services/workItemService';
 import { useAppStore } from '../store/appStore';
 
 type Stage = 'idle' | 'listening' | 'processing' | 'confirm' | 'success' | 'error';
@@ -17,154 +22,50 @@ interface ParsedCommand {
 }
 
 const quickCommands = [
-  { icon: Wallet, label: 'Catat Biaya', color: 'bg-indigo-100 text-indigo-700', template: 'catat semen 50 sak 65 ribu' },
+  { icon: Wallet, label: 'Catat Biaya', color: 'bg-indigo-100 text-indigo-700', template: 'catat semen 10 sak 65000' },
   { icon: BarChart3, label: 'Update Progress', color: 'bg-emerald-100 text-emerald-700', template: 'update progress pondasi 75%' },
-  { icon: FileText, label: 'Laporan', color: 'bg-blue-100 text-blue-700', template: 'gimana project rumah pak ahmad?' },
-  { icon: CheckSquare, label: 'Todo', color: 'bg-violet-100 text-violet-700', template: 'todo cek material besok pagi' },
-  { icon: Clock, label: 'Absensi', color: 'bg-amber-100 text-amber-700', template: 'check in' },
-  { icon: Plus, label: 'Baru', color: 'bg-rose-100 text-rose-700', template: 'buat project baru' },
+  { icon: FileText, label: 'Cek Budget', color: 'bg-blue-100 text-blue-700', template: 'cek budget project' },
+  { icon: Clock, label: 'Log Pekerja', color: 'bg-amber-100 text-amber-700', template: 'hari ini hadir 8 orang' },
+  { icon: Plus, label: 'Buka Proyek', color: 'bg-rose-100 text-rose-700', template: 'buka project' },
 ];
-
-const exampleHistory = [
-  'catat semen 50 sak 65 ribu project rumah pak ahmad',
-  'update pondasi 70 persen',
-  'gimana saldo kas?',
-];
-
-function formatRupiah(n: number) {
-  return `Rp ${n.toLocaleString('id-ID')}`;
-}
-
-function parseCommand(input: string): ParsedCommand | null {
-  const lower = input.toLowerCase().trim();
-
-  // Attendance
-  if (/^(check in|hadir|masuk|absen masuk)$/.test(lower)) {
-    return {
-      intent: 'ABSENSI_CHECKIN',
-      description: 'Check In Absensi',
-      data: { waktu: '08:15', lokasi: 'Site A — Terverifikasi ✓', status: 'Tepat Waktu' },
-    };
-  }
-  if (/^(check out|pulang|selesai|absen keluar)$/.test(lower)) {
-    return {
-      intent: 'ABSENSI_CHECKOUT',
-      description: 'Check Out Absensi',
-      data: { waktu: '17:05', total_kerja: '8 jam 50 menit', status: 'Lembur 5 menit' },
-    };
-  }
-
-  // Cost recording
-  const costMatch = lower.match(/(?:catat|beli|nota|bayar|keluar).*?(\d[\d.,]*)\s*(sak|kubik|m3|m²|liter|kg|batang|unit|buah|ls|orang|hari|set)\s*(?:@|harga|x)?\s*(\d[\d.,]*)?\s*(?:ribu|rb|juta|jt|k)?/);
-  if (costMatch || lower.includes('catat') || lower.includes('beli') || lower.includes('nota')) {
-    const parts = lower.match(/(?:catat|beli|nota|bayar)\s+(.+?)\s+(\d+)\s*(\w+)\s+(?:harga\s+)?(\d+)\s*(ribu|rb|juta|jt)?/);
-    let item = 'Item', qty = 1, unit = 'pcs', price = 0;
-    if (parts) {
-      item = parts[1].charAt(0).toUpperCase() + parts[1].slice(1);
-      qty = parseInt(parts[2]);
-      unit = parts[3];
-      price = parseInt(parts[4]) * (parts[5]?.includes('juta') || parts[5]?.includes('jt') ? 1000000 : parts[5]?.includes('ribu') || parts[5]?.includes('rb') ? 1000 : 1);
-    } else {
-      // Simple extraction
-      const words = lower.split(' ');
-      const numIdx = words.findIndex(w => /^\d+$/.test(w));
-      if (numIdx > 0) {
-        item = words.slice(1, numIdx).join(' ');
-        item = item.charAt(0).toUpperCase() + item.slice(1);
-        qty = parseInt(words[numIdx]);
-        unit = words[numIdx + 1] || 'pcs';
-        const priceWord = words.slice(numIdx + 2).join(' ');
-        if (priceWord.includes('juta') || priceWord.includes('jt')) {
-          price = parseFloat(priceWord) * 1000000;
-        } else if (priceWord.includes('ribu') || priceWord.includes('rb')) {
-          const p = priceWord.replace(/[^\d]/g, '');
-          price = parseInt(p) * 1000;
-        } else {
-          price = parseInt(priceWord.replace(/[^\d]/g, '')) || 65000;
-        }
-      }
-    }
-    if (!price) price = 65000;
-    const total = qty * price;
-    return {
-      intent: 'CATAT_BIAYA',
-      description: 'Catat Realisasi Biaya',
-      data: {
-        item: item || 'Semen',
-        qty: qty || 50,
-        unit: unit || 'sak',
-        harga_satuan: formatRupiah(price || 65000),
-        total: formatRupiah(total || 3250000),
-        project: 'Rumah Pak Ahmad',
-        tanggal: new Date().toLocaleDateString('id-ID'),
-      },
-      warning: total > 5000000 ? '⚠️ Budget kategori ini sudah 85% terpakai' : undefined,
-    };
-  }
-
-  // Progress update
-  const progressMatch = lower.match(/(?:update|progress|hari ini).*?(\w[\w\s]+?)\s+(?:sudah\s+)?(\d+)\s*(?:%|persen)/);
-  if (progressMatch) {
-    return {
-      intent: 'UPDATE_PROGRESS',
-      description: 'Update Progress Task',
-      data: {
-        task: progressMatch[1].trim(),
-        progress_baru: `${progressMatch[2]}%`,
-        progress_lama: '65%',
-        project: 'Rumah Pak Ahmad',
-        tanggal: new Date().toLocaleDateString('id-ID'),
-      },
-    };
-  }
-
-  // Query
-  if (lower.includes('gimana') || lower.includes('saldo') || lower.includes('progress') || lower.includes('laporan') || lower.includes('budget')) {
-    return {
-      intent: 'QUERY',
-      description: 'Tampilkan Informasi',
-      data: {
-        project: 'Rumah Pak Ahmad',
-        progress: '67% (target: 72%)',
-        budget: '62% terpakai (Rp 279jt / Rp 450jt)',
-        cpi: '0.91',
-        spi: '0.93',
-        health: '⚠️ At Risk — Behind 5%',
-      },
-    };
-  }
-
-  // Todo
-  if (lower.includes('todo') || lower.includes('ingatkan') || lower.includes('tugas')) {
-    const taskDesc = lower.replace(/^(todo|ingatkan|tambah tugas|tugas)\s+/i, '');
-    return {
-      intent: 'TAMBAH_TODO',
-      description: 'Tambah Todo',
-      data: {
-        judul: taskDesc || 'Tugas baru',
-        prioritas: 'Medium',
-        deadline: 'Besok',
-        assign_ke: 'Diri Sendiri',
-      },
-    };
-  }
-
-  return null;
-}
 
 export default function CommandModal() {
-  const { setCommandModalOpen, addTransaction, addTodo, addCommandLog, projects } = useAppStore();
+  const navigate = useNavigate();
+  const {
+    setCommandModalOpen,
+    projects,
+    user,
+    tenant,
+    selectedProjectId,
+    refreshData,
+    setCommandLogs,
+  } = useAppStore();
   const [input, setInput] = useState('');
   const [stage, setStage] = useState<Stage>('idle');
   const [isListening, setIsListening] = useState(false);
   const [parsedCmd, setParsedCmd] = useState<ParsedCommand | null>(null);
   const [transcript, setTranscript] = useState('');
   const [layer, setLayer] = useState<1 | 2 | 3>(1);
+  const [resultMessage, setResultMessage] = useState('');
+  const [resultDetails, setResultDetails] = useState('');
+  const [history, setHistory] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
 
-  const activeProject = projects.find(p => p.status === 'active');
+  const activeProject =
+    projects.find(p => p.id === selectedProjectId) ||
+    projects.find(p => p.status === 'active') ||
+    projects[0];
+
+  useEffect(() => {
+    if (user?.id) {
+      loadCommandLogs(user.id).then(logs => {
+        setCommandLogs(logs);
+        setHistory(logs.map(l => l.input));
+      }).catch(console.error);
+    }
+  }, [user?.id, setCommandLogs]);
 
   useEffect(() => {
     if (stage === 'idle') inputRef.current?.focus();
@@ -216,69 +117,102 @@ export default function CommandModal() {
   };
 
   const handleProcess = async (text = input) => {
-    if (!text.trim()) return;
+    if (!text.trim() || !user || !tenant) return;
     setStage('processing');
     setInput(text);
 
-    // Simulate processing layers
-    await new Promise(r => setTimeout(r, 800));
+    let parsed = parseCommand(text);
 
-    const parsed = parseCommand(text);
-    if (parsed) {
-      setLayer(1);
-      setParsedCmd(parsed);
-      setStage('confirm');
-    } else {
-      // Simulate Layer 2/3
+    if (parsed.confidence < 0.75) {
       setLayer(2);
-      await new Promise(r => setTimeout(r, 400));
-      setLayer(3);
-      await new Promise(r => setTimeout(r, 600));
-      setParsedCmd({
-        intent: 'UNKNOWN',
-        description: 'Interpretasi Perintah',
-        data: { input: text, catatan: 'Perintah tidak dikenali sepenuhnya' },
+      const aiResult = await aiParseCommand(text, {
+        projects: projects.map(p => ({ name: p.name, id: p.id, status: p.status })),
+        work_items: [],
+        current_project: activeProject?.name || null,
       });
-      setStage('error');
+      if (aiResult && aiResult.confidence >= 0.6) {
+        parsed = aiResult;
+        setLayer(3);
+      }
+    } else {
+      setLayer(1);
     }
 
-    addCommandLog({
-      id: Date.now().toString(),
-      input: text,
-      intent: parsed?.intent,
-      success: !!parsed,
-      timestamp: new Date().toISOString(),
+    if (parsed.intent === 'unknown' || parsed.confidence < 0.5) {
+      setResultMessage('Maaf, saya belum memahami perintah tersebut.');
+      setResultDetails(`Input: "${text}"`);
+      setStage('error');
+      await logCommand({
+        userId: user.id,
+        orgId: tenant.id,
+        inputType: isListening ? 'voice' : 'text',
+        rawInput: text,
+        parsedIntent: parsed.intent,
+        parsedParams: parsed.params,
+        confidence: parsed.confidence,
+        executionStatus: 'failed',
+      });
+      return;
+    }
+
+    setParsedCmd({
+      intent: parsed.intent,
+      description: parsed.intent.replace(/_/g, ' '),
+      data: parsed.params as Record<string, string | number>,
     });
+    setStage('confirm');
   };
 
-  const handleExecute = () => {
-    if (!parsedCmd) return;
+  const handleExecute = async () => {
+    if (!parsedCmd || !user || !tenant) return;
     setStage('processing');
 
-    setTimeout(() => {
-      if (parsedCmd.intent === 'CATAT_BIAYA') {
-        addTransaction({
-          id: Date.now().toString(),
-          type: 'expense',
-          amount: parsedCmd.data.total ? parseInt(parsedCmd.data.total.toString().replace(/[^\d]/g, '')) : 0,
-          description: parsedCmd.data.item?.toString() || 'Item',
-          category: 'Material',
-          account: 'BCA Utama',
-          date: new Date().toISOString().split('T')[0],
-          project_id: '1',
-          created_at: new Date().toISOString(),
-        });
-      } else if (parsedCmd.intent === 'TAMBAH_TODO') {
-        addTodo({
-          id: Date.now().toString(),
-          title: parsedCmd.data.judul?.toString() || 'Todo baru',
-          priority: 'medium',
-          status: 'pending',
-          created_at: new Date().toISOString(),
-        });
-      }
-      setStage('success');
-    }, 600);
+    const parsed = {
+      intent: parsedCmd.intent,
+      params: parsedCmd.data,
+      confidence: 0.9,
+      raw: input,
+    };
+
+    try {
+      const workItems = activeProject
+        ? await loadWorkItems(activeProject.id)
+        : [];
+
+      const result = await executeIntent(parsed, {
+        userId: user.id,
+        orgId: tenant.id,
+        projects,
+        currentProject: activeProject || null,
+        workItems,
+        onNavigate: path => navigate(path),
+        onRefreshProjects: refreshData,
+        loadWorkItemsForProject: loadWorkItems,
+      });
+
+      await logCommand({
+        userId: user.id,
+        orgId: tenant.id,
+        inputType: isListening ? 'voice' : 'text',
+        rawInput: input,
+        parsedIntent: parsed.intent,
+        parsedParams: parsed.params as Record<string, unknown>,
+        confidence: parsed.confidence,
+        executionStatus: result.success ? 'executed' : 'failed',
+        errorMessage: result.success ? undefined : result.message,
+      });
+
+      if (result.navigateTo) navigate(result.navigateTo);
+      if (result.refreshProjects) await refreshData();
+
+      setResultMessage(result.message);
+      setResultDetails(result.details || '');
+      setStage(result.success ? 'success' : 'error');
+    } catch (e) {
+      setResultMessage('Gagal mengeksekusi perintah');
+      setResultDetails(e instanceof Error ? e.message : String(e));
+      setStage('error');
+    }
   };
 
   const handleReset = () => {
@@ -377,7 +311,7 @@ export default function CommandModal() {
                 <div>
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Riwayat</p>
                   <div className="space-y-2">
-                    {exampleHistory.map((h, i) => (
+                    {history.map((h, i) => (
                       <button
                         key={i}
                         onClick={() => { setInput(h); inputRef.current?.focus(); }}
@@ -475,15 +409,8 @@ export default function CommandModal() {
                   <CheckCircle className="w-8 h-8 text-emerald-600" />
                 </div>
                 <p className="text-lg font-black text-slate-900 mb-1">✅ Berhasil!</p>
-                <p className="text-sm text-slate-500 mb-6">{parsedCmd.description} telah dicatat</p>
-
-                {parsedCmd.data.total && (
-                  <div className="bg-emerald-50 rounded-2xl p-4 mb-6 border border-emerald-100 text-left">
-                    <div className="text-sm font-semibold text-emerald-800 mb-1">💡 Info:</div>
-                    <div className="text-xs text-emerald-700">Total pengeluaran hari ini: Rp 5.800.000</div>
-                    <div className="text-xs text-amber-600 mt-1">⚠️ Budget kategori ini tersisa 15%</div>
-                  </div>
-                )}
+                <p className="text-sm text-slate-500 mb-2">{resultMessage}</p>
+                {resultDetails && <p className="text-xs text-slate-400 mb-6">{resultDetails}</p>}
 
                 <div className="flex gap-3">
                   <button onClick={handleReset} className="flex-1 py-3 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
@@ -502,11 +429,8 @@ export default function CommandModal() {
                 <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
                   <AlertCircle className="w-8 h-8 text-amber-600" />
                 </div>
-                <p className="text-lg font-bold text-slate-800 mb-2">❓ Perintah tidak dipahami</p>
-                <p className="text-sm text-slate-500 mb-6">
-                  Coba ulangi dengan lebih spesifik. Contoh:<br />
-                  <em className="text-indigo-600">"catat semen 50 sak 65 ribu"</em>
-                </p>
+                <p className="text-lg font-bold text-slate-800 mb-2">{resultMessage || '❓ Perintah tidak dipahami'}</p>
+                <p className="text-sm text-slate-500 mb-6">{resultDetails || 'Coba ulangi dengan lebih spesifik.'}</p>
                 <div className="grid grid-cols-2 gap-3">
                   <button onClick={handleReset} className="py-3 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50">
                     Coba Lagi

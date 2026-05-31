@@ -1,57 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   TrendingUp, TrendingDown, AlertCircle,
-  CheckCircle, Users, BarChart3, ChevronRight,
+  CheckCircle, BarChart3, ChevronRight,
   Sparkles, Activity, Calendar, ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
+import { getProjectStats } from '../services/projectService';
+import { aggregateCashflow } from '../services/costService';
+import { loadRecentLogs } from '../services/dailyLogService';
+import { analyzeProject } from '../services/analyzeService';
+import type { AnalyzeResult } from '../services/analyzeService';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 
-const cashflowData = [
-  { date: '1 Jun', income: 50, expense: 20 },
-  { date: '5 Jun', income: 120, expense: 45 },
-  { date: '10 Jun', income: 80, expense: 60 },
-  { date: '15 Jun', income: 150, expense: 80 },
-  { date: '20 Jun', income: 90, expense: 55 },
-  { date: '25 Jun', income: 200, expense: 90 },
-  { date: '30 Jun', income: 160, expense: 70 },
-];
 
-const recentActivities = [
-  { icon: '💰', text: 'Budi catat pengeluaran Rp 3.2jt — Semen project Rumah Pak Ahmad', time: '5 menit lalu', color: 'bg-amber-50 border-amber-100' },
-  { icon: '📊', text: 'Progress Pondasi Gudang Cikarang diupdate: 70% → 75%', time: '23 menit lalu', color: 'bg-blue-50 border-blue-100' },
-  { icon: '👷', text: 'Ahmad check in — Site Rumah Pak Ahmad (08:12)', time: '2 jam lalu', color: 'bg-emerald-50 border-emerald-100' },
-  { icon: '💡', text: 'AI Recommendation: Budget Semen kritis di Rumah Pak Ahmad', time: '3 jam lalu', color: 'bg-violet-50 border-violet-100' },
-  { icon: '✅', text: 'Task Begisting Lantai 1 diselesaikan oleh Rudi', time: '4 jam lalu', color: 'bg-emerald-50 border-emerald-100' },
-];
-
-const aiRecommendations = [
-  {
-    priority: 'critical',
-    icon: '🔴',
-    title: 'Budget semen hampir habis!',
-    detail: 'Semen di project Rumah Pak Ahmad sudah 87% terpakai. Masih ada 5 minggu pengerjaan. Pertimbangkan negosiasi ulang atau alokasi ulang anggaran.',
-    actions: ['Lihat Detail', 'Tambah Budget', 'Abaikan'],
-    category: 'COST',
-  },
-  {
-    priority: 'high',
-    icon: '🟠',
-    title: 'Proyek behind schedule 3 hari',
-    detail: 'SPI: 0.93 — Rumah Pak Ahmad terlambat 3 hari. Tambah 2 pekerja selama 5 hari atau lembur 2 jam/hari untuk catch up.',
-    actions: ['Lihat Opsi', 'Remind Later', 'Abaikan'],
-    category: 'SCHEDULE',
-  },
-  {
-    priority: 'medium',
-    icon: '🟡',
-    title: 'Laporan progress belum diisi',
-    detail: '2 hari tidak ada daily log di Gudang Cikarang. Akurasi analisa berkurang. Minta site manager untuk update.',
-    actions: ['Kirim Reminder', 'Abaikan'],
-    category: 'RISK',
-  },
-];
+const priorityIcon: Record<string, string> = {
+  critical: '🔴',
+  high: '🟠',
+  medium: '🟡',
+  low: '🟢',
+};
 
 function formatRupiah(n: number) {
   if (n >= 1000000000) return `Rp ${(n / 1000000000).toFixed(1)}M`;
@@ -67,21 +35,60 @@ function getGreeting() {
   return 'Selamat malam';
 }
 
-export default function Dashboard() {
-  const { user, projects, todos } = useAppStore();
+export default function Dashboard({ onOpenProject }: { onOpenProject?: (id: string) => void }) {
+  const { user, projects, tenant, setActiveTab, setProjectsListFilter } = useAppStore();
   const [expandedRec, setExpandedRec] = useState<number | null>(null);
+  const [cashflowData, setCashflowData] = useState<{ date: string; amount: number }[]>([]);
+  const [recentLogs, setRecentLogs] = useState<Array<{ description: string; date: string }>>([]);
+  const [recommendations, setRecommendations] = useState<AnalyzeResult['recommendations']>([]);
+  const [stats, setStats] = useState({
+    totalProjects: 0,
+    activeProjects: 0,
+    totalBudget: 0,
+    totalSpent: 0,
+    avgProgress: 0,
+    atRisk: 0,
+  });
+
+  useEffect(() => {
+    if (!tenant?.id) return;
+    getProjectStats(tenant.id).then(setStats).catch(console.error);
+    aggregateCashflow(tenant.id).then(setCashflowData).catch(console.error);
+    loadRecentLogs(tenant.id).then(logs =>
+      setRecentLogs(logs.map(l => ({ description: l.description, date: l.date }))),
+    ).catch(console.error);
+    const firstActive = projects.find(p => p.status === 'active') || projects[0];
+    if (firstActive) {
+      analyzeProject(firstActive.id).then(r => {
+        if (r?.recommendations) setRecommendations(r.recommendations);
+      }).catch(console.error);
+    }
+  }, [tenant?.id, projects.length]);
 
   const activeProjects = projects.filter(p => p.status === 'active');
   const onTrack = projects.filter(p => p.health_status === 'on_track').length;
   const atRisk = projects.filter(p => p.health_status === 'at_risk').length;
   const behind = projects.filter(p => p.health_status === 'behind').length;
-  const todayTodos = todos.filter(t => t.status !== 'done').slice(0, 5);
+  const todayTodos = recentLogs.slice(0, 5).map((log, i) => ({
+    id: String(i),
+    title: log.description,
+    status: 'pending' as const,
+    priority: 'medium' as const,
+    due_date: log.date,
+  }));
+
+  const monthLabel = new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+
+  const goAtRiskProjects = () => {
+    setProjectsListFilter('at_risk');
+    setActiveTab('projects');
+  };
 
   const businessCards = [
-    { label: 'Omzet Bulan Ini', value: 230000000, change: '+12%', up: true, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { label: 'Profit Kotor', value: 78000000, change: '33.9% margin', up: true, icon: BarChart3, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Pengeluaran Ops', value: 24000000, change: '10.4% dari omzet', up: false, icon: TrendingDown, color: 'text-amber-600', bg: 'bg-amber-50' },
-    { label: 'Net Profit', value: 54000000, change: '23.5% margin', up: true, icon: Activity, color: 'text-violet-600', bg: 'bg-violet-50' },
+    { label: 'Total Proyek', value: stats.totalProjects, change: `${activeProjects.length} aktif`, up: true, icon: BarChart3, color: 'text-blue-600', bg: 'bg-blue-50', isMoney: false },
+    { label: 'Proyek Aktif', value: stats.activeProjects, change: `${stats.avgProgress.toFixed(0)}% avg progress`, up: true, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50', isMoney: false },
+    { label: 'Total Budget', value: stats.totalBudget, change: 'RAP semua proyek', up: true, icon: Activity, color: 'text-violet-600', bg: 'bg-violet-50', isMoney: true },
+    { label: 'Total Terpakai', value: stats.totalSpent, change: `${stats.atRisk} at risk`, up: false, icon: TrendingDown, color: 'text-amber-600', bg: 'bg-amber-50', isMoney: true },
   ];
 
   return (
@@ -96,17 +103,22 @@ export default function Dashboard() {
             {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-rose-50 border border-rose-200 rounded-full">
+        <button
+          type="button"
+          onClick={goAtRiskProjects}
+          disabled={stats.atRisk === 0}
+          className="flex items-center gap-2 px-3 py-1.5 bg-rose-50 border border-rose-200 rounded-full disabled:opacity-50 hover:bg-rose-100 transition-colors"
+        >
           <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
-          <span className="text-xs font-semibold text-rose-700">3 alert kritis</span>
-        </div>
+          <span className="text-xs font-semibold text-rose-700">{stats.atRisk} alert</span>
+        </button>
       </motion.div>
 
       {/* Business Snapshot */}
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-bold text-slate-700 text-sm uppercase tracking-wide">Business Snapshot</h2>
-          <span className="text-xs text-slate-400">Juni 2025</span>
+          <span className="text-xs text-slate-400">{monthLabel}</span>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {businessCards.map((card, i) => (
@@ -123,7 +135,9 @@ export default function Dashboard() {
                   <card.icon className={`w-3.5 h-3.5 ${card.color}`} />
                 </div>
               </div>
-              <div className="font-black text-slate-900 text-lg">{formatRupiah(card.value)}</div>
+              <div className="font-black text-slate-900 text-lg">
+                {'isMoney' in card && card.isMoney ? formatRupiah(card.value) : card.value}
+              </div>
               <div className={`flex items-center gap-1 text-xs mt-1 font-medium ${card.up ? 'text-emerald-600' : 'text-amber-600'}`}>
                 {card.up ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                 {card.change}
@@ -161,6 +175,7 @@ export default function Dashboard() {
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 + i * 0.08 }}
+                onClick={() => onOpenProject?.(proj.id)}
                 className={`bg-white rounded-2xl p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer group`}
               >
                 <div className="flex items-start justify-between mb-3">
@@ -247,16 +262,12 @@ export default function Dashboard() {
                 contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', fontSize: '12px' }}
                 formatter={(value) => [`Rp ${value}jt`, '']}
               />
-              <Area type="monotone" dataKey="income" stroke="#6366f1" strokeWidth={2} fill="url(#income)" name="Pemasukan" />
-              <Area type="monotone" dataKey="expense" stroke="#f59e0b" strokeWidth={2} fill="url(#expense)" name="Pengeluaran" />
+              <Area type="monotone" dataKey="amount" stroke="#f59e0b" strokeWidth={2} fill="url(#expense)" name="Pengeluaran" />
             </AreaChart>
           </ResponsiveContainer>
           <div className="flex items-center gap-4 mt-2 justify-center">
             <div className="flex items-center gap-1.5 text-xs text-slate-500">
-              <div className="w-3 h-1.5 rounded-full bg-indigo-500" /> Pemasukan
-            </div>
-            <div className="flex items-center gap-1.5 text-xs text-slate-500">
-              <div className="w-3 h-1.5 rounded-full bg-amber-500" /> Pengeluaran
+              <div className="w-3 h-1.5 rounded-full bg-amber-500" /> Pengeluaran 30 hari (jt Rp)
             </div>
           </div>
         </section>
@@ -264,14 +275,17 @@ export default function Dashboard() {
         {/* Today's Agenda */}
         <section className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-bold text-slate-800">Agenda Hari Ini</h2>
+            <h2 className="font-bold text-slate-800">Log & Aktivitas Terbaru</h2>
             <div className="flex items-center gap-1 text-xs text-indigo-600 font-medium">
               <Calendar className="w-3.5 h-3.5" />
-              {todayTodos.filter(t => t.status === 'done').length}/{todayTodos.length} selesai
+              {todayTodos.length} entri
             </div>
           </div>
           <div className="space-y-2">
-            {todayTodos.map((todo) => (
+            {todayTodos.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-6">Belum ada log harian hari ini</p>
+            ) : (
+              todayTodos.map((todo) => (
               <div
                 key={todo.id}
                 className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
@@ -301,7 +315,8 @@ export default function Dashboard() {
                   {todo.priority}
                 </span>
               </div>
-            ))}
+            ))
+            )}
           </div>
         </section>
       </div>
@@ -311,53 +326,50 @@ export default function Dashboard() {
         <div className="flex items-center gap-2 mb-4">
           <Sparkles className="w-4 h-4 text-indigo-600" />
           <h2 className="font-bold text-slate-800">AI Recommendations</h2>
-          <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-full">3 baru</span>
+          {recommendations.length > 0 && (
+            <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-full">
+              {recommendations.length} rekomendasi
+            </span>
+          )}
         </div>
+        {recommendations.length === 0 ? (
+          <p className="text-sm text-slate-400 bg-white rounded-2xl border border-slate-100 p-6 text-center">
+            Buat proyek aktif untuk mendapatkan rekomendasi AI
+          </p>
+        ) : (
         <div className="space-y-3">
-          {aiRecommendations.map((rec, i) => (
+          {recommendations.map((rec, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.5 + i * 0.1 }}
               className={`bg-white rounded-2xl border shadow-sm overflow-hidden ${
-                rec.priority === 'critical' ? 'border-rose-200' :
-                  rec.priority === 'high' ? 'border-amber-200' : 'border-amber-100'
+                rec.severity === 'critical' ? 'border-rose-200' :
+                  rec.severity === 'high' ? 'border-amber-200' : 'border-amber-100'
               }`}
             >
               <div
                 className="flex items-start gap-3 p-4 cursor-pointer"
                 onClick={() => setExpandedRec(expandedRec === i ? null : i)}
               >
-                <span className="text-xl shrink-0">{rec.icon}</span>
+                <span className="text-xl shrink-0">{priorityIcon[rec.severity] || '💡'}</span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-bold text-slate-900 text-sm">{rec.title}</span>
-                    <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full">{rec.category}</span>
+                    <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full">{rec.type}</span>
                   </div>
-                  <p className="text-xs text-slate-500 leading-relaxed">{rec.detail}</p>
+                  <p className="text-xs text-slate-500 leading-relaxed">{rec.message}</p>
+                  {expandedRec === i && rec.action && (
+                    <p className="text-xs text-indigo-600 font-medium mt-2">→ {rec.action}</p>
+                  )}
                 </div>
                 <ChevronRight className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${expandedRec === i ? 'rotate-90' : ''}`} />
               </div>
-              {expandedRec === i && (
-                <div className="px-4 pb-4 pt-0 flex items-center gap-2">
-                  {rec.actions.map((action, j) => (
-                    <button
-                      key={j}
-                      className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                        j === 0 ? 'bg-indigo-600 text-white hover:bg-indigo-700' :
-                          j === rec.actions.length - 1 ? 'bg-slate-100 text-slate-500 hover:bg-slate-200' :
-                            'bg-amber-100 text-amber-700 hover:bg-amber-200'
-                      }`}
-                    >
-                      {action}
-                    </button>
-                  ))}
-                </div>
-              )}
             </motion.div>
           ))}
         </div>
+        )}
       </section>
 
       {/* Recent Activity */}
@@ -366,56 +378,21 @@ export default function Dashboard() {
           <h2 className="font-bold text-slate-800 flex items-center gap-2">
             <Activity className="w-4 h-4 text-indigo-600" /> Aktivitas Terbaru
           </h2>
-          <button className="text-xs text-indigo-600 font-medium">Lihat semua</button>
         </div>
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm divide-y divide-slate-50">
-          {recentActivities.map((act, i) => (
+          {recentLogs.length === 0 ? (
+            <p className="p-6 text-sm text-slate-400 text-center">Belum ada aktivitas</p>
+          ) : (
+          recentLogs.map((log, i) => (
             <div key={i} className="flex items-center gap-3 p-4 hover:bg-slate-50 transition-colors">
-              <span className="text-xl">{act.icon}</span>
+              <span className="text-xl">📝</span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-slate-700 leading-relaxed">{act.text}</p>
+                <p className="text-sm text-slate-700 leading-relaxed">{log.description}</p>
               </div>
-              <span className="text-xs text-slate-400 shrink-0 whitespace-nowrap">{act.time}</span>
+              <span className="text-xs text-slate-400 shrink-0 whitespace-nowrap">{log.date}</span>
             </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Team Status */}
-      <section className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-slate-800 flex items-center gap-2">
-            <Users className="w-4 h-4 text-indigo-600" /> Status Tim Hari Ini
-          </h2>
-          <span className="text-xs text-slate-400">5/8 hadir</span>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { name: 'Ahmad R.', status: 'present', time: '08:12', project: 'Site A' },
-            { name: 'Budi S.', status: 'present', time: '07:58', project: 'Kantor' },
-            { name: 'Rudi H.', status: 'late', time: '09:30', project: 'Site B' },
-            { name: 'Sari D.', status: 'absent', time: '-', project: '-' },
-          ].map((member, i) => (
-            <div key={i} className={`p-3 rounded-xl border text-center ${
-              member.status === 'present' ? 'border-emerald-200 bg-emerald-50' :
-                member.status === 'late' ? 'border-amber-200 bg-amber-50' : 'border-rose-200 bg-rose-50'
-            }`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold mx-auto mb-2 ${
-                member.status === 'present' ? 'bg-emerald-500' :
-                  member.status === 'late' ? 'bg-amber-500' : 'bg-rose-400'
-              }`}>
-                {member.name.charAt(0)}
-              </div>
-              <div className="text-xs font-semibold text-slate-800 truncate">{member.name}</div>
-              <div className={`text-xs font-medium ${
-                member.status === 'present' ? 'text-emerald-600' :
-                  member.status === 'late' ? 'text-amber-600' : 'text-rose-500'
-              }`}>
-                {member.status === 'present' ? `✓ ${member.time}` : member.status === 'late' ? `⚠ ${member.time}` : '✗ Tidak hadir'}
-              </div>
-              <div className="text-xs text-slate-400 truncate">{member.project}</div>
-            </div>
-          ))}
+          ))
+          )}
         </div>
       </section>
     </div>

@@ -1,0 +1,253 @@
+import { useState } from 'react';
+import { X, Link2, Mail, Hash, Copy, Share2 } from 'lucide-react';
+import { createInvitation, sendInvitationEmails, listInvitations, revokeInvitation } from '../../services/invitationService';
+import { parseEmailList } from '../../lib/validators';
+import { showToast } from '../../store/uiStore';
+import type { InvitationRecord, MemberRole } from '../../types/onboarding';
+
+interface Props {
+  orgId: string;
+  actorRole: string;
+  onClose: () => void;
+  onCreated?: () => void;
+}
+
+type Tab = 'link' | 'email' | 'code';
+
+export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated }: Props) {
+  const [tab, setTab] = useState<Tab>('link');
+  const [role, setRole] = useState<MemberRole>('worker');
+  const [expiry, setExpiry] = useState('7d');
+  const [maxUses, setMaxUses] = useState('1');
+  const [emailInput, setEmailInput] = useState('');
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<{ join_url?: string; code?: string; invitation?: InvitationRecord } | null>(null);
+  const [codes, setCodes] = useState<InvitationRecord[]>([]);
+  const [csvPreview, setCsvPreview] = useState<{ email: string; role: string }[]>([]);
+
+  const canInviteManager = actorRole === 'owner';
+
+  const loadCodes = async () => {
+    const list = await listInvitations(orgId);
+    setCodes(list.filter(i => i.type === 'code'));
+  };
+
+  const handleCreateLink = async () => {
+    setLoading(true);
+    try {
+      const res = await createInvitation({ org_id: orgId, type: 'link', role, expiry, max_uses: maxUses });
+      setResult(res);
+      showToast('Link undangan dibuat', 'success');
+      onCreated?.();
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    const emails = parseEmailList(emailInput);
+    if (!emails.length) {
+      showToast('Masukkan email valid', 'error');
+      return;
+    }
+    setLoading(true);
+    try {
+      const created = await createInvitation({ org_id: orgId, type: 'email', role, expiry, max_uses: '1', personal_message: message });
+      const sendRes = await sendInvitationEmails(created.invitation.id, emails);
+      const ok = sendRes.results.filter(r => r.ok).length;
+      showToast(`${ok}/${emails.length} email terkirim`, ok ? 'success' : 'error');
+      onCreated?.();
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateCode = async () => {
+    setLoading(true);
+    try {
+      const res = await createInvitation({ org_id: orgId, type: 'code', role, expiry, max_uses: maxUses });
+      setResult(res);
+      await loadCodes();
+      showToast('Kode dibuat', 'success');
+      onCreated?.();
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyText = (text: string) => {
+    navigator.clipboard.writeText(text);
+    showToast('Disalin', 'success');
+  };
+
+  const shareWa = (url: string) => {
+    window.open(`https://wa.me/?text=${encodeURIComponent(`Gabung tim kami: ${url}`)}`, '_blank');
+  };
+
+  const handleCsv = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const lines = String(reader.result).split('\n').slice(1);
+      const rows = lines
+        .map(l => l.split(',').map(c => c.trim()))
+        .filter(r => r[0])
+        .slice(0, 50)
+        .map(r => ({ email: r[0], role: r[1] || 'worker' }));
+      setCsvPreview(rows);
+    };
+    reader.readAsText(file);
+  };
+
+  const sendCsvBatch = async () => {
+    setLoading(true);
+    let ok = 0;
+    for (const row of csvPreview.slice(0, 10)) {
+      try {
+        const created = await createInvitation({
+          org_id: orgId,
+          type: 'email',
+          role: row.role as MemberRole,
+          expiry: '7d',
+          email: row.email,
+        });
+        await sendInvitationEmails(created.invitation.id, [row.email]);
+        ok++;
+      } catch {
+        /* continue */
+      }
+    }
+    showToast(`${ok}/${Math.min(csvPreview.length, 10)} terkirim`, ok ? 'success' : 'error');
+    setLoading(false);
+    onCreated?.();
+  };
+
+  const qrUrl = result?.join_url
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(result.join_url)}`
+    : null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+      <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl">
+        <div className="flex items-center justify-between p-4 border-b border-slate-100">
+          <h2 className="font-bold text-slate-900">Undang Anggota</h2>
+          <button type="button" onClick={onClose} aria-label="Tutup"><X className="w-5 h-5 text-slate-400" /></button>
+        </div>
+
+        <div className="flex border-b border-slate-100">
+          {([
+            { id: 'link', icon: Link2, label: 'Link' },
+            { id: 'email', icon: Mail, label: 'Email' },
+            { id: 'code', icon: Hash, label: 'Kode' },
+          ] as const).map(t => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => { setTab(t.id); if (t.id === 'code') loadCodes(); setResult(null); }}
+              className={`flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-1 ${tab === t.id ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500'}`}
+            >
+              <t.icon className="w-4 h-4" /> {t.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="p-4 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-slate-500">Role</label>
+              <select value={role} onChange={e => setRole(e.target.value as MemberRole)} className="w-full mt-1 px-3 py-2 rounded-lg border border-slate-200 text-sm">
+                <option value="worker">Worker</option>
+                {canInviteManager && <option value="manager">Manager</option>}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-slate-500">Kedaluwarsa</label>
+              <select value={expiry} onChange={e => setExpiry(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-lg border border-slate-200 text-sm">
+                <option value="1d">1 hari</option>
+                <option value="7d">7 hari</option>
+                <option value="30d">30 hari</option>
+                <option value="never">Never</option>
+              </select>
+            </div>
+          </div>
+
+          {tab === 'link' && (
+            <>
+              <div>
+                <label className="text-xs text-slate-500">Max uses</label>
+                <select value={maxUses} onChange={e => setMaxUses(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-lg border border-slate-200 text-sm">
+                  <option value="1">1</option>
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="unlimited">Unlimited</option>
+                </select>
+              </div>
+              {!result ? (
+                <button type="button" onClick={handleCreateLink} disabled={loading} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl disabled:opacity-60">
+                  Generate Link
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <input readOnly value={result.join_url || ''} className="w-full px-3 py-2 rounded-lg border text-xs bg-slate-50" />
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => copyText(result.join_url || '')} className="flex-1 py-2 border rounded-lg text-sm flex items-center justify-center gap-1"><Copy className="w-4 h-4" /> Copy</button>
+                    <button type="button" onClick={() => shareWa(result.join_url || '')} className="flex-1 py-2 border rounded-lg text-sm flex items-center justify-center gap-1"><Share2 className="w-4 h-4" /> WA</button>
+                  </div>
+                  {qrUrl && <img src={qrUrl} alt="QR Code" className="mx-auto w-40 h-40 border rounded-lg" />}
+                </div>
+              )}
+            </>
+          )}
+
+          {tab === 'email' && (
+            <>
+              <textarea value={emailInput} onChange={e => setEmailInput(e.target.value)} placeholder="Email (pisah koma/newline, max 10)" className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm h-24" />
+              <textarea value={message} onChange={e => setMessage(e.target.value)} placeholder="Pesan personal (opsional)" className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm h-16" />
+              <button type="button" onClick={handleSendEmail} disabled={loading} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl">Kirim Undangan</button>
+              <div className="border-t pt-3">
+                <p className="text-xs text-slate-500 mb-2">Bulk CSV (email,role,name,position)</p>
+                <input type="file" accept=".csv" onChange={e => e.target.files?.[0] && handleCsv(e.target.files[0])} className="text-xs" />
+                {csvPreview.length > 0 && (
+                  <>
+                    <p className="text-xs mt-2">{csvPreview.length} baris — preview {Math.min(10, csvPreview.length)} pertama akan dikirim</p>
+                    <button type="button" onClick={sendCsvBatch} disabled={loading} className="mt-2 w-full py-2 border rounded-lg text-sm font-semibold">Kirim batch CSV</button>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+
+          {tab === 'code' && (
+            <>
+              {!result ? (
+                <button type="button" onClick={handleCreateCode} disabled={loading} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl">Buat Kode</button>
+              ) : (
+                <div className="text-center py-4">
+                  <div className="text-4xl font-black tracking-widest text-indigo-600">{result.code}</div>
+                  <button type="button" onClick={() => copyText(result.code || '')} className="mt-3 text-sm text-indigo-600 font-semibold">Salin kode</button>
+                </div>
+              )}
+              {codes.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <p className="text-xs font-semibold text-slate-500">Kode aktif</p>
+                  {codes.map(c => (
+                    <div key={c.id} className="flex items-center justify-between py-2 border-b border-slate-50 text-sm">
+                      <span className="font-mono font-bold">{c.code}</span>
+                      <button type="button" onClick={async () => { await revokeInvitation(c.id); loadCodes(); showToast('Dicabut', 'success'); }} className="text-rose-600 text-xs">Revoke</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
