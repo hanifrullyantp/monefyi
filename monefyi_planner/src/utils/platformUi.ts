@@ -31,3 +31,14 @@ export function showWorkerShell(
   const r = effectiveUiRole(orgRole, platformRole, email, uiViewMode);
   return r === 'worker' || r === 'staff';
 }
+
+/** Owner/manager features (HR, team, etc.) — respects super-admin preview mode. */
+export function canAccessManagerFeatures(
+  orgRole: UserRole | undefined,
+  platformRole: string,
+  email: string | undefined,
+  uiViewMode: UiViewMode,
+) {
+  const r = effectiveUiRole(orgRole, platformRole, email, uiViewMode);
+  return r === 'owner' || r === 'manager';
+}

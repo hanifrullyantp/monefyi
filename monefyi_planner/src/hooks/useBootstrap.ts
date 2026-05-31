@@ -6,7 +6,13 @@ import { onAuthStateChange } from '../services/authService';
 import { loadOrg } from '../services/orgService';
 import { loadProfile } from '../services/profileService';
 import { loadProjects } from '../services/projectService';
-import { updateLastActive, tryDomainJoin, createOwnerOrg } from '../services/onboardingService';
+import {
+  updateLastActive,
+  tryDomainJoin,
+  createOwnerOrg,
+  completeOwnerOnboarding,
+} from '../services/onboardingService';
+import { supabase } from '../lib/supabase';
 import {
   getSignupIntent,
   isOwnerSignupIntent,
@@ -91,6 +97,29 @@ async function bootstrapSession(session: Session) {
         } catch (e) {
           console.error('Auto create owner org:', e);
         }
+      }
+    }
+
+    const platformAdmin = resolvePlatformRole(profile, authUser.email) === 'admin';
+    if (!orgCtx && platformAdmin) {
+      const orgName =
+        String(metadata.org_name || profile.name || 'Platform Admin Workspace').trim() ||
+        'Platform Admin Workspace';
+      try {
+        await createOwnerOrg({
+          org_name: orgName,
+          name: String(profile.name || 'Admin'),
+        });
+        orgCtx = await loadOrg(authUser.id);
+        if (orgCtx) {
+          await completeOwnerOnboarding(orgCtx.org.id, {});
+          await supabase
+            .from('profiles')
+            .update({ onboarding_completed: true })
+            .eq('id', authUser.id);
+        }
+      } catch (e) {
+        console.error('Auto create platform admin org:', e);
       }
     }
 

@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { config } from '../lib/config';
+import { assertNoDbError } from '../lib/supabaseErrors';
 import type { MemberRole, OrgMember } from '../types/onboarding';
 
 async function invokeFn<T>(name: string, body?: Record<string, unknown>): Promise<T> {
@@ -57,5 +58,6 @@ export async function updateOrgAccessSettings(orgId: string, settings: {
   default_role_for_domain?: string;
   is_public_discoverable?: boolean;
 }) {
-  return supabase.from('planner_organizations').update(settings).eq('id', orgId);
+  const { error } = await supabase.from('planner_organizations').update(settings).eq('id', orgId);
+  assertNoDbError(error);
 }

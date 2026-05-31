@@ -7,7 +7,8 @@
 // {
 //   "q"?: string,          // substring email (opsional)
 //   "plan"?: string,       // "all" | "none" | "monthly" | "lifetime" (default: "all")
-//   "status"?: string      // "all" | "active" | "expired" | "none" (default: "all")
+//   "status"?: string,     // "all" | "active" | "expired" | "none" (default: "all")
+//   "planner"?: string      // "all" | "planner" | "non_planner" (default: "all")
 // }
 //
 // Response:
@@ -107,22 +108,59 @@ serve(async (req) => {
     const q = String(body?.q || "").trim().toLowerCase();
     const planFilter = String(body?.plan || "all").toLowerCase();   // "all" | "none" | "monthly" | "lifetime"
     const statusFilter = String(body?.status || "all").toLowerCase(); // "all" | "active" | "expired" | "none"
+    const plannerFilter = String(body?.planner || "all").toLowerCase(); // "all" | "planner" | "non_planner"
 
     const page = Math.max(1, Number(body?.page || 1));
     const perPage = Math.min(200, Math.max(1, Number(body?.pageSize || 100)));
 
-    // 3) Ambil list user dari auth.admin.listUsers
-    const { data: listData, error: listErr } = await supa.auth.admin.listUsers({
-      page,
-      perPage,
-    });
+    type AuthUserLite = {
+      id: string;
+      email?: string;
+      created_at?: string;
+      last_sign_in_at?: string;
+      user_metadata?: Record<string, unknown>;
+    };
 
-    if (listErr) {
-      console.error("monefyi-admin-users listUsers error:", listErr);
-      return json({ error: "Failed to list users" }, 500);
+    let users: AuthUserLite[] = [];
+
+    if (plannerFilter === "planner") {
+      const { data: memberRows, error: memberSeedErr } = await supa
+        .from("planner_org_members")
+        .select("user_id")
+        .eq("status", "active")
+        .order("accepted_at", { ascending: false })
+        .limit(500);
+
+      if (memberSeedErr) {
+        console.error("monefyi-admin-users memberSeedErr:", memberSeedErr);
+        return json({ error: "Failed to load planner users" }, 500);
+      }
+
+      const plannerSeedIds = [
+        ...new Set((memberRows || []).map((m) => String(m.user_id)).filter(Boolean)),
+      ];
+
+      const authUsers = await Promise.all(
+        plannerSeedIds.map(async (uid) => {
+          const { data, error } = await supa.auth.admin.getUserById(uid);
+          if (error || !data?.user) return null;
+          return data.user as AuthUserLite;
+        }),
+      );
+      users = authUsers.filter(Boolean) as AuthUserLite[];
+    } else {
+      const { data: listData, error: listErr } = await supa.auth.admin.listUsers({
+        page,
+        perPage,
+      });
+
+      if (listErr) {
+        console.error("monefyi-admin-users listUsers error:", listErr);
+        return json({ error: "Failed to list users" }, 500);
+      }
+
+      users = (listData?.users || []) as AuthUserLite[];
     }
-
-    let users = listData?.users || [];
 
     // Filter by q (email substring) jika ada
     if (q) {
@@ -133,7 +171,7 @@ serve(async (req) => {
 
     const ids = users.map((u) => u.id);
     if (ids.length === 0) {
-      return json({ ok: true, items: [], total: 0 }, 200);
+      return json({ ok: true, items: [], total: 0, page, pageSize: perPage }, 200);
     }
 
     // 4) Ambil user_plans & profiles untuk id tersebut
@@ -157,6 +195,17 @@ serve(async (req) => {
       return json({ error: "Failed to load profiles" }, 500);
     }
 
+    const { data: memberRows, error: memberErr } = await supa
+      .from("planner_org_members")
+      .select("user_id, role, status, planner_organizations(name)")
+      .in("user_id", ids)
+      .eq("status", "active");
+
+    if (memberErr) {
+      console.error("monefyi-admin-users memberErr:", memberErr);
+      return json({ error: "Failed to load planner memberships" }, 500);
+    }
+
     const planByUser = new Map<string, any>();
     for (const p of planRows || []) {
       if (p?.user_id) planByUser.set(p.user_id, p);
@@ -165,6 +214,16 @@ serve(async (req) => {
     const profileByUser = new Map<string, any>();
     for (const p of profileRows || []) {
       if (p?.id) profileByUser.set(p.id, p);
+    }
+
+    const plannerByUser = new Map<string, { role: string; org_name: string | null }>();
+    for (const m of memberRows || []) {
+      if (!m?.user_id) continue;
+      const org = m.planner_organizations as { name?: string } | null;
+      plannerByUser.set(m.user_id, {
+        role: String(m.role || ""),
+        org_name: org?.name ? String(org.name) : null,
+      });
     }
 
     // 5) Susun items
@@ -198,6 +257,12 @@ serve(async (req) => {
       // Filter oleh statusFilter
       if (statusFilter !== "all" && planStatus !== statusFilter) continue;
 
+      const plannerInfo = plannerByUser.get(u.id) || null;
+      const isPlannerUser = !!plannerInfo;
+
+      if (plannerFilter === "planner" && !isPlannerUser) continue;
+      if (plannerFilter === "non_planner" && isPlannerUser) continue;
+
       const name =
         prof?.name ||
         u.user_metadata?.name ||
@@ -214,6 +279,9 @@ serve(async (req) => {
         expires_at: expiresAt,
         ai_daily_limit: aiDailyLimit,
         profile_role: prof?.role || null,
+        is_planner_user: isPlannerUser,
+        planner_role: plannerInfo?.role || null,
+        planner_org_name: plannerInfo?.org_name || null,
       });
     }
 

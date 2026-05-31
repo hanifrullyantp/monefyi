@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { config } from '../lib/config';
+import { assertNoDbError } from '../lib/supabaseErrors';
 
 async function invokeFn<T>(name: string, body?: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke(name, { body: body || {} });
@@ -49,8 +50,18 @@ export async function completeMemberOnboarding(userId: string, updates: {
   phone?: string;
   bio?: string;
 }) {
-  await supabase.from('planner_org_members').update(updates).eq('user_id', userId).eq('status', 'active');
-  return supabase.from('profiles').update({ onboarding_completed: true }).eq('id', userId);
+  const { error: memberErr } = await supabase
+    .from('planner_org_members')
+    .update(updates)
+    .eq('user_id', userId)
+    .eq('status', 'active');
+  assertNoDbError(memberErr);
+
+  const { error: profileErr } = await supabase
+    .from('profiles')
+    .update({ onboarding_completed: true })
+    .eq('id', userId);
+  assertNoDbError(profileErr);
 }
 
 export async function tryDomainJoin() {
@@ -58,9 +69,10 @@ export async function tryDomainJoin() {
 }
 
 export async function updateLastActive(userId: string, orgId: string) {
-  return supabase
+  const { error } = await supabase
     .from('planner_org_members')
     .update({ last_active_at: new Date().toISOString() })
     .eq('user_id', userId)
     .eq('org_id', orgId);
+  assertNoDbError(error);
 }

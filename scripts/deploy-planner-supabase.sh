@@ -9,8 +9,9 @@
 #   export SUPABASE_PROJECT_REF="zzwqfmdyncxbolestkqp"
 #   ./scripts/deploy-planner-supabase.sh
 #
-# Optional: skip migrations
+# Optional: skip migrations or RLS smoke test
 #   SKIP_DB_PUSH=1 ./scripts/deploy-planner-supabase.sh
+#   SKIP_RLS_SMOKE=1 ./scripts/deploy-planner-supabase.sh
 
 set -euo pipefail
 
@@ -32,6 +33,13 @@ fi
 if [[ "${SKIP_DB_PUSH:-}" != "1" ]]; then
   echo "==> Pushing database migrations..."
   npx --yes supabase@latest db push
+  if [[ "${SKIP_RLS_SMOKE:-}" != "1" ]]; then
+    echo "==> Running RLS smoke test..."
+    "$ROOT/scripts/rls-smoke-test.sh" || {
+      echo "Warning: RLS smoke test failed (set SKIP_RLS_SMOKE=1 to skip)" >&2
+      exit 1
+    }
+  fi
 else
   echo "==> Skipping db push (SKIP_DB_PUSH=1)"
 fi

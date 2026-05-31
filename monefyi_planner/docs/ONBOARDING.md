@@ -163,7 +163,11 @@ Password: `TestOnboard2026!`
 
 ## Manual QA checklist
 
-- [ ] Owner signup → org created → onboarding → team page
+### Onboarding & auth
+
+- [ ] Owner signup → org created → onboarding wizard → masuk `/app`
+- [ ] Owner login (setelah verifikasi email) → **tidak** diarahkan ke Cari Perusahaan
+- [ ] Owner resume (`/signup/owner?resume=1`) → buat org dari metadata signup
 - [ ] Generate invite link → join as worker
 - [ ] Email invite (if Resend configured)
 - [ ] Join code flow
@@ -171,3 +175,30 @@ Password: `TestOnboard2026!`
 - [ ] Domain auto-join toggle + test
 - [ ] Role change / remove / transfer ownership
 - [ ] Audit log entries visible
+
+### Per role (login → dashboard)
+
+| Role | Akun seed | Password |
+|------|-----------|----------|
+| Owner | `owner-onboard@test.monefyi.app` | `TestOnboard2026!` |
+| Manager | `mgr1-onboard@test.monefyi.app` | `TestOnboard2026!` |
+| Worker | `worker1-onboard@test.monefyi.app` | `TestOnboard2026!` |
+
+- [ ] **Owner:** buat proyek (modal 3 langkah) — tidak error `infinite recursion`
+- [ ] **Owner:** detail proyek → tambah RAP / work item / biaya
+- [ ] **Owner:** Tim → undang member
+- [ ] **Manager:** buat proyek, lihat semua proyek org
+- [ ] **Worker:** hanya lihat proyek yang di-assign (atau pool tanpa assignment)
+- [ ] **Super admin:** `hanif.rullyant@gmail.com` → `/admin`, bypass verify email
+
+### RLS / database (otomatis)
+
+Setelah `db push`:
+
+```bash
+./scripts/rls-smoke-test.sh
+```
+
+Lihat juga [RLS_AUDIT.md](RLS_AUDIT.md) untuk peta policy dan aturan migrasi baru.
+
+**Aturan RLS baru:** jangan subquery silang A→B jika B→A; pakai helper `planner_auth_*()` (lihat migrasi `20260531160200`, `20260601120000`).

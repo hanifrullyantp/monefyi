@@ -10,8 +10,7 @@ import HrEmployees from '../pages/HrEmployees';
 import WorkerDashboard from '../pages/WorkerDashboard';
 import OnboardingChecklist from './OnboardingChecklist';
 import { useAppStore } from '../store/appStore';
-import { showWorkerShell } from '../utils/platformUi';
-import { isPlatformAdmin } from '../services/adminService';
+import { showWorkerShell, canAccessManagerFeatures } from '../utils/platformUi';
 
 function AppContent() {
   const { id: projectIdParam } = useParams();
@@ -50,7 +49,7 @@ function AppContent() {
   }, [setOnline, setSyncStatus]);
 
   const isWorker = showWorkerShell(user?.role, platformRole, user?.email, uiViewMode);
-  const isSuperAdmin = isPlatformAdmin(platformRole, user?.email);
+  const canAccessHr = canAccessManagerFeatures(user?.role, platformRole, user?.email, uiViewMode);
 
   const renderPage = () => {
     if (isWorker) return <WorkerDashboard />;
@@ -69,7 +68,7 @@ function AppContent() {
         return <Finance />;
       case 'hr':
       case 'team':
-        return (isSuperAdmin || user?.role === 'owner' || user?.role === 'manager')
+        return canAccessHr
           ? <HrEmployees />
           : <Dashboard onOpenProject={id => navigate(`/app/projects/${id}`)} />;
       case 'settings':

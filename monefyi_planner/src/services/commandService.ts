@@ -1,6 +1,7 @@
 import { toCommandLog, type DbCommandLog } from '../lib/adapters';
 import { config } from '../lib/config';
 import { supabase } from '../lib/supabase';
+import { assertNoDbError } from '../lib/supabaseErrors';
 
 export async function loadCommandLogs(userId: string, limit = 20) {
   const { data, error } = await supabase
@@ -25,7 +26,7 @@ export async function logCommand(entry: {
   executionStatus: 'executed' | 'failed' | 'pending' | 'needs_review';
   errorMessage?: string;
 }) {
-  await supabase.from('planner_command_logs').insert({
+  const { error } = await supabase.from('planner_command_logs').insert({
     user_id: entry.userId,
     org_id: entry.orgId,
     input_type: entry.inputType,
@@ -36,6 +37,7 @@ export async function logCommand(entry: {
     execution_status: entry.executionStatus,
     error_message: entry.errorMessage,
   });
+  assertNoDbError(error);
 }
 
 export async function invokeAiParse(

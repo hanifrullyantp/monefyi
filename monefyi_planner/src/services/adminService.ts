@@ -19,6 +19,9 @@ export interface AdminUserRow {
   expires_at?: string | null;
   ai_daily_limit?: number | null;
   profile_role?: string | null;
+  is_planner_user?: boolean;
+  planner_role?: string | null;
+  planner_org_name?: string | null;
 }
 
 export interface CompanyType {
@@ -57,7 +60,12 @@ export function isPlatformAdmin(platformRole: string, email?: string) {
   return config.adminEmails.some(e => e.toLowerCase() === (email || '').toLowerCase());
 }
 
-export async function fetchAdminUsers(params?: { q?: string; plan?: string; status?: string }) {
+export async function fetchAdminUsers(params?: {
+  q?: string;
+  plan?: string;
+  status?: string;
+  planner?: 'all' | 'planner' | 'non_planner';
+}) {
   return invokeFn<{ ok: boolean; items: AdminUserRow[] }>(config.fnAdminUsers, params || {});
 }
 

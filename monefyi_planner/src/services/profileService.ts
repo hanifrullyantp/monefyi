@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { assertNoDbError } from '../lib/supabaseErrors';
 
 export type PlatformRole = 'user' | 'admin';
 
@@ -28,7 +29,8 @@ export async function loadProfile(userId: string, email?: string, metadata?: Rec
 }
 
 export async function updateProfileName(userId: string, name: string) {
-  return supabase.from('profiles').update({ name }).eq('id', userId);
+  const { error } = await supabase.from('profiles').update({ name }).eq('id', userId);
+  assertNoDbError(error);
 }
 
 export async function loadProfileWithSettings(userId: string) {
@@ -50,5 +52,6 @@ export async function updateProfileSettings(userId: string, patch: Record<string
   if (selErr) throw selErr;
 
   const merged = { ...(current?.settings as Record<string, unknown> || {}), ...patch };
-  return supabase.from('profiles').update({ settings: merged }).eq('id', userId);
+  const { error } = await supabase.from('profiles').update({ settings: merged }).eq('id', userId);
+  assertNoDbError(error);
 }

@@ -1,5 +1,6 @@
 import { type DbWorkItem } from '../lib/adapters';
 import { supabase } from '../lib/supabase';
+import { assertNoDbError } from '../lib/supabaseErrors';
 
 export type WorkItem = DbWorkItem;
 
@@ -32,10 +33,11 @@ export async function deleteWorkItem(id: string) {
 }
 
 export async function loadWorkItemsForOrg(orgId: string): Promise<WorkItem[]> {
-  const { data: projects } = await supabase
+  const { data: projects, error: projErr } = await supabase
     .from('planner_projects')
     .select('id')
     .eq('org_id', orgId);
+  if (projErr) throw new Error(projErr.message);
 
   const ids = (projects || []).map(p => p.id);
   if (!ids.length) return [];
@@ -54,6 +56,7 @@ export async function updateProjectProgressFromWorkItems(projectId: string) {
   const items = await loadWorkItems(projectId);
   if (!items.length) return;
   const avg = items.reduce((s, wi) => s + (Number(wi.progress_pct) || 0), 0) / items.length;
-  await supabase.from('planner_projects').update({ progress_pct: avg }).eq('id', projectId);
+  const { error } = await supabase.from('planner_projects').update({ progress_pct: avg }).eq('id', projectId);
+  assertNoDbError(error);
   return avg;
 }

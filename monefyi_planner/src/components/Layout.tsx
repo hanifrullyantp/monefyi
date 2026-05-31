@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { isPlatformAdmin } from '../services/adminService';
-import { showWorkerShell } from '../utils/platformUi';
+import { showWorkerShell, canAccessManagerFeatures } from '../utils/platformUi';
 import CommandModal from './CommandModal';
 import NotificationPanel from './NotificationPanel';
 import ToastHost from './ToastHost';
@@ -30,6 +30,7 @@ export default function Layout({ children }: LayoutProps) {
 
   const isSuperAdmin = isPlatformAdmin(platformRole, user?.email);
   const isWorker = showWorkerShell(user?.role, platformRole, user?.email, uiViewMode);
+  const canAccessHr = canAccessManagerFeatures(user?.role, platformRole, user?.email, uiViewMode);
 
   const ownerTabs = [
     { id: 'home', label: 'Home', icon: Home },
@@ -53,7 +54,7 @@ export default function Layout({ children }: LayoutProps) {
     { id: 'home', label: 'Dashboard', icon: Home },
     { id: 'projects', label: 'Proyek', icon: FolderOpen },
     { id: 'finance', label: 'Keuangan', icon: Wallet },
-    ...(user?.role === 'owner' || user?.role === 'manager'
+    ...(canAccessHr
       ? [{ id: 'hr', label: 'HR & Karyawan', icon: Users }]
       : []),
     { id: 'settings', label: 'Pengaturan', icon: Settings },
@@ -299,7 +300,8 @@ export default function Layout({ children }: LayoutProps) {
                 {activeTab === 'home' ? 'Dashboard' :
                   activeTab === 'projects' ? 'Manajemen Proyek' :
                     activeTab === 'finance' ? 'Keuangan' :
-                      activeTab === 'settings' ? 'Pengaturan' : activeTab}
+                      activeTab === 'hr' ? 'HR & Karyawan' :
+                        activeTab === 'settings' ? 'Pengaturan' : activeTab}
               </div>
             </div>
             <div className="lg:hidden flex items-center gap-2">

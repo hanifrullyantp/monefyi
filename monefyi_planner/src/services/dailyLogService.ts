@@ -21,10 +21,11 @@ export async function createDailyLog(item: Omit<DailyLog, 'id' | 'created_at'>) 
 }
 
 export async function loadRecentLogs(orgId: string, limit = 5) {
-  const { data: projects } = await supabase
+  const { data: projects, error: projErr } = await supabase
     .from('planner_projects')
     .select('id')
     .eq('org_id', orgId);
+  if (projErr) throw new Error(projErr.message);
 
   const ids = (projects || []).map(p => p.id);
   if (!ids.length) return [];
@@ -41,10 +42,11 @@ export async function loadRecentLogs(orgId: string, limit = 5) {
 }
 
 export async function loadWorkerLogsForOrg(orgId: string, limit = 50): Promise<DailyLog[]> {
-  const { data: projects } = await supabase
+  const { data: projects, error: projErr } = await supabase
     .from('planner_projects')
     .select('id')
     .eq('org_id', orgId);
+  if (projErr) throw new Error(projErr.message);
 
   const ids = (projects || []).map(p => p.id);
   if (!ids.length) return [];

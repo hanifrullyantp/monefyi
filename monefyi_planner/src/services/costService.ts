@@ -1,5 +1,6 @@
 import { type DbCostRealization } from '../lib/adapters';
 import { supabase } from '../lib/supabase';
+import { assertNoDbError } from '../lib/supabaseErrors';
 
 export type CostRealization = DbCostRealization;
 
@@ -15,10 +16,11 @@ export async function loadCostRealizations(projectId: string): Promise<CostReali
 }
 
 export async function loadAllCosts(orgId: string): Promise<CostRealization[]> {
-  const { data: projects } = await supabase
+  const { data: projects, error: projErr } = await supabase
     .from('planner_projects')
     .select('id')
     .eq('org_id', orgId);
+  if (projErr) throw new Error(projErr.message);
 
   const ids = (projects || []).map(p => p.id);
   if (!ids.length) return [];
@@ -50,10 +52,11 @@ export async function createCostRealization(
     .eq('project_id', item.project_id);
 
   const totalSpent = (costs || []).reduce((s, c) => s + (Number(c.total_amount) || 0), 0);
-  await supabase
+  const { error: updErr } = await supabase
     .from('planner_projects')
     .update({ total_spent: totalSpent })
     .eq('id', item.project_id);
+  assertNoDbError(updErr);
 
   return data as CostRealization;
 }
@@ -68,7 +71,11 @@ export async function deleteCostRealization(id: string, projectId: string) {
     .eq('project_id', projectId);
 
   const totalSpent = (costs || []).reduce((s, c) => s + (Number(c.total_amount) || 0), 0);
-  await supabase.from('planner_projects').update({ total_spent: totalSpent }).eq('id', projectId);
+  const { error: updErr } = await supabase
+    .from('planner_projects')
+    .update({ total_spent: totalSpent })
+    .eq('id', projectId);
+  assertNoDbError(updErr);
 }
 
 export async function aggregateCashflow(orgId: string, days = 30) {
@@ -97,10 +104,11 @@ export async function aggregateCashflow(orgId: string, days = 30) {
 }
 
 export async function aggregateByProject(orgId: string) {
-  const { data: projects } = await supabase
+  const { data: projects, error } = await supabase
     .from('planner_projects')
     .select('id, name, total_budget, total_spent')
     .eq('org_id', orgId);
+  if (error) throw new Error(error.message);
 
   return (projects || []).map(p => ({
     projectId: p.id,

@@ -1,5 +1,6 @@
 import { toTenant, type DbOrganization } from '../lib/adapters';
 import { supabase } from '../lib/supabase';
+import { assertNoDbError } from '../lib/supabaseErrors';
 import type { Tenant } from '../store/appStore';
 
 export interface OrgContext {
@@ -62,11 +63,13 @@ export async function loadOrg(userId: string): Promise<OrgContext | null> {
 }
 
 export async function updateOrgName(orgId: string, name: string) {
-  return supabase.from('planner_organizations').update({ name }).eq('id', orgId);
+  const { error } = await supabase.from('planner_organizations').update({ name }).eq('id', orgId);
+  assertNoDbError(error);
 }
 
 export async function updateOrgSettings(orgId: string, updates: Record<string, unknown>) {
-  return supabase.from('planner_organizations').update(updates).eq('id', orgId);
+  const { error } = await supabase.from('planner_organizations').update(updates).eq('id', orgId);
+  assertNoDbError(error);
 }
 
 export interface OrgDetails {
@@ -98,7 +101,8 @@ export async function updateOrgFields(orgId: string, fields: {
   brand_color?: string;
   industry?: string;
 }) {
-  return supabase.from('planner_organizations').update(fields).eq('id', orgId);
+  const { error } = await supabase.from('planner_organizations').update(fields).eq('id', orgId);
+  assertNoDbError(error);
 }
 
 export async function mergeOrgSettingsJson(orgId: string, patch: Record<string, unknown>) {
@@ -110,5 +114,6 @@ export async function mergeOrgSettingsJson(orgId: string, patch: Record<string, 
   if (selErr) throw selErr;
 
   const merged = { ...(current?.settings as Record<string, unknown> || {}), ...patch };
-  return supabase.from('planner_organizations').update({ settings: merged }).eq('id', orgId);
+  const { error } = await supabase.from('planner_organizations').update({ settings: merged }).eq('id', orgId);
+  assertNoDbError(error);
 }
