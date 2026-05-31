@@ -48,6 +48,7 @@ const ALLOWED_KEYS = new Set([
   "affiliate_commission",
   "tutorial",
   "notif_threshold",
+  "platform_settings",
 ]);
 
 serve(async (req) => {

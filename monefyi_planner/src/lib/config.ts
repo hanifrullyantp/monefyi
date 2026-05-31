@@ -20,6 +20,12 @@ export const config = {
   fnTransferOwnership: 'planner-transfer-ownership',
   fnSearchCompanies: 'planner-search-companies',
   fnTryDomainJoin: 'planner-try-domain-join',
+  fnAdminUsers: 'monefyi-admin-users',
+  fnAdminUpdateUser: 'monefyi-admin-update-user',
+  fnAdminAppConfig: 'monefyi-admin-app-config',
+  fnAdminPlatformStats: 'monefyi-admin-platform-stats',
+  fnAdminCompanyTypes: 'monefyi-admin-company-types',
+  fnUserAccount: 'monefyi-user-account',
   appEnv:
     (import.meta.env.VITE_APP_ENV as string) ||
     (import.meta.env.VERCEL_ENV as string) ||

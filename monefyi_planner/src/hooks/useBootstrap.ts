@@ -12,7 +12,14 @@ import {
   subscribeNotifications,
   subscribeProjects,
 } from '../services/notificationService';
+import { config } from '../lib/config';
 import { useAppStore } from '../store/appStore';
+
+function resolvePlatformRole(profile: { role?: string }, email?: string): 'user' | 'admin' {
+  if (String(profile?.role || '').toLowerCase() === 'admin') return 'admin';
+  if (config.adminEmails.some(e => e.toLowerCase() === (email || '').toLowerCase())) return 'admin';
+  return 'user';
+}
 
 let bootstrapPromise: Promise<void> | null = null;
 
@@ -29,6 +36,7 @@ async function bootstrapSession(session: Session) {
       authUser.email,
       authUser.user_metadata as Record<string, unknown>,
     );
+    store.setPlatformRole(resolvePlatformRole(profile, authUser.email));
 
     const orgCtx = await loadOrg(authUser.id);
 

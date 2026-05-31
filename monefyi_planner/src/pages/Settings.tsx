@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import {
-  User, Globe, LogOut, Edit3, Check, Building2, Bell, Shield,
-  Info, RefreshCw, Loader2, ChevronRight, Lock, Users, Wifi, WifiOff,
+import { User, Globe, LogOut, Edit3, Check, Building2, Bell, Shield,
+  Info, RefreshCw, Loader2, ChevronRight, Lock, Users, Wifi, WifiOff, Sparkles,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { showToast } from '../store/uiStore';
@@ -14,8 +13,11 @@ import { validatePassword } from '../lib/validators';
 import {
   loadNotificationPrefs, saveNotificationPrefs, type NotificationPrefs,
 } from '../services/settingsPrefsService';
+import UserAccountPanel from '../components/account/UserAccountPanel';
+import { isPlatformAdmin } from '../services/adminService';
+import { Link } from 'react-router-dom';
 
-type SettingsTab = 'profil' | 'organisasi' | 'notifikasi' | 'keamanan' | 'tentang';
+type SettingsTab = 'profil' | 'akun' | 'organisasi' | 'notifikasi' | 'keamanan' | 'tentang';
 
 const TIMEZONES = [
   'Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura', 'Asia/Singapore', 'UTC',
@@ -65,12 +67,13 @@ function planLabel(plan?: string) {
 export default function Settings() {
   const navigate = useNavigate();
   const {
-    user, tenant, logout, setUser, setTenant, setActiveTab,
+    user, tenant, logout, setUser, setTenant, setActiveTab, platformRole,
     syncStatus, isOnline, lastSynced, isDemoMode, projects,
   } = useAppStore();
 
   const isOwner = user?.role === 'owner';
   const canEditOrg = isOwner;
+  const showAdminLink = isPlatformAdmin(platformRole, user?.email);
 
   const [tab, setTab] = useState<SettingsTab>('profil');
   const [loading, setLoading] = useState(true);
@@ -242,6 +245,7 @@ export default function Settings() {
 
   const tabs: { id: SettingsTab; label: string; icon: typeof User; show: boolean }[] = [
     { id: 'profil', label: 'Profil', icon: User, show: true },
+    { id: 'akun', label: 'Akun & AI', icon: Sparkles, show: true },
     { id: 'organisasi', label: 'Organisasi', icon: Building2, show: canEditOrg },
     { id: 'notifikasi', label: 'Notifikasi', icon: Bell, show: true },
     { id: 'keamanan', label: 'Keamanan', icon: Shield, show: true },
@@ -262,6 +266,11 @@ export default function Settings() {
         <div>
           <h1 className="text-2xl md:text-3xl font-black text-slate-900">Pengaturan</h1>
           <p className="text-sm text-slate-500">Kelola profil, organisasi, dan preferensi akun.</p>
+          {showAdminLink && (
+            <Link to="/admin" className="inline-flex mt-2 text-sm font-semibold text-indigo-600 hover:underline">
+              Buka Super Admin →
+            </Link>
+          )}
         </div>
         <button type="button" onClick={load} className="p-2.5 border border-slate-200 rounded-xl hover:bg-slate-50 self-start" aria-label="Refresh">
           <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
@@ -368,6 +377,12 @@ export default function Settings() {
               Batal
             </button>
           )}
+        </div>
+      )}
+
+      {tab === 'akun' && (
+        <div className="bg-white rounded-2xl border border-slate-100 p-6">
+          <UserAccountPanel />
         </div>
       )}
 

@@ -1,37 +1,65 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
+import {
+  resolveGeminiForUser,
+  recordGeminiUsage,
+  callGeminiGenerate,
+} from "../_shared/gemini.ts";
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
+const corsHeaders = {
+  "Access-Control-Allow-Origin": Deno.env.get("APP_CORS_ORIGIN") || "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return new Response(JSON.stringify({ error: "No auth" }), { status: 401, headers: CORS });
+    const url = Deno.env.get("SUPABASE_URL")!;
+    const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const geminiKey = Deno.env.get("GEMINI_API_KEY") || "";
-    const sb = createClient(supabaseUrl, supabaseKey);
+    const authHeader = req.headers.get("Authorization") || "";
+    if (!authHeader) return json({ error: "No auth" }, 401);
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authErr } = await sb.auth.getUser(token);
-    if (authErr || !user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: CORS });
+    const userClient = createClient(url, anon, { global: { headers: { Authorization: authHeader } } });
+    const { data: authData, error: authErr } = await userClient.auth.getUser();
+    if (authErr || !authData?.user) return json({ error: "Unauthorized" }, 401);
 
+    const sb = createClient(url, service, { auth: { persistSession: false } });
     const { input, context } = await req.json();
-    if (!input) return new Response(JSON.stringify({ error: "No input" }), { status: 400, headers: CORS });
+    if (!input) return json({ error: "No input" }, 400);
 
-    if (!geminiKey) {
-      return new Response(JSON.stringify({
+    const gemini = await resolveGeminiForUser(sb, authData.user.id);
+
+    if (!gemini.apiKey) {
+      if (gemini.source === "none" && gemini.platformFallbackUsed >= gemini.platformFallbackLimit) {
+        return json({
+          intent: "unknown",
+          params: {},
+          confidence: 0,
+          message: "Kuota AI platform hari ini habis. Tambahkan Gemini API key di Pengaturan → Akun.",
+          quota: {
+            platform_fallback_used: gemini.platformFallbackUsed,
+            platform_fallback_limit: gemini.platformFallbackLimit,
+          },
+        });
+      }
+      return json({
         intent: "unknown",
         params: {},
         confidence: 0,
-        message: "AI parser not configured (no GEMINI_API_KEY)",
-      }), { headers: { ...CORS, "Content-Type": "application/json" } });
+        message: "AI belum dikonfigurasi. Set Gemini API key di Pengaturan → Akun atau hubungi admin.",
+      });
     }
 
     const systemPrompt = `Kamu adalah parser perintah untuk aplikasi manajemen proyek konstruksi "Monefyi Planner".
@@ -45,37 +73,14 @@ Konteks saat ini:
 Tugas: Parse input pengguna menjadi JSON dengan format:
 {
   "intent": "record_cost|update_progress|check_budget|check_progress|open_project|add_worker_log|open_report|ask_recommendation|add_rap_item|add_work_item|general_query",
-  "params": { ... sesuai intent ... },
+  "params": { ... },
   "confidence": 0.0-1.0,
   "explanation": "penjelasan singkat"
 }
 
-Contoh intent & params:
-- record_cost: { item, qty, unitPrice, total, projectName }
-- update_progress: { workItem, progress }
-- check_budget: { projectName }
-- check_progress: { projectName }
-- open_project: { projectName }
-- add_worker_log: { workers }
-- open_report: {}
-- ask_recommendation: { projectName }
-
 Respond ONLY with valid JSON, no markdown.`;
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
-    const geminiRes = await fetch(geminiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          { role: "user", parts: [{ text: systemPrompt + "\n\nInput pengguna: " + input }] },
-        ],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 500 },
-      }),
-    });
-
-    const geminiData = await geminiRes.json();
-    const text = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const text = await callGeminiGenerate(gemini.apiKey, systemPrompt, "Input pengguna: " + input);
 
     let parsed;
     try {
@@ -85,13 +90,26 @@ Respond ONLY with valid JSON, no markdown.`;
       parsed = { intent: "unknown", params: {}, confidence: 0, raw_ai_response: text };
     }
 
-    return new Response(JSON.stringify(parsed), {
-      headers: { ...CORS, "Content-Type": "application/json" },
+    await recordGeminiUsage(
+      sb,
+      authData.user.id,
+      gemini.usageDate,
+      gemini.source,
+      {
+        requests_count: gemini.userDailyUsed,
+        platform_fallback_count: gemini.platformFallbackUsed,
+      },
+    );
+
+    return json({
+      ...parsed,
+      _meta: {
+        gemini_source: gemini.source,
+        platform_fallback_used: gemini.platformFallbackUsed + (gemini.source === "platform" ? 1 : 0),
+        platform_fallback_limit: gemini.platformFallbackLimit,
+      },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...CORS, "Content-Type": "application/json" },
-    });
+    return json({ error: err instanceof Error ? err.message : "Unknown error" }, 500);
   }
 });

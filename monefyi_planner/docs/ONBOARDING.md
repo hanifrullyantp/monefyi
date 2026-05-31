@@ -69,6 +69,31 @@ Deploy from `my-supabase-project/supabase/functions/`:
 | planner-transfer-ownership | JWT | Transfer owner |
 | planner-search-companies | Public | Find company |
 | planner-try-domain-join | JWT | Domain auto-join |
+| planner-analyze | JWT | AI analysis |
+| planner-parse-command | JWT | AI command parser |
+
+### Deploy (CLI)
+
+Project ref: **Settings → General → Reference ID** (contoh repo: `zzwqfmdyncxbolestkqp`).
+
+```bash
+# 1. Buat token: https://supabase.com/dashboard/account/tokens
+
+# 2. Login (pilih salah satu)
+npx supabase@latest login --token "sbp_YOUR_TOKEN"
+# atau interaktif (buka browser):
+npx supabase@latest login
+
+# 3. Deploy migrasi + semua function Planner
+export SUPABASE_ACCESS_TOKEN="sbp_YOUR_TOKEN"
+export SUPABASE_PROJECT_REF="your-project-ref"
+./scripts/deploy-planner-supabase.sh
+
+# Hanya function (tanpa db push):
+SKIP_DB_PUSH=1 ./scripts/deploy-planner-supabase.sh
+```
+
+Alternatif: GitHub Actions → **Supabase Planner migrate & deploy** (butuh secrets `SUPABASE_ACCESS_TOKEN` + `SUPABASE_PROJECT_REF`).
 
 ### Edge env vars
 

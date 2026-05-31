@@ -36,5 +36,23 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
-          supabase functions deploy planner-analyze
-          supabase functions deploy planner-parse-command
+          for fn in \
+            planner-analyze \
+            planner-parse-command \
+            planner-create-owner-org \
+            planner-validate-invitation \
+            planner-create-invitation \
+            planner-accept-invitation \
+            planner-send-invitation-email \
+            planner-revoke-invitation \
+            planner-approve-join-request \
+            planner-reject-join-request \
+            planner-change-member-role \
+            planner-remove-member \
+            planner-transfer-ownership \
+            planner-search-companies \
+            planner-try-domain-join
+          do
+            echo "Deploying $fn..."
+            supabase functions deploy "$fn"
+          done

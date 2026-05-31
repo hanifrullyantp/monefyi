@@ -13,6 +13,8 @@ import { JoinByCodePage } from './pages/join/JoinByCode';
 import { FindCompanyPage } from './pages/join/FindCompany';
 import { OwnerOnboardingWizard } from './pages/onboarding/OwnerWizard';
 import { MemberOnboardingWizard } from './pages/onboarding/MemberWizard';
+import AdminRoute from './components/AdminRoute';
+import SuperAdmin from './pages/SuperAdmin';
 
 export default function AppRouter() {
   return (
@@ -32,6 +34,7 @@ export default function AppRouter() {
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/app/*" element={<ProtectedRoute><AppShell /></ProtectedRoute>} />
+        <Route path="/admin" element={<AdminRoute><SuperAdmin /></AdminRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

@@ -108,6 +108,8 @@ interface AppState {
   hasMembership: boolean;
   onboardingCompleted: boolean;
   emailVerified: boolean;
+  platformRole: 'user' | 'admin';
+  uiViewMode: 'auto' | 'owner' | 'worker';
 
   syncStatus: SyncStatus;
   pendingSyncCount: number;
@@ -136,6 +138,8 @@ interface AppState {
   setHasMembership: (val: boolean) => void;
   setOnboardingCompleted: (val: boolean) => void;
   setEmailVerified: (val: boolean) => void;
+  setPlatformRole: (role: 'user' | 'admin') => void;
+  setUiViewMode: (mode: 'auto' | 'owner' | 'worker') => void;
   setSyncStatus: (status: SyncStatus) => void;
   setPendingSyncCount: (count: number) => void;
   setOnline: (val: boolean) => void;
@@ -174,6 +178,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   hasMembership: false,
   onboardingCompleted: false,
   emailVerified: false,
+  platformRole: 'user',
+  uiViewMode: (typeof sessionStorage !== 'undefined'
+    ? (sessionStorage.getItem('monefyi_ui_view_mode') as 'auto' | 'owner' | 'worker') || 'auto'
+    : 'auto'),
 
   syncStatus: 'synced',
   pendingSyncCount: 0,
@@ -202,6 +210,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   setHasMembership: hasMembership => set({ hasMembership }),
   setOnboardingCompleted: onboardingCompleted => set({ onboardingCompleted }),
   setEmailVerified: emailVerified => set({ emailVerified }),
+  setPlatformRole: platformRole => set({ platformRole }),
+  setUiViewMode: uiViewMode => {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem('monefyi_ui_view_mode', uiViewMode);
+    }
+    set({ uiViewMode });
+  },
   setSyncStatus: syncStatus => set({ syncStatus }),
   setPendingSyncCount: pendingSyncCount => set({ pendingSyncCount }),
   setOnline: isOnline => set({ isOnline }),

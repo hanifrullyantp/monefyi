@@ -1,9 +1,11 @@
 import { supabase } from '../lib/supabase';
 
+export type PlatformRole = 'user' | 'admin';
+
 export async function loadProfile(userId: string, email?: string, metadata?: Record<string, unknown>) {
   const { data, error: selErr } = await supabase
     .from('profiles')
-    .select('*')
+    .select('id, name, avatar_url, settings, onboarding_completed, role, status, gemini_key, phone')
     .eq('id', userId)
     .maybeSingle();
 
