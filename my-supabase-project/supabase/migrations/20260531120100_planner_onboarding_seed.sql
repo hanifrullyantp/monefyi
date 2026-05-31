@@ -7,8 +7,8 @@ SET search_path = public, extensions, auth;
 
 DO $onboard_seed$
 DECLARE
-  org_id uuid := 'b2222222-3333-4444-8555-666666666601'::uuid;
-  owner_id uuid := 'b2222222-3333-4444-8555-666666666602'::uuid;
+  v_org_id uuid := 'b2222222-3333-4444-8555-666666666601'::uuid;
+  v_owner_id uuid := 'b2222222-3333-4444-8555-666666666602'::uuid;
   mgr1_id uuid := 'b2222222-3333-4444-8555-666666666603'::uuid;
   mgr2_id uuid := 'b2222222-3333-4444-8555-666666666604'::uuid;
   w_ids uuid[] := ARRAY[
@@ -33,7 +33,7 @@ DECLARE
     'Worker Satu', 'Worker Dua', 'Worker Tiga', 'Worker Empat', 'Worker Lima'
   ];
   roles text[] := ARRAY['owner','manager','manager','worker','worker','worker','worker','worker'];
-  uids uuid[] := ARRAY[owner_id, mgr1_id, mgr2_id, w_ids[1], w_ids[2], w_ids[3], w_ids[4], w_ids[5]];
+  uids uuid[] := ARRAY[v_owner_id, mgr1_id, mgr2_id, w_ids[1], w_ids[2], w_ids[3], w_ids[4], w_ids[5]];
   i int;
   uid uuid;
 BEGIN
@@ -68,13 +68,13 @@ BEGIN
     id, name, slug, owner_id, industry, team_size, timezone,
     onboarding_completed, brand_color, is_public_discoverable, allow_join_request
   ) VALUES (
-    org_id, 'PT Buana Onboard Test', 'buana-onboard-test', owner_id,
+    v_org_id, 'PT Buana Onboard Test', 'buana-onboard-test', v_owner_id,
     'construction', '11-50', 'Asia/Jakarta', true, '#6366f1', true, true
   ) ON CONFLICT (id) DO NOTHING;
 
   FOR i IN 1..8 LOOP
     INSERT INTO planner_org_members (org_id, user_id, role, status, accepted_at)
-    VALUES (org_id, uids[i], roles[i], 'active', now())
+    VALUES (v_org_id, uids[i], roles[i], 'active', now())
     ON CONFLICT (org_id, user_id) DO UPDATE SET role = EXCLUDED.role, status = 'active';
   END LOOP;
 END;

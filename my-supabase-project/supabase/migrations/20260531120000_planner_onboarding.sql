@@ -13,6 +13,15 @@ CREATE TABLE IF NOT EXISTS profiles (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Align legacy profiles table (may exist from older migrations)
+ALTER TABLE profiles
+  ADD COLUMN IF NOT EXISTS name TEXT,
+  ADD COLUMN IF NOT EXISTS avatar_url TEXT,
+  ADD COLUMN IF NOT EXISTS settings JSONB DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();
+
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS profiles_self_read ON profiles;
