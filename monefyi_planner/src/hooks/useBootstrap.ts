@@ -6,7 +6,12 @@ import { onAuthStateChange } from '../services/authService';
 import { loadOrg } from '../services/orgService';
 import { loadProfile } from '../services/profileService';
 import { loadProjects } from '../services/projectService';
-import { updateLastActive, tryDomainJoin } from '../services/onboardingService';
+import { updateLastActive, tryDomainJoin, createOwnerOrg } from '../services/onboardingService';
+import {
+  getSignupIntent,
+  isOwnerSignupIntent,
+  parseOwnerOrgParamsFromMetadata,
+} from '../lib/ownerSignup';
 import {
   loadNotifications,
   subscribeNotifications,
@@ -23,11 +28,39 @@ function resolvePlatformRole(profile: { role?: string }, email?: string): 'user'
 
 let bootstrapPromise: Promise<void> | null = null;
 
+async function applyOrgContext(
+  authUser: Session['user'],
+  profile: { name?: string | null },
+  orgCtx: NonNullable<Awaited<ReturnType<typeof loadOrg>>>,
+) {
+  const store = useAppStore.getState();
+  const user = buildUser(authUser, String(profile.name || 'User'), orgCtx.org.id, orgCtx.role);
+  store.setUser(user);
+  store.setTenant(orgCtx.org);
+  store.setAuthenticated(true);
+  store.setHasMembership(true);
+  store.setSignupIntent(null);
+  store.setOnboardingCompleted(!!orgCtx.onboardingCompleted);
+
+  const projects = await loadProjects(orgCtx.org.id, orgCtx.org.currency);
+  store.setProjects(projects);
+
+  const notifications = await loadNotifications(authUser.id);
+  store.setNotifications(notifications);
+
+  updateLastActive(authUser.id, orgCtx.org.id).catch(console.error);
+  store.setLastSynced(new Date());
+  store.setSyncStatus('synced');
+}
+
 async function bootstrapSession(session: Session) {
   const store = useAppStore.getState();
   const authUser = session.user;
+  const metadata = authUser.user_metadata as Record<string, unknown>;
+  const signupIntent = getSignupIntent(metadata) || null;
 
   store.setSyncStatus('syncing');
+  store.setSignupIntent(signupIntent);
   store.setEmailVerified(
     !!authUser.email_confirmed_at ||
       config.skipEmailVerify ||
@@ -38,65 +71,47 @@ async function bootstrapSession(session: Session) {
     const profile = await loadProfile(
       authUser.id,
       authUser.email,
-      authUser.user_metadata as Record<string, unknown>,
+      metadata,
     );
     store.setPlatformRole(resolvePlatformRole(profile, authUser.email));
 
-    const orgCtx = await loadOrg(authUser.id);
+    let orgCtx = await loadOrg(authUser.id);
 
     if (!orgCtx) {
       await tryDomainJoin().catch(() => {});
-      const retryCtx = await loadOrg(authUser.id);
-      if (!retryCtx) {
-      store.setHasMembership(false);
-      store.setUser({
-        id: authUser.id,
-        name: String(profile.name || 'User'),
-        email: authUser.email || '',
-        role: 'worker',
-        tenant_id: '',
-      });
-      store.setTenant(null);
-      store.setAuthenticated(true);
-      store.setOnboardingCompleted(false);
-      store.setProjects([]);
-      store.setNotifications([]);
-      store.setSyncStatus('synced');
-      return;
-      }
+      orgCtx = await loadOrg(authUser.id);
+    }
 
-      const user = buildUser(authUser, String(profile.name || 'User'), retryCtx.org.id, retryCtx.role);
-      store.setUser(user);
-      store.setTenant(retryCtx.org);
-      store.setAuthenticated(true);
-      store.setHasMembership(true);
-      store.setOnboardingCompleted(!!retryCtx.onboardingCompleted);
-      const projects = await loadProjects(retryCtx.org.id, retryCtx.org.currency);
-      store.setProjects(projects);
-      const notifications = await loadNotifications(authUser.id);
-      store.setNotifications(notifications);
-      updateLastActive(authUser.id, retryCtx.org.id).catch(console.error);
-      store.setLastSynced(new Date());
-      store.setSyncStatus('synced');
+    if (!orgCtx) {
+      const ownerParams = parseOwnerOrgParamsFromMetadata(metadata);
+      if (ownerParams) {
+        try {
+          await createOwnerOrg(ownerParams);
+          orgCtx = await loadOrg(authUser.id);
+        } catch (e) {
+          console.error('Auto create owner org:', e);
+        }
+      }
+    }
+
+    if (orgCtx) {
+      await applyOrgContext(authUser, profile, orgCtx);
       return;
     }
 
-    const user = buildUser(authUser, String(profile.name || 'User'), orgCtx.org.id, orgCtx.role);
-    store.setUser(user);
-    store.setTenant(orgCtx.org);
+    store.setHasMembership(false);
+    store.setUser({
+      id: authUser.id,
+      name: String(profile.name || 'User'),
+      email: authUser.email || '',
+      role: isOwnerSignupIntent(metadata) ? 'owner' : 'worker',
+      tenant_id: '',
+    });
+    store.setTenant(null);
     store.setAuthenticated(true);
-    store.setHasMembership(true);
-    store.setOnboardingCompleted(!!orgCtx.onboardingCompleted);
-
-    const projects = await loadProjects(orgCtx.org.id, orgCtx.org.currency);
-    store.setProjects(projects);
-
-    const notifications = await loadNotifications(authUser.id);
-    store.setNotifications(notifications);
-
-    updateLastActive(authUser.id, orgCtx.org.id).catch(console.error);
-
-    store.setLastSynced(new Date());
+    store.setOnboardingCompleted(false);
+    store.setProjects([]);
+    store.setNotifications([]);
     store.setSyncStatus('synced');
   } catch (e) {
     console.error('Bootstrap error:', e);
@@ -126,27 +141,21 @@ export function useBootstrap() {
 
     setAuthInitializing(true);
 
-    const subscription = onAuthStateChange(async (event, session) => {
+    const subscription = onAuthStateChange((event, session) => {
       if (useAppStore.getState().isDemoMode) {
         setAuthInitializing(false);
         return;
       }
+
       if (session?.user) {
-        if (!bootstrapPromise) {
-          bootstrapPromise = bootstrapSession(session).finally(() => {
-            bootstrapPromise = null;
-          });
-        }
-        try {
-          await bootstrapPromise;
-        } catch {
-          /* authError set in bootstrap */
-        }
-      } else if (event === 'SIGNED_OUT' || !session) {
-        if (useAppStore.getState().isDemoMode) {
-          setAuthInitializing(false);
-          return;
-        }
+        // Must NOT await bootstrap here — Supabase blocks signIn until this callback settles.
+        void runBootstrap(session)
+          .catch((e) => console.error('Bootstrap error:', e))
+          .finally(() => setAuthInitializing(false));
+        return;
+      }
+
+      if (event === 'SIGNED_OUT' || !session) {
         setUser(null);
         setTenant(null);
         setAuthenticated(false);

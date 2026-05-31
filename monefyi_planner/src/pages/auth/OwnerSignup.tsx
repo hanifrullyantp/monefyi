@@ -1,12 +1,14 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CheckCircle, Mail } from 'lucide-react';
 import { authUserMessage } from '../../lib/authMessages';
 import { isValidEmail, validatePassword } from '../../lib/validators';
-import { signInWithPassword, signUpWithPassword, resendSignupVerification } from '../../services/authService';
+import { signInWithPassword, signUpWithPassword, resendSignupVerification, getSession } from '../../services/authService';
 import { createOwnerOrg } from '../../services/onboardingService';
 import { runBootstrap } from '../../hooks/useBootstrap';
 import { config } from '../../lib/config';
+import { ownerOrgParamsToForm, parseOwnerOrgParamsFromMetadata } from '../../lib/ownerSignup';
+import { useAppStore } from '../../store/appStore';
 import PasswordField, { isPasswordReady } from '../../components/auth/PasswordField';
 
 type Step = 1 | 2 | 3 | 4;
@@ -32,6 +34,9 @@ export function OwnerSignupPage() {
   const [resendLoading, setResendLoading] = useState(false);
   const [resendMsg, setResendMsg] = useState('');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const resume = searchParams.get('resume') === '1';
+  const { hasMembership } = useAppStore();
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -49,6 +54,40 @@ export function OwnerSignupPage() {
     && isPasswordReady(form.password);
 
   const step2Ready = form.businessName.trim().length > 0;
+
+  useEffect(() => {
+    if (!resume || hasMembership) return;
+    void (async () => {
+      const session = await getSession();
+      if (!session?.user) return;
+      const params = parseOwnerOrgParamsFromMetadata(
+        session.user.user_metadata as Record<string, unknown>,
+      );
+      if (!params) return;
+      setForm(prev => ({
+        ...prev,
+        ...ownerOrgParamsToForm(params),
+        email: session.user.email || prev.email,
+      }));
+      setStep(3);
+    })();
+  }, [resume, hasMembership]);
+
+  const createOrgPayload = () => ({
+    org_name: form.businessName,
+    industry: form.industry,
+    team_size: form.teamSize,
+    timezone: form.timezone,
+    currency: form.currency,
+    business_type: form.industry,
+    name: form.name,
+  });
+
+  const finishOwnerSetup = async (session: NonNullable<Awaited<ReturnType<typeof getSession>>>) => {
+    await createOwnerOrg(createOrgPayload());
+    await runBootstrap(session);
+    navigate('/onboarding/owner');
+  };
 
   const handleNext = () => {
     setError('');
@@ -86,6 +125,12 @@ export function OwnerSignupPage() {
     setLoading(true);
     setError('');
     try {
+      const existingSession = await getSession();
+      if (existingSession?.user) {
+        await finishOwnerSetup(existingSession);
+        return;
+      }
+
       const { data, error: signUpErr } = await signUpWithPassword(form.email, form.password, {
         name: form.name,
         signup_intent: 'create_org',
@@ -114,18 +159,7 @@ export function OwnerSignupPage() {
       }
       if (!session) throw new Error('Sesi tidak tersedia');
 
-      await createOwnerOrg({
-        org_name: form.businessName,
-        industry: form.industry,
-        team_size: form.teamSize,
-        timezone: form.timezone,
-        currency: form.currency,
-        business_type: form.industry,
-        name: form.name,
-      });
-
-      await runBootstrap(session);
-      navigate('/onboarding/owner');
+      await finishOwnerSetup(session);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registrasi gagal');
     } finally {
@@ -201,8 +235,13 @@ export function OwnerSignupPage() {
           {step === 3 && (
             <div className="text-center space-y-4">
               <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto" />
-              <h3 className="font-black text-xl">Siap buat perusahaan</h3>
-              <p className="text-sm text-slate-500">Workspace <strong>{form.businessName}</strong> akan dibuat. Anda otomatis menjadi Owner.</p>
+              <h3 className="font-black text-xl">{resume ? 'Lanjutkan setup perusahaan' : 'Siap buat perusahaan'}</h3>
+              <p className="text-sm text-slate-500">
+                Workspace <strong>{form.businessName}</strong> akan dibuat. Anda otomatis menjadi Owner.
+              </p>
+              {resume && (
+                <p className="text-xs text-slate-400">Data perusahaan sudah diisi saat pendaftaran — tidak perlu cari perusahaan lagi.</p>
+              )}
             </div>
           )}
 

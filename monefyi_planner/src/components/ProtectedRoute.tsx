@@ -1,4 +1,3 @@
-import { agentDebugLog } from '../lib/agentDebugLog';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAppStore } from '../store/appStore';
 import { config } from '../lib/config';
@@ -15,27 +14,13 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     authInitializing,
     emailVerified,
     hasMembership,
+    signupIntent,
     onboardingCompleted,
     user,
     platformRole,
   } = useAppStore();
   const location = useLocation();
   const isSuperAdmin = isPlatformAdmin(platformRole, user?.email);
-
-  // #region agent log
-  if (!authInitializing) {
-    agentDebugLog('H4', 'ProtectedRoute', 'gate check', {
-      isAuthenticated,
-      authInitializing,
-      emailVerified,
-      hasMembership,
-      onboardingCompleted,
-      isSuperAdmin,
-      role: user?.role ?? null,
-      path: location.pathname,
-    });
-  }
-  // #endregion
 
   if (authInitializing) {
     return (
@@ -59,6 +44,9 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!hasMembership && !isSuperAdmin) {
+    if (signupIntent === 'create_org' || user?.role === 'owner') {
+      return <Navigate to="/signup/owner?resume=1" replace />;
+    }
     return <Navigate to="/find-company" replace />;
   }
 

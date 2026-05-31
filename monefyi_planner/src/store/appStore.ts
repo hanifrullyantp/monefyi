@@ -106,6 +106,7 @@ interface AppState {
   authError: string | null;
   projectsListFilter: string;
   hasMembership: boolean;
+  signupIntent: string | null;
   onboardingCompleted: boolean;
   emailVerified: boolean;
   platformRole: 'user' | 'admin';
@@ -136,6 +137,7 @@ interface AppState {
   setAuthInitializing: (val: boolean) => void;
   setAuthError: (error: string | null) => void;
   setHasMembership: (val: boolean) => void;
+  setSignupIntent: (intent: string | null) => void;
   setOnboardingCompleted: (val: boolean) => void;
   setEmailVerified: (val: boolean) => void;
   setPlatformRole: (role: 'user' | 'admin') => void;
@@ -176,6 +178,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   authError: null,
   projectsListFilter: 'all',
   hasMembership: false,
+  signupIntent: null,
   onboardingCompleted: false,
   emailVerified: false,
   platformRole: 'user',
@@ -208,6 +211,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setAuthInitializing: authInitializing => set({ authInitializing }),
   setAuthError: authError => set({ authError }),
   setHasMembership: hasMembership => set({ hasMembership }),
+  setSignupIntent: signupIntent => set({ signupIntent }),
   setOnboardingCompleted: onboardingCompleted => set({ onboardingCompleted }),
   setEmailVerified: emailVerified => set({ emailVerified }),
   setPlatformRole: platformRole => set({ platformRole }),
@@ -313,6 +317,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       selectedProjectId: null,
       authError: null,
       hasMembership: false,
+      signupIntent: null,
       onboardingCompleted: false,
       emailVerified: false,
     });
