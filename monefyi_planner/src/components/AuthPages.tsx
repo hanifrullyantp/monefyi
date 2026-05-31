@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Eye, EyeOff, Sparkles, ArrowLeft, ArrowRight, Mail, Lock, User, Building2, CheckCircle,
 } from 'lucide-react';
+import { agentDebugLog } from '../lib/agentDebugLog';
 import { authUserMessage } from '../lib/authMessages';
 import { config } from '../lib/config';
 import { isValidEmail, validatePassword } from '../lib/validators';
@@ -61,13 +62,28 @@ export function LoginPage() {
     setError('');
     try {
       const { data, error: authErr } = await signInWithPassword(email, password);
+      // #region agent log
+      agentDebugLog('H3', 'AuthPages:handleLogin', 'signIn result', {
+        hasError: !!authErr,
+        errorCode: authErr?.code ?? null,
+        hasSession: !!data.session,
+      });
+      // #endregion
       if (authErr) {
         setError(authUserMessage(authErr));
         return;
       }
       if (data.session) {
+        // #region agent log
+        agentDebugLog('H2', 'AuthPages:handleLogin', 'bootstrap start', {});
+        // #endregion
         await runBootstrap(data.session);
+        // #region agent log
+        agentDebugLog('H2', 'AuthPages:handleLogin', 'bootstrap done, navigating', {});
+        // #endregion
         navigate('/app');
+      } else {
+        setError('Login berhasil tetapi sesi tidak tersedia. Verifikasi email terlebih dahulu.');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login gagal');

@@ -10,7 +10,6 @@ import HrEmployees from '../pages/HrEmployees';
 import WorkerDashboard from '../pages/WorkerDashboard';
 import OnboardingChecklist from './OnboardingChecklist';
 import { useAppStore } from '../store/appStore';
-import { useBootstrap } from '../hooks/useBootstrap';
 import { showWorkerShell } from '../utils/platformUi';
 import { isPlatformAdmin } from '../services/adminService';
 
@@ -19,7 +18,6 @@ function AppContent() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, activeTab, setOnline, setSyncStatus, setSelectedProjectId, setActiveTab, platformRole, uiViewMode } = useAppStore();
-  useBootstrap();
 
   useEffect(() => {
     const tab = searchParams.get('tab');

@@ -1,3 +1,4 @@
+import { agentDebugLog } from '../lib/agentDebugLog';
 import { toTenant, type DbOrganization } from '../lib/adapters';
 import { supabase } from '../lib/supabase';
 import type { Tenant } from '../store/appStore';
@@ -23,7 +24,15 @@ export async function loadOrg(userId: string): Promise<OrgContext | null> {
     .limit(1)
     .maybeSingle();
 
-  if (membershipErr) console.warn('planner_org_members:', membershipErr);
+  if (membershipErr) {
+    console.warn('planner_org_members:', membershipErr);
+    // #region agent log
+    agentDebugLog('H1', 'orgService.ts:loadOrg', 'membership query error', {
+      code: (membershipErr as { code?: string }).code ?? null,
+      message: membershipErr.message,
+    });
+    // #endregion
+  }
 
   if (!membership?.planner_organizations) {
     return null;
