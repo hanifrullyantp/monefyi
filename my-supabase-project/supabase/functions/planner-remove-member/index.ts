@@ -3,7 +3,7 @@ import { handleOptions, jsonResponse } from "../_shared/cors.ts";
 import { getServiceClient } from "../_shared/supabase.ts";
 import { requireUser, getMembership } from "../_shared/auth.ts";
 import { writeAudit, createNotification } from "../_shared/audit.ts";
-import { sendEmail } from "../_shared/email.ts";
+import { sendEmailSafe } from "../_shared/email.ts";
 import { memberRemovedHtml } from "../_shared/email-templates.ts";
 
 serve(async (req) => {
@@ -56,12 +56,12 @@ serve(async (req) => {
 
     const { data: target } = await sb.auth.admin.getUserById(member.user_id);
     if (target?.user?.email) {
-      await sendEmail({
+      await sendEmailSafe({
         to: target.user.email,
         subject: "Akses dihapus",
         html: memberRemovedHtml(org?.name || ""),
         text: `Anda dihapus dari ${org?.name}.`,
-      }).catch(console.error);
+      });
     }
 
     return jsonResponse({ ok: true });

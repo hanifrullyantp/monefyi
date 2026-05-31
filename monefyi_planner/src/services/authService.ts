@@ -5,6 +5,11 @@ export async function signInWithPassword(email: string, password: string) {
   return supabase.auth.signInWithPassword({ email: email.trim(), password });
 }
 
+function authRedirectUrl(path: string): string {
+  const base = typeof window !== 'undefined' ? window.location.origin : '';
+  return `${base}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
 export async function signUpWithPassword(
   email: string,
   password: string,
@@ -13,7 +18,10 @@ export async function signUpWithPassword(
   return supabase.auth.signUp({
     email: email.trim(),
     password,
-    options: { data: metadata },
+    options: {
+      data: metadata,
+      emailRedirectTo: authRedirectUrl('/login'),
+    },
   });
 }
 
@@ -43,7 +51,7 @@ export function getAuthUser(): SupabaseUser | null {
 
 export async function resetPasswordForEmail(email: string) {
   return supabase.auth.resetPasswordForEmail(email.trim(), {
-    redirectTo: `${window.location.origin}/login`,
+    redirectTo: authRedirectUrl('/login'),
   });
 }
 

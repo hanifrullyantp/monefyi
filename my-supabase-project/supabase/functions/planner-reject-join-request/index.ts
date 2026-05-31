@@ -3,7 +3,7 @@ import { handleOptions, jsonResponse } from "../_shared/cors.ts";
 import { getServiceClient } from "../_shared/supabase.ts";
 import { requireUser, getMembership } from "../_shared/auth.ts";
 import { writeAudit, createNotification } from "../_shared/audit.ts";
-import { sendEmail } from "../_shared/email.ts";
+import { sendEmailSafe } from "../_shared/email.ts";
 import { requestStatusHtml } from "../_shared/email-templates.ts";
 import { sanitizeText } from "../_shared/sanitize.ts";
 
@@ -55,12 +55,12 @@ serve(async (req) => {
 
     const { data: requester } = await sb.auth.admin.getUserById(jr.user_id);
     if (requester?.user?.email) {
-      await sendEmail({
+      await sendEmailSafe({
         to: requester.user.email,
         subject: `Ditolak — ${org?.name}`,
         html: requestStatusHtml({ orgName: org?.name || "", approved: false, reason }),
         text: `Permintaan ditolak. ${reason || ""}`,
-      }).catch(console.error);
+      });
     }
 
     return jsonResponse({ ok: true });

@@ -3,7 +3,7 @@ import { handleOptions, jsonResponse } from "../_shared/cors.ts";
 import { getServiceClient } from "../_shared/supabase.ts";
 import { requireUser, getMembership } from "../_shared/auth.ts";
 import { writeAudit, createNotification } from "../_shared/audit.ts";
-import { sendEmail } from "../_shared/email.ts";
+import { sendEmailSafe } from "../_shared/email.ts";
 import { roleChangedHtml } from "../_shared/email-templates.ts";
 import { sanitizeText } from "../_shared/sanitize.ts";
 
@@ -61,12 +61,12 @@ serve(async (req) => {
 
     const { data: target } = await sb.auth.admin.getUserById(member.user_id);
     if (target?.user?.email) {
-      await sendEmail({
+      await sendEmailSafe({
         to: target.user.email,
         subject: "Peran diperbarui",
         html: roleChangedHtml({ orgName: org?.name || "", newRole }),
         text: `Peran Anda diubah menjadi ${newRole}.`,
-      }).catch(console.error);
+      });
     }
 
     return jsonResponse({ ok: true });

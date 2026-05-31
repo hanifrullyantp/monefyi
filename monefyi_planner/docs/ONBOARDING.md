@@ -62,6 +62,7 @@ Deploy from `my-supabase-project/supabase/functions/`:
 | planner-accept-invitation | JWT | Join org |
 | planner-send-invitation-email | JWT | Resend emails |
 | planner-revoke-invitation | JWT | Revoke invite |
+| planner-submit-join-request | JWT | Submit join request + email admins (Resend) |
 | planner-approve-join-request | JWT | Approve request |
 | planner-reject-join-request | JWT | Reject request |
 | planner-change-member-role | JWT | Role change |
@@ -95,15 +96,35 @@ SKIP_DB_PUSH=1 ./scripts/deploy-planner-supabase.sh
 
 Alternatif: GitHub Actions → **Supabase Planner migrate & deploy** (butuh secrets `SUPABASE_ACCESS_TOKEN` + `SUPABASE_PROJECT_REF`).
 
+### Email (semua via Resend + domain monefyi.com)
+
+| Jenis email | Mekanisme | Pengirim |
+|-------------|-----------|----------|
+| Daftar, verifikasi, reset password, magic link | Supabase Auth **Custom SMTP** → Resend | `noreply@monefyi.com` (atur di Dashboard Auth → SMTP) |
+| Undangan tim, welcome, join request, approve/reject, role, remove | Edge Functions → `_shared/email.ts` | `RESEND_FROM_EMAIL` (default `Monefyi <noreply@monefyi.com>`) |
+| Konfirmasi pembayaran Lynk | `lynk-webhook` → shared Resend | sama |
+
+**Supabase Dashboard (Auth → SMTP):** host `smtp.resend.com`, port `465`, user `resend`, password = API key Resend, sender `Monefyi <noreply@monefyi.com>`.
+
+**Edge secrets (wajib production):**
+
+```
+RESEND_API_KEY
+RESEND_FROM_EMAIL=Monefyi <noreply@monefyi.com>
+APP_URL=https://planner.monefyi.com
+```
+
+User bisa mematikan email transaksional di **Pengaturan → Notifikasi** (`profiles.email_notifications`).
+
 ### Edge env vars
 
 ```
 SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY
 SUPABASE_ANON_KEY
-RESEND_API_KEY          # optional
-RESEND_FROM_EMAIL       # optional
-APP_URL                 # e.g. https://app.monefyi.com
+RESEND_API_KEY
+RESEND_FROM_EMAIL
+APP_URL
 APP_CORS_ORIGIN
 SKIP_EMAIL_VERIFY=true  # dev only
 ```

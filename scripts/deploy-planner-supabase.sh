@@ -5,8 +5,8 @@
 #   - SUPABASE_PROJECT_REF (Settings → General → Reference ID), or rely on existing link
 #
 # Usage (from repo root):
-#   export SUPABASE_ACCESS_TOKEN="sbp_..."
-#   export SUPABASE_PROJECT_REF="your-project-ref"
+#   export SUPABASE_ACCESS_TOKEN="sbp_YOUR_TOKEN"
+#   export SUPABASE_PROJECT_REF="zzwqfmdyncxbolestkqp"
 #   ./scripts/deploy-planner-supabase.sh
 #
 # Optional: skip migrations
@@ -45,6 +45,7 @@ PLANNER_FUNCTIONS=(
   planner-accept-invitation
   planner-send-invitation-email
   planner-revoke-invitation
+  planner-submit-join-request
   planner-approve-join-request
   planner-reject-join-request
   planner-change-member-role
@@ -68,4 +69,4 @@ done
 
 echo ""
 echo "Done. Set Edge Function secrets in Supabase Dashboard if needed:"
-echo "  RESEND_API_KEY, RESEND_FROM_EMAIL, APP_URL, APP_CORS_ORIGIN, GEMINI_API_KEY"
+echo "  RESEND_API_KEY, RESEND_FROM_EMAIL (e.g. 'Monefyi <noreply@monefyi.com>'), APP_URL, APP_CORS_ORIGIN, GEMINI_API_KEY"

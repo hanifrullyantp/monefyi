@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { handleOptions, jsonResponse } from "../_shared/cors.ts";
 import { getServiceClient } from "../_shared/supabase.ts";
 import { requireUser, getMembership, canInviteRole } from "../_shared/auth.ts";
-import { sendInvitationEmail } from "../_shared/email.ts";
+import { getAppUrl, sendInvitationEmail } from "../_shared/email.ts";
 import { sanitizeText } from "../_shared/sanitize.ts";
 
 serve(async (req) => {
@@ -38,7 +38,7 @@ serve(async (req) => {
     }
 
     const org = invite.planner_organizations as { name: string; brand_color?: string };
-    const appUrl = Deno.env.get("APP_URL") || "https://app.monefyi.com";
+    const appUrl = getAppUrl();
     const joinUrl = `${appUrl}/join?token=${invite.token}`;
     const inviterName = sanitizeText(user.user_metadata?.name, 120) || user.email || "Admin";
 

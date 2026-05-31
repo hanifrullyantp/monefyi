@@ -1,4 +1,4 @@
-import { Routes, Route, useParams, useNavigate, Navigate, useSearchParams } from 'react-router-dom';
+import { Routes, Route, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Layout from './Layout';
@@ -100,13 +100,6 @@ function AppContent() {
       </AnimatePresence>
     </Layout>
   );
-}
-
-export function AuthRedirect() {
-  const { isAuthenticated, authInitializing } = useAppStore();
-  if (authInitializing) return null;
-  if (isAuthenticated) return <Navigate to="/app" replace />;
-  return null;
 }
 
 export default function AppShell() {

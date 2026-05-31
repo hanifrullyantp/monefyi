@@ -77,7 +77,7 @@ serve(async (req) => {
 
     if (error) throw error;
 
-    const appUrl = Deno.env.get("APP_URL") || "https://app.monefyi.com";
+    const appUrl = Deno.env.get("APP_URL") || "https://planner.monefyi.com";
     const joinUrl = `${appUrl}/join?token=${token}`;
 
     await writeAudit(sb, {

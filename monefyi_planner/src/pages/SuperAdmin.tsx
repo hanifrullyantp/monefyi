@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Users, Building2, Settings, LayoutDashboard, Loader2, RefreshCw,
-  Plus, Trash2, Save, ArrowLeft, Search,
+  Plus, Trash2, Save, ArrowLeft, Search, Pencil,
 } from 'lucide-react';
 import {
   fetchAdminUsers, updateAdminUser, fetchPlatformStats,
@@ -142,9 +142,18 @@ export default function SuperAdmin() {
             <p className="text-xs text-slate-400">Kelola pengguna, jenis perusahaan, dan platform</p>
           </div>
         </div>
-        <button type="button" onClick={() => { if (tab === 'users') loadUsers(); else if (tab === 'company-types') loadTypes(); else loadOverview(); }} className="p-2 hover:bg-white/10 rounded-lg">
-          <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/?edit=1"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold"
+          >
+            <Pencil className="w-4 h-4" />
+            Edit landing
+          </Link>
+          <button type="button" onClick={() => { if (tab === 'users') loadUsers(); else if (tab === 'company-types') loadTypes(); else loadOverview(); }} className="p-2 hover:bg-white/10 rounded-lg">
+            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </header>
 
       <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6">

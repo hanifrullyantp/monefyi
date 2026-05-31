@@ -3,6 +3,7 @@ import { handleOptions, jsonResponse } from "../_shared/cors.ts";
 import { getServiceClient } from "../_shared/supabase.ts";
 import { requireUser } from "../_shared/auth.ts";
 import { writeAudit, createNotification } from "../_shared/audit.ts";
+import { sendWelcomeMemberEmail } from "../_shared/email.ts";
 
 serve(async (req) => {
   const opt = handleOptions(req);
@@ -61,6 +62,8 @@ serve(async (req) => {
       message: "Anda bergabung otomatis via domain email perusahaan.",
       actionUrl: "/onboarding/member",
     });
+
+    await sendWelcomeMemberEmail(sb, user.id, org.name);
 
     return jsonResponse({ joined: true, org_id: org.id, org_name: org.name, role });
   } catch (e) {

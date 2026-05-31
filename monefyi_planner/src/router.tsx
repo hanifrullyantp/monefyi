@@ -3,7 +3,9 @@ import LandingPage from './components/LandingPage';
 import { LoginPage } from './components/AuthPages';
 import ProtectedRoute from './components/ProtectedRoute';
 import AuthOnlyRoute from './components/AuthOnlyRoute';
-import AppShell, { AuthRedirect } from './components/AppShell';
+import AppShell from './components/AppShell';
+import AuthBootstrap from './components/AuthBootstrap';
+import AuthRedirect from './components/AuthRedirect';
 import { PrivacyPage, TermsPage, ContactPage } from './pages/LegalPages';
 import { SignupHubPage } from './pages/auth/SignupHub';
 import { OwnerSignupPage } from './pages/auth/OwnerSignup';
@@ -19,6 +21,7 @@ import SuperAdmin from './pages/SuperAdmin';
 export default function AppRouter() {
   return (
     <BrowserRouter>
+      <AuthBootstrap>
       <Routes>
         <Route path="/" element={<><AuthRedirect /><LandingPage /></>} />
         <Route path="/login" element={<><AuthRedirect /><LoginPage /></>} />
@@ -37,6 +40,7 @@ export default function AppRouter() {
         <Route path="/admin" element={<AdminRoute><SuperAdmin /></AdminRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </AuthBootstrap>
     </BrowserRouter>
   );
 }

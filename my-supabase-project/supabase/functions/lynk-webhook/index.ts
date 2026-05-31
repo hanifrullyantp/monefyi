@@ -12,7 +12,7 @@
 // - LYNK_SIGNATURE_TOKEN          (if set, webhook must include header X-Lynk-Signature exactly equal to this token)
 // - RESEND_API_KEY                (if set, sends confirmation email via Resend)
 // - RESEND_FROM_EMAIL             (e.g. "Monefyi <no-reply@monefyi.com>")
-// - APP_URL                       (default: https://app.monefyi.com)
+// - APP_URL                       (default: https://planner.monefyi.com)
 // - MONTHLY_DAYS                  (default: 30)
 //
 // Notes:
@@ -22,6 +22,7 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { sendEmail } from "../_shared/email.ts";
 
 const jsonHeaders = { "Content-Type": "application/json" };
 const APP_CORS_ORIGIN = Deno.env.get("APP_CORS_ORIGIN") || "*";
@@ -67,60 +68,6 @@ function mapPackageFromItem(item: any) {
 function moneyIDR(n: number) {
   const v = Number(n || 0);
   return new Intl.NumberFormat("id-ID").format(v);
-}
-
-async function sendEmailViaResend(params: {
-  to: string;
-  subject: string;
-  html: string;
-}) {
-  const apiKey = pickEnv("RESEND_API_KEY", "");
-  const from = pickEnv("RESEND_FROM_EMAIL", "");
-
-  console.log("📧 Email send attempt:", {
-    to: params.to,
-    from: from || "(not set)",
-    subject: params.subject,
-    apiKeyPresent: !!apiKey,
-  });
-
-  if (!apiKey || !from) {
-    console.warn("⚠️ RESEND_API_KEY or RESEND_FROM_EMAIL not configured - email skipped");
-    return { ok: false, skipped: true, reason: "RESEND not configured" };
-  }
-
-  if (!params.to || !params.to.includes("@")) {
-    console.error("❌ Invalid recipient email:", params.to);
-    return { ok: false, skipped: true, reason: "Invalid recipient email format" };
-  }
-
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from,
-      to: [params.to],
-      subject: params.subject,
-      html: params.html,
-    }),
-  });
-
-  const txt = await res.text().catch(() => "");
-
-  console.log("📬 Resend API response:", {
-    status: res.status,
-    statusText: res.statusText,
-    ok: res.ok,
-    bodySnippet: txt.slice(0, 400),
-  });
-
-  if (!res.ok) {
-    return { ok: false, skipped: false, reason: `Resend error ${res.status}: ${txt.slice(0, 400)}` };
-  }
-  return { ok: true, skipped: false };
 }
 
 function buildConfirmationEmail(opts: {
@@ -332,7 +279,7 @@ serve(async (req) => {
   let isNewUser = false;
   let generatedPassword: string | null = null;
 
-  const appUrl = pickEnv("APP_URL", "https://app.monefyi.com");
+  const appUrl = pickEnv("APP_URL", "https://planner.monefyi.com");
 
   console.log("👥 Looking for existing user:", customerEmail);
 
@@ -518,10 +465,11 @@ const mail = buildConfirmationEmail({
   generatedPassword,
 });
 
-  const emailRes = await sendEmailViaResend({
+  const emailRes = await sendEmail({
     to: customerEmail,
     subject: mail.subject,
     html: mail.html,
+    text: mail.subject,
   });
 
   console.log("📬 Email result:", emailRes);

@@ -45,6 +45,7 @@ jobs:
             planner-accept-invitation \
             planner-send-invitation-email \
             planner-revoke-invitation \
+            planner-submit-join-request \
             planner-approve-join-request \
             planner-reject-join-request \
             planner-change-member-role \

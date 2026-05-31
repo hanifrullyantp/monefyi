@@ -13,6 +13,7 @@ export const config = {
   fnAcceptInvitation: 'planner-accept-invitation',
   fnSendInvitationEmail: 'planner-send-invitation-email',
   fnRevokeInvitation: 'planner-revoke-invitation',
+  fnSubmitJoinRequest: 'planner-submit-join-request',
   fnApproveJoinRequest: 'planner-approve-join-request',
   fnRejectJoinRequest: 'planner-reject-join-request',
   fnChangeMemberRole: 'planner-change-member-role',

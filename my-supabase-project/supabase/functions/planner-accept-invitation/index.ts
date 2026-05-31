@@ -3,6 +3,7 @@ import { handleOptions, jsonResponse } from "../_shared/cors.ts";
 import { getServiceClient } from "../_shared/supabase.ts";
 import { requireUser } from "../_shared/auth.ts";
 import { writeAudit, createNotification } from "../_shared/audit.ts";
+import { sendWelcomeMemberEmail } from "../_shared/email.ts";
 import { sanitizeText } from "../_shared/sanitize.ts";
 
 async function validateInvitation(sb: ReturnType<typeof getServiceClient>, token?: string, code?: string) {
@@ -116,6 +117,8 @@ serve(async (req) => {
         actionUrl: "/app?tab=team",
       });
     }
+
+    await sendWelcomeMemberEmail(sb, user.id, org?.name || "organisasi");
 
     return jsonResponse({
       org_id: invite.org_id,

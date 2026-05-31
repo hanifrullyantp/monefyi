@@ -3,6 +3,7 @@ import { corsHeaders, handleOptions, jsonResponse } from "../_shared/cors.ts";
 import { getServiceClient } from "../_shared/supabase.ts";
 import { requireUser } from "../_shared/auth.ts";
 import { writeAudit, createNotification } from "../_shared/audit.ts";
+import { sendWelcomeOwnerEmail } from "../_shared/email.ts";
 import { sanitizeText, slugify } from "../_shared/sanitize.ts";
 
 serve(async (req) => {
@@ -88,7 +89,9 @@ serve(async (req) => {
       actionUrl: "/onboarding/owner",
     });
 
-    return jsonResponse({ org });
+    const welcomeEmail = await sendWelcomeOwnerEmail(sb, user.id, orgName);
+
+    return jsonResponse({ org, welcome_email: welcomeEmail });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     if (msg === "UNAUTHORIZED") return jsonResponse({ error: "Unauthorized" }, 401);
