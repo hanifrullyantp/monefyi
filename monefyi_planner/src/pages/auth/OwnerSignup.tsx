@@ -2,13 +2,28 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CheckCircle, Mail } from 'lucide-react';
 import { authUserMessage } from '../../lib/authMessages';
-import { validatePassword } from '../../lib/validators';
+import { isValidEmail, validatePassword } from '../../lib/validators';
 import { signInWithPassword, signUpWithPassword } from '../../services/authService';
 import { createOwnerOrg } from '../../services/onboardingService';
 import { runBootstrap } from '../../hooks/useBootstrap';
 import { config } from '../../lib/config';
+import PasswordField, { isPasswordReady } from '../../components/auth/PasswordField';
 
 type Step = 1 | 2 | 3 | 4;
+
+function validateStep1(form: { name: string; email: string; password: string }): string | null {
+  if (!form.name.trim()) return 'Nama lengkap wajib diisi';
+  if (!form.email.trim()) return 'Email wajib diisi';
+  if (!isValidEmail(form.email)) return 'Format email tidak valid';
+  const pw = validatePassword(form.password);
+  if (!pw.valid) return pw.errors.join('. ');
+  return null;
+}
+
+function validateStep2(form: { businessName: string }): string | null {
+  if (!form.businessName.trim()) return 'Nama perusahaan wajib diisi';
+  return null;
+}
 
 export function OwnerSignupPage() {
   const [step, setStep] = useState<Step>(1);
@@ -26,12 +41,46 @@ export function OwnerSignupPage() {
     timezone: 'Asia/Jakarta',
   });
 
+  const step1Ready =
+    form.name.trim().length > 0
+    && isValidEmail(form.email)
+    && isPasswordReady(form.password);
+
+  const step2Ready = form.businessName.trim().length > 0;
+
+  const handleNext = () => {
+    setError('');
+    if (step === 1) {
+      const err = validateStep1(form);
+      if (err) {
+        setError(err);
+        return;
+      }
+      setStep(2);
+    } else if (step === 2) {
+      const err = validateStep2(form);
+      if (err) {
+        setError(err);
+        return;
+      }
+      setStep(3);
+    }
+  };
+
   const handleSignup = async () => {
-    const pw = validatePassword(form.password);
-    if (!pw.valid) {
-      setError(pw.errors.join('. '));
+    const step1Err = validateStep1(form);
+    if (step1Err) {
+      setError(step1Err);
+      setStep(1);
       return;
     }
+    const step2Err = validateStep2(form);
+    if (step2Err) {
+      setError(step2Err);
+      setStep(2);
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
@@ -82,6 +131,8 @@ export function OwnerSignupPage() {
     }
   };
 
+  const canProceed = step === 1 ? step1Ready : step === 2 ? step2Ready : true;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -99,8 +150,15 @@ export function OwnerSignupPage() {
             <div className="space-y-4">
               <h3 className="font-bold text-slate-800">Info Akun</h3>
               <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Nama lengkap" className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm" />
-              <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="Email" className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm" />
-              <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Password (min 8, huruf besar, angka, simbol)" className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm" />
+              <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="Email" className={`w-full px-4 py-3 rounded-xl border text-sm ${form.email && !isValidEmail(form.email) ? 'border-rose-300' : 'border-slate-200'}`} />
+              {form.email && !isValidEmail(form.email) && (
+                <p className="text-xs text-rose-600 -mt-2">Format email tidak valid</p>
+              )}
+              <PasswordField
+                value={form.password}
+                onChange={password => setForm({ ...form, password })}
+                placeholder="Password (min 8, huruf besar, angka, simbol)"
+              />
             </div>
           )}
 
@@ -145,12 +203,17 @@ export function OwnerSignupPage() {
           {step < 4 && (
             <div className="flex gap-3 mt-8">
               {step > 1 && (
-                <button type="button" onClick={() => setStep((step - 1) as Step)} className="px-4 py-3 border border-slate-200 rounded-xl">
+                <button type="button" onClick={() => { setError(''); setStep((step - 1) as Step); }} className="px-4 py-3 border border-slate-200 rounded-xl">
                   <ArrowLeft className="w-4 h-4" />
                 </button>
               )}
               {step < 3 ? (
-                <button type="button" onClick={() => setStep((step + 1) as Step)} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl">
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={!canProceed}
+                  className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"
+                >
                   Lanjut <ArrowRight className="w-4 h-4 inline ml-1" />
                 </button>
               ) : (
@@ -159,6 +222,10 @@ export function OwnerSignupPage() {
                 </button>
               )}
             </div>
+          )}
+
+          {step === 1 && !canProceed && (
+            <p className="text-xs text-slate-400 text-center mt-3">Lengkapi semua field dan penuhi syarat password untuk melanjutkan.</p>
           )}
         </div>
       </div>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Building2 } from 'lucide-react';
 import { formatInviteCode, validatePassword } from '../../lib/validators';
+import PasswordField, { isPasswordReady } from '../../components/auth/PasswordField';
 import { authUserMessage } from '../../lib/authMessages';
 import { signInWithPassword, signUpWithPassword } from '../../services/authService';
 import { validateInvitation, acceptInvitation } from '../../services/onboardingService';
@@ -107,9 +108,13 @@ export function JoinByCodePage() {
             <form onSubmit={handleJoin} className="space-y-3">
               <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Nama lengkap" required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm" />
               <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="Email" required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm" />
-              <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Password" required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm" />
+              <PasswordField
+                value={form.password}
+                onChange={password => setForm({ ...form, password })}
+                placeholder="Password (min 8, huruf besar, angka, simbol)"
+              />
               {error && <p className="text-sm text-rose-600">{error}</p>}
-              <button type="submit" disabled={loading} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl">Bergabung</button>
+              <button type="submit" disabled={loading || !form.name.trim() || !form.email.trim() || !isPasswordReady(form.password)} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed">Bergabung</button>
             </form>
           </>
         )}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Building2, Loader2 } from 'lucide-react';
 import { validatePassword } from '../../lib/validators';
+import PasswordField, { isPasswordReady } from '../../components/auth/PasswordField';
 import { authUserMessage } from '../../lib/authMessages';
 import { signInWithPassword, signUpWithPassword } from '../../services/authService';
 import { validateInvitation, acceptInvitation } from '../../services/onboardingService';
@@ -118,14 +119,26 @@ export function JoinByTokenPage() {
         <form onSubmit={handleJoin} className="space-y-3">
           <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Nama lengkap" required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm" />
           <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="Email" required readOnly={!!preview.email} className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm disabled:bg-slate-50" />
-          <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Password" required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm" />
+          {isLogin ? (
+            <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Password" required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm" />
+          ) : (
+            <PasswordField
+              value={form.password}
+              onChange={password => setForm({ ...form, password })}
+              placeholder="Password (min 8, huruf besar, angka, simbol)"
+            />
+          )}
           {error && <p className="text-sm text-rose-600">{error}</p>}
-          <button type="submit" disabled={submitting} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl disabled:opacity-60">
+          <button
+            type="submit"
+            disabled={submitting || !form.name.trim() || !form.email.trim() || (!isLogin && !isPasswordReady(form.password)) || (isLogin && !form.password)}
+            className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"
+          >
             {submitting ? 'Memproses...' : 'Terima & Bergabung'}
           </button>
         </form>
 
-        <button type="button" onClick={() => setIsLogin(v => !v)} className="w-full mt-3 text-sm text-indigo-600 font-semibold">
+        <button type="button" onClick={() => { setIsLogin(v => !v); setError(''); setForm(f => ({ ...f, password: '' })); }} className="w-full mt-3 text-sm text-indigo-600 font-semibold">
           {isLogin ? 'Belum punya akun? Daftar' : 'Sudah punya akun? Masuk'}
         </button>
       </div>
