@@ -7,6 +7,9 @@ export function authUserMessage(err: AuthError | Error | null | undefined): stri
   const status = 'status' in err ? String(err.status || '') : '';
   const low = `${msg} ${code} ${status}`.toLowerCase();
 
+  if (low.includes('confirmation email') || low.includes('error sending confirmation')) {
+    return 'Gagal mengirim email verifikasi. Coba lagi beberapa menit atau hubungi admin.';
+  }
   if (low.includes('email_not_confirmed') || low.includes('email not confirmed')) {
     return 'Email belum diverifikasi. Nonaktifkan "Confirm email" di Supabase atau buka link verifikasi.';
   }

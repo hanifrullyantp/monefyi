@@ -6,6 +6,7 @@ import { isValidEmail, validatePassword } from '../../lib/validators';
 import { signInWithPassword, signUpWithPassword } from '../../services/authService';
 import { createOwnerOrg } from '../../services/onboardingService';
 import { runBootstrap } from '../../hooks/useBootstrap';
+import { agentDebugLog } from '../../lib/agentDebugLog';
 import { config } from '../../lib/config';
 import PasswordField, { isPasswordReady } from '../../components/auth/PasswordField';
 
@@ -95,14 +96,34 @@ export function OwnerSignupPage() {
       });
 
       if (signUpErr) {
+        // #region agent log
+        agentDebugLog('H2', 'OwnerSignup.tsx:handleSignup', 'signup error branch', {
+          branch: 'error',
+        });
+        // #endregion
         setError(authUserMessage(signUpErr));
         return;
       }
 
       if (!data.session && data.user && !config.skipEmailVerify) {
+        // #region agent log
+        agentDebugLog('H1', 'OwnerSignup.tsx:handleSignup', 'verify email branch', {
+          branch: 'verify_email_step4',
+          hasSession: false,
+          emailConfirmedAt: data.user.email_confirmed_at ?? null,
+        });
+        // #endregion
         setStep(4);
         return;
       }
+
+      // #region agent log
+      agentDebugLog('H4', 'OwnerSignup.tsx:handleSignup', 'session or auto-login branch', {
+        branch: 'continue_with_session_or_signin',
+        hasSession: !!data.session,
+        skipEmailVerify: config.skipEmailVerify,
+      });
+      // #endregion
 
       let session = data.session;
       if (!session) {

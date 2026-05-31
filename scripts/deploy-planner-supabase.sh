@@ -37,6 +37,7 @@ else
 fi
 
 PLANNER_FUNCTIONS=(
+  auth-send-email
   planner-analyze
   planner-parse-command
   planner-create-owner-org
@@ -64,9 +65,15 @@ PLANNER_FUNCTIONS=(
 echo "==> Deploying ${#PLANNER_FUNCTIONS[@]} Edge Functions..."
 for fn in "${PLANNER_FUNCTIONS[@]}"; do
   echo "    → $fn"
-  npx --yes supabase@latest functions deploy "$fn"
+  if [[ "$fn" == "auth-send-email" ]]; then
+    npx --yes supabase@latest functions deploy "$fn" --no-verify-jwt
+  else
+    npx --yes supabase@latest functions deploy "$fn"
+  fi
 done
 
 echo ""
 echo "Done. Set Edge Function secrets in Supabase Dashboard if needed:"
-echo "  RESEND_API_KEY, RESEND_FROM_EMAIL (e.g. 'Monefyi <noreply@monefyi.com>'), APP_URL, APP_CORS_ORIGIN, GEMINI_API_KEY"
+echo "  RESEND_API_KEY, RESEND_FROM_EMAIL, SEND_EMAIL_HOOK_SECRET, APP_URL, APP_CORS_ORIGIN, GEMINI_API_KEY"
+echo ""
+echo "Auth signup emails: ./scripts/enable-auth-email-hook.sh"

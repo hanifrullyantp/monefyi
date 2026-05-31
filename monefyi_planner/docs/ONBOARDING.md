@@ -100,17 +100,26 @@ Alternatif: GitHub Actions → **Supabase Planner migrate & deploy** (butuh secr
 
 | Jenis email | Mekanisme | Pengirim |
 |-------------|-----------|----------|
-| Daftar, verifikasi, reset password, magic link | Supabase Auth **Custom SMTP** → Resend | `noreply@monefyi.com` (atur di Dashboard Auth → SMTP) |
+| Daftar, verifikasi, reset password, magic link | **Auth Send Email Hook** → `auth-send-email` → Resend API | `Monefyi <noreply@monefyi.com>` |
 | Undangan tim, welcome, join request, approve/reject, role, remove | Edge Functions → `_shared/email.ts` | `RESEND_FROM_EMAIL` (default `Monefyi <noreply@monefyi.com>`) |
 | Konfirmasi pembayaran Lynk | `lynk-webhook` → shared Resend | sama |
 
-**Supabase Dashboard (Auth → SMTP):** host `smtp.resend.com`, port `465`, user `resend`, password = API key Resend, sender `Monefyi <noreply@monefyi.com>`.
+**Auth email (daftar / reset):** Supabase SMTP sering gagal meski Resend API sudah benar. Pakai **Send Email Hook**:
+
+1. Deploy function `auth-send-email`
+2. Supabase Dashboard → **Authentication** → **Hooks** → **Send Email** → Enable
+3. URL: `https://zzwqfmdyncxbolestkqp.supabase.co/functions/v1/auth-send-email`
+4. Copy **Hook Secret** → Edge secret `SEND_EMAIL_HOOK_SECRET` (format `v1,whsec_...`)
+5. Redirect URLs: `https://planner.monefyi.com/**`, `http://localhost:5173/**`
+
+SMTP Auth bisa tetap aktif sebagai fallback, tapi hook menggantikan pengiriman email Auth.
 
 **Edge secrets (wajib production):**
 
 ```
 RESEND_API_KEY
 RESEND_FROM_EMAIL=Monefyi <noreply@monefyi.com>
+SEND_EMAIL_HOOK_SECRET=v1,whsec_...   # dari Auth → Hooks → Send Email
 APP_URL=https://planner.monefyi.com
 ```
 

@@ -53,6 +53,30 @@ export function joinRequestHtml(params: {
 </div></body></html>`;
 }
 
+export function authActionEmailHtml(params: {
+  title: string;
+  body: string;
+  actionLabel: string;
+  actionUrl: string;
+}): string {
+  return `<!DOCTYPE html><html><body style="font-family:sans-serif;background:#f8fafc;padding:24px">
+<div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;padding:32px;border:1px solid #e2e8f0">
+  <p style="color:#6366f1;font-weight:bold;margin:0 0 8px">Monefyi Planner</p>
+  <h1 style="margin:0 0 16px;font-size:22px">${params.title}</h1>
+  <p style="color:#475569;margin:0 0 24px">${params.body}</p>
+  <a href="${params.actionUrl}" style="display:inline-block;background:#6366f1;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold">${params.actionLabel}</a>
+  <p style="color:#94a3b8;font-size:12px;margin-top:24px">Jika tombol tidak berfungsi: ${params.actionUrl}</p>
+</div></body></html>`;
+}
+
+export function authActionEmailText(params: {
+  title: string;
+  body: string;
+  actionUrl: string;
+}): string {
+  return `${params.title}\n\n${params.body}\n\n${params.actionUrl}`;
+}
+
 export function roleChangedHtml(params: { orgName: string; newRole: string }): string {
   return `<!DOCTYPE html><html><body style="font-family:sans-serif;padding:24px">
 <h1>Peran diperbarui</h1>
