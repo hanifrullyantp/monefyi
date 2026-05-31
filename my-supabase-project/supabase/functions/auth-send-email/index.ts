@@ -160,12 +160,6 @@ Deno.serve(async (req) => {
   const confirmUrl = confirmationUrl(emailData);
   const appUrl = getAppUrl();
 
-  console.log("auth-send-email:", {
-    action,
-    hasConfirmUrl: !!confirmUrl,
-    redirectTo: emailData.redirect_to,
-  });
-
   const result = await sendEmail({
     to: user.email,
     subject: SUBJECTS[action] || "Monefyi Planner",
@@ -176,6 +170,14 @@ Deno.serve(async (req) => {
       appUrl,
     }),
     text: buildAuthEmailText({ action, confirmUrl, token: emailData.token }),
+  });
+
+  console.log("auth-send-email:", {
+    action,
+    hasConfirmUrl: !!confirmUrl,
+    redirectTo: emailData.redirect_to,
+    resendId: result.resendId ?? null,
+    ok: result.ok,
   });
 
   if (!result.ok) {

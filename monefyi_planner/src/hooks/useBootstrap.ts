@@ -12,7 +12,7 @@ import {
   subscribeNotifications,
   subscribeProjects,
 } from '../services/notificationService';
-import { config } from '../lib/config';
+import { isPlatformAdmin } from '../services/adminService';
 import { useAppStore } from '../store/appStore';
 
 function resolvePlatformRole(profile: { role?: string }, email?: string): 'user' | 'admin' {
@@ -28,7 +28,11 @@ async function bootstrapSession(session: Session) {
   const authUser = session.user;
 
   store.setSyncStatus('syncing');
-  store.setEmailVerified(!!authUser.email_confirmed_at || config.skipEmailVerify);
+  store.setEmailVerified(
+    !!authUser.email_confirmed_at ||
+      config.skipEmailVerify ||
+      isPlatformAdmin('user', authUser.email),
+  );
 
   try {
     const profile = await loadProfile(

@@ -10,6 +10,9 @@ export function authUserMessage(err: AuthError | Error | null | undefined): stri
   if (low.includes('confirmation email') || low.includes('error sending confirmation')) {
     return 'Gagal mengirim email verifikasi. Coba lagi beberapa menit atau hubungi admin.';
   }
+  if (low.includes('rate limit') || low.includes('over_email_send_rate_limit') || code === '429') {
+    return 'Terlalu banyak permintaan email. Tunggu 5–10 menit lalu klik "Kirim ulang" atau coba lagi.';
+  }
   if (low.includes('email_not_confirmed') || low.includes('email not confirmed')) {
     return 'Email belum diverifikasi. Nonaktifkan "Confirm email" di Supabase atau buka link verifikasi.';
   }

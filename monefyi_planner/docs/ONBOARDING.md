@@ -104,15 +104,15 @@ Alternatif: GitHub Actions → **Supabase Planner migrate & deploy** (butuh secr
 | Undangan tim, welcome, join request, approve/reject, role, remove | Edge Functions → `_shared/email.ts` | `RESEND_FROM_EMAIL` (default `Monefyi <noreply@monefyi.com>`) |
 | Konfirmasi pembayaran Lynk | `lynk-webhook` → shared Resend | sama |
 
-**Auth email (daftar / reset):** Supabase SMTP sering gagal meski Resend API sudah benar. Pakai **Send Email Hook**:
+**Aktifkan hook (sekali, setelah deploy):**
 
-1. Deploy function `auth-send-email`
-2. Supabase Dashboard → **Authentication** → **Hooks** → **Send Email** → Enable
-3. URL: `https://zzwqfmdyncxbolestkqp.supabase.co/functions/v1/auth-send-email`
-4. Copy **Hook Secret** → Edge secret `SEND_EMAIL_HOOK_SECRET` (format `v1,whsec_...`)
-5. Redirect URLs: `https://planner.monefyi.com/**`, `http://localhost:5173/**`
+```bash
+export SUPABASE_ACCESS_TOKEN="sbp_..."
+export SUPABASE_PROJECT_REF="zzwqfmdyncxbolestkqp"
+./scripts/enable-auth-email-hook.sh
+```
 
-SMTP Auth bisa tetap aktif sebagai fallback, tapi hook menggantikan pengiriman email Auth.
+Script ini deploy `auth-send-email`, set `SEND_EMAIL_HOOK_SECRET`, dan enable hook di project Auth config.
 
 **Edge secrets (wajib production):**
 

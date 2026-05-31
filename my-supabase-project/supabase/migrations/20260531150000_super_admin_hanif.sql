@@ -1,7 +1,8 @@
 -- Super admin: hanif.rullyant@gmail.com — password & full platform access
 -- Jalankan di Supabase SQL Editor setelah migrasi onboarding/platform_admin.
 
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+SET search_path = public, extensions, auth;
 
 DO $hanif_admin$
 DECLARE

@@ -2,7 +2,8 @@
 -- Password for all test users: TestOnboard2026!
 -- Requires: 20260531120000_planner_onboarding.sql applied
 
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+SET search_path = public, extensions, auth;
 
 DO $onboard_seed$
 DECLARE

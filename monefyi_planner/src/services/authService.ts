@@ -98,6 +98,23 @@ export async function resetPasswordForEmail(email: string) {
   return result;
 }
 
+export async function resendSignupVerification(email: string) {
+  const redirectTo = authRedirectUrl('/login');
+  const result = await supabase.auth.resend({
+    type: 'signup',
+    email: email.trim(),
+    options: { emailRedirectTo: redirectTo },
+  });
+  // #region agent log
+  agentDebugLog('H6', 'authService.ts:resendSignup', 'resend verification', {
+    hasError: !!result.error,
+    errorMessage: result.error?.message ?? null,
+    redirectTo,
+  });
+  // #endregion
+  return result;
+}
+
 export async function updatePassword(password: string) {
   return supabase.auth.updateUser({ password });
 }

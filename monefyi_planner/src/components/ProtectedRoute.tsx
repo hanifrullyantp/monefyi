@@ -38,7 +38,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (isDemoMode) return <>{children}</>;
 
-  if (!emailVerified && !config.skipEmailVerify) {
+  if (!emailVerified && !config.skipEmailVerify && !isSuperAdmin) {
     return <Navigate to="/verify-email" replace />;
   }
 

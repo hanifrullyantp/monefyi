@@ -14,6 +14,7 @@ export type SendEmailResult = {
   ok: boolean;
   skipped?: boolean;
   reason?: string;
+  resendId?: string;
 };
 
 export function getResendFrom(): string {
@@ -67,7 +68,15 @@ export async function sendEmail(params: {
     return { ok: false, reason: `Resend ${res.status}: ${err.slice(0, 200)}` };
   }
 
-  return { ok: true };
+  let resendId: string | undefined;
+  try {
+    const data = await res.json();
+    resendId = data?.id;
+  } catch {
+    /* ignore */
+  }
+
+  return { ok: true, resendId };
 }
 
 /** Fire-and-forget helper used by edge handlers. */

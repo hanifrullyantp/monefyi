@@ -30,19 +30,25 @@ npx --yes supabase@latest functions deploy auth-send-email \
   --no-verify-jwt
 
 echo "==> Enabling Send Email hook + planner redirect URLs..."
+PATCH_BODY=$(HOOK_URI="$HOOK_URI" SEND_EMAIL_HOOK_SECRET="$SEND_EMAIL_HOOK_SECRET" node <<'NODE'
+const body = {
+  hook_send_email_enabled: true,
+  hook_send_email_uri: process.env.HOOK_URI,
+  hook_send_email_secrets: process.env.SEND_EMAIL_HOOK_SECRET,
+  site_url: "https://planner.monefyi.com",
+  uri_allow_list:
+    "https://planner.monefyi.com/**,https://monefyi-planner.vercel.app/**,http://localhost:5173/**",
+  rate_limit_email_sent: 30,
+};
+process.stdout.write(JSON.stringify(body));
+NODE
+)
+
 curl -sS -X PATCH "https://api.supabase.com/v1/projects/${PROJECT_REF}/config/auth" \
   -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
   -H "Content-Type: application/json" \
-  -d "$(node -e "
-    const secret = process.env.SEND_EMAIL_HOOK_SECRET;
-    console.log(JSON.stringify({
-      hook_send_email_enabled: true,
-      hook_send_email_uri: '${HOOK_URI}',
-      hook_send_email_secrets: secret,
-      site_url: 'https://planner.monefyi.com',
-      uri_allow_list: 'https://planner.monefyi.com/**,https://monefyi-planner.vercel.app/**,http://localhost:5173/**',
-    }));
-  ")"
+  -d "$PATCH_BODY"
+echo ""
 
 echo ""
 echo "Done. Auth emails now use Resend API via auth-send-email hook."

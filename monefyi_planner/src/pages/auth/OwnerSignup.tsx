@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CheckCircle, Mail } from 'lucide-react';
 import { authUserMessage } from '../../lib/authMessages';
 import { isValidEmail, validatePassword } from '../../lib/validators';
-import { signInWithPassword, signUpWithPassword } from '../../services/authService';
+import { signInWithPassword, signUpWithPassword, resendSignupVerification } from '../../services/authService';
 import { createOwnerOrg } from '../../services/onboardingService';
 import { runBootstrap } from '../../hooks/useBootstrap';
 import { agentDebugLog } from '../../lib/agentDebugLog';
@@ -29,7 +29,8 @@ function validateStep2(form: { businessName: string }): string | null {
 export function OwnerSignupPage() {
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMsg, setResendMsg] = useState('');
   const navigate = useNavigate();
   const [form, setForm] = useState({
     name: '',
@@ -152,6 +153,21 @@ export function OwnerSignupPage() {
     }
   };
 
+  const handleResendVerification = async () => {
+    setResendLoading(true);
+    setResendMsg('');
+    setError('');
+    try {
+      const { error: resendErr } = await resendSignupVerification(form.email);
+      if (resendErr) throw resendErr;
+      setResendMsg('Email verifikasi dikirim ulang. Cek inbox dan folder spam.');
+    } catch (err) {
+      setError(err instanceof Error ? authUserMessage(err) || err.message : 'Gagal kirim ulang email');
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
   const canProceed = step === 1 ? step1Ready : step === 2 ? step2Ready : true;
 
   return (
@@ -215,6 +231,16 @@ export function OwnerSignupPage() {
               <Mail className="w-12 h-12 text-indigo-500 mx-auto" />
               <h3 className="font-black text-xl">Verifikasi email</h3>
               <p className="text-sm text-slate-500">Kami mengirim link verifikasi ke <strong>{form.email}</strong>. Setelah verifikasi, masuk dan lanjutkan setup.</p>
+              <p className="text-xs text-slate-400">Cek juga folder spam. Pengirim: <strong>noreply@monefyi.com</strong></p>
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                disabled={resendLoading}
+                className="inline-block py-2 px-4 border border-indigo-200 text-indigo-700 rounded-xl text-sm font-bold disabled:opacity-60"
+              >
+                {resendLoading ? 'Mengirim...' : 'Kirim ulang email verifikasi'}
+              </button>
+              {resendMsg && <p className="text-sm text-emerald-600">{resendMsg}</p>}
               <Link to="/login" className="inline-block py-2 px-4 bg-indigo-600 text-white rounded-xl text-sm font-bold">Ke halaman masuk</Link>
             </div>
           )}
