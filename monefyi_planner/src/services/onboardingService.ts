@@ -36,10 +36,11 @@ export async function completeOwnerOnboarding(orgId: string, updates: {
   brand_color?: string;
   timezone?: string;
 }) {
-  return supabase
+  const { error } = await supabase
     .from('planner_organizations')
     .update({ ...updates, onboarding_completed: true })
     .eq('id', orgId);
+  if (error) throw new Error(error.message);
 }
 
 export async function completeMemberOnboarding(userId: string, updates: {

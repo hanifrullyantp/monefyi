@@ -10,28 +10,54 @@ import { showToast } from '../../store/uiStore';
 type Step = 1 | 2 | 3 | 4;
 
 export function OwnerOnboardingWizard() {
-  const { tenant, setOnboardingCompleted } = useAppStore();
+  const { tenant, setOnboardingCompleted, setHasMembership } = useAppStore();
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>(1);
   const [brandColor, setBrandColor] = useState('#6366f1');
   const [timezone, setTimezone] = useState('Asia/Jakarta');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const finish = async (skipped = false) => {
-    if (!tenant?.id) return;
     setLoading(true);
+    setError('');
     try {
-      await completeOwnerOnboarding(tenant.id, {
+      const session = await getSession();
+      if (!session) throw new Error('Sesi tidak ditemukan. Silakan masuk lagi.');
+
+      let orgId = tenant?.id || useAppStore.getState().tenant?.id;
+      if (!orgId) {
+        await runBootstrap(session);
+        orgId = useAppStore.getState().tenant?.id;
+      }
+      if (!orgId) {
+        throw new Error('Organisasi belum ditemukan. Muat ulang halaman atau selesaikan pendaftaran owner.');
+      }
+
+      await completeOwnerOnboarding(orgId, {
         brand_color: brandColor,
         timezone,
       });
+
       setOnboardingCompleted(true);
-      const session = await getSession();
-      if (session) await runBootstrap(session);
+      setHasMembership(true);
+
+      try {
+        await runBootstrap(session);
+      } catch {
+        /* keep local onboarding flag if refresh fails */
+      }
+
+      if (!useAppStore.getState().onboardingCompleted) {
+        setOnboardingCompleted(true);
+      }
+
       showToast(skipped ? 'Onboarding dilewati' : 'Workspace siap!', 'success');
-      navigate('/app');
+      navigate('/app', { replace: true });
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Gagal menyimpan', 'error');
+      const message = e instanceof Error ? e.message : 'Gagal menyimpan';
+      setError(message);
+      showToast(message, 'error');
     } finally {
       setLoading(false);
     }
@@ -49,7 +75,7 @@ export function OwnerOnboardingWizard() {
         {step === 1 && (
           <div className="space-y-4">
             <h1 className="text-xl font-black">Setup workspace</h1>
-            <p className="text-sm text-slate-500">Atur tampilan dasar {tenant?.name}</p>
+            <p className="text-sm text-slate-500">Atur tampilan dasar {tenant?.name || 'perusahaan Anda'}</p>
             <label className="block text-sm font-medium">Warna brand</label>
             <input type="color" value={brandColor} onChange={e => setBrandColor(e.target.value)} className="w-full h-10 rounded-lg" />
             <label className="block text-sm font-medium">Timezone</label>
@@ -65,7 +91,7 @@ export function OwnerOnboardingWizard() {
           <div className="text-center space-y-4">
             <h1 className="text-xl font-black">Buat project pertama?</h1>
             <p className="text-sm text-slate-500">Anda bisa membuat project nanti dari dashboard.</p>
-            <button type="button" onClick={() => navigate('/app?tab=projects')} className="text-indigo-600 font-semibold text-sm">Buat project sekarang →</button>
+            <p className="text-xs text-slate-400">Klik Lanjut di bawah — project bisa dibuat setelah masuk aplikasi.</p>
           </div>
         )}
 
@@ -73,7 +99,7 @@ export function OwnerOnboardingWizard() {
           <div className="text-center space-y-4">
             <h1 className="text-xl font-black">Undang anggota pertama?</h1>
             <p className="text-sm text-slate-500">Buka halaman Tim setelah setup untuk mengundang.</p>
-            <button type="button" onClick={() => navigate('/app?tab=hr')} className="text-indigo-600 font-semibold text-sm">Ke halaman HR & Karyawan →</button>
+            <p className="text-xs text-slate-400">Klik Lanjut di bawah — undangan bisa dikirim setelah masuk aplikasi.</p>
           </div>
         )}
 
@@ -89,14 +115,18 @@ export function OwnerOnboardingWizard() {
           </div>
         )}
 
+        {error && (
+          <p className="text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2 mt-4">{error}</p>
+        )}
+
         <div className="flex gap-3 mt-8">
-          <button type="button" onClick={() => finish(true)} disabled={loading} className="flex items-center gap-1 px-4 py-2 text-sm text-slate-500">
+          <button type="button" onClick={() => finish(true)} disabled={loading} className="flex items-center gap-1 px-4 py-2 text-sm text-slate-500 disabled:opacity-50">
             <SkipForward className="w-4 h-4" /> Lewati
           </button>
           {step < 4 ? (
             <button type="button" onClick={() => setStep((step + 1) as Step)} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl">Lanjut</button>
           ) : (
-            <button type="button" onClick={() => finish(false)} disabled={loading} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl">
+            <button type="button" onClick={() => finish(false)} disabled={loading} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl disabled:opacity-60">
               {loading ? 'Menyimpan...' : 'Mulai menggunakan'}
             </button>
           )}
