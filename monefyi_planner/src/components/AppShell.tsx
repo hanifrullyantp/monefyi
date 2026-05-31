@@ -11,12 +11,14 @@ import WorkerDashboard from '../pages/WorkerDashboard';
 import OnboardingChecklist from './OnboardingChecklist';
 import { useAppStore } from '../store/appStore';
 import { useBootstrap } from '../hooks/useBootstrap';
+import { showWorkerShell } from '../utils/platformUi';
+import { isPlatformAdmin } from '../services/adminService';
 
 function AppContent() {
   const { id: projectIdParam } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, activeTab, setOnline, setSyncStatus, setSelectedProjectId, setActiveTab } = useAppStore();
+  const { user, activeTab, setOnline, setSyncStatus, setSelectedProjectId, setActiveTab, platformRole, uiViewMode } = useAppStore();
   useBootstrap();
 
   useEffect(() => {
@@ -49,7 +51,8 @@ function AppContent() {
     };
   }, [setOnline, setSyncStatus]);
 
-  const isWorker = user?.role === 'worker' || user?.role === 'staff';
+  const isWorker = showWorkerShell(user?.role, platformRole, user?.email, uiViewMode);
+  const isSuperAdmin = isPlatformAdmin(platformRole, user?.email);
 
   const renderPage = () => {
     if (isWorker) return <WorkerDashboard />;
@@ -68,7 +71,9 @@ function AppContent() {
         return <Finance />;
       case 'hr':
       case 'team':
-        return (user?.role === 'owner' || user?.role === 'manager') ? <HrEmployees /> : <Dashboard onOpenProject={id => navigate(`/app/projects/${id}`)} />;
+        return (isSuperAdmin || user?.role === 'owner' || user?.role === 'manager')
+          ? <HrEmployees />
+          : <Dashboard onOpenProject={id => navigate(`/app/projects/${id}`)} />;
       case 'settings':
         return <Settings />;
       default:

@@ -1,10 +1,11 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAppStore } from '../store/appStore';
 import { config } from '../lib/config';
+import { isPlatformAdmin } from '../services/adminService';
 
 /** Requires authenticated session only (for onboarding / verify email). */
 export default function AuthOnlyRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isDemoMode, authInitializing, emailVerified } = useAppStore();
+  const { isAuthenticated, isDemoMode, authInitializing, emailVerified, user, platformRole } = useAppStore();
   const location = useLocation();
 
   if (authInitializing) {
@@ -19,7 +20,7 @@ export default function AuthOnlyRoute({ children }: { children: React.ReactNode 
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (!emailVerified && !config.skipEmailVerify && !location.pathname.startsWith('/verify-email')) {
+  if (!emailVerified && !config.skipEmailVerify && !isPlatformAdmin(platformRole, user?.email) && !location.pathname.startsWith('/verify-email')) {
     return <Navigate to="/verify-email" replace />;
   }
 

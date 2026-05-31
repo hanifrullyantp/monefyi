@@ -4,9 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, FolderOpen, Wallet, Settings, Bell, Menu, X,
   Sparkles, Wifi, WifiOff, Clock, Users,
-  BarChart3, ChevronRight, LogOut, User
+  BarChart3, ChevronRight, LogOut, User, Shield,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
+import { isPlatformAdmin } from '../services/adminService';
+import { showWorkerShell } from '../utils/platformUi';
 import CommandModal from './CommandModal';
 import NotificationPanel from './NotificationPanel';
 import ToastHost from './ToastHost';
@@ -19,14 +21,15 @@ export default function Layout({ children }: LayoutProps) {
   const {
     user, tenant, activeTab, setActiveTab, syncStatus, pendingSyncCount,
     isOnline, lastSynced, unreadCount, commandModalOpen, setCommandModalOpen,
-    sidebarOpen, setSidebarOpen, logout
+    sidebarOpen, setSidebarOpen, logout, platformRole, uiViewMode, setUiViewMode,
   } = useAppStore();
   const navigate = useNavigate();
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
-  const isWorker = user?.role === 'worker' || user?.role === 'staff';
+  const isSuperAdmin = isPlatformAdmin(platformRole, user?.email);
+  const isWorker = showWorkerShell(user?.role, platformRole, user?.email, uiViewMode);
 
   const ownerTabs = [
     { id: 'home', label: 'Home', icon: Home },
@@ -102,6 +105,36 @@ export default function Layout({ children }: LayoutProps) {
             <div className="mt-3 px-2 py-1.5 bg-slate-50 rounded-lg">
               <div className="text-xs font-medium text-slate-700 truncate">{tenant.name}</div>
               <div className="text-xs text-slate-400 capitalize">{tenant.plan} plan</div>
+            </div>
+          )}
+          {isSuperAdmin && (
+            <div className="mt-3 p-2.5 bg-violet-50 border border-violet-100 rounded-xl">
+              <div className="text-[10px] font-bold text-violet-700 uppercase tracking-wide mb-2">Preview mode</div>
+              <div className="flex gap-1">
+                {([
+                  { id: 'auto' as const, label: 'Auto' },
+                  { id: 'owner' as const, label: 'Owner' },
+                  { id: 'worker' as const, label: 'Worker' },
+                ]).map(m => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setUiViewMode(m.id)}
+                    className={`flex-1 py-1 text-[10px] font-bold rounded-lg ${
+                      uiViewMode === m.id ? 'bg-violet-600 text-white' : 'bg-white text-violet-700'
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/admin')}
+                className="mt-2 w-full flex items-center justify-center gap-1 py-1.5 text-[11px] font-bold text-violet-700 hover:bg-violet-100 rounded-lg"
+              >
+                <Shield className="w-3.5 h-3.5" /> Super Admin
+              </button>
             </div>
           )}
         </div>

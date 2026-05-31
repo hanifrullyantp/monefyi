@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAppStore } from '../store/appStore';
 import { config } from '../lib/config';
+import { isPlatformAdmin } from '../services/adminService';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -15,8 +16,10 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     hasMembership,
     onboardingCompleted,
     user,
+    platformRole,
   } = useAppStore();
   const location = useLocation();
+  const isSuperAdmin = isPlatformAdmin(platformRole, user?.email);
 
   if (authInitializing) {
     return (
@@ -39,15 +42,15 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/verify-email" replace />;
   }
 
-  if (!hasMembership) {
+  if (!hasMembership && !isSuperAdmin) {
     return <Navigate to="/signup?mode=join" replace />;
   }
 
-  if (!onboardingCompleted && user?.role === 'owner') {
+  if (!isSuperAdmin && !onboardingCompleted && user?.role === 'owner') {
     return <Navigate to="/onboarding/owner" replace />;
   }
 
-  if (!onboardingCompleted && (user?.role === 'worker' || user?.role === 'manager' || user?.role === 'staff')) {
+  if (!isSuperAdmin && !onboardingCompleted && (user?.role === 'worker' || user?.role === 'manager' || user?.role === 'staff')) {
     return <Navigate to="/onboarding/member" replace />;
   }
 
