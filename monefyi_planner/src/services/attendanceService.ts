@@ -1,6 +1,8 @@
 import { supabase } from '../lib/supabase';
 import { assertNoDbError } from '../lib/supabaseErrors';
 
+const PROFILE_BY_USER = 'profiles!user_id';
+
 export type AttendanceType = 'check_in' | 'check_out';
 
 export interface AttendanceRecord {
@@ -68,7 +70,7 @@ export async function recordAttendance(entry: {
       project_name: entry.project_name || null,
       note: entry.note || null,
     })
-    .select('*, profiles(name)')
+    .select(`*, ${PROFILE_BY_USER}(name)`)
     .single();
 
   assertNoDbError(error);
@@ -79,7 +81,7 @@ export async function getOrgAttendance(orgId: string, days = 30): Promise<Attend
   const since = new Date(Date.now() - days * 86400000).toISOString();
   const { data, error } = await supabase
     .from('planner_attendance_records')
-    .select('*, profiles(name)')
+    .select(`*, ${PROFILE_BY_USER}(name)`)
     .eq('org_id', orgId)
     .gte('recorded_at', since)
     .order('recorded_at', { ascending: false });
@@ -96,7 +98,7 @@ export async function getUserAttendance(
   const since = new Date(Date.now() - days * 86400000).toISOString();
   const { data, error } = await supabase
     .from('planner_attendance_records')
-    .select('*, profiles(name)')
+    .select(`*, ${PROFILE_BY_USER}(name)`)
     .eq('org_id', orgId)
     .eq('user_id', userId)
     .gte('recorded_at', since)
@@ -185,7 +187,7 @@ export async function groupTodayByUser(orgId: string) {
   const start = `${todayIsoDate()}T00:00:00.000Z`;
   const { data, error } = await supabase
     .from('planner_attendance_records')
-    .select('user_id, type, recorded_at, profiles(name)')
+    .select(`user_id, type, recorded_at, ${PROFILE_BY_USER}(name)`)
     .eq('org_id', orgId)
     .gte('recorded_at', start)
     .order('recorded_at', { ascending: true });

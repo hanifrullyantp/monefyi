@@ -13,7 +13,7 @@ async function invokeFn<T>(name: string, body?: Record<string, unknown>): Promis
 export async function listMembers(orgId: string): Promise<OrgMember[]> {
   const { data, error } = await supabase
     .from('planner_org_members')
-    .select('*, profiles(name, avatar_url)')
+    .select('*, profiles!user_id(name, avatar_url)')
     .eq('org_id', orgId)
     .neq('status', 'removed')
     .order('accepted_at', { ascending: true, nullsFirst: false });

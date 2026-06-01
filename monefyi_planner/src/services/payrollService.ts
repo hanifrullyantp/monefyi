@@ -2,6 +2,9 @@ import { supabase } from '../lib/supabase';
 import { assertNoDbError } from '../lib/supabaseErrors';
 import { countDaysPresentInMonth, formatCurrency } from './attendanceService';
 
+/** PostgREST hint — bon_requests has user_id + reviewed_by FKs to profiles. */
+const PROFILE_BY_USER = 'profiles!user_id';
+
 export interface MemberCompensation {
   id: string;
   org_id: string;
@@ -112,7 +115,7 @@ export async function upsertCompensation(params: {
 export async function listPayrollEntries(orgId: string, limit = 24): Promise<PayrollEntry[]> {
   const { data, error } = await supabase
     .from('planner_payroll_entries')
-    .select('*, profiles(name)')
+    .select(`*, ${PROFILE_BY_USER}(name)`)
     .eq('org_id', orgId)
     .order('period_month', { ascending: false })
     .limit(limit);
@@ -188,7 +191,7 @@ export async function generatePayrollForOrg(
         },
         { onConflict: 'org_id,user_id,period_month' },
       )
-      .select('*, profiles(name)')
+      .select(`*, ${PROFILE_BY_USER}(name)`)
       .single();
 
     assertNoDbError(error);
@@ -229,7 +232,7 @@ export async function updatePayrollStatus(
     .from('planner_payroll_entries')
     .update(updates)
     .eq('id', entryId)
-    .select('*, profiles(name)')
+    .select(`*, ${PROFILE_BY_USER}(name)`)
     .single();
 
   assertNoDbError(error);
@@ -239,7 +242,7 @@ export async function updatePayrollStatus(
 export async function listBonRequests(orgId: string, status?: BonRequest['status']) {
   let q = supabase
     .from('planner_bon_requests')
-    .select('*, profiles(name)')
+    .select(`*, ${PROFILE_BY_USER}(name)`)
     .eq('org_id', orgId)
     .order('created_at', { ascending: false });
 
@@ -262,7 +265,7 @@ export async function createBonRequest(orgId: string, userId: string, amount: nu
       amount,
       reason: reason || null,
     })
-    .select('*, profiles(name)')
+    .select(`*, ${PROFILE_BY_USER}(name)`)
     .single();
 
   assertNoDbError(error);
@@ -284,7 +287,7 @@ export async function reviewBonRequest(
       reject_reason: rejectReason || null,
     })
     .eq('id', requestId)
-    .select('*, profiles(name)')
+    .select(`*, ${PROFILE_BY_USER}(name)`)
     .single();
 
   assertNoDbError(error);

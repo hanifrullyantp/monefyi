@@ -28,7 +28,7 @@ export async function createJoinRequest(orgId: string, message?: string) {
 export async function listJoinRequests(orgId: string): Promise<JoinRequest[]> {
   const { data, error } = await supabase
     .from('planner_join_requests')
-    .select('*, profiles(name)')
+    .select('*, profiles!user_id(name)')
     .eq('org_id', orgId)
     .eq('status', 'pending')
     .order('created_at', { ascending: false });
