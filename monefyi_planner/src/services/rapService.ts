@@ -31,16 +31,35 @@ export async function deleteRapItem(id: string) {
   if (error) throw new Error(error.message);
 }
 
-export function rapSummary(items: RapItem[]) {
+export function rapSummary(items: RapItem[], actualByType?: Record<string, number>) {
   const byType: Record<string, { planned: number; actual: number }> = {};
   for (const item of items) {
     const total = (Number(item.quantity) || 0) * (Number(item.unit_price) || 0);
     if (!byType[item.type]) byType[item.type] = { planned: 0, actual: 0 };
     byType[item.type].planned += total;
   }
+  if (actualByType) {
+    for (const [type, amount] of Object.entries(actualByType)) {
+      if (!byType[type]) byType[type] = { planned: 0, actual: 0 };
+      byType[type].actual = amount / 1_000_000;
+    }
+  }
   return Object.entries(byType).map(([name, v]) => ({
     name: name.charAt(0).toUpperCase() + name.slice(1),
     planned: v.planned / 1_000_000,
     actual: v.actual / 1_000_000,
   }));
+}
+
+export function rapActualsFromCosts(
+  items: RapItem[],
+  byRapId: Record<string, { qty: number; amount: number }>,
+) {
+  const actualByType: Record<string, number> = {};
+  for (const item of items) {
+    const actual = byRapId[item.id];
+    if (!actual) continue;
+    actualByType[item.type] = (actualByType[item.type] || 0) + actual.amount;
+  }
+  return actualByType;
 }

@@ -78,6 +78,20 @@ export async function deleteCostRealization(id: string, projectId: string) {
   assertNoDbError(updErr);
 }
 
+export async function aggregateCostByRapItem(projectId: string) {
+  const costs = await loadCostRealizations(projectId);
+  const byRap: Record<string, { qty: number; amount: number }> = {};
+
+  for (const c of costs) {
+    if (!c.rap_item_id) continue;
+    if (!byRap[c.rap_item_id]) byRap[c.rap_item_id] = { qty: 0, amount: 0 };
+    byRap[c.rap_item_id].qty += Number(c.quantity) || 0;
+    byRap[c.rap_item_id].amount += Number(c.total_amount) || 0;
+  }
+
+  return byRap;
+}
+
 export async function aggregateCashflow(orgId: string, days = 30) {
   const costs = await loadAllCosts(orgId);
   const cutoff = new Date();

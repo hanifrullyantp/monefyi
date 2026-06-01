@@ -72,6 +72,16 @@ Deploy from `my-supabase-project/supabase/functions/`:
 | planner-try-domain-join | JWT | Domain auto-join |
 | planner-analyze | JWT | AI analysis |
 | planner-parse-command | JWT | AI command parser |
+| auth-send-email | Hook | Signup / verify / reset email (Resend) |
+| monefyi-landing-config | GET public, POST admin | Landing page CMS (`slug=planner`) |
+| monefyi-admin-users | JWT admin | User list |
+| monefyi-admin-update-user | JWT admin | Update user plan / role |
+| monefyi-admin-app-config | JWT admin | Global app config |
+| monefyi-admin-platform-stats | JWT admin | Platform statistics |
+| monefyi-admin-company-types | JWT admin | Company type CRUD |
+| monefyi-user-account | JWT | Account settings |
+
+**Total:** 24 functions — deploy semua via `./scripts/deploy-planner-supabase.sh` (termasuk `monefyi-landing-config` dengan `--no-verify-jwt`).
 
 ### Deploy (CLI)
 
@@ -153,6 +163,7 @@ Password: `TestOnboard2026!`
 - `owner-onboard@test.monefyi.app` (owner)
 - `mgr1-onboard@test.monefyi.app` (manager)
 - `worker1-onboard@test.monefyi.app` (worker)
+- `hanif.rullyant@gmail.com` (super admin — password dari migrasi `20260531150000_super_admin_hanif.sql`)
 
 ## Security
 
@@ -190,6 +201,7 @@ Password: `TestOnboard2026!`
 - [ ] **Manager:** buat proyek, lihat semua proyek org
 - [ ] **Worker:** hanya lihat proyek yang di-assign (atau pool tanpa assignment)
 - [ ] **Super admin:** `hanif.rullyant@gmail.com` → `/admin`, bypass verify email
+- [ ] **Super admin:** Landing settings → Save → reload → konten tersimpan
 
 ### RLS / database (otomatis)
 
@@ -198,6 +210,20 @@ Setelah `db push`:
 ```bash
 ./scripts/rls-smoke-test.sh
 ```
+
+### Edge functions (otomatis)
+
+Setelah deploy functions:
+
+```bash
+export ADMIN_TEST_EMAIL="hanif.rullyant@gmail.com"
+export ADMIN_TEST_PASSWORD="..."   # super admin password
+./scripts/planner-edge-smoke-test.sh
+```
+
+Atau otomatis di akhir `./scripts/deploy-planner-supabase.sh` (set `SKIP_EDGE_SMOKE=1` untuk lewati).
+
+GitHub Actions: tambahkan secret `ADMIN_TEST_PASSWORD` agar admin round-trip test jalan di CI.
 
 Lihat juga [RLS_AUDIT.md](RLS_AUDIT.md) untuk peta policy dan aturan migrasi baru.
 

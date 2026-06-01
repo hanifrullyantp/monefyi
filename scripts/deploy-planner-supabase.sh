@@ -9,9 +9,10 @@
 #   export SUPABASE_PROJECT_REF="zzwqfmdyncxbolestkqp"
 #   ./scripts/deploy-planner-supabase.sh
 #
-# Optional: skip migrations or RLS smoke test
+# Optional: skip migrations or smoke tests
 #   SKIP_DB_PUSH=1 ./scripts/deploy-planner-supabase.sh
 #   SKIP_RLS_SMOKE=1 ./scripts/deploy-planner-supabase.sh
+#   SKIP_EDGE_SMOKE=1 ./scripts/deploy-planner-supabase.sh
 
 set -euo pipefail
 
@@ -68,17 +69,38 @@ PLANNER_FUNCTIONS=(
   monefyi-admin-platform-stats
   monefyi-admin-company-types
   monefyi-user-account
+  monefyi-landing-config
+)
+
+NO_VERIFY_JWT_FUNCTIONS=(
+  auth-send-email
+  monefyi-landing-config
 )
 
 echo "==> Deploying ${#PLANNER_FUNCTIONS[@]} Edge Functions..."
 for fn in "${PLANNER_FUNCTIONS[@]}"; do
   echo "    → $fn"
-  if [[ "$fn" == "auth-send-email" ]]; then
+  no_verify=0
+  for nv in "${NO_VERIFY_JWT_FUNCTIONS[@]}"; do
+    if [[ "$fn" == "$nv" ]]; then
+      no_verify=1
+      break
+    fi
+  done
+  if [[ "$no_verify" == "1" ]]; then
     npx --yes supabase@latest functions deploy "$fn" --no-verify-jwt
   else
     npx --yes supabase@latest functions deploy "$fn"
   fi
 done
+
+if [[ "${SKIP_EDGE_SMOKE:-}" != "1" ]]; then
+  echo "==> Running edge function smoke test..."
+  "$ROOT/scripts/planner-edge-smoke-test.sh" || {
+    echo "Warning: edge smoke test failed (set SKIP_EDGE_SMOKE=1 to skip)" >&2
+    exit 1
+  }
+fi
 
 echo ""
 echo "Done. Set Edge Function secrets in Supabase Dashboard if needed:"
