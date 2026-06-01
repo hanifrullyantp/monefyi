@@ -11,10 +11,15 @@ import { listAuditLogs, exportAuditCsv } from '../services/auditService';
 import { loadWorkerLogsForOrg } from '../services/dailyLogService';
 import { loadWorkItemsForOrg } from '../services/workItemService';
 import {
-  groupTodayByUser, getOrgAttendance, formatAttendanceTime,
+  groupTodayByUser, getOrgAttendance, formatAttendanceTime, formatCurrency,
+  type AttendanceRecord,
 } from '../services/attendanceService';
+import {
+  listPayrollEntries, listBonRequests, listCompensation, upsertCompensation,
+  generatePayrollForOrg, updatePayrollStatus, reviewBonRequest, monthStartIso,
+  type PayrollEntry, type BonRequest, type MemberCompensation,
+} from '../services/payrollService';
 import InviteMemberModal from '../components/team/InviteMemberModal';
-import DemoBanner from '../components/DemoBanner';
 import { showToast } from '../store/uiStore';
 import type { OrgMember, JoinRequest, AuditLogEntry } from '../types/onboarding';
 import type { DailyLog } from '../services/dailyLogService';
@@ -48,6 +53,15 @@ export default function HrEmployees() {
   const [audit, setAudit] = useState<AuditLogEntry[]>([]);
   const [workerLogs, setWorkerLogs] = useState<DailyLog[]>([]);
   const [workItemCount, setWorkItemCount] = useState(0);
+  const [todayAttendance, setTodayAttendance] = useState<
+    Map<string, { name: string; checkIn?: string; checkOut?: string; status: 'in' | 'out' | 'none' }>
+  >(new Map());
+  const [recentAttendance, setRecentAttendance] = useState<AttendanceRecord[]>([]);
+  const [payrollEntries, setPayrollEntries] = useState<PayrollEntry[]>([]);
+  const [bonRequests, setBonRequests] = useState<BonRequest[]>([]);
+  const [compensation, setCompensation] = useState<MemberCompensation[]>([]);
+  const [payrollBusy, setPayrollBusy] = useState(false);
+  const [salaryDraft, setSalaryDraft] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -67,18 +81,28 @@ export default function HrEmployees() {
     if (!tenant?.id) return;
     setLoading(true);
     try {
-      const [m, r, a, logs, items] = await Promise.all([
+      const [m, r, a, logs, items, todayMap, attendance, payroll, bons, comp] = await Promise.all([
         listMembers(tenant.id),
         canInvite ? listJoinRequests(tenant.id) : Promise.resolve([]),
         isOwner ? listAuditLogs(tenant.id) : Promise.resolve([]),
         loadWorkerLogsForOrg(tenant.id, 30),
         loadWorkItemsForOrg(tenant.id),
+        groupTodayByUser(tenant.id),
+        getOrgAttendance(tenant.id, 7),
+        canInvite ? listPayrollEntries(tenant.id) : Promise.resolve([]),
+        canInvite ? listBonRequests(tenant.id) : Promise.resolve([]),
+        canInvite ? listCompensation(tenant.id) : Promise.resolve([]),
       ]);
       setMembers(m);
       setRequests(r);
       setAudit(a);
       setWorkerLogs(logs);
       setWorkItemCount(items.length);
+      setTodayAttendance(todayMap);
+      setRecentAttendance(attendance);
+      setPayrollEntries(payroll);
+      setBonRequests(bons);
+      setCompensation(comp);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal memuat', 'error');
     } finally {
@@ -90,9 +114,14 @@ export default function HrEmployees() {
 
   const workers = members.filter(m => m.role === 'worker');
   const managers = members.filter(m => m.role === 'manager');
-  const todayAttendance = tenant?.id ? groupTodayByUser(tenant.id) : new Map();
   const checkedInToday = [...todayAttendance.values()].filter(v => v.status === 'in').length;
-  const recentAttendance = tenant?.id ? getOrgAttendance(tenant.id, 7) : [];
+  const currentMonthPayroll = payrollEntries.filter(e => e.period_month === monthStartIso());
+  const totalPayrollNet = currentMonthPayroll.reduce((s, e) => s + e.net_amount, 0);
+  const pendingBon = bonRequests.filter(b => b.status === 'pending');
+  const compByUser = useMemo(
+    () => Object.fromEntries(compensation.map(c => [c.user_id, c])),
+    [compensation],
+  );
 
   const filtered = useMemo(() => {
     return members.filter(m => {
@@ -166,8 +195,6 @@ export default function HrEmployees() {
           )}
         </div>
       </div>
-
-      <DemoBanner />
 
       <div className="flex gap-2 overflow-x-auto pb-1">
         {tabs.filter(t => t.show).map(t => (
@@ -334,7 +361,7 @@ export default function HrEmployees() {
 
       {tab === 'absensi' && (
         <div className="space-y-4">
-          <p className="text-sm text-slate-500">Check-in/out dari karyawan (MVP lokal per browser). Laporan proyek dari daily log database.</p>
+          <p className="text-sm text-slate-500">Check-in/out tersimpan di database. Laporan proyek dari daily log.</p>
 
           <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
             <div className="p-4 border-b border-slate-50 font-bold text-slate-800">Riwayat Check-in (7 hari)</div>
@@ -389,29 +416,200 @@ export default function HrEmployees() {
 
       {tab === 'payroll' && (
         <div className="space-y-4">
-          <DemoBanner />
           <div className="grid md:grid-cols-3 gap-4">
             {[
-              { label: 'Gaji Bulan Ini', value: '—', sub: 'Modul payroll belum aktif' },
-              { label: 'Bon Pending', value: '0', sub: 'Tidak ada pengajuan' },
-              { label: 'THR / Bonus', value: '—', sub: 'Coming soon' },
+              {
+                label: 'Total Gaji Bulan Ini',
+                value: canInvite ? formatCurrency(totalPayrollNet) : '—',
+                sub: `${currentMonthPayroll.length} slip draft/final`,
+              },
+              {
+                label: 'Bon Pending',
+                value: String(pendingBon.length),
+                sub: pendingBon.length ? 'Perlu review' : 'Tidak ada pengajuan',
+              },
+              {
+                label: 'Karyawan dengan gaji',
+                value: String(compensation.length),
+                sub: 'Atur gaji pokok di bawah',
+              },
             ].map(item => (
               <div key={item.label} className="bg-white rounded-2xl border border-slate-100 p-5">
                 <Wallet className="w-5 h-5 text-indigo-400 mb-2" />
-                <div className="text-2xl font-black text-slate-300">{item.value}</div>
+                <div className="text-2xl font-black text-slate-900">{item.value}</div>
                 <div className="font-semibold text-slate-700">{item.label}</div>
                 <div className="text-xs text-slate-400 mt-1">{item.sub}</div>
               </div>
             ))}
           </div>
-          <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-8 text-center">
-            <Wallet className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <h3 className="font-bold text-slate-700">Modul Payroll & Bon</h3>
-            <p className="text-sm text-slate-500 mt-2 max-w-md mx-auto">
-              Fitur gaji, slip, dan pengajuan bon akan terhubung ke database di versi berikutnya.
-              Saat ini karyawan dapat melihat tab Payroll di dashboard mereka.
-            </p>
-          </div>
+
+          {canInvite && (
+            <>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={payrollBusy}
+                  onClick={async () => {
+                    if (!tenant?.id) return;
+                    setPayrollBusy(true);
+                    try {
+                      await generatePayrollForOrg(
+                        tenant.id,
+                        members.map(m => ({ id: m.id, user_id: m.user_id, role: m.role })),
+                      );
+                      showToast('Payroll bulan ini di-generate', 'success');
+                      load();
+                    } catch (e) {
+                      showToast(e instanceof Error ? e.message : 'Gagal generate payroll', 'error');
+                    } finally {
+                      setPayrollBusy(false);
+                    }
+                  }}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold disabled:opacity-60"
+                >
+                  {payrollBusy ? 'Memproses…' : 'Generate Payroll Bulan Ini'}
+                </button>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+                <div className="p-4 border-b border-slate-50 font-bold text-slate-800">Gaji Pokok Karyawan</div>
+                <div className="divide-y divide-slate-50">
+                  {workers.map(w => (
+                    <div key={w.id} className="px-4 py-3 flex flex-wrap items-center gap-3 text-sm">
+                      <span className="font-medium flex-1 min-w-[120px]">{w.profile?.name || '—'}</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder={String(compByUser[w.user_id]?.monthly_salary || 0)}
+                        value={salaryDraft[w.id] ?? ''}
+                        onChange={e => setSalaryDraft({ ...salaryDraft, [w.id]: e.target.value })}
+                        className="w-36 px-3 py-1.5 rounded-lg border border-slate-200 text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const raw = salaryDraft[w.id] ?? String(compByUser[w.user_id]?.monthly_salary || 0);
+                          const monthly = Number(raw.replace(/\D/g, ''));
+                          if (!monthly) {
+                            showToast('Masukkan gaji bulanan', 'error');
+                            return;
+                          }
+                          try {
+                            await upsertCompensation({
+                              org_id: tenant!.id,
+                              member_id: w.id,
+                              user_id: w.user_id,
+                              monthly_salary: monthly,
+                            });
+                            showToast('Gaji disimpan', 'success');
+                            load();
+                          } catch (e) {
+                            showToast(e instanceof Error ? e.message : 'Gagal simpan', 'error');
+                          }
+                        }}
+                        className="text-indigo-600 font-semibold text-xs"
+                      >
+                        Simpan
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+                <div className="p-4 border-b border-slate-50 font-bold text-slate-800">Slip Gaji ({monthStartIso()})</div>
+                {currentMonthPayroll.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400 text-sm">Belum ada payroll. Set gaji pokok lalu generate.</div>
+                ) : (
+                  <div className="divide-y divide-slate-50">
+                    {currentMonthPayroll.map(p => (
+                      <div key={p.id} className="px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+                        <div>
+                          <div className="font-medium">{p.profiles?.name || p.user_id.slice(0, 8)}</div>
+                          <div className="text-xs text-slate-400">
+                            {p.days_present} hari hadir · {formatCurrency(p.net_amount)}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          {p.status === 'draft' && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                await updatePayrollStatus(p.id, 'approved');
+                                showToast('Disetujui', 'success');
+                                load();
+                              }}
+                              className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold"
+                            >
+                              Approve
+                            </button>
+                          )}
+                          {p.status === 'approved' && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                await updatePayrollStatus(p.id, 'paid');
+                                showToast('Ditandai lunas', 'success');
+                                load();
+                              }}
+                              className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold"
+                            >
+                              Tandai Lunas
+                            </button>
+                          )}
+                          <span className="text-xs capitalize text-slate-500">{p.status}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {pendingBon.length > 0 && (
+                <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+                  <div className="p-4 border-b border-slate-50 font-bold text-slate-800">Pengajuan Bon</div>
+                  <div className="divide-y divide-slate-50">
+                    {pendingBon.map(b => (
+                      <div key={b.id} className="px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+                        <div>
+                          <div className="font-medium">{b.profiles?.name || 'Karyawan'}</div>
+                          <div className="text-xs text-slate-400">{formatCurrency(b.amount)}{b.reason ? ` · ${b.reason}` : ''}</div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              await reviewBonRequest(b.id, 'approved', user!.id);
+                              showToast('Bon disetujui', 'success');
+                              load();
+                            }}
+                            className="px-2 py-1 bg-emerald-600 text-white rounded-lg text-xs font-bold"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              await reviewBonRequest(b.id, 'rejected', user!.id, 'Ditolak');
+                              showToast('Bon ditolak', 'info');
+                              load();
+                            }}
+                            className="px-2 py-1 border rounded-lg text-xs"
+                          >
+                            Tolak
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {!canInvite && (
+            <p className="text-sm text-slate-500">Hanya owner/manager yang dapat mengelola payroll.</p>
+          )}
         </div>
       )}
 

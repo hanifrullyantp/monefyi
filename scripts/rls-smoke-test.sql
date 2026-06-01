@@ -11,6 +11,7 @@ BEGIN
   PERFORM public.planner_auth_owner_org_ids();
   PERFORM public.planner_auth_project_ids();
   PERFORM public.planner_auth_admin_project_ids();
+  PERFORM public.planner_auth_coworker_user_ids();
   RAISE NOTICE 'RLS helpers: OK (empty result without JWT is expected)';
 EXCEPTION
   WHEN undefined_function THEN

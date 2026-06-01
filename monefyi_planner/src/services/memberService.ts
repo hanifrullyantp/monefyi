@@ -16,7 +16,7 @@ export async function listMembers(orgId: string): Promise<OrgMember[]> {
     .select('*, profiles(name, avatar_url)')
     .eq('org_id', orgId)
     .neq('status', 'removed')
-    .order('joined_at', { ascending: true });
+    .order('accepted_at', { ascending: true, nullsFirst: false });
 
   if (error) throw error;
 
@@ -30,7 +30,7 @@ export async function listMembers(orgId: string): Promise<OrgMember[]> {
     department: row.department,
     phone: row.phone,
     bio: row.bio,
-    joined_at: row.invited_at,
+    joined_at: row.accepted_at || row.invited_at,
     last_active_at: row.last_active_at,
     profile: row.profiles as { name?: string; avatar_url?: string },
   }));

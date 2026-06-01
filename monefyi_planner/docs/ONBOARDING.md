@@ -197,13 +197,28 @@ Password: `TestOnboard2026!`
 
 - [ ] **Owner:** buat proyek (modal 3 langkah) — tidak error `infinite recursion`
 - [ ] **Owner:** detail proyek → tambah RAP / work item / biaya
-- [ ] **Owner:** Tim → undang member
+- [ ] **Owner:** Tim → undang member (generate link)
+- [ ] **Owner:** HR & Karyawan → daftar anggota tampil (bukan semua 0 / error 400)
 - [ ] **Manager:** buat proyek, lihat semua proyek org
 - [ ] **Worker:** hanya lihat proyek yang di-assign (atau pool tanpa assignment)
 - [ ] **Super admin:** `hanif.rullyant@gmail.com` → `/admin`, bypass verify email
 - [ ] **Super admin:** Landing settings → Save → reload → konten tersimpan
 
-### RLS / database (otomatis)
+### HR — Absensi & Payroll (database)
+
+Migrasi `20260601150000_planner_attendance_payroll.sql`:
+
+| Tabel | Fungsi |
+|-------|--------|
+| `planner_attendance_records` | Check-in / check-out per org |
+| `planner_member_compensation` | Gaji pokok karyawan |
+| `planner_payroll_entries` | Slip gaji bulanan (generate dari absensi) |
+| `planner_bon_requests` | Pengajuan bon / pinjaman |
+
+**Alur owner:** HR → Payroll → set gaji pokok → **Generate Payroll Bulan Ini** → Approve → Tandai Lunas.
+
+**Alur worker:** Home → Check In/Out · tab Payroll → lihat slip & ajukan bon.
+
 
 Setelah `db push`:
 

@@ -4,7 +4,14 @@ import type { InvitationRecord, InvitationType, MemberRole } from '../types/onbo
 
 async function invokeFn<T>(name: string, body?: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke(name, { body: body || {} });
-  if (error) throw new Error(error.message);
+  if (error) {
+    const msg = error.message || 'Edge function error';
+    const hint =
+      /not found|failed to send|404|502|non-2xx/i.test(msg)
+        ? ' Pastikan edge functions ter-deploy: ./scripts/deploy-planner-supabase.sh'
+        : '';
+    throw new Error(`${msg}${hint}`);
+  }
   if (data?.error) throw new Error(String(data.error));
   return data as T;
 }

@@ -116,5 +116,27 @@ curl -sf -X DELETE "${SUPABASE_URL}/rest/v1/planner_projects?id=eq.${PROJECT_ID}
   -H "apikey: ${SUPABASE_ANON_KEY}" \
   -H "Authorization: Bearer ${ACCESS_TOKEN}" > /dev/null || true
 
+echo "==> HR query: list members + profiles embed"
+MEMBERS_RESP=$(curl -s -w "\n%{http_code}" \
+  "${SUPABASE_URL}/rest/v1/planner_org_members?select=*,profiles(name,avatar_url)&org_id=eq.${ORG_ID}&status=neq.removed&order=accepted_at.asc" \
+  -H "apikey: ${SUPABASE_ANON_KEY}" \
+  -H "Authorization: Bearer ${ACCESS_TOKEN}")
+
+MEMBERS_CODE=$(echo "$MEMBERS_RESP" | tail -n1)
+MEMBERS_BODY=$(echo "$MEMBERS_RESP" | sed '$d')
+
+if [[ "$MEMBERS_CODE" != "200" ]]; then
+  echo "FAIL: list members HTTP $MEMBERS_CODE" >&2
+  echo "$MEMBERS_BODY" >&2
+  exit 1
+fi
+
+MEMBER_COUNT=$(echo "$MEMBERS_BODY" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).length)}catch{console.log(0)}})")
+if [[ "${MEMBER_COUNT:-0}" -lt 1 ]]; then
+  echo "FAIL: expected at least 1 org member" >&2
+  exit 1
+fi
+echo "    Members loaded: $MEMBER_COUNT"
+
 echo ""
 echo "RLS smoke test: PASSED"
