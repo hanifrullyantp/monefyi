@@ -17,11 +17,13 @@ import { OwnerOnboardingWizard } from './pages/onboarding/OwnerWizard';
 import { MemberOnboardingWizard } from './pages/onboarding/MemberWizard';
 import AdminRoute from './components/AdminRoute';
 import SuperAdmin from './pages/SuperAdmin';
+import PwaInstallBanner from './components/PwaInstallBanner';
 
 export default function AppRouter() {
   return (
     <BrowserRouter>
       <AuthBootstrap>
+      <PwaInstallBanner />
       <Routes>
         <Route path="/" element={<><AuthRedirect /><LandingPage /></>} />
         <Route path="/login" element={<><AuthRedirect /><LoginPage /></>} />
