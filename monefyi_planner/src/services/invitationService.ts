@@ -42,6 +42,33 @@ export async function revokeInvitation(invitationId: string) {
   return invokeFn<{ ok: boolean }>(config.fnRevokeInvitation, { invitation_id: invitationId });
 }
 
+export async function directCreateMembers(params: {
+  org_id: string;
+  items: Array<{
+    name: string;
+    email: string;
+    password: string;
+    phone?: string;
+    role: MemberRole;
+  }>;
+}) {
+  return invokeFn<{
+    ok: boolean;
+    created: number;
+    failed: number;
+    results: Array<{
+      ok: boolean;
+      member_id?: string;
+      user_id?: string;
+      name?: string;
+      email?: string;
+      phone?: string;
+      role?: string;
+      error?: string;
+    }>;
+  }>(config.fnDirectCreateMember, params);
+}
+
 export async function listInvitations(orgId: string) {
   const { data, error } = await supabase
     .from('planner_invitations')

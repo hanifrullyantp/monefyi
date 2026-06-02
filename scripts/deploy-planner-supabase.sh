@@ -63,6 +63,7 @@ PLANNER_FUNCTIONS=(
   planner-transfer-ownership
   planner-search-companies
   planner-try-domain-join
+  planner-direct-create-member
   monefyi-admin-users
   monefyi-admin-update-user
   monefyi-admin-app-config

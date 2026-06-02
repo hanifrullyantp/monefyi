@@ -1,6 +1,12 @@
 import { useState } from 'react';
-import { X, Link2, Mail, Hash, Copy, Share2 } from 'lucide-react';
-import { createInvitation, sendInvitationEmails, listInvitations, revokeInvitation } from '../../services/invitationService';
+import { X, Link2, Mail, Hash, Copy, Share2, UserRoundPlus, Send } from 'lucide-react';
+import {
+  createInvitation,
+  sendInvitationEmails,
+  listInvitations,
+  revokeInvitation,
+  directCreateMembers,
+} from '../../services/invitationService';
 import { parseEmailList } from '../../lib/validators';
 import { showToast } from '../../store/uiStore';
 import type { InvitationRecord, MemberRole } from '../../types/onboarding';
@@ -12,7 +18,27 @@ interface Props {
   onCreated?: () => void;
 }
 
-type Tab = 'link' | 'email' | 'code';
+type Tab = 'link' | 'email' | 'code' | 'direct';
+
+type DirectItem = {
+  name: string;
+  email: string;
+  password: string;
+  phone: string;
+  role: MemberRole;
+};
+
+type DirectResult = {
+  ok: boolean;
+  member_id?: string;
+  user_id?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  role?: string;
+  error?: string;
+  password?: string;
+};
 
 export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated }: Props) {
   const [tab, setTab] = useState<Tab>('link');
@@ -25,8 +51,12 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
   const [result, setResult] = useState<{ join_url?: string; code?: string; invitation?: InvitationRecord } | null>(null);
   const [codes, setCodes] = useState<InvitationRecord[]>([]);
   const [csvPreview, setCsvPreview] = useState<{ email: string; role: string }[]>([]);
+  const [directInput, setDirectInput] = useState('');
+  const [directRows, setDirectRows] = useState<DirectItem[]>([]);
+  const [directResults, setDirectResults] = useState<DirectResult[]>([]);
 
   const canInviteManager = actorRole === 'owner';
+  const canDirectCreate = actorRole === 'owner';
 
   const loadCodes = async () => {
     const list = await listInvitations(orgId);
@@ -91,6 +121,30 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
     window.open(`https://wa.me/?text=${encodeURIComponent(`Gabung tim kami: ${url}`)}`, '_blank');
   };
 
+  const toWaPhone = (phone?: string) => (phone || '').replace(/[^\d]/g, '');
+
+  const loginMessage = (row: { name?: string; email?: string; password?: string }) =>
+    [
+      `Halo ${row.name || 'Tim'},`,
+      '',
+      'Akun Anda sudah dibuat di Monefyi Planner.',
+      `Link login: ${window.location.origin}/login`,
+      `Email: ${row.email || '-'}`,
+      `Password: ${row.password || '-'}`,
+      '',
+      'Silakan login dan segera ganti password setelah masuk.',
+    ].join('\n');
+
+  const sendDirectWa = (row: { name?: string; email?: string; password?: string; phone?: string }) => {
+    const phone = toWaPhone(row.phone);
+    if (!phone) {
+      showToast('Nomor HP kosong / tidak valid', 'error');
+      return;
+    }
+    const text = loginMessage(row);
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
   const handleCsv = (file: File) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -128,6 +182,65 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
     onCreated?.();
   };
 
+  const parseDirectRows = () => {
+    const lines = directInput
+      .split('\n')
+      .map(l => l.trim())
+      .filter(Boolean)
+      .slice(0, 50);
+
+    const rows = lines
+      .map(line => line.split(',').map(v => v.trim()))
+      .map(parts => ({
+        name: parts[0] || '',
+        email: parts[1] || '',
+        password: parts[2] || '',
+        phone: parts[3] || '',
+        role,
+      }))
+      .filter(r => r.name && r.email && r.password);
+
+    setDirectRows(rows);
+    setDirectResults([]);
+    showToast(`${rows.length} baris siap diproses`, rows.length ? 'success' : 'error');
+  };
+
+  const handleDirectCreate = async () => {
+    if (!directRows.length) {
+      showToast('Tidak ada data valid. Klik Parse dulu.', 'error');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await directCreateMembers({
+        org_id: orgId,
+        items: directRows.map(r => ({
+          name: r.name,
+          email: r.email,
+          password: r.password,
+          phone: r.phone,
+          role: r.role,
+        })),
+      });
+
+      const byEmail = new Map(directRows.map(r => [r.email.toLowerCase(), r]));
+      const merged = (res.results || []).map(item => {
+        const src = byEmail.get((item.email || '').toLowerCase());
+        return {
+          ...item,
+          password: src?.password || '',
+        };
+      });
+      setDirectResults(merged);
+      showToast(`${res.created}/${directRows.length} akun berhasil dibuat`, res.created ? 'success' : 'error');
+      onCreated?.();
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal create akun', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const qrUrl = result?.join_url
     ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(result.join_url)}`
     : null;
@@ -145,6 +258,7 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
             { id: 'link', icon: Link2, label: 'Link' },
             { id: 'email', icon: Mail, label: 'Email' },
             { id: 'code', icon: Hash, label: 'Kode' },
+            ...(canDirectCreate ? [{ id: 'direct', icon: UserRoundPlus, label: 'Direct' }] : []),
           ] as const).map(t => (
             <button
               key={t.id}
@@ -242,6 +356,90 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
                       <button type="button" onClick={async () => { await revokeInvitation(c.id); loadCodes(); showToast('Dicabut', 'success'); }} className="text-rose-600 text-xs">Revoke</button>
                     </div>
                   ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {tab === 'direct' && canDirectCreate && (
+            <>
+              <div className="rounded-xl border border-slate-200 p-3 bg-slate-50">
+                <p className="text-xs text-slate-600 font-semibold">Format per baris:</p>
+                <p className="text-xs text-slate-500 mt-1">nama,email,password,no_hp</p>
+              </div>
+              <textarea
+                value={directInput}
+                onChange={e => setDirectInput(e.target.value)}
+                placeholder={'Budi Santoso,budi@contoh.com,Budi#2026,628123456789\nSari Dewi,sari@contoh.com,Sari#2026,628987654321'}
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm h-32"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={parseDirectRows}
+                  className="flex-1 py-2 border rounded-lg text-sm font-semibold"
+                >
+                  Parse List
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDirectCreate}
+                  disabled={loading || !directRows.length}
+                  className="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold disabled:opacity-60"
+                >
+                  Buat Akun
+                </button>
+              </div>
+
+              {directRows.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-slate-500">Preview ({directRows.length})</p>
+                  <div className="max-h-40 overflow-y-auto border rounded-lg divide-y">
+                    {directRows.map((r, idx) => (
+                      <div key={`${r.email}-${idx}`} className="px-3 py-2 text-xs flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="font-semibold truncate">{r.name}</div>
+                          <div className="text-slate-500 truncate">{r.email} · {r.phone || '-'}</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => sendDirectWa(r)}
+                          className="shrink-0 inline-flex items-center gap-1 px-2 py-1 border rounded-md text-indigo-600"
+                        >
+                          <Send className="w-3 h-3" /> Direct WA
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {directResults.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-slate-500">Hasil pembuatan akun</p>
+                  <div className="max-h-52 overflow-y-auto border rounded-lg divide-y">
+                    {directResults.map((r, idx) => (
+                      <div key={`${r.email}-${idx}`} className="px-3 py-2 text-xs flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className={`font-semibold truncate ${r.ok ? 'text-emerald-700' : 'text-rose-700'}`}>
+                            {r.ok ? 'Berhasil' : 'Gagal'} · {r.name || r.email || `Baris ${idx + 1}`}
+                          </div>
+                          <div className="text-slate-500 truncate">
+                            {r.email} {r.error ? `· ${r.error}` : ''}
+                          </div>
+                        </div>
+                        {r.ok && (
+                          <button
+                            type="button"
+                            onClick={() => sendDirectWa(r)}
+                            className="shrink-0 inline-flex items-center gap-1 px-2 py-1 border rounded-md text-indigo-600"
+                          >
+                            <Send className="w-3 h-3" /> Direct WA
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </>
