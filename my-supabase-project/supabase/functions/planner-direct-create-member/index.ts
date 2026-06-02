@@ -13,6 +13,15 @@ type DirectMemberInput = {
   role?: string;
 };
 
+async function findUserIdByEmail(sb: ReturnType<typeof getServiceClient>, email: string): Promise<string | null> {
+  const { data, error } = await sb.rpc("planner_find_user_id_by_email", { p_email: email });
+  if (error) throw error;
+  if (!data) return null;
+  if (typeof data === "string") return data;
+  if (Array.isArray(data) && data.length && typeof data[0] === "string") return data[0];
+  return null;
+}
+
 serve(async (req) => {
   const opt = handleOptions(req);
   if (opt) return opt;
@@ -30,7 +39,9 @@ serve(async (req) => {
     if (items.length > 20) return jsonResponse({ error: "Maksimal 20 akun per sekali proses" }, 400);
 
     const membership = await getMembership(sb, actor.id, orgId);
-    if (!membership) return jsonResponse({ error: "Forbidden" }, 403);
+    if (!membership || membership.role !== "owner") {
+      return jsonResponse({ error: "Hanya owner yang bisa direct create akun" }, 403);
+    }
 
     const results: Array<Record<string, unknown>> = [];
 
@@ -83,6 +94,7 @@ serve(async (req) => {
         continue;
       }
 
+      let uid: string | null = null;
       const created = await sb.auth.admin.createUser({
         email,
         password,
@@ -90,7 +102,36 @@ serve(async (req) => {
         user_metadata: { name, phone },
       });
 
-      if (created.error || !created.data.user?.id) {
+      if (created.data.user?.id) {
+        uid = created.data.user.id;
+      } else if (created.error?.message?.toLowerCase().includes("already been registered")) {
+        uid = await findUserIdByEmail(sb, email);
+        if (!uid) {
+          results.push({
+            ok: false,
+            email,
+            phone,
+            role,
+            error: "Email sudah terdaftar tetapi user tidak ditemukan",
+          });
+          continue;
+        }
+        const updated = await sb.auth.admin.updateUserById(uid, {
+          password,
+          email_confirm: true,
+          user_metadata: { name, phone },
+        });
+        if (updated.error) {
+          results.push({
+            ok: false,
+            email,
+            phone,
+            role,
+            error: updated.error.message || "Gagal update user existing",
+          });
+          continue;
+        }
+      } else if (created.error) {
         results.push({
           ok: false,
           email,
@@ -101,19 +142,37 @@ serve(async (req) => {
         continue;
       }
 
-      const uid = created.data.user.id;
-      await sb
+      if (!uid) {
+        results.push({
+          ok: false,
+          email,
+          phone,
+          role,
+          error: "Gagal mendapatkan user id",
+        });
+        continue;
+      }
+
+      const profileUpsert = await sb
         .from("profiles")
         .upsert(
           {
             id: uid,
             name,
-            role: "member",
-            status: "active",
             onboarding_completed: false,
           },
           { onConflict: "id" },
         );
+      if (profileUpsert.error) {
+        results.push({
+          ok: false,
+          email,
+          phone,
+          role,
+          error: profileUpsert.error.message || "Gagal menyiapkan profile",
+        });
+        continue;
+      }
 
       const memberUpsert = await sb
         .from("planner_org_members")
