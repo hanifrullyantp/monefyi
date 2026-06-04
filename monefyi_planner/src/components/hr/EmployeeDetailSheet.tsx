@@ -9,6 +9,7 @@ import {
   recordAdminAttendance,
   formatAttendanceTime,
   formatCurrency,
+  formatSalaryLabel,
   type AttendanceRecord,
 } from '../../services/attendanceService';
 import {
@@ -31,6 +32,7 @@ interface EmployeeDetailSheetProps {
   open: boolean;
   canManage: boolean;
   compensation?: MemberCompensation;
+  hoursPerDay?: number;
   onClose: () => void;
   onUpdated: () => void;
 }
@@ -48,6 +50,7 @@ export default function EmployeeDetailSheet({
   open,
   canManage,
   compensation,
+  hoursPerDay = 8,
   onClose,
   onUpdated,
 }: EmployeeDetailSheetProps) {
@@ -55,7 +58,12 @@ export default function EmployeeDetailSheet({
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<MemberProfilePatch>({});
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
-  const [monthSummary, setMonthSummary] = useState({ daysPresent: 0, totalRecords: 0 });
+  const [monthSummary, setMonthSummary] = useState({
+    daysPresent: 0,
+    effectiveDays: 0,
+    partialDays: [] as { date: string; hoursWorked: number; requiredHours: number; checkIn?: string; checkOut?: string }[],
+    totalRecords: 0,
+  });
   const [payroll, setPayroll] = useState<PayrollEntry[]>([]);
   const [bons, setBons] = useState<BonRequest[]>([]);
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
@@ -83,6 +91,11 @@ export default function EmployeeDetailSheet({
     setTab('info');
   }, [member]);
 
+  useEffect(() => {
+    if (!member || !open) return;
+    void getMonthlySummary(member.user_id, orgId, hoursPerDay).then(setMonthSummary);
+  }, [member, orgId, open, hoursPerDay]);
+
   const loadTabData = useCallback(async () => {
     if (!member || !open) return;
     setLoadingTab(true);
@@ -90,7 +103,7 @@ export default function EmployeeDetailSheet({
       if (tab === 'absensi') {
         const [records, summary] = await Promise.all([
           getUserAttendance(member.user_id, orgId, 60),
-          getMonthlySummary(member.user_id, orgId),
+          getMonthlySummary(member.user_id, orgId, hoursPerDay),
         ]);
         setAttendance(records);
         setMonthSummary(summary);
@@ -110,7 +123,7 @@ export default function EmployeeDetailSheet({
     } finally {
       setLoadingTab(false);
     }
-  }, [member, orgId, open, tab]);
+  }, [member, orgId, open, tab, hoursPerDay]);
 
   useEffect(() => {
     if (tab !== 'info') loadTabData();
@@ -152,7 +165,7 @@ export default function EmployeeDetailSheet({
   if (!member) return null;
 
   const name = member.profile?.name || 'Karyawan';
-  const estSalary = compensation?.monthly_salary || compensation?.daily_rate || 0;
+  const estSalary = formatSalaryLabel(compensation);
 
   const tabs: { id: SheetTab; label: string; icon: typeof Clock }[] = [
     { id: 'info', label: 'Info', icon: Save },
@@ -176,8 +189,16 @@ export default function EmployeeDetailSheet({
 
         <div className="grid grid-cols-2 gap-2">
           <MetricMiniCard label="Hadir bulan ini" value={String(monthSummary.daysPresent || '—')} />
-          <MetricMiniCard label="Est. gaji" value={estSalary ? formatCurrency(estSalary) : '—'} />
+          <MetricMiniCard label="Gaji pokok" value={estSalary} />
         </div>
+        {monthSummary.partialDays.length > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900">
+            <div className="font-bold mb-1">{monthSummary.partialDays.length} hari jam kerja kurang ({hoursPerDay}j/hari)</div>
+            {monthSummary.partialDays.slice(0, 5).map(d => (
+              <div key={d.date}>{d.date}: {d.hoursWorked}j{d.checkIn ? ` · ${d.checkIn}` : ''}{d.checkOut ? `–${d.checkOut}` : ''}</div>
+            ))}
+          </div>
+        )}
 
         <div className="flex gap-1 overflow-x-auto pb-1">
           {tabs.map(t => (
@@ -289,6 +310,7 @@ export default function EmployeeDetailSheet({
                   <span className={r.type === 'check_in' ? 'text-emerald-700' : 'text-slate-600'}>
                     {r.type === 'check_in' ? 'Masuk' : 'Keluar'}
                     {r.note === 'admin_manual' && <span className="text-[10px] ml-1 text-amber-600">(manual)</span>}
+                    {r.is_offsite && <span className="text-[10px] ml-1 text-rose-600">(luar lokasi)</span>}
                   </span>
                   <span className="text-slate-500">{formatAttendanceTime(r.timestamp)} · {r.timestamp.slice(0, 10)}</span>
                 </div>
@@ -303,7 +325,7 @@ export default function EmployeeDetailSheet({
               <div className="bg-emerald-50 rounded-xl p-3 text-sm">
                 <div className="font-bold text-emerald-800">Kompensasi aktif</div>
                 <div className="text-emerald-700 mt-1">
-                  Gaji bulanan: {formatCurrency(compensation.monthly_salary)} · Harian: {formatCurrency(compensation.daily_rate)}
+                  Tipe: {compensation.salary_type === 'daily' ? 'Harian' : 'Bulanan'} · {formatSalaryLabel(compensation)}
                 </div>
               </div>
             )}

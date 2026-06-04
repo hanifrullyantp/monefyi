@@ -10,6 +10,7 @@ export interface MemberCompensation {
   org_id: string;
   member_id: string;
   user_id: string;
+  salary_type: 'daily' | 'monthly';
   monthly_salary: number;
   daily_rate: number;
   currency: string;
@@ -74,6 +75,7 @@ export async function listCompensation(orgId: string): Promise<MemberCompensatio
   assertNoDbError(error);
   return (data || []).map(row => ({
     ...row,
+    salary_type: (row.salary_type as 'daily' | 'monthly') || 'monthly',
     monthly_salary: Number(row.monthly_salary) || 0,
     daily_rate: Number(row.daily_rate) || 0,
   })) as MemberCompensation[];
@@ -83,13 +85,22 @@ export async function upsertCompensation(params: {
   org_id: string;
   member_id: string;
   user_id: string;
-  monthly_salary: number;
+  salary_type: 'daily' | 'monthly';
+  monthly_salary?: number;
   daily_rate?: number;
   currency?: string;
 }) {
-  const daily =
-    params.daily_rate ??
-    (params.monthly_salary > 0 ? Math.round(params.monthly_salary / workingDaysInMonth()) : 0);
+  const salaryType = params.salary_type || 'monthly';
+  let monthly = Number(params.monthly_salary) || 0;
+  let daily = Number(params.daily_rate) || 0;
+
+  if (salaryType === 'daily') {
+    daily = daily || monthly;
+    monthly = 0;
+  } else {
+    monthly = monthly || daily;
+    daily = daily > 0 ? daily : (monthly > 0 ? Math.round(monthly / workingDaysInMonth()) : 0);
+  }
 
   const { data, error } = await supabase
     .from('planner_member_compensation')
@@ -98,7 +109,8 @@ export async function upsertCompensation(params: {
         org_id: params.org_id,
         member_id: params.member_id,
         user_id: params.user_id,
-        monthly_salary: params.monthly_salary,
+        salary_type: salaryType,
+        monthly_salary: monthly,
         daily_rate: daily,
         currency: params.currency || 'IDR',
         updated_at: new Date().toISOString(),
@@ -160,6 +172,7 @@ export async function generatePayrollForOrg(
   orgId: string,
   members: { id: string; user_id: string; role: string }[],
   periodMonth = monthStart(),
+  hoursPerDay = 8,
 ) {
   const periodIso = monthStartIso(periodMonth);
   const compList = await listCompensation(orgId);
@@ -169,10 +182,17 @@ export async function generatePayrollForOrg(
 
   for (const m of members.filter(x => x.role === 'worker' || x.role === 'manager')) {
     const comp = compByUser.get(m.user_id);
-    const daysPresent = await countDaysPresentInMonth(m.user_id, orgId, periodMonth);
+    const daysPresent = await countDaysPresentInMonth(m.user_id, orgId, periodMonth, hoursPerDay, true);
+    const salaryType = comp?.salary_type || 'monthly';
     const monthly = comp?.monthly_salary || 0;
     const daily = comp?.daily_rate || (monthly > 0 ? monthly / workDays : 0);
-    const baseAmount = daily > 0 ? Math.round(daily * daysPresent) : 0;
+
+    let baseAmount = 0;
+    if (salaryType === 'daily') {
+      baseAmount = daily > 0 ? Math.round(daily * daysPresent) : 0;
+    } else {
+      baseAmount = monthly > 0 ? Math.round(monthly) : Math.round(daily * daysPresent);
+    }
 
     const { data, error } = await supabase
       .from('planner_payroll_entries')

@@ -12,8 +12,12 @@ import { loadWorkerLogsForOrg } from '../services/dailyLogService';
 import { loadWorkItemsForOrg } from '../services/workItemService';
 import {
   groupTodayByUser, getOrgAttendance, formatAttendanceTime, formatCurrency,
+  summarizeMonthlyByUser, formatSalaryLabel, getPartialDays,
   type AttendanceRecord,
 } from '../services/attendanceService';
+import { loadOrgDetails } from '../services/orgService';
+import { parseAttendanceSettings, type AttendanceSettings } from '../utils/attendanceSettings';
+import AttendanceSettingsPanel from '../components/hr/AttendanceSettingsPanel';
 import {
   listPayrollEntries, listBonRequests, listCompensation, upsertCompensation,
   generatePayrollForOrg, updatePayrollStatus, reviewBonRequest, monthStartIso,
@@ -63,6 +67,12 @@ export default function HrEmployees() {
   const [compensation, setCompensation] = useState<MemberCompensation[]>([]);
   const [payrollBusy, setPayrollBusy] = useState(false);
   const [salaryDraft, setSalaryDraft] = useState<Record<string, string>>({});
+  const [salaryTypeDraft, setSalaryTypeDraft] = useState<Record<string, 'daily' | 'monthly'>>({});
+  const [monthAttendanceStats, setMonthAttendanceStats] = useState<
+    Map<string, { daysPresent: number; effectiveDays: number; partialCount: number }>
+  >(new Map());
+  const [attendanceSettings, setAttendanceSettings] = useState<AttendanceSettings | null>(null);
+  const [monthAttendanceRecords, setMonthAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<OrgMember | null>(null);
@@ -83,18 +93,23 @@ export default function HrEmployees() {
     if (!tenant?.id) return;
     setLoading(true);
     try {
-      const [m, r, a, logs, items, todayMap, attendance, payroll, bons, comp] = await Promise.all([
+      const [m, r, a, logs, items, todayMap, attendance, payroll, bons, comp, orgDetails] = await Promise.all([
         listMembers(tenant.id),
         canInvite ? listJoinRequests(tenant.id) : Promise.resolve([]),
         isOwner ? listAuditLogs(tenant.id) : Promise.resolve([]),
         loadWorkerLogsForOrg(tenant.id, 30),
         loadWorkItemsForOrg(tenant.id),
         groupTodayByUser(tenant.id),
-        getOrgAttendance(tenant.id, 7),
+        getOrgAttendance(tenant.id, 35),
         canInvite ? listPayrollEntries(tenant.id) : Promise.resolve([]),
         canInvite ? listBonRequests(tenant.id) : Promise.resolve([]),
         canInvite ? listCompensation(tenant.id) : Promise.resolve([]),
+        loadOrgDetails(tenant.id).catch(() => null),
       ]);
+      const attSettings = parseAttendanceSettings(orgDetails?.settings as Record<string, unknown>);
+      setAttendanceSettings(attSettings);
+      setMonthAttendanceRecords(attendance);
+      setMonthAttendanceStats(summarizeMonthlyByUser(attendance, attSettings.hours_per_day));
       setMembers(m);
       setRequests(r);
       setAudit(a);
@@ -310,7 +325,7 @@ export default function HrEmployees() {
             {filtered.map(m => {
               const att = todayAttendance.get(m.user_id);
               const comp = compByUser[m.user_id];
-              const salaryEst = comp?.monthly_salary || comp?.daily_rate || 0;
+              const monthAtt = monthAttendanceStats.get(m.user_id);
               return (
                 <button
                   key={m.id}
@@ -332,12 +347,17 @@ export default function HrEmployees() {
                             Hadir {att.checkIn}
                           </span>
                         )}
+                        {(monthAtt?.partialCount ?? 0) > 0 && (
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                            {monthAtt!.partialCount} hari kurang jam
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
                   <div className="mt-3 pt-3 border-t border-slate-50 grid grid-cols-2 gap-2 text-xs text-slate-500">
-                    <span>Gaji est.: {salaryEst ? formatCurrency(salaryEst) : '—'}</span>
-                    <span>{workItemCount} todo org</span>
+                    <span>Gaji: {formatSalaryLabel(comp)}</span>
+                    <span>Absensi: {monthAtt?.daysPresent ?? 0} hari</span>
                   </div>
                   <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
                     <span>Last seen: {lastSeenLabel(m.last_active_at)}</span>
@@ -364,10 +384,44 @@ export default function HrEmployees() {
 
       {tab === 'absensi' && (
         <div className="space-y-4">
-          <p className="text-sm text-slate-500">Check-in/out tersimpan di database. Laporan proyek dari daily log.</p>
+          <p className="text-sm text-slate-500">
+            Jam kerja per hari: <strong>{attendanceSettings?.hours_per_day ?? 8} jam</strong>.
+            Hari dengan jam kerja kurang dari target ditandai di bawah.
+          </p>
+
+          {(() => {
+            const hoursPerDay = attendanceSettings?.hours_per_day ?? 8;
+            const partialByUser = new Map<string, ReturnType<typeof getPartialDays>>();
+            for (const m of members) {
+              const recs = monthAttendanceRecords.filter(r => r.user_id === m.user_id);
+              const partial = getPartialDays(recs, hoursPerDay);
+              if (partial.length) partialByUser.set(m.user_id, partial);
+            }
+            if (partialByUser.size === 0) return null;
+            return (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3">
+                <div className="font-bold text-amber-900 text-sm">Hari dengan jam kerja kurang</div>
+                {[...partialByUser.entries()].map(([uid, days]) => {
+                  const name = members.find(x => x.user_id === uid)?.profile?.name || 'Karyawan';
+                  return (
+                    <div key={uid} className="text-xs text-amber-900">
+                      <div className="font-semibold mb-1">{name}</div>
+                      {days.map(d => (
+                        <div key={d.date} className="ml-2 py-0.5">
+                          {d.date}: {d.hoursWorked}j / {d.requiredHours}j
+                          {d.checkIn && ` · masuk ${d.checkIn}`}
+                          {d.checkOut && ` · keluar ${d.checkOut}`}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
           <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-            <div className="p-4 border-b border-slate-50 font-bold text-slate-800">Riwayat Check-in (7 hari)</div>
+            <div className="p-4 border-b border-slate-50 font-bold text-slate-800">Riwayat Check-in (30 hari)</div>
             {recentAttendance.length === 0 ? (
               <div className="p-8 text-center text-slate-400 text-sm">Belum ada data absensi.</div>
             ) : (
@@ -376,7 +430,7 @@ export default function HrEmployees() {
                   <div key={r.id} className="px-4 py-3 flex items-center justify-between text-sm">
                     <div>
                       <div className="font-medium">{r.user_name}</div>
-                      <div className="text-xs text-slate-400">{formatAttendanceTime(r.timestamp)}{r.project_name ? ` · ${r.project_name}` : ''}</div>
+                      <div className="text-xs text-slate-400">{formatAttendanceTime(r.timestamp)}{r.project_name ? ` · ${r.project_name}` : ''}{r.is_offsite ? ' · ⚠️ luar lokasi' : ''}</div>
                     </div>
                     <span className={`text-xs font-bold px-2 py-1 rounded-full ${r.type === 'check_in' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
                       {r.type === 'check_in' ? 'Check In' : 'Check Out'}
@@ -419,6 +473,10 @@ export default function HrEmployees() {
 
       {tab === 'payroll' && (
         <div className="space-y-4">
+          {canInvite && tenant?.id && (
+            <AttendanceSettingsPanel orgId={tenant.id} canEdit={canInvite} />
+          )}
+
           <div className="grid md:grid-cols-3 gap-4">
             {[
               {
@@ -459,6 +517,8 @@ export default function HrEmployees() {
                       await generatePayrollForOrg(
                         tenant.id,
                         members.map(m => ({ id: m.id, user_id: m.user_id, role: m.role })),
+                        undefined,
+                        attendanceSettings?.hours_per_day ?? 8,
                       );
                       showToast('Payroll bulan ini di-generate', 'success');
                       load();
@@ -477,13 +537,27 @@ export default function HrEmployees() {
               <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
                 <div className="p-4 border-b border-slate-50 font-bold text-slate-800">Gaji Pokok Karyawan</div>
                 <div className="divide-y divide-slate-50">
-                  {workers.map(w => (
+                  {workers.map(w => {
+                    const comp = compByUser[w.user_id];
+                    const salaryType = salaryTypeDraft[w.id] ?? comp?.salary_type ?? 'monthly';
+                    const defaultAmount = salaryType === 'daily'
+                      ? (comp?.daily_rate || 0)
+                      : (comp?.monthly_salary || 0);
+                    return (
                     <div key={w.id} className="px-4 py-3 flex flex-wrap items-center gap-3 text-sm">
                       <span className="font-medium flex-1 min-w-[120px]">{w.profile?.name || '—'}</span>
+                      <select
+                        value={salaryType}
+                        onChange={e => setSalaryTypeDraft({ ...salaryTypeDraft, [w.id]: e.target.value as 'daily' | 'monthly' })}
+                        className="px-2 py-1.5 rounded-lg border border-slate-200 text-xs"
+                      >
+                        <option value="monthly">Bulanan</option>
+                        <option value="daily">Harian</option>
+                      </select>
                       <input
                         type="text"
                         inputMode="numeric"
-                        placeholder={String(compByUser[w.user_id]?.monthly_salary || 0)}
+                        placeholder={String(defaultAmount)}
                         value={salaryDraft[w.id] ?? ''}
                         onChange={e => setSalaryDraft({ ...salaryDraft, [w.id]: e.target.value })}
                         className="w-36 px-3 py-1.5 rounded-lg border border-slate-200 text-sm"
@@ -491,10 +565,10 @@ export default function HrEmployees() {
                       <button
                         type="button"
                         onClick={async () => {
-                          const raw = salaryDraft[w.id] ?? String(compByUser[w.user_id]?.monthly_salary || 0);
-                          const monthly = Number(raw.replace(/\D/g, ''));
-                          if (!monthly) {
-                            showToast('Masukkan gaji bulanan', 'error');
+                          const raw = salaryDraft[w.id] ?? String(defaultAmount);
+                          const amount = Number(raw.replace(/\D/g, ''));
+                          if (!amount) {
+                            showToast(`Masukkan gaji ${salaryType === 'daily' ? 'harian' : 'bulanan'}`, 'error');
                             return;
                           }
                           try {
@@ -502,7 +576,9 @@ export default function HrEmployees() {
                               org_id: tenant!.id,
                               member_id: w.id,
                               user_id: w.user_id,
-                              monthly_salary: monthly,
+                              salary_type: salaryType,
+                              monthly_salary: salaryType === 'monthly' ? amount : 0,
+                              daily_rate: salaryType === 'daily' ? amount : undefined,
                             });
                             showToast('Gaji disimpan', 'success');
                             load();
@@ -515,7 +591,8 @@ export default function HrEmployees() {
                         Simpan
                       </button>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -748,6 +825,7 @@ export default function HrEmployees() {
         open={!!selectedMember}
         canManage={canInvite}
         compensation={selectedMember ? compByUser[selectedMember.user_id] : undefined}
+        hoursPerDay={attendanceSettings?.hours_per_day ?? 8}
         onClose={() => setSelectedMember(null)}
         onUpdated={load}
       />

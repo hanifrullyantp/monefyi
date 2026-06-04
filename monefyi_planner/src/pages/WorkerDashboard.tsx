@@ -14,8 +14,14 @@ import {
   getUserAttendance,
   formatAttendanceTime,
   formatCurrency,
+  resolveAttendanceLocation,
+  getPartialDays,
+  getMonthlySummary,
   type AttendanceRecord,
 } from '../services/attendanceService';
+import { loadOrgDetails } from '../services/orgService';
+import { parseAttendanceSettings, type AttendanceSettings } from '../utils/attendanceSettings';
+import { useAttendanceAutomation } from '../hooks/useAttendanceAutomation';
 import {
   getUserPayrollForMonth,
   listBonRequests,
@@ -44,6 +50,9 @@ export default function WorkerDashboard() {
   const [bonAmount, setBonAmount] = useState('');
   const [bonReason, setBonReason] = useState('');
   const [bonSubmitting, setBonSubmitting] = useState(false);
+  const [attendanceSettings, setAttendanceSettings] = useState<AttendanceSettings | null>(null);
+  const [partialDays, setPartialDays] = useState<ReturnType<typeof getPartialDays>>([]);
+  const [monthDaysPresent, setMonthDaysPresent] = useState(0);
 
   const workerTab = (['home', 'attendance', 'payroll', 'todos'] as const).includes(
     activeTab as 'home' | 'attendance' | 'payroll' | 'todos',
@@ -61,12 +70,18 @@ export default function WorkerDashboard() {
     if (!user?.id || !tenant?.id || tenant.id === 'demo') return;
     setAttendanceLoading(true);
     try {
-      const [todayStatus, records, pay, bons] = await Promise.all([
+      const [todayStatus, records, pay, bons, orgDetails] = await Promise.all([
         getUserTodayStatus(user.id, tenant.id),
-        getUserAttendance(user.id, tenant.id, 30),
+        getUserAttendance(user.id, tenant.id, 31),
         getUserPayrollForMonth(tenant.id, user.id),
         listBonRequests(tenant.id),
+        loadOrgDetails(tenant.id).catch(() => null),
       ]);
+      const attSettings = parseAttendanceSettings(orgDetails?.settings as Record<string, unknown>);
+      setAttendanceSettings(attSettings);
+      setPartialDays(getPartialDays(records, attSettings.hours_per_day));
+      const summary = await getMonthlySummary(user.id, tenant.id, attSettings.hours_per_day);
+      setMonthDaysPresent(summary.daysPresent);
       setStatus(todayStatus);
       setHistory(records);
       setPayroll(pay);
@@ -106,6 +121,13 @@ export default function WorkerDashboard() {
     if (!user?.id || !tenant?.id) return;
     setAttendanceLoading(true);
     try {
+      const settings = attendanceSettings || parseAttendanceSettings(null);
+      const loc = await resolveAttendanceLocation(settings);
+      if (loc.message && loc.isOffsite && settings.warn_offsite) {
+        showToast(loc.message, 'info');
+      } else if (loc.message && !loc.isOffsite) {
+        showToast(loc.message, 'info');
+      }
       await recordAttendance({
         user_id: user.id,
         user_name: user.name || 'Karyawan',
@@ -113,9 +135,14 @@ export default function WorkerDashboard() {
         type: 'check_in',
         project_id: defaultProject?.id,
         project_name: defaultProjectName,
+        latitude: loc.position?.latitude,
+        longitude: loc.position?.longitude,
+        location_accuracy: loc.position?.accuracy,
+        is_offsite: loc.isOffsite,
+        source: loc.isOffsite ? 'manual' : (settings.geofence_enabled ? 'geofence' : 'manual'),
       });
       await refreshStatus();
-      showToast('Check-in tercatat', 'success');
+      showToast(loc.isOffsite ? 'Check-in tercatat (luar lokasi)' : 'Check-in tercatat', loc.isOffsite ? 'info' : 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal check-in', 'error');
     } finally {
@@ -127,6 +154,11 @@ export default function WorkerDashboard() {
     if (!user?.id || !tenant?.id) return;
     setAttendanceLoading(true);
     try {
+      const settings = attendanceSettings || parseAttendanceSettings(null);
+      const loc = await resolveAttendanceLocation(settings);
+      if (loc.isOffsite && settings.warn_offsite) {
+        showToast('Check-out di luar lokasi kerja.', 'info');
+      }
       await recordAttendance({
         user_id: user.id,
         user_name: user.name || 'Karyawan',
@@ -134,6 +166,10 @@ export default function WorkerDashboard() {
         type: 'check_out',
         project_id: defaultProject?.id,
         project_name: defaultProjectName,
+        latitude: loc.position?.latitude,
+        longitude: loc.position?.longitude,
+        location_accuracy: loc.position?.accuracy,
+        is_offsite: loc.isOffsite,
       });
       await refreshStatus();
       showToast('Check-out tercatat', 'success');
@@ -143,6 +179,19 @@ export default function WorkerDashboard() {
       setAttendanceLoading(false);
     }
   };
+
+  useAttendanceAutomation({
+    enabled: !!tenant?.id && tenant.id !== 'demo',
+    orgId: tenant?.id || '',
+    userId: user?.id || '',
+    userName: user?.name,
+    settings: attendanceSettings || parseAttendanceSettings(null),
+    checkedIn: status.checkedIn,
+    projectId: defaultProject?.id,
+    projectName: defaultProjectName,
+    onStatusChange: refreshStatus,
+    onNotify: (message, type) => showToast(message, type),
+  });
 
   const handleProgressChange = async (wi: WorkItem, pct: number) => {
     setUpdatingId(wi.id);
@@ -178,10 +227,8 @@ export default function WorkerDashboard() {
     }
   };
 
-  const daysPresent = new Set(
-    history.filter(r => r.type === 'check_in').map(r => r.timestamp.slice(0, 10)),
-  ).size;
   const pendingBon = bonRequests.filter(b => b.status === 'pending').length;
+  const hoursPerDay = attendanceSettings?.hours_per_day ?? 8;
 
   return (
     <div className="p-4 space-y-5 max-w-lg mx-auto">
@@ -241,10 +288,23 @@ export default function WorkerDashboard() {
               <div className="text-xs text-slate-500">Task Aktif</div>
             </div>
             <div className="bg-white border rounded-xl p-3 text-center">
-              <div className="text-2xl font-black text-emerald-600">{daysPresent}</div>
-              <div className="text-xs text-slate-500">Hari Hadir (30d)</div>
+              <div className="text-2xl font-black text-emerald-600">{monthDaysPresent}</div>
+              <div className="text-xs text-slate-500">Hari Hadir (bulan ini)</div>
             </div>
           </div>
+
+          {partialDays.length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900">
+              <div className="font-bold mb-1">Jam kerja kurang dari {hoursPerDay} jam</div>
+              {partialDays.slice(0, 4).map(d => (
+                <div key={d.date}>{d.date}: {d.hoursWorked}j{d.checkIn ? ` (${d.checkIn}` : ''}{d.checkOut ? `–${d.checkOut})` : d.checkIn ? ')' : ''}</div>
+              ))}
+            </div>
+          )}
+
+          {attendanceSettings?.auto_wifi_checkin && (
+            <p className="text-[11px] text-slate-400 text-center">Auto absensi WiFi kantor aktif</p>
+          )}
 
           <div>
             <h2 className="font-bold text-slate-800 mb-3">Pekerjaan Aktif</h2>
