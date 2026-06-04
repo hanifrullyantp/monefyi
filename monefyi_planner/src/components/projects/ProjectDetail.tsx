@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, TrendingUp, BarChart3, Target, Layers, Trash2, Edit3,
@@ -62,20 +62,13 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   const [progressDrafts, setProgressDrafts] = useState<Record<string, string>>({});
   const [logDraft, setLogDraft] = useState({ description: '', progress: '' });
 
-  const isLg = useSyncExternalStore(
-    onStoreChange => {
-      const mq = window.matchMedia('(min-width: 1024px)');
-      mq.addEventListener('change', onStoreChange);
-      return () => mq.removeEventListener('change', onStoreChange);
-    },
-    () => window.matchMedia('(min-width: 1024px)').matches,
-    () => true,
-  );
   const {
     scrollRef,
     collapse,
+    isCollapsed,
     handleHeaderTap,
-  } = useCollapsibleHeader(!isLg);
+    toggleHeaderCompact,
+  } = useCollapsibleHeader();
 
   const canManage = user?.role === 'owner' || user?.role === 'manager' || user?.role === 'admin';
   const health = HEALTH_CONFIG[project.health_status] || HEALTH_CONFIG.on_track;
@@ -349,14 +342,16 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-0 sm:p-4"
+        className="fixed inset-0 z-50 flex flex-col bg-slate-900/70 backdrop-blur-sm"
         onClick={e => { if (e.target === e.currentTarget) onClose(); }}
       >
         <motion.div
-          initial={{ y: 50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 50, opacity: 0 }}
-          className="bg-white w-full max-w-5xl h-full sm:h-[90vh] sm:rounded-3xl overflow-hidden flex flex-col shadow-2xl"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 12 }}
+          transition={{ duration: 0.2 }}
+          className="bg-white w-full h-full max-w-none rounded-none overflow-hidden flex flex-col shadow-2xl"
+          onClick={e => e.stopPropagation()}
         >
           <ProjectDetailHeader
             project={project}
@@ -366,9 +361,11 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
             opi={opi}
             loading={loading}
             collapse={collapse}
+            isCollapsed={isCollapsed}
             onClose={onClose}
             onRefresh={() => reload()}
             onHeaderTap={handleHeaderTap}
+            onToggleCompact={toggleHeaderCompact}
           />
 
           <div className="flex overflow-x-auto border-b border-slate-200 bg-white px-2 shrink-0">

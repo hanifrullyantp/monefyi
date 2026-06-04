@@ -1,47 +1,73 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 const COLLAPSE_THRESHOLD = 40;
-const EXPANDED_HEIGHT = 280;
-const COLLAPSED_HEIGHT = 64;
+export const EXPANDED_HEIGHT = 280;
+export const COLLAPSED_HEIGHT = 64;
 
-export function useCollapsibleHeader(enabled: boolean) {
+export type HeaderSizeMode = 'auto' | 'expanded' | 'compact';
+
+export function useCollapsibleHeader() {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [collapse, setCollapse] = useState(0);
-  const [manualExpanded, setManualExpanded] = useState(false);
+  const [scrollCollapse, setScrollCollapse] = useState(0);
+  const [headerSize, setHeaderSize] = useState<HeaderSizeMode>('auto');
   const lastTapRef = useRef(0);
 
   const onScroll = useCallback(() => {
-    if (!enabled || !scrollRef.current) return;
+    if (!scrollRef.current) return;
     const y = scrollRef.current.scrollTop;
-    if (manualExpanded && y < COLLAPSE_THRESHOLD) {
-      setManualExpanded(false);
+
+    if (headerSize === 'compact') return;
+
+    if (headerSize === 'expanded' && y > COLLAPSE_THRESHOLD) {
+      setHeaderSize('auto');
     }
-    const progress = manualExpanded
-      ? 0
-      : Math.min(1, Math.max(0, (y - COLLAPSE_THRESHOLD) / 80));
-    setCollapse(progress);
-  }, [enabled, manualExpanded]);
+
+    if (headerSize !== 'auto') return;
+
+    const progress = Math.min(1, Math.max(0, (y - COLLAPSE_THRESHOLD) / 80));
+    setScrollCollapse(progress);
+  }, [headerSize]);
 
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el || !enabled) return;
+    if (!el) return;
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
-  }, [enabled, onScroll]);
+  }, [onScroll]);
+
+  const collapse =
+    headerSize === 'compact' ? 1 : headerSize === 'expanded' ? 0 : scrollCollapse;
+
+  const isCollapsed = collapse > 0.5;
 
   const headerHeight =
     EXPANDED_HEIGHT - (EXPANDED_HEIGHT - COLLAPSED_HEIGHT) * collapse;
 
+  const expandHeader = useCallback(() => {
+    setHeaderSize('expanded');
+    setScrollCollapse(0);
+    scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const compactHeader = useCallback(() => {
+    setHeaderSize('compact');
+  }, []);
+
+  const toggleHeaderCompact = useCallback(() => {
+    if (isCollapsed) {
+      expandHeader();
+    } else {
+      compactHeader();
+    }
+  }, [compactHeader, expandHeader, isCollapsed]);
+
   const handleHeaderTap = () => {
-    if (collapse < 0.5) return;
+    if (!isCollapsed) return;
     const now = Date.now();
     if (now - lastTapRef.current < 350) {
-      scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-      setManualExpanded(true);
-      setCollapse(0);
+      expandHeader();
     } else {
-      setManualExpanded(true);
-      setCollapse(0);
+      expandHeader();
     }
     lastTapRef.current = now;
   };
@@ -50,8 +76,12 @@ export function useCollapsibleHeader(enabled: boolean) {
     scrollRef,
     collapse,
     headerHeight,
-    isCollapsed: collapse > 0.6,
+    isCollapsed,
+    headerSize,
     handleHeaderTap,
+    toggleHeaderCompact,
+    expandHeader,
+    compactHeader,
     EXPANDED_HEIGHT,
     COLLAPSED_HEIGHT,
   };
