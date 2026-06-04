@@ -120,7 +120,7 @@ export async function aggregateCashflow(orgId: string, days = 30) {
 export async function aggregateByProject(orgId: string) {
   const { data: projects, error } = await supabase
     .from('planner_projects')
-    .select('id, name, total_budget, total_spent')
+    .select('id, name, total_budget, total_spent, total_received')
     .eq('org_id', orgId);
   if (error) throw new Error(error.message);
 
@@ -129,5 +129,6 @@ export async function aggregateByProject(orgId: string) {
     name: p.name,
     budget: Number(p.total_budget) || 0,
     spent: Number(p.total_spent) || 0,
+    received: Number(p.total_received) || 0,
   }));
 }

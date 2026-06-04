@@ -12,6 +12,7 @@ import { showWorkerShell, canAccessManagerFeatures } from '../utils/platformUi';
 import CommandModal from './CommandModal';
 import NotificationPanel from './NotificationPanel';
 import ToastHost from './ToastHost';
+import UndoToast from './ui/UndoToast';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -488,6 +489,7 @@ export default function Layout({ children }: LayoutProps) {
         {commandModalOpen && <CommandModal />}
       </AnimatePresence>
       <ToastHost />
+      <UndoToast />
     </div>
   );
 }

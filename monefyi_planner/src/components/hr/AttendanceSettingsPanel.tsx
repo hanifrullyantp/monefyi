@@ -8,14 +8,15 @@ import {
   type AttendanceSettings,
   type AllowedWifi,
 } from '../../utils/attendanceSettings';
-import { showToast } from '../../store/uiStore';
+import { showToast, useUiStore } from '../../store/uiStore';
 
 interface Props {
   orgId: string;
   canEdit: boolean;
+  actorId?: string;
 }
 
-export default function AttendanceSettingsPanel({ orgId, canEdit }: Props) {
+export default function AttendanceSettingsPanel({ orgId, canEdit, actorId }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<AttendanceSettings>({ ...DEFAULT_ATTENDANCE_SETTINGS });
@@ -33,7 +34,22 @@ export default function AttendanceSettingsPanel({ orgId, canEdit }: Props) {
     if (!canEdit) return;
     setSaving(true);
     try {
+      const org = await loadOrgDetails(orgId);
+      const beforeAttendance = parseAttendanceSettings(org.settings as Record<string, unknown>);
       await mergeOrgSettingsJson(orgId, attendanceSettingsToJson(settings));
+      if (actorId) {
+        const { recordReversibleAction } = await import('../../services/undoService');
+        const action = await recordReversibleAction({
+          orgId,
+          actorId,
+          actionType: 'attendance_settings',
+          entityType: 'planner_organizations',
+          entityId: orgId,
+          beforeState: attendanceSettingsToJson(beforeAttendance),
+          afterState: attendanceSettingsToJson(settings),
+        });
+        useUiStore.getState().showUndoToast('Pengaturan absensi disimpan', action.id);
+      }
       showToast('Pengaturan absensi disimpan', 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal menyimpan', 'error');

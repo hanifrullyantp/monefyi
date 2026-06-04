@@ -83,12 +83,17 @@ export interface OrgDetails {
   timezone?: string | null;
   plan_type?: string | null;
   settings?: Record<string, unknown> | null;
+  allow_join_request?: boolean;
+  allow_email_domain_signup?: boolean;
+  allowed_email_domains?: string[] | null;
+  default_role_for_domain?: string | null;
+  is_public_discoverable?: boolean;
 }
 
 export async function loadOrgDetails(orgId: string): Promise<OrgDetails> {
   const { data, error } = await supabase
     .from('planner_organizations')
-    .select('id, name, slug, industry, team_size, logo_url, brand_color, timezone, plan_type, settings')
+    .select('id, name, slug, industry, team_size, logo_url, brand_color, timezone, plan_type, settings, allow_join_request, allow_email_domain_signup, allowed_email_domains, default_role_for_domain, is_public_discoverable')
     .eq('id', orgId)
     .single();
   if (error) throw error;
@@ -100,20 +105,71 @@ export async function updateOrgFields(orgId: string, fields: {
   timezone?: string;
   brand_color?: string;
   industry?: string;
-}) {
+}, undoContext?: { actorId: string }) {
+  const { data: existing, error: selErr } = await supabase
+    .from('planner_organizations')
+    .select('name, timezone, brand_color, industry, settings')
+    .eq('id', orgId)
+    .single();
+  assertNoDbError(selErr);
+
   const { error } = await supabase.from('planner_organizations').update(fields).eq('id', orgId);
   assertNoDbError(error);
+
+  let undoActionId: string | undefined;
+  if (undoContext) {
+    const { recordReversibleAction } = await import('./undoService');
+    const action = await recordReversibleAction({
+      orgId,
+      actorId: undoContext.actorId,
+      actionType: 'org_settings',
+      entityType: 'planner_organizations',
+      entityId: orgId,
+      beforeState: { fields: existing, settings: existing?.settings },
+      afterState: { fields: { ...existing, ...fields }, settings: existing?.settings },
+    });
+    undoActionId = action.id;
+  }
+
+  return { undoActionId };
 }
 
-export async function mergeOrgSettingsJson(orgId: string, patch: Record<string, unknown>) {
+export async function mergeOrgSettingsJson(
+  orgId: string,
+  patch: Record<string, unknown>,
+  undoContext?: { actorId: string },
+) {
   const { data: current, error: selErr } = await supabase
     .from('planner_organizations')
-    .select('settings')
+    .select('settings, name, timezone, brand_color, industry')
     .eq('id', orgId)
     .maybeSingle();
   if (selErr) throw selErr;
 
-  const merged = { ...(current?.settings as Record<string, unknown> || {}), ...patch };
+  const beforeSettings = { ...(current?.settings as Record<string, unknown> || {}) };
+  const merged = { ...beforeSettings, ...patch };
   const { error } = await supabase.from('planner_organizations').update({ settings: merged }).eq('id', orgId);
   assertNoDbError(error);
+
+  let undoActionId: string | undefined;
+  if (undoContext) {
+    const isAttendance = Object.keys(patch).length === 1 && 'attendance' in patch;
+    const { recordReversibleAction } = await import('./undoService');
+    const action = await recordReversibleAction({
+      orgId,
+      actorId: undoContext.actorId,
+      actionType: isAttendance ? 'attendance_settings' : 'org_settings',
+      entityType: 'planner_organizations',
+      entityId: orgId,
+      beforeState: isAttendance
+        ? { attendance: beforeSettings.attendance }
+        : { settings: beforeSettings, fields: current },
+      afterState: isAttendance
+        ? { attendance: merged.attendance }
+        : { settings: merged, fields: current },
+    });
+    undoActionId = action.id;
+  }
+
+  return { undoActionId };
 }

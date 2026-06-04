@@ -5,7 +5,7 @@ import { User, Globe, LogOut, Edit3, Check, Building2, Bell, Shield,
   Info, RefreshCw, Loader2, ChevronRight, Lock, Users, Wifi, WifiOff, Sparkles,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
-import { showToast } from '../store/uiStore';
+import { showToast, useUiStore } from '../store/uiStore';
 import { updateProfileName, loadProfileWithSettings, updateProfileSettings } from '../services/profileService';
 import { loadOrgDetails, updateOrgFields, mergeOrgSettingsJson } from '../services/orgService';
 import { signOutGlobal, updatePassword } from '../services/authService';
@@ -160,22 +160,42 @@ export default function Settings() {
   };
 
   const handleSaveOrg = async () => {
-    if (!tenant?.id || !canEditOrg) return;
+    if (!tenant?.id || !canEditOrg || !user?.id) return;
     setSavingOrg(true);
     try {
-      const { error: fieldsErr } = await updateOrgFields(tenant.id, {
+      const before = await loadOrgDetails(tenant.id);
+      await updateOrgFields(tenant.id, {
         name: orgName.trim(),
         timezone,
         brand_color: brandColor,
         industry: industry || undefined,
       });
-      if (fieldsErr) throw new Error(fieldsErr.message);
-
-      const { error: settingsErr } = await mergeOrgSettingsJson(tenant.id, {
+      await mergeOrgSettingsJson(tenant.id, {
         currency,
         business_type: businessType,
       });
-      if (settingsErr) throw new Error(settingsErr.message);
+
+      const { recordReversibleAction } = await import('../services/undoService');
+      const action = await recordReversibleAction({
+        orgId: tenant.id,
+        actorId: user.id,
+        actionType: 'org_settings',
+        entityType: 'planner_organizations',
+        entityId: tenant.id,
+        beforeState: {
+          fields: {
+            name: before.name,
+            timezone: before.timezone,
+            brand_color: before.brand_color,
+            industry: before.industry,
+          },
+          settings: before.settings,
+        },
+        afterState: {
+          fields: { name: orgName.trim(), timezone, brand_color: brandColor, industry },
+          settings: { ...(before.settings as Record<string, unknown>), currency, business_type: businessType },
+        },
+      });
 
       setTenant({
         ...tenant,
@@ -185,6 +205,7 @@ export default function Settings() {
         business_type: businessType,
       });
       showToast('Pengaturan organisasi disimpan', 'success');
+      useUiStore.getState().showUndoToast('Pengaturan organisasi disimpan', action.id);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal menyimpan organisasi', 'error');
     } finally {

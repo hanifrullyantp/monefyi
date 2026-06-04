@@ -3,7 +3,7 @@ import {
   ArrowLeft, Calendar, MapPin, RefreshCw, X, ChevronsUp, ChevronsDown,
 } from 'lucide-react';
 import type { Project } from '../../store/appStore';
-import { formatDateId, HEALTH_CONFIG, STATUS_LABEL } from '../../utils/projectUi';
+import { formatRupiah, HEALTH_CONFIG, STATUS_LABEL, formatDateId, daysUntil } from '../../utils/projectUi';
 import { COLLAPSED_HEIGHT } from './useCollapsibleHeader';
 
 interface ProjectDetailHeaderProps {
@@ -12,6 +12,8 @@ interface ProjectDetailHeaderProps {
   daysLeft: number;
   budgetPct: number;
   opi: string;
+  received?: number;
+  surplus?: number;
   loading: boolean;
   collapse: number;
   isCollapsed: boolean;
@@ -27,6 +29,8 @@ export default function ProjectDetailHeader({
   daysLeft,
   budgetPct,
   opi,
+  received = 0,
+  surplus = 0,
   loading,
   collapse,
   isCollapsed,
@@ -188,10 +192,12 @@ export default function ProjectDetailHeader({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-3 bg-white/10 rounded-2xl p-3 md:p-4 border border-white/10">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3 bg-white/10 rounded-2xl p-3 md:p-4 border border-white/10">
             {[
               { label: 'Progress', value: `${project.progress_percentage.toFixed(0)}%` },
               { label: 'Budget', value: `${Math.round(budgetPct)}%` },
+              { label: 'Diterima', value: formatRupiah(received).replace('Rp', 'Rp ') },
+              { label: 'Saldo+', value: formatRupiah(surplus).replace('Rp', 'Rp ') },
               { label: 'Sisa Hari', value: daysLeft > 0 ? `${daysLeft}d` : 'Lewat' },
               { label: 'OPI', value: opi },
             ].map(m => (

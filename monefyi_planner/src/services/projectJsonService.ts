@@ -8,6 +8,10 @@ import { createRapItem, updateRapItem, deleteAllRapItems } from './rapService';
 import { createCostRealization, loadCostRealizations } from './costService';
 import { createWorkItem, updateWorkItem, loadWorkItems } from './workItemService';
 import { createDailyLog, loadDailyLogs } from './dailyLogService';
+import { loadProjectIncomes, createProjectIncome } from './incomeService';
+import { loadProjectTransfers } from './projectTransferService';
+import type { ProjectIncome } from './incomeService';
+import type { ProjectTransfer } from './projectTransferService';
 import { supabase } from '../lib/supabase';
 import { assertNoDbError } from '../lib/supabaseErrors';
 
@@ -22,6 +26,8 @@ export interface ProjectJsonDocument {
   project: Partial<Project> & { id?: string };
   rap?: RapJsonItem[];
   realisasi?: RealisasiJsonItem[];
+  incomes?: IncomeJsonItem[];
+  transfers?: TransferJsonItem[];
   work_items?: WorkItemJsonItem[];
   daily_logs?: DailyLogJsonItem[];
   meta?: {
@@ -59,6 +65,30 @@ export interface RealisasiJsonItem {
   payment_method?: string | null;
   supplier?: string | null;
   status?: string | null;
+}
+
+export interface IncomeJsonItem {
+  id?: string;
+  date: string;
+  amount: number;
+  category?: string;
+  description: string;
+  payment_method?: string | null;
+  client_ref?: string | null;
+  invoice_ref?: string | null;
+  status?: string;
+}
+
+export interface TransferJsonItem {
+  id?: string;
+  from_project_id?: string;
+  to_project_id?: string;
+  from_project_ref?: string;
+  to_project_ref?: string;
+  amount: number;
+  type: 'loan' | 'repayment';
+  date: string;
+  description?: string | null;
 }
 
 export interface WorkItemJsonItem {
@@ -168,8 +198,10 @@ export function buildProjectJsonSnapshot(input: {
   costs: CostRealization[];
   workItems: WorkItem[];
   logs: DailyLog[];
+  incomes?: ProjectIncome[];
+  transfers?: ProjectTransfer[];
 }): ProjectJsonDocument {
-  const { project, rapItems, costs, workItems, logs } = input;
+  const { project, rapItems, costs, workItems, logs, incomes = [], transfers = [] } = input;
   const rapById = Object.fromEntries(rapItems.map(r => [r.id, r.name]));
 
   return {
@@ -191,6 +223,7 @@ export function buildProjectJsonSnapshot(input: {
       currency: project.currency,
       health_status: project.health_status,
       spent_amount: project.spent_amount,
+      total_received: project.total_received,
     },
     rap: rapItems.map(({ id, project_id: _p, created_at: _c, updated_at: _u, ...rest }) => ({
       id,
@@ -200,6 +233,14 @@ export function buildProjectJsonSnapshot(input: {
       id,
       rap_item_id,
       rap_ref: rap_item_id ? rapById[rap_item_id] || null : null,
+      ...rest,
+    })),
+    incomes: incomes.map(({ id, project_id: _p, recorded_by: _r, created_at: _c, updated_at: _u, ...rest }) => ({
+      id,
+      ...rest,
+    })),
+    transfers: transfers.map(({ id, org_id: _o, recorded_by: _r, created_at: _c, ...rest }) => ({
+      id,
       ...rest,
     })),
     work_items: workItems.map(({ id, project_id: _p, created_at: _c, updated_at: _u, ...rest }) => ({
@@ -475,6 +516,7 @@ export interface ApplyProjectJsonResult {
     realisasi: number;
     work_items: number;
     daily_logs: number;
+    incomes?: number;
   };
 }
 
@@ -528,6 +570,23 @@ export async function applyProjectJson(
     await deleteAllDailyLogs(projectId);
   }
 
+  if (doc.incomes?.length) {
+    for (const item of doc.incomes) {
+      await createProjectIncome({
+        project_id: projectId,
+        date: item.date,
+        amount: Number(item.amount) || 0,
+        category: (item.category as ProjectIncome['category']) || 'other',
+        description: item.description.trim(),
+        payment_method: item.payment_method ?? null,
+        client_ref: item.client_ref ?? null,
+        invoice_ref: item.invoice_ref ?? null,
+        status: (item.status as ProjectIncome['status']) || 'received',
+        recorded_by: userId,
+      });
+    }
+  }
+
   return {
     project: updatedProject,
     counts: {
@@ -535,6 +594,7 @@ export async function applyProjectJson(
       realisasi: realisasiCount,
       work_items: workItemsCount,
       daily_logs: logsCount,
+      incomes: doc.incomes?.length || 0,
     },
   };
 }

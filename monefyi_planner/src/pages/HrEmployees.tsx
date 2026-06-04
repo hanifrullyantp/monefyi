@@ -25,7 +25,9 @@ import {
 } from '../services/payrollService';
 import InviteMemberModal from '../components/team/InviteMemberModal';
 import EmployeeDetailSheet from '../components/hr/EmployeeDetailSheet';
-import { showToast } from '../store/uiStore';
+import { showToast, useUiStore } from '../store/uiStore';
+import { useUndoableAction } from '../hooks/useUndoableAction';
+import { listRecentUndoable, actionTypeLabel, undoReversibleAction, type ReversibleAction } from '../services/undoService';
 import type { OrgMember, JoinRequest, AuditLogEntry } from '../types/onboarding';
 import type { DailyLog } from '../services/dailyLogService';
 
@@ -85,6 +87,9 @@ export default function HrEmployees() {
     default_role_for_domain: 'worker',
     is_public_discoverable: false,
   });
+  const [undoableActions, setUndoableActions] = useState<ReversibleAction[]>([]);
+
+  const { notifyUndoable } = useUndoableAction();
 
   const isOwner = user?.role === 'owner';
   const canInvite = isOwner || user?.role === 'manager';
@@ -120,6 +125,9 @@ export default function HrEmployees() {
       setPayrollEntries(payroll);
       setBonRequests(bons);
       setCompensation(comp);
+      if (canInvite || isOwner) {
+        listRecentUndoable(tenant.id, isOwner ? 20 : 3).then(setUndoableActions).catch(() => setUndoableActions([]));
+      }
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal memuat', 'error');
     } finally {
@@ -154,9 +162,14 @@ export default function HrEmployees() {
   );
 
   const handleRoleChange = async (memberId: string, role: string) => {
+    if (!tenant?.id || !user?.id) return;
     try {
-      await changeMemberRole(memberId, role as 'manager' | 'worker');
+      const { undoActionId } = await changeMemberRole(memberId, role as 'manager' | 'worker', {
+        orgId: tenant.id,
+        actorId: user.id,
+      });
       showToast('Role diperbarui', 'success');
+      notifyUndoable('Role karyawan diperbarui', undoActionId);
       load();
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal', 'error');
@@ -252,6 +265,36 @@ export default function HrEmployees() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
+            {canInvite && undoableActions.length > 0 && (
+              <div className="bg-white rounded-2xl border border-slate-100 p-5 md:col-span-2">
+                <h3 className="font-bold text-slate-800 mb-3 text-sm">Aksi Terakhir (Undo)</h3>
+                <div className="space-y-2">
+                  {undoableActions.map(a => (
+                    <div key={a.id} className="flex items-center justify-between gap-2 text-sm border rounded-xl px-3 py-2">
+                      <div>
+                        <div className="font-medium">{actionTypeLabel(a.action_type)}</div>
+                        <div className="text-xs text-slate-400">{new Date(a.created_at).toLocaleString('id-ID')}</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await undoReversibleAction(a.id, user!.id, user!.role);
+                            showToast('Aksi dibatalkan', 'success');
+                            load();
+                          } catch (e) {
+                            showToast(e instanceof Error ? e.message : 'Gagal undo', 'error');
+                          }
+                        }}
+                        className="px-2 py-1 text-xs font-bold text-indigo-600 border border-indigo-200 rounded-lg"
+                      >
+                        Undo
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="bg-white rounded-2xl border border-slate-100 p-5">
               <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
                 <Clock className="w-4 h-4 text-indigo-500" /> Absensi Hari Ini
@@ -474,7 +517,7 @@ export default function HrEmployees() {
       {tab === 'payroll' && (
         <div className="space-y-4">
           {canInvite && tenant?.id && (
-            <AttendanceSettingsPanel orgId={tenant.id} canEdit={canInvite} />
+            <AttendanceSettingsPanel orgId={tenant.id} canEdit={canInvite} actorId={user?.id} />
           )}
 
           <div className="grid md:grid-cols-3 gap-4">
@@ -572,15 +615,16 @@ export default function HrEmployees() {
                             return;
                           }
                           try {
-                            await upsertCompensation({
+                            const { undoActionId } = await upsertCompensation({
                               org_id: tenant!.id,
                               member_id: w.id,
                               user_id: w.user_id,
                               salary_type: salaryType,
                               monthly_salary: salaryType === 'monthly' ? amount : 0,
                               daily_rate: salaryType === 'daily' ? amount : undefined,
-                            });
+                            }, user ? { actorId: user.id } : undefined);
                             showToast('Gaji disimpan', 'success');
+                            notifyUndoable('Gaji pokok disimpan', undoActionId);
                             load();
                           } catch (e) {
                             showToast(e instanceof Error ? e.message : 'Gagal simpan', 'error');
@@ -615,8 +659,9 @@ export default function HrEmployees() {
                             <button
                               type="button"
                               onClick={async () => {
-                                await updatePayrollStatus(p.id, 'approved');
+                                const { undoActionId } = await updatePayrollStatus(p.id, 'approved', undefined, tenant && user ? { orgId: tenant.id, actorId: user.id } : undefined);
                                 showToast('Disetujui', 'success');
+                                notifyUndoable('Payroll disetujui', undoActionId);
                                 load();
                               }}
                               className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold"
@@ -628,8 +673,9 @@ export default function HrEmployees() {
                             <button
                               type="button"
                               onClick={async () => {
-                                await updatePayrollStatus(p.id, 'paid');
+                                const { undoActionId } = await updatePayrollStatus(p.id, 'paid', undefined, tenant && user ? { orgId: tenant.id, actorId: user.id } : undefined);
                                 showToast('Ditandai lunas', 'success');
+                                notifyUndoable('Payroll ditandai lunas', undoActionId);
                                 load();
                               }}
                               className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold"
@@ -659,8 +705,9 @@ export default function HrEmployees() {
                           <button
                             type="button"
                             onClick={async () => {
-                              await reviewBonRequest(b.id, 'approved', user!.id);
+                              const { undoActionId } = await reviewBonRequest(b.id, 'approved', user!.id, undefined, tenant ? { orgId: tenant.id, actorId: user!.id } : undefined);
                               showToast('Bon disetujui', 'success');
+                              notifyUndoable('Bon disetujui', undoActionId);
                               load();
                             }}
                             className="px-2 py-1 bg-emerald-600 text-white rounded-lg text-xs font-bold"
@@ -670,8 +717,9 @@ export default function HrEmployees() {
                           <button
                             type="button"
                             onClick={async () => {
-                              await reviewBonRequest(b.id, 'rejected', user!.id, 'Ditolak');
+                              const { undoActionId } = await reviewBonRequest(b.id, 'rejected', user!.id, 'Ditolak', tenant ? { orgId: tenant.id, actorId: user!.id } : undefined);
                               showToast('Bon ditolak', 'info');
+                              notifyUndoable('Bon ditolak', undoActionId);
                               load();
                             }}
                             className="px-2 py-1 border rounded-lg text-xs"
@@ -718,6 +766,29 @@ export default function HrEmployees() {
       {tab === 'audit' && (
         <div className="space-y-3">
           <button type="button" onClick={() => { const csv = exportAuditCsv(audit); const blob = new Blob([csv], { type: 'text/csv' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'audit.csv'; a.click(); }} className="text-sm text-indigo-600 font-semibold">Export CSV</button>
+          {undoableActions.map(a => (
+            <div key={a.id} className="bg-indigo-50 p-3 rounded-xl border border-indigo-100 text-sm flex justify-between gap-2">
+              <div>
+                <div className="font-semibold">{actionTypeLabel(a.action_type)}</div>
+                <div className="font-mono text-xs text-slate-400">{a.created_at}</div>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await undoReversibleAction(a.id, user!.id, user!.role);
+                    showToast('Aksi dibatalkan', 'success');
+                    load();
+                  } catch (e) {
+                    showToast(e instanceof Error ? e.message : 'Gagal undo', 'error');
+                  }
+                }}
+                className="px-2 py-1 text-xs font-bold text-indigo-700 border border-indigo-200 rounded-lg shrink-0"
+              >
+                Undo
+              </button>
+            </div>
+          ))}
           {audit.map(l => (
             <div key={l.id} className="bg-white p-3 rounded-xl border border-slate-100 text-sm">
               <div className="font-mono text-xs text-slate-400">{l.created_at}</div>
@@ -753,10 +824,32 @@ export default function HrEmployees() {
           <button
             type="button"
             onClick={async () => {
-              await updateOrgAccessSettings(tenant!.id, {
+              const org = await loadOrgDetails(tenant!.id);
+              const before = {
+                allow_join_request: org.allow_join_request,
+                allow_email_domain_signup: org.allow_email_domain_signup,
+                allowed_email_domains: org.allowed_email_domains,
+                default_role_for_domain: org.default_role_for_domain,
+                is_public_discoverable: org.is_public_discoverable,
+              };
+              const payload = {
                 ...access,
                 allowed_email_domains: access.allowed_email_domains.split(',').map(d => d.trim()).filter(Boolean),
-              });
+              };
+              await updateOrgAccessSettings(tenant!.id, payload);
+              if (user?.id) {
+                const { recordReversibleAction } = await import('../services/undoService');
+                const action = await recordReversibleAction({
+                  orgId: tenant!.id,
+                  actorId: user.id,
+                  actionType: 'org_access',
+                  entityType: 'planner_organizations',
+                  entityId: tenant!.id,
+                  beforeState: before as Record<string, unknown>,
+                  afterState: payload as Record<string, unknown>,
+                });
+                useUiStore.getState().showUndoToast('Pengaturan akses disimpan', action.id);
+              }
               showToast('Pengaturan disimpan', 'success');
             }}
             className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold"

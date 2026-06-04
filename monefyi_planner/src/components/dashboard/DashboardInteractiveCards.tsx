@@ -7,6 +7,7 @@ import {
 import { useAppStore } from '../../store/appStore';
 import { getProjectStats } from '../../services/projectService';
 import { aggregateCashflow, aggregateByProject } from '../../services/costService';
+import { getOrgFinanceTotals, aggregateNetCashflow } from '../../services/projectFinanceService';
 import { getTodayAttendanceSummary, buildAttentionItems } from '../../services/dashboardService';
 import { analyzeProject } from '../../services/analyzeService';
 import BottomSheet from '../ui/BottomSheet';
@@ -32,7 +33,8 @@ export default function DashboardInteractiveCards({ onOpenProject }: Props) {
   const [sheet, setSheet] = useState<SheetId>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [stats, setStats] = useState({ totalProjects: 0, activeProjects: 0, totalBudget: 0, totalSpent: 0, atRisk: 0, avgProgress: 0 });
-  const [cashflow, setCashflow] = useState<{ date: string; amount: number }[]>([]);
+  const [financeTotals, setFinanceTotals] = useState({ totalInflow: 0, totalOutflow: 0, netCash: 0 });
+  const [cashflow, setCashflow] = useState<{ date: string; inflow: number; outflow: number; net: number }[]>([]);
   const [byProject, setByProject] = useState<Awaited<ReturnType<typeof aggregateByProject>>>([]);
   const [attendance, setAttendance] = useState({ present: 0, total: 0 });
   const [attention, setAttention] = useState<ReturnType<typeof buildAttentionItems>>([]);
@@ -44,7 +46,12 @@ export default function DashboardInteractiveCards({ onOpenProject }: Props) {
   useEffect(() => {
     if (!tenant?.id) return;
     getProjectStats(tenant.id).then(setStats).catch(console.error);
-    aggregateCashflow(tenant.id, 7).then(setCashflow).catch(console.error);
+    getOrgFinanceTotals(tenant.id).then(f => setFinanceTotals({
+      totalInflow: f.totalInflow,
+      totalOutflow: f.totalOutflow,
+      netCash: f.netCash,
+    })).catch(console.error);
+    aggregateNetCashflow(tenant.id, 7).then(setCashflow).catch(console.error);
     aggregateByProject(tenant.id).then(setByProject).catch(console.error);
     getTodayAttendanceSummary(tenant.id).then(a => setAttendance({ present: a.present, total: a.total })).catch(console.error);
     setAttention(buildAttentionItems(projects));
@@ -76,8 +83,8 @@ export default function DashboardInteractiveCards({ onOpenProject }: Props) {
     {
       id: 'finance' as const,
       label: 'Keuangan',
-      value: formatRupiahShort(monthSpent),
-      sub: 'terpakai semua proyek',
+      value: formatRupiahShort(financeTotals.netCash),
+      sub: `masuk ${formatRupiahShort(financeTotals.totalInflow)} · keluar ${formatRupiahShort(financeTotals.totalOutflow)}`,
       icon: Wallet,
       gradient: 'from-emerald-500/10 to-teal-500/5',
       iconColor: 'text-emerald-600',
@@ -186,8 +193,9 @@ export default function DashboardInteractiveCards({ onOpenProject }: Props) {
         <div className="space-y-4">
           <div className="bg-slate-50 rounded-xl p-4 text-sm space-y-2 font-mono">
             <div className="flex justify-between"><span>Total budget RAP</span><span>{formatRupiah(stats.totalBudget)}</span></div>
-            <div className="flex justify-between text-rose-600"><span>Total terpakai</span><span>({formatRupiah(stats.totalSpent)})</span></div>
-            <div className="border-t pt-2 flex justify-between font-bold"><span>Sisa</span><span>{formatRupiah(Math.max(0, stats.totalBudget - stats.totalSpent))}</span></div>
+            <div className="flex justify-between text-emerald-600"><span>Pemasukan</span><span>{formatRupiah(financeTotals.totalInflow)}</span></div>
+            <div className="flex justify-between text-rose-600"><span>Realisasi biaya</span><span>({formatRupiah(financeTotals.totalOutflow)})</span></div>
+            <div className="border-t pt-2 flex justify-between font-bold"><span>Net kas</span><span className={financeTotals.netCash >= 0 ? 'text-emerald-700' : 'text-rose-700'}>{formatRupiah(financeTotals.netCash)}</span></div>
           </div>
           <div className="h-[120px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -196,18 +204,20 @@ export default function DashboardInteractiveCards({ onOpenProject }: Props) {
                 <XAxis dataKey="date" tick={{ fontSize: 9 }} />
                 <YAxis tick={{ fontSize: 9 }} />
                 <Tooltip />
-                <Area type="monotone" dataKey="amount" stroke="#6366f1" fill="#6366f120" />
+                <Area type="monotone" dataKey="inflow" stroke="#10b981" fill="#10b98120" />
+                <Area type="monotone" dataKey="outflow" stroke="#f43f5e" fill="#f43f5e15" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
           <div className="space-y-2">
             {byProject.slice(0, 6).map(p => {
               const pct = p.budget ? (p.spent / p.budget) * 100 : 0;
+              const received = (p as { received?: number }).received ?? 0;
               return (
                 <div key={p.projectId}>
                   <div className="flex justify-between text-xs mb-1">
                     <span className="font-medium truncate">{p.name}</span>
-                    <span>{Math.round(pct)}%</span>
+                    <span>{Math.round(pct)}% · +{formatRupiahShort(received)}</span>
                   </div>
                   <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                     <div className={`h-full rounded-full ${pct > 85 ? 'bg-amber-500' : 'bg-indigo-500'}`} style={{ width: `${Math.min(100, pct)}%` }} />

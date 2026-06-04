@@ -48,6 +48,7 @@ export interface Project {
   health_status: 'on_track' | 'at_risk' | 'behind' | 'ahead';
   planned_progress: number;
   spent_amount: number;
+  total_received: number;
   created_at: string;
   updated_at: string;
   description?: string;

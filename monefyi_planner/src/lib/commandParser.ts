@@ -41,6 +41,31 @@ function getParsingRules() {
       },
     },
     {
+      intent: 'record_income',
+      patterns: [
+        /(?:terima|terim|dp|termin|pelunasan|catat\s+(?:uang\s+)?masuk|pemasukan)\s+(?:rp\.?\s*)?(\d[\d.,]*)\s*(?:ribu|rb|k|juta|jt)?(?:\s+(?:dp|termin|pelunasan|retensi))?\s*(?:project|proyek|prj)?\s*(.*)?/i,
+        /(?:terima|catat)\s+(dp|termin|pelunasan|retensi)\s+(?:rp\.?\s*)?(\d[\d.,]*)\s*(?:ribu|rb|k|juta|jt)?\s*(?:project|proyek|prj)?\s*(.*)?/i,
+      ],
+      confidence: 0.82,
+      extract: (match: RegExpMatchArray, input: string) => {
+        let category = 'other';
+        let amountStr = match[1];
+        let projectName = match[2]?.trim() || null;
+        if (['dp', 'termin', 'pelunasan', 'retensi'].includes(String(match[1]).toLowerCase())) {
+          category = String(match[1]).toLowerCase();
+          amountStr = match[2];
+          projectName = match[3]?.trim() || null;
+        } else {
+          const catMatch = input.match(/\b(dp|termin|pelunasan|retensi)\b/i);
+          if (catMatch) category = catMatch[1].toLowerCase();
+        }
+        let total = parseNumberFromText(amountStr);
+        if (/juta|jt/i.test(input)) total *= 1_000_000;
+        else if (/ribu|rb|k/i.test(input)) total *= 1000;
+        return { total, amount: total, category, projectName, item: `Penerimaan ${category}`, description: `Penerimaan ${category}` };
+      },
+    },
+    {
       intent: 'update_progress',
       patterns: [
         /(?:progress|proses|hari\s+ini)\s+(.+?)\s+(?:selesai\s+)?(\d+)\s*(?:%|persen|prosen)/i,

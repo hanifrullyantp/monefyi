@@ -89,7 +89,14 @@ export async function upsertCompensation(params: {
   monthly_salary?: number;
   daily_rate?: number;
   currency?: string;
-}) {
+}, undoContext?: { actorId: string }) {
+  const { data: existing } = await supabase
+    .from('planner_member_compensation')
+    .select('*')
+    .eq('org_id', params.org_id)
+    .eq('member_id', params.member_id)
+    .maybeSingle();
+
   const salaryType = params.salary_type || 'monthly';
   let monthly = Number(params.monthly_salary) || 0;
   let daily = Number(params.daily_rate) || 0;
@@ -121,7 +128,23 @@ export async function upsertCompensation(params: {
     .single();
 
   assertNoDbError(error);
-  return data as MemberCompensation;
+
+  let undoActionId: string | undefined;
+  if (undoContext) {
+    const { recordReversibleAction } = await import('./undoService');
+    const action = await recordReversibleAction({
+      orgId: params.org_id,
+      actorId: undoContext.actorId,
+      actionType: 'compensation_upsert',
+      entityType: 'planner_member_compensation',
+      entityId: params.member_id,
+      beforeState: existing ? (existing as Record<string, unknown>) : null,
+      afterState: data as Record<string, unknown>,
+    });
+    undoActionId = action.id;
+  }
+
+  return { compensation: data as MemberCompensation, undoActionId };
 }
 
 export async function listPayrollEntries(orgId: string, limit = 24): Promise<PayrollEntry[]> {
@@ -230,7 +253,8 @@ export async function updatePayrollStatus(
   entryId: string,
   status: PayrollEntry['status'],
   patch?: { bonus_amount?: number; deduction_amount?: number; notes?: string },
-) {
+  undoContext?: { orgId: string; actorId: string },
+): Promise<{ entry: PayrollEntry; undoActionId?: string }> {
   const updates: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
   if (patch?.bonus_amount != null) updates.bonus_amount = patch.bonus_amount;
   if (patch?.deduction_amount != null) updates.deduction_amount = patch.deduction_amount;
@@ -242,6 +266,7 @@ export async function updatePayrollStatus(
     .eq('id', entryId)
     .single();
   assertNoDbError(fetchErr);
+  const beforeSnapshot = { ...existing };
 
   const base = Number(existing.base_amount) || 0;
   const bonus = patch?.bonus_amount ?? (Number(existing.bonus_amount) || 0);
@@ -256,7 +281,23 @@ export async function updatePayrollStatus(
     .single();
 
   assertNoDbError(error);
-  return data as PayrollEntry;
+
+  let undoActionId: string | undefined;
+  if (undoContext) {
+    const { recordReversibleAction } = await import('./undoService');
+    const action = await recordReversibleAction({
+      orgId: undoContext.orgId,
+      actorId: undoContext.actorId,
+      actionType: 'payroll_status',
+      entityType: 'planner_payroll_entries',
+      entityId: entryId,
+      beforeState: beforeSnapshot as Record<string, unknown>,
+      afterState: data as Record<string, unknown>,
+    });
+    undoActionId = action.id;
+  }
+
+  return { entry: data as PayrollEntry, undoActionId };
 }
 
 export async function listBonRequests(orgId: string, status?: BonRequest['status']) {
@@ -297,7 +338,15 @@ export async function reviewBonRequest(
   status: 'approved' | 'rejected' | 'paid',
   reviewerId: string,
   rejectReason?: string,
-) {
+  undoContext?: { orgId: string; actorId: string },
+): Promise<{ request: BonRequest; undoActionId?: string }> {
+  const { data: existing, error: fetchErr } = await supabase
+    .from('planner_bon_requests')
+    .select('*')
+    .eq('id', requestId)
+    .single();
+  assertNoDbError(fetchErr);
+
   const { data, error } = await supabase
     .from('planner_bon_requests')
     .update({
@@ -311,7 +360,23 @@ export async function reviewBonRequest(
     .single();
 
   assertNoDbError(error);
-  return { ...data, amount: Number(data.amount) || 0 } as BonRequest;
+
+  let undoActionId: string | undefined;
+  if (undoContext) {
+    const { recordReversibleAction } = await import('./undoService');
+    const action = await recordReversibleAction({
+      orgId: undoContext.orgId,
+      actorId: undoContext.actorId,
+      actionType: 'bon_review',
+      entityType: 'planner_bon_requests',
+      entityId: requestId,
+      beforeState: existing as Record<string, unknown>,
+      afterState: data as Record<string, unknown>,
+    });
+    undoActionId = action.id;
+  }
+
+  return { request: { ...data, amount: Number(data.amount) || 0 } as BonRequest, undoActionId };
 }
 
 export function payrollSummary(entries: PayrollEntry[]) {

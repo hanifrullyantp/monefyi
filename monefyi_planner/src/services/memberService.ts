@@ -50,8 +50,36 @@ export async function updateMemberProfile(memberId: string, patch: MemberProfile
   assertNoDbError(error);
 }
 
-export async function changeMemberRole(memberId: string, role: MemberRole) {
-  return invokeFn<{ ok: boolean }>(config.fnChangeMemberRole, { member_id: memberId, role });
+export async function changeMemberRole(
+  memberId: string,
+  role: MemberRole,
+  undoContext?: { orgId: string; actorId: string },
+): Promise<{ ok: boolean; undoActionId?: string }> {
+  const { data: existing, error: fetchErr } = await supabase
+    .from('planner_org_members')
+    .select('*')
+    .eq('id', memberId)
+    .single();
+  assertNoDbError(fetchErr);
+
+  const result = await invokeFn<{ ok: boolean }>(config.fnChangeMemberRole, { member_id: memberId, role });
+
+  let undoActionId: string | undefined;
+  if (undoContext) {
+    const { recordReversibleAction } = await import('./undoService');
+    const action = await recordReversibleAction({
+      orgId: undoContext.orgId,
+      actorId: undoContext.actorId,
+      actionType: 'member_role',
+      entityType: 'planner_org_members',
+      entityId: memberId,
+      beforeState: existing as Record<string, unknown>,
+      afterState: { ...existing, role } as Record<string, unknown>,
+    });
+    undoActionId = action.id;
+  }
+
+  return { ...result, undoActionId };
 }
 
 export async function removeMember(memberId: string) {
@@ -71,7 +99,31 @@ export async function updateOrgAccessSettings(orgId: string, settings: {
   allowed_email_domains?: string[];
   default_role_for_domain?: string;
   is_public_discoverable?: boolean;
-}) {
+}, undoContext?: { actorId: string }) {
+  const { data: existing, error: selErr } = await supabase
+    .from('planner_organizations')
+    .select('allow_join_request, allow_email_domain_signup, allowed_email_domains, default_role_for_domain, is_public_discoverable')
+    .eq('id', orgId)
+    .single();
+  assertNoDbError(selErr);
+
   const { error } = await supabase.from('planner_organizations').update(settings).eq('id', orgId);
   assertNoDbError(error);
+
+  let undoActionId: string | undefined;
+  if (undoContext) {
+    const { recordReversibleAction } = await import('./undoService');
+    const action = await recordReversibleAction({
+      orgId,
+      actorId: undoContext.actorId,
+      actionType: 'org_access',
+      entityType: 'planner_organizations',
+      entityId: orgId,
+      beforeState: existing as Record<string, unknown>,
+      afterState: { ...existing, ...settings } as Record<string, unknown>,
+    });
+    undoActionId = action.id;
+  }
+
+  return { undoActionId };
 }

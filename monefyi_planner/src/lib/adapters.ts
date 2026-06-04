@@ -28,6 +28,7 @@ export interface DbProject {
   progress_pct?: number | null;
   total_budget?: number | null;
   total_spent?: number | null;
+  total_received?: number | null;
   tags?: string[] | null;
   settings?: Record<string, unknown> | null;
   created_by?: string | null;
@@ -215,6 +216,7 @@ export function toProject(row: DbProject, currency = 'IDR'): Project {
     health_status: computeHealthStatus(progress, plannedProgress, spent, budget),
     planned_progress: plannedProgress,
     spent_amount: spent,
+    total_received: Number(row.total_received) || 0,
     created_at: row.created_at || new Date().toISOString(),
     updated_at: row.updated_at || new Date().toISOString(),
     description: row.description || undefined,

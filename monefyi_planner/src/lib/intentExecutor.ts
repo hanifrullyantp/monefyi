@@ -1,6 +1,7 @@
 import { formatCurrency, todayStr } from './adapters';
 import type { ParsedCommand } from './commandParser';
 import { createCostRealization } from '../services/costService';
+import { createProjectIncome } from '../services/incomeService';
 import { createDailyLog } from '../services/dailyLogService';
 import { updateWorkItem, loadWorkItems, updateProjectProgressFromWorkItems } from '../services/workItemService';
 import { analyzeProject } from '../services/analyzeService';
@@ -93,6 +94,39 @@ export async function executeIntent(
         success: true,
         message: 'Tercatat!',
         details: `${detail} → ${project.name}`,
+        refreshProjects: true,
+      };
+    }
+
+    case 'record_income': {
+      if (!project) {
+        return {
+          success: false,
+          message: 'Proyek tidak ditemukan',
+          details: 'Buka proyek terlebih dahulu atau sebutkan nama proyek.',
+        };
+      }
+      const amount = Number(params.total) || Number(params.amount) || 0;
+      if (!amount || amount <= 0) {
+        return { success: false, message: 'Nominal uang masuk tidak valid.' };
+      }
+      const category = String(params.category || 'other').toLowerCase();
+      const validCategories = ['dp', 'termin', 'pelunasan', 'retensi', 'other'];
+      await createProjectIncome({
+        project_id: project.id,
+        date: todayStr(),
+        amount,
+        category: (validCategories.includes(category) ? category : 'other') as 'dp' | 'termin' | 'pelunasan' | 'retensi' | 'other',
+        description: String(params.item || params.description || 'Penerimaan klien'),
+        payment_method: params.paymentMethod ? String(params.paymentMethod) : null,
+        status: 'received',
+        recorded_by: ctx.userId,
+      }).then(r => r.income);
+      await ctx.onRefreshProjects();
+      return {
+        success: true,
+        message: 'Uang masuk tercatat!',
+        details: `${formatCurrency(amount)} → ${project.name}`,
         refreshProjects: true,
       };
     }

@@ -18,6 +18,9 @@ import RapRealizationDialog from './RapRealizationDialog';
 import RapImportWizard from './RapImportWizard';
 import ProjectDetailHeader from './ProjectDetailHeader';
 import ProjectJsonPanel from './ProjectJsonPanel';
+import ProjectIncomePanel from './ProjectIncomePanel';
+import ProjectTransferPanel from './ProjectTransferPanel';
+import { getProjectCashSummary } from '../../services/projectTransferService';
 import { exportRapWorkbook, formatSelisih } from '../../services/rapExcelService';
 import { useCollapsibleHeader } from './useCollapsibleHeader';
 import { todayStr } from '../../lib/adapters';
@@ -35,7 +38,7 @@ interface ProjectDetailProps {
 }
 
 export default function ProjectDetail({ project: initialProject, onClose }: ProjectDetailProps) {
-  const { setCommandModalOpen, setSelectedProjectId, updateProject, removeProject, refreshData, tenant, user } = useAppStore();
+  const { setCommandModalOpen, setSelectedProjectId, updateProject, removeProject, refreshData, tenant, user, projects } = useAppStore();
   const showToast = useUiStore(s => s.showToast);
   const [project, setProject] = useState(initialProject);
   const [activeTab, setActiveTab] = useState('overview');
@@ -61,6 +64,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   const [showRapImport, setShowRapImport] = useState(false);
   const [progressDrafts, setProgressDrafts] = useState<Record<string, string>>({});
   const [logDraft, setLogDraft] = useState({ description: '', progress: '' });
+  const [cashSummary, setCashSummary] = useState<{ received: number; surplus: number }>({ received: 0, surplus: 0 });
 
   const {
     scrollRef,
@@ -91,12 +95,17 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
       setRapActuals(rapAgg);
       const a = await analyzeProject(project.id);
       setAnalysis(a);
+      if (tenant?.id) {
+        const cash = await getProjectCashSummary(project.id, tenant.id, project.name, project.spent_amount);
+        setCashSummary({ received: cash.received, surplus: cash.surplus });
+        setProject(p => ({ ...p, total_received: cash.received }));
+      }
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
     }
-  }, [project.id]);
+  }, [project.id, tenant?.id, project.name, project.spent_amount]);
 
   useEffect(() => { setProject(initialProject); }, [initialProject]);
 
@@ -359,6 +368,8 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
             daysLeft={daysLeft}
             budgetPct={budgetPct}
             opi={opi}
+            received={cashSummary.received || project.total_received || 0}
+            surplus={cashSummary.surplus}
             loading={loading}
             collapse={collapse}
             isCollapsed={isCollapsed}
@@ -575,8 +586,13 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                   <motion.div key="re" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
                     <div className="flex justify-between items-center flex-wrap gap-2">
                       <div className="flex gap-2">
-                        {['biaya', 'progres'].map(t => (
-                          <button key={t} type="button" onClick={() => setActiveSubTab(t)} className={`px-4 py-1.5 rounded-lg text-xs font-bold capitalize ${activeSubTab === t ? 'bg-indigo-600 text-white' : 'bg-slate-200'}`}>{t}</button>
+                        {[
+                          { id: 'biaya', label: 'Biaya' },
+                          { id: 'uangmasuk', label: 'Uang Masuk' },
+                          { id: 'hutang', label: 'Hutang Proyek' },
+                          { id: 'progres', label: 'Progres' },
+                        ].map(t => (
+                          <button key={t.id} type="button" onClick={() => setActiveSubTab(t.id)} className={`px-4 py-1.5 rounded-lg text-xs font-bold ${activeSubTab === t.id ? 'bg-indigo-600 text-white' : 'bg-slate-200'}`}>{t.label}</button>
                         ))}
                       </div>
                       <button type="button" onClick={() => setCommandModalOpen(true)} className="flex items-center gap-1 bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-bold">
@@ -704,6 +720,25 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                           </table>
                         </div>
                       </>
+                    ) : activeSubTab === 'uangmasuk' && tenant?.id && user?.id ? (
+                      <ProjectIncomePanel
+                        projectId={project.id}
+                        orgId={tenant.id}
+                        userId={user.id}
+                        budget={project.total_budget_planned}
+                        canManage={canManage}
+                        onUpdated={() => { reload(); refreshData(); }}
+                      />
+                    ) : activeSubTab === 'hutang' && tenant?.id && user?.id ? (
+                      <ProjectTransferPanel
+                        projectId={project.id}
+                        orgId={tenant.id}
+                        userId={user.id}
+                        projects={projects}
+                        spentAmount={project.spent_amount}
+                        canManage={canManage}
+                        onUpdated={() => { reload(); refreshData(); }}
+                      />
                     ) : (
                       <>
                         {canManage && workItems.length > 0 && (
@@ -847,6 +882,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                       costs={costs}
                       workItems={workItems}
                       logs={logs}
+                      orgId={tenant?.id}
                       canEdit={canManage}
                       userId={user?.id}
                       currency={tenant?.currency}

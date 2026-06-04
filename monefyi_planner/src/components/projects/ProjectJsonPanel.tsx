@@ -17,6 +17,9 @@ import {
   downloadProjectJson,
   type ProjectJsonMode,
 } from '../../services/projectJsonService';
+import { loadProjectIncomes } from '../../services/incomeService';
+import { loadProjectTransfers, type ProjectTransfer } from '../../services/projectTransferService';
+import type { ProjectIncome } from '../../services/incomeService';
 
 interface Props {
   project: Project;
@@ -24,6 +27,7 @@ interface Props {
   costs: CostRealization[];
   workItems: WorkItem[];
   logs: DailyLog[];
+  orgId?: string;
   canEdit: boolean;
   userId?: string;
   currency?: string;
@@ -38,6 +42,7 @@ export default function ProjectJsonPanel({
   costs,
   workItems,
   logs,
+  orgId,
   canEdit,
   userId,
   currency,
@@ -51,10 +56,19 @@ export default function ProjectJsonPanel({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState<'data' | 'template' | null>(null);
+  const [incomes, setIncomes] = useState<ProjectIncome[]>([]);
+  const [transfers, setTransfers] = useState<ProjectTransfer[]>([]);
+
+  useEffect(() => {
+    loadProjectIncomes(project.id).then(setIncomes).catch(() => setIncomes([]));
+    if (orgId) {
+      loadProjectTransfers(orgId, project.id).then(setTransfers).catch(() => setTransfers([]));
+    }
+  }, [project.id, orgId]);
 
   const snapshot = useMemo(
-    () => buildProjectJsonSnapshot({ project, rapItems, costs, workItems, logs }),
-    [project, rapItems, costs, workItems, logs],
+    () => buildProjectJsonSnapshot({ project, rapItems, costs, workItems, logs, incomes, transfers }),
+    [project, rapItems, costs, workItems, logs, incomes, transfers],
   );
 
   const template = useMemo(() => getProjectJsonTemplate(project), [project]);
