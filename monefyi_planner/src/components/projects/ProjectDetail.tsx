@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, TrendingUp, BarChart3, Target, Layers, Trash2, Edit3,
-  Sparkles, Activity, Loader2,
+  Sparkles, Activity, Loader2, FileSpreadsheet, Download, Upload, Braces,
 } from 'lucide-react';
 import { useAppStore, Project } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
@@ -15,7 +15,10 @@ import { analyzeProject, type AnalyzeResult } from '../../services/analyzeServic
 import ConfirmDialog from '../ConfirmDialog';
 import EditProjectModal from './EditProjectModal';
 import RapRealizationDialog from './RapRealizationDialog';
+import RapImportWizard from './RapImportWizard';
 import ProjectDetailHeader from './ProjectDetailHeader';
+import ProjectJsonPanel from './ProjectJsonPanel';
+import { exportRapWorkbook, formatSelisih } from '../../services/rapExcelService';
 import { useCollapsibleHeader } from './useCollapsibleHeader';
 import { todayStr } from '../../lib/adapters';
 import {
@@ -55,6 +58,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   const [rapActuals, setRapActuals] = useState<Record<string, { qty: number; amount: number }>>({});
   const [qtyDrafts, setQtyDrafts] = useState<Record<string, string>>({});
   const [realizationDialog, setRealizationDialog] = useState<{ rapItem: typeof rapItems[0]; quantity: number } | null>(null);
+  const [showRapImport, setShowRapImport] = useState(false);
   const [progressDrafts, setProgressDrafts] = useState<Record<string, string>>({});
   const [logDraft, setLogDraft] = useState({ description: '', progress: '' });
 
@@ -128,6 +132,11 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
     return acc;
   }, {});
 
+  const handleExportRap = () => {
+    exportRapWorkbook(project, rapItems, costs, rapActuals);
+    showToast('Excel RAP diekspor', 'success');
+  };
+
   const evm = analysis?.evm;
   const budgetPct = project.total_budget_planned ? (project.spent_amount / project.total_budget_planned) * 100 : 0;
   const cpi = evm?.cpi ?? 1;
@@ -149,6 +158,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
     { id: 'planning', label: 'Planning', icon: Layers },
     { id: 'realisasi', label: 'Realisasi', icon: TrendingUp },
     { id: 'laporan', label: 'Laporan', icon: BarChart3 },
+    { id: 'json', label: 'JSON', icon: Braces },
   ];
 
   const handleStatusChange = async (status: Project['status']) => {
@@ -438,8 +448,20 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                           {t === 'rap' ? `RAP (${rapItems.length})` : `Schedule (${workItems.length})`}
                         </button>
                       ))}
+                      {activeSubTab === 'rap' && (
+                        <>
+                          <button type="button" onClick={handleExportRap} className="ml-auto flex items-center gap-1 text-xs font-bold text-emerald-700 border border-emerald-200 px-2 py-1 rounded-lg">
+                            <Download className="w-3.5 h-3.5" /> Export
+                          </button>
+                          {canManage && (
+                            <button type="button" onClick={() => setShowRapImport(true)} className="flex items-center gap-1 text-xs font-bold text-indigo-600 border border-indigo-200 px-2 py-1 rounded-lg">
+                              <Upload className="w-3.5 h-3.5" /> Import
+                            </button>
+                          )}
+                        </>
+                      )}
                       {canManage && (
-                        <button type="button" onClick={() => { setEditingRapId(null); setRapForm({ type: 'material', name: '', unit: 'unit', quantity: 1, unit_price: 0 }); activeSubTab === 'rap' ? setShowRapForm(v => !v) : setShowWiForm(v => !v); }} className="ml-auto flex items-center gap-1 text-xs font-bold text-indigo-600">
+                        <button type="button" onClick={() => { setEditingRapId(null); setRapForm({ type: 'material', name: '', unit: 'unit', quantity: 1, unit_price: 0 }); activeSubTab === 'rap' ? setShowRapForm(v => !v) : setShowWiForm(v => !v); }} className={`flex items-center gap-1 text-xs font-bold text-indigo-600 ${activeSubTab !== 'rap' ? 'ml-auto' : ''}`}>
                           <Plus className="w-3.5 h-3.5" /> Tambah
                         </button>
                       )}
@@ -563,6 +585,9 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                       <button type="button" onClick={() => setCommandModalOpen(true)} className="flex items-center gap-1 bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-bold">
                         <Plus className="w-3.5 h-3.5" /> Catat via Monefyi Button
                       </button>
+                      <button type="button" onClick={handleExportRap} className="flex items-center gap-1 border border-emerald-200 text-emerald-700 px-3 py-2 rounded-xl text-xs font-bold">
+                        <FileSpreadsheet className="w-3.5 h-3.5" /> Export Excel
+                      </button>
                     </div>
                     {activeSubTab === 'biaya' ? (
                       <>
@@ -586,6 +611,9 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                                   const actual = rapActuals[row.id];
                                   const actualQty = actual?.qty || 0;
                                   const plannedQty = Number(row.quantity) || 0;
+                                  const plannedAmt = plannedQty * Number(row.unit_price);
+                                  const actualAmt = actual?.amount || 0;
+                                  const selisih = formatSelisih(plannedAmt, actualAmt);
                                   const fillPct = plannedQty > 0 ? Math.min(100, (actualQty / plannedQty) * 100) : 0;
                                   return (
                                     <div key={row.id} className="p-4 border-t">
@@ -606,9 +634,14 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                                             <div className="text-xs text-slate-400">RAP</div>
                                             <div className="font-bold">{formatRupiah(plannedQty * Number(row.unit_price))}</div>
                                             {actual && (
-                                              <div className="text-xs text-emerald-600 font-semibold mt-0.5">
-                                                {formatRupiah(actual.amount)}
-                                              </div>
+                                              <>
+                                                <div className="text-xs text-emerald-600 font-semibold mt-0.5">
+                                                  {formatRupiah(actualAmt)}
+                                                </div>
+                                                <div className={`text-[10px] font-bold mt-0.5 ${selisih.diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                  Selisih {selisih.diff >= 0 ? '+' : '−'}{selisih.label}
+                                                </div>
+                                              </>
                                             )}
                                           </div>
                                         </div>
@@ -808,6 +841,28 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                     </div>
                   </motion.div>
                 )}
+
+                {activeTab === 'json' && (
+                  <motion.div key="json" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    <ProjectJsonPanel
+                      project={project}
+                      rapItems={rapItems}
+                      costs={costs}
+                      workItems={workItems}
+                      logs={logs}
+                      canEdit={canManage}
+                      userId={user?.id}
+                      currency={tenant?.currency}
+                      onApplied={async p => {
+                        setProject(p);
+                        updateProject(p.id, p);
+                        await reload();
+                        await refreshData();
+                        showToast('Data JSON diterapkan', 'success');
+                      }}
+                    />
+                  </motion.div>
+                )}
               </AnimatePresence>
             )}
           </div>
@@ -860,6 +915,15 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
             await refreshData();
             showToast('Realisasi tercatat', 'success');
           }}
+        />
+      )}
+      {showRapImport && user?.id && (
+        <RapImportWizard
+          open={showRapImport}
+          projectId={project.id}
+          recordedBy={user.id}
+          onClose={() => setShowRapImport(false)}
+          onImported={() => { void reload(); void refreshData(); }}
         />
       )}
     </>

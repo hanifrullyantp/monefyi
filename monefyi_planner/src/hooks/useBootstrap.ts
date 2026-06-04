@@ -24,6 +24,7 @@ import {
   subscribeProjects,
 } from '../services/notificationService';
 import { isPlatformAdmin } from '../services/adminService';
+import { logSessionExpired } from '../services/runtimeTracer';
 import { useAppStore } from '../store/appStore';
 
 function resolvePlatformRole(profile: { role?: string }, email?: string): 'user' | 'admin' {
@@ -185,6 +186,14 @@ export function useBootstrap() {
       }
 
       if (event === 'SIGNED_OUT' || !session) {
+        if (useAppStore.getState().user?.id) {
+          let wasManual = false;
+          try {
+            wasManual = sessionStorage.getItem('monefyi_manual_logout') === '1';
+            sessionStorage.removeItem('monefyi_manual_logout');
+          } catch { /* ignore */ }
+          logSessionExpired(wasManual);
+        }
         setUser(null);
         setTenant(null);
         setAuthenticated(false);

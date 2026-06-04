@@ -20,11 +20,12 @@ import {
   type PayrollEntry, type BonRequest, type MemberCompensation,
 } from '../services/payrollService';
 import InviteMemberModal from '../components/team/InviteMemberModal';
+import EmployeeDetailSheet from '../components/hr/EmployeeDetailSheet';
 import { showToast } from '../store/uiStore';
 import type { OrgMember, JoinRequest, AuditLogEntry } from '../types/onboarding';
 import type { DailyLog } from '../services/dailyLogService';
 
-type HrTab = 'overview' | 'karyawan' | 'absensi' | 'payroll' | 'requests' | 'audit' | 'access';
+type HrTab = 'overview' | 'karyawan' | 'absensi' | 'payroll' | 'laporan' | 'requests' | 'audit' | 'access';
 type RoleFilter = 'all' | 'worker' | 'manager' | 'owner';
 
 function lastSeenLabel(iso?: string) {
@@ -64,6 +65,7 @@ export default function HrEmployees() {
   const [salaryDraft, setSalaryDraft] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<OrgMember | null>(null);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
   const [access, setAccess] = useState({
@@ -162,6 +164,7 @@ export default function HrEmployees() {
     { id: 'karyawan', label: 'Karyawan', show: true },
     { id: 'absensi', label: 'Absensi', show: true },
     { id: 'payroll', label: 'Payroll', show: true },
+    { id: 'laporan', label: 'Laporan', show: true },
     { id: 'requests', label: 'Join Requests', show: canInvite },
     { id: 'audit', label: 'Audit Log', show: isOwner },
     { id: 'access', label: 'Akses', show: isOwner },
@@ -306,8 +309,15 @@ export default function HrEmployees() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map(m => {
               const att = todayAttendance.get(m.user_id);
+              const comp = compByUser[m.user_id];
+              const salaryEst = comp?.monthly_salary || comp?.daily_rate || 0;
               return (
-                <div key={m.id} className="bg-white rounded-2xl border border-slate-100 p-4 hover:border-indigo-100 transition-colors">
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setSelectedMember(m)}
+                  className="bg-white rounded-2xl border border-slate-100 p-4 hover:border-indigo-200 hover:shadow-md transition-all text-left w-full"
+                >
                   <div className="flex items-start gap-3">
                     <div className="w-11 h-11 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-lg shrink-0">
                       {(m.profile?.name || '?')[0]?.toUpperCase()}
@@ -318,29 +328,22 @@ export default function HrEmployees() {
                       <div className="flex flex-wrap gap-1.5 mt-2">
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${roleBadge(m.role)}`}>{m.role}</span>
                         {att?.status === 'in' && (
-                          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">On site</span>
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                            Hadir {att.checkIn}
+                          </span>
                         )}
                       </div>
                     </div>
                   </div>
-                  <div className="mt-3 pt-3 border-t border-slate-50 flex items-center justify-between text-xs text-slate-500">
-                    <span>Last seen: {lastSeenLabel(m.last_active_at)}</span>
-                    <div className="flex gap-2">
-                      {isOwner && m.role !== 'owner' && m.user_id !== user?.id && (
-                        <select value={m.role} onChange={e => handleRoleChange(m.id, e.target.value)} className="text-xs border rounded-lg px-1.5 py-0.5">
-                          <option value="manager">Manager</option>
-                          <option value="worker">Worker</option>
-                        </select>
-                      )}
-                      {m.role !== 'owner' && m.user_id !== user?.id && (isOwner || (user?.role === 'manager' && m.role === 'worker')) && (
-                        <button type="button" onClick={() => handleRemove(m.id)} className="text-rose-600 font-semibold">Hapus</button>
-                      )}
-                      {isOwner && m.role === 'manager' && (
-                        <button type="button" onClick={() => transferOwnership(tenant!.id, m.id).then(() => { showToast('Ownership transferred', 'success'); load(); })} className="text-indigo-600 font-semibold">Transfer</button>
-                      )}
-                    </div>
+                  <div className="mt-3 pt-3 border-t border-slate-50 grid grid-cols-2 gap-2 text-xs text-slate-500">
+                    <span>Gaji est.: {salaryEst ? formatCurrency(salaryEst) : '—'}</span>
+                    <span>{workItemCount} todo org</span>
                   </div>
-                </div>
+                  <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
+                    <span>Last seen: {lastSeenLabel(m.last_active_at)}</span>
+                    <span className="text-indigo-600 font-semibold">Detail →</span>
+                  </div>
+                </button>
               );
             })}
           </div>
@@ -689,6 +692,65 @@ export default function HrEmployees() {
       {inviteOpen && tenant && user && (
         <InviteMemberModal orgId={tenant.id} actorRole={user.role} onClose={() => setInviteOpen(false)} onCreated={load} />
       )}
+
+      {tab === 'karyawan' && canInvite && (
+        <button
+          type="button"
+          onClick={() => setInviteOpen(true)}
+          className="fixed bottom-24 md:bottom-8 right-6 z-40 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-xl flex items-center justify-center hover:bg-indigo-700"
+          aria-label="Tambah karyawan"
+        >
+          <UserPlus className="w-6 h-6" />
+        </button>
+      )}
+
+      {tab === 'laporan' && (
+        <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4">
+          <h3 className="font-bold text-slate-800">Laporan HR</h3>
+          <p className="text-sm text-slate-500">Export data absensi dan audit untuk arsip organisasi.</p>
+          <div className="flex flex-wrap gap-3">
+            {isOwner && (
+              <button
+                type="button"
+                onClick={() => {
+                  const csv = exportAuditCsv(audit);
+                  const blob = new Blob([csv], { type: 'text/csv' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `audit_${tenant?.slug || 'org'}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold"
+              >
+                Export Audit CSV
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setTab('absensi')}
+              className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-700"
+            >
+              Lihat absensi lengkap
+            </button>
+          </div>
+          <div className="text-sm text-slate-600">
+            <div>Log harian proyek: {workerLogs.length} entri (30 hari)</div>
+            <div>Work items aktif: {workItemCount}</div>
+          </div>
+        </div>
+      )}
+
+      <EmployeeDetailSheet
+        member={selectedMember}
+        orgId={tenant?.id || ''}
+        open={!!selectedMember}
+        canManage={canInvite}
+        compensation={selectedMember ? compByUser[selectedMember.user_id] : undefined}
+        onClose={() => setSelectedMember(null)}
+        onUpdated={load}
+      />
     </div>
   );
 }

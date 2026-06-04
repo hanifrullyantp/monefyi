@@ -2,6 +2,8 @@ export type MemberRole = 'owner' | 'manager' | 'worker';
 export type MemberStatus = 'active' | 'pending' | 'suspended' | 'removed';
 export type InvitationType = 'link' | 'email' | 'code';
 
+export type EmploymentType = 'full_time' | 'part_time' | 'contract' | 'daily';
+
 export interface OrgMember {
   id: string;
   org_id: string;
@@ -12,10 +14,29 @@ export interface OrgMember {
   department?: string;
   phone?: string;
   bio?: string;
+  employee_id?: string;
+  address?: string;
+  employment_type?: EmploymentType;
+  bank_name?: string;
+  bank_account?: string;
+  bank_holder?: string;
   joined_at?: string;
   last_active_at?: string;
   profile?: { name?: string; avatar_url?: string };
   email?: string;
+}
+
+export interface MemberProfilePatch {
+  position?: string;
+  department?: string;
+  phone?: string;
+  bio?: string;
+  employee_id?: string;
+  address?: string;
+  employment_type?: EmploymentType;
+  bank_name?: string;
+  bank_account?: string;
+  bank_holder?: string;
 }
 
 export interface InvitationPreview {

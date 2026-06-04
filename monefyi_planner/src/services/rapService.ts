@@ -31,6 +31,11 @@ export async function deleteRapItem(id: string) {
   if (error) throw new Error(error.message);
 }
 
+export async function deleteAllRapItems(projectId: string) {
+  const { error } = await supabase.from('planner_rap_items').delete().eq('project_id', projectId);
+  if (error) throw new Error(error.message);
+}
+
 export function rapSummary(items: RapItem[], actualByType?: Record<string, number>) {
   const byType: Record<string, { planned: number; actual: number }> = {};
   for (const item of items) {

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Users, Building2, Settings, LayoutDashboard, Loader2, RefreshCw,
-  Plus, Trash2, Save, ArrowLeft, Search, Pencil,
+  Plus, Trash2, Save, ArrowLeft, Search, Pencil, Activity, AlertTriangle,
 } from 'lucide-react';
 import {
   fetchAdminUsers, updateAdminUser, fetchPlatformStats,
@@ -11,8 +11,9 @@ import {
   type AdminUserRow, type CompanyType,
 } from '../services/adminService';
 import { showToast } from '../store/uiStore';
+import { fetchRuntimeTraces, type RuntimeTraceRow } from '../services/runtimeTracer';
 
-type Tab = 'overview' | 'users' | 'company-types' | 'platform';
+type Tab = 'overview' | 'users' | 'company-types' | 'platform' | 'monitoring';
 
 export default function SuperAdmin() {
   const [tab, setTab] = useState<Tab>('overview');
@@ -30,6 +31,8 @@ export default function SuperAdmin() {
     platform_gemini_daily_fallback: 10,
     default_ai_daily_limit: 20,
   });
+  const [traces, setTraces] = useState<RuntimeTraceRow[]>([]);
+  const [monitorFilter, setMonitorFilter] = useState<'all' | 'errors' | 'session'>('all');
 
   const loadOverview = useCallback(async () => {
     setLoading(true);
@@ -72,11 +75,24 @@ export default function SuperAdmin() {
     }
   }, []);
 
+  const loadMonitoring = useCallback(async () => {
+    setLoading(true);
+    try {
+      const rows = await fetchRuntimeTraces({ limit: 150, hours: 48 });
+      setTraces(rows);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal memuat traces', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (tab === 'overview' || tab === 'platform') loadOverview();
     if (tab === 'users') loadUsers();
     if (tab === 'company-types') loadTypes();
-  }, [tab, loadOverview, loadUsers, loadTypes]);
+    if (tab === 'monitoring') loadMonitoring();
+  }, [tab, loadOverview, loadUsers, loadTypes, loadMonitoring]);
 
   const openEditUser = (u: AdminUserRow) => {
     setSelectedUser(u);
@@ -129,9 +145,19 @@ export default function SuperAdmin() {
   const tabs: { id: Tab; label: string; icon: typeof Users }[] = [
     { id: 'overview', label: 'Ringkasan', icon: LayoutDashboard },
     { id: 'users', label: 'Pengguna', icon: Users },
+    { id: 'monitoring', label: 'Monitoring', icon: Activity },
     { id: 'company-types', label: 'Jenis Perusahaan', icon: Building2 },
     { id: 'platform', label: 'Platform', icon: Settings },
   ];
+
+  const filteredTraces = traces.filter(t => {
+    if (monitorFilter === 'errors') return t.severity === 'error' || t.severity === 'critical';
+    if (monitorFilter === 'session') return t.event_type === 'session_expired';
+    return true;
+  });
+
+  const errorCount = traces.filter(t => t.severity === 'error' || t.severity === 'critical').length;
+  const sessionExpiredCount = traces.filter(t => t.event_type === 'session_expired').length;
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -151,7 +177,7 @@ export default function SuperAdmin() {
             <Pencil className="w-4 h-4" />
             Edit landing
           </Link>
-          <button type="button" onClick={() => { if (tab === 'users') loadUsers(); else if (tab === 'company-types') loadTypes(); else loadOverview(); }} className="p-2 hover:bg-white/10 rounded-lg">
+          <button type="button" onClick={() => { if (tab === 'users') loadUsers(); else if (tab === 'company-types') loadTypes(); else if (tab === 'monitoring') loadMonitoring(); else loadOverview(); }} className="p-2 hover:bg-white/10 rounded-lg">
             <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
@@ -250,6 +276,67 @@ export default function SuperAdmin() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {tab === 'monitoring' && (
+          <div className="space-y-4">
+            <div className="grid sm:grid-cols-3 gap-3">
+              <div className="bg-white rounded-2xl p-4 border">
+                <div className="text-2xl font-black text-rose-600">{errorCount}</div>
+                <div className="text-xs text-slate-500">Error / critical (48j)</div>
+              </div>
+              <div className="bg-white rounded-2xl p-4 border">
+                <div className="text-2xl font-black text-amber-600">{sessionExpiredCount}</div>
+                <div className="text-xs text-slate-500">Auto-logout / sign-out</div>
+              </div>
+              <div className="bg-white rounded-2xl p-4 border">
+                <div className="text-2xl font-black text-indigo-600">{traces.length}</div>
+                <div className="text-xs text-slate-500">Total events</div>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              {([
+                { id: 'all' as const, label: 'Semua' },
+                { id: 'errors' as const, label: 'Errors' },
+                { id: 'session' as const, label: 'Auto-logout' },
+              ]).map(f => (
+                <button key={f.id} type="button" onClick={() => setMonitorFilter(f.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold ${monitorFilter === f.id ? 'bg-indigo-600 text-white' : 'bg-white border text-slate-600'}`}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="bg-white rounded-2xl border overflow-hidden">
+              {loading && !traces.length ? (
+                <div className="p-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-600" /></div>
+              ) : filteredTraces.length === 0 ? (
+                <div className="p-8 text-center text-sm text-slate-400">
+                  <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                  Belum ada runtime trace. Pastikan migrasi `runtime_traces` sudah dijalankan.
+                </div>
+              ) : (
+                <div className="divide-y max-h-[520px] overflow-y-auto">
+                  {filteredTraces.map(t => (
+                    <div key={t.id} className="p-4 text-sm hover:bg-slate-50">
+                      <div className="flex justify-between gap-2">
+                        <span className={`font-bold capitalize ${t.severity === 'error' || t.severity === 'critical' ? 'text-rose-700' : 'text-slate-700'}`}>
+                          {t.event_type}
+                        </span>
+                        <span className="text-xs text-slate-400">{new Date(t.created_at).toLocaleString('id-ID')}</span>
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1">{t.component} · {t.severity}</div>
+                      {t.message && <div className="text-slate-600 mt-1">{t.message}</div>}
+                      {t.event_type === 'session_expired' && t.metadata?.was_manual === false && (
+                        <span className="inline-block mt-1 text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">Auto logout</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

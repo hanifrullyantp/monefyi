@@ -77,6 +77,35 @@ export async function recordAttendance(entry: {
   return mapRow(data as DbAttendanceRow, entry.user_name);
 }
 
+/** Owner/manager manual attendance for a team member. */
+export async function recordAdminAttendance(entry: {
+  user_id: string;
+  user_name?: string;
+  org_id: string;
+  type: AttendanceType;
+  recorded_at: string;
+  project_id?: string;
+  project_name?: string;
+  note?: string;
+}): Promise<AttendanceRecord> {
+  const { data, error } = await supabase
+    .from('planner_attendance_records')
+    .insert({
+      org_id: entry.org_id,
+      user_id: entry.user_id,
+      type: entry.type,
+      recorded_at: entry.recorded_at,
+      project_id: entry.project_id || null,
+      project_name: entry.project_name || null,
+      note: entry.note || 'admin_manual',
+    })
+    .select(`*, ${PROFILE_BY_USER}(name)`)
+    .single();
+
+  assertNoDbError(error);
+  return mapRow(data as DbAttendanceRow, entry.user_name);
+}
+
 export async function getOrgAttendance(orgId: string, days = 30): Promise<AttendanceRecord[]> {
   const since = new Date(Date.now() - days * 86400000).toISOString();
   const { data, error } = await supabase

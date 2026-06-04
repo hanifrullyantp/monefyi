@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { config } from '../lib/config';
 import { assertNoDbError } from '../lib/supabaseErrors';
-import type { MemberRole, OrgMember } from '../types/onboarding';
+import type { MemberRole, MemberProfilePatch, OrgMember } from '../types/onboarding';
 
 async function invokeFn<T>(name: string, body?: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke(name, { body: body || {} });
@@ -30,10 +30,24 @@ export async function listMembers(orgId: string): Promise<OrgMember[]> {
     department: row.department,
     phone: row.phone,
     bio: row.bio,
+    employee_id: row.employee_id,
+    address: row.address,
+    employment_type: row.employment_type,
+    bank_name: row.bank_name,
+    bank_account: row.bank_account,
+    bank_holder: row.bank_holder,
     joined_at: row.accepted_at || row.invited_at,
     last_active_at: row.last_active_at,
     profile: row.profiles as { name?: string; avatar_url?: string },
   }));
+}
+
+export async function updateMemberProfile(memberId: string, patch: MemberProfilePatch) {
+  const { error } = await supabase
+    .from('planner_org_members')
+    .update(patch)
+    .eq('id', memberId);
+  assertNoDbError(error);
 }
 
 export async function changeMemberRole(memberId: string, role: MemberRole) {

@@ -1,4 +1,5 @@
 import type { Notification, Project, Tenant, User, UserRole } from '../store/appStore';
+import { parseWorkHours } from '../utils/workHours';
 
 export interface DbOrganization {
   id: string;
@@ -171,16 +172,17 @@ export function computeHealthStatus(
 }
 
 export function toTenant(org: DbOrganization): Tenant {
-  const settings = (org.settings || {}) as Record<string, string>;
+  const settings = (org.settings || {}) as Record<string, unknown>;
   return {
     id: org.id,
     name: org.name,
     slug: org.slug,
-    logo: settings.logo,
-    business_type: settings.business_type || 'construction',
+    logo: settings.logo as string | undefined,
+    business_type: (settings.business_type as string) || 'construction',
     plan: (org.plan_type as Tenant['plan']) || 'free',
-    currency: settings.currency || 'IDR',
-    timezone: settings.timezone || 'Asia/Jakarta',
+    currency: (settings.currency as string) || 'IDR',
+    timezone: (settings.timezone as string) || 'Asia/Jakarta',
+    workHours: parseWorkHours(settings),
   };
 }
 

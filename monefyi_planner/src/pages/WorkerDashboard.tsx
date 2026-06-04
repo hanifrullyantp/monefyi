@@ -231,6 +231,8 @@ export default function WorkerDashboard() {
             loading={attendanceLoading}
             onCheckIn={handleCheckIn}
             onCheckOut={handleCheckOut}
+            shiftStart={tenant?.workHours?.start}
+            shiftEnd={tenant?.workHours?.end}
           />
 
           <div className="grid grid-cols-2 gap-3">

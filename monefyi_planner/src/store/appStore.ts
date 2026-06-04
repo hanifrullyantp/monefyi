@@ -26,6 +26,7 @@ export interface Tenant {
   plan: 'free' | 'pro' | 'enterprise';
   currency: string;
   timezone: string;
+  workHours?: { start: { hour: number; minute: number }; end: { hour: number; minute: number } };
 }
 
 export interface Project {
@@ -301,7 +302,12 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   logout: async () => {
     const { isDemoMode } = get();
-    if (!isDemoMode) await authSignOut();
+    if (!isDemoMode) {
+      try {
+        sessionStorage.setItem('monefyi_manual_logout', '1');
+      } catch { /* ignore */ }
+      await authSignOut();
+    }
     set({
       user: null,
       tenant: null,

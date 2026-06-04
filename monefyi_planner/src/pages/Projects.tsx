@@ -3,15 +3,29 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Search, Grid, List, ChevronRight, MapPin,
   FolderOpen, X, CheckCircle, Info, ArrowUpDown,
-  TrendingUp, AlertTriangle, Sparkles,
+  TrendingUp, AlertTriangle, Sparkles, Columns3, Calendar, GanttChart,
 } from 'lucide-react';
 import { useAppStore, Project } from '../store/appStore';
-import { createProject } from '../services/projectService';
+import { createProject, updateProject as updateProjectApi } from '../services/projectService';
 import ProjectDetail from '../components/projects/ProjectDetail';
+import KanbanView from '../components/projects/views/KanbanView';
+import TimelineView from '../components/projects/views/TimelineView';
+import CalendarView from '../components/projects/views/CalendarView';
 import { useUiStore } from '../store/uiStore';
 import {
   formatRupiah, HEALTH_CONFIG, STATUS_LABEL, sortProjects, type ProjectSort,
 } from '../utils/projectUi';
+
+type ProjectView = 'list' | 'kanban' | 'timeline' | 'calendar';
+const VIEW_STORAGE_KEY = 'monefyi_projects_view';
+
+function readStoredView(): ProjectView {
+  try {
+    const v = localStorage.getItem(VIEW_STORAGE_KEY);
+    if (v === 'list' || v === 'kanban' || v === 'timeline' || v === 'calendar') return v;
+  } catch { /* ignore */ }
+  return 'list';
+}
 
 function CreateProjectModal({ onClose }: { onClose: () => void }) {
   const { user, tenant, addProject } = useAppStore();
@@ -138,8 +152,9 @@ interface ProjectsProps {
 }
 
 export default function Projects({ initialProjectId, onOpenProject, onCloseProject }: ProjectsProps) {
-  const { projects, projectsListFilter, setProjectsListFilter, setSelectedProjectId, user } = useAppStore();
-  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
+  const { projects, projectsListFilter, setProjectsListFilter, setSelectedProjectId, user, updateProject, tenant } = useAppStore();
+  const [projectView, setProjectView] = useState<ProjectView>(readStoredView);
+  const [listLayout, setListLayout] = useState<'card' | 'compact'>('card');
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState(projectsListFilter || 'all');
   const [sort, setSort] = useState<ProjectSort>('recent');
@@ -147,6 +162,7 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
   const [showCreate, setShowCreate] = useState(false);
 
   const canCreate = user?.role === 'owner' || user?.role === 'manager' || user?.role === 'admin';
+  const showToast = useUiStore(s => s.showToast);
 
   useEffect(() => {
     if (initialProjectId) {
@@ -165,6 +181,21 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
     setSelectedProject(p);
     setSelectedProjectId(p.id);
     onOpenProject?.(p.id);
+  };
+
+  const setView = (v: ProjectView) => {
+    setProjectView(v);
+    try { localStorage.setItem(VIEW_STORAGE_KEY, v); } catch { /* ignore */ }
+  };
+
+  const handleStatusChange = async (id: string, status: Project['status']) => {
+    try {
+      const updated = await updateProjectApi(id, { status }, tenant?.currency);
+      updateProject(id, updated);
+      showToast('Status proyek diperbarui', 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal update status', 'error');
+    }
   };
 
   const closeProject = () => {
@@ -255,9 +286,24 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
                 <option value="end_date">Deadline</option>
               </select>
             </div>
-            <div className="flex bg-slate-100 p-1 rounded-xl">
-              <button type="button" onClick={() => setViewMode('card')} className={`p-2 rounded-lg ${viewMode === 'card' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`} aria-label="Kartu"><Grid className="w-4 h-4" /></button>
-              <button type="button" onClick={() => setViewMode('list')} className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`} aria-label="List"><List className="w-4 h-4" /></button>
+            <div className="flex bg-slate-100 p-1 rounded-xl flex-wrap">
+              {([
+                { id: 'list' as const, icon: List, label: 'List' },
+                { id: 'kanban' as const, icon: Columns3, label: 'Kanban' },
+                { id: 'timeline' as const, icon: GanttChart, label: 'Timeline' },
+                { id: 'calendar' as const, icon: Calendar, label: 'Kalender' },
+              ]).map(v => (
+                <button key={v.id} type="button" onClick={() => setView(v.id)} title={v.label}
+                  className={`p-2 rounded-lg ${projectView === v.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`} aria-label={v.label}>
+                  <v.icon className="w-4 h-4" />
+                </button>
+              ))}
+              {projectView === 'list' && (
+                <>
+                  <button type="button" onClick={() => setListLayout('card')} className={`p-2 rounded-lg ${listLayout === 'card' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`} aria-label="Kartu"><Grid className="w-4 h-4" /></button>
+                  <button type="button" onClick={() => setListLayout('compact')} className={`p-2 rounded-lg ${listLayout === 'compact' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`} aria-label="Baris"><List className="w-4 h-4" /></button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -270,12 +316,25 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
         </div>
       </div>
 
-      <div className={viewMode === 'card' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5' : 'space-y-3'}>
+      {projectView === 'kanban' && (
+        <KanbanView projects={filtered} onOpenProject={openProject} onStatusChange={handleStatusChange} />
+      )}
+
+      {projectView === 'timeline' && (
+        <TimelineView projects={filtered} onOpenProject={openProject} />
+      )}
+
+      {projectView === 'calendar' && (
+        <CalendarView projects={filtered} onOpenProject={openProject} />
+      )}
+
+      {projectView === 'list' && (
+      <div className={listLayout === 'card' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5' : 'space-y-3'}>
         {filtered.map((proj, i) => {
           const budgetPct = proj.total_budget_planned ? Math.min(100, (proj.spent_amount / proj.total_budget_planned) * 100) : 0;
           const health = HEALTH_CONFIG[proj.health_status] || HEALTH_CONFIG.on_track;
 
-          if (viewMode === 'list') {
+          if (listLayout === 'compact') {
             return (
               <motion.div key={proj.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={() => openProject(proj)} className="bg-white border rounded-2xl p-4 flex items-center gap-4 hover:shadow-lg cursor-pointer group">
                 <div className={`w-1.5 h-14 rounded-full ${health.dot}`} />
@@ -334,8 +393,9 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
           );
         })}
       </div>
+      )}
 
-      {projects.length === 0 && (
+      {projectView === 'list' && projects.length === 0 && (
         <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-200">
           <FolderOpen className="w-14 h-14 text-indigo-200 mx-auto mb-4" />
           <p className="font-black text-slate-800 text-lg">Belum ada proyek</p>
