@@ -8,6 +8,8 @@ import {
 import { useAppStore } from '../store/appStore';
 import { getProjectStats } from '../services/projectService';
 import { aggregateCashflow } from '../services/costService';
+import DashboardInteractiveCards from '../components/dashboard/DashboardInteractiveCards';
+import DashboardProjectList from '../components/dashboard/DashboardProjectList';
 import { loadRecentLogs } from '../services/dailyLogService';
 import { analyzeProject } from '../services/analyzeService';
 import type { AnalyzeResult } from '../services/analyzeService';
@@ -37,6 +39,7 @@ function getGreeting() {
 
 export default function Dashboard({ onOpenProject }: { onOpenProject?: (id: string) => void }) {
   const { user, projects, tenant, setActiveTab, setProjectsListFilter } = useAppStore();
+  const canCreate = user?.role === 'owner' || user?.role === 'manager';
   const [expandedRec, setExpandedRec] = useState<number | null>(null);
   const [cashflowData, setCashflowData] = useState<{ date: string; amount: number }[]>([]);
   const [recentLogs, setRecentLogs] = useState<Array<{ description: string; date: string }>>([]);
@@ -84,15 +87,8 @@ export default function Dashboard({ onOpenProject }: { onOpenProject?: (id: stri
     setActiveTab('projects');
   };
 
-  const businessCards = [
-    { label: 'Total Proyek', value: stats.totalProjects, change: `${activeProjects.length} aktif`, up: true, icon: BarChart3, color: 'text-blue-600', bg: 'bg-blue-50', isMoney: false },
-    { label: 'Proyek Aktif', value: stats.activeProjects, change: `${stats.avgProgress.toFixed(0)}% avg progress`, up: true, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50', isMoney: false },
-    { label: 'Total Budget', value: stats.totalBudget, change: 'RAP semua proyek', up: true, icon: Activity, color: 'text-violet-600', bg: 'bg-violet-50', isMoney: true },
-    { label: 'Total Terpakai', value: stats.totalSpent, change: `${stats.atRisk} at risk`, up: false, icon: TrendingDown, color: 'text-amber-600', bg: 'bg-amber-50', isMoney: true },
-  ];
-
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto pb-24">
       {/* Greeting */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
         <div>
@@ -114,38 +110,22 @@ export default function Dashboard({ onOpenProject }: { onOpenProject?: (id: stri
         </button>
       </motion.div>
 
-      {/* Business Snapshot */}
+      {/* Interactive dashboard cards */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-bold text-slate-700 text-sm uppercase tracking-wide">Business Snapshot</h2>
+          <h2 className="font-bold text-slate-700 text-sm uppercase tracking-wide">Ringkasan Bisnis</h2>
           <span className="text-xs text-slate-400">{monthLabel}</span>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {businessCards.map((card, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.08 }}
-              className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs text-slate-500">{card.label}</span>
-                <div className={`w-7 h-7 rounded-lg ${card.bg} flex items-center justify-center`}>
-                  <card.icon className={`w-3.5 h-3.5 ${card.color}`} />
-                </div>
-              </div>
-              <div className="font-black text-slate-900 text-lg">
-                {'isMoney' in card && card.isMoney ? formatRupiah(card.value) : card.value}
-              </div>
-              <div className={`flex items-center gap-1 text-xs mt-1 font-medium ${card.up ? 'text-emerald-600' : 'text-amber-600'}`}>
-                {card.up ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                {card.change}
-              </div>
-            </motion.div>
-          ))}
-        </div>
+        <DashboardInteractiveCards onOpenProject={onOpenProject} />
       </section>
+
+      <DashboardProjectList
+        projects={projects}
+        onOpenProject={onOpenProject}
+        onViewAll={() => setActiveTab('projects')}
+        onCreateProject={() => setActiveTab('projects')}
+        canCreate={canCreate}
+      />
 
       {/* Project Overview */}
       <section>

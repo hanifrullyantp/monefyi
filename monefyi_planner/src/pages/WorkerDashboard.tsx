@@ -22,6 +22,7 @@ import {
   createBonRequest,
 } from '../services/payrollService';
 import type { PayrollEntry, BonRequest } from '../services/payrollService';
+import WorkerWorkTimer from '../components/worker/WorkerWorkTimer';
 
 export default function WorkerDashboard() {
   const { user, tenant, projects, activeTab, setActiveTab, setCommandModalOpen } = useAppStore();
@@ -34,6 +35,8 @@ export default function WorkerDashboard() {
     checkedIn: false,
     checkInTime: undefined as string | undefined,
     checkOutTime: undefined as string | undefined,
+    checkInAtIso: undefined as string | undefined,
+    checkOutAtIso: undefined as string | undefined,
   });
   const [history, setHistory] = useState<AttendanceRecord[]>([]);
   const [payroll, setPayroll] = useState<PayrollEntry | null>(null);
@@ -218,43 +221,17 @@ export default function WorkerDashboard() {
 
       {workerTab === 'home' && (
         <div className="space-y-4">
-          <div
-            className={`rounded-2xl p-5 text-white ${status.checkedIn ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : status.checkOutTime ? 'bg-gradient-to-br from-slate-500 to-slate-600' : 'bg-gradient-to-br from-indigo-500 to-violet-600'}`}
-          >
-            <div className="text-white/80 text-sm mb-1">Status Hari Ini</div>
-            <div className="font-black text-xl">
-              {status.checkedIn
-                ? `✅ Check In ${status.checkInTime}`
-                : status.checkOutTime
-                  ? `🏁 Selesai ${status.checkOutTime}`
-                  : '⏰ Belum Check In'}
-            </div>
-            {!status.checkedIn && !status.checkOutTime && (
-              <button
-                type="button"
-                onClick={handleCheckIn}
-                disabled={attendanceLoading}
-                className="w-full mt-4 py-3.5 bg-white text-indigo-700 font-black rounded-xl disabled:opacity-60"
-              >
-                📍 CHECK IN
-              </button>
-            )}
-            {status.checkedIn && (
-              <div className="mt-4">
-                <div className="flex items-center gap-2 mb-3 text-emerald-100 text-sm">
-                  <MapPin className="w-4 h-4" /> {defaultProjectName || 'Lokasi proyek'}
-                </div>
-                <button
-                  type="button"
-                  onClick={handleCheckOut}
-                  disabled={attendanceLoading}
-                  className="w-full py-3 bg-white/20 border border-white/30 text-white font-bold rounded-xl disabled:opacity-60"
-                >
-                  🏁 Check Out
-                </button>
-              </div>
-            )}
-          </div>
+          <WorkerWorkTimer
+            checkedIn={status.checkedIn}
+            checkInAtIso={status.checkInAtIso}
+            checkOutAtIso={status.checkOutAtIso}
+            checkInTimeLabel={status.checkInTime}
+            checkOutTimeLabel={status.checkOutTime}
+            projectName={defaultProjectName}
+            loading={attendanceLoading}
+            onCheckIn={handleCheckIn}
+            onCheckOut={handleCheckOut}
+          />
 
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-white border rounded-xl p-3 text-center">

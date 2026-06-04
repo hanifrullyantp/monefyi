@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, FolderOpen, Wallet, Settings, Bell, Menu, X,
   Sparkles, Wifi, WifiOff, Clock, Users,
-  BarChart3, ChevronRight, LogOut, User, Shield,
+  BarChart3, ChevronRight, LogOut, User, Shield, Building2,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { isPlatformAdmin } from '../services/adminService';
@@ -27,6 +27,7 @@ export default function Layout({ children }: LayoutProps) {
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const isSuperAdmin = isPlatformAdmin(platformRole, user?.email);
   const isWorker = showWorkerShell(user?.role, platformRole, user?.email, uiViewMode);
@@ -34,10 +35,10 @@ export default function Layout({ children }: LayoutProps) {
 
   const ownerTabs = [
     { id: 'home', label: 'Home', icon: Home },
-    { id: 'projects', label: 'Project', icon: FolderOpen },
+    { id: 'projects', label: 'Proyek', icon: FolderOpen },
     { id: 'command', label: '✦', icon: Sparkles, special: true },
     { id: 'finance', label: 'Finance', icon: Wallet },
-    { id: 'settings', label: 'Settings', icon: Settings },
+    ...(canAccessHr ? [{ id: 'hr', label: 'HR', icon: Users }] : []),
   ];
 
   const workerTabs = [
@@ -57,7 +58,6 @@ export default function Layout({ children }: LayoutProps) {
     ...(canAccessHr
       ? [{ id: 'hr', label: 'HR & Karyawan', icon: Users }]
       : []),
-    { id: 'settings', label: 'Pengaturan', icon: Settings },
   ];
 
   const workerSidebarItems = [
@@ -206,7 +206,7 @@ export default function Layout({ children }: LayoutProps) {
                     onClick={() => { setActiveTab('settings'); setProfileOpen(false); }}
                     className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-50"
                   >
-                    <User className="w-4 h-4" /> Profil Saya
+                    <Settings className="w-4 h-4" /> Pengaturan
                   </button>
                   <button
                     onClick={handleLogout}
@@ -338,10 +338,84 @@ export default function Layout({ children }: LayoutProps) {
               </AnimatePresence>
             </div>
 
-            {/* User Avatar - Mobile */}
+            {/* Settings gear */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setSettingsOpen(v => !v)}
+                className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
+                aria-label="Pengaturan"
+              >
+                <Settings className="w-5 h-5 text-slate-600" />
+              </button>
+              <AnimatePresence>
+                {settingsOpen && (
+                  <>
+                    <button
+                      type="button"
+                      className="fixed inset-0 z-40"
+                      aria-label="Tutup menu"
+                      onClick={() => setSettingsOpen(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      className="absolute right-0 top-full mt-2 w-52 bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden z-50"
+                    >
+                      <div className="px-3 py-2 border-b border-slate-100 text-xs font-bold text-slate-500 flex items-center gap-1.5">
+                        <Settings className="w-3.5 h-3.5" /> Pengaturan
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setActiveTab('settings'); setSettingsOpen(false); }}
+                        className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                      >
+                        <User className="w-4 h-4" /> Profil Saya
+                      </button>
+                      {canAccessHr && (
+                        <button
+                          type="button"
+                          onClick={() => { setActiveTab('hr'); setSettingsOpen(false); }}
+                          className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                        >
+                          <Building2 className="w-4 h-4" /> Organisasi
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => { setActiveTab('settings'); setSettingsOpen(false); }}
+                        className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                      >
+                        <Bell className="w-4 h-4" /> Notifikasi
+                      </button>
+                      <div className="border-t border-slate-100">
+                        <button
+                          type="button"
+                          onClick={() => { setSettingsOpen(false); handleLogout(); }}
+                          className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-rose-600 hover:bg-rose-50"
+                        >
+                          <LogOut className="w-4 h-4" /> Keluar
+                        </button>
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* User Avatar */}
             <button
               type="button"
-              onClick={() => { setActiveTab('settings'); setProfileOpen(false); }}
+              onClick={() => setProfileOpen(!profileOpen)}
+              className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold hidden lg:flex"
+              aria-label="Profil"
+            >
+              {user?.name.charAt(0) || 'U'}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setActiveTab('settings'); }}
               className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold lg:hidden"
               aria-label="Profil"
             >
@@ -379,12 +453,14 @@ export default function Layout({ children }: LayoutProps) {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all ${
-                    activeTab === tab.id ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
+                  className={`flex flex-col items-center gap-0.5 px-3 py-1 transition-colors duration-150 border-b-2 ${
+                    activeTab === tab.id
+                      ? 'text-indigo-600 border-indigo-600'
+                      : 'text-slate-400 border-transparent hover:text-slate-600'
                   }`}
                 >
-                  <tab.icon className={`w-5 h-5 ${activeTab === tab.id ? 'text-indigo-600' : 'text-slate-400'}`} />
-                  <span className={`text-xs font-medium ${activeTab === tab.id ? 'text-indigo-600' : 'text-slate-400'}`}>
+                  <tab.icon className="w-5 h-5" />
+                  <span className={`text-[10px] font-semibold ${activeTab === tab.id ? 'font-bold' : ''}`}>
                     {tab.label}
                   </span>
                 </button>

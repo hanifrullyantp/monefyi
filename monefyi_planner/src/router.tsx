@@ -4,6 +4,7 @@ import { LoginPage } from './components/AuthPages';
 import ProtectedRoute from './components/ProtectedRoute';
 import AuthOnlyRoute from './components/AuthOnlyRoute';
 import AppShell from './components/AppShell';
+import ErrorBoundary from './components/ErrorBoundary';
 import AuthBootstrap from './components/AuthBootstrap';
 import AuthRedirect from './components/AuthRedirect';
 import { PrivacyPage, TermsPage, ContactPage } from './pages/LegalPages';
@@ -38,7 +39,7 @@ export default function AppRouter() {
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/contact" element={<ContactPage />} />
-        <Route path="/app/*" element={<ProtectedRoute><AppShell /></ProtectedRoute>} />
+        <Route path="/app/*" element={<ProtectedRoute><ErrorBoundary componentName="App"><AppShell /></ErrorBoundary></ProtectedRoute>} />
         <Route path="/admin" element={<AdminRoute><SuperAdmin /></AdminRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

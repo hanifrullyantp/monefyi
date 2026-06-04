@@ -8,6 +8,12 @@
   --brand-primary: #6366f1;
   --brand-accent: #8b5cf6;
   --brand-dark: #1e1b4b;
+  --radius-card: 16px;
+  --radius-mini: 12px;
+}
+
+.font-mono-nums {
+  font-variant-numeric: tabular-nums;
 }
 
 body {

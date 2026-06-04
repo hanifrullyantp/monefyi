@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, TrendingUp, BarChart3, Target, Layers, Trash2, Edit3,
-  Sparkles, Activity, X, RefreshCw, MapPin, Calendar, Loader2,
+  Sparkles, Activity, Loader2,
 } from 'lucide-react';
 import { useAppStore, Project } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
@@ -15,6 +15,8 @@ import { analyzeProject, type AnalyzeResult } from '../../services/analyzeServic
 import ConfirmDialog from '../ConfirmDialog';
 import EditProjectModal from './EditProjectModal';
 import RapRealizationDialog from './RapRealizationDialog';
+import ProjectDetailHeader from './ProjectDetailHeader';
+import { useCollapsibleHeader } from './useCollapsibleHeader';
 import { todayStr } from '../../lib/adapters';
 import {
   formatRupiah, HEALTH_CONFIG, STATUS_LABEL, daysUntil, formatDateId,
@@ -55,6 +57,21 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   const [realizationDialog, setRealizationDialog] = useState<{ rapItem: typeof rapItems[0]; quantity: number } | null>(null);
   const [progressDrafts, setProgressDrafts] = useState<Record<string, string>>({});
   const [logDraft, setLogDraft] = useState({ description: '', progress: '' });
+
+  const isLg = useSyncExternalStore(
+    onStoreChange => {
+      const mq = window.matchMedia('(min-width: 1024px)');
+      mq.addEventListener('change', onStoreChange);
+      return () => mq.removeEventListener('change', onStoreChange);
+    },
+    () => window.matchMedia('(min-width: 1024px)').matches,
+    () => true,
+  );
+  const {
+    scrollRef,
+    collapse,
+    handleHeaderTap,
+  } = useCollapsibleHeader(!isLg);
 
   const canManage = user?.role === 'owner' || user?.role === 'manager' || user?.role === 'admin';
   const health = HEALTH_CONFIG[project.health_status] || HEALTH_CONFIG.on_track;
@@ -331,40 +348,18 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
           exit={{ y: 50, opacity: 0 }}
           className="bg-white w-full max-w-5xl h-full sm:h-[90vh] sm:rounded-3xl overflow-hidden flex flex-col shadow-2xl"
         >
-          <div className="bg-gradient-to-r from-indigo-700 via-indigo-600 to-violet-700 p-5 md:p-6 text-white shrink-0">
-            <div className="flex items-start justify-between gap-3 mb-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span className="text-xs font-mono bg-white/20 px-2 py-0.5 rounded-md">{project.code}</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-white/20 text-white">{health.label}</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/20 uppercase">{STATUS_LABEL[project.status]}</span>
-                </div>
-                <h2 className="text-xl md:text-2xl font-black truncate">{project.name}</h2>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-indigo-100 text-xs">
-                  {project.client_name && <span>{project.client_name}</span>}
-                  {project.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{project.location}</span>}
-                  <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{formatDateId(project.start_date)} – {formatDateId(project.end_date)}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <button type="button" onClick={() => reload()} className="p-2 hover:bg-white/20 rounded-xl" aria-label="Refresh"><RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} /></button>
-                <button type="button" onClick={onClose} className="p-2 hover:bg-white/20 rounded-xl" aria-label="Tutup"><X className="w-6 h-6" /></button>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white/10 rounded-2xl p-4 border border-white/10">
-              {[
-                { label: 'Progress', value: `${project.progress_percentage.toFixed(0)}%` },
-                { label: 'Budget', value: `${Math.round(budgetPct)}%` },
-                { label: 'Sisa Hari', value: daysLeft > 0 ? `${daysLeft}d` : 'Lewat' },
-                { label: 'OPI', value: opi },
-              ].map(m => (
-                <div key={m.label} className="text-center">
-                  <div className="text-xs text-indigo-100 mb-0.5">{m.label}</div>
-                  <div className="text-xl font-black">{m.value}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <ProjectDetailHeader
+            project={project}
+            health={health}
+            daysLeft={daysLeft}
+            budgetPct={budgetPct}
+            opi={opi}
+            loading={loading}
+            collapse={collapse}
+            onClose={onClose}
+            onRefresh={() => reload()}
+            onHeaderTap={handleHeaderTap}
+          />
 
           <div className="flex overflow-x-auto border-b border-slate-200 bg-white px-2 shrink-0">
             {tabs.map(tab => (
@@ -374,7 +369,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
             ))}
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50">
             {loading && activeTab === 'overview' ? (
               <div className="flex items-center justify-center h-48"><Loader2 className="w-8 h-8 animate-spin text-indigo-600" /></div>
             ) : (

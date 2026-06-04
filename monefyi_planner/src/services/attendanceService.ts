@@ -115,7 +115,13 @@ function todayIsoDate() {
 export async function getUserTodayStatus(
   userId: string,
   orgId: string,
-): Promise<{ checkedIn: boolean; checkInTime?: string; checkOutTime?: string }> {
+): Promise<{
+  checkedIn: boolean;
+  checkInTime?: string;
+  checkOutTime?: string;
+  checkInAtIso?: string;
+  checkOutAtIso?: string;
+}> {
   const start = `${todayIsoDate()}T00:00:00.000Z`;
   const { data, error } = await supabase
     .from('planner_attendance_records')
@@ -136,6 +142,8 @@ export async function getUserTodayStatus(
     checkedIn: !!inAfterOut,
     checkInTime: lastIn ? formatTime(lastIn.recorded_at) : undefined,
     checkOutTime: lastOut && !inAfterOut ? formatTime(lastOut.recorded_at) : undefined,
+    checkInAtIso: lastIn && inAfterOut ? String(lastIn.recorded_at) : undefined,
+    checkOutAtIso: lastOut && !inAfterOut ? String(lastOut.recorded_at) : undefined,
   };
 }
 
