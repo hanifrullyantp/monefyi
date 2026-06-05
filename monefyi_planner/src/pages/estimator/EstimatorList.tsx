@@ -112,6 +112,13 @@ export default function EstimatorList() {
         <div className="flex gap-2">
           <button
             type="button"
+            onClick={() => navigate('/app/estimator/settings')}
+            className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50"
+          >
+            Pengaturan
+          </button>
+          <button
+            type="button"
             onClick={() => navigate('/app/estimator/pricelist')}
             className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50"
           >

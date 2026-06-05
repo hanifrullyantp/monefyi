@@ -28,7 +28,9 @@ export default function PricelistPickerModal({ orgId, onClose, onSelect }: Props
 
   const filtered = items.filter(i => {
     const q = search.toLowerCase().trim();
-    const matchQ = !q || i.name.toLowerCase().includes(q);
+    const matchQ = !q
+      || i.name.toLowerCase().includes(q)
+      || (i.product || '').toLowerCase().includes(q);
     const matchC = !category || i.category === category;
     return matchQ && matchC;
   });
@@ -114,8 +116,11 @@ export default function PricelistPickerModal({ orgId, onClose, onSelect }: Props
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-slate-800 truncate">{item.name}</div>
+                    {item.product && (
+                      <div className="text-xs text-slate-500 truncate">{item.product}</div>
+                    )}
                     <div className="text-xs text-slate-400">
-                      {item.category} · {item.unit} · HPP {formatRupiahFull(Number(item.base_cost))} · {item.default_margin_pct}%
+                      {item.category} · {item.unit} · Jual {formatRupiahFull(Number(item.selling_price))}
                     </div>
                   </div>
                 </button>

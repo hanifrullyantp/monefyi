@@ -6,10 +6,12 @@ export interface PricelistItem {
   id: string;
   org_id: string;
   name: string;
+  product: string | null;
   category: PricelistCategory | null;
   unit: string;
   base_cost: number;
   default_margin_pct: number;
+  selling_price: number;
   notes: string | null;
   is_active: boolean;
   created_by: string | null;
@@ -114,9 +116,21 @@ export interface EstimationFormDraft {
   validity_days: number;
   status: EstimationStatus;
   pdf_template: PdfTemplate;
+  pdf_primary_color: string;
+  pdf_secondary_color: string;
+  pdf_show_images: boolean;
+  pdf_show_bank: boolean;
+  pdf_show_signature: boolean;
   images: EstimationImageDraft[];
   items: EstimationItemDraft[];
 }
+
+export const PDF_TEMPLATE_OPTIONS: Array<{ value: PdfTemplate; label: string; desc: string }> = [
+  { value: 'modern', label: 'Modern', desc: 'Gradient header, grid foto' },
+  { value: 'classic', label: 'Classic', desc: 'Formal, garis & border' },
+  { value: 'minimal', label: 'Minimal', desc: 'Bersih, banyak whitespace' },
+  { value: 'bold', label: 'Bold', desc: 'Typography kuat, CTA box' },
+];
 
 export interface EstimationSummary {
   subtotalHpp: number;

@@ -1,6 +1,43 @@
 import { supabase } from '../lib/supabase';
-import { calcItemRow, emptyItem } from '../lib/estimatorCalc';
+import { calcItemRow, emptyItem, marginFromSelling, sellingFromHpp } from '../lib/estimatorCalc';
 import type { EstimationItemDraft, PricelistCategory, PricelistItem } from '../types/estimator';
+
+export function calcPricelistSelling(baseCost: number, marginPct: number): number {
+  return sellingFromHpp(baseCost, marginPct);
+}
+
+export function applyPricelistPricePatch(
+  row: Pick<PricelistItem, 'base_cost' | 'default_margin_pct' | 'selling_price'>,
+  field: 'base_cost' | 'default_margin_pct' | 'selling_price',
+  value: number,
+): Pick<PricelistItem, 'base_cost' | 'default_margin_pct' | 'selling_price'> {
+  const hpp = Number(row.base_cost) || 0;
+  const margin = Number(row.default_margin_pct) || 0;
+  const selling = Number(row.selling_price) || 0;
+
+  if (field === 'base_cost') {
+    const nextHpp = value;
+    return {
+      base_cost: nextHpp,
+      default_margin_pct: margin,
+      selling_price: calcPricelistSelling(nextHpp, margin),
+    };
+  }
+  if (field === 'default_margin_pct') {
+    const nextMargin = value;
+    return {
+      base_cost: hpp,
+      default_margin_pct: nextMargin,
+      selling_price: calcPricelistSelling(hpp, nextMargin),
+    };
+  }
+  const nextSelling = value;
+  return {
+    base_cost: hpp,
+    default_margin_pct: marginFromSelling(hpp, nextSelling),
+    selling_price: nextSelling,
+  };
+}
 
 export async function loadPricelistItems(orgId: string, activeOnly = true): Promise<PricelistItem[]> {
   let q = supabase
@@ -54,20 +91,25 @@ export async function searchPricelist(
   const q = query.toLowerCase().trim();
   if (!q) return items;
   return items.filter(
-    i => i.name.toLowerCase().includes(q) || (i.category || '').toLowerCase().includes(q),
+    i =>
+      i.name.toLowerCase().includes(q) ||
+      (i.product || '').toLowerCase().includes(q) ||
+      (i.category || '').toLowerCase().includes(q),
   );
 }
 
 export function pricelistToDraftRow(item: PricelistItem) {
+  const hpp = Number(item.base_cost);
+  const selling = Number(item.selling_price) || calcPricelistSelling(hpp, Number(item.default_margin_pct));
   return {
     pricelist_item_id: item.id,
-    name: item.name,
+    name: item.product ? `${item.name} — ${item.product}` : item.name,
     category: item.category || 'material',
     unit: item.unit,
     qty: 1,
-    hpp_per_unit: Number(item.base_cost),
+    hpp_per_unit: hpp,
     margin_pct: Number(item.default_margin_pct),
-    selling_price_per_unit: Number(item.base_cost) * (1 + Number(item.default_margin_pct) / 100),
+    selling_price_per_unit: selling,
     notes: item.notes || '',
   };
 }
@@ -79,10 +121,12 @@ export function pricelistToEstimationItem(item: PricelistItem, sortOrder: number
 
 export interface CsvPricelistRow {
   name: string;
+  product: string | null;
   category: PricelistCategory;
   unit: string;
   base_cost: number;
   default_margin_pct: number;
+  selling_price: number;
   notes: string | null;
 }
 
@@ -91,15 +135,20 @@ const VALID_CATEGORIES = new Set<string>(['material', 'upah', 'alat', 'jasa', 'o
 export function parseCsvPricelistRows(raw: Record<string, string>[]): CsvPricelistRow[] {
   return raw
     .map(row => {
-      const name = (row.name || row.nama || '').trim();
+      const name = (row.name || row.item || row.nama || '').trim();
       if (!name) return null;
+      const product = (row.product || row.produk || '').trim() || null;
       const catRaw = (row.category || row.kategori || 'material').toLowerCase().trim();
       const category = (VALID_CATEGORIES.has(catRaw) ? catRaw : 'material') as PricelistCategory;
       const unit = (row.unit || row.satuan || 'pcs').trim();
       const base_cost = Number(row.base_cost || row.hpp || row.harga || 0);
       const default_margin_pct = Number(row.default_margin_pct || row.margin || row['margin%'] || 20);
+      const sellingRaw = row.selling_price || row.harga_jual || row['harga jual'];
+      const selling_price = sellingRaw
+        ? Number(sellingRaw)
+        : calcPricelistSelling(base_cost, default_margin_pct);
       const notes = (row.notes || row.catatan || '').trim() || null;
-      return { name, category, unit, base_cost, default_margin_pct, notes };
+      return { name, product, category, unit, base_cost, default_margin_pct, selling_price, notes };
     })
     .filter((r): r is CsvPricelistRow => r !== null);
 }
@@ -113,10 +162,12 @@ export async function bulkImportPricelist(
   const payload = rows.map(r => ({
     org_id: orgId,
     name: r.name,
+    product: r.product,
     category: r.category,
     unit: r.unit,
     base_cost: r.base_cost,
     default_margin_pct: r.default_margin_pct,
+    selling_price: r.selling_price,
     notes: r.notes,
     is_active: true,
     created_by: userId,
@@ -126,11 +177,11 @@ export async function bulkImportPricelist(
   return rows.length;
 }
 
-export const PRICELIST_CSV_TEMPLATE = `name,category,unit,base_cost,default_margin_pct,notes
-Pasang ACP,material,m2,350000,25,
-Holo galvanis,material,btg,34000,20,
-Upah pasang,upah,hari,150000,30,Termasuk makan
-Cat tembok,material,kaleng,450000,20,
+export const PRICELIST_CSV_TEMPLATE = `name,product,category,unit,base_cost,default_margin_pct,selling_price,notes
+Pasang ACP,ACP Seven 4mm,material,m2,350000,25,437500,
+Holo galvanis,Galvanis 40x40,material,btg,34000,20,40800,
+Upah pasang,,upah,hari,150000,30,195000,Termasuk makan
+Cat tembok,Avian,material,kaleng,450000,20,540000,
 `;
 
 export function downloadPricelistTemplate(): void {

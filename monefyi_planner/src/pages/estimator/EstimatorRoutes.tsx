@@ -4,6 +4,7 @@ import { useAppStore } from '../../store/appStore';
 import EstimatorList from './EstimatorList';
 import EstimatorForm from './EstimatorForm';
 import PricelistPage from './PricelistPage';
+import EstimatorSettings from './EstimatorSettings';
 
 export default function EstimatorRoutes() {
   const location = useLocation();
@@ -18,6 +19,7 @@ export default function EstimatorRoutes() {
       <Route index element={<EstimatorList />} />
       <Route path="new" element={<EstimatorForm />} />
       <Route path="pricelist" element={<PricelistPage />} />
+      <Route path="settings" element={<EstimatorSettings />} />
       <Route path=":id" element={<EstimatorForm />} />
     </Routes>
   );

@@ -88,7 +88,7 @@ export default function PricelistCsvImport({ orgId, userId, onClose, onImported 
           >
             <Upload className="w-8 h-8 text-slate-300 mx-auto mb-2" />
             <p className="text-sm text-slate-600">Klik atau drag file CSV</p>
-            <p className="text-xs text-slate-400 mt-1">Kolom: name, category, unit, base_cost, default_margin_pct, notes</p>
+            <p className="text-xs text-slate-400 mt-1">Kolom: name/item, product, category, unit, base_cost, margin, selling_price, notes</p>
             <input
               ref={fileRef}
               type="file"

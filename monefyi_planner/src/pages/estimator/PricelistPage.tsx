@@ -5,6 +5,7 @@ import PricelistCsvImport from '../../components/estimator/PricelistCsvImport';
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
 import {
+  applyPricelistPricePatch,
   COMMON_UNITS,
   createPricelistItem,
   deletePricelistItem,
@@ -42,7 +43,9 @@ export default function PricelistPage() {
 
   const filtered = rows.filter(r => {
     const q = search.toLowerCase().trim();
-    const matchSearch = !q || r.name.toLowerCase().includes(q);
+    const matchSearch = !q
+      || r.name.toLowerCase().includes(q)
+      || (r.product || '').toLowerCase().includes(q);
     const matchCat = !categoryFilter || r.category === categoryFilter;
     return matchSearch && matchCat;
   });
@@ -53,10 +56,12 @@ export default function PricelistPage() {
       await createPricelistItem({
         org_id: tenant.id,
         name: 'Item baru',
+        product: null,
         category: 'material',
         unit: 'pcs',
         base_cost: 0,
         default_margin_pct: 20,
+        selling_price: 0,
         notes: null,
         is_active: true,
         created_by: user.id,
@@ -77,6 +82,15 @@ export default function PricelistPage() {
     }
   };
 
+  const handlePriceUpdate = (
+    row: PricelistItem,
+    field: 'base_cost' | 'default_margin_pct' | 'selling_price',
+    value: number,
+  ) => {
+    const patch = applyPricelistPricePatch(row, field, value);
+    handleUpdate(row.id, patch);
+  };
+
   const handleDelete = async (id: string, name: string) => {
     if (!window.confirm(`Hapus "${name}" dari pricelist?`)) return;
     try {
@@ -89,7 +103,7 @@ export default function PricelistPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-6">
+    <div className="max-w-7xl mx-auto p-4 sm:p-6">
       <div className="flex items-center gap-3 mb-6">
         <button
           type="button"
@@ -100,7 +114,7 @@ export default function PricelistPage() {
         </button>
         <div className="flex-1">
           <h1 className="text-2xl font-black text-slate-900">Pricelist</h1>
-          <p className="text-sm text-slate-500">Master harga HPP & margin default</p>
+          <p className="text-sm text-slate-500">Master item, produk, HPP & harga jual</p>
         </div>
         <button
           type="button"
@@ -122,7 +136,7 @@ export default function PricelistPage() {
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Cari item..."
+          placeholder="Cari item atau produk..."
           className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm"
         />
         <select
@@ -150,14 +164,16 @@ export default function PricelistPage() {
         </div>
       ) : (
         <div className="bg-white border border-slate-200 rounded-2xl overflow-x-auto">
-          <table className="w-full text-sm min-w-[640px]">
+          <table className="w-full text-sm min-w-[900px]">
             <thead>
               <tr className="bg-slate-50 text-left text-xs text-slate-500 uppercase">
-                <th className="p-3">Nama</th>
+                <th className="p-3 min-w-[140px]">Item</th>
+                <th className="p-3 min-w-[120px]">Produk</th>
                 <th className="p-3 w-24">Kategori</th>
                 <th className="p-3 w-16">Satuan</th>
                 <th className="p-3 w-28">HPP</th>
                 <th className="p-3 w-20">Margin%</th>
+                <th className="p-3 w-32">Harga Jual/Satuan</th>
                 <th className="p-3 w-16">Aktif</th>
                 <th className="p-3 w-10" />
               </tr>
@@ -170,6 +186,15 @@ export default function PricelistPage() {
                       value={row.name}
                       onChange={e => handleUpdate(row.id, { name: e.target.value })}
                       className="w-full px-2 py-1 border border-transparent hover:border-slate-200 rounded"
+                      placeholder="Nama pekerjaan/item"
+                    />
+                  </td>
+                  <td className="p-2">
+                    <input
+                      value={row.product || ''}
+                      onChange={e => handleUpdate(row.id, { product: e.target.value || null })}
+                      className="w-full px-2 py-1 border border-transparent hover:border-slate-200 rounded"
+                      placeholder="Merk / spesifikasi"
                     />
                   </td>
                   <td className="p-2">
@@ -197,7 +222,7 @@ export default function PricelistPage() {
                       type="number"
                       min={0}
                       value={row.base_cost}
-                      onChange={e => handleUpdate(row.id, { base_cost: Number(e.target.value) })}
+                      onChange={e => handlePriceUpdate(row, 'base_cost', Number(e.target.value))}
                       className="w-full px-2 py-1 border border-slate-200 rounded text-right"
                     />
                     <div className="text-[10px] text-slate-400 text-right">{formatRupiahFull(Number(row.base_cost))}</div>
@@ -206,10 +231,22 @@ export default function PricelistPage() {
                     <input
                       type="number"
                       min={0}
-                      value={row.default_margin_pct}
-                      onChange={e => handleUpdate(row.id, { default_margin_pct: Number(e.target.value) })}
+                      value={Math.round(Number(row.default_margin_pct) * 10) / 10}
+                      onChange={e => handlePriceUpdate(row, 'default_margin_pct', Number(e.target.value))}
                       className="w-full px-2 py-1 border border-slate-200 rounded text-right"
                     />
+                  </td>
+                  <td className="p-2">
+                    <input
+                      type="number"
+                      min={0}
+                      value={Math.round(Number(row.selling_price))}
+                      onChange={e => handlePriceUpdate(row, 'selling_price', Number(e.target.value))}
+                      className="w-full px-2 py-1 border border-indigo-200 bg-indigo-50/30 rounded text-right font-semibold"
+                    />
+                    <div className="text-[10px] text-indigo-600 text-right font-medium">
+                      {formatRupiahFull(Number(row.selling_price))}
+                    </div>
                   </td>
                   <td className="p-2 text-center">
                     <input
