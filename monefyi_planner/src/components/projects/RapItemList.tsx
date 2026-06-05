@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { Search, LayoutGrid, Table2, List, Trash2 } from 'lucide-react';
 import type { RapItem } from '../../services/rapService';
 import type { RapActualAgg } from '../../services/costService';
@@ -46,7 +47,12 @@ export default function RapItemList({
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState<RapStatusFilter>('all');
+  const isDesktop = useIsDesktop();
   const [viewMode, setViewMode] = useState<RapViewMode>('grouped');
+
+  useEffect(() => {
+    setViewMode(isDesktop ? 'table' : 'grouped');
+  }, [isDesktop]);
 
   const enriched = useMemo(() => {
     return items.map(row => {

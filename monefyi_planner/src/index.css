@@ -113,6 +113,10 @@ html {
   @apply bg-slate-900 text-slate-100;
 }
 
+.dark .skeleton {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+}
+
 /* Glass morphism */
 .glass {
   background: rgba(255, 255, 255, 0.8);

@@ -312,9 +312,10 @@ export default function Layout({ children }: LayoutProps) {
               <div className="text-sm font-semibold text-slate-800 capitalize">
                 {activeTab === 'home' ? 'Dashboard' :
                   activeTab === 'projects' ? 'Manajemen Proyek' :
-                    activeTab === 'finance' ? 'Keuangan' :
-                      activeTab === 'hr' ? 'HR & Karyawan' :
-                        activeTab === 'settings' ? 'Pengaturan' : activeTab}
+                    activeTab === 'estimator' ? 'Estimator' :
+                      activeTab === 'finance' ? 'Keuangan' :
+                        activeTab === 'hr' ? 'HR & Karyawan' :
+                          activeTab === 'settings' ? 'Pengaturan' : activeTab}
               </div>
             </div>
             <div className="lg:hidden flex items-center gap-2">
@@ -465,7 +466,7 @@ export default function Layout({ children }: LayoutProps) {
               ) : (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => handleNav(tab.id)}
                   className={`flex flex-col items-center gap-0.5 px-3 py-1 transition-colors duration-150 border-b-2 ${
                     activeTab === tab.id
                       ? 'text-indigo-600 border-indigo-600'

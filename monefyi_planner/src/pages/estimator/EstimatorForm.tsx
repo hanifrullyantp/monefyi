@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Loader2, Save } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
@@ -265,7 +265,9 @@ export default function EstimatorForm() {
         {/* Items */}
         <div className="xl:col-span-5">
           <EstimationItemsTable
+            orgId={tenant!.id}
             items={draft.items}
+            defaultMargin={draft.margin_pct}
             onChange={items => patch({ items })}
           />
         </div>
@@ -298,7 +300,7 @@ export default function EstimatorForm() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
       <span className="text-xs font-medium text-slate-500 mb-1 block">{label}</span>

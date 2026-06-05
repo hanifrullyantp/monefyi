@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Plus, Trash2, Upload } from 'lucide-react';
+import PricelistCsvImport from '../../components/estimator/PricelistCsvImport';
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
 import {
@@ -22,6 +23,7 @@ export default function PricelistPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'' | PricelistCategory>('');
+  const [csvOpen, setCsvOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!tenant?.id) return;
@@ -100,6 +102,13 @@ export default function PricelistPage() {
           <h1 className="text-2xl font-black text-slate-900">Pricelist</h1>
           <p className="text-sm text-slate-500">Master harga HPP & margin default</p>
         </div>
+        <button
+          type="button"
+          onClick={() => setCsvOpen(true)}
+          className="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50"
+        >
+          <Upload className="w-4 h-4" /> Import CSV
+        </button>
         <button
           type="button"
           onClick={handleAdd}
@@ -223,6 +232,18 @@ export default function PricelistPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {csvOpen && tenant?.id && user?.id && (
+        <PricelistCsvImport
+          orgId={tenant.id}
+          userId={user.id}
+          onClose={() => setCsvOpen(false)}
+          onImported={() => {
+            showToast('Pricelist diimport', 'success');
+            load();
+          }}
+        />
       )}
     </div>
   );
