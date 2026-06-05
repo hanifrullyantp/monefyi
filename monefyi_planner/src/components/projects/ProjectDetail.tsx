@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, TrendingUp, BarChart3, Target, Layers, Trash2,
@@ -9,7 +9,7 @@ import { useUiStore } from '../../store/uiStore';
 import { deleteProject } from '../../services/projectService';
 import { loadRapItems, rapSummary, rapActualsFromCosts, createRapItem, deleteRapItem, updateRapItem } from '../../services/rapService';
 import { loadWorkItems, createWorkItem, deleteWorkItem, updateWorkItem, updateProjectProgressFromWorkItems } from '../../services/workItemService';
-import { loadCostRealizations, deleteCostRealization, aggregateCostByRapItem } from '../../services/costService';
+import { loadCostRealizations, deleteCostRealization, aggregateCostByRapItem, repairImportCosts } from '../../services/costService';
 import { loadDailyLogs, createDailyLog } from '../../services/dailyLogService';
 import { analyzeProject, type AnalyzeResult } from '../../services/analyzeService';
 import ConfirmDialog from '../ConfirmDialog';
@@ -67,6 +67,8 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   const [logDraft, setLogDraft] = useState({ description: '', progress: '' });
   const [cashSummary, setCashSummary] = useState<{ received: number; surplus: number }>({ received: 0, surplus: 0 });
   const [costSearch, setCostSearch] = useState('');
+  const [repairingImport, setRepairingImport] = useState(false);
+  const importRepairAttempted = useRef<string | null>(null);
 
   const {
     scrollRef,
@@ -128,6 +130,34 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   }, [activeTab]);
 
   const rapTotal = rapItems.reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.unit_price) || 0), 0);
+  const costsSum = costs.reduce((s, c) => s + (Number(c.total_amount) || 0), 0);
+  const hasImportCosts = costs.some(c => String(c.description || '').startsWith('Import:'));
+  const importCostSpike = rapTotal > 0 && costsSum > rapTotal * 1.5 && hasImportCosts;
+
+  const handleRepairImportCosts = async () => {
+    if (!user?.id) return;
+    setRepairingImport(true);
+    try {
+      const result = await repairImportCosts(project.id, user.id);
+      await reload();
+      await refreshData();
+      showToast(
+        `Biaya import diperbaiki: ${result.removed} baris digabung → ${result.fixed} baris (${formatRupiah(result.totalSpent)})`,
+        'success',
+      );
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal memperbaiki biaya', 'error');
+    } finally {
+      setRepairingImport(false);
+    }
+  };
+
+  useEffect(() => {
+    if (loading || !user?.id || !canManage || !importCostSpike) return;
+    if (importRepairAttempted.current === project.id) return;
+    importRepairAttempted.current = project.id;
+    void handleRepairImportCosts();
+  }, [loading, importCostSpike, project.id, user?.id, canManage]);
 
   const handleExportRap = () => {
     exportRapWorkbook(project, rapItems, costs, rapActuals);
@@ -569,6 +599,23 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                               onOpenRealization={row => canManage && openRealizationDialog(row)}
                             />
                           </>
+                        )}
+
+                        {importCostSpike && canManage && (
+                          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 text-sm text-rose-900 space-y-2">
+                            <p>
+                              Total biaya tercatat ({formatRupiah(costsSum)}) jauh di atas total RAP ({formatRupiah(rapTotal)}).
+                              Biasanya karena import ganda atau kolom Realisasi Biaya Excel terbaca salah.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => void handleRepairImportCosts()}
+                              disabled={repairingImport}
+                              className="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold disabled:opacity-50"
+                            >
+                              {repairingImport ? 'Memperbaiki…' : 'Perbaiki biaya import'}
+                            </button>
+                          </div>
                         )}
 
                         <div className="bg-white rounded-2xl border overflow-hidden">

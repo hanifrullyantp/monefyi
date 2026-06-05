@@ -1,8 +1,31 @@
 import { type DbCostRealization } from '../lib/adapters';
 import { supabase } from '../lib/supabase';
 import { assertNoDbError } from '../lib/supabaseErrors';
+import { loadRapItems } from './rapService';
 
 export type CostRealization = DbCostRealization;
+
+export async function recalculateProjectSpent(projectId: string) {
+  const { data: costs, error } = await supabase
+    .from('planner_cost_realizations')
+    .select('total_amount')
+    .eq('project_id', projectId);
+  if (error) throw new Error(error.message);
+
+  const totalSpent = (costs || []).reduce((s, c) => s + (Number(c.total_amount) || 0), 0);
+  const { error: updErr } = await supabase
+    .from('planner_projects')
+    .update({ total_spent: totalSpent })
+    .eq('id', projectId);
+  assertNoDbError(updErr);
+  return totalSpent;
+}
+
+export async function deleteAllCosts(projectId: string) {
+  const { error } = await supabase.from('planner_cost_realizations').delete().eq('project_id', projectId);
+  if (error) throw new Error(error.message);
+  await recalculateProjectSpent(projectId);
+}
 
 export async function loadCostRealizations(projectId: string): Promise<CostRealization[]> {
   const { data, error } = await supabase
@@ -46,17 +69,7 @@ export async function createCostRealization(
 
   if (error) throw new Error(error.message);
 
-  const { data: costs } = await supabase
-    .from('planner_cost_realizations')
-    .select('total_amount')
-    .eq('project_id', item.project_id);
-
-  const totalSpent = (costs || []).reduce((s, c) => s + (Number(c.total_amount) || 0), 0);
-  const { error: updErr } = await supabase
-    .from('planner_projects')
-    .update({ total_spent: totalSpent })
-    .eq('id', item.project_id);
-  assertNoDbError(updErr);
+  await recalculateProjectSpent(item.project_id);
 
   return data as CostRealization;
 }
@@ -65,17 +78,7 @@ export async function deleteCostRealization(id: string, projectId: string) {
   const { error } = await supabase.from('planner_cost_realizations').delete().eq('id', id);
   if (error) throw new Error(error.message);
 
-  const { data: costs } = await supabase
-    .from('planner_cost_realizations')
-    .select('total_amount')
-    .eq('project_id', projectId);
-
-  const totalSpent = (costs || []).reduce((s, c) => s + (Number(c.total_amount) || 0), 0);
-  const { error: updErr } = await supabase
-    .from('planner_projects')
-    .update({ total_spent: totalSpent })
-    .eq('id', projectId);
-  assertNoDbError(updErr);
+  await recalculateProjectSpent(projectId);
 }
 
 export async function aggregateCostByRapItem(projectId: string) {
@@ -131,4 +134,65 @@ export async function aggregateByProject(orgId: string) {
     spent: Number(p.total_spent) || 0,
     received: Number(p.total_received) || 0,
   }));
+}
+
+/** Gabungkan duplikat import & hitung ulang nominal dari RAP saat ini (Vol × Harga Satuan). */
+export async function repairImportCosts(projectId: string, recordedBy: string) {
+  const [costs, rapItems] = await Promise.all([
+    loadCostRealizations(projectId),
+    loadRapItems(projectId),
+  ]);
+
+  const rapById = new Map(rapItems.map(r => [r.id, r]));
+  const importCosts = costs.filter(c => String(c.description || '').startsWith('Import:'));
+  if (!importCosts.length) {
+    return { removed: 0, fixed: 0, totalSpent: await recalculateProjectSpent(projectId) };
+  }
+
+  const groups = new Map<string, CostRealization[]>();
+  for (const c of importCosts) {
+    const key = c.rap_item_id || String(c.description || '').trim().toLowerCase();
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(c);
+  }
+
+  const idsToDelete = importCosts.map(c => c.id);
+  const { error: delErr } = await supabase
+    .from('planner_cost_realizations')
+    .delete()
+    .in('id', idsToDelete);
+  if (delErr) throw new Error(delErr.message);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const inserts: Omit<CostRealization, 'id' | 'created_at' | 'updated_at'>[] = [];
+
+  for (const [, group] of groups) {
+    const first = group[0];
+    const rap = first.rap_item_id ? rapById.get(first.rap_item_id) : undefined;
+    if (!rap) continue;
+
+    const qty = Number(first.quantity) || Number(rap.quantity) || 0;
+    const unitPrice = Number(rap.unit_price) || 0;
+    if (qty <= 0 || unitPrice <= 0) continue;
+
+    inserts.push({
+      project_id: projectId,
+      rap_item_id: rap.id,
+      date: first.date || today,
+      description: `Import: ${rap.name}`,
+      quantity: qty,
+      unit_price: unitPrice,
+      total_amount: qty * unitPrice,
+      recorded_by: recordedBy,
+      status: 'recorded',
+    });
+  }
+
+  if (inserts.length) {
+    const { error: insErr } = await supabase.from('planner_cost_realizations').insert(inserts);
+    if (insErr) throw new Error(insErr.message);
+  }
+
+  const totalSpent = await recalculateProjectSpent(projectId);
+  return { removed: idsToDelete.length, fixed: inserts.length, totalSpent };
 }

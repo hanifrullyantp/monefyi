@@ -35,6 +35,105 @@ export interface ParsedRapRow {
   errors: string[];
 }
 
+export interface ImportCostDraft {
+  quantity: number;
+  unit_price: number;
+  total_amount: number;
+}
+
+function normalizeHeaderCell(raw: unknown): string {
+  return String(raw || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function parseMoneyCell(raw: unknown): number {
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+  const text = String(raw ?? '').trim();
+  if (!text) return 0;
+  const lower = text.toLowerCase();
+  if (lower.includes('jt') || lower.includes('juta')) {
+    const n = Number(lower.replace(/[^\d.,-]/g, '').replace(',', '.'));
+    return Number.isFinite(n) ? n * 1_000_000 : 0;
+  }
+  if (lower.includes('rb') || lower.includes('ribu')) {
+    const n = Number(lower.replace(/[^\d.,-]/g, '').replace(',', '.'));
+    return Number.isFinite(n) ? n * 1_000 : 0;
+  }
+  const normalized = text.replace(/\./g, '').replace(',', '.');
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function resolveRapColumns(header: (string | number)[]) {
+  const cols: Record<string, number> = {};
+  header.forEach((cell, idx) => {
+    const h = normalizeHeaderCell(cell);
+    if (h === 'no' || h.startsWith('no ')) cols.no = idx;
+    else if (h.includes('kategori')) cols.type = idx;
+    else if (h === 'item' || h.startsWith('item ')) cols.name = idx;
+    else if (h.includes('spesifikasi')) cols.description = idx;
+    else if (h.includes('satuan')) cols.unit = idx;
+    else if (h.includes('vol rap') || h === 'vol') cols.quantity = idx;
+    else if (h.includes('harga satuan') || h === 'harga') cols.unit_price = idx;
+    else if (h.includes('total rap')) cols.total_rap = idx;
+    else if (h.includes('realisasi vol')) cols.actual_qty = idx;
+    else if (h.includes('realisasi biaya')) cols.actual_amount = idx;
+  });
+  return {
+    type: cols.type ?? 1,
+    name: cols.name ?? 2,
+    description: cols.description ?? 3,
+    unit: cols.unit ?? 4,
+    quantity: cols.quantity ?? 5,
+    unit_price: cols.unit_price ?? 6,
+    total_rap: cols.total_rap ?? 7,
+    actual_qty: cols.actual_qty ?? 8,
+    actual_amount: cols.actual_amount ?? 9,
+  };
+}
+
+/** Realisasi = Realisasi Vol × Harga Satuan; kolom Realisasi Biaya hanya dipakai jika selaras. */
+export function resolveImportCost(row: ParsedRapRow): ImportCostDraft | null {
+  const plannedLine = row.quantity * row.unit_price;
+  const actualQty = row.actual_qty != null && row.actual_qty > 0 ? row.actual_qty : 0;
+  const rawAmount = row.actual_amount != null && row.actual_amount > 0 ? row.actual_amount : 0;
+
+  if (actualQty <= 0 && rawAmount <= 0) return null;
+
+  if (actualQty > 0) {
+    const computed = actualQty * row.unit_price;
+    if (rawAmount <= 0 || rawAmount > computed * 1.05) {
+      return { quantity: actualQty, unit_price: row.unit_price, total_amount: computed };
+    }
+    return { quantity: actualQty, unit_price: row.unit_price, total_amount: rawAmount };
+  }
+
+  if (plannedLine > 0 && rawAmount > plannedLine * 1.05) {
+    return { quantity: row.quantity, unit_price: row.unit_price, total_amount: plannedLine };
+  }
+
+  return {
+    quantity: row.quantity,
+    unit_price: row.unit_price,
+    total_amount: rawAmount,
+  };
+}
+
+export function previewImportTotals(rows: ParsedRapRow[]) {
+  let planned = 0;
+  let realisasi = 0;
+  let costRows = 0;
+  for (const row of rows) {
+    if (!row.valid) continue;
+    planned += row.quantity * row.unit_price;
+    const cost = resolveImportCost(row);
+    if (cost) {
+      realisasi += cost.total_amount;
+      costRows += 1;
+    }
+  }
+  return { planned, realisasi, costRows };
+}
+
 export function exportRapWorkbook(
   project: Project,
   rapItems: RapItem[],
@@ -152,30 +251,49 @@ export function parseRapWorkbook(file: ArrayBuffer): ParsedRapRow[] {
   );
   if (headerIdx < 0) headerIdx = 3;
 
+  const col = resolveRapColumns(rows[headerIdx] || []);
   const parsed: ParsedRapRow[] = [];
   for (let i = headerIdx + 1; i < rows.length; i++) {
     const row = rows[i];
-    const name = String(row[2] || '').trim();
+    const name = String(row[col.name] || '').trim();
     if (!name) continue;
 
-    const qty = Number(row[5]) || 0;
-    const unitPrice = Number(row[6]) || 0;
+    const qty = parseMoneyCell(row[col.quantity]);
+    const unitPrice = parseMoneyCell(row[col.unit_price]);
+    const totalRap = parseMoneyCell(row[col.total_rap]);
+    const actualQtyRaw = parseMoneyCell(row[col.actual_qty]);
+    const actualAmountRaw = parseMoneyCell(row[col.actual_amount]);
     const warnings: string[] = [];
     const errors: string[] = [];
 
     if (qty <= 0) warnings.push('Volume RAP 0');
     if (unitPrice <= 0) warnings.push('Harga satuan 0');
 
+    let actual_qty = actualQtyRaw > 0 ? actualQtyRaw : undefined;
+    let actual_amount = actualAmountRaw > 0 ? actualAmountRaw : undefined;
+
+    const plannedLine = qty * unitPrice;
+    if (actual_amount && plannedLine > 0 && actual_amount > plannedLine * 1.05 && actual_qty) {
+      const computed = actual_qty * unitPrice;
+      if (computed <= plannedLine * 1.05) {
+        warnings.push('Realisasi Biaya diabaikan — pakai Vol × Harga Satuan');
+        actual_amount = computed;
+      }
+    }
+    if (!actual_amount && totalRap > 0 && plannedLine > 0 && Math.abs(totalRap - plannedLine) / plannedLine < 0.05) {
+      actual_amount = undefined;
+    }
+
     parsed.push({
       rowIndex: i + 1,
-      type: normalizeType(String(row[1] || '')),
+      type: normalizeType(String(row[col.type] || '')),
       name,
-      description: String(row[3] || '').trim() || undefined,
-      unit: String(row[4] || 'unit').trim() || 'unit',
+      description: String(row[col.description] || '').trim() || undefined,
+      unit: String(row[col.unit] || 'unit').trim() || 'unit',
       quantity: qty,
       unit_price: unitPrice,
-      actual_qty: Number(row[8]) || undefined,
-      actual_amount: Number(row[9]) || undefined,
+      actual_qty,
+      actual_amount,
       valid: errors.length === 0 && !!name,
       warnings,
       errors,

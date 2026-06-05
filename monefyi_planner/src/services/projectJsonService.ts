@@ -5,7 +5,7 @@ import type { WorkItem } from './workItemService';
 import type { DailyLog } from './dailyLogService';
 import { updateProject } from './projectService';
 import { createRapItem, updateRapItem, deleteAllRapItems } from './rapService';
-import { createCostRealization, loadCostRealizations } from './costService';
+import { createCostRealization, loadCostRealizations, deleteAllCosts } from './costService';
 import { createWorkItem, updateWorkItem, loadWorkItems } from './workItemService';
 import { createDailyLog, loadDailyLogs } from './dailyLogService';
 import { loadProjectIncomes, createProjectIncome } from './incomeService';
@@ -317,13 +317,6 @@ export function validateProjectJson(doc: ProjectJsonDocument): string[] {
     if (!item.description?.trim()) errors.push(`daily_logs[${i}]: description wajib.`);
   });
   return errors;
-}
-
-async function deleteAllCosts(projectId: string) {
-  const { error } = await supabase.from('planner_cost_realizations').delete().eq('project_id', projectId);
-  if (error) throw new Error(error.message);
-  const { error: updErr } = await supabase.from('planner_projects').update({ total_spent: 0 }).eq('id', projectId);
-  assertNoDbError(updErr);
 }
 
 async function deleteAllWorkItems(projectId: string) {

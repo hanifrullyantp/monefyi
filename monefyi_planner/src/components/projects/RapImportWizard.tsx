@@ -1,10 +1,11 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, FileSpreadsheet, Loader2, AlertTriangle } from 'lucide-react';
-import { parseRapWorkbook, downloadRapTemplate, type ParsedRapRow } from '../../services/rapExcelService';
+import { parseRapWorkbook, downloadRapTemplate, previewImportTotals, resolveImportCost, type ParsedRapRow } from '../../services/rapExcelService';
 import { createRapItem, deleteAllRapItems } from '../../services/rapService';
-import { createCostRealization } from '../../services/costService';
+import { createCostRealization, deleteAllCosts } from '../../services/costService';
 import { showToast } from '../../store/uiStore';
+import { formatRupiah } from '../../utils/projectUi';
 
 interface RapImportWizardProps {
   open: boolean;
@@ -50,7 +51,10 @@ export default function RapImportWizard({
     }
     setBusy(true);
     try {
-      if (mode === 'replace') await deleteAllRapItems(projectId);
+      if (mode === 'replace') {
+        await deleteAllCosts(projectId);
+        await deleteAllRapItems(projectId);
+      }
 
       for (let i = 0; i < rows.length; i++) {
         const r = rows[i];
@@ -65,15 +69,16 @@ export default function RapImportWizard({
           unit_price: r.unit_price,
           sort_order: i,
         });
-        if (r.actual_amount && r.actual_amount > 0) {
+        const cost = resolveImportCost(r);
+        if (cost && cost.total_amount > 0) {
           await createCostRealization({
             project_id: projectId,
             rap_item_id: item.id,
             date: new Date().toISOString().slice(0, 10),
             description: `Import: ${r.name}`,
-            quantity: r.actual_qty || r.quantity,
-            unit_price: r.unit_price,
-            total_amount: r.actual_amount,
+            quantity: cost.quantity,
+            unit_price: cost.unit_price,
+            total_amount: cost.total_amount,
             recorded_by: recordedBy,
           });
         }
@@ -95,6 +100,7 @@ export default function RapImportWizard({
 
   const validCount = rows.filter(r => r.valid).length;
   const warnCount = rows.filter(r => r.warnings.length).length;
+  const importPreview = step === 'preview' ? previewImportTotals(rows) : null;
 
   return (
     <AnimatePresence>
@@ -154,12 +160,33 @@ export default function RapImportWizard({
                 </div>
 
                 {mode === 'replace' && (
+                  <p className="text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
+                    Mode ganti semua akan menghapus <strong>semua RAP dan riwayat biaya</strong> proyek ini, lalu impor ulang dari file.
+                  </p>
+                )}
+
+                {mode === 'replace' && (
                   <input
                     value={confirmText}
                     onChange={e => setConfirmText(e.target.value)}
                     placeholder='Ketik "GANTI" untuk konfirmasi'
                     className="w-full border border-rose-200 rounded-xl px-3 py-2 text-sm"
                   />
+                )}
+
+                {importPreview && importPreview.costRows > 0 && (
+                  <div className="text-xs bg-slate-50 border rounded-xl px-3 py-2 space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Total RAP (rencana)</span>
+                      <span className="font-bold">{formatRupiah(importPreview.planned)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Realisasi yang akan dicatat ({importPreview.costRows} baris)</span>
+                      <span className={`font-bold ${importPreview.realisasi > importPreview.planned * 1.05 ? 'text-rose-600' : 'text-emerald-700'}`}>
+                        {formatRupiah(importPreview.realisasi)}
+                      </span>
+                    </div>
+                  </div>
                 )}
 
                 <div className="border rounded-xl overflow-x-auto max-h-64">
