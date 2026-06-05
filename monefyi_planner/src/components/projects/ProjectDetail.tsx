@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, TrendingUp, BarChart3, Target, Layers, Trash2,
-  Sparkles, Activity, Loader2, FileSpreadsheet, Download, Upload, Braces,
+  Loader2, FileSpreadsheet, Download, Upload, Braces, Table2, List,
 } from 'lucide-react';
 import { useAppStore, Project } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
@@ -20,8 +20,9 @@ import ProjectJsonPanel from './ProjectJsonPanel';
 import ProjectIncomePanel from './ProjectIncomePanel';
 import ProjectTransferPanel from './ProjectTransferPanel';
 import RapItemList from './RapItemList';
-import MetricHelpCard from '../ui/MetricHelpCard';
-import { EVM_METRICS } from '../../utils/evmMetrics';
+import RapEditableTable from './RapEditableTable';
+import ProjectOverviewDashboard from './ProjectOverviewDashboard';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { getProjectCashSummary } from '../../services/projectTransferService';
 import { exportRapWorkbook } from '../../services/rapExcelService';
 import { useCollapsibleHeader } from './useCollapsibleHeader';
@@ -70,6 +71,8 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   const [repairingImport, setRepairingImport] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
   const importRepairAttempted = useRef<string | null>(null);
+  const isDesktop = useIsDesktop();
+  const [rapView, setRapView] = useState<'spreadsheet' | 'list'>(() => (typeof window !== 'undefined' && window.innerWidth >= 768 ? 'spreadsheet' : 'list'));
 
   const {
     scrollRef,
@@ -129,6 +132,10 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
     if (activeTab === 'planning') setActiveSubTab('rap');
     if (activeTab === 'realisasi') setActiveSubTab('biaya');
   }, [activeTab]);
+
+  useEffect(() => {
+    setRapView(isDesktop ? 'spreadsheet' : 'list');
+  }, [isDesktop, project.id]);
 
   const rapTotal = rapItems.reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.unit_price) || 0), 0);
   const costsSum = costs.reduce((s, c) => s + (Number(c.total_amount) || 0), 0);
@@ -426,55 +433,24 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
             ) : (
               <AnimatePresence mode="wait">
                 {activeTab === 'overview' && (
-                  <motion.div key="ov" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
-                    {project.description && (
-                      <p className="text-sm text-slate-600 bg-white rounded-xl p-4 border">{project.description}</p>
-                    )}
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
-                      {[
-                        { key: 'CPI', value: cpi.toFixed(2), ok: cpi >= 1 },
-                        { key: 'SPI', value: spi.toFixed(2), ok: spi >= 1 },
-                        { key: 'CV', value: formatRupiah(cv), ok: cv >= 0 },
-                        { key: 'SV', value: formatRupiah(sv), ok: sv >= 0 },
-                        { key: 'BAC', value: formatRupiah(project.total_budget_planned), ok: true },
-                        { key: 'AC', value: formatRupiah(evm?.ac ?? project.spent_amount), ok: true },
-                      ].map(m => (
-                        <MetricHelpCard key={m.key} metric={EVM_METRICS[m.key]} value={m.value} ok={m.ok} />
-                      ))}
-                    </div>
-                    <div className="bg-white rounded-2xl p-5 border">
-                      <h3 className="font-bold text-slate-800 mb-4">Kurva S</h3>
-                      <ResponsiveContainer width="100%" height={200}>
-                        <AreaChart data={sCurveData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                          <XAxis dataKey="week" tick={{ fontSize: 10 }} />
-                          <YAxis tick={{ fontSize: 10 }} domain={[0, 100]} unit="%" />
-                          <Tooltip />
-                          <Area type="monotone" dataKey="planned" name="Rencana" stroke="#6366f1" fill="#6366f120" strokeDasharray="5 5" />
-                          <Area type="monotone" dataKey="actual" name="Aktual" stroke="#10b981" fill="#10b98120" />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="bg-white rounded-2xl p-5 border">
-                        <h3 className="font-bold text-sm mb-3 flex items-center gap-2"><Activity className="w-4 h-4 text-indigo-600" /> Log Terbaru</h3>
-                        {logs.length === 0 ? <p className="text-xs text-slate-400">Belum ada log harian.</p> : logs.slice(0, 5).map(log => (
-                          <div key={log.id} className="text-xs text-slate-600 py-2 border-b last:border-0">{log.description} <span className="text-slate-400">· {log.date}</span></div>
-                        ))}
-                      </div>
-                      <div className="bg-amber-50 rounded-2xl p-5 border border-amber-200">
-                        <h3 className="font-bold text-amber-800 text-sm mb-3 flex items-center gap-2"><Sparkles className="w-4 h-4" /> AI Insights</h3>
-                        {!analysis?.recommendations?.length ? (
-                          <p className="text-xs text-amber-700">Tambahkan RAP, jadwal, dan biaya untuk rekomendasi AI.</p>
-                        ) : analysis.recommendations.slice(0, 3).map((rec, i) => (
-                          <div key={i} className="p-3 bg-white/60 rounded-xl text-xs text-amber-900 mb-2">
-                            <strong>{rec.title}</strong>
-                            <p className="mt-1 opacity-90">{rec.message}</p>
-                            {rec.action && <p className="mt-1 text-indigo-700 font-semibold">→ {rec.action}</p>}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                  <motion.div key="ov" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    <ProjectOverviewDashboard
+                      project={project}
+                      health={health}
+                      cpi={cpi}
+                      spi={spi}
+                      cv={cv}
+                      sv={sv}
+                      budgetPct={budgetPct}
+                      received={cashSummary.received || project.total_received || 0}
+                      surplus={cashSummary.surplus}
+                      sCurveData={sCurveData}
+                      logs={logs}
+                      analysis={analysis}
+                      onAddCost={() => { setActiveTab('realisasi'); setActiveSubTab('biaya'); }}
+                      onUpdateProgress={() => { setActiveTab('realisasi'); setActiveSubTab('progres'); }}
+                      onOpenReport={() => setActiveTab('laporan')}
+                    />
                   </motion.div>
                 )}
 
@@ -488,7 +464,25 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                       ))}
                       {activeSubTab === 'rap' && (
                         <>
-                          <button type="button" onClick={handleExportRap} className="ml-auto flex items-center gap-1 text-xs font-bold text-emerald-700 border border-emerald-200 px-2 py-1 rounded-lg">
+                          <div className="flex gap-1 bg-slate-100 p-0.5 rounded-lg ml-auto">
+                            <button
+                              type="button"
+                              title="Tabel spreadsheet"
+                              onClick={() => setRapView('spreadsheet')}
+                              className={`p-1.5 rounded-md ${rapView === 'spreadsheet' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}
+                            >
+                              <Table2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              title="Tampilan list"
+                              onClick={() => setRapView('list')}
+                              className={`p-1.5 rounded-md ${rapView === 'list' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}
+                            >
+                              <List className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <button type="button" onClick={handleExportRap} className="flex items-center gap-1 text-xs font-bold text-emerald-700 border border-emerald-200 px-2 py-1 rounded-lg">
                             <Download className="w-3.5 h-3.5" /> Export
                           </button>
                           {canManage && (
@@ -538,6 +532,17 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                           <p className="text-sm text-slate-500">Belum ada RAP.</p>
                           {canManage && <button type="button" onClick={() => setShowRapForm(true)} className="mt-2 text-indigo-600 text-sm font-bold">+ Tambah item pertama</button>}
                         </div>
+                      ) : rapView === 'spreadsheet' && user?.id ? (
+                        <RapEditableTable
+                          projectId={project.id}
+                          items={rapItems}
+                          rapActuals={rapActuals}
+                          mode="planning"
+                          canManage={canManage}
+                          recordedBy={user.id}
+                          onRefresh={reload}
+                          onExport={handleExportRap}
+                        />
                       ) : (
                         <RapItemList
                           items={rapItems}
@@ -577,7 +582,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                 {activeTab === 'realisasi' && (
                   <motion.div key="re" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
                     <div className="flex justify-between items-center flex-wrap gap-2">
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap items-center">
                         {[
                           { id: 'biaya', label: 'Biaya' },
                           { id: 'uangmasuk', label: 'Uang Masuk' },
@@ -586,6 +591,16 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                         ].map(t => (
                           <button key={t.id} type="button" onClick={() => setActiveSubTab(t.id)} className={`px-4 py-1.5 rounded-lg text-xs font-bold ${activeSubTab === t.id ? 'bg-indigo-600 text-white' : 'bg-slate-200'}`}>{t.label}</button>
                         ))}
+                        {activeSubTab === 'biaya' && rapItems.length > 0 && (
+                          <div className="flex gap-1 bg-slate-100 p-0.5 rounded-lg">
+                            <button type="button" title="Tabel spreadsheet" onClick={() => setRapView('spreadsheet')} className={`p-1.5 rounded-md ${rapView === 'spreadsheet' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}>
+                              <Table2 className="w-4 h-4" />
+                            </button>
+                            <button type="button" title="Tampilan list" onClick={() => setRapView('list')} className={`p-1.5 rounded-md ${rapView === 'list' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}>
+                              <List className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                       <button type="button" onClick={() => setCommandModalOpen(true)} className="flex items-center gap-1 bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-bold">
                         <Plus className="w-3.5 h-3.5" /> Catat via Monefyi Button
@@ -600,6 +615,17 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">
                             Buat RAP di tab Planning terlebih dahulu, lalu catat realisasi per item di sini.
                           </div>
+                        ) : rapView === 'spreadsheet' && user?.id ? (
+                          <RapEditableTable
+                            projectId={project.id}
+                            items={rapItems}
+                            rapActuals={rapActuals}
+                            mode="realisasi"
+                            canManage={canManage}
+                            recordedBy={user.id}
+                            onRefresh={reload}
+                            onExport={handleExportRap}
+                          />
                         ) : (
                           <>
                             <div className="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-xs text-indigo-800">

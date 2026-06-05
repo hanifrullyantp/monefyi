@@ -1,0 +1,58 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+export type AutoSaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
+
+interface UseAutoSaveOptions<T> {
+  debounceMs?: number;
+  onSave: (payload: T) => Promise<void>;
+  onError?: (error: Error) => void;
+}
+
+/**
+ * Debounced auto-save queue. Coalesces rapid edits into one save call.
+ */
+export function useAutoSave<T>({ debounceMs = 800, onSave, onError }: UseAutoSaveOptions<T>) {
+  const [status, setStatus] = useState<AutoSaveStatus>('idle');
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingRef = useRef<T | null>(null);
+  const savingRef = useRef(false);
+
+  const flush = useCallback(async () => {
+    if (savingRef.current || pendingRef.current === null) return;
+    const payload = pendingRef.current;
+    pendingRef.current = null;
+    savingRef.current = true;
+    setStatus('saving');
+    try {
+      await onSave(payload);
+      setStatus('saved');
+      window.setTimeout(() => setStatus(s => (s === 'saved' ? 'idle' : s)), 2000);
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error('Save failed');
+      setStatus('error');
+      onError?.(err);
+    } finally {
+      savingRef.current = false;
+      if (pendingRef.current !== null) void flush();
+    }
+  }, [onSave, onError]);
+
+  const schedule = useCallback(
+    (payload: T) => {
+      pendingRef.current = payload;
+      setStatus('pending');
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null;
+        void flush();
+      }, debounceMs);
+    },
+    [debounceMs, flush],
+  );
+
+  useEffect(() => () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+  }, []);
+
+  return { status, schedule, flush };
+}
