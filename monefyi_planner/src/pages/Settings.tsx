@@ -69,7 +69,7 @@ function planLabel(plan?: string) {
 export default function Settings() {
   const navigate = useNavigate();
   const {
-    user, tenant, logout, setUser, setTenant, setActiveTab, platformRole,
+    user, tenant, logout, setUser, setTenant, setActiveTab, setFinanceVersionPreference, platformRole,
     syncStatus, isOnline, lastSynced, isDemoMode, projects,
   } = useAppStore();
 
@@ -142,11 +142,17 @@ export default function Settings() {
     try {
       await setFinanceVersion(user.id, version);
       setFinanceVersionState(version);
+      setFinanceVersionPreference(version);
       showToast(
         version === 'v2' ? 'Finance V2 aktif — menu Keuangan membuka neraca baru' : 'Finance V1 aktif',
         'success',
       );
-      if (version === 'v2') navigate('/app/finance-v2');
+      if (version === 'v2') {
+        navigate('/app/finance-v2');
+      } else {
+        navigate('/app');
+        setActiveTab('finance');
+      }
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal menyimpan versi finance', 'error');
     } finally {

@@ -2,10 +2,11 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  Plus, Wallet, FolderOpen, Search, RefreshCw, TrendingUp,
+  Plus, Wallet, FolderOpen, Search, RefreshCw,
   AlertTriangle, PieChart, ChevronRight, Loader2, ArrowUpDown,
-  ArrowDownLeft, ArrowUpRight, ArrowRightLeft,
+  ArrowDownLeft, ArrowUpRight, ArrowRightLeft, BarChart3, LayoutDashboard,
 } from 'lucide-react';
+import BusinessReportPanel from '../components/finance-v1/BusinessReportPanel';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   BarChart, Bar, Cell, Line,
@@ -23,6 +24,7 @@ import { formatRupiah } from '../utils/projectUi';
 type PeriodDays = 7 | 30 | 90;
 type ProjectSort = 'spent_desc' | 'variance_desc' | 'name';
 type TxFilter = 'all' | 'income' | 'expense';
+type FinanceView = 'dashboard' | 'laporan';
 
 export default function Finance() {
   const navigate = useNavigate();
@@ -52,6 +54,7 @@ export default function Finance() {
   const [projectFilter, setProjectFilter] = useState<string>('all');
   const [projectSort, setProjectSort] = useState<ProjectSort>('spent_desc');
   const [txFilter, setTxFilter] = useState<TxFilter>('all');
+  const [view, setView] = useState<FinanceView>('dashboard');
 
   const canRecord = user?.role === 'owner' || user?.role === 'manager' || user?.role === 'admin';
 
@@ -137,34 +140,65 @@ export default function Finance() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-black text-slate-900">Keuangan Proyek</h1>
-          <p className="text-sm text-slate-500">Pemasukan, realisasi biaya, net kas, dan hutang proyek (internal & eksternal).</p>
+          <p className="text-sm text-slate-500">
+            {view === 'dashboard'
+              ? 'Pemasukan, realisasi biaya, net kas, dan hutang proyek (internal & eksternal).'
+              : 'Laporan laba rugi bisnis terintegrasi proyek + biaya operasional.'}
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={load} className="p-2.5 border border-slate-200 rounded-xl hover:bg-slate-50" aria-label="Refresh">
-            <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-          {canRecord && (
+          {view === 'dashboard' && (
             <>
-              <button
-                type="button"
-                onClick={() => setCommandModalOpen(true)}
-                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg text-sm"
-              >
-                <Plus className="w-4 h-4" /> Catat Pemasukan
+              <button type="button" onClick={load} className="p-2.5 border border-slate-200 rounded-xl hover:bg-slate-50" aria-label="Refresh">
+                <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
               </button>
-              <button
-                type="button"
-                onClick={() => setCommandModalOpen(true)}
-                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-200 text-sm"
-              >
-                <Plus className="w-4 h-4" /> Catat Biaya
-              </button>
+              {canRecord && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setCommandModalOpen(true)}
+                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg text-sm"
+                  >
+                    <Plus className="w-4 h-4" /> Catat Pemasukan
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCommandModalOpen(true)}
+                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-200 text-sm"
+                  >
+                    <Plus className="w-4 h-4" /> Catat Biaya
+                  </button>
+                </>
+              )}
             </>
           )}
         </div>
       </div>
 
-      {loading && transactions.length === 0 ? (
+      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
+        <button
+          type="button"
+          onClick={() => setView('dashboard')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+            view === 'dashboard' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'
+          }`}
+        >
+          <LayoutDashboard className="w-4 h-4" /> Ringkasan
+        </button>
+        <button
+          type="button"
+          onClick={() => setView('laporan')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+            view === 'laporan' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'
+          }`}
+        >
+          <BarChart3 className="w-4 h-4" /> Laporan Bisnis
+        </button>
+      </div>
+
+      {view === 'laporan' ? (
+        <BusinessReportPanel />
+      ) : loading && transactions.length === 0 ? (
         <div className="flex items-center justify-center h-48">
           <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
         </div>

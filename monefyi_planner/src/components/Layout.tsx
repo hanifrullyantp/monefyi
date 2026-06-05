@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, FolderOpen, Wallet, Settings, Bell, Menu, X,
@@ -14,7 +14,6 @@ import NotificationPanel from './NotificationPanel';
 import ToastHost from './ToastHost';
 import UndoToast from './ui/UndoToast';
 import { loadFinanceVersion } from '../lib/financeVersion';
-import type { FinanceVersion } from '../types/financeV2';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -22,22 +21,23 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const {
-    user, tenant, activeTab, setActiveTab, syncStatus, pendingSyncCount,
-    isOnline, lastSynced, unreadCount, commandModalOpen, setCommandModalOpen,
-    sidebarOpen, setSidebarOpen, logout, platformRole, uiViewMode, setUiViewMode,
+    user, tenant, activeTab, setActiveTab, financeVersion, setFinanceVersionPreference,
+    syncStatus, pendingSyncCount, isOnline, lastSynced, unreadCount, commandModalOpen,
+    setCommandModalOpen, sidebarOpen, setSidebarOpen, logout, platformRole, uiViewMode,
+    setUiViewMode,
   } = useAppStore();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [financeVersion, setFinanceVersion] = useState<FinanceVersion>('v1');
 
   useEffect(() => {
     if (!user?.id) return;
-    loadFinanceVersion(user.id).then(setFinanceVersion).catch(() => setFinanceVersion('v1'));
-  }, [user?.id, location.pathname]);
+    loadFinanceVersion(user.id)
+      .then(setFinanceVersionPreference)
+      .catch(() => setFinanceVersionPreference('v1'));
+  }, [user?.id, setFinanceVersionPreference]);
 
   const isSuperAdmin = isPlatformAdmin(platformRole, user?.email);
   const isWorker = showWorkerShell(user?.role, platformRole, user?.email, uiViewMode);
@@ -81,7 +81,7 @@ export default function Layout({ children }: LayoutProps) {
 
   const sidebarItems = isWorker ? workerSidebarItems : ownerSidebarItems;
 
-  const handleNav = (tabId: string) => {
+  const navigateToTab = (tabId: string) => {
     if (tabId === 'estimator') {
       navigate('/app/estimator');
     } else if (tabId === 'finance' && financeVersion === 'v2') {
@@ -91,7 +91,11 @@ export default function Layout({ children }: LayoutProps) {
       setActiveTab(tabId);
     }
     setSidebarOpen(false);
+    setSettingsOpen(false);
+    setProfileOpen(false);
   };
+
+  const handleNav = navigateToTab;
 
   const handleLogout = async () => {
     setProfileOpen(false);
@@ -227,7 +231,7 @@ export default function Layout({ children }: LayoutProps) {
                     <div className="text-xs text-slate-500">{user?.email}</div>
                   </div>
                   <button
-                    onClick={() => { setActiveTab('settings'); setProfileOpen(false); }}
+                    onClick={() => navigateToTab('settings')}
                     className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-50"
                   >
                     <Settings className="w-4 h-4" /> Pengaturan
@@ -393,7 +397,7 @@ export default function Layout({ children }: LayoutProps) {
                       </div>
                       <button
                         type="button"
-                        onClick={() => { setActiveTab('settings'); setSettingsOpen(false); }}
+                        onClick={() => navigateToTab('settings')}
                         className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
                       >
                         <User className="w-4 h-4" /> Profil Saya
@@ -401,7 +405,7 @@ export default function Layout({ children }: LayoutProps) {
                       {canAccessHr && (
                         <button
                           type="button"
-                          onClick={() => { setActiveTab('hr'); setSettingsOpen(false); }}
+                          onClick={() => navigateToTab('hr')}
                           className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
                         >
                           <Building2 className="w-4 h-4" /> Organisasi
@@ -409,7 +413,7 @@ export default function Layout({ children }: LayoutProps) {
                       )}
                       <button
                         type="button"
-                        onClick={() => { setActiveTab('settings'); setSettingsOpen(false); }}
+                        onClick={() => navigateToTab('settings')}
                         className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
                       >
                         <Bell className="w-4 h-4" /> Notifikasi
@@ -440,7 +444,7 @@ export default function Layout({ children }: LayoutProps) {
             </button>
             <button
               type="button"
-              onClick={() => { setActiveTab('settings'); }}
+              onClick={() => navigateToTab('settings')}
               className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold lg:hidden"
               aria-label="Profil"
             >

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/appStore';
+import { loadFinanceVersion } from '../../lib/financeVersion';
 import FinanceV2Layout from './FinanceV2Layout';
 import FinanceV2Dashboard from './FinanceV2Dashboard';
 import KasPage from './KasPage';
@@ -15,11 +16,30 @@ import LaporanPage from './LaporanPage';
 
 export default function FinanceV2Routes() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const user = useAppStore(s => s.user);
   const setActiveTab = useAppStore(s => s.setActiveTab);
+  const setFinanceVersionPreference = useAppStore(s => s.setFinanceVersionPreference);
 
   useEffect(() => {
     setActiveTab('finance');
   }, [location.pathname, setActiveTab]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    loadFinanceVersion(user.id)
+      .then(version => {
+        if (cancelled) return;
+        setFinanceVersionPreference(version);
+        if (version === 'v1') {
+          navigate('/app', { replace: true });
+          setActiveTab('finance');
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [user?.id, navigate, setActiveTab, setFinanceVersionPreference]);
 
   return (
     <Routes>

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { signOut as authSignOut } from '../services/authService';
 import { loadNotifications } from '../services/notificationService';
 import { loadProjects } from '../services/projectService';
+import type { FinanceVersion } from '../types/financeV2';
 
 export type UserRole = 'owner' | 'admin' | 'manager' | 'staff' | 'worker';
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
@@ -123,6 +124,7 @@ interface AppState {
   lastSynced: Date | null;
 
   activeTab: string;
+  financeVersion: FinanceVersion;
   sidebarOpen: boolean;
   commandModalOpen: boolean;
   selectedProjectId: string | null;
@@ -152,6 +154,7 @@ interface AppState {
   setOnline: (val: boolean) => void;
   setLastSynced: (date: Date | null) => void;
   setActiveTab: (tab: string) => void;
+  setFinanceVersionPreference: (version: FinanceVersion) => void;
   setSidebarOpen: (val: boolean) => void;
   setCommandModalOpen: (val: boolean) => void;
   setSelectedProjectId: (id: string | null) => void;
@@ -197,6 +200,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   lastSynced: null,
 
   activeTab: 'home',
+  financeVersion: 'v1',
   sidebarOpen: false,
   commandModalOpen: false,
   selectedProjectId: null,
@@ -231,6 +235,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setOnline: isOnline => set({ isOnline }),
   setLastSynced: lastSynced => set({ lastSynced }),
   setActiveTab: activeTab => set({ activeTab }),
+  setFinanceVersionPreference: financeVersion => set({ financeVersion }),
   setSidebarOpen: sidebarOpen => set({ sidebarOpen }),
   setCommandModalOpen: commandModalOpen => set({ commandModalOpen }),
   setSelectedProjectId: selectedProjectId => set({ selectedProjectId }),
