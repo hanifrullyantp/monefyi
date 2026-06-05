@@ -1,10 +1,16 @@
 import { parseNumberFromText } from './adapters';
+import { finalizeParams } from './commandNormalize';
+
+export type ParseSource = 'memory' | 'rule' | 'ai';
 
 export interface ParsedCommand {
   intent: string;
   params: Record<string, unknown>;
   confidence: number;
   raw: string;
+  source?: ParseSource;
+  memoryId?: string;
+  provider?: string;
 }
 
 function getParsingRules() {
@@ -139,27 +145,42 @@ export function parseCommand(input: string): ParsedCommand {
           params: rule.extract(match, input),
           confidence: rule.confidence,
           raw: input,
+          source: 'rule',
         };
       }
     }
   }
 
-  return { intent: 'unknown', params: {}, confidence: 0, raw: input };
+  return { intent: 'unknown', params: {}, confidence: 0, raw: input, source: 'rule' };
+}
+
+export interface PipelineContext {
+  orgId?: string;
+  projects: Array<{ name: string; id: string; status?: string }>;
+  work_items: Array<{ name: string; id: string; progress?: number }>;
+  current_project: string | null;
 }
 
 export async function aiParseCommand(
   input: string,
-  context: {
-    projects: Array<{ name: string; id: string; status?: string }>;
-    work_items: Array<{ name: string; id: string; progress?: number }>;
-    current_project: string | null;
-  },
+  context: PipelineContext,
 ): Promise<ParsedCommand | null> {
   try {
     const { config } = await import('./config');
     const { supabase } = await import('./supabase');
+
+    let learned_examples: Array<{ input: string; intent: string; params: unknown }> = [];
+    if (context.orgId) {
+      try {
+        const { loadMemoryExamples } = await import('../services/commandMemoryService');
+        learned_examples = await loadMemoryExamples(context.orgId);
+      } catch {
+        learned_examples = [];
+      }
+    }
+
     const { data } = await supabase.functions.invoke(config.fnParseCommand, {
-      body: { input, context },
+      body: { input, context: { ...context, learned_examples } },
     });
 
     if (data?.intent) {
@@ -168,10 +189,61 @@ export async function aiParseCommand(
         params: data.params || {},
         confidence: data.confidence || 0.7,
         raw: input,
+        source: 'ai',
+        provider: data?._meta?.provider,
       };
     }
   } catch (e) {
     console.warn('AI parser fallback failed:', e);
   }
   return null;
+}
+
+/**
+ * Full parsing pipeline: org learning memory -> regex rules -> AI fallback.
+ * Returns the best ParsedCommand, tagged with its `source`.
+ * `onStage` reports progress for UI ('memory' | 'rule' | 'ai').
+ */
+export async function runCommandPipeline(
+  input: string,
+  context: PipelineContext,
+  onStage?: (stage: ParseSource) => void,
+): Promise<ParsedCommand> {
+  // 1. Learning memory (deterministic, free, org-shared).
+  if (context.orgId) {
+    onStage?.('memory');
+    try {
+      const { lookupMemory } = await import('../services/commandMemoryService');
+      const match = await lookupMemory(context.orgId, input);
+      if (match) {
+        return {
+          intent: match.intent,
+          params: finalizeParams(match.params),
+          confidence: 0.95,
+          raw: input,
+          source: 'memory',
+          memoryId: match.memoryId,
+        };
+      }
+    } catch (e) {
+      console.warn('Memory lookup failed:', e);
+    }
+  }
+
+  // 2. Regex rules.
+  onStage?.('rule');
+  const ruleResult = parseCommand(input);
+  if (ruleResult.intent !== 'unknown' && ruleResult.confidence >= 0.75) {
+    return ruleResult;
+  }
+
+  // 3. AI fallback (+ few-shot from org memory).
+  onStage?.('ai');
+  const aiResult = await aiParseCommand(input, context);
+  if (aiResult && aiResult.confidence >= 0.6) {
+    return aiResult;
+  }
+
+  // Keep the best of what we have for the editable form / error handling.
+  return aiResult ?? ruleResult;
 }

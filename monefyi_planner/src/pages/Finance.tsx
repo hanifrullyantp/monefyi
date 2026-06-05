@@ -137,7 +137,7 @@ export default function Finance() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-black text-slate-900">Keuangan Proyek</h1>
-          <p className="text-sm text-slate-500">Pemasukan, realisasi biaya, net kas, dan hutang antar proyek.</p>
+          <p className="text-sm text-slate-500">Pemasukan, realisasi biaya, net kas, dan hutang proyek (internal & eksternal).</p>
         </div>
         <div className="flex items-center gap-2">
           <button type="button" onClick={load} className="p-2.5 border border-slate-200 rounded-xl hover:bg-slate-50" aria-label="Refresh">
@@ -175,7 +175,7 @@ export default function Finance() {
               { label: 'Total Pemasukan', value: formatRupiah(totals.totalInflow), icon: ArrowDownLeft, color: 'text-emerald-600', bg: 'bg-emerald-50' },
               { label: 'Total Realisasi', value: formatRupiah(totals.totalOutflow), icon: ArrowUpRight, color: 'text-rose-600', bg: 'bg-rose-50' },
               { label: 'Net Kas', value: formatRupiah(totals.netCash), icon: Wallet, color: totals.netCash >= 0 ? 'text-indigo-600' : 'text-rose-600', bg: totals.netCash >= 0 ? 'bg-indigo-50' : 'bg-rose-50' },
-              { label: 'Hutang Antar Proyek', value: formatRupiah(totals.interProjectDebtOutstanding), icon: ArrowRightLeft, color: 'text-amber-600', bg: 'bg-amber-50' },
+              { label: 'Total Hutang Proyek', value: formatRupiah(totals.interProjectDebtOutstanding), icon: ArrowRightLeft, color: 'text-amber-600', bg: 'bg-amber-50' },
               { label: 'Utilisasi Budget', value: `${utilization.toFixed(0)}%`, icon: PieChart, color: utilization > 90 ? 'text-amber-600' : 'text-violet-600', bg: utilization > 90 ? 'bg-amber-50' : 'bg-violet-50' },
             ].map((k, i) => (
               <motion.div key={k.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }} className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
@@ -315,23 +315,34 @@ export default function Finance() {
           {activeTransfers.length > 0 && (
             <section className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
               <div className="p-4 border-b font-bold text-slate-800 text-sm flex items-center gap-2">
-                <ArrowRightLeft className="w-4 h-4 text-amber-600" /> Pinjaman Antar Proyek
+                <ArrowRightLeft className="w-4 h-4 text-amber-600" /> Pinjaman & Hutang Proyek
               </div>
               <div className="divide-y divide-slate-50 max-h-64 overflow-y-auto">
-                {activeTransfers.map(t => (
+                {activeTransfers.map(t => {
+                  const fromLabel = t.source_type === 'external' && t.type === 'loan'
+                    ? (t.counterparty_name || 'Eksternal')
+                    : (t.from_project_id ? (projectNameMap[t.from_project_id] || 'Proyek') : '—');
+                  const toLabel = t.source_type === 'external' && t.type === 'repayment'
+                    ? (t.counterparty_name || 'Eksternal')
+                    : (t.to_project_id ? (projectNameMap[t.to_project_id] || 'Proyek') : '—');
+                  return (
                   <div key={t.id} className="p-4 text-sm flex justify-between gap-2">
                     <div>
                       <span className={`text-xs font-bold px-2 py-0.5 rounded ${t.type === 'loan' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
                         {t.type === 'loan' ? 'Pinjaman' : 'Pelunasan'}
                       </span>
+                      {t.source_type === 'external' && (
+                        <span className="ml-1 text-[10px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">Eksternal</span>
+                      )}
                       <span className="ml-2">
-                        {projectNameMap[t.from_project_id] || 'Proyek'} → {projectNameMap[t.to_project_id] || 'Proyek'}
+                        {fromLabel} → {toLabel}
                       </span>
                       <div className="text-xs text-slate-400 mt-0.5">{t.date}</div>
                     </div>
                     <div className="font-bold text-slate-800">{formatRupiah(t.amount)}</div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
           )}

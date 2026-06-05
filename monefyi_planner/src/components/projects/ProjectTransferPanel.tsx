@@ -1,17 +1,28 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ArrowRightLeft, Loader2 } from 'lucide-react';
 import {
   getProjectCashSummary,
   createProjectTransfer,
   loadProjectTransfers,
+  transferCounterpartyLabel,
   type ProjectCashSummary,
   type ProjectTransfer,
+  type TransferSourceType,
 } from '../../services/projectTransferService';
 import { formatRupiah } from '../../utils/projectUi';
 import { todayStr } from '../../lib/adapters';
 import type { Project } from '../../store/appStore';
 import { useUndoableAction } from '../../hooks/useUndoableAction';
 import { showToast } from '../../store/uiStore';
+
+const EXTERNAL_PRESETS = [
+  'Owner / Pemilik',
+  'Bank',
+  'Kantor Pusat',
+  'Investor',
+  'Supplier (tempo)',
+  'Lainnya',
+];
 
 interface Props {
   projectId: string;
@@ -37,8 +48,11 @@ export default function ProjectTransferPanel({
   const [transfers, setTransfers] = useState<ProjectTransfer[]>([]);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<'loan' | 'repayment'>('loan');
+  const [sourceType, setSourceType] = useState<TransferSourceType>('external');
   const [form, setForm] = useState({
-    counterpartyId: '',
+    counterpartyKey: '',
+    counterpartyProjectId: '',
+    counterpartyName: '',
     amount: '',
     description: '',
     date: todayStr(),
@@ -65,36 +79,137 @@ export default function ProjectTransferPanel({
 
   useEffect(() => { reload(); }, [reload]);
 
+  const owedToOptions = useMemo(() => {
+    if (!summary) return [];
+    return summary.owedTo.map(d => ({
+      key: d.key,
+      label: d.sourceType === 'project'
+        ? (projectNameMap[d.projectId!] || d.projectId)
+        : d.label,
+      sourceType: d.sourceType,
+      projectId: d.projectId,
+      name: d.label,
+      amount: d.amount,
+    }));
+  }, [summary, projectNameMap]);
+
   const handleSubmit = async () => {
     const amount = Number(form.amount);
-    if (!form.counterpartyId) {
-      showToast('Pilih proyek', 'error');
-      return;
-    }
     if (!amount || amount <= 0) {
       showToast('Nominal harus lebih dari 0', 'error');
       return;
     }
 
     try {
-      const fromId = mode === 'loan' ? form.counterpartyId : projectId;
-      const toId = mode === 'loan' ? projectId : form.counterpartyId;
+      if (mode === 'loan') {
+        if (sourceType === 'project') {
+          if (!form.counterpartyProjectId) {
+            showToast('Pilih proyek sumber pinjaman', 'error');
+            return;
+          }
+          const { undoActionId } = await createProjectTransfer({
+            org_id: orgId,
+            source_type: 'project',
+            from_project_id: form.counterpartyProjectId,
+            to_project_id: projectId,
+            amount,
+            type: 'loan',
+            date: form.date,
+            description: form.description.trim() || undefined,
+            recorded_by: userId,
+            undoContext: canManage ? { actorId: userId } : undefined,
+          });
+          showToast('Pinjaman dari proyek tercatat', 'success');
+          notifyUndoable('Pinjaman proyek tercatat', undoActionId);
+        } else {
+          const name = form.counterpartyName.trim();
+          if (!name) {
+            showToast('Isi sumber pinjaman (bank, owner, dll.)', 'error');
+            return;
+          }
+          const { undoActionId } = await createProjectTransfer({
+            org_id: orgId,
+            source_type: 'external',
+            to_project_id: projectId,
+            counterparty_name: name,
+            amount,
+            type: 'loan',
+            date: form.date,
+            description: form.description.trim() || undefined,
+            recorded_by: userId,
+            undoContext: canManage ? { actorId: userId } : undefined,
+          });
+          showToast('Pinjaman eksternal tercatat', 'success');
+          notifyUndoable('Pinjaman eksternal tercatat', undoActionId);
+        }
+      } else {
+        // repayment
+        if (form.counterpartyKey) {
+          const target = owedToOptions.find(o => o.key === form.counterpartyKey);
+          if (!target) {
+            showToast('Pilih hutang yang akan dilunasi', 'error');
+            return;
+          }
+          if (target.sourceType === 'project' && target.projectId) {
+            const { undoActionId } = await createProjectTransfer({
+              org_id: orgId,
+              source_type: 'project',
+              from_project_id: projectId,
+              to_project_id: target.projectId,
+              amount,
+              type: 'repayment',
+              date: form.date,
+              description: form.description.trim() || undefined,
+              recorded_by: userId,
+              undoContext: canManage ? { actorId: userId } : undefined,
+            });
+            showToast('Pelunasan ke proyek tercatat', 'success');
+            notifyUndoable('Pelunasan hutang tercatat', undoActionId);
+          } else {
+            const { undoActionId } = await createProjectTransfer({
+              org_id: orgId,
+              source_type: 'external',
+              from_project_id: projectId,
+              counterparty_name: target.name,
+              amount,
+              type: 'repayment',
+              date: form.date,
+              description: form.description.trim() || undefined,
+              recorded_by: userId,
+              undoContext: canManage ? { actorId: userId } : undefined,
+            });
+            showToast('Pelunasan eksternal tercatat', 'success');
+            notifyUndoable('Pelunasan hutang tercatat', undoActionId);
+          }
+        } else if (sourceType === 'external' && form.counterpartyName.trim()) {
+          const { undoActionId } = await createProjectTransfer({
+            org_id: orgId,
+            source_type: 'external',
+            from_project_id: projectId,
+            counterparty_name: form.counterpartyName.trim(),
+            amount,
+            type: 'repayment',
+            date: form.date,
+            description: form.description.trim() || undefined,
+            recorded_by: userId,
+            undoContext: canManage ? { actorId: userId } : undefined,
+          });
+          showToast('Pelunasan eksternal tercatat', 'success');
+          notifyUndoable('Pelunasan hutang tercatat', undoActionId);
+        } else {
+          showToast('Pilih hutang atau isi penerima pelunasan', 'error');
+          return;
+        }
+      }
 
-      const { undoActionId } = await createProjectTransfer({
-        org_id: orgId,
-        from_project_id: fromId,
-        to_project_id: toId,
-        amount,
-        type: mode,
-        date: form.date,
-        description: form.description.trim() || undefined,
-        recorded_by: userId,
-        undoContext: canManage ? { actorId: userId } : undefined,
+      setForm({
+        counterpartyKey: '',
+        counterpartyProjectId: '',
+        counterpartyName: '',
+        amount: '',
+        description: '',
+        date: todayStr(),
       });
-
-      showToast(mode === 'loan' ? 'Pinjaman tercatat' : 'Pelunasan tercatat', 'success');
-      notifyUndoable(mode === 'loan' ? 'Pinjaman antar proyek tercatat' : 'Pelunasan tercatat', undoActionId);
-      setForm({ counterpartyId: '', amount: '', description: '', date: todayStr() });
       await reload();
       onUpdated?.();
     } catch (e) {
@@ -110,35 +225,44 @@ export default function ProjectTransferPanel({
     );
   }
 
+  const hasDebt = (summary?.owedTo.length || summary?.owedFrom.length) ?? 0;
+
   return (
     <div className="space-y-4">
       <div className="bg-violet-50 border border-violet-200 rounded-xl p-4">
         <div className="text-xs font-bold text-violet-700 uppercase mb-1">Saldo Tersedia (Surplus)</div>
         <div className="text-2xl font-black text-violet-900">{formatRupiah(summary?.surplus ?? 0)}</div>
         <div className="text-xs text-violet-600 mt-2">
-          Diterima {formatRupiah(summary?.received ?? 0)} · Terpakai {formatRupiah(summary?.spent ?? 0)}
+          Diterima {formatRupiah(summary?.received ?? 0)} · Pinjaman masuk {formatRupiah(summary?.loansIn ?? 0)} · Terpakai {formatRupiah(summary?.spent ?? 0)}
         </div>
       </div>
 
-      {(summary?.owedToProjects.length || summary?.owedFromProjects.length) ? (
+      {hasDebt > 0 ? (
         <div className="grid md:grid-cols-2 gap-3">
-          {summary!.owedToProjects.length > 0 && (
+          {summary!.owedTo.length > 0 && (
             <div className="bg-rose-50 border border-rose-200 rounded-xl p-3">
-              <div className="text-xs font-bold text-rose-700 mb-2">Hutang ke proyek lain</div>
-              {summary!.owedToProjects.map(d => (
-                <div key={d.projectId} className="flex justify-between text-sm py-1">
-                  <span>{projectNameMap[d.projectId] || d.projectId.slice(0, 8)}</span>
-                  <span className="font-bold text-rose-700">{formatRupiah(d.amount)}</span>
+              <div className="text-xs font-bold text-rose-700 mb-2">Hutang proyek ini</div>
+              {summary!.owedTo.map(d => (
+                <div key={d.key} className="flex justify-between text-sm py-1 gap-2">
+                  <span className="min-w-0 truncate">
+                    {d.sourceType === 'external' && (
+                      <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded mr-1">Eksternal</span>
+                    )}
+                    {d.sourceType === 'project'
+                      ? (projectNameMap[d.projectId!] || d.projectId?.slice(0, 8))
+                      : d.label}
+                  </span>
+                  <span className="font-bold text-rose-700 shrink-0">{formatRupiah(d.amount)}</span>
                 </div>
               ))}
             </div>
           )}
-          {summary!.owedFromProjects.length > 0 && (
+          {summary!.owedFrom.length > 0 && (
             <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
-              <div className="text-xs font-bold text-emerald-700 mb-2">Piutang dari proyek lain</div>
-              {summary!.owedFromProjects.map(d => (
-                <div key={d.projectId} className="flex justify-between text-sm py-1">
-                  <span>{projectNameMap[d.projectId] || d.projectId.slice(0, 8)}</span>
+              <div className="text-xs font-bold text-emerald-700 mb-2">Piutang ke pihak lain</div>
+              {summary!.owedFrom.map(d => (
+                <div key={d.key} className="flex justify-between text-sm py-1">
+                  <span>{projectNameMap[d.projectId!] || d.projectId?.slice(0, 8)}</span>
                   <span className="font-bold text-emerald-700">{formatRupiah(d.amount)}</span>
                 </div>
               ))}
@@ -146,12 +270,12 @@ export default function ProjectTransferPanel({
           )}
         </div>
       ) : (
-        <p className="text-sm text-slate-500 text-center py-4">Belum ada hutang antar proyek aktif.</p>
+        <p className="text-sm text-slate-500 text-center py-4">Belum ada hutang/piutang aktif.</p>
       )}
 
-      {canManage && otherProjects.length > 0 && (
+      {canManage && (
         <div className="bg-white border rounded-xl p-4 space-y-3">
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {(['loan', 'repayment'] as const).map(t => (
               <button
                 key={t}
@@ -159,23 +283,89 @@ export default function ProjectTransferPanel({
                 onClick={() => setMode(t)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold ${mode === t ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}
               >
-                {t === 'loan' ? 'Pinjam dari proyek' : 'Bayar hutang'}
+                {t === 'loan' ? 'Catat Pinjaman Masuk' : 'Bayar Hutang'}
               </button>
             ))}
           </div>
-          <select
-            value={form.counterpartyId}
-            onChange={e => setForm(f => ({ ...f, counterpartyId: e.target.value }))}
-            className="w-full border rounded-lg px-3 py-2 text-sm"
-          >
-            <option value="">Pilih proyek {mode === 'loan' ? 'sumber pinjaman' : 'kreditur'}</option>
-            {otherProjects.map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
+
+          {mode === 'loan' ? (
+            <>
+              <div className="flex gap-2 flex-wrap">
+                {(['external', 'project'] as const).map(t => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setSourceType(t)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold ${sourceType === t ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600'}`}
+                  >
+                    {t === 'external' ? 'Dari luar (bank, owner, dll.)' : 'Dari proyek lain'}
+                  </button>
+                ))}
+              </div>
+              {sourceType === 'external' ? (
+                <>
+                  <input
+                    list="lender-presets"
+                    placeholder="Sumber pinjaman * (mis. Bank BCA, Owner)"
+                    value={form.counterpartyName}
+                    onChange={e => setForm(f => ({ ...f, counterpartyName: e.target.value }))}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  />
+                  <datalist id="lender-presets">
+                    {EXTERNAL_PRESETS.map(p => <option key={p} value={p} />)}
+                  </datalist>
+                </>
+              ) : otherProjects.length > 0 ? (
+                <select
+                  value={form.counterpartyProjectId}
+                  onChange={e => setForm(f => ({ ...f, counterpartyProjectId: e.target.value }))}
+                  className="w-full border rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="">Pilih proyek sumber pinjaman *</option>
+                  {otherProjects.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              ) : (
+                <p className="text-xs text-slate-500">Tidak ada proyek lain di organisasi. Gunakan sumber eksternal.</p>
+              )}
+            </>
+          ) : (
+            <>
+              {owedToOptions.length > 0 ? (
+                <select
+                  value={form.counterpartyKey}
+                  onChange={e => setForm(f => ({ ...f, counterpartyKey: e.target.value }))}
+                  className="w-full border rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="">Pilih hutang yang dilunasi *</option>
+                  {owedToOptions.map(o => (
+                    <option key={o.key} value={o.key}>
+                      {o.label} — sisa {formatRupiah(o.amount)}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <>
+                  <p className="text-xs text-slate-500">Belum ada hutang tercatat. Lunasi ke pihak eksternal:</p>
+                  <input
+                    list="lender-presets-repay"
+                    placeholder="Penerima pelunasan * (mis. Bank BCA)"
+                    value={form.counterpartyName}
+                    onChange={e => setForm(f => ({ ...f, counterpartyName: e.target.value }))}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  />
+                  <datalist id="lender-presets-repay">
+                    {EXTERNAL_PRESETS.map(p => <option key={p} value={p} />)}
+                  </datalist>
+                </>
+              )}
+            </>
+          )}
+
           <div className="grid grid-cols-2 gap-2">
             <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className="border rounded-lg px-2 py-1.5 text-sm" />
-            <input type="number" placeholder="Nominal" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} className="border rounded-lg px-2 py-1.5 text-sm" />
+            <input type="number" placeholder="Nominal *" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} className="border rounded-lg px-2 py-1.5 text-sm" />
           </div>
           <input placeholder="Keterangan (opsional)" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="w-full border rounded-lg px-2 py-1.5 text-sm" />
           <button type="button" onClick={handleSubmit} className="w-full py-2 bg-indigo-600 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1">
@@ -186,23 +376,26 @@ export default function ProjectTransferPanel({
 
       {transfers.length > 0 && (
         <div className="bg-white rounded-2xl border overflow-hidden">
-          <div className="px-4 py-3 bg-slate-50 font-bold text-sm">Riwayat Transfer</div>
-          {transfers.slice(0, 20).map(t => {
+          <div className="px-4 py-3 bg-slate-50 font-bold text-sm">Riwayat Pinjaman & Pelunasan</div>
+          {transfers.slice(0, 30).map(t => {
             const isIn = t.to_project_id === projectId;
-            const otherId = isIn ? t.from_project_id : t.to_project_id;
+            const label = transferCounterpartyLabel(t, projectId, projectNameMap);
             return (
               <div key={t.id} className="px-4 py-3 border-t text-sm flex justify-between gap-2">
-                <div>
+                <div className="min-w-0">
                   <span className={`text-xs font-bold px-2 py-0.5 rounded ${t.type === 'loan' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
                     {t.type === 'loan' ? 'Pinjaman' : 'Pelunasan'}
                   </span>
+                  {t.source_type === 'external' && (
+                    <span className="ml-1 text-[10px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">Eksternal</span>
+                  )}
                   <span className="ml-2 text-slate-600">
-                    {isIn ? '← dari' : '→ ke'} {projectNameMap[otherId] || otherId.slice(0, 8)}
+                    {isIn ? '← dari' : '→ ke'} {label}
                   </span>
-                  <div className="text-xs text-slate-400 mt-0.5">{t.date}{t.description ? ` · ${t.description}` : ''}</div>
+                  <div className="text-xs text-slate-400 mt-0.5 truncate">{t.date}{t.description ? ` · ${t.description}` : ''}</div>
                 </div>
                 <div className={`font-bold shrink-0 ${isIn ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  {isIn ? '+' : '-'}{formatRupiah(t.amount)}
+                  {isIn ? '+' : '−'}{formatRupiah(t.amount)}
                 </div>
               </div>
             );

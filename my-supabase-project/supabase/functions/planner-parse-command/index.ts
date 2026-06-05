@@ -54,6 +54,7 @@ function buildUserPrompt(
     current_project?: string | null;
     rap_items?: Array<{ name: string }>;
     recent_commands?: string[];
+    learned_examples?: Array<{ input: string; intent: string; params: unknown }>;
   } | null,
 ): string {
   const ctx = context ?? {};
@@ -62,6 +63,15 @@ function buildUserPrompt(
   const rap = (ctx.rap_items ?? []).slice(0, 5).map(i => i.name).join(", ") || "N/A";
   const recent = ctx.recent_commands?.[0] ?? "N/A";
 
+  // Org-specific learned corrections (few-shot) — improves accuracy for local terms.
+  const examples = (ctx.learned_examples ?? []).slice(0, 8);
+  const examplesBlock = examples.length
+    ? "\n\nContoh koreksi tim (pelajari pola ini):\n" +
+      examples
+        .map(e => `- "${e.input}" => {"intent":"${e.intent}","params":${JSON.stringify(e.params)}}`)
+        .join("\n")
+    : "";
+
   return `Input: "${input}"
 
 Context:
@@ -69,7 +79,7 @@ Context:
 - Item pekerjaan: ${items}
 - Proyek dibuka: ${ctx.current_project ?? "tidak ada"}
 - RAP: ${rap}
-- Perintah terakhir: ${recent}
+- Perintah terakhir: ${recent}${examplesBlock}
 
 Parse ke JSON.`;
 }

@@ -20,8 +20,11 @@ import ProjectDetailHeader from './ProjectDetailHeader';
 import ProjectJsonPanel from './ProjectJsonPanel';
 import ProjectIncomePanel from './ProjectIncomePanel';
 import ProjectTransferPanel from './ProjectTransferPanel';
+import RapItemList from './RapItemList';
+import MetricHelpCard from '../ui/MetricHelpCard';
+import { EVM_METRICS } from '../../utils/evmMetrics';
 import { getProjectCashSummary } from '../../services/projectTransferService';
-import { exportRapWorkbook, formatSelisih } from '../../services/rapExcelService';
+import { exportRapWorkbook } from '../../services/rapExcelService';
 import { useCollapsibleHeader } from './useCollapsibleHeader';
 import { todayStr } from '../../lib/adapters';
 import {
@@ -65,10 +68,10 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   const [progressDrafts, setProgressDrafts] = useState<Record<string, string>>({});
   const [logDraft, setLogDraft] = useState({ description: '', progress: '' });
   const [cashSummary, setCashSummary] = useState<{ received: number; surplus: number }>({ received: 0, surplus: 0 });
+  const [costSearch, setCostSearch] = useState('');
 
   const {
     scrollRef,
-    collapse,
     isCollapsed,
     handleHeaderTap,
     toggleHeaderCompact,
@@ -127,12 +130,6 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   }, [activeTab]);
 
   const rapTotal = rapItems.reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.unit_price) || 0), 0);
-  const rapByType = rapItems.reduce<Record<string, typeof rapItems>>((acc, item) => {
-    const key = item.type || 'other';
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(item);
-    return acc;
-  }, {});
 
   const handleExportRap = () => {
     exportRapWorkbook(project, rapItems, costs, rapActuals);
@@ -265,14 +262,14 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
     const parsed = qty ?? Number(qtyDrafts[row.id]);
     setRealizationDialog({
       rapItem: row,
-      quantity: Number.isFinite(parsed) && parsed > 0 ? parsed : 1,
+      quantity: Number.isFinite(parsed) && parsed !== 0 ? parsed : 1,
     });
   };
 
   const submitQtyDraft = (row: typeof rapItems[0]) => {
     const qty = Number(qtyDrafts[row.id]);
-    if (!Number.isFinite(qty) || qty <= 0) {
-      showToast('Masukkan jumlah yang valid', 'error');
+    if (!Number.isFinite(qty) || qty === 0) {
+      showToast('Masukkan jumlah (boleh minus untuk koreksi)', 'error');
       return;
     }
     openRealizationDialog(row, qty);
@@ -371,7 +368,6 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
             received={cashSummary.received || project.total_received || 0}
             surplus={cashSummary.surplus}
             loading={loading}
-            collapse={collapse}
             isCollapsed={isCollapsed}
             onClose={onClose}
             onRefresh={() => reload()}
@@ -399,17 +395,14 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                     )}
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
                       {[
-                        { label: 'CPI', value: cpi.toFixed(2), ok: cpi >= 1 },
-                        { label: 'SPI', value: spi.toFixed(2), ok: spi >= 1 },
-                        { label: 'CV', value: formatRupiah(cv), ok: cv >= 0 },
-                        { label: 'SV', value: formatRupiah(sv), ok: sv >= 0 },
-                        { label: 'BAC', value: formatRupiah(project.total_budget_planned), ok: true },
-                        { label: 'AC', value: formatRupiah(evm?.ac ?? project.spent_amount), ok: true },
+                        { key: 'CPI', value: cpi.toFixed(2), ok: cpi >= 1 },
+                        { key: 'SPI', value: spi.toFixed(2), ok: spi >= 1 },
+                        { key: 'CV', value: formatRupiah(cv), ok: cv >= 0 },
+                        { key: 'SV', value: formatRupiah(sv), ok: sv >= 0 },
+                        { key: 'BAC', value: formatRupiah(project.total_budget_planned), ok: true },
+                        { key: 'AC', value: formatRupiah(evm?.ac ?? project.spent_amount), ok: true },
                       ].map(m => (
-                        <div key={m.label} className="bg-white rounded-xl p-3 border text-center">
-                          <div className={`text-lg font-black ${m.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{m.value}</div>
-                          <div className="text-[10px] font-bold text-slate-500 uppercase">{m.label}</div>
-                        </div>
+                        <MetricHelpCard key={m.key} metric={EVM_METRICS[m.key]} value={m.value} ok={m.ok} />
                       ))}
                     </div>
                     <div className="bg-white rounded-2xl p-5 border">
@@ -509,53 +502,15 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                           {canManage && <button type="button" onClick={() => setShowRapForm(true)} className="mt-2 text-indigo-600 text-sm font-bold">+ Tambah item pertama</button>}
                         </div>
                       ) : (
-                        <>
-                          <div className="bg-indigo-50 rounded-xl p-3 text-sm font-bold text-indigo-800 flex justify-between">
-                            <span>Total RAP</span>
-                            <span>{formatRupiah(rapTotal)}</span>
-                          </div>
-                          {Object.entries(rapByType).map(([cat, items]) => (
-                            <div key={cat} className="bg-white rounded-2xl border overflow-hidden">
-                              <div className="px-4 py-3 bg-slate-50 font-bold text-sm uppercase">{cat}</div>
-                              {items.map(row => {
-                                const actual = rapActuals[row.id];
-                                const actualQty = actual?.qty || 0;
-                                const plannedQty = Number(row.quantity) || 0;
-                                const fillPct = plannedQty > 0 ? Math.min(100, (actualQty / plannedQty) * 100) : 0;
-                                return (
-                                <div key={row.id} className="p-4 border-t text-sm gap-2">
-                                  <div className="flex justify-between items-center gap-2">
-                                    <div className="min-w-0">
-                                      <div className="font-medium truncate">{row.name}</div>
-                                      <div className="text-xs text-slate-400">
-                                        Rencana: {row.quantity} {row.unit} × {formatRupiah(Number(row.unit_price))}
-                                      </div>
-                                      {actual && (
-                                        <div className="text-xs text-emerald-600 mt-0.5">
-                                          Realisasi: {actualQty} {row.unit} · {formatRupiah(actual.amount)}
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-2 shrink-0">
-                                      <span className="font-bold">{formatRupiah(Number(row.quantity) * Number(row.unit_price))}</span>
-                                      {canManage && (
-                                        <>
-                                          <button type="button" onClick={() => startEditRap(row)} className="text-indigo-600 text-xs">Edit</button>
-                                          <button type="button" onClick={() => setConfirmRapId(row.id)} className="text-rose-500 text-xs">Hapus</button>
-                                        </>
-                                      )}
-                                    </div>
-                                  </div>
-                                  {plannedQty > 0 && (
-                                    <div className="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${fillPct}%` }} />
-                                    </div>
-                                  )}
-                                </div>
-                              );})}
-                            </div>
-                          ))}
-                        </>
+                        <RapItemList
+                          items={rapItems}
+                          rapActuals={rapActuals}
+                          mode="planning"
+                          canManage={canManage}
+                          rapTotal={rapTotal}
+                          onEdit={startEditRap}
+                          onDelete={id => setConfirmRapId(id)}
+                        />
                       )
                     ) : workItems.length === 0 ? (
                       <div className="text-center py-12 bg-white rounded-2xl border border-dashed">
@@ -609,106 +564,48 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                             Buat RAP di tab Planning terlebih dahulu, lalu catat realisasi per item di sini.
                           </div>
                         ) : (
-                          <div className="bg-white rounded-2xl border overflow-hidden">
-                            <div className="px-4 py-3 bg-indigo-50 border-b">
-                              <h3 className="text-sm font-bold text-indigo-900">Input Realisasi Manual</h3>
-                              <p className="text-xs text-indigo-700 mt-0.5">
-                                Klik item RAP atau isi jumlah ({' '}
-                                <span className="font-semibold">pcs/satuan</span>) lalu tekan Enter — dialog harga satuan/total akan muncul.
-                              </p>
+                          <>
+                            <div className="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-xs text-indigo-800">
+                              Input qty lalu Enter — atau klik item. Gunakan <strong>minus</strong> (mis. −10) untuk koreksi realisasi.
                             </div>
-                            {Object.entries(rapByType).map(([cat, items]) => (
-                              <div key={cat}>
-                                <div className="px-4 py-2 bg-slate-50 text-xs font-bold uppercase text-slate-500">{cat}</div>
-                                {items.map(row => {
-                                  const actual = rapActuals[row.id];
-                                  const actualQty = actual?.qty || 0;
-                                  const plannedQty = Number(row.quantity) || 0;
-                                  const plannedAmt = plannedQty * Number(row.unit_price);
-                                  const actualAmt = actual?.amount || 0;
-                                  const selisih = formatSelisih(plannedAmt, actualAmt);
-                                  const fillPct = plannedQty > 0 ? Math.min(100, (actualQty / plannedQty) * 100) : 0;
-                                  return (
-                                    <div key={row.id} className="p-4 border-t">
-                                      <button
-                                        type="button"
-                                        onClick={() => canManage && openRealizationDialog(row)}
-                                        disabled={!canManage}
-                                        className="w-full text-left disabled:cursor-default"
-                                      >
-                                        <div className="flex justify-between gap-2 text-sm">
-                                          <div>
-                                            <div className="font-semibold text-slate-800">{row.name}</div>
-                                            <div className="text-xs text-slate-500 mt-0.5">
-                                              Rencana {plannedQty} {row.unit} · Realisasi {actualQty} {row.unit}
-                                            </div>
-                                          </div>
-                                          <div className="text-right shrink-0">
-                                            <div className="text-xs text-slate-400">RAP</div>
-                                            <div className="font-bold">{formatRupiah(plannedQty * Number(row.unit_price))}</div>
-                                            {actual && (
-                                              <>
-                                                <div className="text-xs text-emerald-600 font-semibold mt-0.5">
-                                                  {formatRupiah(actualAmt)}
-                                                </div>
-                                                <div className={`text-[10px] font-bold mt-0.5 ${selisih.diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                                  Selisih {selisih.diff >= 0 ? '+' : '−'}{selisih.label}
-                                                </div>
-                                              </>
-                                            )}
-                                          </div>
-                                        </div>
-                                        {plannedQty > 0 && (
-                                          <div className="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                            <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${fillPct}%` }} />
-                                          </div>
-                                        )}
-                                      </button>
-                                      {canManage && (
-                                        <div className="mt-3 flex gap-2 items-center">
-                                          <input
-                                            type="number"
-                                            min={0}
-                                            step="any"
-                                            placeholder={`Jumlah (${row.unit})`}
-                                            value={qtyDrafts[row.id] ?? ''}
-                                            onChange={e => setQtyDrafts(d => ({ ...d, [row.id]: e.target.value }))}
-                                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submitQtyDraft(row); } }}
-                                            className="flex-1 px-3 py-2 border rounded-xl text-sm"
-                                          />
-                                          <button
-                                            type="button"
-                                            onClick={() => submitQtyDraft(row)}
-                                            className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold shrink-0"
-                                          >
-                                            Enter ↵
-                                          </button>
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            ))}
-                          </div>
+                            <RapItemList
+                              items={rapItems}
+                              rapActuals={rapActuals}
+                              mode="realisasi"
+                              canManage={canManage}
+                              rapTotal={rapTotal}
+                              qtyDrafts={qtyDrafts}
+                              onQtyDraftChange={(id, v) => setQtyDrafts(d => ({ ...d, [id]: v }))}
+                              onSubmitQty={submitQtyDraft}
+                              onOpenRealization={row => canManage && openRealizationDialog(row)}
+                            />
+                          </>
                         )}
 
                         <div className="bg-white rounded-2xl border overflow-hidden">
-                          <div className="px-4 py-3 bg-slate-50 text-xs font-bold text-slate-500 flex justify-between">
-                            <span>Riwayat biaya tercatat</span>
-                            <span>{formatRupiah(costs.reduce((s, c) => s + Number(c.total_amount), 0))}</span>
+                          <div className="px-4 py-3 bg-slate-50 border-b space-y-2">
+                            <div className="flex justify-between text-xs font-bold text-slate-500">
+                              <span>Riwayat biaya tercatat</span>
+                              <span>{formatRupiah(costs.reduce((s, c) => s + Number(c.total_amount), 0))}</span>
+                            </div>
+                            <input
+                              value={costSearch}
+                              onChange={e => setCostSearch(e.target.value)}
+                              placeholder="Filter riwayat..."
+                              className="w-full px-3 py-1.5 border rounded-lg text-xs"
+                            />
                           </div>
                           <table className="w-full text-xs">
                             <thead className="bg-slate-50 border-t"><tr><th className="p-3 text-left">Tanggal</th><th className="p-3 text-left">Keterangan</th><th className="p-3 text-right">Qty</th><th className="p-3 text-right">Total</th>{canManage && <th className="p-3 w-10" />}</tr></thead>
                             <tbody>
-                              {costs.length === 0 ? (
+                              {costs.filter(c => !costSearch.trim() || c.description.toLowerCase().includes(costSearch.toLowerCase())).length === 0 ? (
                                 <tr><td colSpan={5} className="p-8 text-center text-slate-400">Belum ada biaya — input manual di atas atau gunakan Monefyi Button.</td></tr>
-                              ) : costs.map(tx => (
+                              ) : costs.filter(c => !costSearch.trim() || c.description.toLowerCase().includes(costSearch.toLowerCase())).map(tx => (
                                 <tr key={tx.id} className="border-t hover:bg-slate-50">
                                   <td className="p-3 whitespace-nowrap">{tx.date}</td>
                                   <td className="p-3 font-medium">{tx.description}</td>
-                                  <td className="p-3 text-right text-slate-500">{tx.quantity != null ? `${tx.quantity}` : '—'}</td>
-                                  <td className="p-3 text-right font-bold">{formatRupiah(Number(tx.total_amount))}</td>
+                                  <td className={`p-3 text-right ${Number(tx.quantity) < 0 ? 'text-amber-600 font-bold' : 'text-slate-500'}`}>{tx.quantity != null ? `${tx.quantity}` : '—'}</td>
+                                  <td className={`p-3 text-right font-bold ${Number(tx.total_amount) < 0 ? 'text-amber-600' : ''}`}>{formatRupiah(Number(tx.total_amount))}</td>
                                   {canManage && (
                                     <td className="p-3 text-center">
                                       <button type="button" onClick={() => setConfirmCostId(tx.id)} className="p-1 hover:bg-rose-50 rounded"><Trash2 className="w-4 h-4 text-rose-500" /></button>

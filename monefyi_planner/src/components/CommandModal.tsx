@@ -3,22 +3,27 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Sparkles, Mic, MicOff, Send, CheckCircle, AlertCircle,
-  Wallet, BarChart3, FileText, CheckSquare, Clock, Plus,
-  RotateCcw, MessageSquare
+  Wallet, BarChart3, FileText, Clock, Plus,
+  RotateCcw, MessageSquare, Wand2, Brain, PencilLine,
 } from 'lucide-react';
-import { parseCommand, aiParseCommand } from '../lib/commandParser';
+import {
+  aiParseCommand, runCommandPipeline,
+  type ParsedCommand, type ParseSource,
+} from '../lib/commandParser';
+import { finalizeParams } from '../lib/commandNormalize';
 import { executeIntent } from '../lib/intentExecutor';
 import { logCommand, loadCommandLogs } from '../services/commandService';
+import { recordCorrection } from '../services/commandMemoryService';
 import { loadWorkItems } from '../services/workItemService';
+import { loadRapItems } from '../services/rapService';
 import { useAppStore } from '../store/appStore';
 
 type Stage = 'idle' | 'listening' | 'processing' | 'confirm' | 'success' | 'error';
 
-interface ParsedCommand {
+interface FormState {
   intent: string;
-  description: string;
   data: Record<string, string | number>;
-  warning?: string;
+  projectName: string;
 }
 
 const quickCommands = [
@@ -28,6 +33,40 @@ const quickCommands = [
   { icon: Clock, label: 'Log Pekerja', color: 'bg-amber-100 text-amber-700', template: 'hari ini hadir 8 orang' },
   { icon: Plus, label: 'Buka Proyek', color: 'bg-rose-100 text-rose-700', template: 'buka project' },
 ];
+
+const INTENT_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: 'record_cost', label: 'Catat Biaya' },
+  { value: 'update_progress', label: 'Update Progress' },
+  { value: 'check_budget', label: 'Cek Budget' },
+  { value: 'check_progress', label: 'Cek Progress' },
+  { value: 'add_worker_log', label: 'Log Pekerja' },
+  { value: 'open_project', label: 'Buka Proyek' },
+  { value: 'ask_recommendation', label: 'Rekomendasi' },
+  { value: 'open_report', label: 'Buka Laporan' },
+];
+
+const FIELD_LABELS: Record<string, string> = {
+  item: 'Item / Material',
+  qty: 'Jumlah',
+  unitPrice: 'Harga Satuan',
+  total: 'Total',
+  progress: 'Progress (%)',
+  workItem: 'Pekerjaan',
+  workers: 'Jumlah Pekerja',
+  amount: 'Nominal',
+  source: 'Sumber',
+};
+
+const NUMBER_FIELDS = new Set(['qty', 'unitPrice', 'total', 'progress', 'workers', 'amount']);
+
+// Fields that are derived/handled elsewhere and should not be free-text inputs.
+const HIDDEN_FIELDS = new Set(['projectName']);
+
+const STAGE_ORDER: Record<ParseSource, number> = { memory: 1, rule: 2, ai: 3 };
+
+function intentLabel(intent: string): string {
+  return INTENT_OPTIONS.find(o => o.value === intent)?.label || intent.replace(/_/g, ' ');
+}
 
 export default function CommandModal() {
   const navigate = useNavigate();
@@ -43,12 +82,18 @@ export default function CommandModal() {
   const [input, setInput] = useState('');
   const [stage, setStage] = useState<Stage>('idle');
   const [isListening, setIsListening] = useState(false);
-  const [parsedCmd, setParsedCmd] = useState<ParsedCommand | null>(null);
   const [transcript, setTranscript] = useState('');
-  const [layer, setLayer] = useState<1 | 2 | 3>(1);
+  const [pipelineStage, setPipelineStage] = useState<ParseSource>('memory');
   const [resultMessage, setResultMessage] = useState('');
   const [resultDetails, setResultDetails] = useState('');
   const [history, setHistory] = useState<string[]>([]);
+
+  const [form, setForm] = useState<FormState>({ intent: '', data: {}, projectName: '' });
+  const [origParse, setOrigParse] = useState<ParsedCommand | null>(null);
+  const [edited, setEdited] = useState(false);
+  const [workItemOptions, setWorkItemOptions] = useState<string[]>([]);
+  const [rapOptions, setRapOptions] = useState<string[]>([]);
+
   const inputRef = useRef<HTMLInputElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
@@ -70,6 +115,42 @@ export default function CommandModal() {
   useEffect(() => {
     if (stage === 'idle') inputRef.current?.focus();
   }, [stage]);
+
+  // Load work item / RAP suggestions for the chosen target project.
+  useEffect(() => {
+    if (stage !== 'confirm') return;
+    const target = projects.find(p => p.name === form.projectName) || activeProject;
+    if (!target) return;
+    loadWorkItems(target.id).then(items => setWorkItemOptions(items.map(i => i.name))).catch(() => setWorkItemOptions([]));
+    loadRapItems(target.id).then(items => setRapOptions(items.map(i => i.name))).catch(() => setRapOptions([]));
+  }, [stage, form.projectName]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const pipelineContext = () => ({
+    orgId: tenant?.id,
+    projects: projects.map(p => ({ name: p.name, id: p.id, status: p.status })),
+    work_items: [],
+    current_project: activeProject?.name || null,
+  });
+
+  const populateForm = (parsed: ParsedCommand) => {
+    const data: Record<string, string | number> = {};
+    let projectName = '';
+    for (const [k, v] of Object.entries(parsed.params || {})) {
+      if (k === 'projectName') {
+        projectName = v != null ? String(v) : '';
+        continue;
+      }
+      if (v == null) continue;
+      data[k] = typeof v === 'number' ? v : String(v);
+    }
+    setForm({
+      intent: parsed.intent,
+      data,
+      projectName: projectName || activeProject?.name || '',
+    });
+    setOrigParse(parsed);
+    setEdited(false);
+  };
 
   const startListening = () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -120,23 +201,9 @@ export default function CommandModal() {
     if (!text.trim() || !user || !tenant) return;
     setStage('processing');
     setInput(text);
+    setPipelineStage('memory');
 
-    let parsed = parseCommand(text);
-
-    if (parsed.confidence < 0.75) {
-      setLayer(2);
-      const aiResult = await aiParseCommand(text, {
-        projects: projects.map(p => ({ name: p.name, id: p.id, status: p.status })),
-        work_items: [],
-        current_project: activeProject?.name || null,
-      });
-      if (aiResult && aiResult.confidence >= 0.6) {
-        parsed = aiResult;
-        setLayer(3);
-      }
-    } else {
-      setLayer(1);
-    }
+    const parsed = await runCommandPipeline(text, pipelineContext(), s => setPipelineStage(s));
 
     if (parsed.intent === 'unknown' || parsed.confidence < 0.5) {
       setResultMessage('Maaf, saya belum memahami perintah tersebut.');
@@ -155,40 +222,107 @@ export default function CommandModal() {
       return;
     }
 
-    setParsedCmd({
-      intent: parsed.intent,
-      description: parsed.intent.replace(/_/g, ' '),
-      data: parsed.params as Record<string, string | number>,
-    });
+    populateForm(parsed);
     setStage('confirm');
   };
 
+  const handleFixWithAI = async () => {
+    if (!input.trim()) return;
+    setStage('processing');
+    setPipelineStage('ai');
+    const aiResult = await aiParseCommand(input, pipelineContext());
+    if (aiResult && aiResult.intent !== 'unknown') {
+      populateForm(aiResult);
+      setEdited(false);
+      setStage('confirm');
+    } else {
+      setResultMessage('AI belum bisa memahami. Silakan isi manual.');
+      setResultDetails('');
+      setStage('error');
+    }
+  };
+
+  const openManualForm = () => {
+    setForm({
+      intent: 'record_cost',
+      data: {},
+      projectName: activeProject?.name || '',
+    });
+    setOrigParse({ intent: 'unknown', params: {}, confidence: 0, raw: input, source: 'ai' });
+    setEdited(true);
+    setStage('confirm');
+  };
+
+  const updateField = (key: string, value: string) => {
+    setForm(prev => {
+      const data = { ...prev.data, [key]: value };
+      // Keep total in sync when editing qty / unit price for cost entries.
+      if ((key === 'qty' || key === 'unitPrice') && prev.intent === 'record_cost') {
+        const qty = Number(key === 'qty' ? value : data.qty);
+        const unitPrice = Number(key === 'unitPrice' ? value : data.unitPrice);
+        if (!Number.isNaN(qty) && !Number.isNaN(unitPrice) && qty && unitPrice) {
+          data.total = qty * unitPrice;
+        }
+      }
+      return { ...prev, data };
+    });
+    setEdited(true);
+  };
+
+  const formToParams = (): Record<string, unknown> => {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(form.data)) {
+      if (v === '' || v == null) continue;
+      out[k] = NUMBER_FIELDS.has(k) ? Number(v) : v;
+    }
+    if (form.projectName) out.projectName = form.projectName;
+    return finalizeParams(out);
+  };
+
   const handleExecute = async () => {
-    if (!parsedCmd || !user || !tenant) return;
+    if (!user || !tenant || !form.intent) return;
     setStage('processing');
 
+    const finalParams = formToParams();
     const parsed = {
-      intent: parsedCmd.intent,
-      params: parsedCmd.data,
-      confidence: 0.9,
+      intent: form.intent,
+      params: finalParams,
+      confidence: 0.95,
       raw: input,
     };
 
+    const target =
+      projects.find(p => p.name === form.projectName) || activeProject || null;
+
     try {
-      const workItems = activeProject
-        ? await loadWorkItems(activeProject.id)
-        : [];
+      const workItems = target ? await loadWorkItems(target.id) : [];
 
       const result = await executeIntent(parsed, {
         userId: user.id,
         orgId: tenant.id,
         projects,
-        currentProject: activeProject || null,
+        currentProject: target,
         workItems,
         onNavigate: path => navigate(path),
         onRefreshProjects: refreshData,
         loadWorkItemsForProject: loadWorkItems,
       });
+
+      // Learning: persist corrections / reinforce so the parser improves over time.
+      if (result.success && form.intent !== 'unknown') {
+        const shouldLearn =
+          edited || origParse?.source === 'ai' || origParse?.source === 'memory';
+        if (shouldLearn) {
+          await recordCorrection({
+            orgId: tenant.id,
+            userId: user.id,
+            rawInput: input,
+            intent: form.intent,
+            params: finalParams,
+            source: edited ? 'user' : (origParse?.source === 'ai' ? 'ai' : 'user'),
+          }).catch(() => {});
+        }
+      }
 
       await logCommand({
         userId: user.id,
@@ -196,7 +330,7 @@ export default function CommandModal() {
         inputType: isListening ? 'voice' : 'text',
         rawInput: input,
         parsedIntent: parsed.intent,
-        parsedParams: parsed.params as Record<string, unknown>,
+        parsedParams: finalParams,
         confidence: parsed.confidence,
         executionStatus: result.success ? 'executed' : 'failed',
         errorMessage: result.success ? undefined : result.message,
@@ -218,8 +352,45 @@ export default function CommandModal() {
   const handleReset = () => {
     setStage('idle');
     setInput('');
-    setParsedCmd(null);
+    setForm({ intent: '', data: {}, projectName: '' });
+    setOrigParse(null);
+    setEdited(false);
     setTranscript('');
+  };
+
+  const sourceBadge = (() => {
+    if (!origParse) return 'Aturan';
+    if (origParse.source === 'memory') return 'Memori Tim';
+    if (origParse.source === 'ai') return origParse.provider ? `AI · ${origParse.provider}` : 'AI';
+    return 'Aturan';
+  })();
+
+  const renderFieldInput = (key: string, value: string | number) => {
+    const strVal = value === 0 ? '0' : String(value ?? '');
+
+    if (key === 'workItem' && workItemOptions.length > 0) {
+      return (
+        <select
+          value={strVal}
+          onChange={e => updateField(key, e.target.value)}
+          className="text-sm font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg px-2 py-1 max-w-[60%] focus:border-indigo-400 outline-none"
+        >
+          <option value="">— pilih —</option>
+          {!workItemOptions.includes(strVal) && strVal && <option value={strVal}>{strVal}</option>}
+          {workItemOptions.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+      );
+    }
+
+    return (
+      <input
+        type={NUMBER_FIELDS.has(key) ? 'number' : 'text'}
+        value={strVal}
+        list={key === 'item' && rapOptions.length ? 'rap-options' : undefined}
+        onChange={e => updateField(key, e.target.value)}
+        className="text-sm font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg px-2 py-1 text-right max-w-[60%] focus:border-indigo-400 outline-none"
+      />
+    );
   };
 
   return (
@@ -263,7 +434,6 @@ export default function CommandModal() {
             {/* IDLE / INPUT */}
             {stage === 'idle' && (
               <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                {/* Input */}
                 <div className="flex items-center gap-2 bg-slate-50 border-2 border-slate-200 focus-within:border-indigo-400 rounded-2xl px-4 py-3 mb-5 transition-colors">
                   <MessageSquare className="w-4 h-4 text-slate-400 shrink-0" />
                   <input
@@ -335,10 +505,10 @@ export default function CommandModal() {
                     <div key={i} className="waveform-bar" style={{ animationDelay: `${i * 0.1}s` }} />
                   ))}
                 </div>
-                <p className="text-lg font-bold text-slate-800 mb-2">🎤 Mendengarkan...</p>
+                <p className="text-lg font-bold text-slate-800 mb-2">Mendengarkan...</p>
                 {transcript && <p className="text-sm text-slate-500 italic">"{transcript}"</p>}
                 <button onClick={stopListening} className="mt-6 px-6 py-2.5 bg-rose-100 text-rose-700 rounded-xl text-sm font-medium hover:bg-rose-200 transition-colors">
-                  ⏹ Stop
+                  Stop
                 </button>
               </motion.div>
             )}
@@ -347,49 +517,95 @@ export default function CommandModal() {
             {stage === 'processing' && (
               <motion.div key="processing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="py-10 text-center">
                 <div className="w-12 h-12 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4" />
-                <p className="font-bold text-slate-800 mb-2">⚙️ Memproses perintah...</p>
+                <p className="font-bold text-slate-800 mb-2">Memproses perintah...</p>
                 <div className="space-y-1.5">
                   {[
-                    { n: 1, label: 'Rule-Based Parser', done: layer >= 1 },
-                    { n: 2, label: 'Fuzzy Matching', done: layer >= 2 },
-                    { n: 3, label: 'AI GPT-4o', done: layer >= 3 },
-                  ].map(l => (
-                    <div key={l.n} className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${l.done ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-50 text-slate-400'}`}>
-                      <div className={`w-1.5 h-1.5 rounded-full ${l.done ? 'bg-indigo-500' : 'bg-slate-300'}`} />
-                      Layer {l.n}: {l.label}
-                      {l.done && layer === l.n && <span className="ml-auto animate-pulse">...</span>}
-                    </div>
-                  ))}
+                    { key: 'memory' as ParseSource, label: 'Memori Tim' },
+                    { key: 'rule' as ParseSource, label: 'Aturan Parser' },
+                    { key: 'ai' as ParseSource, label: 'AI Multi-Provider' },
+                  ].map(l => {
+                    const done = STAGE_ORDER[pipelineStage] >= STAGE_ORDER[l.key];
+                    return (
+                      <div key={l.key} className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${done ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-50 text-slate-400'}`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${done ? 'bg-indigo-500' : 'bg-slate-300'}`} />
+                        {l.label}
+                        {done && pipelineStage === l.key && <span className="ml-auto animate-pulse">...</span>}
+                      </div>
+                    );
+                  })}
                 </div>
               </motion.div>
             )}
 
-            {/* CONFIRM */}
-            {stage === 'confirm' && parsedCmd && (
+            {/* CONFIRM (editable) */}
+            {stage === 'confirm' && (
               <motion.div key="confirm" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center">
-                    <Sparkles className="w-3 h-3 text-indigo-600" />
+                    <PencilLine className="w-3 h-3 text-indigo-600" />
                   </div>
-                  <span className="text-sm font-bold text-slate-800">📝 Konfirmasi {parsedCmd.description}</span>
-                  <span className="ml-auto text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">Layer {layer}</span>
+                  <span className="text-sm font-bold text-slate-800">Konfirmasi &amp; Koreksi</span>
+                  <span className="ml-auto inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">
+                    <Brain className="w-3 h-3" /> {sourceBadge}
+                  </span>
                 </div>
 
-                <div className="bg-slate-50 rounded-2xl p-4 mb-4 border border-slate-200">
-                  {Object.entries(parsedCmd.data).map(([key, val]) => (
-                    <div key={key} className="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0">
-                      <span className="text-xs text-slate-500 capitalize">{key.replace(/_/g, ' ')}</span>
-                      <span className="text-sm font-semibold text-slate-800">{val}</span>
-                    </div>
-                  ))}
+                <datalist id="rap-options">
+                  {rapOptions.map(o => <option key={o} value={o} />)}
+                </datalist>
+
+                <div className="bg-slate-50 rounded-2xl p-4 mb-4 border border-slate-200 space-y-3">
+                  {/* Intent selector */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-slate-500">Jenis Perintah</span>
+                    <select
+                      value={form.intent}
+                      onChange={e => { setForm(p => ({ ...p, intent: e.target.value })); setEdited(true); }}
+                      className="text-sm font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg px-2 py-1 focus:border-indigo-400 outline-none"
+                    >
+                      {!INTENT_OPTIONS.some(o => o.value === form.intent) && form.intent && (
+                        <option value={form.intent}>{intentLabel(form.intent)}</option>
+                      )}
+                      {INTENT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Target project selector */}
+                  <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
+                    <span className="text-xs text-slate-500">Proyek Tujuan</span>
+                    <select
+                      value={form.projectName}
+                      onChange={e => { setForm(p => ({ ...p, projectName: e.target.value })); setEdited(true); }}
+                      className="text-sm font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg px-2 py-1 max-w-[60%] focus:border-indigo-400 outline-none"
+                    >
+                      <option value="">— umum —</option>
+                      {projects.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Editable params */}
+                  {Object.entries(form.data)
+                    .filter(([key]) => !HIDDEN_FIELDS.has(key))
+                    .map(([key, val]) => (
+                      <div key={key} className="flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
+                        <span className="text-xs text-slate-500 capitalize">{FIELD_LABELS[key] || key.replace(/_/g, ' ')}</span>
+                        {renderFieldInput(key, val)}
+                      </div>
+                    ))}
                 </div>
 
-                {parsedCmd.warning && (
-                  <div className="flex items-center gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-xl mb-4 text-sm text-amber-700">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    {parsedCmd.warning}
+                {edited && (
+                  <div className="flex items-center gap-2 px-3 py-2.5 bg-indigo-50 border border-indigo-200 rounded-xl mb-4 text-xs text-indigo-700">
+                    <Brain className="w-4 h-4 shrink-0" />
+                    Koreksi ini akan dipelajari agar perintah serupa lebih akurat untuk tim.
                   </div>
                 )}
+
+                <div className="flex gap-2 mb-3">
+                  <button onClick={handleFixWithAI} className="flex-1 py-2.5 border border-violet-200 bg-violet-50 rounded-xl text-violet-700 text-xs font-semibold hover:bg-violet-100 transition-colors flex items-center justify-center gap-1.5">
+                    <Wand2 className="w-3.5 h-3.5" /> Perbaiki dgn AI
+                  </button>
+                </div>
 
                 <div className="flex gap-3">
                   <button onClick={handleReset} className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
@@ -403,12 +619,12 @@ export default function CommandModal() {
             )}
 
             {/* SUCCESS */}
-            {stage === 'success' && parsedCmd && (
+            {stage === 'success' && (
               <motion.div key="success" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="text-center py-6">
                 <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
                   <CheckCircle className="w-8 h-8 text-emerald-600" />
                 </div>
-                <p className="text-lg font-black text-slate-900 mb-1">✅ Berhasil!</p>
+                <p className="text-lg font-black text-slate-900 mb-1">Berhasil!</p>
                 <p className="text-sm text-slate-500 mb-2">{resultMessage}</p>
                 {resultDetails && <p className="text-xs text-slate-400 mb-6">{resultDetails}</p>}
 
@@ -429,14 +645,17 @@ export default function CommandModal() {
                 <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
                   <AlertCircle className="w-8 h-8 text-amber-600" />
                 </div>
-                <p className="text-lg font-bold text-slate-800 mb-2">{resultMessage || '❓ Perintah tidak dipahami'}</p>
+                <p className="text-lg font-bold text-slate-800 mb-2">{resultMessage || 'Perintah tidak dipahami'}</p>
                 <p className="text-sm text-slate-500 mb-6">{resultDetails || 'Coba ulangi dengan lebih spesifik.'}</p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-2">
                   <button onClick={handleReset} className="py-3 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50">
                     Coba Lagi
                   </button>
-                  <button onClick={() => setCommandModalOpen(false)} className="py-3 bg-slate-900 text-white rounded-xl text-sm font-bold">
-                    Tutup
+                  <button onClick={handleFixWithAI} className="py-3 border border-violet-200 bg-violet-50 text-violet-700 rounded-xl text-sm font-semibold hover:bg-violet-100 flex items-center justify-center gap-1">
+                    <Wand2 className="w-3.5 h-3.5" /> AI
+                  </button>
+                  <button onClick={openManualForm} className="py-3 bg-slate-900 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-1">
+                    <PencilLine className="w-3.5 h-3.5" /> Manual
                   </button>
                 </div>
               </motion.div>
@@ -445,7 +664,7 @@ export default function CommandModal() {
         </div>
 
         <div className="px-5 py-3 border-t border-slate-100 text-center">
-          <span className="text-xs text-slate-400">Powered by <span className="font-semibold text-indigo-500">Monefyi AI</span> · Layer 1→2→3 Parsing</span>
+          <span className="text-xs text-slate-400">Powered by <span className="font-semibold text-indigo-500">Monefyi AI</span> · Memori Tim → Aturan → AI</span>
         </div>
       </motion.div>
     </motion.div>

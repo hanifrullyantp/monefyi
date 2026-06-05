@@ -25,12 +25,11 @@ export default function RapRealizationDialog({
   onClose,
   onSaved,
 }: RapRealizationDialogProps) {
-  const [quantity, setQuantity] = useState(Math.max(0, initialQty));
+  const isCorrection = initialQty < 0;
+  const [quantity, setQuantity] = useState(initialQty);
   const [priceMode, setPriceMode] = useState<PriceMode>('unit');
   const [unitPrice, setUnitPrice] = useState(Number(rapItem.unit_price) || 0);
-  const [totalAmount, setTotalAmount] = useState(
-    Math.max(0, initialQty) * (Number(rapItem.unit_price) || 0),
-  );
+  const [totalAmount, setTotalAmount] = useState(initialQty * (Number(rapItem.unit_price) || 0));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -55,28 +54,29 @@ export default function RapRealizationDialog({
 
   const handleTotalChange = (value: number) => {
     setTotalAmount(value);
-    if (quantity > 0) setUnitPrice(value / quantity);
+    if (quantity !== 0) setUnitPrice(value / quantity);
   };
 
   const handleSave = async () => {
-    if (quantity <= 0) {
-      setError('Jumlah harus lebih dari 0');
+    if (quantity === 0 || !Number.isFinite(quantity)) {
+      setError('Jumlah tidak boleh 0');
       return;
     }
-    if (totalAmount <= 0) {
-      setError('Nominal harus lebih dari 0');
+    if (totalAmount === 0 || !Number.isFinite(totalAmount)) {
+      setError('Nominal tidak boleh 0');
       return;
     }
 
     setSaving(true);
     setError('');
     try {
-      const resolvedUnit = quantity > 0 ? totalAmount / quantity : unitPrice;
+      const resolvedUnit = quantity !== 0 ? totalAmount / quantity : unitPrice;
+      const label = isCorrection || quantity < 0 ? 'Koreksi' : 'Realisasi';
       await createCostRealization({
         project_id: projectId,
         rap_item_id: rapItem.id,
         date: todayStr(),
-        description: `Realisasi ${rapItem.name}`,
+        description: `${label} ${rapItem.name}`,
         quantity,
         unit_price: resolvedUnit,
         total_amount: totalAmount,
@@ -109,11 +109,16 @@ export default function RapRealizationDialog({
       >
         <div className="p-5 border-b flex items-start justify-between gap-3">
           <div>
-            <div className="text-xs font-bold text-indigo-600 uppercase tracking-wide">Catat Realisasi</div>
+            <div className="text-xs font-bold text-indigo-600 uppercase tracking-wide">
+              {isCorrection || quantity < 0 ? 'Koreksi Realisasi' : 'Catat Realisasi'}
+            </div>
             <h3 className="font-bold text-slate-900 mt-0.5">{rapItem.name}</h3>
             <p className="text-xs text-slate-500 mt-1">
               Rencana: {rapItem.quantity} {rapItem.unit} × {formatRupiah(plannedUnit)}
             </p>
+            {(isCorrection || quantity < 0) && (
+              <p className="text-xs text-amber-700 mt-1">Qty minus mengurangi total realisasi item ini.</p>
+            )}
           </div>
           <button type="button" onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl">
             <X className="w-5 h-5 text-slate-500" />
@@ -122,10 +127,9 @@ export default function RapRealizationDialog({
 
         <div className="p-5 space-y-4">
           <div>
-            <label className="text-xs font-semibold text-slate-500">Jumlah realisasi ({rapItem.unit})</label>
+            <label className="text-xs font-semibold text-slate-500">Jumlah ({rapItem.unit}) — minus = koreksi</label>
             <input
               type="number"
-              min={0}
               step="any"
               value={quantity || ''}
               onChange={e => {
@@ -167,7 +171,7 @@ export default function RapRealizationDialog({
               <label className="text-xs font-semibold text-slate-500">Harga satuan (Rp)</label>
               <input
                 type="number"
-                min={0}
+                step="any"
                 value={unitPrice || ''}
                 onChange={e => handleUnitPriceChange(Number(e.target.value))}
                 onKeyDown={e => { if (e.key === 'Enter') handleSave(); }}
@@ -184,13 +188,13 @@ export default function RapRealizationDialog({
               <label className="text-xs font-semibold text-slate-500">Harga total (Rp)</label>
               <input
                 type="number"
-                min={0}
+                step="any"
                 value={totalAmount || ''}
                 onChange={e => handleTotalChange(Number(e.target.value))}
                 onKeyDown={e => { if (e.key === 'Enter') handleSave(); }}
                 className="w-full mt-1 px-3 py-2.5 border rounded-xl text-sm"
               />
-              {quantity > 0 && (
+              {quantity !== 0 && (
                 <p className="text-xs text-slate-500 mt-1">
                   ≈ {formatRupiah(totalAmount / quantity)} / {rapItem.unit}
                 </p>
@@ -201,8 +205,8 @@ export default function RapRealizationDialog({
           <div className="flex items-center gap-2 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
             <Calculator className="w-4 h-4 text-indigo-600 shrink-0" />
             <div className="text-sm">
-              <span className="text-slate-600">Total realisasi: </span>
-              <span className="font-black text-indigo-700">{formatRupiah(totalAmount)}</span>
+              <span className="text-slate-600">Total: </span>
+              <span className={`font-black ${totalAmount < 0 ? 'text-amber-700' : 'text-indigo-700'}`}>{formatRupiah(totalAmount)}</span>
             </div>
           </div>
 

@@ -81,8 +81,10 @@ export interface IncomeJsonItem {
 
 export interface TransferJsonItem {
   id?: string;
-  from_project_id?: string;
-  to_project_id?: string;
+  source_type?: 'project' | 'external';
+  from_project_id?: string | null;
+  to_project_id?: string | null;
+  counterparty_name?: string | null;
   from_project_ref?: string;
   to_project_ref?: string;
   amount: number;
