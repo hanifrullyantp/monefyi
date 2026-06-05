@@ -1,19 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, TrendingUp, BarChart3, Target, Layers, Trash2, Edit3,
+  Plus, TrendingUp, BarChart3, Target, Layers, Trash2,
   Sparkles, Activity, Loader2, FileSpreadsheet, Download, Upload, Braces,
 } from 'lucide-react';
 import { useAppStore, Project } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
-import { deleteProject, updateProject as updateProjectApi } from '../../services/projectService';
+import { deleteProject } from '../../services/projectService';
 import { loadRapItems, rapSummary, rapActualsFromCosts, createRapItem, deleteRapItem, updateRapItem } from '../../services/rapService';
 import { loadWorkItems, createWorkItem, deleteWorkItem, updateWorkItem, updateProjectProgressFromWorkItems } from '../../services/workItemService';
 import { loadCostRealizations, deleteCostRealization, aggregateCostByRapItem } from '../../services/costService';
 import { loadDailyLogs, createDailyLog } from '../../services/dailyLogService';
 import { analyzeProject, type AnalyzeResult } from '../../services/analyzeService';
 import ConfirmDialog from '../ConfirmDialog';
-import EditProjectModal from './EditProjectModal';
 import RapRealizationDialog from './RapRealizationDialog';
 import RapImportWizard from './RapImportWizard';
 import ProjectDetailHeader from './ProjectDetailHeader';
@@ -28,7 +27,7 @@ import { exportRapWorkbook } from '../../services/rapExcelService';
 import { useCollapsibleHeader } from './useCollapsibleHeader';
 import { todayStr } from '../../lib/adapters';
 import {
-  formatRupiah, HEALTH_CONFIG, STATUS_LABEL, daysUntil, formatDateId,
+  formatRupiah, HEALTH_CONFIG, daysUntil, formatDateId,
 } from '../../utils/projectUi';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -55,7 +54,6 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmCostId, setConfirmCostId] = useState<string | null>(null);
   const [confirmRapId, setConfirmRapId] = useState<string | null>(null);
-  const [showEdit, setShowEdit] = useState(false);
   const [showRapForm, setShowRapForm] = useState(false);
   const [showWiForm, setShowWiForm] = useState(false);
   const [editingRapId, setEditingRapId] = useState<string | null>(null);
@@ -159,17 +157,6 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
     { id: 'laporan', label: 'Laporan', icon: BarChart3 },
     { id: 'json', label: 'JSON', icon: Braces },
   ];
-
-  const handleStatusChange = async (status: Project['status']) => {
-    try {
-      const updated = await updateProjectApi(project.id, { status }, tenant?.currency);
-      setProject(updated);
-      updateProject(project.id, updated);
-      showToast(`Status: ${STATUS_LABEL[status]}`, 'success');
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Gagal update status', 'error');
-    }
-  };
 
   const handleDeleteProject = async () => {
     try {
@@ -373,6 +360,8 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
             onRefresh={() => reload()}
             onHeaderTap={handleHeaderTap}
             onToggleCompact={toggleHeaderCompact}
+            canManage={canManage}
+            onDelete={() => setConfirmDelete(true)}
           />
 
           <div className="flex overflow-x-auto border-b border-slate-200 bg-white px-2 shrink-0">
@@ -796,27 +785,6 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
               </AnimatePresence>
             )}
           </div>
-
-          {canManage && (
-            <div className="p-4 bg-white border-t flex flex-wrap items-center justify-between gap-3 shrink-0">
-              <div className="flex gap-2">
-                <button type="button" onClick={() => setConfirmDelete(true)} className="p-2.5 rounded-xl hover:bg-rose-50 text-rose-500" title="Hapus proyek"><Trash2 className="w-5 h-5" /></button>
-                <button type="button" onClick={() => setShowEdit(true)} className="p-2.5 rounded-xl hover:bg-slate-100 text-slate-500" title="Edit proyek"><Edit3 className="w-5 h-5" /></button>
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-slate-500 font-medium">Status:</label>
-                <select
-                  value={project.status}
-                  onChange={e => handleStatusChange(e.target.value as Project['status'])}
-                  className="text-xs font-bold border rounded-xl px-3 py-2.5 bg-slate-50"
-                >
-                  {(['planning', 'active', 'on_hold', 'completed', 'archived'] as const).map(s => (
-                    <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
         </motion.div>
       </motion.div>
 
@@ -828,9 +796,6 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
       )}
       {confirmRapId && (
         <ConfirmDialog title="Hapus item RAP?" message="Item RAP akan dihapus dari perencanaan." danger confirmLabel="Hapus" onConfirm={async () => { await deleteRapItem(confirmRapId); setConfirmRapId(null); await reload(); showToast('RAP dihapus', 'success'); }} onCancel={() => setConfirmRapId(null)} />
-      )}
-      {showEdit && (
-        <EditProjectModal project={project} onClose={() => setShowEdit(false)} onSaved={p => { setProject(p); updateProject(p.id, p); refreshData(); }} />
       )}
       {realizationDialog && user?.id && (
         <RapRealizationDialog

@@ -5,17 +5,28 @@ import {
   X, Sparkles, Mic, MicOff, Send, CheckCircle, AlertCircle,
   Wallet, BarChart3, FileText, Clock, Plus,
   RotateCcw, MessageSquare, Wand2, Brain, PencilLine,
+  Hash, Lightbulb, TrendingUp, ShoppingCart,
 } from 'lucide-react';
 import {
   aiParseCommand, runCommandPipeline,
   type ParsedCommand, type ParseSource,
 } from '../lib/commandParser';
 import { finalizeParams } from '../lib/commandNormalize';
+import {
+  resolveTags, tagSuggestions, applyTagSuggestion,
+  type TaggableEntity, type ResolvedTag,
+} from '../lib/commandTags';
+import {
+  buildNextActions, historyRecommendations, type Recommendation,
+} from '../lib/recommendations';
 import { executeIntent } from '../lib/intentExecutor';
 import { logCommand, loadCommandLogs } from '../services/commandService';
-import { recordCorrection } from '../services/commandMemoryService';
+import { recordCorrection, loadMemoryExamples } from '../services/commandMemoryService';
+import { loadAliases } from '../services/commandAliasService';
 import { loadWorkItems } from '../services/workItemService';
 import { loadRapItems } from '../services/rapService';
+import { aggregateCostByRapItem } from '../services/costService';
+import { listMembers } from '../services/memberService';
 import { useAppStore } from '../store/appStore';
 
 type Stage = 'idle' | 'listening' | 'processing' | 'confirm' | 'success' | 'error';

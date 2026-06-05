@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import {
-  ArrowLeft, Calendar, MapPin, RefreshCw, X, ChevronsUp, ChevronsDown, Info,
+  ArrowLeft, Calendar, MapPin, RefreshCw, X, ChevronsUp, ChevronsDown, Info, Trash2,
 } from 'lucide-react';
 import type { Project } from '../../store/appStore';
 import { formatRupiah, HEALTH_CONFIG, STATUS_LABEL, formatDateId, daysUntil } from '../../utils/projectUi';
@@ -21,6 +21,8 @@ interface ProjectDetailHeaderProps {
   onRefresh: () => void;
   onHeaderTap: () => void;
   onToggleCompact: () => void;
+  canManage?: boolean;
+  onDelete?: () => void;
 }
 
 export default function ProjectDetailHeader({
@@ -37,6 +39,8 @@ export default function ProjectDetailHeader({
   onRefresh,
   onHeaderTap,
   onToggleCompact,
+  canManage,
+  onDelete,
 }: ProjectDetailHeaderProps) {
   const [opiHelpOpen, setOpiHelpOpen] = useState(false);
   const opiHelpRef = useRef<HTMLDivElement>(null);
@@ -96,6 +100,11 @@ export default function ProjectDetailHeader({
             <button type="button" onClick={e => { e.stopPropagation(); onToggleCompact(); }} className="p-1.5 hover:bg-white/20 rounded-lg shrink-0" aria-label="Perbesar header">
               <ChevronsDown className="w-5 h-5" />
             </button>
+            {canManage && onDelete && (
+              <button type="button" onClick={e => { e.stopPropagation(); onDelete(); }} className="p-1.5 hover:bg-rose-500/30 rounded-lg shrink-0 text-rose-200" aria-label="Hapus proyek">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
             <button type="button" onClick={e => { e.stopPropagation(); onRefresh(); }} className="p-1.5 hover:bg-white/20 rounded-lg shrink-0 hidden sm:flex" aria-label="Refresh">
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
@@ -128,6 +137,11 @@ export default function ProjectDetailHeader({
                 <button type="button" onClick={onToggleCompact} className="p-2 hover:bg-white/20 rounded-xl" aria-label="Ringkas header">
                   <ChevronsUp className="w-5 h-5" />
                 </button>
+                {canManage && onDelete && (
+                  <button type="button" onClick={onDelete} className="p-2 hover:bg-rose-500/30 rounded-xl text-rose-200" aria-label="Hapus proyek">
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                )}
                 <button type="button" onClick={onRefresh} className="p-2 hover:bg-white/20 rounded-xl" aria-label="Refresh">
                   <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
                 </button>
