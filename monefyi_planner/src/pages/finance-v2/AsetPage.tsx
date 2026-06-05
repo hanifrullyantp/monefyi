@@ -150,7 +150,22 @@ export default function AsetPage() {
                           Depresiasi
                         </button>
                       )}
-                      <button type="button" onClick={() => deleteFixedAsset(asset.id).then(load)} className="text-xs font-bold text-slate-400 ml-2 px-2 py-1 rounded-lg">Hapus</button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!window.confirm(`Hapus "${asset.name}"?`)) return;
+                          try {
+                            await deleteFixedAsset(asset.id);
+                            showToast('Aset dihapus', 'success');
+                            load();
+                          } catch (e) {
+                            showToast(e instanceof Error ? e.message : 'Gagal menghapus', 'error');
+                          }
+                        }}
+                        className="text-xs font-bold text-slate-400 ml-2 px-2 py-1 rounded-lg"
+                      >
+                        Hapus
+                      </button>
                     </td>
                   </tr>
                 );

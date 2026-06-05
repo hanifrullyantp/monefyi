@@ -3,7 +3,6 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../store/appStore';
 import FinanceV2Layout from './FinanceV2Layout';
 import FinanceV2Dashboard from './FinanceV2Dashboard';
-import FinanceV2Placeholder from './placeholders/FinanceV2Placeholder';
 import KasPage from './KasPage';
 import PiutangPage from './PiutangPage';
 import HutangPage from './HutangPage';
@@ -12,6 +11,7 @@ import PraBayarPage from './PraBayarPage';
 import AsetPage from './AsetPage';
 import InvestorPage from './InvestorPage';
 import OpexPage from './OpexPage';
+import LaporanPage from './LaporanPage';
 
 export default function FinanceV2Routes() {
   const location = useLocation();
@@ -33,7 +33,7 @@ export default function FinanceV2Routes() {
         <Route path="prabayar" element={<PraBayarPage />} />
         <Route path="investor" element={<InvestorPage />} />
         <Route path="opex" element={<OpexPage />} />
-        <Route path="laporan" element={<FinanceV2Placeholder title="Laporan" description="P&L, neraca, arus kas — Fase 4." />} />
+        <Route path="laporan" element={<LaporanPage />} />
       </Route>
     </Routes>
   );

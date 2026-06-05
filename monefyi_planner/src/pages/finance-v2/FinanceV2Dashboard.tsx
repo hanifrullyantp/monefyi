@@ -166,7 +166,7 @@ export default function FinanceV2Dashboard() {
             <div className="flex flex-wrap gap-2">
               {[
                 { label: 'Transfer Kas', icon: ArrowRightLeft, action: () => navigate('/app/finance-v2/kas') },
-                { label: 'Catat Piutang', icon: Receipt, action: () => navigate('/app/finance-v2/piutang') },
+                { label: 'Catat Opex', icon: Receipt, action: () => navigate('/app/finance-v2/opex') },
                 { label: 'Laporan', icon: FileText, action: () => navigate('/app/finance-v2/laporan') },
               ].map(btn => (
                 <button
