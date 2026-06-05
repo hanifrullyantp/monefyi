@@ -4,7 +4,9 @@ import { ArrowLeft, Loader2, Save } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
 import EstimationItemsTable from '../../components/estimator/EstimationItemsTable';
+import EstimationImageSlots from '../../components/estimator/EstimationImageSlots';
 import EstimationSummaryPanel from '../../components/estimator/EstimationSummaryPanel';
+import { uploadPendingImages } from '../../services/estimationImageService';
 import {
   createEstimation,
   estimationToFormDraft,
@@ -13,6 +15,7 @@ import {
   newEstimationDraft,
   updateEstimation,
 } from '../../services/estimatorService';
+import type { EstimationImageDraft } from '../../types/estimator';
 import { ESTIMATION_STATUS_LABEL } from '../../lib/estimatorFormat';
 import type { EstimationFormDraft } from '../../types/estimator';
 
@@ -48,7 +51,7 @@ export default function EstimatorForm() {
             navigate('/app/estimator');
             return;
           }
-          setDraft(estimationToFormDraft(est));
+          setDraft(await estimationToFormDraft(est));
         }
       } catch (e) {
         showToast(e instanceof Error ? e.message : 'Gagal memuat', 'error');
@@ -69,12 +72,22 @@ export default function EstimatorForm() {
 
     setSaving(true);
     try {
+      let images: EstimationImageDraft[] = draft.images;
+
       if (isNew) {
         const created = await createEstimation(tenant.id, user.id, draft);
+        if (images.some(img => img.pendingFile)) {
+          images = await uploadPendingImages(tenant.id, created.id, images);
+          await updateEstimation(created.id, { ...draft, images });
+        }
         showToast('Estimasi disimpan', 'success');
         navigate(`/app/estimator/${created.id}`, { replace: true });
       } else {
-        await updateEstimation(id, draft);
+        if (images.some(img => img.pendingFile)) {
+          images = await uploadPendingImages(tenant.id, id, images);
+        }
+        await updateEstimation(id, { ...draft, images });
+        patch({ images });
         showToast('Perubahan disimpan', 'success');
       }
     } catch (e) {
@@ -197,6 +210,14 @@ export default function EstimatorForm() {
               </div>
             </Field>
           </section>
+
+          <EstimationImageSlots
+            orgId={tenant!.id}
+            estimationId={isNew ? null : id ?? null}
+            images={draft.images}
+            onChange={images => patch({ images })}
+            onToast={(msg, type) => showToast(msg, type)}
+          />
 
           <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
             <button

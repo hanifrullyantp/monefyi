@@ -89,6 +89,15 @@ export interface EstimationItemDraft {
   notes: string;
 }
 
+export interface EstimationImageDraft {
+  storagePath: string | null;
+  caption: string;
+  previewUrl: string | null;
+  pendingFile?: File;
+  uploading?: boolean;
+  compressInfo?: { before: number; after: number };
+}
+
 export interface EstimationFormDraft {
   code: string;
   title: string;
@@ -105,6 +114,7 @@ export interface EstimationFormDraft {
   validity_days: number;
   status: EstimationStatus;
   pdf_template: PdfTemplate;
+  images: EstimationImageDraft[];
   items: EstimationItemDraft[];
 }
 

@@ -17,6 +17,7 @@ import {
   formatDateId,
   formatRupiahFull,
 } from '../../lib/estimatorFormat';
+import { getSignedImageUrl } from '../../services/estimationImageService';
 import type { Estimation, EstimationStatus } from '../../types/estimator';
 
 const STATUS_FILTERS: Array<{ value: '' | EstimationStatus; label: string }> = [
@@ -35,6 +36,7 @@ export default function EstimatorList() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'' | EstimationStatus>('');
+  const [thumbs, setThumbs] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     if (!tenant?.id) return;
@@ -53,6 +55,28 @@ export default function EstimatorList() {
   }, [tenant?.id, statusFilter, search, showToast]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadThumbs = async () => {
+      const withImage = rows.filter(r => r.image_1_url);
+      const entries = await Promise.all(
+        withImage.map(async r => {
+          try {
+            const url = await getSignedImageUrl(r.image_1_url!);
+            return [r.id, url] as const;
+          } catch {
+            return null;
+          }
+        }),
+      );
+      if (!cancelled) {
+        setThumbs(Object.fromEntries(entries.filter((e): e is [string, string] => e !== null)));
+      }
+    };
+    loadThumbs();
+    return () => { cancelled = true; };
+  }, [rows]);
 
   const handleDelete = async (id: string, title: string) => {
     if (!window.confirm(`Hapus estimasi "${title}"?`)) return;
@@ -164,6 +188,13 @@ export default function EstimatorList() {
               className="bg-white border border-slate-200 rounded-2xl p-4 hover:border-indigo-200 transition-colors"
             >
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                {thumbs[est.id] && (
+                  <img
+                    src={thumbs[est.id]}
+                    alt=""
+                    className="w-14 h-14 rounded-xl object-cover border border-slate-200 shrink-0 hidden sm:block"
+                  />
+                )}
                 <div className="flex-1 min-w-0 cursor-pointer" onClick={() => navigate(`/app/estimator/${est.id}`)}>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-xs text-indigo-600 font-bold">{est.code}</span>

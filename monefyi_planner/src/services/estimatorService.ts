@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { calcEstimationSummary, calcItemRow } from '../lib/estimatorCalc';
 import { nextEstimationCode } from '../lib/estimatorFormat';
+import { emptyImageDrafts, hydrateImageDrafts, imagesToDbFields } from './estimationImageService';
 import type {
   Estimation,
   EstimationFormDraft,
@@ -137,6 +138,7 @@ export async function createEstimation(
       status: draft.status,
       pdf_template: draft.pdf_template,
       created_by: userId,
+      ...imagesToDbFields(draft.images),
       ...header,
     })
     .select()
@@ -178,6 +180,7 @@ export async function updateEstimation(
       status: draft.status,
       pdf_template: draft.pdf_template,
       updated_at: new Date().toISOString(),
+      ...imagesToDbFields(draft.images),
       ...header,
     })
     .eq('id', id);
@@ -228,6 +231,7 @@ export async function duplicateEstimation(
     validity_days: source.validity_days,
     status: 'draft',
     pdf_template: source.pdf_template,
+    images: emptyImageDrafts(),
     items: (source.items || []).map((item, idx) => ({
       pricelist_item_id: item.pricelist_item_id,
       name: item.name,
@@ -247,7 +251,8 @@ export async function duplicateEstimation(
   return createEstimation(orgId, userId, draft);
 }
 
-export function estimationToFormDraft(est: Estimation): EstimationFormDraft {
+export async function estimationToFormDraft(est: Estimation): Promise<EstimationFormDraft> {
+  const images = await hydrateImageDrafts(est);
   return {
     code: est.code,
     title: est.title,
@@ -264,6 +269,7 @@ export function estimationToFormDraft(est: Estimation): EstimationFormDraft {
     validity_days: est.validity_days,
     status: est.status,
     pdf_template: est.pdf_template,
+    images,
     items: (est.items || []).map(item => ({
       id: item.id,
       pricelist_item_id: item.pricelist_item_id,
@@ -300,6 +306,7 @@ export function newEstimationDraft(code: string): EstimationFormDraft {
     validity_days: 14,
     status: 'draft',
     pdf_template: 'modern',
+    images: emptyImageDrafts(),
     items: [],
   };
 }
