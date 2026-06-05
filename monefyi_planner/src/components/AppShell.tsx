@@ -8,6 +8,7 @@ import Finance from '../pages/Finance';
 import Settings from '../pages/Settings';
 import HrEmployees from '../pages/HrEmployees';
 import WorkerDashboard from '../pages/WorkerDashboard';
+import EstimatorRoutes from '../pages/estimator/EstimatorRoutes';
 import OnboardingChecklist from './OnboardingChecklist';
 import { useAppStore } from '../store/appStore';
 import { showWorkerShell, canAccessManagerFeatures } from '../utils/platformUi';
@@ -73,6 +74,8 @@ function AppContent() {
           : <Dashboard onOpenProject={id => navigate(`/app/projects/${id}`)} />;
       case 'settings':
         return <Settings />;
+      case 'estimator':
+        return null;
       default:
         return <Dashboard onOpenProject={id => navigate(`/app/projects/${id}`)} />;
     }
@@ -99,11 +102,20 @@ function AppContent() {
   );
 }
 
+function EstimatorShell() {
+  return (
+    <Layout>
+      <EstimatorRoutes />
+    </Layout>
+  );
+}
+
 export default function AppShell() {
   return (
     <Routes>
       <Route index element={<AppContent />} />
       <Route path="projects/:id" element={<AppContent />} />
+      <Route path="estimator/*" element={<EstimatorShell />} />
     </Routes>
   );
 }

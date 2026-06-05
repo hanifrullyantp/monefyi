@@ -1,8 +1,9 @@
 import type { RapItem } from './rapService';
 import { updateRapItem } from './rapService';
-import { createCostRealization } from './costService';
+import { createCostRealization, updateCostRealization } from './costService';
 import type { RapTableRow } from '../utils/rapTableRows';
 import { todayStr } from '../lib/adapters';
+import { validateRapCell } from '../utils/rapCellValidation';
 
 export type RapCellField =
   | 'name'
@@ -14,7 +15,8 @@ export type RapCellField =
   | 'supplier'
   | 'notes'
   | 'is_critical'
-  | 'qty_realisasi';
+  | 'qty_realisasi'
+  | 'tanggal_realisasi';
 
 const FIELD_TO_RAP: Partial<Record<RapCellField, keyof RapItem>> = {
   name: 'name',
@@ -37,12 +39,23 @@ export async function saveRapCellChange(
     projectId: string;
     recordedBy: string;
     currentActualQty: number;
+    lastCostId?: string;
   },
 ): Promise<RapItem | void> {
+  const validation = validateRapCell(field, value, options.mode);
+  if (!validation.valid) throw new Error(validation.message || 'Nilai tidak valid');
+
+  if (field === 'tanggal_realisasi') {
+    if (options.mode !== 'realisasi' || !options.lastCostId) return;
+    await updateCostRealization(options.lastCostId, options.projectId, {
+      date: String(value),
+    });
+    return;
+  }
+
   if (field === 'qty_realisasi') {
     if (options.mode !== 'realisasi') return;
     const targetQty = Number(value);
-    if (!Number.isFinite(targetQty)) throw new Error('Qty realisasi tidak valid');
     const delta = targetQty - options.currentActualQty;
     if (delta === 0) return;
     await createCostRealization({
@@ -61,13 +74,9 @@ export async function saveRapCellChange(
   const rapKey = FIELD_TO_RAP[field];
   if (!rapKey) return;
 
-  if (field === 'qty_rencana' || field === 'harga_satuan') {
-    const n = Number(value);
-    if (!Number.isFinite(n)) throw new Error('Nilai harus angka');
-    if (field === 'qty_rencana' && n < 0) throw new Error('Qty tidak boleh negatif');
-    if (field === 'harga_satuan' && n < 0) throw new Error('Harga tidak boleh negatif');
-  }
-
-  const patch: Partial<RapItem> = { [rapKey]: value };
+  const patch: Partial<RapItem> = {
+    [rapKey]: value,
+    updated_by: options.recordedBy,
+  };
   return updateRapItem(row.id, patch);
 }

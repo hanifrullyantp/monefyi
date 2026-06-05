@@ -1,4 +1,5 @@
 import type { RapItem } from '../services/rapService';
+import type { RapActualAgg } from '../services/costService';
 
 export type RapRowStatus = 'none' | 'under' | 'over' | 'done';
 
@@ -20,6 +21,8 @@ export interface RapTableRow {
   notes: string;
   is_critical: boolean;
   tanggal_update: string;
+  tanggal_realisasi: string;
+  updated_by: string;
   status: RapRowStatus;
   sort_order: number;
 }
@@ -38,7 +41,7 @@ export function rapTypeLabel(type: string) {
 
 export function buildRapTableRows(
   items: RapItem[],
-  rapActuals: Record<string, { qty: number; amount: number }>,
+  rapActuals: Record<string, RapActualAgg>,
 ): RapTableRow[] {
   return items.map(item => {
     const actual = rapActuals[item.id];
@@ -76,8 +79,31 @@ export function buildRapTableRows(
       notes: item.notes || '',
       is_critical: Boolean(item.is_critical),
       tanggal_update: item.updated_at || item.created_at || '',
+      tanggal_realisasi: actual?.lastDate || '',
+      updated_by: item.updated_by || actual?.lastRecordedBy || '',
       status,
       sort_order: item.sort_order ?? 0,
     };
   });
+}
+
+/** Recompute derived columns after optimistic edit */
+export function recomputeRapRow(row: RapTableRow): RapTableRow {
+  const totalRencana = row.qty_rencana * row.harga_satuan;
+  const totalRealisasi = row.qty_realisasi * row.harga_realisasi;
+  const progressPct = row.qty_rencana > 0 ? (row.qty_realisasi / row.qty_rencana) * 100 : 0;
+  let status: RapRowStatus = 'none';
+  if (row.qty_realisasi !== 0) {
+    if (row.qty_rencana > 0 && row.qty_realisasi >= row.qty_rencana) status = 'done';
+    else if (progressPct > 100) status = 'over';
+    else status = 'under';
+  }
+  return {
+    ...row,
+    total_rencana: totalRencana,
+    total_realisasi: totalRealisasi,
+    selisih: totalRencana - totalRealisasi,
+    progress_pct: progressPct,
+    status,
+  };
 }

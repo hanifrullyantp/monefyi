@@ -1,22 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { GridApi } from 'ag-grid-community';
-import { Columns3, Download, Plus, RefreshCw, Rows3 } from 'lucide-react';
+import { ClipboardCopy, Columns3, Download, Moon, Plus, RefreshCw, Rows3, Sun, Trash2 } from 'lucide-react';
 import EditableTable from '../table/EditableTable';
-import { buildRapColumnDefs } from './rapColumnDefs';
-import { buildRapTableRows, type RapTableRow } from '../../utils/rapTableRows';
+import { buildRapColumnDefs, RAP_COLUMN_FIELDS } from './rapColumnDefs';
+import { buildRapTableRows, recomputeRapRow, type RapTableRow } from '../../utils/rapTableRows';
 import type { RapItem } from '../../services/rapService';
-import { createRapItem } from '../../services/rapService';
+import { createRapItem, deleteRapItem } from '../../services/rapService';
 import { saveRapCellChange, type RapCellField } from '../../services/rapTableService';
+import type { RapActualAgg } from '../../services/costService';
 import { useAutoSave } from '../../hooks/useAutoSave';
+import { useRapRealtime } from '../../hooks/useRapRealtime';
+import { useColorScheme } from '../../hooks/useColorScheme';
 import { useUiStore } from '../../store/uiStore';
+import { validateRapCell, cellErrorKey } from '../../utils/rapCellValidation';
+import { exportGridAsXlsx } from '../../utils/exportGridXlsx';
 
 interface RapEditableTableProps {
   projectId: string;
   items: RapItem[];
-  rapActuals: Record<string, { qty: number; amount: number }>;
+  rapActuals: Record<string, RapActualAgg>;
   mode: 'planning' | 'realisasi';
   canManage: boolean;
   recordedBy: string;
+  loading?: boolean;
   onRefresh: () => Promise<void>;
   onExport?: () => void;
 }
@@ -26,11 +32,13 @@ interface PendingSave {
   field: RapCellField;
   value: string | number | boolean;
   currentActualQty: number;
+  lastCostId?: string;
+  snapshot: RapTableRow[];
 }
 
 const EDITABLE_FIELDS = new Set<string>([
   'name', 'type', 'description', 'unit', 'qty_rencana', 'harga_satuan',
-  'supplier', 'notes', 'is_critical', 'qty_realisasi',
+  'supplier', 'notes', 'is_critical', 'qty_realisasi', 'tanggal_realisasi',
 ]);
 
 export default function RapEditableTable({
@@ -40,22 +48,37 @@ export default function RapEditableTable({
   mode,
   canManage,
   recordedBy,
+  loading = false,
   onRefresh,
   onExport,
 }: RapEditableTableProps) {
   const showToast = useUiStore(s => s.showToast);
+  const { dark, toggle: toggleTheme } = useColorScheme();
   const gridApiRef = useRef<GridApi<RapTableRow> | null>(null);
   const [showColumnMenu, setShowColumnMenu] = useState(false);
   const [groupByType, setGroupByType] = useState(false);
+  const [cellErrors, setCellErrors] = useState<Record<string, string>>({});
+  const [hiddenCols, setHiddenCols] = useState<Record<string, boolean>>({});
 
-  const rowData = useMemo(() => buildRapTableRows(items, rapActuals), [items, rapActuals]);
+  const serverRows = useMemo(() => buildRapTableRows(items, rapActuals), [items, rapActuals]);
+  const [optimisticRows, setOptimisticRows] = useState<RapTableRow[]>(serverRows);
+  const snapshotRef = useRef<RapTableRow[]>(serverRows);
+
+  useEffect(() => {
+    setOptimisticRows(serverRows);
+    snapshotRef.current = serverRows;
+  }, [serverRows]);
+
+  const stableRefresh = useCallback(() => { void onRefresh(); }, [onRefresh]);
+  useRapRealtime(projectId, stableRefresh);
+
   const columnDefs = useMemo(() => {
-    const cols = buildRapColumnDefs(mode, canManage);
+    const cols = buildRapColumnDefs(mode, canManage, cellErrors);
     if (!groupByType) return cols;
     return cols.map(c =>
       c.field === 'type' ? { ...c, rowGroup: true, hide: true } : c,
     );
-  }, [mode, canManage, groupByType]);
+  }, [mode, canManage, cellErrors, groupByType]);
 
   useEffect(() => {
     const api = gridApiRef.current;
@@ -66,32 +89,68 @@ export default function RapEditableTable({
 
   const { status, schedule } = useAutoSave<PendingSave>({
     debounceMs: 800,
-    onSave: async ({ row, field, value, currentActualQty }) => {
-      await saveRapCellChange(row, field, value, {
+    onSave: async (pending) => {
+      await saveRapCellChange(pending.row, pending.field, pending.value, {
         mode,
         projectId,
         recordedBy,
-        currentActualQty,
+        currentActualQty: pending.currentActualQty,
+        lastCostId: pending.lastCostId,
       });
       await onRefresh();
+      setCellErrors(prev => {
+        const next = { ...prev };
+        delete next[cellErrorKey(pending.row.id, pending.field)];
+        return next;
+      });
     },
-    onError: e => showToast(e.message, 'error'),
+    onError: e => {
+      setOptimisticRows(snapshotRef.current);
+      showToast(e.message, 'error');
+    },
   });
+
+  const applyOptimisticPatch = useCallback((rowId: string, field: string, value: unknown) => {
+    setOptimisticRows(prev =>
+      prev.map(r => {
+        if (r.id !== rowId) return r;
+        const patched = { ...r, [field]: value } as RapTableRow;
+        return recomputeRapRow(patched);
+      }),
+    );
+  }, []);
 
   const handleCellChanged = useCallback(
     (row: RapTableRow, field: string, value: unknown, oldValue: unknown) => {
       if (!canManage || value === oldValue) return;
       if (!EDITABLE_FIELDS.has(field)) return;
-      if (mode === 'planning' && field === 'qty_realisasi') return;
+      if (mode === 'planning' && (field === 'qty_realisasi' || field === 'tanggal_realisasi')) return;
 
+      const validation = validateRapCell(field as RapCellField, value, mode);
+      if (!validation.valid) {
+        setCellErrors(prev => ({
+          ...prev,
+          [cellErrorKey(row.id, field)]: validation.message || 'Invalid',
+        }));
+        showToast(validation.message || 'Nilai tidak valid', 'error');
+        setOptimisticRows(snapshotRef.current);
+        return;
+      }
+
+      snapshotRef.current = optimisticRows;
+      applyOptimisticPatch(row.id, field, value);
+
+      const actual = rapActuals[row.id];
       schedule({
         row,
         field: field as RapCellField,
         value: value as string | number | boolean,
         currentActualQty: row.qty_realisasi,
+        lastCostId: actual?.lastCostId,
+        snapshot: snapshotRef.current,
       });
     },
-    [canManage, mode, schedule],
+    [canManage, mode, schedule, showToast, applyOptimisticPatch, optimisticRows, rapActuals],
   );
 
   const handleAddRow = async () => {
@@ -104,6 +163,7 @@ export default function RapEditableTable({
         quantity: 1,
         unit_price: 0,
         sort_order: items.length,
+        updated_by: recordedBy,
       });
       await onRefresh();
       showToast('Baris RAP ditambahkan', 'success');
@@ -112,7 +172,26 @@ export default function RapEditableTable({
     }
   };
 
+  const handleBulkDelete = async () => {
+    const selected = gridApiRef.current?.getSelectedRows() || [];
+    if (!selected.length) {
+      showToast('Pilih baris dulu (checkbox)', 'error');
+      return;
+    }
+    if (!window.confirm(`Hapus ${selected.length} item RAP?`)) return;
+    try {
+      for (const row of selected) {
+        await deleteRapItem(row.id);
+      }
+      await onRefresh();
+      showToast(`${selected.length} item dihapus`, 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal menghapus', 'error');
+    }
+  };
+
   const toggleColumn = (field: string, visible: boolean) => {
+    setHiddenCols(prev => ({ ...prev, [field]: !visible }));
     gridApiRef.current?.setColumnsVisible([field], visible);
   };
 
@@ -120,29 +199,44 @@ export default function RapEditableTable({
     gridApiRef.current?.exportDataAsCsv({ fileName: `RAP_${projectId.slice(0, 8)}.csv` });
   };
 
-  const hiddenToggleFields = ['description', 'supplier', 'notes', 'is_critical', 'harga_realisasi', 'tanggal_update'];
+  const exportXlsx = () => {
+    if (!gridApiRef.current) return;
+    exportGridAsXlsx(gridApiRef.current, `RAP_${projectId.slice(0, 8)}.xlsx`);
+  };
+
+  const copyToClipboard = async () => {
+    const api = gridApiRef.current;
+    if (!api) return;
+    const csv = api.getDataAsCsv({ skipColumnHeaders: false });
+    try {
+      await navigator.clipboard.writeText(csv);
+      showToast('Disalin ke clipboard', 'success');
+    } catch {
+      showToast('Gagal menyalin', 'error');
+    }
+  };
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm sticky top-0 z-10">
+      <div className="flex flex-wrap items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2 shadow-sm sticky top-0 z-10">
         <div className="relative">
           <button
             type="button"
             onClick={() => setShowColumnMenu(v => !v)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 border rounded-lg hover:bg-slate-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 border dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700"
           >
             <Columns3 className="w-3.5 h-3.5" /> Kolom
           </button>
           {showColumnMenu && (
-            <div className="absolute left-0 top-full mt-1 z-20 w-52 p-2 bg-white border rounded-xl shadow-xl text-xs space-y-1">
-              {hiddenToggleFields.map(f => (
-                <label key={f} className="flex items-center gap-2 px-2 py-1 hover:bg-slate-50 rounded cursor-pointer">
+            <div className="absolute left-0 top-full mt-1 z-20 w-56 max-h-64 overflow-y-auto p-2 bg-white dark:bg-slate-800 border dark:border-slate-600 rounded-xl shadow-xl text-xs space-y-0.5">
+              {RAP_COLUMN_FIELDS.map(({ field, label }) => (
+                <label key={field} className="flex items-center gap-2 px-2 py-1 hover:bg-slate-50 dark:hover:bg-slate-700 rounded cursor-pointer">
                   <input
                     type="checkbox"
-                    defaultChecked
-                    onChange={e => toggleColumn(f, e.target.checked)}
+                    checked={hiddenCols[field] !== true}
+                    onChange={e => toggleColumn(field, e.target.checked)}
                   />
-                  {f.replace(/_/g, ' ')}
+                  {label}
                 </label>
               ))}
             </div>
@@ -153,67 +247,77 @@ export default function RapEditableTable({
           type="button"
           onClick={() => setGroupByType(v => !v)}
           className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold border rounded-lg ${
-            groupByType ? 'bg-indigo-600 text-white border-indigo-600' : 'text-slate-700 hover:bg-slate-50'
+            groupByType
+              ? 'bg-indigo-600 text-white border-indigo-600'
+              : 'text-slate-700 dark:text-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
           }`}
         >
-          <Rows3 className="w-3.5 h-3.5" /> Group Kategori
+          <Rows3 className="w-3.5 h-3.5" /> Group
         </button>
 
-        <button
-          type="button"
-          onClick={() => void onRefresh()}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 border rounded-lg hover:bg-slate-50"
-        >
+        <button type="button" onClick={() => void onRefresh()} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 border dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700">
           <RefreshCw className="w-3.5 h-3.5" />
         </button>
 
-        <button
-          type="button"
-          onClick={exportCsv}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-50"
-        >
+        <button type="button" onClick={exportCsv} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20">
           <Download className="w-3.5 h-3.5" /> CSV
         </button>
 
+        <button type="button" onClick={exportXlsx} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20">
+          <Download className="w-3.5 h-3.5" /> XLSX
+        </button>
+
         {onExport && (
-          <button
-            type="button"
-            onClick={onExport}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-50"
-          >
-            <Download className="w-3.5 h-3.5" /> Excel
+          <button type="button" onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-700 border border-emerald-200 rounded-lg">
+            <Download className="w-3.5 h-3.5" /> Template
           </button>
         )}
 
+        <button type="button" onClick={() => void copyToClipboard()} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 border dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700">
+          <ClipboardCopy className="w-3.5 h-3.5" /> Copy
+        </button>
+
+        <button type="button" onClick={toggleTheme} title="Toggle dark mode" className="p-1.5 border dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
+          {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        </button>
+
         {canManage && (
-          <button
-            type="button"
-            onClick={() => void handleAddRow()}
-            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-          >
-            <Plus className="w-3.5 h-3.5" /> Tambah Row
-          </button>
+          <>
+            <button type="button" onClick={() => void handleBulkDelete()} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-rose-700 border border-rose-200 rounded-lg hover:bg-rose-50">
+              <Trash2 className="w-3.5 h-3.5" /> Hapus
+            </button>
+            <button type="button" onClick={() => void handleAddRow()} className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+              <Plus className="w-3.5 h-3.5" /> Tambah Row
+            </button>
+          </>
         )}
       </div>
 
       <EditableTable<RapTableRow>
-        rowData={rowData}
+        rowData={optimisticRows}
         columnDefs={columnDefs}
+        loading={loading}
         saveStatus={status}
         canEdit={canManage}
         groupField={groupByType ? 'type' : undefined}
         onCellChanged={handleCellChanged}
         onGridReady={api => {
           gridApiRef.current = api;
-          if (groupByType) {
-            api.setRowGroupColumns(['type']);
-          }
+          if (groupByType) api.setRowGroupColumns(['type']);
         }}
         height="min(70vh, 560px)"
       />
 
-      <p className="text-[10px] text-slate-400 px-1">
-        Klik 2× sel untuk edit · Enter simpan · Ctrl+C/V copy-paste · Ctrl+Z undo · Geser kolom untuk ubah lebar
+      {Object.keys(cellErrors).length > 0 && (
+        <div className="text-xs text-rose-600 dark:text-rose-400 px-1 space-y-0.5">
+          {Object.entries(cellErrors).map(([k, msg]) => (
+            <div key={k}>{k.split(':')[1]}: {msg}</div>
+          ))}
+        </div>
+      )}
+
+      <p className="text-[10px] text-slate-400 dark:text-slate-500 px-1">
+        Klik 2× edit · Enter simpan · Ctrl+C/V · Ctrl+Z undo · Checkbox untuk bulk hapus · Realtime sync aktif
       </p>
     </div>
   );

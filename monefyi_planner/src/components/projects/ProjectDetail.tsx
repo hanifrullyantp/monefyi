@@ -9,7 +9,7 @@ import { useUiStore } from '../../store/uiStore';
 import { deleteProject, updateProject as updateProjectApi } from '../../services/projectService';
 import { loadRapItems, rapSummary, rapActualsFromCosts, createRapItem, deleteRapItem, updateRapItem } from '../../services/rapService';
 import { loadWorkItems, createWorkItem, deleteWorkItem, updateWorkItem, updateProjectProgressFromWorkItems } from '../../services/workItemService';
-import { loadCostRealizations, deleteCostRealization, aggregateCostByRapItem, repairImportCosts } from '../../services/costService';
+import { loadCostRealizations, deleteCostRealization, aggregateCostByRapItem, repairImportCosts, type RapActualAgg } from '../../services/costService';
 import { loadDailyLogs, createDailyLog } from '../../services/dailyLogService';
 import { analyzeProject, type AnalyzeResult } from '../../services/analyzeService';
 import ConfirmDialog from '../ConfirmDialog';
@@ -60,7 +60,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   const [editingRapId, setEditingRapId] = useState<string | null>(null);
   const [rapForm, setRapForm] = useState({ type: 'material', name: '', unit: 'unit', quantity: 1, unit_price: 0 });
   const [wiForm, setWiForm] = useState({ name: '', planned_start: project.start_date, planned_end: project.end_date, progress_pct: 0 });
-  const [rapActuals, setRapActuals] = useState<Record<string, { qty: number; amount: number }>>({});
+  const [rapActuals, setRapActuals] = useState<Record<string, RapActualAgg>>({});
   const [qtyDrafts, setQtyDrafts] = useState<Record<string, string>>({});
   const [realizationDialog, setRealizationDialog] = useState<{ rapItem: typeof rapItems[0]; quantity: number } | null>(null);
   const [showRapImport, setShowRapImport] = useState(false);
@@ -540,6 +540,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                           mode="planning"
                           canManage={canManage}
                           recordedBy={user.id}
+                          loading={loading}
                           onRefresh={reload}
                           onExport={handleExportRap}
                         />
@@ -623,6 +624,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                             mode="realisasi"
                             canManage={canManage}
                             recordedBy={user.id}
+                            loading={loading}
                             onRefresh={reload}
                             onExport={handleExportRap}
                           />

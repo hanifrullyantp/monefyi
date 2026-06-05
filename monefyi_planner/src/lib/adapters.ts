@@ -62,6 +62,7 @@ export interface DbRapItem {
   notes?: string | null;
   is_critical?: boolean | null;
   sort_order?: number | null;
+  updated_by?: string | null;
   created_at?: string;
   updated_at?: string;
 }

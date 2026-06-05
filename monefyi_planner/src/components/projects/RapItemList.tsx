@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Search, LayoutGrid, Table2, List, Trash2 } from 'lucide-react';
 import type { RapItem } from '../../services/rapService';
+import type { RapActualAgg } from '../../services/costService';
 import { formatRupiah } from '../../utils/projectUi';
 import { formatSelisih } from '../../services/rapExcelService';
 
@@ -17,7 +18,7 @@ const TYPE_LABELS: Record<string, string> = {
 
 interface Props {
   items: RapItem[];
-  rapActuals: Record<string, { qty: number; amount: number }>;
+  rapActuals: Record<string, RapActualAgg>;
   mode: 'planning' | 'realisasi';
   canManage: boolean;
   rapTotal?: number;

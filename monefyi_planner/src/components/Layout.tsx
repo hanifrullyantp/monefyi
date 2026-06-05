@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, FolderOpen, Wallet, Settings, Bell, Menu, X,
-  Sparkles, Wifi, WifiOff, Clock, Users,
+  Sparkles, Wifi, WifiOff, Clock, Users, Calculator,
   BarChart3, ChevronRight, LogOut, User, Shield, Building2,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
@@ -38,6 +38,7 @@ export default function Layout({ children }: LayoutProps) {
     { id: 'home', label: 'Home', icon: Home },
     { id: 'projects', label: 'Proyek', icon: FolderOpen },
     { id: 'command', label: '✦', icon: Sparkles, special: true },
+    { id: 'estimator', label: 'Estimator', icon: Calculator },
     { id: 'finance', label: 'Finance', icon: Wallet },
     ...(canAccessHr ? [{ id: 'hr', label: 'HR', icon: Users }] : []),
   ];
@@ -55,6 +56,7 @@ export default function Layout({ children }: LayoutProps) {
   const ownerSidebarItems = [
     { id: 'home', label: 'Dashboard', icon: Home },
     { id: 'projects', label: 'Proyek', icon: FolderOpen },
+    { id: 'estimator', label: 'Estimator', icon: Calculator },
     { id: 'finance', label: 'Keuangan', icon: Wallet },
     ...(canAccessHr
       ? [{ id: 'hr', label: 'HR & Karyawan', icon: Users }]
@@ -69,6 +71,16 @@ export default function Layout({ children }: LayoutProps) {
   ];
 
   const sidebarItems = isWorker ? workerSidebarItems : ownerSidebarItems;
+
+  const handleNav = (tabId: string) => {
+    if (tabId === 'estimator') {
+      navigate('/app/estimator');
+    } else {
+      navigate('/app');
+      setActiveTab(tabId);
+    }
+    setSidebarOpen(false);
+  };
 
   const handleLogout = async () => {
     setProfileOpen(false);
@@ -146,7 +158,7 @@ export default function Layout({ children }: LayoutProps) {
           {sidebarItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => handleNav(item.id)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                 activeTab === item.id
                   ? 'bg-indigo-50 text-indigo-700 shadow-sm'
@@ -259,7 +271,7 @@ export default function Layout({ children }: LayoutProps) {
                 {sidebarItems.map((item) => (
                   <button
                     key={item.id}
-                    onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
+                    onClick={() => handleNav(item.id)}
                     className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${
                       activeTab === item.id
                         ? 'bg-indigo-50 text-indigo-700'

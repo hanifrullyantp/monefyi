@@ -1,16 +1,17 @@
-import type { ColDef, ICellRendererParams } from 'ag-grid-community';
+import type { ColDef, ICellRendererParams, ValueSetterParams } from 'ag-grid-community';
 import type { RapTableRow } from '../../utils/rapTableRows';
-import { rapTypeLabel } from '../../utils/rapTableRows';
-import { formatRupiah } from '../../utils/projectUi';
-import { formatDateId } from '../../utils/projectUi';
+import { rapTypeLabel, recomputeRapRow } from '../../utils/rapTableRows';
+import { formatRupiah, formatDateId } from '../../utils/projectUi';
+import { validateRapCell } from '../../utils/rapCellValidation';
+import type { RapCellField } from '../../services/rapTableService';
 
 const TYPE_OPTIONS = ['material', 'labor', 'equipment', 'overhead', 'other'];
 
 const STATUS_STYLES: Record<RapTableRow['status'], string> = {
-  none: 'bg-slate-100 text-slate-600',
-  under: 'bg-amber-100 text-amber-800',
-  over: 'bg-rose-100 text-rose-800',
-  done: 'bg-emerald-100 text-emerald-800',
+  none: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-200',
+  under: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200',
+  over: 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200',
+  done: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200',
 };
 
 const STATUS_LABELS: Record<RapTableRow['status'], string> = {
@@ -50,9 +51,52 @@ function dateOrDash(p: { value: string | null | undefined }) {
   }
 }
 
-export function buildRapColumnDefs(mode: 'planning' | 'realisasi', canEdit: boolean): ColDef<RapTableRow>[] {
+function makeSetter(field: keyof RapTableRow, mode: 'planning' | 'realisasi') {
+  return (p: ValueSetterParams<RapTableRow>) => {
+    const v = validateRapCell(field as RapCellField, p.newValue, mode);
+    if (!v.valid) return false;
+    (p.data as RapTableRow)[field] = p.newValue as never;
+    const next = recomputeRapRow(p.data);
+    Object.assign(p.data, next);
+    return true;
+  };
+}
+
+export const RAP_COLUMN_FIELDS: { field: keyof RapTableRow; label: string }[] = [
+  { field: 'name', label: 'Nama Item' },
+  { field: 'type', label: 'Kategori' },
+  { field: 'description', label: 'Spesifikasi' },
+  { field: 'unit', label: 'Satuan' },
+  { field: 'qty_rencana', label: 'Vol RAP' },
+  { field: 'harga_satuan', label: 'Harga Satuan' },
+  { field: 'total_rencana', label: 'Total RAP' },
+  { field: 'qty_realisasi', label: 'Realisasi Vol' },
+  { field: 'harga_realisasi', label: 'Harga Realisasi' },
+  { field: 'total_realisasi', label: 'Total Realisasi' },
+  { field: 'selisih', label: 'Selisih' },
+  { field: 'progress_pct', label: '% Progress' },
+  { field: 'supplier', label: 'Supplier' },
+  { field: 'notes', label: 'Catatan' },
+  { field: 'is_critical', label: 'Kritis' },
+  { field: 'tanggal_update', label: 'Diupdate' },
+  { field: 'tanggal_realisasi', label: 'Tgl Realisasi' },
+  { field: 'updated_by', label: 'Updated By' },
+  { field: 'status', label: 'Status' },
+];
+
+export function buildRapColumnDefs(
+  mode: 'planning' | 'realisasi',
+  canEdit: boolean,
+  cellErrors: Record<string, string>,
+): ColDef<RapTableRow>[] {
   const planEditable = canEdit;
   const realisasiQtyEditable = canEdit && mode === 'realisasi';
+  const realisasiDateEditable = canEdit && mode === 'realisasi';
+
+  const errClass = (field: string) => ({
+    'ring-2 ring-rose-500 ring-inset bg-rose-50/50': (p: { data?: RapTableRow }) =>
+      Boolean(p.data && cellErrors[`${p.data.id}:${field}`]),
+  });
 
   return [
     {
@@ -63,6 +107,8 @@ export function buildRapColumnDefs(mode: 'planning' | 'realisasi', canEdit: bool
       editable: planEditable,
       checkboxSelection: true,
       headerCheckboxSelection: true,
+      cellClassRules: errClass('name'),
+      valueSetter: makeSetter('name', mode),
     },
     {
       field: 'type',
@@ -72,6 +118,7 @@ export function buildRapColumnDefs(mode: 'planning' | 'realisasi', canEdit: bool
       cellEditor: 'agSelectCellEditor',
       cellEditorParams: { values: TYPE_OPTIONS },
       valueFormatter: p => rapTypeLabel(String(p.value || '')),
+      cellClassRules: errClass('type'),
     },
     {
       field: 'description',
@@ -92,6 +139,8 @@ export function buildRapColumnDefs(mode: 'planning' | 'realisasi', canEdit: bool
       type: 'numericColumn',
       valueFormatter: numberOrDash,
       width: 100,
+      cellClassRules: errClass('qty_rencana'),
+      valueSetter: makeSetter('qty_rencana', mode),
     },
     {
       field: 'harga_satuan',
@@ -100,6 +149,8 @@ export function buildRapColumnDefs(mode: 'planning' | 'realisasi', canEdit: bool
       type: 'numericColumn',
       valueFormatter: rupiahFormatter,
       minWidth: 120,
+      cellClassRules: errClass('harga_satuan'),
+      valueSetter: makeSetter('harga_satuan', mode),
     },
     {
       field: 'total_rencana',
@@ -116,6 +167,7 @@ export function buildRapColumnDefs(mode: 'planning' | 'realisasi', canEdit: bool
       type: 'numericColumn',
       valueFormatter: numberOrDash,
       width: 110,
+      cellClassRules: errClass('qty_realisasi'),
     },
     {
       field: 'harga_realisasi',
@@ -140,8 +192,8 @@ export function buildRapColumnDefs(mode: 'planning' | 'realisasi', canEdit: bool
       type: 'numericColumn',
       valueFormatter: rupiahFormatter,
       cellClassRules: {
-        'text-emerald-700 font-semibold': p => Number(p.value) >= 0,
-        'text-rose-700 font-semibold': p => Number(p.value) < 0,
+        'text-emerald-700 font-semibold dark:text-emerald-400': p => Number(p.value) >= 0,
+        'text-rose-700 font-semibold dark:text-rose-400': p => Number(p.value) < 0,
       },
       minWidth: 120,
     },
@@ -183,6 +235,28 @@ export function buildRapColumnDefs(mode: 'planning' | 'realisasi', canEdit: bool
       minWidth: 110,
     },
     {
+      field: 'tanggal_realisasi',
+      headerName: 'Tgl Realisasi',
+      editable: realisasiDateEditable,
+      cellEditor: 'agDateCellEditor',
+      cellEditorParams: { max: new Date().toISOString().slice(0, 10) },
+      valueFormatter: dateOrDash,
+      valueParser: p => (p.newValue instanceof Date ? p.newValue.toISOString().slice(0, 10) : String(p.newValue || '')),
+      minWidth: 120,
+      cellClassRules: errClass('tanggal_realisasi'),
+    },
+    {
+      field: 'updated_by',
+      headerName: 'Updated By',
+      editable: false,
+      minWidth: 100,
+      valueFormatter: p => {
+        const v = String(p.value || '');
+        if (!v) return '—';
+        return v.length > 8 ? `${v.slice(0, 8)}…` : v;
+      },
+    },
+    {
       field: 'status',
       headerName: 'Status',
       editable: false,
@@ -190,7 +264,6 @@ export function buildRapColumnDefs(mode: 'planning' | 'realisasi', canEdit: bool
       cellRenderer: (p: ICellRendererParams<RapTableRow>) => (
         <StatusBadge value={(p.value as RapTableRow['status']) || 'none'} />
       ),
-      rowGroup: false,
     },
   ];
 }

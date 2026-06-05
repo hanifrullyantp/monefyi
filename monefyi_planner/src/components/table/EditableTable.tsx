@@ -7,19 +7,11 @@ import {
   type GridApi,
   type GridReadyEvent,
   type CellValueChangedEvent,
-  themeQuartz,
 } from 'ag-grid-community';
+import { useColorScheme } from '../../hooks/useColorScheme';
+import { gridThemeDark, gridThemeLight } from './gridThemes';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
-
-const gridTheme = themeQuartz.withParams({
-  accentColor: '#4f46e5',
-  borderRadius: 8,
-  fontFamily: 'inherit',
-  headerHeight: 44,
-  rowHeight: 44,
-  spacing: 6,
-});
 
 export type SaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
 
@@ -48,8 +40,11 @@ export default function EditableTable<T extends { id: string }>({
   height = 480,
   className = '',
 }: EditableTableProps<T>) {
+  const { dark } = useColorScheme();
   const gridRef = useRef<AgGridReact<T>>(null);
   const [quickFilter, setQuickFilter] = useState('');
+
+  const theme = dark ? gridThemeDark : gridThemeLight;
 
   const defaultColDef = useMemo<ColDef<T>>(
     () => ({
@@ -59,8 +54,9 @@ export default function EditableTable<T extends { id: string }>({
       editable: canEdit,
       minWidth: 90,
       flex: 1,
+      enableRowGroup: Boolean(groupField),
     }),
-    [canEdit],
+    [canEdit, groupField],
   );
 
   const handleGridReady = useCallback(
@@ -88,6 +84,11 @@ export default function EditableTable<T extends { id: string }>({
     }
   }, [saveStatus]);
 
+  const loadingOverlay = useMemo(
+    () => '<div class="flex flex-col items-center gap-2 p-6 text-sm text-slate-500"><div class="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>Memuat data…</div>',
+    [],
+  );
+
   return (
     <div className={`flex flex-col gap-2 ${className}`}>
       <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -99,17 +100,17 @@ export default function EditableTable<T extends { id: string }>({
             gridRef.current?.api?.setGridOption('quickFilterText', e.target.value);
           }}
           placeholder="Cari di tabel…"
-          className="flex-1 min-w-[140px] px-3 py-2 border border-slate-200 rounded-lg bg-white text-sm"
+          className="flex-1 min-w-[140px] px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 dark:text-slate-100 text-sm"
           aria-label="Cari tabel"
         />
         {statusLabel && (
           <span
             className={`px-2 py-1 rounded-lg font-semibold ${
               saveStatus === 'error'
-                ? 'bg-rose-50 text-rose-700'
+                ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
                 : saveStatus === 'saved'
-                  ? 'bg-emerald-50 text-emerald-700'
-                  : 'bg-slate-100 text-slate-600'
+                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                  : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-200'
             }`}
           >
             {statusLabel}
@@ -118,16 +119,17 @@ export default function EditableTable<T extends { id: string }>({
       </div>
 
       <div
-        className="ag-theme-quartz w-full rounded-xl overflow-hidden border border-slate-200 shadow-sm"
+        className="w-full rounded-xl overflow-hidden border border-slate-200 dark:border-slate-600 shadow-sm"
         style={{ height: typeof height === 'number' ? `${height}px` : height }}
       >
         <AgGridReact<T>
           ref={gridRef}
-          theme={gridTheme}
+          theme={theme}
           rowData={rowData}
           columnDefs={columnDefs}
           defaultColDef={defaultColDef}
           loading={loading}
+          overlayLoadingTemplate={loadingOverlay}
           animateRows
           rowSelection={{ mode: 'multiRow', checkboxes: true, headerCheckbox: true }}
           cellSelection

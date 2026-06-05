@@ -5,6 +5,14 @@ import { loadRapItems } from './rapService';
 
 export type CostRealization = DbCostRealization;
 
+export interface RapActualAgg {
+  qty: number;
+  amount: number;
+  lastDate?: string;
+  lastRecordedBy?: string;
+  lastCostId?: string;
+}
+
 export async function recalculateProjectSpent(projectId: string) {
   const { data: costs, error } = await supabase
     .from('planner_cost_realizations')
@@ -81,15 +89,34 @@ export async function deleteCostRealization(id: string, projectId: string) {
   await recalculateProjectSpent(projectId);
 }
 
+export async function updateCostRealization(
+  id: string,
+  projectId: string,
+  patch: Partial<Pick<CostRealization, 'date' | 'description' | 'quantity' | 'unit_price' | 'total_amount'>>,
+) {
+  const { error } = await supabase.from('planner_cost_realizations').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+  await recalculateProjectSpent(projectId);
+}
+
 export async function aggregateCostByRapItem(projectId: string) {
   const costs = await loadCostRealizations(projectId);
-  const byRap: Record<string, { qty: number; amount: number }> = {};
+  const byRap: Record<string, RapActualAgg> = {};
 
   for (const c of costs) {
     if (!c.rap_item_id) continue;
-    if (!byRap[c.rap_item_id]) byRap[c.rap_item_id] = { qty: 0, amount: 0 };
-    byRap[c.rap_item_id].qty += Number(c.quantity) || 0;
-    byRap[c.rap_item_id].amount += Number(c.total_amount) || 0;
+    if (!byRap[c.rap_item_id]) {
+      byRap[c.rap_item_id] = { qty: 0, amount: 0 };
+    }
+    const agg = byRap[c.rap_item_id];
+    agg.qty += Number(c.quantity) || 0;
+    agg.amount += Number(c.total_amount) || 0;
+    const d = c.date || '';
+    if (!agg.lastDate || d > agg.lastDate) {
+      agg.lastDate = d;
+      agg.lastRecordedBy = c.recorded_by;
+      agg.lastCostId = c.id;
+    }
   }
 
   return byRap;
