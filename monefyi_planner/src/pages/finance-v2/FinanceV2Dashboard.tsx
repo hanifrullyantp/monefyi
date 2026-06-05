@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Loader2, RefreshCw, Plus, ArrowRightLeft, Receipt, FileText } from 'lucide-react';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
@@ -16,6 +17,7 @@ import type { BalanceSheetData, FinanceAccount, FinanceKpis } from '../../types/
 const CHART_COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#f43f5e'];
 
 export default function FinanceV2Dashboard() {
+  const navigate = useNavigate();
   const { tenant, user } = useAppStore();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -163,9 +165,9 @@ export default function FinanceV2Dashboard() {
             <h3 className="font-bold text-slate-800 mb-3">Aksi Cepat</h3>
             <div className="flex flex-wrap gap-2">
               {[
-                { label: 'Transfer Kas', icon: ArrowRightLeft, action: () => showToast('Transfer kas — Fase 2', 'info') },
-                { label: 'Catat Opex', icon: Receipt, action: () => showToast('Opex — Fase 3', 'info') },
-                { label: 'Laporan', icon: FileText, action: () => showToast('Laporan — Fase 4', 'info') },
+                { label: 'Transfer Kas', icon: ArrowRightLeft, action: () => navigate('/app/finance-v2/kas') },
+                { label: 'Catat Piutang', icon: Receipt, action: () => navigate('/app/finance-v2/piutang') },
+                { label: 'Laporan', icon: FileText, action: () => navigate('/app/finance-v2/laporan') },
               ].map(btn => (
                 <button
                   key={btn.label}

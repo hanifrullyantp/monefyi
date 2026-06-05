@@ -52,6 +52,9 @@ export interface Project {
   created_at: string;
   updated_at: string;
   description?: string;
+  finance_status?: 'active' | 'finance_closed';
+  closed_at?: string;
+  final_profit?: number;
 }
 
 export interface Todo {

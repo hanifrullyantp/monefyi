@@ -119,6 +119,171 @@ export const ACCOUNT_TYPE_LABEL: Record<AccountType, string> = {
   laba: 'Laba Periode',
 };
 
+export type ReceivableStatus = 'open' | 'partial' | 'paid' | 'overdue';
+export type PayableStatus = 'open' | 'partial' | 'paid' | 'overdue';
+export type DebtorType = 'person' | 'company' | 'project';
+export type PayableCategory = 'dagang' | 'pajak' | 'lain';
+
+export interface Receivable {
+  id: string;
+  org_id: string;
+  debtor_type: DebtorType;
+  debtor_name: string;
+  debtor_project_id: string | null;
+  amount: number;
+  paid_amount: number;
+  due_date: string | null;
+  status: ReceivableStatus;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface Payable {
+  id: string;
+  org_id: string;
+  creditor_type: string;
+  creditor_name: string;
+  creditor_project_id: string | null;
+  category: PayableCategory | null;
+  amount: number;
+  paid_amount: number;
+  due_date: string | null;
+  status: PayableStatus;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface InventoryItem {
+  id: string;
+  org_id: string;
+  name: string;
+  unit: string;
+  qty: number;
+  unit_cost: number;
+  total_value: number;
+  min_stock: number;
+  location: string | null;
+  updated_at: string;
+}
+
+export const RECEIVABLE_STATUS_LABEL: Record<ReceivableStatus, string> = {
+  open: 'Belum Lunas',
+  partial: 'Sebagian',
+  paid: 'Lunas',
+  overdue: 'Jatuh Tempo',
+};
+
+export const PAYABLE_STATUS_LABEL: Record<PayableStatus, string> = {
+  open: 'Belum Lunas',
+  partial: 'Sebagian',
+  paid: 'Lunas',
+  overdue: 'Jatuh Tempo',
+};
+
+export type InvestmentType = 'equity' | 'project_based' | 'profit_share';
+export type InvestorTransactionType = 'invest' | 'withdraw' | 'dividend';
+export type DepreciationMethod = 'straight' | 'none';
+
+export interface PrepaidItem {
+  id: string;
+  org_id: string;
+  name: string;
+  total_amount: number;
+  start_date: string;
+  end_date: string;
+  remaining_value: number;
+  account_id: string | null;
+  notes: string | null;
+  last_amortized_date: string | null;
+  created_at: string;
+}
+
+export interface FixedAsset {
+  id: string;
+  org_id: string;
+  name: string;
+  category: string | null;
+  purchase_date: string | null;
+  purchase_value: number;
+  current_value: number;
+  depreciation_method: DepreciationMethod;
+  useful_life_months: number | null;
+  last_depreciation_month: string | null;
+  notes: string | null;
+  photo_url: string | null;
+  created_at: string;
+}
+
+export interface Investor {
+  id: string;
+  org_id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  investment_type: InvestmentType | null;
+  total_invested: number;
+  share_pct: number | null;
+  notes: string | null;
+  joined_date: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface InvestorTransaction {
+  id: string;
+  investor_id: string;
+  type: InvestorTransactionType;
+  amount: number;
+  trans_date: string;
+  project_id: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface OpexCategory {
+  id: string;
+  org_id: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface OpexBudget {
+  id: string;
+  org_id: string;
+  category_id: string;
+  period_month: number;
+  period_year: number;
+  planned_amount: number;
+  notes: string | null;
+}
+
+export interface OpexRealization {
+  id: string;
+  org_id: string;
+  category_id: string;
+  paid_date: string;
+  amount: number;
+  source_account_id: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface OpexComparisonRow {
+  categoryId: string;
+  categoryName: string;
+  planned: number;
+  actual: number;
+  variance: number;
+  pctUsed: number | null;
+}
+
+export const INVESTMENT_TYPE_LABEL: Record<InvestmentType, string> = {
+  equity: 'Equity',
+  project_based: 'Berbasis Proyek',
+  profit_share: 'Bagi Hasil',
+};
+
 export const FINANCE_V2_NAV = [
   { path: '', label: 'Dashboard', slug: 'dashboard' },
   { path: 'kas', label: 'Kas', slug: 'kas' },

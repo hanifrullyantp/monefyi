@@ -24,6 +24,40 @@ export async function ensureChartOfAccounts(orgId: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+export async function loadAccountsByType(
+  orgId: string,
+  type: AccountType,
+  opts?: { projectId?: string | null; activeOnly?: boolean },
+): Promise<FinanceAccount[]> {
+  let q = supabase
+    .from('planner_finance_accounts')
+    .select('*')
+    .eq('org_id', orgId)
+    .eq('type', type)
+    .order('name');
+
+  if (opts?.activeOnly !== false) q = q.eq('is_active', true);
+  if (opts?.projectId === null) q = q.is('project_id', null);
+  else if (opts?.projectId) q = q.eq('project_id', opts.projectId);
+
+  const { data, error } = await q;
+  if (error) throw new Error(error.message);
+  return (data || []).map(mapAccount);
+}
+
+export async function findSystemAccount(
+  orgId: string,
+  type: AccountType,
+  nameHint?: string,
+): Promise<FinanceAccount | null> {
+  const accounts = await loadAccountsByType(orgId, type, { activeOnly: true });
+  if (nameHint) {
+    const match = accounts.find(a => a.is_system && a.name.toLowerCase().includes(nameHint.toLowerCase()));
+    if (match) return match;
+  }
+  return accounts.find(a => a.is_system && !a.project_id) || accounts[0] || null;
+}
+
 export async function loadAccounts(orgId: string, opts?: { activeOnly?: boolean }): Promise<FinanceAccount[]> {
   let q = supabase
     .from('planner_finance_accounts')
@@ -71,6 +105,21 @@ export async function createAccount(input: {
       parent_id: input.parentId || null,
       is_system: false,
     })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return mapAccount(data);
+}
+
+export async function updateAccount(
+  accountId: string,
+  patch: { name?: string; is_active?: boolean; metadata?: Record<string, unknown> },
+): Promise<FinanceAccount> {
+  const { data, error } = await supabase
+    .from('planner_finance_accounts')
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq('id', accountId)
     .select()
     .single();
 

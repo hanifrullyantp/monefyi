@@ -4,6 +4,14 @@ import { useAppStore } from '../../store/appStore';
 import FinanceV2Layout from './FinanceV2Layout';
 import FinanceV2Dashboard from './FinanceV2Dashboard';
 import FinanceV2Placeholder from './placeholders/FinanceV2Placeholder';
+import KasPage from './KasPage';
+import PiutangPage from './PiutangPage';
+import HutangPage from './HutangPage';
+import StokPage from './StokPage';
+import PraBayarPage from './PraBayarPage';
+import AsetPage from './AsetPage';
+import InvestorPage from './InvestorPage';
+import OpexPage from './OpexPage';
 
 export default function FinanceV2Routes() {
   const location = useLocation();
@@ -17,14 +25,14 @@ export default function FinanceV2Routes() {
     <Routes>
       <Route element={<FinanceV2Layout />}>
         <Route index element={<FinanceV2Dashboard />} />
-        <Route path="kas" element={<FinanceV2Placeholder title="Kas" description="Multi-akun kas dan transfer antar kas — Fase 2." />} />
-        <Route path="piutang" element={<FinanceV2Placeholder title="Piutang" description="Manajemen piutang dan pembayaran — Fase 2." />} />
-        <Route path="hutang" element={<FinanceV2Placeholder title="Hutang" description="Hutang dagang, pajak, dan lainnya — Fase 2." />} />
-        <Route path="stok" element={<FinanceV2Placeholder title="Stok" description="Persediaan barang dan pergerakan stok — Fase 2." />} />
-        <Route path="aset" element={<FinanceV2Placeholder title="Aset Tetap" description="Depresiasi aset — Fase 3." />} />
-        <Route path="prabayar" element={<FinanceV2Placeholder title="Pra Bayar" description="Amortisasi biaya dibayar dimuka — Fase 3." />} />
-        <Route path="investor" element={<FinanceV2Placeholder title="Investor" description="Modal investor dan dividen — Fase 3." />} />
-        <Route path="opex" element={<FinanceV2Placeholder title="Opex" description="Budget vs realisasi operasional — Fase 3." />} />
+        <Route path="kas" element={<KasPage />} />
+        <Route path="piutang" element={<PiutangPage />} />
+        <Route path="hutang" element={<HutangPage />} />
+        <Route path="stok" element={<StokPage />} />
+        <Route path="aset" element={<AsetPage />} />
+        <Route path="prabayar" element={<PraBayarPage />} />
+        <Route path="investor" element={<InvestorPage />} />
+        <Route path="opex" element={<OpexPage />} />
         <Route path="laporan" element={<FinanceV2Placeholder title="Laporan" description="P&L, neraca, arus kas — Fase 4." />} />
       </Route>
     </Routes>
