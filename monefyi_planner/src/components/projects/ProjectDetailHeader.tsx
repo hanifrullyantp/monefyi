@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowLeft, Calendar, MapPin, RefreshCw, X, ChevronsUp, ChevronsDown, Info, Trash2, CircleDot, Check,
 } from 'lucide-react';
@@ -48,9 +49,23 @@ export default function ProjectDetailHeader({
 }: ProjectDetailHeaderProps) {
   const [opiHelpOpen, setOpiHelpOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
+  const [statusMenuPos, setStatusMenuPos] = useState({ top: 0, right: 0 });
   const opiHelpRef = useRef<HTMLDivElement>(null);
-  const statusRef = useRef<HTMLDivElement>(null);
+  const statusBtnRef = useRef<HTMLButtonElement>(null);
+  const statusMenuRef = useRef<HTMLDivElement>(null);
   const opiMetric = EVM_METRICS.OPI;
+
+  const updateStatusMenuPos = () => {
+    const btn = statusBtnRef.current;
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const menuHeight = 280;
+    const openUp = rect.bottom + menuHeight > window.innerHeight - 8;
+    setStatusMenuPos({
+      top: openUp ? Math.max(8, rect.top - menuHeight - 6) : rect.bottom + 6,
+      right: Math.max(8, window.innerWidth - rect.right),
+    });
+  };
 
   useEffect(() => {
     if (!opiHelpOpen) return;
@@ -67,35 +82,34 @@ export default function ProjectDetailHeader({
 
   useEffect(() => {
     if (!statusOpen) return;
+    updateStatusMenuPos();
     const close = (e: MouseEvent | TouchEvent) => {
-      if (statusRef.current && !statusRef.current.contains(e.target as Node)) setStatusOpen(false);
+      const target = e.target as Node;
+      if (statusBtnRef.current?.contains(target) || statusMenuRef.current?.contains(target)) return;
+      setStatusOpen(false);
     };
+    const onReflow = () => updateStatusMenuPos();
     document.addEventListener('mousedown', close);
     document.addEventListener('touchstart', close);
+    window.addEventListener('resize', onReflow);
+    window.addEventListener('scroll', onReflow, true);
     return () => {
       document.removeEventListener('mousedown', close);
       document.removeEventListener('touchstart', close);
+      window.removeEventListener('resize', onReflow);
+      window.removeEventListener('scroll', onReflow, true);
     };
   }, [statusOpen]);
 
-  const statusMenu = canManage && onStatusChange ? (
-    <div ref={statusRef} className="relative">
-      <button
-        type="button"
-        onClick={e => { e.stopPropagation(); setStatusOpen(v => !v); }}
-        disabled={statusBusy}
-        className="p-2 hover:bg-white/20 rounded-xl disabled:opacity-50"
-        aria-label="Ubah status proyek"
-        title={`Status: ${STATUS_LABEL[project.status]}`}
-      >
-        <CircleDot className={`w-5 h-5 ${statusBusy ? 'animate-pulse' : ''}`} />
-      </button>
-      {statusOpen && (
+  const statusDropdown = statusOpen && canManage && onStatusChange
+    ? createPortal(
         <div
-          className="absolute right-0 top-full mt-1 z-[60] w-44 py-1 bg-white text-slate-800 rounded-xl shadow-xl border text-sm"
+          ref={statusMenuRef}
+          style={{ top: statusMenuPos.top, right: statusMenuPos.right }}
+          className="fixed z-[200] w-48 max-h-[min(320px,70vh)] overflow-y-auto py-1 bg-white text-slate-800 rounded-xl shadow-2xl border border-slate-200 text-sm"
           onClick={e => e.stopPropagation()}
         >
-          <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+          <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 sticky top-0 bg-white">
             Ubah status
           </div>
           {PROJECT_STATUSES.map(s => (
@@ -107,7 +121,7 @@ export default function ProjectDetailHeader({
                 setStatusOpen(false);
                 if (s.id !== project.status) onStatusChange(s.id);
               }}
-              className={`w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between disabled:opacity-50 ${
+              className={`w-full text-left px-3 py-2.5 hover:bg-slate-50 flex items-center justify-between gap-2 disabled:opacity-50 ${
                 project.status === s.id ? 'font-bold text-indigo-600 bg-indigo-50' : ''
               }`}
             >
@@ -115,9 +129,31 @@ export default function ProjectDetailHeader({
               {project.status === s.id && <Check className="w-4 h-4 shrink-0" />}
             </button>
           ))}
-        </div>
-      )}
-    </div>
+        </div>,
+        document.body,
+      )
+    : null;
+
+  const statusMenu = canManage && onStatusChange ? (
+    <>
+      <button
+        ref={statusBtnRef}
+        type="button"
+        onClick={e => {
+          e.stopPropagation();
+          if (!statusOpen) updateStatusMenuPos();
+          setStatusOpen(v => !v);
+        }}
+        disabled={statusBusy}
+        className="p-2 hover:bg-white/20 rounded-xl disabled:opacity-50"
+        aria-label="Ubah status proyek"
+        aria-expanded={statusOpen}
+        title={`Status: ${STATUS_LABEL[project.status]}`}
+      >
+        <CircleDot className={`w-5 h-5 ${statusBusy ? 'animate-pulse' : ''}`} />
+      </button>
+      {statusDropdown}
+    </>
   ) : null;
 
   return (
