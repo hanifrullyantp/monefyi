@@ -105,6 +105,17 @@ export default function CommandModal() {
   const [workItemOptions, setWorkItemOptions] = useState<string[]>([]);
   const [rapOptions, setRapOptions] = useState<string[]>([]);
 
+  // Phase 2: tagging, recommendations, writing autocomplete.
+  const [taggables, setTaggables] = useState<TaggableEntity[]>([]);
+  const [nextActions, setNextActions] = useState<Recommendation[]>([]);
+  const [histRecs, setHistRecs] = useState<Recommendation[]>([]);
+  const [writeHints, setWriteHints] = useState<string[]>([]);
+  const [tagOpen, setTagOpen] = useState<{ fragment: string; matches: TaggableEntity[] } | null>(null);
+  const [resolvedTags, setResolvedTags] = useState<ResolvedTag[]>([]);
+  const [writeSuggest, setWriteSuggest] = useState<string[]>([]);
+  // Tag-free text used for learning so memory signatures stay clean.
+  const [learnText, setLearnText] = useState('');
+
   const inputRef = useRef<HTMLInputElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
@@ -119,6 +130,8 @@ export default function CommandModal() {
       loadCommandLogs(user.id).then(logs => {
         setCommandLogs(logs);
         setHistory(logs.map(l => l.input));
+        setHistRecs(historyRecommendations(logs));
+        setWriteHints(prev => Array.from(new Set([...logs.map(l => l.input), ...prev])));
       }).catch(console.error);
     }
   }, [user?.id, setCommandLogs]);
@@ -126,6 +139,58 @@ export default function CommandModal() {
   useEffect(() => {
     if (stage === 'idle') inputRef.current?.focus();
   }, [stage]);
+
+  // Load taggable entities (projects + workers + RAP + custom aliases) and memory hints.
+  useEffect(() => {
+    const orgId = tenant?.id;
+    if (!orgId) return;
+    let cancelled = false;
+
+    (async () => {
+      const base: TaggableEntity[] = projects.map(p => ({ type: 'project', id: p.id, name: p.name }));
+
+      const [members, aliases, memEx] = await Promise.all([
+        listMembers(orgId).catch(() => []),
+        loadAliases(orgId).catch(() => []),
+        loadMemoryExamples(orgId, 12).catch(() => []),
+      ]);
+
+      const workerTags: TaggableEntity[] = members
+        .map(m => m.profile?.name)
+        .filter((n): n is string => Boolean(n))
+        .map(name => ({ type: 'worker' as const, name }));
+
+      let rapTags: TaggableEntity[] = [];
+      if (activeProject) {
+        const rap = await loadRapItems(activeProject.id).catch(() => []);
+        rapTags = rap.map(r => ({ type: 'rap' as const, id: r.id, name: r.name }));
+      }
+
+      if (cancelled) return;
+      setTaggables([...base, ...workerTags, ...rapTags, ...aliases]);
+      setWriteHints(prev => Array.from(new Set([...prev, ...memEx.map(e => e.input)])));
+    })();
+
+    return () => { cancelled = true; };
+  }, [tenant?.id, projects, activeProject?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Build next-action recommendations for the active project.
+  useEffect(() => {
+    if (!activeProject) { setNextActions([]); return; }
+    let cancelled = false;
+
+    (async () => {
+      const [rap, costByRap, workItems] = await Promise.all([
+        loadRapItems(activeProject.id).catch(() => []),
+        aggregateCostByRapItem(activeProject.id).catch(() => ({})),
+        loadWorkItems(activeProject.id).catch(() => []),
+      ]);
+      if (cancelled) return;
+      setNextActions(buildNextActions({ rapItems: rap, costByRap, workItems }));
+    })();
+
+    return () => { cancelled = true; };
+  }, [activeProject?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load work item / RAP suggestions for the chosen target project.
   useEffect(() => {
@@ -135,6 +200,34 @@ export default function CommandModal() {
     loadWorkItems(target.id).then(items => setWorkItemOptions(items.map(i => i.name))).catch(() => setWorkItemOptions([]));
     loadRapItems(target.id).then(items => setRapOptions(items.map(i => i.name))).catch(() => setRapOptions([]));
   }, [stage, form.projectName]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // React to typing: tag autocomplete + writing suggestions.
+  const handleInputChange = (value: string) => {
+    setInput(value);
+
+    const sugg = tagSuggestions(value, taggables);
+    setTagOpen(sugg && sugg.matches.length ? sugg : null);
+
+    setResolvedTags(value.includes('#') ? resolveTags(value, taggables).tags : []);
+
+    if (!sugg && value.trim().length >= 2) {
+      const frag = value.toLowerCase();
+      const matches = writeHints
+        .filter(h => h && h.toLowerCase() !== frag && h.toLowerCase().includes(frag))
+        .slice(0, 4);
+      setWriteSuggest(matches);
+    } else {
+      setWriteSuggest([]);
+    }
+  };
+
+  const chooseTag = (entity: TaggableEntity) => {
+    const next = applyTagSuggestion(input, entity);
+    setInput(next);
+    setTagOpen(null);
+    setResolvedTags(resolveTags(next, taggables).tags);
+    inputRef.current?.focus();
+  };
 
   const pipelineContext = () => ({
     orgId: tenant?.id,
@@ -212,9 +305,21 @@ export default function CommandModal() {
     if (!text.trim() || !user || !tenant) return;
     setStage('processing');
     setInput(text);
+    setTagOpen(null);
+    setWriteSuggest([]);
     setPipelineStage('memory');
 
-    const parsed = await runCommandPipeline(text, pipelineContext(), s => setPipelineStage(s));
+    // Resolve hashtags into structured hints; parse the tag-free text.
+    const { cleanText, hints } = resolveTags(text, taggables);
+    const parseText = cleanText || text;
+    setLearnText(parseText);
+
+    const parsed = await runCommandPipeline(parseText, pipelineContext(), s => setPipelineStage(s));
+
+    // Apply tag hints to improve accuracy (project target, RAP item, worker).
+    if (hints.projectName) parsed.params = { ...parsed.params, projectName: hints.projectName };
+    if (hints.rapName && !parsed.params.item) parsed.params = { ...parsed.params, item: hints.rapName };
+    if (hints.workerName && !parsed.params.source) parsed.params = { ...parsed.params, source: hints.workerName };
 
     if (parsed.intent === 'unknown' || parsed.confidence < 0.5) {
       setResultMessage('Maaf, saya belum memahami perintah tersebut.');
@@ -327,7 +432,7 @@ export default function CommandModal() {
           await recordCorrection({
             orgId: tenant.id,
             userId: user.id,
-            rawInput: input,
+            rawInput: learnText || input,
             intent: form.intent,
             params: finalParams,
             source: edited ? 'user' : (origParse?.source === 'ai' ? 'ai' : 'user'),
@@ -367,6 +472,10 @@ export default function CommandModal() {
     setOrigParse(null);
     setEdited(false);
     setTranscript('');
+    setTagOpen(null);
+    setResolvedTags([]);
+    setWriteSuggest([]);
+    setLearnText('');
   };
 
   const sourceBadge = (() => {
@@ -445,31 +554,107 @@ export default function CommandModal() {
             {/* IDLE / INPUT */}
             {stage === 'idle' && (
               <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <div className="flex items-center gap-2 bg-slate-50 border-2 border-slate-200 focus-within:border-indigo-400 rounded-2xl px-4 py-3 mb-5 transition-colors">
-                  <MessageSquare className="w-4 h-4 text-slate-400 shrink-0" />
-                  <input
-                    ref={inputRef}
-                    value={input}
-                    onChange={e => setInput(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleProcess()}
-                    placeholder="Ketik atau ucapkan perintah..."
-                    className="flex-1 bg-transparent outline-none text-sm text-slate-800 placeholder-slate-400"
-                  />
-                  <button
-                    onClick={isListening ? stopListening : startListening}
-                    className={`p-1.5 rounded-xl transition-colors ${isListening ? 'bg-rose-100 text-rose-600' : 'hover:bg-indigo-100 text-slate-400 hover:text-indigo-600'}`}
-                  >
-                    {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                  </button>
-                  {input && (
+                <div className="relative mb-2">
+                  <div className="flex items-center gap-2 bg-slate-50 border-2 border-slate-200 focus-within:border-indigo-400 rounded-2xl px-4 py-3 transition-colors">
+                    <MessageSquare className="w-4 h-4 text-slate-400 shrink-0" />
+                    <input
+                      ref={inputRef}
+                      value={input}
+                      onChange={e => handleInputChange(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') { setTagOpen(null); handleProcess(); } }}
+                      placeholder="Ketik perintah... pakai #tag untuk akurasi"
+                      className="flex-1 bg-transparent outline-none text-sm text-slate-800 placeholder-slate-400"
+                    />
                     <button
-                      onClick={() => handleProcess()}
-                      className="p-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"
+                      onClick={isListening ? stopListening : startListening}
+                      className={`p-1.5 rounded-xl transition-colors ${isListening ? 'bg-rose-100 text-rose-600' : 'hover:bg-indigo-100 text-slate-400 hover:text-indigo-600'}`}
                     >
-                      <Send className="w-4 h-4" />
+                      {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                     </button>
+                    {input && (
+                      <button
+                        onClick={() => handleProcess()}
+                        className="p-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Tag autocomplete dropdown */}
+                  {tagOpen && (
+                    <div className="absolute z-10 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+                      {tagOpen.matches.map((m, i) => (
+                        <button
+                          key={`${m.type}-${m.name}-${i}`}
+                          onClick={() => chooseTag(m)}
+                          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-indigo-50 text-left"
+                        >
+                          <Hash className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                          <span className="text-sm text-slate-700 truncate">{m.name}</span>
+                          <span className="ml-auto text-[10px] uppercase tracking-wide text-slate-400">{m.type}</span>
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
+
+                {/* Resolved tag chips */}
+                {resolvedTags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {resolvedTags.map((t, i) => (
+                      <span
+                        key={i}
+                        className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${t.matched ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}
+                      >
+                        <Hash className="w-3 h-3" />{t.name || t.key}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Writing suggestions */}
+                {writeSuggest.length > 0 && (
+                  <div className="mb-4 space-y-1">
+                    {writeSuggest.map((s, i) => (
+                      <button
+                        key={i}
+                        onClick={() => { handleInputChange(s); inputRef.current?.focus(); }}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-50 hover:bg-violet-100 transition-colors text-left"
+                      >
+                        <PencilLine className="w-3.5 h-3.5 text-violet-500 shrink-0" />
+                        <span className="text-xs text-violet-700 truncate">{s}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Next-action recommendations */}
+                {nextActions.length > 0 && (
+                  <div className="mb-5">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                      <Lightbulb className="w-3.5 h-3.5 text-amber-500" /> Rekomendasi Berikutnya
+                    </p>
+                    <div className="space-y-2">
+                      {nextActions.map(rec => (
+                        <button
+                          key={rec.id}
+                          onClick={() => handleProcess(rec.command)}
+                          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-indigo-50 to-violet-50 hover:from-indigo-100 hover:to-violet-100 transition-colors text-left group"
+                        >
+                          {rec.type === 'cost'
+                            ? <ShoppingCart className="w-4 h-4 text-indigo-500 shrink-0" />
+                            : <TrendingUp className="w-4 h-4 text-emerald-500 shrink-0" />}
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-medium text-slate-700 truncate">{rec.label}</div>
+                            {rec.detail && <div className="text-[11px] text-slate-400 truncate">{rec.detail}</div>}
+                          </div>
+                          <Send className="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-500 shrink-0 transition-colors" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Quick Commands */}
                 <div className="mb-5">
@@ -488,14 +673,33 @@ export default function CommandModal() {
                   </div>
                 </div>
 
+                {/* Frequently used (from history signatures) */}
+                {histRecs.length > 0 && (
+                  <div className="mb-5">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Sering Dilakukan</p>
+                    <div className="flex flex-wrap gap-2">
+                      {histRecs.map(rec => (
+                        <button
+                          key={rec.id}
+                          onClick={() => handleProcess(rec.command)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-indigo-100 text-slate-600 hover:text-indigo-700 text-xs font-medium transition-colors"
+                          title={rec.detail}
+                        >
+                          {rec.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* History */}
                 <div>
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Riwayat</p>
                   <div className="space-y-2">
-                    {history.map((h, i) => (
+                    {history.slice(0, 5).map((h, i) => (
                       <button
                         key={i}
-                        onClick={() => { setInput(h); inputRef.current?.focus(); }}
+                        onClick={() => { handleInputChange(h); inputRef.current?.focus(); }}
                         className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors text-left group"
                       >
                         <RotateCcw className="w-3.5 h-3.5 text-slate-400 shrink-0" />
