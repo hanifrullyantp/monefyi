@@ -26,6 +26,15 @@ export const STATUS_LABEL: Record<Project['status'], string> = {
   archived: 'Arsip',
 };
 
+export const PROJECT_STATUSES: { id: Project['status']; label: string }[] = [
+  { id: 'draft', label: STATUS_LABEL.draft },
+  { id: 'planning', label: STATUS_LABEL.planning },
+  { id: 'active', label: STATUS_LABEL.active },
+  { id: 'on_hold', label: STATUS_LABEL.on_hold },
+  { id: 'completed', label: STATUS_LABEL.completed },
+  { id: 'archived', label: STATUS_LABEL.archived },
+];
+
 export function daysUntil(endDate: string) {
   return Math.ceil((new Date(endDate).getTime() - Date.now()) / 86400000);
 }

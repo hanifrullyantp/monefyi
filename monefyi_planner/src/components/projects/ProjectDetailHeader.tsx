@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import {
-  ArrowLeft, Calendar, MapPin, RefreshCw, X, ChevronsUp, ChevronsDown, Info, Trash2,
+  ArrowLeft, Calendar, MapPin, RefreshCw, X, ChevronsUp, ChevronsDown, Info, Trash2, CircleDot, Check,
 } from 'lucide-react';
 import type { Project } from '../../store/appStore';
-import { formatRupiah, HEALTH_CONFIG, STATUS_LABEL, formatDateId, daysUntil } from '../../utils/projectUi';
+import { formatRupiah, HEALTH_CONFIG, STATUS_LABEL, PROJECT_STATUSES, formatDateId, daysUntil } from '../../utils/projectUi';
 import { EVM_METRICS } from '../../utils/evmMetrics';
 import { COLLAPSED_HEIGHT } from './useCollapsibleHeader';
 
@@ -23,6 +23,8 @@ interface ProjectDetailHeaderProps {
   onToggleCompact: () => void;
   canManage?: boolean;
   onDelete?: () => void;
+  onStatusChange?: (status: Project['status']) => void;
+  statusBusy?: boolean;
 }
 
 export default function ProjectDetailHeader({
@@ -41,9 +43,13 @@ export default function ProjectDetailHeader({
   onToggleCompact,
   canManage,
   onDelete,
+  onStatusChange,
+  statusBusy,
 }: ProjectDetailHeaderProps) {
   const [opiHelpOpen, setOpiHelpOpen] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
   const opiHelpRef = useRef<HTMLDivElement>(null);
+  const statusRef = useRef<HTMLDivElement>(null);
   const opiMetric = EVM_METRICS.OPI;
 
   useEffect(() => {
@@ -58,6 +64,61 @@ export default function ProjectDetailHeader({
       document.removeEventListener('touchstart', close);
     };
   }, [opiHelpOpen]);
+
+  useEffect(() => {
+    if (!statusOpen) return;
+    const close = (e: MouseEvent | TouchEvent) => {
+      if (statusRef.current && !statusRef.current.contains(e.target as Node)) setStatusOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('touchstart', close);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('touchstart', close);
+    };
+  }, [statusOpen]);
+
+  const statusMenu = canManage && onStatusChange ? (
+    <div ref={statusRef} className="relative">
+      <button
+        type="button"
+        onClick={e => { e.stopPropagation(); setStatusOpen(v => !v); }}
+        disabled={statusBusy}
+        className="p-2 hover:bg-white/20 rounded-xl disabled:opacity-50"
+        aria-label="Ubah status proyek"
+        title={`Status: ${STATUS_LABEL[project.status]}`}
+      >
+        <CircleDot className={`w-5 h-5 ${statusBusy ? 'animate-pulse' : ''}`} />
+      </button>
+      {statusOpen && (
+        <div
+          className="absolute right-0 top-full mt-1 z-[60] w-44 py-1 bg-white text-slate-800 rounded-xl shadow-xl border text-sm"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+            Ubah status
+          </div>
+          {PROJECT_STATUSES.map(s => (
+            <button
+              key={s.id}
+              type="button"
+              disabled={statusBusy}
+              onClick={() => {
+                setStatusOpen(false);
+                if (s.id !== project.status) onStatusChange(s.id);
+              }}
+              className={`w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between disabled:opacity-50 ${
+                project.status === s.id ? 'font-bold text-indigo-600 bg-indigo-50' : ''
+              }`}
+            >
+              {s.label}
+              {project.status === s.id && <Check className="w-4 h-4 shrink-0" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  ) : null;
 
   return (
     <div
@@ -100,6 +161,11 @@ export default function ProjectDetailHeader({
             <button type="button" onClick={e => { e.stopPropagation(); onToggleCompact(); }} className="p-1.5 hover:bg-white/20 rounded-lg shrink-0" aria-label="Perbesar header">
               <ChevronsDown className="w-5 h-5" />
             </button>
+            {statusMenu && (
+              <div onClick={e => e.stopPropagation()} className="shrink-0 [&_button]:p-1.5 [&_button]:rounded-lg">
+                {statusMenu}
+              </div>
+            )}
             {canManage && onDelete && (
               <button type="button" onClick={e => { e.stopPropagation(); onDelete(); }} className="p-1.5 hover:bg-rose-500/30 rounded-lg shrink-0 text-rose-200" aria-label="Hapus proyek">
                 <Trash2 className="w-4 h-4" />
@@ -137,6 +203,7 @@ export default function ProjectDetailHeader({
                 <button type="button" onClick={onToggleCompact} className="p-2 hover:bg-white/20 rounded-xl" aria-label="Ringkas header">
                   <ChevronsUp className="w-5 h-5" />
                 </button>
+                {statusMenu}
                 {canManage && onDelete && (
                   <button type="button" onClick={onDelete} className="p-2 hover:bg-rose-500/30 rounded-xl text-rose-200" aria-label="Hapus proyek">
                     <Trash2 className="w-5 h-5" />

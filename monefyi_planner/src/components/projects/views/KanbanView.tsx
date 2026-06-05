@@ -1,16 +1,7 @@
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { motion } from 'framer-motion';
 import type { Project } from '../../store/appStore';
-import { formatRupiah, HEALTH_CONFIG, daysUntil } from '../../../utils/projectUi';
-
-const COLUMNS: { id: Project['status']; label: string }[] = [
-  { id: 'draft', label: 'Draft' },
-  { id: 'planning', label: 'Planning' },
-  { id: 'active', label: 'Aktif' },
-  { id: 'on_hold', label: 'Ditunda' },
-  { id: 'completed', label: 'Selesai' },
-  { id: 'archived', label: 'Arsip' },
-];
+import { formatRupiah, HEALTH_CONFIG, daysUntil, PROJECT_STATUSES } from '../../../utils/projectUi';
 
 interface KanbanViewProps {
   projects: Project[];
@@ -34,7 +25,7 @@ export default function KanbanView({ projects, onOpenProject, onStatusChange }: 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <div className="flex gap-3 overflow-x-auto pb-4 min-h-[420px]">
-        {COLUMNS.map(col => {
+        {PROJECT_STATUSES.map(col => {
           const items = byStatus(col.id);
           return (
             <div key={col.id} className="shrink-0 w-64 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col">

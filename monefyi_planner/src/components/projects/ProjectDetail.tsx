@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useAppStore, Project } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
-import { deleteProject } from '../../services/projectService';
+import { deleteProject, updateProject as updateProjectApi } from '../../services/projectService';
 import { loadRapItems, rapSummary, rapActualsFromCosts, createRapItem, deleteRapItem, updateRapItem } from '../../services/rapService';
 import { loadWorkItems, createWorkItem, deleteWorkItem, updateWorkItem, updateProjectProgressFromWorkItems } from '../../services/workItemService';
 import { loadCostRealizations, deleteCostRealization, aggregateCostByRapItem, repairImportCosts } from '../../services/costService';
@@ -27,7 +27,7 @@ import { exportRapWorkbook } from '../../services/rapExcelService';
 import { useCollapsibleHeader } from './useCollapsibleHeader';
 import { todayStr } from '../../lib/adapters';
 import {
-  formatRupiah, HEALTH_CONFIG, daysUntil, formatDateId,
+  formatRupiah, HEALTH_CONFIG, STATUS_LABEL, daysUntil, formatDateId,
 } from '../../utils/projectUi';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -68,6 +68,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   const [cashSummary, setCashSummary] = useState<{ received: number; surplus: number }>({ received: 0, surplus: 0 });
   const [costSearch, setCostSearch] = useState('');
   const [repairingImport, setRepairingImport] = useState(false);
+  const [statusBusy, setStatusBusy] = useState(false);
   const importRepairAttempted = useRef<string | null>(null);
 
   const {
@@ -162,6 +163,21 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   const handleExportRap = () => {
     exportRapWorkbook(project, rapItems, costs, rapActuals);
     showToast('Excel RAP diekspor', 'success');
+  };
+
+  const handleStatusChange = async (status: Project['status']) => {
+    if (status === project.status || statusBusy) return;
+    setStatusBusy(true);
+    try {
+      const updated = await updateProjectApi(project.id, { status }, tenant?.currency);
+      setProject(updated);
+      updateProject(project.id, updated);
+      showToast(`Status diubah ke ${STATUS_LABEL[status]}`, 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal mengubah status', 'error');
+    } finally {
+      setStatusBusy(false);
+    }
   };
 
   const evm = analysis?.evm;
@@ -392,6 +408,8 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
             onToggleCompact={toggleHeaderCompact}
             canManage={canManage}
             onDelete={() => setConfirmDelete(true)}
+            onStatusChange={canManage ? handleStatusChange : undefined}
+            statusBusy={statusBusy}
           />
 
           <div className="flex overflow-x-auto border-b border-slate-200 bg-white px-2 shrink-0">
