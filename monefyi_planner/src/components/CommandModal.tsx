@@ -13,7 +13,7 @@ import {
 } from '../lib/commandParser';
 import { finalizeParams } from '../lib/commandNormalize';
 import {
-  resolveTags, tagSuggestions, applyTagSuggestion,
+  resolveTags, tagSuggestions, applyTagSuggestion, applyProgressTagHints, tagTypeLabel,
   type TaggableEntity, type ResolvedTag,
 } from '../lib/commandTags';
 import {
@@ -140,7 +140,7 @@ export default function CommandModal() {
     if (stage === 'idle') inputRef.current?.focus();
   }, [stage]);
 
-  // Load taggable entities (projects + workers + RAP + custom aliases) and memory hints.
+  // Load taggable entities (projects + workers + RAP + work items + aliases) and memory hints.
   useEffect(() => {
     const orgId = tenant?.id;
     if (!orgId) return;
@@ -161,13 +161,25 @@ export default function CommandModal() {
         .map(name => ({ type: 'worker' as const, name }));
 
       let rapTags: TaggableEntity[] = [];
+      let workItemTags: TaggableEntity[] = [];
       if (activeProject) {
-        const rap = await loadRapItems(activeProject.id).catch(() => []);
+        const [rap, workItems] = await Promise.all([
+          loadRapItems(activeProject.id).catch(() => []),
+          loadWorkItems(activeProject.id).catch(() => []),
+        ]);
         rapTags = rap.map(r => ({ type: 'rap' as const, id: r.id, name: r.name }));
+        workItemTags = workItems
+          .filter(wi => (Number(wi.progress_pct) || 0) < 100 && wi.status !== 'completed')
+          .map(wi => ({
+            type: 'work_item' as const,
+            id: wi.id,
+            name: wi.name,
+            progressPct: Number(wi.progress_pct) || 0,
+          }));
       }
 
       if (cancelled) return;
-      setTaggables([...base, ...workerTags, ...rapTags, ...aliases]);
+      setTaggables([...base, ...workItemTags, ...workerTags, ...rapTags, ...aliases]);
       setWriteHints(prev => Array.from(new Set([...prev, ...memEx.map(e => e.input)])));
     })();
 
@@ -314,14 +326,25 @@ export default function CommandModal() {
     const parseText = cleanText || text;
     setLearnText(parseText);
 
-    const parsed = await runCommandPipeline(parseText, pipelineContext(), s => setPipelineStage(s));
+    let parsed = await runCommandPipeline(parseText, pipelineContext(), s => setPipelineStage(s));
 
-    // Apply tag hints to improve accuracy (project target, RAP item, worker).
+    // Apply tag hints to improve accuracy (project, RAP, worker, work item / progress).
     if (hints.projectName) parsed.params = { ...parsed.params, projectName: hints.projectName };
     if (hints.rapName && !parsed.params.item) parsed.params = { ...parsed.params, item: hints.rapName };
     if (hints.workerName && !parsed.params.source) parsed.params = { ...parsed.params, source: hints.workerName };
 
-    if (parsed.intent === 'unknown' || parsed.confidence < 0.5) {
+    parsed = {
+      ...parsed,
+      ...applyProgressTagHints(parseText, hints, parsed),
+    };
+
+    // Work-item tag alone → open editable confirm for progress update.
+    const taggedProgressOnly =
+      hints.workItemName &&
+      parsed.intent === 'update_progress' &&
+      parsed.confidence >= 0.75;
+
+    if ((parsed.intent === 'unknown' || parsed.confidence < 0.5) && !taggedProgressOnly) {
       setResultMessage('Maaf, saya belum memahami perintah tersebut.');
       setResultDetails(`Input: "${text}"`);
       setStage('error');
@@ -562,7 +585,7 @@ export default function CommandModal() {
                       value={input}
                       onChange={e => handleInputChange(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter') { setTagOpen(null); handleProcess(); } }}
-                      placeholder="Ketik perintah... pakai #tag untuk akurasi"
+                      placeholder="Ketik perintah... #proyek #pekerjaan #rap"
                       className="flex-1 bg-transparent outline-none text-sm text-slate-800 placeholder-slate-400"
                     />
                     <button
@@ -591,8 +614,13 @@ export default function CommandModal() {
                           className="w-full flex items-center gap-2 px-3 py-2 hover:bg-indigo-50 text-left"
                         >
                           <Hash className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                          <span className="text-sm text-slate-700 truncate">{m.name}</span>
-                          <span className="ml-auto text-[10px] uppercase tracking-wide text-slate-400">{m.type}</span>
+                          <span className="text-sm text-slate-700 truncate">
+                            {m.name}
+                            {m.type === 'work_item' && m.progressPct != null && (
+                              <span className="text-slate-400 font-normal"> · {m.progressPct}%</span>
+                            )}
+                          </span>
+                          <span className="ml-auto text-[10px] uppercase tracking-wide text-slate-400">{tagTypeLabel(m.type)}</span>
                         </button>
                       ))}
                     </div>
