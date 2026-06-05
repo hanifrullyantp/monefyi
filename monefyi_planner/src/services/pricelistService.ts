@@ -1,40 +1,47 @@
 import { supabase } from '../lib/supabase';
-import { calcItemRow, emptyItem, marginFromSelling, sellingFromHpp } from '../lib/estimatorCalc';
+import {
+  calcItemRow,
+  emptyItem,
+  hppFromSellingAndMargin,
+  marginFromSelling,
+  sellingFromHpp,
+} from '../lib/estimatorCalc';
 import type { EstimationItemDraft, PricelistCategory, PricelistItem } from '../types/estimator';
 
 export function calcPricelistSelling(baseCost: number, marginPct: number): number {
   return sellingFromHpp(baseCost, marginPct);
 }
 
+/** Harga jual + margin% ditentukan dulu → HPP (base_cost) diestimasi. */
 export function applyPricelistPricePatch(
   row: Pick<PricelistItem, 'base_cost' | 'default_margin_pct' | 'selling_price'>,
   field: 'base_cost' | 'default_margin_pct' | 'selling_price',
   value: number,
 ): Pick<PricelistItem, 'base_cost' | 'default_margin_pct' | 'selling_price'> {
-  const hpp = Number(row.base_cost) || 0;
-  const margin = Number(row.default_margin_pct) || 0;
   const selling = Number(row.selling_price) || 0;
+  const margin = Number(row.default_margin_pct) || 0;
 
   if (field === 'base_cost') {
     const nextHpp = value;
     return {
       base_cost: nextHpp,
-      default_margin_pct: margin,
-      selling_price: calcPricelistSelling(nextHpp, margin),
+      default_margin_pct: marginFromSelling(nextHpp, selling),
+      selling_price: selling,
     };
   }
   if (field === 'default_margin_pct') {
     const nextMargin = value;
+    const anchoredSelling = selling;
     return {
-      base_cost: hpp,
+      base_cost: hppFromSellingAndMargin(anchoredSelling, nextMargin),
       default_margin_pct: nextMargin,
-      selling_price: calcPricelistSelling(hpp, nextMargin),
+      selling_price: anchoredSelling,
     };
   }
   const nextSelling = value;
   return {
-    base_cost: hpp,
-    default_margin_pct: marginFromSelling(hpp, nextSelling),
+    base_cost: hppFromSellingAndMargin(nextSelling, margin),
+    default_margin_pct: margin,
     selling_price: nextSelling,
   };
 }
@@ -116,7 +123,7 @@ export function pricelistToDraftRow(item: PricelistItem) {
 
 export function pricelistToEstimationItem(item: PricelistItem, sortOrder: number): EstimationItemDraft {
   const base = { ...emptyItem(sortOrder), ...pricelistToDraftRow(item) };
-  return { ...base, ...calcItemRow(base) };
+  return { ...base, ...calcItemRow(base, 'margin') };
 }
 
 export interface CsvPricelistRow {
@@ -130,7 +137,7 @@ export interface CsvPricelistRow {
   notes: string | null;
 }
 
-const VALID_CATEGORIES = new Set<string>(['material', 'upah', 'alat', 'jasa', 'other']);
+const VALID_CATEGORIES = new Set<string>(['material', 'upah', 'alat', 'jasa', 'borongan', 'other']);
 
 export function parseCsvPricelistRows(raw: Record<string, string>[]): CsvPricelistRow[] {
   return raw
@@ -141,12 +148,17 @@ export function parseCsvPricelistRows(raw: Record<string, string>[]): CsvPriceli
       const catRaw = (row.category || row.kategori || 'material').toLowerCase().trim();
       const category = (VALID_CATEGORIES.has(catRaw) ? catRaw : 'material') as PricelistCategory;
       const unit = (row.unit || row.satuan || 'pcs').trim();
-      const base_cost = Number(row.base_cost || row.hpp || row.harga || 0);
       const default_margin_pct = Number(row.default_margin_pct || row.margin || row['margin%'] || 20);
       const sellingRaw = row.selling_price || row.harga_jual || row['harga jual'];
-      const selling_price = sellingRaw
-        ? Number(sellingRaw)
-        : calcPricelistSelling(base_cost, default_margin_pct);
+      const hppRaw = row.base_cost || row.hpp || row.harga;
+      let selling_price = sellingRaw ? Number(sellingRaw) : 0;
+      let base_cost = 0;
+      if (selling_price > 0) {
+        base_cost = hppFromSellingAndMargin(selling_price, default_margin_pct);
+      } else if (hppRaw) {
+        base_cost = Number(hppRaw);
+        selling_price = calcPricelistSelling(base_cost, default_margin_pct);
+      }
       const notes = (row.notes || row.catatan || '').trim() || null;
       return { name, product, category, unit, base_cost, default_margin_pct, selling_price, notes };
     })
@@ -199,6 +211,7 @@ export const PRICELIST_CATEGORIES: Array<{ value: PricelistCategory; label: stri
   { value: 'upah', label: 'Upah' },
   { value: 'alat', label: 'Alat' },
   { value: 'jasa', label: 'Jasa' },
+  { value: 'borongan', label: 'Borongan (material + jasa)' },
   { value: 'other', label: 'Lainnya' },
 ];
 

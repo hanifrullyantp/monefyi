@@ -9,6 +9,7 @@ import Settings from '../pages/Settings';
 import HrEmployees from '../pages/HrEmployees';
 import WorkerDashboard from '../pages/WorkerDashboard';
 import EstimatorRoutes from '../pages/estimator/EstimatorRoutes';
+import FinanceV2Routes from '../pages/finance-v2/FinanceV2Routes';
 import OnboardingChecklist from './OnboardingChecklist';
 import { useAppStore } from '../store/appStore';
 import { showWorkerShell, canAccessManagerFeatures } from '../utils/platformUi';
@@ -110,12 +111,21 @@ function EstimatorShell() {
   );
 }
 
+function FinanceV2Shell() {
+  return (
+    <Layout>
+      <FinanceV2Routes />
+    </Layout>
+  );
+}
+
 export default function AppShell() {
   return (
     <Routes>
       <Route index element={<AppContent />} />
       <Route path="projects/:id" element={<AppContent />} />
       <Route path="estimator/*" element={<EstimatorShell />} />
+      <Route path="finance-v2/*" element={<FinanceV2Shell />} />
     </Routes>
   );
 }

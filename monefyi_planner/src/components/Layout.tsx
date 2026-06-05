@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, FolderOpen, Wallet, Settings, Bell, Menu, X,
@@ -13,6 +13,8 @@ import CommandModal from './CommandModal';
 import NotificationPanel from './NotificationPanel';
 import ToastHost from './ToastHost';
 import UndoToast from './ui/UndoToast';
+import { loadFinanceVersion } from '../lib/financeVersion';
+import type { FinanceVersion } from '../types/financeV2';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -25,10 +27,17 @@ export default function Layout({ children }: LayoutProps) {
     sidebarOpen, setSidebarOpen, logout, platformRole, uiViewMode, setUiViewMode,
   } = useAppStore();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [financeVersion, setFinanceVersion] = useState<FinanceVersion>('v1');
+
+  useEffect(() => {
+    if (!user?.id) return;
+    loadFinanceVersion(user.id).then(setFinanceVersion).catch(() => setFinanceVersion('v1'));
+  }, [user?.id, location.pathname]);
 
   const isSuperAdmin = isPlatformAdmin(platformRole, user?.email);
   const isWorker = showWorkerShell(user?.role, platformRole, user?.email, uiViewMode);
@@ -75,6 +84,8 @@ export default function Layout({ children }: LayoutProps) {
   const handleNav = (tabId: string) => {
     if (tabId === 'estimator') {
       navigate('/app/estimator');
+    } else if (tabId === 'finance' && financeVersion === 'v2') {
+      navigate('/app/finance-v2');
     } else {
       navigate('/app');
       setActiveTab(tabId);

@@ -114,7 +114,7 @@ export default function PricelistPage() {
         </button>
         <div className="flex-1">
           <h1 className="text-2xl font-black text-slate-900">Pricelist</h1>
-          <p className="text-sm text-slate-500">Master item, produk, HPP & harga jual</p>
+          <p className="text-sm text-slate-500">Tentukan harga jual & margin — HPP diestimasi otomatis</p>
         </div>
         <button
           type="button"
@@ -171,9 +171,9 @@ export default function PricelistPage() {
                 <th className="p-3 min-w-[120px]">Produk</th>
                 <th className="p-3 w-24">Kategori</th>
                 <th className="p-3 w-16">Satuan</th>
-                <th className="p-3 w-28">HPP</th>
-                <th className="p-3 w-20">Margin%</th>
                 <th className="p-3 w-32">Harga Jual/Satuan</th>
+                <th className="p-3 w-20">Margin%</th>
+                <th className="p-3 w-28">Est. HPP</th>
                 <th className="p-3 w-16">Aktif</th>
                 <th className="p-3 w-10" />
               </tr>
@@ -221,11 +221,13 @@ export default function PricelistPage() {
                     <input
                       type="number"
                       min={0}
-                      value={row.base_cost}
-                      onChange={e => handlePriceUpdate(row, 'base_cost', Number(e.target.value))}
-                      className="w-full px-2 py-1 border border-slate-200 rounded text-right"
+                      value={Math.round(Number(row.selling_price))}
+                      onChange={e => handlePriceUpdate(row, 'selling_price', Number(e.target.value))}
+                      className="w-full px-2 py-1 border border-indigo-200 bg-indigo-50/40 rounded text-right font-semibold"
                     />
-                    <div className="text-[10px] text-slate-400 text-right">{formatRupiahFull(Number(row.base_cost))}</div>
+                    <div className="text-[10px] text-indigo-600 text-right font-medium">
+                      {formatRupiahFull(Number(row.selling_price))}
+                    </div>
                   </td>
                   <td className="p-2">
                     <input
@@ -240,13 +242,12 @@ export default function PricelistPage() {
                     <input
                       type="number"
                       min={0}
-                      value={Math.round(Number(row.selling_price))}
-                      onChange={e => handlePriceUpdate(row, 'selling_price', Number(e.target.value))}
-                      className="w-full px-2 py-1 border border-indigo-200 bg-indigo-50/30 rounded text-right font-semibold"
+                      value={Math.round(Number(row.base_cost))}
+                      onChange={e => handlePriceUpdate(row, 'base_cost', Number(e.target.value))}
+                      className="w-full px-2 py-1 border border-slate-200 bg-slate-50 rounded text-right text-slate-600"
+                      title="Estimasi HPP dari harga jual & margin"
                     />
-                    <div className="text-[10px] text-indigo-600 text-right font-medium">
-                      {formatRupiahFull(Number(row.selling_price))}
-                    </div>
+                    <div className="text-[10px] text-slate-400 text-right">{formatRupiahFull(Number(row.base_cost))}</div>
                   </td>
                   <td className="p-2 text-center">
                     <input

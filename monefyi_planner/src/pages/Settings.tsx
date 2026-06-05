@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { User, Globe, LogOut, Edit3, Check, Building2, Bell, Shield,
-  Info, RefreshCw, Loader2, ChevronRight, Lock, Users, Wifi, WifiOff, Sparkles,
+  Info, RefreshCw, Loader2, ChevronRight, Lock, Users, Wifi, WifiOff, Sparkles, Wallet,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { showToast, useUiStore } from '../store/uiStore';
@@ -16,6 +16,8 @@ import {
 import UserAccountPanel from '../components/account/UserAccountPanel';
 import { isPlatformAdmin } from '../services/adminService';
 import { Link } from 'react-router-dom';
+import { loadFinanceVersion, setFinanceVersion } from '../lib/financeVersion';
+import type { FinanceVersion } from '../types/financeV2';
 
 type SettingsTab = 'profil' | 'akun' | 'organisasi' | 'notifikasi' | 'keamanan' | 'tentang';
 
@@ -84,6 +86,8 @@ export default function Settings() {
   const [department, setDepartment] = useState('');
   const [editingProfile, setEditingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [financeVersion, setFinanceVersionState] = useState<FinanceVersion>('v1');
+  const [savingFinanceVersion, setSavingFinanceVersion] = useState(false);
 
   const [orgName, setOrgName] = useState(tenant?.name || '');
   const [industry, setIndustry] = useState('');
@@ -110,6 +114,8 @@ export default function Settings() {
       setPosition(settings.position || user.position || '');
       setPhone(settings.phone || '');
       setDepartment(settings.department || user.department || '');
+      const fv = await loadFinanceVersion(user.id);
+      setFinanceVersionState(fv);
 
       if (tenant?.id && canEditOrg) {
         const org = await loadOrgDetails(tenant.id);
@@ -129,6 +135,24 @@ export default function Settings() {
   }, [user?.id, user?.name, user?.position, user?.department, tenant?.id, canEditOrg, tenant?.currency, tenant?.business_type]);
 
   useEffect(() => { load(); }, [load]);
+
+  const handleFinanceVersionChange = async (version: FinanceVersion) => {
+    if (!user?.id || version === financeVersion) return;
+    setSavingFinanceVersion(true);
+    try {
+      await setFinanceVersion(user.id, version);
+      setFinanceVersionState(version);
+      showToast(
+        version === 'v2' ? 'Finance V2 aktif — menu Keuangan membuka neraca baru' : 'Finance V1 aktif',
+        'success',
+      );
+      if (version === 'v2') navigate('/app/finance-v2');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal menyimpan versi finance', 'error');
+    } finally {
+      setSavingFinanceVersion(false);
+    }
+  };
 
   const handleSaveProfile = async () => {
     if (!user || !name.trim()) return;
@@ -398,6 +422,36 @@ export default function Settings() {
               Batal
             </button>
           )}
+
+          <div className="pt-4 border-t border-slate-100 space-y-3">
+            <div className="flex items-center gap-2">
+              <Wallet className="w-4 h-4 text-indigo-600" />
+              <h3 className="font-bold text-slate-800">Versi Finance</h3>
+            </div>
+            <p className="text-sm text-slate-500">
+              V1: keuangan proyek (pemasukan & biaya). V2: neraca double-entry terpisah dengan chart of accounts.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              {(['v1', 'v2'] as const).map(v => (
+                <button
+                  key={v}
+                  type="button"
+                  disabled={savingFinanceVersion}
+                  onClick={() => handleFinanceVersionChange(v)}
+                  className={`flex-1 px-4 py-3 rounded-xl border text-sm font-semibold text-left transition-colors ${
+                    financeVersion === v
+                      ? 'border-indigo-300 bg-indigo-50 text-indigo-800'
+                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="font-bold">{v === 'v1' ? 'Finance V1' : 'Finance V2'}</div>
+                  <div className="text-xs font-normal mt-0.5 opacity-80">
+                    {v === 'v1' ? 'Tab Keuangan klasik' : 'Neraca & jurnal terpisah'}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 

@@ -1,6 +1,6 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
 import { Plus, Trash2, Sparkles, List } from 'lucide-react';
-import { calcItemRow, emptyItem } from '../../lib/estimatorCalc';
+import { calcItemRow, emptyItem, sellingFromHpp, type ItemPriceEdit } from '../../lib/estimatorCalc';
 import { formatRupiahFull } from '../../lib/estimatorFormat';
 import type { ParsedEstimationItem } from '../../lib/estimatorParser';
 import type { EstimationItemDraft } from '../../types/estimator';
@@ -9,7 +9,7 @@ import { COMMON_UNITS, pricelistToEstimationItem, PRICELIST_CATEGORIES } from '.
 import SmartInputModal from './SmartInputModal';
 import PricelistPickerModal from './PricelistPickerModal';
 
-type EditableField = 'name' | 'qty' | 'hpp' | 'margin' | 'selling';
+type EditableField = 'name' | 'qty' | 'selling' | 'margin' | 'hpp';
 
 interface Props {
   orgId: string;
@@ -23,10 +23,10 @@ export default function EstimationItemsTable({ orgId, items, defaultMargin = 20,
   const [pickerOpen, setPickerOpen] = useState(false);
   const cellRefs = useRef<Map<string, HTMLInputElement | HTMLSelectElement>>(new Map());
 
-  const updateItem = (index: number, patch: Partial<EstimationItemDraft>, mode: 'margin' | 'selling' = 'margin') => {
+  const updateItem = (index: number, patch: Partial<EstimationItemDraft>, editField: ItemPriceEdit = 'selling') => {
     const next = [...items];
     const merged = { ...next[index], ...patch };
-    const calc = calcItemRow(merged, mode);
+    const calc = calcItemRow(merged, editField);
     next[index] = { ...merged, ...calc };
     onChange(next);
   };
@@ -76,6 +76,10 @@ export default function EstimationItemsTable({ orgId, items, defaultMargin = 20,
   const handleSmartConfirm = (parsed: ParsedEstimationItem[]) => {
     const newItems = parsed.map((p, i) => {
       const base = emptyItem(items.length + i);
+      let selling = p.selling_price_per_unit || 0;
+      if (!selling && p.hpp_per_unit > 0) {
+        selling = sellingFromHpp(p.hpp_per_unit, p.margin_pct);
+      }
       const draft: EstimationItemDraft = {
         ...base,
         pricelist_item_id: p.pricelist_item_id || null,
@@ -83,11 +87,11 @@ export default function EstimationItemsTable({ orgId, items, defaultMargin = 20,
         category: 'material',
         unit: p.unit,
         qty: p.qty,
-        hpp_per_unit: p.hpp_per_unit,
+        hpp_per_unit: 0,
         margin_pct: p.margin_pct,
-        selling_price_per_unit: p.selling_price_per_unit || 0,
+        selling_price_per_unit: selling,
       };
-      return { ...draft, ...calcItemRow(draft, p.selling_price_per_unit ? 'selling' : 'margin') };
+      return { ...draft, ...calcItemRow(draft, 'margin') };
     });
     onChange([...items, ...newItems]);
   };
@@ -97,7 +101,7 @@ export default function EstimationItemsTable({ orgId, items, defaultMargin = 20,
     onChange([...items, ...newItems]);
   };
 
-  const fields: EditableField[] = ['name', 'qty', 'hpp', 'margin', 'selling'];
+  const fields: EditableField[] = ['name', 'qty', 'selling', 'margin', 'hpp'];
 
   return (
     <>
@@ -159,9 +163,9 @@ export default function EstimationItemsTable({ orgId, items, defaultMargin = 20,
                   <th className="p-2 w-20">Kategori</th>
                   <th className="p-2 w-16">Satuan</th>
                   <th className="p-2 w-16">Qty</th>
-                  <th className="p-2 w-24">HPP/Unit</th>
-                  <th className="p-2 w-16">Margin%</th>
                   <th className="p-2 w-24">Jual/Unit</th>
+                  <th className="p-2 w-16">Margin%</th>
+                  <th className="p-2 w-24">Est. HPP</th>
                   <th className="p-2 w-24">Total Jual</th>
                   <th className="p-2 w-8" />
                 </tr>
@@ -207,20 +211,20 @@ export default function EstimationItemsTable({ orgId, items, defaultMargin = 20,
                         min={0}
                         step="any"
                         value={item.qty}
-                        onChange={e => updateItem(idx, { qty: Number(e.target.value) })}
+                        onChange={e => updateItem(idx, { qty: Number(e.target.value) }, 'qty')}
                         onKeyDown={e => handleKeyDown(e, idx, 'qty', fields)}
                         className="w-full px-2 py-1 border border-slate-200 rounded text-right focus:border-indigo-400 outline-none"
                       />
                     </td>
                     <td className="p-1">
                       <input
-                        ref={registerRef(`${idx}-hpp`)}
+                        ref={registerRef(`${idx}-selling`)}
                         type="number"
                         min={0}
-                        value={item.hpp_per_unit}
-                        onChange={e => updateItem(idx, { hpp_per_unit: Number(e.target.value) }, 'margin')}
-                        onKeyDown={e => handleKeyDown(e, idx, 'hpp', fields)}
-                        className="w-full px-2 py-1 border border-slate-200 rounded text-right focus:border-indigo-400 outline-none"
+                        value={Math.round(item.selling_price_per_unit)}
+                        onChange={e => updateItem(idx, { selling_price_per_unit: Number(e.target.value) }, 'selling')}
+                        onKeyDown={e => handleKeyDown(e, idx, 'selling', fields)}
+                        className="w-full px-2 py-1 border border-indigo-200 bg-indigo-50/40 rounded text-right font-semibold focus:border-indigo-400 outline-none"
                       />
                     </td>
                     <td className="p-1">
@@ -236,13 +240,14 @@ export default function EstimationItemsTable({ orgId, items, defaultMargin = 20,
                     </td>
                     <td className="p-1">
                       <input
-                        ref={registerRef(`${idx}-selling`)}
+                        ref={registerRef(`${idx}-hpp`)}
                         type="number"
                         min={0}
-                        value={Math.round(item.selling_price_per_unit)}
-                        onChange={e => updateItem(idx, { selling_price_per_unit: Number(e.target.value) }, 'selling')}
-                        onKeyDown={e => handleKeyDown(e, idx, 'selling', fields)}
-                        className="w-full px-2 py-1 border border-slate-200 rounded text-right focus:border-indigo-400 outline-none"
+                        value={Math.round(item.hpp_per_unit)}
+                        onChange={e => updateItem(idx, { hpp_per_unit: Number(e.target.value) }, 'hpp')}
+                        onKeyDown={e => handleKeyDown(e, idx, 'hpp', fields)}
+                        className="w-full px-2 py-1 border border-slate-200 bg-slate-50 rounded text-right text-slate-600 focus:border-indigo-400 outline-none"
+                        title="Estimasi HPP — dihitung dari harga jual & margin"
                       />
                     </td>
                     <td className="p-2 text-right font-semibold text-slate-700 tabular-nums">

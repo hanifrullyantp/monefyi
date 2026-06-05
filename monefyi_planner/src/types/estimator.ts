@@ -1,4 +1,4 @@
-export type PricelistCategory = 'material' | 'upah' | 'alat' | 'jasa' | 'other';
+export type PricelistCategory = 'material' | 'upah' | 'alat' | 'jasa' | 'borongan' | 'other';
 export type EstimationStatus = 'draft' | 'sent' | 'accepted' | 'rejected' | 'converted';
 export type PdfTemplate = 'modern' | 'classic' | 'minimal' | 'bold';
 

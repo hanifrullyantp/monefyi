@@ -9,25 +9,45 @@ export function marginFromSelling(hppPerUnit: number, sellingPerUnit: number): n
   return ((sellingPerUnit - hppPerUnit) / hppPerUnit) * 100;
 }
 
-/** Recalculate derived fields for one line item. */
+/** HPP estimasi dari harga jual + margin% (harga jual ditentukan dulu). */
+export function hppFromSellingAndMargin(sellingPerUnit: number, marginPct: number): number {
+  const m = Number(marginPct) || 0;
+  if (m <= -100) return sellingPerUnit;
+  return sellingPerUnit / (1 + m / 100);
+}
+
+export type ItemPriceEdit = 'selling' | 'margin' | 'hpp' | 'qty';
+
+/**
+ * Harga jual + margin% adalah input utama; HPP diestimasi dari keduanya.
+ * Edit HPP manual → margin% disesuaikan (harga jual tetap).
+ */
 export function calcItemRow(
   draft: Pick<EstimationItemDraft, 'qty' | 'hpp_per_unit' | 'margin_pct' | 'selling_price_per_unit'>,
-  mode: 'margin' | 'selling' = 'margin',
-): Pick<EstimationItemDraft, 'selling_price_per_unit' | 'total_hpp' | 'total_selling' | 'total_profit' | 'margin_pct'> {
+  editField: ItemPriceEdit = 'selling',
+): Pick<EstimationItemDraft, 'hpp_per_unit' | 'selling_price_per_unit' | 'total_hpp' | 'total_selling' | 'total_profit' | 'margin_pct'> {
   const qty = Number(draft.qty) || 0;
-  const hpp = Number(draft.hpp_per_unit) || 0;
+  let hpp = Number(draft.hpp_per_unit) || 0;
   let selling = Number(draft.selling_price_per_unit) || 0;
   let margin = Number(draft.margin_pct) || 0;
 
-  if (mode === 'margin') {
-    selling = sellingFromHpp(hpp, margin);
-  } else {
+  if (editField === 'qty') {
+    // hanya update total
+  } else if (editField === 'hpp') {
+    hpp = Number(draft.hpp_per_unit) || 0;
     margin = marginFromSelling(hpp, selling);
+  } else if (editField === 'margin') {
+    margin = Number(draft.margin_pct) || 0;
+    hpp = hppFromSellingAndMargin(selling, margin);
+  } else {
+    selling = Number(draft.selling_price_per_unit) || 0;
+    hpp = hppFromSellingAndMargin(selling, margin);
   }
 
   const totalHpp = qty * hpp;
   const totalSelling = qty * selling;
   return {
+    hpp_per_unit: hpp,
     selling_price_per_unit: selling,
     margin_pct: margin,
     total_hpp: totalHpp,
