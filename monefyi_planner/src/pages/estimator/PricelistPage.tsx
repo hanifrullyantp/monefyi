@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, Plus, Trash2, Upload } from 'lucide-react';
 import PricelistCsvImport from '../../components/estimator/PricelistCsvImport';
@@ -16,6 +16,8 @@ import {
 import { formatRupiahFull } from '../../lib/estimatorFormat';
 import type { PricelistCategory, PricelistItem } from '../../types/estimator';
 
+const SAVE_DEBOUNCE_MS = 450;
+
 export default function PricelistPage() {
   const navigate = useNavigate();
   const { tenant, user } = useAppStore();
@@ -25,6 +27,10 @@ export default function PricelistPage() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'' | PricelistCategory>('');
   const [csvOpen, setCsvOpen] = useState(false);
+  const [focusedRowId, setFocusedRowId] = useState<string | null>(null);
+
+  const saveTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const pendingPatches = useRef<Map<string, Partial<PricelistItem>>>(new Map());
 
   const load = useCallback(async () => {
     if (!tenant?.id) return;
@@ -41,7 +47,47 @@ export default function PricelistPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => () => {
+    saveTimers.current.forEach(t => clearTimeout(t));
+  }, []);
+
+  const flushSave = useCallback(async (id: string) => {
+    const patch = pendingPatches.current.get(id);
+    if (!patch || Object.keys(patch).length === 0) return;
+    pendingPatches.current.delete(id);
+
+    try {
+      const saved = await updatePricelistItem(id, patch);
+      setRows(prev => prev.map(r => (r.id === id ? { ...r, ...saved } : r)));
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal menyimpan', 'error');
+      load();
+    }
+  }, [showToast, load]);
+
+  const scheduleSave = useCallback((id: string, patch: Partial<PricelistItem>) => {
+    const prev = pendingPatches.current.get(id) || {};
+    pendingPatches.current.set(id, { ...prev, ...patch });
+
+    const existing = saveTimers.current.get(id);
+    if (existing) clearTimeout(existing);
+
+    saveTimers.current.set(
+      id,
+      setTimeout(() => {
+        saveTimers.current.delete(id);
+        flushSave(id);
+      }, SAVE_DEBOUNCE_MS),
+    );
+  }, [flushSave]);
+
+  const patchRow = useCallback((id: string, patch: Partial<PricelistItem>) => {
+    setRows(prev => prev.map(r => (r.id === id ? { ...r, ...patch } : r)));
+    scheduleSave(id, patch);
+  }, [scheduleSave]);
+
   const filtered = rows.filter(r => {
+    if (r.id === focusedRowId) return true;
     const q = search.toLowerCase().trim();
     const matchSearch = !q
       || r.name.toLowerCase().includes(q)
@@ -53,7 +99,7 @@ export default function PricelistPage() {
   const handleAdd = async () => {
     if (!tenant?.id || !user?.id) return;
     try {
-      await createPricelistItem({
+      const created = await createPricelistItem({
         org_id: tenant.id,
         name: 'Item baru',
         product: null,
@@ -66,39 +112,52 @@ export default function PricelistPage() {
         is_active: true,
         created_by: user.id,
       });
+      setRows(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+      setFocusedRowId(created.id);
       showToast('Item ditambahkan', 'success');
-      load();
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal menambah', 'error');
     }
   };
 
-  const handleUpdate = async (id: string, patch: Partial<PricelistItem>) => {
-    try {
-      await updatePricelistItem(id, patch);
-      setRows(prev => prev.map(r => (r.id === id ? { ...r, ...patch } : r)));
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Gagal update', 'error');
-    }
-  };
-
   const handlePriceUpdate = (
-    row: PricelistItem,
+    id: string,
     field: 'base_cost' | 'default_margin_pct' | 'selling_price',
     value: number,
   ) => {
-    const patch = applyPricelistPricePatch(row, field, value);
-    handleUpdate(row.id, patch);
+    setRows(prev => {
+      const current = prev.find(r => r.id === id);
+      if (!current) return prev;
+      const patch = applyPricelistPricePatch(current, field, value);
+      scheduleSave(id, patch);
+      return prev.map(r => (r.id === id ? { ...r, ...patch } : r));
+    });
   };
 
   const handleDelete = async (id: string, name: string) => {
     if (!window.confirm(`Hapus "${name}" dari pricelist?`)) return;
+
+    const timer = saveTimers.current.get(id);
+    if (timer) clearTimeout(timer);
+    saveTimers.current.delete(id);
+    pendingPatches.current.delete(id);
+
     try {
       await deletePricelistItem(id);
-      showToast('Item dihapus', 'success');
       setRows(prev => prev.filter(r => r.id !== id));
+      showToast('Item dihapus', 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal menghapus', 'error');
+    }
+  };
+
+  const handleRowBlur = (id: string) => {
+    setFocusedRowId(prev => (prev === id ? null : prev));
+    const timer = saveTimers.current.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      saveTimers.current.delete(id);
+      flushSave(id);
     }
   };
 
@@ -184,23 +243,27 @@ export default function PricelistPage() {
                   <td className="p-2">
                     <input
                       value={row.name}
-                      onChange={e => handleUpdate(row.id, { name: e.target.value })}
-                      className="w-full px-2 py-1 border border-transparent hover:border-slate-200 rounded"
+                      onChange={e => patchRow(row.id, { name: e.target.value })}
+                      onFocus={() => setFocusedRowId(row.id)}
+                      onBlur={() => handleRowBlur(row.id)}
+                      className="w-full px-2 py-1 border border-transparent hover:border-slate-200 focus:border-indigo-300 rounded outline-none"
                       placeholder="Nama pekerjaan/item"
                     />
                   </td>
                   <td className="p-2">
                     <input
                       value={row.product || ''}
-                      onChange={e => handleUpdate(row.id, { product: e.target.value || null })}
-                      className="w-full px-2 py-1 border border-transparent hover:border-slate-200 rounded"
+                      onChange={e => patchRow(row.id, { product: e.target.value || null })}
+                      onFocus={() => setFocusedRowId(row.id)}
+                      onBlur={() => handleRowBlur(row.id)}
+                      className="w-full px-2 py-1 border border-transparent hover:border-slate-200 focus:border-indigo-300 rounded outline-none"
                       placeholder="Merk / spesifikasi"
                     />
                   </td>
                   <td className="p-2">
                     <select
                       value={row.category || 'material'}
-                      onChange={e => handleUpdate(row.id, { category: e.target.value as PricelistCategory })}
+                      onChange={e => patchRow(row.id, { category: e.target.value as PricelistCategory })}
                       className="w-full px-1 py-1 text-xs border border-slate-200 rounded"
                     >
                       {PRICELIST_CATEGORIES.map(c => (
@@ -211,7 +274,7 @@ export default function PricelistPage() {
                   <td className="p-2">
                     <select
                       value={row.unit}
-                      onChange={e => handleUpdate(row.id, { unit: e.target.value })}
+                      onChange={e => patchRow(row.id, { unit: e.target.value })}
                       className="w-full px-1 py-1 text-xs border border-slate-200 rounded"
                     >
                       {COMMON_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
@@ -222,7 +285,7 @@ export default function PricelistPage() {
                       type="number"
                       min={0}
                       value={Math.round(Number(row.selling_price))}
-                      onChange={e => handlePriceUpdate(row, 'selling_price', Number(e.target.value))}
+                      onChange={e => handlePriceUpdate(row.id, 'selling_price', Number(e.target.value))}
                       className="w-full px-2 py-1 border border-indigo-200 bg-indigo-50/40 rounded text-right font-semibold"
                     />
                     <div className="text-[10px] text-indigo-600 text-right font-medium">
@@ -234,7 +297,7 @@ export default function PricelistPage() {
                       type="number"
                       min={0}
                       value={Math.round(Number(row.default_margin_pct) * 10) / 10}
-                      onChange={e => handlePriceUpdate(row, 'default_margin_pct', Number(e.target.value))}
+                      onChange={e => handlePriceUpdate(row.id, 'default_margin_pct', Number(e.target.value))}
                       className="w-full px-2 py-1 border border-slate-200 rounded text-right"
                     />
                   </td>
@@ -243,7 +306,7 @@ export default function PricelistPage() {
                       type="number"
                       min={0}
                       value={Math.round(Number(row.base_cost))}
-                      onChange={e => handlePriceUpdate(row, 'base_cost', Number(e.target.value))}
+                      onChange={e => handlePriceUpdate(row.id, 'base_cost', Number(e.target.value))}
                       className="w-full px-2 py-1 border border-slate-200 bg-slate-50 rounded text-right text-slate-600"
                       title="Estimasi HPP dari harga jual & margin"
                     />
@@ -253,7 +316,7 @@ export default function PricelistPage() {
                     <input
                       type="checkbox"
                       checked={row.is_active}
-                      onChange={e => handleUpdate(row.id, { is_active: e.target.checked })}
+                      onChange={e => patchRow(row.id, { is_active: e.target.checked })}
                     />
                   </td>
                   <td className="p-2">
