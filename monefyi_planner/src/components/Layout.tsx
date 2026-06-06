@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, FolderOpen, Wallet, Settings, Bell, Menu, X,
@@ -27,6 +27,7 @@ export default function Layout({ children }: LayoutProps) {
     setUiViewMode,
   } = useAppStore();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -43,11 +44,10 @@ export default function Layout({ children }: LayoutProps) {
   const isWorker = showWorkerShell(user?.role, platformRole, user?.email, uiViewMode);
   const canAccessHr = canAccessManagerFeatures(user?.role, platformRole, user?.email, uiViewMode);
 
-  const ownerTabs = [
+  const ownerMobileTabs = [
     { id: 'home', label: 'Home', icon: Home },
-    { id: 'projects', label: 'Proyek', icon: FolderOpen },
-    { id: 'command', label: '✦', icon: Sparkles, special: true },
     { id: 'estimator', label: 'Estimator', icon: Calculator },
+    { id: 'command', label: '✦', icon: Sparkles, special: true },
     { id: 'finance', label: 'Finance', icon: Wallet },
     ...(canAccessHr ? [{ id: 'hr', label: 'HR', icon: Users }] : []),
   ];
@@ -60,7 +60,18 @@ export default function Layout({ children }: LayoutProps) {
     { id: 'todos', label: 'Todolist', icon: BarChart3 },
   ];
 
-  const tabs = isWorker ? workerTabs : ownerTabs;
+  const mobileTabs = isWorker ? workerTabs : ownerMobileTabs;
+
+  const isTabActive = (tabId: string) => {
+    if (tabId === 'estimator') return location.pathname.startsWith('/app/estimator');
+    if (tabId === 'finance') {
+      return activeTab === 'finance' || location.pathname.startsWith('/app/finance-v2');
+    }
+    if (tabId === 'home') {
+      return activeTab === 'home' && !location.pathname.startsWith('/app/estimator') && !location.pathname.startsWith('/app/finance-v2');
+    }
+    return activeTab === tabId;
+  };
 
   const ownerSidebarItems = [
     { id: 'home', label: 'Dashboard', icon: Home },
@@ -83,8 +94,10 @@ export default function Layout({ children }: LayoutProps) {
 
   const navigateToTab = (tabId: string) => {
     if (tabId === 'estimator') {
+      setActiveTab('estimator');
       navigate('/app/estimator');
     } else if (tabId === 'finance' && financeVersion === 'v2') {
+      setActiveTab('finance');
       navigate('/app/finance-v2');
     } else {
       navigate('/app');
@@ -175,12 +188,12 @@ export default function Layout({ children }: LayoutProps) {
               key={item.id}
               onClick={() => handleNav(item.id)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                activeTab === item.id
+                isTabActive(item.id)
                   ? 'bg-indigo-50 text-indigo-700 shadow-sm'
                   : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
               }`}
             >
-              <item.icon className={`w-4.5 h-4.5 ${activeTab === item.id ? 'text-indigo-600' : 'text-slate-400'}`} />
+              <item.icon className={`w-4.5 h-4.5 ${isTabActive(item.id) ? 'text-indigo-600' : 'text-slate-400'}`} />
               {item.label}
               {item.id === 'home' && unreadCount > 0 && (
                 <span className="ml-auto px-1.5 py-0.5 bg-rose-500 text-white text-xs font-bold rounded-full">
@@ -288,7 +301,7 @@ export default function Layout({ children }: LayoutProps) {
                     key={item.id}
                     onClick={() => handleNav(item.id)}
                     className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${
-                      activeTab === item.id
+                      isTabActive(item.id)
                         ? 'bg-indigo-50 text-indigo-700'
                         : 'text-slate-600 hover:bg-slate-50'
                     }`}
@@ -461,7 +474,7 @@ export default function Layout({ children }: LayoutProps) {
         {/* Bottom Navigation — Mobile */}
         <nav className="lg:hidden border-t border-slate-200 bg-white safe-bottom shrink-0">
           <div className="flex items-end justify-around px-2 pt-2 pb-3">
-            {tabs.map((tab) => (
+            {mobileTabs.map((tab) => (
               tab.special ? (
                 <button
                   key={tab.id}
@@ -483,13 +496,13 @@ export default function Layout({ children }: LayoutProps) {
                   key={tab.id}
                   onClick={() => handleNav(tab.id)}
                   className={`flex flex-col items-center gap-0.5 px-3 py-1 transition-colors duration-150 border-b-2 ${
-                    activeTab === tab.id
+                    isTabActive(tab.id)
                       ? 'text-indigo-600 border-indigo-600'
                       : 'text-slate-400 border-transparent hover:text-slate-600'
                   }`}
                 >
                   <tab.icon className="w-5 h-5" />
-                  <span className={`text-[10px] font-semibold ${activeTab === tab.id ? 'font-bold' : ''}`}>
+                  <span className={`text-[10px] font-semibold ${isTabActive(tab.id) ? 'font-bold' : ''}`}>
                     {tab.label}
                   </span>
                 </button>
