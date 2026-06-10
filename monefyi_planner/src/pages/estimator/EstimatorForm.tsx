@@ -194,9 +194,9 @@ export default function EstimatorForm() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
-        {/* Header + adjustments */}
-        <div className="xl:col-span-4 space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Informasi & pengaturan */}
+        <div className="lg:col-span-3 space-y-4 order-2 lg:order-1">
           <section className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
             <h3 className="text-xs font-bold text-slate-500 uppercase">Informasi</h3>
             <Field label="Kode">
@@ -347,18 +347,21 @@ export default function EstimatorForm() {
           </section>
         </div>
 
-        {/* Items */}
-        <div className="xl:col-span-5">
+        {/* Items — kolom utama */}
+        <div className="lg:col-span-6 order-1 lg:order-2">
           <EstimationItemsTable
             orgId={tenant!.id}
             items={draft.items}
             defaultMargin={draft.margin_pct}
+            overheadPct={draft.overhead_pct}
+            discountPct={draft.discount_pct}
+            taxPct={draft.tax_pct}
             onChange={items => patch({ items })}
           />
         </div>
 
-        {/* Summary */}
-        <div className="xl:col-span-3">
+        {/* Ringkasan */}
+        <div className="lg:col-span-3 order-3">
           <EstimationSummaryPanel draft={draft} />
         </div>
       </div>

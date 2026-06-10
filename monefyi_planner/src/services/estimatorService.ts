@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { calcEstimationSummary, calcItemRow } from '../lib/estimatorCalc';
+import { calcEstimationSummary, calcItemRow, normalizeEstimationItem } from '../lib/estimatorCalc';
 import { nextEstimationCode } from '../lib/estimatorFormat';
 import { emptyImageDrafts, hydrateImageDrafts, imagesToDbFields } from './estimationImageService';
 import type {
@@ -17,22 +17,22 @@ function mapItemsToDb(
   return items
     .filter(i => i.name.trim())
     .map((item, idx) => {
-      const row = calcItemRow(item);
+      const normalized = normalizeEstimationItem(item);
       return {
         estimation_id: estimationId,
-        pricelist_item_id: item.pricelist_item_id || null,
-        name: item.name.trim(),
-        category: item.category || null,
-        unit: item.unit || 'pcs',
-        qty: item.qty,
-        hpp_per_unit: item.hpp_per_unit,
-        margin_pct: row.margin_pct,
-        selling_price_per_unit: row.selling_price_per_unit,
-        total_hpp: row.total_hpp,
-        total_selling: row.total_selling,
-        total_profit: row.total_profit,
+        pricelist_item_id: normalized.pricelist_item_id || null,
+        name: normalized.name.trim(),
+        category: normalized.category || null,
+        unit: normalized.unit || 'pcs',
+        qty: normalized.qty,
+        hpp_per_unit: normalized.hpp_per_unit,
+        margin_pct: normalized.margin_pct,
+        selling_price_per_unit: normalized.selling_price_per_unit,
+        total_hpp: normalized.total_hpp,
+        total_selling: normalized.total_selling,
+        total_profit: normalized.total_profit,
         sort_order: idx,
-        notes: item.notes || null,
+        notes: normalized.notes || null,
       };
     });
 }
@@ -284,22 +284,24 @@ export async function estimationToFormDraft(est: Estimation): Promise<Estimation
     pdf_show_bank: true,
     pdf_show_signature: true,
     images,
-    items: (est.items || []).map(item => ({
-      id: item.id,
-      pricelist_item_id: item.pricelist_item_id,
-      name: item.name,
-      category: item.category || 'material',
-      unit: item.unit,
-      qty: Number(item.qty),
-      hpp_per_unit: Number(item.hpp_per_unit),
-      margin_pct: Number(item.margin_pct),
-      selling_price_per_unit: Number(item.selling_price_per_unit),
-      total_hpp: Number(item.total_hpp),
-      total_selling: Number(item.total_selling),
-      total_profit: Number(item.total_profit),
-      sort_order: item.sort_order,
-      notes: item.notes || '',
-    })),
+    items: (est.items || []).map(item =>
+      normalizeEstimationItem({
+        id: item.id,
+        pricelist_item_id: item.pricelist_item_id,
+        name: item.name,
+        category: item.category || 'material',
+        unit: item.unit,
+        qty: Number(item.qty),
+        hpp_per_unit: Number(item.hpp_per_unit),
+        margin_pct: Number(item.margin_pct),
+        selling_price_per_unit: Number(item.selling_price_per_unit),
+        total_hpp: Number(item.total_hpp),
+        total_selling: Number(item.total_selling),
+        total_profit: Number(item.total_profit),
+        sort_order: item.sort_order,
+        notes: item.notes || '',
+      }),
+    ),
   };
 }
 

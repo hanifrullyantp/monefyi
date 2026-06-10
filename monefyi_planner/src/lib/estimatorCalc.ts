@@ -1,19 +1,29 @@
 import type { EstimationItemDraft, EstimationSummary } from '../types/estimator';
 
+/** Bulatkan ke Rupiah utuh */
+export function roundIdr(n: number): number {
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(n);
+}
+
+/**
+ * Margin = markup pada HPP (laba ÷ HPP × 100).
+ * Contoh: HPP 100rb + margin 40% → jual 140rb.
+ */
 export function sellingFromHpp(hppPerUnit: number, marginPct: number): number {
-  return hppPerUnit * (1 + marginPct / 100);
+  return roundIdr(hppPerUnit * (1 + marginPct / 100));
 }
 
 export function marginFromSelling(hppPerUnit: number, sellingPerUnit: number): number {
   if (hppPerUnit <= 0) return 0;
-  return ((sellingPerUnit - hppPerUnit) / hppPerUnit) * 100;
+  return Math.round(((sellingPerUnit - hppPerUnit) / hppPerUnit) * 1000) / 10;
 }
 
 /** HPP estimasi dari harga jual + margin% (harga jual ditentukan dulu). */
 export function hppFromSellingAndMargin(sellingPerUnit: number, marginPct: number): number {
   const m = Number(marginPct) || 0;
-  if (m <= -100) return sellingPerUnit;
-  return sellingPerUnit / (1 + m / 100);
+  if (m <= -100) return roundIdr(sellingPerUnit);
+  return roundIdr(sellingPerUnit / (1 + m / 100));
 }
 
 export type ItemPriceEdit = 'selling' | 'margin' | 'hpp' | 'qty';
@@ -26,26 +36,41 @@ export function calcItemRow(
   draft: Pick<EstimationItemDraft, 'qty' | 'hpp_per_unit' | 'margin_pct' | 'selling_price_per_unit'>,
   editField: ItemPriceEdit = 'selling',
 ): Pick<EstimationItemDraft, 'hpp_per_unit' | 'selling_price_per_unit' | 'total_hpp' | 'total_selling' | 'total_profit' | 'margin_pct'> {
-  const qty = Number(draft.qty) || 0;
+  const qty = Math.max(0, Number(draft.qty) || 0);
   let hpp = Number(draft.hpp_per_unit) || 0;
   let selling = Number(draft.selling_price_per_unit) || 0;
   let margin = Number(draft.margin_pct) || 0;
 
   if (editField === 'qty') {
-    // hanya update total
+    // qty only — keep unit prices
   } else if (editField === 'hpp') {
     hpp = Number(draft.hpp_per_unit) || 0;
-    margin = marginFromSelling(hpp, selling);
+    if (selling > 0) {
+      margin = marginFromSelling(hpp, selling);
+    } else if (hpp > 0 && margin > 0) {
+      selling = sellingFromHpp(hpp, margin);
+    }
   } else if (editField === 'margin') {
     margin = Number(draft.margin_pct) || 0;
-    hpp = hppFromSellingAndMargin(selling, margin);
+    if (selling > 0) {
+      hpp = hppFromSellingAndMargin(selling, margin);
+    } else if (hpp > 0) {
+      selling = sellingFromHpp(hpp, margin);
+    }
   } else {
     selling = Number(draft.selling_price_per_unit) || 0;
-    hpp = hppFromSellingAndMargin(selling, margin);
+    if (selling > 0) {
+      hpp = hppFromSellingAndMargin(selling, margin);
+    } else if (hpp > 0 && margin > 0) {
+      selling = sellingFromHpp(hpp, margin);
+    }
   }
 
-  const totalHpp = qty * hpp;
-  const totalSelling = qty * selling;
+  hpp = roundIdr(hpp);
+  selling = roundIdr(selling);
+  const totalHpp = roundIdr(qty * hpp);
+  const totalSelling = roundIdr(qty * selling);
+
   return {
     hpp_per_unit: hpp,
     selling_price_per_unit: selling,
@@ -56,22 +81,39 @@ export function calcItemRow(
   };
 }
 
+/** Pastikan total baris = qty × harga satuan (perbaiki data lama / inkonsisten). */
+export function normalizeEstimationItem(item: EstimationItemDraft): EstimationItemDraft {
+  const base = { ...item };
+  if (base.selling_price_per_unit > 0) {
+    return { ...base, ...calcItemRow(base, 'selling') };
+  }
+  if (base.hpp_per_unit > 0) {
+    return { ...base, ...calcItemRow(base, 'margin') };
+  }
+  return { ...base, ...calcItemRow(base, 'qty') };
+}
+
+export function normalizeEstimationItems(items: EstimationItemDraft[]): EstimationItemDraft[] {
+  return items.map(normalizeEstimationItem);
+}
+
 export function calcEstimationSummary(
   items: EstimationItemDraft[],
   overheadPct: number,
   discountPct: number,
   taxPct: number,
 ): EstimationSummary {
-  const subtotalHpp = items.reduce((s, i) => s + (Number(i.total_hpp) || 0), 0);
-  const subtotalSellingItems = items.reduce((s, i) => s + (Number(i.total_selling) || 0), 0);
-  const overheadAmount = subtotalHpp * (overheadPct / 100);
+  const normalized = items.map(i => (i.name.trim() ? normalizeEstimationItem(i) : i));
+  const subtotalHpp = normalized.reduce((s, i) => s + (Number(i.total_hpp) || 0), 0);
+  const subtotalSellingItems = normalized.reduce((s, i) => s + (Number(i.total_selling) || 0), 0);
+  const itemProfit = normalized.reduce((s, i) => s + (Number(i.total_profit) || 0), 0);
+  const overheadAmount = roundIdr(subtotalHpp * (overheadPct / 100));
   const subtotalBeforeDiscount = subtotalSellingItems + overheadAmount;
-  const discountAmount = subtotalBeforeDiscount * (discountPct / 100);
+  const discountAmount = roundIdr(subtotalBeforeDiscount * (discountPct / 100));
   const afterDiscount = subtotalBeforeDiscount - discountAmount;
-  const taxAmount = afterDiscount * (taxPct / 100);
+  const taxAmount = roundIdr(afterDiscount * (taxPct / 100));
   const grandTotal = afterDiscount + taxAmount;
-  const itemProfit = items.reduce((s, i) => s + (Number(i.total_profit) || 0), 0);
-  const totalProfit = itemProfit - discountAmount;
+  const totalProfit = itemProfit + overheadAmount - discountAmount;
   const avgMarginPct = subtotalHpp > 0
     ? ((subtotalSellingItems - subtotalHpp) / subtotalHpp) * 100
     : 0;

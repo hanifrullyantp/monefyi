@@ -3,6 +3,18 @@ const ID_MONTHS = [
   'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
 ];
 
+/** Angka dengan pemisah ribuan (tanpa Rp) */
+export function formatNumberId(n: number): string {
+  if (!Number.isFinite(n)) return '';
+  return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(n);
+}
+
+export function parseNumberId(raw: string): number {
+  const cleaned = raw.replace(/\./g, '').replace(/,/g, '.').replace(/[^\d.-]/g, '');
+  const n = parseFloat(cleaned);
+  return Number.isFinite(n) ? n : 0;
+}
+
 /** Full Rupiah format: Rp 1.000.000 */
 export function formatRupiahFull(n: number): string {
   if (!Number.isFinite(n)) return 'Rp 0';
