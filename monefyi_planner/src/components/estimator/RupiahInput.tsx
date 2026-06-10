@@ -11,6 +11,10 @@ interface Props {
   min?: number;
 }
 
+function displayValue(n: number): string {
+  return n > 0 ? formatNumberId(n) : '';
+}
+
 export default function RupiahInput({
   value,
   onChange,
@@ -24,36 +28,45 @@ export default function RupiahInput({
   const [text, setText] = useState('');
 
   useEffect(() => {
-    if (!focused) {
-      setText(value > 0 ? formatNumberId(value) : '');
-    }
+    if (!focused) setText(displayValue(value));
   }, [value, focused]);
+
+  const commit = (raw: string) => {
+    const parsed = Math.max(min, parseNumberId(raw));
+    onChange(parsed);
+    setText(displayValue(parsed));
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      commit(text);
+      (e.target as HTMLInputElement).blur();
+    }
+    onKeyDown?.(e);
+  };
+
+  const shown = focused ? text : displayValue(value);
+  const charWidth = Math.max(12, shown.length + 1);
 
   return (
     <input
       ref={inputRef}
       type="text"
       inputMode="numeric"
-      value={focused ? text : value > 0 ? formatNumberId(value) : ''}
-      title={title}
+      value={shown}
+      title={title || (value > 0 ? displayValue(value) : undefined)}
       onFocus={() => {
         setFocused(true);
-        setText(value > 0 ? String(value) : '');
+        setText(displayValue(value));
       }}
       onBlur={() => {
         setFocused(false);
-        const parsed = Math.max(min, parseNumberId(text));
-        onChange(parsed);
+        commit(text);
       }}
-      onChange={e => {
-        setText(e.target.value);
-        if (focused) {
-          const parsed = parseNumberId(e.target.value);
-          if (parsed >= min) onChange(parsed);
-        }
-      }}
-      onKeyDown={onKeyDown}
-      className={className}
+      onChange={e => setText(e.target.value)}
+      onKeyDown={handleKeyDown}
+      className={`${className} min-w-[11rem]`}
+      style={{ width: `${charWidth}ch`, maxWidth: '100%' }}
       placeholder="0"
     />
   );

@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { Plus, Trash2, Sparkles, List, Info } from 'lucide-react';
+import { Plus, Trash2, Sparkles, List } from 'lucide-react';
 import { calcEstimationSummary, calcItemRow, emptyItem, sellingFromHpp, type ItemPriceEdit } from '../../lib/estimatorCalc';
 import { formatRupiahFull } from '../../lib/estimatorFormat';
 import type { ParsedEstimationItem } from '../../lib/estimatorParser';
@@ -123,7 +123,7 @@ export default function EstimationItemsTable({
 
   return (
     <>
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 bg-slate-50/50">
           <div>
             <h3 className="font-bold text-slate-800">Rincian Item</h3>
@@ -154,14 +154,6 @@ export default function EstimationItemsTable({
           </div>
         </div>
 
-        <div className="flex items-start gap-2 px-4 py-2 bg-emerald-50/60 border-b border-emerald-100 text-[11px] text-emerald-800">
-          <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-          <span>
-            <strong>Total jual</strong> = Qty × Harga jual/unit. <strong>Total HPP</strong> = Qty × HPP/unit.
-            Ubah HPP manual akan menyesuaikan margin% (harga jual tetap).
-          </span>
-        </div>
-
         {items.length === 0 ? (
           <div className="p-10 text-center text-sm text-slate-400 space-y-4">
             <p>Belum ada item estimasi.</p>
@@ -183,20 +175,20 @@ export default function EstimationItemsTable({
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[960px]">
+          <div className="overflow-x-auto overscroll-x-contain">
+            <table className="w-full text-sm min-w-[1100px] table-auto">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
                   <th className={`${thClass} w-10`}>#</th>
-                  <th className={`${thClass} min-w-[140px]`}>Item</th>
-                  <th className={`${thClass} w-[88px]`}>Kategori</th>
-                  <th className={`${thClass} w-[72px]`}>Satuan</th>
-                  <th className={`${thClass} w-[72px] text-right`}>Qty</th>
-                  <th className={`${thClass} w-[120px] text-right`}>Jual / unit</th>
-                  <th className={`${thClass} w-[72px] text-right`}>Margin %</th>
-                  <th className={`${thClass} w-[120px] text-right`}>HPP / unit</th>
-                  <th className={`${thClass} w-[120px] text-right`}>Total HPP</th>
-                  <th className={`${thClass} w-[128px] text-right`}>Total jual</th>
+                  <th className={`${thClass} min-w-[160px]`}>Item</th>
+                  <th className={`${thClass} min-w-[80px]`}>Kat.</th>
+                  <th className={`${thClass} min-w-[64px]`}>Sat.</th>
+                  <th className={`${thClass} min-w-[64px] text-right`}>Qty</th>
+                  <th className={`${thClass} min-w-[148px] text-right`}>Jual / unit</th>
+                  <th className={`${thClass} min-w-[72px] text-right`}>Margin %</th>
+                  <th className={`${thClass} min-w-[148px] text-right`}>HPP / unit</th>
+                  <th className={`${thClass} min-w-[130px] text-right`}>Total HPP</th>
+                  <th className={`${thClass} min-w-[130px] text-right`}>Total jual</th>
                   <th className="w-10" />
                 </tr>
               </thead>
@@ -246,13 +238,14 @@ export default function EstimationItemsTable({
                         className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-right tabular-nums focus:border-emerald-400 outline-none"
                       />
                     </td>
-                    <td className={tdClass}>
+                    <td className={`${tdClass} whitespace-nowrap`}>
                       <RupiahInput
                         inputRef={registerRef(`${idx}-selling`)}
                         value={item.selling_price_per_unit}
                         onChange={v => updateItem(idx, { selling_price_per_unit: v }, 'selling')}
                         onKeyDown={e => handleKeyDown(e, idx, 'selling', fields)}
-                        className="w-full px-2 py-1.5 border border-emerald-200 bg-emerald-50/50 rounded-lg text-right font-semibold tabular-nums focus:border-emerald-400 focus:ring-1 focus:ring-emerald-100 outline-none"
+                        title={`Harga jual per unit: ${formatRupiahFull(item.selling_price_per_unit)}`}
+                        className="px-2 py-1.5 border border-emerald-200 bg-emerald-50/50 rounded-lg text-right font-semibold tabular-nums focus:border-emerald-400 focus:ring-1 focus:ring-emerald-100 outline-none"
                       />
                     </td>
                     <td className={tdClass}>
@@ -267,20 +260,20 @@ export default function EstimationItemsTable({
                         className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-right tabular-nums focus:border-emerald-400 outline-none"
                       />
                     </td>
-                    <td className={tdClass}>
+                    <td className={`${tdClass} whitespace-nowrap`}>
                       <RupiahInput
                         inputRef={registerRef(`${idx}-hpp`)}
                         value={item.hpp_per_unit}
                         onChange={v => updateItem(idx, { hpp_per_unit: v }, 'hpp')}
                         onKeyDown={e => handleKeyDown(e, idx, 'hpp', fields)}
-                        title="Estimasi HPP per satuan"
-                        className="w-full px-2 py-1.5 border border-slate-200 bg-slate-50 rounded-lg text-right text-slate-700 tabular-nums focus:border-emerald-400 outline-none"
+                        title={`HPP per unit: ${formatRupiahFull(item.hpp_per_unit)}`}
+                        className="px-2 py-1.5 border border-slate-200 bg-slate-50 rounded-lg text-right text-slate-700 tabular-nums focus:border-emerald-400 outline-none"
                       />
                     </td>
-                    <td className={`${tdClass} text-right text-xs text-slate-500 tabular-nums`}>
+                    <td className={`${tdClass} text-right text-sm text-slate-600 tabular-nums whitespace-nowrap`}>
                       {formatRupiahFull(item.total_hpp)}
                     </td>
-                    <td className={`${tdClass} text-right font-bold text-slate-800 tabular-nums`}>
+                    <td className={`${tdClass} text-right font-bold text-slate-800 tabular-nums whitespace-nowrap`}>
                       {formatRupiahFull(item.total_selling)}
                     </td>
                     <td className={tdClass}>

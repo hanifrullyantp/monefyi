@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, FileText, Loader2, Save, Eye } from 'lucide-react';
+import { ArrowLeft, ChevronDown, FileText, Loader2, Save, Eye, Settings2 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
 import EstimationItemsTable from '../../components/estimator/EstimationItemsTable';
@@ -34,6 +34,7 @@ export default function EstimatorForm() {
   const [draft, setDraft] = useState<EstimationFormDraft | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [pdfDesignOpen, setPdfDesignOpen] = useState(false);
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
@@ -75,6 +76,9 @@ export default function EstimatorForm() {
             pdf_secondary_color: est.pdf_secondary_color || settings.secondary_color,
             pdf_template: est.pdf_template || settings.default_pdf_template,
           });
+          if (formDraft.customer_name || formDraft.customer_phone) {
+            setDetailOpen(true);
+          }
         }
       } catch (e) {
         showToast(e instanceof Error ? e.message : 'Gagal memuat', 'error');
@@ -163,12 +167,13 @@ export default function EstimatorForm() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6 pb-28">
-      <div className="flex items-center gap-3 mb-6">
+    <div className="w-full max-w-[100rem] mx-auto px-3 sm:px-5 py-4 pb-28">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-4">
         <button
           type="button"
           onClick={() => navigate('/app/estimator')}
-          className="p-2 rounded-xl hover:bg-slate-100 text-slate-500"
+          className="p-2 rounded-xl hover:bg-slate-100 text-slate-500 shrink-0"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
@@ -179,56 +184,87 @@ export default function EstimatorForm() {
               {ESTIMATION_STATUS_LABEL[draft.status]}
             </span>
           </div>
-          <h1 className="text-xl font-black text-slate-900 truncate">
-            {isNew ? 'Estimasi Baru' : draft.title || 'Edit Estimasi'}
-          </h1>
+          <input
+            value={draft.title}
+            onChange={e => patch({ title: e.target.value })}
+            placeholder="Judul estimasi *"
+            className="w-full text-xl font-black text-slate-900 bg-transparent border-0 border-b-2 border-transparent hover:border-slate-200 focus:border-emerald-500 outline-none py-0.5 truncate"
+          />
         </div>
         <button
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-60"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-60 shrink-0"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           Simpan
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Informasi & pengaturan */}
-        <div className="lg:col-span-3 space-y-4 order-2 lg:order-1">
-          <section className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
-            <h3 className="text-xs font-bold text-slate-500 uppercase">Informasi</h3>
-            <Field label="Kode">
-              <input
-                value={draft.code}
-                onChange={e => patch({ code: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-mono"
-              />
-            </Field>
-            <Field label="Judul *">
-              <input
-                value={draft.title}
-                onChange={e => patch({ title: e.target.value })}
-                placeholder="Renovasi Kitchen Set 3.5m"
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
-              />
-            </Field>
-            <Field label="Customer">
-              <input
-                value={draft.customer_name}
-                onChange={e => patch({ customer_name: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
-              />
-            </Field>
-            <Field label="Telepon">
-              <input
-                value={draft.customer_phone}
-                onChange={e => patch({ customer_phone: e.target.value })}
-                placeholder="+62..."
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
-              />
-            </Field>
+      {/* Toolbar: detail toggle — tidak memotong tabel */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <button
+          type="button"
+          onClick={() => setDetailOpen(v => !v)}
+          className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold border transition-colors ${
+            detailOpen
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          <Settings2 className="w-4 h-4" />
+          Detail & Customer
+          <ChevronDown className={`w-4 h-4 transition-transform ${detailOpen ? 'rotate-180' : ''}`} />
+        </button>
+        {draft.customer_name && !detailOpen && (
+          <span className="text-xs text-slate-500 truncate max-w-[200px]">
+            {draft.customer_name}
+          </span>
+        )}
+      </div>
+
+      {/* Panel detail — collapsible, di atas tabel tapi tidak di samping */}
+      {detailOpen && (
+        <div className="mb-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <section className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 md:col-span-2 xl:col-span-2">
+            <h3 className="text-xs font-bold text-slate-500 uppercase">Informasi Customer & Proyek</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Kode">
+                <input
+                  value={draft.code}
+                  onChange={e => patch({ code: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-mono"
+                />
+              </Field>
+              <Field label="Proyek (opsional)">
+                <select
+                  value={draft.project_id || ''}
+                  onChange={e => patch({ project_id: e.target.value || null })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                >
+                  <option value="">— Tidak terhubung —</option>
+                  {projects.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Customer">
+                <input
+                  value={draft.customer_name}
+                  onChange={e => patch({ customer_name: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                />
+              </Field>
+              <Field label="Telepon">
+                <input
+                  value={draft.customer_phone}
+                  onChange={e => patch({ customer_phone: e.target.value })}
+                  placeholder="+62..."
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                />
+              </Field>
+            </div>
             <Field label="Alamat">
               <textarea
                 value={draft.customer_address}
@@ -236,18 +272,6 @@ export default function EstimatorForm() {
                 rows={2}
                 className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm resize-none"
               />
-            </Field>
-            <Field label="Proyek (opsional)">
-              <select
-                value={draft.project_id || ''}
-                onChange={e => patch({ project_id: e.target.value || null })}
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
-              >
-                <option value="">— Tidak terhubung —</option>
-                {projects.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
             </Field>
             <Field label={`Masa berlaku (${draft.validity_days} hari)`}>
               <input
@@ -268,21 +292,13 @@ export default function EstimatorForm() {
             </Field>
           </section>
 
-          <EstimationImageSlots
-            orgId={tenant!.id}
-            estimationId={isNew ? null : id ?? null}
-            images={draft.images}
-            onChange={images => patch({ images })}
-            onToast={(msg, type) => showToast(msg, type)}
-          />
-
           <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
             <button
               type="button"
               onClick={() => setAdvancedOpen(v => !v)}
               className="w-full flex items-center justify-between px-4 py-3 text-sm font-bold text-slate-700"
             >
-              Pengaturan Lanjut
+              Overhead, Diskon & PPN
               <span className="text-slate-400">{advancedOpen ? '▲' : '▼'}</span>
             </button>
             {advancedOpen && (
@@ -320,14 +336,43 @@ export default function EstimatorForm() {
               </div>
             )}
           </section>
+        </div>
+      )}
 
+      {/* Fokus utama: tabel lebar + ringkasan samping */}
+      <div className="flex flex-col xl:flex-row gap-4 items-start">
+        <div className="flex-1 min-w-0 w-full">
+          <EstimationItemsTable
+            orgId={tenant!.id}
+            items={draft.items}
+            defaultMargin={draft.margin_pct}
+            overheadPct={draft.overhead_pct}
+            discountPct={draft.discount_pct}
+            taxPct={draft.tax_pct}
+            onChange={items => patch({ items })}
+          />
+        </div>
+        <div className="w-full xl:w-72 shrink-0 xl:sticky xl:top-4">
+          <EstimationSummaryPanel draft={draft} />
+        </div>
+      </div>
+
+      {/* Pengaturan sekunder — di bawah tabel */}
+      {detailOpen && (
+        <div className="mt-4 space-y-4">
+          <EstimationImageSlots
+            orgId={tenant!.id}
+            estimationId={isNew ? null : id ?? null}
+            images={draft.images}
+            onChange={images => patch({ images })}
+            onToast={(msg, type) => showToast(msg, type)}
+          />
           <PdfDesignCustomizer
             draft={draft}
             onChange={patch}
             open={pdfDesignOpen}
             onToggle={() => setPdfDesignOpen(v => !v)}
           />
-
           <section className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
             <h3 className="text-xs font-bold text-slate-500 uppercase">Catatan & Syarat</h3>
             <textarea
@@ -346,25 +391,7 @@ export default function EstimatorForm() {
             />
           </section>
         </div>
-
-        {/* Items — kolom utama */}
-        <div className="lg:col-span-6 order-1 lg:order-2">
-          <EstimationItemsTable
-            orgId={tenant!.id}
-            items={draft.items}
-            defaultMargin={draft.margin_pct}
-            overheadPct={draft.overhead_pct}
-            discountPct={draft.discount_pct}
-            taxPct={draft.tax_pct}
-            onChange={items => patch({ items })}
-          />
-        </div>
-
-        {/* Ringkasan */}
-        <div className="lg:col-span-3 order-3">
-          <EstimationSummaryPanel draft={draft} />
-        </div>
-      </div>
+      )}
 
       {/* Sticky bottom bar */}
       <div className="fixed bottom-0 left-0 right-0 lg:left-64 bg-white border-t border-slate-200 px-4 py-3 flex flex-wrap gap-2 justify-end z-20 safe-bottom">
