@@ -164,7 +164,7 @@ export default function Finance() {
                   <button
                     type="button"
                     onClick={() => setCommandModalOpen(true)}
-                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-200 text-sm"
+                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-emerald-200 text-sm"
                   >
                     <Plus className="w-4 h-4" /> Catat Biaya
                   </button>
@@ -180,7 +180,7 @@ export default function Finance() {
           type="button"
           onClick={() => setView('dashboard')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-            view === 'dashboard' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'
+            view === 'dashboard' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'
           }`}
         >
           <LayoutDashboard className="w-4 h-4" /> Ringkasan
@@ -189,7 +189,7 @@ export default function Finance() {
           type="button"
           onClick={() => setView('laporan')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-            view === 'laporan' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'
+            view === 'laporan' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'
           }`}
         >
           <BarChart3 className="w-4 h-4" /> Laporan Bisnis
@@ -200,7 +200,7 @@ export default function Finance() {
         <BusinessReportPanel />
       ) : loading && transactions.length === 0 ? (
         <div className="flex items-center justify-center h-48">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+          <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
         </div>
       ) : (
         <>
@@ -208,9 +208,9 @@ export default function Finance() {
             {[
               { label: 'Total Pemasukan', value: formatRupiah(totals.totalInflow), icon: ArrowDownLeft, color: 'text-emerald-600', bg: 'bg-emerald-50' },
               { label: 'Total Realisasi', value: formatRupiah(totals.totalOutflow), icon: ArrowUpRight, color: 'text-rose-600', bg: 'bg-rose-50' },
-              { label: 'Net Kas', value: formatRupiah(totals.netCash), icon: Wallet, color: totals.netCash >= 0 ? 'text-indigo-600' : 'text-rose-600', bg: totals.netCash >= 0 ? 'bg-indigo-50' : 'bg-rose-50' },
+              { label: 'Net Kas', value: formatRupiah(totals.netCash), icon: Wallet, color: totals.netCash >= 0 ? 'text-emerald-600' : 'text-rose-600', bg: totals.netCash >= 0 ? 'bg-emerald-50' : 'bg-rose-50' },
               { label: 'Total Hutang Proyek', value: formatRupiah(totals.interProjectDebtOutstanding), icon: ArrowRightLeft, color: 'text-amber-600', bg: 'bg-amber-50' },
-              { label: 'Utilisasi Budget', value: `${utilization.toFixed(0)}%`, icon: PieChart, color: utilization > 90 ? 'text-amber-600' : 'text-violet-600', bg: utilization > 90 ? 'bg-amber-50' : 'bg-violet-50' },
+              { label: 'Utilisasi Budget', value: `${utilization.toFixed(0)}%`, icon: PieChart, color: utilization > 90 ? 'text-amber-600' : 'text-emerald-600', bg: utilization > 90 ? 'bg-amber-50' : 'bg-emerald-50' },
             ].map((k, i) => (
               <motion.div key={k.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }} className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
                 <div className={`w-8 h-8 rounded-lg ${k.bg} flex items-center justify-center mb-2`}>
@@ -228,7 +228,7 @@ export default function Finance() {
                 <h2 className="font-bold text-slate-800 text-sm">Pemasukan vs Pengeluaran</h2>
                 <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
                   {([7, 30, 90] as PeriodDays[]).map(d => (
-                    <button key={d} type="button" onClick={() => setPeriod(d)} className={`px-3 py-1 rounded-md text-xs font-bold ${period === d ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}>
+                    <button key={d} type="button" onClick={() => setPeriod(d)} className={`px-3 py-1 rounded-md text-xs font-bold ${period === d ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`}>
                       {d}h
                     </button>
                   ))}
@@ -250,7 +250,7 @@ export default function Finance() {
                         <Tooltip formatter={(v: number, name: string) => [`Rp ${v.toFixed(2)} jt`, name === 'inflow' ? 'Masuk' : name === 'outflow' ? 'Keluar' : 'Net']} />
                         <Area type="monotone" dataKey="inflow" name="inflow" stroke="#10b981" fill="#10b98120" strokeWidth={2} />
                         <Area type="monotone" dataKey="outflow" name="outflow" stroke="#f43f5e" fill="#f43f5e15" strokeWidth={2} />
-                        <Line type="monotone" dataKey="net" name="net" stroke="#6366f1" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="net" name="net" stroke="#059669" strokeWidth={2} dot={false} />
                       </AreaChart>
                     </ResponsiveContainer>
                   </>
@@ -271,7 +271,7 @@ export default function Finance() {
                       <Tooltip formatter={(v: number) => formatRupiah(v)} />
                       <Bar dataKey="amount" radius={4}>
                         {supplierBreakdown.map((_, i) => (
-                          <Cell key={i} fill={['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe', '#ede9fe'][i] || '#6366f1'} />
+                          <Cell key={i} fill={['#059669', '#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5'][i] || '#059669'} />
                         ))}
                       </Bar>
                     </BarChart>
@@ -284,7 +284,7 @@ export default function Finance() {
           <section className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
             <div className="p-4 border-b flex flex-wrap items-center justify-between gap-3">
               <div className="font-bold text-slate-800 flex items-center gap-2 text-sm">
-                <FolderOpen className="w-4 h-4 text-indigo-600" /> Budget vs Realisasi
+                <FolderOpen className="w-4 h-4 text-emerald-600" /> Budget vs Realisasi
               </div>
               <div className="flex items-center gap-2">
                 <ArrowUpDown className="w-4 h-4 text-slate-400" />
@@ -314,11 +314,11 @@ export default function Finance() {
                     >
                       <div className="flex items-start justify-between gap-4 mb-2">
                         <div className="min-w-0">
-                          <div className="font-semibold text-slate-800 truncate group-hover:text-indigo-600">{p.name}</div>
+                          <div className="font-semibold text-slate-800 truncate group-hover:text-emerald-600">{p.name}</div>
                           <div className="text-xs text-slate-400 mt-0.5 flex flex-wrap gap-x-2">
                             <span>Budget {formatRupiah(p.budget)}</span>
                             <span className="text-emerald-600">Diterima {formatRupiah(p.received)}</span>
-                            <span className="text-violet-600">Saldo+ {formatRupiah(p.surplus)}</span>
+                            <span className="text-emerald-600">Saldo+ {formatRupiah(p.surplus)}</span>
                             {p.interProjectDebt > 0 && (
                               <span className="text-amber-600 font-semibold">Hutang {formatRupiah(p.interProjectDebt)}</span>
                             )}
@@ -330,12 +330,12 @@ export default function Finance() {
                             <div className={`font-black ${over ? 'text-rose-600' : 'text-slate-900'}`}>{formatRupiah(p.spent)}</div>
                             <div className="text-xs text-slate-400">{pct.toFixed(0)}% terpakai</div>
                           </div>
-                          <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-500" />
+                          <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-emerald-500" />
                         </div>
                       </div>
                       <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                         <div
-                          className={`h-full rounded-full transition-all ${over ? 'bg-rose-500' : pct > 85 ? 'bg-amber-500' : 'bg-indigo-500'}`}
+                          className={`h-full rounded-full transition-all ${over ? 'bg-rose-500' : pct > 85 ? 'bg-amber-500' : 'bg-emerald-500'}`}
                           style={{ width: `${Math.min(pct, 100)}%` }}
                         />
                       </div>
@@ -384,7 +384,7 @@ export default function Finance() {
           <section className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
             <div className="p-4 border-b space-y-3">
               <div className="font-bold text-slate-800 flex items-center gap-2 text-sm">
-                <Wallet className="w-4 h-4 text-indigo-600" /> Transaksi ({filteredTx.length})
+                <Wallet className="w-4 h-4 text-emerald-600" /> Transaksi ({filteredTx.length})
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
@@ -427,12 +427,12 @@ export default function Finance() {
                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${c.kind === 'income' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                           {c.kind === 'income' ? 'Masuk' : 'Keluar'}
                         </span>
-                        <span className="font-medium text-slate-800 truncate group-hover:text-indigo-600">{c.description}</span>
+                        <span className="font-medium text-slate-800 truncate group-hover:text-emerald-600">{c.description}</span>
                       </div>
                       <div className="text-xs text-slate-400 flex flex-wrap gap-x-2 mt-0.5">
                         <span>{c.date}</span>
                         {projectNameMap[c.project_id] && (
-                          <span className="text-indigo-600">{projectNameMap[c.project_id]}</span>
+                          <span className="text-emerald-600">{projectNameMap[c.project_id]}</span>
                         )}
                         {c.meta && <span>· {c.meta}</span>}
                       </div>

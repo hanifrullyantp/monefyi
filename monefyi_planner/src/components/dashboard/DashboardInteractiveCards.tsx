@@ -77,7 +77,7 @@ export default function DashboardInteractiveCards({ onOpenProject }: Props) {
       value: `${stats.activeProjects} / ${stats.totalProjects}`,
       sub: 'aktif dari total',
       icon: FolderOpen,
-      gradient: 'from-blue-500/10 to-indigo-500/5',
+      gradient: 'from-blue-500/10 to-emerald-500/5',
       iconColor: 'text-blue-600',
     },
     {
@@ -104,8 +104,8 @@ export default function DashboardInteractiveCards({ onOpenProject }: Props) {
       value: attendance.total ? `${attendance.present} / ${attendance.total}` : '—',
       sub: 'hadir hari ini',
       icon: Users,
-      gradient: 'from-violet-500/10 to-purple-500/5',
-      iconColor: 'text-violet-600',
+      gradient: 'from-emerald-500/10 to-emerald-500/5',
+      iconColor: 'text-emerald-600',
     },
   ];
 
@@ -160,10 +160,10 @@ export default function DashboardInteractiveCards({ onOpenProject }: Props) {
             <div>
               <div className="text-xs font-bold text-slate-600 mb-2">Progress keseluruhan</div>
               <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-1">
-                <div className="h-full bg-indigo-600 rounded-full" style={{ width: `${selectedProject.progress_percentage}%` }} />
+                <div className="h-full bg-emerald-600 rounded-full" style={{ width: `${selectedProject.progress_percentage}%` }} />
               </div>
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden border border-dashed border-indigo-200">
-                <div className="h-full bg-indigo-300/60 rounded-full" style={{ width: `${selectedProject.planned_progress}%` }} />
+              <div className="h-2 bg-slate-100 rounded-full overflow-hidden border border-dashed border-emerald-200">
+                <div className="h-full bg-emerald-300/60 rounded-full" style={{ width: `${selectedProject.planned_progress}%` }} />
               </div>
             </div>
             {projectRecs.map((r, i) => (
@@ -173,8 +173,8 @@ export default function DashboardInteractiveCards({ onOpenProject }: Props) {
               </div>
             ))}
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => { onOpenProject?.(selectedProject.id); setSheet(null); }} className="flex-1 min-w-[120px] py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold">Buka Proyek</button>
-              <button type="button" onClick={() => { setCommandModalOpen(true); setSheet(null); }} className="flex-1 min-w-[120px] py-2.5 border border-indigo-200 text-indigo-700 rounded-xl text-xs font-bold">Catat Biaya</button>
+              <button type="button" onClick={() => { onOpenProject?.(selectedProject.id); setSheet(null); }} className="flex-1 min-w-[120px] py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold">Buka Proyek</button>
+              <button type="button" onClick={() => { setCommandModalOpen(true); setSheet(null); }} className="flex-1 min-w-[120px] py-2.5 border border-emerald-200 text-emerald-700 rounded-xl text-xs font-bold">Catat Biaya</button>
             </div>
             <div>
               <div className="text-xs font-bold text-slate-600 mb-2">Proyek lainnya</div>
@@ -220,13 +220,13 @@ export default function DashboardInteractiveCards({ onOpenProject }: Props) {
                     <span>{Math.round(pct)}% · +{formatRupiahShort(received)}</span>
                   </div>
                   <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${pct > 85 ? 'bg-amber-500' : 'bg-indigo-500'}`} style={{ width: `${Math.min(100, pct)}%` }} />
+                    <div className={`h-full rounded-full ${pct > 85 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${Math.min(100, pct)}%` }} />
                   </div>
                 </div>
               );
             })}
           </div>
-          <button type="button" onClick={() => { setActiveTab('finance'); setSheet(null); }} className="w-full py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold">Laporan Lengkap</button>
+          <button type="button" onClick={() => { setActiveTab('finance'); setSheet(null); }} className="w-full py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold">Laporan Lengkap</button>
         </div>
       </BottomSheet>
 
@@ -247,7 +247,7 @@ export default function DashboardInteractiveCards({ onOpenProject }: Props) {
                       <div className="font-semibold text-sm">{item.title}</div>
                       <p className="text-xs text-slate-500 mt-1">{item.message}</p>
                       {item.projectId && (
-                        <button type="button" onClick={() => { onOpenProject?.(item.projectId!); setSheet(null); }} className="mt-2 text-xs font-bold text-indigo-600">Lihat Detail →</button>
+                        <button type="button" onClick={() => { onOpenProject?.(item.projectId!); setSheet(null); }} className="mt-2 text-xs font-bold text-emerald-600">Lihat Detail →</button>
                       )}
                     </div>
                   ))}
@@ -266,7 +266,7 @@ export default function DashboardInteractiveCards({ onOpenProject }: Props) {
             <MetricMiniCard label="Tidak" value={String(Math.max(0, attendance.total - attendance.present))} tone="danger" />
             <MetricMiniCard label="Total" value={String(attendance.total)} />
           </div>
-          <button type="button" onClick={() => { setActiveTab('hr'); setSheet(null); }} className="w-full py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold">Buka HR & Karyawan</button>
+          <button type="button" onClick={() => { setActiveTab('hr'); setSheet(null); }} className="w-full py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold">Buka HR & Karyawan</button>
         </div>
       </BottomSheet>
     </>

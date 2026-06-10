@@ -73,7 +73,7 @@ export function FindCompanyPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-3xl p-8 shadow-2xl">
         <Link to="/signup" className="text-sm text-slate-500 mb-4 inline-block">← Kembali</Link>
 
@@ -98,9 +98,9 @@ export function FindCompanyPage() {
                   key={c.id}
                   type="button"
                   onClick={() => handleSelect(c)}
-                  className="w-full p-3 border border-slate-100 rounded-xl text-left hover:border-indigo-200 flex items-center gap-3"
+                  className="w-full p-3 border border-slate-100 rounded-xl text-left hover:border-emerald-200 flex items-center gap-3"
                 >
-                  <Building2 className="w-5 h-5 text-indigo-600" />
+                  <Building2 className="w-5 h-5 text-emerald-600" />
                   <div>
                     <div className="font-semibold text-sm">{c.name}</div>
                     <div className="text-xs text-slate-500">{c.industry} · {c.team_size}</div>
@@ -133,7 +133,7 @@ export function FindCompanyPage() {
                 placeholder="Password (min 8, huruf besar, angka, simbol)"
               />
               {error && <p className="text-sm text-rose-600">{error}</p>}
-              <button type="submit" disabled={loading || !form.name.trim() || !form.email.trim() || !isPasswordReady(form.password)} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed">Kirim permintaan</button>
+              <button type="submit" disabled={loading || !form.name.trim() || !form.email.trim() || !isPasswordReady(form.password)} className="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed">Kirim permintaan</button>
             </form>
           </>
         )}
@@ -142,7 +142,7 @@ export function FindCompanyPage() {
           <div className="text-center py-6">
             <h2 className="font-black text-xl mb-2">Permintaan terkirim!</h2>
             <p className="text-sm text-slate-500 mb-4">Owner akan memberi tahu setelah approve.</p>
-            <button type="button" onClick={() => navigate('/app')} className="py-2 px-6 bg-indigo-600 text-white rounded-xl text-sm font-bold">Ke dashboard</button>
+            <button type="button" onClick={() => navigate('/app')} className="py-2 px-6 bg-emerald-600 text-white rounded-xl text-sm font-bold">Ke dashboard</button>
           </div>
         )}
       </div>

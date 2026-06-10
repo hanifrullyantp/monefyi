@@ -148,13 +148,13 @@ export default function PiutangPage() {
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={() => setFormOpen(false)} className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold">Batal</button>
-            <button type="button" onClick={handleCreate} className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-bold">Simpan</button>
+            <button type="button" onClick={handleCreate} className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-bold">Simpan</button>
           </div>
         </div>
       )}
 
       {loading ? (
-        <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-indigo-600" /></div>
+        <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
       ) : rows.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-100 p-10 text-center text-slate-400 text-sm">Belum ada piutang.</div>
       ) : (

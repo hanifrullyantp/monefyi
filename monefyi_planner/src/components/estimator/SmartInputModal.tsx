@@ -103,7 +103,7 @@ export default function SmartInputModal({ orgId, defaultMargin = 20, onClose, on
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
               <Sparkles className="w-4 h-4 text-white" />
             </div>
             <div>
@@ -123,14 +123,14 @@ export default function SmartInputModal({ orgId, defaultMargin = 20, onClose, on
               onChange={e => setText(e.target.value)}
               placeholder={`Contoh:\nPasang plafon gypsum 25m2 hpp 85rb margin 30\nACP 50 meter persegi 350000 25%\nUpah pasang 5 hari @150rb`}
               rows={5}
-              className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm resize-none focus:border-indigo-400 outline-none"
+              className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm resize-none focus:border-emerald-400 outline-none"
             />
             {speechSupported && (
               <button
                 type="button"
                 onClick={toggleMic}
                 className={`absolute bottom-3 right-3 p-2.5 rounded-xl transition-colors ${
-                  listening ? 'bg-rose-500 text-white animate-pulse' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+                  listening ? 'bg-rose-500 text-white animate-pulse' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
                 }`}
                 title={listening ? 'Stop rekaman' : 'Input suara'}
               >
@@ -171,7 +171,7 @@ export default function SmartInputModal({ orgId, defaultMargin = 20, onClose, on
                             className="w-full px-2 py-1 border border-transparent hover:border-slate-200 rounded text-sm"
                           />
                           {item.matched_pricelist && (
-                            <div className="text-[10px] text-indigo-500 px-2">↳ {item.matched_pricelist}</div>
+                            <div className="text-[10px] text-emerald-500 px-2">↳ {item.matched_pricelist}</div>
                           )}
                         </td>
                         <td className="p-1">
@@ -229,7 +229,7 @@ export default function SmartInputModal({ orgId, defaultMargin = 20, onClose, on
             type="button"
             onClick={handleConfirm}
             disabled={parsed.length === 0}
-            className="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-sm font-bold disabled:opacity-50"
+            className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-50"
           >
             Tambahkan ke Estimasi ({parsed.length})
           </button>

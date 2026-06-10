@@ -102,12 +102,12 @@ export default function InvestorPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <p className="text-sm text-slate-500">Total modal: <span className="font-bold text-indigo-700">{formatFinanceRupiah(totalInvested)}</span></p>
+        <p className="text-sm text-slate-500">Total modal: <span className="font-bold text-emerald-700">{formatFinanceRupiah(totalInvested)}</span></p>
         <div className="flex gap-2">
           <button type="button" onClick={load} className="p-2.5 border border-slate-200 rounded-xl hover:bg-slate-50">
             <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
           </button>
-          <button type="button" onClick={() => setFormOpen(true)} className="flex items-center gap-2 bg-indigo-600 text-white font-bold px-4 py-2.5 rounded-xl text-sm">
+          <button type="button" onClick={() => setFormOpen(true)} className="flex items-center gap-2 bg-emerald-600 text-white font-bold px-4 py-2.5 rounded-xl text-sm">
             <Plus className="w-4 h-4" /> Investor
           </button>
         </div>
@@ -115,7 +115,7 @@ export default function InvestorPage() {
 
       <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-3">
         <div className="flex items-center gap-2">
-          <Calculator className="w-4 h-4 text-indigo-600" />
+          <Calculator className="w-4 h-4 text-emerald-600" />
           <h3 className="font-bold text-slate-800">Kalkulator Dividen</h3>
         </div>
         <input type="number" value={calcProfit} onChange={e => setCalcProfit(e.target.value)} placeholder="Laba bersih periode (Rp)" className="w-full max-w-xs px-3 py-2 rounded-xl border text-sm" />
@@ -145,7 +145,7 @@ export default function InvestorPage() {
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={() => setFormOpen(false)} className="px-4 py-2 rounded-xl border text-sm">Batal</button>
-            <button type="button" onClick={handleCreate} className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-bold">Simpan</button>
+            <button type="button" onClick={handleCreate} className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-bold">Simpan</button>
           </div>
         </div>
       )}
@@ -168,7 +168,7 @@ export default function InvestorPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-indigo-600" /></div>
+        <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
       ) : (
         <div className="space-y-3">
           {investors.map(inv => (
@@ -182,7 +182,7 @@ export default function InvestorPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="font-black text-indigo-700">{formatFinanceRupiah(inv.total_invested)}</span>
+                  <span className="font-black text-emerald-700">{formatFinanceRupiah(inv.total_invested)}</span>
                   {expandedId === inv.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </div>
               </button>

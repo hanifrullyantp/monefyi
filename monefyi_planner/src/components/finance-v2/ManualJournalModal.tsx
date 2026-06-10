@@ -166,7 +166,7 @@ export default function ManualJournalModal({
             <button
               type="button"
               onClick={() => setLines([...lines, emptyLine()])}
-              className="flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+              className="flex items-center gap-1 text-sm font-semibold text-emerald-600 hover:text-emerald-700"
             >
               <Plus className="w-4 h-4" /> Tambah baris
             </button>
@@ -186,7 +186,7 @@ export default function ManualJournalModal({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2"
+            className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
             Simpan Jurnal

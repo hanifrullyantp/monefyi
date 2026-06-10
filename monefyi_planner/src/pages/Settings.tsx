@@ -52,8 +52,8 @@ function roleLabel(role?: string) {
 
 function roleBadgeClass(role?: string) {
   const map: Record<string, string> = {
-    owner: 'bg-violet-100 text-violet-700',
-    manager: 'bg-indigo-100 text-indigo-700',
+    owner: 'bg-emerald-100 text-emerald-700',
+    manager: 'bg-emerald-100 text-emerald-700',
     worker: 'bg-emerald-100 text-emerald-700',
   };
   return map[role || ''] || 'bg-slate-100 text-slate-600';
@@ -94,7 +94,7 @@ export default function Settings() {
   const [timezone, setTimezone] = useState(tenant?.timezone || 'Asia/Jakarta');
   const [currency, setCurrency] = useState(tenant?.currency || 'IDR');
   const [businessType, setBusinessType] = useState(tenant?.business_type || 'construction');
-  const [brandColor, setBrandColor] = useState('#6366f1');
+  const [brandColor, setBrandColor] = useState('#059669');
   const [savingOrg, setSavingOrg] = useState(false);
 
   const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs>(loadNotificationPrefs());
@@ -125,7 +125,7 @@ export default function Settings() {
         setTimezone(org.timezone || 'Asia/Jakarta');
         setCurrency(orgSettings.currency || tenant.currency || 'IDR');
         setBusinessType(orgSettings.business_type || tenant.business_type || 'construction');
-        setBrandColor(org.brand_color || '#6366f1');
+        setBrandColor(org.brand_color || '#059669');
       }
     } catch (e) {
       console.error(e);
@@ -306,7 +306,7 @@ export default function Settings() {
   if (loading && !name) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
       </div>
     );
   }
@@ -318,7 +318,7 @@ export default function Settings() {
           <h1 className="text-2xl md:text-3xl font-black text-slate-900">Pengaturan</h1>
           <p className="text-sm text-slate-500">Kelola profil, organisasi, dan preferensi akun.</p>
           {showAdminLink && (
-            <Link to="/admin" className="inline-flex mt-2 text-sm font-semibold text-indigo-600 hover:underline">
+            <Link to="/admin" className="inline-flex mt-2 text-sm font-semibold text-emerald-600 hover:underline">
               Buka Super Admin →
             </Link>
           )}
@@ -350,7 +350,7 @@ export default function Settings() {
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap ${tab === t.id ? 'bg-indigo-100 text-indigo-700' : 'bg-white text-slate-600 border border-slate-100'}`}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap ${tab === t.id ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-slate-600 border border-slate-100'}`}
           >
             <t.icon className="w-3.5 h-3.5" />
             {t.label}
@@ -362,7 +362,7 @@ export default function Settings() {
         <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-6">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-5">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-2xl font-black shrink-0">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white text-2xl font-black shrink-0">
                 {name?.charAt(0)?.toUpperCase() || '?'}
               </div>
               <div>
@@ -374,7 +374,7 @@ export default function Settings() {
               </div>
             </div>
             {!editingProfile ? (
-              <button type="button" onClick={() => setEditingProfile(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-indigo-600 hover:bg-indigo-50 rounded-lg">
+              <button type="button" onClick={() => setEditingProfile(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-emerald-600 hover:bg-emerald-50 rounded-lg">
                 <Edit3 className="w-3.5 h-3.5" /> Edit
               </button>
             ) : (
@@ -431,7 +431,7 @@ export default function Settings() {
 
           <div className="pt-4 border-t border-slate-100 space-y-3">
             <div className="flex items-center gap-2">
-              <Wallet className="w-4 h-4 text-indigo-600" />
+              <Wallet className="w-4 h-4 text-emerald-600" />
               <h3 className="font-bold text-slate-800">Versi Finance</h3>
             </div>
             <p className="text-sm text-slate-500">
@@ -446,7 +446,7 @@ export default function Settings() {
                   onClick={() => handleFinanceVersionChange(v)}
                   className={`flex-1 px-4 py-3 rounded-xl border text-sm font-semibold text-left transition-colors ${
                     financeVersion === v
-                      ? 'border-indigo-300 bg-indigo-50 text-indigo-800'
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
                       : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
                 >
@@ -514,7 +514,7 @@ export default function Settings() {
           </div>
 
           <div className="flex flex-wrap gap-3 pt-2">
-            <button type="button" onClick={handleSaveOrg} disabled={savingOrg} className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-2">
+            <button type="button" onClick={handleSaveOrg} disabled={savingOrg} className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-2">
               {savingOrg && <Loader2 className="w-4 h-4 animate-spin" />}
               Simpan Organisasi
             </button>
@@ -525,7 +525,7 @@ export default function Settings() {
           </div>
 
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-500">
-            Kelola anggota, undangan, dan akses join di halaman <button type="button" onClick={goToHr} className="text-indigo-600 font-semibold">HR & Karyawan</button>.
+            Kelola anggota, undangan, dan akses join di halaman <button type="button" onClick={goToHr} className="text-emerald-600 font-semibold">HR & Karyawan</button>.
             Billing dan upgrade paket akan tersedia di versi berikutnya.
           </div>
         </div>
@@ -560,7 +560,7 @@ export default function Settings() {
           </div>
 
           <div className="flex items-center gap-3">
-            <button type="button" onClick={handleSaveNotif} disabled={notifSaved} className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold disabled:opacity-50">
+            <button type="button" onClick={handleSaveNotif} disabled={notifSaved} className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-50">
               Simpan Preferensi
             </button>
             {!notifSaved && <span className="text-xs text-amber-600">Ada perubahan belum disimpan</span>}
@@ -573,7 +573,7 @@ export default function Settings() {
         <div className="space-y-4">
           <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4">
             <div className="flex items-center gap-2">
-              <Lock className="w-5 h-5 text-indigo-500" />
+              <Lock className="w-5 h-5 text-emerald-500" />
               <h3 className="font-bold text-slate-800">Ubah Password</h3>
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
@@ -627,9 +627,9 @@ export default function Settings() {
             </div>
           </div>
 
-          <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-5 text-sm text-indigo-800">
+          <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 text-sm text-emerald-800">
             <p className="font-semibold mb-1">Butuh bantuan?</p>
-            <p className="text-indigo-700">Hubungi admin organisasi atau kunjungi dokumentasi onboarding di repo proyek.</p>
+            <p className="text-emerald-700">Hubungi admin organisasi atau kunjungi dokumentasi onboarding di repo proyek.</p>
           </div>
         </div>
       )}
@@ -662,7 +662,7 @@ function ToggleRow({ label, checked, onChange }: { label: string; checked: boole
   return (
     <label className="flex items-center justify-between py-2.5 px-3 rounded-xl hover:bg-slate-50 cursor-pointer">
       <span className="text-sm text-slate-700">{label}</span>
-      <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} className="w-4 h-4 accent-indigo-600" />
+      <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} className="w-4 h-4 accent-emerald-600" />
     </label>
   );
 }

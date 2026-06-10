@@ -178,7 +178,7 @@ export default function EmployeeDetailSheet({
     <BottomSheet open={open} onClose={onClose} height="95vh" title={name}>
       <div className="space-y-4 -mt-2">
         <div className="flex items-center gap-3">
-          <div className="w-14 h-14 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-700 font-black text-xl">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-700 font-black text-xl">
             {name[0]?.toUpperCase()}
           </div>
           <div>
@@ -206,7 +206,7 @@ export default function EmployeeDetailSheet({
               key={t.id}
               type="button"
               onClick={() => setTab(t.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${tab === t.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${tab === t.id ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'}`}
             >
               {t.label}
             </button>
@@ -269,7 +269,7 @@ export default function EmployeeDetailSheet({
                 type="button"
                 onClick={handleSave}
                 disabled={saving}
-                className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 text-white rounded-xl font-bold"
+                className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white rounded-xl font-bold"
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Simpan
@@ -280,7 +280,7 @@ export default function EmployeeDetailSheet({
 
         {tab !== 'info' && loadingTab && (
           <div className="flex justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
+            <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
           </div>
         )}
 
@@ -297,7 +297,7 @@ export default function EmployeeDetailSheet({
                     <option value="check_out">Check-out</option>
                   </select>
                 </div>
-                <button type="button" onClick={handleAdminAttendance} className="w-full py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold">
+                <button type="button" onClick={handleAdminAttendance} className="w-full py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold">
                   Catat absensi
                 </button>
               </div>

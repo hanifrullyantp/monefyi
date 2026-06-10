@@ -13,7 +13,7 @@ export function OwnerOnboardingWizard() {
   const { tenant, setOnboardingCompleted, setHasMembership } = useAppStore();
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>(1);
-  const [brandColor, setBrandColor] = useState('#6366f1');
+  const [brandColor, setBrandColor] = useState('#059669');
   const [timezone, setTimezone] = useState('Asia/Jakarta');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -68,7 +68,7 @@ export function OwnerOnboardingWizard() {
       <div className="max-w-lg w-full bg-white rounded-2xl p-8 shadow-sm border border-slate-100">
         <div className="flex gap-1 mb-6">
           {[1, 2, 3, 4].map(s => (
-            <div key={s} className={`h-1 flex-1 rounded-full ${s <= step ? 'bg-indigo-600' : 'bg-slate-200'}`} />
+            <div key={s} className={`h-1 flex-1 rounded-full ${s <= step ? 'bg-emerald-600' : 'bg-slate-200'}`} />
           ))}
         </div>
 
@@ -124,9 +124,9 @@ export function OwnerOnboardingWizard() {
             <SkipForward className="w-4 h-4" /> Lewati
           </button>
           {step < 4 ? (
-            <button type="button" onClick={() => setStep((step + 1) as Step)} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl">Lanjut</button>
+            <button type="button" onClick={() => setStep((step + 1) as Step)} className="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-xl">Lanjut</button>
           ) : (
-            <button type="button" onClick={() => finish(false)} disabled={loading} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl disabled:opacity-60">
+            <button type="button" onClick={() => finish(false)} disabled={loading} className="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-xl disabled:opacity-60">
               {loading ? 'Menyimpan...' : 'Mulai menggunakan'}
             </button>
           )}

@@ -46,7 +46,7 @@ export default function RecentTransactions({ entries, loading }: Props) {
         <button
           type="button"
           onClick={() => navigate('/app/finance-v2/laporan')}
-          className="text-xs font-bold text-indigo-600 hover:underline"
+          className="text-xs font-bold text-emerald-600 hover:underline"
         >
           Lihat Semua →
         </button>

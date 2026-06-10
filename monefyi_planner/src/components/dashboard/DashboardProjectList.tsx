@@ -31,7 +31,7 @@ export default function DashboardProjectList({
     <section className="space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="font-bold text-slate-700 text-sm uppercase tracking-wide">Daftar Proyek</h2>
-        <button type="button" onClick={onViewAll} className="text-xs font-semibold text-indigo-600 underline">
+        <button type="button" onClick={onViewAll} className="text-xs font-semibold text-emerald-600 underline">
           Lihat Semua →
         </button>
       </div>
@@ -62,7 +62,7 @@ export default function DashboardProjectList({
                   <div className="font-bold text-slate-900 text-sm truncate">{proj.name}</div>
                   {proj.client_name && <div className="text-xs text-slate-500 truncate">{proj.client_name}</div>}
                   <div className="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${proj.progress_percentage}%` }} />
+                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${proj.progress_percentage}%` }} />
                   </div>
                   <div className="flex gap-3 mt-1.5 text-[10px] text-slate-500">
                     <span>💰 {Math.round(budgetPct)}%</span>
@@ -80,7 +80,7 @@ export default function DashboardProjectList({
         <button
           type="button"
           onClick={onCreateProject}
-          className="w-full py-3 border-2 border-dashed border-indigo-200 text-indigo-600 rounded-xl text-sm font-bold flex items-center justify-center gap-2"
+          className="w-full py-3 border-2 border-dashed border-emerald-200 text-emerald-600 rounded-xl text-sm font-bold flex items-center justify-center gap-2"
         >
           <Plus className="w-4 h-4" /> Buat Proyek Baru
         </button>
@@ -89,7 +89,7 @@ export default function DashboardProjectList({
       <button
         type="button"
         onClick={onViewAll}
-        className="w-full h-12 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-200/50"
+        className="w-full h-12 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-600 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-200/50"
       >
         <span>📁 Kelola Semua Proyek</span>
         <ChevronRight className="w-4 h-4" />

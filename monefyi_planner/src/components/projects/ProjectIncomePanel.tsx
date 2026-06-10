@@ -113,7 +113,7 @@ export default function ProjectIncomePanel({
   if (loading && !incomes.length) {
     return (
       <div className="flex justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
+        <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
       </div>
     );
   }
@@ -125,9 +125,9 @@ export default function ProjectIncomePanel({
           <div className="text-[10px] font-bold text-emerald-700 uppercase">Diterima</div>
           <div className="text-sm font-black text-emerald-800">{formatRupiah(totalReceived)}</div>
         </div>
-        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-center">
-          <div className="text-[10px] font-bold text-indigo-700 uppercase">Kontrak</div>
-          <div className="text-sm font-black text-indigo-800">{formatRupiah(budget)}</div>
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center">
+          <div className="text-[10px] font-bold text-emerald-700 uppercase">Kontrak</div>
+          <div className="text-sm font-black text-emerald-800">{formatRupiah(budget)}</div>
         </div>
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
           <div className="text-[10px] font-bold text-amber-700 uppercase">Sisa Tagihan</div>
@@ -140,7 +140,7 @@ export default function ProjectIncomePanel({
           <button
             type="button"
             onClick={() => setShowForm(v => !v)}
-            className="flex items-center gap-1 text-xs font-bold text-indigo-600"
+            className="flex items-center gap-1 text-xs font-bold text-emerald-600"
           >
             <Plus className="w-3.5 h-3.5" /> Catat Uang Masuk
           </button>

@@ -5,11 +5,19 @@
 }
 
 :root {
-  --brand-primary: #6366f1;
-  --brand-accent: #8b5cf6;
-  --brand-dark: #1e1b4b;
+  --brand-primary: #10b981;
+  --brand-accent: #34d399;
+  --brand-dark: #064e3b;
   --radius-card: 16px;
   --radius-mini: 12px;
+}
+
+.bg-brand {
+  background-color: var(--brand-primary);
+}
+
+.text-brand {
+  color: var(--brand-primary);
 }
 
 .font-mono-nums {
@@ -63,8 +71,8 @@ html {
 }
 
 @keyframes breathe {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
-  50% { box-shadow: 0 0 0 12px rgba(99, 102, 241, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  50% { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
 }
 
 @keyframes slideUp {
@@ -97,7 +105,7 @@ html {
   position: absolute;
   inset: -4px;
   border-radius: 50%;
-  border: 2px solid rgba(99, 102, 241, 0.6);
+  border: 2px solid rgba(16, 185, 129, 0.6);
   animation: pulse-ring 2s ease-out infinite;
 }
 
@@ -132,7 +140,7 @@ html {
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+  background: linear-gradient(135deg, #059669, #10b981, #34d399);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -142,7 +150,7 @@ html {
 .waveform-bar {
   width: 3px;
   border-radius: 3px;
-  background: #6366f1;
+  background: #10b981;
   animation: waveform 0.8s ease-in-out infinite;
 }
 

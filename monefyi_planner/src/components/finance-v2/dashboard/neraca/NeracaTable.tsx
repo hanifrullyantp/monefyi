@@ -98,7 +98,7 @@ export default function NeracaTable({ data, onQuickActionKas }: Props) {
         <button
           type="button"
           onClick={onQuickActionKas}
-          className="inline-flex px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold"
+          className="inline-flex px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold"
         >
           + Catat Saldo Awal Kas
         </button>

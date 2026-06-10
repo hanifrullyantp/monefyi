@@ -133,14 +133,14 @@ export default function EstimationItemsTable({
             <button
               type="button"
               onClick={() => setSmartOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-gradient-to-r from-indigo-500 to-violet-600 rounded-lg hover:opacity-90 shadow-sm"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg hover:opacity-90 shadow-sm"
             >
               <Sparkles className="w-3.5 h-3.5" /> Smart Input
             </button>
             <button
               type="button"
               onClick={() => setPickerOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 bg-white"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-emerald-600 border border-emerald-200 rounded-lg hover:bg-emerald-50 bg-white"
             >
               <List className="w-3.5 h-3.5" /> Dari Pricelist
             </button>
@@ -154,7 +154,7 @@ export default function EstimationItemsTable({
           </div>
         </div>
 
-        <div className="flex items-start gap-2 px-4 py-2 bg-indigo-50/60 border-b border-indigo-100 text-[11px] text-indigo-800">
+        <div className="flex items-start gap-2 px-4 py-2 bg-emerald-50/60 border-b border-emerald-100 text-[11px] text-emerald-800">
           <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
           <span>
             <strong>Total jual</strong> = Qty × Harga jual/unit. <strong>Total HPP</strong> = Qty × HPP/unit.
@@ -169,7 +169,7 @@ export default function EstimationItemsTable({
               <button
                 type="button"
                 onClick={() => setSmartOpen(true)}
-                className="px-4 py-2 text-xs font-bold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100"
+                className="px-4 py-2 text-xs font-bold text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100"
               >
                 ✨ Smart Input
               </button>
@@ -210,7 +210,7 @@ export default function EstimationItemsTable({
                         value={item.name}
                         onChange={e => updateItem(idx, { name: e.target.value })}
                         onKeyDown={e => handleKeyDown(e, idx, 'name', fields)}
-                        className="w-full px-2 py-1.5 border border-transparent hover:border-slate-200 rounded-lg focus:border-indigo-400 focus:ring-1 focus:ring-indigo-100 outline-none text-sm"
+                        className="w-full px-2 py-1.5 border border-transparent hover:border-slate-200 rounded-lg focus:border-emerald-400 focus:ring-1 focus:ring-emerald-100 outline-none text-sm"
                         placeholder="Nama item"
                       />
                     </td>
@@ -243,7 +243,7 @@ export default function EstimationItemsTable({
                         value={item.qty}
                         onChange={e => updateItem(idx, { qty: Number(e.target.value) }, 'qty')}
                         onKeyDown={e => handleKeyDown(e, idx, 'qty', fields)}
-                        className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-right tabular-nums focus:border-indigo-400 outline-none"
+                        className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-right tabular-nums focus:border-emerald-400 outline-none"
                       />
                     </td>
                     <td className={tdClass}>
@@ -252,7 +252,7 @@ export default function EstimationItemsTable({
                         value={item.selling_price_per_unit}
                         onChange={v => updateItem(idx, { selling_price_per_unit: v }, 'selling')}
                         onKeyDown={e => handleKeyDown(e, idx, 'selling', fields)}
-                        className="w-full px-2 py-1.5 border border-indigo-200 bg-indigo-50/50 rounded-lg text-right font-semibold tabular-nums focus:border-indigo-400 focus:ring-1 focus:ring-indigo-100 outline-none"
+                        className="w-full px-2 py-1.5 border border-emerald-200 bg-emerald-50/50 rounded-lg text-right font-semibold tabular-nums focus:border-emerald-400 focus:ring-1 focus:ring-emerald-100 outline-none"
                       />
                     </td>
                     <td className={tdClass}>
@@ -264,7 +264,7 @@ export default function EstimationItemsTable({
                         value={item.margin_pct}
                         onChange={e => updateItem(idx, { margin_pct: Number(e.target.value) }, 'margin')}
                         onKeyDown={e => handleKeyDown(e, idx, 'margin', fields)}
-                        className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-right tabular-nums focus:border-indigo-400 outline-none"
+                        className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-right tabular-nums focus:border-emerald-400 outline-none"
                       />
                     </td>
                     <td className={tdClass}>
@@ -274,7 +274,7 @@ export default function EstimationItemsTable({
                         onChange={v => updateItem(idx, { hpp_per_unit: v }, 'hpp')}
                         onKeyDown={e => handleKeyDown(e, idx, 'hpp', fields)}
                         title="Estimasi HPP per satuan"
-                        className="w-full px-2 py-1.5 border border-slate-200 bg-slate-50 rounded-lg text-right text-slate-700 tabular-nums focus:border-indigo-400 outline-none"
+                        className="w-full px-2 py-1.5 border border-slate-200 bg-slate-50 rounded-lg text-right text-slate-700 tabular-nums focus:border-emerald-400 outline-none"
                       />
                     </td>
                     <td className={`${tdClass} text-right text-xs text-slate-500 tabular-nums`}>
@@ -305,7 +305,7 @@ export default function EstimationItemsTable({
                     <td className="px-2 py-3 text-right text-slate-600 tabular-nums">
                       {formatRupiahFull(totals.subtotalHpp)}
                     </td>
-                    <td className="px-2 py-3 text-right text-indigo-700 tabular-nums">
+                    <td className="px-2 py-3 text-right text-emerald-700 tabular-nums">
                       {formatRupiahFull(totals.subtotalSellingItems)}
                     </td>
                     <td />

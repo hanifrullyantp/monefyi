@@ -172,7 +172,7 @@ export default function SuperAdmin() {
         <div className="flex items-center gap-2">
           <Link
             to="/?edit=1"
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold"
           >
             <Pencil className="w-4 h-4" />
             Edit landing
@@ -187,7 +187,7 @@ export default function SuperAdmin() {
         <div className="flex gap-2 overflow-x-auto">
           {tabs.map(t => (
             <button key={t.id} type="button" onClick={() => setTab(t.id)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap ${tab === t.id ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600'}`}>
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap ${tab === t.id ? 'bg-emerald-600 text-white' : 'bg-white text-slate-600'}`}>
               <t.icon className="w-4 h-4" /> {t.label}
             </button>
           ))}
@@ -202,7 +202,7 @@ export default function SuperAdmin() {
               { label: 'Paket Lifetime', value: (stats.plan_breakdown as Record<string, number>)?.lifetime || 0 },
             ].map(k => (
               <div key={k.label} className="bg-white rounded-2xl p-5 border border-slate-100">
-                <div className="text-3xl font-black text-indigo-600">{String(k.value)}</div>
+                <div className="text-3xl font-black text-emerald-600">{String(k.value)}</div>
                 <div className="text-sm text-slate-500">{k.label}</div>
               </div>
             ))}
@@ -226,7 +226,7 @@ export default function SuperAdmin() {
                 <option value="all">Semua user</option>
                 <option value="non_planner">Bukan user Planner</option>
               </select>
-              <button type="button" onClick={loadUsers} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold">Cari</button>
+              <button type="button" onClick={loadUsers} className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold">Cari</button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -270,7 +270,7 @@ export default function SuperAdmin() {
                       <td className="p-3">{u.profile_role || 'user'}</td>
                       <td className="p-3">{u.ai_daily_limit ?? '—'}</td>
                       <td className="p-3">
-                        <button type="button" onClick={() => openEditUser(u)} className="text-indigo-600 font-semibold text-xs">Edit</button>
+                        <button type="button" onClick={() => openEditUser(u)} className="text-emerald-600 font-semibold text-xs">Edit</button>
                       </td>
                     </tr>
                   ))}
@@ -292,7 +292,7 @@ export default function SuperAdmin() {
                 <div className="text-xs text-slate-500">Auto-logout / sign-out</div>
               </div>
               <div className="bg-white rounded-2xl p-4 border">
-                <div className="text-2xl font-black text-indigo-600">{traces.length}</div>
+                <div className="text-2xl font-black text-emerald-600">{traces.length}</div>
                 <div className="text-xs text-slate-500">Total events</div>
               </div>
             </div>
@@ -304,7 +304,7 @@ export default function SuperAdmin() {
                 { id: 'session' as const, label: 'Auto-logout' },
               ]).map(f => (
                 <button key={f.id} type="button" onClick={() => setMonitorFilter(f.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold ${monitorFilter === f.id ? 'bg-indigo-600 text-white' : 'bg-white border text-slate-600'}`}>
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold ${monitorFilter === f.id ? 'bg-emerald-600 text-white' : 'bg-white border text-slate-600'}`}>
                   {f.label}
                 </button>
               ))}
@@ -312,7 +312,7 @@ export default function SuperAdmin() {
 
             <div className="bg-white rounded-2xl border overflow-hidden">
               {loading && !traces.length ? (
-                <div className="p-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-600" /></div>
+                <div className="p-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-emerald-600" /></div>
               ) : filteredTraces.length === 0 ? (
                 <div className="p-8 text-center text-sm text-slate-400">
                   <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-slate-300" />
@@ -353,7 +353,7 @@ export default function SuperAdmin() {
                   loadTypes();
                   showToast('Ditambahkan', 'success');
                 } catch (e) { showToast(e instanceof Error ? e.message : 'Gagal', 'error'); }
-              }} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold flex items-center gap-1">
+              }} className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold flex items-center gap-1">
                 <Plus className="w-4 h-4" /> Tambah
               </button>
             </div>
@@ -362,7 +362,7 @@ export default function SuperAdmin() {
                 <div key={ct.id} className="p-4 flex flex-wrap items-center gap-3">
                   <input defaultValue={ct.label} onBlur={async e => {
                     try { await updateCompanyType(ct.id, { label: e.target.value }); loadTypes(); } catch { /* */ }
-                  }} className="font-semibold border-b border-transparent focus:border-indigo-300 outline-none" />
+                  }} className="font-semibold border-b border-transparent focus:border-emerald-300 outline-none" />
                   <code className="text-xs bg-slate-100 px-2 py-1 rounded">{ct.slug}</code>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${ct.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100'}`}>
                     {ct.is_active ? 'Aktif' : 'Nonaktif'}
@@ -370,7 +370,7 @@ export default function SuperAdmin() {
                   <button type="button" onClick={async () => {
                     await updateCompanyType(ct.id, { is_active: !ct.is_active });
                     loadTypes();
-                  }} className="text-xs text-indigo-600 ml-auto">Toggle aktif</button>
+                  }} className="text-xs text-emerald-600 ml-auto">Toggle aktif</button>
                   <button type="button" onClick={async () => {
                     if (!confirm('Hapus jenis ini?')) return;
                     await deleteCompanyType(ct.id);
@@ -407,7 +407,7 @@ export default function SuperAdmin() {
               <input value={String(appConfig.checkout_lifetime_url || '')} onChange={e => setAppConfig({ ...appConfig, checkout_lifetime_url: e.target.value })}
                 className="w-full mt-1 px-3 py-2 border rounded-xl text-sm" />
             </div>
-            <button type="button" onClick={savePlatform} disabled={loading} className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold">
+            <button type="button" onClick={savePlatform} disabled={loading} className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold">
               <Save className="w-4 h-4" /> Simpan
             </button>
           </div>
@@ -451,7 +451,7 @@ export default function SuperAdmin() {
             </label>
             <div className="flex gap-2">
               <button type="button" onClick={() => setSelectedUser(null)} className="flex-1 py-2 border rounded-xl">Batal</button>
-              <button type="button" onClick={saveUser} className="flex-1 py-2 bg-indigo-600 text-white rounded-xl font-bold">Simpan</button>
+              <button type="button" onClick={saveUser} className="flex-1 py-2 bg-emerald-600 text-white rounded-xl font-bold">Simpan</button>
             </div>
           </div>
         </div>

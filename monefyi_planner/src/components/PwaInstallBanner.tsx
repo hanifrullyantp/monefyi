@@ -36,8 +36,8 @@ export default function PwaInstallBanner() {
 
   return (
     <div className="fixed bottom-20 md:bottom-6 left-4 right-4 md:left-auto md:right-6 md:max-w-sm z-[60]">
-      <div className="bg-slate-900 text-white rounded-2xl shadow-xl p-4 flex items-start gap-3 border border-indigo-500/30">
-        <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0">
+      <div className="bg-slate-900 text-white rounded-2xl shadow-xl p-4 flex items-start gap-3 border border-emerald-500/30">
+        <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center shrink-0">
           <Download className="w-5 h-5" />
         </div>
         <div className="flex-1 min-w-0">
@@ -47,7 +47,7 @@ export default function PwaInstallBanner() {
             <button
               type="button"
               onClick={install}
-              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-bold"
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold"
             >
               Install
             </button>

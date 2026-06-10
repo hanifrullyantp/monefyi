@@ -12,7 +12,7 @@ const typeConfig = {
   alert: { icon: AlertTriangle, color: 'text-rose-500', bg: 'bg-rose-50' },
   recommendation: { icon: Lightbulb, color: 'text-amber-500', bg: 'bg-amber-50' },
   update: { icon: TrendingUp, color: 'text-blue-500', bg: 'bg-blue-50' },
-  hr: { icon: Users, color: 'text-violet-500', bg: 'bg-violet-50' },
+  hr: { icon: Users, color: 'text-emerald-500', bg: 'bg-emerald-50' },
   system: { icon: Settings, color: 'text-slate-500', bg: 'bg-slate-50' },
 };
 
@@ -84,7 +84,7 @@ export default function NotificationPanel({ onClose }: Props) {
           <div className="flex items-center gap-2">
             <button
               onClick={handleReadAll}
-              className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
+              className="text-xs text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1"
             >
               <CheckCheck className="w-3.5 h-3.5" /> Baca semua
             </button>
@@ -108,7 +108,7 @@ export default function NotificationPanel({ onClose }: Props) {
                 <button
                   key={notif.id}
                   onClick={() => handleRead(notif.id, notif.action_url)}
-                  className={`w-full flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left border-b border-slate-50 ${!notif.read ? 'bg-indigo-50/30' : ''}`}
+                  className={`w-full flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left border-b border-slate-50 ${!notif.read ? 'bg-emerald-50/30' : ''}`}
                 >
                   <div className={`w-8 h-8 rounded-full ${config.bg} flex items-center justify-center shrink-0 mt-0.5`}>
                     <IconComp className={`w-4 h-4 ${config.color}`} />
@@ -116,7 +116,7 @@ export default function NotificationPanel({ onClose }: Props) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
                       <span className="text-sm font-semibold text-slate-800 truncate">{notif.title}</span>
-                      {!notif.read && <div className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />}
+                      {!notif.read && <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />}
                     </div>
                     <p className="text-xs text-slate-500 leading-relaxed">{notif.message}</p>
                     <div className="flex items-center gap-2 mt-1.5">

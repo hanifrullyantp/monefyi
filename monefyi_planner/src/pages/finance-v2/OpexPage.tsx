@@ -129,7 +129,7 @@ export default function OpexPage() {
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-white rounded-2xl border p-4">
           <div className="text-xs text-slate-500">Total Budget</div>
-          <div className="font-black text-lg text-indigo-700">{formatFinanceRupiah(totalPlanned)}</div>
+          <div className="font-black text-lg text-emerald-700">{formatFinanceRupiah(totalPlanned)}</div>
         </div>
         <div className="bg-white rounded-2xl border p-4">
           <div className="text-xs text-slate-500">Total Realisasi</div>
@@ -145,7 +145,7 @@ export default function OpexPage() {
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap ${tab === t.id ? 'bg-indigo-100 text-indigo-700' : 'bg-white border text-slate-600'}`}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap ${tab === t.id ? 'bg-emerald-100 text-emerald-700' : 'bg-white border text-slate-600'}`}
           >
             {t.label}
           </button>
@@ -168,7 +168,7 @@ export default function OpexPage() {
               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
             <input type="number" value={budgetAmount} onChange={e => setBudgetAmount(e.target.value)} placeholder="Planned (Rp)" className="px-3 py-2 rounded-xl border text-sm" />
-            <button type="button" onClick={handleSaveBudget} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold">Simpan</button>
+            <button type="button" onClick={handleSaveBudget} className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold">Simpan</button>
           </div>
         </div>
       )}
@@ -189,7 +189,7 @@ export default function OpexPage() {
       )}
 
       {loading ? (
-        <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-indigo-600" /></div>
+        <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
       ) : comparison.length === 0 ? (
         <div className="bg-white rounded-2xl border p-10 text-center text-slate-400 text-sm">Tambah kategori dan budget untuk mulai.</div>
       ) : (

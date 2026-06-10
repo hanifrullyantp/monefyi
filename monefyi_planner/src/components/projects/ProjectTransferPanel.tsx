@@ -220,7 +220,7 @@ export default function ProjectTransferPanel({
   if (loading && !summary) {
     return (
       <div className="flex justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
+        <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
       </div>
     );
   }
@@ -229,10 +229,10 @@ export default function ProjectTransferPanel({
 
   return (
     <div className="space-y-4">
-      <div className="bg-violet-50 border border-violet-200 rounded-xl p-4">
-        <div className="text-xs font-bold text-violet-700 uppercase mb-1">Saldo Tersedia (Surplus)</div>
-        <div className="text-2xl font-black text-violet-900">{formatRupiah(summary?.surplus ?? 0)}</div>
-        <div className="text-xs text-violet-600 mt-2">
+      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+        <div className="text-xs font-bold text-emerald-700 uppercase mb-1">Saldo Tersedia (Surplus)</div>
+        <div className="text-2xl font-black text-emerald-900">{formatRupiah(summary?.surplus ?? 0)}</div>
+        <div className="text-xs text-emerald-600 mt-2">
           Diterima {formatRupiah(summary?.received ?? 0)} · Pinjaman masuk {formatRupiah(summary?.loansIn ?? 0)} · Terpakai {formatRupiah(summary?.spent ?? 0)}
         </div>
       </div>
@@ -281,7 +281,7 @@ export default function ProjectTransferPanel({
                 key={t}
                 type="button"
                 onClick={() => setMode(t)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold ${mode === t ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold ${mode === t ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'}`}
               >
                 {t === 'loan' ? 'Catat Pinjaman Masuk' : 'Bayar Hutang'}
               </button>
@@ -296,7 +296,7 @@ export default function ProjectTransferPanel({
                     key={t}
                     type="button"
                     onClick={() => setSourceType(t)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold ${sourceType === t ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600'}`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold ${sourceType === t ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'}`}
                   >
                     {t === 'external' ? 'Dari luar (bank, owner, dll.)' : 'Dari proyek lain'}
                   </button>
@@ -368,7 +368,7 @@ export default function ProjectTransferPanel({
             <input type="number" placeholder="Nominal *" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} className="border rounded-lg px-2 py-1.5 text-sm" />
           </div>
           <input placeholder="Keterangan (opsional)" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="w-full border rounded-lg px-2 py-1.5 text-sm" />
-          <button type="button" onClick={handleSubmit} className="w-full py-2 bg-indigo-600 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1">
+          <button type="button" onClick={handleSubmit} className="w-full py-2 bg-emerald-600 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1">
             <ArrowRightLeft className="w-3.5 h-3.5" /> Simpan
           </button>
         </div>

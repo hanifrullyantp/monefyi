@@ -14,7 +14,7 @@ const toneStyles = {
   success: 'bg-emerald-50 border-emerald-100',
   warning: 'bg-amber-50 border-amber-100',
   danger: 'bg-rose-50 border-rose-100',
-  primary: 'bg-indigo-50 border-indigo-100',
+  primary: 'bg-emerald-50 border-emerald-100',
 };
 
 const valueTone = {
@@ -22,7 +22,7 @@ const valueTone = {
   success: 'text-emerald-700',
   warning: 'text-amber-700',
   danger: 'text-rose-700',
-  primary: 'text-indigo-700',
+  primary: 'text-emerald-700',
 };
 
 export default function MetricMiniCard({

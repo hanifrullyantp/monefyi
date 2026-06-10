@@ -80,12 +80,12 @@ export default function AsetPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <p className="text-sm text-slate-500">Nilai buku bersih: <span className="font-bold text-violet-700">{formatFinanceRupiah(totalNBV)}</span></p>
+        <p className="text-sm text-slate-500">Nilai buku bersih: <span className="font-bold text-emerald-700">{formatFinanceRupiah(totalNBV)}</span></p>
         <div className="flex gap-2">
           <button type="button" onClick={load} className="p-2.5 border border-slate-200 rounded-xl hover:bg-slate-50">
             <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
           </button>
-          <button type="button" onClick={() => setFormOpen(true)} className="flex items-center gap-2 bg-violet-600 text-white font-bold px-4 py-2.5 rounded-xl text-sm">
+          <button type="button" onClick={() => setFormOpen(true)} className="flex items-center gap-2 bg-emerald-600 text-white font-bold px-4 py-2.5 rounded-xl text-sm">
             <Plus className="w-4 h-4" /> Tambah Aset
           </button>
         </div>
@@ -103,13 +103,13 @@ export default function AsetPage() {
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={() => setFormOpen(false)} className="px-4 py-2 rounded-xl border text-sm font-semibold">Batal</button>
-            <button type="button" onClick={handleCreate} className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-bold">Simpan</button>
+            <button type="button" onClick={handleCreate} className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-bold">Simpan</button>
           </div>
         </div>
       )}
 
       {loading ? (
-        <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-indigo-600" /></div>
+        <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
       ) : rows.length === 0 ? (
         <div className="bg-white rounded-2xl border p-10 text-center text-slate-400 text-sm">Belum ada aset tetap.</div>
       ) : (
@@ -144,7 +144,7 @@ export default function AsetPage() {
                           type="button"
                           disabled={depreciatingId === asset.id}
                           onClick={() => handleDepreciate(asset)}
-                          className="text-xs font-bold text-violet-700 hover:bg-violet-50 px-2 py-1 rounded-lg inline-flex items-center gap-1"
+                          className="text-xs font-bold text-emerald-700 hover:bg-emerald-50 px-2 py-1 rounded-lg inline-flex items-center gap-1"
                         >
                           {depreciatingId === asset.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <TrendingDown className="w-3 h-3" />}
                           Depresiasi

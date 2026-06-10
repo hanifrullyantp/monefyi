@@ -114,13 +114,13 @@ export default function KasPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <p className="text-sm text-slate-500">Total saldo kas: <span className="font-bold text-indigo-700">{formatFinanceRupiah(totalKas)}</span></p>
+          <p className="text-sm text-slate-500">Total saldo kas: <span className="font-bold text-emerald-700">{formatFinanceRupiah(totalKas)}</span></p>
         </div>
         <div className="flex gap-2">
           <button type="button" onClick={load} className="p-2.5 border border-slate-200 rounded-xl hover:bg-slate-50">
             <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
           </button>
-          <button type="button" onClick={() => setTransferOpen(true)} className="flex items-center gap-2 bg-indigo-600 text-white font-bold px-4 py-2.5 rounded-xl text-sm">
+          <button type="button" onClick={() => setTransferOpen(true)} className="flex items-center gap-2 bg-emerald-600 text-white font-bold px-4 py-2.5 rounded-xl text-sm">
             <ArrowRightLeft className="w-4 h-4" /> Transfer
           </button>
         </div>
@@ -141,7 +141,7 @@ export default function KasPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-indigo-600" /></div>
+        <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
       ) : (
         <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
           <table className="w-full text-sm">
@@ -158,7 +158,7 @@ export default function KasPage() {
                 <tr key={acc.id} className="border-t border-slate-50">
                   <td className="p-3">
                     <div className="font-semibold text-slate-800">{acc.name}</div>
-                    {acc.is_system && <span className="text-[10px] text-indigo-600 font-semibold">SISTEM</span>}
+                    {acc.is_system && <span className="text-[10px] text-emerald-600 font-semibold">SISTEM</span>}
                   </td>
                   <td className="p-3 hidden sm:table-cell text-slate-500">
                     {acc.project_id ? projectMap[acc.project_id] || '—' : 'Bisnis'}
@@ -195,7 +195,7 @@ export default function KasPage() {
           {projectsWithoutKas.map(p => (
             <div key={p.id} className="flex items-center justify-between gap-2 text-sm">
               <span>{p.name}</span>
-              <button type="button" onClick={() => handleCreateProjectKas(p.id, p.name)} className="text-xs font-bold text-indigo-600 hover:underline">
+              <button type="button" onClick={() => handleCreateProjectKas(p.id, p.name)} className="text-xs font-bold text-emerald-600 hover:underline">
                 Buat akun kas
               </button>
             </div>

@@ -122,7 +122,7 @@ export default function ProjectDetailHeader({
                 if (s.id !== project.status) onStatusChange(s.id);
               }}
               className={`w-full text-left px-3 py-2.5 hover:bg-slate-50 flex items-center justify-between gap-2 disabled:opacity-50 ${
-                project.status === s.id ? 'font-bold text-indigo-600 bg-indigo-50' : ''
+                project.status === s.id ? 'font-bold text-emerald-600 bg-emerald-50' : ''
               }`}
             >
               {s.label}
@@ -165,7 +165,7 @@ export default function ProjectDetailHeader({
       role={isCollapsed ? 'button' : undefined}
     >
       <div
-        className="bg-gradient-to-r from-indigo-700 via-indigo-600 to-violet-700 text-white overflow-hidden transition-[min-height] duration-200 ease-out"
+        className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-emerald-700 text-white overflow-hidden transition-[min-height] duration-200 ease-out"
         style={{ minHeight: isCollapsed ? COLLAPSED_HEIGHT : undefined }}
       >
         {isCollapsed ? (
@@ -180,7 +180,7 @@ export default function ProjectDetailHeader({
             </button>
             <div className="flex-1 min-w-0">
               <div className="font-bold text-sm md:text-base truncate tracking-tight">{project.name}</div>
-              <div className="flex items-center gap-2 text-[10px] md:text-xs text-indigo-100 flex-wrap">
+              <div className="flex items-center gap-2 text-[10px] md:text-xs text-emerald-100 flex-wrap">
                 <span className="px-1.5 py-0.5 rounded bg-white/20">{STATUS_LABEL[project.status]}</span>
                 <span className="hidden sm:inline px-1.5 py-0.5 rounded bg-white/20">{health.label}</span>
                 <span>💰 {Math.round(budgetPct)}%</span>
@@ -224,7 +224,7 @@ export default function ProjectDetailHeader({
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/20 uppercase">{STATUS_LABEL[project.status]}</span>
                 </div>
                 <h2 className="text-xl md:text-2xl font-semibold truncate tracking-tight">{project.name}</h2>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-indigo-100 text-xs">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-emerald-100 text-xs">
                   {project.client_name && <span>{project.client_name}</span>}
                   {project.location && (
                     <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{project.location}</span>
@@ -263,12 +263,12 @@ export default function ProjectDetailHeader({
                 { label: 'Sisa Hari', value: daysLeft > 0 ? `${daysLeft}d` : 'Lewat' },
               ].map(m => (
                 <div key={m.label} className="text-center">
-                  <div className="text-[10px] md:text-xs text-indigo-100 mb-0.5 uppercase tracking-wider">{m.label}</div>
+                  <div className="text-[10px] md:text-xs text-emerald-100 mb-0.5 uppercase tracking-wider">{m.label}</div>
                   <div className="text-lg md:text-xl font-black font-mono">{m.value}</div>
                 </div>
               ))}
               <div ref={opiHelpRef} className="relative text-center">
-                <div className="text-[10px] md:text-xs text-indigo-100 mb-0.5 uppercase tracking-wider flex items-center justify-center gap-0.5">
+                <div className="text-[10px] md:text-xs text-emerald-100 mb-0.5 uppercase tracking-wider flex items-center justify-center gap-0.5">
                   OPI
                   <button
                     type="button"
@@ -284,7 +284,7 @@ export default function ProjectDetailHeader({
                   <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 z-50 w-56 p-3 bg-slate-900 text-white text-left rounded-xl shadow-xl text-xs leading-relaxed">
                     <div className="font-bold text-sm mb-1">{opiMetric.title}</div>
                     <p className="text-slate-200 mb-2">{opiMetric.description}</p>
-                    <p className="font-mono text-indigo-200 text-[10px] mb-1">{opiMetric.formula}</p>
+                    <p className="font-mono text-emerald-200 text-[10px] mb-1">{opiMetric.formula}</p>
                     <p className="text-slate-400 text-[10px]">Sumber: {opiMetric.source}</p>
                   </div>
                 )}

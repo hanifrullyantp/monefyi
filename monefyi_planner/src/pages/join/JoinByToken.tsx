@@ -86,7 +86,7 @@ export function JoinByTokenPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
       </div>
     );
   }
@@ -96,17 +96,17 @@ export function JoinByTokenPage() {
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-2xl p-8 text-center border border-slate-100">
           <p className="text-rose-600 mb-4">{preview?.error || error || 'Undangan tidak valid'}</p>
-          <Link to="/signup" className="text-indigo-600 font-semibold">Daftar / Join lainnya</Link>
+          <Link to="/signup" className="text-emerald-600 font-semibold">Daftar / Join lainnya</Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-3xl p-8 shadow-2xl">
         <div className="text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center" style={{ backgroundColor: preview.brand_color || '#6366f1' }}>
+          <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center" style={{ backgroundColor: preview.brand_color || '#059669' }}>
             <Building2 className="w-7 h-7 text-white" />
           </div>
           <h1 className="font-black text-xl text-slate-900">{preview.org_name}</h1>
@@ -132,13 +132,13 @@ export function JoinByTokenPage() {
           <button
             type="submit"
             disabled={submitting || !form.name.trim() || !form.email.trim() || (!isLogin && !isPasswordReady(form.password)) || (isLogin && !form.password)}
-            className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {submitting ? 'Memproses...' : 'Terima & Bergabung'}
           </button>
         </form>
 
-        <button type="button" onClick={() => { setIsLogin(v => !v); setError(''); setForm(f => ({ ...f, password: '' })); }} className="w-full mt-3 text-sm text-indigo-600 font-semibold">
+        <button type="button" onClick={() => { setIsLogin(v => !v); setError(''); setForm(f => ({ ...f, password: '' })); }} className="w-full mt-3 text-sm text-emerald-600 font-semibold">
           {isLogin ? 'Belum punya akun? Daftar' : 'Sudah punya akun? Masuk'}
         </button>
       </div>

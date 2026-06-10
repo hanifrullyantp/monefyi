@@ -31,8 +31,8 @@ export default function PdfDesignCustomizer({ draft, onChange, open, onToggle }:
                   onClick={() => onChange({ pdf_template: t.value })}
                   className={`p-3 rounded-xl border text-left transition-colors ${
                     draft.pdf_template === t.value
-                      ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200'
-                      : 'border-slate-200 hover:border-indigo-200'
+                      ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200'
+                      : 'border-slate-200 hover:border-emerald-200'
                   }`}
                 >
                   <div className="text-sm font-bold text-slate-800">{t.label}</div>
@@ -127,7 +127,7 @@ function ToggleRow({
       <button
         type="button"
         onClick={() => onChange(!checked)}
-        className={`w-10 h-6 rounded-full transition-colors ${checked ? 'bg-indigo-600' : 'bg-slate-200'}`}
+        className={`w-10 h-6 rounded-full transition-colors ${checked ? 'bg-emerald-600' : 'bg-slate-200'}`}
       >
         <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform mx-1 ${checked ? 'translate-x-4' : ''}`} />
       </button>

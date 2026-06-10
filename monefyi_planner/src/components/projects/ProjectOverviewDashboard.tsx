@@ -45,7 +45,7 @@ function toneClasses(tone: KpiCard['tone']) {
     case 'good': return 'from-emerald-500/10 to-emerald-500/5 border-emerald-200/80 text-emerald-700';
     case 'warn': return 'from-amber-500/10 to-amber-500/5 border-amber-200/80 text-amber-700';
     case 'bad': return 'from-rose-500/10 to-rose-500/5 border-rose-200/80 text-rose-700';
-    default: return 'from-indigo-500/10 to-violet-500/5 border-indigo-200/80 text-indigo-700';
+    default: return 'from-emerald-500/10 to-emerald-500/5 border-emerald-200/80 text-emerald-700';
   }
 }
 
@@ -145,17 +145,17 @@ export default function ProjectOverviewDashboard({
   return (
     <div className="space-y-4 md:space-y-5">
       {!hasData && (
-        <div className="rounded-2xl border-2 border-dashed border-indigo-200 bg-indigo-50/50 p-8 text-center">
+        <div className="rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/50 p-8 text-center">
           <div className="text-4xl mb-3">📋</div>
           <h3 className="font-bold text-slate-800 mb-1">Mulai isi proyek ini</h3>
           <p className="text-sm text-slate-500 max-w-md mx-auto mb-4">
             Tambahkan RAP di tab Planning, catat biaya di Realisasi, lalu pantau KPI di sini.
           </p>
           <div className="flex flex-wrap justify-center gap-2">
-            <button type="button" onClick={onAddCost} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold">
+            <button type="button" onClick={onAddCost} className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold">
               + Tambah Biaya
             </button>
-            <button type="button" onClick={onUpdateProgress} className="px-4 py-2 border border-indigo-200 text-indigo-700 rounded-xl text-sm font-bold">
+            <button type="button" onClick={onUpdateProgress} className="px-4 py-2 border border-emerald-200 text-emerald-700 rounded-xl text-sm font-bold">
               Update Progress
             </button>
           </div>
@@ -201,7 +201,7 @@ export default function ProjectOverviewDashboard({
             key={a.label}
             type="button"
             onClick={a.onClick}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:border-indigo-300 hover:text-indigo-700 shadow-sm"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:border-emerald-300 hover:text-emerald-700 shadow-sm"
           >
             {a.label}
             <ArrowUpRight className="w-3.5 h-3.5" />
@@ -215,14 +215,14 @@ export default function ProjectOverviewDashboard({
       <div className="grid lg:grid-cols-5 gap-4">
         <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-200 p-4 md:p-5 shadow-sm">
           <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2 text-sm">
-            <BarChart3 className="w-4 h-4 text-indigo-600" /> Kurva S
+            <BarChart3 className="w-4 h-4 text-emerald-600" /> Kurva S
           </h3>
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={sCurveData}>
               <defs>
                 <linearGradient id="plannedGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#6366f1" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                  <stop offset="0%" stopColor="#059669" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#059669" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="actualGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#10b981" stopOpacity={0.35} />
@@ -232,7 +232,7 @@ export default function ProjectOverviewDashboard({
               <XAxis dataKey="week" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 10 }} domain={[0, 100]} unit="%" />
               <Tooltip />
-              <Area type="monotone" dataKey="planned" name="Rencana" stroke="#6366f1" fill="url(#plannedGrad)" strokeDasharray="4 4" />
+              <Area type="monotone" dataKey="planned" name="Rencana" stroke="#059669" fill="url(#plannedGrad)" strokeDasharray="4 4" />
               <Area type="monotone" dataKey="actual" name="Aktual" stroke="#10b981" fill="url(#actualGrad)" />
             </AreaChart>
           </ResponsiveContainer>
@@ -264,7 +264,7 @@ export default function ProjectOverviewDashboard({
                     <div className="font-bold">{rec.title}</div>
                     <p className="mt-1 opacity-90">{rec.message}</p>
                     {rec.action && (
-                      <button type="button" onClick={onOpenReport} className="mt-2 text-indigo-700 font-bold flex items-center gap-1">
+                      <button type="button" onClick={onOpenReport} className="mt-2 text-emerald-700 font-bold flex items-center gap-1">
                         {rec.action} <ArrowUpRight className="w-3 h-3" />
                       </button>
                     )}
@@ -276,7 +276,7 @@ export default function ProjectOverviewDashboard({
 
           <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
             <h3 className="font-bold text-sm mb-3 flex items-center gap-2 text-slate-800">
-              <Activity className="w-4 h-4 text-indigo-600" /> Log Terbaru
+              <Activity className="w-4 h-4 text-emerald-600" /> Log Terbaru
             </h3>
             {logs.length === 0 ? (
               <p className="text-xs text-slate-400">Belum ada aktivitas lapangan.</p>
@@ -284,7 +284,7 @@ export default function ProjectOverviewDashboard({
               <ul className="space-y-3">
                 {logs.slice(0, 6).map(log => (
                   <li key={log.id} className="flex gap-3 text-xs">
-                    <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold shrink-0">
                       {(log.description || '?').charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">

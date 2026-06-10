@@ -106,11 +106,11 @@ export default function PricelistPickerModal({ orgId, onClose, onSelect }: Props
                   type="button"
                   onClick={() => toggle(item.id)}
                   className={`w-full flex items-center gap-3 px-5 py-3 text-left border-b border-slate-50 hover:bg-slate-50 ${
-                    isSelected ? 'bg-indigo-50' : ''
+                    isSelected ? 'bg-emerald-50' : ''
                   }`}
                 >
                   <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 ${
-                    isSelected ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300'
+                    isSelected ? 'bg-emerald-600 border-emerald-600' : 'border-slate-300'
                   }`}>
                     {isSelected && <Check className="w-3 h-3 text-white" />}
                   </div>
@@ -141,7 +141,7 @@ export default function PricelistPickerModal({ orgId, onClose, onSelect }: Props
             type="button"
             onClick={handleConfirm}
             disabled={selected.size === 0}
-            className="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-sm font-bold disabled:opacity-50"
+            className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-50"
           >
             Tambah ({selected.size})
           </button>

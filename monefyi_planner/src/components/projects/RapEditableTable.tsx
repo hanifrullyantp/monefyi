@@ -248,7 +248,7 @@ export default function RapEditableTable({
           onClick={() => setGroupByType(v => !v)}
           className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold border rounded-lg ${
             groupByType
-              ? 'bg-indigo-600 text-white border-indigo-600'
+              ? 'bg-emerald-600 text-white border-emerald-600'
               : 'text-slate-700 dark:text-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
           }`}
         >
@@ -286,7 +286,7 @@ export default function RapEditableTable({
             <button type="button" onClick={() => void handleBulkDelete()} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-rose-700 border border-rose-200 rounded-lg hover:bg-rose-50">
               <Trash2 className="w-3.5 h-3.5" /> Hapus
             </button>
-            <button type="button" onClick={() => void handleAddRow()} className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+            <button type="button" onClick={() => void handleAddRow()} className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
               <Plus className="w-3.5 h-3.5" /> Tambah Row
             </button>
           </>

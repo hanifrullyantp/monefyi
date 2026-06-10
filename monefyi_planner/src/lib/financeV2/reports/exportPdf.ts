@@ -118,7 +118,7 @@ function buildDocDef(bundle: FinanceReportBundle, kind: ReportKind, orgName: str
       title: { fontSize: 16, bold: true },
       subtitle: { fontSize: 11, color: '#475569' },
       muted: { fontSize: 9, color: '#94a3b8' },
-      sectionHeader: { fontSize: 12, bold: true, color: '#4f46e5' },
+      sectionHeader: { fontSize: 12, bold: true, color: '#059669' },
     },
     defaultStyle: { fontSize: 9 },
     pageMargins: [40, 40, 40, 40],

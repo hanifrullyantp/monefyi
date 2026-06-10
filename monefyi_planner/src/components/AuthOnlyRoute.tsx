@@ -11,7 +11,7 @@ export default function AuthOnlyRoute({ children }: { children: React.ReactNode 
   if (authInitializing) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
       </div>
     );
   }

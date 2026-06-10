@@ -41,7 +41,7 @@ export default function ConfirmDialog({
           </button>
           <button
             onClick={onConfirm}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-white ${danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+            className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-white ${danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
           >
             {confirmLabel}
           </button>

@@ -18,7 +18,7 @@ export function defaultPdfSettings(orgId: string, companyName: string): Omit<Pdf
     signature_url: null,
     signature_name: null,
     signature_title: null,
-    primary_color: '#4f46e5',
+    primary_color: '#059669',
     secondary_color: '#1e293b',
     accent_color: '#10b981',
     default_pdf_template: 'modern',

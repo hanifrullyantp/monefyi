@@ -47,7 +47,7 @@ export default function KanbanView({ projects, onOpenProject, onStatusChange }: 
                               {...drag.draggableProps}
                               {...drag.dragHandleProps}
                               onClick={() => onOpenProject(p)}
-                              className={`bg-white rounded-xl p-3 border cursor-grab active:cursor-grabbing shadow-sm ${snapshot.isDragging ? 'shadow-lg ring-2 ring-indigo-200' : 'hover:border-indigo-100'}`}
+                              className={`bg-white rounded-xl p-3 border cursor-grab active:cursor-grabbing shadow-sm ${snapshot.isDragging ? 'shadow-lg ring-2 ring-emerald-200' : 'hover:border-emerald-100'}`}
                             >
                               <div className="flex items-center gap-2 mb-1">
                                 <div className={`w-2 h-2 rounded-full ${health.dot}`} />
@@ -56,7 +56,7 @@ export default function KanbanView({ projects, onOpenProject, onStatusChange }: 
                               <div className="font-bold text-sm text-slate-800 truncate">{p.name}</div>
                               <div className="text-[10px] text-slate-400 mt-1">{p.progress_percentage.toFixed(0)}% · {formatRupiah(p.spent_amount)}</div>
                               <div className="h-1 bg-slate-100 rounded-full mt-2 overflow-hidden">
-                                <div className="h-full bg-indigo-500" style={{ width: `${budgetPct}%` }} />
+                                <div className="h-full bg-emerald-500" style={{ width: `${budgetPct}%` }} />
                               </div>
                               <div className="text-[10px] text-slate-400 mt-1">{daysUntil(p.end_date)} hari</div>
                             </motion.div>

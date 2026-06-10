@@ -173,7 +173,7 @@ export default function FinanceV2DashboardView() {
       <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-black text-slate-900 flex items-center gap-2">
-            <BarChart3 className="w-7 h-7 text-indigo-600" />
+            <BarChart3 className="w-7 h-7 text-emerald-600" />
             Neraca Keuangan Bisnis
           </h1>
           <p className="text-sm text-slate-500 italic mt-1">
@@ -208,7 +208,7 @@ export default function FinanceV2DashboardView() {
       {staleBanner && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-900 flex flex-wrap items-center justify-between gap-2">
           <span>⚠️ Gagal memuat data terbaru. Menampilkan data terakhir.</span>
-          <button type="button" onClick={load} className="font-bold text-indigo-600">Coba Lagi</button>
+          <button type="button" onClick={load} className="font-bold text-emerald-600">Coba Lagi</button>
         </div>
       )}
 

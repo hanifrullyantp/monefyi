@@ -38,7 +38,7 @@ interface FormState {
 }
 
 const quickCommands = [
-  { icon: Wallet, label: 'Catat Biaya', color: 'bg-indigo-100 text-indigo-700', template: 'catat semen 10 sak 65000' },
+  { icon: Wallet, label: 'Catat Biaya', color: 'bg-emerald-100 text-emerald-700', template: 'catat semen 10 sak 65000' },
   { icon: BarChart3, label: 'Update Progress', color: 'bg-emerald-100 text-emerald-700', template: 'update progress pondasi 75%' },
   { icon: FileText, label: 'Cek Budget', color: 'bg-blue-100 text-blue-700', template: 'cek budget project' },
   { icon: Clock, label: 'Log Pekerja', color: 'bg-amber-100 text-amber-700', template: 'hari ini hadir 8 orang' },
@@ -516,7 +516,7 @@ export default function CommandModal() {
         <select
           value={strVal}
           onChange={e => updateField(key, e.target.value)}
-          className="text-sm font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg px-2 py-1 max-w-[60%] focus:border-indigo-400 outline-none"
+          className="text-sm font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg px-2 py-1 max-w-[60%] focus:border-emerald-400 outline-none"
         >
           <option value="">— pilih —</option>
           {!workItemOptions.includes(strVal) && strVal && <option value={strVal}>{strVal}</option>}
@@ -531,7 +531,7 @@ export default function CommandModal() {
         value={strVal}
         list={key === 'item' && rapOptions.length ? 'rap-options' : undefined}
         onChange={e => updateField(key, e.target.value)}
-        className="text-sm font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg px-2 py-1 text-right max-w-[60%] focus:border-indigo-400 outline-none"
+        className="text-sm font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg px-2 py-1 text-right max-w-[60%] focus:border-emerald-400 outline-none"
       />
     );
   };
@@ -554,13 +554,13 @@ export default function CommandModal() {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-md">
               <Sparkles className="w-4 h-4 text-white" />
             </div>
             <div>
               <div className="font-black text-slate-900 text-sm">Monefyi Assistant</div>
               <div className="text-xs text-slate-400">
-                Konteks: <span className="text-indigo-600 font-medium">{activeProject?.name || 'Umum'}</span>
+                Konteks: <span className="text-emerald-600 font-medium">{activeProject?.name || 'Umum'}</span>
               </div>
             </div>
           </div>
@@ -578,7 +578,7 @@ export default function CommandModal() {
             {stage === 'idle' && (
               <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <div className="relative mb-2">
-                  <div className="flex items-center gap-2 bg-slate-50 border-2 border-slate-200 focus-within:border-indigo-400 rounded-2xl px-4 py-3 transition-colors">
+                  <div className="flex items-center gap-2 bg-slate-50 border-2 border-slate-200 focus-within:border-emerald-400 rounded-2xl px-4 py-3 transition-colors">
                     <MessageSquare className="w-4 h-4 text-slate-400 shrink-0" />
                     <input
                       ref={inputRef}
@@ -590,14 +590,14 @@ export default function CommandModal() {
                     />
                     <button
                       onClick={isListening ? stopListening : startListening}
-                      className={`p-1.5 rounded-xl transition-colors ${isListening ? 'bg-rose-100 text-rose-600' : 'hover:bg-indigo-100 text-slate-400 hover:text-indigo-600'}`}
+                      className={`p-1.5 rounded-xl transition-colors ${isListening ? 'bg-rose-100 text-rose-600' : 'hover:bg-emerald-100 text-slate-400 hover:text-emerald-600'}`}
                     >
                       {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                     </button>
                     {input && (
                       <button
                         onClick={() => handleProcess()}
-                        className="p-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"
+                        className="p-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition-colors"
                       >
                         <Send className="w-4 h-4" />
                       </button>
@@ -611,9 +611,9 @@ export default function CommandModal() {
                         <button
                           key={`${m.type}-${m.name}-${i}`}
                           onClick={() => chooseTag(m)}
-                          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-indigo-50 text-left"
+                          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-emerald-50 text-left"
                         >
-                          <Hash className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                          <Hash className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                           <span className="text-sm text-slate-700 truncate">
                             {m.name}
                             {m.type === 'work_item' && m.progressPct != null && (
@@ -648,10 +648,10 @@ export default function CommandModal() {
                       <button
                         key={i}
                         onClick={() => { handleInputChange(s); inputRef.current?.focus(); }}
-                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-50 hover:bg-violet-100 transition-colors text-left"
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 transition-colors text-left"
                       >
-                        <PencilLine className="w-3.5 h-3.5 text-violet-500 shrink-0" />
-                        <span className="text-xs text-violet-700 truncate">{s}</span>
+                        <PencilLine className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                        <span className="text-xs text-emerald-700 truncate">{s}</span>
                       </button>
                     ))}
                   </div>
@@ -668,16 +668,16 @@ export default function CommandModal() {
                         <button
                           key={rec.id}
                           onClick={() => handleProcess(rec.command)}
-                          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-indigo-50 to-violet-50 hover:from-indigo-100 hover:to-violet-100 transition-colors text-left group"
+                          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-emerald-50 to-emerald-50 hover:from-emerald-100 hover:to-emerald-100 transition-colors text-left group"
                         >
                           {rec.type === 'cost'
-                            ? <ShoppingCart className="w-4 h-4 text-indigo-500 shrink-0" />
+                            ? <ShoppingCart className="w-4 h-4 text-emerald-500 shrink-0" />
                             : <TrendingUp className="w-4 h-4 text-emerald-500 shrink-0" />}
                           <div className="min-w-0 flex-1">
                             <div className="text-sm font-medium text-slate-700 truncate">{rec.label}</div>
                             {rec.detail && <div className="text-[11px] text-slate-400 truncate">{rec.detail}</div>}
                           </div>
-                          <Send className="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-500 shrink-0 transition-colors" />
+                          <Send className="w-3.5 h-3.5 text-slate-300 group-hover:text-emerald-500 shrink-0 transition-colors" />
                         </button>
                       ))}
                     </div>
@@ -710,7 +710,7 @@ export default function CommandModal() {
                         <button
                           key={rec.id}
                           onClick={() => handleProcess(rec.command)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-indigo-100 text-slate-600 hover:text-indigo-700 text-xs font-medium transition-colors"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-700 text-xs font-medium transition-colors"
                           title={rec.detail}
                         >
                           {rec.label}
@@ -732,7 +732,7 @@ export default function CommandModal() {
                       >
                         <RotateCcw className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                         <span className="text-sm text-slate-600 truncate">{h}</span>
-                        <Send className="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-500 ml-auto shrink-0 transition-colors" />
+                        <Send className="w-3.5 h-3.5 text-slate-300 group-hover:text-emerald-500 ml-auto shrink-0 transition-colors" />
                       </button>
                     ))}
                   </div>
@@ -759,7 +759,7 @@ export default function CommandModal() {
             {/* PROCESSING */}
             {stage === 'processing' && (
               <motion.div key="processing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="py-10 text-center">
-                <div className="w-12 h-12 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4" />
+                <div className="w-12 h-12 border-3 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mx-auto mb-4" />
                 <p className="font-bold text-slate-800 mb-2">Memproses perintah...</p>
                 <div className="space-y-1.5">
                   {[
@@ -769,8 +769,8 @@ export default function CommandModal() {
                   ].map(l => {
                     const done = STAGE_ORDER[pipelineStage] >= STAGE_ORDER[l.key];
                     return (
-                      <div key={l.key} className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${done ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-50 text-slate-400'}`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${done ? 'bg-indigo-500' : 'bg-slate-300'}`} />
+                      <div key={l.key} className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${done ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-50 text-slate-400'}`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${done ? 'bg-emerald-500' : 'bg-slate-300'}`} />
                         {l.label}
                         {done && pipelineStage === l.key && <span className="ml-auto animate-pulse">...</span>}
                       </div>
@@ -784,8 +784,8 @@ export default function CommandModal() {
             {stage === 'confirm' && (
               <motion.div key="confirm" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                 <div className="flex items-center gap-2 mb-4">
-                  <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center">
-                    <PencilLine className="w-3 h-3 text-indigo-600" />
+                  <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <PencilLine className="w-3 h-3 text-emerald-600" />
                   </div>
                   <span className="text-sm font-bold text-slate-800">Konfirmasi &amp; Koreksi</span>
                   <span className="ml-auto inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">
@@ -804,7 +804,7 @@ export default function CommandModal() {
                     <select
                       value={form.intent}
                       onChange={e => { setForm(p => ({ ...p, intent: e.target.value })); setEdited(true); }}
-                      className="text-sm font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg px-2 py-1 focus:border-indigo-400 outline-none"
+                      className="text-sm font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg px-2 py-1 focus:border-emerald-400 outline-none"
                     >
                       {!INTENT_OPTIONS.some(o => o.value === form.intent) && form.intent && (
                         <option value={form.intent}>{intentLabel(form.intent)}</option>
@@ -819,7 +819,7 @@ export default function CommandModal() {
                     <select
                       value={form.projectName}
                       onChange={e => { setForm(p => ({ ...p, projectName: e.target.value })); setEdited(true); }}
-                      className="text-sm font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg px-2 py-1 max-w-[60%] focus:border-indigo-400 outline-none"
+                      className="text-sm font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg px-2 py-1 max-w-[60%] focus:border-emerald-400 outline-none"
                     >
                       <option value="">— umum —</option>
                       {projects.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
@@ -838,14 +838,14 @@ export default function CommandModal() {
                 </div>
 
                 {edited && (
-                  <div className="flex items-center gap-2 px-3 py-2.5 bg-indigo-50 border border-indigo-200 rounded-xl mb-4 text-xs text-indigo-700">
+                  <div className="flex items-center gap-2 px-3 py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl mb-4 text-xs text-emerald-700">
                     <Brain className="w-4 h-4 shrink-0" />
                     Koreksi ini akan dipelajari agar perintah serupa lebih akurat untuk tim.
                   </div>
                 )}
 
                 <div className="flex gap-2 mb-3">
-                  <button onClick={handleFixWithAI} className="flex-1 py-2.5 border border-violet-200 bg-violet-50 rounded-xl text-violet-700 text-xs font-semibold hover:bg-violet-100 transition-colors flex items-center justify-center gap-1.5">
+                  <button onClick={handleFixWithAI} className="flex-1 py-2.5 border border-emerald-200 bg-emerald-50 rounded-xl text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors flex items-center justify-center gap-1.5">
                     <Wand2 className="w-3.5 h-3.5" /> Perbaiki dgn AI
                   </button>
                 </div>
@@ -854,7 +854,7 @@ export default function CommandModal() {
                   <button onClick={handleReset} className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
                     <X className="w-4 h-4" /> Batal
                   </button>
-                  <button onClick={handleExecute} className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-200">
+                  <button onClick={handleExecute} className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-lg shadow-emerald-200">
                     <CheckCircle className="w-4 h-4" /> Benar, Catat!
                   </button>
                 </div>
@@ -875,7 +875,7 @@ export default function CommandModal() {
                   <button onClick={handleReset} className="flex-1 py-3 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
                     Catat Lagi
                   </button>
-                  <button onClick={() => setCommandModalOpen(false)} className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-colors">
+                  <button onClick={() => setCommandModalOpen(false)} className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold transition-colors">
                     Selesai
                   </button>
                 </div>
@@ -894,7 +894,7 @@ export default function CommandModal() {
                   <button onClick={handleReset} className="py-3 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50">
                     Coba Lagi
                   </button>
-                  <button onClick={handleFixWithAI} className="py-3 border border-violet-200 bg-violet-50 text-violet-700 rounded-xl text-sm font-semibold hover:bg-violet-100 flex items-center justify-center gap-1">
+                  <button onClick={handleFixWithAI} className="py-3 border border-emerald-200 bg-emerald-50 text-emerald-700 rounded-xl text-sm font-semibold hover:bg-emerald-100 flex items-center justify-center gap-1">
                     <Wand2 className="w-3.5 h-3.5" /> AI
                   </button>
                   <button onClick={openManualForm} className="py-3 bg-slate-900 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-1">
@@ -907,7 +907,7 @@ export default function CommandModal() {
         </div>
 
         <div className="px-5 py-3 border-t border-slate-100 text-center">
-          <span className="text-xs text-slate-400">Powered by <span className="font-semibold text-indigo-500">Monefyi AI</span> · Memori Tim → Aturan → AI</span>
+          <span className="text-xs text-slate-400">Powered by <span className="font-semibold text-emerald-500">Monefyi AI</span> · Memori Tim → Aturan → AI</span>
         </div>
       </motion.div>
     </motion.div>

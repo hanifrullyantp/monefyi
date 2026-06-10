@@ -35,7 +35,7 @@ function Field({
 }
 
 const inputCls =
-  'w-full rounded-xl bg-slate-800 border border-slate-600 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500';
+  'w-full rounded-xl bg-slate-800 border border-slate-600 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500';
 
 export default function LandingSettingsModal({
   open,
@@ -118,7 +118,7 @@ export default function LandingSettingsModal({
               onClick={() => setTab(t.id)}
               className={`shrink-0 px-3 py-2 rounded-xl text-sm font-medium border transition-colors ${
                 tab === t.id
-                  ? 'border-indigo-400 bg-indigo-500/20 text-white'
+                  ? 'border-emerald-400 bg-emerald-500/20 text-white'
                   : 'border-slate-600 text-slate-400 hover:border-slate-500'
               }`}
             >
@@ -312,7 +312,7 @@ export default function LandingSettingsModal({
           <button
             type="button"
             onClick={handleSave}
-            className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-semibold"
+            className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold"
           >
             Terapkan
           </button>

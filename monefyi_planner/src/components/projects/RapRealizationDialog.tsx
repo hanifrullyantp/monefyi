@@ -109,7 +109,7 @@ export default function RapRealizationDialog({
       >
         <div className="p-5 border-b flex items-start justify-between gap-3">
           <div>
-            <div className="text-xs font-bold text-indigo-600 uppercase tracking-wide">
+            <div className="text-xs font-bold text-emerald-600 uppercase tracking-wide">
               {isCorrection || quantity < 0 ? 'Koreksi Realisasi' : 'Catat Realisasi'}
             </div>
             <h3 className="font-bold text-slate-900 mt-0.5">{rapItem.name}</h3>
@@ -156,7 +156,7 @@ export default function RapRealizationDialog({
                   onClick={() => setPriceMode(m.id)}
                   className={`flex-1 py-2 rounded-xl text-xs font-bold border ${
                     priceMode === m.id
-                      ? 'bg-indigo-600 text-white border-indigo-600'
+                      ? 'bg-emerald-600 text-white border-emerald-600'
                       : 'bg-white text-slate-600 border-slate-200'
                   }`}
                 >
@@ -202,11 +202,11 @@ export default function RapRealizationDialog({
             </div>
           )}
 
-          <div className="flex items-center gap-2 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
-            <Calculator className="w-4 h-4 text-indigo-600 shrink-0" />
+          <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+            <Calculator className="w-4 h-4 text-emerald-600 shrink-0" />
             <div className="text-sm">
               <span className="text-slate-600">Total: </span>
-              <span className={`font-black ${totalAmount < 0 ? 'text-amber-700' : 'text-indigo-700'}`}>{formatRupiah(totalAmount)}</span>
+              <span className={`font-black ${totalAmount < 0 ? 'text-amber-700' : 'text-emerald-700'}`}>{formatRupiah(totalAmount)}</span>
             </div>
           </div>
 
@@ -221,7 +221,7 @@ export default function RapRealizationDialog({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold disabled:opacity-60"
+            className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-60"
           >
             {saving ? 'Menyimpan...' : 'Simpan Realisasi'}
           </button>

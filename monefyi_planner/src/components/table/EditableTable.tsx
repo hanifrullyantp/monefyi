@@ -85,7 +85,7 @@ export default function EditableTable<T extends { id: string }>({
   }, [saveStatus]);
 
   const loadingOverlay = useMemo(
-    () => '<div class="flex flex-col items-center gap-2 p-6 text-sm text-slate-500"><div class="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>Memuat data…</div>',
+    () => '<div class="flex flex-col items-center gap-2 p-6 text-sm text-slate-500"><div class="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>Memuat data…</div>',
     [],
   );
 

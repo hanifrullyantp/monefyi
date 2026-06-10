@@ -37,7 +37,7 @@ export function TermsPage() {
 export function ContactPage() {
   return (
     <LegalShell title="Kontak">
-      <p>Email: <a href="mailto:hello@monefyi.com" className="text-indigo-600 font-medium">hello@monefyi.com</a></p>
+      <p>Email: <a href="mailto:hello@monefyi.com" className="text-emerald-600 font-medium">hello@monefyi.com</a></p>
       <p>Untuk demo enterprise atau integrasi kustom, sertakan nama perusahaan dan jumlah proyek aktif.</p>
     </LegalShell>
   );

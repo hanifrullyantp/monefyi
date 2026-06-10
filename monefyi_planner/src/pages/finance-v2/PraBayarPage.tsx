@@ -111,7 +111,7 @@ export default function PraBayarPage() {
           <button type="button" onClick={load} className="p-2.5 border border-slate-200 rounded-xl hover:bg-slate-50">
             <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
           </button>
-          <button type="button" onClick={handleAmortizeAll} disabled={running} className="flex items-center gap-2 border border-indigo-200 text-indigo-700 font-bold px-4 py-2.5 rounded-xl text-sm">
+          <button type="button" onClick={handleAmortizeAll} disabled={running} className="flex items-center gap-2 border border-emerald-200 text-emerald-700 font-bold px-4 py-2.5 rounded-xl text-sm">
             {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />} Amortisasi Hari Ini
           </button>
           <button type="button" onClick={() => setFormOpen(true)} className="flex items-center gap-2 bg-sky-600 text-white font-bold px-4 py-2.5 rounded-xl text-sm">
@@ -131,13 +131,13 @@ export default function PraBayarPage() {
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={() => setFormOpen(false)} className="px-4 py-2 rounded-xl border text-sm font-semibold">Batal</button>
-            <button type="button" onClick={handleCreate} className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-bold">Simpan</button>
+            <button type="button" onClick={handleCreate} className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-bold">Simpan</button>
           </div>
         </div>
       )}
 
       {loading ? (
-        <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-indigo-600" /></div>
+        <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
       ) : rows.length === 0 ? (
         <div className="bg-white rounded-2xl border p-10 text-center text-slate-400 text-sm">Belum ada item pra bayar.</div>
       ) : (
@@ -163,7 +163,7 @@ export default function PraBayarPage() {
                 </div>
                 <div className="flex gap-2 mt-3 border-t border-slate-50 pt-3">
                   {item.remaining_value > 0 && (
-                    <button type="button" onClick={() => handleAmortizeOne(item)} className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 px-2 py-1 rounded-lg">Amortisasi</button>
+                    <button type="button" onClick={() => handleAmortizeOne(item)} className="text-xs font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded-lg">Amortisasi</button>
                   )}
                   <button type="button" onClick={() => handleDelete(item)} className="text-xs font-bold text-slate-400 hover:bg-slate-50 px-2 py-1 rounded-lg">Hapus</button>
                 </div>

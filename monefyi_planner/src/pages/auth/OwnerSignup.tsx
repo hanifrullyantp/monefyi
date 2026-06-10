@@ -185,7 +185,7 @@ export function OwnerSignupPage() {
   const canProceed = step === 1 ? step1Ready : step === 2 ? step2Ready : true;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <Link to="/signup" className="text-slate-400 hover:text-white text-sm mb-8 inline-flex items-center gap-1">
           <ArrowLeft className="w-4 h-4" /> Kembali
@@ -193,7 +193,7 @@ export function OwnerSignupPage() {
         <div className="bg-white rounded-3xl p-8 shadow-2xl">
           <div className="flex gap-1 mb-6">
             {[1, 2, 3].map(s => (
-              <div key={s} className={`h-1.5 flex-1 rounded-full ${s <= Math.min(step, 3) ? 'bg-indigo-600' : 'bg-slate-200'}`} />
+              <div key={s} className={`h-1.5 flex-1 rounded-full ${s <= Math.min(step, 3) ? 'bg-emerald-600' : 'bg-slate-200'}`} />
             ))}
           </div>
 
@@ -247,7 +247,7 @@ export function OwnerSignupPage() {
 
           {step === 4 && (
             <div className="text-center space-y-4">
-              <Mail className="w-12 h-12 text-indigo-500 mx-auto" />
+              <Mail className="w-12 h-12 text-emerald-500 mx-auto" />
               <h3 className="font-black text-xl">Verifikasi email</h3>
               <p className="text-sm text-slate-500">Kami mengirim link verifikasi ke <strong>{form.email}</strong>. Setelah verifikasi, masuk dan lanjutkan setup.</p>
               <p className="text-xs text-slate-400">Cek juga folder spam. Pengirim: <strong>noreply@monefyi.com</strong></p>
@@ -255,12 +255,12 @@ export function OwnerSignupPage() {
                 type="button"
                 onClick={handleResendVerification}
                 disabled={resendLoading}
-                className="inline-block py-2 px-4 border border-indigo-200 text-indigo-700 rounded-xl text-sm font-bold disabled:opacity-60"
+                className="inline-block py-2 px-4 border border-emerald-200 text-emerald-700 rounded-xl text-sm font-bold disabled:opacity-60"
               >
                 {resendLoading ? 'Mengirim...' : 'Kirim ulang email verifikasi'}
               </button>
               {resendMsg && <p className="text-sm text-emerald-600">{resendMsg}</p>}
-              <Link to="/login" className="inline-block py-2 px-4 bg-indigo-600 text-white rounded-xl text-sm font-bold">Ke halaman masuk</Link>
+              <Link to="/login" className="inline-block py-2 px-4 bg-emerald-600 text-white rounded-xl text-sm font-bold">Ke halaman masuk</Link>
             </div>
           )}
 
@@ -278,12 +278,12 @@ export function OwnerSignupPage() {
                   type="button"
                   onClick={handleNext}
                   disabled={!canProceed}
-                  className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Lanjut <ArrowRight className="w-4 h-4 inline ml-1" />
                 </button>
               ) : (
-                <button type="button" onClick={handleSignup} disabled={loading} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl disabled:opacity-60">
+                <button type="button" onClick={handleSignup} disabled={loading} className="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-xl disabled:opacity-60">
                   {loading ? 'Membuat...' : 'Buat Perusahaan'}
                 </button>
               )}

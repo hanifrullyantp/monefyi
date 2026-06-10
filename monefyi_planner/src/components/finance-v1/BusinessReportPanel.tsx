@@ -34,13 +34,12 @@ function ReportLine({
   amount: number;
   pct?: number;
   bold?: boolean;
-  accent?: 'emerald' | 'rose' | 'indigo' | 'amber';
+  accent?: 'emerald' | 'rose' | 'amber';
 }) {
   const color = accent === 'emerald' ? 'text-emerald-600'
     : accent === 'rose' ? 'text-rose-600'
       : accent === 'amber' ? 'text-amber-600'
-        : accent === 'indigo' ? 'text-indigo-600'
-          : 'text-slate-800';
+        : 'text-slate-800';
 
   return (
     <div className={`flex items-center justify-between gap-4 py-2 ${bold ? 'font-bold' : ''}`}>
@@ -167,7 +166,7 @@ export default function BusinessReportPanel() {
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
         <div>
           <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-indigo-600" />
+            <BarChart3 className="w-5 h-5 text-emerald-600" />
             Laporan Keuangan Bisnis
           </h2>
           <p className="text-sm text-slate-500 mt-1">
@@ -207,7 +206,7 @@ export default function BusinessReportPanel() {
               key={key}
               type="button"
               onClick={() => applyPreset(key)}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-indigo-700"
+              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-emerald-50 hover:text-emerald-700"
             >
               {label}
             </button>
@@ -250,15 +249,15 @@ export default function BusinessReportPanel() {
 
       {loading && !report ? (
         <div className="flex items-center justify-center h-48">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+          <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
         </div>
       ) : report && (
         <>
           <div className="grid sm:grid-cols-3 gap-3">
             {[
               { label: 'Omzet', value: report.revenue.total, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-              { label: 'Laba Kotor', value: report.grossProfit, icon: Wallet, color: 'text-indigo-600', bg: 'bg-indigo-50', sub: `${report.grossMarginPct.toFixed(1)}% margin` },
-              { label: 'Laba Bersih', value: report.netProfit, icon: TrendingDown, color: report.netProfit >= 0 ? 'text-violet-600' : 'text-rose-600', bg: report.netProfit >= 0 ? 'bg-violet-50' : 'bg-rose-50', sub: `${report.netMarginPct.toFixed(1)}% margin` },
+              { label: 'Laba Kotor', value: report.grossProfit, icon: Wallet, color: 'text-emerald-600', bg: 'bg-emerald-50', sub: `${report.grossMarginPct.toFixed(1)}% margin` },
+              { label: 'Laba Bersih', value: report.netProfit, icon: TrendingDown, color: report.netProfit >= 0 ? 'text-emerald-600' : 'text-rose-600', bg: report.netProfit >= 0 ? 'bg-emerald-50' : 'bg-rose-50', sub: `${report.netMarginPct.toFixed(1)}% margin` },
             ].map((k, i) => (
               <motion.div
                 key={k.label}
@@ -421,14 +420,14 @@ export default function BusinessReportPanel() {
             </div>
           </section>
 
-          <section className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl p-5 text-white">
+          <section className="bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-2xl p-5 text-white">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
-                <div className="text-indigo-200 text-xs font-semibold uppercase tracking-wide">Ringkasan</div>
+                <div className="text-emerald-200 text-xs font-semibold uppercase tracking-wide">Ringkasan</div>
                 <div className="text-2xl font-black mt-1">{formatRupiah(report.netProfit)}</div>
-                <div className="text-sm text-indigo-100">Laba Bersih · margin {report.netMarginPct.toFixed(1)}%</div>
+                <div className="text-sm text-emerald-100">Laba Bersih · margin {report.netMarginPct.toFixed(1)}%</div>
               </div>
-              <div className="text-right text-sm text-indigo-100 space-y-1">
+              <div className="text-right text-sm text-emerald-100 space-y-1">
                 <div>Omzet {formatRupiah(report.revenue.total)}</div>
                 <div>− HPP {formatRupiah(report.hpp.total)}</div>
                 <div>= Laba kotor {formatRupiah(report.grossProfit)}</div>

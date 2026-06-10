@@ -66,7 +66,7 @@ export async function buildQuotationPdfContext(
   const items = draft.items.filter(i => i.name.trim());
   const summary = calcEstimationSummary(items, draft.overhead_pct, draft.discount_pct, draft.tax_pct);
 
-  const primary = draft.pdf_primary_color || settings.primary_color || '#4f46e5';
+  const primary = draft.pdf_primary_color || settings.primary_color || '#059669';
   const secondary = draft.pdf_secondary_color || settings.secondary_color || '#1e293b';
 
   const images: QuotationPdfImage[] = [];

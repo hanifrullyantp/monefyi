@@ -118,7 +118,7 @@ export default function RapImportWizard({
         >
           <div className="p-5 border-b flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <FileSpreadsheet className="w-5 h-5 text-indigo-600" />
+              <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
               <h3 className="font-black text-slate-900">Import RAP Excel</h3>
             </div>
             <button type="button" onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl"><X className="w-5 h-5" /></button>
@@ -128,15 +128,15 @@ export default function RapImportWizard({
             {step === 'upload' && (
               <>
                 <p className="text-sm text-slate-500">Upload file .xlsx/.xls (maks 10MB). Gunakan template untuk format kolom yang benar.</p>
-                <button type="button" onClick={downloadRapTemplate} className="text-sm font-bold text-indigo-600">
+                <button type="button" onClick={downloadRapTemplate} className="text-sm font-bold text-emerald-600">
                   ↓ Unduh template
                 </button>
                 <button
                   type="button"
                   onClick={() => inputRef.current?.click()}
-                  className="w-full border-2 border-dashed border-indigo-200 rounded-2xl py-12 flex flex-col items-center gap-2 hover:bg-indigo-50/50"
+                  className="w-full border-2 border-dashed border-emerald-200 rounded-2xl py-12 flex flex-col items-center gap-2 hover:bg-emerald-50/50"
                 >
-                  <Upload className="w-8 h-8 text-indigo-400" />
+                  <Upload className="w-8 h-8 text-emerald-400" />
                   <span className="font-bold text-slate-700">Pilih file Excel</span>
                 </button>
                 <input ref={inputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) void handleFile(f); e.target.value = ''; }} />
@@ -155,7 +155,7 @@ export default function RapImportWizard({
                 </div>
 
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => setMode('append')} className={`flex-1 py-2 rounded-xl text-xs font-bold ${mode === 'append' ? 'bg-indigo-600 text-white' : 'bg-slate-100'}`}>Tambah (append)</button>
+                  <button type="button" onClick={() => setMode('append')} className={`flex-1 py-2 rounded-xl text-xs font-bold ${mode === 'append' ? 'bg-emerald-600 text-white' : 'bg-slate-100'}`}>Tambah (append)</button>
                   <button type="button" onClick={() => setMode('replace')} className={`flex-1 py-2 rounded-xl text-xs font-bold ${mode === 'replace' ? 'bg-rose-600 text-white' : 'bg-slate-100'}`}>Ganti semua</button>
                 </div>
 
@@ -220,7 +220,7 @@ export default function RapImportWizard({
           {step === 'preview' && (
             <div className="p-5 border-t flex gap-2">
               <button type="button" onClick={() => { setStep('upload'); setRows([]); }} className="flex-1 py-3 border rounded-xl font-bold text-sm">Kembali</button>
-              <button type="button" onClick={handleImport} disabled={busy || validCount === 0} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50">
+              <button type="button" onClick={handleImport} disabled={busy || validCount === 0} className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50">
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 Import {validCount} item
               </button>

@@ -62,5 +62,5 @@ export const ESTIMATION_STATUS_COLOR: Record<string, string> = {
   sent: 'bg-blue-100 text-blue-700',
   accepted: 'bg-emerald-100 text-emerald-700',
   rejected: 'bg-rose-100 text-rose-700',
-  converted: 'bg-violet-100 text-violet-700',
+  converted: 'bg-emerald-100 text-emerald-700',
 };

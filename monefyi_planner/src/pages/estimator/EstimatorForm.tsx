@@ -157,7 +157,7 @@ export default function EstimatorForm() {
   if (loading || !draft) {
     return (
       <div className="flex justify-center py-24">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
       </div>
     );
   }
@@ -174,7 +174,7 @@ export default function EstimatorForm() {
         </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-mono text-xs text-indigo-600 font-bold">{draft.code}</span>
+            <span className="font-mono text-xs text-emerald-600 font-bold">{draft.code}</span>
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold">
               {ESTIMATION_STATUS_LABEL[draft.status]}
             </span>
@@ -187,7 +187,7 @@ export default function EstimatorForm() {
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 disabled:opacity-60"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-60"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           Simpan
@@ -312,7 +312,7 @@ export default function EstimatorForm() {
                   <button
                     type="button"
                     onClick={() => patch({ tax_pct: draft.tax_pct > 0 ? 0 : 11 })}
-                    className={`w-10 h-6 rounded-full transition-colors ${draft.tax_pct > 0 ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                    className={`w-10 h-6 rounded-full transition-colors ${draft.tax_pct > 0 ? 'bg-emerald-600' : 'bg-slate-200'}`}
                   >
                     <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform mx-1 ${draft.tax_pct > 0 ? 'translate-x-4' : ''}`} />
                   </button>
@@ -379,7 +379,7 @@ export default function EstimatorForm() {
           type="button"
           onClick={handlePreviewPdf}
           disabled={pdfLoading || isNew}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 border border-indigo-200 text-indigo-600 rounded-xl text-sm font-semibold disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 border border-emerald-200 text-emerald-600 rounded-xl text-sm font-semibold disabled:opacity-50"
         >
           <Eye className="w-4 h-4" /> Preview PDF
         </button>
@@ -396,7 +396,7 @@ export default function EstimatorForm() {
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold disabled:opacity-60"
+          className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-60"
         >
           {saving ? 'Menyimpan...' : 'Simpan Draft'}
         </button>

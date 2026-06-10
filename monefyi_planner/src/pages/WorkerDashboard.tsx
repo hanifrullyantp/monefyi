@@ -259,7 +259,7 @@ export default function WorkerDashboard() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 py-1.5 text-xs font-semibold rounded-xl ${workerTab === tab.id ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500'}`}
+            className={`flex-1 py-1.5 text-xs font-semibold rounded-xl ${workerTab === tab.id ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500'}`}
           >
             {tab.label}
           </button>
@@ -284,7 +284,7 @@ export default function WorkerDashboard() {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-white border rounded-xl p-3 text-center">
-              <div className="text-2xl font-black text-indigo-600">{activeTasks.length}</div>
+              <div className="text-2xl font-black text-emerald-600">{activeTasks.length}</div>
               <div className="text-xs text-slate-500">Task Aktif</div>
             </div>
             <div className="bg-white border rounded-xl p-3 text-center">
@@ -309,7 +309,7 @@ export default function WorkerDashboard() {
           <div>
             <h2 className="font-bold text-slate-800 mb-3">Pekerjaan Aktif</h2>
             {loading && activeTasks.length === 0 ? (
-              <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-indigo-400" /></div>
+              <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-emerald-400" /></div>
             ) : activeTasks.length === 0 ? (
               <p className="text-sm text-slate-400 bg-white border rounded-xl p-4 text-center">
                 Belum ada pekerjaan dari proyek. Owner/manager perlu menambahkan work items.
@@ -322,7 +322,7 @@ export default function WorkerDashboard() {
                       <div className="font-semibold text-sm">{wi.name}</div>
                       <div className="text-xs text-slate-400">{projectName(wi.project_id)}</div>
                     </div>
-                    <span className="font-black text-indigo-600">{Number(wi.progress_pct) || 0}%</span>
+                    <span className="font-black text-emerald-600">{Number(wi.progress_pct) || 0}%</span>
                   </div>
                   <input
                     type="range"
@@ -332,7 +332,7 @@ export default function WorkerDashboard() {
                     value={Number(wi.progress_pct) || 0}
                     disabled={updatingId === wi.id}
                     onChange={e => handleProgressChange(wi, Number(e.target.value))}
-                    className="w-full accent-indigo-600 mb-2"
+                    className="w-full accent-emerald-600 mb-2"
                   />
                   <button
                     type="button"
@@ -340,7 +340,7 @@ export default function WorkerDashboard() {
                       setCommandModalOpen(true);
                       showToast(`Gunakan: update progress ${wi.name} 75%`, 'info');
                     }}
-                    className="w-full py-2 border border-indigo-200 text-indigo-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1"
+                    className="w-full py-2 border border-emerald-200 text-emerald-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1"
                   >
                     <TrendingUp className="w-3.5 h-3.5" /> Update via Monefyi Button
                   </button>
@@ -355,11 +355,11 @@ export default function WorkerDashboard() {
         <div className="space-y-4">
           <div className="bg-white border rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-4">
-              <Calendar className="w-5 h-5 text-indigo-500" />
+              <Calendar className="w-5 h-5 text-emerald-500" />
               <h3 className="font-bold text-slate-800">Riwayat Absensi</h3>
             </div>
             {attendanceLoading && history.length === 0 ? (
-              <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-indigo-400" /></div>
+              <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-emerald-400" /></div>
             ) : history.length === 0 ? (
               <p className="text-sm text-slate-400 text-center py-4">Belum ada riwayat. Check-in dari tab Home.</p>
             ) : (
@@ -385,11 +385,11 @@ export default function WorkerDashboard() {
       {workerTab === 'payroll' && (
         <div className="space-y-4">
           <div className="bg-white border rounded-2xl p-5">
-            <Wallet className="w-8 h-8 text-indigo-400 mx-auto mb-2" />
+            <Wallet className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
             <h3 className="font-bold text-slate-800 text-center">Payroll & Bon</h3>
             <div className="mt-4 grid grid-cols-2 gap-3 text-center">
               <div className="bg-slate-50 rounded-xl p-3">
-                <div className="text-lg font-black text-indigo-600">
+                <div className="text-lg font-black text-emerald-600">
                   {payroll ? formatCurrency(payroll.net_amount) : '—'}
                 </div>
                 <div className="text-xs text-slate-500">Gaji Bulan Ini</div>
@@ -425,7 +425,7 @@ export default function WorkerDashboard() {
                 type="button"
                 onClick={handleBonRequest}
                 disabled={bonSubmitting}
-                className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl text-sm disabled:opacity-60"
+                className="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl text-sm disabled:opacity-60"
               >
                 Ajukan Bon / Pinjaman
               </button>
@@ -462,12 +462,12 @@ export default function WorkerDashboard() {
                     </div>
                     <div className="mt-1 h-1.5 bg-slate-100 rounded-full">
                       <div
-                        className="h-full bg-indigo-500 rounded-full"
+                        className="h-full bg-emerald-500 rounded-full"
                         style={{ width: `${Number(wi.progress_pct) || 0}%` }}
                       />
                     </div>
                   </div>
-                  <span className="text-xs font-bold text-indigo-600">{Number(wi.progress_pct) || 0}%</span>
+                  <span className="text-xs font-bold text-emerald-600">{Number(wi.progress_pct) || 0}%</span>
                 </div>
               ))}
               {doneTasks.map(wi => (

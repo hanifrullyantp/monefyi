@@ -82,7 +82,7 @@ export const DEFAULT_LANDING_CONTENT: LandingContent = {
   version: 1,
   brand: {
     logoUrl: '',
-    primaryColor: '#4f46e5',
+    primaryColor: '#059669',
     secondaryColor: '#1e293b',
     productName: 'Monefyi',
     productAccent: 'Planner',
@@ -205,7 +205,7 @@ export const DEFAULT_LANDING_CONTENT: LandingContent = {
       price: 'Rp 299K',
       period: '/bulan',
       desc: 'Untuk kontraktor & bisnis aktif',
-      color: 'border-indigo-500',
+      color: 'border-emerald-500',
       features: [
         'Proyek tak terbatas',
         '25 anggota tim',

@@ -109,7 +109,7 @@ export default function FinanceChartsRow({ neraca, entries, loading }: Props) {
                 key={d}
                 type="button"
                 onClick={() => setRange(d)}
-                className={`px-2 py-1 rounded-lg text-xs font-bold ${range === d ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500'}`}
+                className={`px-2 py-1 rounded-lg text-xs font-bold ${range === d ? 'bg-emerald-100 text-emerald-700' : 'text-slate-500'}`}
               >
                 {d}h
               </button>

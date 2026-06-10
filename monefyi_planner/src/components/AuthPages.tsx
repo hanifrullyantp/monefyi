@@ -102,7 +102,7 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <Link to="/" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-8 text-sm">
           <ArrowLeft className="w-4 h-4" /> Kembali ke beranda
@@ -114,7 +114,7 @@ export function LoginPage() {
           className="bg-white rounded-3xl p-8 shadow-2xl"
         >
           <div className="flex items-center gap-2 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-md">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -124,15 +124,15 @@ export function LoginPage() {
           </div>
 
           {config.devDemoAuth && (
-            <div className="mb-6 p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
-              <p className="text-xs text-indigo-700 font-semibold mb-3">Demo — Pilih role:</p>
+            <div className="mb-6 p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+              <p className="text-xs text-emerald-700 font-semibold mb-3">Demo — Pilih role:</p>
               <div className="grid grid-cols-3 gap-2">
                 {(['owner', 'manager', 'worker'] as const).map(role => (
                   <button
                     key={role}
                     type="button"
                     onClick={() => handleDemoLogin(role)}
-                    className="p-3 rounded-xl bg-white border border-indigo-200 hover:border-indigo-500 text-xs font-bold capitalize"
+                    className="p-3 rounded-xl bg-white border border-emerald-200 hover:border-emerald-500 text-xs font-bold capitalize"
                   >
                     {role}
                   </button>
@@ -151,7 +151,7 @@ export function LoginPage() {
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="kamu@bisnis.com"
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none text-sm"
                 />
               </div>
             </div>
@@ -164,7 +164,7 @@ export function LoginPage() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
+                  className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none text-sm"
                 />
                 <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
                   {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -173,7 +173,7 @@ export function LoginPage() {
             </div>
 
             <div className="flex justify-end">
-              <button type="button" onClick={handleForgotPassword} className="text-xs text-indigo-600 font-medium hover:underline">
+              <button type="button" onClick={handleForgotPassword} className="text-xs text-emerald-600 font-medium hover:underline">
                 Lupa password?
               </button>
             </div>
@@ -191,7 +191,7 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-200 disabled:opacity-60 flex items-center justify-center gap-2"
+              className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-200 disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
@@ -205,13 +205,13 @@ export function LoginPage() {
           </form>
 
           <p className="text-center text-sm text-slate-500 mt-4">
-            <Link to="/join" className="text-indigo-600 font-semibold hover:underline">
+            <Link to="/join" className="text-emerald-600 font-semibold hover:underline">
               Punya undangan? Klik di sini
             </Link>
           </p>
           <p className="text-center text-sm text-slate-500 mt-2">
             Belum punya akun?{' '}
-            <Link to="/signup" className="text-indigo-600 font-semibold hover:underline">
+            <Link to="/signup" className="text-emerald-600 font-semibold hover:underline">
               Daftar gratis
             </Link>
           </p>
@@ -343,7 +343,7 @@ export function SignupPage() {
   const canProceed = step === 1 ? step1Ready : step === 2 ? step2Ready : true;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <Link to="/" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-8 text-sm">
           <ArrowLeft className="w-4 h-4" /> Kembali
@@ -352,7 +352,7 @@ export function SignupPage() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-3xl p-8 shadow-2xl">
           <div className="flex items-center gap-2 mb-2">
             {[1, 2, 3].map(s => (
-              <div key={s} className={`h-1.5 flex-1 rounded-full ${s <= step ? 'bg-indigo-600' : 'bg-slate-200'}`} />
+              <div key={s} className={`h-1.5 flex-1 rounded-full ${s <= step ? 'bg-emerald-600' : 'bg-slate-200'}`} />
             ))}
           </div>
 
@@ -409,12 +409,12 @@ export function SignupPage() {
                 type="button"
                 onClick={handleNext}
                 disabled={!canProceed}
-                className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Lanjut <ArrowRight className="w-4 h-4 inline ml-1" />
               </button>
             ) : (
-              <button type="button" onClick={handleSignup} disabled={loading} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl disabled:opacity-60">
+              <button type="button" onClick={handleSignup} disabled={loading} className="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-xl disabled:opacity-60">
                 {loading ? 'Membuat akun...' : 'Masuk ke Dashboard'}
               </button>
             )}

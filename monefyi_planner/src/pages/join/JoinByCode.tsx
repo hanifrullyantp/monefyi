@@ -78,7 +78,7 @@ export function JoinByCodePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-3xl p-8 shadow-2xl">
         <Link to="/signup" className="text-sm text-slate-500 mb-4 inline-block">← Kembali</Link>
 
@@ -94,14 +94,14 @@ export function JoinByCodePage() {
               className="w-full px-4 py-4 rounded-xl border border-slate-200 text-center text-2xl font-black tracking-widest"
             />
             {error && <p className="text-sm text-rose-600 mt-3">{error}</p>}
-            <button type="button" onClick={checkCode} disabled={loading || code.length < 5} className="w-full mt-4 py-3 bg-indigo-600 text-white font-bold rounded-xl disabled:opacity-60">
+            <button type="button" onClick={checkCode} disabled={loading || code.length < 5} className="w-full mt-4 py-3 bg-emerald-600 text-white font-bold rounded-xl disabled:opacity-60">
               {loading ? 'Memeriksa...' : 'Lanjut'}
             </button>
           </>
         ) : (
           <>
             <div className="text-center mb-6">
-              <Building2 className="w-10 h-10 text-indigo-600 mx-auto mb-2" />
+              <Building2 className="w-10 h-10 text-emerald-600 mx-auto mb-2" />
               <h2 className="font-bold">{preview?.org_name}</h2>
               <p className="text-sm text-slate-500 capitalize">Role: {preview?.role}</p>
             </div>
@@ -114,7 +114,7 @@ export function JoinByCodePage() {
                 placeholder="Password (min 8, huruf besar, angka, simbol)"
               />
               {error && <p className="text-sm text-rose-600">{error}</p>}
-              <button type="submit" disabled={loading || !form.name.trim() || !form.email.trim() || !isPasswordReady(form.password)} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed">Bergabung</button>
+              <button type="submit" disabled={loading || !form.name.trim() || !form.email.trim() || !isPasswordReady(form.password)} className="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed">Bergabung</button>
             </form>
           </>
         )}

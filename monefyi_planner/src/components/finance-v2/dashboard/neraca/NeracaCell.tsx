@@ -89,7 +89,7 @@ export default function NeracaCell({
           <button
             type="button"
             onClick={() => navigate(navigateTo)}
-            className="w-full mt-1 text-[10px] font-bold text-indigo-700 hover:underline"
+            className="w-full mt-1 text-[10px] font-bold text-emerald-700 hover:underline"
           >
             → Lihat Semua Detail
           </button>
@@ -109,7 +109,7 @@ export default function NeracaCell({
         <button
           type="button"
           onClick={() => navigate(navigateTo)}
-          className="w-full py-1 text-[10px] font-bold text-indigo-700 flex items-center justify-center gap-1"
+          className="w-full py-1 text-[10px] font-bold text-emerald-700 flex items-center justify-center gap-1"
         >
           Detail <ChevronDown className="w-3 h-3" />
         </button>

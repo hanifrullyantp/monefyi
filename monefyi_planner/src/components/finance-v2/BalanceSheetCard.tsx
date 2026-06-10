@@ -33,7 +33,7 @@ function Column({
                 type="button"
                 onClick={() => row.route && navigate(row.route)}
                 className={`w-full flex items-center justify-between gap-2 text-left text-sm ${
-                  row.route ? 'hover:text-indigo-600 cursor-pointer' : 'cursor-default'
+                  row.route ? 'hover:text-emerald-600 cursor-pointer' : 'cursor-default'
                 }`}
               >
                 <span className="truncate text-slate-700">{row.name}</span>
@@ -78,9 +78,9 @@ export default function BalanceSheetCard({ data }: Props) {
       </div>
 
       <div className="flex flex-col md:flex-row gap-6 md:gap-8">
-        <Column title="Aktiva" rows={data.aktiva} total={data.totalAktiva} accent="text-indigo-700" />
+        <Column title="Aktiva" rows={data.aktiva} total={data.totalAktiva} accent="text-emerald-700" />
         <div className="hidden md:block w-px bg-slate-100" />
-        <Column title="Pasiva & Ekuitas" rows={data.pasiva} total={data.totalPasiva} accent="text-violet-700" />
+        <Column title="Pasiva & Ekuitas" rows={data.pasiva} total={data.totalPasiva} accent="text-emerald-700" />
       </div>
     </div>
   );

@@ -35,7 +35,7 @@ export default function EditableText({
   }
 
   const shared =
-    'w-full rounded-lg border border-indigo-400/50 bg-indigo-950/40 text-inherit px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400';
+    'w-full rounded-lg border border-emerald-400/50 bg-emerald-950/40 text-inherit px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400';
 
   return (
     <span className={`relative group inline-block w-full ${className}`}>
@@ -54,7 +54,7 @@ export default function EditableText({
           className={shared}
         />
       )}
-      <Pencil className="w-3 h-3 text-indigo-300 absolute -top-1 -right-1 opacity-70 pointer-events-none" />
+      <Pencil className="w-3 h-3 text-emerald-300 absolute -top-1 -right-1 opacity-70 pointer-events-none" />
     </span>
   );
 }

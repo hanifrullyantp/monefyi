@@ -80,7 +80,7 @@ export default function AttendanceSettingsPanel({ orgId, canEdit, actorId }: Pro
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
+        <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
       </div>
     );
   }
@@ -114,7 +114,7 @@ export default function AttendanceSettingsPanel({ orgId, canEdit, actorId }: Pro
 
         <div className="border-t border-slate-100 pt-4">
           <div className="flex items-center gap-2 font-semibold text-slate-800 mb-2">
-            <MapPin className="w-4 h-4 text-indigo-600" /> Lokasi kerja (geofence)
+            <MapPin className="w-4 h-4 text-emerald-600" /> Lokasi kerja (geofence)
           </div>
           <label className="flex items-center gap-2 text-xs mb-2">
             <input
@@ -205,7 +205,7 @@ export default function AttendanceSettingsPanel({ orgId, canEdit, actorId }: Pro
 
         <div className="border-t border-slate-100 pt-4">
           <div className="flex items-center gap-2 font-semibold text-slate-800 mb-2">
-            <Wifi className="w-4 h-4 text-indigo-600" /> WiFi kantor & auto absensi
+            <Wifi className="w-4 h-4 text-emerald-600" /> WiFi kantor & auto absensi
           </div>
           <p className="text-xs text-slate-500 mb-2">
             Browser tidak bisa membaca nama WiFi langsung. Tag SSID sebagai referensi; auto check-in memakai URL internal yang hanya bisa diakses dari jaringan kantor.
@@ -257,7 +257,7 @@ export default function AttendanceSettingsPanel({ orgId, canEdit, actorId }: Pro
                 onChange={e => setNewSsidLabel(e.target.value)}
                 className="flex-1 min-w-[120px] px-3 py-2 rounded-xl border border-slate-200 text-sm"
               />
-              <button type="button" onClick={addWifi} className="px-3 py-2 bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold flex items-center gap-1">
+              <button type="button" onClick={addWifi} className="px-3 py-2 bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold flex items-center gap-1">
                 <Plus className="w-3.5 h-3.5" /> Tag WiFi
               </button>
             </div>
@@ -269,7 +269,7 @@ export default function AttendanceSettingsPanel({ orgId, canEdit, actorId }: Pro
             type="button"
             disabled={saving}
             onClick={save}
-            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold disabled:opacity-60"
+            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-60"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Simpan Pengaturan

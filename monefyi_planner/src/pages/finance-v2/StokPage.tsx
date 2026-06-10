@@ -92,7 +92,7 @@ export default function StokPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <p className="text-sm text-slate-500">Total nilai stok: <span className="font-bold text-violet-700">{formatFinanceRupiah(totalValue)}</span></p>
+        <p className="text-sm text-slate-500">Total nilai stok: <span className="font-bold text-emerald-700">{formatFinanceRupiah(totalValue)}</span></p>
         <button type="button" onClick={load} className="p-2.5 border border-slate-200 rounded-xl hover:bg-slate-50 self-start">
           <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
         </button>
@@ -105,13 +105,13 @@ export default function StokPage() {
           <input value={newUnit} onChange={e => setNewUnit(e.target.value)} placeholder="Satuan" className="px-3 py-2 rounded-xl border border-slate-200 text-sm" />
           <input type="number" value={newCost} onChange={e => setNewCost(e.target.value)} placeholder="HPP/satuan" className="px-3 py-2 rounded-xl border border-slate-200 text-sm" />
         </div>
-        <button type="button" onClick={handleAdd} className="flex items-center gap-2 bg-violet-600 text-white font-bold px-4 py-2 rounded-xl text-sm">
+        <button type="button" onClick={handleAdd} className="flex items-center gap-2 bg-emerald-600 text-white font-bold px-4 py-2 rounded-xl text-sm">
           <Plus className="w-4 h-4" /> Tambah Item
         </button>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-indigo-600" /></div>
+        <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
       ) : rows.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-100 p-10 text-center text-slate-400 text-sm">Belum ada item stok.</div>
       ) : (
@@ -152,7 +152,7 @@ export default function StokPage() {
                       </div>
                     ) : (
                       <div className="flex justify-end gap-1">
-                        <button type="button" onClick={() => setAdjustId(item.id)} className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 px-2 py-1 rounded-lg">Gerak</button>
+                        <button type="button" onClick={() => setAdjustId(item.id)} className="text-xs font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded-lg">Gerak</button>
                         <button type="button" onClick={() => handleDelete(item)} className="text-xs font-bold text-slate-400 hover:bg-slate-50 px-2 py-1 rounded-lg">Hapus</button>
                       </div>
                     )}

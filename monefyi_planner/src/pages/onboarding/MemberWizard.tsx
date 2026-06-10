@@ -41,7 +41,7 @@ export function MemberOnboardingWizard() {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="max-w-lg w-full bg-white rounded-2xl p-8 shadow-sm border border-slate-100">
-        <h1 className="text-lg font-black text-indigo-600 mb-1">Selamat datang di {tenant?.name}</h1>
+        <h1 className="text-lg font-black text-emerald-600 mb-1">Selamat datang di {tenant?.name}</h1>
         <p className="text-sm text-slate-500 mb-6">Lengkapi profil Anda (opsional)</p>
 
         {step === 1 && (
@@ -78,9 +78,9 @@ export function MemberOnboardingWizard() {
             <SkipForward className="w-4 h-4" /> Lewati
           </button>
           {step < 3 ? (
-            <button type="button" onClick={() => setStep((step + 1) as Step)} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl">Lanjut</button>
+            <button type="button" onClick={() => setStep((step + 1) as Step)} className="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-xl">Lanjut</button>
           ) : (
-            <button type="button" onClick={finish} disabled={loading} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl">Mulai</button>
+            <button type="button" onClick={finish} disabled={loading} className="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-xl">Mulai</button>
           )}
         </div>
       </div>

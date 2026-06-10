@@ -52,7 +52,7 @@ export default function TimelineView({ projects, onOpenProject }: TimelineViewPr
               <button
                 type="button"
                 onClick={() => onOpenProject(p)}
-                className="w-44 shrink-0 text-left text-xs font-bold text-slate-700 truncate hover:text-indigo-600"
+                className="w-44 shrink-0 text-left text-xs font-bold text-slate-700 truncate hover:text-emerald-600"
               >
                 {p.name}
               </button>

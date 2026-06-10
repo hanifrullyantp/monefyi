@@ -121,7 +121,7 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
               </div>
               <input type="number" min={0} value={form.total_budget || ''} onChange={e => setForm({ ...form, total_budget: Number(e.target.value) })} placeholder="Estimasi budget (Rp)" className="w-full px-4 py-3 rounded-xl border text-sm" />
               <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Deskripsi singkat (opsional)" rows={2} className="w-full px-4 py-3 rounded-xl border text-sm" />
-              <div className="p-3 bg-indigo-50 rounded-xl text-xs text-indigo-700 flex gap-2"><Info className="w-4 h-4 shrink-0" /> Budget menjadi acuan EVM & analisa AI.</div>
+              <div className="p-3 bg-emerald-50 rounded-xl text-xs text-emerald-700 flex gap-2"><Info className="w-4 h-4 shrink-0" /> Budget menjadi acuan EVM & analisa AI.</div>
             </>
           )}
           {step === 3 && (
@@ -129,14 +129,14 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
               <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
               <h4 className="font-bold text-lg">{form.name || 'Proyek baru'}</h4>
               <p className="text-sm text-slate-500">{form.client_name || 'Tanpa klien'} · {tenant?.name}</p>
-              {form.total_budget > 0 && <p className="text-sm font-semibold text-indigo-600">Budget: {formatRupiah(form.total_budget)}</p>}
+              {form.total_budget > 0 && <p className="text-sm font-semibold text-emerald-600">Budget: {formatRupiah(form.total_budget)}</p>}
             </div>
           )}
           {error && <p className="text-sm text-rose-600">{error}</p>}
         </div>
         <div className="p-6 border-t flex gap-3">
           {step > 1 && <button type="button" onClick={() => setStep(step - 1)} className="px-6 py-3 border rounded-xl text-sm font-bold">Kembali</button>}
-          <button type="button" onClick={() => step < 3 ? setStep(step + 1) : handleCreate()} disabled={loading} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-sm font-black disabled:opacity-60">
+          <button type="button" onClick={() => step < 3 ? setStep(step + 1) : handleCreate()} disabled={loading} className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-sm font-black disabled:opacity-60">
             {step === 3 ? (loading ? 'Menyimpan...' : 'Buat Proyek') : 'Lanjut'}
           </button>
         </div>
@@ -244,7 +244,7 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
           <p className="text-sm text-slate-500">Monitoring, perencanaan, dan kontrol seluruh proyek.</p>
         </div>
         {canCreate && (
-          <button type="button" onClick={() => setShowCreate(true)} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black px-6 py-3 rounded-2xl shadow-xl shadow-indigo-100">
+          <button type="button" onClick={() => setShowCreate(true)} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black px-6 py-3 rounded-2xl shadow-xl shadow-emerald-100">
             <Plus className="w-5 h-5" /> Buat Proyek Baru
           </button>
         )}
@@ -253,10 +253,10 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
       {projects.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: 'Total Proyek', value: String(stats.total), icon: FolderOpen, color: 'text-indigo-600' },
+            { label: 'Total Proyek', value: String(stats.total), icon: FolderOpen, color: 'text-emerald-600' },
             { label: 'Aktif', value: String(stats.active), icon: TrendingUp, color: 'text-emerald-600' },
             { label: 'Perlu Perhatian', value: String(stats.atRisk), icon: AlertTriangle, color: 'text-amber-600' },
-            { label: 'Total Budget', value: formatRupiah(stats.totalBudget), icon: Sparkles, color: 'text-violet-600' },
+            { label: 'Total Budget', value: formatRupiah(stats.totalBudget), icon: Sparkles, color: 'text-emerald-600' },
           ].map((s, i) => (
             <div key={i} className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
               <div className="flex items-center gap-2 mb-1">
@@ -294,14 +294,14 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
                 { id: 'calendar' as const, icon: Calendar, label: 'Kalender' },
               ]).map(v => (
                 <button key={v.id} type="button" onClick={() => setView(v.id)} title={v.label}
-                  className={`p-2 rounded-lg ${projectView === v.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`} aria-label={v.label}>
+                  className={`p-2 rounded-lg ${projectView === v.id ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`} aria-label={v.label}>
                   <v.icon className="w-4 h-4" />
                 </button>
               ))}
               {projectView === 'list' && (
                 <>
-                  <button type="button" onClick={() => setListLayout('card')} className={`p-2 rounded-lg ${listLayout === 'card' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`} aria-label="Kartu"><Grid className="w-4 h-4" /></button>
-                  <button type="button" onClick={() => setListLayout('compact')} className={`p-2 rounded-lg ${listLayout === 'compact' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`} aria-label="Baris"><List className="w-4 h-4" /></button>
+                  <button type="button" onClick={() => setListLayout('card')} className={`p-2 rounded-lg ${listLayout === 'card' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`} aria-label="Kartu"><Grid className="w-4 h-4" /></button>
+                  <button type="button" onClick={() => setListLayout('compact')} className={`p-2 rounded-lg ${listLayout === 'compact' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`} aria-label="Baris"><List className="w-4 h-4" /></button>
                 </>
               )}
             </div>
@@ -309,7 +309,7 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
         </div>
         <div className="flex gap-2 overflow-x-auto pb-1">
           {filters.map(f => (
-            <button key={f.id} type="button" onClick={() => { setFilter(f.id); setProjectsListFilter(f.id); }} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap border-2 transition-colors ${filter === f.id ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-100 text-slate-500 hover:border-slate-200'}`}>
+            <button key={f.id} type="button" onClick={() => { setFilter(f.id); setProjectsListFilter(f.id); }} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap border-2 transition-colors ${filter === f.id ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-slate-100 text-slate-500 hover:border-slate-200'}`}>
               {f.label} <span className={`px-2 py-0.5 rounded-full text-[10px] ${filter === f.id ? 'bg-white/20' : 'bg-slate-100'}`}>{f.count}</span>
             </button>
           ))}
@@ -344,32 +344,32 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${health.bg} ${health.color}`}>{health.label}</span>
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{STATUS_LABEL[proj.status]}</span>
                   </div>
-                  <h3 className="font-black text-slate-800 truncate group-hover:text-indigo-600">{proj.name}</h3>
+                  <h3 className="font-black text-slate-800 truncate group-hover:text-emerald-600">{proj.name}</h3>
                   <div className="text-xs text-slate-500">{proj.client_name || '—'}</div>
                 </div>
                 <div className="text-right hidden sm:block">
                   <div className="text-lg font-black">{proj.progress_percentage.toFixed(0)}%</div>
                   <div className="text-[10px] text-slate-400">{formatRupiah(proj.spent_amount)}</div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-500" />
+                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-emerald-500" />
               </motion.div>
             );
           }
 
           return (
-            <motion.div key={proj.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} onClick={() => openProject(proj)} className="bg-white border rounded-3xl p-5 hover:shadow-xl hover:border-indigo-100 cursor-pointer group transition-all">
+            <motion.div key={proj.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} onClick={() => openProject(proj)} className="bg-white border rounded-3xl p-5 hover:shadow-xl hover:border-emerald-100 cursor-pointer group transition-all">
               <div className="flex justify-between gap-3 mb-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span className="text-[10px] font-mono text-slate-400">{proj.code}</span>
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${health.bg} ${health.color}`}>{health.label}</span>
                   </div>
-                  <h3 className="font-black text-slate-900 truncate group-hover:text-indigo-600">{proj.name}</h3>
+                  <h3 className="font-black text-slate-900 truncate group-hover:text-emerald-600">{proj.name}</h3>
                   <p className="text-xs text-slate-400 flex items-center gap-1 mt-1 truncate">
                     <MapPin className="w-3 h-3 shrink-0" /> {proj.location || proj.client_name || '—'}
                   </p>
                 </div>
-                <FolderOpen className="w-8 h-8 text-indigo-300 group-hover:text-indigo-500 shrink-0" />
+                <FolderOpen className="w-8 h-8 text-emerald-300 group-hover:text-emerald-500 shrink-0" />
               </div>
               <div className="space-y-3">
                 <div>
@@ -378,7 +378,7 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
                 </div>
                 <div>
                   <div className="flex justify-between text-xs mb-1"><span className="text-slate-500">Budget terpakai</span><span className="font-bold">{Math.round(budgetPct)}%</span></div>
-                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-indigo-500 rounded-full" style={{ width: `${budgetPct}%` }} /></div>
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-emerald-500 rounded-full" style={{ width: `${budgetPct}%` }} /></div>
                   <div className="flex justify-between text-[10px] text-slate-400 mt-1">
                     <span>{formatRupiah(proj.spent_amount)}</span>
                     <span>{formatRupiah(proj.total_budget_planned)}</span>
@@ -387,7 +387,7 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
               </div>
               <div className="mt-4 pt-3 border-t flex justify-between items-center">
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold">{STATUS_LABEL[proj.status]}</span>
-                <span className="text-xs text-indigo-600 font-bold flex items-center gap-1">Kelola <ChevronRight className="w-3 h-3" /></span>
+                <span className="text-xs text-emerald-600 font-bold flex items-center gap-1">Kelola <ChevronRight className="w-3 h-3" /></span>
               </div>
             </motion.div>
           );
@@ -397,11 +397,11 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
 
       {projectView === 'list' && projects.length === 0 && (
         <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-200">
-          <FolderOpen className="w-14 h-14 text-indigo-200 mx-auto mb-4" />
+          <FolderOpen className="w-14 h-14 text-emerald-200 mx-auto mb-4" />
           <p className="font-black text-slate-800 text-lg">Belum ada proyek</p>
           <p className="text-sm text-slate-500 mt-2 max-w-sm mx-auto">Buat proyek pertama untuk mulai RAP, jadwal, biaya, dan analisa EVM.</p>
           {canCreate && (
-            <button type="button" onClick={() => setShowCreate(true)} className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-bold">
+            <button type="button" onClick={() => setShowCreate(true)} className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold">
               <Plus className="w-4 h-4" /> Buat proyek pertama
             </button>
           )}
@@ -412,7 +412,7 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
         <div className="text-center py-16 bg-white rounded-3xl border">
           <Search className="w-10 h-10 text-slate-200 mx-auto mb-3" />
           <p className="font-bold text-slate-700">Proyek tidak ditemukan</p>
-          <button type="button" onClick={() => { setSearch(''); setFilter('all'); setProjectsListFilter('all'); }} className="mt-4 text-indigo-600 text-sm font-bold">Reset filter</button>
+          <button type="button" onClick={() => { setSearch(''); setFilter('all'); setProjectsListFilter('all'); }} className="mt-4 text-emerald-600 text-sm font-bold">Reset filter</button>
         </div>
       )}
 

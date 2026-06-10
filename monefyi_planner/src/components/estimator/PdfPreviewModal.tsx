@@ -80,7 +80,7 @@ export default function PdfPreviewModal({ draft, settings, onClose }: Props) {
               type="button"
               onClick={handleDownload}
               disabled={loading}
-              className="inline-flex items-center gap-1 px-3 py-2 text-sm font-semibold text-indigo-600 hover:bg-indigo-50 rounded-lg"
+              className="inline-flex items-center gap-1 px-3 py-2 text-sm font-semibold text-emerald-600 hover:bg-emerald-50 rounded-lg"
             >
               <Download className="w-4 h-4" /> Download
             </button>
@@ -93,7 +93,7 @@ export default function PdfPreviewModal({ draft, settings, onClose }: Props) {
         <div className="flex-1 bg-slate-100 relative">
           {loading && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+              <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
             </div>
           )}
           {error && (

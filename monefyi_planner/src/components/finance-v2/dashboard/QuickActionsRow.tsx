@@ -11,7 +11,7 @@ const actions = [
   { id: 'expense', label: 'Pengeluaran', icon: Minus, color: 'bg-rose-600 hover:bg-rose-700', onClickKey: 'expense' as const },
   { id: 'transfer', label: 'Transfer Kas', icon: ArrowRightLeft, color: 'bg-blue-600 hover:bg-blue-700', route: '/app/finance-v2/kas' },
   { id: 'pay', label: 'Bayar Hutang', icon: CheckCircle, color: 'bg-orange-600 hover:bg-orange-700', route: '/app/finance-v2/hutang' },
-  { id: 'bill', label: 'Tagih Piutang', icon: Receipt, color: 'bg-violet-600 hover:bg-violet-700', route: '/app/finance-v2/piutang' },
+  { id: 'bill', label: 'Tagih Piutang', icon: Receipt, color: 'bg-emerald-600 hover:bg-emerald-700', route: '/app/finance-v2/piutang' },
 ];
 
 export default function QuickActionsRow({ onIncome, onExpense }: Props) {

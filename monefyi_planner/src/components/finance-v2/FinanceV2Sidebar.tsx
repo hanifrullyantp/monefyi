@@ -30,7 +30,7 @@ export default function FinanceV2Sidebar() {
             className={({ isActive }) =>
               `flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
                 isActive
-                  ? 'bg-indigo-100 text-indigo-700'
+                  ? 'bg-emerald-100 text-emerald-700'
                   : 'text-slate-600 hover:bg-slate-100'
               }`
             }

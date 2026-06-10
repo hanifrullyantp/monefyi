@@ -71,13 +71,13 @@ export default function PricelistCsvImport({ orgId, userId, onClose, onImported 
           <button
             type="button"
             onClick={downloadPricelistTemplate}
-            className="inline-flex items-center gap-2 text-sm text-indigo-600 font-semibold hover:text-indigo-800"
+            className="inline-flex items-center gap-2 text-sm text-emerald-600 font-semibold hover:text-emerald-800"
           >
             <Download className="w-4 h-4" /> Download template CSV
           </button>
 
           <div
-            className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center cursor-pointer hover:border-indigo-300 hover:bg-indigo-50/30"
+            className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center cursor-pointer hover:border-emerald-300 hover:bg-emerald-50/30"
             onClick={() => fileRef.current?.click()}
             onDragOver={e => e.preventDefault()}
             onDrop={e => {
@@ -133,7 +133,7 @@ export default function PricelistCsvImport({ orgId, userId, onClose, onImported 
             type="button"
             onClick={handleImport}
             disabled={preview.length === 0 || importing}
-            className="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-sm font-bold disabled:opacity-50 inline-flex items-center justify-center gap-2"
+            className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-50 inline-flex items-center justify-center gap-2"
           >
             {importing && <Loader2 className="w-4 h-4 animate-spin" />}
             Import {preview.length > 0 ? `(${preview.length})` : ''}

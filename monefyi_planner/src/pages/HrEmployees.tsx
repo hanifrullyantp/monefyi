@@ -45,8 +45,8 @@ function lastSeenLabel(iso?: string) {
 
 function roleBadge(role: string) {
   const map: Record<string, string> = {
-    owner: 'bg-violet-100 text-violet-700',
-    manager: 'bg-indigo-100 text-indigo-700',
+    owner: 'bg-emerald-100 text-emerald-700',
+    manager: 'bg-emerald-100 text-emerald-700',
     worker: 'bg-emerald-100 text-emerald-700',
   };
   return map[role] || 'bg-slate-100 text-slate-600';
@@ -201,7 +201,7 @@ export default function HrEmployees() {
   if (loading && !members.length) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
       </div>
     );
   }
@@ -211,7 +211,7 @@ export default function HrEmployees() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-black text-slate-900 flex items-center gap-2">
-            <Users className="w-7 h-7 text-indigo-600" /> HR & Karyawan
+            <Users className="w-7 h-7 text-emerald-600" /> HR & Karyawan
           </h1>
           <p className="text-sm text-slate-500">{tenant?.name} · {members.length} anggota · {workers.length} karyawan lapangan</p>
         </div>
@@ -220,7 +220,7 @@ export default function HrEmployees() {
             <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
           </button>
           {canInvite && (
-            <button type="button" onClick={() => setInviteOpen(true)} className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold">
+            <button type="button" onClick={() => setInviteOpen(true)} className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold">
               <UserPlus className="w-4 h-4" /> Undang Karyawan
             </button>
           )}
@@ -233,7 +233,7 @@ export default function HrEmployees() {
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap ${tab === t.id ? 'bg-indigo-100 text-indigo-700' : 'bg-white text-slate-600 border border-slate-100'}`}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap ${tab === t.id ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-slate-600 border border-slate-100'}`}
           >
             {t.label}
             {t.id === 'requests' && requests.length > 0 && (
@@ -247,9 +247,9 @@ export default function HrEmployees() {
         <div className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
             {[
-              { label: 'Total Anggota', value: members.length, icon: Users, color: 'text-indigo-600 bg-indigo-50' },
+              { label: 'Total Anggota', value: members.length, icon: Users, color: 'text-emerald-600 bg-emerald-50' },
               { label: 'Karyawan', value: workers.length, icon: Briefcase, color: 'text-emerald-600 bg-emerald-50' },
-              { label: 'Manager', value: managers.length, icon: UserCheck, color: 'text-violet-600 bg-violet-50' },
+              { label: 'Manager', value: managers.length, icon: UserCheck, color: 'text-emerald-600 bg-emerald-50' },
               { label: 'Check-in Hari Ini', value: checkedInToday, icon: Clock, color: 'text-amber-600 bg-amber-50' },
               { label: 'Work Items Aktif', value: workItemCount, icon: CheckCircle2, color: 'text-sky-600 bg-sky-50' },
             ].map((kpi, i) => (
@@ -286,7 +286,7 @@ export default function HrEmployees() {
                             showToast(e instanceof Error ? e.message : 'Gagal undo', 'error');
                           }
                         }}
-                        className="px-2 py-1 text-xs font-bold text-indigo-600 border border-indigo-200 rounded-lg"
+                        className="px-2 py-1 text-xs font-bold text-emerald-600 border border-emerald-200 rounded-lg"
                       >
                         Undo
                       </button>
@@ -297,7 +297,7 @@ export default function HrEmployees() {
             )}
             <div className="bg-white rounded-2xl border border-slate-100 p-5">
               <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-indigo-500" /> Absensi Hari Ini
+                <Clock className="w-4 h-4 text-emerald-500" /> Absensi Hari Ini
               </h3>
               {todayAttendance.size === 0 ? (
                 <p className="text-sm text-slate-400">Belum ada check-in hari ini. Karyawan dapat check-in dari aplikasi mobile.</p>
@@ -374,10 +374,10 @@ export default function HrEmployees() {
                   key={m.id}
                   type="button"
                   onClick={() => setSelectedMember(m)}
-                  className="bg-white rounded-2xl border border-slate-100 p-4 hover:border-indigo-200 hover:shadow-md transition-all text-left w-full"
+                  className="bg-white rounded-2xl border border-slate-100 p-4 hover:border-emerald-200 hover:shadow-md transition-all text-left w-full"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-11 h-11 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-lg shrink-0">
+                    <div className="w-11 h-11 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-lg shrink-0">
                       {(m.profile?.name || '?')[0]?.toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -404,7 +404,7 @@ export default function HrEmployees() {
                   </div>
                   <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
                     <span>Last seen: {lastSeenLabel(m.last_active_at)}</span>
-                    <span className="text-indigo-600 font-semibold">Detail →</span>
+                    <span className="text-emerald-600 font-semibold">Detail →</span>
                   </div>
                 </button>
               );
@@ -416,7 +416,7 @@ export default function HrEmployees() {
               <Users className="w-10 h-10 text-slate-300 mx-auto mb-3" />
               <p className="text-slate-500">Belum ada karyawan.</p>
               {canInvite && (
-                <button type="button" onClick={() => setInviteOpen(true)} className="mt-3 text-indigo-600 font-semibold text-sm">
+                <button type="button" onClick={() => setInviteOpen(true)} className="mt-3 text-emerald-600 font-semibold text-sm">
                   Undang karyawan pertama →
                 </button>
               )}
@@ -539,7 +539,7 @@ export default function HrEmployees() {
               },
             ].map(item => (
               <div key={item.label} className="bg-white rounded-2xl border border-slate-100 p-5">
-                <Wallet className="w-5 h-5 text-indigo-400 mb-2" />
+                <Wallet className="w-5 h-5 text-emerald-400 mb-2" />
                 <div className="text-2xl font-black text-slate-900">{item.value}</div>
                 <div className="font-semibold text-slate-700">{item.label}</div>
                 <div className="text-xs text-slate-400 mt-1">{item.sub}</div>
@@ -571,7 +571,7 @@ export default function HrEmployees() {
                       setPayrollBusy(false);
                     }
                   }}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold disabled:opacity-60"
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-60"
                 >
                   {payrollBusy ? 'Memproses…' : 'Generate Payroll Bulan Ini'}
                 </button>
@@ -630,7 +630,7 @@ export default function HrEmployees() {
                             showToast(e instanceof Error ? e.message : 'Gagal simpan', 'error');
                           }
                         }}
-                        className="text-indigo-600 font-semibold text-xs"
+                        className="text-emerald-600 font-semibold text-xs"
                       >
                         Simpan
                       </button>
@@ -678,7 +678,7 @@ export default function HrEmployees() {
                                 notifyUndoable('Payroll ditandai lunas', undoActionId);
                                 load();
                               }}
-                              className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold"
+                              className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold"
                             >
                               Tandai Lunas
                             </button>
@@ -765,9 +765,9 @@ export default function HrEmployees() {
 
       {tab === 'audit' && (
         <div className="space-y-3">
-          <button type="button" onClick={() => { const csv = exportAuditCsv(audit); const blob = new Blob([csv], { type: 'text/csv' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'audit.csv'; a.click(); }} className="text-sm text-indigo-600 font-semibold">Export CSV</button>
+          <button type="button" onClick={() => { const csv = exportAuditCsv(audit); const blob = new Blob([csv], { type: 'text/csv' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'audit.csv'; a.click(); }} className="text-sm text-emerald-600 font-semibold">Export CSV</button>
           {undoableActions.map(a => (
-            <div key={a.id} className="bg-indigo-50 p-3 rounded-xl border border-indigo-100 text-sm flex justify-between gap-2">
+            <div key={a.id} className="bg-emerald-50 p-3 rounded-xl border border-emerald-100 text-sm flex justify-between gap-2">
               <div>
                 <div className="font-semibold">{actionTypeLabel(a.action_type)}</div>
                 <div className="font-mono text-xs text-slate-400">{a.created_at}</div>
@@ -783,7 +783,7 @@ export default function HrEmployees() {
                     showToast(e instanceof Error ? e.message : 'Gagal undo', 'error');
                   }
                 }}
-                className="px-2 py-1 text-xs font-bold text-indigo-700 border border-indigo-200 rounded-lg shrink-0"
+                className="px-2 py-1 text-xs font-bold text-emerald-700 border border-emerald-200 rounded-lg shrink-0"
               >
                 Undo
               </button>
@@ -852,7 +852,7 @@ export default function HrEmployees() {
               }
               showToast('Pengaturan disimpan', 'success');
             }}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold"
+            className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold"
           >
             Simpan
           </button>
@@ -867,7 +867,7 @@ export default function HrEmployees() {
         <button
           type="button"
           onClick={() => setInviteOpen(true)}
-          className="fixed bottom-24 md:bottom-8 right-6 z-40 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-xl flex items-center justify-center hover:bg-indigo-700"
+          className="fixed bottom-24 md:bottom-8 right-6 z-40 w-14 h-14 bg-emerald-600 text-white rounded-full shadow-xl flex items-center justify-center hover:bg-emerald-700"
           aria-label="Tambah karyawan"
         >
           <UserPlus className="w-6 h-6" />
@@ -892,7 +892,7 @@ export default function HrEmployees() {
                   a.click();
                   URL.revokeObjectURL(url);
                 }}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold"
+                className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold"
               >
                 Export Audit CSV
               </button>

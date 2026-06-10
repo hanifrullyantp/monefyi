@@ -17,7 +17,7 @@ export default function LandingAdminBar({
 }: LandingAdminBarProps) {
   return (
     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] flex flex-wrap items-center justify-center gap-2 px-3 py-2 rounded-2xl bg-slate-900/95 border border-slate-700 shadow-2xl text-white text-sm max-w-[95vw]">
-      <span className="font-semibold text-indigo-300 whitespace-nowrap">Mode edit landing</span>
+      <span className="font-semibold text-emerald-300 whitespace-nowrap">Mode edit landing</span>
       <button
         type="button"
         onClick={onOpenSettings}
@@ -30,7 +30,7 @@ export default function LandingAdminBar({
         type="button"
         onClick={onSave}
         disabled={!dirty || saving}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 font-semibold"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 font-semibold"
       >
         <Save className="w-4 h-4" />
         {saving ? 'Menyimpan…' : 'Simpan'}

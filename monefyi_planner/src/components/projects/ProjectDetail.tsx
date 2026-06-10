@@ -421,7 +421,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
 
           <div className="flex overflow-x-auto border-b border-slate-200 bg-white px-2 shrink-0">
             {tabs.map(tab => (
-              <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-4 py-3.5 text-sm font-bold whitespace-nowrap border-b-2 ${activeTab === tab.id ? 'text-indigo-600 border-indigo-600' : 'text-slate-400 border-transparent'}`}>
+              <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-4 py-3.5 text-sm font-bold whitespace-nowrap border-b-2 ${activeTab === tab.id ? 'text-emerald-600 border-emerald-600' : 'text-slate-400 border-transparent'}`}>
                 <tab.icon className="w-4 h-4" /> {tab.label}
               </button>
             ))}
@@ -429,7 +429,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50">
             {loading && activeTab === 'overview' ? (
-              <div className="flex items-center justify-center h-48"><Loader2 className="w-8 h-8 animate-spin text-indigo-600" /></div>
+              <div className="flex items-center justify-center h-48"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
             ) : (
               <AnimatePresence mode="wait">
                 {activeTab === 'overview' && (
@@ -458,7 +458,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                   <motion.div key="pl" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
                     <div className="flex gap-2 flex-wrap items-center">
                       {['rap', 'schedule'].map(t => (
-                        <button key={t} type="button" onClick={() => setActiveSubTab(t)} className={`px-4 py-1.5 rounded-lg text-xs font-bold ${activeSubTab === t ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                        <button key={t} type="button" onClick={() => setActiveSubTab(t)} className={`px-4 py-1.5 rounded-lg text-xs font-bold ${activeSubTab === t ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
                           {t === 'rap' ? `RAP (${rapItems.length})` : `Schedule (${workItems.length})`}
                         </button>
                       ))}
@@ -469,7 +469,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                               type="button"
                               title="Tabel spreadsheet"
                               onClick={() => setRapView('spreadsheet')}
-                              className={`p-1.5 rounded-md ${rapView === 'spreadsheet' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}
+                              className={`p-1.5 rounded-md ${rapView === 'spreadsheet' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}
                             >
                               <Table2 className="w-4 h-4" />
                             </button>
@@ -477,7 +477,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                               type="button"
                               title="Tampilan list"
                               onClick={() => setRapView('list')}
-                              className={`p-1.5 rounded-md ${rapView === 'list' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}
+                              className={`p-1.5 rounded-md ${rapView === 'list' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}
                             >
                               <List className="w-4 h-4" />
                             </button>
@@ -486,14 +486,14 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                             <Download className="w-3.5 h-3.5" /> Export
                           </button>
                           {canManage && (
-                            <button type="button" onClick={() => setShowRapImport(true)} className="flex items-center gap-1 text-xs font-bold text-indigo-600 border border-indigo-200 px-2 py-1 rounded-lg">
+                            <button type="button" onClick={() => setShowRapImport(true)} className="flex items-center gap-1 text-xs font-bold text-emerald-600 border border-emerald-200 px-2 py-1 rounded-lg">
                               <Upload className="w-3.5 h-3.5" /> Import
                             </button>
                           )}
                         </>
                       )}
                       {canManage && (
-                        <button type="button" onClick={() => { setEditingRapId(null); setRapForm({ type: 'material', name: '', unit: 'unit', quantity: 1, unit_price: 0 }); activeSubTab === 'rap' ? setShowRapForm(v => !v) : setShowWiForm(v => !v); }} className={`flex items-center gap-1 text-xs font-bold text-indigo-600 ${activeSubTab !== 'rap' ? 'ml-auto' : ''}`}>
+                        <button type="button" onClick={() => { setEditingRapId(null); setRapForm({ type: 'material', name: '', unit: 'unit', quantity: 1, unit_price: 0 }); activeSubTab === 'rap' ? setShowRapForm(v => !v) : setShowWiForm(v => !v); }} className={`flex items-center gap-1 text-xs font-bold text-emerald-600 ${activeSubTab !== 'rap' ? 'ml-auto' : ''}`}>
                           <Plus className="w-3.5 h-3.5" /> Tambah
                         </button>
                       )}
@@ -511,7 +511,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                         <input placeholder="Satuan" value={rapForm.unit} onChange={e => setRapForm({ ...rapForm, unit: e.target.value })} className="border rounded-lg px-2 py-1.5" />
                         <input type="number" placeholder="Qty" value={rapForm.quantity} onChange={e => setRapForm({ ...rapForm, quantity: Number(e.target.value) })} className="border rounded-lg px-2 py-1.5" />
                         <input type="number" placeholder="Harga satuan" value={rapForm.unit_price} onChange={e => setRapForm({ ...rapForm, unit_price: Number(e.target.value) })} className="border rounded-lg px-2 py-1.5 col-span-2" />
-                        <button type="button" onClick={handleAddRap} className="col-span-2 py-2 bg-indigo-600 text-white rounded-lg font-bold text-xs">{editingRapId ? 'Update RAP' : 'Simpan RAP'}</button>
+                        <button type="button" onClick={handleAddRap} className="col-span-2 py-2 bg-emerald-600 text-white rounded-lg font-bold text-xs">{editingRapId ? 'Update RAP' : 'Simpan RAP'}</button>
                       </div>
                     )}
 
@@ -522,7 +522,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                           <input type="date" value={wiForm.planned_start} onChange={e => setWiForm({ ...wiForm, planned_start: e.target.value })} className="border rounded-lg px-2 py-1.5" />
                           <input type="date" value={wiForm.planned_end} onChange={e => setWiForm({ ...wiForm, planned_end: e.target.value })} className="border rounded-lg px-2 py-1.5" />
                         </div>
-                        <button type="button" onClick={handleAddWorkItem} className="w-full py-2 bg-indigo-600 text-white rounded-lg font-bold text-xs">Simpan Pekerjaan</button>
+                        <button type="button" onClick={handleAddWorkItem} className="w-full py-2 bg-emerald-600 text-white rounded-lg font-bold text-xs">Simpan Pekerjaan</button>
                       </div>
                     )}
 
@@ -530,7 +530,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                       rapItems.length === 0 ? (
                         <div className="text-center py-12 bg-white rounded-2xl border border-dashed">
                           <p className="text-sm text-slate-500">Belum ada RAP.</p>
-                          {canManage && <button type="button" onClick={() => setShowRapForm(true)} className="mt-2 text-indigo-600 text-sm font-bold">+ Tambah item pertama</button>}
+                          {canManage && <button type="button" onClick={() => setShowRapForm(true)} className="mt-2 text-emerald-600 text-sm font-bold">+ Tambah item pertama</button>}
                         </div>
                       ) : rapView === 'spreadsheet' && user?.id ? (
                         <RapEditableTable
@@ -558,7 +558,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                     ) : workItems.length === 0 ? (
                       <div className="text-center py-12 bg-white rounded-2xl border border-dashed">
                         <p className="text-sm text-slate-500">Belum ada jadwal pekerjaan.</p>
-                        {canManage && <button type="button" onClick={() => setShowWiForm(true)} className="mt-2 text-indigo-600 text-sm font-bold">+ Tambah pekerjaan</button>}
+                        {canManage && <button type="button" onClick={() => setShowWiForm(true)} className="mt-2 text-emerald-600 text-sm font-bold">+ Tambah pekerjaan</button>}
                       </div>
                     ) : workItems.map(wi => (
                       <div key={wi.id} className="bg-white rounded-xl border p-4 text-sm">
@@ -572,7 +572,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                           )}
                         </div>
                         <div className="flex items-center gap-3">
-                          <input type="range" min={0} max={100} value={Number(wi.progress_pct) || 0} disabled={!canManage} onChange={e => handleProgressChange(wi.id, Number(e.target.value))} className="flex-1 accent-indigo-600" />
+                          <input type="range" min={0} max={100} value={Number(wi.progress_pct) || 0} disabled={!canManage} onChange={e => handleProgressChange(wi.id, Number(e.target.value))} className="flex-1 accent-emerald-600" />
                           <span className="text-xs font-bold w-10 text-right">{Number(wi.progress_pct) || 0}%</span>
                         </div>
                       </div>
@@ -590,20 +590,20 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                           { id: 'hutang', label: 'Hutang Proyek' },
                           { id: 'progres', label: 'Progres' },
                         ].map(t => (
-                          <button key={t.id} type="button" onClick={() => setActiveSubTab(t.id)} className={`px-4 py-1.5 rounded-lg text-xs font-bold ${activeSubTab === t.id ? 'bg-indigo-600 text-white' : 'bg-slate-200'}`}>{t.label}</button>
+                          <button key={t.id} type="button" onClick={() => setActiveSubTab(t.id)} className={`px-4 py-1.5 rounded-lg text-xs font-bold ${activeSubTab === t.id ? 'bg-emerald-600 text-white' : 'bg-slate-200'}`}>{t.label}</button>
                         ))}
                         {activeSubTab === 'biaya' && rapItems.length > 0 && (
                           <div className="flex gap-1 bg-slate-100 p-0.5 rounded-lg">
-                            <button type="button" title="Tabel spreadsheet" onClick={() => setRapView('spreadsheet')} className={`p-1.5 rounded-md ${rapView === 'spreadsheet' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}>
+                            <button type="button" title="Tabel spreadsheet" onClick={() => setRapView('spreadsheet')} className={`p-1.5 rounded-md ${rapView === 'spreadsheet' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}>
                               <Table2 className="w-4 h-4" />
                             </button>
-                            <button type="button" title="Tampilan list" onClick={() => setRapView('list')} className={`p-1.5 rounded-md ${rapView === 'list' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}>
+                            <button type="button" title="Tampilan list" onClick={() => setRapView('list')} className={`p-1.5 rounded-md ${rapView === 'list' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}>
                               <List className="w-4 h-4" />
                             </button>
                           </div>
                         )}
                       </div>
-                      <button type="button" onClick={() => setCommandModalOpen(true)} className="flex items-center gap-1 bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-bold">
+                      <button type="button" onClick={() => setCommandModalOpen(true)} className="flex items-center gap-1 bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-bold">
                         <Plus className="w-3.5 h-3.5" /> Catat via Monefyi Button
                       </button>
                       <button type="button" onClick={handleExportRap} className="flex items-center gap-1 border border-emerald-200 text-emerald-700 px-3 py-2 rounded-xl text-xs font-bold">
@@ -630,7 +630,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                           />
                         ) : (
                           <>
-                            <div className="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-xs text-indigo-800">
+                            <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3 text-xs text-emerald-800">
                               Input qty lalu Enter — atau klik item. Gunakan <strong>minus</strong> (mis. −10) untuk koreksi realisasi.
                             </div>
                             <RapItemList
@@ -747,12 +747,12 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                                   max={100}
                                   value={Number(progressDrafts[wi.id] ?? wi.progress_pct) || 0}
                                   onChange={e => setProgressDrafts(d => ({ ...d, [wi.id]: e.target.value }))}
-                                  className="w-24 accent-indigo-600"
+                                  className="w-24 accent-emerald-600"
                                 />
                                 <button
                                   type="button"
                                   onClick={() => handleManualProgress(wi.id, Number(progressDrafts[wi.id] ?? wi.progress_pct))}
-                                  className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold"
+                                  className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold"
                                 >
                                   Simpan
                                 </button>
@@ -781,7 +781,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                               <button
                                 type="button"
                                 onClick={handleManualLog}
-                                className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold"
+                                className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold"
                               >
                                 Catat
                               </button>
@@ -819,7 +819,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                             <YAxis tick={{ fontSize: 10 }} />
                             <Tooltip />
                             <Bar dataKey="planned" name="RAP" fill="#e2e8f0" radius={4} />
-                            <Bar dataKey="actual" name="Realisasi" fill="#6366f1" radius={4} />
+                            <Bar dataKey="actual" name="Realisasi" fill="#059669" radius={4} />
                           </BarChart>
                         </ResponsiveContainer>
                       </div>

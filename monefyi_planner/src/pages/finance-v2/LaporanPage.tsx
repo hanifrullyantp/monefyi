@@ -155,7 +155,7 @@ export default function LaporanPage() {
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap ${tab === t.id ? 'bg-indigo-100 text-indigo-700' : 'bg-white border text-slate-600'}`}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap ${tab === t.id ? 'bg-emerald-100 text-emerald-700' : 'bg-white border text-slate-600'}`}
           >
             {t.label}
           </button>
@@ -165,7 +165,7 @@ export default function LaporanPage() {
       <p className="text-xs text-slate-400">{periodLabel}</p>
 
       {loading && !bundle ? (
-        <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-indigo-600" /></div>
+        <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
       ) : bundle ? (
         <ReportContent tab={tab} bundle={bundle} />
       ) : null}
@@ -208,12 +208,12 @@ function ReportContent({ tab, bundle }: { tab: ReportKind; bundle: FinanceReport
     return (
       <div className="grid md:grid-cols-2 gap-4">
         <div className="bg-white rounded-2xl border p-5">
-          <h3 className="font-bold text-indigo-700 mb-3">Aktiva</h3>
+          <h3 className="font-bold text-emerald-700 mb-3">Aktiva</h3>
           {bs.aktiva.map(r => <Row key={r.name} label={r.name} value={r.balance} />)}
           <Row label="Total Aktiva" value={bs.totalAktiva} bold />
         </div>
         <div className="bg-white rounded-2xl border p-5">
-          <h3 className="font-bold text-violet-700 mb-3">Pasiva & Ekuitas</h3>
+          <h3 className="font-bold text-emerald-700 mb-3">Pasiva & Ekuitas</h3>
           {bs.pasiva.map(r => <Row key={r.name} label={r.name} value={r.balance} />)}
           <Row label="Total Pasiva" value={bs.totalPasiva} bold />
           <span className={`inline-block mt-2 text-xs font-bold px-2 py-1 rounded-full ${bs.isBalanced ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>

@@ -18,8 +18,8 @@ export default function OnboardingChecklist() {
   if (completed === ITEMS.length) return null;
 
   return (
-    <div className="mx-4 lg:mx-6 mt-4 bg-indigo-50 border border-indigo-100 rounded-xl p-4">
-      <button type="button" onClick={() => setOpen(v => !v)} className="w-full flex items-center justify-between text-sm font-bold text-indigo-900">
+    <div className="mx-4 lg:mx-6 mt-4 bg-emerald-50 border border-emerald-100 rounded-xl p-4">
+      <button type="button" onClick={() => setOpen(v => !v)} className="w-full flex items-center justify-between text-sm font-bold text-emerald-900">
         <span>Checklist memulai ({pct}%)</span>
         {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
       </button>
@@ -30,7 +30,7 @@ export default function OnboardingChecklist() {
               <button
                 type="button"
                 onClick={() => setDone(d => ({ ...d, [item.id]: !d[item.id] }))}
-                className="flex items-center gap-2 text-sm text-indigo-800"
+                className="flex items-center gap-2 text-sm text-emerald-800"
               >
                 {done[item.id] ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <Circle className="w-4 h-4" />}
                 {item.label}
@@ -39,8 +39,8 @@ export default function OnboardingChecklist() {
           ))}
         </ul>
       )}
-      <div className="mt-2 h-1.5 bg-indigo-100 rounded-full overflow-hidden">
-        <div className="h-full bg-indigo-600 transition-all" style={{ width: `${pct}%` }} />
+      <div className="mt-2 h-1.5 bg-emerald-100 rounded-full overflow-hidden">
+        <div className="h-full bg-emerald-600 transition-all" style={{ width: `${pct}%` }} />
       </div>
     </div>
   );

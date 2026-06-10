@@ -126,7 +126,7 @@ export default function Dashboard({ onOpenProject }: { onOpenProject?: (id: stri
         <section className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-              <Activity className="w-4 h-4 text-indigo-600" /> Log Terbaru
+              <Activity className="w-4 h-4 text-emerald-600" /> Log Terbaru
             </h2>
             <span className="text-xs text-slate-400 flex items-center gap-1"><Calendar className="w-3 h-3" />{recentLogs.length}</span>
           </div>
@@ -146,7 +146,7 @@ export default function Dashboard({ onOpenProject }: { onOpenProject?: (id: stri
       {recommendations.length > 0 && (
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="w-4 h-4 text-indigo-600" />
+            <Sparkles className="w-4 h-4 text-emerald-600" />
             <h2 className="font-bold text-slate-800 text-sm">Rekomendasi AI</h2>
           </div>
           <div className="space-y-2">
@@ -167,7 +167,7 @@ export default function Dashboard({ onOpenProject }: { onOpenProject?: (id: stri
                       <div className="font-bold text-slate-900 text-xs">{rec.title}</div>
                       <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{rec.message}</p>
                       {expandedRec === i && rec.action && (
-                        <p className="text-xs text-indigo-600 font-medium mt-1">→ {rec.action}</p>
+                        <p className="text-xs text-emerald-600 font-medium mt-1">→ {rec.action}</p>
                       )}
                     </div>
                     <ChevronRight className={`w-4 h-4 text-slate-300 shrink-0 transition-transform ${expandedRec === i ? 'rotate-90' : ''}`} />

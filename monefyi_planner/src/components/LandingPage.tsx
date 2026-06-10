@@ -86,7 +86,7 @@ export default function LandingPage() {
   if (loading && !editMode) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -173,7 +173,7 @@ export default function LandingPage() {
       </nav>
 
       <section className={`relative pt-24 pb-16 md:pt-32 md:pb-24 overflow-hidden ${editMode ? 'mt-6' : ''}`}>
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 via-white to-violet-50" />
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-emerald-50" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             <motion.div
@@ -270,7 +270,7 @@ export default function LandingPage() {
                   <div className="text-3xl font-black" style={{ color: content.brand.primaryColor }}>
                     {editMode ? (
                       <input
-                        className="w-full text-center bg-transparent border border-dashed border-indigo-300 rounded px-1"
+                        className="w-full text-center bg-transparent border border-dashed border-emerald-300 rounded px-1"
                         value={stat.value}
                         onChange={e => {
                           const stats = [...content.stats];

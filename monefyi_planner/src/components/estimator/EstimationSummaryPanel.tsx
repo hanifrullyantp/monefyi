@@ -66,7 +66,7 @@ export default function EstimationSummaryPanel({ draft }: Props) {
         </p>
       </div>
 
-      <div className="mx-4 mb-4 bg-gradient-to-br from-indigo-600 to-violet-600 text-white rounded-xl p-4">
+      <div className="mx-4 mb-4 bg-gradient-to-br from-emerald-600 to-emerald-600 text-white rounded-xl p-4">
         <div className="text-[11px] font-medium opacity-90 uppercase tracking-wide">Total penawaran</div>
         <div className="text-2xl font-black tabular-nums mt-0.5">{formatRupiahFull(s.grandTotal)}</div>
       </div>
@@ -100,7 +100,7 @@ function Row({
       <span className={`text-xs ${muted ? 'text-slate-400' : 'text-slate-600'}`}>{label}</span>
       <span
         className={`text-sm tabular-nums shrink-0 ${
-          negative ? 'text-rose-600' : accent ? 'text-indigo-600' : bold ? 'text-slate-900 font-bold' : 'text-slate-800 font-semibold'
+          negative ? 'text-rose-600' : accent ? 'text-emerald-600' : bold ? 'text-slate-900 font-bold' : 'text-slate-800 font-semibold'
         }`}
       >
         {value}

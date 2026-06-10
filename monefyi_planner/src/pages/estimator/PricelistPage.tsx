@@ -185,7 +185,7 @@ export default function PricelistPage() {
         <button
           type="button"
           onClick={handleAdd}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold"
         >
           <Plus className="w-4 h-4" /> Tambah
         </button>
@@ -212,12 +212,12 @@ export default function PricelistPage() {
 
       {loading ? (
         <div className="flex justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+          <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
           <p className="text-slate-500">Belum ada item pricelist</p>
-          <button type="button" onClick={handleAdd} className="mt-3 text-indigo-600 text-sm font-bold">
+          <button type="button" onClick={handleAdd} className="mt-3 text-emerald-600 text-sm font-bold">
             + Tambah item pertama
           </button>
         </div>
@@ -246,7 +246,7 @@ export default function PricelistPage() {
                       onChange={e => patchRow(row.id, { name: e.target.value })}
                       onFocus={() => setFocusedRowId(row.id)}
                       onBlur={() => handleRowBlur(row.id)}
-                      className="w-full px-2 py-1 border border-transparent hover:border-slate-200 focus:border-indigo-300 rounded outline-none"
+                      className="w-full px-2 py-1 border border-transparent hover:border-slate-200 focus:border-emerald-300 rounded outline-none"
                       placeholder="Nama pekerjaan/item"
                     />
                   </td>
@@ -256,7 +256,7 @@ export default function PricelistPage() {
                       onChange={e => patchRow(row.id, { product: e.target.value || null })}
                       onFocus={() => setFocusedRowId(row.id)}
                       onBlur={() => handleRowBlur(row.id)}
-                      className="w-full px-2 py-1 border border-transparent hover:border-slate-200 focus:border-indigo-300 rounded outline-none"
+                      className="w-full px-2 py-1 border border-transparent hover:border-slate-200 focus:border-emerald-300 rounded outline-none"
                       placeholder="Merk / spesifikasi"
                     />
                   </td>
@@ -286,9 +286,9 @@ export default function PricelistPage() {
                       min={0}
                       value={Math.round(Number(row.selling_price))}
                       onChange={e => handlePriceUpdate(row.id, 'selling_price', Number(e.target.value))}
-                      className="w-full px-2 py-1 border border-indigo-200 bg-indigo-50/40 rounded text-right font-semibold"
+                      className="w-full px-2 py-1 border border-emerald-200 bg-emerald-50/40 rounded text-right font-semibold"
                     />
-                    <div className="text-[10px] text-indigo-600 text-right font-medium">
+                    <div className="text-[10px] text-emerald-600 text-right font-medium">
                       {formatRupiahFull(Number(row.selling_price))}
                     </div>
                   </td>

@@ -136,7 +136,7 @@ export default function EstimationImageSlots({
             <div key={slot} className="space-y-2">
               <div
                 className={`relative aspect-[4/3] rounded-xl border-2 border-dashed overflow-hidden transition-colors ${
-                  isDragging ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 bg-slate-50'
+                  isDragging ? 'border-emerald-400 bg-emerald-50' : 'border-slate-200 bg-slate-50'
                 }`}
                 onDragOver={e => { e.preventDefault(); setDragOver(slot); }}
                 onDragLeave={() => setDragOver(null)}
@@ -144,7 +144,7 @@ export default function EstimationImageSlots({
               >
                 {img.uploading ? (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                    <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+                    <Loader2 className="w-6 h-6 animate-spin text-emerald-500" />
                     <span className="text-xs text-slate-500">Mengompresi & upload...</span>
                   </div>
                 ) : img.previewUrl ? (
@@ -176,7 +176,7 @@ export default function EstimationImageSlots({
                   <button
                     type="button"
                     onClick={() => fileRefs.current[slot - 1]?.click()}
-                    className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-colors"
+                    className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50/50 transition-colors"
                   >
                     <ImagePlus className="w-8 h-8" />
                     <span className="text-xs font-medium">Foto {slot}</span>
@@ -204,8 +204,8 @@ export default function EstimationImageSlots({
                     onClick={() => patchSlot(slot, { caption: s })}
                     className={`text-[10px] px-2 py-0.5 rounded-full border ${
                       img.caption === s
-                        ? 'bg-indigo-100 border-indigo-300 text-indigo-700'
-                        : 'border-slate-200 text-slate-500 hover:border-indigo-200'
+                        ? 'bg-emerald-100 border-emerald-300 text-emerald-700'
+                        : 'border-slate-200 text-slate-500 hover:border-emerald-200'
                     }`}
                   >
                     {s}

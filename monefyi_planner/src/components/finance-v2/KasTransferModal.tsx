@@ -88,7 +88,7 @@ export default function KasTransferModal({ open, onClose, orgId, userId, account
         </div>
         <div className="flex gap-2 p-4 border-t border-slate-100">
           <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold">Batal</button>
-          <button type="button" onClick={handleSubmit} disabled={saving} className="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2">
+          <button type="button" onClick={handleSubmit} disabled={saving} className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2">
             {saving && <Loader2 className="w-4 h-4 animate-spin" />} Transfer
           </button>
         </div>

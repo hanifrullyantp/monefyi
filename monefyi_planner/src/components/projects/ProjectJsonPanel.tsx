@@ -130,11 +130,11 @@ export default function ProjectJsonPanel({
 
   return (
     <div className="space-y-4">
-      <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex flex-wrap items-start gap-3">
-        <Braces className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
+      <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex flex-wrap items-start gap-3">
+        <Braces className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
         <div className="flex-1 min-w-[200px] space-y-1">
-          <h3 className="font-bold text-sm text-indigo-900">Data Proyek via JSON</h3>
-          <p className="text-xs text-indigo-700/80 leading-relaxed">
+          <h3 className="font-bold text-sm text-emerald-900">Data Proyek via JSON</h3>
+          <p className="text-xs text-emerald-700/80 leading-relaxed">
             Semua data proyek — detail, RAP, realisasi, work item, log harian — tersedia sebagai JSON.
             Edit lalu terapkan, atau salin template di bawah untuk proyek baru.
           </p>
@@ -143,14 +143,14 @@ export default function ProjectJsonPanel({
           <button
             type="button"
             onClick={() => setView('data')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold ${view === 'data' ? 'bg-indigo-600 text-white' : 'bg-white border text-slate-600'}`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold ${view === 'data' ? 'bg-emerald-600 text-white' : 'bg-white border text-slate-600'}`}
           >
             Data Saat Ini
           </button>
           <button
             type="button"
             onClick={() => setView('template')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold ${view === 'template' ? 'bg-indigo-600 text-white' : 'bg-white border text-slate-600'}`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold ${view === 'template' ? 'bg-emerald-600 text-white' : 'bg-white border text-slate-600'}`}
           >
             Template JSON
           </button>
@@ -196,7 +196,7 @@ export default function ProjectJsonPanel({
           <button
             type="button"
             onClick={() => { setEditorText(templateText); setView('data'); setParseError(null); setValidationErrors([]); }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-50 border border-indigo-200 text-xs font-bold text-indigo-700 hover:bg-indigo-100"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-700 hover:bg-emerald-100"
           >
             Gunakan template di editor
           </button>
@@ -214,7 +214,7 @@ export default function ProjectJsonPanel({
               type="button"
               disabled={saving || !userId}
               onClick={handleApply}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 disabled:opacity-50 ml-auto"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 disabled:opacity-50 ml-auto"
             >
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
               Terapkan ke Proyek
@@ -264,14 +264,14 @@ export default function ProjectJsonPanel({
       <div className="grid sm:grid-cols-2 gap-3 text-xs text-slate-500">
         <div className="bg-white border rounded-xl p-3 space-y-1">
           <p className="font-bold text-slate-700">Struktur root</p>
-          <p><code className="text-indigo-600">project</code> — detail proyek (name, status, dates, budget…)</p>
-          <p><code className="text-indigo-600">rap[]</code> — item RAP (type: material|labor|equipment|overhead|other)</p>
-          <p><code className="text-indigo-600">realisasi[]</code> — biaya; link via <code>rap_item_id</code> atau <code>rap_ref</code></p>
+          <p><code className="text-emerald-600">project</code> — detail proyek (name, status, dates, budget…)</p>
+          <p><code className="text-emerald-600">rap[]</code> — item RAP (type: material|labor|equipment|overhead|other)</p>
+          <p><code className="text-emerald-600">realisasi[]</code> — biaya; link via <code>rap_item_id</code> atau <code>rap_ref</code></p>
         </div>
         <div className="bg-white border rounded-xl p-3 space-y-1">
           <p className="font-bold text-slate-700">Tips update</p>
-          <p><code className="text-indigo-600">work_items[]</code> — pekerjaan / milestone</p>
-          <p><code className="text-indigo-600">daily_logs[]</code> — log harian lapangan</p>
+          <p><code className="text-emerald-600">work_items[]</code> — pekerjaan / milestone</p>
+          <p><code className="text-emerald-600">daily_logs[]</code> — log harian lapangan</p>
           <p>Sertakan <code>id</code> untuk update record existing. Tanpa id = insert baru.</p>
         </div>
       </div>

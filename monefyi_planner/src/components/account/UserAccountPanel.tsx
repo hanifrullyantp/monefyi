@@ -80,7 +80,7 @@ export default function UserAccountPanel() {
   };
 
   if (loading && !account) {
-    return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-indigo-600" /></div>;
+    return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>;
   }
 
   if (!account) return <p className="text-sm text-slate-500">Data akun tidak tersedia.</p>;
@@ -105,7 +105,7 @@ export default function UserAccountPanel() {
           { label: 'Organisasi aktif', value: String(account.active_orgs), icon: Bell },
         ].map(k => (
           <div key={k.label} className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-            <k.icon className="w-4 h-4 text-indigo-500 mb-2" />
+            <k.icon className="w-4 h-4 text-emerald-500 mb-2" />
             <div className="text-lg font-black text-slate-900">{k.value}</div>
             <div className="text-xs text-slate-500">{k.label}</div>
           </div>
@@ -153,7 +153,7 @@ export default function UserAccountPanel() {
         </label>
       </div>
 
-      <button type="button" onClick={handleSave} disabled={saving} className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold disabled:opacity-50">
+      <button type="button" onClick={handleSave} disabled={saving} className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-50">
         Simpan Profil Akun
       </button>
 

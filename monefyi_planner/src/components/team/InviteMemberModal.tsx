@@ -264,7 +264,7 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
               key={t.id}
               type="button"
               onClick={() => { setTab(t.id); if (t.id === 'code') loadCodes(); setResult(null); }}
-              className={`flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-1 ${tab === t.id ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500'}`}
+              className={`flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-1 ${tab === t.id ? 'text-emerald-600 border-b-2 border-emerald-600' : 'text-slate-500'}`}
             >
               <t.icon className="w-4 h-4" /> {t.label}
             </button>
@@ -303,7 +303,7 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
                 </select>
               </div>
               {!result ? (
-                <button type="button" onClick={handleCreateLink} disabled={loading} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl disabled:opacity-60">
+                <button type="button" onClick={handleCreateLink} disabled={loading} className="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl disabled:opacity-60">
                   Generate Link
                 </button>
               ) : (
@@ -323,7 +323,7 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
             <>
               <textarea value={emailInput} onChange={e => setEmailInput(e.target.value)} placeholder="Email (pisah koma/newline, max 10)" className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm h-24" />
               <textarea value={message} onChange={e => setMessage(e.target.value)} placeholder="Pesan personal (opsional)" className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm h-16" />
-              <button type="button" onClick={handleSendEmail} disabled={loading} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl">Kirim Undangan</button>
+              <button type="button" onClick={handleSendEmail} disabled={loading} className="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl">Kirim Undangan</button>
               <div className="border-t pt-3">
                 <p className="text-xs text-slate-500 mb-2">Bulk CSV (email,role,name,position)</p>
                 <input type="file" accept=".csv" onChange={e => e.target.files?.[0] && handleCsv(e.target.files[0])} className="text-xs" />
@@ -340,11 +340,11 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
           {tab === 'code' && (
             <>
               {!result ? (
-                <button type="button" onClick={handleCreateCode} disabled={loading} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl">Buat Kode</button>
+                <button type="button" onClick={handleCreateCode} disabled={loading} className="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl">Buat Kode</button>
               ) : (
                 <div className="text-center py-4">
-                  <div className="text-4xl font-black tracking-widest text-indigo-600">{result.code}</div>
-                  <button type="button" onClick={() => copyText(result.code || '')} className="mt-3 text-sm text-indigo-600 font-semibold">Salin kode</button>
+                  <div className="text-4xl font-black tracking-widest text-emerald-600">{result.code}</div>
+                  <button type="button" onClick={() => copyText(result.code || '')} className="mt-3 text-sm text-emerald-600 font-semibold">Salin kode</button>
                 </div>
               )}
               {codes.length > 0 && (
@@ -385,7 +385,7 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
                   type="button"
                   onClick={handleDirectCreate}
                   disabled={loading || !directRows.length}
-                  className="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold disabled:opacity-60"
+                  className="flex-1 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold disabled:opacity-60"
                 >
                   Buat Akun
                 </button>
@@ -404,7 +404,7 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
                         <button
                           type="button"
                           onClick={() => sendDirectWa(r)}
-                          className="shrink-0 inline-flex items-center gap-1 px-2 py-1 border rounded-md text-indigo-600"
+                          className="shrink-0 inline-flex items-center gap-1 px-2 py-1 border rounded-md text-emerald-600"
                         >
                           <Send className="w-3 h-3" /> Direct WA
                         </button>
@@ -432,7 +432,7 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
                           <button
                             type="button"
                             onClick={() => sendDirectWa(r)}
-                            className="shrink-0 inline-flex items-center gap-1 px-2 py-1 border rounded-md text-indigo-600"
+                            className="shrink-0 inline-flex items-center gap-1 px-2 py-1 border rounded-md text-emerald-600"
                           >
                             <Send className="w-3 h-3" /> Direct WA
                           </button>

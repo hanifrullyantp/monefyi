@@ -105,7 +105,7 @@ export default function EstimatorList() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
-            <Calculator className="w-7 h-7 text-indigo-600" /> Estimator
+            <Calculator className="w-7 h-7 text-emerald-600" /> Estimator
           </h1>
           <p className="text-sm text-slate-500 mt-1">Hitung HPP, margin, dan buat penawaran profesional</p>
         </div>
@@ -127,7 +127,7 @@ export default function EstimatorList() {
           <button
             type="button"
             onClick={() => navigate('/app/estimator/new')}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 shadow-lg shadow-emerald-200"
           >
             <Plus className="w-4 h-4" /> Estimasi Baru
           </button>
@@ -141,7 +141,7 @@ export default function EstimatorList() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Cari kode, judul, customer..."
-            className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-indigo-400 outline-none"
+            className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-emerald-400 outline-none"
           />
         </div>
         <div className="flex gap-2 overflow-x-auto">
@@ -152,14 +152,14 @@ export default function EstimatorList() {
               onClick={() => setStatusFilter(f.value)}
               className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap ${
                 statusFilter === f.value
-                  ? 'bg-indigo-600 text-white'
+                  ? 'bg-emerald-600 text-white'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
               {f.label}
             </button>
           ))}
-          <button type="button" onClick={load} className="p-2 text-slate-400 hover:text-indigo-600">
+          <button type="button" onClick={load} className="p-2 text-slate-400 hover:text-emerald-600">
             <RefreshCw className="w-4 h-4" />
           </button>
         </div>
@@ -167,7 +167,7 @@ export default function EstimatorList() {
 
       {loading ? (
         <div className="flex justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+          <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
         </div>
       ) : rows.length === 0 ? (
         <motion.div
@@ -181,7 +181,7 @@ export default function EstimatorList() {
           <button
             type="button"
             onClick={() => navigate('/app/estimator/new')}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold"
+            className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold"
           >
             + Estimasi Baru
           </button>
@@ -192,7 +192,7 @@ export default function EstimatorList() {
             <motion.div
               key={est.id}
               layout
-              className="bg-white border border-slate-200 rounded-2xl p-4 hover:border-indigo-200 transition-colors"
+              className="bg-white border border-slate-200 rounded-2xl p-4 hover:border-emerald-200 transition-colors"
             >
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 {thumbs[est.id] && (
@@ -204,7 +204,7 @@ export default function EstimatorList() {
                 )}
                 <div className="flex-1 min-w-0 cursor-pointer" onClick={() => navigate(`/app/estimator/${est.id}`)}>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-xs text-indigo-600 font-bold">{est.code}</span>
+                    <span className="font-mono text-xs text-emerald-600 font-bold">{est.code}</span>
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${ESTIMATION_STATUS_COLOR[est.status]}`}>
                       {ESTIMATION_STATUS_LABEL[est.status]}
                     </span>
@@ -247,7 +247,7 @@ function IconBtn({
       type="button"
       title={label}
       onClick={onClick}
-      className={`p-2 rounded-lg ${danger ? 'text-slate-400 hover:text-rose-600 hover:bg-rose-50' : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`}
+      className={`p-2 rounded-lg ${danger ? 'text-slate-400 hover:text-rose-600 hover:bg-rose-50' : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'}`}
     >
       <Icon className="w-4 h-4" />
     </button>

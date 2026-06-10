@@ -99,7 +99,7 @@ export default function EditProjectModal({ project, onClose, onSaved }: EditProj
         </div>
         <div className="p-5 border-t flex gap-3">
           <button onClick={onClose} className="flex-1 py-2.5 border rounded-xl text-sm font-bold text-slate-600">Batal</button>
-          <button onClick={handleSave} disabled={loading} className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold disabled:opacity-60">
+          <button onClick={handleSave} disabled={loading} className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-60">
             {loading ? 'Menyimpan...' : 'Simpan'}
           </button>
         </div>

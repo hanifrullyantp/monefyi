@@ -98,7 +98,7 @@ export default function RapItemList({
     if (mode === 'planning' && canManage) {
       return (
         <div className="flex items-center gap-2 shrink-0">
-          <button type="button" onClick={() => onEdit?.(row)} className="text-indigo-600 text-xs font-bold">Edit</button>
+          <button type="button" onClick={() => onEdit?.(row)} className="text-emerald-600 text-xs font-bold">Edit</button>
           <button type="button" onClick={() => onDelete?.(row.id)} className="text-rose-500 text-xs"><Trash2 className="w-3.5 h-3.5" /></button>
         </div>
       );
@@ -115,7 +115,7 @@ export default function RapItemList({
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); onSubmitQty?.(row); } }}
             className="flex-1 px-3 py-2 border rounded-xl text-sm"
           />
-          <button type="button" onClick={() => onSubmitQty?.(row)} className="px-3 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold shrink-0">↵</button>
+          <button type="button" onClick={() => onSubmitQty?.(row)} className="px-3 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold shrink-0">↵</button>
         </div>
       );
     }
@@ -220,7 +220,7 @@ export default function RapItemList({
               type="button"
               onClick={() => setViewMode(v.id)}
               title={v.label}
-              className={`p-2 rounded-lg ${viewMode === v.id ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
+              className={`p-2 rounded-lg ${viewMode === v.id ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500'}`}
             >
               <v.icon className="w-4 h-4" />
             </button>
@@ -229,7 +229,7 @@ export default function RapItemList({
       </div>
 
       {rapTotal != null && (
-        <div className="bg-indigo-50 rounded-xl p-3 text-sm font-bold text-indigo-800 flex justify-between">
+        <div className="bg-emerald-50 rounded-xl p-3 text-sm font-bold text-emerald-800 flex justify-between">
           <span>Total RAP · {filtered.length}/{items.length} item</span>
           <span>{formatRupiah(rapTotal)}</span>
         </div>
@@ -262,7 +262,7 @@ export default function RapItemList({
                   <td className="p-3 text-right">{e.plannedQty > 0 ? `${Math.round(e.fillPct)}%` : '—'}</td>
                   {mode === 'planning' && canManage && (
                     <td className="p-3">
-                      <button type="button" onClick={() => onEdit?.(e.row)} className="text-indigo-600 font-bold">Edit</button>
+                      <button type="button" onClick={() => onEdit?.(e.row)} className="text-emerald-600 font-bold">Edit</button>
                     </td>
                   )}
                 </tr>

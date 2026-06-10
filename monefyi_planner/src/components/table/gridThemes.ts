@@ -1,7 +1,7 @@
 import { themeQuartz } from 'ag-grid-community';
 
 export const gridThemeLight = themeQuartz.withParams({
-  accentColor: '#4f46e5',
+  accentColor: '#059669',
   borderRadius: 8,
   fontFamily: 'inherit',
   headerHeight: 44,
@@ -11,7 +11,7 @@ export const gridThemeLight = themeQuartz.withParams({
 });
 
 export const gridThemeDark = themeQuartz.withParams({
-  accentColor: '#818cf8',
+  accentColor: '#34d399',
   backgroundColor: '#0f172a',
   foregroundColor: '#e2e8f0',
   chromeBackgroundColor: '#1e293b',

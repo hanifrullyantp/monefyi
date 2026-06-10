@@ -68,7 +68,7 @@ export default function CalendarView({ projects, onOpenProject }: CalendarViewPr
               key={day}
               type="button"
               onClick={() => setSelectedDay(day)}
-              className={`min-h-[52px] p-1 rounded-xl border text-left ${selectedDay === day ? 'border-indigo-400 bg-indigo-50' : 'border-slate-50 hover:bg-slate-50'} ${isToday ? 'ring-1 ring-indigo-300' : ''}`}
+              className={`min-h-[52px] p-1 rounded-xl border text-left ${selectedDay === day ? 'border-emerald-400 bg-emerald-50' : 'border-slate-50 hover:bg-slate-50'} ${isToday ? 'ring-1 ring-emerald-300' : ''}`}
             >
               <div className="text-xs font-bold text-slate-700">{day}</div>
               <div className="flex gap-0.5 flex-wrap mt-0.5">
@@ -87,7 +87,7 @@ export default function CalendarView({ projects, onOpenProject }: CalendarViewPr
           {selectedProjects.length === 0 ? (
             <p className="text-sm text-slate-400">Tidak ada milestone proyek.</p>
           ) : selectedProjects.map(p => (
-            <button key={p.id} type="button" onClick={() => onOpenProject(p)} className="block w-full text-left text-sm py-2 hover:text-indigo-600 font-medium">
+            <button key={p.id} type="button" onClick={() => onOpenProject(p)} className="block w-full text-left text-sm py-2 hover:text-emerald-600 font-medium">
               {p.name}
             </button>
           ))}

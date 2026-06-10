@@ -119,17 +119,17 @@ export default function WorkerWorkTimer({
 
   if (!checkedIn && !checkOutAtIso) {
     return (
-      <div className="rounded-2xl p-5 bg-gradient-to-br from-indigo-500 to-violet-600 text-white">
+      <div className="rounded-2xl p-5 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white">
         <div className="text-white/80 text-sm mb-1">Status Hari Ini</div>
         <div className="font-bold text-lg mb-1">○ Belum Check In</div>
-        <p className="text-sm text-indigo-100 mb-4">
+        <p className="text-sm text-emerald-100 mb-4">
           Jam kerja dimulai: {pad(shiftStart.hour)}:{pad(shiftStart.minute)}
         </p>
         <button
           type="button"
           onClick={onCheckIn}
           disabled={loading}
-          className="w-full py-3.5 bg-white text-indigo-700 font-black rounded-xl disabled:opacity-60"
+          className="w-full py-3.5 bg-white text-emerald-700 font-black rounded-xl disabled:opacity-60"
         >
           🟢 CHECK IN SEKARANG
         </button>
