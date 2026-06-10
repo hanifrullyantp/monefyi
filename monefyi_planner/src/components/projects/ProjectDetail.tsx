@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useAppStore, Project } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
-import { deleteProject, updateProject as updateProjectApi } from '../../services/projectService';
+import { archiveProject, updateProject as updateProjectApi } from '../../services/projectService';
 import { loadRapItems, rapSummary, rapActualsFromCosts, createRapItem, deleteRapItem, updateRapItem } from '../../services/rapService';
 import { loadWorkItems, createWorkItem, deleteWorkItem, updateWorkItem, updateProjectProgressFromWorkItems } from '../../services/workItemService';
 import { loadCostRealizations, deleteCostRealization, aggregateCostByRapItem, repairImportCosts, type RapActualAgg } from '../../services/costService';
@@ -16,6 +16,7 @@ import ConfirmDialog from '../ConfirmDialog';
 import RapRealizationDialog from './RapRealizationDialog';
 import RapImportWizard from './RapImportWizard';
 import ProjectDetailHeader from './ProjectDetailHeader';
+import ProjectEditModal from './ProjectEditModal';
 import ProjectJsonPanel from './ProjectJsonPanel';
 import ProjectIncomePanel from './ProjectIncomePanel';
 import ProjectTransferPanel from './ProjectTransferPanel';
@@ -52,7 +53,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   const [workItems, setWorkItems] = useState<Awaited<ReturnType<typeof loadWorkItems>>>([]);
   const [rapItems, setRapItems] = useState<Awaited<ReturnType<typeof loadRapItems>>>([]);
   const [analysis, setAnalysis] = useState<AnalyzeResult | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
   const [confirmCostId, setConfirmCostId] = useState<string | null>(null);
   const [confirmRapId, setConfirmRapId] = useState<string | null>(null);
   const [showRapForm, setShowRapForm] = useState(false);
@@ -82,6 +83,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   } = useCollapsibleHeader();
 
   const canManage = user?.role === 'owner' || user?.role === 'manager' || user?.role === 'admin';
+  const canArchive = user?.role === 'owner';
   const health = HEALTH_CONFIG[project.health_status] || HEALTH_CONFIG.on_track;
   const daysLeft = daysUntil(project.end_date);
 
@@ -211,16 +213,19 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
     { id: 'json', label: 'JSON', icon: Braces },
   ];
 
-  const handleDeleteProject = async () => {
-    try {
-      await deleteProject(project.id);
-      removeProject(project.id);
-      showToast('Proyek dihapus', 'success');
-      onClose();
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Gagal menghapus', 'error');
-    }
-    setConfirmDelete(false);
+  const handleSaveProject = async (patch: Partial<Project>) => {
+    const updated = await updateProjectApi(project.id, patch, tenant?.currency);
+    setProject(updated);
+    updateProject(project.id, updated);
+    showToast('Detail proyek disimpan', 'success');
+  };
+
+  const handleArchiveProject = async () => {
+    if (!user?.id) return;
+    await archiveProject(project.id, user.id);
+    removeProject(project.id);
+    showToast('Proyek diarsipkan (dapat dipulihkan Super Admin dalam 30 hari)', 'success');
+    onClose();
   };
 
   const handleDeleteCost = async (costId: string) => {
@@ -414,7 +419,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
             onHeaderTap={handleHeaderTap}
             onToggleCompact={toggleHeaderCompact}
             canManage={canManage}
-            onDelete={() => setConfirmDelete(true)}
+            onEdit={() => setShowEdit(true)}
             onStatusChange={canManage ? handleStatusChange : undefined}
             statusBusy={statusBusy}
           />
@@ -881,8 +886,14 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
         </motion.div>
       </motion.div>
 
-      {confirmDelete && (
-        <ConfirmDialog title="Hapus proyek?" message={`"${project.name}" dan semua data terkait akan dihapus permanen.`} danger confirmLabel="Hapus" onConfirm={handleDeleteProject} onCancel={() => setConfirmDelete(false)} />
+      {showEdit && (
+        <ProjectEditModal
+          project={project}
+          canArchive={canArchive}
+          onClose={() => setShowEdit(false)}
+          onSave={handleSaveProject}
+          onArchive={handleArchiveProject}
+        />
       )}
       {confirmCostId && (
         <ConfirmDialog title="Hapus biaya?" message="Entri biaya ini akan dihapus dari proyek." danger confirmLabel="Hapus" onConfirm={() => handleDeleteCost(confirmCostId)} onCancel={() => setConfirmCostId(null)} />

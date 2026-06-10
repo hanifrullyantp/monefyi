@@ -7,6 +7,7 @@ import {
   BarChart3, ChevronRight, LogOut, User, Shield, Building2,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
+import { useUiStore } from '../store/uiStore';
 import { isPlatformAdmin } from '../services/adminService';
 import { showWorkerShell, canAccessManagerFeatures } from '../utils/platformUi';
 import CommandModal from './CommandModal';
@@ -95,7 +96,13 @@ export default function Layout({ children }: LayoutProps) {
 
   const sidebarItems = isWorker ? workerSidebarItems : ownerSidebarItems;
 
-  const navigateToTab = (tabId: string) => {
+  const navigationGuard = useUiStore(s => s.navigationGuard);
+
+  const navigateToTab = async (tabId: string) => {
+    if (navigationGuard) {
+      const canLeave = await navigationGuard.promptLeave();
+      if (!canLeave) return;
+    }
     if (tabId === 'estimator') {
       setActiveTab('estimator');
       navigate('/app/estimator');

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  ArrowLeft, Calendar, MapPin, RefreshCw, X, ChevronsUp, ChevronsDown, Info, Trash2, CircleDot, Check,
+  ArrowLeft, Calendar, MapPin, RefreshCw, X, ChevronsUp, ChevronsDown, Info, Pencil, CircleDot, Check,
 } from 'lucide-react';
 import type { Project } from '../../store/appStore';
 import { formatRupiah, HEALTH_CONFIG, STATUS_LABEL, PROJECT_STATUSES, formatDateId, daysUntil } from '../../utils/projectUi';
@@ -23,7 +23,7 @@ interface ProjectDetailHeaderProps {
   onHeaderTap: () => void;
   onToggleCompact: () => void;
   canManage?: boolean;
-  onDelete?: () => void;
+  onEdit?: () => void;
   onStatusChange?: (status: Project['status']) => void;
   statusBusy?: boolean;
 }
@@ -43,7 +43,7 @@ export default function ProjectDetailHeader({
   onHeaderTap,
   onToggleCompact,
   canManage,
-  onDelete,
+  onEdit,
   onStatusChange,
   statusBusy,
 }: ProjectDetailHeaderProps) {
@@ -202,9 +202,9 @@ export default function ProjectDetailHeader({
                 {statusMenu}
               </div>
             )}
-            {canManage && onDelete && (
-              <button type="button" onClick={e => { e.stopPropagation(); onDelete(); }} className="p-1.5 hover:bg-rose-500/30 rounded-lg shrink-0 text-rose-200" aria-label="Hapus proyek">
-                <Trash2 className="w-4 h-4" />
+            {canManage && onEdit && (
+              <button type="button" onClick={e => { e.stopPropagation(); onEdit(); }} className="p-1.5 hover:bg-white/20 rounded-lg shrink-0" aria-label="Edit proyek">
+                <Pencil className="w-4 h-4" />
               </button>
             )}
             <button type="button" onClick={e => { e.stopPropagation(); onRefresh(); }} className="p-1.5 hover:bg-white/20 rounded-lg shrink-0 hidden sm:flex" aria-label="Refresh">
@@ -240,9 +240,9 @@ export default function ProjectDetailHeader({
                   <ChevronsUp className="w-5 h-5" />
                 </button>
                 {statusMenu}
-                {canManage && onDelete && (
-                  <button type="button" onClick={onDelete} className="p-2 hover:bg-rose-500/30 rounded-xl text-rose-200" aria-label="Hapus proyek">
-                    <Trash2 className="w-5 h-5" />
+                {canManage && onEdit && (
+                  <button type="button" onClick={onEdit} className="p-2 hover:bg-white/20 rounded-xl" aria-label="Edit proyek">
+                    <Pencil className="w-5 h-5" />
                   </button>
                 )}
                 <button type="button" onClick={onRefresh} className="p-2 hover:bg-white/20 rounded-xl" aria-label="Refresh">

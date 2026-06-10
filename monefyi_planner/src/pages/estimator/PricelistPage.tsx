@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useBlocker, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, Plus, Save, Trash2, Upload } from 'lucide-react';
 import PricelistCsvImport from '../../components/estimator/PricelistCsvImport';
 import UnsavedChangesDialog from '../../components/ui/UnsavedChangesDialog';
@@ -47,9 +47,9 @@ export default function PricelistPage() {
   const [categoryFilter, setCategoryFilter] = useState<'' | PricelistCategory>('');
   const [csvOpen, setCsvOpen] = useState(false);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
-  const [pendingNavigate, setPendingNavigate] = useState<(() => void) | null>(null);
 
   const savedSnapshots = useRef<Map<string, string>>(new Map());
+  const leaveResolveRef = useRef<((proceed: boolean) => void) | null>(null);
 
   const load = useCallback(async () => {
     if (!tenant?.id) return;
@@ -77,16 +77,22 @@ export default function PricelistPage() {
   const dirtyIds = useMemo(() => rows.filter(isRowDirty).map(r => r.id), [rows, isRowDirty]);
   const hasUnsaved = dirtyIds.length > 0;
 
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      hasUnsaved && currentLocation.pathname !== nextLocation.pathname,
-  );
+  const promptLeave = useCallback((): Promise<boolean> => {
+    if (!hasUnsaved) return Promise.resolve(true);
+    return new Promise(resolve => {
+      leaveResolveRef.current = resolve;
+      setLeaveDialogOpen(true);
+    });
+  }, [hasUnsaved]);
 
   useEffect(() => {
-    if (blocker.state === 'blocked') {
-      setLeaveDialogOpen(true);
+    if (!hasUnsaved) {
+      useUiStore.getState().setNavigationGuard(null);
+      return;
     }
-  }, [blocker.state]);
+    useUiStore.getState().setNavigationGuard({ promptLeave });
+    return () => useUiStore.getState().setNavigationGuard(null);
+  }, [hasUnsaved, promptLeave]);
 
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -156,42 +162,28 @@ export default function PricelistPage() {
     );
   }, []);
 
-  const closeLeaveDialog = () => {
+  const finishLeavePrompt = (proceed: boolean) => {
     setLeaveDialogOpen(false);
-    setPendingNavigate(null);
-    if (blocker.state === 'blocked') blocker.reset();
+    leaveResolveRef.current?.(proceed);
+    leaveResolveRef.current = null;
   };
+
+  const closeLeaveDialog = () => finishLeavePrompt(false);
 
   const handleLeaveSave = async () => {
     const ok = await saveDirtyRows();
     if (!ok) return;
-    setLeaveDialogOpen(false);
-    if (blocker.state === 'blocked') {
-      blocker.proceed();
-    } else if (pendingNavigate) {
-      pendingNavigate();
-      setPendingNavigate(null);
-    }
+    finishLeavePrompt(true);
   };
 
   const handleLeaveDiscard = () => {
     discardChanges();
-    setLeaveDialogOpen(false);
-    if (blocker.state === 'blocked') {
-      blocker.proceed();
-    } else if (pendingNavigate) {
-      pendingNavigate();
-      setPendingNavigate(null);
-    }
+    finishLeavePrompt(true);
   };
 
-  const handleBack = () => {
-    if (hasUnsaved) {
-      setPendingNavigate(() => () => navigate('/app/estimator'));
-      setLeaveDialogOpen(true);
-      return;
-    }
-    navigate('/app/estimator');
+  const handleBack = async () => {
+    const canLeave = await promptLeave();
+    if (canLeave) navigate('/app/estimator');
   };
 
   const filtered = rows.filter(r => {
@@ -274,7 +266,13 @@ export default function PricelistPage() {
         </button>
         <button
           type="button"
-          onClick={() => setCsvOpen(true)}
+          onClick={() => {
+            if (hasUnsaved) {
+              showToast('Simpan atau buang perubahan sebelum import CSV', 'error');
+              return;
+            }
+            setCsvOpen(true);
+          }}
           className="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50"
         >
           <Upload className="w-4 h-4" /> Import CSV

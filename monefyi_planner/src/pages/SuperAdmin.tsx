@@ -2,8 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Users, Building2, Settings, LayoutDashboard, Loader2, RefreshCw,
-  Plus, Trash2, Save, ArrowLeft, Search, Pencil, Activity, AlertTriangle,
+  Plus, Trash2, Save, ArrowLeft, Search, Pencil, Activity, AlertTriangle, Archive, RotateCcw,
 } from 'lucide-react';
+import {
+  loadArchivedProjects,
+  restoreArchivedProject,
+  type ArchivedProjectRow,
+} from '../services/projectService';
 import {
   fetchAdminUsers, updateAdminUser, fetchPlatformStats,
   updateAppConfig, listCompanyTypes, createCompanyType,
@@ -13,7 +18,7 @@ import {
 import { showToast } from '../store/uiStore';
 import { fetchRuntimeTraces, type RuntimeTraceRow } from '../services/runtimeTracer';
 
-type Tab = 'overview' | 'users' | 'company-types' | 'platform' | 'monitoring';
+type Tab = 'overview' | 'users' | 'company-types' | 'platform' | 'monitoring' | 'archives';
 
 export default function SuperAdmin() {
   const [tab, setTab] = useState<Tab>('overview');
@@ -33,6 +38,8 @@ export default function SuperAdmin() {
   });
   const [traces, setTraces] = useState<RuntimeTraceRow[]>([]);
   const [monitorFilter, setMonitorFilter] = useState<'all' | 'errors' | 'session'>('all');
+  const [archivedProjects, setArchivedProjects] = useState<ArchivedProjectRow[]>([]);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
 
   const loadOverview = useCallback(async () => {
     setLoading(true);
@@ -75,6 +82,31 @@ export default function SuperAdmin() {
     }
   }, []);
 
+  const loadArchives = useCallback(async () => {
+    setLoading(true);
+    try {
+      setArchivedProjects(await loadArchivedProjects());
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal memuat arsip proyek', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleRestoreProject = async (row: ArchivedProjectRow) => {
+    if (!window.confirm(`Pulihkan proyek "${row.name}"?`)) return;
+    setRestoringId(row.id);
+    try {
+      await restoreArchivedProject(row.id);
+      showToast('Proyek dipulihkan', 'success');
+      await loadArchives();
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal memulihkan', 'error');
+    } finally {
+      setRestoringId(null);
+    }
+  };
+
   const loadMonitoring = useCallback(async () => {
     setLoading(true);
     try {
@@ -92,7 +124,8 @@ export default function SuperAdmin() {
     if (tab === 'users') loadUsers();
     if (tab === 'company-types') loadTypes();
     if (tab === 'monitoring') loadMonitoring();
-  }, [tab, loadOverview, loadUsers, loadTypes, loadMonitoring]);
+    if (tab === 'archives') loadArchives();
+  }, [tab, loadOverview, loadUsers, loadTypes, loadMonitoring, loadArchives]);
 
   const openEditUser = (u: AdminUserRow) => {
     setSelectedUser(u);
@@ -146,6 +179,7 @@ export default function SuperAdmin() {
     { id: 'overview', label: 'Ringkasan', icon: LayoutDashboard },
     { id: 'users', label: 'Pengguna', icon: Users },
     { id: 'monitoring', label: 'Monitoring', icon: Activity },
+    { id: 'archives', label: 'Arsip Proyek', icon: Archive },
     { id: 'company-types', label: 'Jenis Perusahaan', icon: Building2 },
     { id: 'platform', label: 'Platform', icon: Settings },
   ];
@@ -177,7 +211,7 @@ export default function SuperAdmin() {
             <Pencil className="w-4 h-4" />
             Edit landing
           </Link>
-          <button type="button" onClick={() => { if (tab === 'users') loadUsers(); else if (tab === 'company-types') loadTypes(); else if (tab === 'monitoring') loadMonitoring(); else loadOverview(); }} className="p-2 hover:bg-white/10 rounded-lg">
+          <button type="button" onClick={() => { if (tab === 'users') loadUsers(); else if (tab === 'company-types') loadTypes(); else if (tab === 'monitoring') loadMonitoring(); else if (tab === 'archives') loadArchives(); else loadOverview(); }} className="p-2 hover:bg-white/10 rounded-lg">
             <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
@@ -335,6 +369,59 @@ export default function SuperAdmin() {
                       )}
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {tab === 'archives' && (
+          <div className="space-y-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-900">
+              Proyek yang dihapus owner disimpan di arsip <strong>30 hari</strong>. Hanya Super Admin yang dapat memulihkan.
+            </div>
+            <div className="bg-white rounded-2xl border overflow-hidden">
+              {loading ? (
+                <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
+              ) : archivedProjects.length === 0 ? (
+                <p className="text-center text-slate-500 py-16 text-sm">Tidak ada proyek di arsip</p>
+              ) : (
+                <div className="divide-y">
+                  {archivedProjects.map(row => {
+                    const purgeDate = row.archive_purge_at ? new Date(row.archive_purge_at) : null;
+                    const daysLeft = purgeDate
+                      ? Math.max(0, Math.ceil((purgeDate.getTime() - Date.now()) / 86400000))
+                      : null;
+                    return (
+                      <div key={row.id} className="p-4 flex flex-wrap items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-slate-900">{row.name}</div>
+                          <div className="text-xs text-slate-500 mt-0.5">
+                            {row.org_name || row.org_id}
+                            {' · '}Diarsip: {new Date(row.deleted_at).toLocaleString('id-ID')}
+                            {daysLeft != null && (
+                              <span className={daysLeft <= 7 ? ' text-rose-600 font-semibold' : ''}>
+                                {' · '}{daysLeft} hari tersisa
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={restoringId === row.id}
+                          onClick={() => handleRestoreProject(row)}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold disabled:opacity-50"
+                        >
+                          {restoringId === row.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <RotateCcw className="w-3.5 h-3.5" />
+                          )}
+                          Pulihkan
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
