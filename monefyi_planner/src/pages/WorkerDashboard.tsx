@@ -259,7 +259,7 @@ export default function WorkerDashboard() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 py-1.5 text-xs font-semibold rounded-xl ${workerTab === tab.id ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500'}`}
+            className={`flex-1 py-1.5 text-xs font-semibold rounded-xl ${workerTab === tab.id ? 'bg-white text-org-dark shadow-sm' : 'text-slate-500'}`}
           >
             {tab.label}
           </button>
@@ -284,11 +284,11 @@ export default function WorkerDashboard() {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-white border rounded-xl p-3 text-center">
-              <div className="text-2xl font-black text-emerald-600">{activeTasks.length}</div>
+              <div className="text-2xl font-black text-org-primary">{activeTasks.length}</div>
               <div className="text-xs text-slate-500">Task Aktif</div>
             </div>
             <div className="bg-white border rounded-xl p-3 text-center">
-              <div className="text-2xl font-black text-emerald-600">{monthDaysPresent}</div>
+              <div className="text-2xl font-black text-org-primary">{monthDaysPresent}</div>
               <div className="text-xs text-slate-500">Hari Hadir (bulan ini)</div>
             </div>
           </div>
@@ -322,7 +322,7 @@ export default function WorkerDashboard() {
                       <div className="font-semibold text-sm">{wi.name}</div>
                       <div className="text-xs text-slate-400">{projectName(wi.project_id)}</div>
                     </div>
-                    <span className="font-black text-emerald-600">{Number(wi.progress_pct) || 0}%</span>
+                    <span className="font-black text-org-primary">{Number(wi.progress_pct) || 0}%</span>
                   </div>
                   <input
                     type="range"
@@ -332,7 +332,7 @@ export default function WorkerDashboard() {
                     value={Number(wi.progress_pct) || 0}
                     disabled={updatingId === wi.id}
                     onChange={e => handleProgressChange(wi, Number(e.target.value))}
-                    className="w-full accent-emerald-600 mb-2"
+                    className="w-full accent-org mb-2"
                   />
                   <button
                     type="button"
@@ -340,7 +340,7 @@ export default function WorkerDashboard() {
                       setCommandModalOpen(true);
                       showToast(`Gunakan: update progress ${wi.name} 75%`, 'info');
                     }}
-                    className="w-full py-2 border border-emerald-200 text-emerald-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1"
+                    className="w-full py-2 border border-org-soft text-org-primary rounded-xl text-xs font-bold flex items-center justify-center gap-1"
                   >
                     <TrendingUp className="w-3.5 h-3.5" /> Update via Monefyi Button
                   </button>
@@ -355,7 +355,7 @@ export default function WorkerDashboard() {
         <div className="space-y-4">
           <div className="bg-white border rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-4">
-              <Calendar className="w-5 h-5 text-emerald-500" />
+              <Calendar className="w-5 h-5 text-org-primary" />
               <h3 className="font-bold text-slate-800">Riwayat Absensi</h3>
             </div>
             {attendanceLoading && history.length === 0 ? (
@@ -373,7 +373,7 @@ export default function WorkerDashboard() {
                         {r.project_name ? ` · ${r.project_name}` : ''}
                       </div>
                     </div>
-                    <Clock className={`w-4 h-4 ${r.type === 'check_in' ? 'text-emerald-500' : 'text-slate-400'}`} />
+                    <Clock className={`w-4 h-4 ${r.type === 'check_in' ? 'text-org-primary' : 'text-slate-400'}`} />
                   </div>
                 ))}
               </div>
@@ -425,7 +425,7 @@ export default function WorkerDashboard() {
                 type="button"
                 onClick={handleBonRequest}
                 disabled={bonSubmitting}
-                className="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl text-sm disabled:opacity-60"
+                className="w-full py-3 bg-org-primary text-org-on-primary font-bold rounded-xl text-sm disabled:opacity-60"
               >
                 Ajukan Bon / Pinjaman
               </button>

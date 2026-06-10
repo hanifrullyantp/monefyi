@@ -14,6 +14,8 @@ import {
   loadNotificationPrefs, saveNotificationPrefs, type NotificationPrefs,
 } from '../services/settingsPrefsService';
 import UserAccountPanel from '../components/account/UserAccountPanel';
+import BrandIdentityPanel from '../components/branding/BrandIdentityPanel';
+import { syncPdfBrandFromOrg } from '../services/pdfSettingsService';
 import { isPlatformAdmin } from '../services/adminService';
 import { Link } from 'react-router-dom';
 import { loadFinanceVersion, setFinanceVersion } from '../lib/financeVersion';
@@ -95,6 +97,7 @@ export default function Settings() {
   const [currency, setCurrency] = useState(tenant?.currency || 'IDR');
   const [businessType, setBusinessType] = useState(tenant?.business_type || 'construction');
   const [brandColor, setBrandColor] = useState('#059669');
+  const [syncPdfBrand, setSyncPdfBrand] = useState(true);
   const [savingOrg, setSavingOrg] = useState(false);
 
   const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs>(loadNotificationPrefs());
@@ -205,6 +208,10 @@ export default function Settings() {
         business_type: businessType,
       });
 
+      if (syncPdfBrand) {
+        await syncPdfBrandFromOrg(tenant.id, brandColor);
+      }
+
       const { recordReversibleAction } = await import('../services/undoService');
       const action = await recordReversibleAction({
         orgId: tenant.id,
@@ -233,6 +240,7 @@ export default function Settings() {
         timezone,
         currency,
         business_type: businessType,
+        brandColor,
       });
       showToast('Pengaturan organisasi disimpan', 'success');
       useUiStore.getState().showUndoToast('Pengaturan organisasi disimpan', action.id);
@@ -471,7 +479,9 @@ export default function Settings() {
         <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-5">
           <div>
             <h3 className="font-bold text-slate-800">Profil Organisasi</h3>
-            <p className="text-sm text-slate-500">Pengaturan perusahaan yang terlihat di seluruh aplikasi.</p>
+            <p className="text-sm text-slate-500">
+              Identitas perusahaan Anda. Warna brand diterapkan ke PDF customer, menu aktif, dan portal karyawan — tanpa mengubah logo Monefyi.
+            </p>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
@@ -504,14 +514,20 @@ export default function Settings() {
                 {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Warna Brand</label>
+            <div className="sm:col-span-2">
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Warna Brand Organisasi</label>
               <div className="flex items-center gap-3">
                 <input type="color" value={brandColor} onChange={e => setBrandColor(e.target.value)} className="w-12 h-10 rounded-lg border border-slate-200 cursor-pointer" />
                 <input value={brandColor} onChange={e => setBrandColor(e.target.value)} className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-sm font-mono" />
               </div>
             </div>
           </div>
+
+          <BrandIdentityPanel
+            brandColor={brandColor}
+            syncPdf={syncPdfBrand}
+            onSyncPdfChange={setSyncPdfBrand}
+          />
 
           <div className="flex flex-wrap gap-3 pt-2">
             <button type="button" onClick={handleSaveOrg} disabled={savingOrg} className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-2">

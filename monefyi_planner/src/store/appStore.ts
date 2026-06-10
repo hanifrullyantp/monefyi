@@ -23,6 +23,7 @@ export interface Tenant {
   name: string;
   slug: string;
   logo?: string;
+  brandColor?: string;
   business_type: string;
   plan: 'free' | 'pro' | 'enterprise';
   currency: string;

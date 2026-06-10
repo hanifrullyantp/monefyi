@@ -20,6 +20,27 @@
   color: var(--brand-primary);
 }
 
+/* Org brand — di-set via inline style di Layout (owner) */
+.org-branded {
+  --org-primary: #059669;
+  --org-accent: #34d399;
+  --org-dark: #047857;
+  --org-soft: #ecfdf5;
+  --org-soft-border: #a7f3d0;
+  --org-on-primary: #ffffff;
+}
+
+.bg-org-primary { background-color: var(--org-primary); }
+.bg-org-soft { background-color: var(--org-soft); }
+.text-org-primary { color: var(--org-primary); }
+.text-org-dark { color: var(--org-dark); }
+.text-org-on-primary { color: var(--org-on-primary); }
+.border-org-soft { border-color: var(--org-soft-border); }
+.border-org-primary { border-color: var(--org-primary); }
+.ring-org-primary { --tw-ring-color: var(--org-primary); }
+.accent-org { accent-color: var(--org-primary); }
+.hover\:bg-org-soft:hover { background-color: var(--org-soft); }
+
 .font-mono-nums {
   font-variant-numeric: tabular-nums;
 }

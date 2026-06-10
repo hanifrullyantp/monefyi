@@ -14,6 +14,8 @@ import NotificationPanel from './NotificationPanel';
 import ToastHost from './ToastHost';
 import UndoToast from './ui/UndoToast';
 import { loadFinanceVersion } from '../lib/financeVersion';
+import { useOrgBrand } from '../hooks/useOrgBrand';
+import { MONEFYI_BRAND } from '../lib/orgBrand';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -40,6 +42,7 @@ export default function Layout({ children }: LayoutProps) {
       .catch(() => setFinanceVersionPreference('v1'));
   }, [user?.id, setFinanceVersionPreference]);
 
+  const { style: orgBrandStyle } = useOrgBrand(tenant?.brandColor);
   const isSuperAdmin = isPlatformAdmin(platformRole, user?.email);
   const isWorker = showWorkerShell(user?.role, platformRole, user?.email, uiViewMode);
   const canAccessHr = canAccessManagerFeatures(user?.role, platformRole, user?.email, uiViewMode);
@@ -129,24 +132,38 @@ export default function Layout({ children }: LayoutProps) {
   const lastSyncText = lastSynced ? `${Math.floor((Date.now() - lastSynced.getTime()) / 60000)} mnt lalu` : 'Belum pernah';
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex h-screen bg-slate-50 overflow-hidden org-branded" style={orgBrandStyle}>
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-slate-100 shadow-sm z-30">
         {/* Logo */}
         <div className="p-6 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-md">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center shadow-md"
+              style={{ background: `linear-gradient(135deg, ${MONEFYI_BRAND.primary}, ${MONEFYI_BRAND.dark})` }}
+            >
               <Sparkles className="w-4.5 h-4.5 text-white" />
             </div>
             <div>
               <div className="font-black text-slate-900 text-sm leading-tight">Monefyi</div>
-              <div className="text-xs text-emerald-600 font-semibold">Planner</div>
+              <div className="text-xs font-semibold" style={{ color: MONEFYI_BRAND.dark }}>Planner</div>
             </div>
           </div>
           {tenant && (
-            <div className="mt-3 px-2 py-1.5 bg-slate-50 rounded-lg">
-              <div className="text-xs font-medium text-slate-700 truncate">{tenant.name}</div>
-              <div className="text-xs text-slate-400 capitalize">{tenant.plan} plan</div>
+            <div className="mt-3 px-2 py-1.5 bg-org-soft border border-org-soft rounded-lg">
+              <div className="flex items-center gap-2 min-w-0">
+                {tenant.logo ? (
+                  <img src={tenant.logo} alt="" className="w-6 h-6 rounded object-cover shrink-0" />
+                ) : (
+                  <div className="w-6 h-6 rounded bg-org-primary shrink-0 flex items-center justify-center text-[10px] font-bold text-org-on-primary">
+                    {tenant.name.charAt(0)}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <div className="text-xs font-medium text-slate-700 truncate">{tenant.name}</div>
+                  <div className="text-xs text-slate-400 capitalize">{tenant.plan} plan</div>
+                </div>
+              </div>
             </div>
           )}
           {isSuperAdmin && (
@@ -189,11 +206,11 @@ export default function Layout({ children }: LayoutProps) {
               onClick={() => handleNav(item.id)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                 isTabActive(item.id)
-                  ? 'bg-emerald-50 text-emerald-700 shadow-sm'
+                  ? 'bg-org-soft text-org-dark shadow-sm border border-org-soft'
                   : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
               }`}
             >
-              <item.icon className={`w-4.5 h-4.5 ${isTabActive(item.id) ? 'text-emerald-600' : 'text-slate-400'}`} />
+              <item.icon className={`w-4.5 h-4.5 ${isTabActive(item.id) ? 'text-org-primary' : 'text-slate-400'}`} />
               {item.label}
               {item.id === 'home' && unreadCount > 0 && (
                 <span className="ml-auto px-1.5 py-0.5 bg-rose-500 text-white text-xs font-bold rounded-full">
@@ -204,16 +221,23 @@ export default function Layout({ children }: LayoutProps) {
           ))}
         </nav>
 
-        {/* Sync Status */}
+        {/* Monefyi AI + Profile */}
         <div className="p-4 border-t border-slate-100">
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${sync.bg} mb-3`}>
-            <div className={`w-2 h-2 rounded-full ${sync.color}`} />
-            <div className="flex-1 min-w-0">
-              <div className={`text-xs font-medium ${sync.textColor}`}>{sync.text}</div>
-              <div className="text-xs text-slate-400 truncate">{lastSyncText}</div>
-            </div>
-            {isOnline ? <Wifi className="w-3.5 h-3.5 text-slate-400" /> : <WifiOff className="w-3.5 h-3.5 text-slate-400" />}
-          </div>
+          <button
+            type="button"
+            onClick={() => setCommandModalOpen(true)}
+            className="hidden lg:flex w-full h-12 mb-3 rounded-xl items-center justify-center gap-2 shadow-md hover:opacity-95 transition-all relative"
+            style={{ background: `linear-gradient(135deg, ${MONEFYI_BRAND.primary}, ${MONEFYI_BRAND.dark})` }}
+            aria-label="Buka Monefyi AI"
+          >
+            <Sparkles className="w-5 h-5 text-white" />
+            <span className="text-sm font-bold text-white">Monefyi AI</span>
+            {pendingSyncCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white text-[10px] font-bold rounded-md flex items-center justify-center">
+                {pendingSyncCount}
+              </span>
+            )}
+          </button>
 
           {/* User Profile */}
           <div className="relative">
@@ -221,7 +245,7 @@ export default function Layout({ children }: LayoutProps) {
               onClick={() => setProfileOpen(!profileOpen)}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50 transition-colors"
             >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
+              <div className="w-8 h-8 rounded-full bg-org-primary flex items-center justify-center text-org-on-primary text-xs font-bold shrink-0">
                 {user?.name.charAt(0) || 'U'}
               </div>
               <div className="flex-1 text-left min-w-0">
@@ -302,7 +326,7 @@ export default function Layout({ children }: LayoutProps) {
                     onClick={() => handleNav(item.id)}
                     className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${
                       isTabActive(item.id)
-                        ? 'bg-emerald-50 text-emerald-700'
+                        ? 'bg-org-soft text-org-dark'
                         : 'text-slate-600 hover:bg-slate-50'
                     }`}
                   >
@@ -355,10 +379,11 @@ export default function Layout({ children }: LayoutProps) {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Sync Status - Mobile */}
-            <div className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${sync.bg} ${sync.textColor}`}>
+            {/* Sync Status — desktop & tablet */}
+            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${sync.bg} ${sync.textColor}`}>
               <div className={`w-1.5 h-1.5 rounded-full ${sync.color}`} />
-              <span className="hidden md:block">{sync.text}</span>
+              <span className="hidden sm:block">{sync.text}</span>
+              <span className="hidden lg:inline text-slate-400 font-normal">· {lastSyncText}</span>
               {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
             </div>
 
@@ -450,7 +475,7 @@ export default function Layout({ children }: LayoutProps) {
             <button
               type="button"
               onClick={() => setProfileOpen(!profileOpen)}
-              className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center text-white text-xs font-bold hidden lg:flex"
+              className="w-8 h-8 rounded-full bg-org-primary flex items-center justify-center text-org-on-primary text-xs font-bold hidden lg:flex"
               aria-label="Profil"
             >
               {user?.name.charAt(0) || 'U'}
@@ -511,19 +536,6 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </nav>
       </div>
-
-      {/* Monefyi Button — Desktop FAB */}
-      <button
-        onClick={() => setCommandModalOpen(true)}
-        className="hidden lg:flex fixed bottom-8 right-8 w-14 h-14 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 items-center justify-center shadow-2xl shadow-emerald-300/50 hover:scale-110 transition-all z-30 animate-breathe"
-      >
-        <Sparkles className="w-6 h-6 text-white" />
-        {pendingSyncCount > 0 && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-            {pendingSyncCount}
-          </span>
-        )}
-      </button>
 
       {/* Command Modal */}
       <AnimatePresence>

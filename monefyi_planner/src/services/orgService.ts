@@ -42,6 +42,8 @@ export async function loadOrg(userId: string): Promise<OrgContext | null> {
 
   const tenant = toTenant(orgRow);
   if (orgRow.logo_url) tenant.logo = orgRow.logo_url;
+  if (orgRow.brand_color) tenant.brandColor = orgRow.brand_color;
+  if (orgRow.timezone) tenant.timezone = orgRow.timezone;
 
   const { data: profile } = await supabase
     .from('profiles')

@@ -119,17 +119,20 @@ export default function WorkerWorkTimer({
 
   if (!checkedIn && !checkOutAtIso) {
     return (
-      <div className="rounded-2xl p-5 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white">
+      <div
+        className="rounded-2xl p-5 text-white"
+        style={{ background: 'linear-gradient(135deg, var(--org-primary), var(--org-dark))' }}
+      >
         <div className="text-white/80 text-sm mb-1">Status Hari Ini</div>
         <div className="font-bold text-lg mb-1">○ Belum Check In</div>
-        <p className="text-sm text-emerald-100 mb-4">
+        <p className="text-sm text-white/80 mb-4">
           Jam kerja dimulai: {pad(shiftStart.hour)}:{pad(shiftStart.minute)}
         </p>
         <button
           type="button"
           onClick={onCheckIn}
           disabled={loading}
-          className="w-full py-3.5 bg-white text-emerald-700 font-black rounded-xl disabled:opacity-60"
+          className="w-full py-3.5 bg-white text-org-dark font-black rounded-xl disabled:opacity-60"
         >
           🟢 CHECK IN SEKARANG
         </button>
@@ -161,10 +164,9 @@ export default function WorkerWorkTimer({
   return (
     <div
       className={`rounded-2xl p-5 text-white space-y-4 ${
-        isOvertime
-          ? 'bg-gradient-to-br from-amber-500 to-orange-600'
-          : 'bg-gradient-to-br from-emerald-500 to-teal-600'
+        isOvertime ? 'bg-gradient-to-br from-amber-500 to-orange-600' : ''
       }`}
+      style={isOvertime ? undefined : { background: 'linear-gradient(135deg, var(--org-primary), var(--org-dark))' }}
     >
       <div className="flex items-center justify-between">
         <span className="font-bold text-sm uppercase tracking-wide">
@@ -220,7 +222,7 @@ export default function WorkerWorkTimer({
       )}
 
       {projectName && (
-        <div className="flex items-center gap-2 text-sm text-emerald-100">
+        <div className="flex items-center gap-2 text-sm text-white/80">
           <MapPin className="w-4 h-4 shrink-0" /> {projectName}
         </div>
       )}

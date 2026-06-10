@@ -1,3 +1,4 @@
+import { pdfColorsFromBrand } from '../lib/orgBrand';
 import { supabase } from '../lib/supabase';
 import type { PdfSettings } from '../types/pdfSettings';
 import type { PdfTemplate } from '../types/estimator';
@@ -43,6 +44,16 @@ export async function loadPdfSettings(orgId: string, companyName: string): Promi
     .single();
   if (insErr) throw new Error(insErr.message);
   return created as PdfSettings;
+}
+
+/** Sinkronkan warna PDF default dari brand organisasi */
+export async function syncPdfBrandFromOrg(orgId: string, brandColor: string): Promise<void> {
+  const colors = pdfColorsFromBrand(brandColor);
+  const { error } = await supabase
+    .from('planner_pdf_settings')
+    .update({ ...colors, updated_at: new Date().toISOString() })
+    .eq('org_id', orgId);
+  if (error) throw new Error(error.message);
 }
 
 export async function updatePdfSettings(
