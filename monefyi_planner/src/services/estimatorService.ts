@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { calcEstimationSummary, calcItemRow, normalizeEstimationItem } from '../lib/estimatorCalc';
+import { calcEstimationSummary, normalizeEstimationItem } from '../lib/estimatorCalc';
 import { nextEstimationCode } from '../lib/estimatorFormat';
 import { emptyImageDrafts, hydrateImageDrafts, imagesToDbFields } from './estimationImageService';
 import type {
