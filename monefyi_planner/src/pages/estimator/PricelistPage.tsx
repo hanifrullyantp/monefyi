@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Plus, Trash2, Upload } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useBlocker, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Loader2, Plus, Save, Trash2, Upload } from 'lucide-react';
 import PricelistCsvImport from '../../components/estimator/PricelistCsvImport';
+import UnsavedChangesDialog from '../../components/ui/UnsavedChangesDialog';
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
 import {
@@ -16,7 +17,24 @@ import {
 import { formatRupiahFull } from '../../lib/estimatorFormat';
 import type { PricelistCategory, PricelistItem } from '../../types/estimator';
 
-const SAVE_DEBOUNCE_MS = 450;
+type EditableFields = Pick<
+  PricelistItem,
+  'name' | 'product' | 'category' | 'unit' | 'base_cost' | 'default_margin_pct' | 'selling_price' | 'is_active'
+>;
+
+function rowSnapshot(row: PricelistItem): string {
+  const pick: EditableFields = {
+    name: row.name,
+    product: row.product,
+    category: row.category,
+    unit: row.unit,
+    base_cost: Number(row.base_cost),
+    default_margin_pct: Number(row.default_margin_pct),
+    selling_price: Number(row.selling_price),
+    is_active: row.is_active,
+  };
+  return JSON.stringify(pick);
+}
 
 export default function PricelistPage() {
   const navigate = useNavigate();
@@ -24,13 +42,14 @@ export default function PricelistPage() {
   const showToast = useUiStore(s => s.showToast);
   const [rows, setRows] = useState<PricelistItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'' | PricelistCategory>('');
   const [csvOpen, setCsvOpen] = useState(false);
-  const [focusedRowId, setFocusedRowId] = useState<string | null>(null);
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [pendingNavigate, setPendingNavigate] = useState<(() => void) | null>(null);
 
-  const saveTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-  const pendingPatches = useRef<Map<string, Partial<PricelistItem>>>(new Map());
+  const savedSnapshots = useRef<Map<string, string>>(new Map());
 
   const load = useCallback(async () => {
     if (!tenant?.id) return;
@@ -38,6 +57,9 @@ export default function PricelistPage() {
     try {
       const data = await loadPricelistItems(tenant.id, false);
       setRows(data);
+      const snaps = new Map<string, string>();
+      data.forEach(r => snaps.set(r.id, rowSnapshot(r)));
+      savedSnapshots.current = snaps;
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal memuat pricelist', 'error');
     } finally {
@@ -47,47 +69,133 @@ export default function PricelistPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  useEffect(() => () => {
-    saveTimers.current.forEach(t => clearTimeout(t));
+  const isRowDirty = useCallback((row: PricelistItem) => {
+    const saved = savedSnapshots.current.get(row.id);
+    return saved !== undefined && saved !== rowSnapshot(row);
   }, []);
 
-  const flushSave = useCallback(async (id: string) => {
-    const patch = pendingPatches.current.get(id);
-    if (!patch || Object.keys(patch).length === 0) return;
-    pendingPatches.current.delete(id);
+  const dirtyIds = useMemo(() => rows.filter(isRowDirty).map(r => r.id), [rows, isRowDirty]);
+  const hasUnsaved = dirtyIds.length > 0;
 
-    try {
-      const saved = await updatePricelistItem(id, patch);
-      setRows(prev => prev.map(r => (r.id === id ? { ...r, ...saved } : r)));
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Gagal menyimpan', 'error');
-      load();
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      hasUnsaved && currentLocation.pathname !== nextLocation.pathname,
+  );
+
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      setLeaveDialogOpen(true);
     }
-  }, [showToast, load]);
+  }, [blocker.state]);
 
-  const scheduleSave = useCallback((id: string, patch: Partial<PricelistItem>) => {
-    const prev = pendingPatches.current.get(id) || {};
-    pendingPatches.current.set(id, { ...prev, ...patch });
-
-    const existing = saveTimers.current.get(id);
-    if (existing) clearTimeout(existing);
-
-    saveTimers.current.set(
-      id,
-      setTimeout(() => {
-        saveTimers.current.delete(id);
-        flushSave(id);
-      }, SAVE_DEBOUNCE_MS),
-    );
-  }, [flushSave]);
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!hasUnsaved) return;
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [hasUnsaved]);
 
   const patchRow = useCallback((id: string, patch: Partial<PricelistItem>) => {
     setRows(prev => prev.map(r => (r.id === id ? { ...r, ...patch } : r)));
-    scheduleSave(id, patch);
-  }, [scheduleSave]);
+  }, []);
+
+  const handlePriceUpdate = (
+    id: string,
+    field: 'base_cost' | 'default_margin_pct' | 'selling_price',
+    value: number,
+  ) => {
+    setRows(prev => {
+      const current = prev.find(r => r.id === id);
+      if (!current) return prev;
+      const patch = applyPricelistPricePatch(current, field, value);
+      return prev.map(r => (r.id === id ? { ...r, ...patch } : r));
+    });
+  };
+
+  const saveDirtyRows = useCallback(async (): Promise<boolean> => {
+    if (!hasUnsaved) return true;
+    setSaving(true);
+    try {
+      const toSave = rows.filter(r => dirtyIds.includes(r.id));
+      for (const row of toSave) {
+        const patch: Partial<PricelistItem> = {
+          name: row.name.trim() || 'Item baru',
+          product: row.product,
+          category: row.category,
+          unit: row.unit,
+          base_cost: Number(row.base_cost),
+          default_margin_pct: Number(row.default_margin_pct),
+          selling_price: Number(row.selling_price),
+          is_active: row.is_active,
+        };
+        const saved = await updatePricelistItem(row.id, patch);
+        savedSnapshots.current.set(row.id, rowSnapshot(saved));
+        setRows(prev => prev.map(r => (r.id === row.id ? { ...r, ...saved } : r)));
+      }
+      showToast(`${toSave.length} item disimpan`, 'success');
+      return true;
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal menyimpan', 'error');
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }, [hasUnsaved, rows, dirtyIds, showToast]);
+
+  const discardChanges = useCallback(() => {
+    setRows(prev =>
+      prev.map(r => {
+        const snap = savedSnapshots.current.get(r.id);
+        if (!snap || snap === rowSnapshot(r)) return r;
+        const saved = JSON.parse(snap) as EditableFields;
+        return { ...r, ...saved };
+      }),
+    );
+  }, []);
+
+  const closeLeaveDialog = () => {
+    setLeaveDialogOpen(false);
+    setPendingNavigate(null);
+    if (blocker.state === 'blocked') blocker.reset();
+  };
+
+  const handleLeaveSave = async () => {
+    const ok = await saveDirtyRows();
+    if (!ok) return;
+    setLeaveDialogOpen(false);
+    if (blocker.state === 'blocked') {
+      blocker.proceed();
+    } else if (pendingNavigate) {
+      pendingNavigate();
+      setPendingNavigate(null);
+    }
+  };
+
+  const handleLeaveDiscard = () => {
+    discardChanges();
+    setLeaveDialogOpen(false);
+    if (blocker.state === 'blocked') {
+      blocker.proceed();
+    } else if (pendingNavigate) {
+      pendingNavigate();
+      setPendingNavigate(null);
+    }
+  };
+
+  const handleBack = () => {
+    if (hasUnsaved) {
+      setPendingNavigate(() => () => navigate('/app/estimator'));
+      setLeaveDialogOpen(true);
+      return;
+    }
+    navigate('/app/estimator');
+  };
 
   const filtered = rows.filter(r => {
-    if (r.id === focusedRowId) return true;
+    if (isRowDirty(r)) return true;
     const q = search.toLowerCase().trim();
     const matchSearch = !q
       || r.name.toLowerCase().includes(q)
@@ -98,6 +206,10 @@ export default function PricelistPage() {
 
   const handleAdd = async () => {
     if (!tenant?.id || !user?.id) return;
+    if (hasUnsaved) {
+      showToast('Simpan perubahan terlebih dahulu sebelum menambah item', 'error');
+      return;
+    }
     try {
       const created = await createPricelistItem({
         org_id: tenant.id,
@@ -112,52 +224,23 @@ export default function PricelistPage() {
         is_active: true,
         created_by: user.id,
       });
+      savedSnapshots.current.set(created.id, rowSnapshot(created));
       setRows(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
-      setFocusedRowId(created.id);
-      showToast('Item ditambahkan', 'success');
+      showToast('Item ditambahkan — edit lalu klik Simpan', 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal menambah', 'error');
     }
   };
 
-  const handlePriceUpdate = (
-    id: string,
-    field: 'base_cost' | 'default_margin_pct' | 'selling_price',
-    value: number,
-  ) => {
-    setRows(prev => {
-      const current = prev.find(r => r.id === id);
-      if (!current) return prev;
-      const patch = applyPricelistPricePatch(current, field, value);
-      scheduleSave(id, patch);
-      return prev.map(r => (r.id === id ? { ...r, ...patch } : r));
-    });
-  };
-
   const handleDelete = async (id: string, name: string) => {
     if (!window.confirm(`Hapus "${name}" dari pricelist?`)) return;
-
-    const timer = saveTimers.current.get(id);
-    if (timer) clearTimeout(timer);
-    saveTimers.current.delete(id);
-    pendingPatches.current.delete(id);
-
     try {
       await deletePricelistItem(id);
+      savedSnapshots.current.delete(id);
       setRows(prev => prev.filter(r => r.id !== id));
       showToast('Item dihapus', 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal menghapus', 'error');
-    }
-  };
-
-  const handleRowBlur = (id: string) => {
-    setFocusedRowId(prev => (prev === id ? null : prev));
-    const timer = saveTimers.current.get(id);
-    if (timer) {
-      clearTimeout(timer);
-      saveTimers.current.delete(id);
-      flushSave(id);
     }
   };
 
@@ -166,15 +249,29 @@ export default function PricelistPage() {
       <div className="flex items-center gap-3 mb-6">
         <button
           type="button"
-          onClick={() => navigate('/app/estimator')}
+          onClick={handleBack}
           className="p-2 rounded-xl hover:bg-slate-100 text-slate-500"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-black text-slate-900">Pricelist</h1>
-          <p className="text-sm text-slate-500">Tentukan harga jual & margin — HPP diestimasi otomatis</p>
+          <p className="text-sm text-slate-500">Edit harga jual & margin — klik Simpan untuk menyimpan</p>
         </div>
+        {hasUnsaved && (
+          <span className="hidden sm:inline text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
+            {dirtyIds.length} belum disimpan
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={saveDirtyRows}
+          disabled={!hasUnsaved || saving}
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-40"
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          Simpan
+        </button>
         <button
           type="button"
           onClick={() => setCsvOpen(true)}
@@ -185,7 +282,7 @@ export default function PricelistPage() {
         <button
           type="button"
           onClick={handleAdd}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold"
+          className="inline-flex items-center gap-2 px-4 py-2.5 border border-emerald-200 text-emerald-700 rounded-xl text-sm font-bold hover:bg-emerald-50"
         >
           <Plus className="w-4 h-4" /> Tambah
         </button>
@@ -238,98 +335,100 @@ export default function PricelistPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(row => (
-                <tr key={row.id} className="border-t border-slate-100">
-                  <td className="p-2">
-                    <input
-                      value={row.name}
-                      onChange={e => patchRow(row.id, { name: e.target.value })}
-                      onFocus={() => setFocusedRowId(row.id)}
-                      onBlur={() => handleRowBlur(row.id)}
-                      className="w-full px-2 py-1 border border-transparent hover:border-slate-200 focus:border-emerald-300 rounded outline-none"
-                      placeholder="Nama pekerjaan/item"
-                    />
-                  </td>
-                  <td className="p-2">
-                    <input
-                      value={row.product || ''}
-                      onChange={e => patchRow(row.id, { product: e.target.value || null })}
-                      onFocus={() => setFocusedRowId(row.id)}
-                      onBlur={() => handleRowBlur(row.id)}
-                      className="w-full px-2 py-1 border border-transparent hover:border-slate-200 focus:border-emerald-300 rounded outline-none"
-                      placeholder="Merk / spesifikasi"
-                    />
-                  </td>
-                  <td className="p-2">
-                    <select
-                      value={row.category || 'material'}
-                      onChange={e => patchRow(row.id, { category: e.target.value as PricelistCategory })}
-                      className="w-full px-1 py-1 text-xs border border-slate-200 rounded"
-                    >
-                      {PRICELIST_CATEGORIES.map(c => (
-                        <option key={c.value} value={c.value}>{c.label}</option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="p-2">
-                    <select
-                      value={row.unit}
-                      onChange={e => patchRow(row.id, { unit: e.target.value })}
-                      className="w-full px-1 py-1 text-xs border border-slate-200 rounded"
-                    >
-                      {COMMON_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-                    </select>
-                  </td>
-                  <td className="p-2">
-                    <input
-                      type="number"
-                      min={0}
-                      value={Math.round(Number(row.selling_price))}
-                      onChange={e => handlePriceUpdate(row.id, 'selling_price', Number(e.target.value))}
-                      className="w-full px-2 py-1 border border-emerald-200 bg-emerald-50/40 rounded text-right font-semibold"
-                    />
-                    <div className="text-[10px] text-emerald-600 text-right font-medium">
-                      {formatRupiahFull(Number(row.selling_price))}
-                    </div>
-                  </td>
-                  <td className="p-2">
-                    <input
-                      type="number"
-                      min={0}
-                      value={Math.round(Number(row.default_margin_pct) * 10) / 10}
-                      onChange={e => handlePriceUpdate(row.id, 'default_margin_pct', Number(e.target.value))}
-                      className="w-full px-2 py-1 border border-slate-200 rounded text-right"
-                    />
-                  </td>
-                  <td className="p-2">
-                    <input
-                      type="number"
-                      min={0}
-                      value={Math.round(Number(row.base_cost))}
-                      onChange={e => handlePriceUpdate(row.id, 'base_cost', Number(e.target.value))}
-                      className="w-full px-2 py-1 border border-slate-200 bg-slate-50 rounded text-right text-slate-600"
-                      title="Estimasi HPP dari harga jual & margin"
-                    />
-                    <div className="text-[10px] text-slate-400 text-right">{formatRupiahFull(Number(row.base_cost))}</div>
-                  </td>
-                  <td className="p-2 text-center">
-                    <input
-                      type="checkbox"
-                      checked={row.is_active}
-                      onChange={e => patchRow(row.id, { is_active: e.target.checked })}
-                    />
-                  </td>
-                  <td className="p-2">
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(row.id, row.name)}
-                      className="p-1 text-slate-400 hover:text-rose-600"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {filtered.map(row => {
+                const dirty = isRowDirty(row);
+                return (
+                  <tr
+                    key={row.id}
+                    className={`border-t border-slate-100 ${dirty ? 'bg-amber-50/40' : ''}`}
+                  >
+                    <td className="p-2">
+                      <input
+                        value={row.name}
+                        onChange={e => patchRow(row.id, { name: e.target.value })}
+                        className="w-full px-2 py-1 border border-transparent hover:border-slate-200 focus:border-emerald-300 rounded outline-none bg-transparent"
+                        placeholder="Nama pekerjaan/item"
+                      />
+                    </td>
+                    <td className="p-2">
+                      <input
+                        value={row.product || ''}
+                        onChange={e => patchRow(row.id, { product: e.target.value || null })}
+                        className="w-full px-2 py-1 border border-transparent hover:border-slate-200 focus:border-emerald-300 rounded outline-none bg-transparent"
+                        placeholder="Merk / spesifikasi"
+                      />
+                    </td>
+                    <td className="p-2">
+                      <select
+                        value={row.category || 'material'}
+                        onChange={e => patchRow(row.id, { category: e.target.value as PricelistCategory })}
+                        className="w-full px-1 py-1 text-xs border border-slate-200 rounded"
+                      >
+                        {PRICELIST_CATEGORIES.map(c => (
+                          <option key={c.value} value={c.value}>{c.label}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="p-2">
+                      <select
+                        value={row.unit}
+                        onChange={e => patchRow(row.id, { unit: e.target.value })}
+                        className="w-full px-1 py-1 text-xs border border-slate-200 rounded"
+                      >
+                        {COMMON_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                      </select>
+                    </td>
+                    <td className="p-2">
+                      <input
+                        type="number"
+                        min={0}
+                        value={Math.round(Number(row.selling_price))}
+                        onChange={e => handlePriceUpdate(row.id, 'selling_price', Number(e.target.value))}
+                        className="w-full px-2 py-1 border border-emerald-200 bg-emerald-50/40 rounded text-right font-semibold"
+                      />
+                      <div className="text-[10px] text-emerald-600 text-right font-medium">
+                        {formatRupiahFull(Number(row.selling_price))}
+                      </div>
+                    </td>
+                    <td className="p-2">
+                      <input
+                        type="number"
+                        min={0}
+                        value={Math.round(Number(row.default_margin_pct) * 10) / 10}
+                        onChange={e => handlePriceUpdate(row.id, 'default_margin_pct', Number(e.target.value))}
+                        className="w-full px-2 py-1 border border-slate-200 rounded text-right"
+                      />
+                    </td>
+                    <td className="p-2">
+                      <input
+                        type="number"
+                        min={0}
+                        value={Math.round(Number(row.base_cost))}
+                        onChange={e => handlePriceUpdate(row.id, 'base_cost', Number(e.target.value))}
+                        className="w-full px-2 py-1 border border-slate-200 bg-slate-50 rounded text-right text-slate-600"
+                        title="Estimasi HPP dari harga jual & margin"
+                      />
+                      <div className="text-[10px] text-slate-400 text-right">{formatRupiahFull(Number(row.base_cost))}</div>
+                    </td>
+                    <td className="p-2 text-center">
+                      <input
+                        type="checkbox"
+                        checked={row.is_active}
+                        onChange={e => patchRow(row.id, { is_active: e.target.checked })}
+                      />
+                    </td>
+                    <td className="p-2">
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(row.id, row.name)}
+                        className="p-1 text-slate-400 hover:text-rose-600"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -346,6 +445,15 @@ export default function PricelistPage() {
           }}
         />
       )}
+
+      <UnsavedChangesDialog
+        open={leaveDialogOpen}
+        saving={saving}
+        message="Ada perubahan pricelist yang belum disimpan. Simpan sebelum keluar dari halaman ini?"
+        onSave={handleLeaveSave}
+        onDiscard={handleLeaveDiscard}
+        onCancel={closeLeaveDialog}
+      />
     </div>
   );
 }

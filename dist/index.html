@@ -28,7 +28,7 @@
 
 
  
-  <link rel="stylesheet" crossorigin href="./assets/index-BUPpBi4h.css">
+  <link rel="stylesheet" crossorigin href="./assets/index--LDfcVsI.css">
 </head>
 <body>
   <div class="min-h-dvh">
@@ -230,8 +230,11 @@
           </div>
         </div>
 
+        <div id="mobileFilterAnchor" class="md:hidden"></div>
+
 <!--======================================================================== -->
 
+        <div id="filterPanelWrap">
         <!-- Periode popover (dropdown + range) -->
         <div id="monthPopover" class="mt-2 hidden rounded-2xl app-card-opaque p-3">
           <div id="periodFilterTitle" class="text-xs app-muted">Filter periode</div>
@@ -317,6 +320,7 @@
             </div>
           </div>
         </div>
+        </div><!-- /filterPanelWrap -->
       </div>
     </header>
 <!-- PEMBUNGKUS UTAMA -->
@@ -356,26 +360,11 @@
       </div>
 
       <div id="kpiSaldoDesktop" class="mt-1 text-2xl font-semibold">—</div>
-<div id="kpiSaldoSubDesktop" class="mt-1 text-xs app-muted">
+      <div id="kpiSaldoSubDesktop" class="mt-1 text-xs app-muted">
   Tap untuk membuka ringkasan lengkap.
 </div>
 
-      <div class="mt-3 flex items-center justify-between">
-        <!-- Tombol Filter/Periode (desktop) -->
-        <button
-          id="btnPeriodToggleDesktop"
-          type="button"
-          class="tap inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-[11px] font-bold hover:opacity-90"
-          title="Filter periode"
-          aria-expanded="false"
-          style="background: rgba(99,102,241,.15); color: rgba(199,210,254,.95); border: 1px solid rgba(99,102,241,.28)"
-        >
-          <span id="saldoMonthDesktop">—</span>
-          <span id="periodChevronDesktop" class="text-[10px]" style="opacity:.9"
-            >▾</span
-          >
-        </button>
-
+      <div class="mt-3 flex items-center justify-end">
         <div
           id="dashboardStateDesktop"
           class="text-[10px] app-muted2 font-bold uppercase tracking-tighter"
@@ -386,6 +375,24 @@
     </div>
   </div>
 </div>
+
+      <!-- KARTU FILTER DESKTOP (di bawah saldo) -->
+      <button
+        id="btnFilterCardDesktop"
+        type="button"
+        class="tap w-full rounded-[2rem] app-card p-4 text-left hover:opacity-95 cursor-pointer shadow-lg border border-slate-800/50"
+        title="Filter periode & transaksi"
+        aria-expanded="false"
+      >
+        <div class="flex items-center justify-between gap-3">
+          <div class="min-w-0">
+            <div class="text-xs app-muted font-medium">Filter & Periode</div>
+            <div id="filterCardPeriodDesktop" class="mt-1 text-sm font-semibold truncate">—</div>
+            <div class="mt-1 text-[11px] app-muted2">Periode, pencarian, tipe, kategori, akun</div>
+          </div>
+          <span id="filterChevronDesktop" class="text-sm shrink-0" style="opacity:.9">▾</span>
+        </div>
+      </button>
       <!-- Navigasi Menu -->
       <nav class="flex flex-col gap-1">
         <button onclick="toggleNav('dash')" class="sidebar-item flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-slate-800/50 transition-all tap group">
@@ -1635,6 +1642,14 @@
 </div>
 
     
+
+</div>
+
+    <!-- Desktop filter popup -->
+    <div id="desktopFilterBackdrop" class="fixed inset-0 z-60 hidden items-start justify-center pt-16 px-4 pb-8" style="background: rgba(0,0,0,.55)">
+      <div class="absolute inset-0" data-close-filter="true"></div>
+      <div id="desktopFilterSlot" class="relative w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl app-card-opaque p-4 shadow-2xl"></div>
+    </div>
 
   <script src="js/app.js" defer></script>
 

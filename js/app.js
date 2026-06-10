@@ -848,6 +848,7 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
       ui: {
         dashboardOpen: false,
         monthPopoverOpen: false,
+        advisorOpen: false,
         receiptPickerOpened: false,
         receiptOcrRunning: false,
         accountDetailOpen: false,
@@ -1386,7 +1387,7 @@ async function upsertTransaction_legacy_local(tx) {
         categories: categories || {},
         updated_at: new Date().toISOString(),
       };
-      const { error } = await supa.from('budgets').upsert(row);
+      const { error } = await supa.from('budgets').upsert(row, { onConflict: 'user_id,month' });
       if (error) throw error;
       STATE.budgetsByMonth[mk] = { income: Number(income||0), categories: categories||{}, updated_at: row.updated_at };
     }
@@ -1920,7 +1921,50 @@ async function upsertTransaction_legacy_local(tx) {
     }
 
     function sumBudgetCategories(categoriesObj){
-      return Object.values(categoriesObj||{}).reduce((a,b)=>a+Number(b||0),0);
+      if (!categoriesObj || typeof categoriesObj !== 'object') return 0;
+      if (Array.isArray(categoriesObj.rows)) {
+        return categoriesObj.rows.reduce((a, r) => a + Number(r?.amount || 0), 0);
+      }
+      return Object.values(categoriesObj).reduce((a, b) => a + Number(b || 0), 0);
+    }
+
+    function getBudgetCategoryAmount(categoriesObj, categoryName){
+      if (!categoriesObj || typeof categoriesObj !== 'object') return 0;
+      const norm = normalizeCategoryName(categoryName || '');
+      if (Array.isArray(categoriesObj.rows)) {
+        return categoriesObj.rows.reduce((sum, r) => {
+          if (normalizeCategoryName(r?.name || '') === norm) return sum + Number(r?.amount || 0);
+          return sum;
+        }, 0);
+      }
+      for (const [k, v] of Object.entries(categoriesObj)) {
+        if (normalizeCategoryName(k) === norm) return Number(v || 0);
+      }
+      return 0;
+    }
+
+    function budgetCategoriesMapForPeriod(){
+      const ms = monthsBetween(STATE.period.start, STATE.period.end);
+      const map = {};
+      for (const mk of ms) {
+        const b = getBudgetMonth(mk);
+        if (!b) continue;
+        const cats = b.categories || {};
+        if (Array.isArray(cats.rows)) {
+          for (const r of cats.rows) {
+            const name = normalizeCategoryName(r?.name || '');
+            if (!name) continue;
+            map[name] = (map[name] || 0) + Number(r?.amount || 0);
+          }
+        } else {
+          for (const [k, v] of Object.entries(cats)) {
+            const name = normalizeCategoryName(k);
+            if (!name) continue;
+            map[name] = (map[name] || 0) + Number(v || 0);
+          }
+        }
+      }
+      return map;
     }
 
     function estimateIncomeForMonth(mk){
@@ -2018,7 +2062,7 @@ async function upsertTransaction_legacy_local(tx) {
         const b = getBudgetMonth(mk);
         if (b) planned += sumBudgetCategories(b.categories);
       }
-      return { planned, months: ms };
+      return { planned, months: ms, categories: budgetCategoriesMapForPeriod() };
     }
 
     // =========================
@@ -2245,22 +2289,20 @@ const startISO = STATE.period.start;
 
 const compact = humanPeriodLabel();
 
-['#saldoMonth', '#saldoMonthDesktop'].forEach((sel) => {
-  const el = $(sel);
-  if (el) el.textContent = compact || mkLabel;
-});
+const periodLabel = compact || mkLabel;
+$('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
 
       // ensure language labels are applied (safe)
      try { applyLanguageToUI(); } catch {}
 
-// aria-expanded untuk kedua tombol periode
-['#btnPeriodToggle', '#btnPeriodToggleDesktop'].forEach((sel) => {
+// aria-expanded untuk tombol periode (mobile) + kartu filter desktop
+['#btnPeriodToggle', '#btnFilterCardDesktop'].forEach((sel) => {
   const el = $(sel);
   if (el) el.setAttribute('aria-expanded', String(STATE.ui.monthPopoverOpen));
 });
 
-// ikon chevron (mobile + desktop)
-['#periodChevron', '#periodChevronDesktop'].forEach((sel) => {
+// ikon chevron (mobile + desktop filter card)
+['#periodChevron', '#filterChevronDesktop'].forEach((sel) => {
   const el = $(sel);
   if (el) el.textContent = STATE.ui.monthPopoverOpen ? '▴' : '▾';
 });
@@ -2328,8 +2370,18 @@ const compact = humanPeriodLabel();
           : 'Akun user biasa.';
       }
 
-      $('#monthPopover').classList.toggle('hidden', !STATE.ui.monthPopoverOpen);
-      $('#filtersWrap').classList.toggle('hidden', !STATE.ui.monthPopoverOpen);
+      $('#monthPopover')?.classList.toggle('hidden', !STATE.ui.monthPopoverOpen || isDesktopViewport());
+      $('#filtersWrap')?.classList.toggle('hidden', !STATE.ui.monthPopoverOpen || isDesktopViewport());
+
+      const filterBackdrop = $('#desktopFilterBackdrop');
+      if (filterBackdrop) {
+        const showDesktopFilter = STATE.ui.monthPopoverOpen && isDesktopViewport();
+        filterBackdrop.classList.toggle('hidden', !showDesktopFilter);
+        filterBackdrop.classList.toggle('flex', showDesktopFilter);
+      }
+
+      const filterCardPeriod = $('#filterCardPeriodDesktop');
+      if (filterCardPeriod) filterCardPeriod.textContent = periodLabel;
 
       // preset UI state
       if ($('#presetSelect')) {
@@ -3121,6 +3173,13 @@ function generateSmartBudgetRecommendation() {
       document.body.style.overflow = '';
     }
 
+    function placeFilterPanel(){
+      const wrap = $('#filterPanelWrap');
+      if (!wrap) return;
+      const target = isDesktopViewport() ? $('#desktopFilterSlot') : $('#mobileFilterAnchor');
+      if (target && wrap.parentElement !== target) target.appendChild(wrap);
+    }
+
     // Add transaction sheet
     const sheetBackdrop = $('#sheetBackdrop');
     const sheet = $('#sheet');
@@ -3298,12 +3357,30 @@ function openBudget(){
     const advisorBackdrop = $('#advisorBackdrop');
     const advisorSheet = $('#advisorSheet');
     function openAdvisor(){
-      openSheet(advisorBackdrop, advisorSheet);
+      if (isDesktopViewport()) {
+        STATE.ui.advisorOpen = true;
+        advisorBackdrop.classList.add('open', 'desktop-sidebar');
+        advisorSheet.classList.add('open');
+        $('#appShell')?.classList.add('advisor-open');
+        document.body.style.overflow = '';
+      } else {
+        STATE.ui.advisorOpen = true;
+        openSheet(advisorBackdrop, advisorSheet);
+      }
       $$('.nav-item[data-nav]').forEach((el) => {
         el.classList.toggle('active', el.getAttribute('data-nav') === 'advisor');
       });
     }
-    function closeAdvisor(){ closeSheet(advisorBackdrop, advisorSheet); }
+    function closeAdvisor(){
+      STATE.ui.advisorOpen = false;
+      if (isDesktopViewport()) {
+        advisorBackdrop.classList.remove('open', 'desktop-sidebar');
+        advisorSheet.classList.remove('open');
+        $('#appShell')?.classList.remove('advisor-open');
+      } else {
+        closeSheet(advisorBackdrop, advisorSheet);
+      }
+    }
     advisorBackdrop.addEventListener('click', (e)=>{
       if (e.target?.dataset?.closeAdvisor === 'true') closeAdvisor();
     });
@@ -4065,7 +4142,12 @@ function openTutorialTopic(id) {
       const set = new Set();
       for (const mk of ms) {
         const b = getBudgetMonth(mk);
-        for (const k of Object.keys(b?.categories || {})) set.add(String(k));
+        const cats = b?.categories || {};
+        if (Array.isArray(cats.rows)) {
+          for (const r of cats.rows) if (r?.name) set.add(normalizeCategoryName(r.name));
+        } else {
+          for (const k of Object.keys(cats)) set.add(normalizeCategoryName(k));
+        }
       }
       // fallback to categories from transactions in range
       for (const tx of getTransactionsInPeriod()) if (tx.category) set.add(String(tx.category));
@@ -4991,39 +5073,8 @@ if (btnApplyAI) {
     };
 }
 
-// --- LOGIC TOGGLE PANEL PERIODE ---
+// --- LOGIC TOGGLE PANEL PERIODE (handled by setMonthPopover / toggleMonthPopover below) ---
 
-// 1. Tombol Buka (Jan 2026 ▾)
-const btnPeriodToggle = document.getElementById('btnPeriodToggle');
-if (btnPeriodToggle) {
-  btnPeriodToggle.onclick = (e) => {
-    e.preventDefault();
-    e.stopPropagation(); // Mencegah konflik klik dengan elemen induk
-    
-    const popover = document.getElementById('monthPopover');
-    const filters = document.getElementById('filtersWrap');
-    
-    // Toggle (Buka/Tutup)
-    const isHidden = popover.classList.contains('hidden');
-    if (isHidden) {
-      popover.classList.remove('hidden');
-      filters.classList.remove('hidden');
-      console.log("Panel Periode Dibuka");
-    } else {
-      popover.classList.add('hidden');
-      filters.classList.add('hidden');
-    }
-  };
-}
-
-// 2. Tombol Tutup di dalam panel
-const btnMonthClose = document.getElementById('btnMonthClose');
-if (btnMonthClose) {
-  btnMonthClose.onclick = () => {
-    document.getElementById('monthPopover').classList.add('hidden');
-    document.getElementById('filtersWrap').classList.add('hidden');
-  };
-}
 // ============================================================
 // 2. TOMBOL RESET (JANGAN DIHAPUS)
 // ============================================================
@@ -5046,7 +5097,7 @@ $('#btnSaveBudget').addEventListener('click', async () => {
     let normalized = { income: d.income, categories: {}, total: 0 };
     
     // Validasi Manual (Safe Mode)
-    if (!d.income) { $('#bStatus').textContent = 'Income wajib diisi.'; return; }
+    if (Number(d.income) <= 0) { $('#bStatus').textContent = 'Income wajib diisi.'; return; }
     if (!d.rows || d.rows.length === 0) { $('#bStatus').textContent = 'Tambah minimal 1 kategori.'; return; }
     
     // Susun data untuk DB
@@ -6167,11 +6218,7 @@ $('#btnSaveBudget').addEventListener('click', async () => {
         const b = getBudgetMonth(mk);
         if (!b) continue;
         if (cat) {
-          // match by normalized key
-          const entries = Object.entries(b.categories || {});
-          for (const [k,v] of entries) {
-            if (normalizeCategoryName(k) === cat) planned += Number(v||0);
-          }
+          planned += getBudgetCategoryAmount(b.categories, cat);
         } else {
           planned += sumBudgetCategories(b.categories);
         }
@@ -6985,11 +7032,30 @@ function toggleNav_legacy(mode) {
 
     function setMonthPopover(open){
       STATE.ui.monthPopoverOpen = open;
+      placeFilterPanel();
       rerender();
     }
 
-    // Periode toggle (di samping saldo)
-    ['#btnPeriodToggle', '#btnPeriodToggleDesktop'].forEach((sel) => {
+    function toggleMonthPopover(){
+      setMonthPopover(!STATE.ui.monthPopoverOpen);
+    }
+
+    placeFilterPanel();
+    window.addEventListener('resize', () => {
+      placeFilterPanel();
+      if (STATE.ui.advisorOpen && !isDesktopViewport()) {
+        advisorBackdrop.classList.remove('desktop-sidebar');
+        $('#appShell')?.classList.remove('advisor-open');
+        if (!advisorBackdrop.classList.contains('open')) openSheet(advisorBackdrop, advisorSheet);
+      } else if (STATE.ui.advisorOpen && isDesktopViewport()) {
+        advisorBackdrop.classList.add('desktop-sidebar');
+        $('#appShell')?.classList.add('advisor-open');
+        document.body.style.overflow = '';
+      }
+    });
+
+    // Periode toggle (mobile header + desktop filter card)
+    ['#btnPeriodToggle', '#btnFilterCardDesktop'].forEach((sel) => {
   const el = $(sel);
   if (!el) return;
 
@@ -7006,17 +7072,24 @@ function toggleNav_legacy(mode) {
 
   const pop = $('#monthPopover');
   const btnMobile = $('#btnPeriodToggle');
-  const btnDesktop = $('#btnPeriodToggleDesktop');
+  const btnFilterCard = $('#btnFilterCardDesktop');
   const filters = $('#filtersWrap');
+  const backdrop = $('#desktopFilterBackdrop');
 
   const target = e.target;
 
-  // Kalau klik di dalam popover, tombol periode (mobile/deskop), atau area filter → jangan close
+  if (target?.dataset?.closeFilter === 'true') {
+    setMonthPopover(false);
+    return;
+  }
+
+  // Kalau klik di dalam popover, tombol periode (mobile), kartu filter desktop, atau area filter → jangan close
   if (
     (pop && pop.contains(target)) ||
     (btnMobile && btnMobile.contains(target)) ||
-    (btnDesktop && btnDesktop.contains(target)) ||
-    (filters && filters.contains(target))
+    (btnFilterCard && btnFilterCard.contains(target)) ||
+    (filters && filters.contains(target)) ||
+    (backdrop && backdrop.contains(target) && !target?.dataset?.closeFilter)
   ) {
     return;
   }
@@ -7152,17 +7225,16 @@ function toggleNav_legacy(mode) {
 
     $('#btnFocusCategory').addEventListener('click', () => { STATE.focusCategory = null; rerender(); });
 
-    // Saldo toggle (mobile + desktop)
+    // Saldo toggle (mobile + desktop) — jangan toggle saat klik tombol filter/periode
 ['#btnSaldoToggle', '#btnSaldoToggleDesktop'].forEach((sel) => {
-  const el = $(sel);              // $ = document.querySelector
+  const el = $(sel);
   if (!el) return;
 
   el.addEventListener('click', (e) => {
-    // Kalau yang diklik adalah tombol periode (mobile atau desktop), jangan toggle dashboard
     if (
       e?.target &&
       (e.target.closest?.('#btnPeriodToggle') ||
-       e.target.closest?.('#btnPeriodToggleDesktop'))
+       e.target.closest?.('#btnFilterCardDesktop'))
     ) {
       return;
     }
