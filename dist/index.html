@@ -3,8 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#020617" />
+  <meta name="theme-color" content="#0F1117" id="metaThemeColor" />
   <title>Monefyi — AI Personal Finance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
   <!-- PWA Manifest (versioned to avoid stale cache) -->
   <link rel="manifest" href="./assets/manifest-1kv1WJOV.webmanifest?v=2025-12-29" />
@@ -28,7 +31,7 @@
 
 
  
-  <link rel="stylesheet" crossorigin href="./assets/index--LDfcVsI.css">
+  <link rel="stylesheet" crossorigin href="./assets/index-BHEbcfq4.css">
 </head>
 <body>
   <div class="min-h-dvh">
@@ -331,10 +334,11 @@
 
 
     <!-- SIDEBAR DESKTOP (KIRI) -->
-    <aside class="hidden md:flex flex-col gap-6 w-72 shrink-0 md:h-full">
+    <aside id="appSidebar" class="hidden md:flex flex-col gap-6 shrink-0 md:h-full relative">
+      <button id="btnSidebarCollapse" type="button" class="tap absolute top-0 right-0 z-10 w-8 h-8 rounded-lg app-chip flex items-center justify-center text-xs" aria-label="Ciutkan sidebar" title="Sidebar">‹</button>
       
       <!-- Logo Brand (desktop) -->
-<div class="flex items-center gap-3 px-2 mb-2">
+<div class="flex items-center gap-3 px-2 mb-2 pr-8">
   <div class="w-10 h-10 rounded-2xl app-card flex items-center justify-center overflow-hidden shadow-lg border border-slate-800">
     <img id="sidebarLogoImg" class="w-full h-full object-cover hidden" alt="Logo Monefyi" />
     
@@ -352,7 +356,7 @@
     id="btnSaldoToggleDesktop"
     role="button"
     tabindex="0"
-    class="tap w-full rounded-[2rem] app-card p-5 text-left hover:opacity-95 cursor-pointer shadow-xl border border-slate-800/50"
+    class="tap saldo-card-glow sidebar-glass w-full rounded-[2rem] app-card p-5 text-left cursor-pointer shadow-xl border border-slate-800/50"
   >
     <div class="flex flex-col gap-1">
       <div id="saldoTitleDesktop" class="text-xs app-muted font-medium">
@@ -380,7 +384,7 @@
       <button
         id="btnFilterCardDesktop"
         type="button"
-        class="tap w-full rounded-[2rem] app-card p-4 text-left hover:opacity-95 cursor-pointer shadow-lg border border-slate-800/50"
+        class="tap sidebar-glass w-full rounded-[2rem] app-card p-4 text-left hover:opacity-95 cursor-pointer shadow-lg border border-slate-800/50"
         title="Filter periode & transaksi"
         aria-expanded="false"
       >
@@ -399,39 +403,50 @@
           <span class="text-white group-hover:scale-110 transition-transform">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
           </span>
-          <span class="font-semibold text-sm">Dashboard</span>
+          <span class="font-semibold text-sm sidebar-label" data-i18n="nav.dashboard">Dashboard</span>
         </button>
 
         <button onclick="toggleNav('list')" class="sidebar-item flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-slate-800/50 transition-all tap group">
           <span class="text-white group-hover:scale-110 transition-transform">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
           </span>
-          <span class="font-semibold text-sm">Semua Transaksi</span>
+          <span class="font-semibold text-sm sidebar-label" data-i18n="nav.transactions">Semua Transaksi</span>
         </button>
 
         <button onclick="openBudget()" class="sidebar-item flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-slate-800/50 transition-all tap group">
           <span class="text-white group-hover:scale-110 transition-transform">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>
           </span>
-          <span class="font-semibold text-sm">Budgeting</span>
+          <span class="font-semibold text-sm sidebar-label" data-i18n="nav.budget">Budgeting</span>
         </button>
 
         <button onclick="openAdvisorAuto()" class="sidebar-item flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-slate-800/50 transition-all tap group">
           <span class="text-white group-hover:scale-110 transition-transform">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path x1="3" y1="5" x2="7" y2="5"/><path x1="17" y1="19" x2="21" y2="19"/></svg>
           </span>
-          <span class="font-semibold text-sm">Monevisor (AI)</span>
+          <span class="font-semibold text-sm sidebar-label" data-i18n="nav.advisor">Monevisor (AI)</span>
         </button>
       </nav>
       
-    <!-- Footer Sidebar -->
-<div class="mt-auto pt-4 border-t border-slate-800/50 space-y-1">
+    <!-- Footer Sidebar + user -->
+<div id="sidebarUserBlock" class="mt-auto pt-4 border-t border-slate-800/50">
+  <div class="flex items-center gap-3 px-2 py-2 mb-2">
+    <span id="sidebarUserAvatar" class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style="background:var(--brand-green-soft);color:var(--accent-primary)">U</span>
+    <div class="min-w-0 flex-1 sidebar-label">
+      <div id="sidebarUserName" class="text-sm font-semibold truncate">User</div>
+      <div class="text-[10px] app-muted">Monefyi</div>
+    </div>
+    <button type="button" onclick="openMenu()" class="tap rounded-lg app-chip p-2 sidebar-label" aria-label="Settings" title="Settings">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    </button>
+  </div>
+<div class="space-y-1">
   <!-- Tutorial -->
   <button onclick="openTutorial()" class="sidebar-item w-full flex items-center gap-3 px-4 py-2 rounded-xl hover:bg-slate-800/50 transition-all text-slate-400 hover:text-white group">
     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 group-hover:text-white">
       <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M8 7h6"/><path d="M8 11h8"/>
     </svg>
-    <span class="text-xs font-medium">Tutorial</span>
+    <span class="text-xs font-medium sidebar-footer-text">Tutorial</span>
   </button>
 
   <!-- Affiliate -->
@@ -455,23 +470,36 @@
     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 group-hover:text-white">
       <path d="M12 12a5 5 0 1 0-4.9-4.1"/><path d="M8 21a7 7 0 0 1 8-7"/>
     </svg>
-    <span class="text-xs font-medium">Profile</span>
+    <span class="text-xs font-medium sidebar-footer-text">Profile</span>
   </button>
+</div>
 </div>
     </aside>
 
            <!-- KONTEN KANAN (DETAIL) -->
     <div class="flex-1 min-w-0 flex flex-col w-full max-w-full md:h-full">
       <!-- Judul Page Desktop -->
-      <div class="hidden md:flex justify-between items-end mb-8 flex-none">
+      <div class="hidden md:flex justify-between items-end mb-6 flex-none gap-4">
         <div>
-          <h2 class="text-3xl font-bold text-white tracking-tight">Transaksi</h2>
-          <p class="text-slate-500 mt-1" id="kpiSaldoSub">Tap kartu saldo untuk detail lengkap.</p>
+          <h2 id="pageTitleTx" class="text-[28px] font-bold tracking-tight" data-i18n="tx.title">Transaksi</h2>
+          <button type="button" id="infoSaldoPill" class="tap mt-2 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs app-chip" data-i18n="info.saldo_hint" title="Tutup">
+            ℹ️ Tap kartu saldo untuk detail lengkap
+          </button>
         </div>
-        <button onclick="openAddSheet('manual')" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-6 py-3 rounded-2xl transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
-          Transaksi Baru
+        <button id="btnHeaderNewTx" onclick="openAddSheet('quick')" class="btn-primary btn-shine tap font-bold px-6 py-3 rounded-lg flex items-center gap-2 shrink-0" data-i18n="header.new_tx">
+          + Transaksi Baru
         </button>
+      </div>
+
+      <!-- Unified AI input (desktop) -->
+      <div id="unifiedAiBarWrap" class="hidden md:block mb-4 flex-none">
+        <div class="ai-input-bar">
+          <button type="button" id="btnUnifiedVoice" class="tap app-chip p-2 rounded-lg shrink-0" title="Voice" aria-label="Voice">🎤</button>
+          <input id="unifiedAiInput" type="text" data-i18n-placeholder="ai.input.placeholder" placeholder="Ketik transaksi…" autocomplete="off" />
+          <button type="button" id="btnUnifiedPhoto" class="tap app-chip p-2 rounded-lg shrink-0" title="Receipt">📷</button>
+          <button type="button" id="btnUnifiedParse" class="tap btn-primary px-4 py-2 rounded-lg text-sm font-semibold shrink-0">→</button>
+        </div>
+        <div id="unifiedAiPreview" class="hidden mt-3"></div>
       </div>
 
       <!-- Render Content Area: isi halaman (dashboard / list transaksi) -->
@@ -621,17 +649,19 @@
               <div id="txCount" class="text-xs app-muted">—</div>
             </div>
             <div class="flex items-center gap-2">
-              <div id="txViewToggle" class="hidden md:flex items-center gap-1 rounded-xl app-chip p-1">
-                <button id="btnTxViewCard" class="tap rounded-lg px-2 py-1 text-xs tx-view-btn active" data-view="card">Card</button>
-                <button id="btnTxViewTable" class="tap rounded-lg px-2 py-1 text-xs tx-view-btn" data-view="table">Tabel</button>
+              <div id="txViewToggle" class="hidden md:flex tx-view-segment">
+                <span id="txViewIndicator" class="tx-view-indicator" aria-hidden="true"></span>
+                <button id="btnTxViewCard" class="tap tx-view-btn active" data-view="card">Card</button>
+                <button id="btnTxViewTable" class="tap tx-view-btn" data-view="table">Tabel</button>
               </div>
-              <button id="btnTxSearchToggle" class="tap rounded-xl app-chip px-3 py-2 text-xs hover:opacity-90">🔍 Cari</button>
+              <button id="btnTxSearchToggle" class="tap rounded-lg app-chip px-3 py-2 text-xs hover:opacity-90" title="Cmd+K">🔍 <span class="hidden lg:inline text-[10px] app-muted2">⌘K</span></button>
             </div>
           </div>
-          <div id="txSearchWrap" class="hidden">
+          <div id="txSearchWrap" class="tx-search-wrap tx-search--collapsed">
             <input id="txSearchInput" class="tap w-full rounded-xl app-input px-3 py-2 text-sm" placeholder="Cari merchant / catatan / kategori..." />
           </div>
-          <div id="txTypeChips" class="flex items-center gap-2 overflow-x-auto pb-1">
+          <div id="txTypeChips" class="tx-chip-row flex items-center gap-2 overflow-x-auto pb-1">
+            <span id="txChipIndicator" class="tx-chip-indicator" aria-hidden="true"></span>
             <button class="tap rounded-full app-chip px-3 py-1.5 text-xs tx-chip active" data-type="">Semua</button>
             <button class="tap rounded-full app-chip px-3 py-1.5 text-xs tx-chip" data-type="income">Pemasukan</button>
             <button class="tap rounded-full app-chip px-3 py-1.5 text-xs tx-chip" data-type="expense">Pengeluaran</button>
@@ -640,6 +670,9 @@
 
           <div class="mt-3">
             <div id="txList" class="space-y-3"></div>
+            <div id="txLoadMoreWrap" class="hidden mt-3">
+              <button type="button" id="btnLoadMoreTx" class="tap btn-ghost py-2.5 rounded-lg text-sm font-medium" data-i18n="tx.load_more">Muat lebih banyak</button>
+            </div>
             <div id="txTableWrap" class="hidden rounded-2xl app-card p-3">
               <div class="flex items-center justify-between gap-2 mb-2">
                 <div id="txTableHint" class="text-[11px] app-muted">Mode tabel desktop: edit langsung, lalu paste dari Excel jika perlu.</div>
@@ -648,10 +681,12 @@
                 <table id="txTable" class="tx-table text-xs w-full"></table>
               </div>
             </div>
-            <div id="txEmpty" class="hidden rounded-2xl app-card p-6 text-sm app-muted">
-              Belum ada transaksi. Tap tombol <span class="font-semibold">+ Transaksi</span> untuk menambah.
-              <div class="mt-3">
-                <button id="btnTxEmptyAdd" class="tap rounded-xl px-3 py-2 text-xs font-semibold text-white hover:opacity-95" style="background: var(--brand-green)">+ Catat Transaksi</button>
+            <div id="txEmpty" class="hidden rounded-2xl app-card p-8 text-center">
+              <div class="text-4xl mb-3">🧾✨</div>
+              <div class="text-base font-semibold" data-i18n="tx.empty.title">Belum ada transaksi</div>
+              <div class="mt-2 text-sm app-muted" data-i18n="tx.empty.subtitle">Mulai catat pemasukan atau pengeluaran pertamamu</div>
+              <div class="mt-4">
+                <button id="btnTxEmptyAdd" class="tap btn-primary px-4 py-2.5 text-sm font-semibold rounded-lg" data-i18n="tx.empty.cta">+ Tambah Transaksi Pertama</button>
               </div>
             </div>
           </div>
@@ -722,11 +757,8 @@
       
     
 
-    <!-- Floating Action Button (desktop only) -->
-<button id="fab" class="tap fixed z-40 bottom-6 right-4 rounded-full shadow-lg w-14 h-14 hidden md:flex items-center justify-center hover:opacity-95" style="background: rgba(99,102,241,.95); color: white; box-shadow: 0 10px 25px rgba(99,102,241,.30); border: 1px solid rgba(199,210,254,.35)">
-  <span class="text-2xl leading-none">+</span>
-  <span class="sr-only">Tambah transaksi</span>
-</button>
+<!-- Desktop FAB removed — use header "Transaksi Baru" + unified AI bar -->
+<button id="fab" class="hidden tap" aria-hidden="true"></button>
 
     <!-- Bottom Sheet: Add Transaction -->
 <div id="sheetBackdrop" class="sheet-backdrop fixed inset-0 z-50" style="background: rgba(0,0,0,.70)">
@@ -782,6 +814,8 @@
 1) makan siang 50k di warteg pake gopay
 2) parkir 5k cash"
           ></textarea>
+
+          <div id="quickAiPreview" class="hidden mt-3"></div>
 
           <div class="mt-2 flex flex-wrap items-center gap-2">
             <button
@@ -846,61 +880,78 @@
           </div>
         </div>
 
-       <!-- MANUAL: Form (Sudah diubah menjadi Select/Dropdown) -->
+       <!-- MANUAL: Form -->
 <div class="tabPanel hidden" data-tab-panel="manual">
   <div class="grid grid-cols-2 gap-2">
-    <div>
-      <label class="text-xs app-muted">Tanggal</label>
-      <input id="mDate" type="date" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-base" />
+    <div class="field-float">
+      <input id="mDate" type="date" class="tap" placeholder=" " required />
+      <label data-i18n="manual.date">Tanggal</label>
     </div>
-    <div>
-      <label class="text-xs app-muted">Tipe</label>
-      <select id="mType" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-base">
+    <div class="field-float">
+      <select id="mType" class="tap" required>
         <option value="expense">expense</option>
         <option value="income">income</option>
         <option value="transfer">transfer</option>
       </select>
+      <label data-i18n="manual.type">Tipe</label>
     </div>
-    <div>
-      <label class="text-xs app-muted">Jumlah (IDR)</label>
-      <input id="mAmount" inputmode="numeric" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-base" placeholder="50000" />
+    <div class="col-span-2 field-float field-amount">
+      <input id="mAmount" inputmode="numeric" class="tap" placeholder=" " required />
+      <label data-i18n="manual.amount">Jumlah (IDR)</label>
     </div>
-
-    <!-- DROPDOWN KATEGORI -->
-    <div>
-      <label class="text-xs app-muted">Kategori</label>
-      <select id="mCategory" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-base"></select>
+    <div class="col-span-2 amount-presets" id="mAmountPresets">
+      <button type="button" class="amount-preset-chip tap" data-amount="50000">50rb</button>
+      <button type="button" class="amount-preset-chip tap" data-amount="100000">100rb</button>
+      <button type="button" class="amount-preset-chip tap" data-amount="200000">200rb</button>
+      <button type="button" class="amount-preset-chip tap" data-amount="500000">500rb</button>
+      <button type="button" class="amount-preset-chip tap" data-amount="1000000">1jt</button>
     </div>
-
-    <!-- DROPDOWN AKUN -->
-    <div>
-      <label class="text-xs app-muted">Akun (dari)</label>
-      <select id="mAccount" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-base"></select>
+    <div class="col-span-2 numpad-grid" id="mNumpad" aria-label="Keypad angka">
+      <button type="button" class="numpad-key tap" data-key="1">1</button>
+      <button type="button" class="numpad-key tap" data-key="2">2</button>
+      <button type="button" class="numpad-key tap" data-key="3">3</button>
+      <button type="button" class="numpad-key tap" data-key="4">4</button>
+      <button type="button" class="numpad-key tap" data-key="5">5</button>
+      <button type="button" class="numpad-key tap" data-key="6">6</button>
+      <button type="button" class="numpad-key tap" data-key="7">7</button>
+      <button type="button" class="numpad-key tap" data-key="8">8</button>
+      <button type="button" class="numpad-key tap" data-key="9">9</button>
+      <button type="button" class="numpad-key tap" data-key="000">000</button>
+      <button type="button" class="numpad-key tap" data-key="0">0</button>
+      <button type="button" class="numpad-key tap" data-key="back" aria-label="Hapus">⌫</button>
     </div>
-
-    <div id="mToWrap" class="hidden">
-      <label class="text-xs app-muted">Akun (ke)</label>
-      <input id="mToAccount" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-base" placeholder="contoh: BCA" />
+    <div class="field-float">
+      <select id="mCategory" class="tap" required></select>
+      <label data-i18n="manual.category">Kategori</label>
     </div>
-
-    <!-- DROPDOWN METODE -->
-    <div>
-      <label class="text-xs app-muted">Metode</label>
-      <select id="mPayment" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-base"></select>
+    <div class="field-float">
+      <select id="mAccount" class="tap" required></select>
+      <label data-i18n="manual.account">Akun (dari)</label>
     </div>
-
-    <div class="col-span-2">
-      <label class="text-xs app-muted">Merchant</label>
-      <input id="mMerchant" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-base" placeholder="Grab / Indomaret" />
+    <div id="mToWrap" class="hidden field-float col-span-2">
+      <input id="mToAccount" class="tap" placeholder=" " />
+      <label data-i18n="manual.to_account">Akun (ke)</label>
     </div>
-    <div class="col-span-2">
-      <label class="text-xs app-muted">Catatan</label>
-      <input id="mNotes" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-base" placeholder="opsional" />
+    <div class="field-float">
+      <select id="mPayment" class="tap"></select>
+      <label data-i18n="manual.payment">Metode</label>
+    </div>
+    <div class="field-float">
+      <input id="mMerchant" class="tap" placeholder=" " />
+      <label data-i18n="manual.merchant">Merchant</label>
+    </div>
+    <div id="mCategorySuggest" class="hidden col-span-2 category-suggest-pill">
+      <span id="mCategorySuggestText"></span>
+      <button type="button" id="btnApplyCategorySuggest" class="tap text-xs font-semibold" style="color:var(--accent-primary)">Terapkan</button>
+    </div>
+    <div class="col-span-2 field-float">
+      <input id="mNotes" class="tap" placeholder=" " />
+      <label data-i18n="manual.notes">Catatan</label>
     </div>
   </div>
 
   <div class="mt-3 flex items-center gap-2">
-    <button id="btnSaveManual" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: rgba(16,185,129,.92)">
+    <button id="btnSaveManual" class="tap btn-primary rounded-lg px-4 py-2 text-sm font-semibold" disabled data-i18n="manual.save">
       Simpan
     </button>
     <div id="manualStatus" class="ml-auto text-xs app-muted">-</div>
@@ -1038,6 +1089,13 @@
           </div>
           <div class="sheet-body px-4 pb-5">
             <div id="advisorContent" class="space-y-3">
+              <div class="rounded-2xl app-card p-4 flex items-center gap-4">
+                <div id="advisorHealthRing" class="health-ring shrink-0" style="--pct: 0%"><span id="advisorHealthScore">—</span></div>
+                <div class="min-w-0">
+                  <div class="text-sm font-semibold" data-i18n="health.score">Skor kesehatan</div>
+                  <div id="advisorHealthLabel" class="text-xs app-muted mt-1">—</div>
+                </div>
+              </div>
               <div class="rounded-2xl app-card p-4">
                 <div class="text-sm font-semibold">Ringkasan</div>
                 <div id="advisorSummary" class="mt-2 text-sm leading-relaxed">Tap <span class="font-semibold">Generate</span> untuk membuat insight dari data transaksi kamu pada periode terpilih.</div>
@@ -1651,6 +1709,28 @@
       <div id="desktopFilterSlot" class="relative w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl app-card-opaque p-4 shadow-2xl"></div>
     </div>
 
+    </div>
+
+    <!-- Onboarding -->
+    <div id="onboardingBackdrop" class="sheet-backdrop fixed inset-0 z-[100] hidden" style="background:rgba(0,0,0,.75)">
+      <div class="flex items-center justify-center min-h-dvh p-4">
+        <div class="w-full max-w-md rounded-2xl app-card-opaque p-6 shadow-2xl">
+          <h2 class="text-xl font-bold" data-i18n="onboarding.welcome">Selamat datang di Monefyi</h2>
+          <ol class="mt-4 space-y-3 text-sm app-muted list-decimal pl-5">
+            <li data-i18n="onboarding.step1">Catat transaksi semudah chat</li>
+            <li data-i18n="onboarding.step2">Monevisor AI menganalisis keuanganmu</li>
+            <li data-i18n="onboarding.step3">Atur budget per kategori</li>
+          </ol>
+          <div class="mt-6 flex gap-2">
+            <button type="button" id="btnOnboardingSkip" class="tap flex-1 btn-ghost py-2.5 rounded-lg text-sm" data-i18n="onboarding.skip">Lewati</button>
+            <button type="button" id="btnOnboardingStart" class="tap flex-1 btn-primary py-2.5 rounded-lg text-sm font-semibold" data-i18n="onboarding.start">Mulai</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/monefyi-ui.js"></script>
   <script src="js/app.js" defer></script>
 
 </body>

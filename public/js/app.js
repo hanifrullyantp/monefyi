@@ -6,6 +6,7 @@
     const SUPABASE_ANON_KEY = String(CFG.supabaseAnonKey || '').trim();
     const SUPABASE_FN_PARSE = CFG.fnParse || 'asfin-parse-transaction';
     const SUPABASE_FN_COACH = CFG.fnCoach || 'ai-user-coach';
+    const SUPABASE_FN_INSIGHTS = CFG.fnInsights || 'monefyi-generate-insights';
     const SUPABASE_FN_ADMIN_APP_CONFIG = CFG.fnAdminAppConfig || 'monefyi-admin-app-config';
 
     // Checkout links (fallback jika app_config tidak set)
@@ -75,7 +76,11 @@
     }
 
     function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
-    function showToast(message, kind='success'){
+    function showToast(message, kind='success', opts){
+      if (window.MonefyiUI?.showToast) {
+        window.MonefyiUI.showToast(message, kind, opts);
+        return;
+      }
       const root = $('#toastRoot');
       if (!root) return;
       const el = document.createElement('div');
@@ -84,9 +89,8 @@
       root.appendChild(el);
       setTimeout(() => {
         el.style.opacity = '0';
-        el.style.transform = 'translateY(6px)';
         setTimeout(() => el.remove(), 180);
-      }, 3000);
+      }, opts?.duration ?? 3000);
     }
 
     function parseNumberInput(v){
@@ -582,6 +586,9 @@ async function loadBudgets(){
 
     function t(key, vars){
       const lang = (STATE.settings?.lang || 'id');
+      if (window.MonefyiI18n?.ready) {
+        return window.MonefyiI18n.t(key, vars, lang, I18N);
+      }
       let str = (I18N[lang]?.[key]) ?? (I18N.id?.[key]) ?? key;
       if (vars && typeof str === 'string') {
         for (const [k,v] of Object.entries(vars)) {
@@ -718,9 +725,11 @@ async function loadBudgets(){
 
       // ===== Main =====
       $('#txTitle') && ($('#txTitle').textContent = t('tx.title'));
-      if ($('#txEmpty')) {
-        $('#txEmpty').innerHTML = t('tx.empty_html');
-      }
+      $('#pageTitleTx') && ($('#pageTitleTx').textContent = t('tx.title'));
+
+      if (window.MonefyiI18n?.applyDataI18n) window.MonefyiI18n.applyDataI18n(document, lang, I18N);
+      $('#sidebarUserName') && ($('#sidebarUserName').textContent = STATE.user?.name || 'User');
+      $('#sidebarUserAvatar') && ($('#sidebarUserAvatar').textContent = (STATE.user?.name || 'U').trim().slice(0, 1).toUpperCase());
 
       // ===== Add sheet =====
       $('#addSheetTitle') && ($('#addSheetTitle').textContent = t('add.title'));
@@ -740,7 +749,7 @@ async function loadBudgets(){
       // Manual labels
       const setLabelNear = (inputId, txt) => {
         const el = $(`#${inputId}`);
-        const lab = el?.closest('div')?.querySelector('label');
+        const lab = el?.closest('.field-float')?.querySelector('label') || el?.closest('div')?.querySelector('label');
         if (lab) lab.textContent = txt;
       };
       setLabelNear('mDate', t('manual.date'));
@@ -853,6 +862,8 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
         receiptOcrRunning: false,
         accountDetailOpen: false,
         txView: 'card',
+        txLoading: false,
+        txVisibleCount: 50,
       },
       accountDetail: {
         account: null,
@@ -911,6 +922,8 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
 
     function applyTheme(){
       document.body.classList.toggle('theme-light', STATE.settings.theme === 'light');
+      const meta = document.getElementById('metaThemeColor');
+      if (meta) meta.content = STATE.settings.theme === 'light' ? '#FFFFFF' : '#0F1117';
       destroyCharts();
     }
 
@@ -978,6 +991,7 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
       if ($('#rangeHint')) $('#rangeHint').textContent = STATE.period.start === STATE.period.end ? '1 hari' : `Rentang: ${STATE.period.label}`;
 
       STATE.focusCategory = null;
+      if (window.MonefyiUI?.cachePeriod) window.MonefyiUI.cachePeriod(STATE.period);
       rerender();
       refreshTransactionsRange().catch(()=>{});
       loadBudgets().then(b => { STATE.budgetsByMonth = b; rerender(); }).catch(()=>{});
@@ -985,6 +999,16 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
     }
 
     function initDefaultPeriod(){
+      const restored = window.MonefyiUI?.restorePeriod?.();
+      if (restored?.start && restored?.end) {
+        setPeriod({
+          preset: restored.preset || 'custom',
+          startISO: restored.start,
+          endISO: restored.end,
+          label: restored.label || dateLabelRange(restored.start, restored.end),
+        });
+        return;
+      }
       const mk = toMonthKey(new Date());
       STATE.selectedMonth = mk;
       setPeriod({ preset:'this_month', startISO: toISODate(startOfMonth(mk)), endISO: toISODate(endOfMonth(mk)), label: monthLabel(mk) });
@@ -1270,6 +1294,8 @@ function computeSubscriptionStatus(profile){
 
     async function refreshTransactionsRange(){
       if (!STATE.db.enabled || !STATE.db.user) return;
+      STATE.ui.txLoading = true;
+      rerender();
       const supa = STATE.db.supa;
 
       const anchor = toMonthKey(STATE.period.end);
@@ -1292,6 +1318,8 @@ function computeSubscriptionStatus(profile){
 
       if (error) {
         console.warn('transactions fetch error', error);
+        STATE.ui.txLoading = false;
+        rerender();
         return;
       }
       STATE.transactions = (data || []).map(t => ({
@@ -1299,6 +1327,8 @@ function computeSubscriptionStatus(profile){
         amount: Number(t.amount||0),
         meta: (t.meta && typeof t.meta === 'object') ? t.meta : (t.meta ? JSON.parse(t.meta) : {})
       }));
+      STATE.ui.txLoading = false;
+      STATE.ui.txVisibleCount = 50;
       ensureSelectOptions();
       rerender();
       updateSaldoAsync();
@@ -1422,14 +1452,80 @@ async function upsertTransaction_legacy_local(tx) {
     }
 
     async function bootstrapAuthed(){
+      if (window.MonefyiI18n?.mergeIntoI18N) window.MonefyiI18n.mergeIntoI18N(I18N);
       $('#appShell').classList.remove('hidden');
       await loadAppConfig();
       await loadProfileAndSettings();
       STATE.budgetsByMonth = await loadBudgets();
       await refreshTransactionsRange();
-      // init coach chat area (empty)
       initCoachChat({ reset: true });
+      initMonefyiEnhancements();
       rerender();
+    }
+
+    function initMonefyiEnhancements(){
+      if (window.MonefyiI18n?.mergeIntoI18N) window.MonefyiI18n.mergeIntoI18N(I18N);
+      window.MonefyiUI?.initSidebarCollapse?.();
+      window.MonefyiUI?.initKeyboardShortcuts?.({
+        onSearch: () => {
+          $('#btnTxSearchToggle')?.click();
+          setTimeout(() => $('#txSearchInput')?.focus(), 80);
+        },
+        onNewTx: () => openAddSheet('quick'),
+        onEscape: () => {
+          document.querySelectorAll('[data-tx-dropdown]').forEach(el => el.classList.add('hidden'));
+          if (STATE.ui.monthPopoverOpen) setMonthPopover(false);
+        },
+      });
+      window.MonefyiUI?.initVoiceInput?.($('#unifiedAiInput'), $('#btnUnifiedVoice'));
+      $('#btnUnifiedParse')?.addEventListener('click', () => handleUnifiedAiParse());
+      $('#unifiedAiInput')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); handleUnifiedAiParse(); }
+      });
+      $('#btnUnifiedPhoto')?.addEventListener('click', () => openReceiptAdd());
+      $('#btnOnboardingStart')?.addEventListener('click', () => {
+        window.MonefyiUI?.hideOnboarding?.();
+        openAddSheet('quick');
+      });
+      $('#btnOnboardingSkip')?.addEventListener('click', () => window.MonefyiUI?.hideOnboarding?.());
+      window.MonefyiUI?.initInfoSaldoPillDismiss?.();
+      window.MonefyiUI?.initTxListKeyboard?.();
+      window.MonefyiUI?.showOnboardingIfNeeded?.();
+      initManualFormEnhancements();
+    }
+
+    async function handleUnifiedAiParse(){
+      const input = $('#unifiedAiInput');
+      const preview = $('#unifiedAiPreview');
+      if (!input?.value?.trim()) return;
+      await showTxPreviewFlow(input.value.trim(), preview, () => { input.value = ''; });
+    }
+
+    async function showTxPreviewFlow(text, previewEl, onDone){
+      if (!previewEl) return;
+      previewEl.classList.remove('hidden');
+      previewEl.innerHTML = `<div class="text-xs app-muted p-2">${t('tx.pending') || 'Menyimpan…'}</div>`;
+      try {
+        const tx = await parseOneLineToTx(text);
+        if (!tx?.amount) {
+          previewEl.innerHTML = `<div class="text-xs app-muted p-2">${t('toast.error')}</div>`;
+          return;
+        }
+        const dup = findPotentialDuplicate(tx);
+        if (dup) tx.meta = { ...(tx.meta || {}), duplicateWarning: dup.id };
+        window.MonefyiUI?.renderTxPreviewCard?.(tx, previewEl, async (saved) => {
+          await upsertTransaction(saved, { pending: true });
+          previewEl.classList.add('hidden');
+          previewEl.innerHTML = '';
+          onDone?.();
+        }, (draft) => {
+          STATE.parsedDraft = draft;
+          openAddSheet('manual');
+        });
+      } catch (e) {
+        console.warn(e);
+        previewEl.innerHTML = `<div class="text-xs app-muted p-2">${t('toast.error')}</div>`;
+      }
     }
 
     // =========================
@@ -1729,7 +1825,7 @@ async function upsertTransaction_legacy_local(tx) {
         notes: obj.notes || (text||'').trim(),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        meta: { source:'quick', parsed:true, provider:'supabase_edge' }
+        meta: { source:'quick', parsed:true, provider:'supabase_edge', confidence: Number(obj.confidence ?? 0.85) }
       };
 
       if (!tx.amount) tx.amount = parseIDRAmount(text) || 0;
@@ -1737,16 +1833,36 @@ async function upsertTransaction_legacy_local(tx) {
     }
 
     async function parseQuickText(text){
-      if (STATE.settings.useGemini && (STATE.settings.geminiKey||'').trim()) {
+      if (STATE.db.enabled && STATE.db.session?.access_token) {
         try {
           return await fetchAIParsedTransactionViaSupabase(text, 'text');
         } catch (e) {
           console.warn('AI parse failed, fallback', e);
-          $('#parseStatus').textContent = 'AI gagal, memakai mode sederhana…';
+          if ($('#parseStatus')) $('#parseStatus').textContent = t('quick.ai_fallback') || 'AI gagal, memakai mode sederhana…';
           await sleep(120);
         }
       }
       return parseTransactionTextHeuristic(text, { source:'quick' });
+    }
+
+    async function fetchInsightsViaSupabase(){
+      if (!STATE.db.enabled || !STATE.db.session?.access_token) return null;
+      const url = `${SUPABASE_URL.replace(/\/+$/,'')}/functions/v1/${SUPABASE_FN_INSIGHTS}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${STATE.db.session.access_token}`,
+        },
+        body: JSON.stringify({
+          start: STATE.period.start,
+          end: STATE.period.end,
+          periodLabel: STATE.period.label,
+          lang: STATE.settings?.lang || 'id',
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text().catch(() => String(res.status)));
+      return res.json();
     }
 
     // =========================
@@ -2309,6 +2425,10 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
 
       $('#userNameTop').textContent = STATE.user.name || 'User';
       $('#userBadge').textContent = (STATE.user.name||'U').trim().slice(0,1).toUpperCase();
+      const sidebarName = $('#sidebarUserName');
+      const sidebarAvatar = $('#sidebarUserAvatar');
+      if (sidebarName) sidebarName.textContent = STATE.user.name || 'User';
+      if (sidebarAvatar) sidebarAvatar.textContent = (STATE.user.name||'U').trim().slice(0,1).toUpperCase();
       $('#uName').value = STATE.user.name || '';
       $('#uEmail').value = STATE.user.email || '';
       $$('.tx-chip').forEach((c) => {
@@ -2316,6 +2436,10 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       });
       syncPresetChipActive();
       syncTxViewToggle();
+      requestAnimationFrame(() => {
+        window.MonefyiUI?.syncChipIndicator?.();
+        window.MonefyiUI?.syncViewSegmentIndicator?.();
+      });
 
       // Top badge next to user: admin / lifetime / exp: d/m/yy
       const badge = $('#userPlanBadge');
@@ -2485,13 +2609,16 @@ renderAccountsSettings();
   const s = sumByType(txs);
   const netStr = formatCompactIDR(s.net);
 
-  const subText = `Bulan ini: +${formatCompactIDR(s.income)} (income) | −${formatCompactIDR(s.expense)} (expense)`;
+  const subHtml = `<span class="saldo-period-line">
+    <span><span class="saldo-dot saldo-dot--income" aria-hidden="true">●</span>+${formatCompactIDR(s.income)} (income)</span>
+    <span><span class="saldo-dot saldo-dot--expense" aria-hidden="true">●</span>−${formatCompactIDR(s.expense)} (expense)</span>
+  </span>`;
 
   // Update subtext saldo (mobile + desktop)
   ['#kpiSaldoSub', '#kpiSaldoSubDesktop'].forEach((sel) => {
     const el = $(sel);
     if (!el) return;
-    el.textContent = subText;
+    el.innerHTML = subHtml;
   });
 
   const savingRate = s.income > 0 ? Math.round(((s.income - s.expense) / s.income) * 100) : 0;
@@ -2933,6 +3060,7 @@ function generateSmartBudgetRecommendation() {
       $$('.tx-view-btn').forEach((btn) => {
         btn.classList.toggle('active', (btn.getAttribute('data-view') || 'card') === current);
       });
+      requestAnimationFrame(() => window.MonefyiUI?.syncViewSegmentIndicator?.());
     }
     function scheduleInlineRefresh(){
       if (txInlineRefreshTimer) clearTimeout(txInlineRefreshTimer);
@@ -3059,6 +3187,16 @@ function generateSmartBudgetRecommendation() {
         });
       });
     }
+    function categoryIconBg(category){
+      const c = normalizeText(category || '');
+      if (c.includes('makan') || c.includes('food')) return 'rgba(245,158,11,.22)';
+      if (c.includes('transport') || c.includes('ojek')) return 'rgba(59,130,246,.22)';
+      if (c.includes('belanja') || c.includes('shop')) return 'rgba(249,115,22,.22)';
+      if (c.includes('tagihan') || c.includes('util')) return 'rgba(168,85,247,.22)';
+      if (c.includes('gaji') || c.includes('income')) return 'rgba(0,229,160,.18)';
+      return 'rgba(148,163,184,.18)';
+    }
+
     function renderTransactionsCards(txs){
       const list = $('#txList');
       list.innerHTML = '';
@@ -3068,79 +3206,145 @@ function generateSmartBudgetRecommendation() {
         groups.get(tx.date).push(tx);
       }
       const dates = [...groups.keys()].sort((a,b)=>b.localeCompare(a));
+      let animIdx = 0;
 
       for (const date of dates) {
-        const chip = document.createElement('div');
-        chip.className = 'flex items-center justify-between px-1';
-        chip.innerHTML = `
-          <div class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs app-chip" style="background: color-mix(in srgb, var(--app-surface2) 70%, transparent)">
-            <span class="font-semibold">${escapeHtml(relativeDayLabel(date))}</span>
-            <span class="app-muted">${t('common.net')}: ${formatCompactIDR(sumByType(groups.get(date)).net)}</span>
-          </div>
+        const net = sumByType(groups.get(date)).net;
+        const divider = document.createElement('div');
+        divider.className = 'tx-date-divider';
+        divider.innerHTML = `
+          <span class="text-xs font-semibold shrink-0">${escapeHtml(relativeDayLabel(date))}</span>
+          <span class="text-xs font-medium shrink-0 tx-date-divider__net--${net >= 0 ? 'pos' : 'neg'}">${t('common.net')}: ${formatCompactIDR(net)}</span>
         `;
-        list.appendChild(chip);
+        list.appendChild(divider);
 
         for (const tx of groups.get(date)) {
-          const row = document.createElement('button');
-          row.className = 'tap w-full text-left rounded-2xl app-card px-4 py-3 hover:opacity-95 focus:outline-none';
+          const row = document.createElement('div');
+          row.className = 'tx-card-v2 app-card w-full text-left' + (tx.meta?.pending ? ' tx-pending' : '');
+          row.style.animationDelay = `${animIdx * 50}ms`;
+          row.setAttribute('tabindex', '0');
+          row.setAttribute('data-tx-row', '1');
+          row.setAttribute('data-tx-id', tx.id);
+          row.setAttribute('role', 'button');
+          row.setAttribute('aria-label', `${tx.merchant || tx.category || 'Transaksi'} ${formatIDR(Number(tx.amount||0))}`);
+          animIdx++;
 
           const isInc = tx.type==='income';
           const isExp = tx.type==='expense';
-          const amtColor = isInc ? 'rgba(167,243,208,.95)' : isExp ? 'rgba(254,202,202,.95)' : 'var(--app-text)';
+          const amtColor = isInc ? 'var(--accent-primary)' : isExp ? 'var(--accent-danger)' : 'var(--app-text)';
           const sign = isInc ? '+' : isExp ? '−' : '';
-
-          const subtitle = [tx.merchant, tx.notes].filter(Boolean).join(' • ');
+          const title = tx.merchant || tx.category || 'Lainnya';
+          const subtitle = [tx.account, tx.type].filter(Boolean).join(' • ');
 
           row.innerHTML = `
+            <div class="tx-card-swipe-delete" aria-hidden="true">${t('tx.swipe.delete') || 'Hapus'}</div>
+            <div class="tx-card-inner">
             <div class="flex items-start gap-3">
-              <div class="mt-0.5 w-10 h-10 rounded-2xl flex items-center justify-center text-base font-semibold" style="border: 1px solid var(--app-border); background: color-mix(in srgb, var(--app-surface2) 85%, transparent)">
-                ${escapeHtml(categoryEmoji(tx.category))}
-              </div>
+              <div class="tx-icon shrink-0" style="background:${categoryIconBg(tx.category)}">${escapeHtml(categoryEmoji(tx.category))}</div>
               <div class="min-w-0 flex-1">
-                <div class="flex items-start justify-between gap-3">
+                <div class="flex items-start justify-between gap-2">
                   <div class="min-w-0">
-                    <div class="text-sm font-semibold truncate">${escapeHtml(tx.category || 'Lainnya')}</div>
-                    <div class="mt-0.5 text-xs app-muted truncate">${escapeHtml(subtitle || '—')}</div>
-                    <div class="mt-1 text-[11px] app-muted2 truncate">${escapeHtml(tx.account || '—')} • ${escapeHtml(tx.type)}</div>
+                    <div class="text-sm font-bold truncate">${escapeHtml(title)}</div>
+                    <div class="mt-0.5 text-xs app-muted truncate">${escapeHtml(subtitle)}</div>
+                    <div class="mt-1 text-[11px] app-muted2">${escapeHtml(tx.date)}${tx.meta?.pending ? ' · ' + (t('tx.pending') || 'Menyimpan…') : ''}</div>
                   </div>
-                  <div class="text-right shrink-0">
-                    <div class="text-sm font-semibold" style="color:${amtColor}">${sign}${formatIDR(Number(tx.amount||0))}</div>
-                    <div class="mt-0.5 text-[11px] app-muted2">${escapeHtml(tx.payment_method || '')}</div>
+                  <div class="text-right shrink-0 flex flex-col items-end gap-1">
+                    <div class="text-base font-bold" style="color:${amtColor}">${sign}${formatIDR(Number(tx.amount||0))}</div>
+                    <span class="text-[10px] rounded-full px-2 py-0.5 app-chip">${escapeHtml(tx.account || '—')}</span>
                   </div>
                 </div>
               </div>
+              <div class="relative shrink-0">
+                <button type="button" class="tx-menu-btn tap rounded-lg app-chip w-8 h-8 flex items-center justify-center" data-tx-menu="${escapeHtmlAttr(tx.id)}" aria-label="Menu">⋮</button>
+                <div class="hidden absolute right-0 top-9 z-20 min-w-[140px] rounded-lg app-card-opaque border border-[var(--app-border)] shadow-lg py-1" data-tx-dropdown="${escapeHtmlAttr(tx.id)}">
+                  <button type="button" class="tap w-full text-left px-3 py-2 text-xs hover:opacity-90" data-tx-edit="${escapeHtmlAttr(tx.id)}">${t('tx.menu.edit') || 'Edit'}</button>
+                  <button type="button" class="tap w-full text-left px-3 py-2 text-xs hover:opacity-90" data-tx-dup="${escapeHtmlAttr(tx.id)}">${t('tx.menu.duplicate') || 'Duplikat'}</button>
+                  <button type="button" class="tap w-full text-left px-3 py-2 text-xs" style="color:var(--accent-danger)" data-tx-del="${escapeHtmlAttr(tx.id)}">${t('tx.menu.delete') || 'Hapus'}</button>
+                </div>
+              </div>
             </div>
-            <div class="mt-2 flex items-center justify-end gap-2 tx-row-actions">
-              <button class="tap rounded-lg app-chip px-2 py-1 text-[11px]" data-tx-edit="${escapeHtmlAttr(tx.id)}">Edit</button>
-              <button class="tap rounded-lg px-2 py-1 text-[11px]" style="background: rgba(244,63,94,.14); border:1px solid rgba(244,63,94,.25); color: rgba(254,202,202,.95)" data-tx-del="${escapeHtmlAttr(tx.id)}">Hapus</button>
+            <div class="hidden mt-3 pt-3 border-t border-[var(--app-border)]" data-tx-confirm="${escapeHtmlAttr(tx.id)}">
+              <div class="text-xs mb-2">${t('tx.delete.confirm') || 'Hapus transaksi ini?'}</div>
+              <div class="flex gap-2">
+                <button type="button" class="tap flex-1 btn-ghost py-1.5 rounded-lg text-xs" data-tx-cancel="${escapeHtmlAttr(tx.id)}">${t('tx.delete.no') || 'Batal'}</button>
+                <button type="button" class="tap flex-1 py-1.5 rounded-lg text-xs text-white" style="background:var(--accent-danger)" data-tx-confirm-del="${escapeHtmlAttr(tx.id)}">${t('tx.delete.yes') || 'Ya, Hapus'}</button>
+              </div>
+            </div>
             </div>
           `;
-          row.addEventListener('click', () => openEdit(tx.id));
-          row.querySelector('[data-tx-edit]')?.addEventListener('click', (e) => {
+
+          row.querySelector('[data-tx-menu]')?.addEventListener('click', (e) => {
             e.stopPropagation();
-            openEdit(tx.id);
+            const dd = row.querySelector(`[data-tx-dropdown]`);
+            document.querySelectorAll('[data-tx-dropdown]').forEach(el => { if (el !== dd) el.classList.add('hidden'); });
+            dd?.classList.toggle('hidden');
           });
-          row.querySelector('[data-tx-del]')?.addEventListener('click', async (e) => {
+          row.querySelector('[data-tx-edit]')?.addEventListener('click', (e) => { e.stopPropagation(); openEdit(tx.id); });
+          row.querySelector('[data-tx-dup]')?.addEventListener('click', async (e) => {
             e.stopPropagation();
-            await deleteTransaction(tx.id);
+            const copy = { ...tx, id: uuid(), created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+            await upsertTransaction(copy, { pending: true });
+          });
+          row.querySelector('[data-tx-del]')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            row.querySelector('[data-tx-confirm]')?.classList.remove('hidden');
+            row.querySelector('[data-tx-dropdown]')?.classList.add('hidden');
+          });
+          row.querySelector('[data-tx-cancel]')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            row.querySelector('[data-tx-confirm]')?.classList.add('hidden');
+          });
+          row.querySelector('[data-tx-confirm-del]')?.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            await deleteTransaction(tx.id, { confirmed: true });
+          });
+          window.MonefyiUI?.initTxSwipeDelete?.(row, () => {
+            row.querySelector('[data-tx-confirm]')?.classList.remove('hidden');
+          });
+          row.addEventListener('click', (e) => {
+            if (e.target.closest('[data-tx-menu]') || e.target.closest('[data-tx-dropdown]') || e.target.closest('[data-tx-confirm]')) return;
+            openEdit(tx.id);
           });
           list.appendChild(row);
         }
       }
+      document.addEventListener('click', () => {
+        document.querySelectorAll('[data-tx-dropdown]').forEach(el => el.classList.add('hidden'));
+      }, { once: true });
     }
     function renderTransactions(){
-      const txs = getFilteredTransactions();
-      $('#txCount').textContent = t('tx.count', { n: txs.length }) + (STATE.focusCategory ? t('tx.focus', { cat: STATE.focusCategory }) : '');
+      const allTxs = getFilteredTransactions();
+      const total = allTxs.length;
+      const limit = Number(STATE.ui.txVisibleCount || 50);
+      const txs = allTxs.slice(0, limit);
+      $('#txCount').textContent = t('tx.count', { n: total }) + (STATE.focusCategory ? t('tx.focus', { cat: STATE.focusCategory }) : '');
 
       const list = $('#txList');
       const tableWrap = $('#txTableWrap');
+      const loadMoreWrap = $('#txLoadMoreWrap');
       const useTable = isDesktopViewport() && String(STATE.ui.txView || 'card') === 'table';
+
+      if (STATE.ui.txLoading) {
+        list.classList.remove('hidden');
+        if (tableWrap) tableWrap.classList.add('hidden');
+        list.innerHTML = window.MonefyiUI?.txSkeleton(5) || '';
+        $('#txEmpty')?.classList.add('hidden');
+        loadMoreWrap?.classList.add('hidden');
+        return;
+      }
+
       list.classList.toggle('hidden', useTable);
       if (tableWrap) tableWrap.classList.toggle('hidden', !useTable);
-      $('#txEmpty').classList.toggle('hidden', txs.length !== 0);
-      if (txs.length === 0) return;
+      $('#txEmpty').classList.toggle('hidden', total !== 0);
+      loadMoreWrap?.classList.toggle('hidden', limit >= total || total === 0);
+
+      if (total === 0) {
+        list.innerHTML = '';
+        return;
+      }
       if (useTable) renderTransactionsTable(txs);
       else renderTransactionsCards(txs);
+      requestAnimationFrame(() => window.MonefyiUI?.syncChipIndicator?.());
     }
 
   function rerender(){
@@ -3185,6 +3389,7 @@ function generateSmartBudgetRecommendation() {
     const sheet = $('#sheet');
 
 function openAddSheet(tab = 'quick') {
+  sheet?.classList.toggle('sheet-form-panel', isDesktopViewport());
   // 1. Isi Dropdown Kategori, Akun, Metode (Agar Manual selalu siap)
   const cats = getActiveBudgetCats();
   const mCat = document.getElementById('mCategory');
@@ -3208,7 +3413,12 @@ function openAddSheet(tab = 'quick') {
   const backdrop = document.getElementById('sheetBackdrop');
   const sheet = document.getElementById('sheet');
   if (backdrop && sheet) {
-    openSheet(backdrop, sheet); // Memanggil fungsi asli aplikasi Anda
+    openSheet(backdrop, sheet);
+  }
+  if (tab === 'manual') {
+    if ($('#mDate') && !$('#mDate').value) $('#mDate').value = toISODate(new Date());
+    validateManualForm();
+    setTimeout(() => $('#mAmount')?.focus(), 120);
   }
 }
 
@@ -4054,71 +4264,73 @@ function openTutorialTopic(id) {
     // =========================
     // Actions
     // =========================
-    async function upsertTransaction(tx) {
-  console.log("Upserting transaction:", tx);
-
-  // 1. Pastikan STATE.transactions adalah array
+    async function upsertTransaction(tx, opts = {}) {
   if (!Array.isArray(STATE.transactions)) STATE.transactions = [];
 
-  // 2. Update Memori Lokal (STATE)
+  if (opts.pending) {
+    tx.meta = { ...(tx.meta || {}), pending: true };
+  }
+
   const index = STATE.transactions.findIndex(t => t.id === tx.id);
   if (index >= 0) {
-    // Jika edit, timpa data lama
     STATE.transactions[index] = { ...tx };
   } else {
-    // Jika baru, tambahkan ke paling depan (paling atas)
     STATE.transactions.unshift({ ...tx });
   }
 
-  // 3. Sortir Ulang (Terbaru di atas berdasarkan tanggal)
   STATE.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  // 4. JALANKAN RERENDER ASLI (PENTING!)
-  // Kita beri jeda 50ms agar browser sempat memproses data di memori
   setTimeout(() => {
-    if (typeof rerender === 'function') {
-      rerender();
-      console.log("UI Rerendered successfully.");
-    }
-  }, 50);
+    if (typeof rerender === 'function') rerender();
+  }, opts.pending ? 0 : 50);
 
-  // 5. Simpan ke Database di Background
   if (STATE.db.enabled && STATE.db.user) {
     try {
       await dbUpsertTransaction(tx);
-      // Update saldo dashboard secara async
+      if (tx.meta?.pending) {
+        delete tx.meta.pending;
+        tx.updated_at = new Date().toISOString();
+      }
       if (typeof updateSaldoAsync === 'function') updateSaldoAsync();
     } catch (e) {
       console.error("DB Save failed:", e);
-      showToast('Gagal menyimpan. Coba lagi', 'error');
+      if (opts.pending) {
+        STATE.transactions = STATE.transactions.filter(t => t.id !== tx.id);
+        rerender();
+      }
+      showToast(t('toast.error') || 'Gagal menyimpan. Coba lagi', 'error');
       return;
     }
   }
-  showToast('Transaksi tersimpan', 'success');
+  if (!opts.silent) showToast(t('toast.saved') || 'Transaksi tersimpan', 'success');
 }
 
-   async function deleteTransaction(id) {
-  if (!confirm('Hapus transaksi ini?')) return;
+   async function deleteTransaction(id, opts = {}) {
+  const removed = STATE.transactions.find(t => t.id === id);
+  if (!removed) return;
+  if (!opts.confirmed && !opts.skipConfirm) return;
 
-  // 1. UPDATE MEMORI LOKAL (Hapus dari list)
   STATE.transactions = STATE.transactions.filter(t => t.id !== id);
+  if (typeof rerender === 'function') rerender();
 
-  // 2. PANGGIL RERENDER SEGERA
-  if (typeof rerender === 'function') {
-    rerender();
-  }
-
-  // 3. HAPUS DI DATABASE
   if (STATE.db.enabled && STATE.db.user) {
     try {
       await dbDeleteTransaction(id);
     } catch (e) {
       console.error("Gagal hapus di database", e);
-      showToast('Gagal menghapus transaksi', 'error');
+      STATE.transactions.unshift(removed);
+      rerender();
+      showToast(t('toast.error') || 'Gagal menghapus transaksi', 'error');
       return;
     }
   }
-  showToast('Transaksi dihapus', 'success');
+  showToast(t('toast.deleted') || 'Transaksi dihapus', 'success', {
+    undo: () => {
+      STATE.transactions.unshift(removed);
+      rerender();
+      if (STATE.db.enabled && STATE.db.user) dbUpsertTransaction(removed).catch(() => {});
+    },
+  });
 }
 
     function getLastUsedAccount(){
@@ -4184,11 +4396,92 @@ function openTutorialTopic(id) {
   $('#editStatus').textContent = '—';
   openEditModal();
 }
+    window.openEdit = openEdit;
 
 
     // ============================================================
 // FUNGSI INPUT MANUAL - 100% SINKRON DENGAN BUDGET
 // ============================================================
+
+    let manualSuggestTimer = null;
+    let pendingCategorySuggest = null;
+
+    function validateManualForm(){
+      const dateOk = !!$('#mDate')?.value;
+      const amt = parseNumberInput($('#mAmount')?.value || '');
+      const catOk = !!$('#mCategory')?.value;
+      const btn = $('#btnSaveManual');
+      if (!btn) return false;
+      const ready = dateOk && amt > 0 && catOk;
+      const wasDisabled = btn.disabled;
+      btn.disabled = !ready;
+      if (ready && wasDisabled) btn.classList.add('btn-primary--ready');
+      else if (!ready) btn.classList.remove('btn-primary--ready');
+      return ready;
+    }
+
+    function suggestManualCategory(){
+      const merchant = ($('#mMerchant')?.value || '').trim();
+      const suggestWrap = $('#mCategorySuggest');
+      const suggestText = $('#mCategorySuggestText');
+      if (!merchant || merchant.length < 2) {
+        suggestWrap?.classList.add('hidden');
+        pendingCategorySuggest = null;
+        return;
+      }
+      const parsed = parseTransactionTextHeuristic(`${merchant} 10000`, { source: 'manual' });
+      const cat = parsed?.category;
+      if (!cat) {
+        suggestWrap?.classList.add('hidden');
+        pendingCategorySuggest = null;
+        return;
+      }
+      pendingCategorySuggest = cat;
+      if (suggestText) suggestText.textContent = `${t('form.category.suggest') || 'Saran'}: ${cat}`;
+      suggestWrap?.classList.remove('hidden');
+    }
+
+    function initManualFormEnhancements(){
+      const amountEl = $('#mAmount');
+      $$('.amount-preset-chip').forEach((chip) => {
+        chip.addEventListener('click', () => {
+          if (amountEl) amountEl.value = chip.getAttribute('data-amount') || '';
+          validateManualForm();
+        });
+      });
+      $$('#mNumpad .numpad-key').forEach((key) => {
+        key.addEventListener('click', () => {
+          if (!amountEl) return;
+          const k = key.getAttribute('data-key');
+          if (k === 'back') amountEl.value = String(amountEl.value || '').slice(0, -1);
+          else amountEl.value = String(amountEl.value || '') + k;
+          validateManualForm();
+        });
+      });
+      ['#mDate', '#mAmount', '#mCategory', '#mType'].forEach((sel) => {
+        $(sel)?.addEventListener('input', validateManualForm);
+        $(sel)?.addEventListener('change', validateManualForm);
+      });
+      $('#mMerchant')?.addEventListener('input', () => {
+        clearTimeout(manualSuggestTimer);
+        manualSuggestTimer = setTimeout(suggestManualCategory, 400);
+      });
+      $('#mMerchant')?.addEventListener('blur', suggestManualCategory);
+      $('#btnApplyCategorySuggest')?.addEventListener('click', () => {
+        if (pendingCategorySuggest && $('#mCategory')) {
+          if (![...$('#mCategory').options].some(o => o.value === pendingCategorySuggest)) {
+            const opt = document.createElement('option');
+            opt.value = pendingCategorySuggest;
+            opt.textContent = pendingCategorySuggest;
+            $('#mCategory').appendChild(opt);
+          }
+          $('#mCategory').value = pendingCategorySuggest;
+          $('#mCategorySuggest')?.classList.add('hidden');
+          validateManualForm();
+        }
+      });
+      validateManualForm();
+    }
 
 function openManualInput() {
   // 1. Tentukan Bulan Aktif
@@ -5351,25 +5644,26 @@ $('#btnSaveBudget').addEventListener('click', async () => {
 
       const btn = $('#btnParse');
       const status = $('#parseStatus');
+      const preview = $('#quickAiPreview');
       btn.disabled = true;
       status.textContent = '⏳...';
 
       try {
-        // Sequential processing to ensure database stability and accurate progress
-        for (let i = 0; i < lines.length; i++) {
-          status.textContent = `⏳ ${i+1}/${lines.length}`;
-          const tx = await parseOneLineToTx(lines[i]);
-          if (tx && tx.amount > 0) {
-            await upsertTransaction(tx);
+        if (lines.length === 1) {
+          await showTxPreviewFlow(lines[0], preview, () => {
+            $('#quickText').value = '';
+            closeAddSheet();
+          });
+        } else {
+          for (let i = 0; i < lines.length; i++) {
+            status.textContent = `⏳ ${i + 1}/${lines.length}`;
+            const tx = await parseOneLineToTx(lines[i]);
+            if (tx && tx.amount > 0) await upsertTransaction(tx, { pending: true });
           }
+          $('#quickText').value = '';
+          refreshAllUI();
+          closeAddSheet();
         }
-
-        $('#quickText').value = '';
-        rerender();
-         // REFRESH SETELAH SEMUA BARIS SELESAI
-  refreshAllUI();
-  refreshAppSchedules();
-        closeAddSheet();
       } catch (e) {
         console.error(e);
         status.textContent = 'Error.';
@@ -5434,6 +5728,7 @@ $('#btnSaveBudget').addEventListener('click', async () => {
     $('#mType').addEventListener('change', syncManualTransferUI);
 
   $('#btnSaveManual').onclick = async () => {
+  if (!validateManualForm()) return;
   const amt = parseNumberInput($('#mAmount').value);
   if (!amt) {
     showToast('Isi jumlah uang terlebih dahulu', 'warn');
@@ -5476,7 +5771,9 @@ $('#btnSaveBudget').addEventListener('click', async () => {
     closeAddSheet();
     $('#mAmount').value = '';
     $('#mMerchant').value = '';
+    $('#mCategorySuggest')?.classList.add('hidden');
     $('#manualStatus').textContent = '';
+    validateManualForm();
   }, 300);
 };
 
@@ -5660,6 +5957,19 @@ $('#btnSaveBudget').addEventListener('click', async () => {
     function renderAdvisorData(ins){
       if (!ins) return;
 
+      const hs = Number(ins.healthScore);
+      if ($('#advisorHealthRing') && Number.isFinite(hs)) {
+        $('#advisorHealthRing').style.setProperty('--pct', `${hs}%`);
+        $('#advisorHealthScore').textContent = String(hs);
+        const labelMap = {
+          excellent: t('health.excellent') || 'Sangat baik',
+          good: t('health.good') || 'Baik',
+          fair: t('health.fair') || 'Perlu perhatian',
+          poor: t('health.poor') || 'Kritis',
+        };
+        $('#advisorHealthLabel').textContent = labelMap[ins.healthLabel] || String(ins.healthLabel || '—');
+      }
+
       // ===== Make insights more "smart" with extra heuristics =====
       const txs = getTransactionsInPeriod();
       const s = sumByType(txs);
@@ -5699,6 +6009,9 @@ $('#btnSaveBudget').addEventListener('click', async () => {
       `;
 
       const bullets = [];
+      if (Array.isArray(ins.aiBullets) && ins.aiBullets.length) {
+        bullets.push(...ins.aiBullets.slice(0, 6));
+      }
       bullets.push(...(ins.top_spending_categories?.[0] ? [`Kategori top: ${ins.top_spending_categories[0].category} (${formatIDR(ins.top_spending_categories[0].amount)})`] : []));
       bullets.push(...(ins.top_merchants?.[0] ? [`Merchant top: ${ins.top_merchants[0].merchant} (${formatIDR(ins.top_merchants[0].amount)})`] : []));
 
@@ -5727,7 +6040,9 @@ $('#btnSaveBudget').addEventListener('click', async () => {
         : '<div class="rounded-xl app-chip p-3 app-muted">Belum cukup data untuk insight.</div>';
 
       const b = ins.budget_recommendations;
-      const by = b?.by_category || [];
+      const by = b?.by_category || (Array.isArray(ins.budgetRecommendations)
+        ? ins.budgetRecommendations.map(r => ({ category: r.category, planned: r.planned }))
+        : []);
       $('#advisorBudget').innerHTML = by.length ? by.map(row => {
         const catNorm = normalizeText(row.category);
         const isUtil = utilKeywords.some(k => catNorm.includes(k));
@@ -5751,15 +6066,34 @@ $('#btnSaveBudget').addEventListener('click', async () => {
 
     async function generateInsightsAndRender(){
       $('#advisorStatus').textContent = 'Mengolah…';
-      $('#advisorSummary').innerHTML = '<div class="h-4 w-5/6 rounded skeleton"></div><div class="mt-2 h-4 w-4/6 rounded skeleton"></div>';
-      $('#advisorBullets').innerHTML = '<li><div class="h-4 w-11/12 rounded skeleton"></div></li><li><div class="h-4 w-9/12 rounded skeleton"></div></li><li><div class="h-4 w-10/12 rounded skeleton"></div></li>';
-      $('#advisorBudget').innerHTML = '<div class="h-10 rounded-2xl skeleton"></div>';
+      $('#advisorSummary').innerHTML = '<div class="h-4 w-5/6 rounded skeleton-line"></div><div class="mt-2 h-4 w-4/6 rounded skeleton-line"></div>';
+      $('#advisorBullets').innerHTML = window.MonefyiUI?.txSkeleton(2) || '';
+      $('#advisorBudget').innerHTML = '<div class="h-10 rounded-xl skeleton-line"></div>';
       await sleep(180);
 
-      const ins = generateInsights();
+      let ins = null;
+      try {
+        const ai = await fetchInsightsViaSupabase();
+        if (ai?.summary) {
+          ins = {
+            summary: ai.summary,
+            healthScore: ai.healthScore,
+            healthLabel: ai.healthLabel,
+            aiBullets: ai.bullets || [],
+            tips: ai.tips || [],
+            alerts: ai.alerts || [],
+            budgetRecommendations: ai.budgetRecommendations || [],
+            metrics: ai.metrics || {},
+            source: ai.source || 'gemini',
+          };
+        }
+      } catch (e) {
+        console.warn('AI insights fallback:', e);
+      }
+      if (!ins) ins = generateInsights();
+
       renderAdvisorData(ins);
 
-      // reset coach chat (period-specific)
       initCoachChat({ reset: true });
 
       STATE.advisorCache.data = ins;
@@ -5767,7 +6101,7 @@ $('#btnSaveBudget').addEventListener('click', async () => {
       STATE.advisorCache.periodKey = `${STATE.period.start}|${STATE.period.end}`;
       STATE.advisorCache.generatedAt = new Date().toISOString();
 
-      $('#advisorStatus').textContent = 'Selesai.';
+      $('#advisorStatus').textContent = ins.source === 'gemini' ? 'AI ✓' : 'Selesai.';
     }
 
     async function openAdvisorAuto(){
@@ -5907,6 +6241,7 @@ $('#btnSaveBudget').addEventListener('click', async () => {
           start: STATE.period.start,
           end: STATE.period.end,
           budgetMonth: toMonthKey(STATE.period.end),
+          lang: STATE.settings?.lang || 'id',
         })
       });
       const txt = await res.text().catch(()=> '');
@@ -7192,12 +7527,18 @@ function toggleNav_legacy(mode) {
     $('#txSearchInput')?.addEventListener('input', () => {
       const v = $('#txSearchInput').value;
       STATE.filters.q = v;
+      STATE.ui.txVisibleCount = 50;
       if ($('#qSearch')) $('#qSearch').value = v;
       rerender();
     });
     $('#btnTxSearchToggle')?.addEventListener('click', () => {
-      $('#txSearchWrap')?.classList.toggle('hidden');
-      if (!$('#txSearchWrap')?.classList.contains('hidden')) $('#txSearchInput')?.focus();
+      const wrap = $('#txSearchWrap');
+      wrap?.classList.toggle('tx-search--collapsed');
+      if (!wrap?.classList.contains('tx-search--collapsed')) $('#txSearchInput')?.focus();
+    });
+    $('#btnLoadMoreTx')?.addEventListener('click', () => {
+      STATE.ui.txVisibleCount = Number(STATE.ui.txVisibleCount || 50) + 50;
+      renderTransactions();
     });
     $$('.tx-view-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -7206,20 +7547,23 @@ function toggleNav_legacy(mode) {
         renderTransactions();
       });
     });
-    $('#fType').addEventListener('change', () => { STATE.filters.type = $('#fType').value; rerender(); });
+    $('#fType').addEventListener('change', () => { STATE.filters.type = $('#fType').value; STATE.ui.txVisibleCount = 50; rerender(); });
     $('#fCategory').addEventListener('change', () => {
       STATE.filters.category = $('#fCategory').value;
+      STATE.ui.txVisibleCount = 50;
       if (STATE.filters.category) STATE.focusCategory = null;
       rerender();
     });
-    $('#fAccount').addEventListener('change', () => { STATE.filters.account = $('#fAccount').value; rerender(); });
+    $('#fAccount').addEventListener('change', () => { STATE.filters.account = $('#fAccount').value; STATE.ui.txVisibleCount = 50; rerender(); });
     $$('.tx-chip').forEach((chip) => {
       chip.addEventListener('click', () => {
         const type = chip.getAttribute('data-type') || '';
         STATE.filters.type = type;
+        STATE.ui.txVisibleCount = 50;
         if ($('#fType')) $('#fType').value = type;
         $$('.tx-chip').forEach((c) => c.classList.toggle('active', c === chip));
         rerender();
+        requestAnimationFrame(() => window.MonefyiUI?.syncChipIndicator?.());
       });
     });
 
@@ -7268,7 +7612,7 @@ function toggleNav_legacy(mode) {
     $('#btnOpenBudget').addEventListener('click', () => { closeMenu(); openBudget(); });
 
     $('#btnMoreAccounts').addEventListener('click', () => openAccounts());
-    $('#btnTxEmptyAdd')?.addEventListener('click', () => openManualAdd());
+    $('#btnTxEmptyAdd')?.addEventListener('click', () => openAddSheet('quick'));
     $('#btnBudgetEmptySetup')?.addEventListener('click', () => openBudget());
     $('#btnEnableAiFromAdvisor')?.addEventListener('click', () => {
       const keyInput = $('#geminiKey');

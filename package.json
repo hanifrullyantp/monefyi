@@ -9,6 +9,7 @@
     "vite": "^7.1.0"
   },
   "scripts": {
+    "prebuild": "mkdir -p public/locales public/js && cp locales/*.json public/locales/ && cp js/i18n.js js/monefyi-ui.js js/app.js js/config.js public/js/",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
