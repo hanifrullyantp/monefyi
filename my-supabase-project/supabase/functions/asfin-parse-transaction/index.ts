@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { resolveGeminiForUser, recordGeminiUsage, callGeminiGenerate } from "../_shared/gemini.ts";
 
 const jsonHeaders = { "Content-Type": "application/json" };
 const APP_CORS_ORIGIN = Deno.env.get("APP_CORS_ORIGIN") || "*";
@@ -324,6 +325,17 @@ function resolveAccount(raw: string, userAccounts: string[], aliases: Record<str
   const fallback = cleanAccountName(raw);
   return { accountName: fallback, unknown: true };
 }
+async function parseViaGeminiText(apiKey: string, text: string, accounts: string[]) {
+  const prompt = `Parse this Indonesian personal finance transaction into JSON only:
+{"date":"YYYY-MM-DD","type":"expense|income|transfer","amount":number,"currency":"IDR","category":"string","merchant":"string","payment_method":"string","account":"string","notes":"string","confidence":0.0-1.0}
+Known accounts: ${accounts.join(", ")}
+Today reference: ${toISODate(new Date())}
+Text: ${text}`;
+  const raw = await callGeminiGenerate(apiKey, "Return JSON only.", prompt, "gemini-2.0-flash");
+  const cleaned = raw.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+  return JSON.parse(cleaned);
+}
+
 async function parseViaGeminiBatch(
   apiKey: string,
   unresolved: Array<{ i: number; description: string; nominal: number; direction: TxDirection; project_tag?: string | null }>,
@@ -374,7 +386,12 @@ serve(async (req) => {
     if (!text) return new Response(JSON.stringify({ error: "text is required" }), { status: 400, headers: { ...corsHeaders, ...jsonHeaders } });
 
     const { data: profile } = await supa.from("profiles").select("gemini_key,settings").eq("id", userData.user.id).maybeSingle();
-    const geminiKey = String(profile?.gemini_key || "").trim();
+    const SERVICE_KEY = pickEnv("SUPABASE_SERVICE_ROLE_KEY");
+    const adminClient = SERVICE_KEY
+      ? createClient(SUPABASE_URL, SERVICE_KEY)
+      : supa;
+    const geminiResolved = await resolveGeminiForUser(adminClient, userData.user.id);
+    const geminiKey = geminiResolved.apiKey || String((profile as { gemini_key?: string })?.gemini_key || "").trim();
     const settings = (profile?.settings && typeof profile.settings === "object") ? profile.settings as Record<string, unknown> : {};
     const learning = (settings.batch_parser_learning && typeof settings.batch_parser_learning === "object")
       ? settings.batch_parser_learning as Record<string, unknown>
@@ -389,6 +406,53 @@ serve(async (req) => {
     const userAccounts = Array.isArray((settings as Record<string, unknown>).accounts)
       ? ((settings as Record<string, unknown>).accounts as string[])
       : ["Kas"];
+
+    // Single-transaction modes (text, receipt) — never WhatsApp batch
+    if (mode === "text" || mode === "receipt") {
+      if (geminiKey) {
+        try {
+          const ai = await parseViaGeminiText(geminiKey, text, userAccounts);
+          if (SERVICE_KEY && geminiResolved.source !== "none") {
+            await recordGeminiUsage(adminClient, userData.user.id, geminiResolved.usageDate, geminiResolved.source, {
+              requests_count: geminiResolved.userDailyUsed,
+              platform_fallback_count: geminiResolved.platformFallbackUsed,
+            });
+          }
+          return new Response(JSON.stringify({
+            date: ai.date || toISODate(new Date()),
+            type: ai.type === "transfer" ? "expense" : (ai.type || "expense"),
+            amount: Number(ai.amount || 0),
+            currency: "IDR",
+            category: ai.category || "Lainnya",
+            merchant: ai.merchant || "",
+            payment_method: ai.payment_method || ai.account || "Cash",
+            account: ai.account || ai.payment_method || "Cash",
+            notes: ai.notes || text,
+            confidence: Number(ai.confidence || 0.88),
+          }), { status: 200, headers: { ...corsHeaders, ...jsonHeaders } });
+        } catch (e) {
+          console.warn("Gemini text parse fallback:", (e as Error).message);
+        }
+      }
+      const pseudo = parseTransactionLine(`- ${text.replace(/\n/g, " ").trim()}`, "expense");
+      if (!pseudo) {
+        return new Response(JSON.stringify({ error: "unable to parse" }), { status: 400, headers: { ...corsHeaders, ...jsonHeaders } });
+      }
+      const cat = classifyCategory(pseudo.description, pseudo.direction);
+      const firstAcc = resolveAccount(pseudo.accounts[0]?.account_raw || "Kas", userAccounts, accountAliases);
+      return new Response(JSON.stringify({
+        date: toISODate(new Date()),
+        type: cat.type || pseudo.direction,
+        amount: pseudo.nominal || 0,
+        currency: "IDR",
+        category: cat.name || "Lainnya",
+        merchant: pseudo.description.slice(0, 42),
+        payment_method: firstAcc.accountName,
+        account: firstAcc.accountName,
+        notes: text,
+        confidence: 0.72,
+      }), { status: 200, headers: { ...corsHeaders, ...jsonHeaders } });
+    }
 
     const wa = stripWAMetadata(text);
     const blocks = splitDateBlocks(wa.content);

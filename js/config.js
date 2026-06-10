@@ -9,6 +9,7 @@
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6d3FmbWR5bmN4Ym9sZXN0a3FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYzNDI3OTQsImV4cCI6MjA4MTkxODc5NH0.qtvqzDicRmIixFh3A46ExuitpAXDWaYHmB7NVBxsc7w",
     fnParse: "asfin-parse-transaction",
     fnCoach: "ai-user-coach",
+    fnInsights: "monefyi-generate-insights",
     fnAdminAppConfig: "monefyi-admin-app-config",
     checkoutMonthly: "https://lynk.id/asfin-ai/9zexz9z5wom1/checkout",
     checkoutLifetime: "https://lynk.id/asfin-ai/j3q0x5ke3g49/checkout",

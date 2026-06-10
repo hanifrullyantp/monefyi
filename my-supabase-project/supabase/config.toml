@@ -392,6 +392,12 @@ entrypoint = "./functions/asfin-parse-transaction/index.ts"
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/asfin-parse-transaction/*.html" ]
 
+[functions.monefyi-generate-insights]
+enabled = true
+verify_jwt = true
+import_map = "./functions/monefyi-generate-insights/deno.json"
+entrypoint = "./functions/monefyi-generate-insights/index.ts"
+
 [functions.auth-send-email]
 enabled = true
 verify_jwt = false

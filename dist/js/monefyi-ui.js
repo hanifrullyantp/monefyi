@@ -241,6 +241,7 @@
       startY = e.touches[0].clientY;
       swiping = false;
       currentX = 0;
+      rowEl.classList.remove('is-swiping');
     }, { passive: true });
 
     rowEl.addEventListener('touchmove', (e) => {
@@ -248,13 +249,15 @@
       const dy = e.touches[0].clientY - startY;
       if (!swiping && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 12) swiping = true;
       if (!swiping || dx > 0) return;
-      currentX = Math.max(dx, -96);
+      rowEl.classList.add('is-swiping');
+      currentX = Math.max(dx, -56);
       inner.style.transform = `translateX(${currentX}px)`;
     }, { passive: true });
 
     rowEl.addEventListener('touchend', () => {
-      if (currentX < -72) onDeleteRequest?.();
+      rowEl.classList.remove('is-swiping');
       inner.style.transform = '';
+      if (currentX < -48) onDeleteRequest?.();
       currentX = 0;
       swiping = false;
     });

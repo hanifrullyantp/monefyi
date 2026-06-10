@@ -215,7 +215,7 @@
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <div id="saldoTitle" class="text-xs app-muted">Total Saldo</div>
-                <div id="kpiSaldo" class="mt-1 text-3xl font-bold">—</div>
+                <div id="kpiSaldo" class="saldo-amount mt-1">—</div>
                 <div id="kpiSaldoSub" class="mt-1 text-xs app-muted">Bulan ini: +Rp 0 (income) | −Rp 0 (expense)</div>
                 <div id="healthScorePill" class="mt-2 inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[11px] font-semibold app-chip">
                   <span id="healthScoreGauge" class="w-2.5 h-2.5 rounded-full" style="background: rgba(16,185,129,.95)"></span>
@@ -350,52 +350,50 @@
   </div>
 </div>
 
+      <!-- Tombol Transaksi Baru (di atas saldo) -->
+      <button
+        id="btnSidebarNewTx"
+        type="button"
+        onclick="openAddSheet('quick')"
+        class="tap btn-primary btn-shine btn-sidebar-new-tx"
+        data-i18n="header.new_tx"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+        <span class="sidebar-label">Transaksi Baru</span>
+      </button>
+
       <!-- KARTU SALDO DESKTOP -->
-<div class="hidden md:block">
+<div id="sidebarSaldoWrap" class="hidden md:block sidebar-saldo-wrap">
   <div
     id="btnSaldoToggleDesktop"
     role="button"
     tabindex="0"
-    class="tap saldo-card-glow sidebar-glass w-full rounded-[2rem] app-card p-5 text-left cursor-pointer shadow-xl border border-slate-800/50"
+    class="tap saldo-card-glow sidebar-glass w-full rounded-xl app-card p-4 text-left cursor-pointer shadow-lg border border-slate-800/50"
   >
-    <div class="flex flex-col gap-1">
+    <div class="flex flex-col gap-1 min-w-0">
       <div id="saldoTitleDesktop" class="text-xs app-muted font-medium">
         Saldo (estimasi)
       </div>
 
-      <div id="kpiSaldoDesktop" class="mt-1 text-2xl font-semibold">—</div>
-      <div id="kpiSaldoSubDesktop" class="mt-1 text-xs app-muted">
+      <div id="kpiSaldoDesktop" class="saldo-amount mt-1">—</div>
+      <div id="kpiSaldoSubDesktop" class="mt-1 text-[11px] app-muted leading-snug">
   Tap untuk membuka ringkasan lengkap.
 </div>
-
-      <div class="mt-3 flex items-center justify-end">
-        <div
-          id="dashboardStateDesktop"
-          class="text-[10px] app-muted2 font-bold uppercase tracking-tighter"
-        >
-         
-        </div>
-      </div>
     </div>
   </div>
 </div>
 
-      <!-- KARTU FILTER DESKTOP (di bawah saldo) -->
+      <!-- Filter compact (satu baris) -->
       <button
         id="btnFilterCardDesktop"
         type="button"
-        class="tap sidebar-glass w-full rounded-[2rem] app-card p-4 text-left hover:opacity-95 cursor-pointer shadow-lg border border-slate-800/50"
+        class="tap sidebar-glass filter-row-compact app-card hover:opacity-95 cursor-pointer border border-slate-800/50"
         title="Filter periode & transaksi"
         aria-expanded="false"
       >
-        <div class="flex items-center justify-between gap-3">
-          <div class="min-w-0">
-            <div class="text-xs app-muted font-medium">Filter & Periode</div>
-            <div id="filterCardPeriodDesktop" class="mt-1 text-sm font-semibold truncate">—</div>
-            <div class="mt-1 text-[11px] app-muted2">Periode, pencarian, tipe, kategori, akun</div>
-          </div>
-          <span id="filterChevronDesktop" class="text-sm shrink-0" style="opacity:.9">▾</span>
-        </div>
+        <span class="filter-row-compact__label">Filter :</span>
+        <span id="filterCardPeriodDesktop" class="filter-row-compact__value">—</span>
+        <span id="filterChevronDesktop" class="text-xs shrink-0 app-muted2" aria-hidden="true">▾</span>
       </button>
       <!-- Navigasi Menu -->
       <nav class="flex flex-col gap-1">
@@ -477,29 +475,56 @@
     </aside>
 
            <!-- KONTEN KANAN (DETAIL) -->
-    <div class="flex-1 min-w-0 flex flex-col w-full max-w-full md:h-full">
-      <!-- Judul Page Desktop -->
-      <div class="hidden md:flex justify-between items-end mb-6 flex-none gap-4">
-        <div>
-          <h2 id="pageTitleTx" class="text-[28px] font-bold tracking-tight" data-i18n="tx.title">Transaksi</h2>
-          <button type="button" id="infoSaldoPill" class="tap mt-2 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs app-chip" data-i18n="info.saldo_hint" title="Tutup">
-            ℹ️ Tap kartu saldo untuk detail lengkap
-          </button>
+    <div class="flex-1 min-w-0 flex flex-col w-full max-w-full md:h-full tx-main-panel">
+      <!-- Toolbar desktop: icon modern, ringkas -->
+      <div id="txToolbarDesktop" class="hidden md:flex items-center gap-2 mb-2 flex-none shrink-0">
+        <div class="min-w-0 flex-1">
+          <h2 id="pageTitleTx" class="text-lg font-bold tracking-tight leading-none" data-i18n="tx.title">Transaksi</h2>
+          <div id="txCountDesktop" class="text-[11px] app-muted mt-0.5">—</div>
         </div>
-        <button id="btnHeaderNewTx" onclick="openAddSheet('quick')" class="btn-primary btn-shine tap font-bold px-6 py-3 rounded-lg flex items-center gap-2 shrink-0" data-i18n="header.new_tx">
-          + Transaksi Baru
-        </button>
+        <div class="tx-toolbar">
+          <button type="button" id="btnTopAi" class="tx-toolbar-btn tap" title="Input AI (⌘N)" aria-label="Input transaksi AI">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3 9.5 8.5 3 11l6.5 2.5L12 19l2.5-5.5L21 11l-6.5-2.5Z"/></svg>
+          </button>
+          <button type="button" id="btnTopSearch" class="tx-toolbar-btn tap" title="Cari (⌘K)" aria-label="Cari transaksi">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+          </button>
+          <button type="button" id="btnTopFilterType" class="tx-toolbar-btn tap" title="Filter tipe" aria-label="Filter tipe transaksi">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          </button>
+          <div id="txViewToggle" class="tx-view-segment shrink-0">
+            <span id="txViewIndicator" class="tx-view-indicator" aria-hidden="true"></span>
+            <button id="btnTxViewCard" class="tap tx-view-btn active" data-view="card" title="Card">Card</button>
+            <button id="btnTxViewTable" class="tap tx-view-btn" data-view="table" title="Tabel">Tabel</button>
+          </div>
+        </div>
       </div>
 
-      <!-- Unified AI input (desktop) -->
-      <div id="unifiedAiBarWrap" class="hidden md:block mb-4 flex-none">
+      <!-- AI input expandable (desktop) -->
+      <div id="unifiedAiBarWrap" class="hidden md:hidden mb-2 flex-none">
         <div class="ai-input-bar">
-          <button type="button" id="btnUnifiedVoice" class="tap app-chip p-2 rounded-lg shrink-0" title="Voice" aria-label="Voice">🎤</button>
+          <button type="button" id="btnUnifiedVoice" class="tap tx-toolbar-btn" title="Voice" aria-label="Voice">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="23"/></svg>
+          </button>
           <input id="unifiedAiInput" type="text" data-i18n-placeholder="ai.input.placeholder" placeholder="Ketik transaksi…" autocomplete="off" />
-          <button type="button" id="btnUnifiedPhoto" class="tap app-chip p-2 rounded-lg shrink-0" title="Receipt">📷</button>
-          <button type="button" id="btnUnifiedParse" class="tap btn-primary px-4 py-2 rounded-lg text-sm font-semibold shrink-0">→</button>
+          <button type="button" id="btnUnifiedPhoto" class="tap tx-toolbar-btn" title="Receipt" aria-label="Foto struk">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </button>
+          <button type="button" id="btnUnifiedParse" class="tap btn-primary px-3 py-2 rounded-lg text-sm font-semibold shrink-0">→</button>
         </div>
-        <div id="unifiedAiPreview" class="hidden mt-3"></div>
+        <div id="unifiedAiPreview" class="hidden mt-2"></div>
+      </div>
+
+      <!-- Legacy header hidden on desktop -->
+      <div class="hidden md:hidden justify-between items-end mb-6 flex-none gap-4">
+        <div>
+          <button type="button" id="infoSaldoPill" class="tap mt-2 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs app-chip" data-i18n="info.saldo_hint" title="Tutup">
+            Tap kartu saldo untuk detail lengkap
+          </button>
+        </div>
+        <button id="btnHeaderNewTx" onclick="openAddSheet('quick')" class="btn-primary btn-shine tap font-bold px-6 py-3 rounded-lg flex items-center gap-2 shrink-0 hidden" data-i18n="header.new_tx">
+          + Transaksi Baru
+        </button>
       </div>
 
       <!-- Render Content Area: isi halaman (dashboard / list transaksi) -->
@@ -642,25 +667,22 @@
         </div>
 
         <!-- Transactions list -->
-        <section id="txSection" class="mt-3 space-y-3">
-          <div class="flex items-end justify-between">
-            <div>
+        <section id="txSection" class="mt-3 md:mt-0 space-y-2 md:space-y-2 flex-1 min-h-0 flex flex-col">
+          <div class="flex items-end justify-between tx-section-head shrink-0">
+            <div class="md:hidden">
               <h2 id="txTitle" class="text-base font-semibold">Transaksi</h2>
               <div id="txCount" class="text-xs app-muted">—</div>
             </div>
-            <div class="flex items-center gap-2">
-              <div id="txViewToggle" class="hidden md:flex tx-view-segment">
-                <span id="txViewIndicator" class="tx-view-indicator" aria-hidden="true"></span>
-                <button id="btnTxViewCard" class="tap tx-view-btn active" data-view="card">Card</button>
-                <button id="btnTxViewTable" class="tap tx-view-btn" data-view="table">Tabel</button>
-              </div>
-              <button id="btnTxSearchToggle" class="tap rounded-lg app-chip px-3 py-2 text-xs hover:opacity-90" title="Cmd+K">🔍 <span class="hidden lg:inline text-[10px] app-muted2">⌘K</span></button>
+            <div class="flex items-center gap-2 md:hidden ml-auto">
+              <button id="btnTxSearchToggle" class="tap tx-toolbar-btn" title="Cari (⌘K)" aria-label="Cari">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+              </button>
             </div>
           </div>
-          <div id="txSearchWrap" class="tx-search-wrap tx-search--collapsed">
+          <div id="txSearchWrap" class="tx-search-wrap tx-search--collapsed shrink-0">
             <input id="txSearchInput" class="tap w-full rounded-xl app-input px-3 py-2 text-sm" placeholder="Cari merchant / catatan / kategori..." />
           </div>
-          <div id="txTypeChips" class="tx-chip-row flex items-center gap-2 overflow-x-auto pb-1">
+          <div id="txTypeChips" class="tx-chip-row tx-chips--desktop-hidden flex items-center gap-2 overflow-x-auto pb-1 shrink-0">
             <span id="txChipIndicator" class="tx-chip-indicator" aria-hidden="true"></span>
             <button class="tap rounded-full app-chip px-3 py-1.5 text-xs tx-chip active" data-type="">Semua</button>
             <button class="tap rounded-full app-chip px-3 py-1.5 text-xs tx-chip" data-type="income">Pemasukan</button>
@@ -668,7 +690,7 @@
             <button class="tap rounded-full app-chip px-3 py-1.5 text-xs tx-chip" data-type="transfer">Transfer</button>
           </div>
 
-          <div class="mt-3">
+          <div id="txListHost" class="mt-1 md:mt-0 flex-1 min-h-0">
             <div id="txList" class="space-y-3"></div>
             <div id="txLoadMoreWrap" class="hidden mt-3">
               <button type="button" id="btnLoadMoreTx" class="tap btn-ghost py-2.5 rounded-lg text-sm font-medium" data-i18n="tx.load_more">Muat lebih banyak</button>
@@ -689,7 +711,7 @@
                 <button id="btnTxEmptyAdd" class="tap btn-primary px-4 py-2.5 text-sm font-semibold rounded-lg" data-i18n="tx.empty.cta">+ Tambah Transaksi Pertama</button>
               </div>
             </div>
-          </div>
+          </div><!-- /txListHost -->
         </section>
       </div> <!-- end #dynamicContent -->
     </div>   <!-- end konten kanan -->

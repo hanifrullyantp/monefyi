@@ -98,7 +98,99 @@ html, body {
       border: 1px solid rgba(255, 255, 255, 0.08) !important;
     }
 
-    .saldo-dot { font-size: 8px; vertical-align: middle; margin-right: 2px; }
+    .saldo-amount {
+      font-size: clamp(1.25rem, 5vw, 1.75rem);
+      font-weight: 700;
+      line-height: 1.15;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    #kpiSaldoDesktop.saldo-amount {
+      font-size: clamp(1rem, 1.6vw, 1.35rem);
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      line-height: 1.2;
+    }
+
+    .filter-row-compact {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: var(--radius-btn);
+      font-size: 12px;
+    }
+    .filter-row-compact__label { color: var(--app-muted); white-space: nowrap; }
+    .filter-row-compact__value { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .btn-sidebar-new-tx {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: var(--radius-btn);
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .tx-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .tx-toolbar-btn {
+      width: 36px;
+      height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-btn);
+      border: 1px solid var(--app-border);
+      background: var(--app-surface2);
+      color: var(--app-text);
+      flex-shrink: 0;
+    }
+    .tx-toolbar-btn:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
+    .tx-toolbar-btn.active { background: var(--brand-green-soft); border-color: var(--accent-primary); color: var(--accent-primary); }
+
+    @media (min-width: 768px) {
+      .tx-main-panel {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+      }
+      .tx-main-panel #dynamicContent {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .tx-main-panel #txSection {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        margin-top: 0 !important;
+      }
+      .tx-main-panel #txListHost {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .tx-section-head--desktop-hidden { display: none !important; }
+      .tx-chips--desktop-hidden { display: none !important; }
+    }
     .saldo-dot--income { color: var(--accent-primary); }
     .saldo-dot--expense { color: var(--accent-danger); }
     .saldo-period-line { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -116,6 +208,16 @@ html, body {
     #appSidebar.sidebar--collapsed #sidebarUserBlock,
     #appSidebar.sidebar--collapsed .sidebar-footer-text {
       display: none;
+    }
+    #appSidebar.sidebar--collapsed .sidebar-saldo-wrap,
+    #appSidebar.sidebar--collapsed #btnFilterCardDesktop {
+      display: none !important;
+    }
+    #appSidebar.sidebar--collapsed .btn-sidebar-new-tx {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      margin: 0 auto;
     }
     @media (min-width: 768px) and (max-width: 1023px) {
       #appSidebar:not(.sidebar--expanded-manual) {
@@ -302,26 +404,36 @@ html, body {
       animation: tx-enter 0.35s ease backwards;
       overflow: hidden;
       position: relative;
+      touch-action: pan-y;
     }
     .tx-card-inner {
       padding: 16px;
       transition: transform 0.2s ease;
-      background: inherit;
+      background: var(--app-card, var(--app-surface));
+      position: relative;
+      z-index: 1;
+      border-radius: inherit;
     }
     .tx-card-swipe-delete {
       position: absolute;
       right: 0;
       top: 0;
       bottom: 0;
-      width: 88px;
+      width: 56px;
       display: flex;
       align-items: center;
       justify-content: center;
       background: var(--accent-danger);
       color: #fff;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 600;
       pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+    .tx-card-v2.is-swiping .tx-card-swipe-delete { opacity: 1; }
+    @media (min-width: 768px) {
+      .tx-card-swipe-delete { display: none !important; }
     }
     .tx-card-v2:focus-visible { outline: none; box-shadow: var(--focus-ring); }
     .tx-card-v2.tx-card--focused { box-shadow: var(--focus-ring); }

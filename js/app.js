@@ -1492,6 +1492,36 @@ async function upsertTransaction_legacy_local(tx) {
       window.MonefyiUI?.initTxListKeyboard?.();
       window.MonefyiUI?.showOnboardingIfNeeded?.();
       initManualFormEnhancements();
+      initTxToolbarDesktop();
+    }
+
+    function initTxToolbarDesktop(){
+      const toggleSearch = () => {
+        const wrap = $('#txSearchWrap');
+        wrap?.classList.toggle('tx-search--collapsed');
+        if (!wrap?.classList.contains('tx-search--collapsed')) {
+          setTimeout(() => $('#txSearchInput')?.focus(), 80);
+        }
+        $('#btnTopSearch')?.classList.toggle('active', !wrap?.classList.contains('tx-search--collapsed'));
+      };
+      $('#btnTopSearch')?.addEventListener('click', toggleSearch);
+      $('#btnTopAi')?.addEventListener('click', () => {
+        const wrap = $('#unifiedAiBarWrap');
+        if (!wrap) return openAddSheet('quick');
+        const willOpen = wrap.classList.contains('hidden');
+        wrap.classList.toggle('hidden', !willOpen);
+        if (willOpen) setTimeout(() => $('#unifiedAiInput')?.focus(), 80);
+        $('#btnTopAi')?.classList.toggle('active', willOpen);
+      });
+      $('#btnTopFilterType')?.addEventListener('click', () => {
+        const chips = $('#txTypeChips');
+        if (!chips) return;
+        chips.classList.toggle('tx-chips--desktop-hidden');
+        $('#btnTopFilterType')?.classList.toggle('active', !chips.classList.contains('tx-chips--desktop-hidden'));
+        if (!chips.classList.contains('tx-chips--desktop-hidden')) {
+          requestAnimationFrame(() => window.MonefyiUI?.syncChipIndicator?.());
+        }
+      });
     }
 
     async function handleUnifiedAiParse(){
@@ -2515,6 +2545,16 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       $('#rangeCard')?.classList.toggle('hidden', (STATE.period.preset || 'this_month') !== 'custom');
 
       $('#dashboardExpanded').classList.toggle('hidden', !STATE.ui.dashboardOpen);
+      const showTxUi = !STATE.ui.dashboardOpen;
+      const txToolbar = $('#txToolbarDesktop');
+      if (txToolbar) {
+        txToolbar.classList.toggle('hidden', !showTxUi);
+        txToolbar.classList.toggle('md:flex', showTxUi);
+      }
+      if (!showTxUi) {
+        $('#unifiedAiBarWrap')?.classList.add('hidden');
+        $('#btnTopAi')?.classList.remove('active');
+      }
       $('#dashboardState').textContent = STATE.ui.dashboardOpen ? t('dashboard.full') : t('dashboard.compact');
       // default hint; can be overridden by renderSaldo which shows period net info
       $('#kpiSaldoSub').textContent = STATE.ui.dashboardOpen ? t('saldo.tap_close') : t('saldo.tap_open');
@@ -2571,16 +2611,16 @@ renderAccountsSettings();
 
     if (isCalculating) {
       el.textContent = '';
-      el.className = 'mt-1 text-2xl font-semibold skeleton-green';
-      el.style.minHeight = '32px';
-      el.style.minWidth = '180px';
-      el.style.display = 'inline-block';
+      el.className = (sel === '#kpiSaldoDesktop' ? 'saldo-amount mt-1' : 'saldo-amount mt-1') + ' skeleton-green';
+      el.style.minHeight = '28px';
+      el.style.minWidth = '0';
+      el.style.display = 'block';
     } else {
       const prev = Number(STATE.ui.lastSaldoAnimated ?? 0);
       const next = Number(saldo || 0);
       const startAt = performance.now();
       const duration = 360;
-      el.className = 'mt-1 text-3xl font-bold';
+      el.className = 'saldo-amount mt-1';
       el.style.minHeight = '';
       el.style.minWidth = '';
       el.style.display = '';
@@ -3317,7 +3357,9 @@ function generateSmartBudgetRecommendation() {
       const total = allTxs.length;
       const limit = Number(STATE.ui.txVisibleCount || 50);
       const txs = allTxs.slice(0, limit);
-      $('#txCount').textContent = t('tx.count', { n: total }) + (STATE.focusCategory ? t('tx.focus', { cat: STATE.focusCategory }) : '');
+      const countText = t('tx.count', { n: total }) + (STATE.focusCategory ? t('tx.focus', { cat: STATE.focusCategory }) : '');
+      $('#txCount').textContent = countText;
+      if ($('#txCountDesktop')) $('#txCountDesktop').textContent = countText;
 
       const list = $('#txList');
       const tableWrap = $('#txTableWrap');
