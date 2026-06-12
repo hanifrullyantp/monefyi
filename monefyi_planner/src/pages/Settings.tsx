@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { User, Globe, LogOut, Edit3, Check, Building2, Bell, Shield,
   Info, RefreshCw, Loader2, ChevronRight, Lock, Users, Wifi, WifiOff, Sparkles, Wallet,
-  Calculator,
+  CreditCard,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { showToast, useUiStore } from '../store/uiStore';
@@ -21,7 +21,7 @@ import { isPlatformAdmin } from '../services/adminService';
 import { Link } from 'react-router-dom';
 import { loadFinanceVersion, setFinanceVersion } from '../lib/financeVersion';
 import type { FinanceVersion } from '../types/financeV2';
-import PricelistPage from './estimator/PricelistPage';
+import UpgradePlansPanel from '../components/settings/UpgradePlansPanel';
 import { formatPlanPriceIdr, planForOrg, type PricingPlan } from '../lib/pricingPlans';
 import { countProjectsCreatedThisMonth, loadPricingPlans } from '../services/pricingPlanService';
 
@@ -332,7 +332,7 @@ export default function Settings() {
     { id: 'profil', label: 'Profil', icon: User, show: true },
     { id: 'akun', label: 'Akun & AI', icon: Sparkles, show: true },
     { id: 'organisasi', label: 'Organisasi', icon: Building2, show: canEditOrg },
-    { id: 'pricelist', label: 'Pricelist', icon: Calculator, show: canEditOrg },
+    { id: 'pricelist', label: 'Pricelist', icon: CreditCard, show: canEditOrg },
     { id: 'notifikasi', label: 'Notifikasi', icon: Bell, show: true },
     { id: 'keamanan', label: 'Keamanan', icon: Shield, show: true },
     { id: 'tentang', label: 'Tentang', icon: Info, show: true },
@@ -562,53 +562,23 @@ export default function Settings() {
             onSyncPdfChange={setSyncPdfBrand}
           />
 
-          <div className="pt-2 border-t border-slate-100 space-y-3">
+          <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h4 className="font-bold text-slate-800">Paket langganan</h4>
               <p className="text-sm text-slate-500">
-                Paket aktif: <span className="font-semibold text-emerald-700">{currentPlan.label}</span>
-                {' · '}
-                {formatPlanPriceIdr(currentPlan.price_monthly_idr)}/bulan
+                {currentPlan.label} · {formatPlanPriceIdr(currentPlan.price_monthly_idr)}/bulan
                 {currentPlan.projects_per_month != null && projectsThisMonth != null && (
-                  <> · Kuota bulan ini: {projectsThisMonth}/{currentPlan.projects_per_month} proyek baru</>
+                  <> · {projectsThisMonth}/{currentPlan.projects_per_month} proyek bulan ini</>
                 )}
               </p>
             </div>
-            <div className="grid sm:grid-cols-3 gap-3">
-              {pricingPlans.map(p => {
-                const active = p.slug === currentPlan.slug;
-                return (
-                  <div
-                    key={p.slug}
-                    className={`rounded-xl border p-4 ${active ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 bg-slate-50'}`}
-                  >
-                    <div className="font-bold text-slate-900">{p.label}</div>
-                    <div className="text-lg font-black text-emerald-700 mt-1">
-                      {formatPlanPriceIdr(p.price_monthly_idr)}
-                      {p.price_monthly_idr > 0 && <span className="text-xs font-normal text-slate-500">/bulan</span>}
-                    </div>
-                    {p.projects_per_month != null ? (
-                      <div className="text-xs text-slate-600 mt-1">{p.projects_per_month} proyek/bulan</div>
-                    ) : (
-                      <div className="text-xs text-slate-600 mt-1">Proyek tanpa batas</div>
-                    )}
-                    <ul className="mt-2 space-y-0.5">
-                      {p.features.slice(0, 3).map(f => (
-                        <li key={f} className="text-xs text-slate-500">· {f}</li>
-                      ))}
-                    </ul>
-                    {active && (
-                      <span className="inline-block mt-2 text-[10px] font-bold uppercase text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                        Paket Anda
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            <p className="text-xs text-slate-400">
-              Untuk upgrade paket, hubungi tim Monefyi. Harga dapat diatur oleh Super Admin.
-            </p>
+            <button
+              type="button"
+              onClick={() => selectTab('pricelist')}
+              className="px-4 py-2 text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl"
+            >
+              Lihat pricelist & upgrade
+            </button>
           </div>
 
           <div className="flex flex-wrap gap-3 pt-2">
@@ -629,7 +599,13 @@ export default function Settings() {
       )}
 
       {tab === 'pricelist' && canEditOrg && (
-        <PricelistPage embedded />
+        <div className="bg-white rounded-2xl border border-slate-100 p-6">
+          <UpgradePlansPanel
+            orgPlanType={tenant?.plan}
+            pricingPlans={pricingPlans}
+            projectsThisMonth={projectsThisMonth}
+          />
+        </div>
       )}
 
       {tab === 'notifikasi' && (
