@@ -3,7 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, Save } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
+import ColorPickerField from '../../components/estimator/ColorPickerField';
 import { loadPdfSettings, updatePdfSettings } from '../../services/pdfSettingsService';
+import {
+  loadWhatsAppTemplate,
+  saveWhatsAppTemplate,
+  defaultWhatsAppTemplateConfig,
+} from '../../services/quotationTemplateService';
+import type { WhatsAppTemplateConfig } from '../../lib/whatsappQuotationMessage';
 import { PDF_TEMPLATE_OPTIONS } from '../../types/estimator';
 import type { PdfSettings } from '../../types/pdfSettings';
 import type { PdfTemplate } from '../../types/estimator';
@@ -13,6 +20,7 @@ export default function EstimatorSettings() {
   const { tenant } = useAppStore();
   const showToast = useUiStore(s => s.showToast);
   const [settings, setSettings] = useState<PdfSettings | null>(null);
+  const [waTemplate, setWaTemplate] = useState<WhatsAppTemplateConfig>(defaultWhatsAppTemplateConfig());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -20,8 +28,12 @@ export default function EstimatorSettings() {
     if (!tenant?.id) return;
     setLoading(true);
     try {
-      const data = await loadPdfSettings(tenant.id, tenant.name);
+      const [data, wa] = await Promise.all([
+        loadPdfSettings(tenant.id, tenant.name),
+        loadWhatsAppTemplate(tenant.id),
+      ]);
       setSettings(data);
+      setWaTemplate(wa);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal memuat pengaturan', 'error');
     } finally {
@@ -59,8 +71,9 @@ export default function EstimatorSettings() {
         default_pdf_template: settings.default_pdf_template,
         footer_text: settings.footer_text,
       });
+      await saveWhatsAppTemplate(tenant.id, waTemplate);
       setSettings(updated);
-      showToast('Pengaturan PDF disimpan', 'success');
+      showToast('Pengaturan disimpan', 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal menyimpan', 'error');
     } finally {
@@ -124,11 +137,54 @@ export default function EstimatorSettings() {
           </div>
         </Section>
 
-        <Section title="Warna & Template Default">
-          <div className="grid grid-cols-3 gap-3">
-            <ColorField label="Primary" value={settings.primary_color} onChange={v => patch({ primary_color: v })} />
-            <ColorField label="Secondary" value={settings.secondary_color} onChange={v => patch({ secondary_color: v })} />
-            <ColorField label="Accent" value={settings.accent_color} onChange={v => patch({ accent_color: v })} />
+        <Section title="Template WhatsApp Penawaran">
+          <p className="text-xs text-slate-500">
+            Placeholder:
+            {' {{salutation}} {{customer_name}} {{title}} {{subtitle}} {{items_list}} {{total}} {{company_name}} {{company_tagline}}'}
+          </p>
+          <Field
+            label="Format baris item"
+            value={waTemplate.itemLine}
+            onChange={v => setWaTemplate(prev => ({ ...prev, itemLine: v }))}
+          />
+          <p className="text-[10px] text-slate-400">
+            Item: {'{{name}} {{qty}} {{unit}} x {{price}} = {{total}}'}
+          </p>
+          <label className="block">
+            <span className="text-xs text-slate-500">Isi pesan utama</span>
+            <textarea
+              value={waTemplate.body}
+              onChange={e => setWaTemplate(prev => ({ ...prev, body: e.target.value }))}
+              rows={8}
+              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl text-sm resize-none font-mono text-xs leading-relaxed"
+            />
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <Field
+              label="Sapaan default"
+              value={waTemplate.defaultSalutation}
+              onChange={v => setWaTemplate(prev => ({ ...prev, defaultSalutation: v }))}
+            />
+            <Field
+              label="Subjudul produk default"
+              value={waTemplate.defaultSubtitle}
+              onChange={v => setWaTemplate(prev => ({ ...prev, defaultSubtitle: v }))}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setWaTemplate(defaultWhatsAppTemplateConfig())}
+            className="text-xs text-emerald-600 font-semibold"
+          >
+            Reset template default
+          </button>
+        </Section>
+
+        <Section title="Warna & Template PDF">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <ColorPickerField label="Primary" value={settings.primary_color} onChange={v => patch({ primary_color: v })} />
+            <ColorPickerField label="Secondary" value={settings.secondary_color} onChange={v => patch({ secondary_color: v })} />
+            <ColorPickerField label="Accent" value={settings.accent_color} onChange={v => patch({ accent_color: v })} />
           </div>
           <label className="block">
             <span className="text-xs text-slate-500">Template default</span>
@@ -187,14 +243,3 @@ function Field({
   );
 }
 
-function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <label className="block">
-      <span className="text-xs text-slate-500">{label}</span>
-      <div className="flex gap-1 mt-1">
-        <input type="color" value={value} onChange={e => onChange(e.target.value)} className="w-9 h-9 rounded cursor-pointer" />
-        <input value={value} onChange={e => onChange(e.target.value)} className="flex-1 px-2 py-1 border border-slate-200 rounded-lg text-xs font-mono" />
-      </div>
-    </label>
-  );
-}

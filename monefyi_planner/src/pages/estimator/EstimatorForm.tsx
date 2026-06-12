@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ChevronDown, FileText, Loader2, Save, Eye, Settings2 } from 'lucide-react';
+import { ArrowLeft, ChevronDown, FileText, Loader2, Save, Eye, Settings2, MessageCircle } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
 import EstimationItemsTable from '../../components/estimator/EstimationItemsTable';
@@ -8,6 +8,12 @@ import EstimationImageSlots from '../../components/estimator/EstimationImageSlot
 import EstimationSummaryPanel from '../../components/estimator/EstimationSummaryPanel';
 import PdfDesignCustomizer from '../../components/estimator/PdfDesignCustomizer';
 import PdfPreviewModal from '../../components/estimator/PdfPreviewModal';
+import ShareWhatsAppModal from '../../components/estimator/ShareWhatsAppModal';
+import {
+  loadWhatsAppTemplate,
+  defaultWhatsAppTemplateConfig,
+} from '../../services/quotationTemplateService';
+import type { WhatsAppTemplateConfig } from '../../lib/whatsappQuotationMessage';
 import { uploadPendingImages } from '../../services/estimationImageService';
 import { downloadQuotationPdf } from '../../lib/pdf/generateQuotationPdf';
 import { loadPdfSettings } from '../../services/pdfSettingsService';
@@ -38,7 +44,9 @@ export default function EstimatorForm() {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [pdfDesignOpen, setPdfDesignOpen] = useState(false);
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
+  const [waShareOpen, setWaShareOpen] = useState(false);
   const [pdfSettings, setPdfSettings] = useState<PdfSettings | null>(null);
+  const [waTemplate, setWaTemplate] = useState<WhatsAppTemplateConfig>(defaultWhatsAppTemplateConfig());
   const [pdfLoading, setPdfLoading] = useState(false);
 
   const patch = useCallback((p: Partial<EstimationFormDraft>) => {
@@ -51,8 +59,12 @@ export default function EstimatorForm() {
     const init = async () => {
       setLoading(true);
       try {
-        const settings = await loadPdfSettings(tenant.id, tenant.name);
+        const [settings, wa] = await Promise.all([
+          loadPdfSettings(tenant.id, tenant.name),
+          loadWhatsAppTemplate(tenant.id),
+        ]);
         setPdfSettings(settings);
+        setWaTemplate(wa);
 
         if (isNew) {
           const code = await generateEstimationCode(tenant.id);
@@ -156,6 +168,11 @@ export default function EstimatorForm() {
   const handlePreviewPdf = () => {
     if (!requireSaved()) return;
     setPdfPreviewOpen(true);
+  };
+
+  const handleShareWhatsApp = () => {
+    if (!requireSaved()) return;
+    setWaShareOpen(true);
   };
 
   if (loading || !draft) {
@@ -404,9 +421,17 @@ export default function EstimatorForm() {
         </button>
         <button
           type="button"
+          onClick={handleShareWhatsApp}
+          disabled={isNew}
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 border border-emerald-200 text-emerald-600 rounded-xl text-sm font-semibold disabled:opacity-50"
+        >
+          <MessageCircle className="w-4 h-4" /> WhatsApp
+        </button>
+        <button
+          type="button"
           onClick={handlePreviewPdf}
           disabled={pdfLoading || isNew}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 border border-emerald-200 text-emerald-600 rounded-xl text-sm font-semibold disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 border border-slate-200 text-slate-700 rounded-xl text-sm font-semibold disabled:opacity-50"
         >
           <Eye className="w-4 h-4" /> Preview PDF
         </button>
@@ -434,6 +459,16 @@ export default function EstimatorForm() {
           draft={draft}
           settings={pdfSettings}
           onClose={() => setPdfPreviewOpen(false)}
+        />
+      )}
+      {waShareOpen && pdfSettings && (
+        <ShareWhatsAppModal
+          open={waShareOpen}
+          onClose={() => setWaShareOpen(false)}
+          draft={draft}
+          settings={pdfSettings}
+          templateConfig={waTemplate}
+          onToast={(msg, type) => showToast(msg, type)}
         />
       )}
     </div>

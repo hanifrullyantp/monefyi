@@ -1,3 +1,4 @@
+import ColorPickerField from './ColorPickerField';
 import { PDF_TEMPLATE_OPTIONS, type EstimationFormDraft } from '../../types/estimator';
 
 interface Props {
@@ -46,39 +47,17 @@ export default function PdfDesignCustomizer({ draft, onChange, open, onToggle }:
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block">
-              <span className="text-xs text-slate-500">Warna Primary</span>
-              <div className="flex gap-2 mt-1">
-                <input
-                  type="color"
-                  value={draft.pdf_primary_color}
-                  onChange={e => onChange({ pdf_primary_color: e.target.value })}
-                  className="w-10 h-9 rounded cursor-pointer"
-                />
-                <input
-                  value={draft.pdf_primary_color}
-                  onChange={e => onChange({ pdf_primary_color: e.target.value })}
-                  className="flex-1 px-2 py-1 border border-slate-200 rounded-lg text-xs font-mono"
-                />
-              </div>
-            </label>
-            <label className="block">
-              <span className="text-xs text-slate-500">Warna Secondary</span>
-              <div className="flex gap-2 mt-1">
-                <input
-                  type="color"
-                  value={draft.pdf_secondary_color}
-                  onChange={e => onChange({ pdf_secondary_color: e.target.value })}
-                  className="w-10 h-9 rounded cursor-pointer"
-                />
-                <input
-                  value={draft.pdf_secondary_color}
-                  onChange={e => onChange({ pdf_secondary_color: e.target.value })}
-                  className="flex-1 px-2 py-1 border border-slate-200 rounded-lg text-xs font-mono"
-                />
-              </div>
-            </label>
+          <div className="grid grid-cols-2 gap-4">
+            <ColorPickerField
+              label="Warna Primary"
+              value={draft.pdf_primary_color}
+              onChange={v => onChange({ pdf_primary_color: v })}
+            />
+            <ColorPickerField
+              label="Warna Secondary"
+              value={draft.pdf_secondary_color}
+              onChange={v => onChange({ pdf_secondary_color: v })}
+            />
           </div>
 
           <div className="space-y-2">
