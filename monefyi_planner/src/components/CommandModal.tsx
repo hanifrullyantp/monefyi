@@ -365,24 +365,36 @@ export default function CommandModal() {
     setWriteSuggest([]);
     setPipelineStage('memory');
 
-    // Resolve hashtags into structured hints; parse the tag-free text.
+    // Batch cost paste: parse raw text first (before tag cleanup collapses newlines).
+    const batchFromRaw = parseCostText(text);
+    if (batchFromRaw.length > 0) {
+      populateForm({
+        intent: 'record_cost_batch',
+        params: { items: batchFromRaw },
+        confidence: 0.9,
+        raw: text,
+        source: 'rule',
+      });
+      setLearnText(text);
+      setStage('confirm');
+      return;
+    }
+
     const { cleanText, hints } = resolveTags(text, taggables);
     const parseText = cleanText || text;
     setLearnText(parseText);
 
-    if (parseText.includes('\n')) {
-      const batchItems = parseCostText(parseText);
-      if (batchItems.length > 0) {
-        populateForm({
-          intent: 'record_cost_batch',
-          params: { items: batchItems },
-          confidence: 0.9,
-          raw: text,
-          source: 'rule',
-        });
-        setStage('confirm');
-        return;
-      }
+    const batchFromClean = parseCostText(parseText);
+    if (batchFromClean.length > 0) {
+      populateForm({
+        intent: 'record_cost_batch',
+        params: { items: batchFromClean },
+        confidence: 0.9,
+        raw: text,
+        source: 'rule',
+      });
+      setStage('confirm');
+      return;
     }
 
     let parsed = await runCommandPipeline(parseText, pipelineContext(), s => setPipelineStage(s));

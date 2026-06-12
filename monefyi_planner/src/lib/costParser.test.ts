@@ -62,4 +62,10 @@ describe('parseCostText', () => {
     const total = lines.reduce((s, l) => s + l.total, 0);
     expect(total).toBeGreaterThan(3_400_000);
   });
+
+  it('parses single-line collapsed WhatsApp paste', () => {
+    const collapsed = SAMPLE.replace(/\n/g, ' ');
+    const lines = parseCostText(collapsed);
+    expect(lines.length).toBeGreaterThan(20);
+  });
 });

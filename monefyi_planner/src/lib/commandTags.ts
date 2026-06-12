@@ -93,7 +93,12 @@ export function resolveTags(
     });
   }
 
-  const cleanText = input.replace(TAG_RE, '').replace(/\s+/g, ' ').trim();
+  // Preserve newlines — required for WhatsApp batch cost parsing.
+  const cleanText = input
+    .replace(TAG_RE, '')
+    .replace(/[^\S\n]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 
   const hints: TagParseResult['hints'] = {};
   for (const t of tags) {

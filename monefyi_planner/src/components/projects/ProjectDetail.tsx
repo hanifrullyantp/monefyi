@@ -155,7 +155,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
     rapActuals,
     costsSum,
     rapTotal,
-    cashSummary.received || project.total_received || 0,
+    project.total_budget_planned || 0,
   );
   const hasImportCosts = costs.some(c => String(c.description || '').startsWith('Import:'));
   const importCostSpike = rapTotal > 0 && costsSum > rapTotal * 1.5 && hasImportCosts;
@@ -645,8 +645,8 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
 
                 {activeTab === 'realisasi' && (
                   <motion.div key="re" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-                    <div className="flex justify-between items-center flex-wrap gap-2">
-                      <div className="flex gap-2 flex-wrap items-center">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
+                      <div className="flex gap-2 flex-wrap items-center min-w-0">
                         {[
                           { id: 'biaya', label: 'Biaya' },
                           { id: 'uangmasuk', label: 'Uang Masuk' },
@@ -669,12 +669,14 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                           </div>
                         )}
                       </div>
-                      <button type="button" onClick={() => setCommandModalOpen(true)} className="flex items-center gap-1 bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-bold">
-                        <Plus className="w-3.5 h-3.5" /> Catat via Monefyi Button
-                      </button>
-                      <button type="button" onClick={handleExportRap} className="flex items-center gap-1 border border-emerald-200 text-emerald-700 px-3 py-2 rounded-xl text-xs font-bold">
-                        <FileSpreadsheet className="w-3.5 h-3.5" /> Export Excel
-                      </button>
+                      <div className="flex flex-wrap gap-2 shrink-0">
+                        <button type="button" onClick={() => setCommandModalOpen(true)} className="flex items-center gap-1 bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap">
+                          <Plus className="w-3.5 h-3.5" /> Catat via Monefyi
+                        </button>
+                        <button type="button" onClick={handleExportRap} className="flex items-center gap-1 border border-emerald-200 text-emerald-700 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap">
+                          <FileSpreadsheet className="w-3.5 h-3.5" /> Export Excel
+                        </button>
+                      </div>
                     </div>
                     {activeSubTab === 'biaya' ? (
                       <>

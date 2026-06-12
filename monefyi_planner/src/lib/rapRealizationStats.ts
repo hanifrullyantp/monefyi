@@ -9,7 +9,7 @@ export interface RapRealizationStats {
   rapTotal: number;
   realizationPct: number;
   grossProfitEstimate: number;
-  received: number;
+  projectOmzet: number;
 }
 
 export function rapItemStatus(
@@ -42,7 +42,7 @@ export function computeRapRealizationStats(
   rapActuals: Record<string, RapActualAgg>,
   costsSum: number,
   rapTotal: number,
-  received: number,
+  projectOmzet: number,
 ): RapRealizationStats {
   let doneCount = 0;
   for (const item of rapItems) {
@@ -58,7 +58,7 @@ export function computeRapRealizationStats(
     costsSum,
     rapTotal,
     realizationPct,
-    grossProfitEstimate: received - costsSum,
-    received,
+    grossProfitEstimate: projectOmzet - costsSum,
+    projectOmzet,
   };
 }

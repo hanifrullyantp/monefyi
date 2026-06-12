@@ -9,7 +9,8 @@ export interface ParsedCostLine {
 }
 
 const WA_META_RE = /^\[[\d:,/\s]+\]/;
-const DATE_HEADER_RE = /^(?:[A-Za-zÀ-ÿ'']+,?\s+)?(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s*$/i;
+const DATE_HEADER_RE = /^(?:[A-Za-zÀ-ÿ'''`´]+,?\s+)?(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s*$/i;
+const COST_LINE_ALT_RE = /^([\d][\d.,]*)\s+(.+)$/;
 const SECTION_SKIP_RE = /^(duit\s+(keluar|masuk)|uang\s+(keluar|masuk))\s*:?\s*$/i;
 const COST_LINE_RE = /^[-–]\s*([\d][\d.,]*)\s+(.+)$/;
 
@@ -79,9 +80,18 @@ function parseCostLineBody(body: string, date: string): ParsedCostLine[] {
   }];
 }
 
+function normalizeCostInput(text: string): string {
+  let t = text.replace(/\r\n/g, '\n').trim();
+  // WhatsApp paste sometimes collapses to one line — re-split cost bullets.
+  if (!t.includes('\n') && /\s-\s*\d/.test(t)) {
+    t = t.replace(/\s+-\s+(?=\d)/g, '\n- ');
+  }
+  return t;
+}
+
 /** Parse WhatsApp-style multi-line expense lists (Duit keluar). */
 export function parseCostText(text: string): ParsedCostLine[] {
-  const lines = text.split(/\r?\n/);
+  const lines = normalizeCostInput(text).split(/\n/);
   let currentDate = new Date().toISOString().slice(0, 10);
   const results: ParsedCostLine[] = [];
 
@@ -102,7 +112,7 @@ export function parseCostText(text: string): ParsedCostLine[] {
 
     if (SECTION_SKIP_RE.test(line)) continue;
 
-    const costMatch = line.match(COST_LINE_RE);
+    const costMatch = line.match(COST_LINE_RE) || line.match(COST_LINE_ALT_RE);
     if (!costMatch) continue;
 
     const amount = parseDottedAmount(costMatch[1]);

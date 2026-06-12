@@ -87,9 +87,9 @@ export default function RapChecklistView({
   const unrealizedCount = enriched.filter(e => e.status === 'none').length;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 min-w-0 max-w-full">
       <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
-        <div className="relative flex-1 min-w-[160px]">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             value={search}
@@ -101,7 +101,7 @@ export default function RapChecklistView({
         <select
           value={typeFilter}
           onChange={e => setTypeFilter(e.target.value)}
-          className="px-3 py-2 border rounded-xl text-sm bg-white"
+          className="px-3 py-2 border rounded-xl text-sm bg-white min-w-0"
         >
           <option value="all">Semua kategori</option>
           {types.map(t => (
@@ -111,7 +111,7 @@ export default function RapChecklistView({
         <button
           type="button"
           onClick={() => setOnlyUnrealized(v => !v)}
-          className={`px-3 py-2 rounded-xl text-sm font-semibold border ${
+          className={`px-3 py-2 rounded-xl text-sm font-semibold border whitespace-nowrap ${
             onlyUnrealized
               ? 'bg-amber-50 border-amber-200 text-amber-800'
               : 'bg-white border-slate-200 text-slate-600'
@@ -121,7 +121,7 @@ export default function RapChecklistView({
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden divide-y divide-slate-100 min-w-0">
         {filtered.length === 0 ? (
           <p className="text-sm text-slate-400 text-center py-10">Tidak ada item cocok filter.</p>
         ) : (
@@ -129,8 +129,8 @@ export default function RapChecklistView({
             const { row, plannedQty, plannedAmt, actualAmt, status, isRealized } = e;
             const busy = busyId === row.id;
             return (
-              <div key={row.id} className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-                <div className="flex items-start gap-3 flex-1 min-w-0">
+              <div key={row.id} className="p-4 min-w-0">
+                <div className="flex items-start gap-3 min-w-0">
                   <button
                     type="button"
                     disabled={!canManage || busy}
@@ -146,12 +146,12 @@ export default function RapChecklistView({
                   </button>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-slate-800">{row.name}</span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS_CLASS[status]}`}>
+                      <span className="font-semibold text-slate-800 break-words">{row.name}</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${STATUS_CLASS[status]}`}>
                         {STATUS_LABEL[status]}
                       </span>
                     </div>
-                    <div className="text-xs text-slate-500 mt-0.5">
+                    <div className="text-xs text-slate-500 mt-0.5 break-words">
                       {TYPE_LABELS[row.type] || row.type} · Rencana {plannedQty} {row.unit} × {formatRupiah(Number(row.unit_price))} = {formatRupiah(plannedAmt)}
                     </div>
                     {isRealized && (
@@ -162,14 +162,14 @@ export default function RapChecklistView({
                   </div>
                 </div>
                 {canManage && (
-                  <div className="flex items-center gap-2 sm:w-48 shrink-0">
+                  <div className="flex items-center gap-2 mt-3 pl-9 min-w-0">
                     <input
                       type="number"
                       min="0"
                       placeholder={isRealized ? 'Nominal' : `Default ${formatRupiah(plannedAmt)}`}
                       value={amountDrafts[row.id] ?? ''}
                       onChange={ev => onAmountDraftChange(row.id, ev.target.value)}
-                      className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                      className="flex-1 min-w-0 px-3 py-2 border border-slate-200 rounded-xl text-sm"
                     />
                     {!isRealized && (
                       <button
@@ -180,7 +180,7 @@ export default function RapChecklistView({
                           true,
                           amountDrafts[row.id] ? parseFloat(amountDrafts[row.id]) : undefined,
                         )}
-                        className="px-3 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold disabled:opacity-50 shrink-0"
+                        className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold disabled:opacity-50 shrink-0"
                       >
                         OK
                       </button>

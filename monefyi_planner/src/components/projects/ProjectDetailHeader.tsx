@@ -275,13 +275,17 @@ export default function ProjectDetailHeader({
                     value: `${realisasiStats.realizationPct.toFixed(1)}%`,
                   },
                   {
-                    label: 'Profit Kotor',
+                    label: 'Proyeksi Profit',
                     value: formatRupiah(realisasiStats.grossProfitEstimate),
+                    hint: 'Omzet proyek − total realisasi',
                   },
                 ].map(m => (
                   <div key={m.label} className="text-center">
                     <div className="text-[10px] md:text-xs text-emerald-100 mb-0.5 uppercase tracking-wider">{m.label}</div>
                     <div className="text-sm md:text-lg font-black font-mono leading-tight">{m.value}</div>
+                    {'hint' in m && m.hint && (
+                      <div className="text-[9px] text-emerald-200/80 mt-0.5 normal-case tracking-normal">{m.hint}</div>
+                    )}
                   </div>
                 ))
               ) : (
