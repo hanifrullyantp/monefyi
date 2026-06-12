@@ -7,23 +7,21 @@ import {
   RotateCcw, MessageSquare, Wand2, Brain, PencilLine,
   Hash, Lightbulb, TrendingUp, ShoppingCart,
 } from 'lucide-react';
-import {
-  aiParseCommand, runCommandPipeline,
-  type ParsedCommand, type ParseSource,
-} from '../lib/commandParser';
+import { aiParseCommand, type ParsedCommand, type ParseSource } from '../lib/commandParser';
+import { runNeverFailPipeline, type PipelineStage } from '../lib/commandPipeline';
 import { finalizeParams } from '../lib/commandNormalize';
 import {
-  resolveTags, tagSuggestions, applyTagSuggestion, applyProgressTagHints, tagTypeLabel,
+  resolveTags, tagSuggestions, applyTagSuggestion, tagTypeLabel,
   type TaggableEntity, type ResolvedTag,
 } from '../lib/commandTags';
 import {
   buildNextActions, historyRecommendations, type Recommendation,
 } from '../lib/recommendations';
 import { executeIntent } from '../lib/intentExecutor';
-import { parseCostText, type ParsedCostLine } from '../lib/costParser';
+import type { ParsedCostLine } from '../lib/costParser';
 import { formatRupiah } from '../utils/projectUi';
 import { logCommand, loadCommandLogs } from '../services/commandService';
-import { recordCorrection, loadMemoryExamples } from '../services/commandMemoryService';
+import { recordCorrection, reinforceMemory, loadMemoryExamples } from '../services/commandMemoryService';
 import { loadAliases } from '../services/commandAliasService';
 import { loadWorkItems } from '../services/workItemService';
 import { loadRapItems } from '../services/rapService';
@@ -77,7 +75,15 @@ const NUMBER_FIELDS = new Set(['qty', 'unitPrice', 'total', 'progress', 'workers
 // Fields that are derived/handled elsewhere and should not be free-text inputs.
 const HIDDEN_FIELDS = new Set(['projectName']);
 
-const STAGE_ORDER: Record<ParseSource, number> = { memory: 1, rule: 2, ai: 3 };
+const STAGE_ORDER: Record<PipelineStage, number> = { memory: 1, rule: 2, fuzzy: 3, ai: 4 };
+
+const SOURCE_LABELS: Record<ParseSource, string> = {
+  memory: 'Memori Tim',
+  rule: 'Aturan',
+  fuzzy: 'Memori Fuzzy',
+  ai: 'AI',
+  fallback: 'Fallback',
+};
 
 function intentLabel(intent: string): string {
   return INTENT_OPTIONS.find(o => o.value === intent)?.label || intent.replace(/_/g, ' ');
@@ -98,7 +104,7 @@ export default function CommandModal() {
   const [stage, setStage] = useState<Stage>('idle');
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
-  const [pipelineStage, setPipelineStage] = useState<ParseSource>('memory');
+  const [pipelineStage, setPipelineStage] = useState<PipelineStage>('memory');
   const [resultMessage, setResultMessage] = useState('');
   const [resultDetails, setResultDetails] = useState('');
   const [history, setHistory] = useState<string[]>([]);
@@ -365,74 +371,26 @@ export default function CommandModal() {
     setWriteSuggest([]);
     setPipelineStage('memory');
 
-    // Batch cost paste: parse raw text first (before tag cleanup collapses newlines).
-    const batchFromRaw = parseCostText(text);
-    if (batchFromRaw.length > 0) {
-      populateForm({
-        intent: 'record_cost_batch',
-        params: { items: batchFromRaw },
-        confidence: 0.9,
-        raw: text,
-        source: 'rule',
-      });
-      setLearnText(text);
-      setStage('confirm');
-      return;
-    }
+    const result = await runNeverFailPipeline(
+      text,
+      pipelineContext(),
+      taggables,
+      s => setPipelineStage(s),
+    );
+    setLearnText(result.preprocessed.parseText);
 
-    const { cleanText, hints } = resolveTags(text, taggables);
-    const parseText = cleanText || text;
-    setLearnText(parseText);
-
-    const batchFromClean = parseCostText(parseText);
-    if (batchFromClean.length > 0) {
-      populateForm({
-        intent: 'record_cost_batch',
-        params: { items: batchFromClean },
-        confidence: 0.9,
-        raw: text,
-        source: 'rule',
-      });
-      setStage('confirm');
-      return;
-    }
-
-    let parsed = await runCommandPipeline(parseText, pipelineContext(), s => setPipelineStage(s));
-
-    // Apply tag hints to improve accuracy (project, RAP, worker, work item / progress).
-    if (hints.projectName) parsed.params = { ...parsed.params, projectName: hints.projectName };
-    if (hints.rapName && !parsed.params.item) parsed.params = { ...parsed.params, item: hints.rapName };
-    if (hints.workerName && !parsed.params.source) parsed.params = { ...parsed.params, source: hints.workerName };
-
-    parsed = {
-      ...parsed,
-      ...applyProgressTagHints(parseText, hints, parsed),
-    };
-
-    // Work-item tag alone → open editable confirm for progress update.
-    const taggedProgressOnly =
-      hints.workItemName &&
-      parsed.intent === 'update_progress' &&
-      parsed.confidence >= 0.75;
-
-    if ((parsed.intent === 'unknown' || parsed.confidence < 0.5) && !taggedProgressOnly) {
-      setResultMessage('Maaf, saya belum memahami perintah tersebut.');
-      setResultDetails(`Input: "${text}"`);
-      setStage('error');
-      await logCommand({
-        userId: user.id,
-        orgId: tenant.id,
-        inputType: isListening ? 'voice' : 'text',
-        rawInput: text,
-        parsedIntent: parsed.intent,
-        parsedParams: parsed.params,
-        confidence: parsed.confidence,
-        executionStatus: 'failed',
-      });
-      return;
-    }
-
-    populateForm(parsed);
+    populateForm({
+      intent: result.intent,
+      params: result.params,
+      confidence: result.confidence,
+      raw: result.raw,
+      source: result.source,
+      memoryId: result.memoryId,
+      memoryHitCount: result.memoryHitCount,
+      provider: result.provider,
+      reasoning: result.reasoning,
+      layer: result.layer,
+    });
     setStage('confirm');
   };
 
@@ -441,15 +399,9 @@ export default function CommandModal() {
     setStage('processing');
     setPipelineStage('ai');
     const aiResult = await aiParseCommand(input, pipelineContext());
-    if (aiResult && aiResult.intent !== 'unknown') {
-      populateForm(aiResult);
-      setEdited(false);
-      setStage('confirm');
-    } else {
-      setResultMessage('AI belum bisa memahami. Silakan isi manual.');
-      setResultDetails('');
-      setStage('error');
-    }
+    populateForm(aiResult);
+    setEdited(false);
+    setStage('confirm');
   };
 
   const openManualForm = () => {
@@ -520,19 +472,31 @@ export default function CommandModal() {
         loadWorkItemsForProject: loadWorkItems,
       });
 
+      const wasCorrected = edited;
+      const executionMeta = {
+        source: origParse?.source,
+        layer: origParse?.layer,
+        reasoning: origParse?.reasoning,
+        wasEdited: wasCorrected,
+      };
+
       // Learning: persist corrections / reinforce so the parser improves over time.
       if (result.success && form.intent !== 'unknown') {
-        const shouldLearn =
-          edited || origParse?.source === 'ai' || origParse?.source === 'memory';
-        if (shouldLearn) {
+        if (wasCorrected || origParse?.source === 'ai' || origParse?.source === 'fallback') {
           await recordCorrection({
             orgId: tenant.id,
             userId: user.id,
             rawInput: learnText || input,
             intent: form.intent,
             params: finalParams,
-            source: edited ? 'user' : (origParse?.source === 'ai' ? 'ai' : 'user'),
+            source: wasCorrected ? 'user' : 'ai',
           }).catch(() => {});
+        } else if (
+          origParse?.source === 'memory' &&
+          origParse.memoryId &&
+          !wasCorrected
+        ) {
+          await reinforceMemory(origParse.memoryId, origParse.memoryHitCount ?? 0).catch(() => {});
         }
         if (form.intent === 'record_cost_batch') {
           const batchSeeds = [
@@ -563,9 +527,14 @@ export default function CommandModal() {
         rawInput: input,
         parsedIntent: parsed.intent,
         parsedParams: finalParams,
-        confidence: parsed.confidence,
+        confidence: origParse?.confidence ?? parsed.confidence,
         executionStatus: result.success ? 'executed' : 'failed',
         errorMessage: result.success ? undefined : result.message,
+        executionResult: executionMeta,
+        wasCorrected,
+        correctionData: wasCorrected
+          ? { before: origParse?.params, after: finalParams }
+          : undefined,
       });
 
       if (result.navigateTo) navigate(result.navigateTo);
@@ -598,11 +567,14 @@ export default function CommandModal() {
   };
 
   const sourceBadge = (() => {
-    if (!origParse) return 'Aturan';
-    if (origParse.source === 'memory') return 'Memori Tim';
-    if (origParse.source === 'ai') return origParse.provider ? `AI · ${origParse.provider}` : 'AI';
-    return 'Aturan';
+    if (!origParse?.source) return 'Aturan';
+    const label = SOURCE_LABELS[origParse.source] || 'Aturan';
+    if (origParse.source === 'ai' && origParse.provider) return `${label} · ${origParse.provider}`;
+    return label;
   })();
+
+  const confidencePct = origParse ? Math.round(origParse.confidence * 100) : null;
+  const lowConfidence = origParse != null && origParse.confidence < 0.7;
 
   const renderFieldInput = (key: string, value: string | number) => {
     const strVal = value === 0 ? '0' : String(value ?? '');
@@ -865,9 +837,10 @@ export default function CommandModal() {
                 <p className="font-bold text-slate-800 mb-2">Memproses perintah...</p>
                 <div className="space-y-1.5">
                   {[
-                    { key: 'memory' as ParseSource, label: 'Memori Tim' },
-                    { key: 'rule' as ParseSource, label: 'Aturan Parser' },
-                    { key: 'ai' as ParseSource, label: 'AI Multi-Provider' },
+                    { key: 'memory' as PipelineStage, label: 'Memori Tim' },
+                    { key: 'rule' as PipelineStage, label: 'Aturan Parser' },
+                    { key: 'fuzzy' as PipelineStage, label: 'Memori Fuzzy' },
+                    { key: 'ai' as PipelineStage, label: 'AI Multi-Provider' },
                   ].map(l => {
                     const done = STAGE_ORDER[pipelineStage] >= STAGE_ORDER[l.key];
                     return (
@@ -885,15 +858,36 @@ export default function CommandModal() {
             {/* CONFIRM (editable) */}
             {stage === 'confirm' && (
               <motion.div key="confirm" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                <div className="flex items-center gap-2 mb-4">
+                <div className="flex items-center gap-2 mb-4 flex-wrap">
                   <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
                     <PencilLine className="w-3 h-3 text-emerald-600" />
                   </div>
                   <span className="text-sm font-bold text-slate-800">Konfirmasi &amp; Koreksi</span>
-                  <span className="ml-auto inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">
-                    <Brain className="w-3 h-3" /> {sourceBadge}
-                  </span>
+                  <div className="ml-auto flex items-center gap-1.5 flex-wrap">
+                    {confidencePct != null && (
+                      <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${lowConfidence ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}`}>
+                        {confidencePct}% yakin
+                      </span>
+                    )}
+                    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">
+                      <Brain className="w-3 h-3" /> {sourceBadge}
+                    </span>
+                  </div>
                 </div>
+
+                {lowConfidence && (
+                  <div className="flex items-start gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-xl mb-4 text-xs text-amber-800">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>Sistem kurang yakin dengan interpretasi ini. Periksa field di bawah sebelum mencatat.</span>
+                  </div>
+                )}
+
+                {origParse?.reasoning && (
+                  <div className="px-3 py-2.5 bg-blue-50 border border-blue-100 rounded-xl mb-4 text-xs text-blue-800">
+                    <span className="font-semibold block mb-0.5">Penjelasan AI</span>
+                    {origParse.reasoning}
+                  </div>
+                )}
 
                 <datalist id="rap-options">
                   {rapOptions.map(o => <option key={o} value={o} />)}
@@ -1093,7 +1087,7 @@ export default function CommandModal() {
         </div>
 
         <div className="px-5 py-3 border-t border-slate-100 text-center">
-          <span className="text-xs text-slate-400">Powered by <span className="font-semibold text-emerald-500">Monefyi AI</span> · Memori Tim → Aturan → AI</span>
+          <span className="text-xs text-slate-400">Powered by <span className="font-semibold text-emerald-500">Monefyi AI</span> · Memori → Aturan → Fuzzy → AI</span>
         </div>
       </motion.div>
     </motion.div>

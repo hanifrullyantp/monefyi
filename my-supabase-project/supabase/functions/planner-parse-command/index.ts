@@ -134,12 +134,15 @@ serve(async (req) => {
         gemini.platformFallbackUsed >= gemini.platformFallbackLimit;
 
       return json({
-        intent: "unknown",
+        intent: "record_cost",
         params: {},
-        confidence: 0,
+        confidence: 0.35,
+        explanation: quotaExhausted
+          ? "Kuota AI platform hari ini habis. Isi form manual di bawah atau tambahkan Gemini API key di Pengaturan → Akun."
+          : "AI belum dikonfigurasi. Isi form manual di bawah atau set Gemini API key di Pengaturan → Akun.",
         message: quotaExhausted
-          ? "Kuota AI platform hari ini habis. Tambahkan Gemini API key di Pengaturan → Akun."
-          : "AI belum dikonfigurasi. Set Gemini API key di Pengaturan → Akun atau hubungi admin.",
+          ? "Kuota AI platform hari ini habis."
+          : "AI belum dikonfigurasi.",
         quota: quotaExhausted
           ? {
             platform_fallback_used: gemini.platformFallbackUsed,
@@ -181,10 +184,11 @@ serve(async (req) => {
     } catch {
       // All providers exhausted — return graceful fallback.
       return json({
-        intent: "unknown",
+        intent: "record_cost",
         params: {},
-        confidence: 0,
-        message: "Parsing gagal sementara. Silakan coba lagi atau gunakan form manual.",
+        confidence: 0.35,
+        explanation: "Parsing AI gagal sementara — silakan isi form manual di bawah lalu catat.",
+        message: "Parsing gagal sementara. Silakan isi form manual.",
         _meta: { all_providers_failed: true },
       });
     }

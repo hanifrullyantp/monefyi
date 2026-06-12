@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, FolderOpen, Wallet, Settings, Bell, Menu, X,
   Sparkles, Wifi, WifiOff, Clock, Users, Calculator,
-  BarChart3, ChevronRight, LogOut, User, Shield, Building2,
+  BarChart3, Shield,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { useUiStore } from '../store/uiStore';
@@ -12,6 +12,7 @@ import { isPlatformAdmin } from '../services/adminService';
 import { showWorkerShell, canAccessManagerFeatures } from '../utils/platformUi';
 import CommandModal from './CommandModal';
 import NotificationPanel from './NotificationPanel';
+import PreviewModeMenu from './layout/PreviewModeMenu';
 import ToastHost from './ToastHost';
 import UndoToast from './ui/UndoToast';
 import { loadFinanceVersion } from '../lib/financeVersion';
@@ -26,15 +27,12 @@ export default function Layout({ children }: LayoutProps) {
   const {
     user, tenant, activeTab, setActiveTab, financeVersion, setFinanceVersionPreference,
     syncStatus, pendingSyncCount, isOnline, lastSynced, unreadCount, commandModalOpen,
-    setCommandModalOpen, sidebarOpen, setSidebarOpen, logout, platformRole, uiViewMode,
-    setUiViewMode,
+    setCommandModalOpen, sidebarOpen, setSidebarOpen, platformRole, uiViewMode,
   } = useAppStore();
   const navigate = useNavigate();
   const location = useLocation();
 
   const [notifOpen, setNotifOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -114,16 +112,18 @@ export default function Layout({ children }: LayoutProps) {
       setActiveTab(tabId);
     }
     setSidebarOpen(false);
-    setSettingsOpen(false);
-    setProfileOpen(false);
   };
 
   const handleNav = navigateToTab;
 
-  const handleLogout = async () => {
-    setProfileOpen(false);
-    await logout();
-    navigate('/login');
+  const goSettingsTab = async (st: string) => {
+    if (navigationGuard) {
+      const canLeave = await navigationGuard.promptLeave();
+      if (!canLeave) return;
+    }
+    setActiveTab('settings');
+    navigate(`/app?tab=settings&st=${st}`);
+    setSidebarOpen(false);
   };
 
   const getSyncIndicator = () => {
@@ -173,36 +173,6 @@ export default function Layout({ children }: LayoutProps) {
               </div>
             </div>
           )}
-          {isSuperAdmin && (
-            <div className="mt-3 p-2.5 bg-emerald-50 border border-emerald-100 rounded-xl">
-              <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide mb-2">Preview mode</div>
-              <div className="flex gap-1">
-                {([
-                  { id: 'auto' as const, label: 'Auto' },
-                  { id: 'owner' as const, label: 'Owner' },
-                  { id: 'worker' as const, label: 'Worker' },
-                ]).map(m => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setUiViewMode(m.id)}
-                    className={`flex-1 py-1 text-[10px] font-bold rounded-lg ${
-                      uiViewMode === m.id ? 'bg-emerald-600 text-white' : 'bg-white text-emerald-700'
-                    }`}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={() => navigate('/admin')}
-                className="mt-2 w-full flex items-center justify-center gap-1 py-1.5 text-[11px] font-bold text-emerald-700 hover:bg-emerald-100 rounded-lg"
-              >
-                <Shield className="w-3.5 h-3.5" /> Super Admin
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Nav Items */}
@@ -228,12 +198,12 @@ export default function Layout({ children }: LayoutProps) {
           ))}
         </nav>
 
-        {/* Monefyi AI + Profile */}
+        {/* Monefyi AI */}
         <div className="p-4 border-t border-slate-100">
           <button
             type="button"
             onClick={() => setCommandModalOpen(true)}
-            className="hidden lg:flex w-full h-12 mb-3 rounded-xl items-center justify-center gap-2 shadow-md hover:opacity-95 transition-all relative"
+            className="hidden lg:flex w-full h-12 rounded-xl items-center justify-center gap-2 shadow-md hover:opacity-95 transition-all relative"
             style={{ background: `linear-gradient(135deg, ${MONEFYI_BRAND.primary}, ${MONEFYI_BRAND.dark})` }}
             aria-label="Buka Monefyi AI"
           >
@@ -245,51 +215,6 @@ export default function Layout({ children }: LayoutProps) {
               </span>
             )}
           </button>
-
-          {/* User Profile */}
-          <div className="relative">
-            <button
-              onClick={() => setProfileOpen(!profileOpen)}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50 transition-colors"
-            >
-              <div className="w-8 h-8 rounded-full bg-org-primary flex items-center justify-center text-org-on-primary text-xs font-bold shrink-0">
-                {user?.name.charAt(0) || 'U'}
-              </div>
-              <div className="flex-1 text-left min-w-0">
-                <div className="text-sm font-medium text-slate-800 truncate">{user?.name}</div>
-                <div className="text-xs text-slate-400 capitalize">{user?.role}</div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-slate-400" />
-            </button>
-
-            <AnimatePresence>
-              {profileOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden z-50"
-                >
-                  <div className="p-3 border-b border-slate-100">
-                    <div className="font-medium text-slate-800 text-sm">{user?.name}</div>
-                    <div className="text-xs text-slate-500">{user?.email}</div>
-                  </div>
-                  <button
-                    onClick={() => navigateToTab('settings')}
-                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-50"
-                  >
-                    <Settings className="w-4 h-4" /> Pengaturan
-                  </button>
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-rose-600 hover:bg-rose-50"
-                  >
-                    <LogOut className="w-4 h-4" /> Keluar
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
         </div>
       </aside>
 
@@ -343,14 +268,6 @@ export default function Layout({ children }: LayoutProps) {
                 ))}
               </nav>
 
-              <div className="p-4 border-t border-slate-100">
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-rose-600 hover:bg-rose-50 rounded-xl"
-                >
-                  <LogOut className="w-4 h-4" /> Keluar
-                </button>
-              </div>
             </motion.aside>
           </>
         )}
@@ -412,86 +329,36 @@ export default function Layout({ children }: LayoutProps) {
               </AnimatePresence>
             </div>
 
-            {/* Settings gear */}
-            <div className="relative">
+            {isSuperAdmin && <PreviewModeMenu />}
+
+            {isSuperAdmin && (
               <button
                 type="button"
-                onClick={() => setSettingsOpen(v => !v)}
-                className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
-                aria-label="Pengaturan"
+                onClick={() => navigate('/admin')}
+                className="p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition-colors"
+                aria-label="Super Admin"
+                title="Super Admin"
               >
-                <Settings className="w-5 h-5 text-slate-600" />
+                <Shield className="w-5 h-5" />
               </button>
-              <AnimatePresence>
-                {settingsOpen && (
-                  <>
-                    <button
-                      type="button"
-                      className="fixed inset-0 z-40"
-                      aria-label="Tutup menu"
-                      onClick={() => setSettingsOpen(false)}
-                    />
-                    <motion.div
-                      initial={{ opacity: 0, y: -8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      className="absolute right-0 top-full mt-2 w-52 bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden z-50"
-                    >
-                      <div className="px-3 py-2 border-b border-slate-100 text-xs font-bold text-slate-500 flex items-center gap-1.5">
-                        <Settings className="w-3.5 h-3.5" /> Pengaturan
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => navigateToTab('settings')}
-                        className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
-                      >
-                        <User className="w-4 h-4" /> Profil Saya
-                      </button>
-                      {canAccessHr && (
-                        <button
-                          type="button"
-                          onClick={() => navigateToTab('hr')}
-                          className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
-                        >
-                          <Building2 className="w-4 h-4" /> Organisasi
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => navigateToTab('settings')}
-                        className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
-                      >
-                        <Bell className="w-4 h-4" /> Notifikasi
-                      </button>
-                      <div className="border-t border-slate-100">
-                        <button
-                          type="button"
-                          onClick={() => { setSettingsOpen(false); handleLogout(); }}
-                          className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-rose-600 hover:bg-rose-50"
-                        >
-                          <LogOut className="w-4 h-4" /> Keluar
-                        </button>
-                      </div>
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
+            )}
 
-            {/* User Avatar */}
             <button
               type="button"
-              onClick={() => setProfileOpen(!profileOpen)}
-              className="w-8 h-8 rounded-full bg-org-primary flex items-center justify-center text-org-on-primary text-xs font-bold hidden lg:flex"
-              aria-label="Profil"
+              onClick={() => goSettingsTab('organisasi')}
+              className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
+              aria-label="Pengaturan organisasi"
+              title="Pengaturan organisasi"
             >
-              {user?.name.charAt(0) || 'U'}
+              <Settings className="w-5 h-5 text-slate-600" />
             </button>
+
             <button
               type="button"
-              onClick={() => navigateToTab('settings')}
-              className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center text-white text-xs font-bold lg:hidden"
-              aria-label="Profil"
+              onClick={() => goSettingsTab('profil')}
+              className="w-8 h-8 rounded-full bg-org-primary flex items-center justify-center text-org-on-primary text-xs font-bold shrink-0"
+              aria-label="Profil saya"
+              title={user?.name || 'Profil'}
             >
               {user?.name.charAt(0) || 'U'}
             </button>

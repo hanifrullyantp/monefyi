@@ -25,6 +25,9 @@ export async function logCommand(entry: {
   confidence?: number;
   executionStatus: 'executed' | 'failed' | 'pending' | 'needs_review';
   errorMessage?: string;
+  executionResult?: Record<string, unknown>;
+  wasCorrected?: boolean;
+  correctionData?: Record<string, unknown>;
 }) {
   const { error } = await supabase.from('planner_command_logs').insert({
     user_id: entry.userId,
@@ -36,6 +39,9 @@ export async function logCommand(entry: {
     confidence: entry.confidence,
     execution_status: entry.executionStatus,
     error_message: entry.errorMessage,
+    execution_result: entry.executionResult ?? null,
+    was_corrected: entry.wasCorrected ?? false,
+    correction_data: entry.correctionData ?? null,
   });
   assertNoDbError(error);
 }

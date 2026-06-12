@@ -36,7 +36,9 @@ function rowSnapshot(row: PricelistItem): string {
   return JSON.stringify(pick);
 }
 
-export default function PricelistPage() {
+type PricelistPageProps = { embedded?: boolean };
+
+export default function PricelistPage({ embedded = false }: PricelistPageProps) {
   const navigate = useNavigate();
   const { tenant, user } = useAppStore();
   const showToast = useUiStore(s => s.showToast);
@@ -183,7 +185,8 @@ export default function PricelistPage() {
 
   const handleBack = async () => {
     const canLeave = await promptLeave();
-    if (canLeave) navigate('/app/estimator');
+    if (!canLeave) return;
+    navigate(embedded ? '/app?tab=settings&st=organisasi' : '/app/estimator');
   };
 
   const filtered = rows.filter(r => {
@@ -239,13 +242,15 @@ export default function PricelistPage() {
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6">
       <div className="flex items-center gap-3 mb-6">
-        <button
-          type="button"
-          onClick={handleBack}
-          className="p-2 rounded-xl hover:bg-slate-100 text-slate-500"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
+        {!embedded && (
+          <button
+            type="button"
+            onClick={handleBack}
+            className="p-2 rounded-xl hover:bg-slate-100 text-slate-500"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+        )}
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-black text-slate-900">Pricelist</h1>
           <p className="text-sm text-slate-500">Edit harga jual & margin — klik Simpan untuk menyimpan</p>

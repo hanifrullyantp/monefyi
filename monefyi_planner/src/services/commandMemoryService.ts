@@ -3,8 +3,10 @@ import {
   buildSlots,
   buildParamsTemplate,
   applyTemplate,
+  normalizeInput,
   type ParamsTemplate,
 } from '../lib/commandNormalize';
+import { combinedSimilarity } from '../lib/textSimilarity';
 
 export interface CommandMemory {
   id: string;
@@ -27,6 +29,66 @@ export interface MemoryMatch {
   hitCount: number;
   accuracyScore: number;
   memoryId: string;
+}
+
+const FUZZY_THRESHOLD = 0.72;
+const FUZZY_MEMORY_LIMIT = 80;
+
+export interface FuzzyMemoryMatch extends MemoryMatch {
+  confidence: number;
+  similarity: number;
+}
+
+/** Fuzzy match against recent org memories when exact signature misses. */
+export async function lookupFuzzyMemory(
+  orgId: string,
+  rawInput: string,
+): Promise<FuzzyMemoryMatch | null> {
+  if (!orgId || !rawInput.trim()) return null;
+
+  const normalized = normalizeInput(rawInput.replace(/\n/g, ' '));
+
+  const { data, error } = await supabase
+    .from('planner_command_memory')
+    .select('*')
+    .eq('org_id', orgId)
+    .order('hit_count', { ascending: false })
+    .limit(FUZZY_MEMORY_LIMIT);
+
+  if (error || !data?.length) return null;
+
+  let best: { mem: CommandMemory; similarity: number } | null = null;
+
+  for (const row of data as CommandMemory[]) {
+    const sample = row.raw_sample || '';
+    if (!sample) continue;
+    const sim = combinedSimilarity(normalized, normalizeInput(sample.replace(/\n/g, ' ')));
+    if (sim >= FUZZY_THRESHOLD && (!best || sim > best.similarity)) {
+      best = { mem: row, similarity: sim };
+    }
+  }
+
+  if (!best) return null;
+
+  const slots = buildSlots(rawInput);
+  const params = slots.signature
+    ? applyTemplate(best.mem.params_template || {}, slots)
+    : (best.mem.params_template as Record<string, unknown>);
+
+  const accuracy = Number(best.mem.accuracy_score) || 0.75;
+  const confidence = Math.min(0.92, accuracy * best.similarity * 0.85);
+
+  return {
+    intent: best.mem.intent,
+    params,
+    signature: best.mem.signature,
+    source: best.mem.source,
+    hitCount: best.mem.hit_count,
+    accuracyScore: accuracy,
+    memoryId: best.mem.id,
+    confidence,
+    similarity: best.similarity,
+  };
 }
 
 /** Look up a learned correction for the given raw input within an org. */

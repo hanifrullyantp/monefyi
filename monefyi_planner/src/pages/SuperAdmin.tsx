@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom';
 import {
   Users, Building2, Settings, LayoutDashboard, Loader2, RefreshCw,
   Plus, Trash2, Save, ArrowLeft, Search, Pencil, Activity, AlertTriangle, Archive, RotateCcw,
+  CreditCard,
 } from 'lucide-react';
+import PricingPlansAdmin from '../components/admin/PricingPlansAdmin';
 import {
   loadArchivedProjects,
   restoreArchivedProject,
@@ -18,7 +20,7 @@ import {
 import { showToast } from '../store/uiStore';
 import { fetchRuntimeTraces, type RuntimeTraceRow } from '../services/runtimeTracer';
 
-type Tab = 'overview' | 'users' | 'company-types' | 'platform' | 'monitoring' | 'archives';
+type Tab = 'overview' | 'users' | 'company-types' | 'platform' | 'monitoring' | 'archives' | 'pricing';
 
 export default function SuperAdmin() {
   const [tab, setTab] = useState<Tab>('overview');
@@ -178,6 +180,7 @@ export default function SuperAdmin() {
   const tabs: { id: Tab; label: string; icon: typeof Users }[] = [
     { id: 'overview', label: 'Ringkasan', icon: LayoutDashboard },
     { id: 'users', label: 'Pengguna', icon: Users },
+    { id: 'pricing', label: 'Paket Harga', icon: CreditCard },
     { id: 'monitoring', label: 'Monitoring', icon: Activity },
     { id: 'archives', label: 'Arsip Proyek', icon: Archive },
     { id: 'company-types', label: 'Jenis Perusahaan', icon: Building2 },
@@ -426,6 +429,10 @@ export default function SuperAdmin() {
               )}
             </div>
           </div>
+        )}
+
+        {tab === 'pricing' && (
+          <PricingPlansAdmin />
         )}
 
         {tab === 'company-types' && (

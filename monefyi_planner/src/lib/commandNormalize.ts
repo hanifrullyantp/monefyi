@@ -21,6 +21,9 @@ const ABBREVIATIONS: Record<string, string> = {
   psr: 'pasir',
   byr: 'bayar',
   bl: 'beli',
+  blj: 'belanja',
+  catet: 'catat',
+  trm: 'terima',
   prj: 'proyek',
   project: 'proyek',
   hrg: 'harga',
@@ -32,11 +35,15 @@ const ABBREVIATIONS: Record<string, string> = {
   mtr: 'meter',
   lbr: 'lembar',
   btg: 'batang',
+  zak: 'sak',
+  karung: 'sak',
+  kubik: 'm3',
 };
 
 // Structural words kept literal in the signature so command shapes stay stable.
 const KEYWORDS = new Set([
-  'beli', 'bayar', 'catat', 'update', 'progress', 'proses', 'cek', 'check',
+  'beli', 'belanja', 'bayar', 'catat', 'update', 'progress', 'proses', 'cek', 'check',
+  'terima', 'hadir',
   'lihat', 'berapa', 'buka', 'tampilkan', 'show', 'hadir', 'kerja', 'pekerja',
   'tukang', 'kuli', 'datang', 'sisa', 'budget', 'anggaran', 'biaya', 'rap',
   'laporan', 'report', 'rekomendasi', 'saran', 'analisa', 'analisis', 'sudah',

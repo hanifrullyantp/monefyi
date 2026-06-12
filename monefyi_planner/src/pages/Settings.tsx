@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { User, Globe, LogOut, Edit3, Check, Building2, Bell, Shield,
   Info, RefreshCw, Loader2, ChevronRight, Lock, Users, Wifi, WifiOff, Sparkles, Wallet,
+  Calculator,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { showToast, useUiStore } from '../store/uiStore';
@@ -20,8 +21,15 @@ import { isPlatformAdmin } from '../services/adminService';
 import { Link } from 'react-router-dom';
 import { loadFinanceVersion, setFinanceVersion } from '../lib/financeVersion';
 import type { FinanceVersion } from '../types/financeV2';
+import PricelistPage from './estimator/PricelistPage';
+import { formatPlanPriceIdr, planForOrg, type PricingPlan } from '../lib/pricingPlans';
+import { countProjectsCreatedThisMonth, loadPricingPlans } from '../services/pricingPlanService';
 
-type SettingsTab = 'profil' | 'akun' | 'organisasi' | 'notifikasi' | 'keamanan' | 'tentang';
+type SettingsTab = 'profil' | 'akun' | 'organisasi' | 'pricelist' | 'notifikasi' | 'keamanan' | 'tentang';
+
+const VALID_SETTINGS_TABS: SettingsTab[] = [
+  'profil', 'akun', 'organisasi', 'pricelist', 'notifikasi', 'keamanan', 'tentang',
+];
 
 const TIMEZONES = [
   'Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura', 'Asia/Singapore', 'UTC',
@@ -61,15 +69,9 @@ function roleBadgeClass(role?: string) {
   return map[role || ''] || 'bg-slate-100 text-slate-600';
 }
 
-function planLabel(plan?: string) {
-  const map: Record<string, string> = {
-    free: 'Gratis', pro: 'Pro', enterprise: 'Enterprise',
-  };
-  return map[plan || 'free'] || plan || 'Gratis';
-}
-
 export default function Settings() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const {
     user, tenant, logout, setUser, setTenant, setActiveTab, setFinanceVersionPreference, platformRole,
     syncStatus, isOnline, lastSynced, isDemoMode, projects,
@@ -107,6 +109,23 @@ export default function Settings() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
 
+  const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([]);
+  const [projectsThisMonth, setProjectsThisMonth] = useState<number | null>(null);
+
+  const currentPlan = planForOrg(tenant?.plan, pricingPlans);
+
+  const selectTab = (id: SettingsTab) => {
+    setTab(id);
+    navigate(`/app?tab=settings&st=${id}`, { replace: true });
+  };
+
+  useEffect(() => {
+    const st = searchParams.get('st');
+    if (st && VALID_SETTINGS_TABS.includes(st as SettingsTab)) {
+      setTab(st as SettingsTab);
+    }
+  }, [searchParams]);
+
   const load = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
@@ -130,6 +149,13 @@ export default function Settings() {
         setBusinessType(orgSettings.business_type || tenant.business_type || 'construction');
         setBrandColor(org.brand_color || '#059669');
       }
+
+      const [plans, monthCount] = await Promise.all([
+        loadPricingPlans(true),
+        tenant?.id ? countProjectsCreatedThisMonth(tenant.id) : Promise.resolve(0),
+      ]);
+      setPricingPlans(plans);
+      setProjectsThisMonth(monthCount);
     } catch (e) {
       console.error(e);
     } finally {
@@ -306,6 +332,7 @@ export default function Settings() {
     { id: 'profil', label: 'Profil', icon: User, show: true },
     { id: 'akun', label: 'Akun & AI', icon: Sparkles, show: true },
     { id: 'organisasi', label: 'Organisasi', icon: Building2, show: canEditOrg },
+    { id: 'pricelist', label: 'Pricelist', icon: Calculator, show: canEditOrg },
     { id: 'notifikasi', label: 'Notifikasi', icon: Bell, show: true },
     { id: 'keamanan', label: 'Keamanan', icon: Shield, show: true },
     { id: 'tentang', label: 'Tentang', icon: Info, show: true },
@@ -340,7 +367,13 @@ export default function Settings() {
         {[
           { label: 'Role', value: roleLabel(user?.role), sub: user?.email },
           { label: 'Organisasi', value: tenant?.name || '—', sub: tenant?.slug },
-          { label: 'Paket', value: planLabel(tenant?.plan), sub: `${projects.length} proyek` },
+          {
+            label: 'Paket',
+            value: currentPlan.label,
+            sub: currentPlan.projects_per_month != null && projectsThisMonth != null
+              ? `${projectsThisMonth}/${currentPlan.projects_per_month} proyek bulan ini`
+              : `${projects.length} proyek`,
+          },
           { label: 'Status', value: isOnline ? 'Online' : 'Offline', sub: syncStatus },
         ].map((kpi, i) => (
           <motion.div key={kpi.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
@@ -357,7 +390,7 @@ export default function Settings() {
           <button
             key={t.id}
             type="button"
-            onClick={() => setTab(t.id)}
+            onClick={() => selectTab(t.id)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap ${tab === t.id ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-slate-600 border border-slate-100'}`}
           >
             <t.icon className="w-3.5 h-3.5" />
@@ -529,6 +562,55 @@ export default function Settings() {
             onSyncPdfChange={setSyncPdfBrand}
           />
 
+          <div className="pt-2 border-t border-slate-100 space-y-3">
+            <div>
+              <h4 className="font-bold text-slate-800">Paket langganan</h4>
+              <p className="text-sm text-slate-500">
+                Paket aktif: <span className="font-semibold text-emerald-700">{currentPlan.label}</span>
+                {' · '}
+                {formatPlanPriceIdr(currentPlan.price_monthly_idr)}/bulan
+                {currentPlan.projects_per_month != null && projectsThisMonth != null && (
+                  <> · Kuota bulan ini: {projectsThisMonth}/{currentPlan.projects_per_month} proyek baru</>
+                )}
+              </p>
+            </div>
+            <div className="grid sm:grid-cols-3 gap-3">
+              {pricingPlans.map(p => {
+                const active = p.slug === currentPlan.slug;
+                return (
+                  <div
+                    key={p.slug}
+                    className={`rounded-xl border p-4 ${active ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 bg-slate-50'}`}
+                  >
+                    <div className="font-bold text-slate-900">{p.label}</div>
+                    <div className="text-lg font-black text-emerald-700 mt-1">
+                      {formatPlanPriceIdr(p.price_monthly_idr)}
+                      {p.price_monthly_idr > 0 && <span className="text-xs font-normal text-slate-500">/bulan</span>}
+                    </div>
+                    {p.projects_per_month != null ? (
+                      <div className="text-xs text-slate-600 mt-1">{p.projects_per_month} proyek/bulan</div>
+                    ) : (
+                      <div className="text-xs text-slate-600 mt-1">Proyek tanpa batas</div>
+                    )}
+                    <ul className="mt-2 space-y-0.5">
+                      {p.features.slice(0, 3).map(f => (
+                        <li key={f} className="text-xs text-slate-500">· {f}</li>
+                      ))}
+                    </ul>
+                    {active && (
+                      <span className="inline-block mt-2 text-[10px] font-bold uppercase text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                        Paket Anda
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-xs text-slate-400">
+              Untuk upgrade paket, hubungi tim Monefyi. Harga dapat diatur oleh Super Admin.
+            </p>
+          </div>
+
           <div className="flex flex-wrap gap-3 pt-2">
             <button type="button" onClick={handleSaveOrg} disabled={savingOrg} className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-2">
               {savingOrg && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -542,9 +624,12 @@ export default function Settings() {
 
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-500">
             Kelola anggota, undangan, dan akses join di halaman <button type="button" onClick={goToHr} className="text-emerald-600 font-semibold">HR & Karyawan</button>.
-            Billing dan upgrade paket akan tersedia di versi berikutnya.
           </div>
         </div>
+      )}
+
+      {tab === 'pricelist' && canEditOrg && (
+        <PricelistPage embedded />
       )}
 
       {tab === 'notifikasi' && (

@@ -72,6 +72,7 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
           total_budget: form.total_budget,
         },
         tenant.currency,
+        tenant.plan,
       );
       addProject(project);
       showToast('Proyek berhasil dibuat', 'success');

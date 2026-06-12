@@ -1,7 +1,7 @@
 import { parseNumberFromText } from './adapters';
 import { finalizeParams } from './commandNormalize';
 
-export type ParseSource = 'memory' | 'rule' | 'ai';
+export type ParseSource = 'memory' | 'rule' | 'ai' | 'fuzzy' | 'fallback';
 
 export interface ParsedCommand {
   intent: string;
@@ -10,7 +10,10 @@ export interface ParsedCommand {
   raw: string;
   source?: ParseSource;
   memoryId?: string;
+  memoryHitCount?: number;
   provider?: string;
+  reasoning?: string;
+  layer?: number;
 }
 
 function getParsingRules() {
@@ -161,10 +164,24 @@ export interface PipelineContext {
   current_project: string | null;
 }
 
+export function createAIFallbackParse(
+  input: string,
+  message?: string,
+): ParsedCommand {
+  return {
+    intent: 'record_cost',
+    params: {},
+    confidence: 0.35,
+    raw: input,
+    source: 'fallback',
+    reasoning: message || 'AI tidak tersedia — silakan isi form manual di bawah.',
+  };
+}
+
 export async function aiParseCommand(
   input: string,
   context: PipelineContext,
-): Promise<ParsedCommand | null> {
+): Promise<ParsedCommand> {
   try {
     const { config } = await import('./config');
     const { supabase } = await import('./supabase');
@@ -183,20 +200,32 @@ export async function aiParseCommand(
       body: { input, context: { ...context, learned_examples } },
     });
 
-    if (data?.intent) {
+    if (data?.intent && data.intent !== 'unknown') {
       return {
         intent: data.intent,
         params: data.params || {},
-        confidence: data.confidence || 0.7,
+        confidence: Number(data.confidence) || 0.7,
         raw: input,
         source: 'ai',
         provider: data?._meta?.provider,
+        reasoning: data.explanation || data.message || undefined,
+      };
+    }
+
+    if (data?.intent === 'unknown' && data?.explanation) {
+      return {
+        intent: 'record_cost',
+        params: data.params || {},
+        confidence: 0.4,
+        raw: input,
+        source: 'ai',
+        reasoning: data.explanation || data.message,
       };
     }
   } catch (e) {
     console.warn('AI parser fallback failed:', e);
   }
-  return null;
+  return createAIFallbackParse(input);
 }
 
 /**
@@ -254,10 +283,13 @@ export async function runCommandPipeline(
   // 3. AI fallback (+ few-shot from org memory).
   onStage?.('ai');
   const aiResult = await aiParseCommand(input, context);
-  if (aiResult && aiResult.confidence >= 0.6) {
+  if (aiResult.confidence >= 0.6 && aiResult.intent !== 'unknown') {
     return aiResult;
   }
 
-  // Keep the best of what we have for the editable form / error handling.
-  return aiResult ?? ruleResult;
+  if (ruleResult.intent !== 'unknown') {
+    return { ...ruleResult, confidence: Math.max(ruleResult.confidence, 0.45) };
+  }
+
+  return aiResult;
 }
