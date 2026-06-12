@@ -89,6 +89,63 @@ export async function deleteCostRealization(id: string, projectId: string) {
   await recalculateProjectSpent(projectId);
 }
 
+export async function deleteCostsByRapItemId(projectId: string, rapItemId: string) {
+  const { error } = await supabase
+    .from('planner_cost_realizations')
+    .delete()
+    .eq('project_id', projectId)
+    .eq('rap_item_id', rapItemId);
+  if (error) throw new Error(error.message);
+  await recalculateProjectSpent(projectId);
+}
+
+/** Toggle checklist realisasi: satu baris konsolidasi per item RAP. */
+export async function setRapItemRealization(input: {
+  projectId: string;
+  rapItemId: string;
+  rapItemName: string;
+  plannedQty: number;
+  plannedUnitPrice: number;
+  realized: boolean;
+  amount?: number | null;
+  recordedBy: string;
+  date?: string;
+}) {
+  const { projectId, rapItemId, realized } = input;
+
+  await deleteCostsByRapItemId(projectId, rapItemId);
+
+  if (!realized) return;
+
+  const plannedQty = Math.max(0, Number(input.plannedQty) || 0);
+  const plannedUnitPrice = Number(input.plannedUnitPrice) || 0;
+  const plannedTotal = Math.round(plannedQty * plannedUnitPrice);
+  const customAmount = input.amount != null && input.amount > 0 ? Math.round(input.amount) : null;
+  const totalAmount = customAmount ?? plannedTotal;
+
+  if (totalAmount <= 0) return;
+
+  let quantity = plannedQty;
+  let unitPrice = plannedUnitPrice;
+
+  if (customAmount != null && customAmount !== plannedTotal) {
+    quantity = 1;
+    unitPrice = customAmount;
+  }
+
+  await createCostRealization({
+    project_id: projectId,
+    rap_item_id: rapItemId,
+    date: input.date || new Date().toISOString().slice(0, 10),
+    description: `Realisasi: ${input.rapItemName}`,
+    quantity,
+    unit_price: unitPrice,
+    total_amount: totalAmount,
+    recorded_by: input.recordedBy,
+    status: 'recorded',
+  });
+}
+
 export async function updateCostRealization(
   id: string,
   projectId: string,

@@ -31,7 +31,7 @@ const SYSTEM_PROMPT = `Kamu adalah parser perintah untuk aplikasi manajemen proy
 Bahasa utama pengguna: Bahasa Indonesia informal.
 
 INTENT yang valid:
-record_cost | update_progress | check_budget | check_progress | open_project | add_worker_log | open_report | ask_recommendation | add_rap_item | add_work_item | general_query
+record_cost | record_cost_batch | update_progress | check_budget | check_progress | open_project | add_worker_log | open_report | ask_recommendation | add_rap_item | add_work_item | general_query
 
 OUTPUT: JSON murni tanpa markdown.
 {
@@ -44,7 +44,15 @@ OUTPUT: JSON murni tanpa markdown.
 Normalisasi angka:
 - "rb" / "ribu" → ×1000
 - "jt" / "juta" → ×1000000
-- "kemarin" → tanggal kemarin`;
+- "kemarin" → tanggal kemarin
+
+Format WhatsApp batch (duit keluar):
+Jum'at, 5/6/2026
+Duit keluar :
+- 63.500 belanja ferum ... (indra)
+- 850.000 gaji Gustam : 510K kerjaan rangka cc, 340K kerjaan aloevera (Indra)
+→ intent record_cost_batch, params.items[] = [{ date:"2026-06-05", total:63500, item:"...", supplier:"indra" }, ...]
+Pecah baris dengan beberapa "NK" setelah ":" menjadi beberapa item.`;
 
 function buildUserPrompt(
   input: string,

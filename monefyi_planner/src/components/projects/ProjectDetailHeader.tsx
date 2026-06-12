@@ -6,6 +6,7 @@ import {
 import type { Project } from '../../store/appStore';
 import { formatRupiah, HEALTH_CONFIG, STATUS_LABEL, PROJECT_STATUSES, formatDateId, daysUntil } from '../../utils/projectUi';
 import { EVM_METRICS } from '../../utils/evmMetrics';
+import type { RapRealizationStats } from '../../lib/rapRealizationStats';
 import { COLLAPSED_HEIGHT } from './useCollapsibleHeader';
 
 interface ProjectDetailHeaderProps {
@@ -16,6 +17,8 @@ interface ProjectDetailHeaderProps {
   opi: string;
   received?: number;
   surplus?: number;
+  activeTab?: string;
+  realisasiStats?: RapRealizationStats | null;
   loading: boolean;
   isCollapsed: boolean;
   onClose: () => void;
@@ -36,6 +39,8 @@ export default function ProjectDetailHeader({
   opi,
   received = 0,
   surplus = 0,
+  activeTab = 'overview',
+  realisasiStats = null,
   loading,
   isCollapsed,
   onClose,
@@ -254,41 +259,69 @@ export default function ProjectDetailHeader({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3 bg-white/10 rounded-2xl p-3 md:p-4 border border-white/10">
-              {[
-                { label: 'Progress', value: `${project.progress_percentage.toFixed(0)}%` },
-                { label: 'Budget', value: `${Math.round(budgetPct)}%` },
-                { label: 'Diterima', value: formatRupiah(received) },
-                { label: 'Saldo+', value: formatRupiah(surplus) },
-                { label: 'Sisa Hari', value: daysLeft > 0 ? `${daysLeft}d` : 'Lewat' },
-              ].map(m => (
-                <div key={m.label} className="text-center">
-                  <div className="text-[10px] md:text-xs text-emerald-100 mb-0.5 uppercase tracking-wider">{m.label}</div>
-                  <div className="text-lg md:text-xl font-black font-mono">{m.value}</div>
-                </div>
-              ))}
-              <div ref={opiHelpRef} className="relative text-center">
-                <div className="text-[10px] md:text-xs text-emerald-100 mb-0.5 uppercase tracking-wider flex items-center justify-center gap-0.5">
-                  OPI
-                  <button
-                    type="button"
-                    onClick={() => setOpiHelpOpen(v => !v)}
-                    className="p-0.5 rounded hover:bg-white/20"
-                    aria-label="Info OPI"
-                  >
-                    <Info className="w-3 h-3" />
-                  </button>
-                </div>
-                <div className="text-lg md:text-xl font-black font-mono">{opi}</div>
-                {opiHelpOpen && (
-                  <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 z-50 w-56 p-3 bg-slate-900 text-white text-left rounded-xl shadow-xl text-xs leading-relaxed">
-                    <div className="font-bold text-sm mb-1">{opiMetric.title}</div>
-                    <p className="text-slate-200 mb-2">{opiMetric.description}</p>
-                    <p className="font-mono text-emerald-200 text-[10px] mb-1">{opiMetric.formula}</p>
-                    <p className="text-slate-400 text-[10px]">Sumber: {opiMetric.source}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-3 bg-white/10 rounded-2xl p-3 md:p-4 border border-white/10">
+              {activeTab === 'realisasi' && realisasiStats ? (
+                [
+                  {
+                    label: 'Item Realisasi',
+                    value: `${realisasiStats.doneCount}/${realisasiStats.totalItems}`,
+                  },
+                  {
+                    label: 'Jumlah Realisasi',
+                    value: `${formatRupiah(realisasiStats.costsSum)} / ${formatRupiah(realisasiStats.rapTotal)}`,
+                  },
+                  {
+                    label: 'Persentase',
+                    value: `${realisasiStats.realizationPct.toFixed(1)}%`,
+                  },
+                  {
+                    label: 'Profit Kotor',
+                    value: formatRupiah(realisasiStats.grossProfitEstimate),
+                  },
+                ].map(m => (
+                  <div key={m.label} className="text-center">
+                    <div className="text-[10px] md:text-xs text-emerald-100 mb-0.5 uppercase tracking-wider">{m.label}</div>
+                    <div className="text-sm md:text-lg font-black font-mono leading-tight">{m.value}</div>
                   </div>
-                )}
-              </div>
+                ))
+              ) : (
+                <>
+                  {[
+                    { label: 'Progress', value: `${project.progress_percentage.toFixed(0)}%` },
+                    { label: 'Budget', value: `${Math.round(budgetPct)}%` },
+                    { label: 'Diterima', value: formatRupiah(received) },
+                    { label: 'Saldo+', value: formatRupiah(surplus) },
+                    { label: 'Sisa Hari', value: daysLeft > 0 ? `${daysLeft}d` : 'Lewat' },
+                  ].map(m => (
+                    <div key={m.label} className="text-center">
+                      <div className="text-[10px] md:text-xs text-emerald-100 mb-0.5 uppercase tracking-wider">{m.label}</div>
+                      <div className="text-lg md:text-xl font-black font-mono">{m.value}</div>
+                    </div>
+                  ))}
+                  <div ref={opiHelpRef} className="relative text-center">
+                    <div className="text-[10px] md:text-xs text-emerald-100 mb-0.5 uppercase tracking-wider flex items-center justify-center gap-0.5">
+                      OPI
+                      <button
+                        type="button"
+                        onClick={() => setOpiHelpOpen(v => !v)}
+                        className="p-0.5 rounded hover:bg-white/20"
+                        aria-label="Info OPI"
+                      >
+                        <Info className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <div className="text-lg md:text-xl font-black font-mono">{opi}</div>
+                    {opiHelpOpen && (
+                      <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 z-50 w-56 p-3 bg-slate-900 text-white text-left rounded-xl shadow-xl text-xs leading-relaxed">
+                        <div className="font-bold text-sm mb-1">{opiMetric.title}</div>
+                        <p className="text-slate-200 mb-2">{opiMetric.description}</p>
+                        <p className="font-mono text-emerald-200 text-[10px] mb-1">{opiMetric.formula}</p>
+                        <p className="text-slate-400 text-[10px]">Sumber: {opiMetric.source}</p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}

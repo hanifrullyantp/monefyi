@@ -1,5 +1,6 @@
 import type { RapItem } from './rapService';
 import { updateRapItem } from './rapService';
+import { findRapItemDuplicate } from '../lib/rapDuplicateDetect';
 import { createCostRealization, updateCostRealization } from './costService';
 import type { RapTableRow } from '../utils/rapTableRows';
 import { todayStr } from '../lib/adapters';
@@ -29,6 +30,14 @@ const FIELD_TO_RAP: Partial<Record<RapCellField, keyof RapItem>> = {
   notes: 'notes',
   is_critical: 'is_critical',
 };
+
+export function warnRapDuplicate(
+  existingItems: RapItem[],
+  candidate: { name: string; type?: string; unit?: string },
+  excludeId?: string,
+): RapItem | null {
+  return findRapItemDuplicate(existingItems, candidate, excludeId);
+}
 
 export async function saveRapCellChange(
   row: RapTableRow,

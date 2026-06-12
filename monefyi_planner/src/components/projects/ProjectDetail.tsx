@@ -2,14 +2,15 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, TrendingUp, BarChart3, Target, Layers, Trash2,
-  Loader2, FileSpreadsheet, Download, Upload, Braces, Table2, List,
+  Loader2, FileSpreadsheet, Download, Upload, Braces, Table2, List, CheckSquare,
 } from 'lucide-react';
 import { useAppStore, Project } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
 import { archiveProject, updateProject as updateProjectApi } from '../../services/projectService';
 import { loadRapItems, rapSummary, rapActualsFromCosts, createRapItem, deleteRapItem, updateRapItem } from '../../services/rapService';
+import { findRapItemDuplicate } from '../../lib/rapDuplicateDetect';
 import { loadWorkItems, createWorkItem, deleteWorkItem, updateWorkItem, updateProjectProgressFromWorkItems } from '../../services/workItemService';
-import { loadCostRealizations, deleteCostRealization, aggregateCostByRapItem, repairImportCosts, type RapActualAgg } from '../../services/costService';
+import { loadCostRealizations, deleteCostRealization, aggregateCostByRapItem, repairImportCosts, setRapItemRealization, type RapActualAgg } from '../../services/costService';
 import { loadDailyLogs, createDailyLog } from '../../services/dailyLogService';
 import { analyzeProject, type AnalyzeResult } from '../../services/analyzeService';
 import ConfirmDialog from '../ConfirmDialog';
@@ -21,7 +22,9 @@ import ProjectJsonPanel from './ProjectJsonPanel';
 import ProjectIncomePanel from './ProjectIncomePanel';
 import ProjectTransferPanel from './ProjectTransferPanel';
 import RapItemList from './RapItemList';
+import RapChecklistView from './RapChecklistView';
 import RapEditableTable from './RapEditableTable';
+import { computeRapRealizationStats } from '../../lib/rapRealizationStats';
 import ProjectOverviewDashboard from './ProjectOverviewDashboard';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { getProjectCashSummary } from '../../services/projectTransferService';
@@ -73,7 +76,9 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   const [statusBusy, setStatusBusy] = useState(false);
   const importRepairAttempted = useRef<string | null>(null);
   const isDesktop = useIsDesktop();
-  const [rapView, setRapView] = useState<'spreadsheet' | 'list'>(() => (typeof window !== 'undefined' && window.innerWidth >= 768 ? 'spreadsheet' : 'list'));
+  const [rapView, setRapView] = useState<'spreadsheet' | 'list' | 'checklist'>('checklist');
+  const [amountDrafts, setAmountDrafts] = useState<Record<string, string>>({});
+  const [toggleRealizationBusy, setToggleRealizationBusy] = useState<string | null>(null);
 
   const {
     scrollRef,
@@ -136,11 +141,22 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   }, [activeTab]);
 
   useEffect(() => {
-    setRapView(isDesktop ? 'spreadsheet' : 'list');
-  }, [isDesktop, project.id]);
+    if (activeTab === 'planning') {
+      setRapView(isDesktop ? 'spreadsheet' : 'list');
+    } else if (activeTab === 'realisasi') {
+      setRapView('checklist');
+    }
+  }, [isDesktop, project.id, activeTab]);
 
   const rapTotal = rapItems.reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.unit_price) || 0), 0);
   const costsSum = costs.reduce((s, c) => s + (Number(c.total_amount) || 0), 0);
+  const realisasiStats = computeRapRealizationStats(
+    rapItems,
+    rapActuals,
+    costsSum,
+    rapTotal,
+    cashSummary.received || project.total_received || 0,
+  );
   const hasImportCosts = costs.some(c => String(c.description || '').startsWith('Import:'));
   const importCostSpike = rapTotal > 0 && costsSum > rapTotal * 1.5 && hasImportCosts;
 
@@ -242,6 +258,16 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
 
   const handleAddRap = async () => {
     if (!rapForm.name.trim()) return;
+    if (!editingRapId) {
+      const dup = findRapItemDuplicate(rapItems, {
+        name: rapForm.name,
+        type: rapForm.type,
+        unit: rapForm.unit,
+      });
+      if (dup && !window.confirm(`Item "${dup.name}" mirip data yang sudah ada. Tetap tambah?`)) {
+        return;
+      }
+    }
     try {
       if (editingRapId) {
         await updateRapItem(editingRapId, rapForm);
@@ -309,6 +335,36 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
       rapItem: row,
       quantity: Number.isFinite(parsed) && parsed !== 0 ? parsed : 1,
     });
+  };
+
+  const handleToggleRealization = async (
+    row: typeof rapItems[0],
+    realized: boolean,
+    amount?: number,
+  ) => {
+    if (!user?.id || !canManage) return;
+    setToggleRealizationBusy(row.id);
+    try {
+      const draft = amountDrafts[row.id];
+      const parsedAmount = amount ?? (draft ? parseFloat(draft) : undefined);
+      await setRapItemRealization({
+        projectId: project.id,
+        rapItemId: row.id,
+        rapItemName: row.name,
+        plannedQty: Number(row.quantity) || 0,
+        plannedUnitPrice: Number(row.unit_price) || 0,
+        realized,
+        amount: parsedAmount,
+        recordedBy: user.id,
+      });
+      await reload();
+      await refreshData();
+      showToast(realized ? 'Item ditandai realisasi' : 'Realisasi dihapus', 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal mengubah realisasi', 'error');
+    } finally {
+      setToggleRealizationBusy(null);
+    }
   };
 
   const submitQtyDraft = (row: typeof rapItems[0]) => {
@@ -412,6 +468,8 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
             opi={opi}
             received={cashSummary.received || project.total_received || 0}
             surplus={cashSummary.surplus}
+            activeTab={activeTab}
+            realisasiStats={realisasiStats}
             loading={loading}
             isCollapsed={isCollapsed}
             onClose={onClose}
@@ -599,6 +657,9 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                         ))}
                         {activeSubTab === 'biaya' && rapItems.length > 0 && (
                           <div className="flex gap-1 bg-slate-100 p-0.5 rounded-lg">
+                            <button type="button" title="Checklist realisasi" onClick={() => setRapView('checklist')} className={`p-1.5 rounded-md ${rapView === 'checklist' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}>
+                              <CheckSquare className="w-4 h-4" />
+                            </button>
                             <button type="button" title="Tabel spreadsheet" onClick={() => setRapView('spreadsheet')} className={`p-1.5 rounded-md ${rapView === 'spreadsheet' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}>
                               <Table2 className="w-4 h-4" />
                             </button>
@@ -621,6 +682,16 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">
                             Buat RAP di tab Planning terlebih dahulu, lalu catat realisasi per item di sini.
                           </div>
+                        ) : rapView === 'checklist' ? (
+                          <RapChecklistView
+                            items={rapItems}
+                            rapActuals={rapActuals}
+                            canManage={canManage}
+                            amountDrafts={amountDrafts}
+                            onAmountDraftChange={(id, v) => setAmountDrafts(d => ({ ...d, [id]: v }))}
+                            onToggle={handleToggleRealization}
+                            busyId={toggleRealizationBusy}
+                          />
                         ) : rapView === 'spreadsheet' && user?.id ? (
                           <RapEditableTable
                             projectId={project.id}
@@ -921,6 +992,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
           open={showRapImport}
           projectId={project.id}
           recordedBy={user.id}
+          existingItems={rapItems}
           onClose={() => setShowRapImport(false)}
           onImported={() => { void reload(); void refreshData(); }}
         />

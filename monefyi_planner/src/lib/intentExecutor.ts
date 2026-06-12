@@ -1,6 +1,8 @@
 import { formatCurrency, todayStr } from './adapters';
 import type { ParsedCommand } from './commandParser';
 import { createCostRealization } from '../services/costService';
+import { loadRapItems, type RapItem } from '../services/rapService';
+import type { ParsedCostLine } from './costParser';
 import { createProjectIncome } from '../services/incomeService';
 import { createDailyLog } from '../services/dailyLogService';
 import { updateWorkItem, loadWorkItems, updateProjectProgressFromWorkItems } from '../services/workItemService';
@@ -37,6 +39,22 @@ function fuzzyMatchProject(name: string | null | undefined, projects: Project[])
   );
 }
 
+function fuzzyMatchRapItem(name: string, items: RapItem[]): { id: string; confidence: number } | null {
+  const lower = name.toLowerCase().trim();
+  if (!lower) return null;
+  let best: { id: string; score: number } | null = null;
+  for (const item of items) {
+    const n = item.name.toLowerCase();
+    if (n === lower) return { id: item.id, confidence: 1 };
+    if (n.includes(lower) || lower.includes(n)) {
+      const score = Math.min(n.length, lower.length) / Math.max(n.length, lower.length);
+      if (!best || score > best.score) best = { id: item.id, score };
+    }
+  }
+  if (best && best.score >= 0.85) return { id: best.id, confidence: best.score };
+  return null;
+}
+
 function fuzzyMatchWorkItem(name: string | null | undefined, items: WorkItem[]) {
   if (!name) return null;
   const lower = name.toLowerCase();
@@ -62,6 +80,51 @@ export async function executeIntent(
   }
 
   switch (intent) {
+    case 'record_cost_batch': {
+      if (!project) {
+        return {
+          success: false,
+          message: 'Proyek tidak ditemukan',
+          details: 'Buka proyek terlebih dahulu atau sebutkan nama proyek.',
+        };
+      }
+      const rawItems = (params.items as ParsedCostLine[]) || [];
+      if (!rawItems.length) {
+        return { success: false, message: 'Tidak ada baris biaya untuk dicatat.' };
+      }
+
+      const rapItems = await loadRapItems(project.id);
+      let recorded = 0;
+      let totalAmount = 0;
+
+      for (const line of rawItems) {
+        const total = Number(line.total) || 0;
+        if (total <= 0) continue;
+        const rapMatch = fuzzyMatchRapItem(line.item, rapItems);
+        await createCostRealization({
+          project_id: project.id,
+          rap_item_id: rapMatch?.id ?? null,
+          date: line.date || todayStr(),
+          description: line.item,
+          quantity: 1,
+          unit_price: total,
+          total_amount: total,
+          supplier: line.supplier ?? null,
+          recorded_by: ctx.userId,
+        });
+        recorded += 1;
+        totalAmount += total;
+      }
+
+      await ctx.onRefreshProjects();
+      return {
+        success: true,
+        message: `${recorded} biaya tercatat!`,
+        details: `Total ${formatCurrency(totalAmount)} → ${project.name}`,
+        refreshProjects: true,
+      };
+    }
+
     case 'record_cost': {
       if (!project) {
         return {

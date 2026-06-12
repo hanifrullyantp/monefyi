@@ -230,8 +230,22 @@ export async function runCommandPipeline(
     }
   }
 
-  // 2. Regex rules.
+  // 2. WhatsApp multi-line batch costs.
   onStage?.('rule');
+  if (input.includes('\n')) {
+    const { parseCostText } = await import('./costParser');
+    const items = parseCostText(input);
+    if (items.length > 0) {
+      return {
+        intent: 'record_cost_batch',
+        params: { items },
+        confidence: 0.9,
+        raw: input,
+        source: 'rule',
+      };
+    }
+  }
+
   const ruleResult = parseCommand(input);
   if (ruleResult.intent !== 'unknown' && ruleResult.confidence >= 0.75) {
     return ruleResult;

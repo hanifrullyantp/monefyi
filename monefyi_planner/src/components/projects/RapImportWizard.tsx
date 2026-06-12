@@ -1,9 +1,11 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, FileSpreadsheet, Loader2, AlertTriangle } from 'lucide-react';
 import { parseRapWorkbook, downloadRapTemplate, previewImportTotals, resolveImportCost, type ParsedRapRow } from '../../services/rapExcelService';
+import type { RapItem } from '../../services/rapService';
 import { createRapItem, deleteAllRapItems } from '../../services/rapService';
 import { createCostRealization, deleteAllCosts } from '../../services/costService';
+import { findRapImportDuplicates } from '../../lib/rapDuplicateDetect';
 import { showToast } from '../../store/uiStore';
 import { formatRupiah } from '../../utils/projectUi';
 
@@ -11,6 +13,7 @@ interface RapImportWizardProps {
   open: boolean;
   projectId: string;
   recordedBy: string;
+  existingItems?: RapItem[];
   onClose: () => void;
   onImported: () => void;
 }
@@ -19,6 +22,7 @@ export default function RapImportWizard({
   open,
   projectId,
   recordedBy,
+  existingItems = [],
   onClose,
   onImported,
 }: RapImportWizardProps) {
@@ -28,6 +32,17 @@ export default function RapImportWizard({
   const [confirmText, setConfirmText] = useState('');
   const [busy, setBusy] = useState(false);
   const [step, setStep] = useState<'upload' | 'preview'>('upload');
+  const [skipDuplicates, setSkipDuplicates] = useState(true);
+
+  const duplicates = useMemo(
+    () => (step === 'preview' ? findRapImportDuplicates(existingItems, rows) : []),
+    [step, existingItems, rows],
+  );
+
+  const duplicateIndexes = useMemo(
+    () => new Set(duplicates.map(d => d.index)),
+    [duplicates],
+  );
 
   const handleFile = async (file: File) => {
     if (file.size > 10 * 1024 * 1024) {
@@ -41,6 +56,7 @@ export default function RapImportWizard({
       return;
     }
     setRows(parsed);
+    setSkipDuplicates(mode === 'append');
     setStep('preview');
   };
 
@@ -56,9 +72,12 @@ export default function RapImportWizard({
         await deleteAllRapItems(projectId);
       }
 
+      let imported = 0;
       for (let i = 0; i < rows.length; i++) {
         const r = rows[i];
         if (!r.valid) continue;
+        if (mode === 'append' && skipDuplicates && duplicateIndexes.has(i)) continue;
+
         const item = await createRapItem({
           project_id: projectId,
           type: r.type,
@@ -82,8 +101,9 @@ export default function RapImportWizard({
             recorded_by: recordedBy,
           });
         }
+        imported += 1;
       }
-      showToast(`${rows.filter(r => r.valid).length} item RAP diimpor`, 'success');
+      showToast(`${imported} item RAP diimpor`, 'success');
       onImported();
       onClose();
       setStep('upload');
@@ -101,6 +121,9 @@ export default function RapImportWizard({
   const validCount = rows.filter(r => r.valid).length;
   const warnCount = rows.filter(r => r.warnings.length).length;
   const importPreview = step === 'preview' ? previewImportTotals(rows) : null;
+  const importableCount = mode === 'append' && skipDuplicates
+    ? rows.filter((r, i) => r.valid && !duplicateIndexes.has(i)).length
+    : validCount;
 
   return (
     <AnimatePresence>
@@ -152,11 +175,51 @@ export default function RapImportWizard({
                       <AlertTriangle className="w-3 h-3" /> {warnCount} peringatan
                     </span>
                   )}
+                  {duplicates.length > 0 && (
+                    <span className="px-2 py-1 bg-amber-100 text-amber-800 rounded-full font-bold flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3" /> {duplicates.length} duplikat
+                    </span>
+                  )}
                 </div>
 
+                {duplicates.length > 0 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-3 text-xs text-amber-900 space-y-2">
+                    <p className="font-bold">{duplicates.length} baris mirip data yang sudah ada:</p>
+                    <ul className="space-y-1 max-h-24 overflow-y-auto">
+                      {duplicates.slice(0, 8).map(d => (
+                        <li key={`${d.index}-${d.reason}`}>
+                          #{d.row.rowIndex} {d.row.name}
+                          {d.existingName ? ` ≈ "${d.existingName}"` : ' (duplikat dalam file)'}
+                        </li>
+                      ))}
+                      {duplicates.length > 8 && <li>…dan {duplicates.length - 8} lainnya</li>}
+                    </ul>
+                    {mode === 'append' && (
+                      <label className="flex items-center gap-2 font-semibold">
+                        <input
+                          type="checkbox"
+                          checked={skipDuplicates}
+                          onChange={e => setSkipDuplicates(e.target.checked)}
+                          className="rounded border-amber-300"
+                        />
+                        Lewati duplikat saat import
+                      </label>
+                    )}
+                    {!skipDuplicates && mode === 'append' && (
+                      <button
+                        type="button"
+                        onClick={() => setSkipDuplicates(true)}
+                        className="text-amber-800 underline font-bold"
+                      >
+                        Lewati duplikat
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => setMode('append')} className={`flex-1 py-2 rounded-xl text-xs font-bold ${mode === 'append' ? 'bg-emerald-600 text-white' : 'bg-slate-100'}`}>Tambah (append)</button>
-                  <button type="button" onClick={() => setMode('replace')} className={`flex-1 py-2 rounded-xl text-xs font-bold ${mode === 'replace' ? 'bg-rose-600 text-white' : 'bg-slate-100'}`}>Ganti semua</button>
+                  <button type="button" onClick={() => { setMode('append'); setSkipDuplicates(true); }} className={`flex-1 py-2 rounded-xl text-xs font-bold ${mode === 'append' ? 'bg-emerald-600 text-white' : 'bg-slate-100'}`}>Tambah (append)</button>
+                  <button type="button" onClick={() => { setMode('replace'); setSkipDuplicates(false); }} className={`flex-1 py-2 rounded-xl text-xs font-bold ${mode === 'replace' ? 'bg-rose-600 text-white' : 'bg-slate-100'}`}>Ganti semua</button>
                 </div>
 
                 {mode === 'replace' && (
@@ -200,13 +263,13 @@ export default function RapImportWizard({
                       </tr>
                     </thead>
                     <tbody>
-                      {rows.map(r => (
-                        <tr key={r.rowIndex} className="border-t">
+                      {rows.map((r, i) => (
+                        <tr key={r.rowIndex} className={`border-t ${duplicateIndexes.has(i) ? 'bg-amber-50' : ''}`}>
                           <td className="p-2">{r.rowIndex}</td>
                           <td className="p-2">{r.name}</td>
                           <td className="p-2">{r.quantity}</td>
                           <td className="p-2">
-                            {r.errors.length ? '❌' : r.warnings.length ? '⚠️' : '✅'}
+                            {duplicateIndexes.has(i) ? '⚠️ dup' : r.errors.length ? '❌' : r.warnings.length ? '⚠️' : '✅'}
                           </td>
                         </tr>
                       ))}
@@ -220,9 +283,9 @@ export default function RapImportWizard({
           {step === 'preview' && (
             <div className="p-5 border-t flex gap-2">
               <button type="button" onClick={() => { setStep('upload'); setRows([]); }} className="flex-1 py-3 border rounded-xl font-bold text-sm">Kembali</button>
-              <button type="button" onClick={handleImport} disabled={busy || validCount === 0} className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50">
+              <button type="button" onClick={handleImport} disabled={busy || importableCount === 0} className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50">
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                Import {validCount} item
+                Import {importableCount} item
               </button>
             </div>
           )}

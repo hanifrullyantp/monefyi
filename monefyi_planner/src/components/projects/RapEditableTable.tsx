@@ -6,6 +6,7 @@ import { buildRapColumnDefs, RAP_COLUMN_FIELDS } from './rapColumnDefs';
 import { buildRapTableRows, recomputeRapRow, type RapTableRow } from '../../utils/rapTableRows';
 import type { RapItem } from '../../services/rapService';
 import { createRapItem, deleteRapItem } from '../../services/rapService';
+import { warnRapDuplicate } from '../../services/rapTableService';
 import { saveRapCellChange, type RapCellField } from '../../services/rapTableService';
 import type { RapActualAgg } from '../../services/costService';
 import { useAutoSave } from '../../hooks/useAutoSave';
@@ -57,6 +58,7 @@ export default function RapEditableTable({
   const gridApiRef = useRef<GridApi<RapTableRow> | null>(null);
   const [showColumnMenu, setShowColumnMenu] = useState(false);
   const [groupByType, setGroupByType] = useState(false);
+  const [addRowWarning, setAddRowWarning] = useState<string | null>(null);
   const [cellErrors, setCellErrors] = useState<Record<string, string>>({});
   const [hiddenCols, setHiddenCols] = useState<Record<string, boolean>>({});
 
@@ -154,6 +156,15 @@ export default function RapEditableTable({
   );
 
   const handleAddRow = async () => {
+    const dup = warnRapDuplicate(items, { name: 'Item baru', type: 'material', unit: 'unit' });
+    if (dup) {
+      setAddRowWarning(`Baris baru mirip item existing: "${dup.name}"`);
+      if (!window.confirm(`Item mirip "${dup.name}" sudah ada. Tetap tambah baris baru?`)) {
+        return;
+      }
+    } else {
+      setAddRowWarning(null);
+    }
     try {
       await createRapItem({
         project_id: projectId,
@@ -292,6 +303,12 @@ export default function RapEditableTable({
           </>
         )}
       </div>
+
+      {addRowWarning && (
+        <div className="text-xs bg-amber-50 border border-amber-200 text-amber-900 rounded-xl px-3 py-2">
+          ⚠️ {addRowWarning}
+        </div>
+      )}
 
       <EditableTable<RapTableRow>
         rowData={optimisticRows}

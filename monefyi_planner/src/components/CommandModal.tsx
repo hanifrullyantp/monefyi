@@ -20,12 +20,15 @@ import {
   buildNextActions, historyRecommendations, type Recommendation,
 } from '../lib/recommendations';
 import { executeIntent } from '../lib/intentExecutor';
+import { parseCostText, type ParsedCostLine } from '../lib/costParser';
+import { formatRupiah } from '../utils/projectUi';
 import { logCommand, loadCommandLogs } from '../services/commandService';
 import { recordCorrection, loadMemoryExamples } from '../services/commandMemoryService';
 import { loadAliases } from '../services/commandAliasService';
 import { loadWorkItems } from '../services/workItemService';
 import { loadRapItems } from '../services/rapService';
-import { aggregateCostByRapItem } from '../services/costService';
+import { aggregateCostByRapItem, loadCostRealizations } from '../services/costService';
+import { findCostDuplicate } from '../lib/rapDuplicateDetect';
 import { listMembers } from '../services/memberService';
 import { useAppStore } from '../store/appStore';
 
@@ -47,6 +50,7 @@ const quickCommands = [
 
 const INTENT_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'record_cost', label: 'Catat Biaya' },
+  { value: 'record_cost_batch', label: 'Catat Biaya (Batch)' },
   { value: 'update_progress', label: 'Update Progress' },
   { value: 'check_budget', label: 'Cek Budget' },
   { value: 'check_progress', label: 'Cek Progress' },
@@ -115,8 +119,11 @@ export default function CommandModal() {
   const [writeSuggest, setWriteSuggest] = useState<string[]>([]);
   // Tag-free text used for learning so memory signatures stay clean.
   const [learnText, setLearnText] = useState('');
+  const [batchMode, setBatchMode] = useState(false);
+  const [batchLines, setBatchLines] = useState<ParsedCostLine[]>([]);
+  const [batchDuplicateIdx, setBatchDuplicateIdx] = useState<Set<number>>(new Set());
 
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
 
@@ -213,6 +220,27 @@ export default function CommandModal() {
     loadRapItems(target.id).then(items => setRapOptions(items.map(i => i.name))).catch(() => setRapOptions([]));
   }, [stage, form.projectName]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (stage !== 'confirm' || !batchMode || !batchLines.length) {
+      setBatchDuplicateIdx(new Set());
+      return;
+    }
+    const target = projects.find(p => p.name === form.projectName) || activeProject;
+    if (!target) return;
+    let cancelled = false;
+    loadCostRealizations(target.id).then(costs => {
+      if (cancelled) return;
+      const dupes = new Set<number>();
+      batchLines.forEach((line, idx) => {
+        if (findCostDuplicate(costs, { date: line.date, amount: line.total, description: line.item })) {
+          dupes.add(idx);
+        }
+      });
+      setBatchDuplicateIdx(dupes);
+    }).catch(() => setBatchDuplicateIdx(new Set()));
+    return () => { cancelled = true; };
+  }, [stage, batchMode, batchLines, form.projectName, activeProject?.id, projects]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // React to typing: tag autocomplete + writing suggestions.
   const handleInputChange = (value: string) => {
     setInput(value);
@@ -249,6 +277,21 @@ export default function CommandModal() {
   });
 
   const populateForm = (parsed: ParsedCommand) => {
+    if (parsed.intent === 'record_cost_batch' && Array.isArray(parsed.params.items)) {
+      setBatchMode(true);
+      setBatchLines(parsed.params.items as ParsedCostLine[]);
+      setForm({
+        intent: 'record_cost_batch',
+        data: {},
+        projectName: activeProject?.name || '',
+      });
+      setOrigParse(parsed);
+      setEdited(false);
+      return;
+    }
+
+    setBatchMode(false);
+    setBatchLines([]);
     const data: Record<string, string | number> = {};
     let projectName = '';
     for (const [k, v] of Object.entries(parsed.params || {})) {
@@ -256,6 +299,7 @@ export default function CommandModal() {
         projectName = v != null ? String(v) : '';
         continue;
       }
+      if (k === 'items') continue;
       if (v == null) continue;
       data[k] = typeof v === 'number' ? v : String(v);
     }
@@ -325,6 +369,21 @@ export default function CommandModal() {
     const { cleanText, hints } = resolveTags(text, taggables);
     const parseText = cleanText || text;
     setLearnText(parseText);
+
+    if (parseText.includes('\n')) {
+      const batchItems = parseCostText(parseText);
+      if (batchItems.length > 0) {
+        populateForm({
+          intent: 'record_cost_batch',
+          params: { items: batchItems },
+          confidence: 0.9,
+          raw: text,
+          source: 'rule',
+        });
+        setStage('confirm');
+        return;
+      }
+    }
 
     let parsed = await runCommandPipeline(parseText, pipelineContext(), s => setPipelineStage(s));
 
@@ -422,7 +481,9 @@ export default function CommandModal() {
     if (!user || !tenant || !form.intent) return;
     setStage('processing');
 
-    const finalParams = formToParams();
+    const finalParams = batchMode && form.intent === 'record_cost_batch'
+      ? { items: batchLines }
+      : formToParams();
     const parsed = {
       intent: form.intent,
       params: finalParams,
@@ -460,6 +521,26 @@ export default function CommandModal() {
             params: finalParams,
             source: edited ? 'user' : (origParse?.source === 'ai' ? 'ai' : 'user'),
           }).catch(() => {});
+        }
+        if (form.intent === 'record_cost_batch') {
+          const batchSeeds = [
+            { rawInput: 'duit keluar', params: { items: [] } },
+            { rawInput: 'duit keluar :', params: { items: [] } },
+            {
+              rawInput: '- 63.500 belanja ferum (indra)',
+              params: { items: [{ date: '2026-06-05', total: 63500, item: 'belanja ferum', supplier: 'indra' }] },
+            },
+          ];
+          for (const seed of batchSeeds) {
+            await recordCorrection({
+              orgId: tenant.id,
+              userId: user.id,
+              rawInput: seed.rawInput,
+              intent: 'record_cost_batch',
+              params: seed.params,
+              source: 'user',
+            }).catch(() => {});
+          }
         }
       }
 
@@ -499,6 +580,9 @@ export default function CommandModal() {
     setResolvedTags([]);
     setWriteSuggest([]);
     setLearnText('');
+    setBatchMode(false);
+    setBatchLines([]);
+    setBatchDuplicateIdx(new Set());
   };
 
   const sourceBadge = (() => {
@@ -578,15 +662,21 @@ export default function CommandModal() {
             {stage === 'idle' && (
               <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <div className="relative mb-2">
-                  <div className="flex items-center gap-2 bg-slate-50 border-2 border-slate-200 focus-within:border-emerald-400 rounded-2xl px-4 py-3 transition-colors">
-                    <MessageSquare className="w-4 h-4 text-slate-400 shrink-0" />
-                    <input
+                  <div className="flex items-start gap-2 bg-slate-50 border-2 border-slate-200 focus-within:border-emerald-400 rounded-2xl px-4 py-3 transition-colors">
+                    <MessageSquare className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                    <textarea
                       ref={inputRef}
                       value={input}
+                      rows={input.includes('\n') ? 6 : 2}
                       onChange={e => handleInputChange(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') { setTagOpen(null); handleProcess(); } }}
-                      placeholder="Ketik perintah... #proyek #pekerjaan #rap"
-                      className="flex-1 bg-transparent outline-none text-sm text-slate-800 placeholder-slate-400"
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                          setTagOpen(null);
+                          handleProcess();
+                        }
+                      }}
+                      placeholder="Ketik perintah atau paste WhatsApp (Duit keluar)… #proyek #rap"
+                      className="flex-1 bg-transparent outline-none text-sm text-slate-800 placeholder-slate-400 resize-y min-h-[2.5rem]"
                     />
                     <button
                       onClick={isListening ? stopListening : startListening}
@@ -827,7 +917,7 @@ export default function CommandModal() {
                   </div>
 
                   {/* Editable params */}
-                  {Object.entries(form.data)
+                  {!batchMode && Object.entries(form.data)
                     .filter(([key]) => !HIDDEN_FIELDS.has(key))
                     .map(([key, val]) => (
                       <div key={key} className="flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
@@ -836,6 +926,89 @@ export default function CommandModal() {
                       </div>
                     ))}
                 </div>
+
+                {batchMode && batchLines.length > 0 && (
+                  <div className="mb-4 border border-slate-200 rounded-2xl overflow-hidden">
+                    <div className="px-3 py-2 bg-slate-50 border-b text-xs font-bold text-slate-600 flex flex-wrap gap-2 justify-between">
+                      <span>Preview {batchLines.length} biaya · Total {formatRupiah(batchLines.reduce((s, l) => s + l.total, 0))}</span>
+                      {batchDuplicateIdx.size > 0 && (
+                        <span className="text-amber-700 font-semibold">
+                          {batchDuplicateIdx.size} baris mirip biaya existing
+                        </span>
+                      )}
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                      <table className="w-full text-xs">
+                        <thead className="bg-white sticky top-0">
+                          <tr className="text-slate-500">
+                            <th className="p-2 text-left">Tgl</th>
+                            <th className="p-2 text-left">Item</th>
+                            <th className="p-2 text-right">Total</th>
+                            <th className="p-2 w-8" />
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {batchLines.map((line, idx) => (
+                            <tr key={idx} className={`border-t border-slate-100 ${batchDuplicateIdx.has(idx) ? 'bg-amber-50' : ''}`}>
+                              <td className="p-2">
+                                {batchDuplicateIdx.has(idx) && (
+                                  <span className="text-[10px] text-amber-700 font-bold block mb-0.5">dup</span>
+                                )}
+                                <input
+                                  type="date"
+                                  value={line.date}
+                                  onChange={e => {
+                                    const v = e.target.value;
+                                    setBatchLines(prev => prev.map((l, i) => i === idx ? { ...l, date: v } : l));
+                                    setEdited(true);
+                                  }}
+                                  className="border rounded px-1 py-0.5 w-full"
+                                />
+                              </td>
+                              <td className="p-2">
+                                <input
+                                  value={line.item}
+                                  onChange={e => {
+                                    const v = e.target.value;
+                                    setBatchLines(prev => prev.map((l, i) => i === idx ? { ...l, item: v } : l));
+                                    setEdited(true);
+                                  }}
+                                  className="border rounded px-1 py-0.5 w-full"
+                                />
+                                {line.supplier && <span className="text-[10px] text-slate-400">({line.supplier})</span>}
+                              </td>
+                              <td className="p-2">
+                                <input
+                                  type="number"
+                                  value={line.total}
+                                  onChange={e => {
+                                    const v = Number(e.target.value);
+                                    setBatchLines(prev => prev.map((l, i) => i === idx ? { ...l, total: v } : l));
+                                    setEdited(true);
+                                  }}
+                                  className="border rounded px-1 py-0.5 w-full text-right"
+                                />
+                              </td>
+                              <td className="p-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setBatchLines(prev => prev.filter((_, i) => i !== idx));
+                                    setEdited(true);
+                                  }}
+                                  className="text-rose-500 hover:text-rose-700"
+                                  aria-label="Hapus baris"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
 
                 {edited && (
                   <div className="flex items-center gap-2 px-3 py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl mb-4 text-xs text-emerald-700">
@@ -855,7 +1028,8 @@ export default function CommandModal() {
                     <X className="w-4 h-4" /> Batal
                   </button>
                   <button onClick={handleExecute} className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-lg shadow-emerald-200">
-                    <CheckCircle className="w-4 h-4" /> Benar, Catat!
+                    <CheckCircle className="w-4 h-4" />
+                    {batchMode ? `Catat ${batchLines.length} biaya` : 'Benar, Catat!'}
                   </button>
                 </div>
               </motion.div>

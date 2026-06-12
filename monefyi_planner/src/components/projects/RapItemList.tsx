@@ -5,6 +5,8 @@ import type { RapItem } from '../../services/rapService';
 import type { RapActualAgg } from '../../services/costService';
 import { formatRupiah } from '../../utils/projectUi';
 import { formatSelisih } from '../../services/rapExcelService';
+import { sortByRealizationStatus } from '../../lib/rapRealizationStats';
+import type { RapRowStatus } from '../../utils/rapTableRows';
 
 export type RapViewMode = 'grouped' | 'table' | 'cards';
 export type RapStatusFilter = 'all' | 'none' | 'under' | 'over' | 'done';
@@ -72,15 +74,23 @@ export default function RapItemList({
     });
   }, [items, rapActuals]);
 
+  const sorted = useMemo(() => {
+    if (mode !== 'realisasi') return enriched;
+    const withStatus = enriched.map(e => ({ ...e, status: e.status as RapRowStatus }));
+    return sortByRealizationStatus(withStatus);
+  }, [enriched, mode]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return enriched.filter(e => {
+    return sorted.filter(e => {
       if (typeFilter !== 'all' && e.row.type !== typeFilter) return false;
       if (statusFilter !== 'all' && e.status !== statusFilter) return false;
       if (q && !e.row.name.toLowerCase().includes(q) && !(e.row.type || '').toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [enriched, search, typeFilter, statusFilter]);
+  }, [sorted, search, typeFilter, statusFilter]);
+
+  const unrealizedCount = enriched.filter(e => e.status === 'none').length;
 
   const grouped = useMemo(() => {
     const map: Record<string, typeof filtered> = {};
@@ -201,13 +211,26 @@ export default function RapItemList({
           ))}
         </select>
         {mode === 'realisasi' && (
-          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as RapStatusFilter)} className="px-3 py-2 border rounded-xl text-sm bg-white">
-            <option value="all">Semua status</option>
-            <option value="none">Belum direalisasi</option>
-            <option value="under">Kurang dari RAP</option>
-            <option value="over">Over RAP</option>
-            <option value="done">Tercapai</option>
-          </select>
+          <>
+            <button
+              type="button"
+              onClick={() => setStatusFilter(v => v === 'none' ? 'all' : 'none')}
+              className={`px-3 py-2 rounded-xl text-sm font-semibold border ${
+                statusFilter === 'none'
+                  ? 'bg-amber-50 border-amber-200 text-amber-800'
+                  : 'bg-white border-slate-200 text-slate-600'
+              }`}
+            >
+              Belum realisasi ({unrealizedCount})
+            </button>
+            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as RapStatusFilter)} className="px-3 py-2 border rounded-xl text-sm bg-white">
+              <option value="all">Semua status</option>
+              <option value="none">Belum direalisasi</option>
+              <option value="under">Kurang dari RAP</option>
+              <option value="over">Over RAP</option>
+              <option value="done">Tercapai</option>
+            </select>
+          </>
         )}
         <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
           {([
