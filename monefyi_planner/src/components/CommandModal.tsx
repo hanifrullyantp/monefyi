@@ -20,13 +20,14 @@ import {
 import { executeIntent } from '../lib/intentExecutor';
 import type { ParsedCostLine } from '../lib/costParser';
 import { formatRupiah } from '../utils/projectUi';
-import { logCommand, loadCommandLogs } from '../services/commandService';
+import { logCommand, loadCommandLogs, getRecentProjectId } from '../services/commandService';
 import { recordCorrection, reinforceMemory, loadMemoryExamples } from '../services/commandMemoryService';
 import { loadAliases } from '../services/commandAliasService';
+import { learnFromProjectResolution } from '../services/projectResolutionLearning';
+import BatchConfirmationView, { type BatchConfirmationResult } from './batch/BatchConfirmationView';
 import { loadWorkItems } from '../services/workItemService';
 import { loadRapItems } from '../services/rapService';
-import { aggregateCostByRapItem, loadCostRealizations } from '../services/costService';
-import { findCostDuplicate } from '../lib/rapDuplicateDetect';
+import { aggregateCostByRapItem } from '../services/costService';
 import { listMembers } from '../services/memberService';
 import { useAppStore } from '../store/appStore';
 
@@ -99,6 +100,7 @@ export default function CommandModal() {
     selectedProjectId,
     refreshData,
     setCommandLogs,
+    addProject,
   } = useAppStore();
   const [input, setInput] = useState('');
   const [stage, setStage] = useState<Stage>('idle');
@@ -127,7 +129,10 @@ export default function CommandModal() {
   const [learnText, setLearnText] = useState('');
   const [batchMode, setBatchMode] = useState(false);
   const [batchLines, setBatchLines] = useState<ParsedCostLine[]>([]);
-  const [batchDuplicateIdx, setBatchDuplicateIdx] = useState<Set<number>>(new Set());
+  const [batchCanSave, setBatchCanSave] = useState(false);
+  const [batchResult, setBatchResult] = useState<BatchConfirmationResult | null>(null);
+  const [recentProjectId, setRecentProjectId] = useState<string | null>(null);
+  const [aliasEntities, setAliasEntities] = useState<TaggableEntity[]>([]);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -193,6 +198,7 @@ export default function CommandModal() {
 
       if (cancelled) return;
       setTaggables([...base, ...workItemTags, ...workerTags, ...rapTags, ...aliases]);
+      setAliasEntities(aliases);
       setWriteHints(prev => Array.from(new Set([...prev, ...memEx.map(e => e.input)])));
     })();
 
@@ -227,25 +233,9 @@ export default function CommandModal() {
   }, [stage, form.projectName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (stage !== 'confirm' || !batchMode || !batchLines.length) {
-      setBatchDuplicateIdx(new Set());
-      return;
-    }
-    const target = projects.find(p => p.name === form.projectName) || activeProject;
-    if (!target) return;
-    let cancelled = false;
-    loadCostRealizations(target.id).then(costs => {
-      if (cancelled) return;
-      const dupes = new Set<number>();
-      batchLines.forEach((line, idx) => {
-        if (findCostDuplicate(costs, { date: line.date, amount: line.total, description: line.item })) {
-          dupes.add(idx);
-        }
-      });
-      setBatchDuplicateIdx(dupes);
-    }).catch(() => setBatchDuplicateIdx(new Set()));
-    return () => { cancelled = true; };
-  }, [stage, batchMode, batchLines, form.projectName, activeProject?.id, projects]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (stage !== 'confirm' || !batchMode || !tenant?.id) return;
+    getRecentProjectId(tenant.id).then(setRecentProjectId).catch(() => setRecentProjectId(null));
+  }, [stage, batchMode, tenant?.id]);
 
   // React to typing: tag autocomplete + writing suggestions.
   const handleInputChange = (value: string) => {
@@ -446,7 +436,9 @@ export default function CommandModal() {
     setStage('processing');
 
     const finalParams = batchMode && form.intent === 'record_cost_batch'
-      ? { items: batchLines }
+      ? (batchResult?.groups?.length
+        ? { groups: batchResult.groups }
+        : { items: batchLines })
       : formToParams();
     const parsed = {
       intent: form.intent,
@@ -499,6 +491,16 @@ export default function CommandModal() {
           await reinforceMemory(origParse.memoryId, origParse.memoryHitCount ?? 0).catch(() => {});
         }
         if (form.intent === 'record_cost_batch') {
+          if (batchResult?.resolutions?.length) {
+            for (const { mentionedName, resolution } of batchResult.resolutions) {
+              await learnFromProjectResolution(
+                mentionedName,
+                resolution,
+                tenant.id,
+                user.id,
+              ).catch(() => {});
+            }
+          }
           const batchSeeds = [
             { rawInput: 'duit keluar', params: { items: [] } },
             { rawInput: 'duit keluar :', params: { items: [] } },
@@ -563,7 +565,9 @@ export default function CommandModal() {
     setLearnText('');
     setBatchMode(false);
     setBatchLines([]);
-    setBatchDuplicateIdx(new Set());
+    setBatchCanSave(false);
+    setBatchResult(null);
+    setRecentProjectId(null);
   };
 
   const sourceBadge = (() => {
@@ -909,18 +913,20 @@ export default function CommandModal() {
                     </select>
                   </div>
 
-                  {/* Target project selector */}
-                  <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
-                    <span className="text-xs text-slate-500">Proyek Tujuan</span>
-                    <select
-                      value={form.projectName}
-                      onChange={e => { setForm(p => ({ ...p, projectName: e.target.value })); setEdited(true); }}
-                      className="text-sm font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg px-2 py-1 max-w-[60%] focus:border-emerald-400 outline-none"
-                    >
-                      <option value="">— umum —</option>
-                      {projects.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-                    </select>
-                  </div>
+                  {/* Target project selector (non-batch only) */}
+                  {!batchMode && (
+                    <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
+                      <span className="text-xs text-slate-500">Proyek Tujuan</span>
+                      <select
+                        value={form.projectName}
+                        onChange={e => { setForm(p => ({ ...p, projectName: e.target.value })); setEdited(true); }}
+                        className="text-sm font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg px-2 py-1 max-w-[60%] focus:border-emerald-400 outline-none"
+                      >
+                        <option value="">— umum —</option>
+                        {projects.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                      </select>
+                    </div>
+                  )}
 
                   {/* Editable params */}
                   {!batchMode && Object.entries(form.data)
@@ -933,87 +939,26 @@ export default function CommandModal() {
                     ))}
                 </div>
 
-                {batchMode && batchLines.length > 0 && (
-                  <div className="mb-4 border border-slate-200 rounded-2xl overflow-hidden">
-                    <div className="px-3 py-2 bg-slate-50 border-b text-xs font-bold text-slate-600 flex flex-wrap gap-2 justify-between">
-                      <span>Preview {batchLines.length} biaya · Total {formatRupiah(batchLines.reduce((s, l) => s + l.total, 0))}</span>
-                      {batchDuplicateIdx.size > 0 && (
-                        <span className="text-amber-700 font-semibold">
-                          {batchDuplicateIdx.size} baris mirip biaya existing
-                        </span>
-                      )}
-                    </div>
-                    <div className="max-h-64 overflow-y-auto">
-                      <table className="w-full text-xs">
-                        <thead className="bg-white sticky top-0">
-                          <tr className="text-slate-500">
-                            <th className="p-2 text-left">Tgl</th>
-                            <th className="p-2 text-left">Item</th>
-                            <th className="p-2 text-right">Total</th>
-                            <th className="p-2 w-8" />
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {batchLines.map((line, idx) => (
-                            <tr key={idx} className={`border-t border-slate-100 ${batchDuplicateIdx.has(idx) ? 'bg-amber-50' : ''}`}>
-                              <td className="p-2">
-                                {batchDuplicateIdx.has(idx) && (
-                                  <span className="text-[10px] text-amber-700 font-bold block mb-0.5">dup</span>
-                                )}
-                                <input
-                                  type="date"
-                                  value={line.date}
-                                  onChange={e => {
-                                    const v = e.target.value;
-                                    setBatchLines(prev => prev.map((l, i) => i === idx ? { ...l, date: v } : l));
-                                    setEdited(true);
-                                  }}
-                                  className="border rounded px-1 py-0.5 w-full"
-                                />
-                              </td>
-                              <td className="p-2">
-                                <input
-                                  value={line.item}
-                                  onChange={e => {
-                                    const v = e.target.value;
-                                    setBatchLines(prev => prev.map((l, i) => i === idx ? { ...l, item: v } : l));
-                                    setEdited(true);
-                                  }}
-                                  className="border rounded px-1 py-0.5 w-full"
-                                />
-                                {line.supplier && <span className="text-[10px] text-slate-400">({line.supplier})</span>}
-                              </td>
-                              <td className="p-2">
-                                <input
-                                  type="number"
-                                  value={line.total}
-                                  onChange={e => {
-                                    const v = Number(e.target.value);
-                                    setBatchLines(prev => prev.map((l, i) => i === idx ? { ...l, total: v } : l));
-                                    setEdited(true);
-                                  }}
-                                  className="border rounded px-1 py-0.5 w-full text-right"
-                                />
-                              </td>
-                              <td className="p-2">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setBatchLines(prev => prev.filter((_, i) => i !== idx));
-                                    setEdited(true);
-                                  }}
-                                  className="text-rose-500 hover:text-rose-700"
-                                  aria-label="Hapus baris"
-                                >
-                                  <X className="w-3.5 h-3.5" />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+                {batchMode && batchLines.length > 0 && user && tenant && (
+                  <BatchConfirmationView
+                    initialItems={batchLines}
+                    projects={projects}
+                    aliases={aliasEntities}
+                    context={{
+                      orgId: tenant.id,
+                      currentProjectId: activeProject?.id,
+                      recentProjectId,
+                    }}
+                    orgId={tenant.id}
+                    userId={user.id}
+                    onItemsChange={lines => {
+                      setBatchLines(lines);
+                      setEdited(true);
+                    }}
+                    onReadyChange={setBatchCanSave}
+                    onBuildResult={setBatchResult}
+                    onProjectCreated={addProject}
+                  />
                 )}
 
                 {edited && (
@@ -1033,7 +978,11 @@ export default function CommandModal() {
                   <button onClick={handleReset} className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
                     <X className="w-4 h-4" /> Batal
                   </button>
-                  <button onClick={handleExecute} className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-lg shadow-emerald-200">
+                  <button
+                    onClick={handleExecute}
+                    disabled={batchMode && !batchCanSave}
+                    className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-lg shadow-emerald-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
                     <CheckCircle className="w-4 h-4" />
                     {batchMode ? `Catat ${batchLines.length} biaya` : 'Benar, Catat!'}
                   </button>

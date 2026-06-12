@@ -81,6 +81,66 @@ export async function executeIntent(
 
   switch (intent) {
     case 'record_cost_batch': {
+      const groups = params.groups as Array<{
+        projectId: string;
+        projectName?: string;
+        items: ParsedCostLine[];
+      }> | undefined;
+
+      if (groups?.length) {
+        let recorded = 0;
+        let totalAmount = 0;
+        const summaries: string[] = [];
+
+        for (const group of groups) {
+          const groupProject = ctx.projects.find(p => p.id === group.projectId);
+          if (!groupProject) continue;
+
+          const rapItems = await loadRapItems(groupProject.id);
+          let groupCount = 0;
+          let groupTotal = 0;
+
+          for (const line of group.items || []) {
+            const total = Number(line.total) || 0;
+            if (total <= 0) continue;
+            const qty = Number(line.quantity) || 1;
+            const unitPrice = Number(line.unitPrice) || total;
+            const rapMatch = fuzzyMatchRapItem(line.item, rapItems);
+            await createCostRealization({
+              project_id: groupProject.id,
+              rap_item_id: rapMatch?.id ?? null,
+              date: line.date || todayStr(),
+              description: line.item,
+              quantity: qty,
+              unit_price: unitPrice,
+              total_amount: total,
+              supplier: line.supplier ?? null,
+              recorded_by: ctx.userId,
+            });
+            groupCount += 1;
+            groupTotal += total;
+          }
+
+          if (groupCount > 0) {
+            recorded += groupCount;
+            totalAmount += groupTotal;
+            summaries.push(`${groupProject.name}: ${groupCount}`);
+          }
+        }
+
+        if (!recorded) {
+          return { success: false, message: 'Tidak ada baris biaya untuk dicatat.' };
+        }
+
+        await ctx.onRefreshProjects();
+        return {
+          success: true,
+          message: `${recorded} biaya tercatat!`,
+          details: `Total ${formatCurrency(totalAmount)} · ${summaries.join(' · ')}`,
+          refreshProjects: true,
+        };
+      }
+
       if (!project) {
         return {
           success: false,
@@ -100,14 +160,16 @@ export async function executeIntent(
       for (const line of rawItems) {
         const total = Number(line.total) || 0;
         if (total <= 0) continue;
+        const qty = Number(line.quantity) || 1;
+        const unitPrice = Number(line.unitPrice) || total;
         const rapMatch = fuzzyMatchRapItem(line.item, rapItems);
         await createCostRealization({
           project_id: project.id,
           rap_item_id: rapMatch?.id ?? null,
           date: line.date || todayStr(),
           description: line.item,
-          quantity: 1,
-          unit_price: total,
+          quantity: qty,
+          unit_price: unitPrice,
           total_amount: total,
           supplier: line.supplier ?? null,
           recorded_by: ctx.userId,

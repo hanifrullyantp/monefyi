@@ -1,11 +1,34 @@
 import { normalizeAmount } from './estimatorParser';
+import {
+  parseCategory,
+  parseQuantityUnit,
+  extractProjectKeywords,
+  pickPrimaryProjectKeyword,
+} from './batchProjectKeywords';
 
 export interface ParsedCostLine {
+  id: string;
   date: string;
   total: number;
   item: string;
   supplier?: string;
   confidence: number;
+  quantity?: number;
+  unit?: string;
+  unitPrice?: number;
+  category?: string;
+  notes?: string;
+  rawText?: string;
+  mentionedProject?: string;
+  projectHintConfidence?: number;
+  isMultiProject?: boolean;
+}
+
+let lineIdCounter = 0;
+
+function nextLineId(): string {
+  lineIdCounter += 1;
+  return `cost-line-${Date.now()}-${lineIdCounter}`;
 }
 
 const WA_META_RE = /^\[[\d:,/\s]+\]/;
@@ -52,6 +75,31 @@ function parseKSegments(text: string): Array<{ amount: number; desc: string }> {
   return results;
 }
 
+function enrichParsedLine(
+  line: Omit<ParsedCostLine, 'id' | 'category' | 'rawText'> & { id?: string },
+  rawBody?: string,
+): ParsedCostLine {
+  const rawText = rawBody || line.item;
+  const category = parseCategory(rawText);
+  const { quantity, unit } = parseQuantityUnit(rawText);
+  let unitPrice: number | undefined;
+  if (quantity && line.total > 0) {
+    unitPrice = Math.round(line.total / quantity);
+  }
+  const primary = pickPrimaryProjectKeyword(rawText);
+  return {
+    ...line,
+    id: line.id || nextLineId(),
+    rawText,
+    category,
+    quantity,
+    unit,
+    unitPrice,
+    mentionedProject: primary?.keyword,
+    projectHintConfidence: primary?.confidence,
+  };
+}
+
 function parseCostLineBody(body: string, date: string): ParsedCostLine[] {
   const colonIdx = body.indexOf(':');
   if (colonIdx > 0) {
@@ -60,29 +108,36 @@ function parseCostLineBody(body: string, date: string): ParsedCostLine[] {
     const kParts = parseKSegments(afterText || afterColon);
     if (kParts.length >= 2) {
       const prefix = body.slice(0, colonIdx).trim();
-      return kParts.map(part => ({
+      const keywords = kParts.map(p =>
+        pickPrimaryProjectKeyword(p.desc)?.keyword,
+      ).filter(Boolean);
+      const isMultiProject =
+        keywords.length >= 2 &&
+        new Set(keywords).size > 1;
+
+      return kParts.map(part => enrichParsedLine({
         date,
         total: part.amount,
         item: part.desc ? `${prefix} — ${part.desc}` : prefix,
         supplier: sharedSupplier,
         confidence: 0.92,
-      }));
+        isMultiProject,
+      }, body));
     }
   }
 
   const { item, supplier } = extractSupplier(body);
-  return [{
+  return [enrichParsedLine({
     date,
     total: 0,
     item,
     supplier,
     confidence: 0.85,
-  }];
+  }, body)];
 }
 
 function normalizeCostInput(text: string): string {
   let t = text.replace(/\r\n/g, '\n').trim();
-  // WhatsApp paste sometimes collapses to one line — re-split cost bullets.
   if (!t.includes('\n') && /\s-\s*\d/.test(t)) {
     t = t.replace(/\s+-\s+(?=\d)/g, '\n- ');
   }
@@ -122,6 +177,9 @@ export function parseCostText(text: string): ParsedCostLine[] {
     const parsed = parseCostLineBody(body, currentDate);
     if (parsed.length === 1 && parsed[0].total === 0) {
       parsed[0].total = amount;
+      if (parsed[0].quantity && parsed[0].quantity > 0) {
+        parsed[0].unitPrice = Math.round(amount / parsed[0].quantity);
+      }
     } else if (parsed.length > 1) {
       for (const p of parsed) {
         results.push(p);
@@ -133,4 +191,25 @@ export function parseCostText(text: string): ParsedCostLine[] {
   }
 
   return results;
+}
+
+/** Re-run project hints after user recontextualizes line text. */
+export function recontextualizeCostLine(
+  line: ParsedCostLine,
+  newText: string,
+): ParsedCostLine {
+  const primary = pickPrimaryProjectKeyword(newText);
+  const { quantity, unit } = parseQuantityUnit(newText);
+  return {
+    ...line,
+    item: newText,
+    rawText: newText,
+    category: parseCategory(newText),
+    quantity,
+    unit,
+    unitPrice: quantity && line.total ? Math.round(line.total / quantity) : line.unitPrice,
+    mentionedProject: primary?.keyword,
+    projectHintConfidence: primary?.confidence,
+    isMultiProject: extractProjectKeywords(newText).length > 1,
+  };
 }

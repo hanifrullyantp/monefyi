@@ -46,6 +46,39 @@ export async function logCommand(entry: {
   assertNoDbError(error);
 }
 
+/** Most recently logged project for an org (from command logs with project in params). */
+export async function getRecentProjectId(orgId: string): Promise<string | null> {
+  if (!orgId) return null;
+  const { data, error } = await supabase
+    .from('planner_command_logs')
+    .select('parsed_params')
+    .eq('org_id', orgId)
+    .eq('execution_status', 'executed')
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  if (error || !data?.length) return null;
+
+  for (const row of data) {
+    const params = row.parsed_params as Record<string, unknown> | null;
+    if (!params) continue;
+    const groups = params.groups as Array<{ projectId?: string }> | undefined;
+    if (groups?.[0]?.projectId) return groups[0].projectId;
+    const projectName = params.projectName as string | undefined;
+    if (projectName) {
+      const { data: proj } = await supabase
+        .from('planner_projects')
+        .select('id')
+        .eq('org_id', orgId)
+        .ilike('name', projectName)
+        .limit(1)
+        .maybeSingle();
+      if (proj?.id) return proj.id as string;
+    }
+  }
+  return null;
+}
+
 export async function invokeAiParse(
   input: string,
   context: Record<string, unknown>,
