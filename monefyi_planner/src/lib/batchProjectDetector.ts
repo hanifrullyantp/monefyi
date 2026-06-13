@@ -451,3 +451,56 @@ export function allUnassignedResolved(
     item => unassignedAssignments.has(item.id) || unassignedOrgIds.has(item.id) || ignoredIds.has(item.id),
   );
 }
+
+export interface BatchSaveBlocker {
+  id: 'unknown_projects' | 'unassigned_items' | 'no_items';
+  message: string;
+  count: number;
+}
+
+/** Human-readable reasons why batch save is still blocked. */
+export function getBatchSaveBlockers(
+  detection: ProjectDetectionResult,
+  resolvedUnknowns: Map<string, ProjectResolution>,
+  unassignedAssignments: Map<string, string>,
+  unassignedOrgIds: Map<string, { opexCategoryId?: string; label?: string }>,
+  ignoredIds: Set<string>,
+  activeItemCount: number,
+): BatchSaveBlocker[] {
+  const blockers: BatchSaveBlocker[] = [];
+
+  const unresolved = detection.unknownProjects.filter(
+    ug => !resolvedUnknowns.has(ug.mentionedName.toLowerCase()),
+  );
+  if (unresolved.length > 0) {
+    const names = unresolved.map(u => `"${u.mentionedName}"`).join(', ');
+    blockers.push({
+      id: 'unknown_projects',
+      message: `Konfirmasi project tidak dikenal: ${names}`,
+      count: unresolved.length,
+    });
+  }
+
+  const unassigned = detection.unassignedItems.items.filter(
+    item => !ignoredIds.has(item.id)
+      && !unassignedAssignments.has(item.id)
+      && !unassignedOrgIds.has(item.id),
+  );
+  if (unassigned.length > 0) {
+    blockers.push({
+      id: 'unassigned_items',
+      message: `Pilih project atau organisasi untuk ${unassigned.length} item di tabel "Belum diassign" (kolom Tujuan)`,
+      count: unassigned.length,
+    });
+  }
+
+  if (activeItemCount === 0) {
+    blockers.push({
+      id: 'no_items',
+      message: 'Tidak ada biaya yang akan dicatat',
+      count: 0,
+    });
+  }
+
+  return blockers;
+}

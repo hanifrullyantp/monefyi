@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Loader2, Plus } from 'lucide-react';
 import { createProject } from '../../services/projectService';
 import type { Project } from '../../store/appStore';
+import ProjectTypeSelect from '../projects/ProjectTypeSelect';
 
 interface CreateProjectQuickFormProps {
   suggestedName: string;
@@ -22,6 +23,7 @@ export default function CreateProjectQuickForm({
   const [name, setName] = useState(suggestedName);
   const [clientName, setClientName] = useState('');
   const [startDate, setStartDate] = useState(today);
+  const [projectType, setProjectType] = useState('construction');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState('');
 
@@ -38,7 +40,7 @@ export default function CreateProjectQuickForm({
         start_date: startDate,
         end_date: startDate,
         status: 'planning',
-        type: 'construction',
+        type: projectType,
       });
       onCreated(project);
     } catch (e) {
@@ -68,6 +70,13 @@ export default function CreateProjectQuickForm({
           onChange={e => setClientName(e.target.value)}
           className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2"
           placeholder="Opsional"
+        />
+        <label className="text-xs text-slate-500">Kategori proyek</label>
+        <ProjectTypeSelect
+          orgId={orgId}
+          value={projectType}
+          onChange={setProjectType}
+          className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2"
         />
         <label className="text-xs text-slate-500">Tgl Mulai</label>
         <input

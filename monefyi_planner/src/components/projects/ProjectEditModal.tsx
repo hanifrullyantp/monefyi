@@ -3,7 +3,9 @@ import { reportDateToMonthPicker } from '../../lib/financeReportMonth';
 import { motion } from 'framer-motion';
 import { X, Loader2, Trash2, AlertTriangle } from 'lucide-react';
 import type { Project } from '../../store/appStore';
+import { useAppStore } from '../../store/appStore';
 import { formatRupiah } from '../../utils/projectUi';
+import ProjectTypeSelect from './ProjectTypeSelect';
 
 interface Props {
   project: Project;
@@ -14,6 +16,7 @@ interface Props {
 }
 
 export default function ProjectEditModal({ project, canArchive, onClose, onSave, onArchive }: Props) {
+  const { tenant } = useAppStore();
   const [form, setForm] = useState({
     name: project.name,
     client_name: project.client_name || '',
@@ -126,18 +129,14 @@ export default function ProjectEditModal({ project, canArchive, onClose, onSave,
             placeholder="Lokasi"
             className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
           />
-          <select
-            value={form.type}
-            onChange={e => setForm({ ...form, type: e.target.value as Project['type'] })}
-            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
-          >
-            <option value="construction">Konstruksi</option>
-            <option value="service">Jasa / Renovasi</option>
-            <option value="it">IT</option>
-            <option value="event">Event</option>
-            <option value="manufacturing">Manufaktur</option>
-            <option value="other">Lainnya</option>
-          </select>
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">Kategori proyek</label>
+            <ProjectTypeSelect
+              orgId={tenant?.id || project.tenant_id}
+              value={form.type}
+              onChange={type => setForm({ ...form, type })}
+            />
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-slate-500 mb-1 block">Mulai</label>

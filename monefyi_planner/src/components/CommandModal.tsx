@@ -633,7 +633,9 @@ export default function CommandModal() {
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 100, opacity: 0 }}
         transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-        className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col"
+        className={`bg-white w-full rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl max-h-[92vh] flex flex-col ${
+          stage === 'confirm' && batchMode ? 'sm:max-w-5xl' : 'sm:max-w-lg'
+        }`}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
@@ -1019,6 +1021,16 @@ export default function CommandModal() {
 
         {stage === 'confirm' && (
           <div className="shrink-0 border-t border-slate-100 bg-white px-5 py-3 space-y-3">
+            {batchMode && !batchCanSave && batchResult?.blockers && batchResult.blockers.length > 0 && (
+              <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
+                <p className="font-bold mb-1">Tombol Catat belum aktif — selesaikan:</p>
+                <ul className="space-y-0.5">
+                  {batchResult.blockers.map(b => (
+                    <li key={b.id}>• {b.message}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {edited && (
               <div className="flex items-center gap-2 px-3 py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700">
                 <Brain className="w-4 h-4 shrink-0" />

@@ -12,6 +12,7 @@ import { formatRupiah } from '../../utils/projectUi';
 interface RapImportWizardProps {
   open: boolean;
   projectId: string;
+  projectName: string;
   recordedBy: string;
   existingItems?: RapItem[];
   onClose: () => void;
@@ -21,6 +22,7 @@ interface RapImportWizardProps {
 export default function RapImportWizard({
   open,
   projectId,
+  projectName,
   recordedBy,
   existingItems = [],
   onClose,
@@ -32,12 +34,14 @@ export default function RapImportWizard({
   const [confirmText, setConfirmText] = useState('');
   const [busy, setBusy] = useState(false);
   const [step, setStep] = useState<'upload' | 'preview'>('upload');
-  const [skipDuplicates, setSkipDuplicates] = useState(true);
+  const [duplicateAction, setDuplicateAction] = useState<'skip' | 'include' | null>(null);
 
   const duplicates = useMemo(
     () => (step === 'preview' ? findRapImportDuplicates(existingItems, rows) : []),
     [step, existingItems, rows],
   );
+
+  const skipDuplicates = duplicateAction === 'skip';
 
   const duplicateIndexes = useMemo(
     () => new Set(duplicates.map(d => d.index)),
@@ -56,13 +60,17 @@ export default function RapImportWizard({
       return;
     }
     setRows(parsed);
-    setSkipDuplicates(mode === 'append');
+    setDuplicateAction(null);
     setStep('preview');
   };
 
   const handleImport = async () => {
     if (mode === 'replace' && confirmText !== 'GANTI') {
       showToast('Ketik GANTI untuk mengganti semua RAP', 'error');
+      return;
+    }
+    if (mode === 'append' && duplicates.length > 0 && duplicateAction === null) {
+      showToast('Pilih dulu cara menangani baris duplikat', 'error');
       return;
     }
     setBusy(true);
@@ -109,6 +117,7 @@ export default function RapImportWizard({
       setStep('upload');
       setRows([]);
       setConfirmText('');
+      setDuplicateAction(null);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Import gagal', 'error');
     } finally {
@@ -124,6 +133,9 @@ export default function RapImportWizard({
   const importableCount = mode === 'append' && skipDuplicates
     ? rows.filter((r, i) => r.valid && !duplicateIndexes.has(i)).length
     : validCount;
+
+  const needsDuplicateChoice = mode === 'append' && duplicates.length > 0;
+  const canImport = importableCount > 0 && (!needsDuplicateChoice || duplicateAction !== null);
 
   return (
     <AnimatePresence>
@@ -151,8 +163,8 @@ export default function RapImportWizard({
             {step === 'upload' && (
               <>
                 <p className="text-sm text-slate-500">Upload file .xlsx/.xls (maks 10MB). Gunakan template untuk format kolom yang benar.</p>
-                <button type="button" onClick={downloadRapTemplate} className="text-sm font-bold text-emerald-600">
-                  ↓ Unduh template
+                <button type="button" onClick={() => downloadRapTemplate(projectName)} className="text-sm font-bold text-emerald-600">
+                  ↓ Unduh template — RAP Project ({projectName})
                 </button>
                 <button
                   type="button"
@@ -183,43 +195,60 @@ export default function RapImportWizard({
                 </div>
 
                 {duplicates.length > 0 && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-3 text-xs text-amber-900 space-y-2">
-                    <p className="font-bold">{duplicates.length} baris mirip data yang sudah ada:</p>
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-3 text-xs text-amber-900 space-y-3">
+                    <p className="font-bold">
+                      {duplicates.length} baris terdeteksi mirip / duplikat
+                      {existingItems.length === 0 ? ' (dalam file Excel)' : ''}:
+                    </p>
+                    <p className="text-amber-800">
+                      Duplikat belum tentu salah — pilih cara import sebelum melanjutkan.
+                    </p>
                     <ul className="space-y-1 max-h-24 overflow-y-auto">
                       {duplicates.slice(0, 8).map(d => (
                         <li key={`${d.index}-${d.reason}`}>
-                          #{d.row.rowIndex} {d.row.name}
-                          {d.existingName ? ` ≈ "${d.existingName}"` : ' (duplikat dalam file)'}
+                          Baris {d.row.rowIndex}: {d.row.name}
+                          {d.reason === 'existing' && d.existingName
+                            ? ` ≈ sudah ada "${d.existingName}"`
+                            : ' (duplikat dalam file)'}
                         </li>
                       ))}
                       {duplicates.length > 8 && <li>…dan {duplicates.length - 8} lainnya</li>}
                     </ul>
                     {mode === 'append' && (
-                      <label className="flex items-center gap-2 font-semibold">
-                        <input
-                          type="checkbox"
-                          checked={skipDuplicates}
-                          onChange={e => setSkipDuplicates(e.target.checked)}
-                          className="rounded border-amber-300"
-                        />
-                        Lewati duplikat saat import
-                      </label>
-                    )}
-                    {!skipDuplicates && mode === 'append' && (
-                      <button
-                        type="button"
-                        onClick={() => setSkipDuplicates(true)}
-                        className="text-amber-800 underline font-bold"
-                      >
-                        Lewati duplikat
-                      </button>
+                      <div className="space-y-2 pt-1 border-t border-amber-200">
+                        <p className="font-semibold text-amber-900">Konfirmasi penanganan duplikat:</p>
+                        <label className="flex items-start gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="dup-action"
+                            checked={duplicateAction === 'skip'}
+                            onChange={() => setDuplicateAction('skip')}
+                            className="mt-0.5"
+                          />
+                          <span>
+                            <strong>Lewati duplikat</strong> — hanya impor baris baru ({rows.filter((r, i) => r.valid && !duplicateIndexes.has(i)).length} item)
+                          </span>
+                        </label>
+                        <label className="flex items-start gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="dup-action"
+                            checked={duplicateAction === 'include'}
+                            onChange={() => setDuplicateAction('include')}
+                            className="mt-0.5"
+                          />
+                          <span>
+                            <strong>Tetap impor semua</strong> — termasuk baris duplikat ({validCount} item)
+                          </span>
+                        </label>
+                      </div>
                     )}
                   </div>
                 )}
 
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => { setMode('append'); setSkipDuplicates(true); }} className={`flex-1 py-2 rounded-xl text-xs font-bold ${mode === 'append' ? 'bg-emerald-600 text-white' : 'bg-slate-100'}`}>Tambah (append)</button>
-                  <button type="button" onClick={() => { setMode('replace'); setSkipDuplicates(false); }} className={`flex-1 py-2 rounded-xl text-xs font-bold ${mode === 'replace' ? 'bg-rose-600 text-white' : 'bg-slate-100'}`}>Ganti semua</button>
+                  <button type="button" onClick={() => { setMode('append'); setDuplicateAction(null); }} className={`flex-1 py-2 rounded-xl text-xs font-bold ${mode === 'append' ? 'bg-emerald-600 text-white' : 'bg-slate-100'}`}>Tambah (append)</button>
+                  <button type="button" onClick={() => { setMode('replace'); setDuplicateAction('include'); }} className={`flex-1 py-2 rounded-xl text-xs font-bold ${mode === 'replace' ? 'bg-rose-600 text-white' : 'bg-slate-100'}`}>Ganti semua</button>
                 </div>
 
                 {mode === 'replace' && (
@@ -283,7 +312,7 @@ export default function RapImportWizard({
           {step === 'preview' && (
             <div className="p-5 border-t flex gap-2">
               <button type="button" onClick={() => { setStep('upload'); setRows([]); }} className="flex-1 py-3 border rounded-xl font-bold text-sm">Kembali</button>
-              <button type="button" onClick={handleImport} disabled={busy || importableCount === 0} className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50">
+              <button type="button" onClick={handleImport} disabled={busy || !canImport} className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50">
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 Import {importableCount} item
               </button>

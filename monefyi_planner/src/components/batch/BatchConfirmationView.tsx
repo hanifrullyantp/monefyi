@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import type { ParsedCostLine } from '../../lib/costParser';
 import { recontextualizeCostLine } from '../../lib/costParser';
 import {
   detectAndSeparateProjects,
   allUnknownsResolved,
   allUnassignedResolved,
+  getBatchSaveBlockers,
   buildBatchExecutionGroups,
   buildOrgOperationalGroups,
+  type BatchSaveBlocker,
   type ProjectDetectionResult,
   type ProjectResolution,
   type BatchDetectionContext,
@@ -30,6 +32,7 @@ export interface BatchConfirmationResult {
   orgGroups: OrgOperationalGroup[];
   resolutions: Array<{ mentionedName: string; resolution: ProjectResolution }>;
   canSave: boolean;
+  blockers: BatchSaveBlocker[];
 }
 
 interface BatchConfirmationViewProps {
@@ -135,7 +138,7 @@ export default function BatchConfirmationView({
             return recontextualizeCostLine(line, resolution.recontextText!);
           });
           onItemsChange(next);
-          setTimeout(() => runDetection(next), 0);
+          setTimeout(() => runDetection(next, true), 0);
           return next;
         });
       }
@@ -164,6 +167,27 @@ export default function BatchConfirmationView({
     return activeItems.length > 0;
   }, [detection, resolvedUnknowns, unassignedAssignments, unassignedOrgIds, ignoredIds, activeItems]);
 
+  const saveBlockers = useMemo(() => {
+    if (!detection) return [];
+    return getBatchSaveBlockers(
+      detection,
+      resolvedUnknowns,
+      unassignedAssignments,
+      unassignedOrgIds,
+      ignoredIds,
+      activeItems.length,
+    );
+  }, [detection, resolvedUnknowns, unassignedAssignments, unassignedOrgIds, ignoredIds, activeItems.length]);
+
+  const pendingUnassignedCount = useMemo(() => {
+    if (!detection) return 0;
+    return detection.unassignedItems.items.filter(
+      item => !ignoredIds.has(item.id)
+        && !unassignedAssignments.has(item.id)
+        && !unassignedOrgIds.has(item.id),
+    ).length;
+  }, [detection, ignoredIds, unassignedAssignments, unassignedOrgIds]);
+
   const orgGroups = useMemo(() => {
     if (!detection) return [];
     return buildOrgOperationalGroups(
@@ -191,8 +215,8 @@ export default function BatchConfirmationView({
       resolution,
     }));
 
-    onBuildResult({ groups, orgGroups, resolutions, canSave });
-  }, [canSave, detection, resolvedUnknowns, unassignedAssignments, unassignedOrgIds, ignoredIds, orgGroups, projects, onReadyChange, onBuildResult]);
+    onBuildResult({ groups, orgGroups, resolutions, canSave, blockers: saveBlockers });
+  }, [canSave, saveBlockers, detection, resolvedUnknowns, unassignedAssignments, unassignedOrgIds, ignoredIds, orgGroups, projects, onReadyChange, onBuildResult]);
 
   useEffect(() => {
     if (!detection) return;
@@ -242,12 +266,114 @@ export default function BatchConfirmationView({
   const unresolvedUnknownCount = detection.unknownProjects.filter(
     ug => !resolvedUnknowns.has(ug.mentionedName.toLowerCase()),
   ).length;
+  const visibleUnassignedItems = detection.unassignedItems.items.filter(i => !ignoredIds.has(i.id));
+  const visibleUnassignedTotal = visibleUnassignedItems.reduce((s, i) => s + i.total, 0);
+
+  const unassignedTable = visibleUnassignedItems.length > 0 && (
+    <UnassignedItemsTable
+      id="batch-unassigned-items"
+      needsAttention={pendingUnassignedCount > 0}
+      items={visibleUnassignedItems}
+      totalAmount={visibleUnassignedTotal}
+      suggestedProjects={detection.unassignedItems.suggestedProjects}
+      projects={projects}
+      orgId={orgId}
+      assignments={unassignedAssignments}
+      orgAssignments={unassignedOrgIds}
+      onAssignAll={projectId => {
+        setUnassignedAssignments(prev => {
+          const next = new Map(prev);
+          detection.unassignedItems.items.forEach(item => {
+            if (!ignoredIds.has(item.id)) next.set(item.id, projectId);
+          });
+          return next;
+        });
+      }}
+      onAssignAllOrg={(opexCategoryId, label) => {
+        setUnassignedOrgIds(prev => {
+          const next = new Map(prev);
+          detection.unassignedItems.items.forEach(item => {
+            if (!ignoredIds.has(item.id)) {
+              next.set(item.id, { opexCategoryId, label });
+            }
+          });
+          return next;
+        });
+        setUnassignedAssignments(prev => {
+          const next = new Map(prev);
+          detection.unassignedItems.items.forEach(item => next.delete(item.id));
+          return next;
+        });
+      }}
+      onItemAssign={(itemId, projectId) => {
+        setUnassignedAssignments(prev => {
+          const next = new Map(prev);
+          next.set(itemId, projectId);
+          return next;
+        });
+        setUnassignedOrgIds(prev => {
+          const next = new Map(prev);
+          next.delete(itemId);
+          return next;
+        });
+      }}
+      onItemAssignOrg={(itemId, opexCategoryId, label) => {
+        setUnassignedOrgIds(prev => {
+          const next = new Map(prev);
+          next.set(itemId, { opexCategoryId, label });
+          return next;
+        });
+        setUnassignedAssignments(prev => {
+          const next = new Map(prev);
+          next.delete(itemId);
+          return next;
+        });
+      }}
+      onItemChange={updateItem}
+      onItemDelete={deleteItem}
+    />
+  );
 
   return (
     <div className="space-y-4">
       <div className="text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
         Preview {activeItems.length} biaya · Total {formatRupiah(previewTotal)}
       </div>
+
+      {!canSave && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 space-y-2">
+          <p className="text-sm font-bold text-amber-900">Checklist sebelum menyimpan</p>
+          <div className="space-y-1.5">
+            <div className={`flex items-center gap-2 text-xs ${unresolvedUnknownCount === 0 ? 'text-emerald-700' : 'text-amber-900 font-medium'}`}>
+              {unresolvedUnknownCount === 0
+                ? <CheckCircle2 className="w-4 h-4 shrink-0" />
+                : <AlertTriangle className="w-4 h-4 shrink-0" />}
+              <span>
+                {unresolvedUnknownCount === 0
+                  ? 'Konfirmasi project tidak dikenal — selesai'
+                  : `Konfirmasi ${unresolvedUnknownCount} project tidak dikenal (bagian kuning di atas)`}
+              </span>
+            </div>
+            <div className={`flex items-center gap-2 text-xs ${pendingUnassignedCount === 0 ? 'text-emerald-700' : 'text-amber-900 font-medium'}`}>
+              {pendingUnassignedCount === 0
+                ? <CheckCircle2 className="w-4 h-4 shrink-0" />
+                : <AlertTriangle className="w-4 h-4 shrink-0" />}
+              <span>
+                {pendingUnassignedCount === 0
+                  ? 'Assign item tanpa project — selesai'
+                  : `Pilih tujuan untuk ${pendingUnassignedCount} item di tabel "Belum diassign" (kolom Tujuan)`}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {canSave && (
+        <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          Semua langkah selesai — klik <strong className="mx-0.5">Catat</strong> di bawah untuk menyimpan.
+        </div>
+      )}
 
       {detection.unknownProjects.length > 0 && (
         <div className="space-y-3">
@@ -284,6 +410,8 @@ export default function BatchConfirmationView({
           })}
         </div>
       )}
+
+      {unassignedTable}
 
       {detection.knownProjects.map(pg => (
         <ProjectItemsTable
@@ -332,80 +460,12 @@ export default function BatchConfirmationView({
         />
       ))}
 
-      <UnassignedItemsTable
-        items={detection.unassignedItems.items.filter(i => !ignoredIds.has(i.id))}
-        totalAmount={detection.unassignedItems.items
-          .filter(i => !ignoredIds.has(i.id))
-          .reduce((s, i) => s + i.total, 0)}
-        suggestedProjects={detection.unassignedItems.suggestedProjects}
-        projects={projects}
-        assignments={unassignedAssignments}
-        orgAssignments={unassignedOrgIds}
-        onAssignAll={projectId => {
-          setUnassignedAssignments(prev => {
-            const next = new Map(prev);
-            detection.unassignedItems.items.forEach(item => {
-              if (!ignoredIds.has(item.id)) next.set(item.id, projectId);
-            });
-            return next;
-          });
-        }}
-        onAssignAllOrg={(opexCategoryId, label) => {
-          setUnassignedOrgIds(prev => {
-            const next = new Map(prev);
-            detection.unassignedItems.items.forEach(item => {
-              if (!ignoredIds.has(item.id)) {
-                next.set(item.id, { opexCategoryId, label });
-              }
-            });
-            return next;
-          });
-          setUnassignedAssignments(prev => {
-            const next = new Map(prev);
-            detection.unassignedItems.items.forEach(item => next.delete(item.id));
-            return next;
-          });
-        }}
-        onItemAssign={(itemId, projectId) => {
-          setUnassignedAssignments(prev => {
-            const next = new Map(prev);
-            next.set(itemId, projectId);
-            return next;
-          });
-          setUnassignedOrgIds(prev => {
-            const next = new Map(prev);
-            next.delete(itemId);
-            return next;
-          });
-        }}
-        onItemAssignOrg={(itemId, opexCategoryId, label) => {
-          setUnassignedOrgIds(prev => {
-            const next = new Map(prev);
-            next.set(itemId, { opexCategoryId, label });
-            return next;
-          });
-          setUnassignedAssignments(prev => {
-            const next = new Map(prev);
-            next.delete(itemId);
-            return next;
-          });
-        }}
-        onItemChange={updateItem}
-        onItemDelete={deleteItem}
-      />
-
       <GrandSummary
         detection={detection}
         resolvedUnknowns={resolvedUnknowns}
         orgGroups={orgGroups}
         allItems={activeItems}
       />
-
-      {!canSave && (
-        <p className="text-xs text-amber-700 font-medium">
-          Selesaikan konfirmasi project dan assign item yang belum punya project sebelum menyimpan.
-        </p>
-      )}
 
       {splitItem && (
         <ItemSplitDialog

@@ -993,6 +993,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
         <RapImportWizard
           open={showRapImport}
           projectId={project.id}
+          projectName={project.name}
           recordedBy={user.id}
           existingItems={rapItems}
           onClose={() => setShowRapImport(false)}

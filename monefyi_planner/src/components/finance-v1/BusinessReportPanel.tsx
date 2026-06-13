@@ -12,11 +12,8 @@ import {
   currentMonthRange,
   presetRange,
 } from '../../services/financeV1/businessReportService';
-import {
-  createOpexCategory,
-  loadOpexCategories,
-  recordV1Opex,
-} from '../../services/financeV1/opexService';
+import { loadOpexCategories, recordV1Opex } from '../../services/financeV1/opexService';
+import OpexCategorySelect from '../ui/OpexCategorySelect';
 import { downloadBusinessReportPdf } from '../../lib/financeV1/exportBusinessReportPdf';
 import type { BusinessFinanceReport } from '../../types/financeV1Report';
 import type { OpexCategory } from '../../types/financeV2';
@@ -72,7 +69,6 @@ export default function BusinessReportPanel() {
   const [opexAmount, setOpexAmount] = useState('');
   const [opexDate, setOpexDate] = useState(new Date().toISOString().slice(0, 10));
   const [opexNotes, setOpexNotes] = useState('');
-  const [newCatName, setNewCatName] = useState('');
   const [savingOpex, setSavingOpex] = useState(false);
 
   const canEdit = user?.role === 'owner' || user?.role === 'manager' || user?.role === 'admin';
@@ -145,19 +141,6 @@ export default function BusinessReportPanel() {
       showToast(e instanceof Error ? e.message : 'Gagal menyimpan', 'error');
     } finally {
       setSavingOpex(false);
-    }
-  };
-
-  const handleAddCategory = async () => {
-    if (!tenant?.id || !newCatName.trim()) return;
-    try {
-      const cat = await createOpexCategory(tenant.id, newCatName.trim());
-      setCategories(prev => [...prev, cat]);
-      setOpexCatId(cat.id);
-      setNewCatName('');
-      showToast('Kategori ditambahkan', 'success');
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Gagal menambah kategori', 'error');
     }
   };
 
@@ -362,15 +345,14 @@ export default function BusinessReportPanel() {
                 <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
                   <p className="text-xs font-bold text-slate-500">Catat Biaya Operasional</p>
                   <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2">
-                    <select
-                      value={opexCatId}
-                      onChange={e => setOpexCatId(e.target.value)}
-                      className="px-3 py-2 rounded-xl border text-sm bg-white"
-                    >
-                      {categories.map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
+                    {tenant?.id && (
+                      <OpexCategorySelect
+                        orgId={tenant.id}
+                        value={opexCatId}
+                        onChange={id => setOpexCatId(id)}
+                        className="px-3 py-2 rounded-xl border text-sm bg-white"
+                      />
+                    )}
                     <input
                       type="number"
                       min="0"
@@ -402,22 +384,6 @@ export default function BusinessReportPanel() {
                     onChange={e => setOpexNotes(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border text-sm"
                   />
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Kategori baru..."
-                      value={newCatName}
-                      onChange={e => setNewCatName(e.target.value)}
-                      className="flex-1 px-3 py-2 rounded-xl border text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddCategory}
-                      className="px-3 py-2 rounded-xl border border-slate-200 text-sm font-semibold hover:bg-slate-50"
-                    >
-                      + Kategori
-                    </button>
-                  </div>
                 </div>
               )}
             </div>

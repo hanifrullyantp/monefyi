@@ -54,8 +54,8 @@ export default function ProjectItemsTable({
       </button>
 
       {expanded && (
-        <div className="max-h-72 overflow-y-auto">
-          <table className="w-full text-xs">
+        <div className="max-h-80 overflow-y-auto overflow-x-auto">
+          <table className="w-full text-xs min-w-[900px]">
             <thead className="bg-white sticky top-0 border-b">
               <tr className="text-slate-500">
                 <th className="p-2 text-left">Tgl</th>

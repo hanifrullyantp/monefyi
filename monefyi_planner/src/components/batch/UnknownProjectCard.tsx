@@ -4,6 +4,7 @@ import type { UnknownProjectGroup, ProjectResolution } from '../../lib/batchProj
 import type { Project } from '../../store/appStore';
 import type { OpexCategory } from '../../types/financeV2';
 import { loadOpexCategories } from '../../services/financeV2/opexService';
+import OpexCategorySelect from '../ui/OpexCategorySelect';
 import { formatRupiah } from '../../utils/projectUi';
 import CreateProjectQuickForm from './CreateProjectQuickForm';
 
@@ -57,6 +58,7 @@ export default function UnknownProjectCard({
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [opexCategories, setOpexCategories] = useState<OpexCategory[]>([]);
   const [opexCategoryId, setOpexCategoryId] = useState('');
+  const [opexCategoryName, setOpexCategoryName] = useState('');
 
   const isResolved = Boolean(resolution) && !editing;
 
@@ -65,7 +67,10 @@ export default function UnknownProjectCard({
     loadOpexCategories(orgId).then(cats => {
       setOpexCategories(cats);
       const ops = cats.find(c => /operasional|opex|umum/i.test(c.name));
-      if (ops) setOpexCategoryId(ops.id);
+      if (ops) {
+        setOpexCategoryId(ops.id);
+        setOpexCategoryName(ops.name);
+      }
     }).catch(() => setOpexCategories([]));
   }, [orgId]);
 
@@ -97,12 +102,12 @@ export default function UnknownProjectCard({
 
   const confirmOrgOperational = () => {
     setEditing(false);
-    const cat = opexCategories.find(c => c.id === opexCategoryId);
+    const catName = opexCategoryName || opexCategories.find(c => c.id === opexCategoryId)?.name;
     onResolve({
       action: 'org_operational',
       orgOpexCategoryId: opexCategoryId || undefined,
-      orgLabel: `Organisasi · ${cat?.name || unknownProject.mentionedName}`,
-      projectName: `Organisasi · ${cat?.name || 'Operasional'}`,
+      orgLabel: `Organisasi · ${catName || unknownProject.mentionedName}`,
+      projectName: `Organisasi · ${catName || 'Operasional'}`,
       whatIsThis,
     });
   };
@@ -259,18 +264,19 @@ export default function UnknownProjectCard({
           <p className="text-xs text-slate-600">
             Biaya ini dicatat di level <strong>organisasi/bisnis</strong> (opex), tidak masuk realisasi project.
           </p>
-          {opexCategories.length > 0 && (
-            <select
+          {opexCategories.length > 0 || orgId ? (
+            <OpexCategorySelect
+              orgId={orgId}
               value={opexCategoryId}
-              onChange={e => setOpexCategoryId(e.target.value)}
+              onChange={(id, name) => {
+                setOpexCategoryId(id);
+                if (name) setOpexCategoryName(name);
+              }}
               className="w-full text-sm border rounded-lg px-2 py-1.5"
-            >
-              <option value="">Kategori opex...</option>
-              {opexCategories.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          )}
+              allowEmpty
+              emptyLabel="Kategori opex..."
+            />
+          ) : null}
           <button
             type="button"
             onClick={confirmOrgOperational}

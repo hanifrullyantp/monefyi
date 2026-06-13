@@ -8,6 +8,7 @@ import {
 import { useAppStore, Project } from '../store/appStore';
 import { createProject, updateProject as updateProjectApi } from '../services/projectService';
 import ProjectDetail from '../components/projects/ProjectDetail';
+import ProjectTypeSelect from '../components/projects/ProjectTypeSelect';
 import KanbanView from '../components/projects/views/KanbanView';
 import TimelineView from '../components/projects/views/TimelineView';
 import CalendarView from '../components/projects/views/CalendarView';
@@ -38,7 +39,7 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
     name: '',
     client_name: '',
     location: '',
-    type: 'construction' as Project['type'],
+    type: 'construction',
     start_date: new Date().toISOString().slice(0, 10),
     end_date: new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10),
     description: '',
@@ -101,12 +102,12 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
               <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Nama proyek *" className="w-full px-4 py-3 rounded-xl border text-sm" />
               <input value={form.client_name} onChange={e => setForm({ ...form, client_name: e.target.value })} placeholder="Nama klien" className="w-full px-4 py-3 rounded-xl border text-sm" />
               <input value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} placeholder="Lokasi" className="w-full px-4 py-3 rounded-xl border text-sm" />
-              <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value as Project['type'] })} className="w-full px-4 py-3 rounded-xl border text-sm">
-                <option value="construction">Konstruksi</option>
-                <option value="service">Jasa / Renovasi</option>
-                <option value="it">IT</option>
-                <option value="other">Lainnya</option>
-              </select>
+              <ProjectTypeSelect
+                orgId={tenant?.id || ''}
+                value={form.type}
+                onChange={type => setForm({ ...form, type })}
+                className="w-full px-4 py-3 rounded-xl border text-sm"
+              />
             </>
           )}
           {step === 2 && (

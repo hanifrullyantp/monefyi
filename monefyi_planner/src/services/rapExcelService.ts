@@ -202,15 +202,14 @@ export function exportRapWorkbook(
   downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `RAP_${project.code}.xlsx`);
 }
 
-export function downloadRapTemplate() {
+export function downloadRapTemplate(projectName: string) {
+  const safeName = (projectName || 'Proyek').replace(/[/\\?%*:|"<>]/g, '').trim() || 'Proyek';
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([
-    ['Template RAP Monefyi — jangan hapus baris instruksi'],
-    ['Isi data mulai baris 5. Kategori: Material, Tenaga, Alat, Overhead'],
+    ['Template RAP Monefyi — isi data mulai baris 5'],
+    ['Kategori: Material, Tenaga, Alat, Overhead'],
     ['Vol dan harga harus angka positif'],
     ['No', 'Kategori', 'Item', 'Spesifikasi', 'Satuan', 'Vol RAP', 'Harga Satuan', 'Total RAP', 'Realisasi Vol', 'Realisasi Biaya'],
-    [1, 'Material', 'Semen 40kg', 'Portland', 'zak', 100, 65000, 6500000, 0, 0],
-    [2, 'Tenaga', 'Pekerja harian', 'Buruh', 'OH', 30, 150000, 4500000, 0, 0],
   ]);
   XLSX.utils.book_append_sheet(wb, ws, 'RAP');
   const guide = XLSX.utils.aoa_to_sheet([
@@ -223,8 +222,8 @@ export function downloadRapTemplate() {
     ['unit', 'Unit/pcs'],
   ]);
   XLSX.utils.book_append_sheet(wb, guide, 'Panduan Satuan');
-  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), 'Template_RAP_Monefyi.xlsx');
+  const buf = XLSX.write(wb, { bookType: 'xls', type: 'array' });
+  downloadBlob(new Blob([buf], { type: 'application/vnd.ms-excel' }), `RAP Project (${safeName}).xls`);
 }
 
 const TYPE_MAP: Record<string, string> = {

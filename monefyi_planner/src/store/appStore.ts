@@ -39,7 +39,7 @@ export interface Project {
   client_name: string;
   client_contact?: string;
   location?: string;
-  type: 'construction' | 'it' | 'event' | 'manufacturing' | 'service' | 'other';
+  type: string;
   status: 'draft' | 'planning' | 'active' | 'on_hold' | 'completed' | 'archived';
   start_date: string;
   end_date: string;

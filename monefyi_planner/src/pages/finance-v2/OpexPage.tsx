@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2, Plus, RefreshCw } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { showToast } from '../../store/uiStore';
 import { formatFinanceRupiah } from '../../lib/financeV2Calc';
+import OpexCategorySelect from '../../components/ui/OpexCategorySelect';
 import {
   buildOpexComparison,
-  createOpexCategory,
   createOpexRealization,
   loadOpexBudgets,
   loadOpexCategories,
@@ -24,9 +24,7 @@ export default function OpexPage() {
   const [tab, setTab] = useState<Tab>('comparison');
   const [loading, setLoading] = useState(true);
   const [comparison, setComparison] = useState<OpexComparisonRow[]>([]);
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
 
-  const [newCat, setNewCat] = useState('');
   const [budgetCatId, setBudgetCatId] = useState('');
   const [budgetAmount, setBudgetAmount] = useState('');
   const [realCatId, setRealCatId] = useState('');
@@ -42,7 +40,6 @@ export default function OpexPage() {
         loadOpexBudgets(tenant.id, month, year),
         loadOpexRealizations(tenant.id, month, year),
       ]);
-      setCategories(cats);
       setComparison(buildOpexComparison(cats, budgets, reals));
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal memuat opex', 'error');
@@ -55,18 +52,6 @@ export default function OpexPage() {
 
   const totalPlanned = comparison.reduce((s, r) => s + r.planned, 0);
   const totalActual = comparison.reduce((s, r) => s + r.actual, 0);
-
-  const handleAddCategory = async () => {
-    if (!tenant?.id || !newCat.trim()) return;
-    try {
-      await createOpexCategory(tenant.id, newCat.trim());
-      showToast('Kategori ditambahkan', 'success');
-      setNewCat('');
-      load();
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Gagal', 'error');
-    }
-  };
 
   const handleSaveBudget = async () => {
     if (!tenant?.id || !budgetCatId || !budgetAmount) return;
@@ -152,35 +137,35 @@ export default function OpexPage() {
         ))}
       </div>
 
-      <div className="bg-white rounded-2xl border p-4 flex gap-2">
-        <input value={newCat} onChange={e => setNewCat(e.target.value)} placeholder="Kategori baru" className="flex-1 px-3 py-2 rounded-xl border text-sm" />
-        <button type="button" onClick={handleAddCategory} className="flex items-center gap-1 px-4 py-2 bg-slate-800 text-white rounded-xl text-sm font-bold">
-          <Plus className="w-4 h-4" /> Kategori
-        </button>
-      </div>
-
-      {tab === 'budget' && (
+      {tab === 'budget' && tenant?.id && (
         <div className="bg-white rounded-2xl border p-5 space-y-3">
           <h3 className="font-bold">Set Budget Bulanan</h3>
+          <p className="text-xs text-slate-500">Pilih kategori atau tambah baru langsung dari dropdown.</p>
           <div className="grid sm:grid-cols-3 gap-2">
-            <select value={budgetCatId} onChange={e => setBudgetCatId(e.target.value)} className="px-3 py-2 rounded-xl border text-sm">
-              <option value="">Kategori</option>
-              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <OpexCategorySelect
+              orgId={tenant.id}
+              value={budgetCatId}
+              onChange={setBudgetCatId}
+              allowEmpty
+              emptyLabel="Kategori"
+            />
             <input type="number" value={budgetAmount} onChange={e => setBudgetAmount(e.target.value)} placeholder="Planned (Rp)" className="px-3 py-2 rounded-xl border text-sm" />
             <button type="button" onClick={handleSaveBudget} className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold">Simpan</button>
           </div>
         </div>
       )}
 
-      {tab === 'realization' && (
+      {tab === 'realization' && tenant?.id && (
         <div className="bg-white rounded-2xl border p-5 space-y-3">
           <h3 className="font-bold">Catat Realisasi</h3>
           <div className="grid sm:grid-cols-4 gap-2">
-            <select value={realCatId} onChange={e => setRealCatId(e.target.value)} className="px-3 py-2 rounded-xl border text-sm">
-              <option value="">Kategori</option>
-              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <OpexCategorySelect
+              orgId={tenant.id}
+              value={realCatId}
+              onChange={setRealCatId}
+              allowEmpty
+              emptyLabel="Kategori"
+            />
             <input type="number" value={realAmount} onChange={e => setRealAmount(e.target.value)} placeholder="Nominal" className="px-3 py-2 rounded-xl border text-sm" />
             <input type="date" value={realDate} onChange={e => setRealDate(e.target.value)} className="px-3 py-2 rounded-xl border text-sm" />
             <button type="button" onClick={handleSaveRealization} className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold">Catat</button>

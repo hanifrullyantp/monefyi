@@ -19,6 +19,11 @@ export function normalizeRapKey(
   return parts.join('|');
 }
 
+/** Kunci duplikat import — nama + kategori + satuan (tanpa qty/harga agar tidak false positive). */
+export function normalizeRapImportKey(name: string, type?: string, unit?: string): string {
+  return normalizeRapKey(name, type, unit);
+}
+
 /** Alias for plan naming — lowercase, trim, collapse spaces + optional qty/price. */
 export function normalizeKey(
   name: string,
@@ -49,7 +54,7 @@ export function findRapImportDuplicates(
   const existingKeys = new Map<string, RapItem>();
   for (const item of existingItems) {
     existingKeys.set(
-      normalizeRapKey(item.name, item.type, item.unit, Number(item.quantity), Number(item.unit_price)),
+      normalizeRapImportKey(item.name, item.type, item.unit),
       item,
     );
   }
@@ -59,8 +64,8 @@ export function findRapImportDuplicates(
 
   importRows.forEach((row, index) => {
     if (!row.valid) return;
-    const key = normalizeRapKey(row.name, row.type, row.unit, row.quantity, row.unit_price);
-    const existing = existingKeys.get(key);
+    const key = normalizeRapImportKey(row.name, row.type, row.unit);
+    const existing = existingItems.length > 0 ? existingKeys.get(key) : undefined;
     if (existing) {
       duplicates.push({
         index,
@@ -69,8 +74,7 @@ export function findRapImportDuplicates(
         existingName: existing.name,
         reason: 'existing',
       });
-    }
-    if (seenInternal.has(key)) {
+    } else if (seenInternal.has(key)) {
       duplicates.push({
         index,
         row,

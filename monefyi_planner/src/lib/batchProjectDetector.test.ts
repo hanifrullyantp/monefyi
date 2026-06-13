@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseCostText } from './costParser';
-import { detectAndSeparateProjects } from './batchProjectDetector';
+import { detectAndSeparateProjects, getBatchSaveBlockers } from './batchProjectDetector';
 import type { Project } from '../store/appStore';
 
 const SAMPLE = `Jum'at, 5/6/2026
@@ -56,5 +56,24 @@ describe('detectAndSeparateProjects', () => {
     const result = detectAndSeparateProjects(lines, {}, projects, []);
     expect(result.totalItems).toBe(lines.length);
     expect(result.totalAmount).toBeGreaterThan(0);
+  });
+
+  it('reports unresolved unknowns as save blocker', () => {
+    const lines = parseCostText(SAMPLE);
+    const result = detectAndSeparateProjects(
+      lines,
+      { orgId: 'org-1', currentProjectId: 'p-paris' },
+      projects,
+      [],
+    );
+    const blockers = getBatchSaveBlockers(
+      result,
+      new Map(),
+      new Map(),
+      new Map(),
+      new Set(),
+      lines.length,
+    );
+    expect(blockers.some(b => b.id === 'unknown_projects')).toBe(true);
   });
 });
