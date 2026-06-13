@@ -45,13 +45,16 @@ export default function GrandSummary({
 
         {detection.unknownProjects.map(ug => {
           const resolved = resolvedUnknowns.get(ug.mentionedName.toLowerCase());
+          const label = !resolved
+            ? `"${ug.mentionedName}"`
+            : (resolved.action === 'org_operational' || resolved.action === 'mark_operational')
+              ? (resolved.orgLabel || 'Organisasi')
+              : (resolved.projectName || ug.mentionedName);
           return (
             <div key={ug.mentionedName} className="flex justify-between text-xs">
               <span className="flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-full ${resolved ? 'bg-blue-500' : 'bg-amber-500'}`} />
-                {resolved && (resolved.action === 'org_operational' || resolved.action === 'mark_operational')
-                  ? resolved.orgLabel || 'Organisasi'
-                  : resolved.projectName || ug.mentionedName}
+                {label}
                 {!resolved && <span className="text-amber-600 font-semibold">perlu konfirmasi</span>}
                 <span className="text-slate-400">{ug.items.length} item</span>
               </span>
