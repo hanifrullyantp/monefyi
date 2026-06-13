@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
-import CreatableSelect, { type SelectOption } from './CreatableSelect';
-import { createOpexCategory, loadOpexCategories } from '../../services/financeV2/opexService';
+import { useEffect } from 'react';
+import CreatableSelect from './CreatableSelect';
+import { useOpexCategoryOptions } from '../../store/orgOptionsStore';
 
 interface OpexCategorySelectProps {
   orgId: string;
@@ -21,24 +21,14 @@ export default function OpexCategorySelect({
   allowEmpty,
   emptyLabel,
 }: OpexCategorySelectProps) {
-  const [options, setOptions] = useState<SelectOption[]>([]);
-
-  const reload = useCallback(async () => {
-    if (!orgId) return;
-    const cats = await loadOpexCategories(orgId);
-    setOptions(cats.map(c => ({ value: c.id, label: c.name })));
-  }, [orgId]);
+  const { options, ensureOpexOptions, addOpexOption } = useOpexCategoryOptions(orgId);
 
   useEffect(() => {
-    reload().catch(() => setOptions([]));
-  }, [reload]);
+    if (!orgId) return;
+    ensureOpexOptions(orgId).catch(() => {});
+  }, [orgId, ensureOpexOptions]);
 
-  const handleCreate = async (label: string) => {
-    const cat = await createOpexCategory(orgId, label);
-    const opt = { value: cat.id, label: cat.name };
-    setOptions(prev => (prev.some(o => o.value === opt.value) ? prev : [...prev, opt]));
-    return opt;
-  };
+  const handleCreate = async (label: string) => addOpexOption(orgId, label);
 
   return (
     <CreatableSelect

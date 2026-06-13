@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
-import CreatableSelect, { type SelectOption } from '../ui/CreatableSelect';
-import { createProjectType, loadProjectTypeOptions } from '../../services/orgCatalogService';
+import { useEffect } from 'react';
+import CreatableSelect from '../ui/CreatableSelect';
+import { useProjectTypeOptions } from '../../store/orgOptionsStore';
 
 interface ProjectTypeSelectProps {
   orgId: string;
@@ -17,23 +17,14 @@ export default function ProjectTypeSelect({
   className = 'w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm',
   disabled,
 }: ProjectTypeSelectProps) {
-  const [options, setOptions] = useState<SelectOption[]>([]);
-
-  const reload = useCallback(async () => {
-    if (!orgId) return;
-    const types = await loadProjectTypeOptions(orgId, value);
-    setOptions(types);
-  }, [orgId, value]);
+  const { options, ensureProjectTypeOptions, addProjectTypeOption } = useProjectTypeOptions(orgId, value);
 
   useEffect(() => {
-    reload().catch(() => setOptions([]));
-  }, [reload]);
+    if (!orgId) return;
+    ensureProjectTypeOptions(orgId, value).catch(() => {});
+  }, [orgId, value, ensureProjectTypeOptions]);
 
-  const handleCreate = async (label: string) => {
-    const entry = await createProjectType(orgId, label);
-    setOptions(prev => (prev.some(o => o.value === entry.value) ? prev : [...prev, entry]));
-    return entry;
-  };
+  const handleCreate = async (label: string) => addProjectTypeOption(orgId, label);
 
   return (
     <CreatableSelect
