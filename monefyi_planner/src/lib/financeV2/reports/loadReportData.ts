@@ -44,6 +44,7 @@ export async function loadEnrichedJournalLines(filters: ReportFilters): Promise<
       if (!acc) continue;
       const projectId = (acc.project_id as string) || null;
       if (filters.projectId && projectId !== filters.projectId) continue;
+      if (filters.allowedProjectIds && projectId && !filters.allowedProjectIds.has(projectId)) continue;
       if (filters.accountId && acc.id !== filters.accountId) continue;
 
       rows.push({

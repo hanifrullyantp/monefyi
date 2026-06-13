@@ -25,7 +25,7 @@ export interface Tenant {
   logo?: string;
   brandColor?: string;
   business_type: string;
-  plan: 'free' | 'pro' | 'enterprise';
+  plan: 'free' | 'starter' | 'pro' | 'pro_plus' | 'enterprise';
   currency: string;
   timezone: string;
   workHours?: { start: { hour: number; minute: number }; end: { hour: number; minute: number } };
@@ -57,6 +57,8 @@ export interface Project {
   finance_status?: 'active' | 'finance_closed';
   closed_at?: string;
   final_profit?: number;
+  finance_report_month?: string;
+  finance_report_month_manual?: boolean;
 }
 
 export interface Todo {
@@ -126,6 +128,7 @@ interface AppState {
 
   activeTab: string;
   financeVersion: FinanceVersion;
+  customDomainContext: import('../services/customDomainService').ResolvedDomainContext | null;
   sidebarOpen: boolean;
   commandModalOpen: boolean;
   selectedProjectId: string | null;
@@ -156,6 +159,7 @@ interface AppState {
   setLastSynced: (date: Date | null) => void;
   setActiveTab: (tab: string) => void;
   setFinanceVersionPreference: (version: FinanceVersion) => void;
+  setCustomDomainContext: (ctx: import('../services/customDomainService').ResolvedDomainContext | null) => void;
   setSidebarOpen: (val: boolean) => void;
   setCommandModalOpen: (val: boolean) => void;
   setSelectedProjectId: (id: string | null) => void;
@@ -202,6 +206,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   activeTab: 'home',
   financeVersion: 'v1',
+  customDomainContext: null,
   sidebarOpen: false,
   commandModalOpen: false,
   selectedProjectId: null,
@@ -237,6 +242,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setLastSynced: lastSynced => set({ lastSynced }),
   setActiveTab: activeTab => set({ activeTab }),
   setFinanceVersionPreference: financeVersion => set({ financeVersion }),
+  setCustomDomainContext: customDomainContext => set({ customDomainContext }),
   setSidebarOpen: sidebarOpen => set({ sidebarOpen }),
   setCommandModalOpen: commandModalOpen => set({ commandModalOpen }),
   setSelectedProjectId: selectedProjectId => set({ selectedProjectId }),

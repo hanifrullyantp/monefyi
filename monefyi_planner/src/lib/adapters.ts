@@ -1,4 +1,5 @@
 import type { Notification, Project, Tenant, User, UserRole } from '../store/appStore';
+import { computeFinanceReportMonth } from './financeReportMonth';
 import { parseWorkHours } from '../utils/workHours';
 
 export interface DbOrganization {
@@ -24,6 +25,8 @@ export interface DbProject {
   planned_end: string;
   actual_start?: string | null;
   actual_end?: string | null;
+  finance_report_month?: string | null;
+  finance_report_month_manual?: boolean | null;
   status?: string | null;
   progress_pct?: number | null;
   total_budget?: number | null;
@@ -221,6 +224,8 @@ export function toProject(row: DbProject, currency = 'IDR'): Project {
     created_at: row.created_at || new Date().toISOString(),
     updated_at: row.updated_at || new Date().toISOString(),
     description: row.description || undefined,
+    finance_report_month: row.finance_report_month || undefined,
+    finance_report_month_manual: row.finance_report_month_manual ?? false,
   };
 }
 
@@ -239,6 +244,7 @@ export function fromProjectInsert(
     total_budget?: number;
   },
 ): Partial<DbProject> {
+  const now = new Date().toISOString();
   return {
     org_id: input.org_id,
     name: input.name,
@@ -251,6 +257,8 @@ export function fromProjectInsert(
     created_by: input.created_by,
     total_budget: input.total_budget ?? 0,
     settings: { type: input.type || 'construction' },
+    finance_report_month: computeFinanceReportMonth(now, input.end_date),
+    finance_report_month_manual: false,
   };
 }
 
@@ -266,6 +274,14 @@ export function fromProjectUpdate(data: Partial<Project>): Partial<DbProject> {
   if (data.progress_percentage !== undefined) update.progress_pct = data.progress_percentage;
   if (data.total_budget_planned !== undefined) update.total_budget = data.total_budget_planned;
   if (data.type !== undefined) update.settings = { type: data.type };
+  if (data.finance_report_month !== undefined) {
+    update.finance_report_month = data.finance_report_month
+      ? monthPickerToReportDate(data.finance_report_month)
+      : null;
+  }
+  if (data.finance_report_month_manual !== undefined) {
+    update.finance_report_month_manual = data.finance_report_month_manual;
+  }
   return update;
 }
 

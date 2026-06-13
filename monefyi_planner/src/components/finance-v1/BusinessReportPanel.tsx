@@ -172,6 +172,9 @@ export default function BusinessReportPanel() {
           <p className="text-sm text-slate-500 mt-1">
             Omzet proyek, HPP realisasi, biaya operasional, dan laba bersih — realtime sesuai filter.
           </p>
+          <p className="text-xs text-slate-400 mt-1">
+            Proyek ditampilkan berdasarkan Bulan Laporan Keuangan (atur di edit proyek).
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button

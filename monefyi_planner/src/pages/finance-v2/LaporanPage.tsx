@@ -105,6 +105,9 @@ export default function LaporanPage() {
   return (
     <div className="space-y-5">
       <div className="bg-white rounded-2xl border border-slate-100 p-4 space-y-3">
+        <p className="text-xs text-slate-500">
+          Proyek masuk laporan berdasarkan <strong>Bulan Laporan Keuangan</strong> (bukan hanya tanggal transaksi). Atur di edit proyek.
+        </p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-2">
           <div>
             <label className="text-xs font-semibold text-slate-500 mb-1 block">Dari</label>

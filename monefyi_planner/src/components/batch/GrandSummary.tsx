@@ -1,10 +1,11 @@
-import type { ProjectDetectionResult, ProjectResolution } from '../../lib/batchProjectDetector';
+import type { ProjectDetectionResult, ProjectResolution, OrgOperationalGroup } from '../../lib/batchProjectDetector';
 import type { ParsedCostLine } from '../../lib/costParser';
 import { formatRupiah } from '../../utils/projectUi';
 
 interface GrandSummaryProps {
   detection: ProjectDetectionResult;
   resolvedUnknowns: Map<string, ProjectResolution>;
+  orgGroups: OrgOperationalGroup[];
   allItems: ParsedCostLine[];
 }
 
@@ -20,6 +21,7 @@ function categoryTotals(items: ParsedCostLine[]): Record<string, number> {
 export default function GrandSummary({
   detection,
   resolvedUnknowns,
+  orgGroups,
   allItems,
 }: GrandSummaryProps) {
   const grandTotal = allItems.reduce((s, i) => s + (Number(i.total) || 0), 0);
@@ -47,7 +49,9 @@ export default function GrandSummary({
             <div key={ug.mentionedName} className="flex justify-between text-xs">
               <span className="flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-full ${resolved ? 'bg-blue-500' : 'bg-amber-500'}`} />
-                {resolved ? resolved.projectName || ug.mentionedName : `"${ug.mentionedName}"`}
+                {resolved && (resolved.action === 'org_operational' || resolved.action === 'mark_operational')
+                  ? resolved.orgLabel || 'Organisasi'
+                  : resolved.projectName || ug.mentionedName}
                 {!resolved && <span className="text-amber-600 font-semibold">perlu konfirmasi</span>}
                 <span className="text-slate-400">{ug.items.length} item</span>
               </span>
@@ -57,6 +61,17 @@ export default function GrandSummary({
             </div>
           );
         })}
+
+        {orgGroups.map(og => (
+          <div key={og.label} className="flex justify-between text-xs">
+            <span className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-500" />
+              {og.label}
+              <span className="text-slate-400">{og.items.length} item · organisasi</span>
+            </span>
+            <span className="font-semibold">{formatRupiah(og.totalAmount)}</span>
+          </div>
+        ))}
 
         {detection.unassignedItems.items.length > 0 && (
           <div className="flex justify-between text-xs">

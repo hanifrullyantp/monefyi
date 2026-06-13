@@ -40,16 +40,18 @@ export async function learnFromProjectResolution(
       break;
 
     case 'mark_operational':
-    case 'ignore':
+    case 'org_operational':
       await upsertAlias({
         orgId: tenantId,
         userId,
         alias: mentionedName,
-        label: 'ignored_keyword',
+        label: resolution.orgLabel || 'org_operational',
         entityType: 'other',
-        entityName: resolution.action,
+        entityName: resolution.whatIsThis || resolution.action,
       }).catch(() => {});
       break;
+
+    case 'ignore':
 
     case 'not_project_keyword':
       if (resolution.recontextText) {

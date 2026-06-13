@@ -26,6 +26,7 @@ import {
 import { isPlatformAdmin } from '../services/adminService';
 import { logSessionExpired } from '../services/runtimeTracer';
 import { useAppStore } from '../store/appStore';
+import { bootstrapCustomDomainContext } from '../services/customDomainService';
 
 function resolvePlatformRole(profile: { role?: string }, email?: string): 'user' | 'admin' {
   if (String(profile?.role || '').toLowerCase() === 'admin') return 'admin';
@@ -170,6 +171,9 @@ export function useBootstrap() {
     initialized.current = true;
 
     setAuthInitializing(true);
+    bootstrapCustomDomainContext()
+      .then(ctx => useAppStore.getState().setCustomDomainContext(ctx))
+      .catch(() => {});
 
     const subscription = onAuthStateChange((event, session) => {
       if (useAppStore.getState().isDemoMode) {

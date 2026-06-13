@@ -22,13 +22,14 @@ import { Link } from 'react-router-dom';
 import { loadFinanceVersion, setFinanceVersion } from '../lib/financeVersion';
 import type { FinanceVersion } from '../types/financeV2';
 import UpgradePlansPanel from '../components/settings/UpgradePlansPanel';
+import CustomDomainPanel from '../components/settings/CustomDomainPanel';
 import { formatPlanPriceIdr, planForOrg, type PricingPlan } from '../lib/pricingPlans';
 import { countProjectsCreatedThisMonth, loadPricingPlans } from '../services/pricingPlanService';
 
-type SettingsTab = 'profil' | 'akun' | 'organisasi' | 'pricelist' | 'notifikasi' | 'keamanan' | 'tentang';
+type SettingsTab = 'profil' | 'akun' | 'organisasi' | 'pricelist' | 'domain' | 'notifikasi' | 'keamanan' | 'tentang';
 
 const VALID_SETTINGS_TABS: SettingsTab[] = [
-  'profil', 'akun', 'organisasi', 'pricelist', 'notifikasi', 'keamanan', 'tentang',
+  'profil', 'akun', 'organisasi', 'pricelist', 'domain', 'notifikasi', 'keamanan', 'tentang',
 ];
 
 const TIMEZONES = [
@@ -333,6 +334,7 @@ export default function Settings() {
     { id: 'akun', label: 'Akun & AI', icon: Sparkles, show: true },
     { id: 'organisasi', label: 'Organisasi', icon: Building2, show: canEditOrg },
     { id: 'pricelist', label: 'Pricelist', icon: CreditCard, show: canEditOrg },
+    { id: 'domain', label: 'Custom Domain', icon: Globe, show: canEditOrg },
     { id: 'notifikasi', label: 'Notifikasi', icon: Bell, show: true },
     { id: 'keamanan', label: 'Keamanan', icon: Shield, show: true },
     { id: 'tentang', label: 'Tentang', icon: Info, show: true },
@@ -605,6 +607,12 @@ export default function Settings() {
             pricingPlans={pricingPlans}
             projectsThisMonth={projectsThisMonth}
           />
+        </div>
+      )}
+
+      {tab === 'domain' && canEditOrg && (
+        <div className="bg-white rounded-2xl border border-slate-100 p-6">
+          <CustomDomainPanel onUpgrade={() => selectTab('pricelist')} />
         </div>
       )}
 

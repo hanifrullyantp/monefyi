@@ -1,7 +1,9 @@
-import { useState } from 'react';
-import { HelpCircle, CheckCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { HelpCircle, Building2 } from 'lucide-react';
 import type { UnknownProjectGroup, ProjectResolution } from '../../lib/batchProjectDetector';
 import type { Project } from '../../store/appStore';
+import type { OpexCategory } from '../../types/financeV2';
+import { loadOpexCategories } from '../../services/financeV2/opexService';
 import { formatRupiah } from '../../utils/projectUi';
 import CreateProjectQuickForm from './CreateProjectQuickForm';
 
@@ -10,8 +12,6 @@ interface UnknownProjectCardProps {
   projects: Project[];
   orgId: string;
   userId: string;
-  isResolved: boolean;
-  resolvedValue?: ProjectResolution;
   onResolve: (resolution: ProjectResolution) => void;
   onProjectCreated: (project: Project, mentionedName: string) => void;
 }
@@ -21,8 +21,6 @@ export default function UnknownProjectCard({
   projects,
   orgId,
   userId,
-  isResolved,
-  resolvedValue,
   onResolve,
   onProjectCreated,
 }: UnknownProjectCardProps) {
@@ -32,18 +30,38 @@ export default function UnknownProjectCard({
   const [whatIsThis, setWhatIsThis] = useState('');
   const [recontextText, setRecontextText] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [opexCategories, setOpexCategories] = useState<OpexCategory[]>([]);
+  const [opexCategoryId, setOpexCategoryId] = useState('');
 
-  if (isResolved && resolvedValue) {
-    return (
-      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 flex items-center gap-2">
-        <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-        <div className="text-sm">
-          <span className="font-semibold text-slate-800">"{unknownProject.mentionedName}"</span>
-          <span className="text-slate-600"> → {resolvedValue.projectName || resolvedValue.action}</span>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!orgId) return;
+    loadOpexCategories(orgId).then(cats => {
+      setOpexCategories(cats);
+      const ops = cats.find(c => /operasional|opex|umum/i.test(c.name));
+      if (ops) setOpexCategoryId(ops.id);
+    }).catch(() => setOpexCategories([]));
+  }, [orgId]);
+
+  const confirmMap = (projectId: string, projectName: string, rememberAlias = addAlias) => {
+    onResolve({
+      action: 'map_existing',
+      projectId,
+      projectName,
+      addAsAlias: rememberAlias,
+      whatIsThis,
+    });
+  };
+
+  const confirmOrgOperational = () => {
+    const cat = opexCategories.find(c => c.id === opexCategoryId);
+    onResolve({
+      action: 'org_operational',
+      orgOpexCategoryId: opexCategoryId || undefined,
+      orgLabel: `Organisasi · ${cat?.name || unknownProject.mentionedName}`,
+      projectName: `Organisasi · ${cat?.name || 'Operasional'}`,
+      whatIsThis,
+    });
+  };
 
   return (
     <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 space-y-3">
@@ -66,28 +84,22 @@ export default function UnknownProjectCard({
         <input
           value={whatIsThis}
           onChange={e => setWhatIsThis(e.target.value)}
-          placeholder="Contoh: project renovasi Pak Aloevera / nama workshop kami"
+          placeholder="Contoh: project renovasi / nama workshop kami"
           className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white"
         />
-        {whatIsThis && (
-          <p className="text-[11px] text-slate-400 mt-1">Opsional — membantu sistem belajar</p>
-        )}
       </div>
 
       {unknownProject.similarProjects.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5 items-center">
           <span className="text-xs text-slate-500">Mungkin maksud Anda:</span>
           {unknownProject.similarProjects.map(sim => (
             <button
               key={sim.id}
               type="button"
-              onClick={() => {
-                setSelectedOption('map_existing');
-                setMappedProjectId(sim.id);
-              }}
-              className={`text-xs px-2 py-1 rounded-full border ${mappedProjectId === sim.id ? 'bg-emerald-100 border-emerald-300 text-emerald-800' : 'bg-white border-slate-200'}`}
+              onClick={() => confirmMap(sim.id, sim.name, true)}
+              className="text-xs px-2.5 py-1 rounded-full border bg-white border-slate-200 hover:bg-emerald-50 hover:border-emerald-300 transition-colors"
             >
-              {sim.name} ({Math.round(sim.similarity * 100)}%)
+              {sim.name} ({Math.round(sim.similarity * 100)}%) — gunakan
             </button>
           ))}
         </div>
@@ -112,6 +124,16 @@ export default function UnknownProjectCard({
         </button>
         <button
           type="button"
+          onClick={() => setSelectedOption('org_operational')}
+          className={`p-2 rounded-xl border text-left text-xs ${selectedOption === 'org_operational' ? 'border-blue-400 bg-blue-50' : 'border-slate-200 bg-white'}`}
+        >
+          <span className="font-semibold block flex items-center gap-1">
+            <Building2 className="w-3 h-3" /> Biaya Organisasi
+          </span>
+          <span className="text-slate-500">Operasional bisnis, bukan project</span>
+        </button>
+        <button
+          type="button"
           onClick={() => setSelectedOption('not_project_keyword')}
           className={`p-2 rounded-xl border text-left text-xs ${selectedOption === 'not_project_keyword' ? 'border-emerald-400 bg-emerald-50' : 'border-slate-200 bg-white'}`}
         >
@@ -121,7 +143,7 @@ export default function UnknownProjectCard({
         <button
           type="button"
           onClick={() => onResolve({ action: 'ignore', whatIsThis })}
-          className="p-2 rounded-xl border border-slate-200 bg-white text-left text-xs"
+          className="p-2 rounded-xl border border-slate-200 bg-white text-left text-xs col-span-2"
         >
           <span className="font-semibold block">Abaikan</span>
           <span className="text-slate-500">Tidak dicatat</span>
@@ -129,7 +151,7 @@ export default function UnknownProjectCard({
       </div>
 
       {selectedOption === 'map_existing' && (
-        <div className="space-y-2 bg-white rounded-xl p-3 border border-slate-200">
+        <div className="space-y-2 bg-white rounded-xl p-3 border border-emerald-200">
           <select
             value={mappedProjectId}
             onChange={e => setMappedProjectId(e.target.value)}
@@ -149,19 +171,38 @@ export default function UnknownProjectCard({
             disabled={!mappedProjectId}
             onClick={() => {
               const p = projects.find(pr => pr.id === mappedProjectId);
-              if (p) {
-                onResolve({
-                  action: 'map_existing',
-                  projectId: p.id,
-                  projectName: p.name,
-                  addAsAlias: addAlias,
-                  whatIsThis,
-                });
-              }
+              if (p) confirmMap(p.id, p.name);
             }}
-            className="w-full py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50"
+            className="w-full py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50 hover:bg-emerald-700 transition-colors"
           >
             Konfirmasi Mapping
+          </button>
+        </div>
+      )}
+
+      {selectedOption === 'org_operational' && (
+        <div className="space-y-2 bg-white rounded-xl p-3 border border-blue-200">
+          <p className="text-xs text-slate-600">
+            Biaya ini dicatat di level <strong>organisasi/bisnis</strong> (opex), tidak masuk realisasi project.
+          </p>
+          {opexCategories.length > 0 && (
+            <select
+              value={opexCategoryId}
+              onChange={e => setOpexCategoryId(e.target.value)}
+              className="w-full text-sm border rounded-lg px-2 py-1.5"
+            >
+              <option value="">Kategori opex...</option>
+              {opexCategories.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          )}
+          <button
+            type="button"
+            onClick={confirmOrgOperational}
+            className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"
+          >
+            Catat sebagai Biaya Organisasi
           </button>
         </div>
       )}
@@ -231,9 +272,6 @@ export default function UnknownProjectCard({
             {item.item.slice(0, 30)} · {formatRupiah(item.total)}
           </span>
         ))}
-        {unknownProject.items.length > 4 && (
-          <span className="text-[10px] text-slate-400">+{unknownProject.items.length - 4} lainnya</span>
-        )}
       </div>
     </div>
   );

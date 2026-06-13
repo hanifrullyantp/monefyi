@@ -15,12 +15,13 @@ import {
   fetchAdminUsers, updateAdminUser, fetchPlatformStats,
   updateAppConfig, listCompanyTypes, createCompanyType,
   updateCompanyType, deleteCompanyType,
-  type AdminUserRow, type CompanyType,
+  fetchAdminOrganizations, updateAdminOrgPlan,
+  type AdminUserRow, type CompanyType, type AdminOrgRow,
 } from '../services/adminService';
 import { showToast } from '../store/uiStore';
 import { fetchRuntimeTraces, type RuntimeTraceRow } from '../services/runtimeTracer';
 
-type Tab = 'overview' | 'users' | 'company-types' | 'platform' | 'monitoring' | 'archives' | 'pricing';
+type Tab = 'overview' | 'users' | 'organizations' | 'company-types' | 'platform' | 'monitoring' | 'archives' | 'pricing';
 
 export default function SuperAdmin() {
   const [tab, setTab] = useState<Tab>('overview');
@@ -42,6 +43,9 @@ export default function SuperAdmin() {
   const [monitorFilter, setMonitorFilter] = useState<'all' | 'errors' | 'session'>('all');
   const [archivedProjects, setArchivedProjects] = useState<ArchivedProjectRow[]>([]);
   const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [organizations, setOrganizations] = useState<AdminOrgRow[]>([]);
+  const [orgSearch, setOrgSearch] = useState('');
+  const [savingOrgId, setSavingOrgId] = useState<string | null>(null);
 
   const loadOverview = useCallback(async () => {
     setLoading(true);
@@ -95,6 +99,17 @@ export default function SuperAdmin() {
     }
   }, []);
 
+  const loadOrganizations = useCallback(async () => {
+    setLoading(true);
+    try {
+      setOrganizations(await fetchAdminOrganizations());
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal memuat organisasi', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const handleRestoreProject = async (row: ArchivedProjectRow) => {
     if (!window.confirm(`Pulihkan proyek "${row.name}"?`)) return;
     setRestoringId(row.id);
@@ -127,7 +142,8 @@ export default function SuperAdmin() {
     if (tab === 'company-types') loadTypes();
     if (tab === 'monitoring') loadMonitoring();
     if (tab === 'archives') loadArchives();
-  }, [tab, loadOverview, loadUsers, loadTypes, loadMonitoring, loadArchives]);
+    if (tab === 'organizations') loadOrganizations();
+  }, [tab, loadOverview, loadUsers, loadTypes, loadMonitoring, loadArchives, loadOrganizations]);
 
   const openEditUser = (u: AdminUserRow) => {
     setSelectedUser(u);
@@ -180,6 +196,7 @@ export default function SuperAdmin() {
   const tabs: { id: Tab; label: string; icon: typeof Users }[] = [
     { id: 'overview', label: 'Ringkasan', icon: LayoutDashboard },
     { id: 'users', label: 'Pengguna', icon: Users },
+    { id: 'organizations', label: 'Organisasi', icon: Building2 },
     { id: 'pricing', label: 'Paket Harga', icon: CreditCard },
     { id: 'monitoring', label: 'Monitoring', icon: Activity },
     { id: 'archives', label: 'Arsip Proyek', icon: Archive },
@@ -214,7 +231,7 @@ export default function SuperAdmin() {
             <Pencil className="w-4 h-4" />
             Edit landing
           </Link>
-          <button type="button" onClick={() => { if (tab === 'users') loadUsers(); else if (tab === 'company-types') loadTypes(); else if (tab === 'monitoring') loadMonitoring(); else if (tab === 'archives') loadArchives(); else loadOverview(); }} className="p-2 hover:bg-white/10 rounded-lg">
+          <button type="button" onClick={() => { if (tab === 'users') loadUsers(); else if (tab === 'organizations') loadOrganizations(); else if (tab === 'company-types') loadTypes(); else if (tab === 'monitoring') loadMonitoring(); else if (tab === 'archives') loadArchives(); else loadOverview(); }} className="p-2 hover:bg-white/10 rounded-lg">
             <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
@@ -427,6 +444,60 @@ export default function SuperAdmin() {
                   })}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {tab === 'organizations' && (
+          <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+            <div className="p-4 border-b">
+              <input
+                value={orgSearch}
+                onChange={e => setOrgSearch(e.target.value)}
+                placeholder="Cari organisasi..."
+                className="w-full max-w-md px-3 py-2 border rounded-lg text-sm"
+              />
+            </div>
+            <div className="divide-y max-h-[70vh] overflow-y-auto">
+              {organizations
+                .filter(o => !orgSearch.trim() || o.name.toLowerCase().includes(orgSearch.toLowerCase()) || o.slug.includes(orgSearch.toLowerCase()))
+                .map(org => {
+                  const domain = org.planner_org_custom_domains?.[0];
+                  return (
+                    <div key={org.id} className="p-4 flex flex-wrap items-center gap-3">
+                      <div className="flex-1 min-w-[200px]">
+                        <div className="font-semibold text-slate-900">{org.name}</div>
+                        <code className="text-xs text-slate-500">{org.slug}</code>
+                        {domain && (
+                          <div className="text-xs text-slate-500 mt-1">
+                            {domain.hostname} · {domain.status}
+                          </div>
+                        )}
+                      </div>
+                      <select
+                        defaultValue={org.plan_type}
+                        disabled={savingOrgId === org.id}
+                        onChange={async e => {
+                          setSavingOrgId(org.id);
+                          try {
+                            await updateAdminOrgPlan(org.id, e.target.value);
+                            showToast('Paket organisasi diperbarui', 'success');
+                            loadOrganizations();
+                          } catch (err) {
+                            showToast(err instanceof Error ? err.message : 'Gagal', 'error');
+                          } finally {
+                            setSavingOrgId(null);
+                          }
+                        }}
+                        className="px-3 py-2 border rounded-lg text-sm"
+                      >
+                        {['free', 'starter', 'pro', 'pro_plus', 'enterprise'].map(p => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })}
             </div>
           </div>
         )}

@@ -128,3 +128,29 @@ export async function listCompanyTypesPublic() {
   if (error) return [];
   return data || [];
 }
+
+export interface AdminOrgRow {
+  id: string;
+  name: string;
+  slug: string;
+  plan_type: string;
+  created_at?: string;
+  planner_org_custom_domains?: { hostname: string; status: string }[];
+}
+
+export async function fetchAdminOrganizations(): Promise<AdminOrgRow[]> {
+  const { data, error } = await supabase
+    .from('planner_organizations')
+    .select('id, name, slug, plan_type, created_at, planner_org_custom_domains(hostname, status)')
+    .order('name');
+  if (error) throw new Error(error.message);
+  return (data || []) as AdminOrgRow[];
+}
+
+export async function updateAdminOrgPlan(orgId: string, plan_type: string): Promise<void> {
+  const { error } = await supabase
+    .from('planner_organizations')
+    .update({ plan_type, updated_at: new Date().toISOString() })
+    .eq('id', orgId);
+  if (error) throw new Error(error.message);
+}

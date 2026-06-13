@@ -3,6 +3,7 @@ import { DEFAULT_PRICING_PLANS, normalizePlanSlug, type PricingPlan } from '../l
 
 function mapRow(row: Record<string, unknown>): PricingPlan {
   const features = row.features;
+  const caps = row.capabilities;
   return {
     id: row.id as string,
     slug: row.slug as string,
@@ -14,6 +15,7 @@ function mapRow(row: Record<string, unknown>): PricingPlan {
     is_active: Boolean(row.is_active),
     is_default: Boolean(row.is_default),
     features: Array.isArray(features) ? features.map(String) : [],
+    capabilities: caps && typeof caps === 'object' ? caps as PricingPlan['capabilities'] : undefined,
   };
 }
 

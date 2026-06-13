@@ -1,3 +1,7 @@
+export interface PlanCapabilities {
+  customDomain?: boolean;
+}
+
 export interface PricingPlan {
   id?: string;
   slug: string;
@@ -10,6 +14,7 @@ export interface PricingPlan {
   is_active: boolean;
   is_default: boolean;
   features: string[];
+  capabilities?: PlanCapabilities;
 }
 
 /** Fallback jika DB belum ter-deploy / kosong */
@@ -24,6 +29,7 @@ export const DEFAULT_PRICING_PLANS: PricingPlan[] = [
     is_active: true,
     is_default: true,
     features: ['2 proyek/bulan', 'Estimator & RAP', '1 organisasi'],
+    capabilities: { customDomain: false },
   },
   {
     slug: 'starter',
@@ -35,6 +41,7 @@ export const DEFAULT_PRICING_PLANS: PricingPlan[] = [
     is_active: true,
     is_default: false,
     features: ['Proyek tanpa batas', 'Semua fitur Gratis', 'Dukungan email'],
+    capabilities: { customDomain: false },
   },
   {
     slug: 'pro',
@@ -46,8 +53,23 @@ export const DEFAULT_PRICING_PLANS: PricingPlan[] = [
     is_active: true,
     is_default: false,
     features: ['Proyek tanpa batas', 'HR & absensi', 'Prioritas dukungan'],
+    capabilities: { customDomain: false },
+  },
+  {
+    slug: 'pro_plus',
+    label: 'Pro+',
+    description: 'Custom domain & white-label login — Rp 499.000/bulan.',
+    price_monthly_idr: 499000,
+    projects_per_month: null,
+    sort_order: 3,
+    is_active: true,
+    is_default: false,
+    features: ['Semua fitur Pro', 'Custom domain', 'Branding login', 'Prioritas tertinggi'],
+    capabilities: { customDomain: true },
   },
 ];
+
+export type PlanCapability = keyof PlanCapabilities;
 
 export function formatPlanPriceIdr(amount: number): string {
   if (amount <= 0) return 'Gratis';
@@ -62,6 +84,7 @@ export function formatPlanPriceIdr(amount: number): string {
 export function normalizePlanSlug(planType?: string): string {
   if (!planType || planType === 'free') return 'free';
   if (planType === 'starter') return 'starter';
+  if (planType === 'pro_plus') return 'pro_plus';
   if (planType === 'pro' || planType === 'enterprise' || planType === 'lifetime') return 'pro';
   return planType;
 }
@@ -71,4 +94,22 @@ export function planForOrg(planType?: string, plans: PricingPlan[] = DEFAULT_PRI
   return plans.find(p => p.slug === slug && p.is_active)
     || plans.find(p => p.is_default)
     || DEFAULT_PRICING_PLANS[0];
+}
+
+const FALLBACK_CAPABILITIES: Record<string, PlanCapabilities> = {
+  free: { customDomain: false },
+  starter: { customDomain: false },
+  pro: { customDomain: false },
+  pro_plus: { customDomain: true },
+  enterprise: { customDomain: false },
+};
+
+export function hasPlanCapability(planType?: string, capability: PlanCapability = 'customDomain'): boolean {
+  if (planType === 'pro_plus' && capability === 'customDomain') return true;
+  const slug = normalizePlanSlug(planType);
+  return Boolean(FALLBACK_CAPABILITIES[slug]?.[capability]);
+}
+
+export function capabilitiesForPlan(plan: PricingPlan): PlanCapabilities {
+  return plan.capabilities || FALLBACK_CAPABILITIES[plan.slug] || { customDomain: false };
 }

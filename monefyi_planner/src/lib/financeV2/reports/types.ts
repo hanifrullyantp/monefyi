@@ -9,6 +9,8 @@ export interface ReportFilters {
   projectId?: string;
   accountId?: string;
   categoryId?: string;
+  /** Set internally — project IDs eligible for report period */
+  allowedProjectIds?: Set<string>;
 }
 
 export interface JournalLineEnriched {

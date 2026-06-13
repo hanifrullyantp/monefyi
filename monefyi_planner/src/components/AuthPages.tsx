@@ -24,7 +24,11 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [resetSent, setResetSent] = useState(false);
   const navigate = useNavigate();
-  const { setUser, setTenant, setAuthenticated, setDemoMode, setAuthInitializing } = useAppStore();
+  const { setUser, setTenant, setAuthenticated, setDemoMode, setAuthInitializing, customDomainContext } = useAppStore();
+  const loginTitle = customDomainContext?.org_name || 'Monefyi Planner';
+  const loginSubtitle = customDomainContext
+    ? 'Masuk ke workspace perusahaan Anda'
+    : 'Masuk ke akun kamu';
 
   const handleDemoLogin = async (role: 'owner' | 'manager' | 'worker') => {
     if (!config.devDemoAuth) return;
@@ -118,10 +122,15 @@ export function LoginPage() {
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="font-black text-slate-900">Monefyi Planner</div>
-              <div className="text-xs text-slate-500">Masuk ke akun kamu</div>
+              <div className="font-black text-slate-900">{loginTitle}</div>
+              <div className="text-xs text-slate-500">{loginSubtitle}</div>
             </div>
           </div>
+          {customDomainContext && (
+            <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 mb-4">
+              Powered by Monefyi Planner
+            </p>
+          )}
 
           {config.devDemoAuth && (
             <div className="mb-6 p-4 bg-emerald-50 rounded-2xl border border-emerald-100">

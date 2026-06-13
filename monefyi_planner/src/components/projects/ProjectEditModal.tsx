@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { reportDateToMonthPicker } from '../../lib/financeReportMonth';
 import { motion } from 'framer-motion';
 import { X, Loader2, Trash2, AlertTriangle } from 'lucide-react';
 import type { Project } from '../../store/appStore';
@@ -22,6 +23,10 @@ export default function ProjectEditModal({ project, canArchive, onClose, onSave,
     end_date: project.end_date,
     description: project.description || '',
     total_budget_planned: project.total_budget_planned,
+    finance_report_month: project.finance_report_month
+      ? reportDateToMonthPicker(project.finance_report_month)
+      : new Date().toISOString().slice(0, 7),
+    finance_report_month_manual: project.finance_report_month_manual ?? false,
   });
   const [saving, setSaving] = useState(false);
   const [archiving, setArchiving] = useState(false);
@@ -51,6 +56,8 @@ export default function ProjectEditModal({ project, canArchive, onClose, onSave,
         end_date: form.end_date,
         description: form.description.trim() || undefined,
         total_budget_planned: form.total_budget_planned,
+        finance_report_month: form.finance_report_month,
+        finance_report_month_manual: form.finance_report_month_manual,
       });
       onClose();
     } catch (e) {
@@ -150,6 +157,26 @@ export default function ProjectEditModal({ project, canArchive, onClose, onSave,
                 className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm"
               />
             </div>
+          </div>
+          <div className="rounded-xl border border-slate-200 p-3 space-y-2 bg-slate-50">
+            <label className="text-xs font-semibold text-slate-600 block">Bulan Laporan Keuangan</label>
+            <input
+              type="month"
+              value={form.finance_report_month}
+              onChange={e => setForm({
+                ...form,
+                finance_report_month: e.target.value,
+                finance_report_month_manual: true,
+              })}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm bg-white"
+            />
+            <p className="text-[11px] text-slate-500">
+              Default: bulan proyek dibuat. Jika tanggal selesai di 7 hari terakhir bulan, otomatis bulan berikutnya.
+              Ubah manual di sini untuk mengunci bulan laporan.
+            </p>
+            {!form.finance_report_month_manual && (
+              <p className="text-[11px] text-emerald-700 font-medium">Mode otomatis — berubah saat tanggal selesai diubah.</p>
+            )}
           </div>
           <input
             type="number"

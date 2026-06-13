@@ -11,6 +11,7 @@ import type {
 } from '../../types/financeV1Report';
 import { HPP_TYPE_LABELS } from '../../types/financeV1Report';
 import { ensureDefaultOpexCategories, loadOpexRealizationsInRange } from './opexService';
+import { filterEligibleProjectIds } from '../../lib/financeReportEligibility';
 
 function pct(part: number, total: number): number {
   if (total <= 0) return 0;
@@ -24,11 +25,12 @@ function inDateRange(date: string, from: string, to: string): boolean {
 async function loadProjects(orgId: string) {
   const { data, error } = await supabase
     .from('planner_projects')
-    .select('id, name')
+    .select('id, name, finance_report_month')
     .eq('org_id', orgId)
+    .is('deleted_at', null)
     .order('name');
   if (error) throw new Error(error.message);
-  return (data || []) as { id: string; name: string }[];
+  return (data || []) as { id: string; name: string; finance_report_month?: string | null }[];
 }
 
 async function loadIncomesInRange(
@@ -93,9 +95,16 @@ export async function buildBusinessFinanceReport(
   const projects = await loadProjects(orgId);
   const projectNameMap = Object.fromEntries(projects.map(p => [p.id, p.name]));
 
+  const eligibleIds = filterEligibleProjectIds(
+    projects,
+    filters.dateFrom,
+    filters.dateTo,
+    filters.projectId,
+  );
+
   const scopedIds = filters.projectId
-    ? projects.filter(p => p.id === filters.projectId).map(p => p.id)
-    : projects.map(p => p.id);
+    ? [...eligibleIds]
+    : [...eligibleIds];
 
   const [incomes, costs, rapTypes, categories] = await Promise.all([
     loadIncomesInRange(scopedIds, filters.dateFrom, filters.dateTo),

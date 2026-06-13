@@ -71,6 +71,8 @@ PLANNER_FUNCTIONS=(
   planner-transfer-ownership
   planner-search-companies
   planner-try-domain-join
+  planner-verify-custom-domain
+  planner-resolve-domain
   planner-direct-create-member
   monefyi-admin-users
   monefyi-admin-update-user
@@ -84,6 +86,7 @@ PLANNER_FUNCTIONS=(
 NO_VERIFY_JWT_FUNCTIONS=(
   auth-send-email
   monefyi-landing-config
+  planner-resolve-domain
 )
 
 echo "==> Deploying ${#PLANNER_FUNCTIONS[@]} Edge Functions..."

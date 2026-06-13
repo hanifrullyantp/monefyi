@@ -7,6 +7,7 @@ import { createProjectIncome } from '../services/incomeService';
 import { createDailyLog } from '../services/dailyLogService';
 import { updateWorkItem, loadWorkItems, updateProjectProgressFromWorkItems } from '../services/workItemService';
 import { analyzeProject } from '../services/analyzeService';
+import { createOpexRealization, loadOpexCategories } from '../services/financeV2/opexService';
 import type { Project } from '../store/appStore';
 import type { WorkItem } from '../services/workItemService';
 
@@ -86,12 +87,17 @@ export async function executeIntent(
         projectName?: string;
         items: ParsedCostLine[];
       }> | undefined;
+      const orgGroups = params.orgGroups as Array<{
+        label: string;
+        opexCategoryId?: string;
+        items: ParsedCostLine[];
+      }> | undefined;
+
+      let recorded = 0;
+      let totalAmount = 0;
+      const summaries: string[] = [];
 
       if (groups?.length) {
-        let recorded = 0;
-        let totalAmount = 0;
-        const summaries: string[] = [];
-
         for (const group of groups) {
           const groupProject = ctx.projects.find(p => p.id === group.projectId);
           if (!groupProject) continue;
@@ -127,11 +133,44 @@ export async function executeIntent(
             summaries.push(`${groupProject.name}: ${groupCount}`);
           }
         }
+      }
 
-        if (!recorded) {
-          return { success: false, message: 'Tidak ada baris biaya untuk dicatat.' };
+      if (orgGroups?.length) {
+        const categories = await loadOpexCategories(ctx.orgId);
+        const defaultCat =
+          categories.find(c => /operasional|opex|umum/i.test(c.name)) || categories[0];
+
+        for (const orgGroup of orgGroups) {
+          const catId = orgGroup.opexCategoryId || defaultCat?.id;
+          if (!catId) continue;
+
+          let orgCount = 0;
+          let orgTotal = 0;
+          for (const line of orgGroup.items || []) {
+            const total = Number(line.total) || 0;
+            if (total <= 0) continue;
+            await createOpexRealization({
+              orgId: ctx.orgId,
+              categoryId: catId,
+              amount: total,
+              paidDate: line.date || todayStr(),
+              notes: line.supplier ? `${line.item} (${line.supplier})` : line.item,
+              createdBy: ctx.userId,
+              withJournal: true,
+            });
+            orgCount += 1;
+            orgTotal += total;
+          }
+
+          if (orgCount > 0) {
+            recorded += orgCount;
+            totalAmount += orgTotal;
+            summaries.push(`${orgGroup.label}: ${orgCount}`);
+          }
         }
+      }
 
+      if (recorded > 0) {
         await ctx.onRefreshProjects();
         return {
           success: true,
@@ -154,8 +193,8 @@ export async function executeIntent(
       }
 
       const rapItems = await loadRapItems(project.id);
-      let recorded = 0;
-      let totalAmount = 0;
+      recorded = 0;
+      totalAmount = 0;
 
       for (const line of rawItems) {
         const total = Number(line.total) || 0;

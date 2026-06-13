@@ -7,9 +7,11 @@ import {
   allUnknownsResolved,
   allUnassignedResolved,
   buildBatchExecutionGroups,
+  buildOrgOperationalGroups,
   type ProjectDetectionResult,
   type ProjectResolution,
   type BatchDetectionContext,
+  type OrgOperationalGroup,
 } from '../../lib/batchProjectDetector';
 import type { Project } from '../../store/appStore';
 import type { TaggableEntity } from '../../lib/commandTags';
@@ -21,9 +23,11 @@ import ProjectItemsTable from './ProjectItemsTable';
 import UnassignedItemsTable from './UnassignedItemsTable';
 import GrandSummary from './GrandSummary';
 import ItemSplitDialog from './ItemSplitDialog';
+import OrgOperationalTable from './OrgOperationalTable';
 
 export interface BatchConfirmationResult {
   groups: Array<{ projectId: string; projectName: string; items: ParsedCostLine[] }>;
+  orgGroups: OrgOperationalGroup[];
   resolutions: Array<{ mentionedName: string; resolution: ProjectResolution }>;
   canSave: boolean;
 }
@@ -57,16 +61,20 @@ export default function BatchConfirmationView({
   const [detection, setDetection] = useState<ProjectDetectionResult | null>(null);
   const [resolvedUnknowns, setResolvedUnknowns] = useState<Map<string, ProjectResolution>>(new Map());
   const [unassignedAssignments, setUnassignedAssignments] = useState<Map<string, string>>(new Map());
+  const [unassignedOrgIds, setUnassignedOrgIds] = useState<Map<string, { opexCategoryId?: string; label?: string }>>(new Map());
   const [ignoredIds, setIgnoredIds] = useState<Set<string>>(new Set());
   const [costsByProject, setCostsByProject] = useState<Record<string, CostRealization[]>>({});
   const [splitItem, setSplitItem] = useState<ParsedCostLine | null>(null);
 
-  const runDetection = useCallback((lines: ParsedCostLine[]) => {
+  const runDetection = useCallback((lines: ParsedCostLine[], preserveResolutions = false) => {
     const result = detectAndSeparateProjects(lines, context, projects, aliases);
     setDetection(result);
-    setResolvedUnknowns(new Map());
-    setUnassignedAssignments(new Map());
-    setIgnoredIds(new Set());
+    if (!preserveResolutions) {
+      setResolvedUnknowns(new Map());
+      setUnassignedAssignments(new Map());
+      setUnassignedOrgIds(new Map());
+      setIgnoredIds(new Set());
+    }
   }, [context, projects, aliases]);
 
   useEffect(() => {
@@ -78,7 +86,7 @@ export default function BatchConfirmationView({
     setItems(prev => {
       const next = prev.map(i => i.id === itemId ? { ...i, ...patch } : i);
       onItemsChange(next);
-      runDetection(next);
+      runDetection(next, true);
       return next;
     });
   };
@@ -88,7 +96,7 @@ export default function BatchConfirmationView({
     setItems(prev => {
       const next = prev.filter(i => i.id !== itemId);
       onItemsChange(next);
-      runDetection(next);
+      runDetection(next, true);
       return next;
     });
   };
@@ -99,6 +107,19 @@ export default function BatchConfirmationView({
       next.set(mentionedName.toLowerCase(), resolution);
       return next;
     });
+
+    if (resolution.action === 'ignore' && detection) {
+      const ug = detection.unknownProjects.find(
+        u => u.mentionedName.toLowerCase() === mentionedName.toLowerCase(),
+      );
+      if (ug) {
+        setIgnoredIds(prev => {
+          const next = new Set(prev);
+          ug.items.forEach(i => next.add(i.id));
+          return next;
+        });
+      }
+    }
 
     if (resolution.action === 'not_project_keyword' && resolution.recontextText && detection) {
       const ug = detection.unknownProjects.find(u => u.mentionedName.toLowerCase() === mentionedName.toLowerCase());
@@ -134,9 +155,19 @@ export default function BatchConfirmationView({
   const canSave = useMemo(() => {
     if (!detection) return false;
     if (!allUnknownsResolved(detection, resolvedUnknowns)) return false;
-    if (!allUnassignedResolved(detection, unassignedAssignments, ignoredIds)) return false;
+    if (!allUnassignedResolved(detection, unassignedAssignments, unassignedOrgIds, ignoredIds)) return false;
     return activeItems.length > 0;
-  }, [detection, resolvedUnknowns, unassignedAssignments, ignoredIds, activeItems]);
+  }, [detection, resolvedUnknowns, unassignedAssignments, unassignedOrgIds, ignoredIds, activeItems]);
+
+  const orgGroups = useMemo(() => {
+    if (!detection) return [];
+    return buildOrgOperationalGroups(
+      detection,
+      resolvedUnknowns,
+      unassignedOrgIds,
+      ignoredIds,
+    );
+  }, [detection, resolvedUnknowns, unassignedOrgIds, ignoredIds]);
 
   useEffect(() => {
     onReadyChange(canSave);
@@ -155,8 +186,8 @@ export default function BatchConfirmationView({
       resolution,
     }));
 
-    onBuildResult({ groups, resolutions, canSave });
-  }, [canSave, detection, resolvedUnknowns, unassignedAssignments, ignoredIds, projects, onReadyChange, onBuildResult]);
+    onBuildResult({ groups, orgGroups, resolutions, canSave });
+  }, [canSave, detection, resolvedUnknowns, unassignedAssignments, unassignedOrgIds, ignoredIds, orgGroups, projects, onReadyChange, onBuildResult]);
 
   useEffect(() => {
     if (!detection) return;
@@ -194,7 +225,7 @@ export default function BatchConfirmationView({
       const without = prev.filter(i => i.id !== splitItem.id);
       const next = [...without, ...newLines];
       onItemsChange(next);
-      runDetection(next);
+      runDetection(next, true);
       return next;
     });
     setSplitItem(null);
@@ -203,6 +234,9 @@ export default function BatchConfirmationView({
   if (!detection) return null;
 
   const previewTotal = activeItems.reduce((s, i) => s + i.total, 0);
+  const unresolvedUnknowns = detection.unknownProjects.filter(
+    ug => !resolvedUnknowns.has(ug.mentionedName.toLowerCase()),
+  );
 
   return (
     <div className="space-y-4">
@@ -210,24 +244,22 @@ export default function BatchConfirmationView({
         Preview {activeItems.length} biaya · Total {formatRupiah(previewTotal)}
       </div>
 
-      {detection.unknownProjects.length > 0 && (
+      {unresolvedUnknowns.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm font-bold text-amber-800">
             <AlertTriangle className="w-4 h-4" />
             Project Tidak Dikenal — Perlu Konfirmasi
             <span className="text-xs font-semibold px-2 py-0.5 bg-amber-100 rounded-full">
-              {detection.unknownProjects.filter(u => !resolvedUnknowns.has(u.mentionedName.toLowerCase())).length} belum selesai
+              {unresolvedUnknowns.length} belum selesai
             </span>
           </div>
-          {detection.unknownProjects.map(ug => (
+          {unresolvedUnknowns.map(ug => (
             <UnknownProjectCard
               key={ug.mentionedName}
               unknownProject={ug}
               projects={projects}
               orgId={orgId}
               userId={userId}
-              isResolved={resolvedUnknowns.has(ug.mentionedName.toLowerCase())}
-              resolvedValue={resolvedUnknowns.get(ug.mentionedName.toLowerCase())}
               onResolve={res => handleResolveUnknown(ug.mentionedName, res)}
               onProjectCreated={handleProjectCreated}
             />
@@ -250,18 +282,21 @@ export default function BatchConfirmationView({
       ))}
 
       {detection.unknownProjects
-        .filter(ug => resolvedUnknowns.has(ug.mentionedName.toLowerCase()))
+        .filter(ug => {
+          const r = resolvedUnknowns.get(ug.mentionedName.toLowerCase());
+          return r && r.projectId && r.projectName &&
+            r.action !== 'org_operational' && r.action !== 'mark_operational';
+        })
         .map(ug => {
           const resolved = resolvedUnknowns.get(ug.mentionedName.toLowerCase())!;
-          if (!resolved.projectId || !resolved.projectName) return null;
           return (
             <ProjectItemsTable
               key={`resolved-${ug.mentionedName}`}
-              projectId={resolved.projectId}
-              projectName={resolved.projectName}
+              projectId={resolved.projectId!}
+              projectName={resolved.projectName!}
               items={ug.items.filter(i => !ignoredIds.has(i.id))}
               totalAmount={ug.items.filter(i => !ignoredIds.has(i.id)).reduce((s, i) => s + i.total, 0)}
-              existingCosts={costsByProject[resolved.projectId] || []}
+              existingCosts={costsByProject[resolved.projectId!] || []}
               badge="Dipetakan"
               onItemChange={updateItem}
               onItemDelete={deleteItem}
@@ -269,6 +304,15 @@ export default function BatchConfirmationView({
             />
           );
         })}
+
+      {orgGroups.map(og => (
+        <OrgOperationalTable
+          key={og.label}
+          group={og}
+          onItemChange={updateItem}
+          onItemDelete={deleteItem}
+        />
+      ))}
 
       <UnassignedItemsTable
         items={detection.unassignedItems.items.filter(i => !ignoredIds.has(i.id))}
@@ -278,6 +322,7 @@ export default function BatchConfirmationView({
         suggestedProjects={detection.unassignedItems.suggestedProjects}
         projects={projects}
         assignments={unassignedAssignments}
+        orgAssignments={unassignedOrgIds}
         onAssignAll={projectId => {
           setUnassignedAssignments(prev => {
             const next = new Map(prev);
@@ -287,10 +332,43 @@ export default function BatchConfirmationView({
             return next;
           });
         }}
+        onAssignAllOrg={(opexCategoryId, label) => {
+          setUnassignedOrgIds(prev => {
+            const next = new Map(prev);
+            detection.unassignedItems.items.forEach(item => {
+              if (!ignoredIds.has(item.id)) {
+                next.set(item.id, { opexCategoryId, label });
+              }
+            });
+            return next;
+          });
+          setUnassignedAssignments(prev => {
+            const next = new Map(prev);
+            detection.unassignedItems.items.forEach(item => next.delete(item.id));
+            return next;
+          });
+        }}
         onItemAssign={(itemId, projectId) => {
           setUnassignedAssignments(prev => {
             const next = new Map(prev);
             next.set(itemId, projectId);
+            return next;
+          });
+          setUnassignedOrgIds(prev => {
+            const next = new Map(prev);
+            next.delete(itemId);
+            return next;
+          });
+        }}
+        onItemAssignOrg={(itemId, opexCategoryId, label) => {
+          setUnassignedOrgIds(prev => {
+            const next = new Map(prev);
+            next.set(itemId, { opexCategoryId, label });
+            return next;
+          });
+          setUnassignedAssignments(prev => {
+            const next = new Map(prev);
+            next.delete(itemId);
             return next;
           });
         }}
@@ -301,6 +379,7 @@ export default function BatchConfirmationView({
       <GrandSummary
         detection={detection}
         resolvedUnknowns={resolvedUnknowns}
+        orgGroups={orgGroups}
         allItems={activeItems}
       />
 

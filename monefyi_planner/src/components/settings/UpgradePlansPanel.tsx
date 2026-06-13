@@ -11,7 +11,7 @@ type Props = {
 function isCurrentPlan(plan: PricingPlan, orgPlanType?: string): boolean {
   const slug = normalizePlanSlug(orgPlanType);
   if (plan.slug === slug) return true;
-  if (plan.slug === 'pro' && slug === 'pro') return true;
+  if (plan.slug === 'pro' && slug === 'pro' && orgPlanType !== 'pro_plus') return true;
   return false;
 }
 

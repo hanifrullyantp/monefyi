@@ -70,14 +70,24 @@ export interface ProjectResolution {
     | 'map_existing'
     | 'created_new'
     | 'mark_operational'
+    | 'org_operational'
     | 'ignore'
     | 'not_project_keyword'
     | 'assign_anyway';
   projectId?: string;
   projectName?: string;
+  orgOpexCategoryId?: string;
+  orgLabel?: string;
   addAsAlias?: boolean;
   whatIsThis?: string;
   recontextText?: string;
+}
+
+export interface OrgOperationalGroup {
+  label: string;
+  opexCategoryId?: string;
+  items: ParsedCostLine[];
+  totalAmount: number;
 }
 
 const KNOWN_THRESHOLD = 0.85;
@@ -345,13 +355,12 @@ export function buildBatchExecutionGroups(
   for (const ug of detection.unknownProjects) {
     const resolution = resolvedUnknowns.get(ug.mentionedName.toLowerCase());
     if (!resolution || resolution.action === 'ignore') {
-      for (const item of ug.items) {
-        if (!resolution) continue;
-        ignoredIds.add(item.id);
+      if (resolution?.action === 'ignore') {
+        for (const item of ug.items) ignoredIds.add(item.id);
       }
       continue;
     }
-    if (resolution.action === 'not_project_keyword') {
+    if (resolution.action === 'not_project_keyword' || resolution.action === 'org_operational' || resolution.action === 'mark_operational') {
       continue;
     }
     if (resolution.projectId && resolution.projectName) {
@@ -371,6 +380,58 @@ export function buildBatchExecutionGroups(
   return Array.from(groupMap.values()).filter(g => g.items.length > 0);
 }
 
+/** Build org-level operational groups (not tied to a project). */
+export function buildOrgOperationalGroups(
+  detection: ProjectDetectionResult,
+  resolvedUnknowns: Map<string, ProjectResolution>,
+  unassignedOrgIds: Map<string, { opexCategoryId?: string; label?: string }>,
+  ignoredIds: Set<string>,
+): OrgOperationalGroup[] {
+  const groupMap = new Map<string, OrgOperationalGroup>();
+
+  const addToOrg = (
+    key: string,
+    label: string,
+    item: ParsedCostLine,
+    opexCategoryId?: string,
+  ) => {
+    if (ignoredIds.has(item.id)) return;
+    const g = groupMap.get(key);
+    if (g) {
+      g.items.push(item);
+      g.totalAmount += item.total;
+    } else {
+      groupMap.set(key, {
+        label,
+        opexCategoryId,
+        items: [item],
+        totalAmount: item.total,
+      });
+    }
+  };
+
+  for (const ug of detection.unknownProjects) {
+    const resolution = resolvedUnknowns.get(ug.mentionedName.toLowerCase());
+    if (!resolution) continue;
+    if (resolution.action === 'org_operational' || resolution.action === 'mark_operational') {
+      const label = resolution.orgLabel || `Organisasi · ${ug.mentionedName}`;
+      const key = `org-${ug.mentionedName.toLowerCase()}`;
+      for (const item of ug.items) {
+        addToOrg(key, label, item, resolution.orgOpexCategoryId);
+      }
+    }
+  }
+
+  for (const item of detection.unassignedItems.items) {
+    const orgAssign = unassignedOrgIds.get(item.id);
+    if (!orgAssign) continue;
+    const label = orgAssign.label || 'Organisasi · Operasional';
+    addToOrg(`org-unassigned-${item.id}`, label, item, orgAssign.opexCategoryId);
+  }
+
+  return Array.from(groupMap.values()).filter(g => g.items.length > 0);
+}
+
 export function allUnknownsResolved(
   detection: ProjectDetectionResult,
   resolvedUnknowns: Map<string, ProjectResolution>,
@@ -383,9 +444,10 @@ export function allUnknownsResolved(
 export function allUnassignedResolved(
   detection: ProjectDetectionResult,
   unassignedAssignments: Map<string, string>,
+  unassignedOrgIds: Map<string, { opexCategoryId?: string; label?: string }>,
   ignoredIds: Set<string>,
 ): boolean {
   return detection.unassignedItems.items.every(
-    item => unassignedAssignments.has(item.id) || ignoredIds.has(item.id),
+    item => unassignedAssignments.has(item.id) || unassignedOrgIds.has(item.id) || ignoredIds.has(item.id),
   );
 }

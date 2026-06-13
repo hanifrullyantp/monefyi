@@ -436,8 +436,11 @@ export default function CommandModal() {
     setStage('processing');
 
     const finalParams = batchMode && form.intent === 'record_cost_batch'
-      ? (batchResult?.groups?.length
-        ? { groups: batchResult.groups }
+      ? (batchResult?.groups?.length || batchResult?.orgGroups?.length
+        ? {
+          groups: batchResult?.groups || [],
+          orgGroups: batchResult?.orgGroups || [],
+        }
         : { items: batchLines })
       : formToParams();
     const parsed = {

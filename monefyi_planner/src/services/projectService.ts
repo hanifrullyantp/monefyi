@@ -2,6 +2,7 @@ import { fromProjectInsert, fromProjectUpdate, toProject, type DbProject } from 
 import { supabase } from '../lib/supabase';
 import type { Project } from '../store/appStore';
 import { assertCanCreateProject } from './pricingPlanService';
+import { computeFinanceReportMonth } from '../lib/financeReportMonth';
 
 export async function loadProjects(orgId: string, currency = 'IDR'): Promise<Project[]> {
   const { data, error } = await supabase
@@ -141,17 +142,29 @@ export async function createProject(
 
 export async function updateProject(projectId: string, data: Partial<Project>, currency = 'IDR') {
   const payload = fromProjectUpdate(data);
+
+  const { data: existingRow } = await supabase
+    .from('planner_projects')
+    .select('settings, created_at, planned_end, finance_report_month_manual')
+    .eq('id', projectId)
+    .maybeSingle();
+
   if (data.type !== undefined) {
-    const { data: existing } = await supabase
-      .from('planner_projects')
-      .select('settings')
-      .eq('id', projectId)
-      .maybeSingle();
     payload.settings = {
-      ...((existing?.settings as Record<string, unknown>) || {}),
+      ...((existingRow?.settings as Record<string, unknown>) || {}),
       type: data.type,
     };
   }
+
+  const manual = data.finance_report_month_manual ?? existingRow?.finance_report_month_manual;
+  if (!manual && (data.end_date !== undefined || data.status !== undefined) && existingRow?.created_at) {
+    const endDate = data.end_date ?? existingRow.planned_end;
+    payload.finance_report_month = computeFinanceReportMonth(
+      existingRow.created_at,
+      endDate,
+    );
+  }
+
   const { data: row, error } = await supabase
     .from('planner_projects')
     .update(payload)
