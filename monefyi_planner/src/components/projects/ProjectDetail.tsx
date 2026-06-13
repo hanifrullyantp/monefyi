@@ -7,7 +7,7 @@ import {
 import { useAppStore, Project } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
 import { archiveProject, updateProject as updateProjectApi } from '../../services/projectService';
-import { loadRapItems, rapSummary, rapActualsFromCosts, createRapItem, deleteRapItem, updateRapItem } from '../../services/rapService';
+import { loadRapItems, rapSummary, rapActualsFromCosts, createRapItem, removeRapItemWithCleanup, updateRapItem } from '../../services/rapService';
 import { findRapItemDuplicate } from '../../lib/rapDuplicateDetect';
 import { loadWorkItems, createWorkItem, deleteWorkItem, updateWorkItem, updateProjectProgressFromWorkItems } from '../../services/workItemService';
 import { loadCostRealizations, deleteCostRealization, aggregateCostByRapItem, repairImportCosts, setRapItemRealization, type RapActualAgg } from '../../services/costService';
@@ -21,6 +21,7 @@ import ProjectEditModal from './ProjectEditModal';
 import ProjectJsonPanel from './ProjectJsonPanel';
 import ProjectIncomePanel from './ProjectIncomePanel';
 import ProjectTransferPanel from './ProjectTransferPanel';
+import ProjectReceivablePanel from './ProjectReceivablePanel';
 import RapItemList from './RapItemList';
 import RapChecklistView from './RapChecklistView';
 import RapEditableTable from './RapEditableTable';
@@ -651,6 +652,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                           { id: 'biaya', label: 'Biaya' },
                           { id: 'uangmasuk', label: 'Uang Masuk' },
                           { id: 'hutang', label: 'Hutang Proyek' },
+                          { id: 'piutang', label: 'Piutang' },
                           { id: 'progres', label: 'Progres' },
                         ].map(t => (
                           <button key={t.id} type="button" onClick={() => setActiveSubTab(t.id)} className={`px-4 py-1.5 rounded-lg text-xs font-bold ${activeSubTab === t.id ? 'bg-emerald-600 text-white' : 'bg-slate-200'}`}>{t.label}</button>
@@ -796,7 +798,16 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                         canManage={canManage}
                         onUpdated={() => { reload(); refreshData(); }}
                       />
-                    ) : (
+                    ) : activeSubTab === 'piutang' && tenant?.id && user?.id ? (
+                      <ProjectReceivablePanel
+                        projectId={project.id}
+                        projectName={project.name}
+                        orgId={tenant.id}
+                        userId={user.id}
+                        canManage={canManage}
+                        onUpdated={() => { reload(); refreshData(); }}
+                      />
+                    ) : activeSubTab === 'progres' ? (
                       <>
                         {canManage && workItems.length > 0 && (
                           <div className="bg-white rounded-2xl border p-4 space-y-3">
@@ -881,7 +892,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                           </div>
                         ))}
                       </>
-                    )}
+                    ) : null}
                   </motion.div>
                 )}
 
@@ -972,7 +983,16 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
         <ConfirmDialog title="Hapus biaya?" message="Entri biaya ini akan dihapus dari proyek." danger confirmLabel="Hapus" onConfirm={() => handleDeleteCost(confirmCostId)} onCancel={() => setConfirmCostId(null)} />
       )}
       {confirmRapId && (
-        <ConfirmDialog title="Hapus item RAP?" message="Item RAP akan dihapus dari perencanaan." danger confirmLabel="Hapus" onConfirm={async () => { await deleteRapItem(confirmRapId); setConfirmRapId(null); await reload(); showToast('RAP dihapus', 'success'); }} onCancel={() => setConfirmRapId(null)} />
+        <ConfirmDialog title="Hapus item RAP?" message="Item RAP dan realisasi biaya terkait akan dihapus." danger confirmLabel="Hapus" onConfirm={async () => {
+          if (!confirmRapId) return;
+          const { budget, spent } = await removeRapItemWithCleanup(project.id, confirmRapId);
+          setConfirmRapId(null);
+          setProject(p => ({ ...p, total_budget_planned: budget, spent_amount: spent }));
+          updateProject(project.id, { total_budget_planned: budget, spent_amount: spent });
+          await reload();
+          await refreshData();
+          showToast('RAP dihapus', 'success');
+        }} onCancel={() => setConfirmRapId(null)} />
       )}
       {realizationDialog && user?.id && (
         <RapRealizationDialog

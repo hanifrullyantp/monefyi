@@ -5,7 +5,7 @@ import EditableTable from '../table/EditableTable';
 import { buildRapColumnDefs, RAP_COLUMN_FIELDS } from './rapColumnDefs';
 import { buildRapTableRows, recomputeRapRow, type RapTableRow } from '../../utils/rapTableRows';
 import type { RapItem } from '../../services/rapService';
-import { createRapItem, deleteRapItem } from '../../services/rapService';
+import { createRapItem, removeRapItemWithCleanup } from '../../services/rapService';
 import { warnRapDuplicate } from '../../services/rapTableService';
 import { saveRapCellChange, type RapCellField } from '../../services/rapTableService';
 import type { RapActualAgg } from '../../services/costService';
@@ -192,7 +192,7 @@ export default function RapEditableTable({
     if (!window.confirm(`Hapus ${selected.length} item RAP?`)) return;
     try {
       for (const row of selected) {
-        await deleteRapItem(row.id);
+        await removeRapItemWithCleanup(projectId, row.id);
       }
       await onRefresh();
       showToast(`${selected.length} item dihapus`, 'success');

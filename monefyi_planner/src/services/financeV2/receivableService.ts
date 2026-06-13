@@ -37,6 +37,18 @@ export async function loadReceivables(orgId: string): Promise<Receivable[]> {
   return (data || []).map(mapReceivable);
 }
 
+export async function loadReceivablesByProject(orgId: string, projectId: string): Promise<Receivable[]> {
+  const { data, error } = await supabase
+    .from('planner_receivables')
+    .select('*')
+    .eq('org_id', orgId)
+    .eq('debtor_project_id', projectId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data || []).map(mapReceivable);
+}
+
 export async function createReceivable(input: {
   orgId: string;
   debtorType: DebtorType;

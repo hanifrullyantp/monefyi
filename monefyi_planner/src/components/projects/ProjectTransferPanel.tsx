@@ -93,6 +93,17 @@ export default function ProjectTransferPanel({
     }));
   }, [summary, projectNameMap]);
 
+  const selectRepaymentTarget = (key: string) => {
+    const target = owedToOptions.find(o => o.key === key);
+    setForm(f => ({
+      ...f,
+      counterpartyKey: key,
+      amount: target ? String(target.amount) : '',
+    }));
+  };
+
+  const selectedDebt = owedToOptions.find(o => o.key === form.counterpartyKey);
+
   const handleSubmit = async () => {
     const amount = Number(form.amount);
     if (!amount || amount <= 0) {
@@ -148,6 +159,10 @@ export default function ProjectTransferPanel({
           const target = owedToOptions.find(o => o.key === form.counterpartyKey);
           if (!target) {
             showToast('Pilih hutang yang akan dilunasi', 'error');
+            return;
+          }
+          if (amount > target.amount + 0.01) {
+            showToast(`Nominal melebihi sisa hutang (${formatRupiah(target.amount)})`, 'error');
             return;
           }
           if (target.sourceType === 'project' && target.projectId) {
@@ -243,7 +258,7 @@ export default function ProjectTransferPanel({
             <div className="bg-rose-50 border border-rose-200 rounded-xl p-3">
               <div className="text-xs font-bold text-rose-700 mb-2">Hutang proyek ini</div>
               {summary!.owedTo.map(d => (
-                <div key={d.key} className="flex justify-between text-sm py-1 gap-2">
+                <div key={d.key} className="flex justify-between items-center text-sm py-1 gap-2">
                   <span className="min-w-0 truncate">
                     {d.sourceType === 'external' && (
                       <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded mr-1">Eksternal</span>
@@ -252,7 +267,21 @@ export default function ProjectTransferPanel({
                       ? (projectNameMap[d.projectId!] || d.projectId?.slice(0, 8))
                       : d.label}
                   </span>
-                  <span className="font-bold text-rose-700 shrink-0">{formatRupiah(d.amount)}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="font-bold text-rose-700">{formatRupiah(d.amount)}</span>
+                    {canManage && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMode('repayment');
+                          selectRepaymentTarget(d.key);
+                        }}
+                        className="text-[10px] font-bold text-rose-700 bg-white border border-rose-200 px-2 py-0.5 rounded-lg hover:bg-rose-100"
+                      >
+                        Bayar
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -280,7 +309,12 @@ export default function ProjectTransferPanel({
               <button
                 key={t}
                 type="button"
-                onClick={() => setMode(t)}
+                onClick={() => {
+                  setMode(t);
+                  if (t === 'repayment' && owedToOptions.length === 1) {
+                    selectRepaymentTarget(owedToOptions[0].key);
+                  }
+                }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold ${mode === t ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'}`}
               >
                 {t === 'loan' ? 'Catat Pinjaman Masuk' : 'Bayar Hutang'}
@@ -333,18 +367,25 @@ export default function ProjectTransferPanel({
           ) : (
             <>
               {owedToOptions.length > 0 ? (
-                <select
-                  value={form.counterpartyKey}
-                  onChange={e => setForm(f => ({ ...f, counterpartyKey: e.target.value }))}
-                  className="w-full border rounded-lg px-3 py-2 text-sm"
-                >
-                  <option value="">Pilih hutang yang dilunasi *</option>
-                  {owedToOptions.map(o => (
-                    <option key={o.key} value={o.key}>
-                      {o.label} — sisa {formatRupiah(o.amount)}
-                    </option>
-                  ))}
-                </select>
+                <>
+                  <select
+                    value={form.counterpartyKey}
+                    onChange={e => selectRepaymentTarget(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value="">Pilih hutang yang dilunasi *</option>
+                    {owedToOptions.map(o => (
+                      <option key={o.key} value={o.key}>
+                        {o.label} — sisa {formatRupiah(o.amount)}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedDebt && (
+                    <p className="text-xs text-slate-500">
+                      Sisa hutang: <strong>{formatRupiah(selectedDebt.amount)}</strong> — nominal di bawah default lunas penuh, bisa diubah untuk cicilan.
+                    </p>
+                  )}
+                </>
               ) : (
                 <>
                   <p className="text-xs text-slate-500">Belum ada hutang tercatat. Lunasi ke pihak eksternal:</p>
@@ -365,7 +406,13 @@ export default function ProjectTransferPanel({
 
           <div className="grid grid-cols-2 gap-2">
             <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className="border rounded-lg px-2 py-1.5 text-sm" />
-            <input type="number" placeholder="Nominal *" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} className="border rounded-lg px-2 py-1.5 text-sm" />
+            <input
+              type="number"
+              placeholder={mode === 'repayment' && selectedDebt ? `Nominal (max ${formatRupiah(selectedDebt.amount)})` : 'Nominal *'}
+              value={form.amount}
+              onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
+              className="border rounded-lg px-2 py-1.5 text-sm"
+            />
           </div>
           <input placeholder="Keterangan (opsional)" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="w-full border rounded-lg px-2 py-1.5 text-sm" />
           <button type="button" onClick={handleSubmit} className="w-full py-2 bg-emerald-600 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1">

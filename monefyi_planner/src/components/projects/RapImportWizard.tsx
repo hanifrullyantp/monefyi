@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, FileSpreadsheet, Loader2, AlertTriangle } from 'lucide-react';
 import { parseRapWorkbook, downloadRapTemplate, previewImportTotals, resolveImportCost, type ParsedRapRow } from '../../services/rapExcelService';
 import type { RapItem } from '../../services/rapService';
-import { createRapItem, deleteAllRapItems } from '../../services/rapService';
+import { createRapItem, deleteAllRapItems, syncProjectBudgetFromRap } from '../../services/rapService';
 import { createCostRealization, deleteAllCosts } from '../../services/costService';
 import { findRapImportDuplicates } from '../../lib/rapDuplicateDetect';
 import { showToast } from '../../store/uiStore';
@@ -111,6 +111,7 @@ export default function RapImportWizard({
         }
         imported += 1;
       }
+      await syncProjectBudgetFromRap(projectId);
       showToast(`${imported} item RAP diimpor`, 'success');
       onImported();
       onClose();

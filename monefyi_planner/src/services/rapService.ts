@@ -31,6 +31,40 @@ export async function deleteRapItem(id: string) {
   if (error) throw new Error(error.message);
 }
 
+/** Sinkronkan total_budget proyek dari jumlah RAP yang tersisa. */
+export async function syncProjectBudgetFromRap(projectId: string): Promise<number> {
+  const { data: items, error } = await supabase
+    .from('planner_rap_items')
+    .select('quantity, unit_price')
+    .eq('project_id', projectId);
+  if (error) throw new Error(error.message);
+
+  const total = (items || []).reduce(
+    (s, i) => s + (Number(i.quantity) || 0) * (Number(i.unit_price) || 0),
+    0,
+  );
+  const { error: updErr } = await supabase
+    .from('planner_projects')
+    .update({ total_budget: total, updated_at: new Date().toISOString() })
+    .eq('id', projectId);
+  if (updErr) throw new Error(updErr.message);
+  return total;
+}
+
+/** Hapus item RAP beserta realisasi biaya terkait, lalu perbarui spent & budget. */
+export async function removeRapItemWithCleanup(
+  projectId: string,
+  rapItemId: string,
+): Promise<{ budget: number; spent: number }> {
+  const { deleteCostsByRapItemId, recalculateProjectSpent } = await import('./costService');
+  await deleteCostsByRapItemId(projectId, rapItemId);
+  const { error } = await supabase.from('planner_rap_items').delete().eq('id', rapItemId);
+  if (error) throw new Error(error.message);
+  const spent = await recalculateProjectSpent(projectId);
+  const budget = await syncProjectBudgetFromRap(projectId);
+  return { budget, spent };
+}
+
 export async function deleteAllRapItems(projectId: string) {
   const { error } = await supabase.from('planner_rap_items').delete().eq('project_id', projectId);
   if (error) throw new Error(error.message);
