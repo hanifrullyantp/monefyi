@@ -64,3 +64,19 @@ export function sortProjects(list: Project[], sort: ProjectSort): Project[] {
       return copy.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
   }
 }
+
+/** Urutan tampilan list: Aktif → Planning → Selesai */
+export const PROJECT_STATUS_SECTIONS = [
+  { id: 'active', label: 'Aktif', statuses: ['active', 'on_hold'] as Project['status'][] },
+  { id: 'planning', label: 'Planning', statuses: ['planning', 'draft'] as Project['status'][] },
+  { id: 'completed', label: 'Selesai', statuses: ['completed', 'archived'] as Project['status'][] },
+] as const;
+
+export function groupProjectsByStatusSection(projects: Project[]) {
+  return PROJECT_STATUS_SECTIONS
+    .map(section => ({
+      section,
+      projects: projects.filter(p => section.statuses.includes(p.status)),
+    }))
+    .filter(g => g.projects.length > 0);
+}

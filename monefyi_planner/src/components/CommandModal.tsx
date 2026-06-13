@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -142,6 +142,15 @@ export default function CommandModal() {
     projects.find(p => p.id === selectedProjectId) ||
     projects.find(p => p.status === 'active') ||
     projects[0];
+
+  const batchDetectionContext = useMemo(
+    () => ({
+      orgId: tenant?.id ?? '',
+      currentProjectId: activeProject?.id,
+      recentProjectId,
+    }),
+    [tenant?.id, activeProject?.id, recentProjectId],
+  );
 
   useEffect(() => {
     if (user?.id) {
@@ -647,7 +656,7 @@ export default function CommandModal() {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5">
+        <div className="flex-1 overflow-y-auto p-5 min-h-0">
           <AnimatePresence mode="wait">
             {/* IDLE / INPUT */}
             {stage === 'idle' && (
@@ -947,11 +956,7 @@ export default function CommandModal() {
                     initialItems={batchLines}
                     projects={projects}
                     aliases={aliasEntities}
-                    context={{
-                      orgId: tenant.id,
-                      currentProjectId: activeProject?.id,
-                      recentProjectId,
-                    }}
+                    context={batchDetectionContext}
                     orgId={tenant.id}
                     userId={user.id}
                     onItemsChange={lines => {
@@ -964,32 +969,6 @@ export default function CommandModal() {
                   />
                 )}
 
-                {edited && (
-                  <div className="flex items-center gap-2 px-3 py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl mb-4 text-xs text-emerald-700">
-                    <Brain className="w-4 h-4 shrink-0" />
-                    Koreksi ini akan dipelajari agar perintah serupa lebih akurat untuk tim.
-                  </div>
-                )}
-
-                <div className="flex gap-2 mb-3">
-                  <button onClick={handleFixWithAI} className="flex-1 py-2.5 border border-emerald-200 bg-emerald-50 rounded-xl text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors flex items-center justify-center gap-1.5">
-                    <Wand2 className="w-3.5 h-3.5" /> Perbaiki dgn AI
-                  </button>
-                </div>
-
-                <div className="flex gap-3">
-                  <button onClick={handleReset} className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
-                    <X className="w-4 h-4" /> Batal
-                  </button>
-                  <button
-                    onClick={handleExecute}
-                    disabled={batchMode && !batchCanSave}
-                    className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-lg shadow-emerald-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    {batchMode ? `Catat ${batchLines.length} biaya` : 'Benar, Catat!'}
-                  </button>
-                </div>
               </motion.div>
             )}
 
@@ -1038,7 +1017,36 @@ export default function CommandModal() {
           </AnimatePresence>
         </div>
 
-        <div className="px-5 py-3 border-t border-slate-100 text-center">
+        {stage === 'confirm' && (
+          <div className="shrink-0 border-t border-slate-100 bg-white px-5 py-3 space-y-3">
+            {edited && (
+              <div className="flex items-center gap-2 px-3 py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700">
+                <Brain className="w-4 h-4 shrink-0" />
+                Koreksi ini akan dipelajari agar perintah serupa lebih akurat untuk tim.
+              </div>
+            )}
+            <div className="flex gap-2">
+              <button onClick={handleFixWithAI} className="flex-1 py-2.5 border border-emerald-200 bg-emerald-50 rounded-xl text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors flex items-center justify-center gap-1.5">
+                <Wand2 className="w-3.5 h-3.5" /> Perbaiki dgn AI
+              </button>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={handleReset} className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
+                <X className="w-4 h-4" /> Batal
+              </button>
+              <button
+                onClick={handleExecute}
+                disabled={batchMode && !batchCanSave}
+                className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-lg shadow-emerald-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <CheckCircle className="w-4 h-4" />
+                {batchMode ? `Catat ${batchLines.length} biaya` : 'Benar, Catat!'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="px-5 py-3 border-t border-slate-100 text-center shrink-0">
           <span className="text-xs text-slate-400">Powered by <span className="font-semibold text-emerald-500">Monefyi AI</span> · Memori → Aturan → Fuzzy → AI</span>
         </div>
       </motion.div>

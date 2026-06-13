@@ -14,6 +14,7 @@ import CalendarView from '../components/projects/views/CalendarView';
 import { useUiStore } from '../store/uiStore';
 import {
   formatRupiah, HEALTH_CONFIG, STATUS_LABEL, sortProjects, type ProjectSort,
+  groupProjectsByStatusSection,
 } from '../utils/projectUi';
 
 type ProjectView = 'list' | 'kanban' | 'timeline' | 'calendar';
@@ -214,12 +215,12 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
 
   const filters = [
     { id: 'all', label: 'Semua', count: projects.length },
-    { id: 'active', label: 'Aktif', count: projects.filter(p => p.status === 'active').length },
-    { id: 'planning', label: 'Planning', count: projects.filter(p => p.status === 'planning').length },
+    { id: 'active', label: 'Aktif', count: projects.filter(p => p.status === 'active' || p.status === 'on_hold').length },
+    { id: 'planning', label: 'Planning', count: projects.filter(p => p.status === 'planning' || p.status === 'draft').length },
     { id: 'on_track', label: 'On Track', count: projects.filter(p => p.health_status === 'on_track').length },
     { id: 'at_risk', label: 'At Risk', count: projects.filter(p => p.health_status === 'at_risk').length },
     { id: 'behind', label: 'Behind', count: projects.filter(p => p.health_status === 'behind').length },
-    { id: 'completed', label: 'Selesai', count: projects.filter(p => p.status === 'completed').length },
+    { id: 'completed', label: 'Selesai', count: projects.filter(p => p.status === 'completed' || p.status === 'archived').length },
   ];
 
   const filtered = useMemo(() => {
@@ -228,7 +229,10 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
       const matchSearch = !q || p.name.toLowerCase().includes(q) || p.client_name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q);
       let matchFilter = true;
       if (filter === 'active' || filter === 'planning' || filter === 'completed') {
-        matchFilter = p.status === filter;
+        matchFilter = p.status === filter
+          || (filter === 'active' && p.status === 'on_hold')
+          || (filter === 'planning' && p.status === 'draft')
+          || (filter === 'completed' && p.status === 'archived');
       } else if (filter !== 'all') {
         matchFilter = p.health_status === filter;
       }
@@ -236,6 +240,74 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
     });
     return sortProjects(list, sort);
   }, [projects, search, filter, sort]);
+
+  const groupedByStatus = useMemo(
+    () => (filter === 'all' ? groupProjectsByStatusSection(filtered) : []),
+    [filtered, filter],
+  );
+
+  const renderProjectCard = (proj: Project, i: number) => {
+    const budgetPct = proj.total_budget_planned ? Math.min(100, (proj.spent_amount / proj.total_budget_planned) * 100) : 0;
+    const health = HEALTH_CONFIG[proj.health_status] || HEALTH_CONFIG.on_track;
+
+    if (listLayout === 'compact') {
+      return (
+        <motion.div key={proj.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={() => openProject(proj)} className="bg-white border rounded-2xl p-4 flex items-center gap-4 hover:shadow-lg cursor-pointer group">
+          <div className={`w-1.5 h-14 rounded-full ${health.dot}`} />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-mono text-slate-400">{proj.code}</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${health.bg} ${health.color}`}>{health.label}</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{STATUS_LABEL[proj.status]}</span>
+            </div>
+            <h3 className="font-black text-slate-800 truncate group-hover:text-emerald-600">{proj.name}</h3>
+            <div className="text-xs text-slate-500">{proj.client_name || '—'}</div>
+          </div>
+          <div className="text-right hidden sm:block">
+            <div className="text-lg font-black">{proj.progress_percentage.toFixed(0)}%</div>
+            <div className="text-[10px] text-slate-400">{formatRupiah(proj.spent_amount)}</div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-emerald-500" />
+        </motion.div>
+      );
+    }
+
+    return (
+      <motion.div key={proj.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} onClick={() => openProject(proj)} className="bg-white border rounded-3xl p-5 hover:shadow-xl hover:border-emerald-100 cursor-pointer group transition-all">
+        <div className="flex justify-between gap-3 mb-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <span className="text-[10px] font-mono text-slate-400">{proj.code}</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${health.bg} ${health.color}`}>{health.label}</span>
+            </div>
+            <h3 className="font-black text-slate-900 truncate group-hover:text-emerald-600">{proj.name}</h3>
+            <p className="text-xs text-slate-400 flex items-center gap-1 mt-1 truncate">
+              <MapPin className="w-3 h-3 shrink-0" /> {proj.location || proj.client_name || '—'}
+            </p>
+          </div>
+          <FolderOpen className="w-8 h-8 text-emerald-300 group-hover:text-emerald-500 shrink-0" />
+        </div>
+        <div className="space-y-3">
+          <div>
+            <div className="flex justify-between text-xs mb-1"><span className="text-slate-500">Progress</span><span className="font-bold">{proj.progress_percentage.toFixed(0)}%</span></div>
+            <div className="h-2 bg-slate-100 rounded-full overflow-hidden"><div className={`h-full ${health.dot} rounded-full`} style={{ width: `${Math.min(proj.progress_percentage, 100)}%` }} /></div>
+          </div>
+          <div>
+            <div className="flex justify-between text-xs mb-1"><span className="text-slate-500">Budget terpakai</span><span className="font-bold">{Math.round(budgetPct)}%</span></div>
+            <div className="h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-emerald-500 rounded-full" style={{ width: `${budgetPct}%` }} /></div>
+            <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+              <span>{formatRupiah(proj.spent_amount)}</span>
+              <span>{formatRupiah(proj.total_budget_planned)}</span>
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 pt-3 border-t flex justify-between items-center">
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold">{STATUS_LABEL[proj.status]}</span>
+          <span className="text-xs text-emerald-600 font-bold flex items-center gap-1">Kelola <ChevronRight className="w-3 h-3" /></span>
+        </div>
+      </motion.div>
+    );
+  };
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
@@ -330,70 +402,27 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
       )}
 
       {projectView === 'list' && (
-      <div className={listLayout === 'card' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5' : 'space-y-3'}>
-        {filtered.map((proj, i) => {
-          const budgetPct = proj.total_budget_planned ? Math.min(100, (proj.spent_amount / proj.total_budget_planned) * 100) : 0;
-          const health = HEALTH_CONFIG[proj.health_status] || HEALTH_CONFIG.on_track;
-
-          if (listLayout === 'compact') {
-            return (
-              <motion.div key={proj.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={() => openProject(proj)} className="bg-white border rounded-2xl p-4 flex items-center gap-4 hover:shadow-lg cursor-pointer group">
-                <div className={`w-1.5 h-14 rounded-full ${health.dot}`} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[10px] font-mono text-slate-400">{proj.code}</span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${health.bg} ${health.color}`}>{health.label}</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{STATUS_LABEL[proj.status]}</span>
-                  </div>
-                  <h3 className="font-black text-slate-800 truncate group-hover:text-emerald-600">{proj.name}</h3>
-                  <div className="text-xs text-slate-500">{proj.client_name || '—'}</div>
+        filter === 'all' && groupedByStatus.length > 0 ? (
+          <div className="space-y-8">
+            {groupedByStatus.map(({ section, projects: sectionProjects }) => (
+              <section key={section.id}>
+                <div className="flex items-center gap-3 mb-4">
+                  <h2 className="text-lg font-black text-slate-900">{section.label}</h2>
+                  <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
+                    {sectionProjects.length}
+                  </span>
                 </div>
-                <div className="text-right hidden sm:block">
-                  <div className="text-lg font-black">{proj.progress_percentage.toFixed(0)}%</div>
-                  <div className="text-[10px] text-slate-400">{formatRupiah(proj.spent_amount)}</div>
+                <div className={listLayout === 'card' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5' : 'space-y-3'}>
+                  {sectionProjects.map((proj, i) => renderProjectCard(proj, i))}
                 </div>
-                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-emerald-500" />
-              </motion.div>
-            );
-          }
-
-          return (
-            <motion.div key={proj.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} onClick={() => openProject(proj)} className="bg-white border rounded-3xl p-5 hover:shadow-xl hover:border-emerald-100 cursor-pointer group transition-all">
-              <div className="flex justify-between gap-3 mb-3">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="text-[10px] font-mono text-slate-400">{proj.code}</span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${health.bg} ${health.color}`}>{health.label}</span>
-                  </div>
-                  <h3 className="font-black text-slate-900 truncate group-hover:text-emerald-600">{proj.name}</h3>
-                  <p className="text-xs text-slate-400 flex items-center gap-1 mt-1 truncate">
-                    <MapPin className="w-3 h-3 shrink-0" /> {proj.location || proj.client_name || '—'}
-                  </p>
-                </div>
-                <FolderOpen className="w-8 h-8 text-emerald-300 group-hover:text-emerald-500 shrink-0" />
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <div className="flex justify-between text-xs mb-1"><span className="text-slate-500">Progress</span><span className="font-bold">{proj.progress_percentage.toFixed(0)}%</span></div>
-                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden"><div className={`h-full ${health.dot} rounded-full`} style={{ width: `${Math.min(proj.progress_percentage, 100)}%` }} /></div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-xs mb-1"><span className="text-slate-500">Budget terpakai</span><span className="font-bold">{Math.round(budgetPct)}%</span></div>
-                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-emerald-500 rounded-full" style={{ width: `${budgetPct}%` }} /></div>
-                  <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-                    <span>{formatRupiah(proj.spent_amount)}</span>
-                    <span>{formatRupiah(proj.total_budget_planned)}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="mt-4 pt-3 border-t flex justify-between items-center">
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold">{STATUS_LABEL[proj.status]}</span>
-                <span className="text-xs text-emerald-600 font-bold flex items-center gap-1">Kelola <ChevronRight className="w-3 h-3" /></span>
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
+              </section>
+            ))}
+          </div>
+        ) : (
+          <div className={listLayout === 'card' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5' : 'space-y-3'}>
+            {filtered.map((proj, i) => renderProjectCard(proj, i))}
+          </div>
+        )
       )}
 
       {projectView === 'list' && projects.length === 0 && (

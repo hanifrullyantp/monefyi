@@ -75,12 +75,17 @@ export default function BatchConfirmationView({
       setUnassignedOrgIds(new Map());
       setIgnoredIds(new Set());
     }
-  }, [context, projects, aliases]);
+  }, [context.orgId, context.currentProjectId, context.recentProjectId, projects, aliases]);
+
+  const initialItemKey = useMemo(
+    () => initialItems.map(i => i.id).join('|'),
+    [initialItems],
+  );
 
   useEffect(() => {
     setItems(initialItems);
     runDetection(initialItems);
-  }, [initialItems, runDetection]);
+  }, [initialItemKey]); // eslint-disable-line react-hooks/exhaustive-deps -- re-detect only when batch lines change structurally
 
   const updateItem = (itemId: string, patch: Partial<ParsedCostLine>) => {
     setItems(prev => {
@@ -234,9 +239,9 @@ export default function BatchConfirmationView({
   if (!detection) return null;
 
   const previewTotal = activeItems.reduce((s, i) => s + i.total, 0);
-  const unresolvedUnknowns = detection.unknownProjects.filter(
+  const unresolvedUnknownCount = detection.unknownProjects.filter(
     ug => !resolvedUnknowns.has(ug.mentionedName.toLowerCase()),
-  );
+  ).length;
 
   return (
     <div className="space-y-4">
@@ -244,26 +249,39 @@ export default function BatchConfirmationView({
         Preview {activeItems.length} biaya · Total {formatRupiah(previewTotal)}
       </div>
 
-      {unresolvedUnknowns.length > 0 && (
+      {detection.unknownProjects.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm font-bold text-amber-800">
             <AlertTriangle className="w-4 h-4" />
             Project Tidak Dikenal — Perlu Konfirmasi
-            <span className="text-xs font-semibold px-2 py-0.5 bg-amber-100 rounded-full">
-              {unresolvedUnknowns.length} belum selesai
-            </span>
+            {unresolvedUnknownCount > 0 && (
+              <span className="text-xs font-semibold px-2 py-0.5 bg-amber-100 rounded-full">
+                {unresolvedUnknownCount} belum selesai
+              </span>
+            )}
           </div>
-          {unresolvedUnknowns.map(ug => (
-            <UnknownProjectCard
-              key={ug.mentionedName}
-              unknownProject={ug}
-              projects={projects}
-              orgId={orgId}
-              userId={userId}
-              onResolve={res => handleResolveUnknown(ug.mentionedName, res)}
-              onProjectCreated={handleProjectCreated}
-            />
-          ))}
+          {detection.unknownProjects.map(ug => {
+            const resolution = resolvedUnknowns.get(ug.mentionedName.toLowerCase());
+            return (
+              <UnknownProjectCard
+                key={ug.mentionedName}
+                unknownProject={ug}
+                resolution={resolution}
+                projects={projects}
+                orgId={orgId}
+                userId={userId}
+                onResolve={res => handleResolveUnknown(ug.mentionedName, res)}
+                onClearResolution={() => {
+                  setResolvedUnknowns(prev => {
+                    const next = new Map(prev);
+                    next.delete(ug.mentionedName.toLowerCase());
+                    return next;
+                  });
+                }}
+                onProjectCreated={handleProjectCreated}
+              />
+            );
+          })}
         </div>
       )}
 
