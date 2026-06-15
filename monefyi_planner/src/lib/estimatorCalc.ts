@@ -25,10 +25,6 @@ export function marginFromSelling(hppPerUnit: number, sellingPerUnit: number): n
 /** HPP estimasi dari harga jual + margin% (gross margin: laba ÷ jual). */
 export function hppFromSellingAndMargin(sellingPerUnit: number, marginPct: number): number {
   const m = Math.min(100, Math.max(0, Number(marginPct) || 0));
-  // #region agent log
-  const _hppResult = m >= 100 ? 0 : roundIdr(sellingPerUnit * (1 - m / 100));
-  fetch('http://127.0.0.1:7456/ingest/64ec47ef-1a63-485e-909c-4ab70260afe3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c69df5'},body:JSON.stringify({sessionId:'c69df5',location:'estimatorCalc.ts:hppFromSellingAndMargin',message:'hpp calc',data:{formula:'gross-v2',sellingPerUnit,marginPct:m,marginRaw:marginPct,hppResult:_hppResult},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
-  // #endregion
   if (m >= 100) return 0;
   return roundIdr(sellingPerUnit * (1 - m / 100));
 }
@@ -78,12 +74,6 @@ export function calcItemRow(
   const totalHpp = roundIdr(qty * hpp);
   const totalSelling = roundIdr(qty * selling);
 
-  // #region agent log
-  if (editField === 'margin' || editField === 'selling') {
-    fetch('http://127.0.0.1:7456/ingest/64ec47ef-1a63-485e-909c-4ab70260afe3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c69df5'},body:JSON.stringify({sessionId:'c69df5',location:'estimatorCalc.ts:calcItemRow',message:'row calc',data:{editField,marginIn:draft.margin_pct,marginOut:margin,selling,hpp,qty},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
-  }
-  // #endregion
-
   return {
     hpp_per_unit: hpp,
     selling_price_per_unit: selling,
@@ -101,12 +91,6 @@ export function syncEstimationItemPrices(item: EstimationItemDraft): EstimationI
   }
   const expectedHpp = hppFromSellingAndMargin(item.selling_price_per_unit, item.margin_pct);
   const actualHpp = roundIdr(item.hpp_per_unit);
-  const needsSync = expectedHpp !== actualHpp;
-  // #region agent log
-  if (item.margin_pct >= 50 || needsSync) {
-    fetch('http://127.0.0.1:7456/ingest/64ec47ef-1a63-485e-909c-4ab70260afe3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c69df5'},body:JSON.stringify({sessionId:'c69df5',location:'estimatorCalc.ts:syncEstimationItemPrices',message:'sync check',data:{marginPct:item.margin_pct,selling:item.selling_price_per_unit,expectedHpp,actualHpp,needsSync},timestamp:Date.now(),hypothesisId:'H3'})}).catch(()=>{});
-  }
-  // #endregion
   if (expectedHpp === actualHpp) {
     const qty = Math.max(0, Number(item.qty) || 0);
     const totalHpp = roundIdr(qty * item.hpp_per_unit);

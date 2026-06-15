@@ -53,9 +53,6 @@ export default function EstimationItemsTable({
         row.total_profit !== items[i].total_profit,
     );
     if (changed) onChange(synced);
-    // #region agent log
-    fetch('http://127.0.0.1:7456/ingest/64ec47ef-1a63-485e-909c-4ab70260afe3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c69df5'},body:JSON.stringify({sessionId:'c69df5',location:'EstimationItemsTable.tsx:syncEffect',message:'sync effect',data:{itemCount:items.length,changed,firstItem:items[0]?{margin:items[0].margin_pct,selling:items[0].selling_price_per_unit,hpp:items[0].hpp_per_unit}:null,syncedFirst:synced[0]?{margin:synced[0].margin_pct,hpp:synced[0].hpp_per_unit}:null},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
-    // #endregion
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sinkron harga saat items berubah
   }, [items]);
 
@@ -78,11 +75,6 @@ export default function EstimationItemsTable({
     const merged = { ...next[index], ...patch };
     const calc = calcItemRow(merged, editField);
     next[index] = { ...merged, ...calc };
-    // #region agent log
-    if (editField === 'margin' || 'margin_pct' in patch) {
-      fetch('http://127.0.0.1:7456/ingest/64ec47ef-1a63-485e-909c-4ab70260afe3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c69df5'},body:JSON.stringify({sessionId:'c69df5',location:'EstimationItemsTable.tsx:updateItem',message:'margin update',data:{index,editField,patchMargin:patch.margin_pct,mergedMargin:merged.margin_pct,resultHpp:calc.hpp_per_unit,resultSelling:calc.selling_price_per_unit},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
-    }
-    // #endregion
     onChange(next);
   };
 
