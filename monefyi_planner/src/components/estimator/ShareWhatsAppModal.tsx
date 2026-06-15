@@ -18,6 +18,7 @@ interface Props {
   onClose: () => void;
   draft: EstimationFormDraft;
   settings: PdfSettings;
+  projectName?: string | null;
   templateConfig: WhatsAppTemplateConfig;
   onToast: (msg: string, type: 'success' | 'error') => void;
 }
@@ -27,6 +28,7 @@ export default function ShareWhatsAppModal({
   onClose,
   draft,
   settings,
+  projectName,
   templateConfig,
   onToast,
 }: Props) {
@@ -73,7 +75,7 @@ export default function ShareWhatsAppModal({
           showBank: draft.pdf_show_bank,
           showSignature: draft.pdf_show_signature,
         });
-        const filename = quotationPdfFilename(draft);
+        const filename = quotationPdfFilename(draft, projectName);
         const file = new File([blob], filename, { type: 'application/pdf' });
 
         if (typeof navigator !== 'undefined' && navigator.canShare?.({ files: [file] })) {

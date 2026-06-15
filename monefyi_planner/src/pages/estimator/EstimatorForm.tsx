@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ChevronDown, FileText, Loader2, Save, Eye, Settings2, MessageCircle } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
@@ -52,6 +52,11 @@ export default function EstimatorForm() {
   const patch = useCallback((p: Partial<EstimationFormDraft>) => {
     setDraft(prev => (prev ? { ...prev, ...p } : prev));
   }, []);
+
+  const estimationProjectName = useMemo(() => {
+    if (!draft) return '';
+    return (draft.project_id && projects.find(p => p.id === draft.project_id)?.name) || draft.title;
+  }, [draft, projects]);
 
   useEffect(() => {
     if (!tenant?.id) return;
@@ -152,11 +157,16 @@ export default function EstimatorForm() {
     if (!draft || !pdfSettings || !requireSaved()) return;
     setPdfLoading(true);
     try {
-      await downloadQuotationPdf(draft, pdfSettings, {
-        showImages: draft.pdf_show_images,
-        showBank: draft.pdf_show_bank,
-        showSignature: draft.pdf_show_signature,
-      });
+      await downloadQuotationPdf(
+        draft,
+        pdfSettings,
+        {
+          showImages: draft.pdf_show_images,
+          showBank: draft.pdf_show_bank,
+          showSignature: draft.pdf_show_signature,
+        },
+        estimationProjectName,
+      );
       showToast('PDF diunduh', 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal membuat PDF', 'error');
@@ -458,6 +468,7 @@ export default function EstimatorForm() {
         <PdfPreviewModal
           draft={draft}
           settings={pdfSettings}
+          projectName={estimationProjectName}
           onClose={() => setPdfPreviewOpen(false)}
         />
       )}
@@ -467,6 +478,7 @@ export default function EstimatorForm() {
           onClose={() => setWaShareOpen(false)}
           draft={draft}
           settings={pdfSettings}
+          projectName={estimationProjectName}
           templateConfig={waTemplate}
           onToast={(msg, type) => showToast(msg, type)}
         />

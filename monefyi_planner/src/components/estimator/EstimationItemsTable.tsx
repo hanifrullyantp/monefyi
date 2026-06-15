@@ -1,6 +1,6 @@
-import { Fragment, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Plus, Trash2, Sparkles, List } from 'lucide-react';
-import { calcEstimationSummary, calcItemRow, emptyItem, sellingFromHpp, type ItemPriceEdit } from '../../lib/estimatorCalc';
+import { calcEstimationSummary, calcItemRow, emptyItem, sellingFromHpp, syncEstimationItemPricesList, type ItemPriceEdit } from '../../lib/estimatorCalc';
 import { formatRupiahFull } from '../../lib/estimatorFormat';
 import {
   getEstimationItemProductGroup,
@@ -41,6 +41,20 @@ export default function EstimationItemsTable({
   const [smartOpen, setSmartOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const cellRefs = useRef<Map<string, HTMLInputElement | HTMLSelectElement>>(new Map());
+
+  // Perbaiki HPP yang tidak selaras dengan margin (data lama / formula markup).
+  useEffect(() => {
+    const synced = syncEstimationItemPricesList(items);
+    const changed = synced.some(
+      (row, i) =>
+        row.hpp_per_unit !== items[i].hpp_per_unit ||
+        row.total_hpp !== items[i].total_hpp ||
+        row.total_selling !== items[i].total_selling ||
+        row.total_profit !== items[i].total_profit,
+    );
+    if (changed) onChange(synced);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sinkron harga saat items berubah
+  }, [items]);
 
   const activeItems = useMemo(() => items.filter(i => i.name.trim()), [items]);
   const productGroups = useMemo(() => groupEstimationItemsByProduct(items), [items]);
@@ -318,11 +332,14 @@ export default function EstimationItemsTable({
                             ref={registerRef(`${idx}-margin`)}
                             type="number"
                             min={0}
+                            max={100}
                             step="0.1"
                             value={item.margin_pct}
                             onChange={e => updateItem(idx, { margin_pct: Number(e.target.value) }, 'margin')}
+                            onBlur={() => updateItem(idx, { margin_pct: item.margin_pct }, 'margin')}
                             onKeyDown={e => handleKeyDown(e, idx, 'margin', fields)}
                             className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-right tabular-nums focus:border-emerald-400 outline-none"
+                            title="Margin = laba ÷ harga jual (100% = HPP nol)"
                           />
                         </td>
                         <td className={`${tdClass} whitespace-nowrap`}>

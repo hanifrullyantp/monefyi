@@ -22,9 +22,10 @@ export function marginFromSelling(hppPerUnit: number, sellingPerUnit: number): n
   return Math.round(((sellingPerUnit - hppPerUnit) / sellingPerUnit) * 1000) / 10;
 }
 
-/** HPP estimasi dari harga jual + margin% (harga jual ditentukan dulu). */
+/** HPP estimasi dari harga jual + margin% (gross margin: laba ÷ jual). */
 export function hppFromSellingAndMargin(sellingPerUnit: number, marginPct: number): number {
   const m = Math.min(100, Math.max(0, Number(marginPct) || 0));
+  if (m >= 100) return 0;
   return roundIdr(sellingPerUnit * (1 - m / 100));
 }
 
@@ -83,11 +84,32 @@ export function calcItemRow(
   };
 }
 
-/** Pastikan total baris = qty × harga satuan (perbaiki data lama / inkonsisten). */
+/** Sinkronkan HPP/total jika margin & harga jual tidak konsisten (mis. data lama). */
+export function syncEstimationItemPrices(item: EstimationItemDraft): EstimationItemDraft {
+  if (!item.selling_price_per_unit || item.selling_price_per_unit <= 0) {
+    return item;
+  }
+  const expectedHpp = hppFromSellingAndMargin(item.selling_price_per_unit, item.margin_pct);
+  if (expectedHpp === roundIdr(item.hpp_per_unit)) {
+    const qty = Math.max(0, Number(item.qty) || 0);
+    const totalHpp = roundIdr(qty * item.hpp_per_unit);
+    const totalSelling = roundIdr(qty * item.selling_price_per_unit);
+    if (totalHpp === roundIdr(item.total_hpp) && totalSelling === roundIdr(item.total_selling)) {
+      return item;
+    }
+  }
+  return { ...item, ...calcItemRow(item, 'margin') };
+}
+
+export function syncEstimationItemPricesList(items: EstimationItemDraft[]): EstimationItemDraft[] {
+  return items.map(syncEstimationItemPrices);
+}
+
+/** Pastikan harga satuan & total konsisten dengan margin gross. */
 export function normalizeEstimationItem(item: EstimationItemDraft): EstimationItemDraft {
   const base = { ...item };
   if (base.selling_price_per_unit > 0) {
-    return { ...base, ...calcItemRow(base, 'selling') };
+    return syncEstimationItemPrices(base);
   }
   if (base.hpp_per_unit > 0) {
     return { ...base, ...calcItemRow(base, 'margin') };

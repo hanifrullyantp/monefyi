@@ -9,10 +9,11 @@ import { downloadBlob } from '../../lib/pdf/pdfMakeSetup';
 interface Props {
   draft: EstimationFormDraft;
   settings: PdfSettings;
+  projectName?: string | null;
   onClose: () => void;
 }
 
-export default function PdfPreviewModal({ draft, settings, onClose }: Props) {
+export default function PdfPreviewModal({ draft, settings, projectName, onClose }: Props) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -54,7 +55,7 @@ export default function PdfPreviewModal({ draft, settings, onClose }: Props) {
         showBank: draft.pdf_show_bank,
         showSignature: draft.pdf_show_signature,
       });
-      downloadBlob(blob, quotationPdfFilename(draft));
+      downloadBlob(blob, quotationPdfFilename(draft, projectName));
     } catch {
       // ignore
     }
