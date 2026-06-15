@@ -162,6 +162,8 @@ export interface PipelineContext {
   projects: Array<{ name: string; id: string; status?: string }>;
   work_items: Array<{ name: string; id: string; progress?: number }>;
   current_project: string | null;
+  /** Dari perintah sebelumnya: "buat estimasi" / "buat project". */
+  leadTargetHint?: 'estimation' | 'project';
 }
 
 export function createAIFallbackParse(

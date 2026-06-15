@@ -7,7 +7,7 @@ import {
   type IncomeCategory,
   type ProjectIncome,
 } from '../../services/incomeService';
-import { formatRupiah } from '../../utils/projectUi';
+import { formatRupiah, parseMoneyInput } from '../../utils/projectUi';
 import { todayStr } from '../../lib/adapters';
 import { useUndoableAction } from '../../hooks/useUndoableAction';
 import { showToast } from '../../store/uiStore';
@@ -26,7 +26,7 @@ interface Props {
   userId: string;
   budget: number;
   canManage: boolean;
-  onUpdated?: () => void;
+  onUpdated?: () => void | Promise<void>;
 }
 
 export default function ProjectIncomePanel({
@@ -66,8 +66,8 @@ export default function ProjectIncomePanel({
   const remainingBill = Math.max(0, budget - totalReceived);
 
   const handleSubmit = async () => {
-    const amount = Number(form.amount);
-    if (!amount || amount <= 0) {
+    const amount = parseMoneyInput(form.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
       showToast('Nominal harus lebih dari 0', 'error');
       return;
     }
@@ -92,7 +92,7 @@ export default function ProjectIncomePanel({
       setForm({ category: 'dp', date: todayStr(), amount: '', description: '', payment_method: '' });
       setShowForm(false);
       await reload();
-      onUpdated?.();
+      await onUpdated?.();
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal menyimpan', 'error');
     }
@@ -104,7 +104,7 @@ export default function ProjectIncomePanel({
       await deleteProjectIncome(id, projectId);
       showToast('Uang masuk dihapus', 'success');
       await reload();
-      onUpdated?.();
+      await onUpdated?.();
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal hapus', 'error');
     }
@@ -159,7 +159,7 @@ export default function ProjectIncomePanel({
             ))}
           </select>
           <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className="border rounded-lg px-2 py-1.5" />
-          <input type="number" placeholder="Nominal *" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} className="border rounded-lg px-2 py-1.5" />
+          <input type="text" inputMode="numeric" placeholder="Nominal * (6.680.000)" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} className="border rounded-lg px-2 py-1.5" />
           <input placeholder="Keterangan *" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="border rounded-lg px-2 py-1.5 col-span-2" />
           <input placeholder="Metode bayar" value={form.payment_method} onChange={e => setForm(f => ({ ...f, payment_method: e.target.value }))} className="border rounded-lg px-2 py-1.5 col-span-2" />
           <button type="button" onClick={handleSubmit} className="col-span-2 py-2 bg-emerald-600 text-white rounded-lg font-bold text-xs">Simpan</button>

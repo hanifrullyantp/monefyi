@@ -3,6 +3,7 @@ import { Loader2, Plus, RefreshCw, Banknote } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { showToast } from '../../store/uiStore';
 import { formatFinanceRupiah } from '../../lib/financeV2Calc';
+import { parseMoneyInput } from '../../utils/projectUi';
 import { loadKasAccounts } from '../../services/financeV2/kasService';
 import {
   createPayable,
@@ -60,8 +61,8 @@ export default function HutangPage() {
 
   const handleCreate = async () => {
     if (!tenant?.id || !creditorName.trim() || !amount) return;
-    const num = parseFloat(amount);
-    if (num <= 0) return;
+    const num = parseMoneyInput(amount);
+    if (!Number.isFinite(num) || num <= 0) return;
     try {
       await createPayable({
         orgId: tenant.id,
@@ -86,8 +87,8 @@ export default function HutangPage() {
   };
 
   const handlePay = async (pay: Payable) => {
-    const num = parseFloat(payAmount);
-    if (!tenant?.id || !num || num <= 0) return;
+    const num = parseMoneyInput(payAmount);
+    if (!tenant?.id || !Number.isFinite(num) || num <= 0) return;
     try {
       await recordPayablePayment({
         orgId: tenant.id,
@@ -140,7 +141,7 @@ export default function HutangPage() {
               <option value="pajak">Hutang Pajak</option>
               <option value="lain">Hutang Lain</option>
             </select>
-            <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Nominal" className="px-3 py-2 rounded-xl border border-slate-200 text-sm" />
+            <input type="text" inputMode="numeric" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Nominal (6.680.000)" className="px-3 py-2 rounded-xl border border-slate-200 text-sm" />
             <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="px-3 py-2 rounded-xl border border-slate-200 text-sm" />
             <select value={projectId} onChange={e => setProjectId(e.target.value)} className="px-3 py-2 rounded-xl border border-slate-200 text-sm sm:col-span-2">
               <option value="">Tanpa proyek</option>
@@ -184,7 +185,7 @@ export default function HutangPage() {
                 {outstanding > 0 && (
                   payId === pay.id ? (
                     <div className="mt-3 flex flex-wrap gap-2 items-end border-t border-slate-50 pt-3">
-                      <input type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)} placeholder="Nominal bayar" className="px-3 py-2 rounded-xl border border-slate-200 text-sm w-32" />
+                      <input type="text" inputMode="numeric" value={payAmount} onChange={e => setPayAmount(e.target.value)} placeholder="Nominal bayar" className="px-3 py-2 rounded-xl border border-slate-200 text-sm w-32" />
                       <select value={payKasId} onChange={e => setPayKasId(e.target.value)} className="px-3 py-2 rounded-xl border border-slate-200 text-sm">
                         <option value="">Kas default</option>
                         {kasAccounts.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
@@ -194,7 +195,7 @@ export default function HutangPage() {
                     </div>
                   ) : (
                     <div className="mt-3 flex gap-2 border-t border-slate-50 pt-3">
-                      <button type="button" onClick={() => { setPayId(pay.id); setPayAmount(String(outstanding)); }} className="flex items-center gap-1 text-xs font-bold text-rose-700 hover:bg-rose-50 px-2 py-1 rounded-lg">
+                      <button type="button" onClick={() => { setPayId(pay.id); setPayAmount(outstanding.toLocaleString('id-ID')); }} className="flex items-center gap-1 text-xs font-bold text-rose-700 hover:bg-rose-50 px-2 py-1 rounded-lg">
                         <Banknote className="w-3.5 h-3.5" /> Bayar Hutang
                       </button>
                       {pay.paid_amount === 0 && (

@@ -7,6 +7,50 @@ export function formatRupiah(n: number) {
   return `Rp ${n.toLocaleString('id-ID')}`;
 }
 
+/** Parse nominal dari input user — mendukung format ID (6.680.000) dan angka biasa. */
+export function parseMoneyInput(raw: string | number | null | undefined): number {
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+  const text = String(raw ?? '').trim();
+  if (!text) return NaN;
+
+  const lower = text.toLowerCase();
+  if (lower.includes('jt') || lower.includes('juta')) {
+    const n = Number(lower.replace(/[^\d.,-]/g, '').replace(',', '.'));
+    return Number.isFinite(n) ? n * 1_000_000 : NaN;
+  }
+  if (lower.includes('rb') || lower.includes('ribu')) {
+    const n = Number(lower.replace(/[^\d.,-]/g, '').replace(',', '.'));
+    return Number.isFinite(n) ? n * 1_000 : NaN;
+  }
+
+  let normalized = text.replace(/\s/g, '');
+  const hasComma = normalized.includes(',');
+  const hasDot = normalized.includes('.');
+
+  if (hasComma && hasDot) {
+    const lastComma = normalized.lastIndexOf(',');
+    const lastDot = normalized.lastIndexOf('.');
+    normalized = lastComma > lastDot
+      ? normalized.replace(/\./g, '').replace(',', '.')
+      : normalized.replace(/,/g, '');
+  } else if (hasDot) {
+    const parts = normalized.split('.');
+    if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
+      normalized = normalized.replace(/\./g, '');
+    }
+  } else if (hasComma) {
+    const parts = normalized.split(',');
+    if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
+      normalized = normalized.replace(/,/g, '');
+    } else {
+      normalized = normalized.replace(',', '.');
+    }
+  }
+
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : NaN;
+}
+
 export const HEALTH_CONFIG: Record<
   Project['health_status'],
   { label: string; color: string; bg: string; dot: string }

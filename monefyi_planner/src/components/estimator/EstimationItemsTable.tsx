@@ -1,7 +1,14 @@
-import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { Fragment, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Plus, Trash2, Sparkles, List } from 'lucide-react';
 import { calcEstimationSummary, calcItemRow, emptyItem, sellingFromHpp, type ItemPriceEdit } from '../../lib/estimatorCalc';
 import { formatRupiahFull } from '../../lib/estimatorFormat';
+import {
+  getEstimationItemProductGroup,
+  groupEstimationItemsByProduct,
+  groupSharedQty,
+  hasProductGroup,
+  type EstimationItemGroup,
+} from '../../lib/estimatorProductGroup';
 import type { ParsedEstimationItem } from '../../lib/estimatorParser';
 import type { EstimationItemDraft } from '../../types/estimator';
 import type { PricelistItem } from '../../types/estimator';
@@ -36,6 +43,14 @@ export default function EstimationItemsTable({
   const cellRefs = useRef<Map<string, HTMLInputElement | HTMLSelectElement>>(new Map());
 
   const activeItems = useMemo(() => items.filter(i => i.name.trim()), [items]);
+  const productGroups = useMemo(() => groupEstimationItemsByProduct(items), [items]);
+  const groupHeaderAt = useMemo(() => {
+    const map = new Map<number, EstimationItemGroup>();
+    for (const g of productGroups) {
+      if (g.indices.length) map.set(Math.min(...g.indices), g);
+    }
+    return map;
+  }, [productGroups]);
   const totals = useMemo(
     () => calcEstimationSummary(activeItems, overheadPct, discountPct, taxPct),
     [activeItems, overheadPct, discountPct, taxPct],
@@ -51,6 +66,19 @@ export default function EstimationItemsTable({
 
   const addRow = () => onChange([...items, emptyItem(items.length)]);
   const removeRow = (index: number) => onChange(items.filter((_, i) => i !== index));
+
+  const shouldShowGroupHeader = (group: EstimationItemGroup) =>
+    group.indices.length > 1 ||
+    (group.indices.length === 1 && hasProductGroup(items[group.indices[0]]));
+
+  const setGroupQty = (indices: number[], qty: number) => {
+    const next = [...items];
+    for (const idx of indices) {
+      const merged = { ...next[idx], qty };
+      next[idx] = { ...merged, ...calcItemRow(merged, 'qty') };
+    }
+    onChange(next);
+  };
 
   const focusCell = (row: number, field: EditableField) => {
     cellRefs.current.get(`${row}-${field}`)?.focus();
@@ -193,101 +221,140 @@ export default function EstimationItemsTable({
                 </tr>
               </thead>
               <tbody>
-                {items.map((item, idx) => (
-                  <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50/60 transition-colors">
-                    <td className={`${tdClass} text-slate-400 text-xs text-center`}>{idx + 1}</td>
-                    <td className={tdClass}>
-                      <input
-                        ref={registerRef(`${idx}-name`)}
-                        value={item.name}
-                        onChange={e => updateItem(idx, { name: e.target.value })}
-                        onKeyDown={e => handleKeyDown(e, idx, 'name', fields)}
-                        className="w-full px-2 py-1.5 border border-transparent hover:border-slate-200 rounded-lg focus:border-emerald-400 focus:ring-1 focus:ring-emerald-100 outline-none text-sm"
-                        placeholder="Nama item"
-                      />
-                    </td>
-                    <td className={tdClass}>
-                      <select
-                        value={item.category}
-                        onChange={e => updateItem(idx, { category: e.target.value })}
-                        className="w-full px-1.5 py-1.5 text-xs border border-slate-200 rounded-lg bg-white"
+                {items.map((item, idx) => {
+                  const group = groupHeaderAt.get(idx);
+                  const groupHeader =
+                    group && shouldShowGroupHeader(group) ? (
+                      <tr
+                        key={`group-${group.key}-${idx}`}
+                        className="bg-emerald-50/70 border-b border-emerald-100"
                       >
-                        {PRICELIST_CATEGORIES.map(c => (
-                          <option key={c.value} value={c.value}>{c.label}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className={tdClass}>
-                      <select
-                        value={item.unit}
-                        onChange={e => updateItem(idx, { unit: e.target.value })}
-                        className="w-full px-1.5 py-1.5 text-xs border border-slate-200 rounded-lg bg-white"
-                      >
-                        {COMMON_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-                      </select>
-                    </td>
-                    <td className={tdClass}>
-                      <input
-                        ref={registerRef(`${idx}-qty`)}
-                        type="number"
-                        min={0}
-                        step="any"
-                        value={item.qty}
-                        onChange={e => updateItem(idx, { qty: Number(e.target.value) }, 'qty')}
-                        onKeyDown={e => handleKeyDown(e, idx, 'qty', fields)}
-                        className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-right tabular-nums focus:border-emerald-400 outline-none"
-                      />
-                    </td>
-                    <td className={`${tdClass} whitespace-nowrap`}>
-                      <RupiahInput
-                        inputRef={registerRef(`${idx}-selling`)}
-                        value={item.selling_price_per_unit}
-                        onChange={v => updateItem(idx, { selling_price_per_unit: v }, 'selling')}
-                        onKeyDown={e => handleKeyDown(e, idx, 'selling', fields)}
-                        title={`Harga jual per unit: ${formatRupiahFull(item.selling_price_per_unit)}`}
-                        className="px-2 py-1.5 border border-emerald-200 bg-emerald-50/50 rounded-lg text-right font-semibold tabular-nums focus:border-emerald-400 focus:ring-1 focus:ring-emerald-100 outline-none"
-                      />
-                    </td>
-                    <td className={tdClass}>
-                      <input
-                        ref={registerRef(`${idx}-margin`)}
-                        type="number"
-                        min={0}
-                        step="0.1"
-                        value={item.margin_pct}
-                        onChange={e => updateItem(idx, { margin_pct: Number(e.target.value) }, 'margin')}
-                        onKeyDown={e => handleKeyDown(e, idx, 'margin', fields)}
-                        className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-right tabular-nums focus:border-emerald-400 outline-none"
-                      />
-                    </td>
-                    <td className={`${tdClass} whitespace-nowrap`}>
-                      <RupiahInput
-                        inputRef={registerRef(`${idx}-hpp`)}
-                        value={item.hpp_per_unit}
-                        onChange={v => updateItem(idx, { hpp_per_unit: v }, 'hpp')}
-                        onKeyDown={e => handleKeyDown(e, idx, 'hpp', fields)}
-                        title={`HPP per unit: ${formatRupiahFull(item.hpp_per_unit)}`}
-                        className="px-2 py-1.5 border border-slate-200 bg-slate-50 rounded-lg text-right text-slate-700 tabular-nums focus:border-emerald-400 outline-none"
-                      />
-                    </td>
-                    <td className={`${tdClass} text-right text-sm text-slate-600 tabular-nums whitespace-nowrap`}>
-                      {formatRupiahFull(item.total_hpp)}
-                    </td>
-                    <td className={`${tdClass} text-right font-bold text-slate-800 tabular-nums whitespace-nowrap`}>
-                      {formatRupiahFull(item.total_selling)}
-                    </td>
-                    <td className={tdClass}>
-                      <button
-                        type="button"
-                        onClick={() => removeRow(idx)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                        aria-label="Hapus baris"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                        <td colSpan={4} className="px-3 py-2">
+                          <div className="text-xs font-bold text-emerald-800">{group.key}</div>
+                          <div className="text-[10px] text-emerald-600 font-medium">
+                            Kelompok produk — ubah qty global di kanan
+                          </div>
+                        </td>
+                        <td className={`${tdClass} text-right`}>
+                          <input
+                            type="number"
+                            min={0}
+                            step="any"
+                            placeholder="—"
+                            value={groupSharedQty(group.indices, items) ?? ''}
+                            onChange={e => setGroupQty(group.indices, Number(e.target.value))}
+                            className="w-full px-2 py-1.5 border border-emerald-300 bg-white rounded-lg text-right tabular-nums focus:border-emerald-500 outline-none font-semibold text-emerald-800"
+                            title={`Qty global untuk semua item ${group.key}`}
+                          />
+                        </td>
+                        <td colSpan={6} className="px-3 py-2 text-[10px] text-emerald-600 align-middle">
+                          {group.indices.length} item · satuan per baris tetap bisa diubah sendiri
+                        </td>
+                      </tr>
+                    ) : null;
+
+                  const productLabel = getEstimationItemProductGroup(item);
+
+                  return (
+                    <Fragment key={idx}>
+                      {groupHeader}
+                      <tr className="border-b border-slate-100 hover:bg-slate-50/60 transition-colors">
+                        <td className={`${tdClass} text-slate-400 text-xs text-center`}>{idx + 1}</td>
+                        <td className={tdClass}>
+                          <input
+                            ref={registerRef(`${idx}-name`)}
+                            value={item.name}
+                            onChange={e => updateItem(idx, { name: e.target.value })}
+                            onKeyDown={e => handleKeyDown(e, idx, 'name', fields)}
+                            className="w-full px-2 py-1.5 border border-transparent hover:border-slate-200 rounded-lg focus:border-emerald-400 focus:ring-1 focus:ring-emerald-100 outline-none text-sm"
+                            placeholder="Nama item"
+                            title={productLabel ? `Kelompok: ${productLabel}` : undefined}
+                          />
+                        </td>
+                        <td className={tdClass}>
+                          <select
+                            value={item.category}
+                            onChange={e => updateItem(idx, { category: e.target.value })}
+                            className="w-full px-1.5 py-1.5 text-xs border border-slate-200 rounded-lg bg-white"
+                          >
+                            {PRICELIST_CATEGORIES.map(c => (
+                              <option key={c.value} value={c.value}>{c.label}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className={tdClass}>
+                          <select
+                            value={item.unit}
+                            onChange={e => updateItem(idx, { unit: e.target.value })}
+                            className="w-full px-1.5 py-1.5 text-xs border border-slate-200 rounded-lg bg-white"
+                          >
+                            {COMMON_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                          </select>
+                        </td>
+                        <td className={tdClass}>
+                          <input
+                            ref={registerRef(`${idx}-qty`)}
+                            type="number"
+                            min={0}
+                            step="any"
+                            value={item.qty}
+                            onChange={e => updateItem(idx, { qty: Number(e.target.value) }, 'qty')}
+                            onKeyDown={e => handleKeyDown(e, idx, 'qty', fields)}
+                            className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-right tabular-nums focus:border-emerald-400 outline-none"
+                          />
+                        </td>
+                        <td className={`${tdClass} whitespace-nowrap`}>
+                          <RupiahInput
+                            inputRef={registerRef(`${idx}-selling`)}
+                            value={item.selling_price_per_unit}
+                            onChange={v => updateItem(idx, { selling_price_per_unit: v }, 'selling')}
+                            onKeyDown={e => handleKeyDown(e, idx, 'selling', fields)}
+                            title={`Harga jual per unit: ${formatRupiahFull(item.selling_price_per_unit)}`}
+                            className="px-2 py-1.5 border border-emerald-200 bg-emerald-50/50 rounded-lg text-right font-semibold tabular-nums focus:border-emerald-400 focus:ring-1 focus:ring-emerald-100 outline-none"
+                          />
+                        </td>
+                        <td className={tdClass}>
+                          <input
+                            ref={registerRef(`${idx}-margin`)}
+                            type="number"
+                            min={0}
+                            step="0.1"
+                            value={item.margin_pct}
+                            onChange={e => updateItem(idx, { margin_pct: Number(e.target.value) }, 'margin')}
+                            onKeyDown={e => handleKeyDown(e, idx, 'margin', fields)}
+                            className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-right tabular-nums focus:border-emerald-400 outline-none"
+                          />
+                        </td>
+                        <td className={`${tdClass} whitespace-nowrap`}>
+                          <RupiahInput
+                            inputRef={registerRef(`${idx}-hpp`)}
+                            value={item.hpp_per_unit}
+                            onChange={v => updateItem(idx, { hpp_per_unit: v }, 'hpp')}
+                            onKeyDown={e => handleKeyDown(e, idx, 'hpp', fields)}
+                            title={`HPP per unit: ${formatRupiahFull(item.hpp_per_unit)}`}
+                            className="px-2 py-1.5 border border-slate-200 bg-slate-50 rounded-lg text-right text-slate-700 tabular-nums focus:border-emerald-400 outline-none"
+                          />
+                        </td>
+                        <td className={`${tdClass} text-right text-sm text-slate-600 tabular-nums whitespace-nowrap`}>
+                          {formatRupiahFull(item.total_hpp)}
+                        </td>
+                        <td className={`${tdClass} text-right font-bold text-slate-800 tabular-nums whitespace-nowrap`}>
+                          {formatRupiahFull(item.total_selling)}
+                        </td>
+                        <td className={tdClass}>
+                          <button
+                            type="button"
+                            onClick={() => removeRow(idx)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                            aria-label="Hapus baris"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    </Fragment>
+                  );
+                })}
               </tbody>
               {activeItems.length > 0 && (
                 <tfoot>

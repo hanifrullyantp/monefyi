@@ -77,6 +77,8 @@ export interface Estimation {
 export interface EstimationItemDraft {
   id?: string;
   pricelist_item_id?: string | null;
+  /** Kelompok produk (merk/spesifikasi) — untuk sinkron qty global antar item. */
+  product_group?: string;
   name: string;
   category: string;
   unit: string;

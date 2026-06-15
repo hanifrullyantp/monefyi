@@ -78,12 +78,16 @@ export interface LandingContent {
   };
 }
 
+/** Warna landing selaras dengan MONEFYI_BRAND (emerald app shell). */
+export const LANDING_BRAND_PRIMARY = '#10b981';
+export const LANDING_BRAND_SECONDARY = '#059669';
+
 export const DEFAULT_LANDING_CONTENT: LandingContent = {
   version: 1,
   brand: {
     logoUrl: '',
-    primaryColor: '#059669',
-    secondaryColor: '#1e293b',
+    primaryColor: LANDING_BRAND_PRIMARY,
+    secondaryColor: LANDING_BRAND_SECONDARY,
     productName: 'Monefyi',
     productAccent: 'Planner',
   },
@@ -224,7 +228,7 @@ export const DEFAULT_LANDING_CONTENT: LandingContent = {
       price: 'Custom',
       period: '',
       desc: 'Untuk perusahaan dengan banyak proyek',
-      color: 'border-slate-700',
+      color: 'border-emerald-700',
       features: [
         'Semua fitur Pro',
         'Anggota tak terbatas',
@@ -255,7 +259,15 @@ export const DEFAULT_LANDING_CONTENT: LandingContent = {
 export function mergeLandingContent(partial: Partial<LandingContent> | null | undefined): LandingContent {
   if (!partial || typeof partial !== 'object') return { ...DEFAULT_LANDING_CONTENT };
   const base = JSON.parse(JSON.stringify(DEFAULT_LANDING_CONTENT)) as LandingContent;
-  return deepMerge(base, partial as Record<string, unknown>) as LandingContent;
+  const merged = deepMerge(base, partial as Record<string, unknown>) as LandingContent;
+  // Migrasi palet lama (slate) ke hijau app
+  if (merged.brand.secondaryColor === '#1e293b') {
+    merged.brand.secondaryColor = LANDING_BRAND_SECONDARY;
+  }
+  if (merged.brand.primaryColor === '#047857') {
+    merged.brand.primaryColor = LANDING_BRAND_PRIMARY;
+  }
+  return merged;
 }
 
 function deepMerge<T extends Record<string, unknown>>(target: T, source: Record<string, unknown>): T {

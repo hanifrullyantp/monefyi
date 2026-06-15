@@ -10,6 +10,10 @@ import { analyzeProject } from '../services/analyzeService';
 import { createOpexRealization, loadOpexCategories } from '../services/financeV2/opexService';
 import type { Project } from '../store/appStore';
 import type { WorkItem } from '../services/workItemService';
+import { buildLeadNotes, parseSizeEstimate, type LeadTarget } from './leadFormParser';
+import { calcItemRow, emptyItem } from './estimatorCalc';
+import { createEstimation, generateEstimationCode, newEstimationDraft } from '../services/estimatorService';
+import { createProject } from '../services/projectService';
 
 export interface IntentResult {
   success: boolean;
@@ -422,6 +426,79 @@ export async function executeIntent(
         };
       }
       return { success: false, message: 'Buka proyek terlebih dahulu.' };
+    }
+
+    case 'create_lead': {
+      const target = (params.target as LeadTarget) || 'estimation';
+      const customerName = String(params.customer_name || '').trim();
+      const customerPhone = String(params.customer_phone || '').trim();
+      if (!customerName || !customerPhone) {
+        return { success: false, message: 'Nama dan WhatsApp wajib diisi untuk lead.' };
+      }
+
+      const need = String(params.need || params.interest || 'Konsultasi').trim();
+      const sizeText = params.size_text ? String(params.size_text) : undefined;
+      const size = parseSizeEstimate(sizeText);
+      const qty = Number(params.qty) || size.qty || 1;
+      const unit = String(params.unit || size.unit || 'ls');
+      const notes = buildLeadNotes(params);
+
+      if (target === 'project') {
+        const end = new Date();
+        end.setMonth(end.getMonth() + 3);
+        const projectName =
+          need.length > 50 ? `${need.slice(0, 47)}… — ${customerName}` : `${need} — ${customerName}`;
+
+        const created = await createProject({
+          org_id: ctx.orgId,
+          created_by: ctx.userId,
+          name: projectName,
+          client_name: customerName,
+          location: String(params.customer_address || ''),
+          description: notes,
+          start_date: todayStr(),
+          end_date: end.toISOString().slice(0, 10),
+          status: 'planning',
+        });
+        await ctx.onRefreshProjects();
+
+        return {
+          success: true,
+          message: `Proyek "${created.name}" dibuat dari data lead.`,
+          details: `${customerName} · ${customerPhone}`,
+          navigateTo: `/app/projects/${created.id}`,
+          refreshProjects: true,
+        };
+      }
+
+      const code = await generateEstimationCode(ctx.orgId);
+      const base = emptyItem(0);
+      const itemDraft = {
+        ...base,
+        name: need,
+        category: 'jasa',
+        unit,
+        qty,
+        margin_pct: 20,
+      };
+      const itemWithCalc = { ...itemDraft, ...calcItemRow(itemDraft, 'margin') };
+
+      const est = await createEstimation(ctx.orgId, ctx.userId, {
+        ...newEstimationDraft(code),
+        title: need,
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        customer_address: String(params.customer_address || ''),
+        notes,
+        items: [itemWithCalc],
+      });
+
+      return {
+        success: true,
+        message: `Estimasi ${est.code} dibuat untuk ${customerName}.`,
+        details: `${need}${sizeText ? ` · ${sizeText}` : ''}`,
+        navigateTo: `/app/estimator/${est.id}`,
+      };
     }
 
     default:

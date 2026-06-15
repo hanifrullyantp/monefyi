@@ -7,7 +7,7 @@ import {
   deleteReceivable,
 } from '../../services/financeV2/receivableService';
 import { loadKasAccounts } from '../../services/financeV2/kasService';
-import { formatRupiah } from '../../utils/projectUi';
+import { formatRupiah, parseMoneyInput } from '../../utils/projectUi';
 import { showToast } from '../../store/uiStore';
 import type { DebtorType, Receivable } from '../../types/financeV2';
 import { RECEIVABLE_STATUS_LABEL } from '../../types/financeV2';
@@ -25,7 +25,7 @@ interface Props {
   orgId: string;
   userId: string;
   canManage: boolean;
-  onUpdated?: () => void;
+  onUpdated?: () => void | Promise<void>;
 }
 
 export default function ProjectReceivablePanel({
@@ -69,10 +69,15 @@ export default function ProjectReceivablePanel({
 
   useEffect(() => { reload(); }, [reload]);
 
+  const notifyUpdated = async () => {
+    await onUpdated?.();
+    await reload();
+  };
+
   const handleCreate = async () => {
-    const num = parseFloat(amount);
-    if (!debtorName.trim() || !num || num <= 0) {
-      showToast('Isi nama debitur dan nominal', 'error');
+    const num = parseMoneyInput(amount);
+    if (!debtorName.trim() || !Number.isFinite(num) || num <= 0) {
+      showToast('Isi nama debitur dan nominal (contoh: 6.680.000)', 'error');
       return;
     }
     try {
@@ -90,16 +95,15 @@ export default function ProjectReceivablePanel({
       setDebtorName('');
       setAmount('');
       setDueDate('');
-      await reload();
-      onUpdated?.();
+      await notifyUpdated();
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal mencatat piutang', 'error');
     }
   };
 
   const handlePay = async (rec: Receivable) => {
-    const num = parseFloat(payAmount);
-    if (!num || num <= 0) {
+    const num = parseMoneyInput(payAmount);
+    if (!Number.isFinite(num) || num <= 0) {
       showToast('Nominal tidak valid', 'error');
       return;
     }
@@ -114,8 +118,7 @@ export default function ProjectReceivablePanel({
       showToast('Pembayaran piutang dicatat', 'success');
       setPayId(null);
       setPayAmount('');
-      await reload();
-      onUpdated?.();
+      await notifyUpdated();
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal mencatat pembayaran', 'error');
     }
@@ -126,8 +129,7 @@ export default function ProjectReceivablePanel({
     try {
       await deleteReceivable(rec.id);
       showToast('Piutang dihapus', 'success');
-      await reload();
-      onUpdated?.();
+      await notifyUpdated();
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal menghapus', 'error');
     }
@@ -183,10 +185,11 @@ export default function ProjectReceivablePanel({
               <option value="project">Proyek lain</option>
             </select>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               value={amount}
               onChange={e => setAmount(e.target.value)}
-              placeholder="Nominal piutang *"
+              placeholder="Nominal piutang * (contoh: 6.680.000)"
               className="border rounded-lg px-3 py-2 text-sm"
             />
             <input
@@ -234,9 +237,11 @@ export default function ProjectReceivablePanel({
                       <div className="flex-1 min-w-[8rem]">
                         <label className="text-[10px] text-slate-500 block mb-0.5">Nominal terima</label>
                         <input
-                          type="number"
+                          type="text"
+                          inputMode="numeric"
                           value={payAmount}
                           onChange={e => setPayAmount(e.target.value)}
+                          placeholder="6.680.000"
                           className="w-full border rounded-lg px-3 py-2 text-sm"
                         />
                       </div>
@@ -259,7 +264,10 @@ export default function ProjectReceivablePanel({
                     <div className="mt-3 flex gap-2 border-t border-slate-50 pt-3">
                       <button
                         type="button"
-                        onClick={() => { setPayId(rec.id); setPayAmount(String(outstanding)); }}
+                        onClick={() => {
+                          setPayId(rec.id);
+                          setPayAmount(outstanding.toLocaleString('id-ID'));
+                        }}
                         className="flex items-center gap-1 text-xs font-bold text-emerald-700 hover:bg-emerald-50 px-2 py-1 rounded-lg"
                       >
                         <Banknote className="w-3.5 h-3.5" /> Terima Pembayaran

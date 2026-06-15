@@ -29,6 +29,7 @@ import { computeRapRealizationStats } from '../../lib/rapRealizationStats';
 import ProjectOverviewDashboard from './ProjectOverviewDashboard';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { getProjectCashSummary } from '../../services/projectTransferService';
+import { loadReceivablesByProject } from '../../services/financeV2/receivableService';
 import { exportRapWorkbook } from '../../services/rapExcelService';
 import { useCollapsibleHeader } from './useCollapsibleHeader';
 import { todayStr } from '../../lib/adapters';
@@ -71,7 +72,14 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   const [showRapImport, setShowRapImport] = useState(false);
   const [progressDrafts, setProgressDrafts] = useState<Record<string, string>>({});
   const [logDraft, setLogDraft] = useState({ description: '', progress: '' });
-  const [cashSummary, setCashSummary] = useState<{ received: number; surplus: number }>({ received: 0, surplus: 0 });
+  const [cashSummary, setCashSummary] = useState<{
+    received: number;
+    surplus: number;
+    spent: number;
+    debtOwed: number;
+    debtReceivable: number;
+  }>({ received: 0, surplus: 0, spent: 0, debtOwed: 0, debtReceivable: 0 });
+  const [piutangSummary, setPiutangSummary] = useState({ outstanding: 0, total: 0, count: 0 });
   const [costSearch, setCostSearch] = useState('');
   const [repairingImport, setRepairingImport] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
@@ -108,19 +116,45 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
       setWorkItems(w);
       setRapItems(r);
       setRapActuals(rapAgg);
+      const costsSumLocal = c.reduce((s, row) => s + (Number(row.total_amount) || 0), 0);
       const a = await analyzeProject(project.id);
       setAnalysis(a);
       if (tenant?.id) {
-        const cash = await getProjectCashSummary(project.id, tenant.id, project.name, project.spent_amount);
-        setCashSummary({ received: cash.received, surplus: cash.surplus });
-        setProject(p => ({ ...p, total_received: cash.received }));
+        const [cash, recs] = await Promise.all([
+          getProjectCashSummary(project.id, tenant.id, project.name, costsSumLocal),
+          loadReceivablesByProject(tenant.id, project.id),
+        ]);
+        setCashSummary({
+          received: cash.received,
+          surplus: cash.surplus,
+          spent: cash.spent,
+          debtOwed: cash.owedTo.reduce((s, d) => s + d.amount, 0),
+          debtReceivable: cash.owedFrom.reduce((s, d) => s + d.amount, 0),
+        });
+        setPiutangSummary({
+          outstanding: recs.reduce((s, row) => s + (row.amount - row.paid_amount), 0),
+          total: recs.reduce((s, row) => s + row.amount, 0),
+          count: recs.length,
+        });
+        setProject(p => ({
+          ...p,
+          total_received: cash.received,
+          spent_amount: costsSumLocal,
+        }));
       }
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
     }
-  }, [project.id, tenant?.id, project.name, project.spent_amount]);
+  }, [project.id, tenant?.id, project.name]);
+
+  const refreshProjectData = useCallback(async () => {
+    await refreshData();
+    const fresh = useAppStore.getState().projects.find(p => p.id === project.id);
+    if (fresh) setProject(fresh);
+    await reload();
+  }, [reload, refreshData, project.id]);
 
   useEffect(() => { setProject(initialProject); }, [initialProject]);
 
@@ -470,7 +504,10 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
             received={cashSummary.received || project.total_received || 0}
             surplus={cashSummary.surplus}
             activeTab={activeTab}
+            activeSubTab={activeSubTab}
             realisasiStats={realisasiStats}
+            piutangSummary={piutangSummary}
+            cashSummary={cashSummary}
             loading={loading}
             isCollapsed={isCollapsed}
             onClose={onClose}
@@ -786,7 +823,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                         userId={user.id}
                         budget={project.total_budget_planned}
                         canManage={canManage}
-                        onUpdated={() => { reload(); refreshData(); }}
+                        onUpdated={() => { void refreshProjectData(); }}
                       />
                     ) : activeSubTab === 'hutang' && tenant?.id && user?.id ? (
                       <ProjectTransferPanel
@@ -796,7 +833,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                         projects={projects}
                         spentAmount={project.spent_amount}
                         canManage={canManage}
-                        onUpdated={() => { reload(); refreshData(); }}
+                        onUpdated={() => { void refreshProjectData(); }}
                       />
                     ) : activeSubTab === 'piutang' && tenant?.id && user?.id ? (
                       <ProjectReceivablePanel
@@ -805,7 +842,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                         orgId={tenant.id}
                         userId={user.id}
                         canManage={canManage}
-                        onUpdated={() => { reload(); refreshData(); }}
+                        onUpdated={() => { void refreshProjectData(); }}
                       />
                     ) : activeSubTab === 'progres' ? (
                       <>

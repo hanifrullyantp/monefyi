@@ -110,6 +110,7 @@ export function pricelistToDraftRow(item: PricelistItem) {
   const selling = Number(item.selling_price) || calcPricelistSelling(hpp, Number(item.default_margin_pct));
   return {
     pricelist_item_id: item.id,
+    product_group: item.product?.trim() || '',
     name: item.product ? `${item.name} — ${item.product}` : item.name,
     category: item.category || 'material',
     unit: item.unit,

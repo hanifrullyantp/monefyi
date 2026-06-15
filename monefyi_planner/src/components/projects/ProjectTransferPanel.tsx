@@ -9,7 +9,7 @@ import {
   type ProjectTransfer,
   type TransferSourceType,
 } from '../../services/projectTransferService';
-import { formatRupiah } from '../../utils/projectUi';
+import { formatRupiah, parseMoneyInput } from '../../utils/projectUi';
 import { todayStr } from '../../lib/adapters';
 import type { Project } from '../../store/appStore';
 import { useUndoableAction } from '../../hooks/useUndoableAction';
@@ -31,7 +31,7 @@ interface Props {
   projects: Project[];
   spentAmount: number;
   canManage: boolean;
-  onUpdated?: () => void;
+  onUpdated?: () => void | Promise<void>;
 }
 
 export default function ProjectTransferPanel({
@@ -98,15 +98,15 @@ export default function ProjectTransferPanel({
     setForm(f => ({
       ...f,
       counterpartyKey: key,
-      amount: target ? String(target.amount) : '',
+      amount: target ? target.amount.toLocaleString('id-ID') : '',
     }));
   };
 
   const selectedDebt = owedToOptions.find(o => o.key === form.counterpartyKey);
 
   const handleSubmit = async () => {
-    const amount = Number(form.amount);
-    if (!amount || amount <= 0) {
+    const amount = parseMoneyInput(form.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
       showToast('Nominal harus lebih dari 0', 'error');
       return;
     }
@@ -226,7 +226,7 @@ export default function ProjectTransferPanel({
         date: todayStr(),
       });
       await reload();
-      onUpdated?.();
+      await onUpdated?.();
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal menyimpan', 'error');
     }
@@ -407,7 +407,8 @@ export default function ProjectTransferPanel({
           <div className="grid grid-cols-2 gap-2">
             <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className="border rounded-lg px-2 py-1.5 text-sm" />
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               placeholder={mode === 'repayment' && selectedDebt ? `Nominal (max ${formatRupiah(selectedDebt.amount)})` : 'Nominal *'}
               value={form.amount}
               onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}

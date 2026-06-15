@@ -19,6 +19,7 @@ import {
 } from '../lib/recommendations';
 import { executeIntent } from '../lib/intentExecutor';
 import type { ParsedCostLine } from '../lib/costParser';
+import { looksLikeLeadForm } from '../lib/leadFormParser';
 import { formatRupiah } from '../utils/projectUi';
 import { logCommand, loadCommandLogs, getRecentProjectId } from '../services/commandService';
 import { recordCorrection, reinforceMemory, loadMemoryExamples } from '../services/commandMemoryService';
@@ -57,6 +58,7 @@ const INTENT_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'open_project', label: 'Buka Proyek' },
   { value: 'ask_recommendation', label: 'Rekomendasi' },
   { value: 'open_report', label: 'Buka Laporan' },
+  { value: 'create_lead', label: 'Buat dari Lead' },
 ];
 
 const FIELD_LABELS: Record<string, string> = {
@@ -69,12 +71,21 @@ const FIELD_LABELS: Record<string, string> = {
   workers: 'Jumlah Pekerja',
   amount: 'Nominal',
   source: 'Sumber',
+  target: 'Tujuan',
+  customer_name: 'Nama',
+  customer_phone: 'WhatsApp',
+  customer_address: 'Kota',
+  need: 'Kebutuhan',
+  size_text: 'Ukuran',
+  budget: 'Budget',
+  notes: 'Catatan',
+  interest: 'Minat',
 };
 
 const NUMBER_FIELDS = new Set(['qty', 'unitPrice', 'total', 'progress', 'workers', 'amount']);
 
 // Fields that are derived/handled elsewhere and should not be free-text inputs.
-const HIDDEN_FIELDS = new Set(['projectName']);
+const HIDDEN_FIELDS = new Set(['projectName', 'products', 'qty', 'unit']);
 
 const STAGE_ORDER: Record<PipelineStage, number> = { memory: 1, rule: 2, fuzzy: 3, ai: 4 };
 
@@ -135,6 +146,7 @@ export default function CommandModal() {
   const [aliasEntities, setAliasEntities] = useState<TaggableEntity[]>([]);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const leadTargetHintRef = useRef<'estimation' | 'project' | undefined>();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
 
@@ -279,6 +291,7 @@ export default function CommandModal() {
     projects: projects.map(p => ({ name: p.name, id: p.id, status: p.status })),
     work_items: [],
     current_project: activeProject?.name || null,
+    leadTargetHint: leadTargetHintRef.current,
   });
 
   const populateForm = (parsed: ParsedCommand) => {
@@ -364,6 +377,24 @@ export default function CommandModal() {
 
   const handleProcess = async (text = input) => {
     if (!text.trim() || !user || !tenant) return;
+
+    if (!looksLikeLeadForm(text)) {
+      if (/\b(buat|buatkan)\s+estimasi\b/i.test(text)) {
+        leadTargetHintRef.current = 'estimation';
+        setResultMessage('Siap — tempel form lead konsultasi untuk buat estimasi baru.');
+        setResultDetails('Contoh: Nama, WhatsApp, Kota, Kebutuhan, Ukuran, Budget, Catatan.');
+        setStage('success');
+        return;
+      }
+      if (/\b(buat|buatkan)\s+(proyek|project)\b/i.test(text)) {
+        leadTargetHintRef.current = 'project';
+        setResultMessage('Siap — tempel form lead konsultasi untuk buat proyek baru.');
+        setResultDetails('Contoh: Nama, WhatsApp, Kota, Kebutuhan, Ukuran, Budget, Catatan.');
+        setStage('success');
+        return;
+      }
+    }
+
     setStage('processing');
     setInput(text);
     setTagOpen(null);
@@ -553,6 +584,9 @@ export default function CommandModal() {
 
       if (result.navigateTo) navigate(result.navigateTo);
       if (result.refreshProjects) await refreshData();
+      if (result.success && form.intent === 'create_lead') {
+        leadTargetHintRef.current = undefined;
+      }
 
       setResultMessage(result.message);
       setResultDetails(result.details || '');
@@ -580,6 +614,7 @@ export default function CommandModal() {
     setBatchCanSave(false);
     setBatchResult(null);
     setRecentProjectId(null);
+    leadTargetHintRef.current = undefined;
   };
 
   const sourceBadge = (() => {

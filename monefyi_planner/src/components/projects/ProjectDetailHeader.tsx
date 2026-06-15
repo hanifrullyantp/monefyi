@@ -9,6 +9,20 @@ import { EVM_METRICS } from '../../utils/evmMetrics';
 import type { RapRealizationStats } from '../../lib/rapRealizationStats';
 import { COLLAPSED_HEIGHT } from './useCollapsibleHeader';
 
+export interface ProjectPiutangSummary {
+  outstanding: number;
+  total: number;
+  count: number;
+}
+
+export interface ProjectCashSummaryCards {
+  received: number;
+  surplus: number;
+  spent: number;
+  debtOwed: number;
+  debtReceivable: number;
+}
+
 interface ProjectDetailHeaderProps {
   project: Project;
   health: (typeof HEALTH_CONFIG)[keyof typeof HEALTH_CONFIG];
@@ -18,7 +32,10 @@ interface ProjectDetailHeaderProps {
   received?: number;
   surplus?: number;
   activeTab?: string;
+  activeSubTab?: string;
   realisasiStats?: RapRealizationStats | null;
+  piutangSummary?: ProjectPiutangSummary;
+  cashSummary?: ProjectCashSummaryCards;
   loading: boolean;
   isCollapsed: boolean;
   onClose: () => void;
@@ -40,7 +57,10 @@ export default function ProjectDetailHeader({
   received = 0,
   surplus = 0,
   activeTab = 'overview',
+  activeSubTab = '',
   realisasiStats = null,
+  piutangSummary,
+  cashSummary,
   loading,
   isCollapsed,
   onClose,
@@ -105,6 +125,47 @@ export default function ProjectDetailHeader({
       window.removeEventListener('scroll', onReflow, true);
     };
   }, [statusOpen]);
+
+  const headerMetrics = (() => {
+    if (activeTab === 'realisasi' && activeSubTab === 'piutang' && piutangSummary) {
+      return [
+        { label: 'Total Piutang', value: formatRupiah(piutangSummary.total) },
+        { label: 'Sisa Ditagih', value: formatRupiah(piutangSummary.outstanding) },
+        { label: 'Jumlah Debitur', value: String(piutangSummary.count) },
+        { label: 'Saldo+', value: formatRupiah(surplus) },
+      ];
+    }
+    if (activeTab === 'realisasi' && activeSubTab === 'hutang' && cashSummary) {
+      return [
+        { label: 'Hutang Proyek', value: formatRupiah(cashSummary.debtOwed) },
+        { label: 'Saldo+', value: formatRupiah(cashSummary.surplus) },
+        { label: 'Diterima', value: formatRupiah(cashSummary.received) },
+        { label: 'Terpakai', value: formatRupiah(cashSummary.spent) },
+      ];
+    }
+    if (activeTab === 'realisasi' && activeSubTab === 'uangmasuk') {
+      const remaining = Math.max(0, project.total_budget_planned - (received || 0));
+      return [
+        { label: 'Diterima', value: formatRupiah(received) },
+        { label: 'Sisa Tagihan', value: formatRupiah(remaining) },
+        { label: 'Budget RAP', value: formatRupiah(project.total_budget_planned) },
+        { label: 'Saldo+', value: formatRupiah(surplus) },
+      ];
+    }
+    if (activeTab === 'realisasi' && activeSubTab === 'biaya' && realisasiStats) {
+      return [
+        { label: 'Item Realisasi', value: `${realisasiStats.doneCount}/${realisasiStats.totalItems}` },
+        { label: 'Jumlah Realisasi', value: `${formatRupiah(realisasiStats.costsSum)} / ${formatRupiah(realisasiStats.rapTotal)}` },
+        { label: 'Persentase', value: `${realisasiStats.realizationPct.toFixed(1)}%` },
+        {
+          label: 'Proyeksi Profit',
+          value: formatRupiah(realisasiStats.grossProfitEstimate),
+          hint: 'Omzet proyek − total realisasi',
+        },
+      ];
+    }
+    return null;
+  })();
 
   const statusDropdown = statusOpen && canManage && onStatusChange
     ? createPortal(
@@ -260,26 +321,8 @@ export default function ProjectDetailHeader({
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-3 bg-white/10 rounded-2xl p-3 md:p-4 border border-white/10">
-              {activeTab === 'realisasi' && realisasiStats ? (
-                [
-                  {
-                    label: 'Item Realisasi',
-                    value: `${realisasiStats.doneCount}/${realisasiStats.totalItems}`,
-                  },
-                  {
-                    label: 'Jumlah Realisasi',
-                    value: `${formatRupiah(realisasiStats.costsSum)} / ${formatRupiah(realisasiStats.rapTotal)}`,
-                  },
-                  {
-                    label: 'Persentase',
-                    value: `${realisasiStats.realizationPct.toFixed(1)}%`,
-                  },
-                  {
-                    label: 'Proyeksi Profit',
-                    value: formatRupiah(realisasiStats.grossProfitEstimate),
-                    hint: 'Omzet proyek − total realisasi',
-                  },
-                ].map(m => (
+              {headerMetrics ? (
+                headerMetrics.map(m => (
                   <div key={m.label} className="text-center">
                     <div className="text-[10px] md:text-xs text-emerald-100 mb-0.5 uppercase tracking-wider">{m.label}</div>
                     <div className="text-sm md:text-lg font-black font-mono leading-tight">{m.value}</div>

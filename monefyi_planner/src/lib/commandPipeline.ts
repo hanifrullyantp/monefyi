@@ -5,6 +5,7 @@ import { preprocessInput, type PreprocessedInput } from './commandPreprocessor';
 import { applyProgressTagHints } from './commandTags';
 import type { TaggableEntity } from './commandTags';
 import { lookupMemory, lookupFuzzyMemory } from '../services/commandMemoryService';
+import { looksLikeLeadForm, parseLeadForm } from './leadFormParser';
 
 export type PipelineSource = 'memory' | 'rule' | 'fuzzy' | 'ai' | 'fallback';
 
@@ -98,8 +99,32 @@ export async function runNeverFailPipeline(
     }
   }
 
-  // Layer 2 — batch WhatsApp + regex rules
+  // Layer 2 — lead form (konsultasi / WhatsApp) sebelum parser biaya
   onStage?.('rule');
+  const leadSource = looksLikeLeadForm(preprocessed.original)
+    ? preprocessed.original
+    : looksLikeLeadForm(preprocessed.parseText)
+      ? preprocessed.parseText
+      : null;
+  if (leadSource) {
+    const lead = parseLeadForm(leadSource, context.leadTargetHint);
+    if (lead) {
+      return {
+        intent: 'create_lead',
+        params: lead,
+        confidence: 0.93,
+        raw: rawInput,
+        source: 'rule',
+        layer: 2,
+        reasoning:
+          lead.target === 'project'
+            ? 'Form lead terdeteksi — akan dibuat proyek baru.'
+            : 'Form lead terdeteksi — akan dibuat estimasi baru.',
+        preprocessed,
+      };
+    }
+  }
+
   const batchFromRaw = parseCostText(preprocessed.original);
   if (batchFromRaw.length > 0) {
     return {
