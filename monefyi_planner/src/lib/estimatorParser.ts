@@ -153,7 +153,7 @@ function extractPrices(text: string): {
   }
 
   if (selling > 0 && hpp > 0 && margin === 20) {
-    margin = ((selling - hpp) / hpp) * 100;
+    margin = ((selling - hpp) / selling) * 100;
   }
 
   return { hpp, selling, margin, cleaned: cleaned.replace(/\s+/g, ' ').trim() };

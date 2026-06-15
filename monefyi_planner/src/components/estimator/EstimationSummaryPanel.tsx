@@ -62,7 +62,7 @@ export default function EstimationSummaryPanel({ draft }: Props) {
           />
         </div>
         <p className="text-[10px] text-slate-400 mt-1.5 leading-snug">
-          Margin = laba dari HPP (markup). HPP dihitung dari harga jual ÷ (1 + margin%).
+          Margin = laba ÷ harga jual. HPP = harga jual × (1 − margin%).
         </p>
       </div>
 

@@ -7,23 +7,25 @@ export function roundIdr(n: number): number {
 }
 
 /**
- * Margin = markup pada HPP (laba ÷ HPP × 100).
- * Contoh: HPP 100rb + margin 40% → jual 140rb.
+ * Margin = laba dari harga jual (gross margin: laba ÷ jual × 100).
+ * Contoh: jual 100rb + margin 40% → HPP 60rb.
  */
 export function sellingFromHpp(hppPerUnit: number, marginPct: number): number {
-  return roundIdr(hppPerUnit * (1 + marginPct / 100));
+  const m = Math.min(99.999, Math.max(0, Number(marginPct) || 0));
+  const denom = 1 - m / 100;
+  if (denom <= 0) return roundIdr(hppPerUnit);
+  return roundIdr(hppPerUnit / denom);
 }
 
 export function marginFromSelling(hppPerUnit: number, sellingPerUnit: number): number {
-  if (hppPerUnit <= 0) return 0;
-  return Math.round(((sellingPerUnit - hppPerUnit) / hppPerUnit) * 1000) / 10;
+  if (sellingPerUnit <= 0) return 0;
+  return Math.round(((sellingPerUnit - hppPerUnit) / sellingPerUnit) * 1000) / 10;
 }
 
 /** HPP estimasi dari harga jual + margin% (harga jual ditentukan dulu). */
 export function hppFromSellingAndMargin(sellingPerUnit: number, marginPct: number): number {
-  const m = Number(marginPct) || 0;
-  if (m <= -100) return roundIdr(sellingPerUnit);
-  return roundIdr(sellingPerUnit / (1 + m / 100));
+  const m = Math.min(100, Math.max(0, Number(marginPct) || 0));
+  return roundIdr(sellingPerUnit * (1 - m / 100));
 }
 
 export type ItemPriceEdit = 'selling' | 'margin' | 'hpp' | 'qty';
@@ -114,8 +116,8 @@ export function calcEstimationSummary(
   const taxAmount = roundIdr(afterDiscount * (taxPct / 100));
   const grandTotal = afterDiscount + taxAmount;
   const totalProfit = itemProfit + overheadAmount - discountAmount;
-  const avgMarginPct = subtotalHpp > 0
-    ? ((subtotalSellingItems - subtotalHpp) / subtotalHpp) * 100
+  const avgMarginPct = subtotalSellingItems > 0
+    ? ((subtotalSellingItems - subtotalHpp) / subtotalSellingItems) * 100
     : 0;
 
   return {

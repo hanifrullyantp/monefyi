@@ -155,7 +155,7 @@ export default function EstimationItemsTable({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 bg-slate-50/50">
           <div>
             <h3 className="font-bold text-slate-800">Rincian Item</h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">Harga jual & margin menentukan HPP estimasi per satuan</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Harga jual & margin% menentukan HPP (margin = laba ÷ jual)</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
