@@ -280,7 +280,7 @@ export default function EstimationItemsTable({
                             value={item.name}
                             onChange={e => updateItem(idx, { name: e.target.value })}
                             onKeyDown={e => handleKeyDown(e, idx, 'name', fields)}
-                            className="w-full px-2 py-1.5 border border-transparent hover:border-slate-200 rounded-lg focus:border-emerald-400 focus:ring-1 focus:ring-emerald-100 outline-none text-sm"
+                            className="w-full px-2 py-1.5 border border-transparent hover:border-slate-200 rounded-lg focus:border-emerald-400 focus:ring-1 focus:ring-emerald-100 outline-none text-sm text-slate-900 placeholder:text-slate-400"
                             placeholder="Nama item"
                             title={productLabel ? `Kelompok: ${productLabel}` : undefined}
                           />
@@ -289,7 +289,7 @@ export default function EstimationItemsTable({
                           <select
                             value={item.category}
                             onChange={e => updateItem(idx, { category: e.target.value })}
-                            className="w-full px-1.5 py-1.5 text-xs border border-slate-200 rounded-lg bg-white"
+                            className="w-full px-1.5 py-1.5 text-xs border border-slate-200 rounded-lg bg-white text-slate-900"
                           >
                             {PRICELIST_CATEGORIES.map(c => (
                               <option key={c.value} value={c.value}>{c.label}</option>
@@ -300,7 +300,7 @@ export default function EstimationItemsTable({
                           <select
                             value={item.unit}
                             onChange={e => updateItem(idx, { unit: e.target.value })}
-                            className="w-full px-1.5 py-1.5 text-xs border border-slate-200 rounded-lg bg-white"
+                            className="w-full px-1.5 py-1.5 text-xs border border-slate-200 rounded-lg bg-white text-slate-900"
                           >
                             {COMMON_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                           </select>
@@ -314,7 +314,7 @@ export default function EstimationItemsTable({
                             value={item.qty}
                             onChange={e => updateItem(idx, { qty: Number(e.target.value) }, 'qty')}
                             onKeyDown={e => handleKeyDown(e, idx, 'qty', fields)}
-                            className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-right tabular-nums focus:border-emerald-400 outline-none"
+                            className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-right tabular-nums focus:border-emerald-400 outline-none text-slate-900"
                           />
                         </td>
                         <td className={`${tdClass} whitespace-nowrap`}>
@@ -338,7 +338,7 @@ export default function EstimationItemsTable({
                             onChange={e => updateItem(idx, { margin_pct: Number(e.target.value) }, 'margin')}
                             onBlur={() => updateItem(idx, { margin_pct: item.margin_pct }, 'margin')}
                             onKeyDown={e => handleKeyDown(e, idx, 'margin', fields)}
-                            className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-right tabular-nums focus:border-emerald-400 outline-none"
+                            className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-right tabular-nums focus:border-emerald-400 outline-none text-slate-900"
                             title="Margin = laba ÷ harga jual (100% = HPP nol)"
                           />
                         </td>

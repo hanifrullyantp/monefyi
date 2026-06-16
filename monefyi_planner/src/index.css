@@ -51,6 +51,39 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/*
+ * Form fields on white/light surfaces must not inherit body text color.
+ * In dark mode body uses text-slate-100; inputs with bg-white stayed unreadable.
+ */
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']):not([type='button']):not([type='submit']):not([type='reset']):not([type='hidden']),
+textarea,
+select {
+  color: #0f172a;
+  -webkit-text-fill-color: currentColor;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+
+select option {
+  color: #0f172a;
+  background-color: #ffffff;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: #0f172a !important;
+  caret-color: #0f172a;
+}
+
+/* Explicit dark-surface fields (e.g. EditableTable) keep light text via Tailwind dark:text-* */
+
 /* PWA standalone — safe area for notched phones */
 @media (display-mode: standalone) {
   body {
@@ -159,12 +192,19 @@ html {
   -webkit-backdrop-filter: blur(12px);
 }
 
-/* Gradient text */
+/* Gradient text — isolate from descendants (webkit fill inherits otherwise) */
 .gradient-text {
   background: linear-gradient(135deg, #059669, #10b981, #34d399);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.gradient-text input,
+.gradient-text textarea,
+.gradient-text select {
+  -webkit-text-fill-color: currentColor;
+  color: #0f172a;
 }
 
 /* Waveform bars */
