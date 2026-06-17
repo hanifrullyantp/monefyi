@@ -84,6 +84,8 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   const [repairingImport, setRepairingImport] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
   const importRepairAttempted = useRef<string | null>(null);
+  const projectRef = useRef(project);
+  projectRef.current = project;
   const isDesktop = useIsDesktop();
   const [rapView, setRapView] = useState<'spreadsheet' | 'list' | 'checklist'>('checklist');
   const [amountDrafts, setAmountDrafts] = useState<Record<string, string>>({});
@@ -102,14 +104,15 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   const daysLeft = daysUntil(project.end_date);
 
   const reload = useCallback(async () => {
+    const current = projectRef.current;
     setLoading(true);
     try {
       const [c, l, w, r, rapAgg] = await Promise.all([
-        loadCostRealizations(project.id),
-        loadDailyLogs(project.id),
-        loadWorkItems(project.id),
-        loadRapItems(project.id),
-        aggregateCostByRapItem(project.id),
+        loadCostRealizations(current.id),
+        loadDailyLogs(current.id),
+        loadWorkItems(current.id),
+        loadRapItems(current.id),
+        aggregateCostByRapItem(current.id),
       ]);
       setCosts(c);
       setLogs(l);
@@ -117,12 +120,12 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
       setRapItems(r);
       setRapActuals(rapAgg);
       const costsSumLocal = c.reduce((s, row) => s + (Number(row.total_amount) || 0), 0);
-      const a = await analyzeProject(project.id);
+      const a = await analyzeProject(current.id);
       setAnalysis(a);
       if (tenant?.id) {
         const [cash, recs] = await Promise.all([
-          getProjectCashSummary(project.id, tenant.id, project.name, costsSumLocal),
-          loadReceivablesByProject(tenant.id, project.id),
+          getProjectCashSummary(current.id, tenant.id, current.name, costsSumLocal),
+          loadReceivablesByProject(tenant.id, current.id),
         ]);
         setCashSummary({
           received: cash.received,
@@ -147,7 +150,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
     } finally {
       setLoading(false);
     }
-  }, [project.id, tenant?.id, project.name]);
+  }, [tenant?.id]);
 
   const refreshProjectData = useCallback(async () => {
     await refreshData();
@@ -156,13 +159,11 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
     await reload();
   }, [reload, refreshData, project.id]);
 
-  useEffect(() => { setProject(initialProject); }, [initialProject]);
-
   useEffect(() => {
-    setSelectedProjectId(project.id);
-    reload();
+    setSelectedProjectId(initialProject.id);
+    void reload();
     return () => setSelectedProjectId(null);
-  }, [project.id, reload, setSelectedProjectId]);
+  }, [initialProject.id, reload, setSelectedProjectId]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };

@@ -71,20 +71,33 @@ export default function ProjectJsonPanel({
     [project, rapItems, costs, workItems, logs, incomes, transfers],
   );
 
+  // Tanpa exported_at — agar perubahan timestamp tidak memicu effect berulang (React #185).
+  const snapshotContentKey = useMemo(() => {
+    const { meta, ...rest } = snapshot;
+    return JSON.stringify({ ...rest, meta: { project_id: meta.project_id } });
+  }, [snapshot]);
+
   const template = useMemo(() => getProjectJsonTemplate(project), [project]);
 
   const templateText = useMemo(() => JSON.stringify(template, null, 2), [template]);
 
   const loadSnapshot = useCallback(() => {
-    setEditorText(JSON.stringify(snapshot, null, 2));
+    const fresh = buildProjectJsonSnapshot({ project, rapItems, costs, workItems, logs, incomes, transfers });
+    setEditorText(JSON.stringify(fresh, null, 2));
     setParseError(null);
     setValidationErrors([]);
     setView('data');
-  }, [snapshot]);
+  }, [project, rapItems, costs, workItems, logs, incomes, transfers]);
 
   useEffect(() => {
-    loadSnapshot();
-  }, [loadSnapshot]);
+    const fresh = buildProjectJsonSnapshot({ project, rapItems, costs, workItems, logs, incomes, transfers });
+    setEditorText(JSON.stringify(fresh, null, 2));
+    setParseError(null);
+    setValidationErrors([]);
+    setView('data');
+    // Hanya saat isi data berubah — bukan setiap render (exported_at / referensi object).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshotContentKey]);
 
   const validateEditor = () => {
     try {

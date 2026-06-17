@@ -170,7 +170,21 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
   useEffect(() => {
     if (initialProjectId) {
       const p = projects.find(x => x.id === initialProjectId);
-      if (p) setSelectedProject(p);
+      if (p) {
+        setSelectedProject(prev => {
+          if (!prev || prev.id !== p.id) return p;
+          if (
+            prev.name === p.name
+            && prev.status === p.status
+            && prev.spent_amount === p.spent_amount
+            && prev.total_received === p.total_received
+            && prev.progress_percentage === p.progress_percentage
+          ) {
+            return prev;
+          }
+          return p;
+        });
+      }
     } else {
       setSelectedProject(null);
     }
@@ -448,7 +462,9 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
       )}
 
       <AnimatePresence>
-        {selectedProject && <ProjectDetail project={selectedProject} onClose={closeProject} />}
+        {selectedProject && (
+          <ProjectDetail key={selectedProject.id} project={selectedProject} onClose={closeProject} />
+        )}
         {showCreate && <CreateProjectModal onClose={() => setShowCreate(false)} />}
       </AnimatePresence>
     </div>

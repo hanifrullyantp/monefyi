@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Loader2, Plus } from 'lucide-react';
 
 const CREATE_VALUE = '__create_new__';
@@ -42,9 +42,14 @@ export default function CreatableSelect({
     setNewLabel('');
   }, [creating]);
 
-  const knownValue = options.some(o => o.value === value)
+  const displayOptions = useMemo(() => {
+    if (!value || options.some(o => o.value === value)) return options;
+    return [{ value, label: value.replace(/_/g, ' ') }, ...options];
+  }, [options, value]);
+
+  const knownValue = displayOptions.some(o => o.value === value)
     ? value
-    : (allowEmpty ? '' : (options[0]?.value || ''));
+    : (allowEmpty ? '' : (displayOptions[0]?.value || ''));
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const next = e.target.value;
@@ -81,7 +86,7 @@ export default function CreatableSelect({
         aria-label={placeholder}
       >
         {allowEmpty && <option value="">{emptyLabel}</option>}
-        {options.map(o => (
+        {displayOptions.map(o => (
           <option key={o.value} value={o.value}>{o.label}</option>
         ))}
         {onCreateOption && !disabled && (
