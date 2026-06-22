@@ -630,6 +630,7 @@ html, body {
     @media (max-width: 767px) {
       .tx-chip-indicator { display: none; }
       .tx-chips--collapsed { display: none !important; }
+      #txToolbarDesktop { display: none !important; }
     }
     @media (min-width: 768px) {
       .tx-chip-row .tx-chip.active {
