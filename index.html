@@ -36,12 +36,29 @@
  
 </head>
 <body>
+  <!-- Logo Monefyi (satu sumber untuk loading, sidebar, header, auth) -->
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" style="position:absolute;width:0;height:0;overflow:hidden">
+    <defs>
+      <clipPath id="monefyi-m-left"><polygon points="0,0 108,0 68,192 0,192"/></clipPath>
+      <clipPath id="monefyi-m-right"><polygon points="108,0 192,0 192,192 68,192"/></clipPath>
+    </defs>
+    <symbol id="monefyi-logo" viewBox="0 0 192 192">
+      <rect width="192" height="192" rx="44" fill="#1B2230"/>
+      <path fill="#9DD4F7" d="M48 148V48h20v48l28-48h6l28 48v52h-20V84l-28 50H88L60 84v64H48Z" clip-path="url(#monefyi-m-left)"/>
+      <path fill="#9DD4F7" d="M48 148V48h20v48l28-48h6l28 48v52h-20V84l-28 50H88L60 84v64H48Z" clip-path="url(#monefyi-m-right)"/>
+    </symbol>
+    <symbol id="monefyi-mark" viewBox="0 0 192 192">
+      <path fill="#9DD4F7" d="M48 148V48h20v48l28-48h6l28 48v52h-20V84l-28 50H88L60 84v64H48Z" clip-path="url(#monefyi-m-left)"/>
+      <path fill="#9DD4F7" d="M48 148V48h20v48l28-48h6l28 48v52h-20V84l-28 50H88L60 84v64H48Z" clip-path="url(#monefyi-m-right)"/>
+    </symbol>
+  </svg>
+
   <div class="min-h-dvh">
 
     <!-- Loading Screen -->
     <div id="loadingOverlay">
       <div class="loading-logo">
-        <img src="./icons/icon-192.svg" width="80" height="80" alt="Monefyi" class="loading-logo-img" />
+        <svg class="brand-logo-svg loading-logo-svg" width="80" height="80" aria-hidden="true"><use href="#monefyi-logo"/></svg>
       </div>
       <div class="mt-5 text-sm app-muted loading-text">Initializing Monefyi...</div>
     </div>
@@ -76,8 +93,8 @@
           <div class="rounded-3xl app-card-opaque p-5">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 rounded-2xl brand-logo-slot overflow-hidden shrink-0">
-                <img id="authLogoImg" src="./icons/icon-192.svg" class="w-full h-full object-cover" alt="Logo Monefyi" />
-                <span id="authLogoFallback" class="hidden">M</span>
+                <svg class="brand-logo-svg brand-logo-svg--auth" width="44" height="44" aria-hidden="true"><use href="#monefyi-logo"/></svg>
+                <img id="authLogoImg" class="brand-logo-custom hidden w-full h-full object-cover" alt="Logo Monefyi" />
               </div>
               <div class="brand-text-block min-w-0">
                 <div class="brand-sub text-xs app-muted">Monefyi</div>
@@ -182,8 +199,8 @@
           <div class="flex items-center gap-2 min-w-0">
             <button id="btnLogo" class="tap flex items-center gap-2 text-left" title="Monefyi Advisor">
               <div id="appLogo" class="w-10 h-10 rounded-2xl brand-logo-slot overflow-hidden shrink-0">
-                <img id="appLogoImg" src="./icons/icon-192.svg" class="w-full h-full object-cover" alt="Logo Monefyi" />
-                <span id="appLogoFallback" class="hidden font-bold">M</span>
+                <svg class="brand-logo-svg" width="40" height="40" aria-hidden="true"><use href="#monefyi-logo"/></svg>
+                <img id="appLogoImg" class="brand-logo-custom hidden w-full h-full object-cover" alt="Logo Monefyi" />
               </div>
             </button>
 
@@ -342,8 +359,8 @@
       <!-- Brand -->
       <div class="sidebar-brand flex items-center gap-2.5 px-1 pr-8">
         <div class="w-10 h-10 rounded-2xl brand-logo-slot overflow-hidden shrink-0">
-          <img id="sidebarLogoImg" src="./icons/icon-192.svg" class="w-full h-full object-cover" alt="Logo Monefyi" />
-          <span id="sidebarLogoFallback" class="hidden font-bold text-white text-xl">M</span>
+          <svg class="brand-logo-svg" width="40" height="40" aria-hidden="true"><use href="#monefyi-logo"/></svg>
+          <img id="sidebarLogoImg" class="brand-logo-custom hidden w-full h-full object-cover" alt="Logo Monefyi" />
         </div>
         <div class="sidebar-label min-w-0 brand-text-block">
           <h1 class="brand-title font-bold text-white">Monefyi</h1>

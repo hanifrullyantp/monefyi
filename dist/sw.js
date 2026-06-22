@@ -1,6 +1,6 @@
 // Simple offline-first service worker for Monefyi.
 // Caches app shell (HTML/CSS/JS) and falls back for navigations.
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v2";
 const CACHE_NAME = `monefyi-${CACHE_VERSION}`;
 
 // Saat build Vite, beberapa asset (mis. CSS) bisa di-hash menjadi path lain.

@@ -102,9 +102,9 @@
         'aria-label',
         aside.classList.contains('sidebar--collapsed') ? t('sidebar.expand') : t('sidebar.collapse'),
       );
-      if (typeof global.syncSidebarCollapsedUI === 'function') global.syncSidebarCollapsedUI();
+      if (typeof window.syncSidebarCollapsedUI === 'function') window.syncSidebarCollapsedUI();
     });
-    if (typeof global.syncSidebarCollapsedUI === 'function') global.syncSidebarCollapsedUI();
+    if (typeof window.syncSidebarCollapsedUI === 'function') window.syncSidebarCollapsedUI();
   }
 
   function renderTxPreviewCard(tx, container, onSave, onEdit) {

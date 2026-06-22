@@ -144,7 +144,7 @@
     function categoryIconHtml(cat){
       const emoji = categoryEmoji(cat);
       if (emoji !== '➕') return escapeHtml(emoji);
-      return `<img src="${DEFAULT_LOGO_MARK}" class="tx-cat-logo-fallback" alt="" width="18" height="18" loading="lazy" />`;
+      return '<svg class="tx-cat-logo-fallback" width="18" height="18" aria-hidden="true"><use href="#monefyi-mark"/></svg>';
     }
 async function loadBudgets(){
   // Pastikan koneksi database aktif
@@ -1128,23 +1128,19 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
 
     function applyAppBranding() {
   const logoUrl = STATE.appConfig?.logo_url ? String(STATE.appConfig.logo_url) : '';
-  const src = logoUrl || DEFAULT_LOGO;
 
-  const show = (imgEl, fallbackEl) => {
-    if (!imgEl) return;
-    imgEl.src = src;
-    imgEl.classList.remove('hidden');
-    if (fallbackEl) fallbackEl.classList.add('hidden');
-  };
-
-  // Header mobile
-  show($('#appLogoImg'), $('#appLogoFallback'));
-
-  // Auth overlay
-  show($('#authLogoImg'), $('#authLogoFallback'));
-
-  // Sidebar desktop
-  show($('#sidebarLogoImg'), $('#sidebarLogoFallback'));
+  $$('.brand-logo-slot').forEach((slot) => {
+    const svg = slot.querySelector('.brand-logo-svg');
+    const img = slot.querySelector('.brand-logo-custom');
+    if (logoUrl && img) {
+      img.src = logoUrl;
+      img.classList.remove('hidden');
+      svg?.classList.add('hidden');
+    } else {
+      img?.classList.add('hidden');
+      svg?.classList.remove('hidden');
+    }
+  });
 }
 
     function applyAdminUI() {
@@ -1465,7 +1461,7 @@ async function upsertTransaction_legacy_local(tx) {
       STATE.budgetsByMonth = await loadBudgets();
       await refreshTransactionsRange();
       initCoachChat({ reset: true });
-      initMonefyiEnhancements();
+      try { initMonefyiEnhancements(); } catch (e) { console.warn('initMonefyiEnhancements', e); }
       rerender();
     }
 
@@ -1514,7 +1510,7 @@ async function upsertTransaction_legacy_local(tx) {
       const btn = $('#btnSidebarCollapse');
       if (btn) btn.textContent = collapsed ? '›' : '‹';
     }
-    global.syncSidebarCollapsedUI = syncSidebarCollapsedUI;
+    window.syncSidebarCollapsedUI = syncSidebarCollapsedUI;
 
     let deferredPwaPrompt = null;
     function initPwaInstall(){
@@ -7956,44 +7952,49 @@ function toggleNav_legacy(mode) {
         const loader = $('#loadingOverlay');
         if (!loader) return;
         loader.style.opacity = '0';
-        setTimeout(() => { loader.style.visibility = 'hidden'; }, 500);
+        loader.style.pointerEvents = 'none';
+        setTimeout(() => {
+          loader.style.visibility = 'hidden';
+          loader.style.display = 'none';
+        }, 500);
       }
-
-      $('#appShell').classList.add('hidden');
-      // show auth overlay while bootstrapping to avoid blank screen
-      try { showAuth(); } catch {}
-
-      initDefaultPeriod();
-      setTab('quick');
-
-      // initial UI language from defaults (will be replaced after profile loads)
-      try { applyLanguageToUI(); } catch {}
 
       try {
-        if (!window.supabase?.createClient) {
+        $('#appShell').classList.add('hidden');
+        try { showAuth(); } catch {}
+        initDefaultPeriod();
+        setTab('quick');
+
+        try { applyLanguageToUI(); } catch {}
+
+        try {
+          if (!window.supabase?.createClient) {
+            $('#authOverlay')?.classList.remove('hidden');
+            $('#authStatus').textContent = 'Gagal memuat Supabase SDK. Cek koneksi internet / adblock.';
+          } else {
+            await Promise.race([
+              initSupabase(),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('init timeout')), 15000)),
+            ]);
+          }
+        } catch (e) {
+          console.error('Init error', e);
           $('#authOverlay')?.classList.remove('hidden');
-          $('#authStatus').textContent = 'Gagal memuat Supabase SDK. Cek koneksi internet / adblock.';
-        } else {
-          await initSupabase();
+          $('#authStatus').textContent = e?.message === 'init timeout'
+            ? 'Koneksi lambat. Silakan refresh atau coba lagi.'
+            : 'Gagal inisialisasi. Coba refresh atau hubungi admin.';
         }
-      } catch (e) {
-        console.error('Init error', e);
-        $('#authOverlay')?.classList.remove('hidden');
-        $('#authStatus').textContent = 'Gagal inisialisasi. Coba refresh atau hubungi admin.';
+
+        $('#btnPrintReport')?.addEventListener('click', () => printReport());
+        if ($('#mDate')) $('#mDate').value = toISODate(new Date());
+        if ($('#mAccount')) $('#mAccount').value = getLastUsedAccount();
+        applyAppBranding();
+        rerender();
+      } finally {
+        const elapsed = Date.now() - bootStarted;
+        await sleep(Math.max(0, MIN_LOADER_MS - elapsed));
+        hideLoadingOverlay();
       }
-
-      const elapsed = Date.now() - bootStarted;
-      await sleep(Math.max(0, MIN_LOADER_MS - elapsed));
-      hideLoadingOverlay();
-
-      // Print
-      $('#btnPrintReport')?.addEventListener('click', () => printReport());
-
-      // default date
-      if ($('#mDate')) $('#mDate').value = toISODate(new Date());
-      if ($('#mAccount')) $('#mAccount').value = getLastUsedAccount();
-
-      rerender();
     })();
 
     // =========================
