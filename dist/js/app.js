@@ -864,6 +864,8 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
         txView: 'card',
         txLoading: false,
         txVisibleCount: 50,
+        txTableSort: { col: 'date', dir: 'desc' },
+        txTableColumns: null,
       },
       accountDetail: {
         account: null,
@@ -1493,6 +1495,40 @@ async function upsertTransaction_legacy_local(tx) {
       window.MonefyiUI?.showOnboardingIfNeeded?.();
       initManualFormEnhancements();
       initTxToolbarDesktop();
+      initPwaInstall();
+      syncSidebarCollapsedUI();
+    }
+
+    function syncSidebarCollapsedUI(){
+      const collapsed = $('#appSidebar')?.classList.contains('sidebar--collapsed');
+      document.body.classList.toggle('sidebar-collapsed', !!collapsed);
+      const strip = $('#desktopSaldoStrip');
+      if (strip) {
+        strip.classList.toggle('hidden', !collapsed);
+        strip.classList.toggle('md:flex', !!collapsed);
+      }
+      const btn = $('#btnSidebarCollapse');
+      if (btn) btn.textContent = collapsed ? '›' : '‹';
+    }
+    global.syncSidebarCollapsedUI = syncSidebarCollapsedUI;
+
+    let deferredPwaPrompt = null;
+    function initPwaInstall(){
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPwaPrompt = e;
+        $('#btnPwaInstall')?.classList.remove('hidden');
+      });
+      $('#btnPwaInstall')?.addEventListener('click', async () => {
+        if (!deferredPwaPrompt) return;
+        deferredPwaPrompt.prompt();
+        try { await deferredPwaPrompt.userChoice; } catch (_) {}
+        deferredPwaPrompt = null;
+        $('#btnPwaInstall')?.classList.add('hidden');
+      });
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        $('#btnPwaInstall')?.classList.add('hidden');
+      }
     }
 
     function initTxToolbarDesktop(){
@@ -1521,6 +1557,19 @@ async function upsertTransaction_legacy_local(tx) {
         if (!chips.classList.contains('tx-chips--desktop-hidden')) {
           requestAnimationFrame(() => window.MonefyiUI?.syncChipIndicator?.());
         }
+      });
+      $('#btnTxTableCols')?.addEventListener('click', () => {
+        $('#txTableColPicker')?.classList.toggle('hidden');
+      });
+      [
+        ['#btnTopAi', 'Input AI'],
+        ['#btnTopSearch', 'Cari'],
+        ['#btnTopFilterType', 'Filter tipe'],
+        ['#btnHeaderNewTx', 'Transaksi Baru'],
+        ['#btnTxTableCols', 'Kolom tabel'],
+      ].forEach(([sel, tip]) => {
+        const el = $(sel);
+        if (el && !el.getAttribute('data-tip')) el.setAttribute('data-tip', tip);
       });
     }
 
@@ -2442,7 +2491,7 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
      try { applyLanguageToUI(); } catch {}
 
 // aria-expanded untuk tombol periode (mobile) + kartu filter desktop
-['#btnPeriodToggle', '#btnFilterCardDesktop'].forEach((sel) => {
+['#btnPeriodToggle', '#btnFilterCardDesktop', '#btnFilterStripDesktop'].forEach((sel) => {
   const el = $(sel);
   if (el) el.setAttribute('aria-expanded', String(STATE.ui.monthPopoverOpen));
 });
@@ -2524,18 +2573,19 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
           : 'Akun user biasa.';
       }
 
-      $('#monthPopover')?.classList.toggle('hidden', !STATE.ui.monthPopoverOpen || isDesktopViewport());
-      $('#filtersWrap')?.classList.toggle('hidden', !STATE.ui.monthPopoverOpen || isDesktopViewport());
+      $('#monthPopover')?.classList.toggle('hidden', !STATE.ui.monthPopoverOpen);
+      $('#filtersWrap')?.classList.toggle('hidden', !STATE.ui.monthPopoverOpen);
 
       const filterBackdrop = $('#desktopFilterBackdrop');
       if (filterBackdrop) {
         const showDesktopFilter = STATE.ui.monthPopoverOpen && isDesktopViewport();
         filterBackdrop.classList.toggle('hidden', !showDesktopFilter);
         filterBackdrop.classList.toggle('flex', showDesktopFilter);
+        if (showDesktopFilter) placeFilterPanel();
       }
-
       const filterCardPeriod = $('#filterCardPeriodDesktop');
       if (filterCardPeriod) filterCardPeriod.textContent = periodLabel;
+      if ($('#filterStripPeriodDesktop')) $('#filterStripPeriodDesktop').textContent = periodLabel;
       if ($('#presetSelect')) {
         // keep preset selection in sync
         $('#presetSelect').value = STATE.period.preset || 'this_month';
@@ -2543,6 +2593,12 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       $('#rangeCard')?.classList.toggle('hidden', (STATE.period.preset || 'this_month') !== 'custom');
 
       $('#dashboardExpanded').classList.toggle('hidden', !STATE.ui.dashboardOpen);
+      $('#txSection')?.classList.toggle('hidden', STATE.ui.dashboardOpen);
+      const dynamicContent = $('#dynamicContent');
+      if (dynamicContent) {
+        dynamicContent.classList.toggle('dynamic-content--dashboard', STATE.ui.dashboardOpen);
+        dynamicContent.classList.toggle('dynamic-content--tx', !STATE.ui.dashboardOpen);
+      }
       const showTxUi = !STATE.ui.dashboardOpen;
       const txToolbar = $('#txToolbarDesktop');
       if (txToolbar) {
@@ -2602,8 +2658,8 @@ renderAccountsSettings();
 
   const saldoText = isCalculating ? t('saldo.calculating') : formatIDR(saldo);
 
-  // Update angka saldo (mobile + desktop)
-  ['#kpiSaldo', '#kpiSaldoDesktop'].forEach((sel) => {
+  // Update angka saldo (mobile + desktop + strip)
+  ['#kpiSaldo', '#kpiSaldoDesktop', '#kpiSaldoStrip'].forEach((sel) => {
     const el = $(sel);
     if (!el) return;
 
@@ -3088,6 +3144,87 @@ function generateSmartBudgetRecommendation() {
     }
 
     const TX_TABLE_COLUMNS = ['date','type','category','account','payment_method','merchant','notes','amount'];
+    const TX_TABLE_COL_META = {
+      date: { label: 'Tanggal', sortable: true },
+      type: { label: 'Tipe', sortable: true },
+      category: { label: 'Kategori', sortable: true },
+      account: { label: 'Akun', sortable: true },
+      payment_method: { label: 'Metode', sortable: true },
+      merchant: { label: 'Merchant', sortable: true },
+      notes: { label: 'Catatan', sortable: true },
+      amount: { label: 'Nominal', sortable: true, align: 'right' },
+    };
+    const TX_TABLE_COL_DEFAULT = {
+      date: true, type: true, category: true, account: true,
+      payment_method: false, merchant: true, notes: false, amount: true,
+    };
+    function getTxTableColumnVisibility(){
+      if (STATE.ui.txTableColumns) return STATE.ui.txTableColumns;
+      try {
+        const raw = localStorage.getItem('monefyi_tx_cols');
+        if (raw) STATE.ui.txTableColumns = { ...TX_TABLE_COL_DEFAULT, ...JSON.parse(raw) };
+      } catch (_) {}
+      if (!STATE.ui.txTableColumns) STATE.ui.txTableColumns = { ...TX_TABLE_COL_DEFAULT };
+      return STATE.ui.txTableColumns;
+    }
+    function saveTxTableColumnVisibility(){
+      try { localStorage.setItem('monefyi_tx_cols', JSON.stringify(STATE.ui.txTableColumns || TX_TABLE_COL_DEFAULT)); } catch (_) {}
+    }
+    function visibleTxTableColumns(){
+      const vis = getTxTableColumnVisibility();
+      return TX_TABLE_COLUMNS.filter((c) => vis[c] !== false);
+    }
+    function sortTxList(txs){
+      const sort = STATE.ui.txTableSort || { col: 'date', dir: 'desc' };
+      const col = sort.col || 'date';
+      const mul = sort.dir === 'asc' ? 1 : -1;
+      return [...txs].sort((a, b) => {
+        if (col === 'amount') {
+          return (Number(a.amount || 0) - Number(b.amount || 0)) * mul;
+        }
+        if (col === 'date') {
+          return String(a.date || '').localeCompare(String(b.date || '')) * mul;
+        }
+        return String(a[col] || '').localeCompare(String(b[col] || ''), 'id', { sensitivity: 'base' }) * mul;
+      });
+    }
+    function toggleTxTableSort(col){
+      const cur = STATE.ui.txTableSort || { col: 'date', dir: 'desc' };
+      if (cur.col === col) {
+        STATE.ui.txTableSort = { col, dir: cur.dir === 'asc' ? 'desc' : 'asc' };
+      } else {
+        STATE.ui.txTableSort = { col, dir: col === 'date' ? 'desc' : 'asc' };
+      }
+      renderTransactions();
+    }
+    function renderTxTableColPicker(){
+      const wrap = $('#txTableColChecks');
+      if (!wrap) return;
+      const vis = getTxTableColumnVisibility();
+      wrap.innerHTML = TX_TABLE_COLUMNS.map((col) => {
+        const meta = TX_TABLE_COL_META[col] || { label: col };
+        const checked = vis[col] !== false ? 'checked' : '';
+        return `<label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="tx-col-check" data-col="${col}" ${checked} /> ${meta.label}</label>`;
+      }).join('');
+      wrap.querySelectorAll('.tx-col-check').forEach((el) => {
+        el.addEventListener('change', () => {
+          const col = el.getAttribute('data-col');
+          if (!col) return;
+          if (!STATE.ui.txTableColumns) getTxTableColumnVisibility();
+          STATE.ui.txTableColumns[col] = el.checked;
+          if (visibleTxTableColumns().length === 0) {
+            STATE.ui.txTableColumns[col] = true;
+            el.checked = true;
+            showToast('Minimal 1 kolom aktif', 'warn');
+            return;
+          }
+          saveTxTableColumnVisibility();
+          renderTransactions();
+        });
+      });
+    }
+    const TX_ICON_EDIT = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+    const TX_ICON_DEL = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>';
     let txInlineRefreshTimer = null;
     function isDesktopViewport(){
       return window.matchMedia('(min-width: 768px)').matches;
@@ -3153,52 +3290,62 @@ function generateSmartBudgetRecommendation() {
       const table = $('#txTable');
       if (!table) return;
       const hint = $('#txTableHint');
+      const cols = visibleTxTableColumns();
+      const sorted = sortTxList(txs);
+      const sort = STATE.ui.txTableSort || { col: 'date', dir: 'desc' };
+      const sortMark = (col) => {
+        if (sort.col !== col) return '↕';
+        return sort.dir === 'asc' ? '↑' : '↓';
+      };
+
       table.innerHTML = `
         <thead>
           <tr>
-            <th>Tanggal</th>
-            <th>Tipe</th>
-            <th>Kategori</th>
-            <th>Akun</th>
-            <th>Metode</th>
-            <th>Merchant</th>
-            <th>Catatan</th>
-            <th class="text-right">Nominal</th>
-            <th>Aksi</th>
+            ${cols.map((col) => {
+              const meta = TX_TABLE_COL_META[col] || { label: col };
+              const sortedCls = sort.col === col ? ' tx-th-sorted' : '';
+              return `<th class="tx-th-sortable${sortedCls}" data-sort-col="${col}" title="Urutkan ${meta.label}">${meta.label}<span class="tx-sort-mark">${sortMark(col)}</span></th>`;
+            }).join('')}
+            <th class="tx-td-actions">Aksi</th>
           </tr>
         </thead>
         <tbody>
-          ${txs.map((tx, rowIdx) => `
+          ${sorted.map((tx, rowIdx) => `
             <tr data-tx-id="${escapeHtmlAttr(tx.id)}">
-              <td><input class="tx-cell-input" data-row="${rowIdx}" data-col="0" data-col-name="date" value="${escapeHtmlAttr(tx.date || '')}" /></td>
-              <td>
-                <select class="tx-cell-select" data-row="${rowIdx}" data-col="1" data-col-name="type">
-                  <option value="income" ${tx.type==='income'?'selected':''}>income</option>
-                  <option value="expense" ${tx.type==='expense'?'selected':''}>expense</option>
-                  <option value="transfer" ${tx.type==='transfer'?'selected':''}>transfer</option>
-                </select>
-              </td>
-              <td><input class="tx-cell-input" data-row="${rowIdx}" data-col="2" data-col-name="category" value="${escapeHtmlAttr(tx.category || '')}" /></td>
-              <td><input class="tx-cell-input" data-row="${rowIdx}" data-col="3" data-col-name="account" value="${escapeHtmlAttr(tx.account || '')}" /></td>
-              <td><input class="tx-cell-input" data-row="${rowIdx}" data-col="4" data-col-name="payment_method" value="${escapeHtmlAttr(tx.payment_method || '')}" /></td>
-              <td><input class="tx-cell-input" data-row="${rowIdx}" data-col="5" data-col-name="merchant" value="${escapeHtmlAttr(tx.merchant || '')}" /></td>
-              <td><input class="tx-cell-input" data-row="${rowIdx}" data-col="6" data-col-name="notes" value="${escapeHtmlAttr(tx.notes || '')}" /></td>
-              <td><input class="tx-cell-input text-right" data-row="${rowIdx}" data-col="7" data-col-name="amount" value="${escapeHtmlAttr(String(Number(tx.amount || 0)))}" /></td>
-              <td>
-                <button class="tap rounded-lg px-2 py-1 text-[11px]" data-inline-edit="${escapeHtmlAttr(tx.id)}" style="background: rgba(99,102,241,.14); border:1px solid rgba(99,102,241,.25); color: rgba(199,210,254,.95)">Detail</button>
-                <button class="tap rounded-lg px-2 py-1 text-[11px]" data-inline-del="${escapeHtmlAttr(tx.id)}" style="background: rgba(244,63,94,.14); border:1px solid rgba(244,63,94,.25); color: rgba(254,202,202,.95)">Hapus</button>
+              ${cols.map((col, ci) => {
+                const colIdx = TX_TABLE_COLUMNS.indexOf(col);
+                if (col === 'type') {
+                  return `<td><span class="tx-type-pill">${escapeHtml(tx.type || 'expense')}</span></td>`;
+                }
+                if (col === 'amount') {
+                  const isInc = tx.type === 'income';
+                  const isExp = tx.type === 'expense';
+                  const color = isInc ? 'var(--accent-primary)' : isExp ? 'var(--accent-danger)' : 'var(--app-text)';
+                  return `<td class="tx-td-amount"><input class="tx-cell-input text-right" data-row="${rowIdx}" data-col="${colIdx}" data-col-name="amount" value="${escapeHtmlAttr(String(Number(tx.amount || 0)))}" style="color:${color};font-weight:600" /></td>`;
+                }
+                return `<td><input class="tx-cell-input" data-row="${rowIdx}" data-col="${colIdx}" data-col-name="${col}" value="${escapeHtmlAttr(String(tx[col] ?? ''))}" /></td>`;
+              }).join('')}
+              <td class="tx-td-actions">
+                <span class="tx-row-actions">
+                  <button type="button" class="tx-action-btn tap" data-tip="Edit" data-inline-edit="${escapeHtmlAttr(tx.id)}" aria-label="Edit">${TX_ICON_EDIT}</button>
+                  <button type="button" class="tx-action-btn tx-action-btn--danger tap" data-tip="Hapus" data-inline-del="${escapeHtmlAttr(tx.id)}" aria-label="Hapus">${TX_ICON_DEL}</button>
+                </span>
               </td>
             </tr>
           `).join('')}
         </tbody>
       `;
-      if (hint) hint.textContent = `Mode tabel desktop aktif • ${txs.length} baris`;
+      if (hint) hint.textContent = `${sorted.length} baris · klik header untuk urut · double-click sel untuk edit`;
 
-      table.querySelectorAll('.tx-cell-input, .tx-cell-select').forEach((el) => {
+      table.querySelectorAll('[data-sort-col]').forEach((th) => {
+        th.addEventListener('click', () => toggleTxTableSort(th.getAttribute('data-sort-col')));
+      });
+
+      table.querySelectorAll('.tx-cell-input').forEach((el) => {
         const saveCell = async () => {
           const row = Number(el.getAttribute('data-row'));
           const col = String(el.getAttribute('data-col-name') || '');
-          const tx = txs[row];
+          const tx = sorted[row];
           if (!tx || !col) return;
           tx[col] = normalizeTxCellValue(col, el.value);
           if (col === 'amount') el.value = String(Number(tx.amount || 0));
@@ -3207,20 +3354,23 @@ function generateSmartBudgetRecommendation() {
             if (hint) hint.textContent = 'Tersimpan';
           } catch (e) {
             console.warn('inline save failed', e);
-            if (hint) hint.textContent = 'Gagal simpan. Cek koneksi.';
+            if (hint) hint.textContent = 'Gagal simpan';
           }
         };
-        if (el.classList.contains('tx-cell-select')) el.addEventListener('change', saveCell);
-        else el.addEventListener('blur', saveCell);
-        el.addEventListener('paste', (e) => { handleTxTablePaste(e, txs).catch(console.warn); });
+        el.addEventListener('blur', saveCell);
+        el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); el.blur(); } });
+        el.addEventListener('paste', (e) => { handleTxTablePaste(e, sorted).catch(console.warn); });
       });
 
       table.querySelectorAll('[data-inline-edit]').forEach((btn) => {
-        btn.addEventListener('click', () => openEdit(btn.getAttribute('data-inline-edit')));
+        btn.addEventListener('click', (e) => { e.stopPropagation(); openEdit(btn.getAttribute('data-inline-edit')); });
       });
       table.querySelectorAll('[data-inline-del]').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-          await deleteTransaction(btn.getAttribute('data-inline-del'));
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (confirm(t('tx.delete.confirm') || 'Hapus transaksi ini?')) {
+            await deleteTransaction(btn.getAttribute('data-inline-del'), { confirmed: true });
+          }
         });
       });
     }
@@ -3257,8 +3407,8 @@ function generateSmartBudgetRecommendation() {
 
         for (const tx of groups.get(date)) {
           const row = document.createElement('div');
-          row.className = 'tx-card-v2 app-card w-full text-left' + (tx.meta?.pending ? ' tx-pending' : '');
-          row.style.animationDelay = `${animIdx * 50}ms`;
+          row.className = 'tx-card-v2 tx-card-compact app-card w-full text-left' + (tx.meta?.pending ? ' tx-pending' : '');
+          row.style.animationDelay = `${animIdx * 30}ms`;
           row.setAttribute('tabindex', '0');
           row.setAttribute('data-tx-row', '1');
           row.setAttribute('data-tx-id', tx.id);
@@ -3271,75 +3421,59 @@ function generateSmartBudgetRecommendation() {
           const amtColor = isInc ? 'var(--accent-primary)' : isExp ? 'var(--accent-danger)' : 'var(--app-text)';
           const sign = isInc ? '+' : isExp ? '−' : '';
           const title = tx.merchant || tx.category || 'Lainnya';
-          const subtitle = [tx.account, tx.type].filter(Boolean).join(' • ');
+          const subtitle = [tx.category !== title ? tx.category : null, tx.account, tx.type].filter(Boolean).join(' · ');
 
           row.innerHTML = `
             <div class="tx-card-swipe-delete" aria-hidden="true">${t('tx.swipe.delete') || 'Hapus'}</div>
             <div class="tx-card-inner">
-            <div class="flex items-start gap-3">
-              <div class="tx-icon shrink-0" style="background:${categoryIconBg(tx.category)}">${escapeHtml(categoryEmoji(tx.category))}</div>
-              <div class="min-w-0 flex-1">
-                <div class="flex items-start justify-between gap-2">
-                  <div class="min-w-0">
-                    <div class="text-sm font-bold truncate">${escapeHtml(title)}</div>
-                    <div class="mt-0.5 text-xs app-muted truncate">${escapeHtml(subtitle)}</div>
-                    <div class="mt-1 text-[11px] app-muted2">${escapeHtml(tx.date)}${tx.meta?.pending ? ' · ' + (t('tx.pending') || 'Menyimpan…') : ''}</div>
-                  </div>
-                  <div class="text-right shrink-0 flex flex-col items-end gap-1">
-                    <div class="text-base font-bold" style="color:${amtColor}">${sign}${formatIDR(Number(tx.amount||0))}</div>
-                    <span class="text-[10px] rounded-full px-2 py-0.5 app-chip">${escapeHtml(tx.account || '—')}</span>
-                  </div>
+              <div class="flex items-center gap-2.5">
+                <div class="tx-icon shrink-0" style="background:${categoryIconBg(tx.category)}">${escapeHtml(categoryEmoji(tx.category))}</div>
+                <div class="min-w-0 flex-1">
+                  <div class="text-sm font-semibold truncate leading-tight">${escapeHtml(title)}</div>
+                  <div class="text-[11px] app-muted truncate">${escapeHtml(subtitle)}${tx.meta?.pending ? ' · ' + (t('tx.pending') || '…') : ''}</div>
                 </div>
-              </div>
-              <div class="relative shrink-0">
-                <button type="button" class="tx-menu-btn tap rounded-lg app-chip w-8 h-8 flex items-center justify-center" data-tx-menu="${escapeHtmlAttr(tx.id)}" aria-label="Menu">⋮</button>
-                <div class="hidden absolute right-0 top-9 z-20 min-w-[140px] rounded-lg app-card-opaque border border-[var(--app-border)] shadow-lg py-1" data-tx-dropdown="${escapeHtmlAttr(tx.id)}">
-                  <button type="button" class="tap w-full text-left px-3 py-2 text-xs hover:opacity-90" data-tx-edit="${escapeHtmlAttr(tx.id)}">${t('tx.menu.edit') || 'Edit'}</button>
-                  <button type="button" class="tap w-full text-left px-3 py-2 text-xs hover:opacity-90" data-tx-dup="${escapeHtmlAttr(tx.id)}">${t('tx.menu.duplicate') || 'Duplikat'}</button>
-                  <button type="button" class="tap w-full text-left px-3 py-2 text-xs" style="color:var(--accent-danger)" data-tx-del="${escapeHtmlAttr(tx.id)}">${t('tx.menu.delete') || 'Hapus'}</button>
+                <div class="text-right shrink-0 font-semibold text-sm tabular-nums" style="color:${amtColor}">${sign}${formatIDR(Number(tx.amount||0))}</div>
+                <div class="tx-card-actions shrink-0 hidden md:flex">
+                  <button type="button" class="tx-action-btn tap" data-tip="Edit" data-tx-edit="${escapeHtmlAttr(tx.id)}" aria-label="Edit">${TX_ICON_EDIT}</button>
+                  <button type="button" class="tx-action-btn tx-action-btn--danger tap" data-tip="Hapus" data-tx-del-quick="${escapeHtmlAttr(tx.id)}" aria-label="Hapus">${TX_ICON_DEL}</button>
                 </div>
+                <button type="button" class="tx-menu-btn tap rounded-lg app-chip w-7 h-7 flex items-center justify-center md:hidden shrink-0" data-tx-menu="${escapeHtmlAttr(tx.id)}" data-tip="Menu" aria-label="Menu">⋮</button>
               </div>
-            </div>
-            <div class="hidden mt-3 pt-3 border-t border-[var(--app-border)]" data-tx-confirm="${escapeHtmlAttr(tx.id)}">
-              <div class="text-xs mb-2">${t('tx.delete.confirm') || 'Hapus transaksi ini?'}</div>
-              <div class="flex gap-2">
-                <button type="button" class="tap flex-1 btn-ghost py-1.5 rounded-lg text-xs" data-tx-cancel="${escapeHtmlAttr(tx.id)}">${t('tx.delete.no') || 'Batal'}</button>
-                <button type="button" class="tap flex-1 py-1.5 rounded-lg text-xs text-white" style="background:var(--accent-danger)" data-tx-confirm-del="${escapeHtmlAttr(tx.id)}">${t('tx.delete.yes') || 'Ya, Hapus'}</button>
+              <div class="hidden absolute right-2 top-10 z-20 min-w-[120px] rounded-lg app-card-opaque border border-[var(--app-border)] shadow-lg py-1 md:hidden" data-tx-dropdown="${escapeHtmlAttr(tx.id)}">
+                <button type="button" class="tap w-full text-left px-3 py-2 text-xs" data-tx-edit="${escapeHtmlAttr(tx.id)}">${t('tx.menu.edit') || 'Edit'}</button>
+                <button type="button" class="tap w-full text-left px-3 py-2 text-xs" style="color:var(--accent-danger)" data-tx-del="${escapeHtmlAttr(tx.id)}">${t('tx.menu.delete') || 'Hapus'}</button>
               </div>
-            </div>
             </div>
           `;
 
           row.querySelector('[data-tx-menu]')?.addEventListener('click', (e) => {
             e.stopPropagation();
-            const dd = row.querySelector(`[data-tx-dropdown]`);
+            const dd = row.querySelector('[data-tx-dropdown]');
             document.querySelectorAll('[data-tx-dropdown]').forEach(el => { if (el !== dd) el.classList.add('hidden'); });
             dd?.classList.toggle('hidden');
           });
-          row.querySelector('[data-tx-edit]')?.addEventListener('click', (e) => { e.stopPropagation(); openEdit(tx.id); });
-          row.querySelector('[data-tx-dup]')?.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const copy = { ...tx, id: uuid(), created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
-            await upsertTransaction(copy, { pending: true });
+          row.querySelectorAll('[data-tx-edit]').forEach((btn) => {
+            btn.addEventListener('click', (e) => { e.stopPropagation(); openEdit(tx.id); });
           });
-          row.querySelector('[data-tx-del]')?.addEventListener('click', (e) => {
+          row.querySelector('[data-tx-del-quick]')?.addEventListener('click', async (e) => {
             e.stopPropagation();
-            row.querySelector('[data-tx-confirm]')?.classList.remove('hidden');
-            row.querySelector('[data-tx-dropdown]')?.classList.add('hidden');
+            if (confirm(t('tx.delete.confirm') || 'Hapus transaksi ini?')) {
+              await deleteTransaction(tx.id, { confirmed: true });
+            }
           });
-          row.querySelector('[data-tx-cancel]')?.addEventListener('click', (e) => {
+          row.querySelector('[data-tx-del]')?.addEventListener('click', async (e) => {
             e.stopPropagation();
-            row.querySelector('[data-tx-confirm]')?.classList.add('hidden');
+            if (confirm(t('tx.delete.confirm') || 'Hapus transaksi ini?')) {
+              await deleteTransaction(tx.id, { confirmed: true });
+            }
           });
-          row.querySelector('[data-tx-confirm-del]')?.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            await deleteTransaction(tx.id, { confirmed: true });
-          });
-          window.MonefyiUI?.initTxSwipeDelete?.(row, () => {
-            row.querySelector('[data-tx-confirm]')?.classList.remove('hidden');
+          window.MonefyiUI?.initTxSwipeDelete?.(row, async () => {
+            if (confirm(t('tx.delete.confirm') || 'Hapus transaksi ini?')) {
+              await deleteTransaction(tx.id, { confirmed: true });
+            }
           });
           row.addEventListener('click', (e) => {
-            if (e.target.closest('[data-tx-menu]') || e.target.closest('[data-tx-dropdown]') || e.target.closest('[data-tx-confirm]')) return;
+            if (e.target.closest('[data-tx-menu]') || e.target.closest('[data-tx-dropdown]') || e.target.closest('.tx-card-actions')) return;
             openEdit(tx.id);
           });
           list.appendChild(row);
@@ -3374,6 +3508,11 @@ function generateSmartBudgetRecommendation() {
 
       list.classList.toggle('hidden', useTable);
       if (tableWrap) tableWrap.classList.toggle('hidden', !useTable);
+      if (useTable) {
+        renderTxTableColPicker();
+        $('#txTableColPicker')?.classList.add('hidden');
+      }
+      $('#txListHost')?.classList.toggle('tx-list-host--table', useTable);
       $('#txEmpty').classList.toggle('hidden', total !== 0);
       loadMoreWrap?.classList.toggle('hidden', limit >= total || total === 0);
 
@@ -7428,8 +7567,8 @@ function toggleNav_legacy(mode) {
       }
     });
 
-    // Periode toggle (mobile header + desktop filter card)
-    ['#btnPeriodToggle', '#btnFilterCardDesktop'].forEach((sel) => {
+    // Periode toggle (mobile header + desktop filter card + strip)
+    ['#btnPeriodToggle', '#btnFilterCardDesktop', '#btnFilterStripDesktop'].forEach((sel) => {
   const el = $(sel);
   if (!el) return;
 
@@ -7617,7 +7756,8 @@ function toggleNav_legacy(mode) {
     if (
       e?.target &&
       (e.target.closest?.('#btnPeriodToggle') ||
-       e.target.closest?.('#btnFilterCardDesktop'))
+       e.target.closest?.('#btnFilterCardDesktop') ||
+       e.target.closest?.('#btnFilterStripDesktop'))
     ) {
       return;
     }
