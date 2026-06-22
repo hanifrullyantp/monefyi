@@ -6,7 +6,13 @@ const CACHE_NAME = `monefyi-${CACHE_VERSION}`;
 // Saat build Vite, beberapa asset (mis. CSS) bisa di-hash menjadi path lain.
 // Jadi saat install, cukup cache `index.html` saja; sisanya di-cache "on demand"
 // lewat handler `fetch` (GET same-origin).
-const shellUrls = [new URL("./index.html", self.location).href];
+const shellUrls = [
+  new URL("./index.html", self.location).href,
+  new URL("./icons/icon-192.svg", self.location).href,
+  new URL("./icons/icon-512.svg", self.location).href,
+  new URL("./icons/monefyi-mark.svg", self.location).href,
+  new URL("./manifest.webmanifest", self.location).href,
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

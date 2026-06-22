@@ -7,10 +7,11 @@
   <title>Monefyi — AI Personal Finance</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
   <!-- PWA Manifest (versioned to avoid stale cache) -->
-  <link rel="manifest" href="./assets/manifest-DVD1MuOS.webmanifest?v=2025-12-29" />
+  <link rel="manifest" href="./assets/manifest-DVD1MuOS.webmanifest?v=2026-06-22" />
+  <link rel="icon" href="./assets/icon-192-BnQJVhbu.svg" type="image/svg+xml" />
 
   <!-- Android PWA -->
   <meta name="mobile-web-app-capable" content="yes" />
@@ -20,8 +21,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Monefyi" />
-  <link rel="apple-touch-icon" href="./assets/icon-192-CP_9NQDi.svg" />
-  <link rel="apple-touch-icon" sizes="192x192" href="./assets/icon-192-CP_9NQDi.svg" />
+  <link rel="apple-touch-icon" href="./assets/icon-192-BnQJVhbu.svg" />
+  <link rel="apple-touch-icon" sizes="192x192" href="./assets/icon-192-BnQJVhbu.svg" />
 
   <script src="js/config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.2.2" integrity="sha384-qKt1F1k7v69ebd7q6Na1d2FGVMI+43GgA5hpfz7i+zDfrz8rIjXYu7majL1fXSeS" crossorigin="anonymous"></script>
@@ -32,7 +33,7 @@
 
 
  
-  <link rel="stylesheet" crossorigin href="./assets/index-64FIyACD.css">
+  <link rel="stylesheet" crossorigin href="./assets/index-Cl0UwiZp.css">
 </head>
 <body>
   <div class="min-h-dvh">
@@ -40,9 +41,9 @@
     <!-- Loading Screen -->
     <div id="loadingOverlay">
       <div class="loading-logo">
-        <span class="text-4xl font-bold text-white">M</span>
+        <img src="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='192'%20height='192'%20viewBox='0%200%20192%20192'%20fill='none'%3e%3crect%20width='192'%20height='192'%20rx='44'%20fill='%231B2230'/%3e%3cdefs%3e%3cclipPath%20id='mLeft'%3e%3cpolygon%20points='0,0%20108,0%2068,192%200,192'/%3e%3c/clipPath%3e%3cclipPath%20id='mRight'%3e%3cpolygon%20points='108,0%20192,0%20192,192%2068,192'/%3e%3c/clipPath%3e%3c/defs%3e%3cpath%20fill='%239DD4F7'%20clip-path='url(%23mLeft)'%20d='M48%20148V48h20v48l28-48h6l28%2048v52h-20V84l-28%2050H88L60%2084v64H48Z'/%3e%3cpath%20fill='%239DD4F7'%20clip-path='url(%23mRight)'%20d='M48%20148V48h20v48l28-48h6l28%2048v52h-20V84l-28%2050H88L60%2084v64H48Z'/%3e%3c/svg%3e" width="80" height="80" alt="Monefyi" class="loading-logo-img" />
       </div>
-      <div class="mt-6 text-sm app-muted animate-pulse">Initializing Monefyi...</div>
+      <div class="mt-5 text-sm app-muted loading-text">Initializing Monefyi...</div>
     </div>
 
     <!-- Onboarding Tutorial Overlay -->
@@ -74,13 +75,13 @@
         <div class="w-full max-w-md">
           <div class="rounded-3xl app-card-opaque p-5">
             <div class="flex items-center gap-3">
-              <div class="w-11 h-11 rounded-2xl overflow-hidden flex items-center justify-center font-bold" style="background: rgba(99,102,241,.15); color: rgba(99,102,241,.95); border: 1px solid rgba(99,102,241,.25)">
-                <img id="authLogoImg" class="w-full h-full object-cover hidden" alt="Logo" />
-                <span id="authLogoFallback">A</span>
+              <div class="w-11 h-11 rounded-2xl brand-logo-slot overflow-hidden shrink-0">
+                <img id="authLogoImg" src="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='192'%20height='192'%20viewBox='0%200%20192%20192'%20fill='none'%3e%3crect%20width='192'%20height='192'%20rx='44'%20fill='%231B2230'/%3e%3cdefs%3e%3cclipPath%20id='mLeft'%3e%3cpolygon%20points='0,0%20108,0%2068,192%200,192'/%3e%3c/clipPath%3e%3cclipPath%20id='mRight'%3e%3cpolygon%20points='108,0%20192,0%20192,192%2068,192'/%3e%3c/clipPath%3e%3c/defs%3e%3cpath%20fill='%239DD4F7'%20clip-path='url(%23mLeft)'%20d='M48%20148V48h20v48l28-48h6l28%2048v52h-20V84l-28%2050H88L60%2084v64H48Z'/%3e%3cpath%20fill='%239DD4F7'%20clip-path='url(%23mRight)'%20d='M48%20148V48h20v48l28-48h6l28%2048v52h-20V84l-28%2050H88L60%2084v64H48Z'/%3e%3c/svg%3e" class="w-full h-full object-cover" alt="Logo Monefyi" />
+                <span id="authLogoFallback" class="hidden">M</span>
               </div>
-              <div>
-                <div class="text-xs app-muted">Monefyi</div>
-                <div id="authTitle" class="text-lg font-semibold">Masuk</div>
+              <div class="brand-text-block min-w-0">
+                <div class="brand-sub text-xs app-muted">Monefyi</div>
+                <div id="authTitle" class="text-lg font-semibold leading-tight">Masuk</div>
               </div>
             </div>
 
@@ -180,9 +181,9 @@
         <div class="flex items-center justify-between gap-3">
           <div class="flex items-center gap-2 min-w-0">
             <button id="btnLogo" class="tap flex items-center gap-2 text-left" title="Monefyi Advisor">
-              <div id="appLogo" class="w-10 h-10 rounded-2xl app-card flex items-center justify-center overflow-hidden">
-                <img id="appLogoImg" class="w-full h-full object-cover hidden" alt="Logo Monefyi" />
-                <span id="appLogoFallback" class="font-bold">M</span>
+              <div id="appLogo" class="w-10 h-10 rounded-2xl brand-logo-slot overflow-hidden shrink-0">
+                <img id="appLogoImg" src="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='192'%20height='192'%20viewBox='0%200%20192%20192'%20fill='none'%3e%3crect%20width='192'%20height='192'%20rx='44'%20fill='%231B2230'/%3e%3cdefs%3e%3cclipPath%20id='mLeft'%3e%3cpolygon%20points='0,0%20108,0%2068,192%200,192'/%3e%3c/clipPath%3e%3cclipPath%20id='mRight'%3e%3cpolygon%20points='108,0%20192,0%20192,192%2068,192'/%3e%3c/clipPath%3e%3c/defs%3e%3cpath%20fill='%239DD4F7'%20clip-path='url(%23mLeft)'%20d='M48%20148V48h20v48l28-48h6l28%2048v52h-20V84l-28%2050H88L60%2084v64H48Z'/%3e%3cpath%20fill='%239DD4F7'%20clip-path='url(%23mRight)'%20d='M48%20148V48h20v48l28-48h6l28%2048v52h-20V84l-28%2050H88L60%2084v64H48Z'/%3e%3c/svg%3e" class="w-full h-full object-cover" alt="Logo Monefyi" />
+                <span id="appLogoFallback" class="hidden font-bold">M</span>
               </div>
             </button>
 
@@ -339,14 +340,14 @@
       <button id="btnSidebarCollapse" type="button" class="tap absolute top-0 right-0 z-10 w-8 h-8 rounded-lg app-chip flex items-center justify-center text-xs" aria-label="Ciutkan sidebar" title="Sidebar">‹</button>
 
       <!-- Brand -->
-      <div class="sidebar-brand flex items-center gap-3 px-1 pr-8">
-        <div class="w-10 h-10 rounded-2xl app-card flex items-center justify-center overflow-hidden shadow-lg border border-slate-800 shrink-0">
-          <img id="sidebarLogoImg" class="w-full h-full object-cover hidden" alt="Logo Monefyi" />
-          <span id="sidebarLogoFallback" class="font-bold text-white text-xl">M</span>
+      <div class="sidebar-brand flex items-center gap-2.5 px-1 pr-8">
+        <div class="w-10 h-10 rounded-2xl brand-logo-slot overflow-hidden shrink-0">
+          <img id="sidebarLogoImg" src="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='192'%20height='192'%20viewBox='0%200%20192%20192'%20fill='none'%3e%3crect%20width='192'%20height='192'%20rx='44'%20fill='%231B2230'/%3e%3cdefs%3e%3cclipPath%20id='mLeft'%3e%3cpolygon%20points='0,0%20108,0%2068,192%200,192'/%3e%3c/clipPath%3e%3cclipPath%20id='mRight'%3e%3cpolygon%20points='108,0%20192,0%20192,192%2068,192'/%3e%3c/clipPath%3e%3c/defs%3e%3cpath%20fill='%239DD4F7'%20clip-path='url(%23mLeft)'%20d='M48%20148V48h20v48l28-48h6l28%2048v52h-20V84l-28%2050H88L60%2084v64H48Z'/%3e%3cpath%20fill='%239DD4F7'%20clip-path='url(%23mRight)'%20d='M48%20148V48h20v48l28-48h6l28%2048v52h-20V84l-28%2050H88L60%2084v64H48Z'/%3e%3c/svg%3e" class="w-full h-full object-cover" alt="Logo Monefyi" />
+          <span id="sidebarLogoFallback" class="hidden font-bold text-white text-xl">M</span>
         </div>
-        <div class="sidebar-label min-w-0">
-          <h1 class="font-bold text-white leading-none">Monefyi</h1>
-          <span class="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">Advisor AI</span>
+        <div class="sidebar-label min-w-0 brand-text-block">
+          <h1 class="brand-title font-bold text-white">Monefyi</h1>
+          <span class="brand-sub text-[10px] text-slate-500 uppercase font-semibold">Advisor AI</span>
         </div>
       </div>
 

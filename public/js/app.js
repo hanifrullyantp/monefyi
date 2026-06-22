@@ -120,6 +120,9 @@
       return Math.round(n);
     }
 
+    const DEFAULT_LOGO = './icons/icon-192.svg';
+    const DEFAULT_LOGO_MARK = './icons/monefyi-mark.svg';
+
     function normalizeText(t){
       return (t||'').toLowerCase().replace(/\s+/g,' ').trim();
     }
@@ -137,6 +140,11 @@
       if (c.includes('bisnis') || c.includes('kerja')) return '💼';
       if (c.includes('hadiah') || c.includes('donasi')) return '🎁';
       return '➕';
+    }
+    function categoryIconHtml(cat){
+      const emoji = categoryEmoji(cat);
+      if (emoji !== '➕') return escapeHtml(emoji);
+      return `<img src="${DEFAULT_LOGO_MARK}" class="tx-cat-logo-fallback" alt="" width="18" height="18" loading="lazy" />`;
     }
 async function loadBudgets(){
   // Pastikan koneksi database aktif
@@ -1120,17 +1128,13 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
 
     function applyAppBranding() {
   const logoUrl = STATE.appConfig?.logo_url ? String(STATE.appConfig.logo_url) : '';
+  const src = logoUrl || DEFAULT_LOGO;
 
   const show = (imgEl, fallbackEl) => {
-    if (!imgEl || !fallbackEl) return;
-    if (logoUrl) {
-      imgEl.src = logoUrl;
-      imgEl.classList.remove('hidden');
-      fallbackEl.classList.add('hidden');
-    } else {
-      imgEl.classList.add('hidden');
-      fallbackEl.classList.remove('hidden');
-    }
+    if (!imgEl) return;
+    imgEl.src = src;
+    imgEl.classList.remove('hidden');
+    if (fallbackEl) fallbackEl.classList.add('hidden');
   };
 
   // Header mobile
@@ -1139,7 +1143,7 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
   // Auth overlay
   show($('#authLogoImg'), $('#authLogoFallback'));
 
-  // Sidebar desktop (TAMBAHAN)
+  // Sidebar desktop
   show($('#sidebarLogoImg'), $('#sidebarLogoFallback'));
 }
 
@@ -2762,7 +2766,7 @@ renderAccountsSettings();
         if (lastNotif !== today) {
           new Notification("Monefyi Warning", {
             body: `Budget Anda sudah terpakai ${pct.toFixed(0)}%. Waktunya berhemat!`,
-            icon: "/icons/icon-192.svg"
+            icon: "./icons/icon-192.svg"
           });
           localStorage.setItem('last_budget_notif', today);
           showToast(`Budget hampir habis (${pct.toFixed(0)}%)`, 'warn');
@@ -3427,7 +3431,7 @@ function generateSmartBudgetRecommendation() {
             <div class="tx-card-swipe-delete" aria-hidden="true">${t('tx.swipe.delete') || 'Hapus'}</div>
             <div class="tx-card-inner">
               <div class="flex items-center gap-2.5">
-                <div class="tx-icon shrink-0" style="background:${categoryIconBg(tx.category)}">${escapeHtml(categoryEmoji(tx.category))}</div>
+                <div class="tx-icon shrink-0" style="background:${categoryIconBg(tx.category)}">${categoryIconHtml(tx.category)}</div>
                 <div class="min-w-0 flex-1">
                   <div class="text-sm font-semibold truncate leading-tight">${escapeHtml(title)}</div>
                   <div class="text-[11px] app-muted truncate">${escapeHtml(subtitle)}${tx.meta?.pending ? ' · ' + (t('tx.pending') || '…') : ''}</div>
