@@ -37,7 +37,7 @@ export default function MetricMiniCard({
 
   return (
     <div className={`rounded-xl border p-3 ${toneStyles[tone]}`}>
-      {Icon && <Icon className="w-4 h-4 text-slate-400 mb-1" />}
+      {Icon && <Icon className="w-4 h-4 text-slate-600 mb-1" />}
       <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{label}</div>
       <div className={`text-lg font-black font-mono leading-tight mt-0.5 ${valueTone[tone]}`}>
         {value}

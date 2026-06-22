@@ -59,7 +59,7 @@ export default function RecentTransactions({ entries, loading }: Props) {
           ))}
         </div>
       ) : rows.length === 0 ? (
-        <p className="p-6 text-sm text-slate-400 text-center">Belum ada transaksi.</p>
+        <p className="p-6 text-sm text-slate-600 text-center">Belum ada transaksi.</p>
       ) : (
         <ul className="divide-y divide-slate-50">
           {rows.map(entry => {
@@ -80,7 +80,7 @@ export default function RecentTransactions({ entries, loading }: Props) {
                   <span className={`font-bold shrink-0 ${meta.sign === '+' ? 'text-emerald-600' : meta.sign === '-' ? 'text-rose-600' : 'text-blue-600'}`}>
                     {meta.sign}{formatFinanceRupiah(entry.total_amount)}
                   </span>
-                  <span className="text-[10px] text-slate-400 w-16 text-right shrink-0">
+                  <span className="text-[10px] text-slate-600 w-16 text-right shrink-0">
                     {relativeTime(entry.created_at)}
                   </span>
                 </button>

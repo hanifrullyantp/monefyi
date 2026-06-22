@@ -71,7 +71,7 @@ export default function Dashboard({ onOpenProject }: { onOpenProject?: (id: stri
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
             {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}
-            {stats.avgProgress > 0 && <span className="text-slate-400"> · Rata-rata progress {Math.round(stats.avgProgress)}%</span>}
+            {stats.avgProgress > 0 && <span className="text-slate-600"> · Rata-rata progress {Math.round(stats.avgProgress)}%</span>}
           </p>
         </div>
         {stats.atRisk > 0 && (
@@ -109,7 +109,7 @@ export default function Dashboard({ onOpenProject }: { onOpenProject?: (id: stri
         <section className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-bold text-slate-800 text-sm">Arus Kas 30 Hari</h2>
-            <span className="text-[10px] text-slate-400">jt Rp</span>
+            <span className="text-[10px] text-slate-600">jt Rp</span>
           </div>
           <ResponsiveContainer width="100%" height={160}>
             <AreaChart data={cashflowData}>
@@ -128,15 +128,15 @@ export default function Dashboard({ onOpenProject }: { onOpenProject?: (id: stri
             <h2 className="font-bold text-slate-800 text-sm flex items-center gap-2">
               <Activity className="w-4 h-4 text-emerald-600" /> Log Terbaru
             </h2>
-            <span className="text-xs text-slate-400 flex items-center gap-1"><Calendar className="w-3 h-3" />{recentLogs.length}</span>
+            <span className="text-xs text-slate-600 flex items-center gap-1"><Calendar className="w-3 h-3" />{recentLogs.length}</span>
           </div>
           <div className="space-y-2 max-h-[160px] overflow-y-auto">
             {recentLogs.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-4">Belum ada log</p>
+              <p className="text-sm text-slate-600 text-center py-4">Belum ada log</p>
             ) : recentLogs.slice(0, 6).map((log, i) => (
               <div key={i} className="text-xs text-slate-600 py-1.5 border-b border-slate-50 last:border-0 flex justify-between gap-2">
                 <span className="truncate">{log.description}</span>
-                <span className="text-slate-400 shrink-0">{log.date}</span>
+                <span className="text-slate-600 shrink-0">{log.date}</span>
               </div>
             ))}
           </div>
@@ -170,7 +170,7 @@ export default function Dashboard({ onOpenProject }: { onOpenProject?: (id: stri
                         <p className="text-xs text-emerald-600 font-medium mt-1">→ {rec.action}</p>
                       )}
                     </div>
-                    <ChevronRight className={`w-4 h-4 text-slate-300 shrink-0 transition-transform ${expandedRec === i ? 'rotate-90' : ''}`} />
+                    <ChevronRight className={`w-4 h-4 text-slate-500 shrink-0 transition-transform ${expandedRec === i ? 'rotate-90' : ''}`} />
                   </div>
                 </button>
               </motion.div>

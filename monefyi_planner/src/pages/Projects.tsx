@@ -92,7 +92,7 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
         <div className="p-6 border-b flex items-center justify-between">
           <div>
             <h3 className="font-black text-slate-900">Buat Proyek Baru</h3>
-            <p className="text-xs text-slate-400">Langkah {step} dari 3</p>
+            <p className="text-xs text-slate-600">Langkah {step} dari 3</p>
           </div>
           <button type="button" onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl" aria-label="Tutup"><X className="w-5 h-5" /></button>
         </div>
@@ -168,26 +168,14 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
   const showToast = useUiStore(s => s.showToast);
 
   useEffect(() => {
-    if (initialProjectId) {
-      const p = projects.find(x => x.id === initialProjectId);
-      if (p) {
-        setSelectedProject(prev => {
-          if (!prev || prev.id !== p.id) return p;
-          if (
-            prev.name === p.name
-            && prev.status === p.status
-            && prev.spent_amount === p.spent_amount
-            && prev.total_received === p.total_received
-            && prev.progress_percentage === p.progress_percentage
-          ) {
-            return prev;
-          }
-          return p;
-        });
-      }
-    } else {
+    if (!initialProjectId) {
       setSelectedProject(null);
+      return;
     }
+    const p = projects.find(x => x.id === initialProjectId);
+    if (!p) return;
+    // Jangan ganti referensi proyek dari store saat detail sudah terbuka — cegah re-render loop.
+    setSelectedProject(prev => (!prev || prev.id !== p.id ? p : prev));
   }, [initialProjectId, projects]);
 
   useEffect(() => {
@@ -271,7 +259,7 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
           <div className={`w-1.5 h-14 rounded-full ${health.dot}`} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-mono text-slate-400">{proj.code}</span>
+              <span className="text-[10px] font-mono text-slate-600">{proj.code}</span>
               <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${health.bg} ${health.color}`}>{health.label}</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{STATUS_LABEL[proj.status]}</span>
             </div>
@@ -280,9 +268,9 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
           </div>
           <div className="text-right hidden sm:block">
             <div className="text-lg font-black">{proj.progress_percentage.toFixed(0)}%</div>
-            <div className="text-[10px] text-slate-400">{formatRupiah(proj.spent_amount)}</div>
+            <div className="text-[10px] text-slate-600">{formatRupiah(proj.spent_amount)}</div>
           </div>
-          <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-emerald-500" />
+          <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-emerald-500" />
         </motion.div>
       );
     }
@@ -292,11 +280,11 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
         <div className="flex justify-between gap-3 mb-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
-              <span className="text-[10px] font-mono text-slate-400">{proj.code}</span>
+              <span className="text-[10px] font-mono text-slate-600">{proj.code}</span>
               <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${health.bg} ${health.color}`}>{health.label}</span>
             </div>
             <h3 className="font-black text-slate-900 truncate group-hover:text-emerald-600">{proj.name}</h3>
-            <p className="text-xs text-slate-400 flex items-center gap-1 mt-1 truncate">
+            <p className="text-xs text-slate-600 flex items-center gap-1 mt-1 truncate">
               <MapPin className="w-3 h-3 shrink-0" /> {proj.location || proj.client_name || '—'}
             </p>
           </div>
@@ -310,7 +298,7 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
           <div>
             <div className="flex justify-between text-xs mb-1"><span className="text-slate-500">Budget terpakai</span><span className="font-bold">{Math.round(budgetPct)}%</span></div>
             <div className="h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-emerald-500 rounded-full" style={{ width: `${budgetPct}%` }} /></div>
-            <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+            <div className="flex justify-between text-[10px] text-slate-600 mt-1">
               <span>{formatRupiah(proj.spent_amount)}</span>
               <span>{formatRupiah(proj.total_budget_planned)}</span>
             </div>
@@ -360,12 +348,12 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
       <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari nama, klien, atau kode..." className="w-full pl-10 pr-4 py-3 rounded-xl border text-sm" />
           </div>
           <div className="flex gap-2 shrink-0">
             <div className="relative">
-              <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 pointer-events-none" />
               <select value={sort} onChange={e => setSort(e.target.value as ProjectSort)} className="pl-9 pr-4 py-3 rounded-xl border text-sm appearance-none bg-white min-w-[140px]">
                 <option value="recent">Terbaru</option>
                 <option value="name">Nama A–Z</option>

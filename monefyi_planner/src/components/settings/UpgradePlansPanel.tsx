@@ -110,7 +110,7 @@ export default function UpgradePlansPanel({
                     Paket aktif
                   </div>
                 ) : plan.price_monthly_idr === 0 ? (
-                  <div className="w-full py-2.5 text-center text-sm text-slate-400">
+                  <div className="w-full py-2.5 text-center text-sm text-slate-600">
                     Paket dasar
                   </div>
                 ) : (
@@ -128,7 +128,7 @@ export default function UpgradePlansPanel({
         })}
       </div>
 
-      <p className="text-xs text-slate-400 text-center">
+      <p className="text-xs text-slate-600 text-center">
         Setelah pembayaran dikonfirmasi, paket organisasi Anda akan diaktifkan oleh tim Monefyi.
         Paket berbayar mengaktifkan organisasi Pro (proyek tanpa batas).
       </p>

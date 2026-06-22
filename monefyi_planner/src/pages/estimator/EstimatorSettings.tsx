@@ -147,7 +147,7 @@ export default function EstimatorSettings() {
             value={waTemplate.itemLine}
             onChange={v => setWaTemplate(prev => ({ ...prev, itemLine: v }))}
           />
-          <p className="text-[10px] text-slate-400">
+          <p className="text-[10px] text-slate-600">
             Item: {'{{name}} {{qty}} {{unit}} x {{price}} = {{total}}'}
           </p>
           <label className="block">

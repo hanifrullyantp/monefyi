@@ -64,7 +64,7 @@ select {
 
 input::placeholder,
 textarea::placeholder {
-  color: #94a3b8;
+  color: #64748b;
   opacity: 1;
 }
 
@@ -168,6 +168,55 @@ html {
   background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
   background-size: 1000px 100%;
   animation: shimmer 2s infinite;
+}
+
+/*
+ * Kontras teks — light surfaces & label sekunder (mobile + desktop).
+ * Banyak komponen pakai bg-white/bg-slate-50; di dark mode body teksnya terang sehingga tidak terbaca.
+ */
+:where(
+  .bg-white,
+  .bg-slate-50,
+  .bg-slate-100,
+  .bg-gray-50,
+  .bg-emerald-50,
+  .bg-amber-50,
+  .bg-rose-50,
+  .bg-blue-50,
+  .bg-orange-50,
+  .glass
+) {
+  color: #0f172a;
+}
+
+:where(.bg-white, .bg-slate-50, .bg-slate-100, .bg-gray-50, .glass) :where(.text-slate-300) {
+  color: #64748b;
+}
+
+:where(.bg-white, .bg-slate-50, .bg-slate-100, .bg-gray-50, .glass) :where(.text-slate-400) {
+  color: #475569;
+}
+
+:where(.bg-white, .bg-slate-50, .bg-slate-100, .bg-gray-50, .glass) :where(.text-slate-500) {
+  color: #334155;
+}
+
+/* Tema terang — perkuat label abu di seluruh app */
+html:not(.dark) :where(.text-slate-300) {
+  color: #64748b;
+}
+
+html:not(.dark) :where(.text-slate-400) {
+  color: #475569;
+}
+
+html:not(.dark) :where(.text-slate-500) {
+  color: #334155;
+}
+
+html:not(.dark) main,
+.dark main {
+  color: #0f172a;
 }
 
 /* Dark mode support */

@@ -273,7 +273,7 @@ export default function HrEmployees() {
                     <div key={a.id} className="flex items-center justify-between gap-2 text-sm border rounded-xl px-3 py-2">
                       <div>
                         <div className="font-medium">{actionTypeLabel(a.action_type)}</div>
-                        <div className="text-xs text-slate-400">{new Date(a.created_at).toLocaleString('id-ID')}</div>
+                        <div className="text-xs text-slate-600">{new Date(a.created_at).toLocaleString('id-ID')}</div>
                       </div>
                       <button
                         type="button"
@@ -300,7 +300,7 @@ export default function HrEmployees() {
                 <Clock className="w-4 h-4 text-emerald-500" /> Absensi Hari Ini
               </h3>
               {todayAttendance.size === 0 ? (
-                <p className="text-sm text-slate-400">Belum ada check-in hari ini. Karyawan dapat check-in dari aplikasi mobile.</p>
+                <p className="text-sm text-slate-600">Belum ada check-in hari ini. Karyawan dapat check-in dari aplikasi mobile.</p>
               ) : (
                 <div className="space-y-2">
                   {[...todayAttendance.entries()].slice(0, 6).map(([uid, info]) => (
@@ -320,14 +320,14 @@ export default function HrEmployees() {
                 <Briefcase className="w-4 h-4 text-emerald-500" /> Laporan Harian Proyek
               </h3>
               {workerLogs.length === 0 ? (
-                <p className="text-sm text-slate-400">Belum ada log pekerja di proyek. Catat di daily log proyek.</p>
+                <p className="text-sm text-slate-600">Belum ada log pekerja di proyek. Catat di daily log proyek.</p>
               ) : (
                 <div className="space-y-2">
                   {workerLogs.slice(0, 5).map(log => (
                     <div key={log.id} className="text-sm py-2 border-b border-slate-50 last:border-0">
                       <div className="flex justify-between">
                         <span className="font-medium">{projectNameMap[log.project_id] || 'Proyek'}</span>
-                        <span className="text-xs text-slate-400">{log.date}</span>
+                        <span className="text-xs text-slate-600">{log.date}</span>
                       </div>
                       <div className="text-xs text-slate-500">{log.workers_present} pekerja · {log.work_description?.slice(0, 60) || '—'}</div>
                     </div>
@@ -353,7 +353,7 @@ export default function HrEmployees() {
         <>
           <div className="flex flex-wrap gap-3">
             <div className="relative flex-1 min-w-[200px] max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari nama..." className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm" />
             </div>
             <select value={roleFilter} onChange={e => setRoleFilter(e.target.value as RoleFilter)} className="px-4 py-2 rounded-xl border border-slate-200 text-sm">
@@ -382,7 +382,7 @@ export default function HrEmployees() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-bold text-slate-900 truncate">{m.profile?.name || '—'}</div>
-                      <div className="text-xs text-slate-400 truncate">{m.position || m.department || '—'}</div>
+                      <div className="text-xs text-slate-600 truncate">{m.position || m.department || '—'}</div>
                       <div className="flex flex-wrap gap-1.5 mt-2">
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${roleBadge(m.role)}`}>{m.role}</span>
                         {att?.status === 'in' && (
@@ -402,7 +402,7 @@ export default function HrEmployees() {
                     <span>Gaji: {formatSalaryLabel(comp)}</span>
                     <span>Absensi: {monthAtt?.daysPresent ?? 0} hari</span>
                   </div>
-                  <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
+                  <div className="mt-2 flex items-center justify-between text-xs text-slate-600">
                     <span>Last seen: {lastSeenLabel(m.last_active_at)}</span>
                     <span className="text-emerald-600 font-semibold">Detail →</span>
                   </div>
@@ -413,7 +413,7 @@ export default function HrEmployees() {
 
           {filtered.length === 0 && (
             <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">
-              <Users className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+              <Users className="w-10 h-10 text-slate-500 mx-auto mb-3" />
               <p className="text-slate-500">Belum ada karyawan.</p>
               {canInvite && (
                 <button type="button" onClick={() => setInviteOpen(true)} className="mt-3 text-emerald-600 font-semibold text-sm">
@@ -466,14 +466,14 @@ export default function HrEmployees() {
           <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
             <div className="p-4 border-b border-slate-50 font-bold text-slate-800">Riwayat Check-in (30 hari)</div>
             {recentAttendance.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 text-sm">Belum ada data absensi.</div>
+              <div className="p-8 text-center text-slate-600 text-sm">Belum ada data absensi.</div>
             ) : (
               <div className="divide-y divide-slate-50">
                 {recentAttendance.slice(0, 20).map(r => (
                   <div key={r.id} className="px-4 py-3 flex items-center justify-between text-sm">
                     <div>
                       <div className="font-medium">{r.user_name}</div>
-                      <div className="text-xs text-slate-400">{formatAttendanceTime(r.timestamp)}{r.project_name ? ` · ${r.project_name}` : ''}{r.is_offsite ? ' · ⚠️ luar lokasi' : ''}</div>
+                      <div className="text-xs text-slate-600">{formatAttendanceTime(r.timestamp)}{r.project_name ? ` · ${r.project_name}` : ''}{r.is_offsite ? ' · ⚠️ luar lokasi' : ''}</div>
                     </div>
                     <span className={`text-xs font-bold px-2 py-1 rounded-full ${r.type === 'check_in' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
                       {r.type === 'check_in' ? 'Check In' : 'Check Out'}
@@ -487,7 +487,7 @@ export default function HrEmployees() {
           <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
             <div className="p-4 border-b border-slate-50 font-bold text-slate-800">Kehadiran dari Daily Log Proyek</div>
             {workerLogs.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 text-sm">Belum ada log pekerja.</div>
+              <div className="p-8 text-center text-slate-600 text-sm">Belum ada log pekerja.</div>
             ) : (
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-slate-500 text-left">
@@ -542,7 +542,7 @@ export default function HrEmployees() {
                 <Wallet className="w-5 h-5 text-emerald-400 mb-2" />
                 <div className="text-2xl font-black text-slate-900">{item.value}</div>
                 <div className="font-semibold text-slate-700">{item.label}</div>
-                <div className="text-xs text-slate-400 mt-1">{item.sub}</div>
+                <div className="text-xs text-slate-600 mt-1">{item.sub}</div>
               </div>
             ))}
           </div>
@@ -643,14 +643,14 @@ export default function HrEmployees() {
               <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
                 <div className="p-4 border-b border-slate-50 font-bold text-slate-800">Slip Gaji ({monthStartIso()})</div>
                 {currentMonthPayroll.length === 0 ? (
-                  <div className="p-8 text-center text-slate-400 text-sm">Belum ada payroll. Set gaji pokok lalu generate.</div>
+                  <div className="p-8 text-center text-slate-600 text-sm">Belum ada payroll. Set gaji pokok lalu generate.</div>
                 ) : (
                   <div className="divide-y divide-slate-50">
                     {currentMonthPayroll.map(p => (
                       <div key={p.id} className="px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-sm">
                         <div>
                           <div className="font-medium">{p.profiles?.name || p.user_id.slice(0, 8)}</div>
-                          <div className="text-xs text-slate-400">
+                          <div className="text-xs text-slate-600">
                             {p.days_present} hari hadir · {formatCurrency(p.net_amount)}
                           </div>
                         </div>
@@ -699,7 +699,7 @@ export default function HrEmployees() {
                       <div key={b.id} className="px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-sm">
                         <div>
                           <div className="font-medium">{b.profiles?.name || 'Karyawan'}</div>
-                          <div className="text-xs text-slate-400">{formatCurrency(b.amount)}{b.reason ? ` · ${b.reason}` : ''}</div>
+                          <div className="text-xs text-slate-600">{formatCurrency(b.amount)}{b.reason ? ` · ${b.reason}` : ''}</div>
                         </div>
                         <div className="flex gap-2">
                           <button
@@ -770,7 +770,7 @@ export default function HrEmployees() {
             <div key={a.id} className="bg-emerald-50 p-3 rounded-xl border border-emerald-100 text-sm flex justify-between gap-2">
               <div>
                 <div className="font-semibold">{actionTypeLabel(a.action_type)}</div>
-                <div className="font-mono text-xs text-slate-400">{a.created_at}</div>
+                <div className="font-mono text-xs text-slate-600">{a.created_at}</div>
               </div>
               <button
                 type="button"
@@ -791,7 +791,7 @@ export default function HrEmployees() {
           ))}
           {audit.map(l => (
             <div key={l.id} className="bg-white p-3 rounded-xl border border-slate-100 text-sm">
-              <div className="font-mono text-xs text-slate-400">{l.created_at}</div>
+              <div className="font-mono text-xs text-slate-600">{l.created_at}</div>
               <div className="font-semibold">{l.action}</div>
             </div>
           ))}

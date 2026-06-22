@@ -333,7 +333,7 @@ export default function RapEditableTable({
         </div>
       )}
 
-      <p className="text-[10px] text-slate-400 dark:text-slate-500 px-1">
+      <p className="text-[10px] text-slate-600 dark:text-slate-500 px-1">
         Klik 2× edit · Enter simpan · Ctrl+C/V · Ctrl+Z undo · Checkbox untuk bulk hapus · Realtime sync aktif
       </p>
     </div>

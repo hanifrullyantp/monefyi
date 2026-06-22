@@ -8,6 +8,8 @@ function mergeOption(list: SelectOption[], opt: SelectOption): SelectOption[] {
   return [...list, opt];
 }
 
+const EMPTY_OPTIONS: SelectOption[] = [];
+
 interface OrgOptionsState {
   opexOptions: Record<string, SelectOption[]>;
   opexLoaded: Record<string, boolean>;
@@ -87,14 +89,14 @@ export const useOrgOptionsStore = create<OrgOptionsState>((set, get) => ({
 }));
 
 export function useOpexCategoryOptions(orgId: string) {
-  const options = useOrgOptionsStore(s => s.opexOptions[orgId] || []);
+  const options = useOrgOptionsStore(s => s.opexOptions[orgId] ?? EMPTY_OPTIONS);
   const ensureOpexOptions = useOrgOptionsStore(s => s.ensureOpexOptions);
   const addOpexOption = useOrgOptionsStore(s => s.addOpexOption);
   return { options, ensureOpexOptions, addOpexOption };
 }
 
 export function useProjectTypeOptions(orgId: string, currentValue?: string) {
-  const options = useOrgOptionsStore(s => s.projectTypeOptions[orgId] || []);
+  const options = useOrgOptionsStore(s => s.projectTypeOptions[orgId] ?? EMPTY_OPTIONS);
   const ensureProjectTypeOptions = useOrgOptionsStore(s => s.ensureProjectTypeOptions);
   const addProjectTypeOption = useOrgOptionsStore(s => s.addProjectTypeOption);
   return { options, ensureProjectTypeOptions, addProjectTypeOption, currentValue };

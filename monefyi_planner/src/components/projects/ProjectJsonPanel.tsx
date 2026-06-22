@@ -58,12 +58,14 @@ export default function ProjectJsonPanel({
   const [copied, setCopied] = useState<'data' | 'template' | null>(null);
   const [incomes, setIncomes] = useState<ProjectIncome[]>([]);
   const [transfers, setTransfers] = useState<ProjectTransfer[]>([]);
+  const [editorBootstrapped, setEditorBootstrapped] = useState(false);
 
   useEffect(() => {
     loadProjectIncomes(project.id).then(setIncomes).catch(() => setIncomes([]));
     if (orgId) {
       loadProjectTransfers(orgId, project.id).then(setTransfers).catch(() => setTransfers([]));
     }
+    setEditorBootstrapped(false);
   }, [project.id, orgId]);
 
   const snapshot = useMemo(
@@ -91,13 +93,16 @@ export default function ProjectJsonPanel({
 
   useEffect(() => {
     const fresh = buildProjectJsonSnapshot({ project, rapItems, costs, workItems, logs, incomes, transfers });
-    setEditorText(JSON.stringify(fresh, null, 2));
+    const nextText = JSON.stringify(fresh, null, 2);
+    setEditorText(prev => (prev === nextText ? prev : nextText));
     setParseError(null);
     setValidationErrors([]);
-    setView('data');
-    // Hanya saat isi data berubah — bukan setiap render (exported_at / referensi object).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshotContentKey]);
+    if (!editorBootstrapped) {
+      setView('data');
+      setEditorBootstrapped(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by snapshotContentKey
+  }, [snapshotContentKey, editorBootstrapped]);
 
   const validateEditor = () => {
     try {
@@ -250,7 +255,7 @@ export default function ProjectJsonPanel({
 
       <div className="bg-slate-900 rounded-2xl overflow-hidden border border-slate-700">
         <div className="px-4 py-2 border-b border-slate-700 flex items-center justify-between">
-          <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">
+          <span className="text-[10px] font-mono text-slate-600 uppercase tracking-wider">
             {view === 'template' ? 'Template JSON (read-only)' : canEdit ? 'Editor JSON' : 'JSON (read-only)'}
           </span>
           <span className="text-[10px] text-slate-500 font-mono">

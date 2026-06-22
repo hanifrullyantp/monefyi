@@ -411,7 +411,7 @@ export default function PricelistPage({ embedded = false }: PricelistPageProps) 
                         className="w-full px-2 py-1 border border-slate-200 bg-slate-50 rounded text-right text-slate-600"
                         title="Estimasi HPP dari harga jual & margin"
                       />
-                      <div className="text-[10px] text-slate-400 text-right">{formatRupiahFull(Number(row.base_cost))}</div>
+                      <div className="text-[10px] text-slate-600 text-right">{formatRupiahFull(Number(row.base_cost))}</div>
                     </td>
                     <td className="p-2 text-center">
                       <input
@@ -424,7 +424,7 @@ export default function PricelistPage({ embedded = false }: PricelistPageProps) 
                       <button
                         type="button"
                         onClick={() => handleDelete(row.id, row.name)}
-                        className="p-1 text-slate-400 hover:text-rose-600"
+                        className="p-1 text-slate-600 hover:text-rose-600"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>

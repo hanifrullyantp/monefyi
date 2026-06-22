@@ -17,7 +17,7 @@ export default function PdfDesignCustomizer({ draft, onChange, open, onToggle }:
         className="w-full flex items-center justify-between px-4 py-3 text-sm font-bold text-slate-700"
       >
         Tampilan Dokumen PDF
-        <span className="text-slate-400">{open ? '▲' : '▼'}</span>
+        <span className="text-slate-600">{open ? '▲' : '▼'}</span>
       </button>
 
       {open && (

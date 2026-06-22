@@ -106,6 +106,19 @@ export function syncEstimationItemPricesList(items: EstimationItemDraft[]): Esti
   return items.map(syncEstimationItemPrices);
 }
 
+const PRICE_SYNC_FIELDS = ['hpp_per_unit', 'total_hpp', 'total_selling', 'total_profit', 'selling_price_per_unit', 'margin_pct'] as const;
+
+/** True jika sync mengubah nilai harga (bukan hanya referensi array baru). */
+export function estimationItemsNeedPriceSync(
+  before: EstimationItemDraft[],
+  after: EstimationItemDraft[],
+): boolean {
+  if (before.length !== after.length) return true;
+  return before.some((row, i) =>
+    PRICE_SYNC_FIELDS.some(f => row[f] !== after[i][f]),
+  );
+}
+
 /** Pastikan harga satuan & total konsisten dengan margin gross. */
 export function normalizeEstimationItem(item: EstimationItemDraft): EstimationItemDraft {
   const base = { ...item };

@@ -87,7 +87,7 @@ export default function CreateProjectQuickForm({
         />
       </div>
       {error && <p className="text-xs text-rose-600">{error}</p>}
-      <p className="text-[11px] text-slate-400">Detail lengkap bisa diisi nanti di halaman Project</p>
+      <p className="text-[11px] text-slate-600">Detail lengkap bisa diisi nanti di halaman Project</p>
       <div className="flex gap-2">
         <button
           type="button"

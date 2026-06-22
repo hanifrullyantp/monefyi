@@ -246,7 +246,7 @@ export default function NeracaTable({ data, onQuickActionKas }: Props) {
             </div>
           </div>
         </div>
-        <p className="md:hidden text-[10px] text-center text-slate-400 py-1">← Geser untuk lihat semua →</p>
+        <p className="md:hidden text-[10px] text-center text-slate-600 py-1">← Geser untuk lihat semua →</p>
 
         <SubtotalRow
           totalAktiva={totals.totalAktiva}

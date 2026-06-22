@@ -70,7 +70,7 @@ export default function TimelineView({ projects, onOpenProject }: TimelineViewPr
         })}
 
         {projects.length === 0 && (
-          <p className="text-sm text-slate-400 py-8 text-center">Tidak ada proyek untuk timeline.</p>
+          <p className="text-sm text-slate-600 py-8 text-center">Tidak ada proyek untuk timeline.</p>
         )}
       </div>
     </div>

@@ -96,11 +96,11 @@ export default function KPIRow({ kasBebas, labaBersih, totalHutang, arusKasNet, 
           <div className={`w-8 h-8 rounded-xl ${item.bg} flex items-center justify-center mb-2`}>
             <item.icon className={`w-4 h-4 ${item.color}`} />
           </div>
-          <div className="text-[11px] uppercase tracking-wide text-slate-400 font-semibold">{item.label}</div>
+          <div className="text-[11px] uppercase tracking-wide text-slate-600 font-semibold">{item.label}</div>
           <div className={`text-xl md:text-2xl font-black ${item.color} mt-0.5`}>
             <CurrencyDisplay value={item.value} variant="short" animate emptyAsDash={false} />
           </div>
-          <div className="text-[10px] text-slate-400 italic mt-0.5">{item.sublabel}</div>
+          <div className="text-[10px] text-slate-600 italic mt-0.5">{item.sublabel}</div>
           <div className={`text-[10px] font-bold mt-1 ${item.trendUp ? 'text-emerald-600' : 'text-rose-600'}`}>
             {item.trend}
           </div>

@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Plus, Trash2, Sparkles, List } from 'lucide-react';
-import { calcEstimationSummary, calcItemRow, emptyItem, sellingFromHpp, syncEstimationItemPricesList, type ItemPriceEdit } from '../../lib/estimatorCalc';
+import { calcEstimationSummary, calcItemRow, emptyItem, sellingFromHpp, syncEstimationItemPricesList, estimationItemsNeedPriceSync, type ItemPriceEdit } from '../../lib/estimatorCalc';
 import { formatRupiahFull } from '../../lib/estimatorFormat';
 import {
   getEstimationItemProductGroup,
@@ -45,14 +45,8 @@ export default function EstimationItemsTable({
   // Perbaiki HPP yang tidak selaras dengan margin (data lama / formula markup).
   useEffect(() => {
     const synced = syncEstimationItemPricesList(items);
-    const changed = synced.some(
-      (row, i) =>
-        row.hpp_per_unit !== items[i].hpp_per_unit ||
-        row.total_hpp !== items[i].total_hpp ||
-        row.total_selling !== items[i].total_selling ||
-        row.total_profit !== items[i].total_profit,
-    );
-    if (changed) onChange(synced);
+    if (!estimationItemsNeedPriceSync(items, synced)) return;
+    onChange(synced);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sinkron harga saat items berubah
   }, [items]);
 
@@ -169,7 +163,7 @@ export default function EstimationItemsTable({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 bg-slate-50/50">
           <div>
             <h3 className="font-bold text-slate-800">Rincian Item</h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">Harga jual & margin% menentukan HPP (margin = laba ÷ jual)</p>
+            <p className="text-[11px] text-slate-600 mt-0.5">Harga jual & margin% menentukan HPP (margin = laba ÷ jual)</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -197,7 +191,7 @@ export default function EstimationItemsTable({
         </div>
 
         {items.length === 0 ? (
-          <div className="p-10 text-center text-sm text-slate-400 space-y-4">
+          <div className="p-10 text-center text-sm text-slate-600 space-y-4">
             <p>Belum ada item estimasi.</p>
             <div className="flex flex-wrap justify-center gap-2">
               <button
@@ -273,14 +267,14 @@ export default function EstimationItemsTable({
                     <Fragment key={idx}>
                       {groupHeader}
                       <tr className="border-b border-slate-100 hover:bg-slate-50/60 transition-colors">
-                        <td className={`${tdClass} text-slate-400 text-xs text-center`}>{idx + 1}</td>
+                        <td className={`${tdClass} text-slate-600 text-xs text-center`}>{idx + 1}</td>
                         <td className={tdClass}>
                           <input
                             ref={registerRef(`${idx}-name`)}
                             value={item.name}
                             onChange={e => updateItem(idx, { name: e.target.value })}
                             onKeyDown={e => handleKeyDown(e, idx, 'name', fields)}
-                            className="w-full px-2 py-1.5 border border-transparent hover:border-slate-200 rounded-lg focus:border-emerald-400 focus:ring-1 focus:ring-emerald-100 outline-none text-sm text-slate-900 placeholder:text-slate-400"
+                            className="w-full px-2 py-1.5 border border-transparent hover:border-slate-200 rounded-lg focus:border-emerald-400 focus:ring-1 focus:ring-emerald-100 outline-none text-sm text-slate-900 placeholder:text-slate-600"
                             placeholder="Nama item"
                             title={productLabel ? `Kelompok: ${productLabel}` : undefined}
                           />
@@ -362,7 +356,7 @@ export default function EstimationItemsTable({
                           <button
                             type="button"
                             onClick={() => removeRow(idx)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                             aria-label="Hapus baris"
                           >
                             <Trash2 className="w-4 h-4" />

@@ -9,21 +9,10 @@ export function useColorScheme() {
   });
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const enableDark = stored === 'dark' || (stored !== 'light' && prefersDark);
+    // Light-first UI — dark hanya jika user eksplisit memilih (hindari teks pudar di kartu putih).
+    const enableDark = localStorage.getItem(STORAGE_KEY) === 'dark';
     document.documentElement.classList.toggle('dark', enableDark);
     setDark(enableDark);
-
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const onChange = () => {
-      if (localStorage.getItem(STORAGE_KEY)) return;
-      const next = mq.matches;
-      document.documentElement.classList.toggle('dark', next);
-      setDark(next);
-    };
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
   }, []);
 
   const toggle = () => {

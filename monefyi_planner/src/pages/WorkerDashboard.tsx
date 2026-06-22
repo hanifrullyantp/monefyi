@@ -237,7 +237,7 @@ export default function WorkerDashboard() {
           <div>
             <div className="text-sm text-slate-500">Halo,</div>
             <h1 className="text-2xl font-black text-slate-900">{user?.name?.split(' ')[0]} 👷</h1>
-            <div className="text-xs text-slate-400 mt-0.5">{dateStr}</div>
+            <div className="text-xs text-slate-600 mt-0.5">{dateStr}</div>
           </div>
           <button
             type="button"
@@ -303,7 +303,7 @@ export default function WorkerDashboard() {
           )}
 
           {attendanceSettings?.auto_wifi_checkin && (
-            <p className="text-[11px] text-slate-400 text-center">Auto absensi WiFi kantor aktif</p>
+            <p className="text-[11px] text-slate-600 text-center">Auto absensi WiFi kantor aktif</p>
           )}
 
           <div>
@@ -311,7 +311,7 @@ export default function WorkerDashboard() {
             {loading && activeTasks.length === 0 ? (
               <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-emerald-400" /></div>
             ) : activeTasks.length === 0 ? (
-              <p className="text-sm text-slate-400 bg-white border rounded-xl p-4 text-center">
+              <p className="text-sm text-slate-600 bg-white border rounded-xl p-4 text-center">
                 Belum ada pekerjaan dari proyek. Owner/manager perlu menambahkan work items.
               </p>
             ) : (
@@ -320,7 +320,7 @@ export default function WorkerDashboard() {
                   <div className="flex justify-between mb-2">
                     <div>
                       <div className="font-semibold text-sm">{wi.name}</div>
-                      <div className="text-xs text-slate-400">{projectName(wi.project_id)}</div>
+                      <div className="text-xs text-slate-600">{projectName(wi.project_id)}</div>
                     </div>
                     <span className="font-black text-org-primary">{Number(wi.progress_pct) || 0}%</span>
                   </div>
@@ -361,19 +361,19 @@ export default function WorkerDashboard() {
             {attendanceLoading && history.length === 0 ? (
               <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-emerald-400" /></div>
             ) : history.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-4">Belum ada riwayat. Check-in dari tab Home.</p>
+              <p className="text-sm text-slate-600 text-center py-4">Belum ada riwayat. Check-in dari tab Home.</p>
             ) : (
               <div className="space-y-2 max-h-80 overflow-y-auto">
                 {history.slice(0, 30).map(r => (
                   <div key={r.id} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0 text-sm">
                     <div>
                       <div className="font-medium">{r.type === 'check_in' ? 'Check In' : 'Check Out'}</div>
-                      <div className="text-xs text-slate-400">
+                      <div className="text-xs text-slate-600">
                         {formatAttendanceTime(r.timestamp)}
                         {r.project_name ? ` · ${r.project_name}` : ''}
                       </div>
                     </div>
-                    <Clock className={`w-4 h-4 ${r.type === 'check_in' ? 'text-org-primary' : 'text-slate-400'}`} />
+                    <Clock className={`w-4 h-4 ${r.type === 'check_in' ? 'text-org-primary' : 'text-slate-600'}`} />
                   </div>
                 ))}
               </div>
@@ -394,7 +394,7 @@ export default function WorkerDashboard() {
                 </div>
                 <div className="text-xs text-slate-500">Gaji Bulan Ini</div>
                 {payroll && (
-                  <div className="text-[10px] text-slate-400 mt-1">
+                  <div className="text-[10px] text-slate-600 mt-1">
                     {payroll.days_present} hari hadir · {payroll.status}
                   </div>
                 )}
@@ -449,15 +449,15 @@ export default function WorkerDashboard() {
       {workerTab === 'todos' && (
         <div className="space-y-3">
           {activeTasks.length === 0 && doneTasks.length === 0 ? (
-            <p className="text-sm text-slate-400 text-center py-8">Tidak ada task</p>
+            <p className="text-sm text-slate-600 text-center py-8">Tidak ada task</p>
           ) : (
             <>
               {activeTasks.map(wi => (
                 <div key={wi.id} className="bg-white border rounded-xl p-4 flex items-center gap-3">
-                  <Circle className="w-5 h-5 text-slate-300 shrink-0" />
+                  <Circle className="w-5 h-5 text-slate-500 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">{wi.name}</div>
-                    <div className="text-xs text-slate-400">
+                    <div className="text-xs text-slate-600">
                       {projectName(wi.project_id)} · deadline {wi.planned_end || '—'}
                     </div>
                     <div className="mt-1 h-1.5 bg-slate-100 rounded-full">

@@ -44,7 +44,7 @@ export default function ColorPickerField({ label, value, onChange, presets = DEF
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             aria-label={`${label} kustom`}
           />
-          <span className="text-[10px] text-slate-400 font-bold pointer-events-none">+</span>
+          <span className="text-[10px] text-slate-600 font-bold pointer-events-none">+</span>
         </label>
       </div>
       <div

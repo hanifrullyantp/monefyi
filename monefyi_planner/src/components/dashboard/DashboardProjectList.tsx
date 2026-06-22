@@ -38,7 +38,7 @@ export default function DashboardProjectList({
 
       <div className="space-y-2">
         {list.length === 0 ? (
-          <p className="text-sm text-slate-400 text-center py-6 bg-white rounded-xl border border-dashed">Belum ada proyek.</p>
+          <p className="text-sm text-slate-600 text-center py-6 bg-white rounded-xl border border-dashed">Belum ada proyek.</p>
         ) : list.map((proj, i) => {
           const daysLeft = Math.ceil((new Date(proj.end_date).getTime() - Date.now()) / 86400000);
           const budgetPct = proj.total_budget_planned
@@ -69,7 +69,7 @@ export default function DashboardProjectList({
                     <span>📅 {daysLeft > 0 ? `${daysLeft} hari lagi` : 'Lewat'}</span>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+                <ChevronRight className="w-4 h-4 text-slate-500 shrink-0" />
               </div>
             </motion.button>
           );

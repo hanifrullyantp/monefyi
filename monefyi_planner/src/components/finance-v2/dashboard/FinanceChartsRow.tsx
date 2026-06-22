@@ -101,7 +101,7 @@ export default function FinanceChartsRow({ neraca, entries, loading }: Props) {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
           <div>
             <h3 className="font-bold text-slate-800">Arus Kas — Masuk vs Keluar</h3>
-            <p className="text-xs text-slate-400 italic">Transfer antar kas tidak dihitung</p>
+            <p className="text-xs text-slate-600 italic">Transfer antar kas tidak dihitung</p>
           </div>
           <div className="flex gap-1">
             {([7, 30, 90] as const).map(d => (
@@ -129,13 +129,13 @@ export default function FinanceChartsRow({ neraca, entries, loading }: Props) {
             </ComposedChart>
           </ResponsiveContainer>
         ) : (
-          <p className="text-sm text-slate-400 italic py-12 text-center">Belum ada transaksi pada periode ini.</p>
+          <p className="text-sm text-slate-600 italic py-12 text-center">Belum ada transaksi pada periode ini.</p>
         )}
       </div>
 
       <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 p-4 md:p-5">
         <h3 className="font-bold text-slate-800 mb-1">Komposisi Aset</h3>
-        <p className="text-xs text-slate-400 mb-2">Klik slice untuk detail</p>
+        <p className="text-xs text-slate-600 mb-2">Klik slice untuk detail</p>
         {composition.length > 0 ? (
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
@@ -161,7 +161,7 @@ export default function FinanceChartsRow({ neraca, entries, loading }: Props) {
             </PieChart>
           </ResponsiveContainer>
         ) : (
-          <p className="text-sm text-slate-400 italic py-12 text-center">Belum ada komposisi aktiva.</p>
+          <p className="text-sm text-slate-600 italic py-12 text-center">Belum ada komposisi aktiva.</p>
         )}
         <div className="text-center -mt-2">
           <div className="text-xs text-slate-500">Total Aset</div>

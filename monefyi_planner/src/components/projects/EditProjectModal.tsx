@@ -64,7 +64,7 @@ export default function EditProjectModal({ project, onClose, onSaved }: EditProj
           <div>
             <label className="text-xs font-bold text-slate-500 uppercase">Lokasi</label>
             <div className="relative mt-1">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
               <input value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} className="w-full pl-10 pr-3 py-2 border rounded-xl text-sm" />
             </div>
           </div>

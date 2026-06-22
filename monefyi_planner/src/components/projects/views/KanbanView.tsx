@@ -51,14 +51,14 @@ export default function KanbanView({ projects, onOpenProject, onStatusChange }: 
                             >
                               <div className="flex items-center gap-2 mb-1">
                                 <div className={`w-2 h-2 rounded-full ${health.dot}`} />
-                                <span className="text-[10px] font-mono text-slate-400">{p.code}</span>
+                                <span className="text-[10px] font-mono text-slate-600">{p.code}</span>
                               </div>
                               <div className="font-bold text-sm text-slate-800 truncate">{p.name}</div>
-                              <div className="text-[10px] text-slate-400 mt-1">{p.progress_percentage.toFixed(0)}% · {formatRupiah(p.spent_amount)}</div>
+                              <div className="text-[10px] text-slate-600 mt-1">{p.progress_percentage.toFixed(0)}% · {formatRupiah(p.spent_amount)}</div>
                               <div className="h-1 bg-slate-100 rounded-full mt-2 overflow-hidden">
                                 <div className="h-full bg-emerald-500" style={{ width: `${budgetPct}%` }} />
                               </div>
-                              <div className="text-[10px] text-slate-400 mt-1">{daysUntil(p.end_date)} hari</div>
+                              <div className="text-[10px] text-slate-600 mt-1">{daysUntil(p.end_date)} hari</div>
                             </motion.div>
                           )}
                         </Draggable>

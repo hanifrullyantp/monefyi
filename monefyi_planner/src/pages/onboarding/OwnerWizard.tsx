@@ -91,7 +91,7 @@ export function OwnerOnboardingWizard() {
           <div className="text-center space-y-4">
             <h1 className="text-xl font-black">Buat project pertama?</h1>
             <p className="text-sm text-slate-500">Anda bisa membuat project nanti dari dashboard.</p>
-            <p className="text-xs text-slate-400">Klik Lanjut di bawah — project bisa dibuat setelah masuk aplikasi.</p>
+            <p className="text-xs text-slate-600">Klik Lanjut di bawah — project bisa dibuat setelah masuk aplikasi.</p>
           </div>
         )}
 
@@ -99,7 +99,7 @@ export function OwnerOnboardingWizard() {
           <div className="text-center space-y-4">
             <h1 className="text-xl font-black">Undang anggota pertama?</h1>
             <p className="text-sm text-slate-500">Buka halaman Tim setelah setup untuk mengundang.</p>
-            <p className="text-xs text-slate-400">Klik Lanjut di bawah — undangan bisa dikirim setelah masuk aplikasi.</p>
+            <p className="text-xs text-slate-600">Klik Lanjut di bawah — undangan bisa dikirim setelah masuk aplikasi.</p>
           </div>
         )}
 

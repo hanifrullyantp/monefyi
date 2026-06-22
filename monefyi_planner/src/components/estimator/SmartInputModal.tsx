@@ -147,7 +147,7 @@ export default function SmartInputModal({ orgId, defaultMargin = 20, onClose, on
               <div className="overflow-x-auto">
                 <table className="w-full text-sm min-w-[520px]">
                   <thead>
-                    <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                    <tr className="text-left text-xs text-slate-600 border-b border-slate-100">
                       <th className="p-2 w-6" />
                       <th className="p-2">Item</th>
                       <th className="p-2 w-12">Qty</th>
@@ -196,7 +196,7 @@ export default function SmartInputModal({ orgId, defaultMargin = 20, onClose, on
                             onChange={e => updateParsed(idx, { hpp_per_unit: Number(e.target.value) })}
                             className="w-full px-2 py-1 border border-slate-200 rounded text-right text-sm"
                           />
-                          <div className="text-[10px] text-slate-400 text-right px-1">
+                          <div className="text-[10px] text-slate-600 text-right px-1">
                             {formatRupiahFull(item.hpp_per_unit)}
                           </div>
                         </td>

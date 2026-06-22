@@ -220,11 +220,20 @@ export function useBootstrap() {
   useEffect(() => {
     if (!user?.id || !tenant?.id || useAppStore.getState().isDemoMode) return;
 
-    const unsubs: Array<() => void> = [];
-    unsubs.push(subscribeNotifications(user.id, () => refreshData()));
-    unsubs.push(subscribeProjects(tenant.id, () => refreshData()));
+    let projectsRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleProjectsRefresh = () => {
+      if (projectsRefreshTimer) clearTimeout(projectsRefreshTimer);
+      projectsRefreshTimer = setTimeout(() => { void refreshData(); }, 500);
+    };
 
-    return () => unsubs.forEach(u => u());
+    const unsubs: Array<() => void> = [];
+    unsubs.push(subscribeNotifications(user.id, () => { void refreshData(); }));
+    unsubs.push(subscribeProjects(tenant.id, scheduleProjectsRefresh));
+
+    return () => {
+      if (projectsRefreshTimer) clearTimeout(projectsRefreshTimer);
+      unsubs.forEach(u => u());
+    };
   }, [user?.id, tenant?.id, refreshData]);
 }
 

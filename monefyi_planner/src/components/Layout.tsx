@@ -168,7 +168,7 @@ export default function Layout({ children }: LayoutProps) {
                 )}
                 <div className="min-w-0">
                   <div className="text-xs font-medium text-slate-700 truncate">{tenant.name}</div>
-                  <div className="text-xs text-slate-400 capitalize">{tenant.plan} plan</div>
+                  <div className="text-xs text-slate-600 capitalize">{tenant.plan} plan</div>
                 </div>
               </div>
             </div>
@@ -187,7 +187,7 @@ export default function Layout({ children }: LayoutProps) {
                   : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
               }`}
             >
-              <item.icon className={`w-4.5 h-4.5 ${isTabActive(item.id) ? 'text-org-primary' : 'text-slate-400'}`} />
+              <item.icon className={`w-4.5 h-4.5 ${isTabActive(item.id) ? 'text-org-primary' : 'text-slate-600'}`} />
               {item.label}
               {item.id === 'home' && unreadCount > 0 && (
                 <span className="ml-auto px-1.5 py-0.5 bg-rose-500 text-white text-xs font-bold rounded-full">
@@ -307,7 +307,7 @@ export default function Layout({ children }: LayoutProps) {
             <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${sync.bg} ${sync.textColor}`}>
               <div className={`w-1.5 h-1.5 rounded-full ${sync.color}`} />
               <span className="hidden sm:block">{sync.text}</span>
-              <span className="hidden lg:inline text-slate-400 font-normal">· {lastSyncText}</span>
+              <span className="hidden lg:inline text-slate-600 font-normal">· {lastSyncText}</span>
               {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
             </div>
 
@@ -397,7 +397,7 @@ export default function Layout({ children }: LayoutProps) {
                   className={`flex flex-col items-center gap-0.5 px-3 py-1 transition-colors duration-150 border-b-2 ${
                     isTabActive(tab.id)
                       ? 'text-emerald-600 border-emerald-600'
-                      : 'text-slate-400 border-transparent hover:text-slate-600'
+                      : 'text-slate-600 border-transparent hover:text-slate-800'
                   }`}
                 >
                   <tab.icon className="w-5 h-5" />

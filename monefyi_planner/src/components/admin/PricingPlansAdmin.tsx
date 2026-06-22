@@ -131,7 +131,7 @@ export default function PricingPlansAdmin() {
                   className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600"
                   title={plan.is_active ? 'Nonaktifkan' : 'Aktifkan'}
                 >
-                  {plan.is_active ? <ToggleRight className="w-5 h-5 text-emerald-600" /> : <ToggleLeft className="w-5 h-5 text-slate-400" />}
+                  {plan.is_active ? <ToggleRight className="w-5 h-5 text-emerald-600" /> : <ToggleLeft className="w-5 h-5 text-slate-600" />}
                   {plan.is_active ? 'Aktif' : 'Nonaktif'}
                 </button>
                 <button
@@ -164,7 +164,7 @@ export default function PricingPlansAdmin() {
                   onChange={e => patchLocal(key, { price_monthly_idr: Number(e.target.value) })}
                   className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
                 />
-                <span className="text-slate-400 font-normal">{formatPlanPriceIdr(plan.price_monthly_idr)}</span>
+                <span className="text-slate-600 font-normal">{formatPlanPriceIdr(plan.price_monthly_idr)}</span>
               </label>
               <label className="text-xs font-semibold text-slate-500">
                 Proyek / bulan (kosong = tanpa batas)

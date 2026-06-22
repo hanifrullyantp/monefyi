@@ -37,7 +37,7 @@ export default function GrandSummary({
             <span className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
               {pg.projectName}
-              <span className="text-slate-400">{pg.items.length} item</span>
+              <span className="text-slate-600">{pg.items.length} item</span>
             </span>
             <span className="font-semibold">{formatRupiah(pg.totalAmount)}</span>
           </div>
@@ -56,7 +56,7 @@ export default function GrandSummary({
                 <span className={`w-2 h-2 rounded-full ${resolved ? 'bg-blue-500' : 'bg-amber-500'}`} />
                 {label}
                 {!resolved && <span className="text-amber-600 font-semibold">perlu konfirmasi</span>}
-                <span className="text-slate-400">{ug.items.length} item</span>
+                <span className="text-slate-600">{ug.items.length} item</span>
               </span>
               <span className={`font-semibold ${!resolved ? 'text-amber-700' : ''}`}>
                 {formatRupiah(ug.totalAmount)}
@@ -70,7 +70,7 @@ export default function GrandSummary({
             <span className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-blue-500" />
               {og.label}
-              <span className="text-slate-400">{og.items.length} item · organisasi</span>
+              <span className="text-slate-600">{og.items.length} item · organisasi</span>
             </span>
             <span className="font-semibold">{formatRupiah(og.totalAmount)}</span>
           </div>
@@ -81,7 +81,7 @@ export default function GrandSummary({
             <span className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-slate-400" />
               Belum diassign
-              <span className="text-slate-400">{detection.unassignedItems.items.length} item</span>
+              <span className="text-slate-600">{detection.unassignedItems.items.length} item</span>
             </span>
             <span className="font-semibold">{formatRupiah(detection.unassignedItems.totalAmount)}</span>
           </div>

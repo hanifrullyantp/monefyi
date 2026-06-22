@@ -286,7 +286,7 @@ export default function ProjectReceivablePanel({
         </div>
       )}
 
-      <p className="text-[11px] text-slate-400 flex items-center gap-1">
+      <p className="text-[11px] text-slate-600 flex items-center gap-1">
         <ArrowDownLeft className="w-3 h-3" />
         Piutang tercatat di keuangan bisnis dan terhubung ke proyek ini.
       </p>

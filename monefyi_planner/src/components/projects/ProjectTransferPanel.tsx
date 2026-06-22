@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ArrowRightLeft, Loader2 } from 'lucide-react';
 import {
   getProjectCashSummary,
@@ -60,12 +60,14 @@ export default function ProjectTransferPanel({
 
   const projectNameMap = Object.fromEntries(projects.map(p => [p.id, p.name]));
   const otherProjects = projects.filter(p => p.id !== projectId);
+  const spentRef = useRef(spentAmount);
+  spentRef.current = spentAmount;
 
   const reload = useCallback(async () => {
     setLoading(true);
     try {
       const [s, t] = await Promise.all([
-        getProjectCashSummary(projectId, orgId, undefined, spentAmount),
+        getProjectCashSummary(projectId, orgId, undefined, spentRef.current),
         loadProjectTransfers(orgId, projectId),
       ]);
       setSummary(s);
@@ -75,9 +77,9 @@ export default function ProjectTransferPanel({
     } finally {
       setLoading(false);
     }
-  }, [projectId, orgId, spentAmount]);
+  }, [projectId, orgId]);
 
-  useEffect(() => { reload(); }, [reload]);
+  useEffect(() => { void reload(); }, [projectId, orgId, reload]);
 
   const owedToOptions = useMemo(() => {
     if (!summary) return [];
@@ -440,7 +442,7 @@ export default function ProjectTransferPanel({
                   <span className="ml-2 text-slate-600">
                     {isIn ? '← dari' : '→ ke'} {label}
                   </span>
-                  <div className="text-xs text-slate-400 mt-0.5 truncate">{t.date}{t.description ? ` · ${t.description}` : ''}</div>
+                  <div className="text-xs text-slate-600 mt-0.5 truncate">{t.date}{t.description ? ` · ${t.description}` : ''}</div>
                 </div>
                 <div className={`font-bold shrink-0 ${isIn ? 'text-emerald-600' : 'text-rose-600'}`}>
                   {isIn ? '+' : '−'}{formatRupiah(t.amount)}

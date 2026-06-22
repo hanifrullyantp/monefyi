@@ -111,7 +111,7 @@ export default function AsetPage() {
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
       ) : rows.length === 0 ? (
-        <div className="bg-white rounded-2xl border p-10 text-center text-slate-400 text-sm">Belum ada aset tetap.</div>
+        <div className="bg-white rounded-2xl border p-10 text-center text-slate-600 text-sm">Belum ada aset tetap.</div>
       ) : (
         <div className="bg-white rounded-2xl border overflow-hidden">
           <table className="w-full text-sm">
@@ -133,7 +133,7 @@ export default function AsetPage() {
                   <tr key={asset.id} className="border-t border-slate-50">
                     <td className="p-3">
                       <div className="font-semibold">{asset.name}</div>
-                      <div className="text-xs text-slate-400">{asset.category || '—'}{asset.last_depreciation_month && ` · Dep ${asset.last_depreciation_month}`}</div>
+                      <div className="text-xs text-slate-600">{asset.category || '—'}{asset.last_depreciation_month && ` · Dep ${asset.last_depreciation_month}`}</div>
                     </td>
                     <td className="p-3 text-right hidden sm:table-cell">{formatFinanceRupiah(asset.purchase_value)}</td>
                     <td className="p-3 text-right font-bold">{formatFinanceRupiah(asset.current_value)}</td>
@@ -162,7 +162,7 @@ export default function AsetPage() {
                             showToast(e instanceof Error ? e.message : 'Gagal menghapus', 'error');
                           }
                         }}
-                        className="text-xs font-bold text-slate-400 ml-2 px-2 py-1 rounded-lg"
+                        className="text-xs font-bold text-slate-600 ml-2 px-2 py-1 rounded-lg"
                       >
                         Hapus
                       </button>

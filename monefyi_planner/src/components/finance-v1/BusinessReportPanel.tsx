@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   FileDown, Loader2, Plus, RefreshCw, TrendingDown, TrendingUp,
@@ -43,7 +43,7 @@ function ReportLine({
       <span className={`text-sm ${bold ? 'text-slate-900' : 'text-slate-600'}`}>
         {label}
         {pct !== undefined && pct > 0 && (
-          <span className="text-xs text-slate-400 ml-1">({pct.toFixed(1)}%)</span>
+          <span className="text-xs text-slate-600 ml-1">({pct.toFixed(1)}%)</span>
         )}
       </span>
       <span className={`text-sm tabular-nums shrink-0 ${bold ? color : 'text-slate-800'}`}>
@@ -70,6 +70,8 @@ export default function BusinessReportPanel() {
   const [opexDate, setOpexDate] = useState(new Date().toISOString().slice(0, 10));
   const [opexNotes, setOpexNotes] = useState('');
   const [savingOpex, setSavingOpex] = useState(false);
+  const opexDefaultSet = useRef(false);
+  const loadRef = useRef<() => Promise<void>>(async () => {});
 
   const canEdit = user?.role === 'owner' || user?.role === 'manager' || user?.role === 'admin';
 
@@ -77,17 +79,14 @@ export default function BusinessReportPanel() {
     if (!tenant?.id) return;
     setLoading(true);
     try {
-      const [r, cats] = await Promise.all([
-        buildBusinessFinanceReport(tenant.id, {
-          dateFrom,
-          dateTo,
-          projectId: projectId || undefined,
-        }),
-        loadOpexCategories(tenant.id),
-      ]);
+      const r = await buildBusinessFinanceReport(tenant.id, {
+        dateFrom,
+        dateTo,
+        projectId: projectId || undefined,
+      });
+      const cats = await loadOpexCategories(tenant.id);
       setReport(r);
       setCategories(cats);
-      if (!opexCatId && cats.length) setOpexCatId(cats[0].id);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal memuat laporan', 'error');
     } finally {
@@ -95,7 +94,26 @@ export default function BusinessReportPanel() {
     }
   }, [tenant?.id, dateFrom, dateTo, projectId]);
 
-  useEffect(() => { load(); }, [load]);
+  loadRef.current = load;
+
+  useEffect(() => {
+    if (!tenant?.id) return;
+    void loadRef.current();
+  }, [tenant?.id, dateFrom, dateTo, projectId]);
+
+  useEffect(() => {
+    opexDefaultSet.current = false;
+  }, [tenant?.id]);
+
+  useEffect(() => {
+    if (opexCatId || !categories.length || opexDefaultSet.current) return;
+    opexDefaultSet.current = true;
+    setOpexCatId(categories[0].id);
+  }, [opexCatId, categories]);
+
+  const handleOpexCatChange = useCallback((id: string) => {
+    setOpexCatId(id);
+  }, []);
 
   const applyPreset = (preset: Preset) => {
     const range = presetRange(preset);
@@ -155,7 +173,7 @@ export default function BusinessReportPanel() {
           <p className="text-sm text-slate-500 mt-1">
             Omzet proyek, HPP realisasi, biaya operasional, dan laba bersih — realtime sesuai filter.
           </p>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-600 mt-1">
             Proyek ditampilkan berdasarkan Bulan Laporan Keuangan (atur di edit proyek).
           </p>
         </div>
@@ -257,7 +275,7 @@ export default function BusinessReportPanel() {
                 </div>
                 <div className={`text-lg font-black ${k.color}`}>{formatRupiah(k.value)}</div>
                 <div className="text-xs text-slate-500">{k.label}</div>
-                {k.sub && <div className="text-[10px] text-slate-400 mt-0.5">{k.sub}</div>}
+                {k.sub && <div className="text-[10px] text-slate-600 mt-0.5">{k.sub}</div>}
               </motion.div>
             ))}
           </div>
@@ -274,7 +292,7 @@ export default function BusinessReportPanel() {
                 <ReportLine label="Total Omzet" amount={report.revenue.total} bold accent="emerald" />
                 <div className="border-t border-slate-100 mt-2 pt-2 space-y-0.5">
                   {report.revenue.byProject.length === 0 ? (
-                    <p className="text-sm text-slate-400 py-2">Belum ada pemasukan pada periode ini</p>
+                    <p className="text-sm text-slate-600 py-2">Belum ada pemasukan pada periode ini</p>
                   ) : (
                     report.revenue.byProject.map((p, i) => (
                       <ReportLine
@@ -300,7 +318,7 @@ export default function BusinessReportPanel() {
                 <ReportLine label="Total HPP" amount={report.hpp.total} bold accent="rose" />
                 <div className="border-t border-slate-100 mt-2 pt-2 space-y-0.5">
                   {report.hpp.byType.length === 0 ? (
-                    <p className="text-sm text-slate-400 py-2">Belum ada realisasi biaya pada periode ini</p>
+                    <p className="text-sm text-slate-600 py-2">Belum ada realisasi biaya pada periode ini</p>
                   ) : (
                     report.hpp.byType.map((h, i) => (
                       <ReportLine
@@ -328,7 +346,7 @@ export default function BusinessReportPanel() {
               <ReportLine label="Total Operasional" amount={report.opex.total} bold accent="amber" />
               <div className="border-t border-slate-100 mt-2 pt-2 space-y-0.5">
                 {report.opex.byCategory.length === 0 ? (
-                  <p className="text-sm text-slate-400 py-2">Belum ada biaya operasional — catat di bawah</p>
+                  <p className="text-sm text-slate-600 py-2">Belum ada biaya operasional — catat di bawah</p>
                 ) : (
                   report.opex.byCategory.map((o, i) => (
                     <ReportLine
@@ -349,7 +367,7 @@ export default function BusinessReportPanel() {
                       <OpexCategorySelect
                         orgId={tenant.id}
                         value={opexCatId}
-                        onChange={id => setOpexCatId(id)}
+                        onChange={handleOpexCatChange}
                         className="px-3 py-2 rounded-xl border text-sm bg-white"
                       />
                     )}
@@ -415,7 +433,7 @@ export default function BusinessReportPanel() {
                   <div key={p.projectId} className="p-4 flex flex-wrap items-center justify-between gap-2 text-sm">
                     <div>
                       <div className="font-semibold text-slate-800">{p.projectName}</div>
-                      <div className="text-xs text-slate-400">
+                      <div className="text-xs text-slate-600">
                         Omzet {formatRupiah(p.revenue)} · HPP {formatRupiah(p.hpp)}
                       </div>
                     </div>
@@ -423,7 +441,7 @@ export default function BusinessReportPanel() {
                       <div className={`font-bold ${p.grossProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                         {formatRupiah(p.grossProfit)}
                       </div>
-                      <div className="text-xs text-slate-400">margin {p.marginPct.toFixed(1)}%</div>
+                      <div className="text-xs text-slate-600">margin {p.marginPct.toFixed(1)}%</div>
                     </div>
                   </div>
                 ))}

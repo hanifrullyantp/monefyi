@@ -81,7 +81,7 @@ export function FindCompanyPage() {
           <>
             <h1 className="font-black text-xl mb-4">Cari perusahaan</h1>
             <div className="relative mb-4">
-              <Search className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
+              <Search className="w-4 h-4 absolute left-3 top-3.5 text-slate-600" />
               <input
                 value={query}
                 onChange={e => {

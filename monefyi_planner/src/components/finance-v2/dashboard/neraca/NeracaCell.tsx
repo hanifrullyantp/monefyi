@@ -66,7 +66,7 @@ export default function NeracaCell({
       >
         <div className="text-sm font-semibold tabular-nums text-right">
           {isZero ? (
-            <span className="text-slate-400 italic">—</span>
+            <span className="text-slate-600 italic">—</span>
           ) : (
             <CurrencyDisplay value={value} variant="full" negativeRed />
           )}
@@ -118,7 +118,7 @@ export default function NeracaCell({
         <button
           type="button"
           onClick={() => setExpanded(false)}
-          className="w-full py-0.5 flex justify-center text-slate-400"
+          className="w-full py-0.5 flex justify-center text-slate-600"
           aria-label="Tutup"
         >
           <ChevronUp className="w-3 h-3" />

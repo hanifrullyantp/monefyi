@@ -236,7 +236,7 @@ export default function Finance() {
               </div>
               <div className="p-4">
                 {cashflow.every(d => d.inflow === 0 && d.outflow === 0) ? (
-                  <div className="h-48 flex items-center justify-center text-sm text-slate-400">
+                  <div className="h-48 flex items-center justify-center text-sm text-slate-600">
                     Belum ada transaksi {period} hari terakhir
                   </div>
                 ) : (
@@ -261,7 +261,7 @@ export default function Finance() {
             <section className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
               <div className="p-4 border-b font-bold text-slate-800 text-sm">Top Supplier / Sumber</div>
               {supplierBreakdown.length === 0 ? (
-                <p className="p-6 text-sm text-slate-400 text-center">Belum ada data supplier</p>
+                <p className="p-6 text-sm text-slate-600 text-center">Belum ada data supplier</p>
               ) : (
                 <div className="p-4">
                   <ResponsiveContainer width="100%" height={180}>
@@ -287,7 +287,7 @@ export default function Finance() {
                 <FolderOpen className="w-4 h-4 text-emerald-600" /> Budget vs Realisasi
               </div>
               <div className="flex items-center gap-2">
-                <ArrowUpDown className="w-4 h-4 text-slate-400" />
+                <ArrowUpDown className="w-4 h-4 text-slate-600" />
                 <select value={projectSort} onChange={e => setProjectSort(e.target.value as ProjectSort)} className="text-xs border rounded-lg px-2 py-1.5 bg-white">
                   <option value="spent_desc">Terpakai terbesar</option>
                   <option value="variance_desc">Over budget</option>
@@ -315,7 +315,7 @@ export default function Finance() {
                       <div className="flex items-start justify-between gap-4 mb-2">
                         <div className="min-w-0">
                           <div className="font-semibold text-slate-800 truncate group-hover:text-emerald-600">{p.name}</div>
-                          <div className="text-xs text-slate-400 mt-0.5 flex flex-wrap gap-x-2">
+                          <div className="text-xs text-slate-600 mt-0.5 flex flex-wrap gap-x-2">
                             <span>Budget {formatRupiah(p.budget)}</span>
                             <span className="text-emerald-600">Diterima {formatRupiah(p.received)}</span>
                             <span className="text-emerald-600">Saldo+ {formatRupiah(p.surplus)}</span>
@@ -328,9 +328,9 @@ export default function Finance() {
                         <div className="text-right shrink-0 flex items-center gap-2">
                           <div>
                             <div className={`font-black ${over ? 'text-rose-600' : 'text-slate-900'}`}>{formatRupiah(p.spent)}</div>
-                            <div className="text-xs text-slate-400">{pct.toFixed(0)}% terpakai</div>
+                            <div className="text-xs text-slate-600">{pct.toFixed(0)}% terpakai</div>
                           </div>
-                          <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-emerald-500" />
+                          <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-emerald-500" />
                         </div>
                       </div>
                       <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -371,7 +371,7 @@ export default function Finance() {
                       <span className="ml-2">
                         {fromLabel} → {toLabel}
                       </span>
-                      <div className="text-xs text-slate-400 mt-0.5">{t.date}</div>
+                      <div className="text-xs text-slate-600 mt-0.5">{t.date}</div>
                     </div>
                     <div className="font-bold text-slate-800">{formatRupiah(t.amount)}</div>
                   </div>
@@ -388,7 +388,7 @@ export default function Finance() {
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
                   <input
                     value={search}
                     onChange={e => setSearch(e.target.value)}
@@ -412,7 +412,7 @@ export default function Finance() {
             <div className="divide-y divide-slate-50 max-h-[480px] overflow-y-auto">
               {filteredTx.length === 0 ? (
                 <div className="p-10 text-center">
-                  <p className="text-sm text-slate-400">Tidak ada transaksi cocok dengan filter</p>
+                  <p className="text-sm text-slate-600">Tidak ada transaksi cocok dengan filter</p>
                 </div>
               ) : (
                 filteredTx.slice(0, 50).map(c => (
@@ -429,7 +429,7 @@ export default function Finance() {
                         </span>
                         <span className="font-medium text-slate-800 truncate group-hover:text-emerald-600">{c.description}</span>
                       </div>
-                      <div className="text-xs text-slate-400 flex flex-wrap gap-x-2 mt-0.5">
+                      <div className="text-xs text-slate-600 flex flex-wrap gap-x-2 mt-0.5">
                         <span>{c.date}</span>
                         {projectNameMap[c.project_id] && (
                           <span className="text-emerald-600">{projectNameMap[c.project_id]}</span>
@@ -445,7 +445,7 @@ export default function Finance() {
               )}
             </div>
             {filteredTx.length > 50 && (
-              <p className="p-3 text-center text-xs text-slate-400 border-t">Menampilkan 50 dari {filteredTx.length} transaksi</p>
+              <p className="p-3 text-center text-xs text-slate-600 border-t">Menampilkan 50 dari {filteredTx.length} transaksi</p>
             )}
           </section>
 

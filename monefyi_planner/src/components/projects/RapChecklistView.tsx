@@ -90,7 +90,7 @@ export default function RapChecklistView({
     <div className="space-y-3 min-w-0 max-w-full">
       <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
         <div className="relative flex-1 min-w-0">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -123,7 +123,7 @@ export default function RapChecklistView({
 
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden divide-y divide-slate-100 min-w-0">
         {filtered.length === 0 ? (
-          <p className="text-sm text-slate-400 text-center py-10">Tidak ada item cocok filter.</p>
+          <p className="text-sm text-slate-600 text-center py-10">Tidak ada item cocok filter.</p>
         ) : (
           filtered.map(e => {
             const { row, plannedQty, plannedAmt, actualAmt, status, isRealized } = e;

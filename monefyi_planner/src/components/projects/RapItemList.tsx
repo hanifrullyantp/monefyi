@@ -196,7 +196,7 @@ export default function RapItemList({
     <div className="space-y-3">
       <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
         <div className="relative flex-1 min-w-[160px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -259,7 +259,7 @@ export default function RapItemList({
       )}
 
       {filtered.length === 0 ? (
-        <p className="text-sm text-slate-400 text-center py-8 bg-white rounded-xl border">Tidak ada item cocok filter.</p>
+        <p className="text-sm text-slate-600 text-center py-8 bg-white rounded-xl border">Tidak ada item cocok filter.</p>
       ) : viewMode === 'table' ? (
         <div className="bg-white rounded-2xl border overflow-x-auto">
           <table className="w-full text-xs">

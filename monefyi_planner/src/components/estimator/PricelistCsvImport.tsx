@@ -86,9 +86,9 @@ export default function PricelistCsvImport({ orgId, userId, onClose, onImported 
               if (file) handleFile(file);
             }}
           >
-            <Upload className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+            <Upload className="w-8 h-8 text-slate-500 mx-auto mb-2" />
             <p className="text-sm text-slate-600">Klik atau drag file CSV</p>
-            <p className="text-xs text-slate-400 mt-1">Kolom: name/item, product, category, unit, base_cost, margin, selling_price, notes</p>
+            <p className="text-xs text-slate-600 mt-1">Kolom: name/item, product, category, unit, base_cost, margin, selling_price, notes</p>
             <input
               ref={fileRef}
               type="file"
@@ -114,11 +114,11 @@ export default function PricelistCsvImport({ orgId, userId, onClose, onImported 
                 {preview.slice(0, 10).map((row, i) => (
                   <div key={i} className="px-3 py-2 border-t border-slate-50 text-sm flex justify-between gap-2">
                     <span className="truncate">{row.name}</span>
-                    <span className="text-slate-400 shrink-0">{formatRupiahFull(row.base_cost)}</span>
+                    <span className="text-slate-600 shrink-0">{formatRupiahFull(row.base_cost)}</span>
                   </div>
                 ))}
                 {preview.length > 10 && (
-                  <div className="px-3 py-2 text-xs text-slate-400">+{preview.length - 10} lainnya</div>
+                  <div className="px-3 py-2 text-xs text-slate-600">+{preview.length - 10} lainnya</div>
                 )}
               </div>
             </div>

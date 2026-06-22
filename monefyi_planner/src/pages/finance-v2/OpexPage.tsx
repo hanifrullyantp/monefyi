@@ -176,7 +176,7 @@ export default function OpexPage() {
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
       ) : comparison.length === 0 ? (
-        <div className="bg-white rounded-2xl border p-10 text-center text-slate-400 text-sm">Tambah kategori dan budget untuk mulai.</div>
+        <div className="bg-white rounded-2xl border p-10 text-center text-slate-600 text-sm">Tambah kategori dan budget untuk mulai.</div>
       ) : (
         <div className="bg-white rounded-2xl border overflow-hidden">
           <table className="w-full text-sm">

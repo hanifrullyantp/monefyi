@@ -279,7 +279,7 @@ export default function ProjectOverviewDashboard({
               <Activity className="w-4 h-4 text-emerald-600" /> Log Terbaru
             </h3>
             {logs.length === 0 ? (
-              <p className="text-xs text-slate-400">Belum ada aktivitas lapangan.</p>
+              <p className="text-xs text-slate-600">Belum ada aktivitas lapangan.</p>
             ) : (
               <ul className="space-y-3">
                 {logs.slice(0, 6).map(log => (
@@ -289,7 +289,7 @@ export default function ProjectOverviewDashboard({
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-slate-700 font-medium line-clamp-2">{log.description}</p>
-                      <p className="text-slate-400 mt-0.5">{formatRelativeTime(log.created_at || log.date)}</p>
+                      <p className="text-slate-600 mt-0.5">{formatRelativeTime(log.created_at || log.date)}</p>
                     </div>
                   </li>
                 ))}

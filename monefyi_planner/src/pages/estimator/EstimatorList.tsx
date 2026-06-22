@@ -136,7 +136,7 @@ export default function EstimatorList() {
 
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -159,7 +159,7 @@ export default function EstimatorList() {
               {f.label}
             </button>
           ))}
-          <button type="button" onClick={load} className="p-2 text-slate-400 hover:text-emerald-600">
+          <button type="button" onClick={load} className="p-2 text-slate-600 hover:text-emerald-600">
             <RefreshCw className="w-4 h-4" />
           </button>
         </div>
@@ -175,9 +175,9 @@ export default function EstimatorList() {
           animate={{ opacity: 1 }}
           className="text-center py-16 bg-slate-50 rounded-2xl border border-dashed border-slate-200"
         >
-          <Calculator className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+          <Calculator className="w-12 h-12 text-slate-500 mx-auto mb-4" />
           <p className="font-semibold text-slate-600">Belum ada estimasi</p>
-          <p className="text-sm text-slate-400 mt-1 mb-4">Buat estimasi pertama untuk penawaran customer</p>
+          <p className="text-sm text-slate-600 mt-1 mb-4">Buat estimasi pertama untuk penawaran customer</p>
           <button
             type="button"
             onClick={() => navigate('/app/estimator/new')}
@@ -247,7 +247,7 @@ function IconBtn({
       type="button"
       title={label}
       onClick={onClick}
-      className={`p-2 rounded-lg ${danger ? 'text-slate-400 hover:text-rose-600 hover:bg-rose-50' : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'}`}
+      className={`p-2 rounded-lg ${danger ? 'text-slate-600 hover:text-rose-600 hover:bg-rose-50' : 'text-slate-600 hover:text-emerald-600 hover:bg-emerald-50'}`}
     >
       <Icon className="w-4 h-4" />
     </button>

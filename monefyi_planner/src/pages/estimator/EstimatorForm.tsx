@@ -310,7 +310,7 @@ export default function EstimatorForm() {
                 onChange={e => patch({ validity_days: Number(e.target.value) })}
                 className="w-full"
               />
-              <div className="flex justify-between text-[10px] text-slate-400">
+              <div className="flex justify-between text-[10px] text-slate-600">
                 <span>7 hari</span>
                 <span>14 hari</span>
                 <span>21 hari</span>
@@ -326,7 +326,7 @@ export default function EstimatorForm() {
               className="w-full flex items-center justify-between px-4 py-3 text-sm font-bold text-slate-700"
             >
               Overhead, Diskon & PPN
-              <span className="text-slate-400">{advancedOpen ? '▲' : '▼'}</span>
+              <span className="text-slate-600">{advancedOpen ? '▲' : '▼'}</span>
             </button>
             {advancedOpen && (
               <div className="px-4 pb-4 space-y-3 border-t border-slate-100 pt-3">

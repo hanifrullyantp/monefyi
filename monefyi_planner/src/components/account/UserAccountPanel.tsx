@@ -138,7 +138,7 @@ export default function UserAccountPanel() {
             placeholder={account.has_gemini_key ? 'Kosongkan jika tidak ingin mengubah' : 'AIza...'}
             className="w-full mt-1 px-3 py-2 rounded-xl border text-sm font-mono"
           />
-          <p className="text-xs text-slate-400 mt-1">Key Anda dipakai untuk parsing perintah AI. Tanpa key, sistem memakai key platform dengan batas harian.</p>
+          <p className="text-xs text-slate-600 mt-1">Key Anda dipakai untuk parsing perintah AI. Tanpa key, sistem memakai key platform dengan batas harian.</p>
         </div>
       </div>
 
@@ -168,7 +168,7 @@ export default function UserAccountPanel() {
         </button>
       </div>
 
-      <div className="text-xs text-slate-400 space-y-1">
+      <div className="text-xs text-slate-600 space-y-1">
         <p>Email: {account.email} {account.email_verified ? '✓ terverifikasi' : '(belum verifikasi)'}</p>
         <p>Status akun: {account.status}</p>
         {account.plan_expires_at && <p>Berakhir: {new Date(account.plan_expires_at).toLocaleDateString('id-ID')}</p>}

@@ -176,7 +176,7 @@ export default function EstimationImageSlots({
                   <button
                     type="button"
                     onClick={() => fileRefs.current[slot - 1]?.click()}
-                    className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50/50 transition-colors"
+                    className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-600 hover:text-emerald-600 hover:bg-emerald-50/50 transition-colors"
                   >
                     <ImagePlus className="w-8 h-8" />
                     <span className="text-xs font-medium">Foto {slot}</span>
@@ -223,7 +223,7 @@ export default function EstimationImageSlots({
         })}
       </div>
 
-      <p className="text-[10px] text-slate-400 mt-3">
+      <p className="text-[10px] text-slate-600 mt-3">
         Maks {formatFileSize(2 * 1024 * 1024)} per file · JPG/PNG/WEBP · Auto-kompresi ke ~500KB
       </p>
     </section>

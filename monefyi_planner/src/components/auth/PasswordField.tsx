@@ -39,7 +39,7 @@ export default function PasswordField({
       {showRequirements && (
         <ul id="password-requirements" className="space-y-1 text-xs">
           {checklist.map(item => (
-            <li key={item.id} className={item.passed ? 'text-emerald-600' : value.length > 0 ? 'text-rose-600' : 'text-slate-400'}>
+            <li key={item.id} className={item.passed ? 'text-emerald-600' : value.length > 0 ? 'text-rose-600' : 'text-slate-600'}>
               {item.passed ? '✓' : '○'} {item.label}
             </li>
           ))}

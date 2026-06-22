@@ -86,6 +86,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   const importRepairAttempted = useRef<string | null>(null);
   const projectRef = useRef(project);
   projectRef.current = project;
+  const reloadRef = useRef<() => Promise<void>>(async () => {});
   const isDesktop = useIsDesktop();
   const [rapView, setRapView] = useState<'spreadsheet' | 'list' | 'checklist'>('checklist');
   const [amountDrafts, setAmountDrafts] = useState<Record<string, string>>({});
@@ -152,18 +153,22 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
     }
   }, [tenant?.id]);
 
+  reloadRef.current = reload;
+
   const refreshProjectData = useCallback(async () => {
     await refreshData();
-    const fresh = useAppStore.getState().projects.find(p => p.id === project.id);
+    const fresh = useAppStore.getState().projects.find(p => p.id === projectRef.current.id);
     if (fresh) setProject(fresh);
-    await reload();
-  }, [reload, refreshData, project.id]);
+    await reloadRef.current();
+  }, [refreshData]);
 
   useEffect(() => {
     setSelectedProjectId(initialProject.id);
-    void reload();
+    void reloadRef.current();
     return () => setSelectedProjectId(null);
-  }, [initialProject.id, reload, setSelectedProjectId]);
+    // reload via ref — hindari loop saat callback identity berubah (React #185)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialProject.id, setSelectedProjectId]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -198,6 +203,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
 
   const handleRepairImportCosts = async () => {
     if (!user?.id) return;
+    importRepairAttempted.current = project.id;
     setRepairingImport(true);
     try {
       const result = await repairImportCosts(project.id, user.id);
@@ -213,13 +219,6 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
       setRepairingImport(false);
     }
   };
-
-  useEffect(() => {
-    if (loading || !user?.id || !canManage || !importCostSpike) return;
-    if (importRepairAttempted.current === project.id) return;
-    importRepairAttempted.current = project.id;
-    void handleRepairImportCosts();
-  }, [loading, importCostSpike, project.id, user?.id, canManage]);
 
   const handleExportRap = () => {
     exportRapWorkbook(project, rapItems, costs, rapActuals);
@@ -523,7 +522,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
 
           <div className="flex overflow-x-auto border-b border-slate-200 bg-white px-2 shrink-0">
             {tabs.map(tab => (
-              <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-4 py-3.5 text-sm font-bold whitespace-nowrap border-b-2 ${activeTab === tab.id ? 'text-emerald-600 border-emerald-600' : 'text-slate-400 border-transparent'}`}>
+              <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-4 py-3.5 text-sm font-bold whitespace-nowrap border-b-2 ${activeTab === tab.id ? 'text-emerald-600 border-emerald-600' : 'text-slate-600 border-transparent hover:text-slate-800'}`}>
                 <tab.icon className="w-4 h-4" /> {tab.label}
               </button>
             ))}
@@ -667,7 +666,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                         <div className="flex justify-between items-start gap-2 mb-2">
                           <div>
                             <span className="font-bold">{wi.name}</span>
-                            <div className="text-xs text-slate-400">{formatDateId(wi.planned_start)} – {formatDateId(wi.planned_end)}</div>
+                            <div className="text-xs text-slate-600">{formatDateId(wi.planned_start)} – {formatDateId(wi.planned_end)}</div>
                           </div>
                           {canManage && (
                             <button type="button" onClick={() => deleteWorkItem(wi.id).then(reload)} className="text-rose-500 text-xs shrink-0">Hapus</button>
@@ -799,7 +798,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                             <thead className="bg-slate-50 border-t"><tr><th className="p-3 text-left">Tanggal</th><th className="p-3 text-left">Keterangan</th><th className="p-3 text-right">Qty</th><th className="p-3 text-right">Total</th>{canManage && <th className="p-3 w-10" />}</tr></thead>
                             <tbody>
                               {costs.filter(c => !costSearch.trim() || c.description.toLowerCase().includes(costSearch.toLowerCase())).length === 0 ? (
-                                <tr><td colSpan={5} className="p-8 text-center text-slate-400">Belum ada biaya — input manual di atas atau gunakan Monefyi Button.</td></tr>
+                                <tr><td colSpan={5} className="p-8 text-center text-slate-600">Belum ada biaya — input manual di atas atau gunakan Monefyi Button.</td></tr>
                               ) : costs.filter(c => !costSearch.trim() || c.description.toLowerCase().includes(costSearch.toLowerCase())).map(tx => (
                                 <tr key={tx.id} className="border-t hover:bg-slate-50">
                                   <td className="p-3 whitespace-nowrap">{tx.date}</td>
@@ -917,7 +916,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                         )}
 
                         {logs.length === 0 ? (
-                          <p className="text-sm text-slate-400 text-center py-8">Belum ada log harian.</p>
+                          <p className="text-sm text-slate-600 text-center py-8">Belum ada log harian.</p>
                         ) : logs.map(log => (
                           <div key={log.id} className="bg-white border rounded-xl p-4 text-sm flex justify-between gap-2">
                             <div>
@@ -926,7 +925,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                                 <span className="ml-2 text-emerald-600 text-xs font-bold">+{log.progress_increment}%</span>
                               ) : null}
                             </div>
-                            <span className="text-slate-400 shrink-0">{log.date}</span>
+                            <span className="text-slate-600 shrink-0">{log.date}</span>
                           </div>
                         ))}
                       </>
@@ -956,7 +955,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                         <div className={`mt-3 px-3 py-1 rounded-full text-xs font-bold ${Number(opi) >= 1 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
                           {Number(opi) >= 1 ? 'Performa baik' : 'Perlu perhatian'}
                         </div>
-                        <p className="text-xs text-slate-400 mt-3">CPI {cpi.toFixed(2)} · SPI {spi.toFixed(2)}</p>
+                        <p className="text-xs text-slate-600 mt-3">CPI {cpi.toFixed(2)} · SPI {spi.toFixed(2)}</p>
                       </div>
                     </div>
                     <div className="bg-white border rounded-2xl overflow-hidden">

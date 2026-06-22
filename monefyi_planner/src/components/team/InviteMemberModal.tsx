@@ -250,7 +250,7 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
       <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl">
         <div className="flex items-center justify-between p-4 border-b border-slate-100">
           <h2 className="font-bold text-slate-900">Undang Anggota</h2>
-          <button type="button" onClick={onClose} aria-label="Tutup"><X className="w-5 h-5 text-slate-400" /></button>
+          <button type="button" onClick={onClose} aria-label="Tutup"><X className="w-5 h-5 text-slate-600" /></button>
         </div>
 
         <div className="flex border-b border-slate-100">

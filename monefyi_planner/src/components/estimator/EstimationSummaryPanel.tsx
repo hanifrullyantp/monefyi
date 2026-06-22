@@ -22,7 +22,7 @@ export default function EstimationSummaryPanel({ draft }: Props) {
       <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/80">
         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Ringkasan</h3>
         {activeItems.length > 0 && (
-          <p className="text-[11px] text-slate-400 mt-0.5">{activeItems.length} item</p>
+          <p className="text-[11px] text-slate-600 mt-0.5">{activeItems.length} item</p>
         )}
       </div>
 
@@ -61,7 +61,7 @@ export default function EstimationSummaryPanel({ draft }: Props) {
             style={{ width: `${marginWidth}%` }}
           />
         </div>
-        <p className="text-[10px] text-slate-400 mt-1.5 leading-snug">
+        <p className="text-[10px] text-slate-600 mt-1.5 leading-snug">
           Margin = laba ÷ harga jual. HPP = harga jual × (1 − margin%).
         </p>
       </div>
@@ -97,7 +97,7 @@ function Row({
 }) {
   return (
     <div className="flex justify-between gap-3 items-baseline">
-      <span className={`text-xs ${muted ? 'text-slate-400' : 'text-slate-600'}`}>{label}</span>
+      <span className={`text-xs ${muted ? 'text-slate-600' : 'text-slate-600'}`}>{label}</span>
       <span
         className={`text-sm tabular-nums shrink-0 ${
           negative ? 'text-rose-600' : accent ? 'text-emerald-600' : bold ? 'text-slate-900 font-bold' : 'text-slate-800 font-semibold'

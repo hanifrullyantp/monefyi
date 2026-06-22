@@ -97,8 +97,8 @@ export default function NotificationPanel({ onClose }: Props) {
         <div className="max-h-96 overflow-y-auto">
           {notifications.length === 0 ? (
             <div className="text-center py-10">
-              <Bell className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-              <p className="text-sm text-slate-400">Tidak ada notifikasi</p>
+              <Bell className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+              <p className="text-sm text-slate-600">Tidak ada notifikasi</p>
             </div>
           ) : (
             notifications.map((notif) => {
@@ -120,7 +120,7 @@ export default function NotificationPanel({ onClose }: Props) {
                     </div>
                     <p className="text-xs text-slate-500 leading-relaxed">{notif.message}</p>
                     <div className="flex items-center gap-2 mt-1.5">
-                      <span className="text-xs text-slate-400">{timeAgo(notif.created_at)}</span>
+                      <span className="text-xs text-slate-600">{timeAgo(notif.created_at)}</span>
                       {notif.priority && (
                         <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${priorityBadge[notif.priority]}`}>
                           {notif.priority}

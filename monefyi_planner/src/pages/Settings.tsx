@@ -382,7 +382,7 @@ export default function Settings() {
             className="bg-white rounded-2xl border border-slate-100 p-4">
             <div className="text-xs text-slate-500">{kpi.label}</div>
             <div className="font-black text-slate-900 truncate">{kpi.value}</div>
-            <div className="text-xs text-slate-400 truncate">{kpi.sub}</div>
+            <div className="text-xs text-slate-600 truncate">{kpi.sub}</div>
           </motion.div>
         ))}
       </div>
@@ -438,7 +438,7 @@ export default function Settings() {
             </Field>
             <Field label="Email" icon={Globe}>
               <span className="text-sm font-medium text-slate-800">{user?.email || '—'}</span>
-              <p className="text-xs text-slate-400 mt-0.5">Email tidak dapat diubah di sini.</p>
+              <p className="text-xs text-slate-600 mt-0.5">Email tidak dapat diubah di sini.</p>
             </Field>
             <Field label="Jabatan / Posisi">
               {editingProfile ? (
@@ -650,7 +650,7 @@ export default function Settings() {
             </button>
             {!notifSaved && <span className="text-xs text-amber-600">Ada perubahan belum disimpan</span>}
           </div>
-          <p className="text-xs text-slate-400">Disimpan lokal per perangkat. Sinkron ke cloud — coming soon.</p>
+          <p className="text-xs text-slate-600">Disimpan lokal per perangkat. Sinkron ke cloud — coming soon.</p>
         </div>
       )}
 
@@ -671,7 +671,7 @@ export default function Settings() {
                 <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
               </div>
             </div>
-            <p className="text-xs text-slate-400">Minimal 8 karakter, huruf besar, angka, dan simbol.</p>
+            <p className="text-xs text-slate-600">Minimal 8 karakter, huruf besar, angka, dan simbol.</p>
             <button type="button" onClick={handleChangePassword} disabled={changingPassword || !newPassword} className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-2">
               {changingPassword && <Loader2 className="w-4 h-4 animate-spin" />}
               Update Password
@@ -702,10 +702,10 @@ export default function Settings() {
           <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-3">
             <h3 className="font-bold text-slate-800">Status Sinkronisasi</h3>
             <div className="flex items-center gap-3 text-sm">
-              {isOnline ? <Wifi className="w-4 h-4 text-emerald-500" /> : <WifiOff className="w-4 h-4 text-slate-400" />}
+              {isOnline ? <Wifi className="w-4 h-4 text-emerald-500" /> : <WifiOff className="w-4 h-4 text-slate-600" />}
               <span className="font-medium capitalize">{syncStatus}</span>
               {lastSynced && (
-                <span className="text-slate-400">
+                <span className="text-slate-600">
                   · Terakhir sync {lastSynced.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                 </span>
               )}
@@ -726,7 +726,7 @@ function Field({ label, icon: Icon, children }: { label: string; icon?: typeof U
   return (
     <div className="py-3 border-b border-slate-50 last:border-0">
       <div className="flex items-center gap-2 mb-1">
-        {Icon && <Icon className="w-3.5 h-3.5 text-slate-400" />}
+        {Icon && <Icon className="w-3.5 h-3.5 text-slate-600" />}
         <div className="text-xs font-semibold text-slate-500">{label}</div>
       </div>
       {children}
@@ -737,7 +737,7 @@ function Field({ label, icon: Icon, children }: { label: string; icon?: typeof U
 function NotifGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="py-3">
-      <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">{title}</div>
+      <div className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-2">{title}</div>
       <div className="space-y-1">{children}</div>
     </div>
   );

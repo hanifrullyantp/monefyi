@@ -25,7 +25,7 @@ export default function CurrencyDisplay({
   const isNegative = value < 0;
 
   if (!Number.isFinite(value) || (emptyAsDash && value === 0)) {
-    return <span className={`text-slate-400 italic ${className}`}>—</span>;
+    return <span className={`text-slate-600 italic ${className}`}>—</span>;
   }
 
   return (

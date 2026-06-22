@@ -189,7 +189,7 @@ export default function InvestorPage() {
               {expandedId === inv.id && (
                 <div className="mt-3 border-t pt-3 space-y-1">
                   {(txMap[inv.id] || []).length === 0 ? (
-                    <p className="text-xs text-slate-400">Belum ada transaksi.</p>
+                    <p className="text-xs text-slate-600">Belum ada transaksi.</p>
                   ) : (txMap[inv.id] || []).map(tx => (
                     <div key={tx.id} className="flex justify-between text-sm">
                       <span className="text-slate-600">{tx.trans_date} · {tx.type}</span>

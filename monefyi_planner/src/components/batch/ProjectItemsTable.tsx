@@ -49,7 +49,7 @@ export default function ProjectItemsTable({
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-sm font-bold text-slate-800">{formatRupiah(totalAmount)}</span>
-          <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-4 h-4 text-slate-600 transition-transform ${expanded ? 'rotate-180' : ''}`} />
         </div>
       </button>
 

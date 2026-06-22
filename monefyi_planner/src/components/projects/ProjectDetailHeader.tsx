@@ -175,7 +175,7 @@ export default function ProjectDetailHeader({
           className="fixed z-[200] w-48 max-h-[min(320px,70vh)] overflow-y-auto py-1 bg-white text-slate-800 rounded-xl shadow-2xl border border-slate-200 text-sm"
           onClick={e => e.stopPropagation()}
         >
-          <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 sticky top-0 bg-white">
+          <div className="px-3 py-1.5 text-[10px] font-bold text-slate-600 uppercase tracking-wider border-b border-slate-100 sticky top-0 bg-white">
             Ubah status
           </div>
           {PROJECT_STATUSES.map(s => (
@@ -363,7 +363,7 @@ export default function ProjectDetailHeader({
                         <div className="font-bold text-sm mb-1">{opiMetric.title}</div>
                         <p className="text-slate-200 mb-2">{opiMetric.description}</p>
                         <p className="font-mono text-emerald-200 text-[10px] mb-1">{opiMetric.formula}</p>
-                        <p className="text-slate-400 text-[10px]">Sumber: {opiMetric.source}</p>
+                        <p className="text-slate-600 text-[10px]">Sumber: {opiMetric.source}</p>
                       </div>
                     )}
                   </div>

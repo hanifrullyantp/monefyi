@@ -2417,12 +2417,12 @@ async function upsertTransaction_legacy_local(tx) {
     }
 
     function renderHeader(){
-      // Update sidebar state
-      $$('.sidebar-item').forEach(el => {
+      // Update sidebar active state
+      $$('.sidebar-item[data-nav]').forEach((el) => {
         el.classList.remove('active');
-        const text = el.textContent.toLowerCase();
-        if (STATE.ui.dashboardOpen && text.includes('dash')) el.classList.add('active');
-        if (!STATE.ui.dashboardOpen && text.includes('transaksi')) el.classList.add('active');
+        const nav = el.getAttribute('data-nav');
+        if (nav === 'dash' && STATE.ui.dashboardOpen) el.classList.add('active');
+        if (nav === 'list' && !STATE.ui.dashboardOpen) el.classList.add('active');
       });
 
       // label utama header menggunakan bulan (contoh: Des 2025)
@@ -2536,8 +2536,6 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
 
       const filterCardPeriod = $('#filterCardPeriodDesktop');
       if (filterCardPeriod) filterCardPeriod.textContent = periodLabel;
-
-      // preset UI state
       if ($('#presetSelect')) {
         // keep preset selection in sync
         $('#presetSelect').value = STATE.period.preset || 'this_month';
@@ -2649,17 +2647,16 @@ renderAccountsSettings();
   const s = sumByType(txs);
   const netStr = formatCompactIDR(s.net);
 
-  const subHtml = `<span class="saldo-period-line">
+  const subHtmlMobile = `<span class="saldo-period-line">
     <span><span class="saldo-dot saldo-dot--income" aria-hidden="true">●</span>+${formatCompactIDR(s.income)} (income)</span>
     <span><span class="saldo-dot saldo-dot--expense" aria-hidden="true">●</span>−${formatCompactIDR(s.expense)} (expense)</span>
   </span>`;
+  const subHtmlDesktop = `Bulan ini: +${formatCompactIDR(s.income)} (income) | −${formatCompactIDR(s.expense)} (expense)`;
 
-  // Update subtext saldo (mobile + desktop)
-  ['#kpiSaldoSub', '#kpiSaldoSubDesktop'].forEach((sel) => {
-    const el = $(sel);
-    if (!el) return;
-    el.innerHTML = subHtml;
-  });
+  const elSubMobile = $('#kpiSaldoSub');
+  if (elSubMobile) elSubMobile.innerHTML = subHtmlMobile;
+  const elSubDesktop = $('#kpiSaldoSubDesktop');
+  if (elSubDesktop) elSubDesktop.textContent = subHtmlDesktop;
 
   const savingRate = s.income > 0 ? Math.round(((s.income - s.expense) / s.income) * 100) : 0;
   const budgetRow = budgetForPeriod();

@@ -180,7 +180,7 @@ export default function ProjectIncomePanel({
           <tbody>
             {incomes.length === 0 ? (
               <tr>
-                <td colSpan={canManage ? 5 : 4} className="p-8 text-center text-slate-400">
+                <td colSpan={canManage ? 5 : 4} className="p-8 text-center text-slate-600">
                   Belum ada uang masuk tercatat
                 </td>
               </tr>
@@ -188,7 +188,7 @@ export default function ProjectIncomePanel({
               <tr key={i.id} className="border-t">
                 <td className="p-3 text-slate-600">{i.date}</td>
                 <td className="p-3"><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 text-xs font-bold">{CATEGORY_LABELS[i.category]}</span></td>
-                <td className="p-3">{i.description}{i.payment_method ? <span className="text-slate-400 text-xs"> · {i.payment_method}</span> : null}</td>
+                <td className="p-3">{i.description}{i.payment_method ? <span className="text-slate-600 text-xs"> · {i.payment_method}</span> : null}</td>
                 <td className="p-3 text-right font-bold text-emerald-600">{formatRupiah(i.amount)}</td>
                 {canManage && (
                   <td className="p-3">

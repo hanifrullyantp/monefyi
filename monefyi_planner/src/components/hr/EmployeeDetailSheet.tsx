@@ -304,7 +304,7 @@ export default function EmployeeDetailSheet({
             )}
             <div className="space-y-2">
               {attendance.length === 0 ? (
-                <p className="text-sm text-slate-400">Belum ada riwayat absensi.</p>
+                <p className="text-sm text-slate-600">Belum ada riwayat absensi.</p>
               ) : attendance.slice(0, 15).map(r => (
                 <div key={r.id} className="flex justify-between text-sm py-2 border-b border-slate-50">
                   <span className={r.type === 'check_in' ? 'text-emerald-700' : 'text-slate-600'}>
@@ -331,7 +331,7 @@ export default function EmployeeDetailSheet({
             )}
             <div className="text-xs font-bold text-slate-500">Slip bulan ini</div>
             {payroll.filter(p => p.period_month === monthStartIso()).length === 0 ? (
-              <p className="text-sm text-slate-400">Belum ada payroll bulan ini.</p>
+              <p className="text-sm text-slate-600">Belum ada payroll bulan ini.</p>
             ) : payroll.filter(p => p.period_month === monthStartIso()).map(p => (
               <div key={p.id} className="flex justify-between text-sm bg-white border rounded-xl p-3">
                 <span>{p.status}</span>
@@ -356,11 +356,11 @@ export default function EmployeeDetailSheet({
           <div className="space-y-2">
             <p className="text-xs text-slate-500">{workItems.length} work item aktif di organisasi (semua proyek).</p>
             {workItems.length === 0 ? (
-              <p className="text-sm text-slate-400">Belum ada work item.</p>
+              <p className="text-sm text-slate-600">Belum ada work item.</p>
             ) : workItems.map(wi => (
               <div key={wi.id} className="text-sm py-2 border-b border-slate-50">
                 <div className="font-medium">{wi.name}</div>
-                <div className="text-xs text-slate-400">{wi.planned_end?.slice(0, 10)} · {wi.progress_pct ?? 0}%</div>
+                <div className="text-xs text-slate-600">{wi.planned_end?.slice(0, 10)} · {wi.progress_pct ?? 0}%</div>
               </div>
             ))}
           </div>

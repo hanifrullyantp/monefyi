@@ -157,7 +157,7 @@ export default function PiutangPage() {
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
       ) : rows.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-100 p-10 text-center text-slate-400 text-sm">Belum ada piutang.</div>
+        <div className="bg-white rounded-2xl border border-slate-100 p-10 text-center text-slate-600 text-sm">Belum ada piutang.</div>
       ) : (
         <div className="space-y-3">
           {rows.map(rec => {

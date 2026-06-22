@@ -24,7 +24,7 @@ function Column({
     <div className="flex-1 min-w-0">
       <h3 className={`text-sm font-bold ${accent} mb-3`}>{title}</h3>
       {rows.length === 0 ? (
-        <p className="text-sm text-slate-400 italic">Belum ada saldo</p>
+        <p className="text-sm text-slate-600 italic">Belum ada saldo</p>
       ) : (
         <ul className="space-y-2">
           {rows.map(row => (

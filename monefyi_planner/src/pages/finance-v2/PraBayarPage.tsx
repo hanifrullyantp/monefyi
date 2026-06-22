@@ -139,7 +139,7 @@ export default function PraBayarPage() {
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
       ) : rows.length === 0 ? (
-        <div className="bg-white rounded-2xl border p-10 text-center text-slate-400 text-sm">Belum ada item pra bayar.</div>
+        <div className="bg-white rounded-2xl border p-10 text-center text-slate-600 text-sm">Belum ada item pra bayar.</div>
       ) : (
         <div className="space-y-3">
           {rows.map(item => {
@@ -157,7 +157,7 @@ export default function PraBayarPage() {
                   </div>
                   <div className="text-right">
                     <div className="font-black">{formatFinanceRupiah(item.remaining_value)}</div>
-                    <div className="text-xs text-slate-400">dari {formatFinanceRupiah(item.total_amount)}</div>
+                    <div className="text-xs text-slate-600">dari {formatFinanceRupiah(item.total_amount)}</div>
                     <div className="text-xs text-slate-500 mt-1">~{formatFinanceRupiah(daily)}/hari</div>
                   </div>
                 </div>
@@ -165,7 +165,7 @@ export default function PraBayarPage() {
                   {item.remaining_value > 0 && (
                     <button type="button" onClick={() => handleAmortizeOne(item)} className="text-xs font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded-lg">Amortisasi</button>
                   )}
-                  <button type="button" onClick={() => handleDelete(item)} className="text-xs font-bold text-slate-400 hover:bg-slate-50 px-2 py-1 rounded-lg">Hapus</button>
+                  <button type="button" onClick={() => handleDelete(item)} className="text-xs font-bold text-slate-600 hover:bg-slate-50 px-2 py-1 rounded-lg">Hapus</button>
                 </div>
               </div>
             );

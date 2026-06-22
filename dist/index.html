@@ -31,7 +31,7 @@
 
 
  
-  <link rel="stylesheet" crossorigin href="./assets/index-AROylgbn.css">
+  <link rel="stylesheet" crossorigin href="./assets/index-DXeO7HL1.css">
 </head>
 <body>
   <div class="min-h-dvh">
@@ -334,144 +334,115 @@
 
 
     <!-- SIDEBAR DESKTOP (KIRI) -->
-    <aside id="appSidebar" class="hidden md:flex flex-col gap-6 shrink-0 md:h-full relative">
+    <aside id="appSidebar" class="hidden md:flex flex-col gap-4 shrink-0 md:h-full relative">
       <button id="btnSidebarCollapse" type="button" class="tap absolute top-0 right-0 z-10 w-8 h-8 rounded-lg app-chip flex items-center justify-center text-xs" aria-label="Ciutkan sidebar" title="Sidebar">‹</button>
-      
-      <!-- Logo Brand (desktop) -->
-<div class="flex items-center gap-3 px-2 mb-2 pr-8">
-  <div class="w-10 h-10 rounded-2xl app-card flex items-center justify-center overflow-hidden shadow-lg border border-slate-800">
-    <img id="sidebarLogoImg" class="w-full h-full object-cover hidden" alt="Logo Monefyi" />
-    
-    <span id="sidebarLogoFallback" class="font-bold text-white text-xl">M</span>
-  </div>
-  <div>
-    <h1 class="font-bold text-white leading-none">Monefyi</h1>
-    <span class="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">Advisor AI</span>
-  </div>
-</div>
 
-      <!-- Tombol Transaksi Baru (di atas saldo) -->
-      <button
-        id="btnSidebarNewTx"
-        type="button"
-        onclick="openAddSheet('quick')"
-        class="tap btn-primary btn-shine btn-sidebar-new-tx"
-        data-i18n="header.new_tx"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
-        <span class="sidebar-label">Transaksi Baru</span>
-      </button>
-
-      <!-- KARTU SALDO DESKTOP -->
-<div id="sidebarSaldoWrap" class="hidden md:block sidebar-saldo-wrap">
-  <div
-    id="btnSaldoToggleDesktop"
-    role="button"
-    tabindex="0"
-    class="tap saldo-card-glow sidebar-glass w-full rounded-xl app-card p-4 text-left cursor-pointer shadow-lg border border-slate-800/50"
-  >
-    <div class="flex flex-col gap-1 min-w-0">
-      <div id="saldoTitleDesktop" class="text-xs app-muted font-medium">
-        Saldo (estimasi)
+      <!-- Brand -->
+      <div class="sidebar-brand flex items-center gap-3 px-1 pr-8">
+        <div class="w-10 h-10 rounded-2xl app-card flex items-center justify-center overflow-hidden shadow-lg border border-slate-800 shrink-0">
+          <img id="sidebarLogoImg" class="w-full h-full object-cover hidden" alt="Logo Monefyi" />
+          <span id="sidebarLogoFallback" class="font-bold text-white text-xl">M</span>
+        </div>
+        <div class="sidebar-label min-w-0">
+          <h1 class="font-bold text-white leading-none">Monefyi</h1>
+          <span class="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">Advisor AI</span>
+        </div>
       </div>
 
-      <div id="kpiSaldoDesktop" class="saldo-amount mt-1">—</div>
-      <div id="kpiSaldoSubDesktop" class="mt-1 text-[11px] app-muted leading-snug">
-  Tap untuk membuka ringkasan lengkap.
-</div>
-    </div>
-  </div>
-</div>
+      <!-- Kartu Saldo + filter periode di dalam -->
+      <div id="sidebarSaldoWrap" class="hidden md:block sidebar-saldo-wrap sidebar-label">
+        <div
+          id="btnSaldoToggleDesktop"
+          role="button"
+          tabindex="0"
+          class="sidebar-saldo-card tap saldo-card-glow sidebar-glass cursor-pointer"
+          title="Tap untuk ringkasan lengkap"
+        >
+          <div class="sidebar-saldo-card__label" id="saldoTitleDesktop">Saldo (estimasi)</div>
+          <div id="kpiSaldoDesktop" class="sidebar-saldo-card__amount saldo-amount">—</div>
+          <div id="kpiSaldoSubDesktop" class="sidebar-saldo-card__sub">Bulan ini: —</div>
+          <div class="sidebar-saldo-card__footer">
+            <button
+              id="btnFilterCardDesktop"
+              type="button"
+              class="sidebar-saldo-filter tap"
+              title="Filter periode & transaksi"
+              aria-expanded="false"
+            >
+              <span id="filterCardPeriodDesktop">—</span>
+              <span id="filterChevronDesktop" class="sidebar-saldo-filter__chev" aria-hidden="true">▾</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
-      <!-- Filter compact (satu baris) -->
-      <button
-        id="btnFilterCardDesktop"
-        type="button"
-        class="tap sidebar-glass filter-row-compact app-card hover:opacity-95 cursor-pointer border border-slate-800/50"
-        title="Filter periode & transaksi"
-        aria-expanded="false"
-      >
-        <span class="filter-row-compact__label">Filter :</span>
-        <span id="filterCardPeriodDesktop" class="filter-row-compact__value">—</span>
-        <span id="filterChevronDesktop" class="text-xs shrink-0 app-muted2" aria-hidden="true">▾</span>
-      </button>
-      <!-- Navigasi Menu -->
-      <nav class="flex flex-col gap-1">
-        <button onclick="toggleNav('dash')" class="sidebar-item flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-slate-800/50 transition-all tap group">
-          <span class="text-white group-hover:scale-110 transition-transform">
+      <!-- Menu utama -->
+      <nav class="sidebar-nav-primary flex flex-col gap-0.5">
+        <button type="button" onclick="toggleNav('dash')" data-nav="dash" class="sidebar-item sidebar-item--primary tap group">
+          <span class="sidebar-item__icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
           </span>
-          <span class="font-semibold text-sm sidebar-label" data-i18n="nav.dashboard">Dashboard</span>
+          <span class="sidebar-item__label sidebar-label" data-i18n="nav.dashboard">Dashboard</span>
         </button>
 
-        <button onclick="toggleNav('list')" class="sidebar-item flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-slate-800/50 transition-all tap group">
-          <span class="text-white group-hover:scale-110 transition-transform">
+        <button type="button" onclick="toggleNav('list')" data-nav="list" class="sidebar-item sidebar-item--primary tap group">
+          <span class="sidebar-item__icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
           </span>
-          <span class="font-semibold text-sm sidebar-label" data-i18n="nav.transactions">Semua Transaksi</span>
+          <span class="sidebar-item__label sidebar-label" data-i18n="nav.transactions">Semua Transaksi</span>
         </button>
 
-        <button onclick="openBudget()" class="sidebar-item flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-slate-800/50 transition-all tap group">
-          <span class="text-white group-hover:scale-110 transition-transform">
+        <button type="button" onclick="openBudget()" class="sidebar-item sidebar-item--primary tap group">
+          <span class="sidebar-item__icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>
           </span>
-          <span class="font-semibold text-sm sidebar-label" data-i18n="nav.budget">Budgeting</span>
+          <span class="sidebar-item__label sidebar-label" data-i18n="nav.budget">Budgeting</span>
         </button>
 
-        <button onclick="openAdvisorAuto()" class="sidebar-item flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-slate-800/50 transition-all tap group">
-          <span class="text-white group-hover:scale-110 transition-transform">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path x1="3" y1="5" x2="7" y2="5"/><path x1="17" y1="19" x2="21" y2="19"/></svg>
+        <button type="button" onclick="openAdvisorAuto()" class="sidebar-item sidebar-item--primary tap group">
+          <span class="sidebar-item__icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l2.5-5.5L21 11l-6.5-2.5Z"/></svg>
           </span>
-          <span class="font-semibold text-sm sidebar-label" data-i18n="nav.advisor">Monevisor (AI)</span>
+          <span class="sidebar-item__label sidebar-label" data-i18n="nav.advisor">Monevisor (AI)</span>
         </button>
       </nav>
-      
-    <!-- Footer Sidebar + user -->
-<div id="sidebarUserBlock" class="mt-auto pt-4 border-t border-slate-800/50">
-  <div class="flex items-center gap-3 px-2 py-2 mb-2">
-    <span id="sidebarUserAvatar" class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style="background:var(--brand-green-soft);color:var(--accent-primary)">U</span>
-    <div class="min-w-0 flex-1 sidebar-label">
-      <div id="sidebarUserName" class="text-sm font-semibold truncate">User</div>
-      <div class="text-[10px] app-muted">Monefyi</div>
-    </div>
-    <button type="button" onclick="openMenu()" class="tap rounded-lg app-chip p-2 sidebar-label" aria-label="Settings" title="Settings">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-    </button>
-  </div>
-<div class="space-y-1">
-  <!-- Tutorial -->
-  <button onclick="openTutorial()" class="sidebar-item w-full flex items-center gap-3 px-4 py-2 rounded-xl hover:bg-slate-800/50 transition-all text-slate-400 hover:text-white group">
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 group-hover:text-white">
-      <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M8 7h6"/><path d="M8 11h8"/>
-    </svg>
-    <span class="text-xs font-medium sidebar-footer-text">Tutorial</span>
-  </button>
 
-  <!-- Affiliate -->
-  <button onclick="openAffiliate()" class="sidebar-item w-full flex items-center gap-3 px-4 py-2 rounded-xl hover:bg-slate-800/50 transition-all text-slate-400 hover:text-white group">
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 group-hover:text-white">
-      <path d="M20 6 9 17l-5-5"/><path d="M22 10V6h-4"/>
-    </svg>
-    <span class="text-xs font-medium">Affiliate</span>
-  </button>
+      <!-- Menu sekunder (bawah) -->
+      <div id="sidebarUserBlock" class="mt-auto pt-2">
+        <div class="sidebar-divider sidebar-label" aria-hidden="true"></div>
+        <nav class="sidebar-nav-secondary flex flex-col gap-0.5 pt-2">
+          <button type="button" onclick="openTutorial()" class="sidebar-item sidebar-item--secondary tap group">
+            <span class="sidebar-item__icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M8 7h6"/><path d="M8 11h8"/></svg>
+            </span>
+            <span class="sidebar-item__label sidebar-label sidebar-footer-text">Tutorial</span>
+          </button>
 
-  <!-- Pengaturan -->
-  <button onclick="openMenu()" class="sidebar-item w-full flex items-center gap-3 px-4 py-2 rounded-xl hover:bg-slate-800/50 transition-all text-slate-400 hover:text-white group">
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 group-hover:text-white">
-      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1.73 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>
-    </svg>
-    <span class="text-xs font-medium">Pengaturan</span>
-  </button>
+          <button type="button" onclick="openAffiliate()" class="sidebar-item sidebar-item--secondary tap group">
+            <span class="sidebar-item__icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/><path d="M22 10V6h-4"/></svg>
+            </span>
+            <span class="sidebar-item__label sidebar-label">Affiliate</span>
+          </button>
 
-  <!-- Profile -->
-  <button onclick="openUser()" class="sidebar-item w-full flex items-center gap-3 px-4 py-2 rounded-xl hover:bg-slate-800/50 transition-all text-slate-400 hover:text-white group">
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 group-hover:text-white">
-      <path d="M12 12a5 5 0 1 0-4.9-4.1"/><path d="M8 21a7 7 0 0 1 8-7"/>
-    </svg>
-    <span class="text-xs font-medium sidebar-footer-text">Profile</span>
-  </button>
-</div>
-</div>
+          <button type="button" onclick="openMenu()" class="sidebar-item sidebar-item--secondary tap group">
+            <span class="sidebar-item__icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1.73 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            </span>
+            <span class="sidebar-item__label sidebar-label">Pengaturan</span>
+          </button>
+
+          <button type="button" onclick="openUser()" class="sidebar-item sidebar-item--secondary tap group">
+            <span class="sidebar-item__icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12a5 5 0 1 0-4.9-4.1"/><path d="M8 21a7 7 0 0 1 8-7"/></svg>
+            </span>
+            <span class="sidebar-item__label sidebar-label sidebar-footer-text">Profile</span>
+          </button>
+        </nav>
+        <!-- sinkronisasi user (hidden, dipakai JS) -->
+        <span id="sidebarUserName" class="hidden">User</span>
+        <span id="sidebarUserAvatar" class="hidden">U</span>
+      </div>
     </aside>
 
            <!-- KONTEN KANAN (DETAIL) -->
@@ -480,9 +451,14 @@
       <div id="txToolbarDesktop" class="hidden md:flex items-center gap-2 mb-2 flex-none shrink-0">
         <div class="min-w-0 flex-1">
           <h2 id="pageTitleTx" class="text-lg font-bold tracking-tight leading-none" data-i18n="tx.title">Transaksi</h2>
+          <button type="button" id="infoSaldoPill" class="tap text-[10px] app-muted mt-0.5 hover:opacity-80 text-left block" data-i18n="info.saldo_hint" title="Tutup">Tap kartu saldo untuk detail lengkap</button>
           <div id="txCountDesktop" class="text-[11px] app-muted mt-0.5">—</div>
         </div>
         <div class="tx-toolbar">
+          <button type="button" id="btnHeaderNewTx" onclick="openAddSheet('quick')" class="btn-primary btn-shine tap font-semibold px-4 py-2 rounded-lg text-sm shrink-0 flex items-center gap-1.5 mr-1" data-i18n="header.new_tx">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+            Transaksi Baru
+          </button>
           <button type="button" id="btnTopAi" class="tx-toolbar-btn tap" title="Input AI (⌘N)" aria-label="Input transaksi AI">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3 9.5 8.5 3 11l6.5 2.5L12 19l2.5-5.5L21 11l-6.5-2.5Z"/></svg>
           </button>
@@ -513,18 +489,6 @@
           <button type="button" id="btnUnifiedParse" class="tap btn-primary px-3 py-2 rounded-lg text-sm font-semibold shrink-0">→</button>
         </div>
         <div id="unifiedAiPreview" class="hidden mt-2"></div>
-      </div>
-
-      <!-- Legacy header hidden on desktop -->
-      <div class="hidden md:hidden justify-between items-end mb-6 flex-none gap-4">
-        <div>
-          <button type="button" id="infoSaldoPill" class="tap mt-2 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs app-chip" data-i18n="info.saldo_hint" title="Tutup">
-            Tap kartu saldo untuk detail lengkap
-          </button>
-        </div>
-        <button id="btnHeaderNewTx" onclick="openAddSheet('quick')" class="btn-primary btn-shine tap font-bold px-6 py-3 rounded-lg flex items-center gap-2 shrink-0 hidden" data-i18n="header.new_tx">
-          + Transaksi Baru
-        </button>
       </div>
 
       <!-- Render Content Area: isi halaman (dashboard / list transaksi) -->

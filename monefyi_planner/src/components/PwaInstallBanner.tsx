@@ -42,7 +42,7 @@ export default function PwaInstallBanner() {
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-bold text-sm">Install Monefyi Planner</p>
-          <p className="text-xs text-slate-300 mt-0.5">Akses cepat dari home screen, seperti app native.</p>
+          <p className="text-xs text-slate-500 mt-0.5">Akses cepat dari home screen, seperti app native.</p>
           <div className="flex gap-2 mt-3">
             <button
               type="button"
@@ -51,12 +51,12 @@ export default function PwaInstallBanner() {
             >
               Install
             </button>
-            <button type="button" onClick={dismiss} className="px-3 py-1.5 text-xs text-slate-400">
+            <button type="button" onClick={dismiss} className="px-3 py-1.5 text-xs text-slate-600">
               Nanti
             </button>
           </div>
         </div>
-        <button type="button" onClick={dismiss} aria-label="Tutup" className="text-slate-400 hover:text-white">
+        <button type="button" onClick={dismiss} aria-label="Tutup" className="text-slate-600 hover:text-white">
           <X className="w-4 h-4" />
         </button>
       </div>

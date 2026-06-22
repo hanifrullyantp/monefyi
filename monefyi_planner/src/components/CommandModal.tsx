@@ -680,7 +680,7 @@ export default function CommandModal() {
             </div>
             <div>
               <div className="font-black text-slate-900 text-sm">Monefyi Assistant</div>
-              <div className="text-xs text-slate-400">
+              <div className="text-xs text-slate-600">
                 Konteks: <span className="text-emerald-600 font-medium">{activeProject?.name || 'Umum'}</span>
               </div>
             </div>
@@ -700,7 +700,7 @@ export default function CommandModal() {
               <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <div className="relative mb-2">
                   <div className="flex items-start gap-2 bg-slate-50 border-2 border-slate-200 focus-within:border-emerald-400 rounded-2xl px-4 py-3 transition-colors">
-                    <MessageSquare className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                    <MessageSquare className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />
                     <textarea
                       ref={inputRef}
                       value={input}
@@ -717,7 +717,7 @@ export default function CommandModal() {
                     />
                     <button
                       onClick={isListening ? stopListening : startListening}
-                      className={`p-1.5 rounded-xl transition-colors ${isListening ? 'bg-rose-100 text-rose-600' : 'hover:bg-emerald-100 text-slate-400 hover:text-emerald-600'}`}
+                      className={`p-1.5 rounded-xl transition-colors ${isListening ? 'bg-rose-100 text-rose-600' : 'hover:bg-emerald-100 text-slate-600 hover:text-emerald-600'}`}
                     >
                       {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                     </button>
@@ -744,10 +744,10 @@ export default function CommandModal() {
                           <span className="text-sm text-slate-700 truncate">
                             {m.name}
                             {m.type === 'work_item' && m.progressPct != null && (
-                              <span className="text-slate-400 font-normal"> · {m.progressPct}%</span>
+                              <span className="text-slate-600 font-normal"> · {m.progressPct}%</span>
                             )}
                           </span>
-                          <span className="ml-auto text-[10px] uppercase tracking-wide text-slate-400">{tagTypeLabel(m.type)}</span>
+                          <span className="ml-auto text-[10px] uppercase tracking-wide text-slate-600">{tagTypeLabel(m.type)}</span>
                         </button>
                       ))}
                     </div>
@@ -760,7 +760,7 @@ export default function CommandModal() {
                     {resolvedTags.map((t, i) => (
                       <span
                         key={i}
-                        className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${t.matched ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}
+                        className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${t.matched ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}
                       >
                         <Hash className="w-3 h-3" />{t.name || t.key}
                       </span>
@@ -802,9 +802,9 @@ export default function CommandModal() {
                             : <TrendingUp className="w-4 h-4 text-emerald-500 shrink-0" />}
                           <div className="min-w-0 flex-1">
                             <div className="text-sm font-medium text-slate-700 truncate">{rec.label}</div>
-                            {rec.detail && <div className="text-[11px] text-slate-400 truncate">{rec.detail}</div>}
+                            {rec.detail && <div className="text-[11px] text-slate-600 truncate">{rec.detail}</div>}
                           </div>
-                          <Send className="w-3.5 h-3.5 text-slate-300 group-hover:text-emerald-500 shrink-0 transition-colors" />
+                          <Send className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-500 shrink-0 transition-colors" />
                         </button>
                       ))}
                     </div>
@@ -857,9 +857,9 @@ export default function CommandModal() {
                         onClick={() => { handleInputChange(h); inputRef.current?.focus(); }}
                         className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors text-left group"
                       >
-                        <RotateCcw className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <RotateCcw className="w-3.5 h-3.5 text-slate-600 shrink-0" />
                         <span className="text-sm text-slate-600 truncate">{h}</span>
-                        <Send className="w-3.5 h-3.5 text-slate-300 group-hover:text-emerald-500 ml-auto shrink-0 transition-colors" />
+                        <Send className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-500 ml-auto shrink-0 transition-colors" />
                       </button>
                     ))}
                   </div>
@@ -897,7 +897,7 @@ export default function CommandModal() {
                   ].map(l => {
                     const done = STAGE_ORDER[pipelineStage] >= STAGE_ORDER[l.key];
                     return (
-                      <div key={l.key} className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${done ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-50 text-slate-400'}`}>
+                      <div key={l.key} className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${done ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-50 text-slate-600'}`}>
                         <div className={`w-1.5 h-1.5 rounded-full ${done ? 'bg-emerald-500' : 'bg-slate-300'}`} />
                         {l.label}
                         {done && pipelineStage === l.key && <span className="ml-auto animate-pulse">...</span>}
@@ -1017,7 +1017,7 @@ export default function CommandModal() {
                 </div>
                 <p className="text-lg font-black text-slate-900 mb-1">Berhasil!</p>
                 <p className="text-sm text-slate-500 mb-2">{resultMessage}</p>
-                {resultDetails && <p className="text-xs text-slate-400 mb-6">{resultDetails}</p>}
+                {resultDetails && <p className="text-xs text-slate-600 mb-6">{resultDetails}</p>}
 
                 <div className="flex gap-3">
                   <button onClick={handleReset} className="flex-1 py-3 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
@@ -1094,7 +1094,7 @@ export default function CommandModal() {
         )}
 
         <div className="px-5 py-3 border-t border-slate-100 text-center shrink-0">
-          <span className="text-xs text-slate-400">Powered by <span className="font-semibold text-emerald-500">Monefyi AI</span> · Memori → Aturan → Fuzzy → AI</span>
+          <span className="text-xs text-slate-600">Powered by <span className="font-semibold text-emerald-500">Monefyi AI</span> · Memori → Aturan → Fuzzy → AI</span>
         </div>
       </motion.div>
     </motion.div>

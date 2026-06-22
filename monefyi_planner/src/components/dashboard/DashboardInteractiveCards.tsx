@@ -41,6 +41,7 @@ export default function DashboardInteractiveCards({ onOpenProject }: Props) {
   const [projectRecs, setProjectRecs] = useState<Array<{ title: string; message: string }>>([]);
 
   const activeProjects = projects.filter(p => p.status === 'active');
+  const firstActiveProjectId = activeProjects[0]?.id ?? '';
   const selectedProject = projects.find(p => p.id === selectedProjectId) || activeProjects[0] || projects[0];
 
   useEffect(() => {
@@ -58,8 +59,8 @@ export default function DashboardInteractiveCards({ onOpenProject }: Props) {
   }, [tenant?.id, projects]);
 
   useEffect(() => {
-    if (activeProjects[0] && !selectedProjectId) setSelectedProjectId(activeProjects[0].id);
-  }, [activeProjects, selectedProjectId]);
+    if (firstActiveProjectId && !selectedProjectId) setSelectedProjectId(firstActiveProjectId);
+  }, [firstActiveProjectId, selectedProjectId]);
 
   useEffect(() => {
     if (!selectedProject?.id) return;
@@ -133,7 +134,7 @@ export default function DashboardInteractiveCards({ onOpenProject }: Props) {
             <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{card.label}</div>
             <div className="text-xl font-black text-slate-900 mt-1 font-mono">{card.value}</div>
             <div className="text-xs text-slate-500 mt-0.5">{card.sub}</div>
-            <ChevronRight className="absolute bottom-3 right-3 w-4 h-4 text-slate-300" />
+            <ChevronRight className="absolute bottom-3 right-3 w-4 h-4 text-slate-500" />
           </motion.button>
         ))}
       </div>

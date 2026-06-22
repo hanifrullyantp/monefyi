@@ -69,7 +69,7 @@ export default function PricelistPickerModal({ orgId, onClose, onSelect }: Props
 
         <div className="px-5 py-3 space-y-2 border-b border-slate-100">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -92,9 +92,9 @@ export default function PricelistPickerModal({ orgId, onClose, onSelect }: Props
 
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <div className="p-8 text-center text-sm text-slate-400">Memuat...</div>
+            <div className="p-8 text-center text-sm text-slate-600">Memuat...</div>
           ) : filtered.length === 0 ? (
-            <div className="p-8 text-center text-sm text-slate-400">
+            <div className="p-8 text-center text-sm text-slate-600">
               Tidak ada item. Tambahkan di halaman Pricelist dulu.
             </div>
           ) : (
@@ -119,7 +119,7 @@ export default function PricelistPickerModal({ orgId, onClose, onSelect }: Props
                     {item.product && (
                       <div className="text-xs text-slate-500 truncate">{item.product}</div>
                     )}
-                    <div className="text-xs text-slate-400">
+                    <div className="text-xs text-slate-600">
                       {item.category} · {item.unit} · Jual {formatRupiahFull(Number(item.selling_price))}
                     </div>
                   </div>

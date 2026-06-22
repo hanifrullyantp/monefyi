@@ -30,7 +30,7 @@ export default function MetricHelpCard({ metric, value, ok = true }: Props) {
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
-        className="absolute top-2 right-2 p-1 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
+        className="absolute top-2 right-2 p-1 rounded-lg text-slate-600 hover:text-emerald-600 hover:bg-emerald-50"
         aria-label={`Info ${metric.label}`}
       >
         <Info className="w-3.5 h-3.5" />
@@ -48,7 +48,7 @@ export default function MetricHelpCard({ metric, value, ok = true }: Props) {
           </div>
           <p className="text-slate-200 mb-2">{metric.description}</p>
           <p className="font-mono text-emerald-200 text-[10px] mb-1">{metric.formula}</p>
-          <p className="text-slate-400 text-[10px]">Sumber: {metric.source}</p>
+          <p className="text-slate-600 text-[10px]">Sumber: {metric.source}</p>
         </div>
       )}
     </div>

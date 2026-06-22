@@ -54,7 +54,7 @@ export default function CalendarView({ projects, onOpenProject }: CalendarViewPr
         <button type="button" onClick={() => setCursor(new Date(year, month + 1, 1))} className="px-3 py-1 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-lg">→</button>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400 mb-1">
+      <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-600 mb-1">
         {['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'].map(d => <div key={d}>{d}</div>)}
       </div>
 
@@ -85,7 +85,7 @@ export default function CalendarView({ projects, onOpenProject }: CalendarViewPr
         <div className="mt-4 pt-4 border-t">
           <div className="text-xs font-bold text-slate-500 mb-2">Event {selectedDay} {monthLabel(cursor)}</div>
           {selectedProjects.length === 0 ? (
-            <p className="text-sm text-slate-400">Tidak ada milestone proyek.</p>
+            <p className="text-sm text-slate-600">Tidak ada milestone proyek.</p>
           ) : selectedProjects.map(p => (
             <button key={p.id} type="button" onClick={() => onOpenProject(p)} className="block w-full text-left text-sm py-2 hover:text-emerald-600 font-medium">
               {p.name}

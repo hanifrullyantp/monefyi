@@ -29,7 +29,7 @@ export default function PreviewModeMenu() {
       </button>
       {open && (
         <div className="absolute right-0 top-full mt-2 w-44 py-1 bg-white rounded-xl shadow-lg border border-slate-100 z-50">
-          <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase">Preview mode</div>
+          <div className="px-3 py-1.5 text-[10px] font-bold text-slate-600 uppercase">Preview mode</div>
           {([
             { id: 'auto' as const, label: 'Auto' },
             { id: 'owner' as const, label: 'Owner' },

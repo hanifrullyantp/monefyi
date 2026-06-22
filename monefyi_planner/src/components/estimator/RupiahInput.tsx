@@ -65,7 +65,7 @@ export default function RupiahInput({
       }}
       onChange={e => setText(e.target.value)}
       onKeyDown={handleKeyDown}
-      className={`${className} min-w-[11rem] text-slate-900 placeholder:text-slate-400`}
+      className={`${className} min-w-[11rem] text-slate-900 placeholder:text-slate-600`}
       style={{ width: `${charWidth}ch`, maxWidth: '100%' }}
       placeholder="0"
     />

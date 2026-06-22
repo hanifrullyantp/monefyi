@@ -165,7 +165,7 @@ export default function LaporanPage() {
         ))}
       </div>
 
-      <p className="text-xs text-slate-400">{periodLabel}</p>
+      <p className="text-xs text-slate-600">{periodLabel}</p>
 
       {loading && !bundle ? (
         <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
@@ -260,7 +260,7 @@ function ReportContent({ tab, bundle }: { tab: ReportKind; bundle: FinanceReport
           </thead>
           <tbody>
             {bundle.projects.length === 0 ? (
-              <tr><td colSpan={4} className="p-8 text-center text-slate-400">Tidak ada data proyek pada periode ini.</td></tr>
+              <tr><td colSpan={4} className="p-8 text-center text-slate-600">Tidak ada data proyek pada periode ini.</td></tr>
             ) : bundle.projects.map(r => (
               <tr key={r.projectId} className="border-t border-slate-50">
                 <td className="p-3 font-semibold">{r.projectName}</td>
@@ -289,12 +289,12 @@ function ReportContent({ tab, bundle }: { tab: ReportKind; bundle: FinanceReport
         </thead>
         <tbody>
           {bundle.investors.length === 0 ? (
-            <tr><td colSpan={5} className="p-8 text-center text-slate-400">Tidak ada data investor.</td></tr>
+            <tr><td colSpan={5} className="p-8 text-center text-slate-600">Tidak ada data investor.</td></tr>
           ) : bundle.investors.map(r => (
             <tr key={r.investorId} className="border-t border-slate-50">
               <td className="p-3">
                 <div className="font-semibold">{r.investorName}</div>
-                {r.sharePct != null && <div className="text-xs text-slate-400">{r.sharePct}%</div>}
+                {r.sharePct != null && <div className="text-xs text-slate-600">{r.sharePct}%</div>}
               </td>
               <td className="p-3 text-right">{formatFinanceRupiah(r.invested)}</td>
               <td className="p-3 text-right">{formatFinanceRupiah(r.withdrawn)}</td>

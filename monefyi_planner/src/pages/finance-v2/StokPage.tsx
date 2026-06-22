@@ -113,7 +113,7 @@ export default function StokPage() {
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
       ) : rows.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-100 p-10 text-center text-slate-400 text-sm">Belum ada item stok.</div>
+        <div className="bg-white rounded-2xl border border-slate-100 p-10 text-center text-slate-600 text-sm">Belum ada item stok.</div>
       ) : (
         <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
           <table className="w-full text-sm">
@@ -131,7 +131,7 @@ export default function StokPage() {
                 <tr key={item.id} className="border-t border-slate-50">
                   <td className="p-3">
                     <div className="font-semibold text-slate-800">{item.name}</div>
-                    <div className="text-xs text-slate-400">{item.unit}{item.location && ` · ${item.location}`}</div>
+                    <div className="text-xs text-slate-600">{item.unit}{item.location && ` · ${item.location}`}</div>
                     {item.qty <= item.min_stock && item.min_stock > 0 && (
                       <span className="text-[10px] font-bold text-amber-600">Stok rendah</span>
                     )}
@@ -147,13 +147,13 @@ export default function StokPage() {
                         <div className="flex gap-1">
                           <button type="button" onClick={() => handleAdjust(item, 1)} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded" title="Masuk"><PackagePlus className="w-4 h-4" /></button>
                           <button type="button" onClick={() => handleAdjust(item, -1)} className="p-1 text-rose-600 hover:bg-rose-50 rounded" title="Keluar"><PackageMinus className="w-4 h-4" /></button>
-                          <button type="button" onClick={() => setAdjustId(null)} className="text-xs text-slate-400 px-1">×</button>
+                          <button type="button" onClick={() => setAdjustId(null)} className="text-xs text-slate-600 px-1">×</button>
                         </div>
                       </div>
                     ) : (
                       <div className="flex justify-end gap-1">
                         <button type="button" onClick={() => setAdjustId(item.id)} className="text-xs font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded-lg">Gerak</button>
-                        <button type="button" onClick={() => handleDelete(item)} className="text-xs font-bold text-slate-400 hover:bg-slate-50 px-2 py-1 rounded-lg">Hapus</button>
+                        <button type="button" onClick={() => handleDelete(item)} className="text-xs font-bold text-slate-600 hover:bg-slate-50 px-2 py-1 rounded-lg">Hapus</button>
                       </div>
                     )}
                   </td>
