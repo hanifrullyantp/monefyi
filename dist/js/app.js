@@ -1470,7 +1470,9 @@ async function upsertTransaction_legacy_local(tx) {
       window.MonefyiUI?.initSidebarCollapse?.();
       window.MonefyiUI?.initKeyboardShortcuts?.({
         onSearch: () => {
-          $('#btnTxSearchToggle')?.click();
+          const wrap = $('#txSearchWrap');
+          wrap?.classList.remove('tx-search--collapsed');
+          ['#btnTopSearch', '#btnTopSearchMobile'].forEach((sel) => $(sel)?.classList.add('active'));
           setTimeout(() => $('#txSearchInput')?.focus(), 80);
         },
         onNewTx: () => openAddSheet('quick'),
@@ -1494,7 +1496,7 @@ async function upsertTransaction_legacy_local(tx) {
       window.MonefyiUI?.initTxListKeyboard?.();
       window.MonefyiUI?.showOnboardingIfNeeded?.();
       initManualFormEnhancements();
-      initTxToolbarDesktop();
+      initTxToolbar();
       initPwaInstall();
       syncSidebarCollapsedUI();
     }
@@ -1531,45 +1533,78 @@ async function upsertTransaction_legacy_local(tx) {
       }
     }
 
-    function initTxToolbarDesktop(){
+    function applyDataTip(selectors) {
+      selectors.forEach(([sel, tip]) => {
+        const el = $(sel);
+        if (!el) return;
+        el.setAttribute('data-tip', tip);
+        el.removeAttribute('title');
+      });
+    }
+
+    function initTxToolbar() {
       const toggleSearch = () => {
         const wrap = $('#txSearchWrap');
         wrap?.classList.toggle('tx-search--collapsed');
-        if (!wrap?.classList.contains('tx-search--collapsed')) {
-          setTimeout(() => $('#txSearchInput')?.focus(), 80);
-        }
-        $('#btnTopSearch')?.classList.toggle('active', !wrap?.classList.contains('tx-search--collapsed'));
+        const expanded = !wrap?.classList.contains('tx-search--collapsed');
+        if (expanded) setTimeout(() => $('#txSearchInput')?.focus(), 80);
+        ['#btnTopSearch', '#btnTopSearchMobile'].forEach((sel) => {
+          $(sel)?.classList.toggle('active', expanded);
+        });
       };
       $('#btnTopSearch')?.addEventListener('click', toggleSearch);
-      $('#btnTopAi')?.addEventListener('click', () => {
+      $('#btnTopSearchMobile')?.addEventListener('click', toggleSearch);
+
+      const toggleAi = () => {
         const wrap = $('#unifiedAiBarWrap');
         if (!wrap) return openAddSheet('quick');
         const willOpen = wrap.classList.contains('hidden');
         wrap.classList.toggle('hidden', !willOpen);
         if (willOpen) setTimeout(() => $('#unifiedAiInput')?.focus(), 80);
-        $('#btnTopAi')?.classList.toggle('active', willOpen);
-      });
-      $('#btnTopFilterType')?.addEventListener('click', () => {
+        ['#btnTopAi', '#btnTopAiMobile'].forEach((sel) => {
+          $(sel)?.classList.toggle('active', willOpen);
+        });
+      };
+      $('#btnTopAi')?.addEventListener('click', toggleAi);
+      $('#btnTopAiMobile')?.addEventListener('click', toggleAi);
+
+      const toggleFilter = () => {
         const chips = $('#txTypeChips');
         if (!chips) return;
-        chips.classList.toggle('tx-chips--desktop-hidden');
-        $('#btnTopFilterType')?.classList.toggle('active', !chips.classList.contains('tx-chips--desktop-hidden'));
-        if (!chips.classList.contains('tx-chips--desktop-hidden')) {
-          requestAnimationFrame(() => window.MonefyiUI?.syncChipIndicator?.());
+        const isDesktop = window.matchMedia('(min-width: 768px)').matches;
+        if (isDesktop) {
+          chips.classList.toggle('tx-chips--desktop-hidden');
+        } else {
+          chips.classList.toggle('tx-chips--collapsed');
         }
-      });
+        const shown = isDesktop
+          ? !chips.classList.contains('tx-chips--desktop-hidden')
+          : !chips.classList.contains('tx-chips--collapsed');
+        ['#btnTopFilterType', '#btnTopFilterTypeMobile'].forEach((sel) => {
+          $(sel)?.classList.toggle('active', shown);
+        });
+        if (shown) requestAnimationFrame(() => window.MonefyiUI?.syncChipIndicator?.());
+      };
+      $('#btnTopFilterType')?.addEventListener('click', toggleFilter);
+      $('#btnTopFilterTypeMobile')?.addEventListener('click', toggleFilter);
+
       $('#btnTxTableCols')?.addEventListener('click', () => {
         $('#txTableColPicker')?.classList.toggle('hidden');
       });
-      [
+
+      applyDataTip([
         ['#btnTopAi', 'Input AI'],
+        ['#btnTopAiMobile', 'Input AI'],
         ['#btnTopSearch', 'Cari'],
+        ['#btnTopSearchMobile', 'Cari'],
         ['#btnTopFilterType', 'Filter tipe'],
+        ['#btnTopFilterTypeMobile', 'Filter tipe'],
         ['#btnHeaderNewTx', 'Transaksi Baru'],
         ['#btnTxTableCols', 'Kolom tabel'],
-      ].forEach(([sel, tip]) => {
-        const el = $(sel);
-        if (el && !el.getAttribute('data-tip')) el.setAttribute('data-tip', tip);
+      ]);
+
+      $$('#txToolbarDesktop [title], #txToolbarMobile [title]').forEach((el) => {
+        if (el.getAttribute('data-tip')) el.removeAttribute('title');
       });
     }
 
@@ -2605,13 +2640,16 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
         txToolbar.classList.toggle('hidden', !showTxUi);
         txToolbar.classList.toggle('md:flex', showTxUi);
       }
+      const txToolbarMobile = $('#txToolbarMobile');
+      if (txToolbarMobile) {
+        txToolbarMobile.classList.toggle('hidden', !showTxUi);
+      }
       if (!showTxUi) {
         $('#unifiedAiBarWrap')?.classList.add('hidden');
-        $('#btnTopAi')?.classList.remove('active');
+        ['#btnTopAi', '#btnTopAiMobile'].forEach((sel) => $(sel)?.classList.remove('active'));
       }
-      $('#dashboardState').textContent = STATE.ui.dashboardOpen ? t('dashboard.full') : t('dashboard.compact');
-      // default hint; can be overridden by renderSaldo which shows period net info
-      $('#kpiSaldoSub').textContent = STATE.ui.dashboardOpen ? t('saldo.tap_close') : t('saldo.tap_open');
+      const dashState = $('#dashboardState');
+      if (dashState) dashState.textContent = STATE.ui.dashboardOpen ? (t('dashboard.full') || 'Lengkap') : (t('dashboard.compact') || 'Ringkas');
 
       $('#toggleTheme').checked = (STATE.settings.theme === 'light');
       $('#toggleKPI').checked = !!STATE.settings.showKPI;
@@ -2689,10 +2727,14 @@ renderAccountsSettings();
     }
 
     if (!document.body.classList.contains('theme-light')) {
-      el.style.color =
-        saldo >= 0
-          ? 'rgba(167,243,208,.95)'
-          : 'rgba(254,202,202,.95)';
+      if (sel === '#kpiSaldo') {
+        el.style.color = '#ffffff';
+      } else {
+        el.style.color =
+          saldo >= 0
+            ? 'rgba(167,243,208,.95)'
+            : 'rgba(254,202,202,.95)';
+      }
     } else {
       el.style.color = '';
     }
@@ -2703,10 +2745,10 @@ renderAccountsSettings();
   const s = sumByType(txs);
   const netStr = formatCompactIDR(s.net);
 
-  const subHtmlMobile = `<span class="saldo-period-line">
-    <span><span class="saldo-dot saldo-dot--income" aria-hidden="true">●</span>+${formatCompactIDR(s.income)} (income)</span>
-    <span><span class="saldo-dot saldo-dot--expense" aria-hidden="true">●</span>−${formatCompactIDR(s.expense)} (expense)</span>
-  </span>`;
+  const subHtmlMobile = `
+    <span class="saldo-metric-chip saldo-metric-chip--income"><span aria-hidden="true">↑</span> +${formatCompactIDR(s.income)} income</span>
+    <span class="saldo-metric-chip saldo-metric-chip--expense"><span aria-hidden="true">↓</span> −${formatCompactIDR(s.expense)} expense</span>
+  `;
   const subHtmlDesktop = `Bulan ini: +${formatCompactIDR(s.income)} (income) | −${formatCompactIDR(s.expense)} (expense)`;
 
   const elSubMobile = $('#kpiSaldoSub');
@@ -2721,11 +2763,18 @@ renderAccountsSettings();
   const healthScore = Math.max(0, Math.min(100, Math.round((savingRate * 0.5) + (budgetCompliance * 0.5))));
   const gauge = $('#healthScoreGauge');
   const text = $('#healthScoreText');
+  const pill = $('#healthScorePill');
   if (gauge) {
-    let col = 'rgba(16,185,129,.95)';
-    if (healthScore < 45) col = 'rgba(244,63,94,.95)';
-    else if (healthScore < 70) col = 'rgba(245,158,11,.95)';
+    let col = 'var(--accent-primary)';
+    if (healthScore < 45) col = 'var(--accent-danger)';
+    else if (healthScore < 70) col = 'var(--accent-warning)';
     gauge.style.background = col;
+  }
+  if (pill) {
+    pill.classList.remove('hero-health-pill--good', 'hero-health-pill--warn', 'hero-health-pill--bad');
+    if (healthScore >= 70) pill.classList.add('hero-health-pill--good');
+    else if (healthScore >= 45) pill.classList.add('hero-health-pill--warn');
+    else pill.classList.add('hero-health-pill--bad');
   }
   if (text) {
     const label = healthScore >= 70 ? 'Baik' : (healthScore >= 45 ? 'Waspada' : 'Perlu perhatian');
@@ -3432,7 +3481,7 @@ function generateSmartBudgetRecommendation() {
                   <div class="text-sm font-semibold truncate leading-tight">${escapeHtml(title)}</div>
                   <div class="text-[11px] app-muted truncate">${escapeHtml(subtitle)}${tx.meta?.pending ? ' · ' + (t('tx.pending') || '…') : ''}</div>
                 </div>
-                <div class="text-right shrink-0 font-semibold text-sm tabular-nums" style="color:${amtColor}">${sign}${formatIDR(Number(tx.amount||0))}</div>
+                <div class="text-right shrink-0 font-bold text-base tabular-nums tx-card-amount" style="color:${amtColor}">${sign}${formatIDR(Number(tx.amount||0))}</div>
                 <div class="tx-card-actions shrink-0 hidden md:flex">
                   <button type="button" class="tx-action-btn tap" data-tip="Edit" data-tx-edit="${escapeHtmlAttr(tx.id)}" aria-label="Edit">${TX_ICON_EDIT}</button>
                   <button type="button" class="tx-action-btn tx-action-btn--danger tap" data-tip="Hapus" data-tx-del-quick="${escapeHtmlAttr(tx.id)}" aria-label="Hapus">${TX_ICON_DEL}</button>

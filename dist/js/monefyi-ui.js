@@ -224,8 +224,14 @@
   }
 
   function syncViewSegmentIndicator() {
-    const seg = $('#txViewToggle');
-    syncSegmentIndicator(seg, '.tx-view-btn.active', $('#txViewIndicator', seg));
+    [
+      ['#txViewToggle', '#txViewIndicator'],
+      ['#txViewToggleMobile', '#txViewIndicatorMobile'],
+    ].forEach(([segSel, indSel]) => {
+      const seg = $(segSel);
+      if (!seg) return;
+      syncSegmentIndicator(seg, '.tx-view-btn.active', $(indSel, seg));
+    });
   }
 
   function initTxSwipeDelete(rowEl, onDeleteRequest) {
