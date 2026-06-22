@@ -874,6 +874,8 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
         txVisibleCount: 50,
         txTableSort: { col: 'date', dir: 'desc' },
         txTableColumns: null,
+        enhancementsReady: false,
+        txToolbarReady: false,
       },
       accountDetail: {
         account: null,
@@ -1046,13 +1048,15 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
       STATE.db.session = data.session;
       STATE.db.user = data.session?.user || null;
 
-      STATE.db.supa.auth.onAuthStateChange(async (_event, session) => {
+      STATE.db.supa.auth.onAuthStateChange(async (event, session) => {
         STATE.db.session = session;
         STATE.db.user = session?.user || null;
         if (STATE.db.user) {
+          if (event === 'TOKEN_REFRESHED') return;
           await bootstrapAuthed();
-          hideAuth();
         } else {
+          STATE.ui.enhancementsReady = false;
+          STATE.ui.txToolbarReady = false;
           showAuth();
         }
       });
