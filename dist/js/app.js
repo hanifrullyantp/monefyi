@@ -199,6 +199,7 @@ async function loadBudgets(){
       showTrend: true,
       showCategory: true,
       showWeek: true,
+      saldoPosition: 'topbar',
 
       // AI
       geminiKey: '',
@@ -1655,6 +1656,7 @@ async function upsertTransaction_legacy_local(tx) {
       };
       $('#btnTopFilterType')?.addEventListener('click', toggleFilter);
       $('#btnTopFilterTypeMobile')?.addEventListener('click', toggleFilter);
+      $('#btnDesktopFilter')?.addEventListener('click', toggleFilter);
 
       $('#btnTxTableCols')?.addEventListener('click', () => {
         $('#txTableColPicker')?.classList.toggle('hidden');
@@ -1671,7 +1673,7 @@ async function upsertTransaction_legacy_local(tx) {
         ['#btnTxTableCols', 'Kolom tabel'],
       ]);
 
-      $$('#txToolbarDesktop [title], #txToolbarMobile [title]').forEach((el) => {
+      $$('#desktopHeader [title], #txToolbarMobile [title]').forEach((el) => {
         if (el.getAttribute('data-tip')) el.removeAttribute('title');
       });
     }
@@ -2619,7 +2621,7 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
      try { applyLanguageToUI(); } catch {}
 
 // aria-expanded untuk tombol periode (mobile) + kartu filter desktop
-['#btnPeriodToggle', '#btnFilterCardDesktop', '#btnFilterStripDesktop'].forEach((sel) => {
+['#btnPeriodToggle', '#btnFilterCardDesktop', '#btnFilterStripDesktop', '#btnPeriodToggleTopbar'].forEach((sel) => {
   const el = $(sel);
   if (el) el.setAttribute('aria-expanded', String(STATE.ui.monthPopoverOpen));
 });
@@ -2631,11 +2633,31 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
 });
 
       $('#userNameTop').textContent = STATE.user.name || 'User';
+      $('#dashboardUserName') && ($('#dashboardUserName').textContent = STATE.user.name || 'Akun');
       $('#userBadge').textContent = (STATE.user.name||'U').trim().slice(0,1).toUpperCase();
       const sidebarName = $('#sidebarUserName');
       const sidebarAvatar = $('#sidebarUserAvatar');
       if (sidebarName) sidebarName.textContent = STATE.user.name || 'User';
       if (sidebarAvatar) sidebarAvatar.textContent = (STATE.user.name||'U').trim().slice(0,1).toUpperCase();
+      
+      const desktopName = $('#userNameDesktop');
+      if (desktopName) desktopName.textContent = STATE.user.name || 'User';
+      const desktopAvatar = $('#userAvatarDesktop');
+      if (desktopAvatar) desktopAvatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(STATE.user.name || 'User')}&background=0D8ABC&color=fff`;
+      
+      // Toggle Saldo Position
+      const isTopbar = STATE.settings.saldoPosition === 'topbar';
+      const sidebarWrap = $('#sidebarSaldoWrap');
+      const topbarWrap = $('#topbarSaldoWrap');
+      if (sidebarWrap) {
+        if (isTopbar) sidebarWrap.style.display = 'none';
+        else sidebarWrap.style.display = '';
+      }
+      if (topbarWrap) {
+        if (!isTopbar) topbarWrap.style.display = 'none';
+        else topbarWrap.style.display = '';
+      }
+      
       $('#uName').value = STATE.user.name || '';
       $('#uEmail').value = STATE.user.email || '';
       $$('.tx-chip').forEach((c) => {
@@ -2728,7 +2750,7 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
         dynamicContent.classList.toggle('dynamic-content--tx', !STATE.ui.dashboardOpen);
       }
       const showTxUi = !STATE.ui.dashboardOpen;
-      const txToolbar = $('#txToolbarDesktop');
+      const txToolbar = $('#desktopHeader');
       if (txToolbar) {
         txToolbar.classList.toggle('hidden', !showTxUi);
         txToolbar.classList.toggle('md:flex', showTxUi);
@@ -2748,6 +2770,9 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       $('#toggleTrend').checked = !!STATE.settings.showTrend;
       $('#toggleCategory').checked = !!STATE.settings.showCategory;
       $('#toggleWeek').checked = !!STATE.settings.showWeek;
+      
+      const saldoPosSelect = $('#saldoPositionSelect');
+      if (saldoPosSelect) saldoPosSelect.value = STATE.settings.saldoPosition || 'topbar';
 
       $('#geminiKey').value = STATE.settings.geminiKey || '';
       $('#toggleGemini').checked = !!STATE.settings.useGemini;
@@ -2788,15 +2813,15 @@ renderAccountsSettings();
   const saldoText = isCalculating ? t('saldo.calculating') : formatIDR(saldo);
   const masked = !!STATE.ui.saldoMasked;
 
-  // Update angka saldo (mobile + desktop + strip)
-  ['#kpiSaldo', '#kpiSaldoDesktop', '#kpiSaldoStrip'].forEach((sel) => {
+  // Update angka saldo (mobile + desktop + strip + topbar)
+  ['#kpiSaldo', '#kpiSaldoDesktop', '#kpiSaldoStrip', '#kpiSaldoTopbar'].forEach((sel) => {
     const el = $(sel);
     if (!el) return;
     el.classList.toggle('saldo-masked', masked);
 
     if (isCalculating) {
       el.textContent = '';
-      const skelCls = sel === '#kpiSaldo'
+      const skelCls = (sel === '#kpiSaldo' || sel === '#kpiSaldoTopbar')
         ? 'hero-saldo-card__amount saldo-amount mt-2 skeleton-green'
         : 'saldo-amount mt-1 skeleton-green';
       el.className = skelCls + (masked ? ' saldo-masked' : '');
@@ -2804,7 +2829,7 @@ renderAccountsSettings();
       el.style.minWidth = '0';
       el.style.display = 'block';
     } else if (masked) {
-      el.className = sel === '#kpiSaldo'
+      el.className = (sel === '#kpiSaldo' || sel === '#kpiSaldoTopbar')
         ? 'hero-saldo-card__amount saldo-amount mt-2 saldo-masked'
         : 'saldo-amount mt-1 saldo-masked';
       el.style.minHeight = '';
@@ -2816,7 +2841,7 @@ renderAccountsSettings();
       const next = Number(saldo || 0);
       const startAt = performance.now();
       const duration = 360;
-      el.className = sel === '#kpiSaldo'
+      el.className = (sel === '#kpiSaldo' || sel === '#kpiSaldoTopbar')
         ? 'hero-saldo-card__amount saldo-amount mt-2'
         : 'saldo-amount mt-1';
       el.style.minHeight = '';
@@ -2876,9 +2901,15 @@ renderAccountsSettings();
   if (elSubMobile) elSubMobile.innerHTML = subHtmlMobile;
   const elSubDesktop = $('#kpiSaldoSubDesktop');
   if (elSubDesktop) elSubDesktop.innerHTML = subHtmlDesktop;
+  
+  const elIncomeTopbar = $('#kpiIncomeTopbarVal');
+  if (elIncomeTopbar) elIncomeTopbar.textContent = `+${formatCompactIDR(s.income)}`;
+  const elExpenseTopbar = $('#kpiExpenseTopbarVal');
+  if (elExpenseTopbar) elExpenseTopbar.textContent = `-${formatCompactIDR(s.expense)}`;
 
   try { renderHeroSparkline('#heroSaldoSparkline'); } catch (_) {}
   try { renderHeroSparklineDesktop(); } catch (_) {}
+  try { renderHeroSparkline('#heroSaldoSparklineTopbar'); } catch (_) {}
 
   const savingRate = s.income > 0 ? Math.round(((s.income - s.expense) / s.income) * 100) : 0;
   const budgetRow = budgetForPeriod();
@@ -2916,14 +2947,14 @@ renderAccountsSettings();
       $('#kpiExpense').textContent = formatIDR(s.expense);
       const net = s.net;
       $('#kpiNet').textContent = formatIDR(net);
-      $('#kpiNet').className = `mt-1 text-xl font-semibold`;
-      $('#kpiNet').style.color = net>=0 ? 'rgba(167,243,208,.95)' : 'rgba(254,202,202,.95)';
+      $('#kpiNet').className = `text-lg font-bold`;
+      $('#kpiNet').style.color = net>=0 ? '#10b981' : '#f43f5e';
       $('#kpiSaving').textContent = (savingRate===null) ? '—' : `${(savingRate*100).toFixed(0)}%`;
 
-      $('#kpiIncomeSub').textContent = t('kpi.period_sub', { label: STATE.period.label });
-      $('#kpiExpenseSub').textContent = t('kpi.period_sub', { label: STATE.period.label });
-      $('#kpiNetSub').textContent = t('kpi.period_sub', { label: STATE.period.label });
-      $('#kpiSavingSub').textContent = savingRate===null ? t('kpi.need_income') : t('kpi.net_sub', { net: formatCompactIDR(net) });
+      $('#kpiIncomeSubText') && ($('#kpiIncomeSubText').textContent = t('kpi.period_sub', { label: STATE.period.label }));
+      $('#kpiExpenseSubText') && ($('#kpiExpenseSubText').textContent = t('kpi.period_sub', { label: STATE.period.label }));
+      $('#kpiNetSubText') && ($('#kpiNetSubText').textContent = t('kpi.period_sub', { label: STATE.period.label }));
+      $('#kpiSavingSub') && ($('#kpiSavingSub').textContent = savingRate===null ? t('kpi.need_income') : t('kpi.net_sub', { net: formatCompactIDR(net) }));
     }
 
     function checkBudgetNotifications(pct, planned) {
@@ -3050,10 +3081,12 @@ function generateSmartBudgetRecommendation() {
         $('#budgetDonutText') && ($('#budgetDonutText').textContent = 'Set');
         $('#budgetRemainingLabel') && ($('#budgetRemainingLabel').textContent = 'Budget belum diatur');
         $('#budgetTopCats') && ($('#budgetTopCats').innerHTML = `<div class="rounded-xl app-chip p-2">Atur budget untuk melihat progres kategori.</div>`);
+        $('#budgetTipsBanner')?.classList.add('hidden');
         $('#budgetEmptyCta')?.classList.remove('hidden');
         return;
       }
       $('#budgetEmptyCta')?.classList.add('hidden');
+      $('#budgetTipsBanner')?.classList.remove('hidden');
 
       const diff = planned - actual;
       const pct = planned > 0 ? clamp((actual / planned) * 100, 0, 999) : 0;
@@ -3068,13 +3101,14 @@ function generateSmartBudgetRecommendation() {
       $('#budgetDiff').textContent = formatIDR(diff);
       $('#budgetDiff').style.color = diff >= 0 ? 'rgba(167,243,208,.95)' : 'rgba(254,202,202,.95)';
 
-      $('#budgetHint').textContent = `Sisa budget: ${formatIDR(Math.max(0, planned-actual))}.`;
+      $('#budgetHint').textContent = `${formatIDR(actual)} dari ${formatIDR(planned)}`;
 
       const remaining = Math.max(0, planned - actual);
       const usedPct = Math.max(0, Math.min(100, (actual / planned) * 100));
       const donut = $('#budgetDonut');
       if (donut) donut.style.background = `conic-gradient(rgba(244,63,94,.85) 0 ${usedPct}%, rgba(16,185,129,.85) ${usedPct}% 100%)`;
       $('#budgetDonutText') && ($('#budgetDonutText').textContent = `${Math.max(0, 100 - Math.round(usedPct))}%`);
+      $('#budgetDonutSub') && ($('#budgetDonutSub').textContent = `Sisa ${formatCompactIDR(remaining)}`);
       $('#budgetRemainingLabel') && ($('#budgetRemainingLabel').textContent = `Sisa ${formatCompactIDR(remaining)}`);
 
       const byCat = groupExpenseByCategory(txs).slice(0,3);
@@ -3084,10 +3118,35 @@ function generateSmartBudgetRecommendation() {
           const catBudget = Number((budgetForPeriod().categories || {})[c.category] || 0);
           const rpct = catBudget > 0 ? Math.min(100, Math.round((c.amount / catBudget) * 100)) : 0;
           const left = Math.max(0, catBudget - c.amount);
-          return `<div>
-            <div class="flex items-center justify-between gap-2"><span class="truncate">${escapeHtml(c.category)}</span><span>${rpct}%</span></div>
-            <div class="h-1.5 rounded-full mt-1" style="background: color-mix(in srgb, var(--app-border) 40%, transparent)"><div class="h-1.5 rounded-full" style="width:${Math.min(100,rpct)}%;background:${rpct>=100?'rgba(244,63,94,.8)':'rgba(16,185,129,.8)'}"></div></div>
-            <div class="text-[11px] app-muted2 mt-0.5">${left>0?`${formatCompactIDR(left)} sisa`:'Over'}</div>
+          
+          const lower = String(c.category).toLowerCase();
+          let iconSvg = '';
+          if (lower.includes('makan') || lower.includes('jajan') || lower.includes('food')) {
+            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>';
+          } else if (lower.includes('belanja') || lower.includes('pasar') || lower.includes('shop')) {
+            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>';
+          } else {
+            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>';
+          }
+          
+          const isOver = rpct >= 100;
+          const colorClass = isOver ? 'rgba(244,63,94,1)' : 'rgba(16,185,129,1)';
+          const bgClass = isOver ? 'rgba(244,63,94,0.15)' : 'rgba(16,185,129,0.15)';
+
+          return `<div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: ${bgClass}; color: ${colorClass};">
+              ${iconSvg}
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between gap-2 text-[11px] text-white">
+                <span class="truncate">${escapeHtml(c.category)}</span>
+                <span class="font-bold">${rpct}%</span>
+              </div>
+              <div class="h-1.5 rounded-full mt-1.5" style="background: color-mix(in srgb, var(--app-border) 40%, transparent)">
+                <div class="h-1.5 rounded-full" style="width:${Math.min(100,rpct)}%;background:${colorClass}"></div>
+              </div>
+              <div class="text-[9px] app-muted mt-1 text-right">${left>0?`${formatCompactIDR(left)} sisa`:'0 sisa'}</div>
+            </div>
           </div>`;
         }).join('') : `<div class="text-[11px] app-muted2">Belum ada realisasi kategori.</div>`;
       }
@@ -3338,7 +3397,7 @@ function generateSmartBudgetRecommendation() {
 
     function applySaldoMaskUI() {
       const masked = !!STATE.ui.saldoMasked;
-      ['#kpiSaldo', '#kpiSaldoDesktop', '#kpiSaldoStrip'].forEach((sel) => {
+      ['#kpiSaldo', '#kpiSaldoDesktop', '#kpiSaldoStrip', '#kpiSaldoTopbar'].forEach((sel) => {
         const el = $(sel);
         if (el) el.classList.toggle('saldo-masked', masked);
       });
@@ -3676,6 +3735,17 @@ function generateSmartBudgetRecommendation() {
       const list = $('#txList');
       list.innerHTML = '';
       let animIdx = 0;
+      
+      const budgetRow = budgetForPeriod();
+      const catBudgets = budgetRow?.categories || {};
+      const txsInPeriod = getTransactionsInPeriod();
+      const catSpent = {};
+      txsInPeriod.forEach(t => {
+        if (t.type === 'expense') {
+          const c = t.category || 'Lainnya';
+          catSpent[c] = (catSpent[c] || 0) + Math.abs(Number(t.amount || 0));
+        }
+      });
 
       for (const tx of txs) {
           const row = document.createElement('div');
@@ -3697,11 +3767,34 @@ function generateSmartBudgetRecommendation() {
           const typeLabel = txTypeLabel(tx.type);
           const subtitleParts = [tx.category !== title ? tx.category : null, tx.account].filter(Boolean);
           const subtitle = subtitleParts.join(' · ');
+          
+          let budgetHtml = '';
+          if (isExp) {
+            const planned = Number(catBudgets[tx.category] || 0);
+            if (planned > 0) {
+              const spent = catSpent[tx.category] || 0;
+              const pct = Math.min(100, (spent / planned) * 100);
+              const barColor = pct > 90 ? 'var(--accent-danger)' : pct > 75 ? 'var(--accent-warning)' : 'var(--accent-primary)';
+              budgetHtml = `
+                <div class="hidden md:flex flex-col justify-center w-full max-w-[120px]">
+                  <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden mb-1">
+                    <div class="h-full rounded-full" style="width: ${pct}%; background-color: ${barColor}"></div>
+                  </div>
+                  <div class="text-[10px] app-muted text-right">${formatCompactIDR(spent)} / ${formatCompactIDR(planned)}</div>
+                </div>
+              `;
+            } else {
+              budgetHtml = `<div class="hidden md:block text-[10px] app-muted">—</div>`;
+            }
+          } else {
+            budgetHtml = `<div class="hidden md:block text-[10px] app-muted">—</div>`;
+          }
 
           row.innerHTML = `
             <div class="tx-card-swipe-delete" aria-hidden="true">${t('tx.swipe.delete') || 'Hapus'}</div>
-            <div class="tx-card-inner tx-card-mockup">
-              <div class="tx-card-row">
+            <div class="tx-card-inner tx-card-mockup group">
+              <!-- Mobile Layout -->
+              <div class="tx-card-row md:hidden">
                 <div class="tx-icon shrink-0" style="background:${categoryIconBg(tx.category)}">${categoryIconHtml(tx.category)}</div>
                 <div class="tx-card-body">
                   <div class="text-sm font-semibold truncate leading-tight">${escapeHtml(title)}</div>
@@ -3711,12 +3804,27 @@ function generateSmartBudgetRecommendation() {
                   <div class="text-[10px] app-muted">${escapeHtml(dateFormatted)}</div>
                   <div class="font-bold" style="color:${amtColor}">${sign}${formatIDR(Math.abs(Number(tx.amount||0)))}</div>
                 </div>
-                <div class="tx-card-actions shrink-0 hidden md:flex">
-                  <button type="button" class="tx-action-btn tap" data-tip="Edit" data-tx-edit="${escapeHtmlAttr(tx.id)}" aria-label="Edit">${TX_ICON_EDIT}</button>
-                  <button type="button" class="tx-action-btn tx-action-btn--danger tap" data-tip="Hapus" data-tx-del-quick="${escapeHtmlAttr(tx.id)}" aria-label="Hapus">${TX_ICON_DEL}</button>
-                </div>
-                <button type="button" class="tx-menu-btn tap rounded-lg app-chip w-7 h-7 flex items-center justify-center md:hidden shrink-0" data-tx-menu="${escapeHtmlAttr(tx.id)}" data-tip="Menu" aria-label="Menu">⋮</button>
+                <button type="button" class="tx-menu-btn tap rounded-lg app-chip w-7 h-7 flex items-center justify-center shrink-0" data-tx-menu="${escapeHtmlAttr(tx.id)}" data-tip="Menu" aria-label="Menu">⋮</button>
               </div>
+              
+              <!-- Desktop Table Layout -->
+              <div class="hidden md:grid grid-cols-[48px_2fr_1fr_1fr_1fr_1fr_1.5fr] gap-3 items-center w-full py-1">
+                <div class="tx-icon shrink-0" style="background:${categoryIconBg(tx.category)}">${categoryIconHtml(tx.category)}</div>
+                <div class="text-sm font-semibold truncate">${escapeHtml(title)}</div>
+                <div class="text-xs app-muted truncate">${escapeHtml(tx.category || 'Lainnya')}</div>
+                <div class="text-xs app-muted truncate">${escapeHtml(tx.account || 'Cash')}</div>
+                <div class="text-xs app-muted truncate">${escapeHtml(dateFormatted)}</div>
+                <div class="text-sm font-bold text-right" style="color:${amtColor}">${sign}${formatIDR(Math.abs(Number(tx.amount||0)))}</div>
+                <div class="flex items-center justify-between">
+                  ${budgetHtml}
+                  <div class="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                    <button type="button" class="p-1.5 text-slate-400 hover:text-white rounded-md hover:bg-slate-700" data-tx-del-quick="${escapeHtmlAttr(tx.id)}" aria-label="Hapus">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <div class="hidden absolute right-2 top-10 z-20 min-w-[120px] rounded-lg app-card-opaque border border-[var(--app-border)] shadow-lg py-1 md:hidden" data-tx-dropdown="${escapeHtmlAttr(tx.id)}">
                 <button type="button" class="tap w-full text-left px-3 py-2 text-xs" data-tx-edit="${escapeHtmlAttr(tx.id)}">${t('tx.menu.edit') || 'Edit'}</button>
                 <button type="button" class="tap w-full text-left px-3 py-2 text-xs" style="color:var(--accent-danger)" data-tx-del="${escapeHtmlAttr(tx.id)}">${t('tx.menu.delete') || 'Hapus'}</button>
@@ -3751,8 +3859,12 @@ function generateSmartBudgetRecommendation() {
             }
           });
           row.addEventListener('click', (e) => {
-            if (e.target.closest('[data-tx-menu]') || e.target.closest('[data-tx-dropdown]') || e.target.closest('.tx-card-actions')) return;
-            openEdit(tx.id);
+            if (e.target.closest('[data-tx-menu]') || e.target.closest('[data-tx-dropdown]') || e.target.closest('.tx-card-actions') || e.target.closest('[data-tx-del-quick]')) return;
+            if (window.innerWidth >= 768) {
+              openInlineEdit(tx.id, row);
+            } else {
+              openEdit(tx.id);
+            }
           });
           list.appendChild(row);
       }
@@ -3760,6 +3872,93 @@ function generateSmartBudgetRecommendation() {
         document.querySelectorAll('[data-tx-dropdown]').forEach(el => el.classList.add('hidden'));
       }, { once: true });
     }
+
+    function openInlineEdit(txId, rowElement) {
+      const tx = STATE.transactions.find(t => t.id === txId);
+      if (!tx) return;
+
+      const isInc = tx.type === 'income';
+      const isExp = tx.type === 'expense';
+      const title = tx.merchant || tx.category || 'Lainnya';
+      const dateFormatted = tx.date; // Use raw date for input
+      
+      const desktopRow = rowElement.querySelector('.hidden.md\\:grid');
+      if (!desktopRow) return;
+
+      // Generate category options
+      let catOptions = '';
+      const cats = getLiveBudgetCategories();
+      if (tx.category && !cats.includes(tx.category)) cats.push(tx.category);
+      cats.forEach(c => {
+        const sel = c === tx.category ? 'selected' : '';
+        catOptions += `<option value="${escapeHtmlAttr(c)}" ${sel}>${escapeHtml(c)}</option>`;
+      });
+
+      // Generate account options
+      let accOptions = '';
+      const accs = [...new Set([...STATE.settings.accounts, ...STATE.transactions.map(t=>t.account).filter(Boolean)])].sort();
+      accs.forEach(a => {
+        const sel = a === tx.account ? 'selected' : '';
+        accOptions += `<option value="${escapeHtmlAttr(a)}" ${sel}>${escapeHtml(a)}</option>`;
+      });
+
+      desktopRow.innerHTML = `
+        <div class="tx-icon shrink-0" style="background:${categoryIconBg(tx.category)}">${categoryIconHtml(tx.category)}</div>
+        <div><input type="text" class="w-full bg-[#161D28] border border-slate-700 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-emerald-500 inline-edit-title" value="${escapeHtmlAttr(tx.merchant || '')}" placeholder="Deskripsi"></div>
+        <div><select class="w-full bg-[#161D28] border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500 inline-edit-cat">${catOptions}</select></div>
+        <div><select class="w-full bg-[#161D28] border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500 inline-edit-acc">${accOptions}</select></div>
+        <div><input type="date" class="w-full bg-[#161D28] border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500 inline-edit-date" value="${dateFormatted}"></div>
+        <div><input type="number" class="w-full bg-[#161D28] border border-slate-700 rounded px-2 py-1 text-sm text-white text-right focus:outline-none focus:border-emerald-500 inline-edit-amount" value="${Math.abs(Number(tx.amount||0))}"></div>
+        <div class="flex items-center justify-end gap-2">
+          <button type="button" class="p-1 text-emerald-400 hover:text-emerald-300 inline-edit-save" title="Simpan">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </button>
+          <button type="button" class="p-1 text-slate-400 hover:text-slate-300 inline-edit-cancel" title="Batal">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+      `;
+
+      // Remove click listener to prevent re-triggering
+      const clone = rowElement.cloneNode(true);
+      rowElement.parentNode.replaceChild(clone, rowElement);
+
+      const saveBtn = clone.querySelector('.inline-edit-save');
+      const cancelBtn = clone.querySelector('.inline-edit-cancel');
+
+      saveBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const newTitle = clone.querySelector('.inline-edit-title').value.trim();
+        const newCat = clone.querySelector('.inline-edit-cat').value;
+        const newAcc = clone.querySelector('.inline-edit-acc').value;
+        const newDate = clone.querySelector('.inline-edit-date').value;
+        let newAmount = Number(clone.querySelector('.inline-edit-amount').value);
+        if (tx.type === 'expense') newAmount = -Math.abs(newAmount);
+        else if (tx.type === 'income') newAmount = Math.abs(newAmount);
+
+        tx.merchant = newTitle;
+        tx.category = newCat;
+        tx.account = newAcc;
+        tx.date = newDate;
+        tx.amount = newAmount;
+
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true">...</span>';
+        await upsertTransaction(tx);
+        if(typeof refreshAllUI === 'function') refreshAllUI();
+        rerender();
+      });
+
+      cancelBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        rerender(); // Re-render to restore original state
+      });
+      
+      // Prevent clicks inside inputs from bubbling up
+      clone.querySelectorAll('input, select').forEach(el => {
+        el.addEventListener('click', e => e.stopPropagation());
+      });
+    }
+
     function renderTransactions(){
       const allTxs = getFilteredTransactions();
       const total = allTxs.length;
@@ -7764,6 +7963,7 @@ if (btnDelete) {
     $('#btnLogo')?.addEventListener('click', () => openAdvisorAuto());
     $('#btnMenu')?.addEventListener('click', () => openMenu());
     $('#btnUser')?.addEventListener('click', () => openUser());
+    $('#btnUserDesktop')?.addEventListener('click', () => openUser());
 
 
 function toggleNav_legacy(mode) {
@@ -7845,7 +8045,7 @@ function toggleNav_legacy(mode) {
     });
 
     // Periode toggle (mobile header + desktop filter card + strip)
-    ['#btnPeriodToggle', '#btnFilterCardDesktop', '#btnFilterStripDesktop'].forEach((sel) => {
+    ['#btnPeriodToggle', '#btnFilterCardDesktop', '#btnFilterStripDesktop', '#btnPeriodToggleTopbar'].forEach((sel) => {
   const el = $(sel);
   if (!el) return;
 
@@ -7984,6 +8184,15 @@ function toggleNav_legacy(mode) {
       STATE.filters.q = v;
       STATE.ui.txVisibleCount = 50;
       if ($('#qSearch')) $('#qSearch').value = v;
+      if ($('#desktopSearchInput')) $('#desktopSearchInput').value = v;
+      rerender();
+    });
+    $('#desktopSearchInput')?.addEventListener('input', () => {
+      const v = $('#desktopSearchInput').value;
+      STATE.filters.q = v;
+      STATE.ui.txVisibleCount = 50;
+      if ($('#qSearch')) $('#qSearch').value = v;
+      if ($('#txSearchInput')) $('#txSearchInput').value = v;
       rerender();
     });
     $('#btnTxSearchToggle')?.addEventListener('click', () => {
@@ -8097,8 +8306,12 @@ function toggleNav_legacy(mode) {
       e.stopPropagation();
       openMenu();
     });
+    $('#btnNotifDesktop')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openMenu();
+    });
 
-    ['#btnSaldoMask', '#btnSaldoMaskDesktop'].forEach((sel) => {
+    ['#btnSaldoMask', '#btnSaldoMaskDesktop', '#btnSaldoMaskTopbar'].forEach((sel) => {
       $(sel)?.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -8131,15 +8344,21 @@ function toggleNav_legacy(mode) {
       STATE.settings.showTrend = $('#toggleTrend').checked;
       STATE.settings.showCategory = $('#toggleCategory').checked;
       STATE.settings.showWeek = $('#toggleWeek').checked;
+      if ($('#saldoPositionSelect')) {
+        STATE.settings.saldoPosition = $('#saldoPositionSelect').value;
+      }
     }
 
-    ['toggleKPI','toggleBudget','toggleTrend','toggleCategory','toggleWeek'].forEach(id => {
-      $(`#${id}`).addEventListener('change', async () => {
-        syncSettingsFromToggles();
-        try { await saveSettings(); } catch {}
-        destroyCharts();
-        rerender();
-      });
+    ['toggleKPI','toggleBudget','toggleTrend','toggleCategory','toggleWeek', 'saldoPositionSelect'].forEach(id => {
+      const el = $(`#${id}`);
+      if (el) {
+        el.addEventListener('change', async () => {
+          syncSettingsFromToggles();
+          try { await saveSettings(); } catch {}
+          destroyCharts();
+          rerender();
+        });
+      }
     });
 
     // User interactions

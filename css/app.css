@@ -110,6 +110,26 @@ html, body {
       pointer-events: none;
       z-index: 0;
     }
+    
+    /* Inline Edit Inputs */
+    .inline-edit-title, .inline-edit-cat, .inline-edit-acc, .inline-edit-date, .inline-edit-amount {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: var(--app-text);
+      transition: all 0.2s;
+    }
+    .inline-edit-title:focus, .inline-edit-cat:focus, .inline-edit-acc:focus, .inline-edit-date:focus, .inline-edit-amount:focus {
+      border-color: var(--accent-primary);
+      background: rgba(255,255,255,0.08);
+    }
+    .theme-light .inline-edit-title, .theme-light .inline-edit-cat, .theme-light .inline-edit-acc, .theme-light .inline-edit-date, .theme-light .inline-edit-amount {
+      background: rgba(0,0,0,0.03);
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+    .theme-light .inline-edit-title:focus, .theme-light .inline-edit-cat:focus, .theme-light .inline-edit-acc:focus, .theme-light .inline-edit-date:focus, .theme-light .inline-edit-amount:focus {
+      border-color: var(--accent-primary);
+      background: rgba(0,0,0,0.05);
+    }
     .nav-bar-inner {
       position: relative;
       z-index: 1;
