@@ -174,6 +174,10 @@
 
   function showOnboardingIfNeeded() {
     if (localStorage.getItem('monefyi_onboarding_done')) return;
+    const auth = $('#authOverlay');
+    if (auth && !auth.classList.contains('hidden')) return;
+    const shell = $('#appShell');
+    if (shell && shell.classList.contains('hidden')) return;
     const el = $('#onboardingBackdrop');
     if (!el) return;
     el.classList.remove('hidden');
@@ -187,6 +191,17 @@
       el.classList.remove('open');
       el.classList.add('hidden');
     }
+    global.ensureAppShellVisible?.();
+  }
+
+  function initOnboardingDismiss() {
+    const el = $('#onboardingBackdrop');
+    if (!el || el.dataset.dismissBound === '1') return;
+    el.dataset.dismissBound = '1';
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('.rounded-2xl.app-card-opaque')) return;
+      hideOnboarding();
+    });
   }
 
   function cachePeriod(period) {
@@ -336,6 +351,7 @@
     initVoiceInput,
     showOnboardingIfNeeded,
     hideOnboarding,
+    initOnboardingDismiss,
     cachePeriod,
     restorePeriod,
     txSkeleton,

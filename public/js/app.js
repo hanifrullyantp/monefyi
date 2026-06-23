@@ -874,6 +874,8 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
         txVisibleCount: 50,
         txTableSort: { col: 'date', dir: 'desc' },
         txTableColumns: null,
+        enhancementsReady: false,
+        txToolbarReady: false,
       },
       accountDetail: {
         account: null,
@@ -1046,13 +1048,15 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
       STATE.db.session = data.session;
       STATE.db.user = data.session?.user || null;
 
-      STATE.db.supa.auth.onAuthStateChange(async (_event, session) => {
+      STATE.db.supa.auth.onAuthStateChange(async (event, session) => {
         STATE.db.session = session;
         STATE.db.user = session?.user || null;
+        if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') return;
         if (STATE.db.user) {
           await bootstrapAuthed();
-          hideAuth();
         } else {
+          STATE.ui.enhancementsReady = false;
+          STATE.ui.txToolbarReady = false;
           showAuth();
         }
       });
@@ -1062,7 +1066,6 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
 
       if (STATE.db.user) {
         await bootstrapAuthed();
-        hideAuth();
       } else {
         showAuth();
       }
@@ -1453,16 +1456,40 @@ async function upsertTransaction_legacy_local(tx) {
       }
     }
 
+    function enterAppShell() {
+      $('#appShell')?.classList.remove('hidden');
+      hideAuth();
+    }
+
+    function ensureAppShellVisible() {
+      if (!STATE.db?.user) return;
+      $('#appShell')?.classList.remove('hidden');
+      $('#authOverlay')?.classList.add('hidden');
+      if (!STATE.subscription?.expired) {
+        document.body.style.overflow = '';
+      }
+    }
+    window.ensureAppShellVisible = ensureAppShellVisible;
+
     async function bootstrapAuthed(){
-      if (window.MonefyiI18n?.mergeIntoI18N) window.MonefyiI18n.mergeIntoI18N(I18N);
-      $('#appShell').classList.remove('hidden');
-      await loadAppConfig();
-      await loadProfileAndSettings();
-      STATE.budgetsByMonth = await loadBudgets();
-      await refreshTransactionsRange();
-      initCoachChat({ reset: true });
-      try { initMonefyiEnhancements(); } catch (e) { console.warn('initMonefyiEnhancements', e); }
-      rerender();
+      enterAppShell();
+      try {
+        if (window.MonefyiI18n?.mergeIntoI18N) window.MonefyiI18n.mergeIntoI18N(I18N);
+        await loadAppConfig();
+        await loadProfileAndSettings();
+        try { STATE.budgetsByMonth = await loadBudgets(); } catch (e) { console.warn('loadBudgets', e); }
+        try { await refreshTransactionsRange(); } catch (e) { console.warn('refreshTransactionsRange', e); }
+        try { initCoachChat({ reset: true }); } catch (e) { console.warn('initCoachChat', e); }
+        if (!STATE.ui.enhancementsReady) {
+          STATE.ui.enhancementsReady = true;
+          try { initMonefyiEnhancements(); } catch (e) { console.warn('initMonefyiEnhancements', e); }
+        }
+        rerender();
+        ensureAppShellVisible();
+      } catch (e) {
+        console.error('bootstrapAuthed', e);
+        if (typeof showToast === 'function') showToast('Gagal memuat data. Coba refresh.', 'warn');
+      }
     }
 
     function initMonefyiEnhancements(){
@@ -1489,12 +1516,17 @@ async function upsertTransaction_legacy_local(tx) {
       $('#btnUnifiedPhoto')?.addEventListener('click', () => openReceiptAdd());
       $('#btnOnboardingStart')?.addEventListener('click', () => {
         window.MonefyiUI?.hideOnboarding?.();
-        openAddSheet('quick');
+        ensureAppShellVisible();
+        setTimeout(() => openAddSheet('quick'), 350);
       });
-      $('#btnOnboardingSkip')?.addEventListener('click', () => window.MonefyiUI?.hideOnboarding?.());
+      $('#btnOnboardingSkip')?.addEventListener('click', () => {
+        window.MonefyiUI?.hideOnboarding?.();
+        ensureAppShellVisible();
+      });
       window.MonefyiUI?.initInfoSaldoPillDismiss?.();
+      window.MonefyiUI?.initOnboardingDismiss?.();
       window.MonefyiUI?.initTxListKeyboard?.();
-      window.MonefyiUI?.showOnboardingIfNeeded?.();
+      setTimeout(() => window.MonefyiUI?.showOnboardingIfNeeded?.(), 500);
       initManualFormEnhancements();
       initTxToolbar();
       initPwaInstall();
@@ -1543,6 +1575,8 @@ async function upsertTransaction_legacy_local(tx) {
     }
 
     function initTxToolbar() {
+      if (STATE.ui.txToolbarReady) return;
+      STATE.ui.txToolbarReady = true;
       const toggleSearch = () => {
         const wrap = $('#txSearchWrap');
         wrap?.classList.toggle('tx-search--collapsed');
@@ -1646,6 +1680,10 @@ async function upsertTransaction_legacy_local(tx) {
     // Auth UI actions (sign-in only)
     // =========================
     function showAuth(){
+      if (STATE.db?.user) {
+        ensureAppShellVisible();
+        return;
+      }
       $('#authOverlay').classList.remove('hidden');
       $('#appShell').classList.add('hidden');
       document.body.style.overflow = 'hidden';
@@ -1687,18 +1725,30 @@ async function upsertTransaction_legacy_local(tx) {
     });
 
     $('#btnAuthSubmit')?.addEventListener('click', async () => {
-      if (!STATE.db.enabled) return;
+      if (!STATE.db.enabled || !STATE.db.supa) {
+        $('#authStatus').textContent = location.protocol === 'file:'
+          ? 'Buka lewat https://, bukan file://.'
+          : 'Aplikasi belum siap. Refresh halaman atau cek koneksi internet.';
+        return;
+      }
       const email = ($('#authEmail')?.value || '').trim();
       const pass = ($('#authPass')?.value || '').trim();
 
       if (!email || !pass) { $('#authStatus').textContent = 'Email & password wajib diisi.'; return; }
 
       $('#authStatus').textContent = 'Masuk…';
+      const btn = $('#btnAuthSubmit');
+      if (btn) btn.disabled = true;
       try {
-        const { data, error } = await STATE.db.supa.auth.signInWithPassword({ email, password: pass });
+        const { error } = await STATE.db.supa.auth.signInWithPassword({ email, password: pass });
         if (error) throw error;
-        // success
         $('#authStatus').textContent = '';
+        // Fallback jika onAuthStateChange lambat atau gagal
+        setTimeout(() => {
+          if (STATE.db.user && $('#authOverlay') && !$('#authOverlay').classList.contains('hidden')) {
+            bootstrapAuthed().catch((e) => console.warn('bootstrapAuthed fallback', e));
+          }
+        }, 600);
       } catch (e) {
         const msg = String(e?.message || '').toLowerCase();
         const code = (e && typeof e === 'object') ? (e.status || e.code || '') : '';
@@ -1725,6 +1775,8 @@ async function upsertTransaction_legacy_local(tx) {
 
         // Fallback (keep simple)
         $('#authStatus').textContent = 'Gagal masuk. Cek password di email atau hubungi admin.';
+      } finally {
+        if (btn) btn.disabled = false;
       }
     });
 
@@ -7987,6 +8039,12 @@ function toggleNav_legacy(mode) {
 
     window.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
+      const onboarding = $('#onboardingBackdrop');
+      if (onboarding?.classList.contains('open')) {
+        window.MonefyiUI?.hideOnboarding?.();
+        ensureAppShellVisible();
+        return;
+      }
       resetToHome({ keepPeriod: true });
     });
 
