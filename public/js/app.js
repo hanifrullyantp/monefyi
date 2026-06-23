@@ -873,6 +873,7 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
       focusCategory: null,
       ui: {
         dashboardOpen: false,
+        txDesktopFiltersOpen: false,
         monthPopoverOpen: false,
         advisorOpen: false,
         receiptPickerOpened: false,
@@ -1659,8 +1660,11 @@ async function upsertTransaction_legacy_local(tx) {
       };
       $('#btnTopFilterType')?.addEventListener('click', toggleFilter);
       $('#btnTopFilterTypeMobile')?.addEventListener('click', toggleFilter);
-      $('#btnDesktopFilter')?.addEventListener('click', toggleFilter);
-      $('#btnTxDesktopFilters')?.addEventListener('click', toggleFilter);
+
+      $('#btnDesktopFilter')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleTxDesktopFilters();
+      });
 
       $('#btnTxTableCols')?.addEventListener('click', () => {
         $('#txTableColPicker')?.classList.toggle('hidden');
@@ -2542,15 +2546,28 @@ async function upsertTransaction_legacy_local(tx) {
 
       const catSel = $('#fCategory');
       const accSel = $('#fAccount');
+      const dfCat = $('#dfCategory');
+      const dfAcc = $('#dfAccount');
 
-      const curCat = catSel.value;
-      const curAcc = accSel.value;
+      const curCat = catSel?.value || dfCat?.value || '';
+      const curAcc = accSel?.value || dfAcc?.value || '';
 
-      catSel.innerHTML = '<option value="">Semua kategori</option>' + cats.map(c=>`<option value="${escapeHtmlAttr(c)}">${escapeHtml(c)}</option>`).join('');
-      accSel.innerHTML = '<option value="">Semua akun</option>' + accounts.map(a=>`<option value="${escapeHtmlAttr(a)}">${escapeHtml(a)}</option>`).join('');
+      const catHtml = '<option value="">Semua kategori</option>' + cats.map(c=>`<option value="${escapeHtmlAttr(c)}">${escapeHtml(c)}</option>`).join('');
+      const accHtml = '<option value="">Semua akun</option>' + accounts.map(a=>`<option value="${escapeHtmlAttr(a)}">${escapeHtml(a)}</option>`).join('');
 
-      if (cats.includes(curCat)) catSel.value = curCat;
-      if (accounts.includes(curAcc)) accSel.value = curAcc;
+      if (catSel) catSel.innerHTML = catHtml;
+      if (dfCat) dfCat.innerHTML = catHtml;
+      if (accSel) accSel.innerHTML = accHtml;
+      if (dfAcc) dfAcc.innerHTML = accHtml;
+
+      if (cats.includes(curCat)) {
+        if (catSel) catSel.value = curCat;
+        if (dfCat) dfCat.value = curCat;
+      }
+      if (accounts.includes(curAcc)) {
+        if (accSel) accSel.value = curAcc;
+        if (dfAcc) dfAcc.value = curAcc;
+      }
     }
 
     function renderAccountsSettings(){
@@ -2768,6 +2785,30 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
         dynamicContent.classList.toggle('dynamic-content--tx', !STATE.ui.dashboardOpen);
       }
       const showTxUi = !STATE.ui.dashboardOpen;
+      const showTxDesktopFilters = showTxUi && isDesktopViewport() && !!STATE.ui.txDesktopFiltersOpen;
+      const txFilterBar = $('#txDesktopFilterBar');
+      if (txFilterBar) {
+        txFilterBar.classList.toggle('hidden', !showTxDesktopFilters);
+        txFilterBar.classList.toggle('md:grid', showTxDesktopFilters);
+      }
+      const dfType = $('#dfType');
+      if (dfType) dfType.value = STATE.filters.type || '';
+      const dfCatEl = $('#dfCategory');
+      if (dfCatEl && STATE.filters.category) dfCatEl.value = STATE.filters.category;
+      const dfAccEl = $('#dfAccount');
+      if (dfAccEl && STATE.filters.account) dfAccEl.value = STATE.filters.account;
+      const dfPeriod = $('#dfPeriod');
+      if (dfPeriod) dfPeriod.value = STATE.period.preset || 'this_month';
+      if ($('#dfRangeStart')) $('#dfRangeStart').value = STATE.period.start || '';
+      if ($('#dfRangeEnd')) $('#dfRangeEnd').value = STATE.period.end || '';
+      const showDfRange = showTxDesktopFilters && (STATE.period.preset === 'custom' || dfPeriod?.value === 'custom');
+      const txFilterRange = $('#txDesktopFilterRange');
+      if (txFilterRange) {
+        txFilterRange.classList.toggle('hidden', !showDfRange);
+        txFilterRange.classList.toggle('md:grid', showDfRange);
+      }
+      $('#btnDesktopFilter')?.classList.toggle('active', !!STATE.ui.txDesktopFiltersOpen && isDesktopViewport());
+
       const txToolbar = $('#desktopHeader');
       if (txToolbar) {
         const showDesktopHeader = showTxUi && isDesktopViewport();
@@ -2780,6 +2821,7 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       if (!showTxUi) {
         $('#unifiedAiBarWrap')?.classList.add('hidden');
         ['#btnTopAi', '#btnTopAiMobile'].forEach((sel) => $(sel)?.classList.remove('active'));
+        if (STATE.ui.txDesktopFiltersOpen) STATE.ui.txDesktopFiltersOpen = false;
       }
 
       $('#toggleTheme').checked = (STATE.settings.theme === 'light');
@@ -4054,7 +4096,13 @@ function generateSmartBudgetRecommendation() {
     function placeFilterPanel(){
       const wrap = $('#filterPanelWrap');
       if (!wrap) return;
-      const target = isDesktopViewport() ? $('#desktopFilterAnchor') : $('#mobileFilterAnchor');
+      if (isDesktopViewport()) {
+        // Desktop tx filters use #txDesktopFilterBar; keep panel in mobile anchor when not open
+        const mobileAnchor = $('#mobileFilterAnchor');
+        if (mobileAnchor && wrap.parentElement !== mobileAnchor) mobileAnchor.appendChild(wrap);
+        return;
+      }
+      const target = $('#mobileFilterAnchor');
       if (target && wrap.parentElement !== target) target.appendChild(wrap);
     }
 
@@ -8086,6 +8134,22 @@ function toggleNav(view, triggerEl) {
       rerender();
     }
 
+    function setTxDesktopFilters(open) {
+      STATE.ui.txDesktopFiltersOpen = !!open;
+      if (!open) {
+        $('#txDesktopFilterRange')?.classList.add('hidden');
+        $('#txDesktopFilterRange')?.classList.remove('md:grid');
+      }
+      if (open) ensureSelectOptions();
+      rerender();
+    }
+    function toggleTxDesktopFilters() {
+      setTxDesktopFilters(!STATE.ui.txDesktopFiltersOpen);
+    }
+    function closeTxDesktopFilters() {
+      if (STATE.ui.txDesktopFiltersOpen) setTxDesktopFilters(false);
+    }
+
     function toggleMonthPopover(){
       setMonthPopover(!STATE.ui.monthPopoverOpen);
     }
@@ -8299,12 +8363,55 @@ function toggleNav(view, triggerEl) {
       rerender();
       setMonthPopover(false);
     });
+
+    $('#dfType')?.addEventListener('change', () => {
+      STATE.filters.type = $('#dfType').value || '';
+      STATE.ui.txVisibleCount = 50;
+      if ($('#fType')) $('#fType').value = STATE.filters.type;
+      rerender();
+      closeTxDesktopFilters();
+    });
+    $('#dfCategory')?.addEventListener('change', () => {
+      STATE.filters.category = $('#dfCategory').value || '';
+      STATE.ui.txVisibleCount = 50;
+      if (STATE.filters.category) STATE.focusCategory = null;
+      if ($('#fCategory')) $('#fCategory').value = STATE.filters.category;
+      rerender();
+      closeTxDesktopFilters();
+    });
+    $('#dfAccount')?.addEventListener('change', () => {
+      STATE.filters.account = $('#dfAccount').value || '';
+      STATE.ui.txVisibleCount = 50;
+      if ($('#fAccount')) $('#fAccount').value = STATE.filters.account;
+      rerender();
+      closeTxDesktopFilters();
+    });
+    $('#dfPeriod')?.addEventListener('change', () => {
+      const preset = $('#dfPeriod').value;
+      if (preset === 'custom') {
+        const range = $('#txDesktopFilterRange');
+        range?.classList.remove('hidden');
+        range?.classList.add('md:grid');
+        return;
+      }
+      applyPreset(preset);
+      closeTxDesktopFilters();
+    });
+    $('#dfApplyRange')?.addEventListener('click', () => {
+      const s = $('#dfRangeStart')?.value;
+      const e = $('#dfRangeEnd')?.value;
+      if (!s || !e) return;
+      setPeriod({ preset: 'custom', startISO: s, endISO: e, label: dateLabelRange(s, e) });
+      closeTxDesktopFilters();
+    });
+
     $$('.tx-chip').forEach((chip) => {
       chip.addEventListener('click', () => {
         const type = chip.getAttribute('data-type') || '';
         STATE.filters.type = type;
         STATE.ui.txVisibleCount = 50;
         if ($('#fType')) $('#fType').value = type;
+        if ($('#dfType')) $('#dfType').value = type;
         $$('.tx-chip').forEach((c) => c.classList.toggle('active', c === chip));
         rerender();
         requestAnimationFrame(() => window.MonefyiUI?.syncChipIndicator?.());

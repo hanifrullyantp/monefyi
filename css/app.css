@@ -86,7 +86,12 @@ html, body {
     max-width: 100%;
     overflow-x: hidden;
   }
-    /* Desktop-only blocks — never show on mobile */
+    /* Desktop filter icon active state */
+    #btnDesktopFilter.active {
+      border-color: var(--accent-primary) !important;
+      color: var(--accent-primary) !important;
+      box-shadow: 0 0 0 2px rgba(16,185,129,.25);
+    }
     @media (max-width: 767px) {
       #desktopHeader,
       #topbarSaldoWrap,

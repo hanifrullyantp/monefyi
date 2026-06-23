@@ -33,7 +33,7 @@
 
 
  
-  <link rel="stylesheet" crossorigin href="./assets/index-CreJwsAV.css">
+  <link rel="stylesheet" crossorigin href="./assets/index-cLwrQlVt.css">
 </head>
 <body>
   <!-- Logo Monefyi (satu sumber untuk loading, sidebar, header, auth) -->
@@ -771,14 +771,42 @@
               </div>
             </div>
           </div>
-          
-          <!-- Desktop: filter dropdowns trigger + anchor (default hidden) -->
-          <div class="hidden md:flex items-center justify-end shrink-0">
-            <button id="btnTxDesktopFilters" type="button" class="tap rounded-full app-chip px-3 py-2 text-xs hover:opacity-90" aria-label="Buka filter transaksi">
-              Filter ▾
-            </button>
+          <div id="txDesktopFilterBar" class="hidden md:grid grid-cols-4 gap-2 shrink-0 mb-2">
+            <select id="dfType" class="tap rounded-xl app-input px-3 py-2 text-sm" aria-label="Filter tipe">
+              <option value="">Semua tipe</option>
+              <option value="expense">Pengeluaran</option>
+              <option value="income">Pemasukan</option>
+              <option value="transfer">Transfer</option>
+            </select>
+            <select id="dfCategory" class="tap rounded-xl app-input px-3 py-2 text-sm" aria-label="Filter kategori">
+              <option value="">Semua kategori</option>
+            </select>
+            <select id="dfAccount" class="tap rounded-xl app-input px-3 py-2 text-sm" aria-label="Filter akun">
+              <option value="">Semua akun</option>
+            </select>
+            <select id="dfPeriod" class="tap rounded-xl app-input px-3 py-2 text-sm" aria-label="Filter periode">
+              <option value="this_month">Bulan ini</option>
+              <option value="last_month">Bulan lalu</option>
+              <option value="this_week">Minggu ini</option>
+              <option value="three_months">3 Bulan</option>
+              <option value="six_months">6 Bulan</option>
+              <option value="this_year">Tahun ini</option>
+              <option value="today">Hari ini</option>
+              <option value="yesterday">Kemarin</option>
+              <option value="custom">Rentang tanggal</option>
+            </select>
           </div>
-          <div id="desktopFilterAnchor" class="hidden md:block shrink-0"></div>
+          <div id="txDesktopFilterRange" class="hidden md:grid grid-cols-[1fr_1fr_auto] gap-2 shrink-0 mb-2 items-end">
+            <div>
+              <label class="text-[10px] app-muted">Mulai</label>
+              <input id="dfRangeStart" type="date" class="tap mt-0.5 w-full rounded-xl app-input px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="text-[10px] app-muted">Sampai</label>
+              <input id="dfRangeEnd" type="date" class="tap mt-0.5 w-full rounded-xl app-input px-3 py-2 text-sm" />
+            </div>
+            <button id="dfApplyRange" type="button" class="tap rounded-xl px-3 py-2 text-sm font-semibold" style="background: rgba(16,185,129,.15); color: rgba(167,243,208,.95); border: 1px solid rgba(52,211,153,.25)">Terapkan</button>
+          </div>
 
           <div id="txSearchWrap" class="tx-search-wrap tx-search--collapsed shrink-0 md:hidden">
             <input id="txSearchInput" class="tap w-full rounded-xl app-input px-3 py-2 text-sm" placeholder="Cari merchant / catatan / kategori..." />
