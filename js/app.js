@@ -1589,7 +1589,10 @@ async function upsertTransaction_legacy_local(tx) {
         $('#btnPwaInstall')?.classList.remove('hidden');
       });
       $('#btnPwaInstall')?.addEventListener('click', async () => {
-        if (!deferredPwaPrompt) return;
+        if (!deferredPwaPrompt) {
+          try { showToast('Install tidak tersedia di perangkat ini.', 'info'); } catch (_) {}
+          return;
+        }
         deferredPwaPrompt.prompt();
         try { await deferredPwaPrompt.userChoice; } catch (_) {}
         deferredPwaPrompt = null;
@@ -1739,6 +1742,17 @@ async function upsertTransaction_legacy_local(tx) {
       inp.type = isPass ? 'text' : 'password';
       const btn = $('#btnToggleAuthPass');
       if (btn) btn.textContent = isPass ? t('auth.hide') : t('auth.show');
+    });
+
+    // Press Enter in email/pass triggers sign-in
+    ['#authEmail', '#authPass'].forEach((sel) => {
+      const el = $(sel);
+      if (!el) return;
+      el.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        $('#btnAuthSubmit')?.click();
+      });
     });
 
     // Forgot password (send reset link)
@@ -4048,9 +4062,6 @@ function generateSmartBudgetRecommendation() {
 function openAddSheet(tab = 'quick') {
   const backdropEl = document.getElementById('sheetBackdrop');
   const sheetEl = document.getElementById('sheet');
-  // #region agent log
-  fetch('http://127.0.0.1:7456/ingest/64ec47ef-1a63-485e-909c-4ab70260afe3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4aca'},body:JSON.stringify({sessionId:'ae4aca',location:'js/app.js:openAddSheet',message:'openAddSheet entry',data:{tab,hasSheet:!!sheetEl,hasBackdrop:!!backdropEl},timestamp:Date.now(),hypothesisId:'A',runId:'post-fix'})}).catch(()=>{});
-  // #endregion
   sheetEl?.classList.toggle('sheet-form-panel', isDesktopViewport());
   // 1. Isi Dropdown Kategori, Akun, Metode (Agar Manual selalu siap)
   const cats = getActiveBudgetCats();
@@ -4074,9 +4085,6 @@ function openAddSheet(tab = 'quick') {
   // 3. Buka Sheet
   if (backdropEl && sheetEl) {
     openSheet(backdropEl, sheetEl);
-    // #region agent log
-    fetch('http://127.0.0.1:7456/ingest/64ec47ef-1a63-485e-909c-4ab70260afe3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4aca'},body:JSON.stringify({sessionId:'ae4aca',location:'js/app.js:openAddSheet',message:'sheet opened',data:{tab,sheetOpen:sheetEl.classList.contains('open')},timestamp:Date.now(),hypothesisId:'A',runId:'post-fix'})}).catch(()=>{});
-    // #endregion
   }
   if (tab === 'manual') {
     if ($('#mDate') && !$('#mDate').value) $('#mDate').value = toISODate(new Date());
@@ -4266,6 +4274,24 @@ function openBudget(){
     menuBackdrop.addEventListener('click', (e)=>{
       if (e.target?.dataset?.closeMenu === 'true') closeMenu();
     });
+
+    // Sidebar secondary shortcuts (used by index.html onclick)
+    function openSettings(){
+      openMenu();
+      // Scroll to Settings block for convenience
+      setTimeout(() => {
+        const el = document.getElementById('menuSettingsCard');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 80);
+    }
+    window.openSettings = openSettings;
+
+    function openAffiliate(){
+      // openAffModal is defined later (affiliate modal section)
+      if (typeof openAffModal === 'function') openAffModal();
+      else openMenu();
+    }
+    window.openAffiliate = openAffiliate;
 
     // === Tutorial sheet logic (versi accordion) ===
 const tutorialBackdrop = $('#tutorialBackdrop');
@@ -8156,6 +8182,14 @@ function toggleNav(view, triggerEl) {
         const e = new Date(y, 11, 31);
         setPeriod({ preset, startISO: toISODate(s), endISO: toISODate(e), label: `Tahun ${y}` });
       }
+
+      // Sync UI + auto-close popover after selection
+      STATE.period.preset = preset;
+      const presetSelect = $('#presetSelect');
+      if (presetSelect) presetSelect.value = preset;
+      $('#rangeCard')?.classList.toggle('hidden', preset !== 'custom');
+      if (preset !== 'custom') $('#presetHint').textContent = '—';
+      if (STATE.ui.monthPopoverOpen) setMonthPopover(false);
     }
 
     // preset dropdown (hemat space)
