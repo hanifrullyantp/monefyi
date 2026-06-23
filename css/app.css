@@ -397,6 +397,8 @@ html, body {
       body.sidebar-collapsed #desktopSaldoStrip {
         display: flex !important;
       }
+    }
+
     .tx-section-head {
       display: flex;
       align-items: flex-start;
@@ -552,6 +554,7 @@ html, body {
     .saldo-masked--inactive {
       filter: blur(0);
     }
+    .hero-health-pill {
       display: inline-flex;
       align-items: center;
       gap: 6px;
