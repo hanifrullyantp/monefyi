@@ -9,17 +9,17 @@
 
     /* App theme — Monefyi design system (emerald + white / dark blue) */
     body {
-      --app-bg: #0A0E13;
-      --app-card: #151A24;
-      --app-surface: #1A1F2B;
-      --app-surface2: rgba(255,255,255,.06);
-      --app-text: #E2E8F0;
-      --app-muted: #94A3B8;
+      --app-bg: #0B1118;
+      --app-card: #131A24;
+      --app-surface: #161D28;
+      --app-surface2: rgba(255,255,255,.05);
+      --app-text: #F1F5F9;
+      --app-muted: #8B9CB3;
       --app-muted2: #64748B;
-      --app-border: rgba(255,255,255,.10);
-      --app-divider: rgba(255,255,255,.10);
-      --app-backdrop: rgba(13,17,23,.85);
-      --app-sheet: #1C2333;
+      --app-border: rgba(255,255,255,.08);
+      --app-divider: rgba(255,255,255,.08);
+      --app-backdrop: rgba(11,17,24,.92);
+      --app-sheet: #131A24;
       --accent-primary: #10B981;
       --accent-primary-hover: #059669;
       --accent-danger: #F43F5E;
@@ -28,11 +28,11 @@
       --brand-blue: #1E3A5F;
       --brand-green: #10B981;
       --brand-grad: linear-gradient(135deg, #0ea5e9 0%, #10B981 100%);
-      --brand-blue-soft: rgba(30,58,95,.25);
-      --brand-green-soft: rgba(16,185,129,.14);
-      --brand-border: rgba(16,185,129,.28);
-      --brand-shadow: 0 8px 32px rgba(16,185,129,.12);
-      --nav-surface: #161E2E;
+      --brand-blue-soft: rgba(30,58,95,.22);
+      --brand-green-soft: rgba(16,185,129,.12);
+      --brand-border: rgba(16,185,129,.24);
+      --brand-shadow: 0 8px 32px rgba(16,185,129,.10);
+      --nav-surface: #0E1520;
       --radius-card: 16px;
       --radius-btn: 12px;
       --radius-pill: 50px;
@@ -72,22 +72,24 @@ html, body {
     .app-header { background: var(--app-backdrop); border-bottom: 1px solid var(--app-border); }
     .nav-bar {
       background: var(--nav-surface);
-      border-top: 1px solid var(--app-border);
-      backdrop-filter: blur(12px);
-      position: relative;
+      border-top: 1px solid rgba(255,255,255,.06);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      position: fixed;
       overflow: visible;
+      padding-top: 18px;
     }
     .nav-bar::before {
       content: '';
       position: absolute;
-      top: -32px;
+      top: -1px;
       left: 50%;
       transform: translateX(-50%);
-      width: 76px;
-      height: 76px;
+      width: 92px;
+      height: 92px;
       border-radius: 50%;
       background: transparent;
-      box-shadow: 0 34px 0 var(--nav-surface);
+      box-shadow: 0 42px 0 0 var(--nav-surface);
       pointer-events: none;
       z-index: 0;
     }
@@ -95,7 +97,33 @@ html, body {
       position: relative;
       z-index: 1;
       width: 100%;
-      background: transparent;
+      background: var(--nav-surface);
+    }
+    .nav-bar-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 88px 1fr 1fr;
+      align-items: end;
+      min-height: 56px;
+      padding: 0 4px 6px;
+    }
+    .nav-fab-slot {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      margin-top: -38px;
+      position: relative;
+      z-index: 2;
+    }
+    .nav-item {
+      color: var(--app-muted) !important;
+      padding-bottom: 4px;
+    }
+    .nav-item span:first-child {
+      opacity: 0.7;
+    }
+    .nav-item.active span:first-child {
+      opacity: 1;
+      color: var(--accent-primary);
     }
     .app-card { background: var(--app-card, var(--app-surface)); border: 1px solid var(--app-border); border-radius: var(--radius-card); }
     @keyframes bounce-soft {
@@ -466,9 +494,9 @@ html, body {
       position: relative;
       padding: 16px;
       border-radius: 20px;
-      background: linear-gradient(145deg, #0D1117 0%, #1a2744 100%);
-      border: 1px solid rgba(255,255,255,.08);
-      box-shadow: 0 8px 32px rgba(16,185,129,.08), inset 0 -1px 0 rgba(16,185,129,.15);
+      background: linear-gradient(145deg, #0B1118 0%, #152238 100%);
+      border: 1px solid rgba(255,255,255,.07);
+      box-shadow: 0 8px 32px rgba(0,0,0,.25), inset 0 -1px 0 rgba(16,185,129,.12);
       overflow: hidden;
     }
     .hero-saldo-card::before {
@@ -522,22 +550,24 @@ html, body {
       flex-grow: 1;
     }
     .kpi-metric {
-      padding: 8px 10px;
-      border-radius: 12px;
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.08);
-      font-size: 11px;
-      font-weight: 500;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(0,0,0,.22);
+      border: 1px solid rgba(255,255,255,.06);
+      font-size: 12px;
+      font-weight: 600;
       color: var(--app-muted);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
     }
-    .kpi-metric--income { color: var(--accent-primary); border-color: rgba(16,185,129,.2); background: rgba(16,185,129,.1); }
-    .kpi-metric--expense { color: var(--accent-danger); border-color: rgba(244,63,94,.2); background: rgba(244,63,94,.1); }
+    .kpi-metric--income { color: var(--accent-primary); border-color: rgba(16,185,129,.18); background: rgba(16,185,129,.08); }
+    .kpi-metric--expense { color: var(--accent-danger); border-color: rgba(244,63,94,.18); background: rgba(244,63,94,.08); }
     .kpi-metric__value {
       display: block;
-      font-size: 13px;
-      font-weight: 600;
-      margin-top: 2px;
-      color: var(--app-text);
+      font-size: 11px;
+      font-weight: 500;
+      margin-top: 4px;
+      color: var(--app-muted);
+      text-transform: capitalize;
     }
     .hero-saldo-sparkline {
       position: absolute;
@@ -785,9 +815,11 @@ html, body {
 
     .tx-chip {
       border-radius: var(--radius-pill);
-      opacity: 0.6;
-      border: 1px solid var(--app-border);
+      opacity: 0.85;
+      border: 1px solid transparent;
+      background: transparent;
       transition: all 0.2s ease;
+      color: var(--app-muted);
     }
     .tx-chip.active {
       background: var(--accent-primary) !important;
@@ -851,11 +883,25 @@ html, body {
 
     /* Transaction card mockup */
     .tx-card-mockup .tx-card-row {
-      align-items: flex-start;
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr) auto;
+      column-gap: 12px;
+      align-items: start;
+      width: 100%;
     }
     .tx-card-mockup .tx-icon {
-      width: 48px; height: 48px;
+      grid-column: 1;
+      grid-row: 1 / span 2;
+      width: 48px;
+      height: 48px;
       font-size: 18px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .tx-card-mockup .tx-card-body {
+      grid-column: 2;
+      min-width: 0;
+      align-self: center;
     }
     .tx-card-mockup__meta {
       font-size: 11px;
@@ -863,15 +909,38 @@ html, body {
       margin-top: 2px;
     }
     .tx-card-mockup__amount {
+      grid-column: 3;
+      grid-row: 1 / span 2;
       display: flex;
       flex-direction: column;
       align-items: flex-end;
+      justify-content: center;
       gap: 2px;
+      margin-left: 8px;
+      flex-shrink: 0;
+      text-align: right;
       font-variant-numeric: tabular-nums;
+      white-space: nowrap;
     }
     .tx-card-mockup__amount .font-bold {
-      font-size: 15px;
+      font-size: 16px;
       font-weight: 700;
+      line-height: 1.2;
+    }
+    .tx-card-mockup .tx-menu-btn,
+    .tx-card-mockup .tx-card-actions {
+      display: none !important;
+    }
+    @media (min-width: 768px) {
+      .tx-card-mockup .tx-card-actions {
+        display: flex !important;
+        grid-column: 4;
+        grid-row: 1;
+        align-self: center;
+      }
+      .tx-card-mockup .tx-card-row {
+        grid-template-columns: 48px minmax(0, 1fr) auto auto;
+      }
     }
     .tx-card-v2 {
       padding: 0;
@@ -1327,13 +1396,20 @@ html, body {
       align-items: center;
       justify-content: center;
       color: #fff;
-      border: 4px solid var(--app-bg);
+      border: 5px solid var(--app-bg);
       background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-      box-shadow: 0 0 16px rgba(16,185,129,.6), 0 0 4px rgba(16,185,129,.8);
-      transition: box-shadow 0.2s ease;
+      box-shadow:
+        0 0 0 4px rgba(16,185,129,.15),
+        0 0 24px rgba(16,185,129,.55),
+        0 0 48px rgba(16,185,129,.25);
+      transition: box-shadow 0.2s ease, transform 0.15s ease;
     }
     .fab-main:hover {
-      box-shadow: 0 0 20px rgba(16,185,129,.8), 0 0 6px rgba(16,185,129,1);
+      box-shadow:
+        0 0 0 4px rgba(16,185,129,.22),
+        0 0 32px rgba(16,185,129,.7),
+        0 0 56px rgba(16,185,129,.35);
+      transform: scale(1.03);
     }
     .tx-chip-row .tx-chip.active {
       background: var(--accent-primary) !important;
@@ -1366,9 +1442,10 @@ html, body {
     }
     .tx-card-compact {
       border: 1px solid rgba(255,255,255,.06);
-      border-radius: 12px;
+      border-radius: 16px;
+      background: var(--app-card);
     }
-    .tx-card-compact .tx-card-inner { position: relative; padding: 12px 14px; }
+    .tx-card-compact .tx-card-inner { position: relative; padding: 14px 16px; }
     .tx-card-compact .tx-card-row {
       display: flex;
       align-items: center;
@@ -1622,10 +1699,10 @@ html, body {
       --brand-border: rgba(52,211,153,.28);
       --brand-shadow: 0 12px 28px rgba(16,185,129,.22);
 
-      /* subtle background accents */
+      /* subtle background accents — toned down to match mockup */
       background-image:
-        radial-gradient(900px circle at 10% -10%, rgba(14,165,233,.18), transparent 55%),
-        radial-gradient(900px circle at 110% 0%, rgba(16,185,129,.14), transparent 55%);
+        radial-gradient(800px circle at 15% -5%, rgba(16,185,129,.06), transparent 50%),
+        radial-gradient(600px circle at 95% 5%, rgba(14,165,233,.05), transparent 45%);
       background-attachment: fixed;
     }
     body.theme-light {
@@ -1649,11 +1726,9 @@ html, body {
 
     #appShell { transition: all 0.3s ease; }
 
-    /* Primary actions: green */
+    /* Primary actions: green — desktop FAB hidden; mobile uses .fab-main */
     #fab {
-      background: var(--brand-green) !important;
-      border: 1px solid rgba(167,243,208,.35) !important;
-      box-shadow: var(--brand-shadow) !important;
+      display: none !important;
     }
 
     #btnAuthSubmit,

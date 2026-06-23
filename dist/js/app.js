@@ -3280,6 +3280,13 @@ function generateSmartBudgetRecommendation() {
       return relativeDayLabel(iso);
     }
 
+    function txTypeLabel(type) {
+      const map = { income: 'Income', expense: 'Expense', transfer: 'Transfer' };
+      const mapId = { income: 'Pemasukan', expense: 'Pengeluaran', transfer: 'Transfer' };
+      const lang = STATE.settings?.lang || 'id';
+      return lang === 'en' ? (map[type] || type) : (mapId[type] || type);
+    }
+
     function calculateTxNet(tx) {
       const amt = Number(tx.amount || 0);
       if (tx.type === 'income') return amt;
@@ -3644,11 +3651,12 @@ function generateSmartBudgetRecommendation() {
           const amtColor = isInc ? 'var(--accent-primary)' : isExp ? 'var(--accent-danger)' : 'var(--app-text)';
           const sign = isInc ? '+' : isExp ? '−' : '';
           const title = tx.merchant || tx.category || 'Lainnya';
-          const subtitle = [tx.category !== title ? tx.category : null, tx.account].filter(Boolean).join(' · ');
           const dateFormatted = formatShortDate(tx.date);
           const netAmount = calculateTxNet(tx);
           const netColor = netAmount >= 0 ? 'var(--accent-primary)' : 'var(--accent-danger)';
-          const typeLabel = tx.type === 'income' ? (t('tx.type.income') || 'Pemasukan') : tx.type === 'expense' ? (t('tx.type.expense') || 'Pengeluaran') : (t('tx.type.transfer') || 'Transfer');
+          const typeLabel = txTypeLabel(tx.type);
+          const subtitleParts = [tx.category !== title ? tx.category : null, tx.account].filter(Boolean);
+          const subtitle = subtitleParts.join(' · ');
 
           row.innerHTML = `
             <div class="tx-card-swipe-delete" aria-hidden="true">${t('tx.swipe.delete') || 'Hapus'}</div>
@@ -3657,12 +3665,12 @@ function generateSmartBudgetRecommendation() {
                 <div class="tx-icon shrink-0" style="background:${categoryIconBg(tx.category)}">${categoryIconHtml(tx.category)}</div>
                 <div class="tx-card-body">
                   <div class="text-sm font-semibold truncate leading-tight">${escapeHtml(title)}</div>
-                  <div class="tx-card-mockup__meta text-[11px] app-muted truncate">${escapeHtml(subtitle)}${subtitle ? ' · ' : ''}${typeLabel}${tx.meta?.pending ? ' · ' + (t('tx.pending') || '…') : ''}</div>
+                  <div class="tx-card-mockup__meta truncate">${escapeHtml(subtitle)}${subtitle ? ' · ' : ''}${typeLabel}${tx.meta?.pending ? ' · ' + (t('tx.pending') || '…') : ''}</div>
                 </div>
-                <div class="tx-card-mockup__amount text-right shrink-0">
+                <div class="tx-card-mockup__amount">
                   <div class="text-[10px] app-muted">${escapeHtml(dateFormatted)}</div>
                   <div class="text-[11px] font-medium" style="color:${netColor}">Net: ${formatCompactIDR(netAmount)}</div>
-                  <div class="font-bold" style="color:${amtColor}; font-size: 15px;">${sign}${formatIDR(Math.abs(Number(tx.amount||0)))}</div>
+                  <div class="font-bold" style="color:${amtColor}">${sign}${formatIDR(Math.abs(Number(tx.amount||0)))}</div>
                 </div>
                 <div class="tx-card-actions shrink-0 hidden md:flex">
                   <button type="button" class="tx-action-btn tap" data-tip="Edit" data-tx-edit="${escapeHtmlAttr(tx.id)}" aria-label="Edit">${TX_ICON_EDIT}</button>
