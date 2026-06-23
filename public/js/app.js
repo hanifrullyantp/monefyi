@@ -757,11 +757,24 @@ async function loadBudgets(){
         if (k === 'manual') b.textContent = t('tab.manual');
         if (k === 'receipt') b.textContent = t('tab.receipt');
       });
-      const quickLab = $('label[for="quickText"]');
-      if (quickLab) quickLab.textContent = t('quick.label');
+      const quickLab = $('#quickTextLabel');
+      if (quickLab) quickLab.innerHTML = t('quick.label_html') || t('quick.label');
       $('#quickText')?.setAttribute('placeholder', t('quick.placeholder'));
-      $('#btnParse') && ($('#btnParse').textContent = t('quick.process'));
-      $('#btnQuickClear') && ($('#btnQuickClear').textContent = t('quick.clear'));
+      $('#btnParseTitle') && ($('#btnParseTitle').textContent = t('quick.process'));
+      $('#btnParseSub') && ($('#btnParseSub').textContent = t('quick.process_sub') || 'AI akan memproses transaksi Anda');
+      $('#quickAiBadge') && ($('#quickAiBadge').textContent = t('quick.badge') || 'Cepat & Praktis');
+      $('#quickExamplesTitle') && ($('#quickExamplesTitle').textContent = t('quick.examples_title') || 'Contoh cepat');
+      $('#btnQuickExamplesMore') && ($('#btnQuickExamplesMore').textContent = t('quick.examples_more') || 'Lihat lainnya >');
+      $('#quickAltTitle') && ($('#quickAltTitle').textContent = t('quick.alt_title') || 'Atau pilih metode input lainnya');
+      $('#quickSecureText') && ($('#quickSecureText').textContent = t('quick.secure') || 'Data Anda aman dan terenkripsi');
+      $('#quickMethodManualTitle') && ($('#quickMethodManualTitle').textContent = t('quick.method_manual') || 'Input Manual');
+      $('#quickMethodManualSub') && ($('#quickMethodManualSub').textContent = t('quick.method_manual_sub') || 'Isi detail transaksi secara lengkap');
+      $('#quickMethodBatchTitle') && ($('#quickMethodBatchTitle').textContent = t('quick.method_batch') || 'Impor Batch');
+      $('#quickMethodBatchSub') && ($('#quickMethodBatchSub').textContent = t('quick.method_batch_sub') || 'Unggah file untuk input banyak data');
+      $('#quickMethodReceiptTitle') && ($('#quickMethodReceiptTitle').textContent = t('quick.method_receipt') || 'Scan Struk');
+      $('#quickMethodReceiptSub') && ($('#quickMethodReceiptSub').textContent = t('quick.method_receipt_sub') || 'Pindai struk belanja secara otomatis');
+      $('#quickMethodClearTitle') && ($('#quickMethodClearTitle').textContent = t('quick.clear'));
+      $('#quickMethodClearSub') && ($('#quickMethodClearSub').textContent = t('quick.method_clear_sub') || 'Hapus input sebelumnya');
 
       // Manual labels
       const setLabelNear = (inputId, txt) => {
@@ -802,7 +815,8 @@ async function loadBudgets(){
         if (t1) t1.textContent = t('advisor.title');
         if (t2) t2.textContent = t('advisor.subtitle');
       }
-      $('#btnGenerateInsights') && ($('#btnGenerateInsights').textContent = t('advisor.generate'));
+      $('#btnGenerateInsightsTitle') && ($('#btnGenerateInsightsTitle').textContent = t('advisor.generate'));
+      $('#btnGenerateInsightsSub') && ($('#btnGenerateInsightsSub').textContent = t('advisor.generate_sub') || 'Buat insight dari data terbaru');
       const aSummaryTitle = $('#advisorContent .app-card:nth-child(1) .text-sm.font-semibold');
       if (aSummaryTitle) aSummaryTitle.textContent = t('advisor.summary_title');
       if ($('#advisorSummary')) $('#advisorSummary').innerHTML = t('advisor.summary_hint_html');
@@ -3637,6 +3651,9 @@ function generateSmartBudgetRecommendation() {
     function isDesktopViewport(){
       return window.matchMedia('(min-width: 768px)').matches;
     }
+    function isMobileTableView(){
+      return !isDesktopViewport() && String(STATE.ui.txView || 'card') === 'table';
+    }
     function syncTxViewToggle(){
       const current = String(STATE.ui.txView || 'card');
       $$('.tx-view-btn').forEach((btn) => {
@@ -3796,6 +3813,9 @@ function generateSmartBudgetRecommendation() {
       const list = $('#txList');
       list.innerHTML = '';
       let animIdx = 0;
+
+      const showTableRow = isDesktopViewport() || isMobileTableView();
+      const showCardRow = !showTableRow;
       
       const budgetRow = budgetForPeriod();
       const catBudgets = budgetRow?.categories || {};
@@ -3837,7 +3857,7 @@ function generateSmartBudgetRecommendation() {
               const pct = Math.min(100, (spent / planned) * 100);
               const barColor = pct > 90 ? 'var(--accent-danger)' : pct > 75 ? 'var(--accent-warning)' : 'var(--accent-primary)';
               budgetHtml = `
-                <div class="hidden md:flex flex-col justify-center w-full max-w-[120px]">
+                <div class="tx-budget-cell flex flex-col justify-center w-full max-w-[120px]">
                   <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden mb-1">
                     <div class="h-full rounded-full" style="width: ${pct}%; background-color: ${barColor}"></div>
                   </div>
@@ -3845,17 +3865,17 @@ function generateSmartBudgetRecommendation() {
                 </div>
               `;
             } else {
-              budgetHtml = `<div class="hidden md:block text-[10px] app-muted">—</div>`;
+              budgetHtml = `<div class="tx-budget-cell text-[10px] app-muted">—</div>`;
             }
           } else {
-            budgetHtml = `<div class="hidden md:block text-[10px] app-muted">—</div>`;
+            budgetHtml = `<div class="tx-budget-cell text-[10px] app-muted">—</div>`;
           }
 
           row.innerHTML = `
             <div class="tx-card-swipe-delete" aria-hidden="true">${t('tx.swipe.delete') || 'Hapus'}</div>
             <div class="tx-card-inner tx-card-mockup group">
-              <!-- Mobile Layout -->
-              <div class="tx-card-row md:hidden">
+              <!-- Mobile card layout -->
+              <div class="tx-card-row tx-card-row-mobile${showCardRow ? '' : ' hidden'}">
                 <div class="tx-icon shrink-0" style="background:${categoryIconBg(tx.category)}">${categoryIconHtml(tx.category)}</div>
                 <div class="tx-card-body">
                   <div class="text-sm font-semibold truncate leading-tight">${escapeHtml(title)}</div>
@@ -3868,8 +3888,8 @@ function generateSmartBudgetRecommendation() {
                 <button type="button" class="tx-menu-btn tap rounded-lg app-chip w-7 h-7 flex items-center justify-center shrink-0" data-tx-menu="${escapeHtmlAttr(tx.id)}" data-tip="Menu" aria-label="Menu">⋮</button>
               </div>
               
-              <!-- Desktop Table Layout -->
-              <div class="hidden md:grid grid-cols-[48px_2fr_1fr_1fr_1fr_1fr_1.5fr] gap-3 items-center w-full py-1">
+              <!-- Desktop / mobile-table row layout -->
+              <div class="tx-card-row-table grid grid-cols-[48px_2fr_1fr_1fr_1fr_1fr_1.5fr] gap-3 items-center w-full py-1${showTableRow ? '' : ' hidden'}">
                 <div class="tx-icon shrink-0" style="background:${categoryIconBg(tx.category)}">${categoryIconHtml(tx.category)}</div>
                 <div class="text-sm font-semibold truncate">${escapeHtml(title)}</div>
                 <div class="text-xs app-muted truncate">${escapeHtml(tx.category || 'Lainnya')}</div>
@@ -3878,7 +3898,7 @@ function generateSmartBudgetRecommendation() {
                 <div class="text-sm font-bold text-right" style="color:${amtColor}">${sign}${formatIDR(Math.abs(Number(tx.amount||0)))}</div>
                 <div class="flex items-center justify-between">
                   ${budgetHtml}
-                  <div class="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                  <div class="tx-row-del opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                     <button type="button" class="p-1.5 text-slate-400 hover:text-white rounded-md hover:bg-slate-700" data-tx-del-quick="${escapeHtmlAttr(tx.id)}" aria-label="Hapus">
                       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                     </button>
@@ -3886,7 +3906,7 @@ function generateSmartBudgetRecommendation() {
                 </div>
               </div>
 
-              <div class="hidden absolute right-2 top-10 z-20 min-w-[120px] rounded-lg app-card-opaque border border-[var(--app-border)] shadow-lg py-1 md:hidden" data-tx-dropdown="${escapeHtmlAttr(tx.id)}">
+              <div class="tx-card-dropdown absolute right-2 top-10 z-20 min-w-[120px] rounded-lg app-card-opaque border border-[var(--app-border)] shadow-lg py-1${showCardRow ? '' : ' hidden'}" data-tx-dropdown="${escapeHtmlAttr(tx.id)}">
                 <button type="button" class="tap w-full text-left px-3 py-2 text-xs" data-tx-edit="${escapeHtmlAttr(tx.id)}">${t('tx.menu.edit') || 'Edit'}</button>
                 <button type="button" class="tap w-full text-left px-3 py-2 text-xs" style="color:var(--accent-danger)" data-tx-del="${escapeHtmlAttr(tx.id)}">${t('tx.menu.delete') || 'Hapus'}</button>
               </div>
@@ -3914,14 +3934,16 @@ function generateSmartBudgetRecommendation() {
               await deleteTransaction(tx.id, { confirmed: true });
             }
           });
-          window.MonefyiUI?.initTxSwipeDelete?.(row, async () => {
-            if (confirm(t('tx.delete.confirm') || 'Hapus transaksi ini?')) {
-              await deleteTransaction(tx.id, { confirmed: true });
-            }
-          });
+          if (showCardRow) {
+            window.MonefyiUI?.initTxSwipeDelete?.(row, async () => {
+              if (confirm(t('tx.delete.confirm') || 'Hapus transaksi ini?')) {
+                await deleteTransaction(tx.id, { confirmed: true });
+              }
+            });
+          }
           row.addEventListener('click', (e) => {
             if (e.target.closest('[data-tx-menu]') || e.target.closest('[data-tx-dropdown]') || e.target.closest('.tx-card-actions') || e.target.closest('[data-tx-del-quick]')) return;
-            if (window.innerWidth >= 768) {
+            if (showTableRow) {
               openInlineEdit(tx.id, row);
             } else {
               openEdit(tx.id);
@@ -3943,7 +3965,7 @@ function generateSmartBudgetRecommendation() {
       const title = tx.merchant || tx.category || 'Lainnya';
       const dateFormatted = tx.date; // Use raw date for input
       
-      const desktopRow = rowElement.querySelector('.hidden.md\\:grid');
+      const desktopRow = rowElement.querySelector('.tx-card-row-table');
       if (!desktopRow) return;
 
       // Generate category options
@@ -4032,9 +4054,11 @@ function generateSmartBudgetRecommendation() {
       const list = $('#txList');
       const tableWrap = $('#txTableWrap');
       const loadMoreWrap = $('#txLoadMoreWrap');
-      // Desktop list uses mockup-style rows; disable separate table mode UI
+      const mobileTable = isMobileTableView();
       if (isDesktopViewport()) STATE.ui.txView = 'card';
-      const useTable = isDesktopViewport() && String(STATE.ui.txView || 'card') === 'table';
+      syncTxViewToggle();
+
+      $('#txListHost')?.classList.toggle('tx-list-host--mobile-table', mobileTable);
 
       if (STATE.ui.txLoading) {
         list.classList.remove('hidden');
@@ -4045,13 +4069,9 @@ function generateSmartBudgetRecommendation() {
         return;
       }
 
-      list.classList.toggle('hidden', useTable);
-      if (tableWrap) tableWrap.classList.toggle('hidden', !useTable);
-      if (useTable) {
-        renderTxTableColPicker();
-        $('#txTableColPicker')?.classList.add('hidden');
-      }
-      $('#txListHost')?.classList.toggle('tx-list-host--table', useTable);
+      list.classList.remove('hidden');
+      if (tableWrap) tableWrap.classList.add('hidden');
+      $('#txListHost')?.classList.toggle('tx-list-host--table', false);
       $('#txEmpty').classList.toggle('hidden', total !== 0);
       loadMoreWrap?.classList.toggle('hidden', limit >= total || total === 0);
 
@@ -4059,8 +4079,7 @@ function generateSmartBudgetRecommendation() {
         list.innerHTML = '';
         return;
       }
-      if (useTable) renderTransactionsTable(txs);
-      else renderTransactionsCards(txs);
+      renderTransactionsCards(txs);
       requestAnimationFrame(() => window.MonefyiUI?.syncChipIndicator?.());
     }
 
@@ -4111,10 +4130,29 @@ function generateSmartBudgetRecommendation() {
     const sheetBackdrop = $('#sheetBackdrop');
     const sheet = $('#sheet');
 
+function updateAddSheetHeader(tab = 'quick') {
+  const titleEl = $('#addSheetTitle');
+  const subEl = $('#addSheetSubtitle');
+  const backBtn = $('#btnAddSheetBack');
+  const iconEl = $('#addSheetIcon');
+  const headers = {
+    quick: { title: t('add.title'), sub: t('add.subtitle') },
+    manual: { title: t('quick.method_manual') || 'Input Manual', sub: t('quick.method_manual_sub') || 'Isi detail transaksi secara lengkap' },
+    batch: { title: t('quick.method_batch') || 'Impor Batch', sub: t('quick.method_batch_sub') || 'Unggah file untuk input banyak data' },
+    receipt: { title: t('quick.method_receipt') || 'Scan Struk', sub: t('quick.method_receipt_sub') || 'Pindai struk belanja secara otomatis' },
+  };
+  const info = headers[tab] || headers.quick;
+  if (titleEl) titleEl.textContent = info.title;
+  if (subEl) subEl.textContent = info.sub;
+  backBtn?.classList.toggle('hidden', tab === 'quick');
+  iconEl?.classList.toggle('hidden', tab !== 'quick');
+}
+
 function openAddSheet(tab = 'quick') {
   const backdropEl = document.getElementById('sheetBackdrop');
   const sheetEl = document.getElementById('sheet');
   sheetEl?.classList.toggle('sheet-form-panel', isDesktopViewport());
+  setSheetPosition('bottom');
   // 1. Isi Dropdown Kategori, Akun, Metode (Agar Manual selalu siap)
   const cats = getActiveBudgetCats();
   const mCat = document.getElementById('mCategory');
@@ -4133,6 +4171,8 @@ function openAddSheet(tab = 'quick') {
       panel.classList.add('hidden');
     }
   });
+  updateAddSheetHeader(tab);
+  setTab(tab);
 
   // 3. Buka Sheet
   if (backdropEl && sheetEl) {
@@ -4147,9 +4187,8 @@ function openAddSheet(tab = 'quick') {
 
     // Buka input AI (quick) sebagai popup di tengah
 function openQuickAdd() {
-  setSheetPosition('center');          // posisi tengah
   if (typeof openAddSheet === 'function') {
-    openAddSheet('quick');            // pakai fungsi lama: aktifkan tab quick
+    openAddSheet('quick');
   }
 }
 
@@ -4158,26 +4197,46 @@ const btnQuickGoManual = document.getElementById('btnQuickGoManual');
 
 if (btnQuickGoManual) {
     btnQuickGoManual.onclick = function(e) {
-        e.preventDefault(); // Mencegah reload
-        console.log("Berpindah ke form manual...");
-
-        // 1. Refresh Kategori Budget lagi (agar 100% sinkron)
+        e.preventDefault();
         const cats = getActiveBudgetCats();
         const mCat = document.getElementById('mCategory');
         if (mCat) setSelectOptions(mCat, cats, cats[0] || 'Lainnya');
-
-        // 2. Tampilkan Panel Manual
-        document.querySelectorAll('.tabPanel').forEach(p => p.classList.add('hidden'));
-        const manualPanel = document.querySelector('[data-tab-panel="manual"]');
-        if (manualPanel) {
-            manualPanel.classList.remove('hidden');
-        }
-
-        // 3. Reset field input
+        setTab('manual');
+        updateAddSheetHeader('manual');
         if($('#mAmount')) $('#mAmount').value = '';
         if($('#mMerchant')) $('#mMerchant').value = '';
+        if ($('#mDate') && !$('#mDate').value) $('#mDate').value = toISODate(new Date());
+        validateManualForm();
     };
 }
+
+$('#btnAddSheetBack')?.addEventListener('click', () => {
+  setTab('quick');
+  updateAddSheetHeader('quick');
+});
+
+const QUICK_EXAMPLE_SETS = [
+  ['makan siang 50k di warteg pake gopay', 'parkir 5k cash'],
+  ['bensin 150rb shell debit', 'transfer ke tabungan 500k'],
+  ['kopi 35k starbucks gopay', 'listrik pln 420rb bca'],
+];
+let quickExampleIndex = 0;
+function renderQuickExamples(index = 0) {
+  const list = $('#quickExamplesList');
+  if (!list) return;
+  const items = QUICK_EXAMPLE_SETS[index % QUICK_EXAMPLE_SETS.length] || QUICK_EXAMPLE_SETS[0];
+  list.innerHTML = items.map(item => `<li>${escapeHtml(item)}</li>`).join('');
+}
+renderQuickExamples(0);
+$('#btnQuickExamplesMore')?.addEventListener('click', () => {
+  quickExampleIndex = (quickExampleIndex + 1) % QUICK_EXAMPLE_SETS.length;
+  renderQuickExamples(quickExampleIndex);
+});
+$('#btnQuickCamera')?.addEventListener('click', () => setTab('receipt'));
+$('#btnQuickGoReceipt')?.addEventListener('click', () => {
+  setTab('receipt');
+  updateAddSheetHeader('receipt');
+});
 
 // Buka input manual sebagai bottom sheet
 function openManualAdd() {
@@ -5010,6 +5069,7 @@ function openTutorialTopic(id) {
         b.style.color = active ? 'rgba(199,210,254,.95)' : '';
       });
       $$('.tabPanel').forEach(p => p.classList.toggle('hidden', p.dataset.tabPanel !== tab));
+      updateAddSheetHeader(tab);
 
       if (tab === 'receipt') {
         requestAnimationFrame(()=>{
@@ -6469,6 +6529,7 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
     });
     $('#btnQuickGoBatch')?.addEventListener('click', () => {
       setTab('batch');
+      updateAddSheetHeader('batch');
     });
     $('#btnBatchPaste')?.addEventListener('click', async () => {
       try {

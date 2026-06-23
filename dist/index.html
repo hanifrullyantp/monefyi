@@ -33,7 +33,7 @@
 
 
  
-  <link rel="stylesheet" crossorigin href="./assets/index-CGdYOfmV.css">
+  <link rel="stylesheet" crossorigin href="./assets/index-C5yKqcYq.css">
 </head>
 <body>
   <!-- Logo Monefyi (satu sumber untuk loading, sidebar, header, auth) -->
@@ -937,94 +937,132 @@
   <div class="absolute inset-0" data-close="true"></div>
   <div id="sheet" class="sheet absolute left-0 right-0 bottom-0 mx-auto max-w-xl">
     <div class="rounded-t-3xl app-card-opaque border-t border-x sheet-panel">
-      <div class="sheet-head px-4 pt-3 pb-2">
-        <div class="flex items-center justify-between">
-          <div class="min-w-0">
-            <div id="addSheetTitle" class="text-xs app-muted">Tambah transaksi</div>
-            <div id="addSheetSubtitle" class="text-base font-semibold">
-              Input cepat (mobile-first)
+      <div class="sheet-head px-4 pt-4 pb-2 shrink-0">
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex items-start gap-3 min-w-0">
+            <button type="button" id="btnAddSheetBack" class="tap hidden w-9 h-9 rounded-xl app-chip flex items-center justify-center shrink-0 hover:opacity-90" aria-label="Kembali">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <div id="addSheetIcon" class="add-sheet-icon w-11 h-11 rounded-2xl flex items-center justify-center shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            </div>
+            <div class="min-w-0">
+              <div id="addSheetTitle" class="text-lg font-bold text-white leading-tight">Tambah Transaksi</div>
+              <div id="addSheetSubtitle" class="text-[11px] app-muted mt-0.5">Input cepat & mudah</div>
             </div>
           </div>
-          <button class="tap rounded-xl app-chip px-3 py-2 text-sm hover:opacity-90" data-close="true">
-            Tutup
+          <button type="button" class="tap w-9 h-9 rounded-xl app-chip flex items-center justify-center shrink-0 hover:opacity-90" data-close="true" aria-label="Tutup">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
           </button>
         </div>
 
-        <!-- Baris tab DISembunyikan di mobile, tetap ada untuk jaga fungsi JS lama -->
-        <div class="mt-3 hidden md:flex gap-2">
-          <button class="tabBtn tap flex-1 rounded-2xl app-chip px-3 py-2 text-sm" data-tab="quick">
-            Cepat (AI)
-          </button>
-          <button class="tabBtn tap flex-1 rounded-2xl app-chip px-3 py-2 text-sm" data-tab="batch">
-            Impor Batch
-          </button>
-          <button class="tabBtn tap flex-1 rounded-2xl app-chip px-3 py-2 text-sm" data-tab="manual">
-            Manual
-          </button>
-          <button class="tabBtn tap flex-1 rounded-2xl app-chip px-3 py-2 text-sm" data-tab="receipt">
-            Foto Struk
-          </button>
+        <!-- Tab buttons hidden; navigation via quick cards -->
+        <div class="hidden">
+          <button class="tabBtn" data-tab="quick">Cepat (AI)</button>
+          <button class="tabBtn" data-tab="batch">Impor Batch</button>
+          <button class="tabBtn" data-tab="manual">Manual</button>
+          <button class="tabBtn" data-tab="receipt">Foto Struk</button>
         </div>
       </div>
 
       <div class="sheet-body px-4 pb-5">
         <!-- QUICK: Ketik manual (AI) -->
         <div class="tabPanel" data-tab-panel="quick">
-          <div class="space-y-1">
-            <div class="text-sm font-semibold">Input teks bebas (AI)</div>
-            <label class="text-xs app-muted" for="quickText">
-              Tulis seperti chat. Bisa lebih dari 1 transaksi: pisahkan per baris.
-            </label>
-          </div>
+          <div class="add-ai-card rounded-2xl p-4 border border-slate-800/60">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-2 min-w-0">
+                <div class="add-ai-badge w-8 h-8 rounded-lg flex items-center justify-center shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>
+                </div>
+                <div class="text-sm font-bold text-white">Input Teks Bebas (AI)</div>
+              </div>
+              <div id="quickAiBadge" class="text-[10px] font-bold px-2 py-1 rounded-full shrink-0" style="color:#10b981;border:1px solid rgba(16,185,129,.35);background:rgba(16,185,129,.08);">Cepat & Praktis</div>
+            </div>
 
-          <!-- font text-base (≈16px) agar keyboard tidak auto-zoom di iOS -->
-          <textarea
-            id="quickText"
-            rows="4"
-            class="tap mt-2 w-full rounded-2xl app-input px-3 py-3 text-base"
-            placeholder="Contoh:
-1) makan siang 50k di warteg pake gopay
-2) parkir 5k cash"
-          ></textarea>
+            <label class="block mt-3 text-[11px] app-muted leading-relaxed" for="quickText" id="quickTextLabel">
+              Tulis seperti chat. Bisa lebih dari 1 transaksi: pisahkan per baris. <span class="italic text-slate-400">Contoh: “makan siang 50k di warteg pake gopay”</span>
+            </label>
+
+            <div class="add-textarea-wrap relative mt-3">
+              <textarea
+                id="quickText"
+                rows="4"
+                class="tap w-full rounded-2xl app-input px-3 py-3 pr-12 text-base min-h-[120px] resize-none border border-slate-700/80 bg-slate-900/60"
+                placeholder="Ketik transaksi di sini..."
+              ></textarea>
+              <button type="button" id="btnQuickCamera" class="tap absolute bottom-3 right-3 w-9 h-9 rounded-xl flex items-center justify-center hover:brightness-110 transition-all" style="background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.25);" aria-label="Scan struk">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+              </button>
+            </div>
+
+            <div class="add-quick-examples mt-3 rounded-xl p-3 border border-slate-800/50 bg-slate-900/40">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-1.5 text-[11px] font-bold" style="color:#10b981;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.9 1.2 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+                  <span id="quickExamplesTitle">Contoh cepat</span>
+                </div>
+                <button type="button" id="btnQuickExamplesMore" class="tap text-[10px] app-muted hover:text-white px-2 py-1 rounded-lg hover:bg-white/5">Lihat lainnya &gt;</button>
+              </div>
+              <ol id="quickExamplesList" class="mt-2 space-y-1 text-[11px] text-slate-300 list-decimal pl-4">
+                <li>makan siang 50k di warteg pake gopay</li>
+                <li>parkir 5k cash</li>
+              </ol>
+            </div>
+          </div>
 
           <div id="quickAiPreview" class="hidden mt-3"></div>
+          <div id="quickPreview" class="hidden"></div>
+          <div id="parseStatus" class="mt-2 text-center text-xs app-muted"></div>
 
-          <div class="mt-2 flex flex-wrap items-center gap-2">
-            <button
-              id="btnParse"
-              class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95"
-              style="background: rgba(99,102,241,.95)"
-            >
-              Proses teks
+          <div class="mt-4 text-[11px] app-muted" id="quickAltTitle">Atau pilih metode input lainnya</div>
+          <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <button type="button" id="btnQuickGoManual" class="add-method-card add-method-card--green tap rounded-2xl p-3 text-left border hover:brightness-105 transition-all">
+              <div class="w-9 h-9 rounded-xl flex items-center justify-center mb-2" style="background:rgba(16,185,129,.12);color:#10b981;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              </div>
+              <div id="quickMethodManualTitle" class="text-[11px] font-bold text-white">Input Manual</div>
+              <div id="quickMethodManualSub" class="text-[9px] app-muted mt-1 leading-snug">Isi detail transaksi secara lengkap</div>
             </button>
-
-            <!-- Tombol ke form manual -->
-            <button
-              id="btnQuickGoManual"
-              type="button"
-              class="tap rounded-2xl app-chip px-4 py-2 text-sm hover:opacity-90"
-            >
-              Input manual
+            <button type="button" id="btnQuickGoBatch" class="add-method-card add-method-card--blue tap rounded-2xl p-3 text-left border hover:brightness-105 transition-all">
+              <div class="w-9 h-9 rounded-xl flex items-center justify-center mb-2" style="background:rgba(59,130,246,.12);color:#60a5fa;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+              </div>
+              <div id="quickMethodBatchTitle" class="text-[11px] font-bold text-white">Impor Batch</div>
+              <div id="quickMethodBatchSub" class="text-[9px] app-muted mt-1 leading-snug">Unggah file untuk input banyak data</div>
             </button>
-            <button
-              id="btnQuickGoBatch"
-              type="button"
-              class="tap rounded-2xl app-chip px-4 py-2 text-sm hover:opacity-90"
-            >
-              Impor batch
+            <button type="button" id="btnQuickGoReceipt" class="add-method-card add-method-card--purple tap rounded-2xl p-3 text-left border hover:brightness-105 transition-all">
+              <div class="w-9 h-9 rounded-xl flex items-center justify-center mb-2" style="background:rgba(168,85,247,.12);color:#c084fc;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+              </div>
+              <div id="quickMethodReceiptTitle" class="text-[11px] font-bold text-white">Scan Struk</div>
+              <div id="quickMethodReceiptSub" class="text-[9px] app-muted mt-1 leading-snug">Pindai struk belanja secara otomatis</div>
             </button>
-
-            <button
-              id="btnQuickClear"
-              class="tap rounded-2xl app-chip px-4 py-2 text-sm hover:opacity-90"
-            >
-              Bersihkan
+            <button type="button" id="btnQuickClear" class="add-method-card add-method-card--red tap rounded-2xl p-3 text-left border hover:brightness-105 transition-all">
+              <div class="w-9 h-9 rounded-xl flex items-center justify-center mb-2" style="background:rgba(244,63,94,.12);color:#fb7185;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+              </div>
+              <div id="quickMethodClearTitle" class="text-[11px] font-bold text-white">Bersihkan</div>
+              <div id="quickMethodClearSub" class="text-[9px] app-muted mt-1 leading-snug">Hapus input sebelumnya</div>
             </button>
-
-            <div id="parseStatus" class="ml-auto text-xs app-muted"> </div>
           </div>
 
-          <div id="quickPreview" class="hidden"></div>
+          <button type="button" id="btnParse" class="add-process-btn tap w-full mt-4 rounded-2xl p-4 flex items-center justify-between gap-3 hover:brightness-105 active:scale-[0.99] transition-all">
+            <div class="flex items-center gap-3 min-w-0 text-left">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-white/15 border border-white/10">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>
+              </div>
+              <div class="min-w-0">
+                <div id="btnParseTitle" class="text-sm font-bold text-white">Proses Transaksi</div>
+                <div id="btnParseSub" class="text-[10px] text-emerald-50/85 mt-0.5">AI akan memproses transaksi Anda</div>
+              </div>
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white shrink-0"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+
+          <div class="mt-4 flex items-center justify-center gap-1.5 text-[10px] app-muted">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span id="quickSecureText">Data Anda aman dan terenkripsi</span>
+          </div>
         </div>
 
         <div class="tabPanel hidden" data-tab-panel="batch">
@@ -1315,13 +1353,15 @@
               
               <!-- Top Section: Generate & Health -->
               <div class="grid grid-cols-2 gap-3">
-                <div class="rounded-2xl p-4 flex flex-col justify-center relative overflow-hidden cursor-pointer hover:opacity-95 transition-opacity" style="background: linear-gradient(135deg, #10b981 0%, #047857 100%);" id="btnGenerateInsights">
-                  <div class="flex items-center gap-2 text-white font-bold text-base mb-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"/></svg>
-                    Generate
+                <button type="button" id="btnGenerateInsights" class="advisor-generate-card tap rounded-2xl p-4 flex items-start gap-3 text-left w-full min-h-[92px] cursor-pointer hover:brightness-105 active:scale-[0.99] transition-all">
+                  <div class="advisor-generate-icon w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>
                   </div>
-                  <div class="text-[10px] text-emerald-100">Buat insight dari data terbaru</div>
-                </div>
+                  <div class="min-w-0 pt-0.5">
+                    <div id="btnGenerateInsightsTitle" class="text-white font-bold text-[15px] leading-tight tracking-tight">Generate</div>
+                    <div id="btnGenerateInsightsSub" class="text-[11px] text-emerald-50/90 mt-1 leading-snug font-medium">Buat insight dari data terbaru</div>
+                  </div>
+                </button>
                 <div class="rounded-2xl app-card p-4 flex items-center gap-3 border border-slate-800/50 cursor-pointer hover:bg-white/5 transition-colors">
                   <div id="advisorHealthRing" class="health-ring shrink-0" style="--pct: 0%; width: 48px; height: 48px;"><span id="advisorHealthScore" class="text-sm font-bold">—</span></div>
                   <div class="flex-1 min-w-0">
