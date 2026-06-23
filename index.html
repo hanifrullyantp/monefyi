@@ -391,14 +391,14 @@
 
       <!-- Menu utama -->
       <nav class="sidebar-nav-primary flex flex-col gap-0.5">
-        <button type="button" onclick="toggleNav('dash')" data-nav="dash" class="sidebar-item sidebar-item--primary tap group">
+        <button type="button" data-nav="dash" class="sidebar-item sidebar-item--primary tap group">
           <span class="sidebar-item__icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
           </span>
           <span class="sidebar-item__label sidebar-label" data-i18n="nav.dashboard">Dashboard</span>
         </button>
 
-        <button type="button" onclick="toggleNav('list')" data-nav="list" class="sidebar-item sidebar-item--primary tap group">
+        <button type="button" data-nav="list" class="sidebar-item sidebar-item--primary tap group">
           <span class="sidebar-item__icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
           </span>
@@ -835,14 +835,14 @@
  <nav class="fixed bottom-0 left-0 right-0 z-[110] nav-bar block md:hidden">
     <div class="nav-bar-inner safe-bottom">
       <div class="nav-bar-grid">
-      <button onclick="toggleNav('dash')" class="nav-item flex flex-col items-center gap-1 tap" data-nav="beranda">
+      <button type="button" data-nav="beranda" class="nav-item flex flex-col items-center gap-1 tap">
         <span class="text-xl">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
         </span>
         <span class="text-[11px] font-medium">Beranda</span>
       </button>
       
-      <button onclick="toggleNav('list')" class="nav-item flex flex-col items-center gap-1 tap" data-nav="transaksi">
+      <button type="button" data-nav="transaksi" class="nav-item flex flex-col items-center gap-1 tap">
         <span class="text-xl">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
         </span>

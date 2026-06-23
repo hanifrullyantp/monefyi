@@ -1539,11 +1539,18 @@ html, body {
       padding: 14px 16px 18px;
       background: var(--grad-card-surface-soft);
     }
-    .tx-card-compact .tx-card-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      width: 100%;
+    @media (max-width: 767px) {
+      .tx-card-compact .tx-card-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+      }
+    }
+    @media (min-width: 768px) {
+      .tx-card-compact .tx-card-row {
+        display: none !important;
+      }
     }
     .tx-card-compact .tx-card-body { min-width: 0; flex: 1; overflow: hidden; }
     .tx-card-compact .tx-card-amount {

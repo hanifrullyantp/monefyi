@@ -2744,6 +2744,10 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
 
       $('#dashboardExpanded').classList.toggle('hidden', !STATE.ui.dashboardOpen);
       $('#txSection')?.classList.toggle('hidden', STATE.ui.dashboardOpen);
+      const pageTitleDesktop = $('#pageTitleTxDesktop');
+      if (pageTitleDesktop) {
+        pageTitleDesktop.textContent = STATE.ui.dashboardOpen ? 'Dashboard' : 'Transaksi';
+      }
       const dynamicContent = $('#dynamicContent');
       if (dynamicContent) {
         dynamicContent.classList.toggle('dynamic-content--dashboard', STATE.ui.dashboardOpen);
@@ -7981,8 +7985,7 @@ function toggleNav_legacy(mode) {
 
 
 
-    function toggleNav(view) {
-      // Close all open sheets automatically
+function toggleNav(view, triggerEl) {
       closeAddSheet();
       closeAdvisor();
       closeMenu();
@@ -7992,7 +7995,7 @@ function toggleNav_legacy(mode) {
       closeEditModal();
       closeBudget();
 
-      const btn = event ? event.currentTarget : null;
+      const btn = triggerEl || (typeof event !== 'undefined' ? event.currentTarget : null);
       if (btn && btn.classList) {
         btn.classList.add('animate-bounce-soft');
         setTimeout(() => btn.classList.remove('animate-bounce-soft'), 300);
@@ -8008,9 +8011,32 @@ function toggleNav_legacy(mode) {
       $$('.nav-item[data-nav]').forEach((el) => {
         el.classList.toggle('active', el.getAttribute('data-nav') === active);
       });
+      $$('.sidebar-item[data-nav]').forEach((el) => {
+        el.classList.toggle('active', el.getAttribute('data-nav') === view);
+      });
       rerender();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+    window.toggleNav = toggleNav;
+
+    $$('.sidebar-item[data-nav]').forEach((el) => {
+      el.addEventListener('click', () => {
+        const view = el.getAttribute('data-nav');
+        if (view === 'dash' || view === 'list') toggleNav(view, el);
+      });
+    });
+
+    $$('.nav-item[data-nav]').forEach((el) => {
+      el.addEventListener('click', (e) => {
+        const nav = el.getAttribute('data-nav');
+        const map = { beranda: 'dash', transaksi: 'list' };
+        const view = map[nav];
+        if (view) {
+          e.preventDefault();
+          toggleNav(view, el);
+        }
+      });
+    });
 
     $('#btnMainAction')?.addEventListener('click', (e) => {
       const menu = $('#actionMenu');
@@ -8540,7 +8566,6 @@ function toggleNav_legacy(mode) {
       if (syncRemote && typeof refreshTransactionsRange === 'function') {
         try { await refreshTransactionsRange(); } catch (e) { console.warn('refreshTransactionsRange', e); }
       }
-      if (typeof renderTransactionList === 'function') renderTransactionList();
       if (typeof renderTransactions === 'function') renderTransactions();
       if (typeof renderTxList === 'function') renderTxList();
       if (typeof renderBudgetRows === 'function') renderBudgetRows();
