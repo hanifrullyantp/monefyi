@@ -33,7 +33,7 @@
 
 
  
-  <link rel="stylesheet" crossorigin href="./assets/index-BYUgDnfC.css">
+  <link rel="stylesheet" crossorigin href="./assets/index-CGdYOfmV.css">
 </head>
 <body>
   <!-- Logo Monefyi (satu sumber untuk loading, sidebar, header, auth) -->
@@ -771,7 +771,7 @@
               </div>
             </div>
           </div>
-          <div id="txDesktopFilterBar" class="hidden md:grid grid-cols-4 gap-2 shrink-0 mb-2">
+          <div id="txDesktopFilterBar" class="tx-filter-bar hidden shrink-0 mb-2">
             <select id="dfType" class="tap rounded-xl app-input px-3 py-2 text-sm" aria-label="Filter tipe">
               <option value="">Semua tipe</option>
               <option value="expense">Pengeluaran</option>
@@ -796,7 +796,7 @@
               <option value="custom">Rentang tanggal</option>
             </select>
           </div>
-          <div id="txDesktopFilterRange" class="hidden md:grid grid-cols-[1fr_1fr_auto] gap-2 shrink-0 mb-2 items-end">
+          <div id="txDesktopFilterRange" class="tx-filter-range hidden shrink-0 mb-2">
             <div>
               <label class="text-[10px] app-muted">Mulai</label>
               <input id="dfRangeStart" type="date" class="tap mt-0.5 w-full rounded-xl app-input px-3 py-2 text-sm" />
@@ -811,7 +811,7 @@
           <div id="txSearchWrap" class="tx-search-wrap tx-search--collapsed shrink-0 md:hidden">
             <input id="txSearchInput" class="tap w-full rounded-xl app-input px-3 py-2 text-sm" placeholder="Cari merchant / catatan / kategori..." />
           </div>
-          <div id="txTypeChips" class="tx-chip-row flex md:hidden items-center gap-2 overflow-x-auto pb-1 shrink-0">
+          <div id="txTypeChips" class="hidden" aria-hidden="true">
             <span id="txChipIndicator" class="tx-chip-indicator" aria-hidden="true"></span>
             <button class="tap rounded-full app-chip px-3 py-1.5 text-xs tx-chip active" data-type="">Semua</button>
             <button class="tap rounded-full app-chip px-3 py-1.5 text-xs tx-chip" data-type="income">Pemasukan</button>
@@ -1295,98 +1295,189 @@
     <!-- Advisor Sheet -->
     <div id="advisorBackdrop" class="sheet-backdrop fixed inset-0 z-80" style="background: rgba(0,0,0,.70)">
       <div class="absolute inset-0" data-close-advisor="true"></div>
-      <div id="advisorSheet" class="sheet absolute left-0 right-0 bottom-0 mx-auto max-w-xl">
-        <div class="rounded-t-3xl app-card-opaque border-t border-x sheet-panel">
-          <div class="sheet-head px-4 pt-3 pb-2">
-            <div class="flex items-center justify-between">
-              <div>
-                <div class="text-xs app-muted">Monevisor</div>
-                <div class="text-base font-semibold">Insight & Rekomendasi</div>
+      <div id="advisorSheet" class="sheet absolute left-0 right-0 bottom-0 mx-auto max-w-xl md:right-0 md:left-auto md:top-0 md:h-full md:w-[400px] md:max-w-none md:translate-y-0 md:translate-x-full transition-transform duration-300">
+        <div class="rounded-t-3xl md:rounded-none md:rounded-l-3xl app-card-opaque border-t md:border-t-0 md:border-l border-x md:border-r-0 sheet-panel md:h-full md:flex md:flex-col">
+          <div class="sheet-head px-4 pt-4 pb-2 shrink-0">
+            <div class="flex items-start justify-between">
+              <div class="min-w-0">
+                <div class="text-[11px] font-bold" style="color: #10b981;">Monevisor</div>
+                <div class="text-lg font-bold text-white mt-0.5">Insight & Rekomendasi</div>
+                <div class="mt-1 text-[11px] app-muted">AI bantu kamu kelola keuangan lebih cerdas.</div>
               </div>
-              <button class="tap rounded-xl app-chip px-3 py-2 text-sm hover:opacity-90" data-close-advisor="true">Tutup</button>
-            </div>
-            <div class="mt-3 flex items-center gap-2">
-              <button id="btnGenerateInsights" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: rgba(99,102,241,.95)">Generate</button>
-              <div class="ml-auto text-xs app-muted" id="advisorStatus">—</div>
+              <button class="tap rounded-xl app-chip px-3 py-2 text-xs font-semibold hover:opacity-90 flex items-center gap-1.5" data-close-advisor="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                Tutup
+              </button>
             </div>
           </div>
           <div class="sheet-body px-4 pb-5">
-            <div id="advisorContent" class="space-y-3">
-              <div class="rounded-2xl app-card p-4 flex items-center gap-4">
-                <div id="advisorHealthRing" class="health-ring shrink-0" style="--pct: 0%"><span id="advisorHealthScore">—</span></div>
-                <div class="min-w-0">
-                  <div class="text-sm font-semibold" data-i18n="health.score">Skor kesehatan</div>
-                  <div id="advisorHealthLabel" class="text-xs app-muted mt-1">—</div>
-                </div>
-              </div>
-              <div class="rounded-2xl app-card p-4">
-                <div class="text-sm font-semibold">Ringkasan</div>
-                <div id="advisorSummary" class="mt-2 text-sm leading-relaxed">Tap <span class="font-semibold">Generate</span> untuk membuat insight dari data transaksi kamu pada periode terpilih.</div>
-                <div id="advisorMetrics" class="mt-3 grid grid-cols-2 gap-2"></div>
-              </div>
-              <div class="rounded-2xl app-card p-4">
-                <div class="text-sm font-semibold">Insight utama</div>
-                <div id="advisorBullets" class="mt-2 space-y-2 text-sm"></div>
-              </div>
-              <div class="rounded-2xl app-card p-4">
-                <div class="flex items-center justify-between">
-                  <div class="text-sm font-semibold">Rekomendasi budget (bulan depan)</div>
-                  <div class="text-xs app-muted">planned</div>
-                </div>
-                <div id="advisorBudget" class="mt-3 space-y-2"></div>
-              </div>
-
-              <!-- AI Financial Coach (Chat) -->
-              <div class="rounded-2xl app-card p-4">
-                <div class="flex items-center justify-between gap-3">
-                  <div>
-                    <div class="text-sm font-semibold">AI Financial Coach</div>
-                    <div class="mt-1 text-xs app-muted">Tanya apa pun tentang kondisi keuanganmu pada periode ini.</div>
+            <div id="advisorContent" class="space-y-4">
+              
+              <!-- Top Section: Generate & Health -->
+              <div class="grid grid-cols-2 gap-3">
+                <div class="rounded-2xl p-4 flex flex-col justify-center relative overflow-hidden cursor-pointer hover:opacity-95 transition-opacity" style="background: linear-gradient(135deg, #10b981 0%, #047857 100%);" id="btnGenerateInsights">
+                  <div class="flex items-center gap-2 text-white font-bold text-base mb-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"/></svg>
+                    Generate
                   </div>
-                  <div id="coachQuota" class="text-xs app-muted"> </div>
+                  <div class="text-[10px] text-emerald-100">Buat insight dari data terbaru</div>
                 </div>
-                <div id="coachPrompts" class="mt-3 flex gap-2 overflow-x-auto pb-1">
-                  <button class="tap rounded-full app-chip px-3 py-1 text-xs coach-prompt">Bagaimana saving rate saya?</button>
-                  <button class="tap rounded-full app-chip px-3 py-1 text-xs coach-prompt">Kategori apa yang boros?</button>
-                  <button class="tap rounded-full app-chip px-3 py-1 text-xs coach-prompt">Buat rencana budget bulan depan</button>
-                </div>
-
-                <div id="coachChat" class="mt-3 rounded-2xl" style="border: 1px solid var(--app-border); background: color-mix(in srgb, var(--app-surface2) 70%, transparent)">
-                  <div id="coachMessages" class="p-3 space-y-2" style="max-height: 260px; overflow:auto; -webkit-overflow-scrolling: touch"></div>
-                  <div class="p-3 pt-0">
-                    <div class="flex items-end gap-2">
-                      <textarea id="coachInput" rows="2" class="tap flex-1 rounded-2xl app-input px-3 py-2 text-sm" placeholder="Contoh: Aku bulan ini boros nggak sih?"></textarea>
-                      <button id="btnCoachSend" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: var(--brand-green); border: 1px solid rgba(167,243,208,.35)">Kirim</button>
+                <div class="rounded-2xl app-card p-4 flex items-center gap-3 border border-slate-800/50 cursor-pointer hover:bg-white/5 transition-colors">
+                  <div id="advisorHealthRing" class="health-ring shrink-0" style="--pct: 0%; width: 48px; height: 48px;"><span id="advisorHealthScore" class="text-sm font-bold">—</span></div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[10px] app-muted">Skor kesehatan</div>
+                    <div class="flex items-baseline gap-1 mt-0.5">
+                      <span id="advisorHealthScoreRaw" class="text-lg font-bold text-white">—</span>
+                      <span class="text-[10px] text-slate-400">/100</span>
                     </div>
-                    <div id="coachStatus" class="mt-2 text-xs app-muted"> </div>
+                    <div id="advisorHealthLabel" class="text-[10px] font-bold mt-0.5" style="color: #10b981;">—</div>
                   </div>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
+                </div>
+              </div>
+              <div class="text-xs app-muted text-center" id="advisorStatus"></div>
+
+              <!-- Insight Utama -->
+              <div class="rounded-2xl app-card p-4 border border-slate-800/50">
+                <div class="flex items-start gap-3">
+                  <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: rgba(16,185,129,0.15); color: #10b981;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.9 1.2 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+                  </div>
+                  <div>
+                    <div class="text-sm font-bold text-white">Insight utama</div>
+                    <div class="text-[11px] app-muted mt-0.5">Ringkasan keuangan kamu pada periode terpilih.</div>
+                  </div>
+                </div>
+                
+                <div id="advisorMetrics" class="mt-4 grid grid-cols-4 gap-2">
+                  <!-- Metrics injected by JS -->
+                </div>
+                
+                <div class="mt-4 flex items-center justify-between text-[11px] app-muted bg-slate-800/50 p-2.5 rounded-xl border border-slate-700/50">
+                  <div class="flex items-center gap-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                    <span>Periode terpilih: <span id="advisorPeriodLabel" class="text-slate-300 font-medium">—</span></span>
+                  </div>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                </div>
+                
+                <div id="advisorBullets" class="hidden"></div>
+              </div>
+
+              <!-- Rekomendasi Budget -->
+              <div class="rounded-2xl app-card p-4 border border-slate-800/50">
+                <div class="flex items-start gap-3">
+                  <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: rgba(16,185,129,0.15); color: #10b981;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                  </div>
+                  <div>
+                    <div class="text-sm font-bold text-white">Rekomendasi budget (bulan depan)</div>
+                    <div class="text-[11px] app-muted mt-0.5">Saran alokasi berdasarkan pola spending kamu.</div>
+                  </div>
+                </div>
+                <div id="advisorBudget" class="mt-4 space-y-3"></div>
+                <button class="w-full mt-4 py-2 text-[11px] font-bold text-[#10b981] flex items-center justify-center gap-1 hover:opacity-80">
+                  Lihat semua insight
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+              </div>
+
+              <!-- AI Financial Coach -->
+              <div class="rounded-2xl app-card p-4 border border-slate-800/50">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: rgba(16,185,129,0.15); color: #10b981;">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="10" x="3" y="11" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg>
+                    </div>
+                    <div>
+                      <div class="text-sm font-bold text-white">AI Financial Coach</div>
+                      <div class="text-[11px] app-muted mt-0.5">Tanya tentang keuanganmu, AI siap bantu!</div>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-[10px] app-muted" id="coachQuotaText">Kuota: 999/999</div>
+                    <div class="text-[10px]" style="color: #10b981;" id="coachQuotaUsed">(terpakai 0)</div>
+                  </div>
+                </div>
+                
+                <div id="coachPrompts" class="mt-4 grid grid-cols-3 gap-2">
+                  <button class="tap rounded-xl app-chip p-2 text-[10px] font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition-colors flex flex-col items-center text-center gap-1.5 coach-prompt">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+                    Bagaimana saving rate saya?
+                  </button>
+                  <button class="tap rounded-xl app-chip p-2 text-[10px] font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition-colors flex flex-col items-center text-center gap-1.5 coach-prompt">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                    Kategori apa yang boros?
+                  </button>
+                  <button class="tap rounded-xl app-chip p-2 text-[10px] font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition-colors flex flex-col items-center text-center gap-1.5 coach-prompt">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                    Buat rencana budget bulan depan
+                  </button>
+                </div>
+
+                <div id="coachChat" class="mt-4">
+                  <div id="coachMessages" class="space-y-2 mb-3" style="max-height: 260px; overflow:auto; -webkit-overflow-scrolling: touch"></div>
+                  <div class="relative">
+                    <input id="coachInput" type="text" class="tap w-full rounded-xl app-input pl-3 pr-20 py-3 text-xs text-white placeholder-slate-500 border border-slate-700 focus:border-emerald-500 bg-slate-800/50" placeholder="Tanya AI apa pun..." />
+                    <button id="btnCoachSend" class="tap absolute right-1.5 top-1.5 bottom-1.5 rounded-lg px-3 text-xs font-bold text-white hover:opacity-95 flex items-center gap-1.5" style="background: #10b981;">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" x2="11" y1="2" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                      Kirim
+                    </button>
+                  </div>
+                  <div class="mt-2 text-[10px] app-muted">Contoh: "Aku bulan ini boros nggak sih?"</div>
+                  <div id="coachStatus" class="mt-1 text-xs app-muted"></div>
                 </div>
               </div>
 
-              <!-- AI Settings (Moved here) -->
-              <div class="rounded-2xl app-card p-4">
+              <!-- Pengaturan AI -->
+              <div class="rounded-2xl app-card p-4 border border-slate-800/50">
                 <div id="advisorAiEmptyCta" class="hidden rounded-xl app-card-opaque p-3 mb-3">
                   <div class="text-sm font-semibold">Monevisor AI belum aktif</div>
                   <div class="mt-1 text-xs app-muted">Hubungkan API key untuk analisa keuangan personal.</div>
                   <button id="btnEnableAiFromAdvisor" class="tap mt-2 rounded-xl px-3 py-2 text-xs font-semibold text-white hover:opacity-95" style="background: var(--brand-green)">Aktifkan Monevisor</button>
                 </div>
-                <div class="text-sm font-semibold">Pengaturan AI (Monefyi)</div>
-                <p class="mt-1 text-xs app-muted leading-relaxed">
-                  Masukkan API key Gemini kamu untuk mengaktifkan fitur cerdas Monefyi.
-                </p>
-                <div class="mt-3 space-y-2">
-                  <label class="text-xs app-muted">Gemini API Key</label>
-                  <input id="geminiKey" class="tap w-full rounded-xl app-input px-3 py-2 text-sm" placeholder="AIza..." />
-                  <label class="flex items-center justify-between gap-3 text-sm app-chip px-3 py-2 rounded-xl">
-                    <span>Aktifkan AI</span>
-                    <input id="toggleGemini" type="checkbox" class="h-5 w-5" />
+                
+                <div class="flex items-start gap-3">
+                  <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: rgba(16,185,129,0.15); color: #10b981;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+                  </div>
+                  <div>
+                    <div class="text-sm font-bold text-white">Pengaturan AI (Monefyi)</div>
+                    <div class="text-[11px] app-muted mt-0.5">Hubungkan API Key Gemini kamu untuk fitur AI yang lebih cerdas.</div>
+                  </div>
+                </div>
+                
+                <div class="mt-4 space-y-3">
+                  <div class="flex items-center gap-2 bg-slate-800/50 rounded-xl p-1 border border-slate-700">
+                    <div class="text-[11px] text-slate-400 pl-3 w-24 shrink-0">Gemini API Key</div>
+                    <input id="geminiKey" type="password" class="tap flex-1 bg-transparent px-2 py-2 text-xs text-white placeholder-slate-600 outline-none" placeholder="••••••••••••••••••••" />
+                    <button class="p-2 text-slate-400 hover:text-white" onclick="const i=document.getElementById('geminiKey'); i.type=i.type==='password'?'text':'password';">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                  </div>
+                  
+                  <label class="flex items-center justify-between gap-3 bg-slate-800/50 rounded-xl p-3 border border-slate-700 cursor-pointer">
+                    <div>
+                      <div class="text-[11px] font-bold text-white">Aktifkan AI</div>
+                      <div class="text-[10px] app-muted mt-0.5">Izinkan AI memberikan insight dan rekomendasi</div>
+                    </div>
+                    <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                      <input id="toggleGemini" type="checkbox" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer transition-transform duration-200 ease-in-out" style="border-color: #cbd5e1; top: 2px; left: 2px;"/>
+                      <label for="toggleGemini" class="toggle-label block overflow-hidden h-6 rounded-full bg-slate-600 cursor-pointer transition-colors duration-200 ease-in-out"></label>
+                    </div>
                   </label>
 
-                  <div class="flex items-center gap-2">
-                    <button id="btnSaveGemini" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: rgba(16,185,129,.92)">Simpan</button>
-                    <button id="btnTestAI" class="tap rounded-2xl app-chip px-4 py-2 text-sm hover:opacity-90">Tes Koneksi</button>
+                  <div class="flex items-center gap-2 pt-1">
+                    <button id="btnSaveGemini" class="tap rounded-xl px-4 py-2.5 text-xs font-bold text-white hover:opacity-95 flex items-center gap-1.5" style="background: #10b981;">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                      Simpan
+                    </button>
+                    <button id="btnTestAI" class="tap rounded-xl border border-slate-600 bg-transparent px-4 py-2.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 flex items-center gap-1.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+                      Tes Koneksi
+                    </button>
                   </div>
-                  <div class="text-xs app-muted" id="geminiStatus">—</div>
+                  <div class="text-[10px] app-muted" id="geminiStatus"></div>
                 </div>
               </div>
 

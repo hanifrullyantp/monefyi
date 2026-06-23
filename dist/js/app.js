@@ -1641,25 +1641,10 @@ async function upsertTransaction_legacy_local(tx) {
       $('#btnTopAi')?.addEventListener('click', toggleAi);
       $('#btnTopAiMobile')?.addEventListener('click', toggleAi);
 
-      const toggleFilter = () => {
-        const chips = $('#txTypeChips');
-        if (!chips) return;
-        const isDesktop = window.matchMedia('(min-width: 768px)').matches;
-        if (isDesktop) {
-          chips.classList.toggle('tx-chips--desktop-hidden');
-        } else {
-          chips.classList.toggle('tx-chips--collapsed');
-        }
-        const shown = isDesktop
-          ? !chips.classList.contains('tx-chips--desktop-hidden')
-          : !chips.classList.contains('tx-chips--collapsed');
-        ['#btnTopFilterType', '#btnTopFilterTypeMobile'].forEach((sel) => {
-          $(sel)?.classList.toggle('active', shown);
-        });
-        if (shown) requestAnimationFrame(() => window.MonefyiUI?.syncChipIndicator?.());
-      };
-      $('#btnTopFilterType')?.addEventListener('click', toggleFilter);
-      $('#btnTopFilterTypeMobile')?.addEventListener('click', toggleFilter);
+      $('#btnTopFilterTypeMobile')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleTxDesktopFilters();
+      });
 
       $('#btnDesktopFilter')?.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -2785,11 +2770,11 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
         dynamicContent.classList.toggle('dynamic-content--tx', !STATE.ui.dashboardOpen);
       }
       const showTxUi = !STATE.ui.dashboardOpen;
-      const showTxDesktopFilters = showTxUi && isDesktopViewport() && !!STATE.ui.txDesktopFiltersOpen;
+      const showTxFilters = showTxUi && !!STATE.ui.txDesktopFiltersOpen;
       const txFilterBar = $('#txDesktopFilterBar');
       if (txFilterBar) {
-        txFilterBar.classList.toggle('hidden', !showTxDesktopFilters);
-        txFilterBar.classList.toggle('md:grid', showTxDesktopFilters);
+        txFilterBar.classList.toggle('hidden', !showTxFilters);
+        txFilterBar.classList.toggle('tx-filter-bar--open', showTxFilters);
       }
       const dfType = $('#dfType');
       if (dfType) dfType.value = STATE.filters.type || '';
@@ -2801,13 +2786,14 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       if (dfPeriod) dfPeriod.value = STATE.period.preset || 'this_month';
       if ($('#dfRangeStart')) $('#dfRangeStart').value = STATE.period.start || '';
       if ($('#dfRangeEnd')) $('#dfRangeEnd').value = STATE.period.end || '';
-      const showDfRange = showTxDesktopFilters && (STATE.period.preset === 'custom' || dfPeriod?.value === 'custom');
+      const showDfRange = showTxFilters && (STATE.period.preset === 'custom' || dfPeriod?.value === 'custom');
       const txFilterRange = $('#txDesktopFilterRange');
       if (txFilterRange) {
         txFilterRange.classList.toggle('hidden', !showDfRange);
-        txFilterRange.classList.toggle('md:grid', showDfRange);
+        txFilterRange.classList.toggle('tx-filter-range--open', showDfRange);
       }
-      $('#btnDesktopFilter')?.classList.toggle('active', !!STATE.ui.txDesktopFiltersOpen && isDesktopViewport());
+      $('#btnDesktopFilter')?.classList.toggle('active', showTxFilters && isDesktopViewport());
+      $('#btnTopFilterTypeMobile')?.classList.toggle('active', showTxFilters && !isDesktopViewport());
 
       const txToolbar = $('#desktopHeader');
       if (txToolbar) {
@@ -6765,6 +6751,7 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
       if ($('#advisorHealthRing') && Number.isFinite(hs)) {
         $('#advisorHealthRing').style.setProperty('--pct', `${hs}%`);
         $('#advisorHealthScore').textContent = String(hs);
+        if ($('#advisorHealthScoreRaw')) $('#advisorHealthScoreRaw').textContent = String(hs);
         const labelMap = {
           excellent: t('health.excellent') || 'Sangat baik',
           good: t('health.good') || 'Baik',
@@ -6803,14 +6790,60 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
       // Smarter budget reco: treat utilities as monthly fixed (1x/month) and cap frequency suggestions
       // We still show planned values, but add note in bullets if utilities detected.
 
-      $('#advisorSummary').textContent = ins.summary;
+      $('#advisorSummary') && ($('#advisorSummary').textContent = ins.summary);
       const m = ins.metrics || {};
+      
+      const formatVal = (val) => {
+        if (val >= 1000000) return (val / 1000000).toFixed(1).replace(/\.0$/, '') + ' jt';
+        if (val >= 1000) return (val / 1000).toFixed(0) + ' rb';
+        return val.toString();
+      };
+
       $('#advisorMetrics').innerHTML = `
-        <div class="rounded-xl app-chip p-2"><div class="text-[11px] app-muted">Income</div><div class="font-semibold">${formatCompactIDR(m.income||0)}</div></div>
-        <div class="rounded-xl app-chip p-2"><div class="text-[11px] app-muted">Expense</div><div class="font-semibold">${formatCompactIDR(m.expense||0)}</div></div>
-        <div class="rounded-xl app-chip p-2"><div class="text-[11px] app-muted">Net</div><div class="font-semibold">${formatCompactIDR(m.net||0)}</div></div>
-        <div class="rounded-xl app-chip p-2"><div class="text-[11px] app-muted">Saving</div><div class="font-semibold">${m.income>0?Math.round((m.net/m.income)*100):0}%</div></div>
+        <div class="rounded-xl app-chip p-3 flex flex-col justify-between gap-2 border border-slate-700/50">
+          <div class="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style="background: rgba(16,185,129,0.15); color: #10b981;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+          </div>
+          <div>
+            <div class="text-[10px] app-muted">Income</div>
+            <div class="font-bold text-white text-sm mt-0.5">${formatVal(m.income||0)}</div>
+          </div>
+        </div>
+        <div class="rounded-xl app-chip p-3 flex flex-col justify-between gap-2 border border-slate-700/50">
+          <div class="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style="background: rgba(244,63,94,0.15); color: #f43f5e;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><line x1="9" x2="15" y1="7" y2="7"/><line x1="9" x2="15" y1="11" y2="11"/><line x1="9" x2="11" y1="15" y2="15"/></svg>
+          </div>
+          <div>
+            <div class="text-[10px] app-muted">Expense</div>
+            <div class="font-bold text-white text-sm mt-0.5">${formatVal(m.expense||0)}</div>
+          </div>
+        </div>
+        <div class="rounded-xl app-chip p-3 flex flex-col justify-between gap-2 border border-slate-700/50">
+          <div class="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style="background: rgba(59,130,246,0.15); color: #3b82f6;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
+          </div>
+          <div>
+            <div class="text-[10px] app-muted">Net</div>
+            <div class="font-bold text-white text-sm mt-0.5">${formatVal(m.net||0)}</div>
+          </div>
+        </div>
+        <div class="rounded-xl app-chip p-3 flex flex-col justify-between gap-2 border border-slate-700/50">
+          <div class="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style="background: rgba(16,185,129,0.15); color: #10b981;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+          </div>
+          <div>
+            <div class="text-[10px] app-muted">Saving Rate</div>
+            <div class="font-bold text-white text-sm mt-0.5">${m.income>0?Math.round((m.net/m.income)*100):0}%</div>
+          </div>
+        </div>
       `;
+
+      if ($('#advisorPeriodLabel')) {
+        const start = new Date(STATE.period.start);
+        const end = new Date(STATE.period.end);
+        const formatOpts = { day: 'numeric', month: 'short', year: 'numeric' };
+        $('#advisorPeriodLabel').textContent = `${start.toLocaleDateString('id-ID', {day:'numeric'})} - ${end.toLocaleDateString('id-ID', formatOpts)}`;
+      }
 
       const bullets = [];
       if (Array.isArray(ins.aiBullets) && ins.aiBullets.length) {
@@ -6847,21 +6880,30 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
       const by = b?.by_category || (Array.isArray(ins.budgetRecommendations)
         ? ins.budgetRecommendations.map(r => ({ category: r.category, planned: r.planned }))
         : []);
-      $('#advisorBudget').innerHTML = by.length ? by.map(row => {
+      
+      $('#advisorBudget').innerHTML = by.length ? by.map((row, idx) => {
         const catNorm = normalizeText(row.category);
         const isUtil = utilKeywords.some(k => catNorm.includes(k));
-        const note = isUtil ? 'utilitas (umumnya 1x/bulan)' : 'berdasarkan pola spending kamu';
+        let note = isUtil ? 'Utilitas terdeteksi (umumnya 1x/bulan)' : `Insight ${idx + 1}`;
+        
         return `
-          <div class="rounded-2xl app-card p-3">
-            <div class="flex items-center justify-between gap-3">
-              <div class="min-w-0">
-                <div class="text-sm font-semibold truncate">${escapeHtml(row.category)}</div>
-                <div class="text-xs app-muted">${escapeHtml(note)}</div>
+          <div class="flex items-center gap-3 py-2 border-b border-slate-800/50 last:border-0 cursor-pointer hover:bg-white/5 transition-colors rounded-xl px-2 -mx-2">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold" style="background: rgba(16,185,129,0.15); color: #10b981;">
+              ${idx + 1}
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <div class="text-sm font-bold text-white truncate">${escapeHtml(row.category)}</div>
+                ${idx === 0 ? '<div class="text-[9px] font-bold px-1.5 py-0.5 rounded" style="background: rgba(16,185,129,0.15); color: #10b981;">Top kategori</div>' : ''}
               </div>
-              <div class="text-right">
-                <div class="text-sm font-semibold" style="color: rgba(199,210,254,.95)">${formatIDR(row.planned)}</div>
-                <div class="text-xs app-muted2">planned</div>
+              <div class="text-[10px] app-muted mt-0.5 truncate">${escapeHtml(note)}</div>
+            </div>
+            <div class="text-right flex items-center gap-2">
+              <div>
+                <div class="text-sm font-bold text-white">${formatIDR(row.planned)}</div>
+                <div class="text-[10px] app-muted">Rekomendasi</div>
               </div>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500"><path d="m9 18 6-6-6-6"/></svg>
             </div>
           </div>
         `;
@@ -6870,8 +6912,8 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
 
     async function generateInsightsAndRender(){
       $('#advisorStatus').textContent = 'Mengolah…';
-      $('#advisorSummary').innerHTML = '<div class="h-4 w-5/6 rounded skeleton-line"></div><div class="mt-2 h-4 w-4/6 rounded skeleton-line"></div>';
-      $('#advisorBullets').innerHTML = window.MonefyiUI?.txSkeleton(2) || '';
+      if ($('#advisorSummary')) $('#advisorSummary').innerHTML = '<div class="h-4 w-5/6 rounded skeleton-line"></div><div class="mt-2 h-4 w-4/6 rounded skeleton-line"></div>';
+      $('#advisorMetrics').innerHTML = '<div class="col-span-4 h-16 rounded-xl skeleton-line"></div>';
       $('#advisorBudget').innerHTML = '<div class="h-10 rounded-xl skeleton-line"></div>';
       await sleep(180);
 
@@ -6943,11 +6985,12 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
       const wrap = document.createElement('div');
       wrap.className = mine ? 'flex justify-end' : 'flex justify-start';
       const b = document.createElement('div');
-      b.className = 'max-w-[85%] rounded-2xl px-3 py-2 text-sm';
+      b.className = 'max-w-[85%] rounded-2xl px-3 py-2 text-xs leading-relaxed';
       b.style.border = '1px solid var(--app-border)';
       b.style.background = mine
-        ? 'color-mix(in srgb, var(--brand-green) 22%, var(--app-sheet) 78%)'
-        : 'color-mix(in srgb, var(--app-sheet) 92%, var(--app-bg) 8%)';
+        ? 'color-mix(in srgb, #10b981 22%, transparent 78%)'
+        : 'color-mix(in srgb, #1e293b 80%, transparent 20%)';
+      b.style.color = 'white';
       b.textContent = text;
       wrap.appendChild(b);
       return wrap;
@@ -6960,8 +7003,8 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
 
       if (!COACH.messages.length) {
         const hint = document.createElement('div');
-        hint.className = 'text-xs app-muted';
-        hint.textContent = 'Tanya AI tentang pengeluaran, budget, atau saran hemat. (Contoh: “Aku bulan ini boros nggak?”)';
+        hint.className = 'text-[10px] app-muted text-center py-2';
+        hint.textContent = 'Belum ada percakapan. Mulai sapa AI!';
         box.appendChild(hint);
         return;
       }
@@ -7016,18 +7059,22 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
     }
 
     async function refreshCoachQuotaUI(){
-      const qEl = $('#coachQuota');
-      if (!qEl) return;
-      qEl.textContent = 'Memuat kuota…';
+      const qText = $('#coachQuotaText');
+      const qUsed = $('#coachQuotaUsed');
+      if (!qText) return;
+      qText.textContent = 'Memuat kuota…';
+      if (qUsed) qUsed.textContent = '';
       try {
         const out = await fetchCoachQuotaStatus();
         const remaining = Number(out?.remaining ?? 0);
         const limit = Number(out?.limit ?? 0);
         const used = Number(out?.usedToday ?? 0);
-        qEl.textContent = `Kuota hari ini: ${remaining}/${limit} tersisa (terpakai ${used})`;
+        qText.textContent = `Kuota: ${remaining}/${limit}`;
+        if (qUsed) qUsed.textContent = `(terpakai ${used})`;
       } catch (e) {
         console.warn('quota status failed:', e);
-        qEl.textContent = 'Kuota AI tidak tersedia';
+        qText.textContent = 'Kuota AI tidak tersedia';
+        if (qUsed) qUsed.textContent = '';
       }
     }
 
@@ -8201,8 +8248,9 @@ function toggleNav(view, triggerEl) {
     function setTxDesktopFilters(open) {
       STATE.ui.txDesktopFiltersOpen = !!open;
       if (!open) {
-        $('#txDesktopFilterRange')?.classList.add('hidden');
-        $('#txDesktopFilterRange')?.classList.remove('md:grid');
+        const range = $('#txDesktopFilterRange');
+        range?.classList.add('hidden');
+        range?.classList.remove('tx-filter-range--open');
       }
       if (open) ensureSelectOptions();
       rerender();
@@ -8455,7 +8503,7 @@ function toggleNav(view, triggerEl) {
       if (preset === 'custom') {
         const range = $('#txDesktopFilterRange');
         range?.classList.remove('hidden');
-        range?.classList.add('md:grid');
+        range?.classList.add('tx-filter-range--open');
         return;
       }
       applyPreset(preset);
