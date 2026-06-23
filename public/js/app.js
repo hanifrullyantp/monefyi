@@ -3499,15 +3499,6 @@ function generateSmartBudgetRecommendation() {
       let animIdx = 0;
 
       for (const date of dates) {
-        const net = sumByType(groups.get(date)).net;
-        const divider = document.createElement('div');
-        divider.className = 'tx-date-divider';
-        divider.innerHTML = `
-          <span class="text-xs font-semibold shrink-0">${escapeHtml(relativeDayLabel(date))}</span>
-          <span class="text-xs font-medium shrink-0 tx-date-divider__net--${net >= 0 ? 'pos' : 'neg'}">${t('common.net')}: ${formatCompactIDR(net)}</span>
-        `;
-        list.appendChild(divider);
-
         for (const tx of groups.get(date)) {
           const row = document.createElement('div');
           row.className = 'tx-card-v2 tx-card-compact app-card w-full text-left' + (tx.meta?.pending ? ' tx-pending' : '');
@@ -3524,18 +3515,26 @@ function generateSmartBudgetRecommendation() {
           const amtColor = isInc ? 'var(--accent-primary)' : isExp ? 'var(--accent-danger)' : 'var(--app-text)';
           const sign = isInc ? '+' : isExp ? '−' : '';
           const title = tx.merchant || tx.category || 'Lainnya';
-          const subtitle = [tx.category !== title ? tx.category : null, tx.account, tx.type].filter(Boolean).join(' · ');
+          const subtitle = [tx.category !== title ? tx.category : null, tx.account].filter(Boolean).join(' · ');
+          const dateFormatted = formatShortDate(tx.date);
+          const netAmount = calculateTxNet(tx);
+          const netColor = netAmount >= 0 ? 'var(--accent-primary)' : 'var(--accent-danger)';
+          const typeLabel = tx.type === 'income' ? t('tx.type.income') : tx.type === 'expense' ? t('tx.type.expense') : t('tx.type.transfer');
 
           row.innerHTML = `
             <div class="tx-card-swipe-delete" aria-hidden="true">${t('tx.swipe.delete') || 'Hapus'}</div>
-            <div class="tx-card-inner">
+            <div class="tx-card-inner tx-card-mockup">
               <div class="tx-card-row">
                 <div class="tx-icon shrink-0" style="background:${categoryIconBg(tx.category)}">${categoryIconHtml(tx.category)}</div>
                 <div class="tx-card-body">
                   <div class="text-sm font-semibold truncate leading-tight">${escapeHtml(title)}</div>
-                  <div class="text-[11px] app-muted truncate">${escapeHtml(subtitle)}${tx.meta?.pending ? ' · ' + (t('tx.pending') || '…') : ''}</div>
+                  <div class="tx-card-mockup__meta text-[11px] app-muted truncate">${escapeHtml(subtitle)} · ${typeLabel}${tx.meta?.pending ? ' · ' + (t('tx.pending') || '…') : ''}</div>
                 </div>
-                <div class="tx-card-amount" style="color:${amtColor}">${sign}${formatIDR(Number(tx.amount||0))}</div>
+                <div class="tx-card-mockup__amount text-right shrink-0">
+                  <div class="text-[10px] app-muted">${dateFormatted}</div>
+                  <div class="font-bold" style="color:${netColor}">${sign}${formatIDR(Math.abs(netAmount))}</div>
+                  <div class="font-bold" style="color:${amtColor}; font-size: 15px;">${sign}${formatIDR(Number(tx.amount||0))}</div>
+                </div>
                 <div class="tx-card-actions shrink-0 hidden md:flex">
                   <button type="button" class="tx-action-btn tap" data-tip="Edit" data-tx-edit="${escapeHtmlAttr(tx.id)}" aria-label="Edit">${TX_ICON_EDIT}</button>
                   <button type="button" class="tx-action-btn tx-action-btn--danger tap" data-tip="Hapus" data-tx-del-quick="${escapeHtmlAttr(tx.id)}" aria-label="Hapus">${TX_ICON_DEL}</button>
@@ -3669,8 +3668,25 @@ function generateSmartBudgetRecommendation() {
     const sheetBackdrop = $('#sheetBackdrop');
     const sheet = $('#sheet');
 
+function closeOverlaySheetsForAdd() {
+  try { closeBudget(); } catch (_) {}
+  try { closeAdvisor(); } catch (_) {}
+  try { closeMenu(); } catch (_) {}
+  try { closeUser(); } catch (_) {}
+  try { closeAccounts(); } catch (_) {}
+  try { closeAccountDetail(); } catch (_) {}
+  try { closeEditModal(); } catch (_) {}
+  try { closeTutorial(); } catch (_) {}
+  try { closeAffModal(); } catch (_) {}
+  try { closeAdminPanel(); } catch (_) {}
+}
+
 function openAddSheet(tab = 'quick') {
-  sheet?.classList.toggle('sheet-form-panel', isDesktopViewport());
+  closeOverlaySheetsForAdd();
+  const sheetEl = document.getElementById('sheet');
+  const desktop = isDesktopViewport();
+  sheetEl?.classList.toggle('sheet-form-panel', desktop);
+  setSheetPosition(desktop && tab === 'quick' ? 'center' : 'bottom');
   // 1. Isi Dropdown Kategori, Akun, Metode (Agar Manual selalu siap)
   const cats = getActiveBudgetCats();
   const mCat = document.getElementById('mCategory');
@@ -3700,15 +3716,14 @@ function openAddSheet(tab = 'quick') {
     if ($('#mDate') && !$('#mDate').value) $('#mDate').value = toISODate(new Date());
     validateManualForm();
     setTimeout(() => $('#mAmount')?.focus(), 120);
+  } else if (tab === 'quick') {
+    setTimeout(() => $('#quickText')?.focus(), 120);
   }
 }
 
     // Buka input AI (quick) sebagai popup di tengah
 function openQuickAdd() {
-  setSheetPosition('center');          // posisi tengah
-  if (typeof openAddSheet === 'function') {
-    openAddSheet('quick');            // pakai fungsi lama: aktifkan tab quick
-  }
+  openAddSheet('quick');
 }
 
 // Gunakan ID btnQuickGoManual sesuai HTML Anda
@@ -3756,16 +3771,13 @@ function setSheetPosition(mode) {
   var sheet = document.getElementById('sheet');
   if (!sheet) return;
 
-  if (mode === 'center') {
-    // popup di tengah
-    sheet.classList.remove('bottom-0');
-    sheet.classList.add('top-1/2');
-    sheet.classList.add('-translate-y-1/2');
-  } else {
-    // bottom sheet biasa
+  const useBottom = mode !== 'center' || !isDesktopViewport();
+  if (useBottom) {
     sheet.classList.add('bottom-0');
-    sheet.classList.remove('top-1/2');
-    sheet.classList.remove('-translate-y-1/2');
+    sheet.classList.remove('top-1/2', '-translate-y-1/2');
+  } else {
+    sheet.classList.remove('bottom-0');
+    sheet.classList.add('top-1/2', '-translate-y-1/2');
   }
 }
     function closeAddSheet(){ closeSheet(sheetBackdrop, sheet); }
@@ -7639,9 +7651,9 @@ function toggleNav_legacy(mode) {
     }
 
     $('#btnMainAction')?.addEventListener('click', (e) => {
-      const menu = $('#actionMenu');
-      menu.classList.toggle('hidden');
       e.stopPropagation();
+      $('#actionMenu')?.classList.add('hidden');
+      openAddSheet('quick');
     });
 
     document.addEventListener('click', () => $('#actionMenu')?.classList.add('hidden'));

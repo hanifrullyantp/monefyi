@@ -3669,8 +3669,25 @@ function generateSmartBudgetRecommendation() {
     const sheetBackdrop = $('#sheetBackdrop');
     const sheet = $('#sheet');
 
+function closeOverlaySheetsForAdd() {
+  try { closeBudget(); } catch (_) {}
+  try { closeAdvisor(); } catch (_) {}
+  try { closeMenu(); } catch (_) {}
+  try { closeUser(); } catch (_) {}
+  try { closeAccounts(); } catch (_) {}
+  try { closeAccountDetail(); } catch (_) {}
+  try { closeEditModal(); } catch (_) {}
+  try { closeTutorial(); } catch (_) {}
+  try { closeAffModal(); } catch (_) {}
+  try { closeAdminPanel(); } catch (_) {}
+}
+
 function openAddSheet(tab = 'quick') {
-  sheet?.classList.toggle('sheet-form-panel', isDesktopViewport());
+  closeOverlaySheetsForAdd();
+  const sheetEl = document.getElementById('sheet');
+  const desktop = isDesktopViewport();
+  sheetEl?.classList.toggle('sheet-form-panel', desktop);
+  setSheetPosition(desktop && tab === 'quick' ? 'center' : 'bottom');
   // 1. Isi Dropdown Kategori, Akun, Metode (Agar Manual selalu siap)
   const cats = getActiveBudgetCats();
   const mCat = document.getElementById('mCategory');
@@ -3700,15 +3717,14 @@ function openAddSheet(tab = 'quick') {
     if ($('#mDate') && !$('#mDate').value) $('#mDate').value = toISODate(new Date());
     validateManualForm();
     setTimeout(() => $('#mAmount')?.focus(), 120);
+  } else if (tab === 'quick') {
+    setTimeout(() => $('#quickText')?.focus(), 120);
   }
 }
 
     // Buka input AI (quick) sebagai popup di tengah
 function openQuickAdd() {
-  setSheetPosition('center');          // posisi tengah
-  if (typeof openAddSheet === 'function') {
-    openAddSheet('quick');            // pakai fungsi lama: aktifkan tab quick
-  }
+  openAddSheet('quick');
 }
 
 // Gunakan ID btnQuickGoManual sesuai HTML Anda
@@ -3756,16 +3772,13 @@ function setSheetPosition(mode) {
   var sheet = document.getElementById('sheet');
   if (!sheet) return;
 
-  if (mode === 'center') {
-    // popup di tengah
-    sheet.classList.remove('bottom-0');
-    sheet.classList.add('top-1/2');
-    sheet.classList.add('-translate-y-1/2');
-  } else {
-    // bottom sheet biasa
+  const useBottom = mode !== 'center' || !isDesktopViewport();
+  if (useBottom) {
     sheet.classList.add('bottom-0');
-    sheet.classList.remove('top-1/2');
-    sheet.classList.remove('-translate-y-1/2');
+    sheet.classList.remove('top-1/2', '-translate-y-1/2');
+  } else {
+    sheet.classList.remove('bottom-0');
+    sheet.classList.add('top-1/2', '-translate-y-1/2');
   }
 }
     function closeAddSheet(){ closeSheet(sheetBackdrop, sheet); }
@@ -7639,9 +7652,9 @@ function toggleNav_legacy(mode) {
     }
 
     $('#btnMainAction')?.addEventListener('click', (e) => {
-      const menu = $('#actionMenu');
-      menu.classList.toggle('hidden');
       e.stopPropagation();
+      $('#actionMenu')?.classList.add('hidden');
+      openAddSheet('quick');
     });
 
     document.addEventListener('click', () => $('#actionMenu')?.classList.add('hidden'));

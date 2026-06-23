@@ -9,9 +9,9 @@
 
     /* App theme — Monefyi design system (emerald + white / dark blue) */
     body {
-      --app-bg: #0D1117;
-      --app-card: #1C2333;
-      --app-surface: #1E2130;
+      --app-bg: #0A0E13;
+      --app-card: #151A24;
+      --app-surface: #1A1F2B;
       --app-surface2: rgba(255,255,255,.06);
       --app-text: #E2E8F0;
       --app-muted: #94A3B8;
@@ -70,7 +70,29 @@ html, body {
     overflow-x: hidden;
   }
     .app-header { background: var(--app-backdrop); border-bottom: 1px solid var(--app-border); }
-    .nav-bar { background: var(--nav-surface); border-top: 1px solid var(--app-border); backdrop-filter: blur(12px); }
+    .nav-bar {
+      background: var(--nav-surface);
+      border-top: 1px solid var(--app-border);
+      backdrop-filter: blur(12px);
+      position: relative;
+      overflow: hidden;
+      mask-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 375 70" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 0H375V50C375 61.0457 366.046 70 355 70H20C8.9543 70 0 61.0457 0 50V0Z" fill="black"/></svg>');
+      mask-size: 100% 100%;
+      mask-repeat: no-repeat;
+    }
+    .nav-bar-inner {
+      height: 100%;
+      width: 100%;
+      background: var(--nav-surface);
+      border-top: 1px solid var(--app-border);
+      backdrop-filter: blur(12px);
+      mask-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 375 70" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 0H375V50C375 61.0457 366.046 70 355 70H20C8.9543 70 0 61.0457 0 50V0Z" fill="black"/></svg>');
+      mask-size: 100% 100%;
+      mask-repeat: no-repeat;
+      position: absolute;
+      bottom: 0;
+      left: 0;
+    }
     .app-card { background: var(--app-card, var(--app-surface)); border: 1px solid var(--app-border); border-radius: var(--radius-card); }
     @keyframes bounce-soft {
       0% { transform: scale(1); }
@@ -146,23 +168,35 @@ html, body {
       opacity: 0.55;
     }
 
-    /* Kartu saldo sidebar */
     .sidebar-saldo-card {
-      width: 100%;
-      padding: 16px 16px 14px;
-      border-radius: var(--radius-card);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-      text-align: left;
+      padding: 16px;
+      border-radius: 20px;
+      background: linear-gradient(145deg, #0D1117 0%, #1a2744 100%);
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow: 0 8px 32px rgba(16,185,129,.08), inset 0 -1px 0 rgba(16,185,129,.15);
+      overflow: hidden;
+      position: relative;
     }
-    .sidebar-saldo-card__label {
-      font-size: 11px;
-      font-weight: 500;
+    .sidebar-saldo-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 0%, rgba(16,185,129,.08), transparent 55%),
+        radial-gradient(ellipse 60% 40% at 90% 100%, rgba(14,165,233,.06), transparent 50%);
+      pointer-events: none;
+    }
+    .sidebar-saldo-card > * { position: relative; z-index: 1; }
+    .sidebar-saldo-card__label-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
       color: var(--app-muted);
+      font-weight: 500;
     }
     .sidebar-saldo-card__amount {
-      margin-top: 6px;
-      font-size: clamp(1.45rem, 2.4vw, 1.95rem) !important;
+      font-size: clamp(1.45rem, 2.4vw, 1.95rem);
       font-weight: 700;
       line-height: 1.1;
       max-width: 100%;
@@ -170,16 +204,27 @@ html, body {
       overflow-wrap: anywhere;
       white-space: normal;
     }
-    .sidebar-saldo-card__sub {
-      margin-top: 8px;
-      font-size: 11px;
-      line-height: 1.45;
-      color: var(--app-muted);
-    }
-    .sidebar-saldo-card__footer {
+    .sidebar-saldo-card__body {
       display: flex;
-      justify-content: flex-end;
+      gap: 12px;
       margin-top: 12px;
+      position: relative;
+      align-items: flex-end;
+    }
+    .sidebar-saldo-card__metrics {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      flex-grow: 1;
+    }
+    .sidebar-saldo-sparkline {
+      position: absolute;
+      right: 0;
+      bottom: -16px; /* Adjust as needed */
+      width: 40%; /* ~40% width of card */
+      height: 80px; /* fixed height for sparkline */
+      opacity: 0.8;
+      filter: drop-shadow(0 0 4px rgba(16,185,129,.5));
     }
     .sidebar-saldo-filter {
       display: inline-flex;
@@ -352,12 +397,21 @@ html, body {
       body.sidebar-collapsed #desktopSaldoStrip {
         display: flex !important;
       }
-      .tx-section-head--desktop-hidden { display: none !important; }
-      .tx-chips--desktop-hidden { display: none !important; }
+    .tx-section-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      width: 100%;
     }
-    .saldo-dot--income { color: var(--accent-primary); }
-    .saldo-dot--expense { color: var(--accent-danger); }
-    .saldo-period-line { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .tx-section-head-mobile {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+    .tx-section-head--desktop-hidden { display: none !important; }
+    .tx-chips--desktop-hidden { display: none !important; }
     .saldo-metric-chip {
       display: inline-flex;
       align-items: center;
@@ -427,7 +481,10 @@ html, body {
       justify-content: space-between;
       gap: 12px;
     }
-    .hero-saldo-card__label {
+    .hero-saldo-card__label-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
       font-size: 12px;
       color: var(--app-muted);
       font-weight: 500;
@@ -445,20 +502,56 @@ html, body {
       color: var(--app-text);
       backdrop-filter: blur(8px);
     }
-    .hero-saldo-card__chips {
+    .hero-saldo-card__body {
       display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 10px;
-    }
-    .hero-saldo-card__bottom {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
       gap: 12px;
       margin-top: 12px;
+      position: relative;
+      align-items: flex-end;
     }
-    .hero-health-pill {
+    .hero-saldo-metrics {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      flex-grow: 1;
+    }
+    .kpi-metric {
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.08);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--app-muted);
+    }
+    .kpi-metric--income { color: var(--accent-primary); border-color: rgba(16,185,129,.2); background: rgba(16,185,129,.1); }
+    .kpi-metric--expense { color: var(--accent-danger); border-color: rgba(244,63,94,.2); background: rgba(244,63,94,.1); }
+    .kpi-metric__value {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-top: 2px;
+      color: var(--app-text);
+    }
+    .hero-saldo-sparkline {
+      position: absolute;
+      right: 0;
+      bottom: -16px; /* Adjust as needed */
+      width: 40%; /* ~40% width of card */
+      height: 80px; /* fixed height for sparkline */
+      opacity: 0.8;
+      filter: drop-shadow(0 0 4px rgba(16,185,129,.5));
+    }
+    .saldo-masked {
+      filter: blur(4px);
+      transition: filter 0.2s ease;
+    }
+    .saldo-masked--active {
+      filter: blur(4px);
+    }
+    .saldo-masked--inactive {
+      filter: blur(0);
+    }
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -744,7 +837,30 @@ html, body {
     .tx-date-divider__net--pos { color: var(--accent-primary); }
     .tx-date-divider__net--neg { color: var(--accent-danger); }
 
-    /* Transaction card v2 */
+    /* Transaction card mockup */
+    .tx-card-mockup .tx-card-row {
+      align-items: flex-start;
+    }
+    .tx-card-mockup .tx-icon {
+      width: 48px; height: 48px;
+      font-size: 18px;
+    }
+    .tx-card-mockup__meta {
+      font-size: 11px;
+      color: var(--app-muted);
+      margin-top: 2px;
+    }
+    .tx-card-mockup__amount {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+      font-variant-numeric: tabular-nums;
+    }
+    .tx-card-mockup__amount .font-bold {
+      font-size: 15px;
+      font-weight: 700;
+    }
     .tx-card-v2 {
       padding: 0;
       border-radius: var(--radius-card);
@@ -1169,21 +1285,11 @@ html, body {
 
     .nav-item.active {
       color: var(--accent-primary) !important;
-      position: relative;
     }
     .nav-item.active span:last-child {
       color: var(--accent-primary);
       opacity: 1 !important;
       font-weight: 600;
-    }
-    .nav-item.active::after {
-      content: "";
-      position: absolute;
-      bottom: 2px;
-      width: 24px;
-      height: 3px;
-      border-radius: var(--radius-pill);
-      background: var(--accent-primary);
     }
     .nav-item span:last-child {
       font-size: 11px;
@@ -1201,7 +1307,11 @@ html, body {
       color: #fff;
       border: 4px solid var(--app-bg);
       background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-      box-shadow: 0 8px 24px rgba(16,185,129,.4);
+      box-shadow: 0 0 16px rgba(16,185,129,.6), 0 0 4px rgba(16,185,129,.8);
+      transition: box-shadow 0.2s ease;
+    }
+    .fab-main:hover {
+      box-shadow: 0 0 20px rgba(16,185,129,.8), 0 0 6px rgba(16,185,129,1);
     }
     .tx-chip-row .tx-chip.active {
       background: var(--accent-primary) !important;
