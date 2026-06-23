@@ -1660,6 +1660,7 @@ async function upsertTransaction_legacy_local(tx) {
       $('#btnTopFilterType')?.addEventListener('click', toggleFilter);
       $('#btnTopFilterTypeMobile')?.addEventListener('click', toggleFilter);
       $('#btnDesktopFilter')?.addEventListener('click', toggleFilter);
+      $('#btnTxDesktopFilters')?.addEventListener('click', toggleFilter);
 
       $('#btnTxTableCols')?.addEventListener('click', () => {
         $('#txTableColPicker')?.classList.toggle('hidden');
@@ -2739,13 +2740,13 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       $('#monthPopover')?.classList.toggle('hidden', !STATE.ui.monthPopoverOpen);
       $('#filtersWrap')?.classList.toggle('hidden', !STATE.ui.monthPopoverOpen);
 
+      // Desktop filter now renders inline above tx list (not as overlay)
       const filterBackdrop = $('#desktopFilterBackdrop');
       if (filterBackdrop) {
-        const showDesktopFilter = STATE.ui.monthPopoverOpen && isDesktopViewport();
-        filterBackdrop.classList.toggle('hidden', !showDesktopFilter);
-        filterBackdrop.classList.toggle('flex', showDesktopFilter);
-        if (showDesktopFilter) placeFilterPanel();
+        filterBackdrop.classList.add('hidden');
+        filterBackdrop.classList.remove('flex');
       }
+      if (STATE.ui.monthPopoverOpen) placeFilterPanel();
       const filterCardPeriod = $('#filterCardPeriodDesktop');
       if (filterCardPeriod) filterCardPeriod.textContent = periodLabel;
       if ($('#filterStripPeriodDesktop')) $('#filterStripPeriodDesktop').textContent = periodLabel;
@@ -3988,6 +3989,8 @@ function generateSmartBudgetRecommendation() {
       const list = $('#txList');
       const tableWrap = $('#txTableWrap');
       const loadMoreWrap = $('#txLoadMoreWrap');
+      // Desktop list uses mockup-style rows; disable separate table mode UI
+      if (isDesktopViewport()) STATE.ui.txView = 'card';
       const useTable = isDesktopViewport() && String(STATE.ui.txView || 'card') === 'table';
 
       if (STATE.ui.txLoading) {
@@ -4051,7 +4054,7 @@ function generateSmartBudgetRecommendation() {
     function placeFilterPanel(){
       const wrap = $('#filterPanelWrap');
       if (!wrap) return;
-      const target = isDesktopViewport() ? $('#desktopFilterSlot') : $('#mobileFilterAnchor');
+      const target = isDesktopViewport() ? $('#desktopFilterAnchor') : $('#mobileFilterAnchor');
       if (target && wrap.parentElement !== target) target.appendChild(wrap);
     }
 
@@ -8277,14 +8280,25 @@ function toggleNav(view, triggerEl) {
         renderTransactions();
       });
     });
-    $('#fType').addEventListener('change', () => { STATE.filters.type = $('#fType').value; STATE.ui.txVisibleCount = 50; rerender(); });
+    $('#fType').addEventListener('change', () => {
+      STATE.filters.type = $('#fType').value;
+      STATE.ui.txVisibleCount = 50;
+      rerender();
+      setMonthPopover(false);
+    });
     $('#fCategory').addEventListener('change', () => {
       STATE.filters.category = $('#fCategory').value;
       STATE.ui.txVisibleCount = 50;
       if (STATE.filters.category) STATE.focusCategory = null;
       rerender();
+      setMonthPopover(false);
     });
-    $('#fAccount').addEventListener('change', () => { STATE.filters.account = $('#fAccount').value; STATE.ui.txVisibleCount = 50; rerender(); });
+    $('#fAccount').addEventListener('change', () => {
+      STATE.filters.account = $('#fAccount').value;
+      STATE.ui.txVisibleCount = 50;
+      rerender();
+      setMonthPopover(false);
+    });
     $$('.tx-chip').forEach((chip) => {
       chip.addEventListener('click', () => {
         const type = chip.getAttribute('data-type') || '';

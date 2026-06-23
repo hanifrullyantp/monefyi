@@ -94,6 +94,17 @@ html, body {
         display: none !important;
       }
     }
+
+    /* Desktop: hide old tx title/count + mobile-only toolbar */
+    @media (min-width: 768px) {
+      #txSearchWrap,
+      #txToolbarMobile,
+      #txTitle,
+      #txCount,
+      #txTableWrap {
+        display: none !important;
+      }
+    }
     .app-header { background: var(--app-backdrop); border-bottom: 1px solid var(--app-border); }
     .nav-bar {
       background: var(--nav-surface);
