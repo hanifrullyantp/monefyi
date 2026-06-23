@@ -50,8 +50,9 @@
 
     <!-- Loading Screen -->
     <div id="loadingOverlay">
-      <div class="loading-logo">
-        <img class="loading-logo-img" src="./icons/monefyi-logo.png" width="80" height="80" alt="" />
+      <div class="loading-logo brand-logo-slot">
+        <svg class="brand-logo-svg loading-logo-svg" width="80" height="80" aria-hidden="true"><use href="#monefyi-logo"/></svg>
+        <img id="loadingLogoImg" class="brand-logo-custom hidden w-full h-full object-cover" alt="" />
       </div>
       <div class="mt-5 text-sm app-muted loading-text">Initializing Monefyi...</div>
     </div>
@@ -719,7 +720,7 @@
         <!-- Main Content Area -->
 <div class="flex-1 min-w-0">
   <!-- Nav Bar Mobile -->
- <nav class="fixed bottom-0 left-0 right-0 z-[90] nav-bar safe-bottom block md:hidden">
+ <nav class="fixed bottom-0 left-0 right-0 z-[110] nav-bar safe-bottom block md:hidden">
     <div class="flex items-center justify-around h-16 px-2">
       <button onclick="toggleNav('dash')" class="nav-item flex flex-col items-center gap-1 tap text-white" data-nav="beranda">
         <span class="text-xl">
@@ -1732,7 +1733,7 @@
     </div>
 
     <!-- Onboarding -->
-    <div id="onboardingBackdrop" class="sheet-backdrop fixed inset-0 z-[100] hidden" style="background:rgba(0,0,0,.75)">
+    <div id="onboardingBackdrop" class="sheet-backdrop fixed inset-0 z-[125] hidden" style="background:rgba(0,0,0,.75)">
       <div class="flex items-center justify-center min-h-dvh p-4">
         <div class="w-full max-w-md rounded-2xl app-card-opaque p-6 shadow-2xl">
           <h2 class="text-xl font-bold" data-i18n="onboarding.welcome">Selamat datang di Monefyi</h2>
