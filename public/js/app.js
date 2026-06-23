@@ -876,6 +876,8 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
         txTableColumns: null,
         enhancementsReady: false,
         txToolbarReady: false,
+        saldoMasked: false,
+        lastSaldoAnimated: 0,
       },
       accountDetail: {
         account: null,
@@ -2742,21 +2744,31 @@ renderAccountsSettings();
     !Object.prototype.hasOwnProperty.call(STATE.db.saldoCache, key);
 
   const saldoText = isCalculating ? t('saldo.calculating') : formatIDR(saldo);
+  const masked = !!STATE.ui.saldoMasked;
 
   // Update angka saldo (mobile + desktop + strip)
   ['#kpiSaldo', '#kpiSaldoDesktop', '#kpiSaldoStrip'].forEach((sel) => {
     const el = $(sel);
     if (!el) return;
+    el.classList.toggle('saldo-masked', masked);
 
     if (isCalculating) {
       el.textContent = '';
       const skelCls = sel === '#kpiSaldo'
         ? 'hero-saldo-card__amount saldo-amount mt-2 skeleton-green'
         : 'saldo-amount mt-1 skeleton-green';
-      el.className = skelCls;
+      el.className = skelCls + (masked ? ' saldo-masked' : '');
       el.style.minHeight = '28px';
       el.style.minWidth = '0';
       el.style.display = 'block';
+    } else if (masked) {
+      el.className = sel === '#kpiSaldo'
+        ? 'hero-saldo-card__amount saldo-amount mt-2 saldo-masked'
+        : 'saldo-amount mt-1 saldo-masked';
+      el.style.minHeight = '';
+      el.style.minWidth = '';
+      el.style.display = '';
+      el.textContent = '••••••';
     } else {
       const prev = Number(STATE.ui.lastSaldoAnimated ?? 0);
       const next = Number(saldo || 0);
@@ -2798,15 +2810,33 @@ renderAccountsSettings();
   const netStr = formatCompactIDR(s.net);
 
   const subHtmlMobile = `
-    <span class="saldo-metric-chip saldo-metric-chip--income"><span aria-hidden="true">↑</span> +${formatCompactIDR(s.income)} income</span>
-    <span class="saldo-metric-chip saldo-metric-chip--expense"><span aria-hidden="true">↓</span> −${formatCompactIDR(s.expense)} expense</span>
+    <div class="kpi-metric kpi-metric--income">
+      <span aria-hidden="true">↑ +${formatCompactIDR(s.income)}</span>
+      <span class="kpi-metric__value">Income</span>
+    </div>
+    <div class="kpi-metric kpi-metric--expense">
+      <span aria-hidden="true">↓ −${formatCompactIDR(s.expense)}</span>
+      <span class="kpi-metric__value">Expense</span>
+    </div>
   `;
-  const subHtmlDesktop = `Bulan ini: +${formatCompactIDR(s.income)} (income) | −${formatCompactIDR(s.expense)} (expense)`;
+  const subHtmlDesktop = `
+    <div class="kpi-metric kpi-metric--income">
+      <span aria-hidden="true">↑ +${formatCompactIDR(s.income)}</span>
+      <span class="kpi-metric__value">Income</span>
+    </div>
+    <div class="kpi-metric kpi-metric--expense">
+      <span aria-hidden="true">↓ −${formatCompactIDR(s.expense)}</span>
+      <span class="kpi-metric__value">Expense</span>
+    </div>
+  `;
 
   const elSubMobile = $('#kpiSaldoSub');
   if (elSubMobile) elSubMobile.innerHTML = subHtmlMobile;
   const elSubDesktop = $('#kpiSaldoSubDesktop');
-  if (elSubDesktop) elSubDesktop.textContent = subHtmlDesktop;
+  if (elSubDesktop) elSubDesktop.innerHTML = subHtmlDesktop;
+
+  try { renderHeroSparkline('#heroSaldoSparkline'); } catch (_) {}
+  try { renderHeroSparklineDesktop(); } catch (_) {}
 
   const savingRate = s.income > 0 ? Math.round(((s.income - s.expense) / s.income) * 100) : 0;
   const budgetRow = budgetForPeriod();
@@ -3246,6 +3276,112 @@ function generateSmartBudgetRecommendation() {
       return `${wd}, ${iso}`;
     }
 
+    function formatShortDate(iso) {
+      return relativeDayLabel(iso);
+    }
+
+    function calculateTxNet(tx) {
+      const amt = Number(tx.amount || 0);
+      if (tx.type === 'income') return amt;
+      if (tx.type === 'expense') return -amt;
+      return 0;
+    }
+
+    function applySaldoMaskUI() {
+      const masked = !!STATE.ui.saldoMasked;
+      ['#kpiSaldo', '#kpiSaldoDesktop', '#kpiSaldoStrip'].forEach((sel) => {
+        const el = $(sel);
+        if (el) el.classList.toggle('saldo-masked', masked);
+      });
+    }
+
+    function toggleSaldoMask() {
+      STATE.ui.saldoMasked = !STATE.ui.saldoMasked;
+      try { localStorage.setItem('monefyi_saldo_masked', STATE.ui.saldoMasked ? '1' : '0'); } catch (_) {}
+      applySaldoMaskUI();
+      renderSaldo();
+    }
+
+    function toggleAppTheme() {
+      STATE.settings.theme = STATE.settings.theme === 'light' ? 'dark' : 'light';
+      const toggle = $('#toggleTheme');
+      if (toggle) toggle.checked = STATE.settings.theme === 'light';
+      saveSettings().catch(() => {});
+      applyTheme();
+      rerender();
+    }
+
+    function renderHeroSparkline(canvasId) {
+      const el = $(canvasId || '#heroSaldoSparkline');
+      if (!el || typeof Chart === 'undefined') return;
+      if (el._chart) { el._chart.destroy(); el._chart = null; }
+
+      const start = new Date(STATE.period.start);
+      const end = new Date(STATE.period.end);
+      const days = Math.min(Math.ceil((end - start) / (24 * 3600 * 1000)) + 1, 45);
+      if (days < 2) return;
+
+      const map = new Map();
+      for (let i = 0; i < days; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        map.set(toISODate(d), 0);
+      }
+      for (const tx of getTransactionsInPeriod()) {
+        const iso = tx.date;
+        if (!map.has(iso)) continue;
+        map.set(iso, (map.get(iso) || 0) + calculateTxNet(tx));
+      }
+
+      const labels = [...map.keys()];
+      const data = labels.map((k) => map.get(k));
+
+      const ctx = el.getContext('2d');
+      el._chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            data,
+            borderColor: 'rgba(52,211,153,0.9)',
+            segment: {
+              borderColor: (c) => {
+                const v = c.p1.parsed.y;
+                return v >= 0 ? 'rgba(52,211,153,0.95)' : 'rgba(244,63,94,0.95)';
+              },
+            },
+            backgroundColor: (context) => {
+              const { chart } = context;
+              const { ctx: c, chartArea } = chart;
+              if (!chartArea) return 'rgba(52,211,153,0.12)';
+              const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+              g.addColorStop(0, 'rgba(244,63,94,0.18)');
+              g.addColorStop(1, 'rgba(52,211,153,0.22)');
+              return g;
+            },
+            fill: true,
+            tension: 0.42,
+            pointRadius: data.map((_, i) => (i === data.length - 1 ? 4 : 0)),
+            pointBackgroundColor: data.map((_, i) => (i === data.length - 1 ? '#fff' : 'transparent')),
+            pointBorderColor: data.map((_, i) => (i === data.length - 1 ? 'rgba(52,211,153,1)' : 'transparent')),
+            pointBorderWidth: 2,
+            pointHoverRadius: 0,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { enabled: false } },
+          scales: { x: { display: false }, y: { display: false } },
+          layout: { padding: { left: 0, right: 4, top: 8, bottom: 0 } },
+        },
+      });
+    }
+
+    function renderHeroSparklineDesktop() {
+      renderHeroSparkline('#heroSaldoSparklineDesktop');
+    }
+
     const TX_TABLE_COLUMNS = ['date','type','category','account','payment_method','merchant','notes','amount'];
     const TX_TABLE_COL_META = {
       date: { label: 'Tanggal', sortable: true },
@@ -3490,25 +3626,9 @@ function generateSmartBudgetRecommendation() {
     function renderTransactionsCards(txs){
       const list = $('#txList');
       list.innerHTML = '';
-      const groups = new Map();
-      for (const tx of txs) {
-        if (!groups.has(tx.date)) groups.set(tx.date, []);
-        groups.get(tx.date).push(tx);
-      }
-      const dates = [...groups.keys()].sort((a,b)=>b.localeCompare(a));
       let animIdx = 0;
 
-      for (const date of dates) {
-        const net = sumByType(groups.get(date)).net;
-        const divider = document.createElement('div');
-        divider.className = 'tx-date-divider';
-        divider.innerHTML = `
-          <span class="text-xs font-semibold shrink-0">${escapeHtml(relativeDayLabel(date))}</span>
-          <span class="text-xs font-medium shrink-0 tx-date-divider__net--${net >= 0 ? 'pos' : 'neg'}">${t('common.net')}: ${formatCompactIDR(net)}</span>
-        `;
-        list.appendChild(divider);
-
-        for (const tx of groups.get(date)) {
+      for (const tx of txs) {
           const row = document.createElement('div');
           row.className = 'tx-card-v2 tx-card-compact app-card w-full text-left' + (tx.meta?.pending ? ' tx-pending' : '');
           row.style.animationDelay = `${animIdx * 30}ms`;
@@ -3524,18 +3644,26 @@ function generateSmartBudgetRecommendation() {
           const amtColor = isInc ? 'var(--accent-primary)' : isExp ? 'var(--accent-danger)' : 'var(--app-text)';
           const sign = isInc ? '+' : isExp ? '−' : '';
           const title = tx.merchant || tx.category || 'Lainnya';
-          const subtitle = [tx.category !== title ? tx.category : null, tx.account, tx.type].filter(Boolean).join(' · ');
+          const subtitle = [tx.category !== title ? tx.category : null, tx.account].filter(Boolean).join(' · ');
+          const dateFormatted = formatShortDate(tx.date);
+          const netAmount = calculateTxNet(tx);
+          const netColor = netAmount >= 0 ? 'var(--accent-primary)' : 'var(--accent-danger)';
+          const typeLabel = tx.type === 'income' ? (t('tx.type.income') || 'Pemasukan') : tx.type === 'expense' ? (t('tx.type.expense') || 'Pengeluaran') : (t('tx.type.transfer') || 'Transfer');
 
           row.innerHTML = `
             <div class="tx-card-swipe-delete" aria-hidden="true">${t('tx.swipe.delete') || 'Hapus'}</div>
-            <div class="tx-card-inner">
+            <div class="tx-card-inner tx-card-mockup">
               <div class="tx-card-row">
                 <div class="tx-icon shrink-0" style="background:${categoryIconBg(tx.category)}">${categoryIconHtml(tx.category)}</div>
                 <div class="tx-card-body">
                   <div class="text-sm font-semibold truncate leading-tight">${escapeHtml(title)}</div>
-                  <div class="text-[11px] app-muted truncate">${escapeHtml(subtitle)}${tx.meta?.pending ? ' · ' + (t('tx.pending') || '…') : ''}</div>
+                  <div class="tx-card-mockup__meta text-[11px] app-muted truncate">${escapeHtml(subtitle)}${subtitle ? ' · ' : ''}${typeLabel}${tx.meta?.pending ? ' · ' + (t('tx.pending') || '…') : ''}</div>
                 </div>
-                <div class="tx-card-amount" style="color:${amtColor}">${sign}${formatIDR(Number(tx.amount||0))}</div>
+                <div class="tx-card-mockup__amount text-right shrink-0">
+                  <div class="text-[10px] app-muted">${escapeHtml(dateFormatted)}</div>
+                  <div class="text-[11px] font-medium" style="color:${netColor}">Net: ${formatCompactIDR(netAmount)}</div>
+                  <div class="font-bold" style="color:${amtColor}; font-size: 15px;">${sign}${formatIDR(Math.abs(Number(tx.amount||0)))}</div>
+                </div>
                 <div class="tx-card-actions shrink-0 hidden md:flex">
                   <button type="button" class="tx-action-btn tap" data-tip="Edit" data-tx-edit="${escapeHtmlAttr(tx.id)}" aria-label="Edit">${TX_ICON_EDIT}</button>
                   <button type="button" class="tx-action-btn tx-action-btn--danger tap" data-tip="Hapus" data-tx-del-quick="${escapeHtmlAttr(tx.id)}" aria-label="Hapus">${TX_ICON_DEL}</button>
@@ -3580,7 +3708,6 @@ function generateSmartBudgetRecommendation() {
             openEdit(tx.id);
           });
           list.appendChild(row);
-        }
       }
       document.addEventListener('click', () => {
         document.querySelectorAll('[data-tx-dropdown]').forEach(el => el.classList.add('hidden'));
@@ -7859,6 +7986,8 @@ function toggleNav_legacy(mode) {
     if (
       e?.target &&
       (e.target.closest?.('#btnPeriodToggle') ||
+       e.target.closest?.('#btnSaldoMask') ||
+       e.target.closest?.('#btnSaldoMaskDesktop') ||
        e.target.closest?.('#btnFilterCardDesktop') ||
        e.target.closest?.('#btnFilterStripDesktop'))
     ) {
@@ -7911,6 +8040,29 @@ function toggleNav_legacy(mode) {
       applyTheme();
       rerender();
     });
+
+    $('#btnThemeToggle')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleAppTheme();
+    });
+
+    $('#btnNotif')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openMenu();
+    });
+
+    ['#btnSaldoMask', '#btnSaldoMaskDesktop'].forEach((sel) => {
+      $(sel)?.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleSaldoMask();
+      });
+    });
+
+    try {
+      STATE.ui.saldoMasked = localStorage.getItem('monefyi_saldo_masked') === '1';
+    } catch (_) {}
+    applySaldoMaskUI();
 
     // Language save (explicit)
     $('#btnSaveLang').addEventListener('click', async () => {
@@ -8056,15 +8208,9 @@ function toggleNav_legacy(mode) {
     (async function init(){
       const bootStarted = Date.now();
       const MIN_LOADER_MS = 450;
-      // #region agent log
-      fetch('http://127.0.0.1:7456/ingest/64ec47ef-1a63-485e-909c-4ab70260afe3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4aca'},body:JSON.stringify({sessionId:'ae4aca',location:'js/app.js:init',message:'boot start',data:{appJsLines:8164},timestamp:Date.now(),hypothesisId:'A',runId:'post-fix'})}).catch(()=>{});
-      // #endregion
 
       function hideLoadingOverlay() {
         const loader = $('#loadingOverlay');
-        // #region agent log
-        fetch('http://127.0.0.1:7456/ingest/64ec47ef-1a63-485e-909c-4ab70260afe3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4aca'},body:JSON.stringify({sessionId:'ae4aca',location:'js/app.js:hideLoadingOverlay',message:'hide loader',data:{hasLoader:!!loader,elapsed:Date.now()-bootStarted},timestamp:Date.now(),hypothesisId:'B',runId:'post-fix'})}).catch(()=>{});
-        // #endregion
         if (!loader) return;
         loader.style.opacity = '0';
         loader.style.pointerEvents = 'none';
