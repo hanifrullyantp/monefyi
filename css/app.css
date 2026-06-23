@@ -103,6 +103,7 @@ html, body {
     /* Desktop: hide old tx title/count + mobile-only toolbar */
     @media (min-width: 768px) {
       #txSearchWrap,
+      #txTypeChips,
       #txToolbarMobile,
       #txTitle,
       #txCount,
@@ -1370,7 +1371,8 @@ html, body {
       }
 
       /* Desktop: Monevisor as persistent right sidebar (not modal overlay) */
-      #advisorBackdrop.desktop-sidebar {
+      #advisorBackdrop.desktop-sidebar,
+      #budgetBackdrop.desktop-sidebar {
         position: fixed;
         top: 0;
         right: 0;
@@ -1384,10 +1386,12 @@ html, body {
         z-index: 40;
         pointer-events: auto;
       }
-      #advisorBackdrop.desktop-sidebar > [data-close-advisor="true"]:not(button) {
+      #advisorBackdrop.desktop-sidebar > [data-close-advisor="true"]:not(button),
+      #budgetBackdrop.desktop-sidebar > [data-close-budget="true"]:not(button) {
         display: none;
       }
-      #advisorBackdrop.desktop-sidebar #advisorSheet {
+      #advisorBackdrop.desktop-sidebar #advisorSheet,
+      #budgetBackdrop.desktop-sidebar #budgetSheet {
         position: relative;
         inset: auto;
         width: 100%;
@@ -1395,7 +1399,8 @@ html, body {
         max-width: none;
         transform: none !important;
       }
-      #advisorBackdrop.desktop-sidebar #advisorSheet .sheet-panel {
+      #advisorBackdrop.desktop-sidebar #advisorSheet .sheet-panel,
+      #budgetBackdrop.desktop-sidebar #budgetSheet .sheet-panel {
         border-radius: 0 !important;
         border-left: 1px solid var(--app-border);
         border-top: none;
@@ -1403,7 +1408,8 @@ html, body {
         max-height: 100dvh;
         height: 100%;
       }
-      #appShell.advisor-open {
+      #appShell.advisor-open,
+      #appShell.budget-open {
         margin-right: min(420px, 36vw);
         transition: margin-right 0.25s ease;
       }
@@ -1475,6 +1481,10 @@ html, body {
     .sheet-backdrop.open { opacity: 1; pointer-events: auto; }
     .sheet { transform: translateY(16px); opacity: 0; pointer-events: none; transition: transform .18s ease, opacity .18s ease; }
     .sheet.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
+    
+    @media (min-width: 768px) {
+      #budgetSheet.sheet.open { transform: translateX(0) !important; }
+    }
 
     .nav-item.active {
       color: var(--accent-primary) !important;

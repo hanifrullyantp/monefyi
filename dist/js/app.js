@@ -3182,30 +3182,45 @@ function generateSmartBudgetRecommendation() {
           const lower = String(c.category).toLowerCase();
           let iconSvg = '';
           if (lower.includes('makan') || lower.includes('jajan') || lower.includes('food')) {
-            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>';
+            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>';
           } else if (lower.includes('belanja') || lower.includes('pasar') || lower.includes('shop')) {
-            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>';
+            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>';
+          } else if (lower.includes('tabungan') || lower.includes('save') || lower.includes('invest')) {
+            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>';
+          } else if (lower.includes('tagihan') || lower.includes('utilitas') || lower.includes('bill') || lower.includes('car') || lower.includes('mobil')) {
+            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>';
           } else {
-            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>';
+            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>';
           }
           
           const isOver = rpct >= 100;
           const colorClass = isOver ? 'rgba(244,63,94,1)' : 'rgba(16,185,129,1)';
           const bgClass = isOver ? 'rgba(244,63,94,0.15)' : 'rgba(16,185,129,0.15)';
+          const iconBgClass = lower.includes('pasar') ? '#312e81' : lower.includes('tabungan') ? '#1e3a8a' : lower.includes('makan') ? '#78350f' : lower.includes('tagihan') ? '#134e4a' : 'rgba(255,255,255,0.1)';
+          const iconColorClass = lower.includes('pasar') ? '#a5b4fc' : lower.includes('tabungan') ? '#bfdbfe' : lower.includes('makan') ? '#fde68a' : lower.includes('tagihan') ? '#99f6e4' : '#fff';
 
-          return `<div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: ${bgClass}; color: ${colorClass};">
+          return `<div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style="background: ${iconBgClass}; color: ${iconColorClass};">
               ${iconSvg}
             </div>
             <div class="flex-1 min-w-0">
-              <div class="flex items-center justify-between gap-2 text-[11px] text-white">
-                <span class="truncate">${escapeHtml(c.category)}</span>
-                <span class="font-bold">${rpct}%</span>
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wider">${escapeHtml(c.category)}</div>
+                  <div class="text-[10px] mt-0.5" style="color: ${colorClass};">${left>0?`Sisa: ${formatCompactIDR(left)}`:'Sisa: 0 (Over)'}</div>
+                </div>
+                <div class="text-right">
+                  <div class="text-[10px] app-muted">Budget</div>
+                  <div class="text-sm font-bold text-white">${formatCompactIDR(catBudget)}</div>
+                </div>
               </div>
-              <div class="h-1.5 rounded-full mt-1.5" style="background: color-mix(in srgb, var(--app-border) 40%, transparent)">
-                <div class="h-1.5 rounded-full" style="width:${Math.min(100,rpct)}%;background:${colorClass}"></div>
+              <div class="relative mt-2">
+                <div class="h-1.5 rounded-full w-full" style="background: color-mix(in srgb, var(--app-border) 40%, transparent)">
+                  <div class="h-1.5 rounded-full" style="width:${Math.min(100,rpct)}%;background:${colorClass}"></div>
+                </div>
+                <div class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow" style="left: calc(${Math.min(100,rpct)}% - 6px);"></div>
               </div>
-              <div class="text-[9px] app-muted mt-1 text-right">${left>0?`${formatCompactIDR(left)} sisa`:'0 sisa'}</div>
+              <div class="text-[10px] app-muted mt-1.5 text-right">${formatCompactIDR(c.amount)}</div>
             </div>
           </div>`;
         }).join('') : `<div class="text-[11px] app-muted2">Belum ada realisasi kategori.</div>`;
@@ -4270,7 +4285,18 @@ function openBudget(){
 
   // Render & Buka Popup
   renderBudgetSheet();
-  openSheet(budgetBackdrop, budgetSheet);
+  
+  if (isDesktopViewport()) {
+    STATE.ui.budgetOpen = true;
+    budgetBackdrop.classList.add('open', 'desktop-sidebar');
+    budgetSheet.classList.add('open');
+    $('#appShell')?.classList.add('budget-open');
+    document.body.style.overflow = '';
+  } else {
+    STATE.ui.budgetOpen = true;
+    openSheet(budgetBackdrop, budgetSheet);
+  }
+
   $$('.nav-item[data-nav]').forEach((el) => {
     el.classList.toggle('active', el.getAttribute('data-nav') === 'budget');
   });
@@ -4280,7 +4306,16 @@ function openBudget(){
       setTimeout(()=>$('#bIncome')?.focus(), 120);
   }
 }
-    function closeBudget(){ closeSheet(budgetBackdrop, budgetSheet); }
+    function closeBudget(){ 
+      STATE.ui.budgetOpen = false;
+      if (isDesktopViewport()) {
+        budgetBackdrop.classList.remove('open', 'desktop-sidebar');
+        budgetSheet.classList.remove('open');
+        $('#appShell')?.classList.remove('budget-open');
+      } else {
+        closeSheet(budgetBackdrop, budgetSheet); 
+      }
+    }
     budgetBackdrop.addEventListener('click', (e)=>{
       if (e.target?.dataset?.closeBudget === 'true') closeBudget();
     });
@@ -5376,21 +5411,36 @@ async function upsertTransaction_dbOnly(tx) {
     // Clamp visual 0-100%
     let pctVisual = Math.min(Math.max(pctRaw, 0), 100);
 
-    // --- LOGIKA WARNA SOLID (Requirement No. 3) ---
-    // Hijau (Aman), Kuning (Hampir Habis > 75%), Merah (Over >= 100%)
-    let barColor = '#10b981'; // Emerald-500
-    let dotColor = '#10b981';
+    let barColor = '#f43f5e'; // Rose-500 for the bar in the mockup
+    let dotColor = '#fff';
     
-    if (pctRaw >= 100) {
-        barColor = '#f43f5e'; // Rose-500
-        dotColor = '#f43f5e';
-    } else if (pctRaw >= 75) {
-        barColor = '#f59e0b'; // Amber-500
-        dotColor = '#f59e0b';
+    const lower = String(catName).toLowerCase();
+    let iconSvg = '';
+    let iconBgClass = 'rgba(255,255,255,0.1)';
+    let iconColorClass = '#fff';
+
+    if (lower.includes('makan') || lower.includes('jajan') || lower.includes('food')) {
+      iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>';
+      iconBgClass = '#f59e0b';
+      iconColorClass = '#fff';
+    } else if (lower.includes('belanja') || lower.includes('pasar') || lower.includes('shop')) {
+      iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>';
+      iconBgClass = '#4f46e5';
+      iconColorClass = '#fff';
+    } else if (lower.includes('tabungan') || lower.includes('save') || lower.includes('invest')) {
+      iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>';
+      iconBgClass = '#2563eb';
+      iconColorClass = '#fff';
+    } else if (lower.includes('tagihan') || lower.includes('utilitas') || lower.includes('bill') || lower.includes('car') || lower.includes('mobil')) {
+      iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>';
+      iconBgClass = '#0d9488';
+      iconColorClass = '#fff';
+    } else {
+      iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>';
     }
 
     const el = document.createElement('div');
-    el.className = 'rounded-2xl app-chip p-4 cursor-pointer hover:bg-white/5 mb-3 transition-colors relative group';
+    el.className = 'rounded-2xl app-chip p-4 cursor-pointer hover:bg-white/5 transition-colors relative group border border-slate-800/50';
     
     // Klik row untuk edit detail
     el.onclick = (e) => {
@@ -5399,54 +5449,49 @@ async function upsertTransaction_dbOnly(tx) {
     };
 
     el.innerHTML = `
-      <div class="relative pt-1 pb-4"> <!-- Padding bottom ditambah untuk label gantung -->
-        
-        <!-- HEADER: Sisa (Kiri) & Budget (Kanan) -->
-        <div class="flex justify-between items-end mb-2 text-xs">
-           <div class="font-medium ${sisa < 0 ? 'text-rose-400' : 'text-emerald-400'}">
-             Sisa: ${formatCompactIDR(Math.max(0, sisa))} 
-             ${sisa < 0 ? `<span class="text-rose-500 font-bold ml-1">(Over)</span>` : ''}
-           </div>
-           <div class="text-slate-400">
-             Budget: <span class="text-white font-semibold">${formatCompactIDR(planned)}</span>
-           </div>
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style="background: ${iconBgClass}; color: ${iconColorClass};">
+          ${iconSvg}
         </div>
-
-        <!-- TITLE KATEGORI (Absolute Center atau terserah, disini saya taruh di atas bar) -->
-        <div class="absolute top-[-4px] left-0 w-full text-center pointer-events-none opacity-20 text-[10px] font-bold uppercase tracking-widest">
-            ${escapeHtml(catName)}
-        </div>
-
-        <!-- PROGRESS BAR TRACK -->
-        <div class="relative w-full h-2 bg-gray-700 rounded-full mt-1">
-            
-            <!-- FILL BAR (Solid Color) -->
-            <div class="absolute top-0 left-0 h-2 rounded-full transition-all duration-500"
-                 style="width: ${pctVisual}%; background-color: ${barColor};">
+        <div class="flex-1 min-w-0 pb-4 relative">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wider">${escapeHtml(catName)}</div>
+              <div class="text-[10px] mt-0.5" style="color: ${sisa < 0 ? '#f43f5e' : '#10b981'};">
+                Sisa: ${formatCompactIDR(Math.max(0, sisa))} ${sisa < 0 ? '(Over)' : ''}
+              </div>
             </div>
-
-            <!-- DOT & FLOATING LABEL (Requirement No. 2) -->
-            <div class="absolute top-1/2 -translate-y-1/2" style="left: ${pctVisual}%; transition: left 0.5s ease-out;">
-                
-                <!-- Titik Putih -->
-                <div class="w-4 h-4 bg-white rounded-full border-2 shadow-lg -translate-x-1/2" 
-                     style="border-color: ${dotColor}"></div>
-                
-                <!-- Label Realisasi Menggantung Di Bawah -->
-                <div class="absolute top-5 left-1/2 -translate-x-1/2 whitespace-nowrap flex flex-col items-center">
-                    <div class="w-0.5 h-2 bg-slate-600 mb-0.5"></div> <!-- Garis penunjuk kecil -->
-                    <div class="bg-slate-800 text-[10px] text-white px-2 py-0.5 rounded border border-slate-600 shadow-xl font-mono">
-                        ${formatCompactIDR(actual)}
-                    </div>
-                </div>
-
+            <div class="text-right">
+              <div class="text-[10px] app-muted">Budget</div>
+              <div class="text-sm font-bold text-white">${formatCompactIDR(planned)}</div>
             </div>
-        </div>
+          </div>
 
+          <!-- PROGRESS BAR TRACK -->
+          <div class="relative w-full h-1.5 rounded-full mt-2" style="background: color-mix(in srgb, var(--app-border) 40%, transparent)">
+              <!-- FILL BAR -->
+              <div class="absolute top-0 left-0 h-1.5 rounded-full transition-all duration-500"
+                   style="width: ${pctVisual}%; background-color: ${barColor};">
+              </div>
+
+              <!-- DOT & FLOATING LABEL -->
+              <div class="absolute top-1/2 -translate-y-1/2" style="left: ${pctVisual}%; transition: left 0.5s ease-out;">
+                  <!-- Titik Putih -->
+                  <div class="w-3 h-3 bg-white rounded-full shadow -translate-x-1/2"></div>
+                  
+                  <!-- Label Realisasi Menggantung Di Bawah -->
+                  <div class="absolute top-3 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                      <div class="bg-transparent text-[10px] text-slate-400 px-1 py-0.5 font-mono">
+                          ${formatCompactIDR(actual)}
+                      </div>
+                  </div>
+              </div>
+          </div>
+        </div>
       </div>
       
-      <!-- Tombol Hapus (Pocok Kanan Atas absolute) -->
-      <button class="bCatDel absolute top-1 right-1 text-slate-600 hover:text-rose-500 p-2 text-lg leading-none" data-id="${row.id}">×</button>
+      <!-- Tombol Hapus -->
+      <button class="bCatDel absolute top-2 right-2 text-slate-600 hover:text-rose-500 p-2 text-lg leading-none hidden group-hover:block" data-id="${row.id}">×</button>
     `;
     wrap.appendChild(el);
   }
@@ -5470,10 +5515,20 @@ async function upsertTransaction_dbOnly(tx) {
       const totals = budgetDraftTotals();
 
       $('#bTotalBudget').textContent = formatIDR(totals.total);
+      
+      const bFooterTotal = $('#bFooterTotal');
+      if (bFooterTotal) bFooterTotal.textContent = formatIDR(totals.total);
+
       const rem = totals.remaining;
       const remText = `Sisa: ${formatIDR(Math.max(0, rem))}` + (rem<0 ? ` (over ${formatIDR(Math.abs(rem))})` : '');
       $('#bRemaining').textContent = remText;
-      $('#bRemaining').style.color = rem>=0 ? 'rgba(167,243,208,.95)' : 'rgba(254,202,202,.95)';
+      $('#bRemaining').style.color = rem>=0 ? '#10b981' : '#f43f5e';
+
+      const bFooterRemaining = $('#bFooterRemaining');
+      if (bFooterRemaining) {
+        bFooterRemaining.textContent = formatIDR(Math.max(0, rem)) + (rem<0 ? ` (over ${formatIDR(Math.abs(rem))})` : '');
+        bFooterRemaining.style.color = rem>=0 ? '#10b981' : '#f43f5e';
+      }
 
       for (const row of (d.rows||[])) {
         const cur = Number(row.amount||0);
@@ -5484,9 +5539,9 @@ async function upsertTransaction_dbOnly(tx) {
       }
 
       if (totals.income <= 0) {
-        $('#bFooterHint').textContent = 'Isi income dulu agar total budget bisa dibatasi.';
+        if ($('#bFooterHint')) $('#bFooterHint').textContent = 'Isi income dulu agar total budget bisa dibatasi.';
       } else {
-        $('#bFooterHint').textContent = (rem>=0)
+        if ($('#bFooterHint')) $('#bFooterHint').textContent = (rem>=0)
           ? `OK. Kamu masih punya sisa income ${formatIDR(rem)} yang belum dialokasikan.`
           : `Total budget melebihi income. Kurangi budget kategori (otomatis di-clamp).`;
       }
@@ -6120,7 +6175,7 @@ $('#btnResetBudgetDraft').addEventListener('click', () => {
 // ============================================================
 // 3. TOMBOL SIMPAN / SAVE (JANGAN DIHAPUS)
 // ============================================================
-$('#btnSaveBudget').addEventListener('click', async () => {
+async function handleSaveBudget() {
     const d = STATE.budgetDraft;
     if (!d) return;
 
@@ -6145,26 +6200,35 @@ $('#btnSaveBudget').addEventListener('click', async () => {
     try {
         // Tampilkan loading text
         const btn = $('#btnSaveBudget');
-        const oldText = btn.innerText;
-        btn.innerText = 'Menyimpan...';
+        const oldText = btn ? btn.innerText : '';
+        if (btn) btn.innerText = 'Menyimpan...';
         
         await saveBudgetMonth(d.month, d.income, normalized.categories);
         
-        $('#bStatus').textContent = 'Tersimpan.';
+        $('#bStatus').innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> Budget tersimpan.';
+        $('#bStatus').style.color = '#10b981';
         
         // Refresh halaman utama jika ada fungsi rerender()
         if(typeof rerender === 'function') rerender();
         
         setTimeout(() => { 
             closeBudget(); 
-            btn.innerText = oldText; 
+            if (btn) btn.innerText = oldText; 
         }, 500);
     } catch (e) {
         console.error(e);
         $('#bStatus').textContent = 'Gagal simpan. Coba lagi.';
-        $('#btnSaveBudget').innerText = 'Simpan Budget';
+        $('#bStatus').style.color = '#f43f5e';
+        const btn = $('#btnSaveBudget');
+        if (btn) btn.innerText = 'Simpan Budget';
     }
-});
+}
+
+const btnSaveBudget = $('#btnSaveBudget');
+if (btnSaveBudget) btnSaveBudget.addEventListener('click', handleSaveBudget);
+
+const btnSaveBudgetFooter = $('#btnSaveBudgetFooter');
+if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSaveBudget);
 
 // ============================================================
 // 4. TOMBOL TAMBAH TRANSAKSI (JANGAN DIHAPUS)
