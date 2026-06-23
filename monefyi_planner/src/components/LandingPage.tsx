@@ -16,6 +16,7 @@ import EditableText from './landing/EditableText';
 import LandingAdminBar from './landing/LandingAdminBar';
 import LandingSettingsModal from './landing/LandingSettingsModal';
 import { resolveLandingIcon } from './landing/landingIcons';
+import { MonefyiLogo } from './MonefyiLogo';
 
 export default function LandingPage() {
   const [searchParams] = useSearchParams();
@@ -130,12 +131,7 @@ export default function LandingPage() {
             {content.brand.logoUrl ? (
               <img src={content.brand.logoUrl} alt="" className="w-8 h-8 rounded-lg object-contain" />
             ) : (
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center shadow-md"
-                style={{ background: `linear-gradient(135deg, ${content.brand.primaryColor}, ${content.brand.secondaryColor})` }}
-              >
-                <Sparkles className="w-4 h-4 text-white" />
-              </div>
+              <MonefyiLogo className="w-8 h-8 rounded-lg object-contain" />
             )}
             <span className="font-bold text-slate-900 text-lg">
               <EditableText

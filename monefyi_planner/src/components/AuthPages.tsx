@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Eye, EyeOff, Sparkles, ArrowLeft, ArrowRight, Mail, Lock, User, Building2, CheckCircle,
+  Eye, EyeOff, ArrowLeft, ArrowRight, Mail, Lock, User, Building2, CheckCircle,
 } from 'lucide-react';
 import { authUserMessage } from '../lib/authMessages';
 import { config } from '../lib/config';
@@ -15,6 +15,7 @@ import {
   resetPasswordForEmail,
 } from '../services/authService';
 import { useAppStore } from '../store/appStore';
+import { MonefyiLogo } from './MonefyiLogo';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -118,9 +119,7 @@ export function LoginPage() {
           className="bg-white rounded-3xl p-8 shadow-2xl"
         >
           <div className="flex items-center gap-2 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-md">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
+            <MonefyiLogo className="w-10 h-10 rounded-xl object-contain shadow-md" />
             <div>
               <div className="font-black text-slate-900">{loginTitle}</div>
               <div className="text-xs text-slate-500">{loginSubtitle}</div>

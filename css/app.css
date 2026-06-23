@@ -223,8 +223,8 @@ html, body {
       border: none;
       border-radius: inherit;
     }
-    .loading-logo-svg { width: 80px; height: 80px; border-radius: 22px; }
-    .brand-logo-custom { position: absolute; inset: 0; }
+    .loading-logo-img { width: 80px; height: 80px; border-radius: 22px; object-fit: contain; }
+    .brand-logo-custom { position: absolute; inset: 0; object-fit: contain; }
     .brand-text-block { display: flex; flex-direction: column; gap: 2px; }
     .brand-title {
       font-size: 1.05rem;
@@ -254,12 +254,13 @@ html, body {
       white-space: nowrap;
     }
     .hero-saldo-card__amount.saldo-amount {
-      font-size: 32px;
-      font-weight: 700;
+      font-size: clamp(36px, 9vw, 42px);
+      font-weight: 800;
       color: #ffffff;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      letter-spacing: -0.02em;
     }
     #kpiSaldoDesktop.saldo-amount,
     .sidebar-saldo-card__amount.saldo-amount {
@@ -476,37 +477,46 @@ html, body {
       color: var(--accent-primary);
     }
 
-    /* Mobile tx toolbar */
+    /* Mobile tx toolbar — inline with subtitle */
     .tx-toolbar-mobile {
       display: flex;
       align-items: center;
-      gap: 8px;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-      padding-bottom: 4px;
+      gap: 12px;
+      flex-shrink: 0;
     }
-    .tx-toolbar-mobile::-webkit-scrollbar { display: none; }
-    .tx-mobile-cta {
+    .tx-icon-btn {
+      width: auto;
+      height: auto;
+      padding: 2px;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 10px 16px;
-      border-radius: var(--radius-pill);
-      font-size: 13px;
-      font-weight: 700;
-      white-space: nowrap;
-      flex-shrink: 0;
-      color: #fff;
-      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      justify-content: center;
       border: none;
-      box-shadow: 0 4px 16px rgba(16,185,129,.35);
-    }
-    .tx-toolbar-mobile .tx-toolbar-btn {
-      width: 40px;
-      height: 40px;
+      background: transparent;
+      color: var(--app-muted);
       flex-shrink: 0;
     }
+    .tx-icon-btn:hover,
+    .tx-icon-btn.active { color: var(--accent-primary); background: transparent; }
+    .tx-view-segment--ghost {
+      border: none;
+      background: transparent;
+      gap: 4px;
+      padding: 0;
+    }
+    .tx-view-segment--ghost .tx-view-btn {
+      border: none;
+      background: transparent;
+      color: var(--app-muted);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 6px;
+    }
+    .tx-view-segment--ghost .tx-view-btn.active {
+      color: var(--accent-primary);
+      background: transparent;
+    }
+    .tx-view-segment--ghost .tx-view-indicator { display: none; }
 
     /* Sidebar collapse (252px ↔ 48px icon rail) */
     #appSidebar {
@@ -1227,6 +1237,25 @@ html, body {
       border-radius: 12px;
     }
     .tx-card-compact .tx-card-inner { position: relative; padding: 12px 14px; }
+    .tx-card-compact .tx-card-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+    }
+    .tx-card-compact .tx-card-body { min-width: 0; flex: 1; overflow: hidden; }
+    .tx-card-compact .tx-card-amount {
+      flex-shrink: 0;
+      margin-left: auto;
+      text-align: right;
+      font-weight: 700;
+      font-size: 15px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    @media (max-width: 767px) {
+      .tx-card-compact .tx-menu-btn { display: none; }
+    }
     .tx-card-compact:active .tx-card-inner {
       background: color-mix(in srgb, var(--app-card) 88%, rgba(255,255,255,.08));
     }

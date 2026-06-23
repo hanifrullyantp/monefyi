@@ -13,6 +13,7 @@ import { showWorkerShell, canAccessManagerFeatures } from '../utils/platformUi';
 import CommandModal from './CommandModal';
 import NotificationPanel from './NotificationPanel';
 import PreviewModeMenu from './layout/PreviewModeMenu';
+import { MonefyiLogo } from './MonefyiLogo';
 import ToastHost from './ToastHost';
 import UndoToast from './ui/UndoToast';
 import { loadFinanceVersion } from '../lib/financeVersion';
@@ -145,12 +146,7 @@ export default function Layout({ children }: LayoutProps) {
         {/* Logo */}
         <div className="p-6 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center shadow-md"
-              style={{ background: `linear-gradient(135deg, ${MONEFYI_BRAND.primary}, ${MONEFYI_BRAND.dark})` }}
-            >
-              <Sparkles className="w-4.5 h-4.5 text-white" />
-            </div>
+            <MonefyiLogo className="w-9 h-9 rounded-xl object-contain shadow-md" />
             <div>
               <div className="font-black text-slate-900 text-sm leading-tight">Monefyi</div>
               <div className="text-xs font-semibold" style={{ color: MONEFYI_BRAND.dark }}>Planner</div>
@@ -238,9 +234,7 @@ export default function Layout({ children }: LayoutProps) {
             >
               <div className="p-6 flex items-center justify-between border-b border-slate-100">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
-                    <Sparkles className="w-4 h-4 text-white" />
-                  </div>
+                  <MonefyiLogo className="w-9 h-9 rounded-xl object-contain" />
                   <div>
                     <div className="font-black text-slate-900">Monefyi</div>
                     <div className="text-xs text-emerald-600 font-semibold">Planner</div>
@@ -295,9 +289,7 @@ export default function Layout({ children }: LayoutProps) {
               </div>
             </div>
             <div className="lg:hidden flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
-                <Sparkles className="w-3.5 h-3.5 text-white" />
-              </div>
+              <MonefyiLogo className="w-7 h-7 rounded-lg object-contain" />
               <span className="font-bold text-slate-900 text-sm">Monefyi</span>
             </div>
           </div>

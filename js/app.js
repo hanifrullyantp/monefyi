@@ -120,8 +120,8 @@
       return Math.round(n);
     }
 
-    const DEFAULT_LOGO = './icons/icon-192.svg';
-    const DEFAULT_LOGO_MARK = './icons/monefyi-mark.svg';
+    const DEFAULT_LOGO = './icons/monefyi-logo.png';
+    const DEFAULT_LOGO_MARK = './icons/monefyi-logo.png';
 
     function normalizeText(t){
       return (t||'').toLowerCase().replace(/\s+/g,' ').trim();
@@ -1130,18 +1130,15 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
     }
 
     function applyAppBranding() {
-  const logoUrl = STATE.appConfig?.logo_url ? String(STATE.appConfig.logo_url) : '';
+  const logoUrl = STATE.appConfig?.logo_url ? String(STATE.appConfig.logo_url) : DEFAULT_LOGO;
 
   $$('.brand-logo-slot').forEach((slot) => {
     const svg = slot.querySelector('.brand-logo-svg');
     const img = slot.querySelector('.brand-logo-custom');
-    if (logoUrl && img) {
+    if (img) {
       img.src = logoUrl;
       img.classList.remove('hidden');
       svg?.classList.add('hidden');
-    } else {
-      img?.classList.add('hidden');
-      svg?.classList.remove('hidden');
     }
   });
 }
@@ -2700,8 +2697,6 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
         $('#unifiedAiBarWrap')?.classList.add('hidden');
         ['#btnTopAi', '#btnTopAiMobile'].forEach((sel) => $(sel)?.classList.remove('active'));
       }
-      const dashState = $('#dashboardState');
-      if (dashState) dashState.textContent = STATE.ui.dashboardOpen ? (t('dashboard.full') || 'Lengkap') : (t('dashboard.compact') || 'Ringkas');
 
       $('#toggleTheme').checked = (STATE.settings.theme === 'light');
       $('#toggleKPI').checked = !!STATE.settings.showKPI;
@@ -2755,7 +2750,10 @@ renderAccountsSettings();
 
     if (isCalculating) {
       el.textContent = '';
-      el.className = (sel === '#kpiSaldoDesktop' ? 'saldo-amount mt-1' : 'saldo-amount mt-1') + ' skeleton-green';
+      const skelCls = sel === '#kpiSaldo'
+        ? 'hero-saldo-card__amount saldo-amount mt-2 skeleton-green'
+        : 'saldo-amount mt-1 skeleton-green';
+      el.className = skelCls;
       el.style.minHeight = '28px';
       el.style.minWidth = '0';
       el.style.display = 'block';
@@ -2764,7 +2762,9 @@ renderAccountsSettings();
       const next = Number(saldo || 0);
       const startAt = performance.now();
       const duration = 360;
-      el.className = 'saldo-amount mt-1';
+      el.className = sel === '#kpiSaldo'
+        ? 'hero-saldo-card__amount saldo-amount mt-2'
+        : 'saldo-amount mt-1';
       el.style.minHeight = '';
       el.style.minWidth = '';
       el.style.display = '';
@@ -2816,21 +2816,23 @@ renderAccountsSettings();
   const gauge = $('#healthScoreGauge');
   const text = $('#healthScoreText');
   const pill = $('#healthScorePill');
-  if (gauge) {
-    let col = 'var(--accent-primary)';
-    if (healthScore < 45) col = 'var(--accent-danger)';
-    else if (healthScore < 70) col = 'var(--accent-warning)';
-    gauge.style.background = col;
-  }
-  if (pill) {
-    pill.classList.remove('hero-health-pill--good', 'hero-health-pill--warn', 'hero-health-pill--bad');
-    if (healthScore >= 70) pill.classList.add('hero-health-pill--good');
-    else if (healthScore >= 45) pill.classList.add('hero-health-pill--warn');
-    else pill.classList.add('hero-health-pill--bad');
-  }
-  if (text) {
-    const label = healthScore >= 70 ? 'Baik' : (healthScore >= 45 ? 'Waspada' : 'Perlu perhatian');
-    text.textContent = `Skor: ${healthScore} · ${label}`;
+  if (pill || gauge || text) {
+    if (gauge) {
+      let col = 'var(--accent-primary)';
+      if (healthScore < 45) col = 'var(--accent-danger)';
+      else if (healthScore < 70) col = 'var(--accent-warning)';
+      gauge.style.background = col;
+    }
+    if (pill) {
+      pill.classList.remove('hero-health-pill--good', 'hero-health-pill--warn', 'hero-health-pill--bad');
+      if (healthScore >= 70) pill.classList.add('hero-health-pill--good');
+      else if (healthScore >= 45) pill.classList.add('hero-health-pill--warn');
+      else pill.classList.add('hero-health-pill--bad');
+    }
+    if (text) {
+      const label = healthScore >= 70 ? 'Baik' : (healthScore >= 45 ? 'Waspada' : 'Perlu perhatian');
+      text.textContent = `Skor: ${healthScore} · ${label}`;
+    }
   }
 }
     function renderKPIs(){
@@ -2863,7 +2865,7 @@ renderAccountsSettings();
         if (lastNotif !== today) {
           new Notification("Monefyi Warning", {
             body: `Budget Anda sudah terpakai ${pct.toFixed(0)}%. Waktunya berhemat!`,
-            icon: "./icons/icon-192.svg"
+            icon: "./icons/monefyi-logo.png"
           });
           localStorage.setItem('last_budget_notif', today);
           showToast(`Budget hampir habis (${pct.toFixed(0)}%)`, 'warn');
@@ -3527,13 +3529,13 @@ function generateSmartBudgetRecommendation() {
           row.innerHTML = `
             <div class="tx-card-swipe-delete" aria-hidden="true">${t('tx.swipe.delete') || 'Hapus'}</div>
             <div class="tx-card-inner">
-              <div class="flex items-center gap-2.5">
+              <div class="tx-card-row">
                 <div class="tx-icon shrink-0" style="background:${categoryIconBg(tx.category)}">${categoryIconHtml(tx.category)}</div>
-                <div class="min-w-0 flex-1">
+                <div class="tx-card-body">
                   <div class="text-sm font-semibold truncate leading-tight">${escapeHtml(title)}</div>
                   <div class="text-[11px] app-muted truncate">${escapeHtml(subtitle)}${tx.meta?.pending ? ' · ' + (t('tx.pending') || '…') : ''}</div>
                 </div>
-                <div class="text-right shrink-0 font-bold text-base tabular-nums tx-card-amount" style="color:${amtColor}">${sign}${formatIDR(Number(tx.amount||0))}</div>
+                <div class="tx-card-amount" style="color:${amtColor}">${sign}${formatIDR(Number(tx.amount||0))}</div>
                 <div class="tx-card-actions shrink-0 hidden md:flex">
                   <button type="button" class="tx-action-btn tap" data-tip="Edit" data-tx-edit="${escapeHtmlAttr(tx.id)}" aria-label="Edit">${TX_ICON_EDIT}</button>
                   <button type="button" class="tx-action-btn tx-action-btn--danger tap" data-tip="Hapus" data-tx-del-quick="${escapeHtmlAttr(tx.id)}" aria-label="Hapus">${TX_ICON_DEL}</button>

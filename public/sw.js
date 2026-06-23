@@ -8,6 +8,7 @@ const CACHE_NAME = `monefyi-${CACHE_VERSION}`;
 // lewat handler `fetch` (GET same-origin).
 const shellUrls = [
   new URL("./index.html", self.location).href,
+  new URL("./icons/monefyi-logo.png", self.location).href,
   new URL("./icons/icon-192.svg", self.location).href,
   new URL("./icons/icon-512.svg", self.location).href,
   new URL("./icons/monefyi-mark.svg", self.location).href,
