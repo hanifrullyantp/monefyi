@@ -1592,13 +1592,39 @@ html, body {
     }
 
     @media (max-width: 767px) {
-      #budgetSheet .sheet-panel,
+      body {
+        --mobile-nav-offset: calc(5.5rem + max(0.75rem, env(safe-area-inset-bottom)));
+      }
+      .nav-bar {
+        z-index: 90;
+      }
+      #budgetBackdrop {
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: var(--mobile-nav-offset);
+      }
+      #budgetSheet .sheet-panel {
+        max-height: calc(100dvh - var(--mobile-nav-offset));
+        min-height: 0;
+        border-radius: 1.25rem 1.25rem 0 0 !important;
+      }
+      #budgetSheet.sheet {
+        left: 0;
+        right: 0;
+        bottom: var(--mobile-nav-offset);
+      }
+      #budgetDetailBackdrop {
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: var(--mobile-nav-offset);
+      }
       #advisorSheet .sheet-panel {
         max-height: 100dvh;
         min-height: 100dvh;
         border-radius: 0 !important;
       }
-      #budgetSheet.sheet,
       #advisorSheet.sheet {
         left: 0;
         right: 0;
