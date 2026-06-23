@@ -86,6 +86,14 @@ html, body {
     max-width: 100%;
     overflow-x: hidden;
   }
+    /* Desktop-only blocks — never show on mobile */
+    @media (max-width: 767px) {
+      #desktopHeader,
+      #topbarSaldoWrap,
+      #txListDesktopHeader {
+        display: none !important;
+      }
+    }
     .app-header { background: var(--app-backdrop); border-bottom: 1px solid var(--app-border); }
     .nav-bar {
       background: var(--nav-surface);

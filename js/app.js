@@ -2649,13 +2649,12 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       const isTopbar = STATE.settings.saldoPosition === 'topbar';
       const sidebarWrap = $('#sidebarSaldoWrap');
       const topbarWrap = $('#topbarSaldoWrap');
+      const onDesktop = isDesktopViewport();
       if (sidebarWrap) {
-        if (isTopbar) sidebarWrap.style.display = 'none';
-        else sidebarWrap.style.display = '';
+        sidebarWrap.style.display = (!isTopbar && onDesktop) ? '' : 'none';
       }
       if (topbarWrap) {
-        if (!isTopbar) topbarWrap.style.display = 'none';
-        else topbarWrap.style.display = '';
+        topbarWrap.style.display = (isTopbar && onDesktop) ? '' : 'none';
       }
       
       $('#uName').value = STATE.user.name || '';
@@ -2756,8 +2755,8 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       const showTxUi = !STATE.ui.dashboardOpen;
       const txToolbar = $('#desktopHeader');
       if (txToolbar) {
-        txToolbar.classList.toggle('hidden', !showTxUi);
-        txToolbar.classList.toggle('md:flex', showTxUi);
+        const showDesktopHeader = showTxUi && isDesktopViewport();
+        txToolbar.classList.toggle('hidden', !showDesktopHeader);
       }
       const txToolbarMobile = $('#txToolbarMobile');
       if (txToolbarMobile) {
@@ -4047,7 +4046,12 @@ function generateSmartBudgetRecommendation() {
     const sheet = $('#sheet');
 
 function openAddSheet(tab = 'quick') {
-  sheet?.classList.toggle('sheet-form-panel', isDesktopViewport());
+  const backdropEl = document.getElementById('sheetBackdrop');
+  const sheetEl = document.getElementById('sheet');
+  // #region agent log
+  fetch('http://127.0.0.1:7456/ingest/64ec47ef-1a63-485e-909c-4ab70260afe3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4aca'},body:JSON.stringify({sessionId:'ae4aca',location:'js/app.js:openAddSheet',message:'openAddSheet entry',data:{tab,hasSheet:!!sheetEl,hasBackdrop:!!backdropEl},timestamp:Date.now(),hypothesisId:'A',runId:'post-fix'})}).catch(()=>{});
+  // #endregion
+  sheetEl?.classList.toggle('sheet-form-panel', isDesktopViewport());
   // 1. Isi Dropdown Kategori, Akun, Metode (Agar Manual selalu siap)
   const cats = getActiveBudgetCats();
   const mCat = document.getElementById('mCategory');
@@ -4068,10 +4072,11 @@ function openAddSheet(tab = 'quick') {
   });
 
   // 3. Buka Sheet
-  const backdrop = document.getElementById('sheetBackdrop');
-  const sheet = document.getElementById('sheet');
-  if (backdrop && sheet) {
-    openSheet(backdrop, sheet);
+  if (backdropEl && sheetEl) {
+    openSheet(backdropEl, sheetEl);
+    // #region agent log
+    fetch('http://127.0.0.1:7456/ingest/64ec47ef-1a63-485e-909c-4ab70260afe3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4aca'},body:JSON.stringify({sessionId:'ae4aca',location:'js/app.js:openAddSheet',message:'sheet opened',data:{tab,sheetOpen:sheetEl.classList.contains('open')},timestamp:Date.now(),hypothesisId:'A',runId:'post-fix'})}).catch(()=>{});
+    // #endregion
   }
   if (tab === 'manual') {
     if ($('#mDate') && !$('#mDate').value) $('#mDate').value = toISODate(new Date());
@@ -8059,6 +8064,7 @@ function toggleNav(view, triggerEl) {
     placeFilterPanel();
     window.addEventListener('resize', () => {
       placeFilterPanel();
+      rerender();
       if (STATE.ui.advisorOpen && !isDesktopViewport()) {
         advisorBackdrop.classList.remove('desktop-sidebar');
         $('#appShell')?.classList.remove('advisor-open');
