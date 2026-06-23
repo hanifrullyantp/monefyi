@@ -86,11 +86,33 @@ html, body {
     max-width: 100%;
     overflow-x: hidden;
   }
+    /* Tx filter dropdowns (mobile + desktop) */
+    .tx-filter-bar.tx-filter-bar--open {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.5rem;
+    }
+    @media (min-width: 768px) {
+      .tx-filter-bar.tx-filter-bar--open {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
+    .tx-filter-range.tx-filter-range--open {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 0.5rem;
+      align-items: end;
+    }
+
     /* Desktop filter icon active state */
-    #btnDesktopFilter.active {
+    #btnDesktopFilter.active,
+    #btnTopFilterTypeMobile.active {
       border-color: var(--accent-primary) !important;
       color: var(--accent-primary) !important;
       box-shadow: 0 0 0 2px rgba(16,185,129,.25);
+    }
+    #btnTopFilterTypeMobile.active {
+      background: var(--brand-green-soft);
     }
     @media (max-width: 767px) {
       #desktopHeader,
