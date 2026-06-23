@@ -3380,7 +3380,7 @@ function generateSmartBudgetRecommendation() {
           maintainAspectRatio: false,
           plugins: { legend: { display: false }, tooltip: { enabled: false } },
           scales: { x: { display: false }, y: { display: false } },
-          layout: { padding: { left: 0, right: 4, top: 8, bottom: 0 } },
+          layout: { padding: { left: 0, right: 4, top: 12, bottom: 4 } },
         },
       });
     }
@@ -3652,8 +3652,6 @@ function generateSmartBudgetRecommendation() {
           const sign = isInc ? '+' : isExp ? '−' : '';
           const title = tx.merchant || tx.category || 'Lainnya';
           const dateFormatted = formatShortDate(tx.date);
-          const netAmount = calculateTxNet(tx);
-          const netColor = netAmount >= 0 ? 'var(--accent-primary)' : 'var(--accent-danger)';
           const typeLabel = txTypeLabel(tx.type);
           const subtitleParts = [tx.category !== title ? tx.category : null, tx.account].filter(Boolean);
           const subtitle = subtitleParts.join(' · ');
@@ -3669,7 +3667,6 @@ function generateSmartBudgetRecommendation() {
                 </div>
                 <div class="tx-card-mockup__amount">
                   <div class="text-[10px] app-muted">${escapeHtml(dateFormatted)}</div>
-                  <div class="text-[11px] font-medium" style="color:${netColor}">Net: ${formatCompactIDR(netAmount)}</div>
                   <div class="font-bold" style="color:${amtColor}">${sign}${formatIDR(Math.abs(Number(tx.amount||0)))}</div>
                 </div>
                 <div class="tx-card-actions shrink-0 hidden md:flex">

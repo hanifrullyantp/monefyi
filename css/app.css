@@ -33,13 +33,24 @@
       --brand-border: rgba(16,185,129,.24);
       --brand-shadow: 0 8px 32px rgba(16,185,129,.10);
       --nav-surface: #0E1520;
+      --app-card-elevated: rgba(20, 28, 40, 0.88);
+      --app-card-mid: rgba(15, 22, 32, 0.52);
+      --app-card-fade: rgba(11, 17, 24, 0);
+      --grad-card-surface: linear-gradient(180deg, var(--app-card-elevated) 0%, var(--app-card-mid) 58%, var(--app-card-fade) 100%);
+      --grad-card-surface-soft: linear-gradient(180deg, rgba(18, 26, 38, 0.75) 0%, rgba(11, 17, 24, 0) 100%);
+      --grad-hero-surface: linear-gradient(165deg, rgba(21, 34, 56, 0.92) 0%, rgba(14, 22, 34, 0.58) 42%, rgba(11, 17, 24, 0) 100%);
       --radius-card: 16px;
       --radius-btn: 12px;
       --radius-pill: 50px;
       --focus-ring: 0 0 0 2px var(--accent-primary);
       --font-sans: 'Montserrat', system-ui, -apple-system, sans-serif;
 
-      background: var(--app-bg);
+      background-color: var(--app-bg);
+      background-image:
+        linear-gradient(180deg, #0B1118 0%, #0D1520 38%, #0B1118 100%),
+        radial-gradient(800px circle at 15% -5%, rgba(16,185,129,.06), transparent 50%),
+        radial-gradient(600px circle at 95% 5%, rgba(14,165,233,.05), transparent 45%);
+      background-attachment: fixed;
       color: var(--app-text);
       font-family: var(--font-sans);
       letter-spacing: -0.01em;
@@ -56,6 +67,12 @@
       --app-divider: rgba(15,23,42,.08);
       --app-backdrop: rgba(248,250,252,.92);
       --app-sheet: #FFFFFF;
+      --app-card-elevated: rgba(255, 255, 255, 0.95);
+      --app-card-mid: rgba(248, 250, 252, 0.7);
+      --app-card-fade: rgba(255, 255, 255, 0);
+      --grad-card-surface: linear-gradient(180deg, var(--app-card-elevated) 0%, var(--app-card-mid) 60%, var(--app-card-fade) 100%);
+      --grad-card-surface-soft: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(248,250,252,0) 100%);
+      --grad-hero-surface: linear-gradient(165deg, rgba(240,253,250,0.95) 0%, rgba(248,250,252,0.5) 50%, rgba(255,255,255,0) 100%);
       --accent-primary: #10B981;
       --accent-primary-hover: #059669;
       --accent-danger: #EF4444;
@@ -125,7 +142,13 @@ html, body {
       opacity: 1;
       color: var(--accent-primary);
     }
-    .app-card { background: var(--app-card, var(--app-surface)); border: 1px solid var(--app-border); border-radius: var(--radius-card); }
+    .app-card {
+      background: var(--grad-card-surface);
+      border: none;
+      border-top: 1px solid rgba(255,255,255,.05);
+      border-radius: var(--radius-card);
+      box-shadow: none;
+    }
     @keyframes bounce-soft {
       0% { transform: scale(1); }
       50% { transform: scale(1.15); }
@@ -203,9 +226,10 @@ html, body {
     .sidebar-saldo-card {
       padding: 16px;
       border-radius: 20px;
-      background: linear-gradient(145deg, #0D1117 0%, #1a2744 100%);
-      border: 1px solid rgba(255,255,255,.08);
-      box-shadow: 0 8px 32px rgba(16,185,129,.08), inset 0 -1px 0 rgba(16,185,129,.15);
+      background: var(--grad-hero-surface);
+      border: none;
+      border-top: 1px solid rgba(255,255,255,.06);
+      box-shadow: none;
       overflow: hidden;
       position: relative;
     }
@@ -242,21 +266,27 @@ html, body {
       margin-top: 12px;
       position: relative;
       align-items: flex-end;
+      min-height: 68px;
+      padding-bottom: 2px;
     }
     .sidebar-saldo-card__metrics {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 8px;
       flex-grow: 1;
+      position: relative;
+      z-index: 1;
     }
     .sidebar-saldo-sparkline {
       position: absolute;
       right: 0;
-      bottom: -16px; /* Adjust as needed */
-      width: 40%; /* ~40% width of card */
-      height: 80px; /* fixed height for sparkline */
-      opacity: 0.8;
-      filter: drop-shadow(0 0 4px rgba(16,185,129,.5));
+      bottom: 0;
+      width: 42%;
+      height: 52px;
+      opacity: 0.75;
+      pointer-events: none;
+      z-index: 0;
+      filter: drop-shadow(0 0 4px rgba(16,185,129,.4));
     }
     .sidebar-saldo-filter {
       display: inline-flex;
@@ -492,12 +522,25 @@ html, body {
     /* Hero saldo card (mobile) */
     .hero-saldo-card {
       position: relative;
-      padding: 16px;
-      border-radius: 20px;
-      background: linear-gradient(145deg, #0B1118 0%, #152238 100%);
-      border: 1px solid rgba(255,255,255,.07);
-      box-shadow: 0 8px 32px rgba(0,0,0,.25), inset 0 -1px 0 rgba(16,185,129,.12);
+      padding: 16px 16px 20px;
+      border-radius: 20px 20px 0 0;
+      background: var(--grad-hero-surface);
+      border: none;
+      border-top: 1px solid rgba(255,255,255,.06);
+      box-shadow: none;
       overflow: hidden;
+      margin-bottom: -4px;
+    }
+    .hero-saldo-card::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 40px;
+      background: linear-gradient(to bottom, transparent, var(--app-bg));
+      pointer-events: none;
+      z-index: 2;
     }
     .hero-saldo-card::before {
       content: '';
@@ -542,12 +585,16 @@ html, body {
       margin-top: 12px;
       position: relative;
       align-items: flex-end;
+      min-height: 68px;
+      padding-bottom: 2px;
     }
     .hero-saldo-metrics {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 8px;
       flex-grow: 1;
+      position: relative;
+      z-index: 1;
     }
     .kpi-metric {
       padding: 10px 12px;
@@ -572,11 +619,13 @@ html, body {
     .hero-saldo-sparkline {
       position: absolute;
       right: 0;
-      bottom: -16px; /* Adjust as needed */
-      width: 40%; /* ~40% width of card */
-      height: 80px; /* fixed height for sparkline */
-      opacity: 0.8;
-      filter: drop-shadow(0 0 4px rgba(16,185,129,.5));
+      bottom: 0;
+      width: 42%;
+      height: 52px;
+      opacity: 0.75;
+      pointer-events: none;
+      z-index: 0;
+      filter: drop-shadow(0 0 4px rgba(16,185,129,.4));
     }
     .saldo-masked {
       filter: blur(4px);
@@ -856,7 +905,7 @@ html, body {
       color: var(--app-text);
     }
 
-    #txList { display: flex; flex-direction: column; gap: 8px; }
+    #txList { display: flex; flex-direction: column; gap: 2px; }
     .tx-list-host--table { display: flex; flex-direction: column; }
     .tx-date-divider {
       display: flex;
@@ -950,13 +999,28 @@ html, body {
       overflow: hidden;
       position: relative;
       touch-action: pan-y;
+      background: transparent;
+      border: none;
+      box-shadow: none;
     }
     .tx-card-inner {
       padding: 16px;
       transition: transform 0.2s ease;
-      background: var(--app-card, var(--app-surface));
+      background: var(--grad-card-surface-soft);
       position: relative;
       z-index: 1;
+      border-radius: inherit;
+      border: none;
+    }
+    .tx-card-inner::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 28px;
+      background: linear-gradient(to bottom, transparent, var(--app-bg));
+      pointer-events: none;
       border-radius: inherit;
     }
     .tx-card-swipe-delete {
@@ -1077,7 +1141,11 @@ html, body {
       50% { transform: scale(1.02); }
       100% { transform: scale(1); }
     }
-    .tx-card-v2:hover { background: color-mix(in srgb, var(--app-card) 85%, var(--accent-primary) 15%); }
+    .tx-card-v2:hover { background: transparent; }
+    .tx-card-mockup .tx-card-inner:hover,
+    .tx-card-compact:hover .tx-card-inner {
+      background: linear-gradient(180deg, rgba(22, 32, 46, 0.82) 0%, rgba(11, 17, 24, 0) 100%);
+    }
     .tx-card-v2 .tx-icon {
       width: 44px; height: 44px;
       border-radius: 50%;
@@ -1441,11 +1509,16 @@ html, body {
       border: 1px solid rgba(16,185,129,.30);
     }
     .tx-card-compact {
-      border: 1px solid rgba(255,255,255,.06);
+      border: none;
       border-radius: 16px;
-      background: var(--app-card);
+      background: transparent;
+      box-shadow: none;
     }
-    .tx-card-compact .tx-card-inner { position: relative; padding: 14px 16px; }
+    .tx-card-compact .tx-card-inner {
+      position: relative;
+      padding: 14px 16px 18px;
+      background: var(--grad-card-surface-soft);
+    }
     .tx-card-compact .tx-card-row {
       display: flex;
       align-items: center;
@@ -1699,10 +1772,8 @@ html, body {
       --brand-border: rgba(52,211,153,.28);
       --brand-shadow: 0 12px 28px rgba(16,185,129,.22);
 
-      /* subtle background accents — toned down to match mockup */
-      background-image:
-        radial-gradient(800px circle at 15% -5%, rgba(16,185,129,.06), transparent 50%),
-        radial-gradient(600px circle at 95% 5%, rgba(14,165,233,.05), transparent 45%);
+      /* subtle background accents — base layer handled on body */
+      background-image: none;
       background-attachment: fixed;
     }
     body.theme-light {
