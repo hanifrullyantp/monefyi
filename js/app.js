@@ -76,6 +76,14 @@
     }
 
     function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+    function withTimeout(promise, ms, label = 'op') {
+      return Promise.race([
+        promise,
+        new Promise((_, reject) => {
+          setTimeout(() => reject(new Error(`timeout:${label}`)), ms);
+        }),
+      ]);
+    }
     function showToast(message, kind='success', opts){
       if (window.MonefyiUI?.showToast) {
         window.MonefyiUI.showToast(message, kind, opts);
@@ -1040,22 +1048,35 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
         return;
       }
 
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+        $('#authOverlay')?.classList.remove('hidden');
+        $('#authStatus').textContent = 'Konfigurasi Supabase belum lengkap. Hubungi admin.';
+        $('#btnAuthSubmit').disabled = true;
+        return;
+      }
+
       const { createClient } = window.supabase;
       STATE.db.supa = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
       });
       STATE.db.enabled = true;
 
-      const { data } = await STATE.db.supa.auth.getSession();
-      STATE.db.session = data.session;
-      STATE.db.user = data.session?.user || null;
+      try {
+        const { data } = await withTimeout(STATE.db.supa.auth.getSession(), 8000, 'session');
+        STATE.db.session = data?.session || null;
+        STATE.db.user = data?.session?.user || null;
+      } catch (e) {
+        console.warn('getSession', e);
+        STATE.db.session = null;
+        STATE.db.user = null;
+      }
 
       STATE.db.supa.auth.onAuthStateChange(async (event, session) => {
         STATE.db.session = session;
         STATE.db.user = session?.user || null;
         if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') return;
         if (STATE.db.user) {
-          await bootstrapAuthed();
+          bootstrapAuthed().catch((err) => console.warn('bootstrapAuthed', err));
         } else {
           STATE.ui.enhancementsReady = false;
           STATE.ui.txToolbarReady = false;
@@ -1063,14 +1084,21 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
         }
       });
 
-      // Try load global app config for branding (even before login)
-      await loadAppConfig();
+      // Jangan blokir login menunggu app_config
+      loadAppConfig().catch((e) => console.warn('loadAppConfig', e));
 
       if (STATE.db.user) {
-        await bootstrapAuthed();
+        bootstrapAuthed().catch((e) => console.warn('bootstrapAuthed', e));
       } else {
         showAuth();
       }
+    }
+
+    async function ensureDbReady() {
+      if (STATE.db.enabled && STATE.db.supa) return true;
+      if (!window.supabase?.createClient) return false;
+      await initSupabase();
+      return !!(STATE.db.enabled && STATE.db.supa);
     }
     async function ensureProfile(){
       const supa = STATE.db.supa;
@@ -1121,7 +1149,11 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
       if (!STATE.db.enabled) return null;
       try {
         const supa = STATE.db.supa;
-        const { data, error } = await supa.from('app_config').select('*').eq('id', 'global').maybeSingle();
+        const { data, error } = await withTimeout(
+          supa.from('app_config').select('*').eq('id', 'global').maybeSingle(),
+          6000,
+          'app_config'
+        );
         if (error) return null;
         STATE.appConfig = data || null;
         applyAppBranding();
@@ -1474,10 +1506,13 @@ async function upsertTransaction_legacy_local(tx) {
       enterAppShell();
       try {
         if (window.MonefyiI18n?.mergeIntoI18N) window.MonefyiI18n.mergeIntoI18N(I18N);
-        await loadAppConfig();
-        await loadProfileAndSettings();
-        try { STATE.budgetsByMonth = await loadBudgets(); } catch (e) { console.warn('loadBudgets', e); }
-        try { await refreshTransactionsRange(); } catch (e) { console.warn('refreshTransactionsRange', e); }
+        await withTimeout(loadAppConfig(), 8000, 'app_config_boot').catch(() => null);
+        await withTimeout(loadProfileAndSettings(), 12000, 'profile').catch((e) => {
+          console.warn('loadProfileAndSettings', e);
+          return null;
+        });
+        try { STATE.budgetsByMonth = await withTimeout(loadBudgets(), 10000, 'budgets'); } catch (e) { console.warn('loadBudgets', e); }
+        try { await withTimeout(refreshTransactionsRange(), 15000, 'transactions'); } catch (e) { console.warn('refreshTransactionsRange', e); }
         try { initCoachChat({ reset: true }); } catch (e) { console.warn('initCoachChat', e); }
         if (!STATE.ui.enhancementsReady) {
           STATE.ui.enhancementsReady = true;
@@ -1725,10 +1760,17 @@ async function upsertTransaction_legacy_local(tx) {
 
     $('#btnAuthSubmit')?.addEventListener('click', async () => {
       if (!STATE.db.enabled || !STATE.db.supa) {
-        $('#authStatus').textContent = location.protocol === 'file:'
-          ? 'Buka lewat https://, bukan file://.'
-          : 'Aplikasi belum siap. Refresh halaman atau cek koneksi internet.';
-        return;
+        $('#authStatus').textContent = 'Menghubungkan…';
+        try {
+          const ready = await withTimeout(ensureDbReady(), 12000, 'db_ready');
+          if (!ready) throw new Error('db not ready');
+        } catch (e) {
+          console.warn('ensureDbReady', e);
+          $('#authStatus').textContent = location.protocol === 'file:'
+            ? 'Buka lewat https://, bukan file://.'
+            : 'Gagal terhubung ke server. Coba refresh halaman.';
+          return;
+        }
       }
       const email = ($('#authEmail')?.value || '').trim();
       const pass = ($('#authPass')?.value || '').trim();
@@ -8238,17 +8280,24 @@ function toggleNav_legacy(mode) {
             $('#authOverlay')?.classList.remove('hidden');
             $('#authStatus').textContent = 'Gagal memuat Supabase SDK. Cek koneksi internet / adblock.';
           } else {
-            await Promise.race([
-              initSupabase(),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('init timeout')), 15000)),
-            ]);
+            await withTimeout(initSupabase(), 20000, 'init');
           }
         } catch (e) {
           console.error('Init error', e);
           $('#authOverlay')?.classList.remove('hidden');
-          $('#authStatus').textContent = e?.message === 'init timeout'
-            ? 'Koneksi lambat. Silakan refresh atau coba lagi.'
+          const isTimeout = String(e?.message || '').includes('timeout');
+          $('#authStatus').textContent = isTimeout
+            ? 'Koneksi lambat — kamu tetap bisa coba masuk.'
             : 'Gagal inisialisasi. Coba refresh atau hubungi admin.';
+          // Tetap coba siapkan klien Supabase agar tombol Masuk bisa dipakai
+          if (!STATE.db.supa && window.supabase?.createClient && SUPABASE_URL && SUPABASE_ANON_KEY) {
+            try {
+              STATE.db.supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+                auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+              });
+              STATE.db.enabled = true;
+            } catch (_) {}
+          }
         }
 
         $('#btnPrintReport')?.addEventListener('click', () => printReport());
