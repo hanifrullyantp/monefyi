@@ -30,6 +30,9 @@ export interface EstimationItem {
   hpp_per_unit: number;
   margin_pct: number;
   selling_price_per_unit: number;
+  item_discount_pct: number;
+  item_discount_amount: number;
+  is_bonus: boolean;
   total_hpp: number;
   total_selling: number;
   total_profit: number;
@@ -51,6 +54,8 @@ export interface Estimation {
   overhead_pct: number;
   margin_pct: number;
   discount_pct: number;
+  discount_amount: number;
+  adjustments: EstimationAdjustment[] | null;
   tax_pct: number;
   total_selling_price: number;
   total_profit: number;
@@ -73,6 +78,14 @@ export interface Estimation {
   items?: EstimationItem[];
 }
 
+/** Pengurangan / penyesuaian harga di level estimasi (dengan keterangan). */
+export interface EstimationAdjustment {
+  id: string;
+  label: string;
+  /** Nominal positif — dikurangkan dari subtotal penawaran. */
+  amount: number;
+}
+
 /** Draft row for the editable items table (may lack id until saved). */
 export interface EstimationItemDraft {
   id?: string;
@@ -86,6 +99,12 @@ export interface EstimationItemDraft {
   hpp_per_unit: number;
   margin_pct: number;
   selling_price_per_unit: number;
+  /** Diskon % dari total jual baris ini. */
+  item_discount_pct: number;
+  /** Diskon nominal (Rp) dari total jual baris setelah diskon %. */
+  item_discount_amount: number;
+  /** Item bonus — ditampilkan tapi tidak dihitung ke total jual. */
+  is_bonus: boolean;
   total_hpp: number;
   total_selling: number;
   total_profit: number;
@@ -112,6 +131,10 @@ export interface EstimationFormDraft {
   overhead_pct: number;
   margin_pct: number;
   discount_pct: number;
+  /** Diskon total nominal (Rp), di luar diskon %. */
+  discount_amount: number;
+  /** Baris pengurangan dengan keterangan (nego, voucher, dll). */
+  adjustments: EstimationAdjustment[];
   tax_pct: number;
   notes: string;
   terms_conditions: string;
@@ -136,9 +159,14 @@ export const PDF_TEMPLATE_OPTIONS: Array<{ value: PdfTemplate; label: string; de
 
 export interface EstimationSummary {
   subtotalHpp: number;
+  subtotalSellingGross: number;
+  itemDiscountTotal: number;
   subtotalSellingItems: number;
   overheadAmount: number;
   subtotalBeforeDiscount: number;
+  discountAmountPct: number;
+  discountAmountFixed: number;
+  adjustmentTotal: number;
   discountAmount: number;
   afterDiscount: number;
   taxAmount: number;

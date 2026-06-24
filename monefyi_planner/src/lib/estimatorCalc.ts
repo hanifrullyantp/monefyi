@@ -1,4 +1,4 @@
-import type { EstimationItemDraft, EstimationSummary } from '../types/estimator';
+import type { EstimationAdjustment, EstimationItemDraft, EstimationSummary } from '../types/estimator';
 
 /** Bulatkan ke Rupiah utuh */
 export function roundIdr(n: number): number {
@@ -80,8 +80,28 @@ export function calcItemRow(
     margin_pct: margin,
     total_hpp: totalHpp,
     total_selling: totalSelling,
-    total_profit: totalSelling - totalHpp,
+    total_profit: effectiveItemSelling({ ...draft, total_hpp: totalHpp, total_selling: totalSelling, is_bonus: draft.is_bonus ?? false, item_discount_pct: draft.item_discount_pct ?? 0, item_discount_amount: draft.item_discount_amount ?? 0 }) - totalHpp,
   };
+}
+
+/** Total jual efektif per baris setelah diskon item / bonus. */
+export function effectiveItemSelling(
+  item: Pick<EstimationItemDraft, 'total_selling' | 'item_discount_pct' | 'item_discount_amount' | 'is_bonus'>,
+): number {
+  if (item.is_bonus) return 0;
+  const base = roundIdr(Number(item.total_selling) || 0);
+  const pct = Math.min(100, Math.max(0, Number(item.item_discount_pct) || 0));
+  let after = pct > 0 ? roundIdr(base * (1 - pct / 100)) : base;
+  const amt = roundIdr(Number(item.item_discount_amount) || 0);
+  if (amt > 0) after = Math.max(0, after - amt);
+  return after;
+}
+
+export function itemDiscountAmount(
+  item: Pick<EstimationItemDraft, 'total_selling' | 'item_discount_pct' | 'item_discount_amount' | 'is_bonus'>,
+): number {
+  const gross = item.is_bonus ? roundIdr(Number(item.total_selling) || 0) : roundIdr(Number(item.total_selling) || 0);
+  return Math.max(0, gross - effectiveItemSelling(item));
 }
 
 /** Sinkronkan HPP/total jika margin & harga jual tidak konsisten (mis. data lama). */
@@ -140,27 +160,46 @@ export function calcEstimationSummary(
   overheadPct: number,
   discountPct: number,
   taxPct: number,
+  opts?: {
+    discountAmount?: number;
+    adjustments?: EstimationAdjustment[];
+  },
 ): EstimationSummary {
   const normalized = items.map(i => (i.name.trim() ? normalizeEstimationItem(i) : i));
   const subtotalHpp = normalized.reduce((s, i) => s + (Number(i.total_hpp) || 0), 0);
-  const subtotalSellingItems = normalized.reduce((s, i) => s + (Number(i.total_selling) || 0), 0);
-  const itemProfit = normalized.reduce((s, i) => s + (Number(i.total_profit) || 0), 0);
+  const subtotalSellingGross = normalized.reduce((s, i) => s + (Number(i.total_selling) || 0), 0);
+  const itemDiscountTotal = normalized.reduce((s, i) => s + itemDiscountAmount(i), 0);
+  const subtotalSellingItems = normalized.reduce((s, i) => s + effectiveItemSelling(i), 0);
+  const itemProfit = normalized.reduce(
+    (s, i) => s + (effectiveItemSelling(i) - (Number(i.total_hpp) || 0)),
+    0,
+  );
   const overheadAmount = roundIdr(subtotalHpp * (overheadPct / 100));
   const subtotalBeforeDiscount = subtotalSellingItems + overheadAmount;
-  const discountAmount = roundIdr(subtotalBeforeDiscount * (discountPct / 100));
-  const afterDiscount = subtotalBeforeDiscount - discountAmount;
+  const discountAmountPct = roundIdr(subtotalBeforeDiscount * (discountPct / 100));
+  const discountAmountFixed = roundIdr(Math.max(0, Number(opts?.discountAmount) || 0));
+  const adjustmentTotal = roundIdr(
+    (opts?.adjustments || []).reduce((s, a) => s + Math.max(0, Number(a.amount) || 0), 0),
+  );
+  const discountAmount = discountAmountPct + discountAmountFixed + adjustmentTotal;
+  const afterDiscount = Math.max(0, subtotalBeforeDiscount - discountAmountPct - discountAmountFixed - adjustmentTotal);
   const taxAmount = roundIdr(afterDiscount * (taxPct / 100));
   const grandTotal = afterDiscount + taxAmount;
-  const totalProfit = itemProfit + overheadAmount - discountAmount;
+  const totalProfit = itemProfit + overheadAmount - discountAmountPct - discountAmountFixed - adjustmentTotal;
   const avgMarginPct = subtotalSellingItems > 0
     ? ((subtotalSellingItems - subtotalHpp) / subtotalSellingItems) * 100
     : 0;
 
   return {
     subtotalHpp,
+    subtotalSellingGross,
+    itemDiscountTotal,
     subtotalSellingItems,
     overheadAmount,
     subtotalBeforeDiscount,
+    discountAmountPct,
+    discountAmountFixed,
+    adjustmentTotal,
     discountAmount,
     afterDiscount,
     taxAmount,
@@ -179,6 +218,9 @@ export function emptyItem(sortOrder = 0): EstimationItemDraft {
     hpp_per_unit: 0,
     margin_pct: 20,
     selling_price_per_unit: 0,
+    item_discount_pct: 0,
+    item_discount_amount: 0,
+    is_bonus: false,
     total_hpp: 0,
     total_selling: 0,
     total_profit: 0,

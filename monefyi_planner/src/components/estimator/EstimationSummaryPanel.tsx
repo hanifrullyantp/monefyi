@@ -13,6 +13,7 @@ export default function EstimationSummaryPanel({ draft }: Props) {
     draft.overhead_pct,
     draft.discount_pct,
     draft.tax_pct,
+    { discountAmount: draft.discount_amount, adjustments: draft.adjustments },
   );
 
   const marginWidth = Math.min(100, Math.max(0, s.avgMarginPct));
@@ -28,6 +29,9 @@ export default function EstimationSummaryPanel({ draft }: Props) {
 
       <div className="p-4 space-y-2 text-sm">
         <Row label="Subtotal HPP" value={formatRupiahFull(s.subtotalHpp)} />
+        {s.itemDiscountTotal > 0 && (
+          <Row label="Diskon per item" value={`−${formatRupiahFull(s.itemDiscountTotal)}`} negative />
+        )}
         <Row label="Subtotal jual item" value={formatRupiahFull(s.subtotalSellingItems)} />
         {draft.overhead_pct > 0 && (
           <Row
@@ -40,9 +44,15 @@ export default function EstimationSummaryPanel({ draft }: Props) {
           <Row label="Subtotal penawaran" value={formatRupiahFull(s.subtotalBeforeDiscount)} bold />
         </div>
         {draft.discount_pct > 0 && (
-          <Row label={`Diskon (${draft.discount_pct}%)`} value={`−${formatRupiahFull(s.discountAmount)}`} negative />
+          <Row label={`Diskon total (${draft.discount_pct}%)`} value={`−${formatRupiahFull(s.discountAmountPct)}`} negative />
         )}
-        {draft.discount_pct > 0 && (
+        {draft.discount_amount > 0 && (
+          <Row label="Diskon total (nominal)" value={`−${formatRupiahFull(s.discountAmountFixed)}`} negative />
+        )}
+        {draft.adjustments.filter(a => a.label.trim() && a.amount > 0).map(adj => (
+          <Row key={adj.id} label={adj.label.trim()} value={`−${formatRupiahFull(adj.amount)}`} negative />
+        ))}
+        {s.discountAmount > 0 && (
           <Row label="Setelah diskon" value={formatRupiahFull(s.afterDiscount)} muted />
         )}
         {draft.tax_pct > 0 && (

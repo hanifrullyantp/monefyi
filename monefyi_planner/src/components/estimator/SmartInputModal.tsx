@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { X, Mic, MicOff, Sparkles, Check, AlertTriangle } from 'lucide-react';
 import { parseEstimationText, type ParsedEstimationItem } from '../../lib/estimatorParser';
 import { formatRupiahFull } from '../../lib/estimatorFormat';
+import QtyInput from './QtyInput';
 import { loadPricelistItems } from '../../services/pricelistService';
 import type { PricelistItem } from '../../types/estimator';
 
@@ -175,10 +176,9 @@ export default function SmartInputModal({ orgId, defaultMargin = 20, onClose, on
                           )}
                         </td>
                         <td className="p-1">
-                          <input
-                            type="number"
+                          <QtyInput
                             value={item.qty}
-                            onChange={e => updateParsed(idx, { qty: Number(e.target.value) })}
+                            onChange={v => updateParsed(idx, { qty: v })}
                             className="w-full px-1 py-1 border border-slate-200 rounded text-right text-sm"
                           />
                         </td>

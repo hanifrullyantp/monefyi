@@ -1,5 +1,5 @@
 import convertTerbilang from 'terbilang-ts';
-import { calcEstimationSummary } from '../estimatorCalc';
+import { calcEstimationSummary, effectiveItemSelling } from '../estimatorCalc';
 import { formatDateId, formatRupiahFull } from '../estimatorFormat';
 import { urlToDataUri, fileToDataUri } from './pdfImageUtils';
 import type { EstimationFormDraft, PdfTemplate } from '../../types/estimator';
@@ -37,6 +37,8 @@ export interface QuotationPdfContext {
   subtotalLabel: string;
   overheadLabel: string | null;
   discountLabel: string | null;
+  discountFixedLabel: string | null;
+  adjustmentLabels: Array<{ label: string; value: string }>;
   taxLabel: string | null;
   grandTotal: string;
   grandTotalWords: string;
@@ -64,7 +66,10 @@ export async function buildQuotationPdfContext(
   options: PdfDisplayOptions,
 ): Promise<QuotationPdfContext> {
   const items = draft.items.filter(i => i.name.trim());
-  const summary = calcEstimationSummary(items, draft.overhead_pct, draft.discount_pct, draft.tax_pct);
+  const summary = calcEstimationSummary(items, draft.overhead_pct, draft.discount_pct, draft.tax_pct, {
+    discountAmount: draft.discount_amount,
+    adjustments: draft.adjustments,
+  });
 
   const primary = draft.pdf_primary_color || settings.primary_color || '#059669';
   const secondary = draft.pdf_secondary_color || settings.secondary_color || '#1e293b';
@@ -114,17 +119,28 @@ export async function buildQuotationPdfContext(
     bankName: settings.bank_name || '',
     bankAccount: settings.bank_account || '',
     bankAccountName: settings.bank_account_name || '',
-    items: items.map((item, idx) => ({
-      no: idx + 1,
-      name: item.name,
-      qty: String(item.qty),
-      unit: item.unit,
-      unitPrice: rp(item.selling_price_per_unit),
-      total: rp(item.total_selling),
-    })),
+    items: items.map((item, idx) => {
+      const net = effectiveItemSelling(item);
+      const suffix = item.is_bonus ? ' (BONUS)' : '';
+      const discNote = item.item_discount_pct > 0 || item.item_discount_amount > 0
+        ? ` [diskon ${item.item_discount_pct > 0 ? `${item.item_discount_pct}%` : ''}${item.item_discount_amount > 0 ? ` ${rp(item.item_discount_amount)}` : ''}]`
+        : '';
+      return {
+        no: idx + 1,
+        name: `${item.name}${suffix}${discNote}`,
+        qty: String(item.qty),
+        unit: item.unit,
+        unitPrice: item.is_bonus ? '—' : rp(item.selling_price_per_unit),
+        total: item.is_bonus ? 'BONUS' : rp(net),
+      };
+    }),
     subtotalLabel: rp(summary.subtotalBeforeDiscount),
     overheadLabel: draft.overhead_pct > 0 ? `${rp(summary.overheadAmount)} (${draft.overhead_pct}%)` : null,
-    discountLabel: draft.discount_pct > 0 ? `-${rp(summary.discountAmount)} (${draft.discount_pct}%)` : null,
+    discountLabel: draft.discount_pct > 0 ? `-${rp(summary.discountAmountPct)} (${draft.discount_pct}%)` : null,
+    discountFixedLabel: draft.discount_amount > 0 ? `-${rp(summary.discountAmountFixed)}` : null,
+    adjustmentLabels: (draft.adjustments || [])
+      .filter(a => a.label.trim() && a.amount > 0)
+      .map(a => ({ label: a.label.trim(), value: `-${rp(a.amount)}` })),
     taxLabel: draft.tax_pct > 0 ? `${rp(summary.taxAmount)} (${draft.tax_pct}%)` : null,
     grandTotal: rp(summary.grandTotal),
     grandTotalWords: capitalizeFirst(convertTerbilang(Math.round(summary.grandTotal))),

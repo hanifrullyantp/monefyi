@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Plus, Trash2, Sparkles, List } from 'lucide-react';
-import { calcEstimationSummary, calcItemRow, emptyItem, sellingFromHpp, syncEstimationItemPricesList, estimationItemsNeedPriceSync, type ItemPriceEdit } from '../../lib/estimatorCalc';
+import { calcEstimationSummary, calcItemRow, effectiveItemSelling, emptyItem, sellingFromHpp, syncEstimationItemPricesList, estimationItemsNeedPriceSync, type ItemPriceEdit } from '../../lib/estimatorCalc';
 import { formatRupiahFull } from '../../lib/estimatorFormat';
 import {
   getEstimationItemProductGroup,
@@ -10,10 +10,11 @@ import {
   type EstimationItemGroup,
 } from '../../lib/estimatorProductGroup';
 import type { ParsedEstimationItem } from '../../lib/estimatorParser';
-import type { EstimationItemDraft } from '../../types/estimator';
+import type { EstimationAdjustment, EstimationItemDraft } from '../../types/estimator';
 import type { PricelistItem } from '../../types/estimator';
 import { COMMON_UNITS, pricelistToEstimationItem, PRICELIST_CATEGORIES } from '../../services/pricelistService';
 import RupiahInput from './RupiahInput';
+import QtyInput from './QtyInput';
 import SmartInputModal from './SmartInputModal';
 import PricelistPickerModal from './PricelistPickerModal';
 
@@ -25,6 +26,8 @@ interface Props {
   defaultMargin?: number;
   overheadPct?: number;
   discountPct?: number;
+  discountAmount?: number;
+  adjustments?: EstimationAdjustment[];
   taxPct?: number;
   onChange: (items: EstimationItemDraft[]) => void;
 }
@@ -35,6 +38,8 @@ export default function EstimationItemsTable({
   defaultMargin = 20,
   overheadPct = 0,
   discountPct = 0,
+  discountAmount = 0,
+  adjustments = [],
   taxPct = 0,
   onChange,
 }: Props) {
@@ -60,15 +65,17 @@ export default function EstimationItemsTable({
     return map;
   }, [productGroups]);
   const totals = useMemo(
-    () => calcEstimationSummary(activeItems, overheadPct, discountPct, taxPct),
-    [activeItems, overheadPct, discountPct, taxPct],
+    () => calcEstimationSummary(activeItems, overheadPct, discountPct, taxPct, { discountAmount, adjustments }),
+    [activeItems, overheadPct, discountPct, discountAmount, adjustments, taxPct],
   );
 
   const updateItem = (index: number, patch: Partial<EstimationItemDraft>, editField: ItemPriceEdit = 'selling') => {
     const next = [...items];
     const merged = { ...next[index], ...patch };
     const calc = calcItemRow(merged, editField);
-    next[index] = { ...merged, ...calc };
+    const row = { ...merged, ...calc };
+    row.total_profit = effectiveItemSelling(row) - (Number(row.total_hpp) || 0);
+    next[index] = row;
     onChange(next);
   };
 
@@ -83,7 +90,10 @@ export default function EstimationItemsTable({
     const next = [...items];
     for (const idx of indices) {
       const merged = { ...next[idx], qty };
-      next[idx] = { ...merged, ...calcItemRow(merged, 'qty') };
+      const calc = calcItemRow(merged, 'qty');
+      const row = { ...merged, ...calc };
+      row.total_profit = effectiveItemSelling(row) - (Number(row.total_hpp) || 0);
+      next[idx] = row;
     }
     onChange(next);
   };
@@ -212,7 +222,7 @@ export default function EstimationItemsTable({
           </div>
         ) : (
           <div className="overflow-x-auto overscroll-x-contain">
-            <table className="w-full text-sm min-w-[1100px] table-auto">
+            <table className="w-full text-sm min-w-[1280px] table-auto">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
                   <th className={`${thClass} w-10`}>#</th>
@@ -223,6 +233,9 @@ export default function EstimationItemsTable({
                   <th className={`${thClass} min-w-[148px] text-right`}>Jual / unit</th>
                   <th className={`${thClass} min-w-[72px] text-right`}>Margin %</th>
                   <th className={`${thClass} min-w-[148px] text-right`}>HPP / unit</th>
+                  <th className={`${thClass} min-w-[56px] text-center`}>Bonus</th>
+                  <th className={`${thClass} min-w-[64px] text-right`}>Disk. %</th>
+                  <th className={`${thClass} min-w-[120px] text-right`}>Disk. Rp</th>
                   <th className={`${thClass} min-w-[130px] text-right`}>Total HPP</th>
                   <th className={`${thClass} min-w-[130px] text-right`}>Total jual</th>
                   <th className="w-10" />
@@ -244,24 +257,23 @@ export default function EstimationItemsTable({
                           </div>
                         </td>
                         <td className={`${tdClass} text-right`}>
-                          <input
-                            type="number"
-                            min={0}
-                            step="any"
+                          <QtyInput
+                            value={groupSharedQty(group.indices, items) ?? 0}
+                            onChange={v => setGroupQty(group.indices, v)}
                             placeholder="—"
-                            value={groupSharedQty(group.indices, items) ?? ''}
-                            onChange={e => setGroupQty(group.indices, Number(e.target.value))}
                             className="w-full px-2 py-1.5 border border-emerald-300 bg-white rounded-lg text-right tabular-nums focus:border-emerald-500 outline-none font-semibold text-emerald-800"
                             title={`Qty global untuk semua item ${group.key}`}
                           />
                         </td>
-                        <td colSpan={6} className="px-3 py-2 text-[10px] text-emerald-600 align-middle">
+                        <td colSpan={8} className="px-3 py-2 text-[10px] text-emerald-600 align-middle">
                           {group.indices.length} item · satuan per baris tetap bisa diubah sendiri
                         </td>
                       </tr>
                     ) : null;
 
                   const productLabel = getEstimationItemProductGroup(item);
+                  const netSelling = effectiveItemSelling(item);
+                  const hasItemDiscount = netSelling !== item.total_selling || item.is_bonus;
 
                   return (
                     <Fragment key={idx}>
@@ -300,15 +312,12 @@ export default function EstimationItemsTable({
                           </select>
                         </td>
                         <td className={tdClass}>
-                          <input
-                            ref={registerRef(`${idx}-qty`)}
-                            type="number"
-                            min={0}
-                            step="any"
+                          <QtyInput
+                            inputRef={registerRef(`${idx}-qty`)}
                             value={item.qty}
-                            onChange={e => updateItem(idx, { qty: Number(e.target.value) }, 'qty')}
+                            onChange={v => updateItem(idx, { qty: v }, 'qty')}
                             onKeyDown={e => handleKeyDown(e, idx, 'qty', fields)}
-                            className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-right tabular-nums focus:border-emerald-400 outline-none text-slate-900"
+                            className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-right tabular-nums focus:border-emerald-400 outline-none"
                           />
                         </td>
                         <td className={`${tdClass} whitespace-nowrap`}>
@@ -346,11 +355,51 @@ export default function EstimationItemsTable({
                             className="px-2 py-1.5 border border-slate-200 bg-slate-50 rounded-lg text-right text-slate-700 tabular-nums focus:border-emerald-400 outline-none"
                           />
                         </td>
+                        <td className={`${tdClass} text-center`}>
+                          <input
+                            type="checkbox"
+                            checked={item.is_bonus}
+                            onChange={e => updateItem(idx, { is_bonus: e.target.checked }, 'qty')}
+                            className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                            title="Item bonus — tidak dihitung ke total jual"
+                          />
+                        </td>
+                        <td className={tdClass}>
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            step="0.1"
+                            value={item.item_discount_pct || ''}
+                            onChange={e => updateItem(idx, { item_discount_pct: Number(e.target.value) }, 'qty')}
+                            disabled={item.is_bonus}
+                            className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-right tabular-nums focus:border-emerald-400 outline-none text-slate-900 disabled:bg-slate-50 disabled:text-slate-400"
+                            placeholder="0"
+                          />
+                        </td>
+                        <td className={tdClass}>
+                          <div className={item.is_bonus ? 'opacity-40 pointer-events-none' : ''}>
+                            <RupiahInput
+                              value={item.item_discount_amount}
+                              onChange={v => updateItem(idx, { item_discount_amount: v }, 'qty')}
+                              className="px-2 py-1.5 border border-slate-200 rounded-lg text-right text-sm min-w-[6rem]"
+                              min={0}
+                            />
+                          </div>
+                        </td>
                         <td className={`${tdClass} text-right text-sm text-slate-600 tabular-nums whitespace-nowrap`}>
                           {formatRupiahFull(item.total_hpp)}
                         </td>
                         <td className={`${tdClass} text-right font-bold text-slate-800 tabular-nums whitespace-nowrap`}>
-                          {formatRupiahFull(item.total_selling)}
+                          {item.is_bonus && (
+                            <span className="block text-[10px] font-bold text-amber-600 uppercase">Bonus</span>
+                          )}
+                          {hasItemDiscount && !item.is_bonus && item.total_selling > 0 && (
+                            <span className="block text-[10px] text-slate-400 line-through font-normal">
+                              {formatRupiahFull(item.total_selling)}
+                            </span>
+                          )}
+                          {formatRupiahFull(netSelling)}
                         </td>
                         <td className={tdClass}>
                           <button
@@ -370,7 +419,7 @@ export default function EstimationItemsTable({
               {activeItems.length > 0 && (
                 <tfoot>
                   <tr className="bg-slate-50 border-t-2 border-slate-200 font-semibold text-xs">
-                    <td colSpan={8} className="px-3 py-3 text-right text-slate-500 uppercase tracking-wide">
+                    <td colSpan={11} className="px-3 py-3 text-right text-slate-500 uppercase tracking-wide">
                       Total ({activeItems.length} item)
                     </td>
                     <td className="px-2 py-3 text-right text-slate-600 tabular-nums">

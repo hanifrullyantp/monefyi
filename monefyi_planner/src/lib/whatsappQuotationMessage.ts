@@ -1,4 +1,4 @@
-import { calcEstimationSummary } from './estimatorCalc';
+import { calcEstimationSummary, effectiveItemSelling } from './estimatorCalc';
 import { formatRupiahFull } from './estimatorFormat';
 import type { EstimationFormDraft } from '../types/estimator';
 import type { PdfSettings } from '../types/pdfSettings';
@@ -68,15 +68,17 @@ export function buildWhatsAppQuotationMessage(
     draft.overhead_pct,
     draft.discount_pct,
     draft.tax_pct,
+    { discountAmount: draft.discount_amount, adjustments: draft.adjustments },
   );
 
   const itemLines = activeItems.map(item => {
+    const net = effectiveItemSelling(item);
     const vars = {
-      name: item.name,
+      name: item.is_bonus ? `${item.name} (BONUS)` : item.name,
       qty: String(item.qty),
       unit: item.unit,
-      price: formatRupiahFull(item.selling_price_per_unit),
-      total: formatRupiahFull(item.total_selling),
+      price: item.is_bonus ? '—' : formatRupiahFull(item.selling_price_per_unit),
+      total: item.is_bonus ? 'BONUS' : formatRupiahFull(net),
     };
     return applyPlaceholders(config.itemLine, vars).trim();
   });
