@@ -5,7 +5,7 @@ const fs = require("fs");
 const path = require("path");
 
 const root = path.join(__dirname, "..");
-const indexPath = path.join(root, "index.html");
+const indexPath = path.join(root, "app", "index.html");
 const reportTplPath = path.join(__dirname, "print-report-template.txt");
 
 let html = fs.readFileSync(indexPath, "utf8");

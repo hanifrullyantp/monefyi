@@ -80,15 +80,15 @@ function main() {
     "[functions.monefyi-landing-config]\nenabled = true\nverify_jwt = false",
   );
   assertContains(
-    `${root}/js/app.js`,
+    `${root}/app/js/app.js`,
     "functions/v1/monefyi-admin-users",
   );
   assertContains(
-    `${root}/js/app.js`,
+    `${root}/app/js/app.js`,
     "functions/v1/ai-quota-status",
   );
   assertContains(
-    `${root}/js/app.js`,
+    `${root}/app/js/app.js`,
     "mode: 'batch'",
   );
 

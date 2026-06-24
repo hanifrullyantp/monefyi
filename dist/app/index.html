@@ -1,0 +1,2061 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0F1117" id="metaThemeColor" />
+  <title>Monefyi — AI Personal Finance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- PWA Manifest (versioned to avoid stale cache; file lives in public/ — not hashed by Vite) -->
+  <link rel="manifest" href="./manifest.webmanifest?v=2026-06-24" crossorigin="anonymous" />
+  <link rel="icon" href="/app/assets/icon-192-D5jKsHsf.png" type="image/png" sizes="192x192" />
+
+  <!-- Android PWA -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="application-name" content="Monefyi" />
+
+  <!-- iOS PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Monefyi" />
+  <link rel="apple-touch-icon" href="/app/assets/icon-180-BOZYX0Vm.png" sizes="180x180" />
+  <link rel="apple-touch-icon" sizes="192x192" href="/app/assets/icon-192-D5jKsHsf.png" />
+
+  <script src="js/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.2.2" integrity="sha384-qKt1F1k7v69ebd7q6Na1d2FGVMI+43GgA5hpfz7i+zDfrz8rIjXYu7majL1fXSeS" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" integrity="sha384-GJqSu7vueQ9qN0E9yLPb3Wtpd7OrgK8KmYzC8T1IysG1bcvxvIO4qtYR/D3A991F" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.48.1/dist/umd/supabase.js" integrity="sha384-Tgoms7a53eyQOCcKXlBrA1X967mm3BHK43f3979dACl74tZlLW+O85pmfCuhfUtx" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+
+ 
+  <link rel="stylesheet" crossorigin href="/app/assets/index-DXm_1tgs.css">
+</head>
+<body>
+  <!-- Logo Monefyi (satu sumber untuk loading, sidebar, header, auth) -->
+  <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" focusable="false" style="position:absolute;width:0;height:0;overflow:hidden">
+    <symbol id="monefyi-logo" viewBox="0 0 800 807">
+      <image width="800" height="807" href="/app/assets/monefyi-logo-Dl0ceDfS.png"/>
+    </symbol>
+    <symbol id="monefyi-mark" viewBox="0 0 800 807">
+      <image width="800" height="807" href="/app/assets/monefyi-logo-Dl0ceDfS.png"/>
+    </symbol>
+  </svg>
+
+  <div class="min-h-dvh">
+
+    <!-- Loading Screen -->
+    <div id="loadingOverlay">
+      <div class="loading-logo brand-logo-slot">
+        <svg class="brand-logo-svg loading-logo-svg" width="80" height="80" aria-hidden="true"><use href="#monefyi-logo"/></svg>
+        <img id="loadingLogoImg" class="brand-logo-custom hidden w-full h-full object-cover" alt="" />
+      </div>
+      <div class="mt-5 text-sm app-muted loading-text">Initializing Monefyi...</div>
+    </div>
+
+    <!-- Onboarding Tutorial Overlay -->
+    <div id="tourOverlay" class="fixed inset-0 z-[70] hidden" style="background: rgba(0,0,0,.72)">
+      <div id="tourSpotlight" class="absolute rounded-2xl" style="box-shadow: 0 0 0 9999px rgba(0,0,0,.72); border: 1px solid rgba(255,255,255,.18);"></div>
+
+      <div id="tourBubble" class="absolute left-4 right-4 mx-auto max-w-xl">
+        <div class="rounded-3xl app-card-opaque p-4" style="border: 1px solid rgba(255,255,255,.14)">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <div id="tourTitle" class="text-sm font-semibold">—</div>
+              <div id="tourText" class="mt-1 text-sm app-muted leading-relaxed">—</div>
+            </div>
+            <button id="tourSkip" class="tap rounded-xl app-chip px-3 py-2 text-xs hover:opacity-90" type="button">Selesai</button>
+          </div>
+          <div class="mt-3 flex items-center gap-2">
+            <button id="tourPrev" class="tap rounded-xl app-chip px-3 py-2 text-sm hover:opacity-90" type="button">Kembali</button>
+            <button id="tourNext" class="tap rounded-xl px-3 py-2 text-sm font-semibold text-white hover:opacity-95" type="button" style="background: var(--brand-green); border: 1px solid rgba(167,243,208,.35)">Next</button>
+            <div class="ml-auto text-xs app-muted" id="tourStep">—</div>
+          </div>
+          <div id="tourHint" class="mt-2 text-[11px] app-muted2">Tip: Tutorial ini hanya muncul sekali.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auth Overlay (Sign in only) -->
+    <div id="authOverlay" class="fixed inset-0 z-[60] hidden" style="background: color-mix(in srgb, var(--app-bg) 75%, black 25%)">
+      <div class="min-h-dvh flex items-center justify-center px-4 safe-top safe-bottom">
+        <div class="w-full max-w-md">
+          <div class="rounded-3xl app-card-opaque p-5">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-2xl brand-logo-slot overflow-hidden shrink-0">
+                <svg class="brand-logo-svg brand-logo-svg--auth" width="44" height="44" aria-hidden="true"><use href="#monefyi-logo"/></svg>
+                <img id="authLogoImg" class="brand-logo-custom hidden w-full h-full object-cover" alt="Logo Monefyi" />
+              </div>
+              <div class="brand-text-block min-w-0">
+                <div class="brand-sub text-xs app-muted">Monefyi</div>
+                <div id="authTitle" class="text-lg font-semibold leading-tight">Masuk</div>
+              </div>
+            </div>
+
+            <div class="mt-4 space-y-2">
+              <div>
+                <label id="authEmailLabel" class="text-xs app-muted">Email</label>
+                <input id="authEmail" type="email" class="tap mt-1 w-full rounded-2xl app-input px-3 py-3 text-sm" placeholder="nama@email.com" />
+              </div>
+              <div>
+                <div class="flex items-center justify-between">
+                  <label id="authPassLabel" class="text-xs app-muted">Password</label>
+                  <button id="btnToggleAuthPass" class="tap text-[11px] app-muted hover:opacity-80" type="button">Lihat</button>
+                </div>
+                <input id="authPass" type="password" class="tap mt-1 w-full rounded-2xl app-input px-3 py-3 text-sm" placeholder="password" />
+                <div id="authPassHint" class="mt-1 text-[11px] app-muted2">Password dikirim ke email setelah pembayaran. Cek password di email kamu.</div>
+              </div>
+
+              <div class="pt-2 flex items-center gap-2">
+                <button id="btnAuthSubmit" class="tap flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white hover:opacity-95" style="background: rgba(99,102,241,.95)">Masuk</button>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <button id="btnForgotPass" class="tap text-xs app-muted hover:opacity-80" type="button">Lupa password?</button>
+                <div class="text-xs app-muted" id="authStatus"> </div>
+              </div>
+              <div id="authContactHint" class="text-[11px] app-muted2">Jika email belum terdaftar atau belum menerima akses, silakan hubungi admin.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subscription banner (H-3 monthly) -->
+    <div id="planBanner" class="hidden sticky top-0 z-80 app-header backdrop-blur" style="border-bottom: 1px solid var(--app-border)">
+      <div class="max-w-xl mx-auto px-4 pb-2">
+        <div class="mt-2 rounded-2xl app-card p-3 flex items-start gap-3" style="background: color-mix(in srgb, rgba(14,165,233,.14) 70%, transparent)">
+          <div class="mt-0.5 w-9 h-9 rounded-2xl flex items-center justify-center" style="background: rgba(14,165,233,.16); border:1px solid rgba(125,211,252,.28)">
+            <span class="text-sm">⏳</span>
+          </div>
+          <div class="min-w-0 flex-1">
+            <div id="planBannerText" class="text-sm font-semibold">—</div>
+            <div id="planBannerSub" class="mt-0.5 text-xs app-muted">—</div>
+          </div>
+          <a id="planBannerBtn" class="tap shrink-0 rounded-xl px-3 py-2 text-xs font-semibold text-white hover:opacity-95" href="https://monefyi.com#paket" target="_blank" rel="noopener" style="background: var(--brand-green); border: 1px solid rgba(167,243,208,.35)">Perpanjang</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Expired overlay (monthly expired) -->
+    <div id="expiredOverlay" class="fixed inset-0 z-[65] hidden" style="background: color-mix(in srgb, var(--app-bg) 78%, black 22%)">
+      <div class="min-h-dvh flex items-center justify-center px-4 safe-top safe-bottom">
+        <div class="w-full max-w-md">
+          <div class="rounded-3xl app-card-opaque p-5">
+            <div class="text-xs app-muted">Monefyi</div>
+            <div class="mt-1 text-lg font-semibold">Masa aktif berakhir</div>
+            <div class="mt-2 text-sm app-muted leading-relaxed">
+              Masa aktif paket 1 bulan Monefyi kamu sudah berakhir. Untuk kembali menggunakan aplikasi, silakan perpanjang paketmu.
+            </div>
+            <div class="mt-4 flex items-center gap-2">
+              <a id="btnRenewPlan" class="tap flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white hover:opacity-95" href="https://monefyi.com#paket" target="_blank" rel="noopener" style="background: var(--brand-green); border: 1px solid rgba(167,243,208,.35)">Perpanjang paket</a>
+              <button id="btnExpiredLogout" class="tap rounded-2xl px-4 py-3 text-sm font-semibold hover:opacity-90" type="button" style="background: rgba(244,63,94,.12); color: rgba(254,202,202,.95); border: 1px solid rgba(244,63,94,.25)">Logout</button>
+            </div>
+            <div class="mt-3 text-[11px] app-muted2">Jika kamu baru saja bayar, tunggu 1–2 menit atau hubungi admin.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Affiliate Modal -->
+    <div id="affBackdrop" class="sheet-backdrop fixed inset-0 z-80" style="background: rgba(0,0,0,.70)">
+      <div class="absolute inset-0" data-close-aff="true"></div>
+      <div id="affSheet" class="sheet absolute left-0 right-0 top-16 mx-auto max-w-xl px-4">
+        <div class="rounded-3xl app-card-opaque p-5" style="border: 1px solid var(--app-border)">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <div class="text-xs app-muted">Program Affiliate Monefyi</div>
+              <div id="affHeadline" class="mt-1 text-lg font-semibold">—</div>
+            </div>
+            <button type="button" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" data-close-aff="true" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+          </div>
+
+          <div id="affBody" class="mt-3 text-sm app-muted leading-relaxed">—</div>
+
+          <div class="mt-4 flex items-center gap-2">
+            <a id="affCta" class="tap flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white hover:opacity-95" href="#" target="_blank" rel="noopener" style="background: var(--brand-green); border: 1px solid rgba(167,243,208,.35)">Mulai Sekarang</a>
+          </div>
+
+          <div id="affHint" class="mt-2 text-[11px] app-muted2"> </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top bar -->
+    <header class="sticky top-0 z-30 app-header backdrop-blur safe-top md:hidden">
+      <div class="max-w-xl mx-auto px-4 pb-3">
+        <div class="mobile-header-row">
+          <button id="btnLogo" class="tap flex items-center shrink-0" aria-label="Monefyi Advisor">
+            <div id="appLogo" class="w-10 h-10 rounded-2xl brand-logo-slot overflow-hidden shrink-0">
+              <svg class="brand-logo-svg" width="40" height="40" aria-hidden="true"><use href="#monefyi-logo"/></svg>
+              <img id="appLogoImg" class="brand-logo-custom hidden w-full h-full object-cover" alt="Logo Monefyi" />
+            </div>
+          </button>
+
+          <button id="btnUser" class="mobile-header-user tap inline-flex items-center gap-2 rounded-full app-chip px-2.5 py-1.5 text-sm hover:opacity-90 min-w-0" aria-label="Akun">
+            <span id="userBadge" class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold shrink-0" style="background: rgba(20,184,166,.20); color: rgba(153,246,228,.95)">U</span>
+            <span id="userNameTop" class="truncate max-w-[100px]">User</span>
+            <span id="userPlanBadge" class="hidden rounded-full px-2 py-0.5 text-[11px] font-semibold shrink-0" style="background: rgba(20,184,166,.14); color: rgba(153,246,228,.95); border: 1px solid rgba(45,212,191,.25)">—</span>
+          </button>
+
+          <div class="mobile-header-actions">
+            <button id="btnThemeToggle" class="mobile-header-ghost tap" type="button" data-tip="Ganti tema" aria-label="Ganti tema">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="block dark:hidden"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="M4.93 4.93l1.41 1.41"/><path d="M17.66 17.66l1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="M4.93 19.07l1.41-1.41"/><path d="M17.66 6.34l1.41-1.41"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden dark:block"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+            </button>
+            <button id="btnNotif" class="mobile-header-ghost tap relative" type="button" data-tip="Notifikasi" aria-label="Notifikasi">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.36 17c.07.7.24 1.4.5 2h3.28a7.26 7.26 0 0 1 .5-2"/></svg>
+              <span id="notifBadge" class="hidden absolute top-0.5 right-0.5 w-2 h-2 rounded-full" style="background:var(--accent-primary)"></span>
+            </button>
+          </div>
+        </div>
+
+        <div class="mobile-saldo-wrap mt-2">
+          <div id="btnSaldoToggle" role="button" tabindex="0" class="hero-saldo-card tap text-left hover:opacity-95">
+            <div class="hero-saldo-card__top">
+              <div class="hero-saldo-card__label-row">
+                <span>Saldo (estimasi)</span>
+                <button id="btnSaldoMask" type="button" class="tap opacity-80 hover:opacity-100" aria-label="Sembunyikan saldo">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="block"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+              <button id="btnPeriodToggle" type="button" class="hero-saldo-card__period tap" aria-expanded="false" aria-label="Filter periode">
+                <span id="saldoMonth">—</span>
+                <span id="periodChevron" class="text-xs opacity-80" aria-hidden="true">▾</span>
+              </button>
+            </div>
+            <div id="kpiSaldo" class="hero-saldo-card__amount saldo-amount mt-2">—</div>
+            <div class="hero-saldo-card__body">
+              <div id="kpiSaldoSub" class="hero-saldo-metrics"></div>
+              <canvas id="heroSaldoSparkline" class="hero-saldo-sparkline"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div id="mobileFilterAnchor" class="md:hidden"></div>
+
+<!--======================================================================== -->
+
+        <div id="filterPanelWrap">
+        <!-- Periode popover (dropdown + range) -->
+        <div id="monthPopover" class="mt-2 hidden rounded-2xl app-card-opaque p-3">
+          <div id="periodFilterTitle" class="text-xs app-muted">Filter periode</div>
+          <div class="mt-2 grid grid-cols-2 gap-2">
+            <button id="btnPresetThisMonth" class="tap rounded-xl app-chip px-3 py-2 text-xs hover:opacity-90 period-preset" data-preset="this_month">Bulan ini</button>
+            <button id="btnPresetLastMonth" class="tap rounded-xl app-chip px-3 py-2 text-xs hover:opacity-90 period-preset" data-preset="last_month">Bulan lalu</button>
+            <button id="btnPresetThisWeek" class="tap rounded-xl app-chip px-3 py-2 text-xs hover:opacity-90 period-preset" data-preset="this_week">Minggu ini</button>
+            <button id="btnPresetThreeMonths" class="tap rounded-xl app-chip px-3 py-2 text-xs hover:opacity-90 period-preset" data-preset="three_months">3 Bulan</button>
+            <button id="btnPresetSixMonths" class="tap rounded-xl app-chip px-3 py-2 text-xs hover:opacity-90 period-preset" data-preset="six_months">6 Bulan</button>
+            <button id="btnPresetThisYear" class="tap rounded-xl app-chip px-3 py-2 text-xs hover:opacity-90 period-preset" data-preset="this_year">Tahun ini</button>
+            <button id="btnPresetCustom" class="tap rounded-xl app-chip px-3 py-2 text-xs hover:opacity-90 period-preset" data-preset="custom">Custom</button>
+          </div>
+
+          <div class="mt-2 grid grid-cols-1 gap-2">
+            <div class="rounded-2xl app-card p-3">
+              <label id="periodChooseLabel" class="text-xs app-muted">Pilih periode</label>
+              <select id="presetSelect" class="tap mt-2 w-full rounded-xl app-input px-3 py-2 text-sm">
+                <option value="this_month">Bulan ini</option>
+                <option value="last_month">Bulan lalu</option>
+                <option value="this_week">Minggu ini</option>
+                <option value="three_months">3 Bulan</option>
+                <option value="six_months">6 Bulan</option>
+                <option value="this_year">Tahun ini</option>
+                <option value="today">Hari ini</option>
+                <option value="yesterday">Kemarin</option>
+                <option value="custom">Rentang tanggal</option>
+              </select>
+              <div id="presetHint" class="mt-2 text-[11px] app-muted">—</div>
+            </div>
+
+            <div id="rangeCard" class="rounded-2xl app-card p-3 hidden">
+              <div id="rangeCardTitle" class="text-xs app-muted">Rentang tanggal</div>
+              <div class="mt-2 grid grid-cols-2 gap-2">
+                <div>
+                  <label id="rangeStartLabel" class="text-[11px] app-muted">Mulai</label>
+                  <input id="rangeStart" type="date" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label id="rangeEndLabel" class="text-[11px] app-muted">Sampai</label>
+                  <input id="rangeEnd" type="date" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-sm" />
+                </div>
+              </div>
+              <div class="mt-2 flex items-center gap-2">
+                <button id="btnApplyRange" class="tap rounded-xl px-3 py-2 text-sm hover:opacity-90" style="background: rgba(16,185,129,.15); color: rgba(167,243,208,.95); border: 1px solid rgba(52,211,153,.25)">Terapkan</button>
+                <div class="text-xs app-muted" id="rangeHint"> </div>
+              </div>
+            </div>
+
+            <button type="button" id="btnMonthClose" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+          </div>
+
+          <div id="periodFiltersHint" class="mt-3 text-[11px] app-muted2">Filter (search/tipe/kategori/akun) muncul saat panel periode dibuka.</div>
+        </div>
+
+        <!-- Search & filters (hidden until popover open) -->
+        <div id="filtersWrap" class="mt-3 hidden">
+          <div class="grid grid-cols-1 gap-2">
+            <div class="flex items-center gap-2">
+              <div class="flex-1">
+                <input id="qSearch" placeholder="Cari merchant / catatan…" class="tap w-full rounded-xl app-input px-3 py-2 text-sm" />
+              </div>
+              <button id="btnClearFilters" class="tap shrink-0 rounded-xl app-chip px-3 py-2 text-sm hover:opacity-90">Reset</button>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+              <select id="fType" class="tap rounded-xl app-input px-3 py-2 text-sm">
+                <option value="">Semua tipe</option>
+                <option value="expense">Pengeluaran</option>
+                <option value="income">Pemasukan</option>
+                <option value="transfer">Transfer</option>
+              </select>
+              <select id="fCategory" class="tap rounded-xl app-input px-3 py-2 text-sm">
+                <option value="">Semua kategori</option>
+              </select>
+              <select id="fAccount" class="tap rounded-xl app-input px-3 py-2 text-sm">
+                <option value="">Semua akun</option>
+              </select>
+            </div>
+            <div class="text-xs app-muted">Tip: filter ini mempengaruhi list transaksi dan grafik tren.</div>
+
+            <div class="pt-2">
+              <button id="btnPrintReport" class="tap w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white hover:opacity-95" style="background: rgba(14,165,233,.85); border: 1px solid rgba(125,211,252,.35)">Cetak laporan (PDF)</button>
+              <div id="printStatus" class="mt-2 text-xs app-muted"> </div>
+            </div>
+          </div>
+        </div>
+        </div><!-- /filterPanelWrap -->
+      </div>
+    </header>
+<!-- PEMBUNGKUS UTAMA -->
+
+<main id="appShell" class="w-full max-w-full mx-auto px-4 md:pb-8 md:pt-8 md:h-dvh md:overflow-hidden">
+  <div class="flex flex-col md:flex-row gap-8 items-start w-full md:h-full md:min-h-0">   
+ 
+
+
+    <!-- SIDEBAR DESKTOP (KIRI) -->
+    <aside id="appSidebar" class="hidden md:flex flex-col gap-4 shrink-0 md:h-full md:min-h-0 relative">
+      <button id="btnSidebarCollapse" type="button" class="tap absolute top-0 right-0 z-10 w-8 h-8 rounded-lg app-chip flex items-center justify-center text-xs" aria-label="Ciutkan sidebar" title="Sidebar">‹</button>
+
+      <!-- Brand -->
+      <div class="sidebar-brand flex items-center gap-2.5 px-1 pr-8">
+        <div class="w-10 h-10 rounded-2xl brand-logo-slot overflow-hidden shrink-0">
+          <svg class="brand-logo-svg" width="40" height="40" aria-hidden="true"><use href="#monefyi-logo"/></svg>
+          <img id="sidebarLogoImg" class="brand-logo-custom hidden w-full h-full object-cover" alt="Logo Monefyi" />
+        </div>
+        <div class="sidebar-label min-w-0 brand-text-block">
+          <h1 class="brand-title font-bold text-white">Monefyi</h1>
+          <span class="brand-sub text-[10px] text-slate-500 uppercase font-semibold">Advisor AI</span>
+        </div>
+      </div>
+
+      <!-- Kartu Saldo + filter periode di dalam -->
+      <div id="sidebarSaldoWrap" class="hidden md:block sidebar-saldo-wrap sidebar-label">
+        <div
+          id="btnSaldoToggleDesktop"
+          role="button"
+          tabindex="0"
+          class="sidebar-saldo-card tap saldo-card-glow sidebar-glass cursor-pointer"
+          title="Tap untuk ringkasan lengkap"
+        >
+          <div class="sidebar-saldo-card__top">
+            <div class="hero-saldo-card__label-row">
+              <span>Saldo (estimasi)</span>
+              <button id="btnSaldoMaskDesktop" type="button" class="tap opacity-80 hover:opacity-100" aria-label="Sembunyikan saldo">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="block"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <div id="kpiSaldoDesktop" class="sidebar-saldo-card__amount saldo-amount">—</div>
+            <div class="hero-saldo-card__body">
+              <div id="kpiSaldoSubDesktop" class="hero-saldo-metrics"></div>
+              <canvas id="heroSaldoSparklineDesktop" class="hero-saldo-sparkline"></canvas>
+            </div>
+          </div>
+          <div class="sidebar-saldo-card__footer">
+            <button
+              id="btnFilterCardDesktop"
+              type="button"
+              class="sidebar-saldo-filter tap"
+              title="Filter periode & transaksi"
+              aria-expanded="false"
+            >
+              <span id="filterCardPeriodDesktop">—</span>
+              <span id="filterChevronDesktop" class="sidebar-saldo-filter__chev" aria-hidden="true">▾</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Menu utama -->
+      <nav class="sidebar-nav-primary flex flex-col gap-0.5">
+        <button type="button" data-nav="dash" class="sidebar-item sidebar-item--primary tap group">
+          <span class="sidebar-item__icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+          </span>
+          <span class="sidebar-item__label sidebar-label" data-i18n="nav.dashboard">Dashboard</span>
+        </button>
+
+        <button type="button" data-nav="list" class="sidebar-item sidebar-item--primary tap group">
+          <span class="sidebar-item__icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
+          </span>
+          <span class="sidebar-item__label sidebar-label" data-i18n="nav.transactions">Semua Transaksi</span>
+        </button>
+
+        <button type="button" onclick="openBudget()" class="sidebar-item sidebar-item--primary tap group">
+          <span class="sidebar-item__icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>
+          </span>
+          <span class="sidebar-item__label sidebar-label" data-i18n="nav.budget">Budgeting</span>
+        </button>
+
+        <button type="button" onclick="openAdvisorAuto()" class="sidebar-item sidebar-item--primary tap group">
+          <span class="sidebar-item__icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l2.5-5.5L21 11l-6.5-2.5Z"/></svg>
+          </span>
+          <span class="sidebar-item__label sidebar-label" data-i18n="nav.advisor">Monevisor (AI)</span>
+        </button>
+      </nav>
+
+      <!-- Menu sekunder (bawah) -->
+      <div id="sidebarUserBlock" class="mt-auto pt-2">
+        <div class="sidebar-divider sidebar-label" aria-hidden="true"></div>
+        <nav class="sidebar-nav-secondary flex flex-col gap-0.5 pt-2">
+          <button type="button" onclick="openTutorial()" class="sidebar-item sidebar-item--secondary tap group">
+            <span class="sidebar-item__icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M8 7h6"/><path d="M8 11h8"/></svg>
+            </span>
+            <span class="sidebar-item__label sidebar-label sidebar-footer-text">Tutorial</span>
+          </button>
+
+          <button type="button" onclick="openAffiliate()" class="sidebar-item sidebar-item--secondary tap group">
+            <span class="sidebar-item__icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/><path d="M22 10V6h-4"/></svg>
+            </span>
+            <span class="sidebar-item__label sidebar-label">Affiliate</span>
+          </button>
+
+          <button type="button" onclick="openSettings()" class="sidebar-item sidebar-item--secondary tap group">
+            <span class="sidebar-item__icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1.73 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            </span>
+            <span class="sidebar-item__label sidebar-label">Pengaturan</span>
+          </button>
+
+          <button type="button" onclick="openUser()" class="sidebar-item sidebar-item--secondary tap group">
+            <span class="sidebar-item__icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12a5 5 0 1 0-4.9-4.1"/><path d="M8 21a7 7 0 0 1 8-7"/></svg>
+            </span>
+            <span class="sidebar-item__label sidebar-label sidebar-footer-text">Profile</span>
+          </button>
+
+          <button type="button" id="btnPwaInstall" class="sidebar-item sidebar-item--secondary tap group hidden">
+            <span class="sidebar-item__icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+            </span>
+            <span class="sidebar-item__label sidebar-label">Install App</span>
+          </button>
+        </nav>
+        <!-- sinkronisasi user (hidden, dipakai JS) -->
+        <span id="sidebarUserName" class="hidden">User</span>
+        <span id="sidebarUserAvatar" class="hidden">U</span>
+      </div>
+    </aside>
+
+           <!-- KONTEN KANAN (DETAIL) -->
+    <div class="flex-1 min-w-0 flex flex-col w-full max-w-full md:h-full tx-main-panel">
+      <!-- Saldo strip saat sidebar collapsed -->
+      <div id="desktopSaldoStrip" class="hidden md:hidden items-center gap-3 mb-3 shrink-0 sidebar-glass rounded-xl app-card px-4 py-3 border border-slate-800/50">
+        <div class="min-w-0 flex-1">
+          <div class="text-[10px] app-muted">Saldo (estimasi)</div>
+          <div id="kpiSaldoStrip" class="saldo-amount text-lg leading-tight">—</div>
+        </div>
+        <button type="button" id="btnFilterStripDesktop" class="sidebar-saldo-filter tap shrink-0">
+          <span id="filterStripPeriodDesktop">—</span>
+          <span class="sidebar-saldo-filter__chev" aria-hidden="true">▾</span>
+        </button>
+      </div>
+      <!-- Topbar Desktop (Header) -->
+      <div id="desktopHeader" class="hidden md:flex items-center justify-between gap-4 mb-6 shrink-0">
+        <div class="min-w-0">
+          <h2 id="pageTitleTxDesktop" class="text-2xl font-bold tracking-tight leading-none text-white">Transaksi</h2>
+          <div class="text-sm app-muted mt-1">Kelola transaksi keuangan Anda</div>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="relative hidden lg:block">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input id="desktopSearchInput" type="text" placeholder="Search" class="bg-[#1A222C] border border-slate-700/50 rounded-full pl-9 pr-4 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 w-64" />
+          </div>
+          <button type="button" id="btnDesktopFilter" class="w-10 h-10 rounded-full bg-[#1A222C] border border-slate-700/50 flex items-center justify-center text-slate-300 hover:text-white hover:border-emerald-500 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          </button>
+          
+          <button id="btnUserDesktop" class="flex items-center gap-2 rounded-full bg-[#1A222C] border border-slate-700/50 px-3 py-1.5 hover:border-emerald-500 transition-colors">
+            <img id="userAvatarDesktop" src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff" class="w-7 h-7 rounded-full" alt="Avatar" />
+            <div class="flex flex-col items-start text-left">
+              <span id="userNameDesktop" class="text-sm font-medium text-white leading-none">User</span>
+              <span id="userRoleDesktop" class="text-[10px] text-slate-400 leading-none mt-0.5">admin</span>
+            </div>
+          </button>
+
+          <button type="button" id="btnNotifDesktop" class="w-10 h-10 rounded-full bg-[#1A222C] border border-slate-700/50 flex items-center justify-center text-slate-300 hover:text-white hover:border-emerald-500 transition-colors relative">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.36 17c.07.7.24 1.4.5 2h3.28a7.26 7.26 0 0 1 .5-2"/></svg>
+            <span id="notifBadgeDesktop" class="absolute top-2 right-2.5 w-2 h-2 rounded-full bg-emerald-500"></span>
+          </button>
+
+          <button type="button" id="btnHeaderNewTxDesktop" onclick="openAddSheet('quick')" class="bg-emerald-400 hover:bg-emerald-500 text-[#0B1118] font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors ml-2">
+            Transaksi Baru
+          </button>
+        </div>
+      </div>
+
+      <!-- Topbar Saldo Card (Desktop) -->
+      <div id="topbarSaldoWrap" class="hidden md:block mb-6">
+        <div id="btnSaldoToggleTopbar" role="button" tabindex="0" class="hero-saldo-card tap cursor-pointer w-full" style="border-radius: 20px; margin-bottom: 0;">
+          <div class="hero-saldo-card__top">
+            <div class="hero-saldo-card__label-row">
+              <span>Saldo (estimasi)</span>
+              <button id="btnSaldoMaskTopbar" type="button" class="tap opacity-80 hover:opacity-100" aria-label="Sembunyikan saldo">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="block"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <button id="btnPeriodToggleTopbar" type="button" class="hero-saldo-card__period tap" aria-expanded="false" aria-label="Filter periode">
+              <span id="saldoMonthTopbar">—</span>
+              <span class="text-xs opacity-80" aria-hidden="true">▾</span>
+            </button>
+          </div>
+          <div class="flex items-end justify-between mt-2">
+            <div id="kpiSaldoTopbar" class="hero-saldo-card__amount saldo-amount">—</div>
+            <div class="flex gap-3 relative z-10">
+              <div class="kpi-metric kpi-metric--income flex flex-col items-start px-4 py-2">
+                <span class="text-emerald-400 font-bold text-lg leading-none" id="kpiIncomeTopbarVal">+0</span>
+                <span class="text-slate-400 text-xs mt-1">Income</span>
+              </div>
+              <div class="kpi-metric kpi-metric--expense flex flex-col items-start px-4 py-2">
+                <span class="text-rose-400 font-bold text-lg leading-none" id="kpiExpenseTopbarVal">-0</span>
+                <span class="text-slate-400 text-xs mt-1">Expense</span>
+              </div>
+            </div>
+          </div>
+          <canvas id="heroSaldoSparklineTopbar" class="hero-saldo-sparkline" style="width: 50%; height: 60px; bottom: 10px; right: 20px;"></canvas>
+        </div>
+      </div>
+
+
+      <!-- AI input expandable (desktop + mobile toolbar) -->
+      <div id="unifiedAiBarWrap" class="hidden mb-2 flex-none">
+        <div class="ai-input-bar">
+          <button type="button" id="btnUnifiedVoice" class="tap tx-toolbar-btn" title="Voice" aria-label="Voice">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="23"/></svg>
+          </button>
+          <input id="unifiedAiInput" type="text" data-i18n-placeholder="ai.input.placeholder" placeholder="Ketik transaksi…" autocomplete="off" />
+          <button type="button" id="btnUnifiedPhoto" class="tap tx-toolbar-btn" title="Receipt" aria-label="Foto struk">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </button>
+          <button type="button" id="btnUnifiedParse" class="tap btn-primary px-3 py-2 rounded-lg text-sm font-semibold shrink-0">→</button>
+        </div>
+        <div id="unifiedAiPreview" class="hidden mt-2"></div>
+      </div>
+
+      <!-- Render Content Area: isi halaman (dashboard / list transaksi) -->
+      <div id="dynamicContent" class="flex-1 overflow-y-auto space-y-6 w-full max-w-full">
+        <!-- Expanded dashboard -->
+        <div id="dashboardExpanded" class="hidden">
+          <!-- Account balances (top 3) -->
+          <section id="accountsBalancesSection" class="mt-4">
+            <div class="flex items-center justify-between gap-3 px-1">
+              <h2 class="text-[22px] font-bold tracking-tight text-white">Halo, <span id="dashboardUserName" style="color: #10b981;">Akun</span> 👋</h2>
+              <button id="btnMoreAccounts" class="tap text-xs app-muted hover:opacity-80 rounded-full px-3 py-1.5" style="border: 1px solid rgba(255,255,255,0.1)">Lihat semua ›</button>
+            </div>
+            <div id="accountsBalancesRow" class="mt-4 flex gap-3 overflow-x-auto pb-2 snap-x px-1 hide-scrollbar"></div>
+            <div id="accountsBalancesHint" class="mt-1 text-xs app-muted px-1">Tap akun untuk lihat detail.</div>
+          </section>
+
+          <!-- KPI cards -->
+          <section id="kpiSection" class="mt-4 grid grid-cols-2 gap-3">
+            <div class="rounded-2xl app-card p-4 flex flex-col justify-between">
+              <div class="flex items-center gap-2 mb-3">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: rgba(16,185,129,0.15); color: #10b981;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/><path d="m5 17 7-7 7 7"/></svg>
+                </div>
+                <div class="text-[11px] app-muted leading-tight">Pemasukan (periode)</div>
+              </div>
+              <div>
+                <div id="kpiIncome" class="text-lg font-bold text-white">—</div>
+                <div id="kpiIncomeSub" class="mt-1 text-[10px] app-muted flex items-center gap-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                  <span id="kpiIncomeSubText">—</span>
+                </div>
+              </div>
+            </div>
+            <div class="rounded-2xl app-card p-4 flex flex-col justify-between">
+              <div class="flex items-center gap-2 mb-3">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: rgba(244,63,94,0.15); color: #f43f5e;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/><path d="m19 7-7 7-7-7"/></svg>
+                </div>
+                <div class="text-[11px] app-muted leading-tight">Pengeluaran (periode)</div>
+              </div>
+              <div>
+                <div id="kpiExpense" class="text-lg font-bold text-white">—</div>
+                <div id="kpiExpenseSub" class="mt-1 text-[10px] app-muted flex items-center gap-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                  <span id="kpiExpenseSubText">—</span>
+                </div>
+              </div>
+            </div>
+            <div class="rounded-2xl app-card p-4 flex flex-col justify-between">
+              <div class="flex items-center gap-2 mb-3">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: rgba(16,185,129,0.15); color: #10b981;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                </div>
+                <div class="text-[11px] app-muted leading-tight">Surplus / Defisit</div>
+              </div>
+              <div>
+                <div id="kpiNet" class="text-lg font-bold" style="color: #10b981;">—</div>
+                <div id="kpiNetSub" class="mt-1 text-[10px] app-muted flex items-center gap-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                  <span id="kpiNetSubText">—</span>
+                </div>
+              </div>
+            </div>
+            <div class="rounded-2xl app-card p-4 flex flex-col justify-between">
+              <div class="flex items-center gap-2 mb-3">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: rgba(14,165,233,0.15); color: #0ea5e9;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+                </div>
+                <div class="text-[11px] app-muted leading-tight">Saving rate</div>
+              </div>
+              <div>
+                <div id="kpiSaving" class="text-lg font-bold text-white">—</div>
+                <div id="kpiSavingSub" class="mt-1 text-[10px] app-muted">—</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Budget -->
+          <section id="budgetSection" class="mt-4">
+            <div class="rounded-2xl app-card p-4">
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex gap-2">
+                  <div class="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style="color: #10b981;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+                  </div>
+                  <div>
+                    <h2 class="text-sm font-bold text-white">Budgeting</h2>
+                    <div class="mt-1 text-[11px] app-muted leading-relaxed">Atur budget per kategori. Ada rekomendasi berdasarkan pola bulan-bulan sebelumnya.</div>
+                  </div>
+                </div>
+                <button id="btnEditBudget" class="tap text-[11px] font-bold hover:opacity-90 rounded-xl px-3 py-1.5 shrink-0" style="color: #10b981; border: 1px solid rgba(16,185,129,0.3)">Atur Budget</button>
+              </div>
+
+              <div class="mt-4 grid grid-cols-3 gap-2">
+                <div class="rounded-xl app-chip p-3">
+                  <div class="text-[10px] app-muted">Budget</div>
+                  <div id="budgetPlanned" class="mt-1 text-xs font-bold text-white">—</div>
+                </div>
+                <div class="rounded-xl app-chip p-3">
+                  <div class="text-[10px] app-muted">Realisasi</div>
+                  <div id="budgetActual" class="mt-1 text-xs font-bold text-white">—</div>
+                </div>
+                <div class="rounded-xl app-chip p-3">
+                  <div class="text-[10px] app-muted">Selisih</div>
+                  <div id="budgetDiff" class="mt-1 text-xs font-bold" style="color: #10b981;">—</div>
+                </div>
+              </div>
+
+              <div class="mt-3 rounded-2xl app-card-opaque p-4">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="text-[11px] app-muted">Budget bulan ini</div>
+                  <div id="budgetRemainingLabel" class="text-[11px] app-muted">—</div>
+                </div>
+                <div class="mt-4 flex items-center gap-4">
+                  <div class="flex flex-col items-center shrink-0">
+                    <div class="relative w-20 h-20 rounded-full" style="background: conic-gradient(rgba(244,63,94,.85) 0 0%, rgba(16,185,129,.85) 0 100%);" id="budgetDonut">
+                      <div class="absolute inset-2 rounded-full app-card flex items-center justify-center text-sm font-bold text-white" id="budgetDonutText">—</div>
+                    </div>
+                    <div id="budgetDonutSub" class="mt-2 text-[10px] app-muted text-center">—</div>
+                  </div>
+                  <div id="budgetTopCats" class="flex-1 space-y-3 text-xs w-full min-w-0"></div>
+                </div>
+                
+                <div id="budgetTipsBanner" class="mt-4 rounded-xl p-3 flex items-center gap-2" style="background: rgba(234,179,8,0.1); border: 1px solid rgba(234,179,8,0.2);">
+                  <div style="color: #eab308;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.9 1.2 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg></div>
+                  <div id="budgetTipsText" class="text-[10px] text-white flex-1">Tips: Kamu masih bisa hemat di kategori Lainnya.</div>
+                  <div class="text-white"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></div>
+                </div>
+              </div>
+
+              <div class="mt-4">
+                <div class="flex items-center justify-between text-[11px] font-bold text-white">
+                  <span>Progress Budget Bulanan</span>
+                  <span id="budgetPct" class="text-app-muted font-normal">—</span>
+                </div>
+                <div class="mt-2 h-1.5 rounded-full" style="background: color-mix(in srgb, var(--app-border) 30%, transparent)">
+                  <div id="budgetBar" class="h-1.5 rounded-full" style="width:0%; background: #10b981"></div>
+                </div>
+                <div id="budgetHint" class="mt-1.5 text-[10px] app-muted">—</div>
+              </div>
+
+              <div id="budgetEmptyCta" class="mt-3 hidden rounded-2xl app-card-opaque p-3">
+                <div class="text-sm font-semibold">Budget belum diatur</div>
+                <div class="mt-1 text-xs app-muted">Atur budget agar AI bisa bantu alokasi terbaik.</div>
+                <div class="mt-2">
+                  <button id="btnBudgetEmptySetup" class="tap rounded-xl px-3 py-2 text-xs font-semibold text-white hover:opacity-95" style="background: var(--brand-green)">Atur Budget Sekarang</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Charts -->
+          <section id="chartsSection" class="mt-4 grid grid-cols-1 gap-3 w-full max-w-full">
+            <div id="cardTrend" class="rounded-2xl app-card p-4">
+              <div class="flex items-center justify-between">
+                <h2 class="text-sm font-semibold">Tren (sesuai filter)</h2>
+                <span class="text-xs app-muted">IDR</span>
+              </div>
+              <div class="mt-3">
+                <canvas id="chartTrend" height="160"></canvas>
+              </div>
+              <div class="mt-2 text-xs app-muted">Otomatis menyesuaikan periode dan filter (tipe/kategori/akun/pencarian).</div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div id="cardCategory" class="rounded-2xl app-card p-4">
+                <div class="flex items-center justify-between">
+                  <h2 class="text-sm font-semibold">Kategori (periode)</h2>
+                  <button id="btnFocusCategory" class="tap text-xs app-muted hover:opacity-80">Reset fokus</button>
+                </div>
+                <div class="mt-3">
+                  <canvas id="chartCategory" height="160"></canvas>
+                </div>
+                <div id="catLegend" class="mt-3 text-xs app-muted space-y-1"></div>
+              </div>
+
+              <div id="cardWeek" class="rounded-2xl app-card p-4">
+                <div class="flex items-center justify-between">
+                  <h2 class="text-sm font-semibold">Pengeluaran per hari (minggu)</h2>
+                  <span class="text-xs app-muted" id="weekRange">—</span>
+                </div>
+                <div class="mt-3">
+                  <canvas id="chartWeek" height="160"></canvas>
+                </div>
+                <div class="mt-3 text-xs app-muted">Membantu lihat hari paling boros (berdasarkan minggu dari akhir periode).</div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Transactions list -->
+        <section id="txSection" class="mt-3 md:mt-0 space-y-2 md:space-y-2 flex-1 min-h-0 flex flex-col">
+          <div class="tx-section-head shrink-0 md:hidden">
+            <div class="flex items-start justify-between gap-3 w-full">
+              <div class="min-w-0 flex-1">
+                <h2 id="txTitle" class="text-lg font-bold tracking-tight leading-tight">Transaksi</h2>
+                <div id="txCount" class="text-xs app-muted">—</div>
+              </div>
+              <div id="txToolbarMobile" class="tx-toolbar-mobile shrink-0 items-center">
+                <button type="button" id="btnTopSearchMobile" class="tx-icon-btn tap" aria-label="Cari transaksi">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+                </button>
+                <button type="button" id="btnTopFilterTypeMobile" class="tx-icon-btn tap" aria-label="Filter tipe transaksi">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                </button>
+                <div id="txViewToggleMobile" class="tx-view-segment tx-view-segment--ghost shrink-0">
+                  <span id="txViewIndicatorMobile" class="tx-view-indicator" aria-hidden="true"></span>
+                  <button type="button" class="tap tx-view-btn active" data-view="card">Card</button>
+                  <button type="button" class="tap tx-view-btn" data-view="table">Tabel</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="txDesktopFilterBar" class="tx-filter-bar hidden shrink-0 mb-2">
+            <select id="dfType" class="tap rounded-xl app-input px-3 py-2 text-sm" aria-label="Filter tipe">
+              <option value="">Semua tipe</option>
+              <option value="expense">Pengeluaran</option>
+              <option value="income">Pemasukan</option>
+              <option value="transfer">Transfer</option>
+            </select>
+            <select id="dfCategory" class="tap rounded-xl app-input px-3 py-2 text-sm" aria-label="Filter kategori">
+              <option value="">Semua kategori</option>
+            </select>
+            <select id="dfAccount" class="tap rounded-xl app-input px-3 py-2 text-sm" aria-label="Filter akun">
+              <option value="">Semua akun</option>
+            </select>
+            <select id="dfPeriod" class="tap rounded-xl app-input px-3 py-2 text-sm" aria-label="Filter periode">
+              <option value="this_month">Bulan ini</option>
+              <option value="last_month">Bulan lalu</option>
+              <option value="this_week">Minggu ini</option>
+              <option value="three_months">3 Bulan</option>
+              <option value="six_months">6 Bulan</option>
+              <option value="this_year">Tahun ini</option>
+              <option value="today">Hari ini</option>
+              <option value="yesterday">Kemarin</option>
+              <option value="custom">Rentang tanggal</option>
+            </select>
+          </div>
+          <div id="txDesktopFilterRange" class="tx-filter-range hidden shrink-0 mb-2">
+            <div>
+              <label class="text-[10px] app-muted">Mulai</label>
+              <input id="dfRangeStart" type="date" class="tap mt-0.5 w-full rounded-xl app-input px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="text-[10px] app-muted">Sampai</label>
+              <input id="dfRangeEnd" type="date" class="tap mt-0.5 w-full rounded-xl app-input px-3 py-2 text-sm" />
+            </div>
+            <button id="dfApplyRange" type="button" class="tap rounded-xl px-3 py-2 text-sm font-semibold" style="background: rgba(16,185,129,.15); color: rgba(167,243,208,.95); border: 1px solid rgba(52,211,153,.25)">Terapkan</button>
+          </div>
+
+          <div id="txSearchWrap" class="tx-search-wrap tx-search--collapsed shrink-0 md:hidden">
+            <input id="txSearchInput" class="tap w-full rounded-xl app-input px-3 py-2 text-sm" placeholder="Cari merchant / catatan / kategori..." />
+          </div>
+          <div id="txTypeChips" class="hidden" aria-hidden="true">
+            <span id="txChipIndicator" class="tx-chip-indicator" aria-hidden="true"></span>
+            <button class="tap rounded-full app-chip px-3 py-1.5 text-xs tx-chip active" data-type="">Semua</button>
+            <button class="tap rounded-full app-chip px-3 py-1.5 text-xs tx-chip" data-type="income">Pemasukan</button>
+            <button class="tap rounded-full app-chip px-3 py-1.5 text-xs tx-chip" data-type="expense">Pengeluaran</button>
+            <button class="tap rounded-full app-chip px-3 py-1.5 text-xs tx-chip" data-type="transfer">Transfer</button>
+          </div>
+
+          <div id="txListHost" class="mt-1 md:mt-0 flex-1 min-h-0">
+            <!-- Desktop Table Header -->
+            <div id="txListDesktopHeader" class="hidden md:grid grid-cols-[48px_2fr_1fr_1fr_1fr_1fr_1.5fr] gap-3 px-4 py-2 text-xs font-medium text-slate-400 border-b border-slate-800/50 mb-2">
+              <div>Ikon</div>
+              <div>Deskripsi</div>
+              <div>Kategori</div>
+              <div>Akun</div>
+              <div>Tanggal</div>
+              <div class="text-right">Jumlah</div>
+              <div>Anggaran Terkait</div>
+            </div>
+            <div id="txList" class="flex flex-col gap-2"></div>
+            <div id="txLoadMoreWrap" class="hidden mt-3">
+              <button type="button" id="btnLoadMoreTx" class="tap btn-ghost py-2.5 rounded-lg text-sm font-medium" data-i18n="tx.load_more">Muat lebih banyak</button>
+            </div>
+            <div id="txTableWrap" class="hidden tx-table-panel flex-1 min-h-0 flex flex-col">
+              <div class="flex items-center justify-between gap-2 mb-2 shrink-0">
+                <div id="txTableHint" class="text-[11px] app-muted">—</div>
+                <div class="flex items-center gap-1 shrink-0">
+                  <button type="button" id="btnTxTableCols" class="tx-toolbar-btn tap" data-tip="Kolom tabel" aria-label="Kolom tabel">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="10" rx="1"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div id="txTableColPicker" class="hidden mb-2 shrink-0 rounded-xl app-card p-3 text-xs">
+                <div class="font-semibold mb-2">Tampilkan kolom</div>
+                <div id="txTableColChecks" class="grid grid-cols-2 gap-2"></div>
+              </div>
+              <div class="tx-table-scroll flex-1 min-h-0">
+                <table id="txTable" class="tx-table tx-table-seamless text-xs w-full"></table>
+              </div>
+            </div>
+            <div id="txEmpty" class="hidden rounded-2xl app-card p-8 text-center">
+              <div class="text-4xl mb-3">🧾✨</div>
+              <div class="text-base font-semibold" data-i18n="tx.empty.title">Belum ada transaksi</div>
+              <div class="mt-2 text-sm app-muted" data-i18n="tx.empty.subtitle">Mulai catat pemasukan atau pengeluaran pertamamu</div>
+              <div class="mt-4">
+                <button id="btnTxEmptyAdd" class="tap btn-primary px-4 py-2.5 text-sm font-semibold rounded-lg" data-i18n="tx.empty.cta">+ Tambah Transaksi Pertama</button>
+              </div>
+            </div>
+          </div><!-- /txListHost -->
+        </section>
+      </div> <!-- end #dynamicContent -->
+    </div>   <!-- end konten kanan -->
+
+  </div>
+</main>
+        <!-- Main Content Area -->
+<div class="flex-1 min-w-0">
+  <!-- Nav Bar Mobile -->
+ <nav class="fixed bottom-0 left-0 right-0 z-[110] nav-bar block md:hidden">
+    <div class="nav-bar-inner safe-bottom">
+      <div class="nav-bar-grid">
+      <button type="button" data-nav="beranda" class="nav-item flex flex-col items-center gap-1 tap">
+        <span class="text-xl">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+        </span>
+        <span class="text-[11px] font-medium">Beranda</span>
+      </button>
+      
+      <button type="button" data-nav="transaksi" class="nav-item flex flex-col items-center gap-1 tap">
+        <span class="text-xl">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
+        </span>
+        <span class="text-[11px] font-medium">Transaksi</span>
+      </button>
+      
+      <div class="nav-fab-slot">
+        <button id="btnMainAction" class="fab-main tap" aria-label="Tambah transaksi">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+        </button>
+        <div id="actionMenu" class="hidden absolute bottom-full left-1/2 -translate-x-1/2 mb-4 flex flex-col gap-3 items-center">
+           <!-- Kamera = FOTO STRUK -->
+    <button onclick="openReceiptAdd()" class="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center shadow-xl tap animate-bounce-soft text-white">
+      <!-- ikon kamera -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </button>
+            <!-- PEN = PARSING AI -->
+          <button onclick="openQuickAdd()" class="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center shadow-xl tap animate-bounce-soft text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          </button>
+          <button onclick="openManualAdd()" class="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center shadow-xl tap animate-bounce-soft text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M4 13.5V8a2 2 0 0 1 2-2h5.5"/><path d="M14.5 4.5 19 9l-8 8-4 1 1-4z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <button onclick="openBudget()" class="nav-item flex flex-col items-center gap-1 tap" data-nav="budget">
+        <span class="text-xl">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>
+        </span>
+        <span class="text-[11px] font-medium">Budget</span>
+      </button>
+      
+      <button onclick="openAdvisorAuto()" class="nav-item flex flex-col items-center gap-1 tap" data-nav="advisor">
+        <span class="text-xl">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"/></svg>
+        </span>
+        <span class="text-[11px] font-medium">Advisor</span>
+      </button>
+    </div>
+    </div>
+  </nav>
+</div>
+
+<div id="toastRoot" class="fixed bottom-24 left-1/2 -translate-x-1/2 z-[120] w-[92%] max-w-sm pointer-events-none"></div>
+
+      
+    
+
+<!-- Desktop FAB removed — use header "Transaksi Baru" + unified AI bar -->
+<button id="fab" class="hidden tap" aria-hidden="true"></button>
+
+    <!-- Bottom Sheet: Add Transaction -->
+<div id="sheetBackdrop" class="sheet-backdrop fixed inset-0 z-80" style="background: rgba(0,0,0,.70)">
+  <div class="absolute inset-0" data-close="true"></div>
+  <div id="sheet" class="sheet absolute left-0 right-0 bottom-0 mx-auto max-w-xl">
+    <div class="rounded-t-3xl app-card-opaque border-t border-x sheet-panel">
+      <div class="sheet-head px-4 pt-4 pb-2 shrink-0">
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex items-start gap-3 min-w-0">
+            <button type="button" id="btnAddSheetBack" class="tap hidden w-9 h-9 rounded-xl app-chip flex items-center justify-center shrink-0 hover:opacity-90" aria-label="Kembali">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <div id="addSheetIcon" class="add-sheet-icon w-11 h-11 rounded-2xl flex items-center justify-center shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            </div>
+            <div class="min-w-0">
+              <div id="addSheetTitle" class="text-lg font-bold text-white leading-tight">Tambah Transaksi</div>
+              <div id="addSheetSubtitle" class="text-[11px] app-muted mt-0.5">Input cepat & mudah</div>
+            </div>
+          </div>
+          <button type="button" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" data-close="true" aria-label="Tutup">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
+
+        <!-- Tab buttons hidden; navigation via quick cards -->
+        <div class="hidden">
+          <button class="tabBtn" data-tab="quick">Cepat (AI)</button>
+          <button class="tabBtn" data-tab="batch">Impor Batch</button>
+          <button class="tabBtn" data-tab="manual">Manual</button>
+          <button class="tabBtn" data-tab="receipt">Foto Struk</button>
+        </div>
+      </div>
+
+      <div class="sheet-body px-4 pb-5">
+        <!-- QUICK: Ketik manual (AI) -->
+        <div class="tabPanel" data-tab-panel="quick">
+          <div class="add-ai-card rounded-2xl p-4 border border-slate-800/60">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-2 min-w-0">
+                <div class="add-ai-badge w-8 h-8 rounded-lg flex items-center justify-center shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>
+                </div>
+                <div class="text-sm font-bold text-white">Input Teks Bebas (AI)</div>
+              </div>
+              <div id="quickAiBadge" class="text-[10px] font-bold px-2 py-1 rounded-full shrink-0" style="color:#10b981;border:1px solid rgba(16,185,129,.35);background:rgba(16,185,129,.08);">Cepat & Praktis</div>
+            </div>
+
+            <label class="block mt-3 text-[11px] app-muted leading-relaxed" for="quickText" id="quickTextLabel">
+              Tulis seperti chat. Bisa lebih dari 1 transaksi: pisahkan per baris. <span class="italic text-slate-400">Contoh: “makan siang 50k di warteg pake gopay”</span>
+            </label>
+
+            <div class="add-input-composer mt-3 rounded-2xl border border-slate-700/80 bg-slate-900/60 overflow-hidden">
+              <textarea
+                id="quickText"
+                rows="3"
+                class="tap w-full px-3 pt-3 pb-2 text-base resize-none border-0 bg-transparent outline-none focus:ring-0 min-h-[72px]"
+                placeholder="Ketik transaksi di sini..."
+              ></textarea>
+              <div class="add-input-toolbar flex items-center gap-1.5 px-2 pb-2 pt-1 border-t border-slate-700/60">
+                <button type="button" id="btnParse" class="add-process-btn-inline tap flex-1 min-w-0 rounded-xl px-3 py-2 text-[11px] font-bold text-white hover:brightness-105 active:scale-[0.99] transition-all flex items-center justify-center gap-1.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>
+                  <span id="btnParseTitle">Proses Transaksi</span>
+                </button>
+                <button type="button" id="btnQuickGoManual" class="add-tool-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0 hover:brightness-110 transition-all" style="background:rgba(16,185,129,.12);color:#10b981;border:1px solid rgba(16,185,129,.22);" title="Input Manual" aria-label="Input Manual">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                </button>
+                <button type="button" id="btnQuickGoBatch" class="add-tool-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0 hover:brightness-110 transition-all" style="background:rgba(59,130,246,.12);color:#60a5fa;border:1px solid rgba(59,130,246,.22);" title="Impor Batch" aria-label="Impor Batch">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+                </button>
+                <button type="button" id="btnQuickGoReceipt" class="add-tool-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0 hover:brightness-110 transition-all" style="background:rgba(168,85,247,.12);color:#c084fc;border:1px solid rgba(168,85,247,.22);" title="Scan Struk" aria-label="Scan Struk">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                </button>
+                <button type="button" id="btnQuickClear" class="add-tool-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0 hover:brightness-110 transition-all" style="background:rgba(244,63,94,.12);color:#fb7185;border:1px solid rgba(244,63,94,.22);" title="Bersihkan" aria-label="Bersihkan">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <div id="quickRecoTitle" class="text-[11px] font-bold mb-2" style="color:#10b981;">Rekomendasi input</div>
+              <div id="quickRecoList" class="flex flex-wrap gap-2"></div>
+            </div>
+          </div>
+
+          <div id="quickAiPreview" class="hidden mt-3"></div>
+          <div id="quickPreview" class="hidden"></div>
+          <div id="parseStatus" class="mt-2 text-center text-xs app-muted"></div>
+
+          <div class="mt-4 flex items-center justify-center gap-1.5 text-[10px] app-muted">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span id="quickSecureText">Data Anda aman dan terenkripsi</span>
+          </div>
+        </div>
+
+        <div class="tabPanel hidden" data-tab-panel="batch">
+          <div class="grid md:grid-cols-2 gap-3">
+            <div class="rounded-2xl app-card p-3">
+              <div class="text-sm font-semibold">Impor Batch WhatsApp</div>
+              <div class="mt-1 text-xs app-muted">Paste chat transaksi multi tanggal, lalu parse & preview sebelum simpan.</div>
+              <textarea id="batchText" rows="12" class="tap mt-2 w-full rounded-2xl app-input px-3 py-3 text-sm" placeholder="[09:32, 4/29/2026] Indra:&#10;Minggu, 26/4/2026&#10;Duit keluar :&#10;- 949.999 5 kping ACP ... (230.000 uang kas + 720.000 uang Indra)"></textarea>
+              <div class="mt-2 flex items-center gap-2">
+                <button id="btnBatchParse" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: rgba(99,102,241,.95)">Parse & Preview</button>
+                <button id="btnBatchPaste" class="tap rounded-2xl app-chip px-4 py-2 text-sm hover:opacity-90">Paste Clipboard</button>
+                <div id="batchStatus" class="ml-auto text-xs app-muted"> </div>
+              </div>
+            </div>
+            <div class="rounded-2xl app-card p-3">
+              <div class="text-sm font-semibold">Preview</div>
+              <div id="batchSummary" class="mt-2 text-xs app-muted">Belum ada hasil parse.</div>
+              <div id="batchReviewQueue" class="mt-2 space-y-2"></div>
+              <div id="batchTxList" class="mt-2 max-h-72 overflow-auto space-y-2"></div>
+              <div class="mt-3 flex items-center gap-2">
+                <button id="btnBatchSaveAll" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: rgba(16,185,129,.92)">Simpan Semua</button>
+                <button id="btnBatchSaveValid" class="tap rounded-2xl app-chip px-4 py-2 text-sm hover:opacity-90">Simpan yang Valid</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+       <!-- MANUAL: Form -->
+<div class="tabPanel hidden" data-tab-panel="manual">
+  <div class="grid grid-cols-2 gap-2">
+    <div class="field-float">
+      <input id="mDate" type="date" class="tap" placeholder=" " required />
+      <label data-i18n="manual.date">Tanggal</label>
+    </div>
+    <div class="field-float">
+      <select id="mType" class="tap" required>
+        <option value="expense">expense</option>
+        <option value="income">income</option>
+        <option value="transfer">transfer</option>
+      </select>
+      <label data-i18n="manual.type">Tipe</label>
+    </div>
+    <div class="col-span-2 field-float field-amount">
+      <input id="mAmount" inputmode="numeric" class="tap" placeholder=" " required />
+      <label data-i18n="manual.amount">Jumlah (IDR)</label>
+    </div>
+    <div class="col-span-2 amount-presets" id="mAmountPresets">
+      <button type="button" class="amount-preset-chip tap" data-amount="50000">50rb</button>
+      <button type="button" class="amount-preset-chip tap" data-amount="100000">100rb</button>
+      <button type="button" class="amount-preset-chip tap" data-amount="200000">200rb</button>
+      <button type="button" class="amount-preset-chip tap" data-amount="500000">500rb</button>
+      <button type="button" class="amount-preset-chip tap" data-amount="1000000">1jt</button>
+    </div>
+    <div class="col-span-2 numpad-grid" id="mNumpad" aria-label="Keypad angka">
+      <button type="button" class="numpad-key tap" data-key="1">1</button>
+      <button type="button" class="numpad-key tap" data-key="2">2</button>
+      <button type="button" class="numpad-key tap" data-key="3">3</button>
+      <button type="button" class="numpad-key tap" data-key="4">4</button>
+      <button type="button" class="numpad-key tap" data-key="5">5</button>
+      <button type="button" class="numpad-key tap" data-key="6">6</button>
+      <button type="button" class="numpad-key tap" data-key="7">7</button>
+      <button type="button" class="numpad-key tap" data-key="8">8</button>
+      <button type="button" class="numpad-key tap" data-key="9">9</button>
+      <button type="button" class="numpad-key tap" data-key="000">000</button>
+      <button type="button" class="numpad-key tap" data-key="0">0</button>
+      <button type="button" class="numpad-key tap" data-key="back" aria-label="Hapus">⌫</button>
+    </div>
+    <div class="field-float">
+      <select id="mCategory" class="tap" required></select>
+      <label data-i18n="manual.category">Kategori</label>
+    </div>
+    <div class="field-float">
+      <select id="mAccount" class="tap" required></select>
+      <label data-i18n="manual.account">Akun (dari)</label>
+    </div>
+    <div id="mToWrap" class="hidden field-float col-span-2">
+      <input id="mToAccount" class="tap" placeholder=" " />
+      <label data-i18n="manual.to_account">Akun (ke)</label>
+    </div>
+    <div class="field-float">
+      <select id="mPayment" class="tap"></select>
+      <label data-i18n="manual.payment">Metode</label>
+    </div>
+    <div class="field-float">
+      <input id="mMerchant" class="tap" placeholder=" " />
+      <label data-i18n="manual.merchant">Merchant</label>
+    </div>
+    <div id="mCategorySuggest" class="hidden col-span-2 category-suggest-pill">
+      <span id="mCategorySuggestText"></span>
+      <button type="button" id="btnApplyCategorySuggest" class="tap text-xs font-semibold" style="color:var(--accent-primary)">Terapkan</button>
+    </div>
+    <div class="col-span-2 field-float">
+      <input id="mNotes" class="tap" placeholder=" " />
+      <label data-i18n="manual.notes">Catatan</label>
+    </div>
+  </div>
+
+  <div class="mt-3 flex items-center gap-2">
+    <button id="btnSaveManual" class="tap btn-primary rounded-lg px-4 py-2 text-sm font-semibold" disabled data-i18n="manual.save">
+      Simpan
+    </button>
+    <div id="manualStatus" class="ml-auto text-xs app-muted">-</div>
+  </div>
+</div>
+        <!-- RECEIPT: Foto Struk (OCR) -->
+        <div class="tabPanel hidden" data-tab-panel="receipt">
+          <div class="rounded-2xl app-card p-3">
+            <div class="text-sm font-semibold">Foto Struk → OCR → Simpan</div>
+            <p class="mt-1 text-xs app-muted leading-relaxed">
+              Pilih foto dari kamera/galeri (HP) atau file (desktop). Bisa pilih lebih dari
+              satu foto. Setelah OCR selesai, transaksi otomatis disiapkan untuk disimpan.
+            </p>
+
+            <input id="rFile" type="file" accept="image/*" multiple class="hidden" />
+
+            <div class="mt-3 flex items-center gap-2">
+              <button
+                id="btnPickReceipt"
+                class="tap rounded-2xl app-chip px-4 py-2 text-sm hover:opacity-90"
+              >
+                Pilih foto
+              </button>
+              <div id="ocrStatus" class="ml-auto text-xs app-muted"> </div>
+            </div>
+
+            <div id="receiptTxWrap" class="mt-3 hidden">
+              <div class="text-xs app-muted">Transaksi terdeteksi</div>
+              <div id="receiptTxList" class="mt-2 space-y-2"></div>
+              <div class="mt-3 flex items-center gap-2">
+                <button
+                  id="btnSaveReceiptAuto"
+                  class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95"
+                  style="background: rgba(16,185,129,.92)"
+                >
+                  Simpan transaksi
+                </button>
+                <button
+                  id="btnClearReceipt"
+                  class="tap rounded-2xl app-chip px-4 py-2 text-sm hover:opacity-90"
+                >
+                  Bersihkan
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div> <!-- sheet-body -->
+    </div>   <!-- sheet-panel -->
+  </div>     <!-- sheet -->
+</div>       <!-- sheetBackdrop -->
+
+    <!-- Budget Sheet -->
+    <div id="budgetBackdrop" class="sheet-backdrop fixed inset-0 z-80" style="background: rgba(0,0,0,.70)">
+      <div class="absolute inset-0" data-close-budget="true"></div>
+      <div id="budgetSheet" class="sheet absolute left-0 right-0 bottom-0 mx-auto max-w-xl">
+        <div class="rounded-t-3xl app-card-opaque border-t border-x sheet-panel">
+          <div class="sheet-head px-4 pt-4 pb-2 shrink-0">
+            <div class="flex items-start justify-between">
+              <div class="min-w-0">
+                <div class="text-[11px] font-bold" style="color: #10b981;">Budgeting</div>
+                <div class="text-lg font-bold text-white mt-0.5">Atur budget per kategori</div>
+                <div class="mt-2 text-xs app-muted">Bulan budget: <span id="bMonthLabel" class="font-semibold" style="color: #10b981;">—</span></div>
+              </div>
+              <button type="button" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" data-close-budget="true" aria-label="Tutup">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="sheet-body px-4 pb-5">
+            <div class="rounded-2xl app-card p-4 border border-slate-800/50">
+              <div class="flex items-center gap-2 text-sm font-bold text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+                Ringkasan
+              </div>
+              <div class="mt-4 grid grid-cols-2 gap-3">
+                <div class="rounded-xl app-chip p-3 flex flex-col justify-between">
+                  <div class="flex items-center gap-1.5 text-[11px] app-muted">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+                    Income (bulan ini)
+                  </div>
+                  <input id="bIncome" inputmode="numeric" class="tap mt-2 w-full rounded-lg app-input px-3 py-2 text-sm font-bold text-white text-center" placeholder="contoh: 10000000" />
+                  <div class="mt-2 text-[10px] app-muted leading-relaxed">Dipakai sebagai batas total budget kategori.</div>
+                </div>
+                <div class="rounded-xl app-chip p-3 flex flex-col justify-between">
+                  <div class="flex items-center gap-1.5 text-[11px] app-muted">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Total budget
+                  </div>
+                  <div class="mt-2">
+                    <div id="bTotalBudget" class="text-lg font-bold text-white">—</div>
+                    <div id="bRemaining" class="mt-1 text-[11px]" style="color: #10b981;">Sisa: —</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-4 flex items-center gap-2">
+                <button id="btnApplyAIBudget" class="tap flex-1 rounded-xl px-4 py-2.5 text-xs font-bold text-white hover:opacity-95 flex items-center justify-center gap-2" style="background: #10b981;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"/></svg>
+                  Gunakan rekomendasi
+                </button>
+                <button id="btnResetBudgetDraft" class="tap rounded-xl app-chip px-4 py-2.5 text-xs font-bold hover:opacity-90 flex items-center gap-1.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                  Reset
+                </button>
+              </div>
+              <div id="bStatus" class="mt-2 text-right text-[10px] flex items-center justify-end gap-1" style="color: #10b981;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                Budget tersimpan.
+              </div>
+
+              <div class="mt-3 flex items-start gap-1.5 text-[10px] app-muted">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                <span>Rekomendasi (belajar dari 3 bulan terakhir)</span>
+              </div>
+              <div id="bRecoList" class="mt-2 flex flex-wrap gap-2 hidden"></div>
+            </div>
+
+            <div class="mt-4 rounded-2xl app-card p-4 border border-slate-800/50 relative pb-20">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="flex items-center gap-2 text-sm font-bold text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-4"/></svg>
+                    Budget per kategori
+                  </div>
+                  <div class="mt-1.5 text-[10px] app-muted leading-relaxed">Nominal akan mengurangi “Sisa”.<br>Total budget tidak bisa melebihi income.</div>
+                </div>
+                <button id="btnAddBudgetCategory" class="tap rounded-xl app-chip px-3 py-2 text-xs font-bold hover:opacity-90 flex items-center gap-1" style="color: #10b981;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+                  Kategori
+                </button>
+              </div>
+
+              <div id="bRows" class="mt-4 space-y-4"></div>
+              
+              <!-- Sticky Footer inside card -->
+              <div id="btnSaveBudgetFooter" class="absolute bottom-0 left-0 right-0 p-3 bg-[#1A222C]/90 backdrop-blur rounded-b-2xl border-t border-slate-800/50 flex items-center justify-between cursor-pointer hover:bg-[#1A222C] transition-colors">
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background: rgba(234,179,8,0.15); color: #eab308;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+                  </div>
+                  <div>
+                    <div class="text-[10px] app-muted">Total budget</div>
+                    <div id="bFooterTotal" class="text-xs font-bold text-white">—</div>
+                  </div>
+                </div>
+                <div class="text-right flex items-center gap-3">
+                  <div>
+                    <div class="text-[10px] app-muted">Sisa</div>
+                    <div id="bFooterRemaining" class="text-xs font-bold" style="color: #10b981;">—</div>
+                  </div>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400"><path d="m9 18 6-6-6-6"/></svg>
+                </div>
+              </div>
+
+              <div class="mt-3 flex items-center gap-2 hidden">
+                <button id="btnSaveBudget" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: rgba(16,185,129,.92)">Simpan Budget</button>
+                <button id="btnBudgetGoToTx" class="tap rounded-2xl app-chip px-4 py-2 text-sm hover:opacity-90">Tambah transaksi</button>
+              </div>
+
+              <div id="bFooterHint" class="mt-2 text-xs app-muted hidden">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Advisor Sheet -->
+    <div id="advisorBackdrop" class="sheet-backdrop fixed inset-0 z-80" style="background: rgba(0,0,0,.70)">
+      <div class="absolute inset-0" data-close-advisor="true"></div>
+      <div id="advisorSheet" class="sheet absolute left-0 right-0 bottom-0 mx-auto max-w-xl md:right-0 md:left-auto md:top-0 md:h-full md:w-[400px] md:max-w-none md:translate-y-0 md:translate-x-full transition-transform duration-300">
+        <div class="rounded-t-3xl md:rounded-none md:rounded-l-3xl app-card-opaque border-t md:border-t-0 md:border-l border-x md:border-r-0 sheet-panel md:h-full md:flex md:flex-col">
+          <div class="sheet-head px-4 pt-4 pb-2 shrink-0">
+            <div class="flex items-start justify-between">
+              <div class="min-w-0">
+                <div class="text-[11px] font-bold" style="color: #10b981;">Monevisor</div>
+                <div class="text-lg font-bold text-white mt-0.5">Insight & Rekomendasi</div>
+                <div class="mt-1 text-[11px] app-muted">AI bantu kamu kelola keuangan lebih cerdas.</div>
+              </div>
+              <button type="button" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" data-close-advisor="true" aria-label="Tutup">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="sheet-body px-4 pb-5">
+            <div id="advisorContent" class="space-y-4">
+              
+              <!-- Top Section: Generate & Health -->
+              <div class="grid grid-cols-2 gap-3">
+                <button type="button" id="btnGenerateInsights" class="advisor-generate-card tap rounded-2xl p-4 flex items-start gap-3 text-left w-full min-h-[92px] cursor-pointer hover:brightness-105 active:scale-[0.99] transition-all">
+                  <div class="advisor-generate-icon w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>
+                  </div>
+                  <div class="min-w-0 pt-0.5">
+                    <div id="btnGenerateInsightsTitle" class="text-white font-bold text-[15px] leading-tight tracking-tight">Generate</div>
+                    <div id="btnGenerateInsightsSub" class="text-[11px] text-emerald-50/90 mt-1 leading-snug font-medium">Buat insight dari data terbaru</div>
+                  </div>
+                </button>
+                <div class="rounded-2xl app-card p-4 flex items-center gap-3 border border-slate-800/50 cursor-pointer hover:bg-white/5 transition-colors">
+                  <div id="advisorHealthRing" class="health-ring shrink-0" style="--pct: 0%; width: 48px; height: 48px;"><span id="advisorHealthScore" class="text-sm font-bold">—</span></div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[10px] app-muted">Skor kesehatan</div>
+                    <div class="flex items-baseline gap-1 mt-0.5">
+                      <span id="advisorHealthScoreRaw" class="text-lg font-bold text-white">—</span>
+                      <span class="text-[10px] text-slate-400">/100</span>
+                    </div>
+                    <div id="advisorHealthLabel" class="text-[10px] font-bold mt-0.5" style="color: #10b981;">—</div>
+                  </div>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
+                </div>
+              </div>
+              <div class="text-xs app-muted text-center" id="advisorStatus"></div>
+
+              <!-- Insight Utama -->
+              <div class="rounded-2xl app-card p-4 border border-slate-800/50">
+                <div class="flex items-start gap-3">
+                  <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: rgba(16,185,129,0.15); color: #10b981;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.9 1.2 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+                  </div>
+                  <div>
+                    <div class="text-sm font-bold text-white">Insight utama</div>
+                    <div class="text-[11px] app-muted mt-0.5">Ringkasan keuangan kamu pada periode terpilih.</div>
+                  </div>
+                </div>
+                
+                <div id="advisorMetrics" class="mt-4 grid grid-cols-4 gap-2">
+                  <!-- Metrics injected by JS -->
+                </div>
+                
+                <div class="mt-4 flex items-center justify-between text-[11px] app-muted bg-slate-800/50 p-2.5 rounded-xl border border-slate-700/50">
+                  <div class="flex items-center gap-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                    <span>Periode terpilih: <span id="advisorPeriodLabel" class="text-slate-300 font-medium">—</span></span>
+                  </div>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                </div>
+                
+                <div id="advisorBullets" class="hidden"></div>
+              </div>
+
+              <!-- Rekomendasi Budget -->
+              <div class="rounded-2xl app-card p-4 border border-slate-800/50">
+                <div class="flex items-start gap-3">
+                  <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: rgba(16,185,129,0.15); color: #10b981;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                  </div>
+                  <div>
+                    <div class="text-sm font-bold text-white">Rekomendasi budget (bulan depan)</div>
+                    <div class="text-[11px] app-muted mt-0.5">Saran alokasi berdasarkan pola spending kamu.</div>
+                  </div>
+                </div>
+                <div id="advisorBudget" class="mt-4 space-y-3"></div>
+                <button class="w-full mt-4 py-2 text-[11px] font-bold text-[#10b981] flex items-center justify-center gap-1 hover:opacity-80">
+                  Lihat semua insight
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+              </div>
+
+              <!-- AI Financial Coach -->
+              <div class="rounded-2xl app-card p-4 border border-slate-800/50">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: rgba(16,185,129,0.15); color: #10b981;">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="10" x="3" y="11" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg>
+                    </div>
+                    <div>
+                      <div class="text-sm font-bold text-white">AI Financial Coach</div>
+                      <div class="text-[11px] app-muted mt-0.5">Tanya tentang keuanganmu, AI siap bantu!</div>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-[10px] app-muted" id="coachQuotaText">Kuota: 999/999</div>
+                    <div class="text-[10px]" style="color: #10b981;" id="coachQuotaUsed">(terpakai 0)</div>
+                  </div>
+                </div>
+                
+                <div id="coachPrompts" class="mt-4 grid grid-cols-3 gap-2">
+                  <button class="tap rounded-xl app-chip p-2 text-[10px] font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition-colors flex flex-col items-center text-center gap-1.5 coach-prompt">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+                    Bagaimana saving rate saya?
+                  </button>
+                  <button class="tap rounded-xl app-chip p-2 text-[10px] font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition-colors flex flex-col items-center text-center gap-1.5 coach-prompt">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                    Kategori apa yang boros?
+                  </button>
+                  <button class="tap rounded-xl app-chip p-2 text-[10px] font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition-colors flex flex-col items-center text-center gap-1.5 coach-prompt">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                    Buat rencana budget bulan depan
+                  </button>
+                </div>
+
+                <div id="coachChat" class="mt-4">
+                  <div id="coachMessages" class="space-y-2 mb-3" style="max-height: 260px; overflow:auto; -webkit-overflow-scrolling: touch"></div>
+                  <div class="relative">
+                    <input id="coachInput" type="text" class="tap w-full rounded-xl app-input pl-3 pr-20 py-3 text-xs text-white placeholder-slate-500 border border-slate-700 focus:border-emerald-500 bg-slate-800/50" placeholder="Tanya AI apa pun..." />
+                    <button id="btnCoachSend" class="tap absolute right-1.5 top-1.5 bottom-1.5 rounded-lg px-3 text-xs font-bold text-white hover:opacity-95 flex items-center gap-1.5" style="background: #10b981;">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" x2="11" y1="2" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                      Kirim
+                    </button>
+                  </div>
+                  <div class="mt-2 text-[10px] app-muted">Contoh: "Aku bulan ini boros nggak sih?"</div>
+                  <div id="coachStatus" class="mt-1 text-xs app-muted"></div>
+                </div>
+              </div>
+
+              <!-- Pengaturan AI -->
+              <div class="rounded-2xl app-card p-4 border border-slate-800/50">
+                <div id="advisorAiEmptyCta" class="hidden rounded-xl app-card-opaque p-3 mb-3">
+                  <div class="text-sm font-semibold">Monevisor AI belum aktif</div>
+                  <div class="mt-1 text-xs app-muted">Hubungkan API key untuk analisa keuangan personal.</div>
+                  <button id="btnEnableAiFromAdvisor" class="tap mt-2 rounded-xl px-3 py-2 text-xs font-semibold text-white hover:opacity-95" style="background: var(--brand-green)">Aktifkan Monevisor</button>
+                </div>
+                
+                <div class="flex items-start gap-3">
+                  <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: rgba(16,185,129,0.15); color: #10b981;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+                  </div>
+                  <div>
+                    <div class="text-sm font-bold text-white">Pengaturan AI (Monefyi)</div>
+                    <div class="text-[11px] app-muted mt-0.5">Hubungkan API Key Gemini kamu untuk fitur AI yang lebih cerdas.</div>
+                  </div>
+                </div>
+                
+                <div class="mt-4 space-y-3">
+                  <div class="flex items-center gap-2 bg-slate-800/50 rounded-xl p-1 border border-slate-700">
+                    <div class="text-[11px] text-slate-400 pl-3 w-24 shrink-0">Gemini API Key</div>
+                    <input id="geminiKey" type="password" class="tap flex-1 bg-transparent px-2 py-2 text-xs text-white placeholder-slate-600 outline-none" placeholder="••••••••••••••••••••" />
+                    <button class="p-2 text-slate-400 hover:text-white" onclick="const i=document.getElementById('geminiKey'); i.type=i.type==='password'?'text':'password';">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                  </div>
+                  
+                  <label class="flex items-center justify-between gap-3 bg-slate-800/50 rounded-xl p-3 border border-slate-700 cursor-pointer">
+                    <div>
+                      <div class="text-[11px] font-bold text-white">Aktifkan AI</div>
+                      <div class="text-[10px] app-muted mt-0.5">Izinkan AI memberikan insight dan rekomendasi</div>
+                    </div>
+                    <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                      <input id="toggleGemini" type="checkbox" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer transition-transform duration-200 ease-in-out" style="border-color: #cbd5e1; top: 2px; left: 2px;"/>
+                      <label for="toggleGemini" class="toggle-label block overflow-hidden h-6 rounded-full bg-slate-600 cursor-pointer transition-colors duration-200 ease-in-out"></label>
+                    </div>
+                  </label>
+
+                  <div class="flex items-center gap-2 pt-1">
+                    <button id="btnSaveGemini" class="tap rounded-xl px-4 py-2.5 text-xs font-bold text-white hover:opacity-95 flex items-center gap-1.5" style="background: #10b981;">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                      Simpan
+                    </button>
+                    <button id="btnTestAI" class="tap rounded-xl border border-slate-600 bg-transparent px-4 py-2.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 flex items-center gap-1.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+                      Tes Koneksi
+                    </button>
+                  </div>
+                  <div class="text-[10px] app-muted" id="geminiStatus"></div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Menu modal -->
+    <div id="menuBackdrop" class="sheet-backdrop fixed inset-0 z-80" style="background: rgba(0,0,0,.70)">
+      <div class="absolute inset-0" data-close-menu="true"></div>
+      <div id="menuSheet" class="sheet absolute left-0 right-0 bottom-0 mx-auto max-w-xl">
+        <div class="rounded-t-3xl app-card-opaque border-t border-x sheet-panel">
+          <div class="sheet-head px-4 pt-3 pb-2">
+            <div class="flex items-center justify-between">
+              <div>
+                <div id="menuSheetTitle" class="text-xs app-muted">Menu</div>
+                <div id="menuSheetSubtitle" class="text-base font-semibold">Tutorial & Settings</div>
+              </div>
+              <button type="button" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" data-close-menu="true" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+            </div>
+          </div>
+          <div class="sheet-body px-4 pb-5 space-y-3">
+            <div class="rounded-2xl app-card p-4">
+              <div class="text-sm font-semibold">Tutorial cepat</div>
+              <ol class="mt-2 text-xs app-muted space-y-1 list-decimal pl-5">
+                <li>Tap tombol <span class="font-semibold">+</span> untuk input transaksi.</li>
+                <li>Pakai tab <span class="font-semibold">Cepat (AI)</span> untuk parsing kalimat bebas.</li>
+                <li>Pakai <span class="font-semibold">Foto Struk</span> untuk OCR dan simpan otomatis.</li>
+                <li>Tap transaksi untuk edit / hapus.</li>
+                <li>Untuk filter/search/periode, klik <span class="font-semibold">Periode</span>.</li>
+              </ol>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <button id="btnOpenQuick" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: rgba(99,102,241,.95)">Tambah transaksi</button>
+                <button id="btnOpenBudget" class="tap rounded-2xl app-chip px-4 py-2 text-sm hover:opacity-90">Atur budget</button>
+                <button id="btnOpenAdvisor" class="tap rounded-2xl app-chip px-4 py-2 text-sm hover:opacity-90">Buka Advisor</button>
+              </div>
+            </div>
+
+
+
+            <div id="adminBrandingCard" class="rounded-2xl app-card p-4 hidden">
+              <div class="text-sm font-semibold">Branding (Admin)</div>
+              <p class="mt-1 text-xs app-muted leading-relaxed">Ubah logo aplikasi. Hanya admin yang bisa mengubah.</p>
+
+              <div class="mt-3 space-y-3">
+                <div class="rounded-2xl app-card-opaque p-3">
+                  <div class="text-sm font-semibold">Upload logo</div>
+                  <div class="mt-1 text-xs app-muted">Upload gambar (PNG/JPG/SVG). File akan disimpan ke Supabase Storage dan URL-nya otomatis dipakai oleh semua user.</div>
+                  <div class="mt-2 flex items-center gap-2">
+                    <input id="logoFile" type="file" accept="image/*" class="tap w-full rounded-xl app-input px-3 py-2 text-sm" />
+                  </div>
+                  <div class="mt-2 text-[11px] app-muted2">Bucket Storage yang dipakai: <span class="font-semibold">app-branding</span> (harus public read, admin write).</div>
+                </div>
+
+                <div>
+                  <label class="text-xs app-muted">Logo URL</label>
+                  <input id="logoUrl" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-sm" placeholder="https://.../logo.png" />
+                  <div class="mt-1 text-[11px] app-muted2">Jika kamu isi manual URL, klik Simpan. Jika upload file, URL akan terisi otomatis.</div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <button id="btnSaveLogo" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: rgba(99,102,241,.95)">Simpan</button>
+                  <button id="btnTestLogoUpload" class="tap rounded-2xl app-chip px-4 py-2 text-sm hover:opacity-90" type="button">Test koneksi</button>
+                  <div class="ml-auto text-xs app-muted" id="logoStatus">—</div>
+                </div>
+                <div class="mt-2 text-[11px] app-muted2">Jika muncul error <span class="font-semibold">Failed to fetch</span>, biasanya karena Edge Function belum terdeploy / secrets belum di-set / diblokir adblock / jaringan memblokir domain Supabase.</div>
+              </div>
+            </div>
+
+            <div id="adminPanelLauncher" class="rounded-2xl app-card p-4 hidden">
+              <div class="text-sm font-semibold">Admin</div>
+              <p class="mt-1 text-xs app-muted leading-relaxed">Kelola user & konfigurasi produk (khusus admin).</p>
+              <div class="mt-3 flex items-center gap-2">
+                <button id="btnOpenAdminPanel" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: var(--brand-grad); border: 1px solid rgba(125,211,252,.30)">Buka Admin Panel</button>
+                <div class="ml-auto text-xs app-muted" id="adminPanelHint">—</div>
+              </div>
+            </div>
+
+            <div id="menuSettingsCard" class="rounded-2xl app-card p-4">
+              <div class="text-sm font-semibold">Settings</div>
+              <div class="mt-3 space-y-3">
+                <label class="flex items-center justify-between gap-3 text-sm">
+                  <span>
+                    <div class="font-semibold" data-i18n="settings.theme.title">Mode terang</div>
+                    <div class="text-xs app-muted" data-i18n="settings.theme.desc">Ubah tema tampilan.</div>
+                  </span>
+                  <input id="toggleTheme" type="checkbox" class="h-5 w-5" />
+                </label>
+
+                <div class="grid grid-cols-1 gap-2">
+                  <div class="text-sm font-semibold" data-i18n="settings.lang.title">Bahasa</div>
+                  <select id="langSelect" class="tap rounded-xl app-input px-3 py-2 text-sm">
+                    <option value="id">Bahasa Indonesia</option>
+                    <option value="en">English</option>
+                  </select>
+                  <div class="flex items-center gap-2">
+                    <button id="btnSaveLang" class="tap rounded-xl px-3 py-2 text-sm font-semibold hover:opacity-90" style="background: rgba(99,102,241,.15); color: rgba(199,210,254,.95); border: 1px solid rgba(99,102,241,.28)">Simpan</button>
+                    <div id="langStatus" class="ml-auto text-xs app-muted">—</div>
+                  </div>
+                  <div class="text-xs app-muted" data-i18n="settings.lang.desc">Mengubah seluruh bahasa aplikasi.</div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-2">
+                  <div class="text-sm font-semibold">Tampilan Desktop</div>
+                  <label class="flex items-center justify-between gap-3 text-sm app-chip px-3 py-2 rounded-xl">
+                    <span>Posisi Kartu Saldo</span>
+                    <select id="saldoPositionSelect" class="tap rounded-xl app-input px-3 py-1 text-sm bg-transparent border-none outline-none">
+                      <option value="topbar">Topbar (Atas)</option>
+                      <option value="sidebar">Sidebar (Kiri)</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="grid grid-cols-1 gap-2">
+                  <div class="text-sm font-semibold">Data yang ditampilkan</div>
+                  <label class="flex items-center justify-between gap-3 text-sm app-chip px-3 py-2 rounded-xl">
+                    <span>Tampilkan KPI (income/expense/net/saving)</span>
+                    <input id="toggleKPI" type="checkbox" class="h-5 w-5" />
+                  </label>
+                  <label class="flex items-center justify-between gap-3 text-sm app-chip px-3 py-2 rounded-xl">
+                    <span>Tampilkan budgeting</span>
+                    <input id="toggleBudget" type="checkbox" class="h-5 w-5" />
+                  </label>
+                </div>
+
+                <div class="grid grid-cols-1 gap-2">
+                  <div class="text-sm font-semibold">Grafik di dashboard</div>
+                  <label class="flex items-center justify-between gap-3 text-sm app-chip px-3 py-2 rounded-xl">
+                    <span>Tren</span>
+                    <input id="toggleTrend" type="checkbox" class="h-5 w-5" />
+                  </label>
+                  <label class="flex items-center justify-between gap-3 text-sm app-chip px-3 py-2 rounded-xl">
+                    <span>Donut kategori</span>
+                    <input id="toggleCategory" type="checkbox" class="h-5 w-5" />
+                  </label>
+                  <label class="flex items-center justify-between gap-3 text-sm app-chip px-3 py-2 rounded-xl">
+                    <span>Bar pengeluaran per hari</span>
+                    <input id="toggleWeek" type="checkbox" class="h-5 w-5" />
+                  </label>
+                </div>
+
+                <div class="rounded-2xl app-card-opaque p-3">
+                  <div class="text-sm font-semibold">Akun</div>
+                  <div class="mt-1 text-xs app-muted">Tambah daftar akun (Cash, BCA, GoPay, dll.) untuk dipakai di filter & input.</div>
+                  <div class="mt-2 flex gap-2">
+                    <input id="newAccount" class="tap flex-1 rounded-xl app-input px-3 py-2 text-sm" placeholder="contoh: Jago" />
+                    <button id="btnAddAccount" class="tap rounded-xl px-3 py-2 text-sm hover:opacity-90" style="background: rgba(99,102,241,.15); color: rgba(199,210,254,.95); border: 1px solid rgba(99,102,241,.25)">Tambah</button>
+                  </div>
+                  <div id="accountsList" class="mt-2 flex flex-wrap gap-2"></div>
+                  <div class="mt-2 text-xs app-muted" id="accountsStatus">—</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="rounded-2xl app-card p-4">
+              <div class="text-sm font-semibold">Data</div>
+              <p class="mt-1 text-xs app-muted leading-relaxed">
+                Export/import Excel atau CSV membantu backup dan pindahkan data.
+              </p>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <button id="btnExportExcel" class="tap rounded-2xl app-chip px-4 py-2 text-sm hover:opacity-90">Export Excel</button>
+                <button id="btnExportCSV" class="tap rounded-2xl app-chip px-4 py-2 text-sm hover:opacity-90">Export CSV</button>
+                <label class="tap rounded-2xl app-chip px-4 py-2 text-sm hover:opacity-90 cursor-pointer">
+                  Import Excel/CSV
+                  <input id="fileImportCSV" type="file" accept=".xlsx,.xls,text/csv,.csv" class="hidden" />
+                </label>
+              </div>
+            </div>
+
+            <div class="text-xs app-muted2">Monefyi • Webapp</div>
+
+        <!-- Print report container (shown only on print) -->
+        <div id="printReport" class="hidden"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accounts sheet (balances) -->
+    <div id="accountsBackdrop" class="sheet-backdrop fixed inset-0 z-80" style="background: rgba(0,0,0,.70)">
+      <div class="absolute inset-0" data-close-accounts="true"></div>
+      <div id="accountsSheet" class="sheet absolute left-0 right-0 bottom-0 mx-auto max-w-xl">
+        <div class="rounded-t-3xl app-card-opaque border-t border-x sheet-panel">
+          <div class="sheet-head px-4 pt-3 pb-2">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-xs app-muted">Akun</div>
+                <div class="text-base font-semibold">Saldo per akun</div>
+              </div>
+              <button type="button" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" data-close-accounts="true" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+            </div>
+            <div class="mt-2 text-xs app-muted">Tap akun untuk lihat detail.</div>
+          </div>
+          <div class="sheet-body px-4 pb-5">
+            <div id="accountsAllList" class="space-y-2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Account detail sheet -->
+    <div id="accountDetailBackdrop" class="sheet-backdrop fixed inset-0 z-50" style="background: rgba(0,0,0,.70)">
+      <div class="absolute inset-0" data-close-account-detail="true"></div>
+      <div id="accountDetailSheet" class="sheet absolute left-0 right-0 bottom-0 mx-auto max-w-xl">
+        <div class="rounded-t-3xl app-card-opaque border-t border-x sheet-panel">
+          <div class="sheet-head px-4 pt-3 pb-2">
+            <div class="flex items-center justify-between gap-3">
+              <div class="min-w-0">
+                <div class="text-xs app-muted">Akun</div>
+                <div id="accDetailTitle" class="text-base font-semibold truncate">—</div>
+              </div>
+              <button type="button" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" data-close-account-detail="true" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+            </div>
+
+            <div class="mt-3 flex flex-wrap gap-2">
+              <button id="btnAccAddMoney" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: rgba(16,185,129,.92)">Tambah Uang</button>
+              <button id="btnAccMoveMoney" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: rgba(14,165,233,.85)">Pindah Uang</button>
+              <button id="btnAccAddTx" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: rgba(99,102,241,.95)">Transaksi</button>
+              <div id="accDetailStatus" class="ml-auto text-xs app-muted">—</div>
+            </div>
+          </div>
+
+          <div class="sheet-body px-4 pb-5 space-y-3">
+            <div class="rounded-2xl app-card-opaque p-4">
+              <div class="text-sm font-semibold">Ringkasan</div>
+              <div class="mt-3 grid grid-cols-2 gap-2">
+                <div class="rounded-2xl app-chip p-3">
+                  <div class="text-xs app-muted">Saldo (estimasi)</div>
+                  <div id="accSaldo" class="mt-1 text-xl font-semibold">—</div>
+                  <div class="mt-1 text-[11px] app-muted">Sampai akhir periode</div>
+                </div>
+                <div class="rounded-2xl app-chip p-3">
+                  <div class="text-xs app-muted">Net (periode)</div>
+                  <div id="accNet" class="mt-1 text-xl font-semibold">—</div>
+                  <div class="mt-1 text-[11px] app-muted">Income − Expense</div>
+                </div>
+                <div class="rounded-2xl app-chip p-3">
+                  <div class="text-xs app-muted">Pemasukan</div>
+                  <div id="accIncome" class="mt-1 text-sm font-semibold">—</div>
+                </div>
+                <div class="rounded-2xl app-chip p-3">
+                  <div class="text-xs app-muted">Pengeluaran</div>
+                  <div id="accExpense" class="mt-1 text-sm font-semibold">—</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="rounded-2xl app-card-opaque p-4">
+              <div class="flex items-center justify-between">
+                <div class="text-sm font-semibold">Ganti nama akun</div>
+                <button id="btnSaveAccRename" class="tap rounded-xl px-3 py-2 text-xs font-semibold hover:opacity-90" style="background: rgba(99,102,241,.15); color: rgba(199,210,254,.95); border: 1px solid rgba(99,102,241,.28)">Simpan</button>
+              </div>
+              <div class="mt-2 flex items-center gap-2">
+                <input id="accRenameInput" class="tap flex-1 rounded-xl app-input px-3 py-2 text-sm" placeholder="Nama akun" />
+              </div>
+              <div class="mt-2 text-[11px] app-muted2">Mengubah nama akan mengupdate transaksi lama yang memakai akun ini.</div>
+            </div>
+
+            <div class="rounded-2xl app-card-opaque p-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-sm font-semibold">Transaksi akun</div>
+                  <div id="accTxHint" class="mt-1 text-xs app-muted">—</div>
+                </div>
+              </div>
+              <div id="accTxList" class="mt-3 divide-y app-divider rounded-2xl overflow-hidden" style="border:1px solid var(--app-border)"></div>
+              <div id="accTxEmpty" class="mt-3 text-sm app-muted hidden">Belum ada transaksi untuk akun ini pada periode ini.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Panel Sheet -->
+    <div id="adminBackdrop" class="sheet-backdrop fixed inset-0 z-80" style="background: rgba(0,0,0,.70)">
+      <div class="absolute inset-0" data-close-admin="true"></div>
+      <div id="adminSheet" class="sheet absolute left-0 right-0 bottom-0 mx-auto max-w-xl">
+        <div class="rounded-t-3xl app-card-opaque border-t border-x sheet-panel">
+          <div class="sheet-head px-4 pt-3 pb-2">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-xs app-muted">Admin</div>
+                <div class="text-base font-semibold">Super Admin Panel</div>
+              </div>
+              <button type="button" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" data-close-admin="true" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+            </div>
+
+            <div class="mt-3 flex gap-2">
+              <button id="adminTabUsers" class="tap flex-1 rounded-2xl app-chip px-3 py-2 text-sm">User</button>
+              <button id="adminTabConfig" class="tap flex-1 rounded-2xl app-chip px-3 py-2 text-sm">Konfigurasi</button>
+            </div>
+          </div>
+
+          <div class="sheet-body px-4 pb-5">
+            <!-- Users tab -->
+            <div id="adminUsersPanel" class="space-y-3">
+              <div class="rounded-2xl app-card p-4">
+                <div class="text-sm font-semibold">Manajemen User & Membership</div>
+                <div class="mt-2 grid grid-cols-1 gap-2">
+                  <input id="adminUserSearch" class="tap w-full rounded-xl app-input px-3 py-2 text-sm" placeholder="Cari email…" />
+                  <div class="grid grid-cols-2 gap-2">
+                    <select id="adminPlanFilter" class="tap rounded-xl app-input px-3 py-2 text-sm">
+                      <option value="">Semua plan</option>
+                      <option value="none">none</option>
+                      <option value="monthly">monthly</option>
+                      <option value="lifetime">lifetime</option>
+                    </select>
+                    <select id="adminStatusFilter" class="tap rounded-xl app-input px-3 py-2 text-sm">
+                      <option value="">Semua status</option>
+                      <option value="active">aktif</option>
+                      <option value="expiring">H≤3</option>
+                      <option value="expired">expired</option>
+                    </select>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button id="btnAdminRefreshUsers" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: var(--brand-green); border: 1px solid rgba(167,243,208,.35)">Refresh</button>
+                    <div id="adminUsersStatus" class="ml-auto text-xs app-muted">—</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="rounded-2xl app-card p-4">
+                <div class="text-sm font-semibold">Daftar user</div>
+                <div class="mt-2 text-xs app-muted">Catatan: endpoint admin membutuhkan Edge Function (service role) agar bisa membaca semua user.</div>
+                <div id="adminUsersList" class="mt-3 space-y-2"></div>
+              </div>
+            </div>
+
+            <!-- Config tab -->
+            <div id="adminConfigPanel" class="space-y-3 hidden">
+              <div class="rounded-2xl app-card p-4">
+                <div class="text-sm font-semibold">Konfigurasi Produk & Link</div>
+                <div class="mt-2 grid grid-cols-1 gap-2">
+                  <div>
+                    <label class="text-xs app-muted">Checkout bulanan URL</label>
+                    <input id="cfgMonthlyUrl" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-sm" placeholder="https://lynk.id/..." />
+                  </div>
+                  <div>
+                    <label class="text-xs app-muted">Checkout lifetime URL</label>
+                    <input id="cfgLifetimeUrl" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-sm" placeholder="https://lynk.id/..." />
+                  </div>
+                  <div>
+                    <label class="text-xs app-muted">Komisi affiliate (IDR)</label>
+                    <input id="cfgAffiliateCommission" inputmode="numeric" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-sm" placeholder="100000" />
+                  </div>
+
+                  <div class="rounded-2xl app-card-opaque p-3">
+                    <div class="text-sm font-semibold">Tutorial & Notifikasi</div>
+                    <div class="mt-3 space-y-2">
+                      <label class="text-[10px] app-muted uppercase">Video Tutorial URL (Embed)</label>
+                      <input id="cfgVideoUrl" class="tap w-full rounded-xl app-input px-3 py-2 text-sm" placeholder="https://youtube.com/embed/..." />
+                      
+                      <label class="text-[10px] app-muted uppercase">Notifikasi Rule (Threshold %)</label>
+                      <input id="cfgNotifThreshold" type="number" class="tap w-full rounded-xl app-input px-3 py-2 text-sm" placeholder="80" />
+                      <p class="text-[9px] app-muted">Kirim notifikasi jika budget kategori terpakai > X%</p>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-2">
+                    <button id="btnSaveAdminConfig" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: var(--brand-grad); border: 1px solid rgba(125,211,252,.30)">Simpan konfigurasi</button>
+                    <div id="adminConfigStatus" class="ml-auto text-xs app-muted">—</div>
+                  </div>
+
+                  <div class="text-[11px] app-muted2">Konfigurasi ini disimpan di tabel app_config (id: global). Pastikan RLS mengizinkan admin mengubahnya via Edge Function / policy.</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- User sheet -->
+    <div id="userBackdrop" class="sheet-backdrop fixed inset-0 z-80" style="background: rgba(0,0,0,.70)">
+      <div class="absolute inset-0" data-close-user="true"></div>
+      <div id="userSheet" class="sheet absolute left-0 right-0 bottom-0 mx-auto max-w-xl">
+        <div class="rounded-t-3xl app-card-opaque border-t border-x sheet-panel">
+          <div class="sheet-head px-4 pt-3 pb-2">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-xs app-muted">Akun</div>
+                <div class="text-base font-semibold">Profil & Keamanan</div>
+              </div>
+              <button type="button" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" data-close-user="true" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+            </div>
+          </div>
+          <div class="sheet-body px-4 pb-5 space-y-3">
+            <div class="rounded-2xl app-card p-4">
+              <div class="text-sm font-semibold">Informasi user</div>
+              <div class="mt-3 grid grid-cols-1 gap-2">
+                <div>
+                  <label class="text-xs app-muted">Nama</label>
+                  <input id="uName" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label class="text-xs app-muted">Email</label>
+                  <input id="uEmail" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-sm" disabled />
+                </div>
+
+                <div class="rounded-2xl app-chip p-3">
+                  <div class="text-xs app-muted">Role</div>
+                  <div id="uRole" class="mt-1 text-sm font-semibold">—</div>
+                  <div id="uRoleHint" class="mt-1 text-[11px] app-muted2"> </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <button id="btnSaveUser" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: rgba(16,185,129,.92)">Simpan</button>
+                  <div id="userStatus" class="ml-auto text-xs app-muted">—</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="rounded-2xl app-card p-4">
+              <div class="text-sm font-semibold">Ganti password</div>
+              <div class="mt-3 grid grid-cols-1 gap-2">
+                <div>
+                  <label class="text-xs app-muted">Password baru</label>
+                  <input id="uNewPass" type="password" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-sm" placeholder="minimal 8 karakter" />
+                </div>
+                <div>
+                  <label class="text-xs app-muted">Ulangi password baru</label>
+                  <input id="uNewPass2" type="password" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-sm" placeholder="ulang password" />
+                </div>
+                <button class="tap rounded-2xl app-chip px-4 py-2 text-sm hover:opacity-90" id="btnUpdatePassword">Update password</button>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button id="btnSignOut" class="tap rounded-2xl px-4 py-3 text-sm font-semibold hover:opacity-90" style="background: rgba(244,63,94,.12); color: rgba(254,202,202,.95); border: 1px solid rgba(244,63,94,.25)">Log Out</button>
+              <div class="text-xs app-muted" id="signOutStatus">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit modal -->
+    <div id="editBackdrop" class="sheet-backdrop fixed inset-0 z-80" style="background: rgba(0,0,0,.70)">
+      <div class="absolute inset-0" data-close-edit="true"></div>
+      <div class="absolute left-0 right-0 top-14 mx-auto max-w-xl px-4">
+        <div id="editCard" class="sheet rounded-2xl app-card-opaque p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-xs app-muted">Edit transaksi</div>
+              <div class="text-base font-semibold" id="editTitle">—</div>
+            </div>
+            <button type="button" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" data-close-edit="true" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+          </div>
+
+          <div class="mt-3 grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-xs app-muted">Tanggal</label>
+              <input id="eDate" type="date" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="text-xs app-muted">Tipe</label>
+              <select id="eType" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-sm">
+                <option value="expense">expense</option>
+                <option value="income">income</option>
+                <option value="transfer">transfer</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs app-muted">Jumlah</label>
+              <input id="eAmount" inputmode="numeric" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="text-xs app-muted">Kategori</label>
+              <select id="eCategory" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-sm"></select>
+            </div>
+            <div>
+              <label class="text-xs app-muted">Akun</label>
+              <select id="eAccount" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-sm"></select>
+            </div>
+            <div>
+              <label class="text-xs app-muted">Metode</label>
+              <select id="ePayment" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-sm"></select>
+            </div>
+            <div class="col-span-2">
+              <label class="text-xs app-muted">Merchant</label>
+              <input id="eMerchant" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-sm" />
+            </div>
+            <div class="col-span-2">
+              <label class="text-xs app-muted">Catatan</label>
+              <input id="eNotes" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-sm" />
+            </div>
+          </div>
+
+          <div class="mt-3 flex items-center gap-2">
+            <button id="btnUpdateTx" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: rgba(16,185,129,.92)">Update</button>
+            <button id="btnDeleteTx" class="tap rounded-2xl px-4 py-2 text-sm hover:opacity-90" style="background: rgba(244,63,94,.12); color: rgba(254,202,202,.95); border: 1px solid rgba(244,63,94,.25)">Hapus</button>
+            <div id="editStatus" class="ml-auto text-xs app-muted">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tutorial Sheet -->
+<div id="tutorialBackdrop" class="sheet-backdrop fixed inset-0 z-80" style="background: rgba(0,0,0,.70)">
+  <div class="absolute inset-0" data-close-tutorial="true"></div>
+  <div id="tutorialSheet" class="sheet absolute left-0 right-0 bottom-0 mx-auto max-w-xl">
+    <div class="rounded-t-3xl app-card-opaque border-t border-x sheet-panel">
+      <div class="sheet-head px-4 pt-3 pb-2">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-xs app-muted">📖 Panduan Pengguna</div>
+            <div class="text-base font-semibold">Tutorial Monefyi</div>
+          </div>
+          <button type="button" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" data-close-tutorial="true" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+        </div>
+      </div>
+      <div class="sheet-body px-4 pb-5 space-y-4">
+        <!-- Video di atas -->
+        <div class="rounded-2xl bg-slate-900/50 border border-slate-800 overflow-hidden">
+          <div class="aspect-video bg-black flex items-center justify-center relative">
+            <div id="tutorialVideoPlaceholder" class="text-center p-6">
+              <span class="text-4xl mb-2 block">📺</span>
+              <p class="text-xs app-muted">Pilih salah satu topik di bawah untuk melihat video / panduan langkah.</p>
+            </div>
+            <iframe
+              id="tutorialVideoFrame"
+              class="absolute inset-0 w-full h-full hidden"
+              src=""
+              frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowfullscreen
+            ></iframe>
+          </div>
+        </div>
+
+        <div class="text-xs app-muted">
+          Tap salah satu topik di bawah. Satu topik akan terbuka, yang lain akan meredup.
+        </div>
+
+        <!-- Accordion Tutorial -->
+        <div id="tutorialStepsContainer" class="space-y-3">
+          <!-- Kartu tutorial akan di-render dari JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+</div>
+
+    <!-- Desktop filter popup -->
+    <div id="desktopFilterBackdrop" class="fixed inset-0 z-60 hidden items-start justify-center pt-16 px-4 pb-8" style="background: rgba(0,0,0,.55)">
+      <div class="absolute inset-0" data-close-filter="true"></div>
+      <div id="desktopFilterSlot" class="relative w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl app-card-opaque p-4 shadow-2xl"></div>
+    </div>
+
+    </div>
+
+    <!-- Onboarding -->
+    <div id="onboardingBackdrop" class="sheet-backdrop fixed inset-0 z-[125] hidden" style="background:rgba(0,0,0,.75)">
+      <div class="flex items-center justify-center min-h-dvh p-4">
+        <div class="w-full max-w-md rounded-2xl app-card-opaque p-6 shadow-2xl">
+          <h2 class="text-xl font-bold" data-i18n="onboarding.welcome">Selamat datang di Monefyi</h2>
+          <ol class="mt-4 space-y-3 text-sm app-muted list-decimal pl-5">
+            <li data-i18n="onboarding.step1">Catat transaksi semudah chat</li>
+            <li data-i18n="onboarding.step2">Monevisor AI menganalisis keuanganmu</li>
+            <li data-i18n="onboarding.step3">Atur budget per kategori</li>
+          </ol>
+          <div class="mt-6 flex gap-2">
+            <button type="button" id="btnOnboardingSkip" class="tap flex-1 btn-ghost py-2.5 rounded-lg text-sm" data-i18n="onboarding.skip">Lewati</button>
+            <button type="button" id="btnOnboardingStart" class="tap flex-1 btn-primary py-2.5 rounded-lg text-sm font-semibold" data-i18n="onboarding.start">Mulai</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/monefyi-ui.js"></script>
+  <script src="js/app.js" defer></script>
+
+</body>
+</html>

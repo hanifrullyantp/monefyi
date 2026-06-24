@@ -2,7 +2,7 @@
 /** Extract I18N from js/app.js → locales/id.json + locales/en.json */
 const fs = require('fs');
 const path = require('path');
-const src = fs.readFileSync(path.join(__dirname, '../js/app.js'), 'utf8');
+const src = fs.readFileSync(path.join(__dirname, '../app/js/app.js'), 'utf8');
 const start = src.indexOf('const I18N = {');
 const end = src.indexOf('\n    function t(key, vars)', start);
 if (start < 0 || end < 0) {

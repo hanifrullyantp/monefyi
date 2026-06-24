@@ -1,0 +1,182 @@
+# Monefyi PWA - Cursor Rules
+# Last Updated: 2025-01-15
+
+## Project Context
+project_name: Monefyi
+project_type: Progressive Web App (PWA)
+primary_language: JavaScript (ES6+)
+framework: Vanilla JS (no React/Vue/Angular)
+backend: Supabase (PostgreSQL + Edge Functions)
+
+## Code Style
+
+### JavaScript
+- Use ES6+ features (const/let, arrow functions, destructuring)
+- Prefer `const` over `let`, never `var`
+- Use template literals for strings with variables
+- Async/await preferred over `.then()` chains
+- Pure functions when possible (no side effects)
+
+### Naming Conventions
+- Functions: camelCase with verb prefix (parseQuickText, getUserData, calculateTotal)
+- Constants: SCREAMING_SNAKE_CASE (MAX_RETRIES, API_ENDPOINT, GRAMMAR_RULES)
+- Files: kebab-case.js (parse-rules.js, user-service.js)
+- Classes/Types: PascalCase (ParseResult, TransactionModel)
+
+### File Structure
+- One primary export per file
+- Group related functions together
+- Keep files under 300 lines (split if larger)
+- Use index.js for barrel exports
+
+### Comments
+- JSDoc for all public functions
+- Inline comments for non-obvious logic
+- TODO comments must include (PHASE-X) prefix
+- No commented-out code (use git)
+
+## Error Handling
+
+### Required Pattern
+```javascript
+async function fetchData() {
+  try {
+    const result = await apiCall();
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Fetch failed:', error);
+    Sentry.captureException(error);
+    return { success: false, error: error.message };
+  }
+}
+```
+
+### Error Logging
+- Use `console.error()` for errors (never `console.log`)
+- Send to Sentry for production errors
+- Include context (user ID, input, timestamp)
+- Never expose sensitive data in logs
+
+## Performance
+
+### Rules
+- IndexedDB operations must complete in <50ms
+- DOM updates: batch with `requestAnimationFrame`
+- Avoid synchronous localStorage (use IndexedDB)
+- Debounce user input (300ms for text, 500ms for search)
+- Lazy load images `loading="lazy"`
+
+## Security
+
+### Required Checks
+- All Supabase queries must use RLS policies
+- User input must be sanitized (XSS prevention)
+- No sensitive data in localStorage (use IndexedDB + encryption)
+- API keys in environment variables (never hardcoded)
+- Rate limiting for expensive operations
+
+## Testing
+
+### Requirements
+- All public functions need unit tests
+- Integration tests for database operations
+- E2E tests for user-facing features
+- Test coverage target: 70%
+
+### Test Naming
+Pattern: "Function/Component - Scenario - Expected Result"
+Example: Deno.test('normalizeInput - Amount with "jt" - Converts to millions', ...)
+
+## Database (Supabase)
+
+### Query Patterns
+- Select only needed columns (not SELECT *)
+- Always handle error from .insert()/.update()
+- Use prepared statements (parameterized queries)
+- Verify RLS policies for cross-user isolation
+
+## AI Integration
+
+### Prompt Engineering
+- Use structured output (JSON schema)
+- Include 3-5 few-shot examples
+- Set temperature low (0.1-0.3 for deterministic)
+- Always check quota before calling
+- Fallback to BYOK if quota exceeded
+
+## Feature Flags
+
+### Usage Pattern
+```javascript
+const useNewFeature = await featureFlags.isEnabled('feature_name', userId);
+if (useNewFeature) {
+  return await newImplementation();
+} else {
+  return await legacyImplementation();
+}
+```
+
+### Rollout Strategy
+- Start at 5% (internal team)
+- Monitor metrics for 48h
+- Increase to 15%, 30%, 50%, 75%, 100%
+- Auto-rollback if error rate >2%
+
+## Monefyi-Specific Rules
+
+### Parser Pipeline
+- Always try L0-L2 before calling server
+- Log all parse events (non-blocking)
+- Never block user flow on logging failure
+- Cache memory in IndexedDB for offline
+
+### Transaction Fields
+- Required: date, type, amount, currency
+- Optional: category, merchant, account, notes
+- Always validate amount >0
+- Date format: ISO 8601 (YYYY-MM-DD)
+
+### Confidence Scoring
+- L1 Memory: >=0.95
+- L2 Rules: >=0.75
+- L3 Fuzzy: >=0.65
+- L4 AI: >=0.60
+- L5 Review: <0.60
+
+## Git Commit Messages
+
+### Format
+```
+type(scope): Short description
+
+Longer description if needed.
+
+Refs: #issue-number
+```
+
+### Types
+- feat: New feature
+- fix: Bug fix
+- refactor: Code change (no behavior change)
+- perf: Performance improvement
+- test: Add/update tests
+- docs: Documentation
+- chore: Maintenance (deps, configs)
+
+## When in Doubt
+
+### Reference Docs
+Before implementing, check:
+- @.monefyi/PARSE_MIGRATION_CONTEXT.md - Overall architecture
+- @.monefyi/DECISION_LOG.md - Why decisions were made
+- @docs/phases/PHASE_1_FOUNDATION.md - Current phase details
+- @docs/reference/GRAMMAR_RULES.ts - Parser patterns
+- @docs/testing/GOLDEN_DATASET.json - Test cases
+
+### Attach Context
+Always attach when:
+- Implementing new feature: @PHASE_X.md
+- Using shared types: @TYPES.ts
+- Database work: @DB_SCHEMA.sql
+- Parser work: @GRAMMAR_RULES.ts
+```

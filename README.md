@@ -15,14 +15,23 @@ Aplikasi keuangan pribadi (PWA) — HTML + CSS + JavaScript, backend Supabase.
 | [`planner/`](planner/README.md) | Vite + HTML/CSS/JS (PWA) | Root Directory: **`planner`** |
 | [`monefyi_planner/`](monefyi_planner/README.md) | React + Vite + Tailwind | Root Directory: **`monefyi_planner`** |
 
-## Struktur
+## Struktur deploy (monefyi.com)
+
+| URL | Folder | Isi |
+|-----|--------|-----|
+| `monefyi.com/` | [`landing/`](landing/) | Landing page marketing |
+| `monefyi.com/app/` | [`app/`](app/) | Aplikasi PWA utama |
+
+Detail build & Vercel: [`docs/DEPLOY_STRUCTURE.md`](docs/DEPLOY_STRUCTURE.md).
+
+## Struktur kode aplikasi (`app/`)
 
 | File / folder | Isi |
 |---------------|-----|
-| `index.html` | Shell halaman, CDN library + referensi aset |
-| `js/config.js` | **Sesuaikan di sini:** URL Supabase, anon key, checkout, admin, `basePath` |
-| `js/app.js` | Logika aplikasi |
-| `css/app.css` | Gaya antarmuka |
+| `app/index.html` | Shell halaman, CDN library + referensi aset |
+| `app/js/config.js` | **Sesuaikan di sini:** URL Supabase, anon key, checkout, admin, `basePath` |
+| `app/js/app.js` | Logika aplikasi |
+| `app/css/app.css` | Gaya antarmuka |
 | `scripts/` | Utilitas one-off (`refactor.cjs`, template print) — tidak wajib di production |
 
 ## Menjalankan lokal
@@ -31,10 +40,12 @@ Buka lewat **HTTP** (bukan `file://`), agar service worker / fetch normal:
 
 ```bash
 npm install
-npm run dev
+npm run dev          # aplikasi → http://localhost:5173/app/
+npm run dev:landing  # landing → http://localhost:5174/
+npm run build        # dist/ (landing + app)
 ```
 
-Lalu buka `http://localhost:5173`.
+Lalu buka `http://localhost:5173/app/` untuk aplikasi, atau `http://localhost:5174/` untuk landing.
 
 Alternatif tanpa Vite:
 
