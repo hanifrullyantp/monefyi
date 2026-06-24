@@ -1,0 +1,121 @@
+#!/bin/bash
+
+# ============================================================
+# Monefyi Phase 1 - Setup Script
+# Lokasi: /Users/user/Documents/GitHub/monefyi/
+# ============================================================
+
+set -e  # Exit on error
+
+MONEFYI_ROOT="/Users/user/Documents/GitHub/monefyi"
+cd "$MONEFYI_ROOT"
+
+echo "🚀 Starting Monefyi Phase 1 Setup..."
+echo "📁 Location: $MONEFYI_ROOT"
+echo ""
+
+# ============================================================
+# 1. CREATE FOLDER STRUCTURE
+# ============================================================
+echo "📂 Creating folder structure..."
+
+mkdir -p .monefyi
+mkdir -p docs/phases
+mkdir -p docs/reference
+mkdir -p docs/testing
+mkdir -p js/parsers
+mkdir -p js/services
+mkdir -p tests
+
+echo "✅ Folders created"
+echo ""
+
+# ============================================================
+# 2. CREATE .cursorrules
+# ============================================================
+echo "📄 Creating .cursorrules..."
+
+cat > .cursorrules << 'CURSORRULES_EOF'
+# Monefyi PWA - Cursor Rules
+# Last Updated: 2025-01-15
+
+## Project Context
+project_name: Monefyi
+project_type: Progressive Web App (PWA)
+primary_language: JavaScript (ES6+)
+framework: Vanilla JS (no React/Vue/Angular)
+backend: Supabase (PostgreSQL + Edge Functions)
+
+## Code Style
+
+### JavaScript
+- Use ES6+ features (const/let, arrow functions, destructuring)
+- Prefer `const` over `let`, never `var`
+- Use template literals for strings with variables
+- Async/await preferred over `.then()` chains
+- Pure functions when possible (no side effects)
+
+### Naming Conventions
+functions: camelCase with verb prefix
+  examples:
+    - parseQuickText()
+    - getUserData()
+    - calculateTotal()
+
+constants: SCREAMING_SNAKE_CASE
+  examples:
+    - MAX_RETRIES
+    - API_ENDPOINT
+    - GRAMMAR_RULES
+
+files: kebab-case.js
+  examples:
+    - parse-rules.js
+    - user-service.js
+    - transaction-model.js
+
+classes_and_types: PascalCase
+  examples:
+    - ParseResult
+    - TransactionModel
+    - UserService
+
+### File Structure
+- One primary export per file
+- Group related functions together
+- Keep files under 300 lines (split if larger)
+- Use index.js for barrel exports
+
+### Comments
+- JSDoc for all public functions
+- Inline comments for non-obvious logic
+- TODO comments must include (PHASE-X) prefix
+- No commented-out code (use git)
+
+## Error Handling
+
+### Required Pattern
+```javascript
+// ✅ Good
+async function fetchData() {
+  try {
+    const result = await apiCall();
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Fetch failed:', error);
+    Sentry.captureException(error);
+    return { success: false, error: error.message };
+  }
+}
+cd /Users/user/Documents/GitHub/monefyi/
+
+# Check ukuran file
+ls -lh .monefyi/ docs/phases/ docs/reference/ docs/testing/ .cursorrules
+
+# Expected output (perhatikan SIZE):
+# .cursorrules                            ~3 KB  ✅
+# .monefyi/DECISION_LOG.md                ~2 KB  ✅
+# .monefyi/PARSE_MIGRATION_CONTEXT.md     ~4 KB  ✅
+# docs/phases/PHASE_1_FOUNDATION.md       ~150 B ⚠️ TERLALU KECIL
+# docs/reference/GRAMMAR_RULES.ts         ~60 B  ⚠️ TERLALU KECIL  
+# docs/testing/GOLDEN_DATASET.json        ~35 B  ⚠️ TERLALU KECILç

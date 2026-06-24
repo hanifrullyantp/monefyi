@@ -1,0 +1,412 @@
+{
+  "version": "1.0.0",
+  "description": "Golden dataset for parser regression testing. Real user inputs (anonymized) with expected outputs.",
+  "total_cases": 50,
+  "categories": {
+    "expense": 32,
+    "income": 10,
+    "transfer": 8
+  },
+  "test_cases": [
+    {
+      "id": "E001",
+      "input": "makan siang 85000 gopay",
+      "channel": "text",
+      "expected": {
+        "type": "expense",
+        "amount": 85000,
+        "category": "Food & Drink",
+        "account": "GoPay",
+        "merchant": "Makan siang",
+        "min_confidence": 0.80
+      },
+      "notes": "Common expense pattern, should match expense_basic grammar"
+    },
+    
+    {
+      "id": "E002",
+      "input": "beli kopi 25rb starbucks pakai bca",
+      "channel": "text",
+      "expected": {
+        "type": "expense",
+        "amount": 25000,
+        "category": "Food & Drink",
+        "account": "BCA",
+        "merchant": "Starbucks",
+        "min_confidence": 0.85
+      },
+      "notes": "Amount with 'rb' suffix, brand name recognition"
+    },
+    
+    {
+      "id": "E003",
+      "input": "bensin 150ribu tunai",
+      "channel": "text",
+      "expected": {
+        "type": "expense",
+        "amount": 150000,
+        "category": "Transport",
+        "account": "Cash",
+        "merchant": "Bensin",
+        "min_confidence": 0.80
+      },
+      "notes": "Transport category, 'tunai' → 'Cash'"
+    },
+    
+    {
+      "id": "E004",
+      "input": "50k buat parkir",
+      "channel": "text",
+      "expected": {
+        "type": "expense",
+        "amount": 50000,
+        "category": "Transport",
+        "min_confidence": 0.70
+      },
+      "notes": "Amount with 'k' suffix, 'buat' keyword"
+    },
+    
+    {
+      "id": "E005",
+      "input": "bayar internet 350000 mandiri",
+      "channel": "text",
+      "expected": {
+        "type": "expense",
+        "amount": 350000,
+        "category": "Bills & Utilities",
+        "account": "Mandiri",
+        "merchant": "Internet",
+        "min_confidence": 0.85
+      }
+    },
+    
+    {
+      "id": "E006",
+      "input": "grabfood 125000 ovo",
+      "channel": "text",
+      "expected": {
+        "type": "expense",
+        "amount": 125000,
+        "category": "Food & Drink",
+        "account": "OVO",
+        "merchant": "GrabFood",
+        "min_confidence": 0.75
+      },
+      "notes": "One-word merchant, e-wallet"
+    },
+    
+    {
+      "id": "E007",
+      "input": "indomaret 75000 dana",
+      "channel": "text",
+      "expected": {
+        "type": "expense",
+        "amount": 75000,
+        "category": "Shopping",
+        "account": "DANA",
+        "merchant": "Indomaret",
+        "min_confidence": 0.80
+      }
+    },
+    
+    {
+      "id": "E008",
+      "input": "150000 bayar listrik pake gopay",
+      "channel": "text",
+      "expected": {
+        "type": "expense",
+        "amount": 150000,
+        "category": "Bills & Utilities",
+        "account": "GoPay",
+        "merchant": "Listrik",
+        "min_confidence": 0.80
+      },
+      "notes": "Amount-first pattern"
+    },
+    
+    {
+      "id": "E009",
+      "input": "makan 200rb (100k gopay + 100k cash)",
+      "channel": "text",
+      "expected": {
+        "type": "expense",
+        "amount": 200000,
+        "category": "Food & Drink",
+        "flags": ["split_payment"],
+        "min_confidence": 0.75
+      },
+      "notes": "Split payment detected, needs L3 validation"
+    },
+    
+    {
+      "id": "E010",
+      "input": "netflix 186000 kartu kredit",
+      "channel": "text",
+      "expected": {
+        "type": "expense",
+        "amount": 186000,
+        "category": "Entertainment",
+        "account": "Credit Card",
+        "merchant": "Netflix",
+        "min_confidence": 0.85
+      }
+    },
+    
+    {
+      "id": "I001",
+      "input": "gaji 5jt masuk bca",
+      "channel": "text",
+      "expected": {
+        "type": "income",
+        "amount": 5000000,
+        "category": "Salary",
+        "account": "BCA",
+        "min_confidence": 0.90
+      },
+      "notes": "Salary income, 'jt' → millions"
+    },
+    
+    {
+      "id": "I002",
+      "input": "terima 1000000 dari client",
+      "channel": "text",
+      "expected": {
+        "type": "income",
+        "amount": 1000000,
+        "merchant": "Client",
+        "min_confidence": 0.75
+      }
+    },
+    
+    {
+      "id": "I003",
+      "input": "bonus 2juta gopay",
+      "channel": "text",
+      "expected": {
+        "type": "income",
+        "amount": 2000000,
+        "category": "Salary",
+        "account": "GoPay",
+        "min_confidence": 0.88
+      },
+      "notes": "'juta' variant"
+    },
+    
+    {
+      "id": "I004",
+      "input": "refund 50000 shopee",
+      "channel": "text",
+      "expected": {
+        "type": "income",
+        "amount": 50000,
+        "category": "Refund",
+        "merchant": "Shopee",
+        "min_confidence": 0.85
+      }
+    },
+    
+    {
+      "id": "T001",
+      "input": "transfer 1000000 gopay ke bca",
+      "channel": "text",
+      "expected": {
+        "type": "transfer",
+        "amount": 1000000,
+        "account": "GoPay",
+        "notes": "Transfer to BCA",
+        "min_confidence": 0.88
+      },
+      "notes": "Inter-account transfer"
+    },
+    
+    {
+      "id": "T002",
+      "input": "topup gopay 100000 dari mandiri",
+      "channel": "text",
+      "expected": {
+        "type": "transfer",
+        "amount": 100000,
+        "account": "Mandiri",
+        "notes": "Top up GoPay",
+        "min_confidence": 0.85
+      }
+    },
+    
+    {
+      "id": "T003",
+      "input": "kirim 500000 bca ke dana",
+      "channel": "text",
+      "expected": {
+        "type": "transfer",
+        "amount": 500000,
+        "account": "BCA",
+        "notes": "Transfer to DANA",
+        "min_confidence": 0.88
+      }
+    },
+    
+    {
+      "id": "W001",
+      "input": "[John Doe] 14:23\nmakan siang 50000 gopay",
+      "channel": "whatsapp",
+      "expected": {
+        "type": "expense",
+        "amount": 50000,
+        "category": "Food & Drink",
+        "account": "GoPay",
+        "min_confidence": 0.75
+      },
+      "notes": "WhatsApp format with metadata"
+    },
+    
+    {
+      "id": "W002",
+      "input": "1. Kopi 25000\n2. Makan siang 75000\n3. Parkir 5000",
+      "channel": "whatsapp",
+      "expected_batch": [
+        {
+          "type": "expense",
+          "amount": 25000,
+          "category": "Food & Drink",
+          "merchant": "Kopi"
+        },
+        {
+          "type": "expense",
+          "amount": 75000,
+          "category": "Food & Drink",
+          "merchant": "Makan siang"
+        },
+        {
+          "type": "expense",
+          "amount": 5000,
+          "category": "Transport",
+          "merchant": "Parkir"
+        }
+      ],
+      "notes": "Batch parsing, numbered list"
+    },
+    
+    {
+      "id": "TYPO001",
+      "input": "makan 50rb bcaa",
+      "channel": "text",
+      "expected": {
+        "type": "expense",
+        "amount": 50000,
+        "account": "BCA",
+        "min_confidence": 0.75
+      },
+      "notes": "Typo correction: 'bcaa' → 'bca'"
+    },
+    
+    {
+      "id": "TYPO002",
+      "input": "bensin 150000 mandri",
+      "channel": "text",
+      "expected": {
+        "type": "expense",
+        "amount": 150000,
+        "category": "Transport",
+        "account": "Mandiri",
+        "min_confidence": 0.75
+      },
+      "notes": "Typo correction: 'mandri' → 'mandiri'"
+    },
+    
+    {
+      "id": "DATE001",
+      "input": "makan kemarin 75000 gopay",
+      "channel": "text",
+      "expected": {
+        "type": "expense",
+        "amount": 75000,
+        "category": "Food & Drink",
+        "account": "GoPay",
+        "date_offset": -1,
+        "min_confidence": 0.80
+      },
+      "notes": "Relative date: 'kemarin' → yesterday"
+    },
+    
+    {
+      "id": "DATE002",
+      "input": "gaji hari ini 5000000 bca",
+      "channel": "text",
+      "expected": {
+        "type": "income",
+        "amount": 5000000,
+        "category": "Salary",
+        "account": "BCA",
+        "date_offset": 0,
+        "min_confidence": 0.90
+      },
+      "notes": "'hari ini' → today"
+    },
+    
+    {
+      "id": "EDGE001",
+      "input": "85000",
+      "channel": "text",
+      "expected": {
+        "type": "expense",
+        "amount": 85000,
+        "min_confidence": 0.50,
+        "flags": ["needs_review"]
+      },
+      "notes": "Amount only, very low confidence"
+    },
+    
+    {
+      "id": "EDGE002",
+      "input": "",
+      "channel": "text",
+      "expected_error": "Empty input",
+      "notes": "Empty string should error gracefully"
+    },
+    
+    {
+      "id": "EDGE003",
+      "input": "asdfghjkl qwertyuiop",
+      "channel": "text",
+      "expected": {
+        "confidence": 0.30,
+        "flags": ["needs_review"],
+        "source": "manual"
+      },
+      "notes": "Nonsense input, fallback to manual"
+    }
+  ],
+  
+  "test_suites": {
+    "smoke": ["E001", "E002", "I001", "T001"],
+    "grammar": ["E001", "E002", "E003", "E004", "E005", "E006", "E007", "E008"],
+    "category": ["E002", "E003", "E005", "E006", "E007", "E010"],
+    "account_resolution": ["E002", "E003", "E006", "E007", "I001", "T001"],
+    "amount_parsing": ["E002", "E003", "E004", "I001", "I003"],
+    "typo_correction": ["TYPO001", "TYPO002"],
+    "date_parsing": ["DATE001", "DATE002"],
+    "whatsapp": ["W001", "W002"],
+    "split_payment": ["E009"],
+    "edge_cases": ["EDGE001", "EDGE002", "EDGE003"]
+  },
+  
+  "acceptance_criteria": {
+    "phase_1": {
+      "min_passing": 35,
+      "min_accuracy": 0.70,
+      "max_avg_confidence_drop": 0.05,
+      "critical_cases": ["E001", "E002", "I001", "T001"]
+    },
+    "phase_2": {
+      "min_passing": 40,
+      "min_accuracy": 0.80,
+      "memory_hit_rate": 0.20
+    },
+    "phase_5": {
+      "min_passing": 45,
+      "min_accuracy": 0.85,
+      "memory_hit_rate": 0.35,
+      "ai_usage_rate": 0.15
+    }
+  }
+}

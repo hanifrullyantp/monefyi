@@ -171,7 +171,7 @@
               <div class="text-xs app-muted">Program Affiliate Monefyi</div>
               <div id="affHeadline" class="mt-1 text-lg font-semibold">—</div>
             </div>
-            <button class="tap rounded-xl app-chip px-3 py-2 text-sm hover:opacity-90" data-close-aff="true" type="button">Tutup</button>
+            <button type="button" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" data-close-aff="true" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
           </div>
 
           <div id="affBody" class="mt-3 text-sm app-muted leading-relaxed">—</div>
@@ -289,7 +289,7 @@
               </div>
             </div>
 
-            <button id="btnMonthClose" class="tap rounded-xl app-chip px-3 py-2 text-sm hover:opacity-90">Tutup</button>
+            <button type="button" id="btnMonthClose" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
           </div>
 
           <div id="periodFiltersHint" class="mt-3 text-[11px] app-muted2">Filter (search/tipe/kategori/akun) muncul saat panel periode dibuka.</div>
@@ -332,12 +332,12 @@
 <!-- PEMBUNGKUS UTAMA -->
 
 <main id="appShell" class="w-full max-w-full mx-auto px-4 pb-32 md:pb-8 md:pt-8 safe-bottom md:h-dvh md:overflow-hidden">
-  <div class="flex flex-col md:flex-row gap-8 items-start w-full md:h-full">   
+  <div class="flex flex-col md:flex-row gap-8 items-start w-full md:h-full md:min-h-0">   
  
 
 
     <!-- SIDEBAR DESKTOP (KIRI) -->
-    <aside id="appSidebar" class="hidden md:flex flex-col gap-4 shrink-0 md:h-full relative">
+    <aside id="appSidebar" class="hidden md:flex flex-col gap-4 shrink-0 md:h-full md:min-h-0 relative">
       <button id="btnSidebarCollapse" type="button" class="tap absolute top-0 right-0 z-10 w-8 h-8 rounded-lg app-chip flex items-center justify-center text-xs" aria-label="Ciutkan sidebar" title="Sidebar">‹</button>
 
       <!-- Brand -->
@@ -951,8 +951,8 @@
               <div id="addSheetSubtitle" class="text-[11px] app-muted mt-0.5">Input cepat & mudah</div>
             </div>
           </div>
-          <button type="button" class="tap w-9 h-9 rounded-xl app-chip flex items-center justify-center shrink-0 hover:opacity-90" data-close="true" aria-label="Tutup">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          <button type="button" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" data-close="true" aria-label="Tutup">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
           </button>
         </div>
 
@@ -983,81 +983,42 @@
               Tulis seperti chat. Bisa lebih dari 1 transaksi: pisahkan per baris. <span class="italic text-slate-400">Contoh: “makan siang 50k di warteg pake gopay”</span>
             </label>
 
-            <div class="add-textarea-wrap relative mt-3">
+            <div class="add-input-composer mt-3 rounded-2xl border border-slate-700/80 bg-slate-900/60 overflow-hidden">
               <textarea
                 id="quickText"
-                rows="4"
-                class="tap w-full rounded-2xl app-input px-3 py-3 pr-12 text-base min-h-[120px] resize-none border border-slate-700/80 bg-slate-900/60"
+                rows="3"
+                class="tap w-full px-3 pt-3 pb-2 text-base resize-none border-0 bg-transparent outline-none focus:ring-0 min-h-[72px]"
                 placeholder="Ketik transaksi di sini..."
               ></textarea>
-              <button type="button" id="btnQuickCamera" class="tap absolute bottom-3 right-3 w-9 h-9 rounded-xl flex items-center justify-center hover:brightness-110 transition-all" style="background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.25);" aria-label="Scan struk">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
-              </button>
+              <div class="add-input-toolbar flex items-center gap-1.5 px-2 pb-2 pt-1 border-t border-slate-700/60">
+                <button type="button" id="btnParse" class="add-process-btn-inline tap flex-1 min-w-0 rounded-xl px-3 py-2 text-[11px] font-bold text-white hover:brightness-105 active:scale-[0.99] transition-all flex items-center justify-center gap-1.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>
+                  <span id="btnParseTitle">Proses Transaksi</span>
+                </button>
+                <button type="button" id="btnQuickGoManual" class="add-tool-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0 hover:brightness-110 transition-all" style="background:rgba(16,185,129,.12);color:#10b981;border:1px solid rgba(16,185,129,.22);" title="Input Manual" aria-label="Input Manual">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                </button>
+                <button type="button" id="btnQuickGoBatch" class="add-tool-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0 hover:brightness-110 transition-all" style="background:rgba(59,130,246,.12);color:#60a5fa;border:1px solid rgba(59,130,246,.22);" title="Impor Batch" aria-label="Impor Batch">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+                </button>
+                <button type="button" id="btnQuickGoReceipt" class="add-tool-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0 hover:brightness-110 transition-all" style="background:rgba(168,85,247,.12);color:#c084fc;border:1px solid rgba(168,85,247,.22);" title="Scan Struk" aria-label="Scan Struk">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                </button>
+                <button type="button" id="btnQuickClear" class="add-tool-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0 hover:brightness-110 transition-all" style="background:rgba(244,63,94,.12);color:#fb7185;border:1px solid rgba(244,63,94,.22);" title="Bersihkan" aria-label="Bersihkan">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                </button>
+              </div>
             </div>
 
-            <div class="add-quick-examples mt-3 rounded-xl p-3 border border-slate-800/50 bg-slate-900/40">
-              <div class="flex items-center justify-between gap-2">
-                <div class="flex items-center gap-1.5 text-[11px] font-bold" style="color:#10b981;">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.9 1.2 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
-                  <span id="quickExamplesTitle">Contoh cepat</span>
-                </div>
-                <button type="button" id="btnQuickExamplesMore" class="tap text-[10px] app-muted hover:text-white px-2 py-1 rounded-lg hover:bg-white/5">Lihat lainnya &gt;</button>
-              </div>
-              <ol id="quickExamplesList" class="mt-2 space-y-1 text-[11px] text-slate-300 list-decimal pl-4">
-                <li>makan siang 50k di warteg pake gopay</li>
-                <li>parkir 5k cash</li>
-              </ol>
+            <div class="mt-3">
+              <div id="quickRecoTitle" class="text-[11px] font-bold mb-2" style="color:#10b981;">Rekomendasi input</div>
+              <div id="quickRecoList" class="flex flex-wrap gap-2"></div>
             </div>
           </div>
 
           <div id="quickAiPreview" class="hidden mt-3"></div>
           <div id="quickPreview" class="hidden"></div>
           <div id="parseStatus" class="mt-2 text-center text-xs app-muted"></div>
-
-          <div class="mt-4 text-[11px] app-muted" id="quickAltTitle">Atau pilih metode input lainnya</div>
-          <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <button type="button" id="btnQuickGoManual" class="add-method-card add-method-card--green tap rounded-2xl p-3 text-left border hover:brightness-105 transition-all">
-              <div class="w-9 h-9 rounded-xl flex items-center justify-center mb-2" style="background:rgba(16,185,129,.12);color:#10b981;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-              </div>
-              <div id="quickMethodManualTitle" class="text-[11px] font-bold text-white">Input Manual</div>
-              <div id="quickMethodManualSub" class="text-[9px] app-muted mt-1 leading-snug">Isi detail transaksi secara lengkap</div>
-            </button>
-            <button type="button" id="btnQuickGoBatch" class="add-method-card add-method-card--blue tap rounded-2xl p-3 text-left border hover:brightness-105 transition-all">
-              <div class="w-9 h-9 rounded-xl flex items-center justify-center mb-2" style="background:rgba(59,130,246,.12);color:#60a5fa;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
-              </div>
-              <div id="quickMethodBatchTitle" class="text-[11px] font-bold text-white">Impor Batch</div>
-              <div id="quickMethodBatchSub" class="text-[9px] app-muted mt-1 leading-snug">Unggah file untuk input banyak data</div>
-            </button>
-            <button type="button" id="btnQuickGoReceipt" class="add-method-card add-method-card--purple tap rounded-2xl p-3 text-left border hover:brightness-105 transition-all">
-              <div class="w-9 h-9 rounded-xl flex items-center justify-center mb-2" style="background:rgba(168,85,247,.12);color:#c084fc;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
-              </div>
-              <div id="quickMethodReceiptTitle" class="text-[11px] font-bold text-white">Scan Struk</div>
-              <div id="quickMethodReceiptSub" class="text-[9px] app-muted mt-1 leading-snug">Pindai struk belanja secara otomatis</div>
-            </button>
-            <button type="button" id="btnQuickClear" class="add-method-card add-method-card--red tap rounded-2xl p-3 text-left border hover:brightness-105 transition-all">
-              <div class="w-9 h-9 rounded-xl flex items-center justify-center mb-2" style="background:rgba(244,63,94,.12);color:#fb7185;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-              </div>
-              <div id="quickMethodClearTitle" class="text-[11px] font-bold text-white">Bersihkan</div>
-              <div id="quickMethodClearSub" class="text-[9px] app-muted mt-1 leading-snug">Hapus input sebelumnya</div>
-            </button>
-          </div>
-
-          <button type="button" id="btnParse" class="add-process-btn tap w-full mt-4 rounded-2xl p-4 flex items-center justify-between gap-3 hover:brightness-105 active:scale-[0.99] transition-all">
-            <div class="flex items-center gap-3 min-w-0 text-left">
-              <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-white/15 border border-white/10">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>
-              </div>
-              <div class="min-w-0">
-                <div id="btnParseTitle" class="text-sm font-bold text-white">Proses Transaksi</div>
-                <div id="btnParseSub" class="text-[10px] text-emerald-50/85 mt-0.5">AI akan memproses transaksi Anda</div>
-              </div>
-            </div>
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white shrink-0"><path d="m9 18 6-6-6-6"/></svg>
-          </button>
 
           <div class="mt-4 flex items-center justify-center gap-1.5 text-[10px] app-muted">
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -1226,9 +1187,8 @@
                 <div class="text-lg font-bold text-white mt-0.5">Atur budget per kategori</div>
                 <div class="mt-2 text-xs app-muted">Bulan budget: <span id="bMonthLabel" class="font-semibold" style="color: #10b981;">—</span></div>
               </div>
-              <button class="tap rounded-xl app-chip px-3 py-2 text-xs font-semibold hover:opacity-90 flex items-center gap-1.5" data-close-budget="true">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-                Tutup
+              <button type="button" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" data-close-budget="true" aria-label="Tutup">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
               </button>
             </div>
           </div>
@@ -1342,9 +1302,8 @@
                 <div class="text-lg font-bold text-white mt-0.5">Insight & Rekomendasi</div>
                 <div class="mt-1 text-[11px] app-muted">AI bantu kamu kelola keuangan lebih cerdas.</div>
               </div>
-              <button class="tap rounded-xl app-chip px-3 py-2 text-xs font-semibold hover:opacity-90 flex items-center gap-1.5" data-close-advisor="true">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                Tutup
+              <button type="button" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" data-close-advisor="true" aria-label="Tutup">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
               </button>
             </div>
           </div>
@@ -1538,7 +1497,7 @@
                 <div id="menuSheetTitle" class="text-xs app-muted">Menu</div>
                 <div id="menuSheetSubtitle" class="text-base font-semibold">Tutorial & Settings</div>
               </div>
-              <button class="tap rounded-xl app-chip px-3 py-2 text-sm hover:opacity-90" data-close-menu="true">Tutup</button>
+              <button type="button" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" data-close-menu="true" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
             </div>
           </div>
           <div class="sheet-body px-4 pb-5 space-y-3">
@@ -1709,7 +1668,7 @@
                 <div class="text-xs app-muted">Akun</div>
                 <div class="text-base font-semibold">Saldo per akun</div>
               </div>
-              <button class="tap rounded-xl app-chip px-3 py-2 text-sm hover:opacity-90" data-close-accounts="true">Tutup</button>
+              <button type="button" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" data-close-accounts="true" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
             </div>
             <div class="mt-2 text-xs app-muted">Tap akun untuk lihat detail.</div>
           </div>
@@ -1731,7 +1690,7 @@
                 <div class="text-xs app-muted">Akun</div>
                 <div id="accDetailTitle" class="text-base font-semibold truncate">—</div>
               </div>
-              <button class="tap rounded-xl app-chip px-3 py-2 text-sm hover:opacity-90" data-close-account-detail="true">Tutup</button>
+              <button type="button" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" data-close-account-detail="true" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
             </div>
 
             <div class="mt-3 flex flex-wrap gap-2">
@@ -1804,7 +1763,7 @@
                 <div class="text-xs app-muted">Admin</div>
                 <div class="text-base font-semibold">Super Admin Panel</div>
               </div>
-              <button class="tap rounded-xl app-chip px-3 py-2 text-sm hover:opacity-90" data-close-admin="true">Tutup</button>
+              <button type="button" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" data-close-admin="true" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
             </div>
 
             <div class="mt-3 flex gap-2">
@@ -1904,7 +1863,7 @@
                 <div class="text-xs app-muted">Akun</div>
                 <div class="text-base font-semibold">Profil & Keamanan</div>
               </div>
-              <button class="tap rounded-xl app-chip px-3 py-2 text-sm hover:opacity-90" data-close-user="true">Tutup</button>
+              <button type="button" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" data-close-user="true" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
             </div>
           </div>
           <div class="sheet-body px-4 pb-5 space-y-3">
@@ -1967,7 +1926,7 @@
               <div class="text-xs app-muted">Edit transaksi</div>
               <div class="text-base font-semibold" id="editTitle">—</div>
             </div>
-            <button class="tap rounded-xl app-chip px-3 py-2 text-sm hover:opacity-90" data-close-edit="true">Tutup</button>
+            <button type="button" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" data-close-edit="true" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
           </div>
 
           <div class="mt-3 grid grid-cols-2 gap-2">
@@ -2029,7 +1988,7 @@
             <div class="text-xs app-muted">📖 Panduan Pengguna</div>
             <div class="text-base font-semibold">Tutorial Monefyi</div>
           </div>
-          <button class="tap rounded-xl app-chip px-3 py-2 text-sm hover:opacity-90" data-close-tutorial="true">Tutup</button>
+          <button type="button" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" data-close-tutorial="true" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
         </div>
       </div>
       <div class="sheet-body px-4 pb-5 space-y-4">

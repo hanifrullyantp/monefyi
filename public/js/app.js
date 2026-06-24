@@ -653,7 +653,12 @@ async function loadBudgets(){
       $('#rangeStartLabel') && ($('#rangeStartLabel').textContent = t('period.start'));
       $('#rangeEndLabel') && ($('#rangeEndLabel').textContent = t('period.end'));
       $('#btnApplyRange') && ($('#btnApplyRange').textContent = t('period.apply'));
-      $('#btnMonthClose') && ($('#btnMonthClose').textContent = t('period.close'));
+      $('#btnMonthClose') && ($('#btnMonthClose').setAttribute('aria-label', t('period.close')));
+
+      // ===== Close buttons =====
+      $$('.sheet-close-btn, [data-close="true"], [data-close-menu="true"], [data-close-advisor="true"], [data-close-budget="true"], [data-close-user="true"], [data-close-accounts="true"], [data-close-account-detail="true"], [data-close-edit="true"], [data-close-tutorial="true"], [data-close-aff="true"], [data-close-admin="true"]').forEach(btn => {
+        if (btn.tagName === 'BUTTON') btn.setAttribute('aria-label', t('common.close'));
+      });
       $('#periodFiltersHint') && ($('#periodFiltersHint').textContent = t('period.filters_hint'));
 
       const preset = $('#presetSelect');
@@ -761,20 +766,9 @@ async function loadBudgets(){
       if (quickLab) quickLab.innerHTML = t('quick.label_html') || t('quick.label');
       $('#quickText')?.setAttribute('placeholder', t('quick.placeholder'));
       $('#btnParseTitle') && ($('#btnParseTitle').textContent = t('quick.process'));
-      $('#btnParseSub') && ($('#btnParseSub').textContent = t('quick.process_sub') || 'AI akan memproses transaksi Anda');
       $('#quickAiBadge') && ($('#quickAiBadge').textContent = t('quick.badge') || 'Cepat & Praktis');
-      $('#quickExamplesTitle') && ($('#quickExamplesTitle').textContent = t('quick.examples_title') || 'Contoh cepat');
-      $('#btnQuickExamplesMore') && ($('#btnQuickExamplesMore').textContent = t('quick.examples_more') || 'Lihat lainnya >');
-      $('#quickAltTitle') && ($('#quickAltTitle').textContent = t('quick.alt_title') || 'Atau pilih metode input lainnya');
+      $('#quickRecoTitle') && ($('#quickRecoTitle').textContent = t('quick.reco_title') || 'Rekomendasi input');
       $('#quickSecureText') && ($('#quickSecureText').textContent = t('quick.secure') || 'Data Anda aman dan terenkripsi');
-      $('#quickMethodManualTitle') && ($('#quickMethodManualTitle').textContent = t('quick.method_manual') || 'Input Manual');
-      $('#quickMethodManualSub') && ($('#quickMethodManualSub').textContent = t('quick.method_manual_sub') || 'Isi detail transaksi secara lengkap');
-      $('#quickMethodBatchTitle') && ($('#quickMethodBatchTitle').textContent = t('quick.method_batch') || 'Impor Batch');
-      $('#quickMethodBatchSub') && ($('#quickMethodBatchSub').textContent = t('quick.method_batch_sub') || 'Unggah file untuk input banyak data');
-      $('#quickMethodReceiptTitle') && ($('#quickMethodReceiptTitle').textContent = t('quick.method_receipt') || 'Scan Struk');
-      $('#quickMethodReceiptSub') && ($('#quickMethodReceiptSub').textContent = t('quick.method_receipt_sub') || 'Pindai struk belanja secara otomatis');
-      $('#quickMethodClearTitle') && ($('#quickMethodClearTitle').textContent = t('quick.clear'));
-      $('#quickMethodClearSub') && ($('#quickMethodClearSub').textContent = t('quick.method_clear_sub') || 'Hapus input sebelumnya');
 
       // Manual labels
       const setLabelNear = (inputId, txt) => {
@@ -860,11 +854,6 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
       if (accSheetTitle) accSheetTitle.textContent = t('accounts.sheet_title');
       const accSheetHint = $('#accountsSheet .sheet-head .mt-2.text-xs');
       if (accSheetHint) accSheetHint.textContent = t('accounts.hint');
-
-      // ===== Close buttons =====
-      $$('[data-close="true"], [data-close-menu="true"], [data-close-advisor="true"], [data-close-budget="true"], [data-close-user="true"], [data-close-accounts="true"], [data-close-account-detail="true"], [data-close-edit="true"]').forEach(btn => {
-        if (btn.tagName === 'BUTTON') btn.textContent = t('common.close');
-      });
 
       // ===== User =====
       $('#btnSignOut') && ($('#btnSignOut').textContent = t('user.logout'));
@@ -4173,6 +4162,7 @@ function openAddSheet(tab = 'quick') {
   });
   updateAddSheetHeader(tab);
   setTab(tab);
+  if (tab === 'quick') renderQuickInputRecommendations();
 
   // 3. Buka Sheet
   if (backdropEl && sheetEl) {
@@ -4210,29 +4200,116 @@ if (btnQuickGoManual) {
     };
 }
 
+function formatQuickTextAmount(amount) {
+  const n = Math.round(Number(amount) || 0);
+  if (n >= 1_000_000) {
+    const jt = n / 1_000_000;
+    return `${Number.isInteger(jt) ? jt : jt.toFixed(1).replace(/\.0$/, '')}jt`;
+  }
+  if (n >= 1_000) return `${Math.round(n / 1_000)}k`;
+  return String(n);
+}
+
+function buildQuickInputLineFromTx(tx) {
+  const label = (tx.notes || tx.merchant || tx.category || 'transaksi').trim();
+  const amt = formatQuickTextAmount(tx.amount);
+  const payRaw = String(tx.payment || tx.account || '').trim();
+  const pay = payRaw.toLowerCase();
+  let payPart = '';
+  if (pay && pay !== 'cash') payPart = ` pake ${payRaw}`;
+  else if (pay === 'cash') payPart = ' cash';
+  return `${label} ${amt}${payPart}`.trim();
+}
+
+function getQuickInputRecommendations(limit = 6) {
+  const seen = new Set();
+  const out = [];
+
+  const pushLine = (line, source) => {
+    const text = String(line || '').trim();
+    if (!text || text.length < 4) return;
+    const key = text.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({ text, source });
+  };
+
+  const mk = STATE.selectedMonth || toMonthKey(new Date());
+  const budget = STATE.budgetsByMonth[mk] || getBudgetMonth(mk);
+  const budgetRows = budget?.categories?.rows;
+  if (Array.isArray(budgetRows)) {
+    for (const row of budgetRows) {
+      const items = Array.isArray(row.items) ? row.items : [];
+      if (items.length) {
+        const top = items.slice().sort((a, b) => (Number(b.qty || 1) * Number(b.price || 0)) - (Number(a.qty || 1) * Number(a.price || 0)))[0];
+        if (top) {
+          const amt = Number(top.price || 0) * Number(top.qty || 1);
+          pushLine(`${top.name || row.name} ${formatQuickTextAmount(amt)}`, 'budget');
+        }
+      } else if (row.name && row.amount) {
+        pushLine(`${row.name} ${formatQuickTextAmount(row.amount)}`, 'budget');
+      }
+      if (out.length >= limit) return out.slice(0, limit);
+    }
+  }
+
+  const threeMonthsAgo = new Date();
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+  const freq = new Map();
+  for (const tx of (STATE.transactions || [])) {
+    if (tx.type !== 'expense') continue;
+    if (new Date(tx.date) < threeMonthsAgo) continue;
+    const line = buildQuickInputLineFromTx(tx);
+    const cur = freq.get(line) || { line, count: 0, amount: Number(tx.amount || 0) };
+    cur.count += 1;
+    cur.amount = Math.round((cur.amount + Number(tx.amount || 0)) / 2);
+    freq.set(line, cur);
+  }
+  [...freq.values()]
+    .sort((a, b) => b.count - a.count || b.amount - a.amount)
+    .forEach(item => pushLine(item.line, 'history'));
+
+  if (out.length < 3) {
+    [
+      'makan siang 50k di warteg pake gopay',
+      'parkir 5k cash',
+      'listrik pln 420rb bca',
+    ].forEach(line => pushLine(line, 'fallback'));
+  }
+
+  return out.slice(0, limit);
+}
+
+function renderQuickInputRecommendations() {
+  const wrap = $('#quickRecoList');
+  if (!wrap) return;
+  const items = getQuickInputRecommendations(6);
+  if (!items.length) {
+    wrap.innerHTML = `<div class="text-[11px] app-muted">${escapeHtml(t('quick.reco_empty') || 'Belum ada rekomendasi. Mulai catat transaksi atau atur budget.')}</div>`;
+    return;
+  }
+  wrap.innerHTML = items.map(item => `
+    <button type="button" class="quick-reco-chip tap rounded-xl px-3 py-2 text-[11px] text-left max-w-full" data-quick-reco="${escapeHtmlAttr(item.text)}" title="${escapeHtmlAttr(item.text)}">
+      ${escapeHtml(item.text)}
+    </button>
+  `).join('');
+  $$('[data-quick-reco]', wrap).forEach(btn => {
+    btn.addEventListener('click', () => {
+      const ta = $('#quickText');
+      if (!ta) return;
+      const val = btn.getAttribute('data-quick-reco') || '';
+      if (!ta.value.trim()) ta.value = val;
+      else if (!ta.value.includes(val)) ta.value = `${ta.value.replace(/\s+$/, '')}\n${val}`;
+      ta.focus();
+    });
+  });
+}
+
 $('#btnAddSheetBack')?.addEventListener('click', () => {
   setTab('quick');
   updateAddSheetHeader('quick');
 });
 
-const QUICK_EXAMPLE_SETS = [
-  ['makan siang 50k di warteg pake gopay', 'parkir 5k cash'],
-  ['bensin 150rb shell debit', 'transfer ke tabungan 500k'],
-  ['kopi 35k starbucks gopay', 'listrik pln 420rb bca'],
-];
-let quickExampleIndex = 0;
-function renderQuickExamples(index = 0) {
-  const list = $('#quickExamplesList');
-  if (!list) return;
-  const items = QUICK_EXAMPLE_SETS[index % QUICK_EXAMPLE_SETS.length] || QUICK_EXAMPLE_SETS[0];
-  list.innerHTML = items.map(item => `<li>${escapeHtml(item)}</li>`).join('');
-}
-renderQuickExamples(0);
-$('#btnQuickExamplesMore')?.addEventListener('click', () => {
-  quickExampleIndex = (quickExampleIndex + 1) % QUICK_EXAMPLE_SETS.length;
-  renderQuickExamples(quickExampleIndex);
-});
-$('#btnQuickCamera')?.addEventListener('click', () => setTab('receipt'));
 $('#btnQuickGoReceipt')?.addEventListener('click', () => {
   setTab('receipt');
   updateAddSheetHeader('receipt');
@@ -5070,6 +5147,7 @@ function openTutorialTopic(id) {
       });
       $$('.tabPanel').forEach(p => p.classList.toggle('hidden', p.dataset.tabPanel !== tab));
       updateAddSheetHeader(tab);
+      if (tab === 'quick') renderQuickInputRecommendations();
 
       if (tab === 'receipt') {
         requestAnimationFrame(()=>{
@@ -5751,7 +5829,7 @@ function openBudgetCategoryDetail(rowId) {
             <!-- Header -->
             <div class="px-4 py-3 border-b border-slate-700 bg-slate-800 flex justify-between items-center">
               <div class="flex-1 mr-2" id="bdCatName"></div>
-              <button onclick="closeBudgetDetail()" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+              <button type="button" onclick="closeBudgetDetail()" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
             </div>
 
             <!-- Body List -->
@@ -7022,6 +7100,8 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
       }
       await generateInsightsAndRender();
     }
+    window.openAdvisor = openAdvisor;
+    window.openAdvisorAuto = openAdvisorAuto;
 
     // tombol manual refresh (tetap ada)
     $('#btnGenerateInsights').addEventListener('click', async () => {

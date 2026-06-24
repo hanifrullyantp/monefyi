@@ -801,6 +801,20 @@ html, body {
       width: 252px;
       transition: width 0.3s ease;
     }
+    @media (min-width: 768px) {
+      #appShell > .flex {
+        min-height: 0;
+      }
+      #appSidebar:not(.sidebar--collapsed) {
+        overflow-y: auto;
+        overflow-x: hidden;
+        min-height: 0;
+        max-height: 100%;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+      }
+    }
     #appSidebar.sidebar--collapsed {
       width: 52px;
       overflow: visible;
@@ -1393,6 +1407,36 @@ html, body {
       border: 1px solid rgba(167, 243, 208, 0.28) !important;
       box-shadow: 0 10px 28px rgba(16, 185, 129, 0.22);
       color: #fff !important;
+    }
+    .add-process-btn-inline {
+      background: linear-gradient(135deg, #34d399 0%, #10b981 55%, #059669 100%) !important;
+      border: 1px solid rgba(167, 243, 208, 0.28) !important;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.18);
+      color: #fff !important;
+    }
+    .add-input-composer textarea::placeholder {
+      color: rgba(148, 163, 184, 0.75);
+    }
+    .quick-reco-chip {
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid rgba(16, 185, 129, 0.18);
+      color: rgba(226, 232, 240, 0.95);
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .quick-reco-chip:hover {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: rgba(16, 185, 129, 0.35);
+    }
+
+    .sheet-close-btn {
+      color: #991b1b !important;
+      background: rgba(127, 29, 29, 0.12) !important;
+      border: 1px solid rgba(153, 27, 27, 0.28) !important;
+    }
+    .sheet-close-btn:hover {
+      color: #b91c1c !important;
+      background: rgba(153, 27, 27, 0.2) !important;
+      border-color: rgba(185, 28, 28, 0.4) !important;
     }
     @media (min-width: 768px) {
       #sheet.sheet-form-panel .sheet-panel {
