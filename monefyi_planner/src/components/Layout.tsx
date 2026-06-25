@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, FolderOpen, Wallet, Settings, Bell, Menu, X,
   Sparkles, Wifi, WifiOff, Clock, Users, Calculator,
-  BarChart3, Shield, PanelLeftClose, PanelLeftOpen,
+  BarChart3, Shield, ChevronRight,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { useUiStore } from '../store/uiStore';
@@ -144,20 +144,65 @@ export default function Layout({ children }: LayoutProps) {
     <div className="flex h-screen bg-slate-50 overflow-hidden org-branded" style={orgBrandStyle}>
       {/* Desktop Sidebar */}
       <aside
-        className={`hidden lg:flex flex-col bg-white border-r border-slate-100 shadow-sm z-30 transition-[width] duration-200 ${
-          navSidebarCollapsed ? 'w-0 overflow-hidden border-r-0' : 'w-64'
+        className={`hidden lg:flex flex-col bg-white border-r border-slate-100 shadow-sm z-30 transition-[width] duration-200 shrink-0 ${
+          navSidebarCollapsed ? 'w-[4.5rem]' : 'w-64'
         }`}
       >
-        {/* Logo */}
-        <div className="p-6 border-b border-slate-100">
-          <div className="flex items-center gap-2.5">
-            <MonefyiLogo className="w-9 h-9 rounded-xl object-contain shadow-md" />
-            <div>
-              <div className="font-black text-slate-900 text-sm leading-tight">Monefyi</div>
-              <div className="text-xs font-semibold" style={{ color: MONEFYI_BRAND.dark }}>Planner</div>
-            </div>
+        {/* Logo + collapse + Monefyi AI */}
+        <div className={`border-b border-slate-100 ${navSidebarCollapsed ? 'px-2 py-3' : 'p-4'}`}>
+          <div className={`flex items-center gap-2 ${navSidebarCollapsed ? 'flex-col' : ''}`}>
+            <MonefyiLogo
+              className={`rounded-xl object-contain shadow-md shrink-0 ${
+                navSidebarCollapsed ? 'w-9 h-9' : 'w-9 h-9'
+              }`}
+            />
+            {!navSidebarCollapsed && (
+              <div className="flex-1 min-w-0">
+                <div className="font-black text-slate-900 text-sm leading-tight">Monefyi</div>
+                <div className="text-xs font-semibold" style={{ color: MONEFYI_BRAND.dark }}>Planner</div>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={toggleNavSidebarCollapsed}
+              className={`p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors shrink-0 ${
+                navSidebarCollapsed ? 'mt-1' : ''
+              }`}
+              title={navSidebarCollapsed ? 'Perluas menu' : 'Perkecil menu'}
+              aria-label={navSidebarCollapsed ? 'Perluas menu navigasi' : 'Perkecil menu navigasi'}
+            >
+              <ChevronRight
+                className={`w-5 h-5 transition-transform duration-200 ${
+                  navSidebarCollapsed ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
           </div>
-          {tenant && (
+
+          <button
+            type="button"
+            onClick={() => setCommandModalOpen(true)}
+            className={`mt-3 relative flex items-center justify-center shadow-md hover:opacity-95 transition-all ${
+              navSidebarCollapsed
+                ? 'w-10 h-10 mx-auto rounded-xl'
+                : 'w-full h-11 rounded-xl gap-2'
+            }`}
+            style={{ background: `linear-gradient(135deg, ${MONEFYI_BRAND.primary}, ${MONEFYI_BRAND.dark})` }}
+            aria-label="Buka Monefyi AI"
+            title="Monefyi AI"
+          >
+            <Sparkles className="w-5 h-5 text-white shrink-0" />
+            {!navSidebarCollapsed && (
+              <span className="text-sm font-bold text-white">Monefyi AI</span>
+            )}
+            {pendingSyncCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                {pendingSyncCount > 9 ? '9+' : pendingSyncCount}
+              </span>
+            )}
+          </button>
+
+          {tenant && !navSidebarCollapsed && (
             <div className="mt-3 px-2 py-1.5 bg-org-soft border border-org-soft rounded-lg">
               <div className="flex items-center gap-2 min-w-0">
                 {tenant.logo ? (
@@ -177,59 +222,42 @@ export default function Layout({ children }: LayoutProps) {
         </div>
 
         {/* Nav Items */}
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        <nav className={`flex-1 overflow-y-auto space-y-1 ${navSidebarCollapsed ? 'p-2' : 'p-4'}`}>
           {sidebarItems.map((item) => (
             <button
               key={item.id}
               onClick={() => handleNav(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+              title={navSidebarCollapsed ? item.label : undefined}
+              className={`w-full flex items-center rounded-xl text-sm font-medium transition-all relative ${
+                navSidebarCollapsed
+                  ? 'justify-center p-2.5'
+                  : 'gap-3 px-3 py-2.5'
+              } ${
                 isTabActive(item.id)
                   ? 'bg-org-soft text-org-dark shadow-sm border border-org-soft'
                   : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
               }`}
             >
-              <item.icon className={`w-4.5 h-4.5 ${isTabActive(item.id) ? 'text-org-primary' : 'text-slate-600'}`} />
-              {item.label}
-              {item.id === 'home' && unreadCount > 0 && (
-                <span className="ml-auto px-1.5 py-0.5 bg-rose-500 text-white text-xs font-bold rounded-full">
-                  {unreadCount}
-                </span>
+              <item.icon className={`shrink-0 ${navSidebarCollapsed ? 'w-5 h-5' : 'w-4.5 h-4.5'} ${
+                isTabActive(item.id) ? 'text-org-primary' : 'text-slate-600'
+              }`} />
+              {!navSidebarCollapsed && (
+                <>
+                  <span className="truncate">{item.label}</span>
+                  {item.id === 'home' && unreadCount > 0 && (
+                    <span className="ml-auto px-1.5 py-0.5 bg-rose-500 text-white text-xs font-bold rounded-full">
+                      {unreadCount}
+                    </span>
+                  )}
+                </>
+              )}
+              {navSidebarCollapsed && item.id === 'home' && unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full" />
               )}
             </button>
           ))}
         </nav>
-
-        {/* Monefyi AI */}
-        <div className="p-4 border-t border-slate-100">
-          <button
-            type="button"
-            onClick={() => setCommandModalOpen(true)}
-            className="hidden lg:flex w-full h-12 rounded-xl items-center justify-center gap-2 shadow-md hover:opacity-95 transition-all relative"
-            style={{ background: `linear-gradient(135deg, ${MONEFYI_BRAND.primary}, ${MONEFYI_BRAND.dark})` }}
-            aria-label="Buka Monefyi AI"
-          >
-            <Sparkles className="w-5 h-5 text-white" />
-            <span className="text-sm font-bold text-white">Monefyi AI</span>
-            {pendingSyncCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white text-[10px] font-bold rounded-md flex items-center justify-center">
-                {pendingSyncCount}
-              </span>
-            )}
-          </button>
-        </div>
       </aside>
-
-      {navSidebarCollapsed && (
-        <button
-          type="button"
-          onClick={toggleNavSidebarCollapsed}
-          className="hidden lg:flex fixed left-2 top-[4.5rem] z-40 p-2 rounded-xl bg-white border border-slate-200 shadow-md text-slate-600 hover:text-emerald-600 hover:border-emerald-200"
-          title="Tampilkan menu"
-          aria-label="Tampilkan menu navigasi"
-        >
-          <PanelLeftOpen className="w-5 h-5" />
-        </button>
-      )}
 
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
@@ -289,15 +317,6 @@ export default function Layout({ children }: LayoutProps) {
         {/* Top Bar */}
         <header className="glass border-b border-slate-200 px-4 lg:px-6 h-14 flex items-center justify-between shrink-0 z-20">
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={toggleNavSidebarCollapsed}
-              className="hidden lg:flex p-2 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors"
-              title={navSidebarCollapsed ? 'Tampilkan menu' : 'Sembunyikan menu'}
-              aria-label={navSidebarCollapsed ? 'Tampilkan menu navigasi' : 'Sembunyikan menu navigasi'}
-            >
-              {navSidebarCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
-            </button>
             <button
               onClick={() => setSidebarOpen(true)}
               className="p-2 rounded-lg hover:bg-slate-100 lg:hidden transition-colors"

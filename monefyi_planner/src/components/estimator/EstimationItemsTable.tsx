@@ -258,28 +258,19 @@ export default function EstimationItemsTable({
                       >
                         <td colSpan={3} className={`px-3 py-2 ${stickyCheck} bg-emerald-50/70`}>
                           <div className="text-xs font-bold text-emerald-800">{group.key}</div>
-                          <div className="text-[10px] text-emerald-600 font-medium">
-                            Produk — atur qty satuan di kolom Qty
-                          </div>
                         </td>
                         <td colSpan={2} className="px-2 py-2 bg-emerald-50/70" />
                         <td className={`${tdClass} text-right bg-emerald-50/70`}>
-                          <div className="text-[9px] font-bold text-emerald-700 uppercase tracking-wide mb-0.5 text-right">
-                            Qty satuan produk
-                          </div>
                           <QtyInput
                             value={groupSharedQty(group.indices, items) ?? 0}
                             onChange={v => setGroupQty(group.indices, v)}
                             placeholder="—"
                             className="w-full px-2 py-1.5 border border-emerald-300 bg-white rounded-lg text-right tabular-nums focus:border-emerald-500 outline-none font-semibold text-emerald-800"
-                            title={`Qty satuan produk — terapkan ke ${group.indices.length} item ${group.key}`}
+                            title={`Qty global ${group.key} (${group.indices.length} item)`}
                           />
-                          {groupSharedQty(group.indices, items) == null && (
-                            <div className="text-[9px] text-amber-600 mt-0.5 text-right">Qty per item berbeda</div>
-                          )}
                         </td>
                         <td colSpan={9} className="px-3 py-2 text-[10px] text-emerald-600 align-middle bg-emerald-50/70">
-                          {group.indices.length} item · qty per baris tetap bisa diubah sendiri
+                          {group.indices.length} item
                         </td>
                       </tr>
                     ) : null;

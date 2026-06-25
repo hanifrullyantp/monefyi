@@ -468,7 +468,7 @@ export default function EstimatorForm() {
       {/* Sticky bottom bar */}
       <div
         className={`fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-3 flex flex-wrap gap-2 justify-end z-20 safe-bottom ${
-          navSidebarCollapsed ? 'lg:left-0' : 'lg:left-64'
+          navSidebarCollapsed ? 'lg:left-[4.5rem]' : 'lg:left-64'
         }`}
       >
         <button
