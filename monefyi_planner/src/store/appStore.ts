@@ -130,6 +130,8 @@ interface AppState {
   financeVersion: FinanceVersion;
   customDomainContext: import('../services/customDomainService').ResolvedDomainContext | null;
   sidebarOpen: boolean;
+  /** Desktop nav sidebar disembunyikan untuk layar lebih lebar (estimator, dll). */
+  navSidebarCollapsed: boolean;
   commandModalOpen: boolean;
   selectedProjectId: string | null;
 
@@ -161,6 +163,8 @@ interface AppState {
   setFinanceVersionPreference: (version: FinanceVersion) => void;
   setCustomDomainContext: (ctx: import('../services/customDomainService').ResolvedDomainContext | null) => void;
   setSidebarOpen: (val: boolean) => void;
+  setNavSidebarCollapsed: (val: boolean) => void;
+  toggleNavSidebarCollapsed: () => void;
   setCommandModalOpen: (val: boolean) => void;
   setSelectedProjectId: (id: string | null) => void;
   setProjects: (projects: Project[]) => void;
@@ -208,6 +212,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   financeVersion: 'v1',
   customDomainContext: null,
   sidebarOpen: false,
+  navSidebarCollapsed: typeof localStorage !== 'undefined'
+    && localStorage.getItem('monefyi_nav_sidebar_collapsed') === '1',
   commandModalOpen: false,
   selectedProjectId: null,
 
@@ -244,6 +250,19 @@ export const useAppStore = create<AppState>((set, get) => ({
   setFinanceVersionPreference: financeVersion => set({ financeVersion }),
   setCustomDomainContext: customDomainContext => set({ customDomainContext }),
   setSidebarOpen: sidebarOpen => set({ sidebarOpen }),
+  setNavSidebarCollapsed: navSidebarCollapsed => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('monefyi_nav_sidebar_collapsed', navSidebarCollapsed ? '1' : '0');
+    }
+    set({ navSidebarCollapsed });
+  },
+  toggleNavSidebarCollapsed: () => {
+    const next = !get().navSidebarCollapsed;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('monefyi_nav_sidebar_collapsed', next ? '1' : '0');
+    }
+    set({ navSidebarCollapsed: next });
+  },
   setCommandModalOpen: commandModalOpen => set({ commandModalOpen }),
   setSelectedProjectId: selectedProjectId => set({ selectedProjectId }),
   setProjects: projects => set({ projects }),

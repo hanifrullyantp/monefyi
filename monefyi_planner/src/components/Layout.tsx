@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, FolderOpen, Wallet, Settings, Bell, Menu, X,
   Sparkles, Wifi, WifiOff, Clock, Users, Calculator,
-  BarChart3, Shield,
+  BarChart3, Shield, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { useUiStore } from '../store/uiStore';
@@ -28,7 +28,8 @@ export default function Layout({ children }: LayoutProps) {
   const {
     user, tenant, activeTab, setActiveTab, financeVersion, setFinanceVersionPreference,
     syncStatus, pendingSyncCount, isOnline, lastSynced, unreadCount, commandModalOpen,
-    setCommandModalOpen, sidebarOpen, setSidebarOpen, platformRole, uiViewMode,
+    setCommandModalOpen, sidebarOpen, setSidebarOpen, navSidebarCollapsed, toggleNavSidebarCollapsed,
+    platformRole, uiViewMode,
   } = useAppStore();
   const navigate = useNavigate();
   const location = useLocation();
@@ -142,7 +143,11 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden org-branded" style={orgBrandStyle}>
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-slate-100 shadow-sm z-30">
+      <aside
+        className={`hidden lg:flex flex-col bg-white border-r border-slate-100 shadow-sm z-30 transition-[width] duration-200 ${
+          navSidebarCollapsed ? 'w-0 overflow-hidden border-r-0' : 'w-64'
+        }`}
+      >
         {/* Logo */}
         <div className="p-6 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
@@ -214,6 +219,18 @@ export default function Layout({ children }: LayoutProps) {
         </div>
       </aside>
 
+      {navSidebarCollapsed && (
+        <button
+          type="button"
+          onClick={toggleNavSidebarCollapsed}
+          className="hidden lg:flex fixed left-2 top-[4.5rem] z-40 p-2 rounded-xl bg-white border border-slate-200 shadow-md text-slate-600 hover:text-emerald-600 hover:border-emerald-200"
+          title="Tampilkan menu"
+          aria-label="Tampilkan menu navigasi"
+        >
+          <PanelLeftOpen className="w-5 h-5" />
+        </button>
+      )}
+
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
         {sidebarOpen && (
@@ -272,6 +289,15 @@ export default function Layout({ children }: LayoutProps) {
         {/* Top Bar */}
         <header className="glass border-b border-slate-200 px-4 lg:px-6 h-14 flex items-center justify-between shrink-0 z-20">
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={toggleNavSidebarCollapsed}
+              className="hidden lg:flex p-2 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors"
+              title={navSidebarCollapsed ? 'Tampilkan menu' : 'Sembunyikan menu'}
+              aria-label={navSidebarCollapsed ? 'Tampilkan menu navigasi' : 'Sembunyikan menu navigasi'}
+            >
+              {navSidebarCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
+            </button>
             <button
               onClick={() => setSidebarOpen(true)}
               className="p-2 rounded-lg hover:bg-slate-100 lg:hidden transition-colors"

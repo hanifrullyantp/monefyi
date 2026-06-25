@@ -105,6 +105,31 @@ export async function searchPricelist(
   );
 }
 
+export interface PricelistProductGroup {
+  product: string;
+  items: PricelistItem[];
+}
+
+/** Kelompokkan pricelist per nama produk untuk tampilan picker. */
+export function groupPricelistByProduct(items: PricelistItem[]): PricelistProductGroup[] {
+  const map = new Map<string, PricelistItem[]>();
+  for (const item of items) {
+    const key = item.product?.trim() || '';
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(item);
+  }
+  return [...map.entries()]
+    .map(([product, groupItems]) => ({
+      product,
+      items: groupItems.sort((a, b) => a.name.localeCompare(b.name, 'id')),
+    }))
+    .sort((a, b) => {
+      if (!a.product) return 1;
+      if (!b.product) return -1;
+      return a.product.localeCompare(b.product, 'id');
+    });
+}
+
 export function pricelistToDraftRow(item: PricelistItem) {
   const hpp = Number(item.base_cost);
   const selling = Number(item.selling_price) || calcPricelistSelling(hpp, Number(item.default_margin_pct));

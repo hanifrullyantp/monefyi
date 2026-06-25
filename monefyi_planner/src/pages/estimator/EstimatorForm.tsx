@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ChevronDown, FileText, Loader2, Save, Eye, Settings2, MessageCircle } from 'lucide-react';
+import { ArrowLeft, ChevronDown, FileText, Loader2, Save, Eye, Settings2, MessageCircle, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
 import EstimationItemsTable from '../../components/estimator/EstimationItemsTable';
@@ -28,7 +28,8 @@ import {
   updateEstimation,
 } from '../../services/estimatorService';
 import type { EstimationImageDraft } from '../../types/estimator';
-import { ESTIMATION_STATUS_LABEL } from '../../lib/estimatorFormat';
+import { ESTIMATION_STATUS_LABEL, formatRupiahFull } from '../../lib/estimatorFormat';
+import { calcEstimationSummary, countedEstimationItems } from '../../lib/estimatorCalc';
 import type { EstimationFormDraft } from '../../types/estimator';
 
 export default function EstimatorForm() {
@@ -37,12 +38,16 @@ export default function EstimatorForm() {
   const navigate = useNavigate();
   const { tenant, user, projects } = useAppStore();
   const showToast = useUiStore(s => s.showToast);
+  const navSidebarCollapsed = useAppStore(s => s.navSidebarCollapsed);
 
   const [draft, setDraft] = useState<EstimationFormDraft | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(min-width: 1280px)').matches : false,
+  );
   const [pdfDesignOpen, setPdfDesignOpen] = useState(false);
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
   const [waShareOpen, setWaShareOpen] = useState(false);
@@ -58,6 +63,17 @@ export default function EstimatorForm() {
     if (!draft) return '';
     return (draft.project_id && projects.find(p => p.id === draft.project_id)?.name) || draft.title;
   }, [draft, projects]);
+
+  const summaryTotal = useMemo(() => {
+    if (!draft) return 0;
+    return calcEstimationSummary(
+      countedEstimationItems(draft.items),
+      draft.overhead_pct,
+      draft.discount_pct,
+      draft.tax_pct,
+      { discountAmount: draft.discount_amount, adjustments: draft.adjustments },
+    ).grandTotal;
+  }, [draft]);
 
   useEffect(() => {
     if (!tenant?.id) return;
@@ -245,6 +261,19 @@ export default function EstimatorForm() {
           Detail & Customer
           <ChevronDown className={`w-4 h-4 transition-transform ${detailOpen ? 'rotate-180' : ''}`} />
         </button>
+        <button
+          type="button"
+          onClick={() => setSummaryOpen(v => !v)}
+          className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold border transition-colors ${
+            summaryOpen
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          {summaryOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+          Ringkasan
+          <span className="font-bold tabular-nums">{formatRupiahFull(summaryTotal)}</span>
+        </button>
         {draft.customer_name && !detailOpen && (
           <span className="text-xs text-slate-500 truncate max-w-[200px]">
             {draft.customer_name}
@@ -393,9 +422,11 @@ export default function EstimatorForm() {
             onChange={items => patch({ items })}
           />
         </div>
-        <div className="w-full xl:w-72 shrink-0 xl:sticky xl:top-4">
-          <EstimationSummaryPanel draft={draft} />
-        </div>
+        {summaryOpen && (
+          <div className="w-full xl:w-72 shrink-0 xl:sticky xl:top-4">
+            <EstimationSummaryPanel draft={draft} />
+          </div>
+        )}
       </div>
 
       {/* Pengaturan sekunder — di bawah tabel */}
@@ -435,7 +466,11 @@ export default function EstimatorForm() {
       )}
 
       {/* Sticky bottom bar */}
-      <div className="fixed bottom-0 left-0 right-0 lg:left-64 bg-white border-t border-slate-200 px-4 py-3 flex flex-wrap gap-2 justify-end z-20 safe-bottom">
+      <div
+        className={`fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-3 flex flex-wrap gap-2 justify-end z-20 safe-bottom ${
+          navSidebarCollapsed ? 'lg:left-0' : 'lg:left-64'
+        }`}
+      >
         <button
           type="button"
           onClick={() => navigate('/app/estimator')}

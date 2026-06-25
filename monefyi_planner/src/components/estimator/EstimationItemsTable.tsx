@@ -167,6 +167,10 @@ export default function EstimationItemsTable({
 
   const thClass = 'px-3 py-2.5 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wide whitespace-nowrap';
   const tdClass = 'px-2 py-1.5 align-middle';
+  const stickyCheck = 'sticky left-0 z-20 bg-white shadow-[2px_0_6px_-4px_rgba(15,23,42,0.12)]';
+  const stickyNum = 'sticky left-10 z-20 bg-white shadow-[2px_0_6px_-4px_rgba(15,23,42,0.08)]';
+  const stickyItem = 'sticky left-[4.75rem] z-20 bg-white min-w-[9.5rem] shadow-[2px_0_6px_-4px_rgba(15,23,42,0.06)]';
+  const stickyHead = 'bg-slate-50';
 
   return (
     <>
@@ -226,9 +230,9 @@ export default function EstimationItemsTable({
             <table className="w-full text-sm min-w-[1280px] table-auto">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className={`${thClass} w-10 text-center`} title="Centang untuk masuk total estimasi">✓</th>
-                  <th className={`${thClass} w-10`}>#</th>
-                  <th className={`${thClass} min-w-[160px]`}>Item</th>
+                  <th className={`${thClass} ${stickyCheck} ${stickyHead} w-10 text-center`} title="Centang untuk masuk total estimasi">✓</th>
+                  <th className={`${thClass} ${stickyNum} ${stickyHead} w-10`}>#</th>
+                  <th className={`${thClass} ${stickyItem} ${stickyHead} min-w-[160px]`}>Item</th>
                   <th className={`${thClass} min-w-[80px]`}>Kat.</th>
                   <th className={`${thClass} min-w-[64px]`}>Sat.</th>
                   <th className={`${thClass} min-w-[64px] text-right`}>Qty</th>
@@ -252,23 +256,30 @@ export default function EstimationItemsTable({
                         key={`group-${group.key}-${idx}`}
                         className="bg-emerald-50/70 border-b border-emerald-100"
                       >
-                        <td colSpan={5} className="px-3 py-2">
+                        <td colSpan={3} className={`px-3 py-2 ${stickyCheck} bg-emerald-50/70`}>
                           <div className="text-xs font-bold text-emerald-800">{group.key}</div>
                           <div className="text-[10px] text-emerald-600 font-medium">
-                            Kelompok produk — ubah qty global di kanan
+                            Produk — atur qty satuan di kolom Qty
                           </div>
                         </td>
-                        <td className={`${tdClass} text-right`}>
+                        <td colSpan={2} className="px-2 py-2 bg-emerald-50/70" />
+                        <td className={`${tdClass} text-right bg-emerald-50/70`}>
+                          <div className="text-[9px] font-bold text-emerald-700 uppercase tracking-wide mb-0.5 text-right">
+                            Qty satuan produk
+                          </div>
                           <QtyInput
                             value={groupSharedQty(group.indices, items) ?? 0}
                             onChange={v => setGroupQty(group.indices, v)}
                             placeholder="—"
                             className="w-full px-2 py-1.5 border border-emerald-300 bg-white rounded-lg text-right tabular-nums focus:border-emerald-500 outline-none font-semibold text-emerald-800"
-                            title={`Qty global untuk semua item ${group.key}`}
+                            title={`Qty satuan produk — terapkan ke ${group.indices.length} item ${group.key}`}
                           />
+                          {groupSharedQty(group.indices, items) == null && (
+                            <div className="text-[9px] text-amber-600 mt-0.5 text-right">Qty per item berbeda</div>
+                          )}
                         </td>
-                        <td colSpan={8} className="px-3 py-2 text-[10px] text-emerald-600 align-middle">
-                          {group.indices.length} item · satuan per baris tetap bisa diubah sendiri
+                        <td colSpan={9} className="px-3 py-2 text-[10px] text-emerald-600 align-middle bg-emerald-50/70">
+                          {group.indices.length} item · qty per baris tetap bisa diubah sendiri
                         </td>
                       </tr>
                     ) : null;
@@ -290,7 +301,7 @@ export default function EstimationItemsTable({
                             : 'hover:bg-slate-50/60'
                         }`}
                       >
-                        <td className={`${tdClass} text-center`}>
+                        <td className={`${tdClass} text-center ${stickyCheck} ${rowMuted ? 'bg-slate-50/90' : 'bg-white'}`}>
                           <input
                             type="checkbox"
                             checked={isCounted}
@@ -299,22 +310,33 @@ export default function EstimationItemsTable({
                             title={isCounted ? 'Masuk total estimasi' : 'Tidak masuk total — item tetap disimpan'}
                           />
                         </td>
-                        <td className={`${tdClass} text-slate-600 text-xs text-center`}>{idx + 1}</td>
-                        <td className={tdClass}>
-                          <input
-                            ref={registerRef(`${idx}-name`)}
-                            value={item.name}
-                            onChange={e => updateItem(idx, { name: e.target.value })}
-                            onKeyDown={e => handleKeyDown(e, idx, 'name', fields)}
-                            className={`w-full px-2 py-1.5 border border-transparent hover:border-slate-200 rounded-lg focus:border-emerald-400 focus:ring-1 focus:ring-emerald-100 outline-none text-sm placeholder:text-slate-600 ${
-                              rowMuted ? 'text-slate-500 line-through decoration-slate-400' : 'text-slate-900'
-                            }`}
-                            placeholder="Nama item"
-                            title={productLabel ? `Kelompok: ${productLabel}` : undefined}
-                          />
-                          {rowMuted && (
-                            <span className="block text-[10px] text-slate-500 font-medium mt-0.5">Tidak masuk total</span>
-                          )}
+                        <td className={`${tdClass} text-slate-600 text-xs text-center ${stickyNum} ${rowMuted ? 'bg-slate-50/90' : 'bg-white'}`}>{idx + 1}</td>
+                        <td className={`${tdClass} ${stickyItem} ${rowMuted ? 'bg-slate-50/90' : 'bg-white'}`}>
+                          <div className="flex items-start gap-2 min-w-0">
+                            <input
+                              type="checkbox"
+                              checked={isCounted}
+                              onChange={e => updateItem(idx, { included: e.target.checked }, 'qty')}
+                              className="w-4 h-4 mt-1 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 shrink-0 lg:hidden"
+                              title={isCounted ? 'Masuk total' : 'Tidak masuk total'}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <input
+                                ref={registerRef(`${idx}-name`)}
+                                value={item.name}
+                                onChange={e => updateItem(idx, { name: e.target.value })}
+                                onKeyDown={e => handleKeyDown(e, idx, 'name', fields)}
+                                className={`w-full px-2 py-1.5 border border-transparent hover:border-slate-200 rounded-lg focus:border-emerald-400 focus:ring-1 focus:ring-emerald-100 outline-none text-sm placeholder:text-slate-600 ${
+                                  rowMuted ? 'text-slate-500 line-through decoration-slate-400' : 'text-slate-900'
+                                }`}
+                                placeholder="Nama item"
+                                title={productLabel ? `Kelompok: ${productLabel}` : undefined}
+                              />
+                              {rowMuted && (
+                                <span className="block text-[10px] text-slate-500 font-medium mt-0.5">Tidak masuk total</span>
+                              )}
+                            </div>
+                          </div>
                         </td>
                         <td className={tdClass}>
                           <select
