@@ -61,6 +61,24 @@ Buka URL Vite (port default **5173**).
 
 Push ke `main` memicu deploy otomatis jika project Vercel terhubung.
 
+### Build gagal: "Provisioning integrations failed"
+
+Penyebab umum: integrasi Supabase di Vercel **Suspended** (mis. resource `supabase-red-kite`). Deploy berhenti sebelum build (durasi ~0–1 detik).
+
+**Perbaikan:**
+
+```bash
+cd monefyi_planner
+npx vercel link --yes --project monefyi-planner
+npx vercel integration list                    # cek status resource
+npx vercel integration resource disconnect supabase-red-kite --yes
+npx vercel deploy --prod --yes
+```
+
+Env `NEXT_PUBLIC_SUPABASE_*` / `SUPABASE_*` sudah ada di project — tidak perlu integrasi aktif untuk build. Opsional: hapus resource suspended di Vercel → Storage / Integrations.
+
+Production: **https://planner.monefyi.com**
+
 ### Preview: Deployment Protection (401)
 
 URL preview **`…-git-main-….vercel.app`** kadang dilindungi Vercel Authentication. Nonaktifkan di **Settings → Deployment Protection** untuk Preview, atau uji di domain production.

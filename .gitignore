@@ -8,5 +8,5 @@ my-supabase-project/.env
 my-supabase-project/supabase/.temp/
 # Jangan commit salinan config produksi berisi secret tambahan
 # js/config.local.js
-.DS_Store
 **/.DS_Store
+monefyi_planner/.env.local
