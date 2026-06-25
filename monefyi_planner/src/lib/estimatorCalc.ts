@@ -155,6 +155,17 @@ export function normalizeEstimationItems(items: EstimationItemDraft[]): Estimati
   return items.map(normalizeEstimationItem);
 }
 
+/** Item bernama yang dicentang untuk masuk total estimasi. */
+export function isEstimationItemCounted(
+  item: Pick<EstimationItemDraft, 'name' | 'included'>,
+): boolean {
+  return Boolean(item.name.trim()) && item.included !== false;
+}
+
+export function countedEstimationItems(items: EstimationItemDraft[]): EstimationItemDraft[] {
+  return items.filter(isEstimationItemCounted);
+}
+
 export function calcEstimationSummary(
   items: EstimationItemDraft[],
   overheadPct: number,
@@ -165,7 +176,8 @@ export function calcEstimationSummary(
     adjustments?: EstimationAdjustment[];
   },
 ): EstimationSummary {
-  const normalized = items.map(i => (i.name.trim() ? normalizeEstimationItem(i) : i));
+  const counted = countedEstimationItems(items);
+  const normalized = counted.map(i => normalizeEstimationItem(i));
   const subtotalHpp = normalized.reduce((s, i) => s + (Number(i.total_hpp) || 0), 0);
   const subtotalSellingGross = normalized.reduce((s, i) => s + (Number(i.total_selling) || 0), 0);
   const itemDiscountTotal = normalized.reduce((s, i) => s + itemDiscountAmount(i), 0);
@@ -221,6 +233,7 @@ export function emptyItem(sortOrder = 0): EstimationItemDraft {
     item_discount_pct: 0,
     item_discount_amount: 0,
     is_bonus: false,
+    included: true,
     total_hpp: 0,
     total_selling: 0,
     total_profit: 0,

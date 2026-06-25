@@ -1,4 +1,4 @@
-import { calcEstimationSummary, effectiveItemSelling } from './estimatorCalc';
+import { calcEstimationSummary, countedEstimationItems, effectiveItemSelling } from './estimatorCalc';
 import { formatRupiahFull } from './estimatorFormat';
 import type { EstimationFormDraft } from '../types/estimator';
 import type { PdfSettings } from '../types/pdfSettings';
@@ -62,7 +62,7 @@ export function buildWhatsAppQuotationMessage(
   salutation: string,
   subtitle?: string,
 ): string {
-  const activeItems = draft.items.filter(i => i.name.trim());
+  const activeItems = countedEstimationItems(draft.items);
   const summary = calcEstimationSummary(
     activeItems,
     draft.overhead_pct,

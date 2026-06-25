@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { calcEstimationSummary, normalizeEstimationItem } from '../lib/estimatorCalc';
+import { calcEstimationSummary, countedEstimationItems, normalizeEstimationItem } from '../lib/estimatorCalc';
 import { nextEstimationCode } from '../lib/estimatorFormat';
 import { emptyImageDrafts, hydrateImageDrafts, imagesToDbFields } from './estimationImageService';
 import type {
@@ -31,6 +31,7 @@ function mapItemsToDb(
         item_discount_pct: normalized.item_discount_pct ?? 0,
         item_discount_amount: normalized.item_discount_amount ?? 0,
         is_bonus: normalized.is_bonus ?? false,
+        included: normalized.included !== false,
         total_hpp: normalized.total_hpp,
         total_selling: normalized.total_selling,
         total_profit: normalized.total_profit,
@@ -45,7 +46,7 @@ function summaryToHeader(
   items: EstimationItemDraft[],
 ) {
   const s = calcEstimationSummary(
-    items.filter(i => i.name.trim()),
+    countedEstimationItems(items),
     draft.overhead_pct,
     draft.discount_pct,
     draft.tax_pct,
@@ -263,6 +264,7 @@ export async function duplicateEstimation(
       item_discount_pct: Number(item.item_discount_pct ?? 0),
       item_discount_amount: Number(item.item_discount_amount ?? 0),
       is_bonus: Boolean(item.is_bonus),
+      included: item.included !== false,
       total_hpp: Number(item.total_hpp),
       total_selling: Number(item.total_selling),
       total_profit: Number(item.total_profit),
@@ -313,6 +315,7 @@ export async function estimationToFormDraft(est: Estimation): Promise<Estimation
         item_discount_pct: Number(item.item_discount_pct ?? 0),
         item_discount_amount: Number(item.item_discount_amount ?? 0),
         is_bonus: Boolean(item.is_bonus),
+        included: item.included !== false,
         total_hpp: Number(item.total_hpp),
         total_selling: Number(item.total_selling),
         total_profit: Number(item.total_profit),

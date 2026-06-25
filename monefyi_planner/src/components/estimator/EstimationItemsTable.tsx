@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Plus, Trash2, Sparkles, List } from 'lucide-react';
-import { calcEstimationSummary, calcItemRow, effectiveItemSelling, emptyItem, sellingFromHpp, syncEstimationItemPricesList, estimationItemsNeedPriceSync, type ItemPriceEdit } from '../../lib/estimatorCalc';
+import { calcEstimationSummary, calcItemRow, countedEstimationItems, effectiveItemSelling, emptyItem, sellingFromHpp, syncEstimationItemPricesList, estimationItemsNeedPriceSync, type ItemPriceEdit } from '../../lib/estimatorCalc';
 import { formatRupiahFull } from '../../lib/estimatorFormat';
 import {
   getEstimationItemProductGroup,
@@ -55,7 +55,8 @@ export default function EstimationItemsTable({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sinkron harga saat items berubah
   }, [items]);
 
-  const activeItems = useMemo(() => items.filter(i => i.name.trim()), [items]);
+  const namedItems = useMemo(() => items.filter(i => i.name.trim()), [items]);
+  const countedItems = useMemo(() => countedEstimationItems(items), [items]);
   const productGroups = useMemo(() => groupEstimationItemsByProduct(items), [items]);
   const groupHeaderAt = useMemo(() => {
     const map = new Map<number, EstimationItemGroup>();
@@ -65,8 +66,8 @@ export default function EstimationItemsTable({
     return map;
   }, [productGroups]);
   const totals = useMemo(
-    () => calcEstimationSummary(activeItems, overheadPct, discountPct, taxPct, { discountAmount, adjustments }),
-    [activeItems, overheadPct, discountPct, discountAmount, adjustments, taxPct],
+    () => calcEstimationSummary(countedItems, overheadPct, discountPct, taxPct, { discountAmount, adjustments }),
+    [countedItems, overheadPct, discountPct, discountAmount, adjustments, taxPct],
   );
 
   const updateItem = (index: number, patch: Partial<EstimationItemDraft>, editField: ItemPriceEdit = 'selling') => {
@@ -225,6 +226,7 @@ export default function EstimationItemsTable({
             <table className="w-full text-sm min-w-[1280px] table-auto">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className={`${thClass} w-10 text-center`} title="Centang untuk masuk total estimasi">✓</th>
                   <th className={`${thClass} w-10`}>#</th>
                   <th className={`${thClass} min-w-[160px]`}>Item</th>
                   <th className={`${thClass} min-w-[80px]`}>Kat.</th>
@@ -250,7 +252,7 @@ export default function EstimationItemsTable({
                         key={`group-${group.key}-${idx}`}
                         className="bg-emerald-50/70 border-b border-emerald-100"
                       >
-                        <td colSpan={4} className="px-3 py-2">
+                        <td colSpan={5} className="px-3 py-2">
                           <div className="text-xs font-bold text-emerald-800">{group.key}</div>
                           <div className="text-[10px] text-emerald-600 font-medium">
                             Kelompok produk — ubah qty global di kanan
@@ -275,10 +277,28 @@ export default function EstimationItemsTable({
                   const netSelling = effectiveItemSelling(item);
                   const hasItemDiscount = netSelling !== item.total_selling || item.is_bonus;
 
+                  const isCounted = item.included !== false;
+                  const rowMuted = item.name.trim() && !isCounted;
+
                   return (
                     <Fragment key={idx}>
                       {groupHeader}
-                      <tr className="border-b border-slate-100 hover:bg-slate-50/60 transition-colors">
+                      <tr
+                        className={`border-b border-slate-100 transition-colors ${
+                          rowMuted
+                            ? 'bg-slate-50/90 opacity-60 hover:opacity-75'
+                            : 'hover:bg-slate-50/60'
+                        }`}
+                      >
+                        <td className={`${tdClass} text-center`}>
+                          <input
+                            type="checkbox"
+                            checked={isCounted}
+                            onChange={e => updateItem(idx, { included: e.target.checked }, 'qty')}
+                            className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                            title={isCounted ? 'Masuk total estimasi' : 'Tidak masuk total — item tetap disimpan'}
+                          />
+                        </td>
                         <td className={`${tdClass} text-slate-600 text-xs text-center`}>{idx + 1}</td>
                         <td className={tdClass}>
                           <input
@@ -286,10 +306,15 @@ export default function EstimationItemsTable({
                             value={item.name}
                             onChange={e => updateItem(idx, { name: e.target.value })}
                             onKeyDown={e => handleKeyDown(e, idx, 'name', fields)}
-                            className="w-full px-2 py-1.5 border border-transparent hover:border-slate-200 rounded-lg focus:border-emerald-400 focus:ring-1 focus:ring-emerald-100 outline-none text-sm text-slate-900 placeholder:text-slate-600"
+                            className={`w-full px-2 py-1.5 border border-transparent hover:border-slate-200 rounded-lg focus:border-emerald-400 focus:ring-1 focus:ring-emerald-100 outline-none text-sm placeholder:text-slate-600 ${
+                              rowMuted ? 'text-slate-500 line-through decoration-slate-400' : 'text-slate-900'
+                            }`}
                             placeholder="Nama item"
                             title={productLabel ? `Kelompok: ${productLabel}` : undefined}
                           />
+                          {rowMuted && (
+                            <span className="block text-[10px] text-slate-500 font-medium mt-0.5">Tidak masuk total</span>
+                          )}
                         </td>
                         <td className={tdClass}>
                           <select
@@ -416,11 +441,15 @@ export default function EstimationItemsTable({
                   );
                 })}
               </tbody>
-              {activeItems.length > 0 && (
+              {countedItems.length > 0 && (
                 <tfoot>
                   <tr className="bg-slate-50 border-t-2 border-slate-200 font-semibold text-xs">
-                    <td colSpan={11} className="px-3 py-3 text-right text-slate-500 uppercase tracking-wide">
-                      Total ({activeItems.length} item)
+                    <td colSpan={12} className="px-3 py-3 text-right text-slate-500 uppercase tracking-wide">
+                      Total ({countedItems.length}
+                      {namedItems.length > countedItems.length
+                        ? ` dari ${namedItems.length} item`
+                        : ' item'}
+                      )
                     </td>
                     <td className="px-2 py-3 text-right text-slate-600 tabular-nums">
                       {formatRupiahFull(totals.subtotalHpp)}

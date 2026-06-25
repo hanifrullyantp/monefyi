@@ -1,4 +1,4 @@
-import { calcEstimationSummary } from '../../lib/estimatorCalc';
+import { calcEstimationSummary, countedEstimationItems } from '../../lib/estimatorCalc';
 import { formatRupiahFull } from '../../lib/estimatorFormat';
 import type { EstimationFormDraft } from '../../types/estimator';
 
@@ -7,9 +7,10 @@ interface Props {
 }
 
 export default function EstimationSummaryPanel({ draft }: Props) {
-  const activeItems = draft.items.filter(i => i.name.trim());
+  const namedItems = draft.items.filter(i => i.name.trim());
+  const countedItems = countedEstimationItems(draft.items);
   const s = calcEstimationSummary(
-    activeItems,
+    countedItems,
     draft.overhead_pct,
     draft.discount_pct,
     draft.tax_pct,
@@ -22,8 +23,13 @@ export default function EstimationSummaryPanel({ draft }: Props) {
     <div className="bg-white border border-slate-200 rounded-2xl shadow-sm sticky top-20 overflow-hidden">
       <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/80">
         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Ringkasan</h3>
-        {activeItems.length > 0 && (
-          <p className="text-[11px] text-slate-600 mt-0.5">{activeItems.length} item</p>
+        {countedItems.length > 0 && (
+          <p className="text-[11px] text-slate-600 mt-0.5">
+            {countedItems.length} item masuk total
+            {namedItems.length > countedItems.length && (
+              <span className="text-slate-400"> · {namedItems.length - countedItems.length} tidak dihitung</span>
+            )}
+          </p>
         )}
       </div>
 

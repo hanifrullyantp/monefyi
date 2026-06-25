@@ -33,6 +33,8 @@ export interface EstimationItem {
   item_discount_pct: number;
   item_discount_amount: number;
   is_bonus: boolean;
+  /** Centang = masuk total estimasi; tidak centang = tetap ada tapi diabaikan dari total. */
+  included: boolean;
   total_hpp: number;
   total_selling: number;
   total_profit: number;
@@ -105,6 +107,8 @@ export interface EstimationItemDraft {
   item_discount_amount: number;
   /** Item bonus — ditampilkan tapi tidak dihitung ke total jual. */
   is_bonus: boolean;
+  /** Centang = masuk total estimasi; tidak centang = tetap ada tapi diabaikan dari total. */
+  included: boolean;
   total_hpp: number;
   total_selling: number;
   total_profit: number;

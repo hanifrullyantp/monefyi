@@ -1,5 +1,5 @@
 import convertTerbilang from 'terbilang-ts';
-import { calcEstimationSummary, effectiveItemSelling } from '../estimatorCalc';
+import { calcEstimationSummary, countedEstimationItems, effectiveItemSelling } from '../estimatorCalc';
 import { formatDateId, formatRupiahFull } from '../estimatorFormat';
 import { urlToDataUri, fileToDataUri } from './pdfImageUtils';
 import type { EstimationFormDraft, PdfTemplate } from '../../types/estimator';
@@ -65,7 +65,7 @@ export async function buildQuotationPdfContext(
   settings: PdfSettings,
   options: PdfDisplayOptions,
 ): Promise<QuotationPdfContext> {
-  const items = draft.items.filter(i => i.name.trim());
+  const items = countedEstimationItems(draft.items);
   const summary = calcEstimationSummary(items, draft.overhead_pct, draft.discount_pct, draft.tax_pct, {
     discountAmount: draft.discount_amount,
     adjustments: draft.adjustments,
