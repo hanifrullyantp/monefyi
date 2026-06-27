@@ -589,7 +589,7 @@ html, body {
     .saldo-metric-chip--income { color: var(--accent-primary); }
     .saldo-metric-chip--expense { color: var(--accent-danger); }
 
-    /* Mobile header — logo | periode | search · settings · profile */
+    /* Mobile header — logo | filter | search · profile · settings */
     .mobile-header-row {
       display: grid;
       grid-template-columns: 36px minmax(0, 1fr) auto;
