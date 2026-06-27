@@ -1,22 +1,18 @@
 {
   "name": "monefyi",
   "private": true,
-  "description": "Monefyi — landing (monefyi.com) + PWA app (monefyi.com/app)",
+  "description": "Monefyi PWA — static HTML/CSS/JS + Supabase",
   "engines": {
     "node": ">=20.x"
   },
   "devDependencies": {
-    "sharp": "^0.34.3",
     "vite": "^7.1.0"
   },
   "scripts": {
-    "prebuild": "mkdir -p app/public/locales app/public/js app/public/icons && cp app/locales/*.json app/public/locales/ && cp app/js/i18n.js app/js/monefyi-ui.js app/js/app.js app/js/config.js app/public/js/ && cp app/sw.js app/public/sw.js && node scripts/generate-icons.cjs",
-    "build": "npm run build:landing && npm run build:app",
-    "build:landing": "vite build --config vite.landing.config.js",
-    "build:app": "vite build --config vite.app.config.js",
-    "dev": "vite --config vite.app.config.js",
-    "dev:landing": "vite --config vite.landing.config.js",
-    "preview": "vite preview --outDir dist",
+    "prebuild": "mkdir -p public/locales public/js && cp locales/*.json public/locales/ && cp js/i18n.js js/monefyi-ui.js js/app.js js/config.js public/js/",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "refactor": "node scripts/refactor.cjs",
     "smoke": "node scripts/smoke.cjs",
     "benchmark:parser": "node scripts/batch-parser-benchmark.cjs"

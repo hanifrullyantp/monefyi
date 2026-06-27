@@ -4,26 +4,13 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
-      "source": "/app",
-      "destination": "/app/index.html"
-    },
-    {
-      "source": "/app/((?!.*\\.(?:js|css|svg|png|jpg|jpeg|webp|gif|ico|json|webmanifest|txt|map|xml)$).*)",
-      "destination": "/app/index.html"
+      "source": "/((?!.*\\.(?:js|css|svg|png|jpg|jpeg|webp|gif|ico|json|webmanifest|txt|map|xml)$).*)",
+      "destination": "/index.html"
     }
   ],
   "headers": [
     {
-      "source": "/app/manifest.webmanifest",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/manifest+json"
-        }
-      ]
-    },
-    {
-      "source": "/app/sw.js",
+      "source": "/sw.js",
       "headers": [
         {
           "key": "Cache-Control",
