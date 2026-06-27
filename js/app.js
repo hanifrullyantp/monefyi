@@ -2048,7 +2048,7 @@ async function upsertTransaction_legacy_local(tx) {
       return tx;
     }
 
-    async function parseQuickText(text){
+    async function legacyParseAIFirst(text){
       if (STATE.db.enabled && STATE.db.session?.access_token) {
         try {
           return await fetchAIParsedTransactionViaSupabase(text, 'text');
@@ -2059,6 +2059,134 @@ async function upsertTransaction_legacy_local(tx) {
         }
       }
       return parseTransactionTextHeuristic(text, { source:'quick' });
+    }
+
+    // =========================
+    // New Deterministic Parse Pipeline (L0→L1→L2)
+    // Controlled by feature flag: localStorage 'feature_new_parser_pipeline' = 'true'
+    // Full service: js/services/feature-flags.js
+    // TODO(PHASE-1): Update prebuild in package.json to copy js/parsers/ and js/services/
+    // =========================
+
+    /** @type {{ normalizeInput: Function, queryLocalMemory: Function, L2_applyRules: Function }|null} */
+    let _parseMods = null;
+
+    /**
+     * Lazily loads L0-L2 parser modules and caches them.
+     * Import paths are relative to document root (app.js is a classic script).
+     * @returns {Promise<{normalizeInput: Function, queryLocalMemory: Function, L2_applyRules: Function}>}
+     */
+    async function _loadParseMods() {
+      if (_parseMods) return _parseMods;
+      const [normMod, memMod, rulesMod] = await Promise.all([
+        import('./js/parsers/normalize.js'),
+        import('./js/services/memory.js'),
+        import('./js/parsers/rules.js'),
+      ]);
+      _parseMods = {
+        normalizeInput: normMod.normalizeInput,
+        queryLocalMemory: memMod.queryLocalMemory,
+        L2_applyRules: rulesMod.L2_applyRules,
+      };
+      return _parseMods;
+    }
+
+    /**
+     * Returns whether the new parse pipeline is enabled via localStorage.
+     * Defaults to false (safe for production until build pipeline is updated).
+     * @returns {boolean}
+     */
+    function _isNewPipelineEnabled() {
+      try {
+        return localStorage.getItem('feature_new_parser_pipeline') === 'true';
+      } catch { return false; }
+    }
+
+    /**
+     * Shapes a L0-L2 ParseResult into a full transaction object.
+     * Falls back to existing heuristic helpers for any missing fields.
+     * @param {string} text - original raw user input
+     * @param {object} result - ParseResult from L1 memory or L2 rules
+     * @param {string} provider - 'memory' | 'rule'
+     * @returns {object} transaction object compatible with legacyParseAIFirst output
+     */
+    function _buildTxFromPipelineResult(text, result, provider) {
+      const now = new Date().toISOString();
+      return {
+        id: uuid(),
+        date: result.date || parseDateFromText(text) || toISODate(new Date()),
+        type: result.type || 'expense',
+        amount: Number(result.amount || parseIDRAmount(text) || 0),
+        currency: 'IDR',
+        category: result.category || 'Lainnya',
+        subcategory: '',
+        account: result.account || guessAccount(text, null) || 'Cash',
+        merchant: result.merchant || '',
+        payment_method: result.account || guessPayment(text) || 'Cash',
+        notes: (text || '').trim(),
+        created_at: now,
+        updated_at: now,
+        meta: {
+          source: 'quick',
+          parsed: true,
+          provider,
+          confidence: result.confidence ?? 0.80,
+          matchedRules: result.matchedRules ?? [],
+          pipelineFlags: result.flags ?? [],
+        },
+      };
+    }
+
+    /**
+     * Runs the deterministic parse pipeline: L0 (normalize) → L1 (memory) → L2 (rules).
+     * Returns a transaction object on a confident match, or null on a pipeline miss
+     * (which causes the caller to cascade to L3-L5 via legacyParseAIFirst).
+     * @param {string} text - raw user input text
+     * @param {string|null} [userId] - reserved for future per-user L1 memory scoping
+     * @returns {Promise<object|null>}
+     */
+    async function runNewParsePipeline(text, userId = null) {
+      const mods = await _loadParseMods();
+
+      // L0: Normalize
+      const normalized = mods.normalizeInput(text);
+
+      // L1: Memory (exact ≥0.95, fuzzy ≥0.80)
+      const memHit = await mods.queryLocalMemory(normalized);
+      if (memHit && memHit.confidence >= 0.95) {
+        return _buildTxFromPipelineResult(text, memHit, 'memory');
+      }
+
+      // L2: Grammar rules (confident match ≥0.75)
+      const ruleHit = await mods.L2_applyRules(normalized);
+      if (ruleHit && ruleHit.confidence >= 0.75) {
+        return _buildTxFromPipelineResult(text, ruleHit, 'rule');
+      }
+
+      // Pipeline miss — caller falls through to legacy (L3-L5)
+      return null;
+    }
+
+    /**
+     * Parses quick-entry text into a transaction object.
+     * When feature flag 'feature_new_parser_pipeline' is ON:
+     *   Tries L0→L1→L2; on miss or error cascades to legacyParseAIFirst.
+     * When flag is OFF (default): delegates directly to legacyParseAIFirst.
+     * @param {string} text - raw user input
+     * @returns {Promise<object>} transaction object
+     */
+    async function parseQuickText(text) {
+      if (_isNewPipelineEnabled()) {
+        try {
+          const pipelineResult = await runNewParsePipeline(text);
+          if (pipelineResult) return pipelineResult;
+          // L0-L2 miss → cascade to L3-L5
+        } catch (err) {
+          console.error('[parseQuickText] new pipeline error, falling back:', err);
+          if (typeof Sentry !== 'undefined') Sentry.captureException(err);
+        }
+      }
+      return legacyParseAIFirst(text);
     }
 
     async function fetchInsightsViaSupabase(){
