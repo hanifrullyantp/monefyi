@@ -1,0 +1,174 @@
+/**
+ * Quick Preview confirmation card — dark/light via Monefyi CSS variables
+ */
+
+.quick-preview-card {
+  background: var(--app-card, #131A24);
+  border: 1px solid var(--app-border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-card, 12px);
+  padding: 16px;
+  color: var(--app-text, #F1F5F9);
+  font-family: var(--font-sans, 'Montserrat', system-ui, sans-serif);
+}
+
+.qp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.qp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: help;
+}
+
+.qp-badge-purple { background: rgba(139, 92, 246, 0.18); color: #C4B5FD; border: 1px solid rgba(139, 92, 246, 0.35); }
+.qp-badge-blue { background: rgba(59, 130, 246, 0.18); color: #93C5FD; border: 1px solid rgba(59, 130, 246, 0.35); }
+.qp-badge-green { background: rgba(16, 185, 129, 0.18); color: #6EE7B7; border: 1px solid rgba(16, 185, 129, 0.35); }
+.qp-badge-gray { background: var(--app-surface2, rgba(255,255,255,.05)); color: var(--app-muted, #8B9CB3); border: 1px solid var(--app-border); }
+
+body.theme-light .qp-badge-purple { background: #E9D5FF; color: #6B21A8; }
+body.theme-light .qp-badge-blue { background: #DBEAFE; color: #1E40AF; }
+body.theme-light .qp-badge-green { background: #D1FAE5; color: #065F46; }
+body.theme-light .qp-badge-gray { background: #F3F4F6; color: #374151; }
+
+.qp-confidence {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qp-conf-track {
+  width: 88px;
+  height: 8px;
+  background: var(--app-surface2, rgba(255,255,255,.08));
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.qp-conf-bar { height: 100%; border-radius: 4px; transition: width 0.25s ease; }
+.qp-confidence-high .qp-conf-bar, .qp-confidence-high .qp-conf-bar { background: #10B981; }
+.qp-confidence-medium .qp-conf-bar { background: #F59E0B; }
+.qp-confidence-low .qp-conf-bar { background: #EF4444; }
+.qp-confidence-high .qp-conf-bar { background: #10B981; }
+.qp-confidence-medium .qp-conf-bar { background: #F59E0B; }
+.qp-confidence-low .qp-conf-bar { background: #EF4444; }
+
+.qp-conf-text {
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 32px;
+}
+
+.qp-rules {
+  font-size: 11px;
+  color: var(--app-muted);
+  margin-bottom: 10px;
+  padding: 6px 8px;
+  background: var(--app-surface2);
+  border-radius: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qp-fields {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.qp-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-muted);
+  margin-bottom: 4px;
+}
+
+.qp-field input,
+.qp-field select,
+.qp-field textarea {
+  width: 100%;
+  padding: 9px 11px;
+  border: 2px solid var(--app-border);
+  border-radius: 8px;
+  font-size: 16px;
+  font-family: inherit;
+  background: var(--app-surface, #161D28);
+  color: var(--app-text);
+}
+
+body.theme-light .qp-field input,
+body.theme-light .qp-field select,
+body.theme-light .qp-field textarea {
+  background: #fff;
+  border-color: #E5E7EB;
+  color: #0F172A;
+}
+
+.qp-field input:focus,
+.qp-field select:focus,
+.qp-field textarea:focus {
+  outline: none;
+  border-color: var(--accent-primary, #10B981);
+}
+
+.qp-field--warn input {
+  border-color: #EF4444;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.qp-field textarea { resize: vertical; min-height: 52px; }
+
+.qp-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.qp-btn {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 14px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.qp-btn-save {
+  background: var(--accent-primary, #10B981);
+  color: #fff;
+  flex: 1.2;
+}
+
+.qp-btn-edit {
+  background: var(--app-surface2);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
+}
+
+.qp-btn-cancel {
+  background: transparent;
+  color: var(--app-muted);
+  flex: 0.8;
+}
+
+@media (max-width: 374px) {
+  .quick-preview-card { padding: 12px; }
+  .qp-header { flex-direction: column; align-items: flex-start; }
+  .qp-actions { flex-direction: column; }
+  .qp-btn { width: 100%; flex: none; }
+}

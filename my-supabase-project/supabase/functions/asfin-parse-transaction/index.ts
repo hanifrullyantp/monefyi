@@ -3,12 +3,32 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import { resolveGeminiForUser, recordGeminiUsage, callGeminiGenerate } from "../_shared/gemini.ts";
 
 const jsonHeaders = { "Content-Type": "application/json" };
-const APP_CORS_ORIGIN = Deno.env.get("APP_CORS_ORIGIN") || "*";
-const corsHeaders = {
-  "Access-Control-Allow-Origin": APP_CORS_ORIGIN,
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+
+const ALLOWED_ORIGINS = [
+  "https://www.monefyi.com",
+  "https://monefyi.com",
+  "https://planner.monefyi.com",
+  "http://localhost:5500",
+  "http://127.0.0.1:5500",
+  "http://localhost:5173",
+];
+
+/**
+ * Returns CORS headers for the request origin when allowed.
+ * @param {Request} request
+ */
+function getCorsHeaders(request: Request): Record<string, string> {
+  const origin = request.headers.get("origin") || "";
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Max-Age": "86400",
+    "Vary": "Origin",
+  };
+}
 
 type TxDirection = "expense" | "income";
 type ParserFlag =
@@ -365,7 +385,11 @@ ${JSON.stringify(unresolved)}
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const corsHeaders = getCorsHeaders(req);
+
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: { ...corsHeaders, ...jsonHeaders } });
   }

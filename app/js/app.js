@@ -1685,7 +1685,7 @@ async function upsertTransaction_legacy_local(tx) {
     async function showTxPreviewFlow(text, previewEl, onDone){
       if (!previewEl) return;
       previewEl.classList.remove('hidden');
-      previewEl.innerHTML = `<div class="text-xs app-muted p-2">${t('tx.pending') || 'Menyimpan…'}</div>`;
+      previewEl.innerHTML = `<div class="text-xs app-muted p-2">${t('tx.pending') || 'Memproses…'}</div>`;
       try {
         const tx = await parseOneLineToTx(text);
         if (!tx?.amount) {
@@ -1694,15 +1694,33 @@ async function upsertTransaction_legacy_local(tx) {
         }
         const dup = findPotentialDuplicate(tx);
         if (dup) tx.meta = { ...(tx.meta || {}), duplicateWarning: dup.id };
-        window.MonefyiUI?.renderTxPreviewCard?.(tx, previewEl, async (saved) => {
-          await upsertTransaction(saved, { pending: true });
-          previewEl.classList.add('hidden');
-          previewEl.innerHTML = '';
-          onDone?.();
-        }, (draft) => {
-          STATE.parsedDraft = draft;
-          openAddSheet('manual');
+
+        const { renderQuickPreview, txToPreviewModel } = await import('./components/quick-preview.js');
+        const model = txToPreviewModel(tx);
+        previewEl.innerHTML = '';
+        const card = renderQuickPreview(model, {
+          onSave: async (edited) => {
+            const saved = {
+              ...tx,
+              ...edited,
+              account: edited.account || tx.account,
+              payment_method: edited.account || tx.payment_method || tx.account,
+            };
+            await upsertTransaction(saved, { pending: true });
+            previewEl.classList.add('hidden');
+            previewEl.innerHTML = '';
+            onDone?.();
+          },
+          onEdit: (edited) => {
+            STATE.parsedDraft = { ...tx, ...edited };
+            openAddSheet('manual');
+          },
+          onCancel: () => {
+            previewEl.classList.add('hidden');
+            previewEl.innerHTML = '';
+          },
         });
+        previewEl.appendChild(card);
       } catch (e) {
         console.warn(e);
         previewEl.innerHTML = `<div class="text-xs app-muted p-2">${t('toast.error')}</div>`;
@@ -2198,7 +2216,7 @@ async function upsertTransaction_legacy_local(tx) {
       try {
         const userId = STATE.db.user?.id || null;
         if (userId) {
-          import('./js/services/metrics.js').then(({ logParseEvent }) => {
+          import('./services/metrics.js').then(({ logParseEvent }) => {
             logParseEvent({
               userId,
               input: text,
