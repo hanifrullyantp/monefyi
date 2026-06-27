@@ -737,20 +737,6 @@ html, body {
       overflow: hidden;
       margin-bottom: 0;
     }
-    .hero-saldo-card__wallet-illus {
-      position: absolute;
-      top: 12px;
-      right: 8px;
-      width: 96px;
-      height: 80px;
-      opacity: 0.55;
-      pointer-events: none;
-      z-index: 0;
-    }
-    .hero-saldo-card__wallet-illus svg {
-      width: 100%;
-      height: 100%;
-    }
     .hero-saldo-card::after {
       display: none;
     }
@@ -797,77 +783,61 @@ html, body {
       margin-top: 6px;
       position: relative;
       z-index: 1;
-      padding-right: 72px;
     }
     .hero-saldo-card__metrics-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      gap: 12px;
       margin-top: 14px;
       position: relative;
       z-index: 1;
     }
-    .hero-saldo-ie {
+    .hero-saldo-stat {
       display: flex;
       align-items: center;
+      justify-content: flex-start;
       gap: 10px;
-      padding: 12px;
-      border-radius: 16px;
-      background: rgba(0, 0, 0, 0.28);
       min-width: 0;
+      padding: 0;
+      background: none;
+      border: none;
     }
-    .hero-saldo-ie--income,
-    .income-card {
-      border: 1px solid rgba(16, 185, 129, 0.3);
-    }
-    .hero-saldo-ie--expense,
-    .expense-card {
-      border: 1px solid rgba(239, 68, 68, 0.28);
-    }
-    .hero-saldo-ie__icon {
-      width: 34px;
-      height: 34px;
+    .hero-saldo-stat__icon {
+      width: 38px;
+      height: 38px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
     }
-    .ie-icon-income,
-    .hero-saldo-ie--income .hero-saldo-ie__icon {
-      background: rgba(16, 185, 129, 0.2);
-      color: var(--accent-primary);
+    .hero-saldo-stat--income .hero-saldo-stat__icon {
+      background: linear-gradient(145deg, rgba(16, 185, 129, 0.38) 0%, rgba(5, 150, 105, 0.12) 100%);
+      color: #6ee7b7;
+      box-shadow:
+        0 0 18px rgba(16, 185, 129, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14);
     }
-    .ie-icon-expense,
-    .hero-saldo-ie--expense .hero-saldo-ie__icon {
-      background: rgba(239, 68, 68, 0.18);
-      color: var(--accent-danger);
+    .hero-saldo-stat--expense .hero-saldo-stat__icon {
+      background: linear-gradient(145deg, rgba(239, 68, 68, 0.34) 0%, rgba(190, 24, 93, 0.1) 100%);
+      color: #fca5a5;
+      box-shadow:
+        0 0 18px rgba(239, 68, 68, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
     }
-    .hero-saldo-ie__body {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      min-width: 0;
-    }
-    .hero-saldo-ie__label {
-      font-size: 11px;
-      color: var(--app-muted);
-      font-weight: 500;
-    }
-    .hero-saldo-ie__value {
-      font-size: 14px;
+    .hero-saldo-stat__value {
+      font-size: 15px;
       font-weight: 700;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      font-variant-numeric: tabular-nums;
     }
-    .income-card .hero-saldo-ie__value,
-    .income-card .ie-value {
-      color: var(--accent-primary);
+    .hero-saldo-stat--income .hero-saldo-stat__value {
+      color: #34d399;
     }
-    .expense-card .hero-saldo-ie__value,
-    .expense-card .ie-value {
-      color: var(--accent-danger);
+    .hero-saldo-stat--expense .hero-saldo-stat__value {
+      color: #f87171;
     }
     /* legacy kpi pills — kept for compatibility */
     .hero-saldo-kpi {
@@ -2366,9 +2336,13 @@ html, body {
         align-items: center;
         justify-content: space-between;
         gap: 12px;
-        margin: 16px 0 10px;
-        padding: 0 2px;
+        margin: 0 0 10px;
+        padding: 8px 2px 0;
         flex-shrink: 0;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: linear-gradient(180deg, #0a1219 70%, transparent);
       }
       .home-tx-section-header__title {
         margin: 0;
@@ -2509,7 +2483,45 @@ html, body {
         flex: 1;
         min-height: 0;
         overflow-y: auto;
+        overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: contain;
+        touch-action: pan-y;
+      }
+
+      /* Mobile scroll chain — tx list */
+      .tx-main-panel {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      #dynamicContent.dynamic-content--tx {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      #txSection {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      #txListHost {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: contain;
+        touch-action: pan-y;
+      }
+      #appShell > .flex {
+        flex: 1;
+        min-height: 0;
       }
       .tx-card-dropdown {
         display: none;
