@@ -189,31 +189,34 @@
     <!-- Top bar -->
     <header class="sticky top-0 z-30 app-header backdrop-blur safe-top md:hidden">
       <div class="max-w-xl mx-auto px-4 pb-3">
-        <div class="mobile-header-row">
-          <button id="btnLogo" class="tap mobile-header-logo" aria-label="Monefyi Advisor">
-            <div id="appLogo" class="w-9 h-9 rounded-xl brand-logo-slot overflow-hidden shrink-0">
-              <svg class="brand-logo-svg" width="36" height="36" aria-hidden="true"><use href="#monefyi-logo"/></svg>
+        <div class="mobile-header-row top-bar">
+          <button id="btnLogo" class="tap mobile-header-logo top-bar__logo" aria-label="Monefyi Advisor">
+            <div id="appLogo" class="brand-logo-slot overflow-hidden shrink-0">
+              <svg class="brand-logo-svg" width="40" height="40" aria-hidden="true"><use href="#monefyi-logo"/></svg>
               <img id="appLogoImg" class="brand-logo-custom hidden w-full h-full object-cover" alt="Logo Monefyi" />
             </div>
           </button>
 
-          <div class="mobile-header-period-wrap">
-            <button id="btnPeriodToggle" type="button" class="mobile-header-period tap" aria-expanded="false" aria-label="Filter transaksi">
+          <div class="mobile-header-period-wrap top-bar__period">
+            <button id="btnPeriodToggle" type="button" class="mobile-header-period tap date-selector" aria-expanded="false" aria-label="Filter transaksi">
+              <svg class="date-selector__icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
               <span id="saldoMonth">—</span>
               <span id="periodChevron" class="mobile-header-period__chev" aria-hidden="true">▾</span>
             </button>
           </div>
 
-          <div class="mobile-header-actions">
-            <button type="button" id="btnTopSearchMobile" class="mobile-header-ghost tap" aria-label="Cari transaksi">
-              <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+          <div class="mobile-header-actions top-bar__actions">
+            <button type="button" id="btnTopSearchMobile" class="mobile-header-ghost top-bar__icon-btn tap" aria-label="Cari transaksi">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
             </button>
-            <button id="btnSettingsMobile" class="mobile-header-ghost tap" type="button" aria-label="Pengaturan">
-              <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+            <button id="btnSettingsMobile" class="mobile-header-ghost top-bar__icon-btn tap" type="button" aria-label="Pengaturan">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
             </button>
-            <button id="btnUser" class="mobile-header-avatar tap" aria-label="Akun">
-              <span id="userBadge" class="mobile-header-avatar__badge">U</span>
-              <span id="userNameTop" class="hidden">User</span>
+            <button id="btnUser" class="mobile-header-user tap user-btn" aria-label="Akun">
+              <svg class="user-btn__icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span id="userNameTop" class="user-btn__name">User</span>
+              <span class="user-btn__chev" aria-hidden="true">▾</span>
+              <span id="userBadge" class="sr-only">U</span>
               <span id="userPlanBadge" class="hidden">—</span>
             </button>
           </div>
@@ -272,27 +275,59 @@
         </div>
 
         <div class="mobile-saldo-wrap mt-2">
-          <div id="btnSaldoToggle" role="button" tabindex="0" class="hero-saldo-card tap text-left hover:opacity-95">
-            <div class="hero-saldo-card__top">
-              <div class="hero-saldo-card__label-row">
+          <div id="btnSaldoToggle" role="button" tabindex="0" class="hero-saldo-card balance-card tap text-left hover:opacity-95">
+            <div class="hero-saldo-card__wallet-illus wallet-illustration" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" fill="none">
+                <defs>
+                  <linearGradient id="walletGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#1e3a5f"/>
+                    <stop offset="100%" stop-color="#0f172a"/>
+                  </linearGradient>
+                </defs>
+                <rect x="8" y="24" width="88" height="58" rx="14" fill="url(#walletGrad)" stroke="rgba(16,185,129,.35)" stroke-width="2"/>
+                <rect x="8" y="24" width="88" height="18" rx="14" fill="rgba(16,185,129,.12)"/>
+                <rect x="62" y="46" width="34" height="26" rx="8" fill="#134e4a" stroke="rgba(16,185,129,.45)" stroke-width="1.5"/>
+                <circle cx="79" cy="59" r="5" fill="#10b981"/>
+                <path d="M28 52h24" stroke="rgba(255,255,255,.25)" stroke-width="3" stroke-linecap="round"/>
+                <path d="M28 62h16" stroke="rgba(255,255,255,.15)" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="hero-saldo-card__top balance-card__header">
+              <div class="hero-saldo-card__label-row balance-header">
                 <span>Saldo (estimasi)</span>
                 <button id="btnSaldoMask" type="button" class="tap opacity-80 hover:opacity-100" aria-label="Sembunyikan saldo">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="block"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
               </div>
             </div>
-            <div id="kpiSaldo" class="hero-saldo-card__amount saldo-amount">—</div>
-            <div class="hero-saldo-card__metrics-row">
-              <div id="kpiSaldoIncome" class="hero-saldo-kpi hero-saldo-kpi--income">—</div>
-              <div id="kpiSaldoExpense" class="hero-saldo-kpi hero-saldo-kpi--expense">—</div>
-            </div>
-            <button type="button" id="heroBudgetProgress" class="hero-budget-progress tap" aria-label="Buka budgeting">
-              <div class="hero-budget-progress__head">
-                <span class="hero-budget-progress__label">Realisasi Budget</span>
-                <span id="heroBudgetPct" class="hero-budget-progress__pct">—</span>
+            <div id="kpiSaldo" class="hero-saldo-card__amount balance-amount saldo-amount">—</div>
+            <div class="hero-saldo-card__metrics-row income-expense-row">
+              <div class="hero-saldo-ie income-card">
+                <div class="hero-saldo-ie__icon ie-icon ie-icon-income" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                </div>
+                <div class="hero-saldo-ie__body ie-content">
+                  <span class="hero-saldo-ie__label ie-label">Pemasukan</span>
+                  <span id="kpiSaldoIncome" class="hero-saldo-ie__value ie-value">—</span>
+                </div>
               </div>
-              <div class="hero-budget-progress__track">
-                <div id="heroBudgetBar" class="hero-budget-progress__fill" style="width:0%"></div>
+              <div class="hero-saldo-ie expense-card">
+                <div class="hero-saldo-ie__icon ie-icon ie-icon-expense" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+                <div class="hero-saldo-ie__body ie-content">
+                  <span class="hero-saldo-ie__label ie-label">Pengeluaran</span>
+                  <span id="kpiSaldoExpense" class="hero-saldo-ie__value ie-value">—</span>
+                </div>
+              </div>
+            </div>
+            <button type="button" id="heroBudgetProgress" class="hero-budget-progress budget-progress tap" aria-label="Buka budgeting">
+              <div class="hero-budget-progress__head budget-header">
+                <span class="hero-budget-progress__label">Realisasi Budget</span>
+                <span id="heroBudgetPct" class="hero-budget-progress__pct budget-percent">—</span>
+              </div>
+              <div class="hero-budget-progress__track progress-bar">
+                <div id="heroBudgetBar" class="hero-budget-progress__fill progress-fill" style="width:0%"></div>
               </div>
             </button>
           </div>
@@ -864,7 +899,15 @@
             <button class="tap rounded-full app-chip px-3 py-1.5 text-xs tx-chip" data-type="transfer">Transfer</button>
           </div>
 
-          <div id="txListHost" class="mt-1 md:mt-0 flex-1 min-h-0">
+          <div id="homeTxSectionHead" class="home-tx-section-header transactions-section__head md:hidden">
+            <h2 class="home-tx-section-header__title">Transaksi Terbaru</h2>
+            <button type="button" class="home-tx-section-header__link link-see-all tap" onclick="toggleNav('list')">
+              Lihat semua
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+          </div>
+
+          <div id="txListHost" class="mt-1 md:mt-0 flex-1 min-h-0 transactions-list">
             <!-- Desktop Table Header -->
             <div id="txListDesktopHeader" class="hidden md:grid grid-cols-[48px_2fr_1fr_1fr_1fr_1fr_1.5fr] gap-3 px-4 py-2 text-xs font-medium text-slate-400 border-b border-slate-800/50 mb-2">
               <div>Ikon</div>
@@ -914,26 +957,26 @@
         <!-- Main Content Area -->
 <div class="flex-1 min-w-0">
   <!-- Nav Bar Mobile -->
- <nav class="fixed bottom-0 left-0 right-0 z-[110] nav-bar block md:hidden">
+ <nav class="fixed bottom-0 left-0 right-0 z-[110] nav-bar bottom-nav block md:hidden">
     <div class="nav-bar-inner safe-bottom">
-      <div class="nav-bar-grid">
-      <button type="button" data-nav="beranda" class="nav-item flex flex-col items-center gap-1 tap">
-        <span class="text-xl">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+      <div class="nav-bar-grid bottom-nav__grid">
+      <button type="button" data-nav="beranda" class="nav-item bottom-nav__item flex flex-col items-center gap-1 tap">
+        <span class="nav-item__icon text-xl">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
         </span>
         <span class="text-[11px] font-medium">Beranda</span>
       </button>
       
-      <button type="button" data-nav="transaksi" class="nav-item flex flex-col items-center gap-1 tap">
-        <span class="text-xl">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
+      <button type="button" data-nav="transaksi" class="nav-item bottom-nav__item flex flex-col items-center gap-1 tap">
+        <span class="nav-item__icon text-xl">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
         </span>
         <span class="text-[11px] font-medium">Transaksi</span>
       </button>
       
-      <div class="nav-fab-slot">
-        <button id="btnMainAction" class="fab-main tap" aria-label="Tambah transaksi">
-          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+      <div class="nav-fab-slot bottom-nav__fab-slot">
+        <button id="btnMainAction" class="fab-main fab-add tap" aria-label="Tambah transaksi">
+          <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
         </button>
         <div id="actionMenu" class="hidden absolute bottom-full left-1/2 -translate-x-1/2 mb-4 flex flex-col gap-3 items-center">
            <!-- Kamera = FOTO STRUK -->
