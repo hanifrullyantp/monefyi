@@ -2176,17 +2176,42 @@ async function upsertTransaction_legacy_local(tx) {
      * @returns {Promise<object>} transaction object
      */
     async function parseQuickText(text) {
+      const startTime = Date.now();
+      let parsed;
+
       if (_isNewPipelineEnabled()) {
         try {
           const pipelineResult = await runNewParsePipeline(text);
-          if (pipelineResult) return pipelineResult;
-          // L0-L2 miss → cascade to L3-L5
+          if (pipelineResult) parsed = pipelineResult;
         } catch (err) {
           console.error('[parseQuickText] new pipeline error, falling back:', err);
           if (typeof Sentry !== 'undefined') Sentry.captureException(err);
         }
       }
-      return legacyParseAIFirst(text);
+
+      if (!parsed) {
+        parsed = await legacyParseAIFirst(text);
+      }
+
+      // Log metrics (non-blocking, fire-and-forget)
+      try {
+        const userId = STATE.db.user?.id || null;
+        if (userId) {
+          import('./js/services/metrics.js').then(({ logParseEvent }) => {
+            logParseEvent({
+              userId,
+              input: text,
+              result: parsed,
+              latency: Date.now() - startTime,
+              pipeline: _isNewPipelineEnabled() ? 'new' : 'legacy',
+            });
+          }).catch(() => {});
+        }
+      } catch (err) {
+        // Silent fail — metrics must not break parsing
+      }
+
+      return parsed;
     }
 
     async function fetchInsightsViaSupabase(){
