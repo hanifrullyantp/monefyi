@@ -9347,3 +9347,65 @@ function toggleNav(view, triggerEl) {
           });
       });
     }
+
+    // ── Saldo card scroll-collapse (mobile) ─────────────────────────────────
+    // Collapses the saldo card into a compact bar as the user scrolls down,
+    // giving more visual space for the transaction list.
+    (function setupSaldoCollapseOnScroll() {
+      const COLLAPSE_AT = 55;   // px — collapse when scrolled past this
+      const EXPAND_AT   = 18;   // px — re-expand when back near top
+      let collapsed = false;
+      let ticking   = false;
+
+      function applyCollapse(scrollTop) {
+        const wrap = document.querySelector('.mobile-saldo-wrap');
+        if (!wrap) return;
+
+        if (!collapsed && scrollTop > COLLAPSE_AT) {
+          collapsed = true;
+          wrap.classList.add('saldo-collapsed');
+          const details = wrap.querySelector('.saldo-details-wrap');
+          if (details) details.setAttribute('aria-hidden', 'true');
+        } else if (collapsed && scrollTop < EXPAND_AT) {
+          collapsed = false;
+          wrap.classList.remove('saldo-collapsed');
+          const details = wrap.querySelector('.saldo-details-wrap');
+          if (details) details.setAttribute('aria-hidden', 'false');
+        }
+        ticking = false;
+      }
+
+      function onScroll() {
+        if (ticking) return;
+        ticking = true;
+        const shell = document.getElementById('appShell');
+        const scrollTop = shell ? shell.scrollTop : 0;
+        requestAnimationFrame(function () { applyCollapse(scrollTop); });
+      }
+
+      function bind() {
+        const shell = document.getElementById('appShell');
+        if (!shell) return;
+        // Only active on mobile widths
+        if (window.matchMedia('(max-width: 767px)').matches) {
+          shell.addEventListener('scroll', onScroll, { passive: true });
+        }
+        window.matchMedia('(max-width: 767px)').addEventListener('change', function (mq) {
+          if (mq.matches) {
+            shell.addEventListener('scroll', onScroll, { passive: true });
+          } else {
+            shell.removeEventListener('scroll', onScroll);
+            // Ensure expanded on desktop
+            const wrap = document.querySelector('.mobile-saldo-wrap');
+            if (wrap) wrap.classList.remove('saldo-collapsed');
+            collapsed = false;
+          }
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bind);
+      } else {
+        bind();
+      }
+    })();
