@@ -9251,7 +9251,7 @@ function toggleNav(view, triggerEl) {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
         navigator.serviceWorker
-          .register('./sw.js', { scope: '/app/' })
+          .register('/app/sw.js', { scope: '/app/' })
           .catch(function (err) {
             console.error('Service worker registration failed:', err);
           });

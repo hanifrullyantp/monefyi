@@ -8790,9 +8790,11 @@ function toggleNav(view, triggerEl) {
     });
     $$('.tx-view-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
-        STATE.ui.txView = btn.getAttribute('data-view') || 'card';
+        const view = btn.getAttribute('data-view') || 'card';
+        STATE.ui.txView = view;
         syncTxViewToggle();
         renderTransactions();
+        if (!isDesktopViewport()) setSaldoFilterMenu(false);
       });
     });
     $('#fType').addEventListener('change', () => {
@@ -8882,6 +8884,7 @@ function toggleNav(view, triggerEl) {
       (e.target.closest?.('#btnPeriodToggle') ||
        e.target.closest?.('#btnSaldoMask') ||
        e.target.closest?.('#btnSaldoMaskDesktop') ||
+       e.target.closest?.('#heroBudgetProgress') ||
        e.target.closest?.('#btnFilterCardDesktop') ||
        e.target.closest?.('#btnFilterStripDesktop'))
     ) {
@@ -9248,7 +9251,7 @@ function toggleNav(view, triggerEl) {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
         navigator.serviceWorker
-          .register('./sw.js', { scope: '/app/' })
+          .register('/app/sw.js', { scope: '/app/' })
           .catch(function (err) {
             console.error('Service worker registration failed:', err);
           });
