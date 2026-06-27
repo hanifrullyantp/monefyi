@@ -3,7 +3,7 @@ import {
   TYPO_MAP,
   AMOUNT_PATTERNS,
   DATE_KEYWORDS,
-} from '../app/js/parsers/normalize.js';
+} from '../js/parsers/normalize.js';
 import { assertEquals, assert } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 
 // --- Amount parsing ---

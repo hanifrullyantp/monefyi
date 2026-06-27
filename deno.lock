@@ -38,7 +38,6 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
-        "npm:sharp@~0.34.3",
         "npm:vite@^7.1.0"
       ]
     }
