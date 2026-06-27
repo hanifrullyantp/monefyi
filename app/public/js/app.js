@@ -2708,25 +2708,31 @@ async function upsertTransaction_legacy_local(tx) {
       const accSel = $('#fAccount');
       const dfCat = $('#dfCategory');
       const dfAcc = $('#dfAccount');
+      const sfCat = $('#saldoFilterCategory');
+      const sfAcc = $('#saldoFilterAccount');
 
-      const curCat = catSel?.value || dfCat?.value || '';
-      const curAcc = accSel?.value || dfAcc?.value || '';
+      const curCat = catSel?.value || dfCat?.value || sfCat?.value || '';
+      const curAcc = accSel?.value || dfAcc?.value || sfAcc?.value || '';
 
       const catHtml = '<option value="">Semua kategori</option>' + cats.map(c=>`<option value="${escapeHtmlAttr(c)}">${escapeHtml(c)}</option>`).join('');
       const accHtml = '<option value="">Semua akun</option>' + accounts.map(a=>`<option value="${escapeHtmlAttr(a)}">${escapeHtml(a)}</option>`).join('');
 
       if (catSel) catSel.innerHTML = catHtml;
       if (dfCat) dfCat.innerHTML = catHtml;
+      if (sfCat) sfCat.innerHTML = catHtml;
       if (accSel) accSel.innerHTML = accHtml;
       if (dfAcc) dfAcc.innerHTML = accHtml;
+      if (sfAcc) sfAcc.innerHTML = accHtml;
 
       if (cats.includes(curCat)) {
         if (catSel) catSel.value = curCat;
         if (dfCat) dfCat.value = curCat;
+        if (sfCat) sfCat.value = curCat;
       }
       if (accounts.includes(curAcc)) {
         if (accSel) accSel.value = curAcc;
         if (dfAcc) dfAcc.value = curAcc;
+        if (sfAcc) sfAcc.value = curAcc;
       }
     }
 
@@ -2926,8 +2932,15 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       $('#monthPopover')?.classList.toggle('hidden', !STATE.ui.monthPopoverOpen || !isDesktopViewport());
       $('#filtersWrap')?.classList.toggle('hidden', !STATE.ui.monthPopoverOpen || !isDesktopViewport());
       $('#saldoFilterMenu')?.classList.toggle('hidden', !STATE.ui.saldoFilterOpen || isDesktopViewport());
+      const saldoFilterPeriod = $('#saldoFilterPeriod');
+      if (saldoFilterPeriod) saldoFilterPeriod.value = STATE.period.preset || 'this_month';
+      $('#saldoFilterRange')?.classList.toggle('hidden', (STATE.period.preset || 'this_month') !== 'custom');
       const saldoFilterType = $('#saldoFilterType');
       if (saldoFilterType) saldoFilterType.value = STATE.filters.type || '';
+      const saldoFilterCategory = $('#saldoFilterCategory');
+      if (saldoFilterCategory) saldoFilterCategory.value = STATE.filters.category || '';
+      const saldoFilterAccount = $('#saldoFilterAccount');
+      if (saldoFilterAccount) saldoFilterAccount.value = STATE.filters.account || '';
 
       // Desktop filter now renders inline above tx list (not as overlay)
       const filterBackdrop = $('#desktopFilterBackdrop');
@@ -3843,7 +3856,7 @@ function generateSmartBudgetRecommendation() {
       return window.matchMedia('(min-width: 768px)').matches;
     }
     function isMobileTableView(){
-      return !isDesktopViewport() && String(STATE.ui.txView || 'card') === 'table';
+      return false;
     }
     function syncTxViewToggle(){
       const current = String(STATE.ui.txView || 'card');
@@ -8584,7 +8597,10 @@ function toggleNav(view, triggerEl) {
 
     function setSaldoFilterMenu(open) {
       STATE.ui.saldoFilterOpen = !!open;
-      if (open) STATE.ui.monthPopoverOpen = false;
+      if (open) {
+        STATE.ui.monthPopoverOpen = false;
+        ensureSelectOptions();
+      }
       rerender();
     }
     function toggleSaldoFilterMenu() {
@@ -8723,9 +8739,15 @@ function toggleNav(view, triggerEl) {
       STATE.period.preset = preset;
       const presetSelect = $('#presetSelect');
       if (presetSelect) presetSelect.value = preset;
+      const dfPeriod = $('#dfPeriod');
+      if (dfPeriod) dfPeriod.value = preset;
+      const saldoPeriod = $('#saldoFilterPeriod');
+      if (saldoPeriod) saldoPeriod.value = preset;
       $('#rangeCard')?.classList.toggle('hidden', preset !== 'custom');
+      $('#saldoFilterRange')?.classList.toggle('hidden', preset !== 'custom');
       if (preset !== 'custom') $('#presetHint').textContent = '—';
       if (STATE.ui.monthPopoverOpen) setMonthPopover(false);
+      if (STATE.ui.saldoFilterOpen && preset !== 'custom') setSaldoFilterMenu(false);
     }
 
     // preset dropdown (hemat space)
@@ -8984,6 +9006,45 @@ function toggleNav(view, triggerEl) {
       if ($('#fType')) $('#fType').value = STATE.filters.type;
       if ($('#dfType')) $('#dfType').value = STATE.filters.type;
       STATE.ui.txVisibleCount = 50;
+      rerender();
+    });
+
+    $('#saldoFilterPeriod')?.addEventListener('change', () => {
+      const preset = $('#saldoFilterPeriod').value;
+      STATE.period.preset = preset;
+      $('#saldoFilterRange')?.classList.toggle('hidden', preset !== 'custom');
+      if ($('#presetSelect')) $('#presetSelect').value = preset;
+      if ($('#dfPeriod')) $('#dfPeriod').value = preset;
+      if (preset === 'custom') return;
+      applyPreset(preset);
+    });
+
+    $('#saldoFilterCategory')?.addEventListener('change', () => {
+      STATE.filters.category = $('#saldoFilterCategory').value || '';
+      STATE.ui.txVisibleCount = 50;
+      if (STATE.filters.category) STATE.focusCategory = null;
+      if ($('#fCategory')) $('#fCategory').value = STATE.filters.category;
+      if ($('#dfCategory')) $('#dfCategory').value = STATE.filters.category;
+      rerender();
+    });
+
+    $('#saldoFilterAccount')?.addEventListener('change', () => {
+      STATE.filters.account = $('#saldoFilterAccount').value || '';
+      STATE.ui.txVisibleCount = 50;
+      if ($('#fAccount')) $('#fAccount').value = STATE.filters.account;
+      if ($('#dfAccount')) $('#dfAccount').value = STATE.filters.account;
+      rerender();
+    });
+
+    $('#saldoFilterApplyRange')?.addEventListener('click', () => {
+      const s = $('#saldoFilterRangeStart')?.value;
+      const e = $('#saldoFilterRangeEnd')?.value;
+      if (!s || !e) return;
+      setPeriod({ preset: 'custom', startISO: s, endISO: e, label: dateLabelRange(s, e) });
+      if ($('#presetSelect')) $('#presetSelect').value = 'custom';
+      if ($('#dfPeriod')) $('#dfPeriod').value = 'custom';
+      if ($('#saldoFilterPeriod')) $('#saldoFilterPeriod').value = 'custom';
+      setSaldoFilterMenu(false);
       rerender();
     });
 

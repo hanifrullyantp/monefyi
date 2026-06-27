@@ -584,24 +584,76 @@ html, body {
     .saldo-metric-chip--income { color: var(--accent-primary); }
     .saldo-metric-chip--expense { color: var(--accent-danger); }
 
-    /* Mobile header — logo | spacer | search | settings | profile */
+    /* Mobile header — logo | periode | search · settings · profile */
     .mobile-header-row {
-      display: grid;
-      grid-template-columns: auto 1fr auto auto auto;
+      display: flex;
       align-items: center;
       gap: 8px;
     }
-    .mobile-header-spacer { min-width: 0; }
-    .mobile-header-avatar {
-      width: 40px;
-      height: 40px;
+    .mobile-header-logo {
+      display: inline-flex;
+      align-items: center;
+      flex-shrink: 0;
       padding: 0;
       border: none;
       background: transparent;
     }
+    .mobile-header-period-wrap {
+      flex: 1;
+      min-width: 0;
+    }
+    .mobile-header-period {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      max-width: 100%;
+      padding: 7px 12px;
+      border-radius: var(--radius-pill);
+      font-size: 13px;
+      font-weight: 600;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.12);
+      color: var(--app-text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mobile-header-period #saldoMonth {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mobile-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .mobile-header-avatar {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border: none;
+      background: transparent;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .mobile-header-avatar__badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      background: rgba(20,184,166,.20);
+      color: rgba(153,246,228,.95);
+    }
     .mobile-header-ghost {
-      width: 40px;
-      height: 40px;
+      width: 36px;
+      height: 36px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -609,8 +661,19 @@ html, body {
       border: 1px solid var(--app-border);
       background: transparent;
       color: var(--app-muted);
+      flex-shrink: 0;
     }
     .mobile-header-ghost:hover { color: var(--app-text); border-color: color-mix(in srgb, var(--accent-primary) 40%, var(--app-border)); }
+    .mobile-filter-panel {
+      margin-top: 8px;
+      padding: 12px;
+      border-radius: 14px;
+      background: var(--app-card);
+      border: 1px solid var(--app-border);
+      display: grid;
+      gap: 10px;
+    }
+    .mobile-filter-panel.hidden { display: none; }
 
     /* Hero saldo card (mobile) */
     .hero-saldo-card {
@@ -663,31 +726,22 @@ html, body {
       color: var(--app-text);
       backdrop-filter: blur(8px);
     }
-    .hero-saldo-card__grid {
+    .hero-saldo-card__amount {
+      margin-top: 6px;
+    }
+    .hero-saldo-card__metrics-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      gap: 8px;
       margin-top: 10px;
-      align-items: stretch;
-    }
-    .hero-saldo-card__col-left {
-      display: flex;
-      align-items: center;
-      min-width: 0;
-    }
-    .hero-saldo-card__col-right {
-      display: grid;
-      grid-template-rows: 1fr 1fr;
-      gap: 6px;
-      min-width: 0;
     }
     .hero-saldo-kpi {
       display: flex;
       align-items: center;
-      justify-content: flex-end;
+      justify-content: center;
       font-size: 13px;
       font-weight: 700;
-      padding: 6px 8px;
+      padding: 8px 10px;
       border-radius: 10px;
       min-width: 0;
       white-space: nowrap;
@@ -722,19 +776,6 @@ html, body {
       border-radius: inherit;
       background: var(--accent-primary);
       transition: width 0.35s ease, background 0.25s ease;
-    }
-    .saldo-filter-menu {
-      margin-top: 8px;
-      padding: 12px;
-      border-radius: 14px;
-      background: var(--app-card);
-      border: 1px solid var(--app-border);
-    }
-    .saldo-filter-menu__view {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
     }
     .hero-saldo-card__body {
       display: flex;
