@@ -34,7 +34,7 @@
 
 
  
-  <link rel="stylesheet" crossorigin href="/app/assets/index-DJShayxf.css">
+  <link rel="stylesheet" crossorigin href="/app/assets/index-BvYEsdTj.css">
 </head>
 <body>
   <!-- Logo Monefyi (satu sumber untuk loading, sidebar, header, auth) -->
@@ -222,58 +222,6 @@
           </div>
         </div>
 
-        <div id="saldoFilterMenu" class="mobile-filter-panel hidden">
-          <div>
-            <label for="saldoFilterPeriod" class="text-xs app-muted">Periode</label>
-            <select id="saldoFilterPeriod" class="tap w-full rounded-xl app-input px-3 py-2 text-sm mt-1">
-              <option value="this_month">Bulan ini</option>
-              <option value="last_month">Bulan lalu</option>
-              <option value="this_week">Minggu ini</option>
-              <option value="three_months">3 Bulan</option>
-              <option value="six_months">6 Bulan</option>
-              <option value="this_year">Tahun ini</option>
-              <option value="today">Hari ini</option>
-              <option value="yesterday">Kemarin</option>
-              <option value="custom">Rentang tanggal</option>
-            </select>
-          </div>
-          <div id="saldoFilterRange" class="hidden">
-            <div class="grid grid-cols-2 gap-2 mt-1">
-              <div>
-                <label for="saldoFilterRangeStart" class="text-[11px] app-muted">Mulai</label>
-                <input id="saldoFilterRangeStart" type="date" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label for="saldoFilterRangeEnd" class="text-[11px] app-muted">Sampai</label>
-                <input id="saldoFilterRangeEnd" type="date" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-sm" />
-              </div>
-            </div>
-            <button type="button" id="saldoFilterApplyRange" class="tap mt-2 w-full rounded-xl px-3 py-2 text-sm font-semibold" style="background: rgba(16,185,129,.15); color: rgba(167,243,208,.95); border: 1px solid rgba(52,211,153,.25)">Terapkan rentang</button>
-          </div>
-          <div>
-            <label for="saldoFilterType" class="text-xs app-muted">Tipe</label>
-            <select id="saldoFilterType" class="tap w-full rounded-xl app-input px-3 py-2 text-sm mt-1">
-              <option value="">Semua tipe</option>
-              <option value="expense">Pengeluaran</option>
-              <option value="income">Pemasukan</option>
-              <option value="transfer">Transfer</option>
-            </select>
-          </div>
-          <div>
-            <label for="saldoFilterCategory" class="text-xs app-muted">Kategori</label>
-            <select id="saldoFilterCategory" class="tap w-full rounded-xl app-input px-3 py-2 text-sm mt-1">
-              <option value="">Semua kategori</option>
-            </select>
-          </div>
-          <div>
-            <label for="saldoFilterAccount" class="text-xs app-muted">Akun</label>
-            <select id="saldoFilterAccount" class="tap w-full rounded-xl app-input px-3 py-2 text-sm mt-1">
-              <option value="">Semua akun</option>
-            </select>
-          </div>
-          <button type="button" id="btnPrintReportMobile" class="tap w-full rounded-xl px-3 py-2.5 text-sm font-semibold text-white" style="background: rgba(14,165,233,.85); border: 1px solid rgba(125,211,252,.35)">Cetak laporan (PDF)</button>
-        </div>
-
         <div class="mobile-saldo-wrap mt-2">
           <div id="btnSaldoToggle" role="button" tabindex="0" class="hero-saldo-card balance-card tap text-left hover:opacity-95">
             <div class="hero-saldo-card__top balance-card__header">
@@ -406,8 +354,8 @@
     </header>
 <!-- PEMBUNGKUS UTAMA -->
 
-<main id="appShell" class="w-full max-w-full mx-auto px-4 md:pb-8 md:pt-8 md:h-dvh md:overflow-hidden">
-  <div class="flex flex-col md:flex-row gap-8 items-start w-full md:h-full md:min-h-0">   
+<main id="appShell" class="w-full max-w-full mx-auto px-4 min-h-0 md:pb-8 md:pt-8 md:h-dvh md:overflow-hidden">
+  <div class="flex flex-col md:flex-row gap-8 items-start w-full flex-1 min-h-0 md:h-full md:min-h-0">   
  
 
 
@@ -541,7 +489,7 @@
     </aside>
 
            <!-- KONTEN KANAN (DETAIL) -->
-    <div class="flex-1 min-w-0 flex flex-col w-full max-w-full md:h-full tx-main-panel">
+    <div class="flex-1 min-w-0 flex flex-col w-full max-w-full min-h-0 md:h-full tx-main-panel">
       <!-- Saldo strip saat sidebar collapsed -->
       <div id="desktopSaldoStrip" class="hidden md:hidden items-center gap-3 mb-3 shrink-0 sidebar-glass rounded-xl app-card px-4 py-3 border border-slate-800/50">
         <div class="min-w-0 flex-1">
@@ -636,7 +584,7 @@
       </div>
 
       <!-- Render Content Area: isi halaman (dashboard / list transaksi) -->
-      <div id="dynamicContent" class="flex-1 overflow-y-auto space-y-6 w-full max-w-full">
+      <div id="dynamicContent" class="flex-1 min-h-0 space-y-6 w-full max-w-full md:overflow-y-auto">
         <!-- Expanded dashboard -->
         <div id="dashboardExpanded" class="hidden">
           <!-- Account balances (top 3) -->
@@ -885,6 +833,43 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
               </button>
             </div>
+
+            <div id="saldoFilterMenu" class="mobile-filter-panel hidden md:hidden shrink-0">
+              <div class="mobile-filter-grid">
+                <select id="saldoFilterType" class="mobile-filter-select tap" aria-label="Filter tipe">
+                  <option value="">Semua tipe</option>
+                  <option value="expense">Pengeluaran</option>
+                  <option value="income">Pemasukan</option>
+                  <option value="transfer">Transfer</option>
+                </select>
+                <select id="saldoFilterCategory" class="mobile-filter-select tap" aria-label="Filter kategori">
+                  <option value="">Semua kategori</option>
+                </select>
+                <select id="saldoFilterAccount" class="mobile-filter-select tap" aria-label="Filter akun">
+                  <option value="">Semua akun</option>
+                </select>
+                <select id="saldoFilterPeriod" class="mobile-filter-select tap" aria-label="Filter periode">
+                  <option value="this_month">Bulan ini</option>
+                  <option value="last_month">Bulan lalu</option>
+                  <option value="this_week">Minggu ini</option>
+                  <option value="three_months">3 Bulan</option>
+                  <option value="six_months">6 Bulan</option>
+                  <option value="this_year">Tahun ini</option>
+                  <option value="today">Hari ini</option>
+                  <option value="yesterday">Kemarin</option>
+                  <option value="custom">Rentang tanggal</option>
+                </select>
+              </div>
+              <div id="saldoFilterRange" class="mobile-filter-range hidden">
+                <div class="mobile-filter-range__grid">
+                  <input id="saldoFilterRangeStart" type="date" class="tap mobile-filter-select" aria-label="Tanggal mulai" />
+                  <input id="saldoFilterRangeEnd" type="date" class="tap mobile-filter-select" aria-label="Tanggal sampai" />
+                </div>
+                <button type="button" id="saldoFilterApplyRange" class="tap mobile-filter-range__apply">Terapkan rentang</button>
+              </div>
+              <button type="button" id="btnPrintReportMobile" class="tap mobile-filter-print">Cetak laporan (PDF)</button>
+            </div>
+
             <!-- Desktop Table Header -->
             <div id="txListDesktopHeader" class="hidden md:grid grid-cols-[48px_2fr_1fr_1fr_1fr_1fr_1.5fr] gap-3 px-4 py-2 text-xs font-medium text-slate-400 border-b border-slate-800/50 mb-2">
               <div>Ikon</div>

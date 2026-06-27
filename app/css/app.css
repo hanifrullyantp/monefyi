@@ -716,15 +716,68 @@ html, body {
       border: 0;
     }
     .mobile-filter-panel {
-      margin-top: 8px;
-      padding: 12px;
-      border-radius: 14px;
-      background: var(--app-card);
-      border: 1px solid var(--app-border);
-      display: grid;
+      margin: 0 0 12px;
+      padding: 0;
+      border: none;
+      background: transparent;
+      display: flex;
+      flex-direction: column;
       gap: 10px;
+      flex-shrink: 0;
     }
     .mobile-filter-panel.hidden { display: none; }
+    .mobile-filter-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .mobile-filter-select {
+      width: 100%;
+      min-width: 0;
+      padding: 11px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(19, 24, 38, 0.95);
+      color: var(--app-text);
+      font-size: 13px;
+      font-weight: 500;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 30px;
+    }
+    .mobile-filter-range {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .mobile-filter-range.hidden { display: none; }
+    .mobile-filter-range__grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .mobile-filter-range__apply {
+      width: 100%;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      background: rgba(16, 185, 129, 0.15);
+      color: rgba(167, 243, 208, 0.95);
+      border: 1px solid rgba(52, 211, 153, 0.25);
+    }
+    .mobile-filter-print {
+      width: 100%;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+      background: rgba(14, 165, 233, 0.85);
+      border: 1px solid rgba(125, 211, 252, 0.35);
+    }
 
     /* Hero saldo card (mobile) — Beranda balance card */
     .hero-saldo-card {
@@ -2339,10 +2392,6 @@ html, body {
         margin: 0 0 10px;
         padding: 8px 2px 0;
         flex-shrink: 0;
-        position: sticky;
-        top: 0;
-        z-index: 2;
-        background: linear-gradient(180deg, #0a1219 70%, transparent);
       }
       .home-tx-section-header__title {
         margin: 0;
@@ -2430,8 +2479,13 @@ html, body {
       body.app-ready {
         height: 100dvh;
         overflow: hidden;
+      }
+      body.app-ready > .min-h-dvh {
+        height: 100%;
+        min-height: 0;
         display: flex;
         flex-direction: column;
+        overflow: hidden;
       }
       body.app-ready .app-header {
         flex-shrink: 0;
@@ -2441,87 +2495,27 @@ html, body {
       body.app-ready #appShell {
         flex: 1;
         min-height: 0;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: contain;
+        touch-action: pan-y;
         padding-bottom: var(--mobile-nav-offset);
       }
-      body.app-ready #appShell > .flex {
-        flex: 1;
-        min-height: 0;
-        display: flex;
-        flex-direction: column;
-      }
-      body.app-ready .tx-main-panel {
-        flex: 1;
-        min-height: 0;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      }
-      body.app-ready #dynamicContent.dynamic-content--tx {
-        flex: 1;
-        min-height: 0;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      }
-      body.app-ready #dynamicContent.dynamic-content--dashboard {
-        flex: 1;
-        min-height: 0;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-      }
+      body.app-ready #appShell > .flex,
+      body.app-ready .tx-main-panel,
+      body.app-ready #dynamicContent,
+      body.app-ready #dynamicContent.dynamic-content--tx,
+      body.app-ready #dynamicContent.dynamic-content--dashboard,
       body.app-ready #txSection {
-        flex: 1;
+        overflow: visible;
         min-height: 0;
-        display: flex;
-        flex-direction: column;
-        margin-top: 0 !important;
+        height: auto;
       }
       body.app-ready #txListHost {
-        flex: 1;
+        overflow: visible;
         min-height: 0;
-        overflow-y: auto;
-        overflow-x: hidden;
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior-y: contain;
-        touch-action: pan-y;
-      }
-
-      /* Mobile scroll chain — tx list */
-      .tx-main-panel {
-        flex: 1;
-        min-height: 0;
-        display: flex;
-        flex-direction: column;
-      }
-      #dynamicContent.dynamic-content--tx {
-        flex: 1;
-        min-height: 0;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      }
-      #txSection {
-        flex: 1;
-        min-height: 0;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      }
-      #txListHost {
-        flex: 1;
-        min-height: 0;
-        overflow-y: auto;
-        overflow-x: hidden;
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior-y: contain;
-        touch-action: pan-y;
-      }
-      #appShell > .flex {
-        flex: 1;
-        min-height: 0;
+        height: auto;
       }
       .tx-card-dropdown {
         display: none;
