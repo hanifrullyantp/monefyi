@@ -592,24 +592,26 @@ html, body {
     /* Mobile header — logo | periode | search · settings · profile */
     .mobile-header-row {
       display: grid;
-      grid-template-columns: 40px minmax(0, 1fr) auto;
+      grid-template-columns: 36px minmax(0, 1fr) auto;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+      min-width: 0;
+      width: 100%;
     }
     .mobile-header-logo {
       display: inline-flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      width: 40px;
-      height: 40px;
+      width: 36px;
+      height: 36px;
       padding: 0;
       border: none;
       background: transparent;
     }
     .mobile-header-logo .brand-logo-slot {
-      width: 40px;
-      height: 40px;
+      width: 36px;
+      height: 36px;
       border-radius: 10px;
     }
     .mobile-header-period-wrap {
@@ -618,13 +620,13 @@ html, body {
     .mobile-header-period {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       width: 100%;
       min-width: 0;
-      padding: 0 12px;
-      height: 40px;
+      padding: 0 10px;
+      height: 36px;
       border-radius: 12px;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
       background: rgba(19, 24, 38, 0.95);
       border: 1px solid rgba(255, 255, 255, 0.1);
@@ -650,11 +652,12 @@ html, body {
       align-items: center;
       gap: 4px;
       flex-shrink: 0;
+      min-width: 0;
     }
     .mobile-header-ghost {
       box-sizing: border-box;
-      width: 40px;
-      height: 40px;
+      width: 36px;
+      height: 36px;
       padding: 0;
       display: inline-flex;
       align-items: center;
@@ -675,15 +678,21 @@ html, body {
       box-sizing: border-box;
       display: inline-flex;
       align-items: center;
-      gap: 5px;
-      max-width: 108px;
-      height: 40px;
-      padding: 0 10px;
+      justify-content: center;
+      gap: 0;
+      width: 36px;
+      height: 36px;
+      max-width: 36px;
+      padding: 0;
       border-radius: 12px;
       border: 1px solid rgba(255, 255, 255, 0.1);
       background: rgba(19, 24, 38, 0.95);
       color: var(--app-text);
       flex-shrink: 0;
+    }
+    .user-btn__name,
+    .user-btn__chev {
+      display: none;
     }
     .user-btn__icon {
       flex-shrink: 0;
@@ -2365,7 +2374,7 @@ html, body {
 
     @media (max-width: 767px) {
       body {
-        --mobile-nav-offset: calc(5.25rem + max(0.75rem, env(safe-area-inset-bottom)));
+        --mobile-nav-offset: calc(7rem + max(1rem, env(safe-area-inset-bottom)));
         background-color: #0a1219;
         background-image:
           radial-gradient(ellipse 120% 40% at 50% 0%, rgba(16,185,129,.12), transparent 55%),
@@ -2375,6 +2384,11 @@ html, body {
       .app-header {
         background: transparent;
         border-bottom: none;
+      }
+      .app-header .max-w-xl {
+        max-width: 100%;
+        padding-left: 12px;
+        padding-right: 12px;
       }
       .hero-saldo-card__amount.saldo-amount {
         font-size: clamp(34px, 9.4vw, 44px);
@@ -2415,6 +2429,11 @@ html, body {
       /* Transaction cards — Beranda list */
       #txList {
         gap: 10px;
+        padding-bottom: 24px;
+      }
+      .tx-card-v2 .tx-menu-btn,
+      .tx-card-compact .tx-menu-btn {
+        display: none !important;
       }
       .tx-card-v2 .tx-card-inner {
         background: #131826;
@@ -2493,7 +2512,7 @@ html, body {
         top: auto;
       }
       body.app-ready #appShell {
-        flex: 1;
+        flex: 1 1 auto;
         min-height: 0;
         overflow-y: auto;
         overflow-x: hidden;
@@ -2501,6 +2520,9 @@ html, body {
         overscroll-behavior-y: contain;
         touch-action: pan-y;
         padding-bottom: var(--mobile-nav-offset);
+      }
+      body.app-ready > .min-h-dvh > .nav-bar {
+        flex: 0 0 auto;
       }
       body.app-ready #appShell > .flex,
       body.app-ready .tx-main-panel,
