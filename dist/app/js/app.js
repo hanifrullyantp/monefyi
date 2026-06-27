@@ -877,6 +877,7 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
       ui: {
         dashboardOpen: false,
         txDesktopFiltersOpen: false,
+        saldoFilterOpen: false,
         monthPopoverOpen: false,
         advisorOpen: false,
         receiptPickerOpened: false,
@@ -1586,48 +1587,24 @@ async function upsertTransaction_legacy_local(tx) {
     window.syncSidebarCollapsedUI = syncSidebarCollapsedUI;
 
     let deferredPwaPrompt = null;
-    function isStandalonePwa(){
-      return (
-        window.matchMedia('(display-mode: standalone)').matches ||
-        navigator.standalone === true
-      );
-    }
-    function isIosSafari(){
-      return /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
-    }
-    function syncStandaloneBodyClass(){
-      document.body.classList.toggle('is-standalone', isStandalonePwa());
-    }
     function initPwaInstall(){
-      syncStandaloneBodyClass();
       window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPwaPrompt = e;
         $('#btnPwaInstall')?.classList.remove('hidden');
       });
-      const btn = $('#btnPwaInstall');
-      const btnLabel = btn?.querySelector('.sidebar-label');
-      if (btn && isIosSafari() && !isStandalonePwa()) {
-        btn.classList.remove('hidden');
-        if (btnLabel) btnLabel.textContent = 'Install di iPhone';
-      }
-      btn?.addEventListener('click', async () => {
-        if (deferredPwaPrompt) {
-          deferredPwaPrompt.prompt();
-          try { await deferredPwaPrompt.userChoice; } catch (_) {}
-          deferredPwaPrompt = null;
-          btn?.classList.add('hidden');
+      $('#btnPwaInstall')?.addEventListener('click', async () => {
+        if (!deferredPwaPrompt) {
+          try { showToast('Install tidak tersedia di perangkat ini.', 'info'); } catch (_) {}
           return;
         }
-        if (isIosSafari() && !isStandalonePwa()) {
-          if (typeof openTutorialTopic === 'function') openTutorialTopic('pwa');
-          else if (typeof openTutorial === 'function') openTutorial();
-          return;
-        }
-        try { showToast('Install tidak tersedia di perangkat ini.', 'info'); } catch (_) {}
+        deferredPwaPrompt.prompt();
+        try { await deferredPwaPrompt.userChoice; } catch (_) {}
+        deferredPwaPrompt = null;
+        $('#btnPwaInstall')?.classList.add('hidden');
       });
-      if (isStandalonePwa()) {
-        btn?.classList.add('hidden');
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        $('#btnPwaInstall')?.classList.add('hidden');
       }
     }
 
@@ -2072,7 +2049,7 @@ async function upsertTransaction_legacy_local(tx) {
       return tx;
     }
 
-    async function parseQuickText(text){
+    async function legacyParseAIFirst(text){
       if (STATE.db.enabled && STATE.db.session?.access_token) {
         try {
           return await fetchAIParsedTransactionViaSupabase(text, 'text');
@@ -2083,6 +2060,159 @@ async function upsertTransaction_legacy_local(tx) {
         }
       }
       return parseTransactionTextHeuristic(text, { source:'quick' });
+    }
+
+    // =========================
+    // New Deterministic Parse Pipeline (L0→L1→L2)
+    // Controlled by feature flag: localStorage 'feature_new_parser_pipeline' = 'true'
+    // Full service: js/services/feature-flags.js
+    // TODO(PHASE-1): Update prebuild in package.json to copy js/parsers/ and js/services/
+    // =========================
+
+    /** @type {{ normalizeInput: Function, queryLocalMemory: Function, L2_applyRules: Function }|null} */
+    let _parseMods = null;
+
+    /**
+     * Lazily loads L0-L2 parser modules and caches them.
+     * Import paths are relative to document root (app.js is a classic script).
+     * @returns {Promise<{normalizeInput: Function, queryLocalMemory: Function, L2_applyRules: Function}>}
+     */
+    async function _loadParseMods() {
+      if (_parseMods) return _parseMods;
+      const [normMod, memMod, rulesMod] = await Promise.all([
+        import('./js/parsers/normalize.js'),
+        import('./js/services/memory.js'),
+        import('./js/parsers/rules.js'),
+      ]);
+      _parseMods = {
+        normalizeInput: normMod.normalizeInput,
+        queryLocalMemory: memMod.queryLocalMemory,
+        L2_applyRules: rulesMod.L2_applyRules,
+      };
+      return _parseMods;
+    }
+
+    /**
+     * Returns whether the new parse pipeline is enabled via localStorage.
+     * Defaults to false (safe for production until build pipeline is updated).
+     * @returns {boolean}
+     */
+    function _isNewPipelineEnabled() {
+      try {
+        return localStorage.getItem('feature_new_parser_pipeline') === 'true';
+      } catch { return false; }
+    }
+
+    /**
+     * Shapes a L0-L2 ParseResult into a full transaction object.
+     * Falls back to existing heuristic helpers for any missing fields.
+     * @param {string} text - original raw user input
+     * @param {object} result - ParseResult from L1 memory or L2 rules
+     * @param {string} provider - 'memory' | 'rule'
+     * @returns {object} transaction object compatible with legacyParseAIFirst output
+     */
+    function _buildTxFromPipelineResult(text, result, provider) {
+      const now = new Date().toISOString();
+      return {
+        id: uuid(),
+        date: result.date || parseDateFromText(text) || toISODate(new Date()),
+        type: result.type || 'expense',
+        amount: Number(result.amount || parseIDRAmount(text) || 0),
+        currency: 'IDR',
+        category: result.category || 'Lainnya',
+        subcategory: '',
+        account: result.account || guessAccount(text, null) || 'Cash',
+        merchant: result.merchant || '',
+        payment_method: result.account || guessPayment(text) || 'Cash',
+        notes: (text || '').trim(),
+        created_at: now,
+        updated_at: now,
+        meta: {
+          source: 'quick',
+          parsed: true,
+          provider,
+          confidence: result.confidence ?? 0.80,
+          matchedRules: result.matchedRules ?? [],
+          pipelineFlags: result.flags ?? [],
+        },
+      };
+    }
+
+    /**
+     * Runs the deterministic parse pipeline: L0 (normalize) → L1 (memory) → L2 (rules).
+     * Returns a transaction object on a confident match, or null on a pipeline miss
+     * (which causes the caller to cascade to L3-L5 via legacyParseAIFirst).
+     * @param {string} text - raw user input text
+     * @param {string|null} [userId] - reserved for future per-user L1 memory scoping
+     * @returns {Promise<object|null>}
+     */
+    async function runNewParsePipeline(text, userId = null) {
+      const mods = await _loadParseMods();
+
+      // L0: Normalize
+      const normalized = mods.normalizeInput(text);
+
+      // L1: Memory (exact ≥0.95, fuzzy ≥0.80)
+      const memHit = await mods.queryLocalMemory(normalized);
+      if (memHit && memHit.confidence >= 0.95) {
+        return _buildTxFromPipelineResult(text, memHit, 'memory');
+      }
+
+      // L2: Grammar rules (confident match ≥0.75)
+      const ruleHit = await mods.L2_applyRules(normalized);
+      if (ruleHit && ruleHit.confidence >= 0.75) {
+        return _buildTxFromPipelineResult(text, ruleHit, 'rule');
+      }
+
+      // Pipeline miss — caller falls through to legacy (L3-L5)
+      return null;
+    }
+
+    /**
+     * Parses quick-entry text into a transaction object.
+     * When feature flag 'feature_new_parser_pipeline' is ON:
+     *   Tries L0→L1→L2; on miss or error cascades to legacyParseAIFirst.
+     * When flag is OFF (default): delegates directly to legacyParseAIFirst.
+     * @param {string} text - raw user input
+     * @returns {Promise<object>} transaction object
+     */
+    async function parseQuickText(text) {
+      const startTime = Date.now();
+      let parsed;
+
+      if (_isNewPipelineEnabled()) {
+        try {
+          const pipelineResult = await runNewParsePipeline(text);
+          if (pipelineResult) parsed = pipelineResult;
+        } catch (err) {
+          console.error('[parseQuickText] new pipeline error, falling back:', err);
+          if (typeof Sentry !== 'undefined') Sentry.captureException(err);
+        }
+      }
+
+      if (!parsed) {
+        parsed = await legacyParseAIFirst(text);
+      }
+
+      // Log metrics (non-blocking, fire-and-forget)
+      try {
+        const userId = STATE.db.user?.id || null;
+        if (userId) {
+          import('./js/services/metrics.js').then(({ logParseEvent }) => {
+            logParseEvent({
+              userId,
+              input: text,
+              result: parsed,
+              latency: Date.now() - startTime,
+              pipeline: _isNewPipelineEnabled() ? 'new' : 'legacy',
+            });
+          }).catch(() => {});
+        }
+      } catch (err) {
+        // Silent fail — metrics must not break parsing
+      }
+
+      return parsed;
     }
 
     async function fetchInsightsViaSupabase(){
@@ -2667,13 +2797,22 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
 // aria-expanded untuk tombol periode (mobile) + kartu filter desktop
 ['#btnPeriodToggle', '#btnFilterCardDesktop', '#btnFilterStripDesktop', '#btnPeriodToggleTopbar'].forEach((sel) => {
   const el = $(sel);
-  if (el) el.setAttribute('aria-expanded', String(STATE.ui.monthPopoverOpen));
+  if (!el) return;
+  el.setAttribute('aria-expanded', String(
+    sel === '#btnPeriodToggle' && !isDesktopViewport()
+      ? STATE.ui.saldoFilterOpen
+      : STATE.ui.monthPopoverOpen
+  ));
 });
 
 // ikon chevron (mobile + desktop filter card)
 ['#periodChevron', '#filterChevronDesktop'].forEach((sel) => {
   const el = $(sel);
-  if (el) el.textContent = STATE.ui.monthPopoverOpen ? '▴' : '▾';
+  if (!el) return;
+  const open = sel === '#periodChevron' && !isDesktopViewport()
+    ? STATE.ui.saldoFilterOpen
+    : STATE.ui.monthPopoverOpen;
+  el.textContent = open ? '▴' : '▾';
 });
 
       $('#userNameTop').textContent = STATE.user.name || 'User';
@@ -2766,8 +2905,11 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
           : 'Akun user biasa.';
       }
 
-      $('#monthPopover')?.classList.toggle('hidden', !STATE.ui.monthPopoverOpen);
-      $('#filtersWrap')?.classList.toggle('hidden', !STATE.ui.monthPopoverOpen);
+      $('#monthPopover')?.classList.toggle('hidden', !STATE.ui.monthPopoverOpen || !isDesktopViewport());
+      $('#filtersWrap')?.classList.toggle('hidden', !STATE.ui.monthPopoverOpen || !isDesktopViewport());
+      $('#saldoFilterMenu')?.classList.toggle('hidden', !STATE.ui.saldoFilterOpen || isDesktopViewport());
+      const saldoFilterType = $('#saldoFilterType');
+      if (saldoFilterType) saldoFilterType.value = STATE.filters.type || '';
 
       // Desktop filter now renders inline above tx list (not as overlay)
       const filterBackdrop = $('#desktopFilterBackdrop');
@@ -2795,10 +2937,6 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       if (dynamicContent) {
         dynamicContent.classList.toggle('dynamic-content--dashboard', STATE.ui.dashboardOpen);
         dynamicContent.classList.toggle('dynamic-content--tx', !STATE.ui.dashboardOpen);
-      }
-      const saldoCard = $('#btnSaldoToggle');
-      if (saldoCard) {
-        saldoCard.classList.toggle('hero-saldo-card--compact', !STATE.ui.dashboardOpen);
       }
       const showTxUi = !STATE.ui.dashboardOpen;
       const showTxFilters = showTxUi && !!STATE.ui.txDesktopFiltersOpen;
@@ -2878,6 +3016,27 @@ if (isAdminUser && $('#logoUrl')) {
 renderAccountsSettings();
 }
 
+   function heroBudgetBarColor(pct) {
+      if (pct <= 50) return '#10b981';
+      if (pct <= 75) return '#eab308';
+      if (pct <= 90) return '#f97316';
+      return '#ef4444';
+    }
+    function renderHeroBudgetProgress(s, masked) {
+      const bar = $('#heroBudgetBar');
+      if (!bar) return;
+      const { planned } = budgetForPeriod();
+      const actual = s.expense;
+      if (masked || !planned) {
+        bar.style.width = '0%';
+        bar.style.background = 'rgba(148,163,184,.3)';
+        return;
+      }
+      const pct = Math.min(100, (actual / planned) * 100);
+      bar.style.width = `${pct}%`;
+      bar.style.background = heroBudgetBarColor(pct);
+    }
+
    function renderSaldo() {
   const key = STATE.period.end;
   const saldo = estimateSaldoUpToPeriodEnd();
@@ -2899,7 +3058,7 @@ renderAccountsSettings();
     if (isCalculating) {
       el.textContent = '';
       const skelCls = (sel === '#kpiSaldo' || sel === '#kpiSaldoTopbar')
-        ? 'hero-saldo-card__amount saldo-amount mt-2 skeleton-green'
+        ? 'hero-saldo-card__amount saldo-amount skeleton-green'
         : 'saldo-amount mt-1 skeleton-green';
       el.className = skelCls + (masked ? ' saldo-masked' : '');
       el.style.minHeight = '28px';
@@ -2907,7 +3066,7 @@ renderAccountsSettings();
       el.style.display = 'block';
     } else if (masked) {
       el.className = (sel === '#kpiSaldo' || sel === '#kpiSaldoTopbar')
-        ? 'hero-saldo-card__amount saldo-amount mt-2 saldo-masked'
+        ? 'hero-saldo-card__amount saldo-amount saldo-masked'
         : 'saldo-amount mt-1 saldo-masked';
       el.style.minHeight = '';
       el.style.minWidth = '';
@@ -2919,7 +3078,7 @@ renderAccountsSettings();
       const startAt = performance.now();
       const duration = 360;
       el.className = (sel === '#kpiSaldo' || sel === '#kpiSaldoTopbar')
-        ? 'hero-saldo-card__amount saldo-amount mt-2'
+        ? 'hero-saldo-card__amount saldo-amount'
         : 'saldo-amount mt-1';
       el.style.minHeight = '';
       el.style.minWidth = '';
@@ -2953,16 +3112,13 @@ renderAccountsSettings();
   const s = sumByType(txs);
   const netStr = formatCompactIDR(s.net);
 
-  const subHtmlMobile = `
-    <div class="kpi-metric kpi-metric--income">
-      <span aria-hidden="true">↑ +${formatCompactIDR(s.income)}</span>
-      <span class="kpi-metric__value">Income</span>
-    </div>
-    <div class="kpi-metric kpi-metric--expense">
-      <span aria-hidden="true">↓ −${formatCompactIDR(s.expense)}</span>
-      <span class="kpi-metric__value">Expense</span>
-    </div>
-  `;
+  const incomeText = masked ? '••••' : `+${formatCompactIDR(s.income)}`;
+  const expenseText = masked ? '••••' : `−${formatCompactIDR(s.expense)}`;
+  const elIncome = $('#kpiSaldoIncome');
+  if (elIncome) elIncome.textContent = incomeText;
+  const elExpense = $('#kpiSaldoExpense');
+  if (elExpense) elExpense.textContent = expenseText;
+
   const subHtmlDesktop = `
     <div class="kpi-metric kpi-metric--income">
       <span aria-hidden="true">↑ +${formatCompactIDR(s.income)}</span>
@@ -2974,17 +3130,17 @@ renderAccountsSettings();
     </div>
   `;
 
-  const elSubMobile = $('#kpiSaldoSub');
-  if (elSubMobile) elSubMobile.innerHTML = subHtmlMobile;
   const elSubDesktop = $('#kpiSaldoSubDesktop');
   if (elSubDesktop) elSubDesktop.innerHTML = subHtmlDesktop;
+
+  renderHeroBudgetProgress(s, masked);
   
   const elIncomeTopbar = $('#kpiIncomeTopbarVal');
   if (elIncomeTopbar) elIncomeTopbar.textContent = `+${formatCompactIDR(s.income)}`;
   const elExpenseTopbar = $('#kpiExpenseTopbarVal');
   if (elExpenseTopbar) elExpenseTopbar.textContent = `-${formatCompactIDR(s.expense)}`;
 
-  try { renderHeroSparkline('#heroSaldoSparkline'); } catch (_) {}
+  try { renderHeroSparkline('#heroSaldoSparklineDesktop'); } catch (_) {}
   try { renderHeroSparklineDesktop(); } catch (_) {}
   try { renderHeroSparkline('#heroSaldoSparklineTopbar'); } catch (_) {}
 
@@ -3923,7 +4079,7 @@ function generateSmartBudgetRecommendation() {
                 </div>
               </div>
 
-              <div class="tx-card-dropdown absolute right-2 top-10 z-20 min-w-[120px] rounded-lg app-card-opaque border border-[var(--app-border)] shadow-lg py-1${showCardRow ? '' : ' hidden'}" data-tx-dropdown="${escapeHtmlAttr(tx.id)}">
+              <div class="tx-card-dropdown absolute right-2 top-10 z-20 min-w-[120px] rounded-lg app-card-opaque border border-[var(--app-border)] shadow-lg py-1 hidden" data-tx-dropdown="${escapeHtmlAttr(tx.id)}">
                 <button type="button" class="tap w-full text-left px-3 py-2 text-xs" data-tx-edit="${escapeHtmlAttr(tx.id)}">${t('tx.menu.edit') || 'Edit'}</button>
                 <button type="button" class="tap w-full text-left px-3 py-2 text-xs" style="color:var(--accent-danger)" data-tx-del="${escapeHtmlAttr(tx.id)}">${t('tx.menu.delete') || 'Hapus'}</button>
               </div>
@@ -8408,8 +8564,18 @@ function toggleNav(view, triggerEl) {
 
     document.addEventListener('click', () => $('#actionMenu')?.classList.add('hidden'));
 
+    function setSaldoFilterMenu(open) {
+      STATE.ui.saldoFilterOpen = !!open;
+      if (open) STATE.ui.monthPopoverOpen = false;
+      rerender();
+    }
+    function toggleSaldoFilterMenu() {
+      setSaldoFilterMenu(!STATE.ui.saldoFilterOpen);
+    }
+
     function setMonthPopover(open){
       STATE.ui.monthPopoverOpen = open;
+      if (open) STATE.ui.saldoFilterOpen = false;
       placeFilterPanel();
       rerender();
     }
@@ -8457,7 +8623,11 @@ function toggleNav(view, triggerEl) {
 
   el.addEventListener('click', (e) => {
     e.stopPropagation();
-    toggleMonthPopover();   // fungsi lama tetap dipakai
+    if (sel === '#btnPeriodToggle' && !isDesktopViewport()) {
+      toggleSaldoFilterMenu();
+    } else {
+      toggleMonthPopover();
+    }
   });
 });
 
@@ -8620,12 +8790,7 @@ function toggleNav(view, triggerEl) {
     });
     $$('.tx-view-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const view = btn.getAttribute('data-view') || 'card';
-        if (view === 'table' && !isDesktopViewport() && window.innerWidth < 400) {
-          try { showToast('Tabel tidak optimal di layar kecil. Gunakan tampilan Card.', 'info'); } catch (_) {}
-          return;
-        }
-        STATE.ui.txView = view;
+        STATE.ui.txView = btn.getAttribute('data-view') || 'card';
         syncTxViewToggle();
         renderTransactions();
       });
@@ -8779,9 +8944,39 @@ function toggleNav(view, triggerEl) {
       e.stopPropagation();
       openMenu();
     });
+    $('#btnSettingsMobile')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openSettings();
+    });
     $('#btnNotifDesktop')?.addEventListener('click', (e) => {
       e.stopPropagation();
       openMenu();
+    });
+
+    $('#heroBudgetProgress')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openBudget();
+    });
+
+    $('#saldoFilterType')?.addEventListener('change', () => {
+      STATE.filters.type = $('#saldoFilterType').value || '';
+      if ($('#fType')) $('#fType').value = STATE.filters.type;
+      if ($('#dfType')) $('#dfType').value = STATE.filters.type;
+      STATE.ui.txVisibleCount = 50;
+      rerender();
+    });
+
+    $('#btnPrintReportMobile')?.addEventListener('click', () => {
+      printReport();
+      setSaldoFilterMenu(false);
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!STATE.ui.saldoFilterOpen || isDesktopViewport()) return;
+      const menu = $('#saldoFilterMenu');
+      const btn = $('#btnPeriodToggle');
+      if (menu?.contains(e.target) || btn?.contains(e.target)) return;
+      setSaldoFilterMenu(false);
     });
 
     ['#btnSaldoMask', '#btnSaldoMaskDesktop', '#btnSaldoMaskTopbar'].forEach((sel) => {
@@ -9002,7 +9197,6 @@ function toggleNav(view, triggerEl) {
         await sleep(Math.max(0, MIN_LOADER_MS - elapsed));
         hideLoadingOverlay();
         document.body.classList.add('app-ready');
-        syncStandaloneBodyClass();
       }
     })();
 

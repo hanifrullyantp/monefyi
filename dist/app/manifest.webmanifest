@@ -9,19 +9,19 @@
   "theme_color": "#0F1117",
   "icons": [
     {
-      "src": "./icons/icon-192.png",
+      "src": "./icons/monefyi-logo.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "./icons/icon-512.png",
+      "src": "./icons/monefyi-logo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "./icons/icon-512-maskable.png",
+      "src": "./icons/monefyi-logo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

@@ -584,21 +584,20 @@ html, body {
     .saldo-metric-chip--income { color: var(--accent-primary); }
     .saldo-metric-chip--expense { color: var(--accent-danger); }
 
-    /* Mobile header — 3 zones */
+    /* Mobile header — logo | spacer | search | settings | profile */
     .mobile-header-row {
       display: grid;
-      grid-template-columns: auto 1fr auto;
-      align-items: center;
-      gap: 12px;
-    }
-    .mobile-header-user {
-      justify-self: center;
-      max-width: 100%;
-    }
-    .mobile-header-actions {
-      display: flex;
+      grid-template-columns: auto 1fr auto auto auto;
       align-items: center;
       gap: 8px;
+    }
+    .mobile-header-spacer { min-width: 0; }
+    .mobile-header-avatar {
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border: none;
+      background: transparent;
     }
     .mobile-header-ghost {
       width: 40px;
@@ -616,25 +615,16 @@ html, body {
     /* Hero saldo card (mobile) */
     .hero-saldo-card {
       position: relative;
-      padding: 16px 16px 20px;
-      border-radius: 20px 20px 0 0;
+      padding: 12px 14px 14px;
+      border-radius: 16px;
       background: var(--grad-hero-surface);
-      border: none;
-      border-top: 1px solid rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.06);
       box-shadow: none;
       overflow: hidden;
-      margin-bottom: -4px;
+      margin-bottom: 0;
     }
     .hero-saldo-card::after {
-      content: '';
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      height: 40px;
-      background: linear-gradient(to bottom, transparent, var(--app-bg));
-      pointer-events: none;
-      z-index: 2;
+      display: none;
     }
     .hero-saldo-card::before {
       content: '';
@@ -672,6 +662,79 @@ html, body {
       border: 1px solid rgba(255,255,255,.12);
       color: var(--app-text);
       backdrop-filter: blur(8px);
+    }
+    .hero-saldo-card__grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+      align-items: stretch;
+    }
+    .hero-saldo-card__col-left {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+    }
+    .hero-saldo-card__col-right {
+      display: grid;
+      grid-template-rows: 1fr 1fr;
+      gap: 6px;
+      min-width: 0;
+    }
+    .hero-saldo-kpi {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 6px 8px;
+      border-radius: 10px;
+      min-width: 0;
+      white-space: nowrap;
+    }
+    .hero-saldo-kpi--income {
+      color: var(--accent-primary);
+      background: rgba(16,185,129,.1);
+      border: 1px solid rgba(16,185,129,.18);
+    }
+    .hero-saldo-kpi--expense {
+      color: var(--accent-danger);
+      background: rgba(244,63,94,.08);
+      border: 1px solid rgba(244,63,94,.16);
+    }
+    .hero-budget-progress {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      padding: 0;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+    }
+    .hero-budget-progress__track {
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.08);
+      overflow: hidden;
+    }
+    .hero-budget-progress__fill {
+      height: 100%;
+      border-radius: inherit;
+      background: var(--accent-primary);
+      transition: width 0.35s ease, background 0.25s ease;
+    }
+    .saldo-filter-menu {
+      margin-top: 8px;
+      padding: 12px;
+      border-radius: 14px;
+      background: var(--app-card);
+      border: 1px solid var(--app-border);
+    }
+    .saldo-filter-menu__view {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
     }
     .hero-saldo-card__body {
       display: flex;
@@ -2078,7 +2141,85 @@ html, body {
 
     @media (max-width: 767px) {
       body {
-        --mobile-nav-offset: calc(5.5rem + max(0.75rem, env(safe-area-inset-bottom)));
+        --mobile-nav-offset: calc(4.75rem + max(0.75rem, env(safe-area-inset-bottom)));
+        background-color: #0a1219;
+        background-image:
+          radial-gradient(ellipse 120% 40% at 50% 0%, rgba(16,185,129,.12), transparent 55%),
+          radial-gradient(ellipse 80% 30% at 100% 20%, rgba(14,165,233,.06), transparent 50%),
+          linear-gradient(180deg, #0c1512 0%, #0a1219 45%, #0a1219 100%);
+      }
+      .app-header {
+        background: transparent;
+        border-bottom: none;
+      }
+      .hero-saldo-card__amount.saldo-amount {
+        font-size: clamp(20px, 5.5vw, 26px);
+        font-weight: 800;
+        max-width: 100%;
+      }
+      body.app-ready {
+        height: 100dvh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      body.app-ready .app-header {
+        flex-shrink: 0;
+        position: relative;
+        top: auto;
+      }
+      body.app-ready #appShell {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        padding-bottom: var(--mobile-nav-offset);
+      }
+      body.app-ready #appShell > .flex {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      body.app-ready .tx-main-panel {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      body.app-ready #dynamicContent.dynamic-content--tx {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      body.app-ready #dynamicContent.dynamic-content--dashboard {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      body.app-ready #txSection {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        margin-top: 0 !important;
+      }
+      body.app-ready #txListHost {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .tx-card-dropdown {
+        display: none;
+      }
+      .tx-card-dropdown:not(.hidden) {
+        display: block;
       }
       .nav-bar {
         z-index: 110;

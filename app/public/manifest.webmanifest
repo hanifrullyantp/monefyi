@@ -2,10 +2,9 @@
   "name": "Monefyi",
   "short_name": "Monefyi",
   "description": "AI Personal Finance (PWA)",
-  "start_url": "./index.html",
-  "scope": "./",
+  "start_url": "/app/",
+  "scope": "/app/",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone"],
   "background_color": "#0F1117",
   "theme_color": "#0F1117",
   "icons": [

@@ -877,6 +877,7 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
       ui: {
         dashboardOpen: false,
         txDesktopFiltersOpen: false,
+        saldoFilterOpen: false,
         monthPopoverOpen: false,
         advisorOpen: false,
         receiptPickerOpened: false,
@@ -2796,13 +2797,22 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
 // aria-expanded untuk tombol periode (mobile) + kartu filter desktop
 ['#btnPeriodToggle', '#btnFilterCardDesktop', '#btnFilterStripDesktop', '#btnPeriodToggleTopbar'].forEach((sel) => {
   const el = $(sel);
-  if (el) el.setAttribute('aria-expanded', String(STATE.ui.monthPopoverOpen));
+  if (!el) return;
+  el.setAttribute('aria-expanded', String(
+    sel === '#btnPeriodToggle' && !isDesktopViewport()
+      ? STATE.ui.saldoFilterOpen
+      : STATE.ui.monthPopoverOpen
+  ));
 });
 
 // ikon chevron (mobile + desktop filter card)
 ['#periodChevron', '#filterChevronDesktop'].forEach((sel) => {
   const el = $(sel);
-  if (el) el.textContent = STATE.ui.monthPopoverOpen ? '▴' : '▾';
+  if (!el) return;
+  const open = sel === '#periodChevron' && !isDesktopViewport()
+    ? STATE.ui.saldoFilterOpen
+    : STATE.ui.monthPopoverOpen;
+  el.textContent = open ? '▴' : '▾';
 });
 
       $('#userNameTop').textContent = STATE.user.name || 'User';
@@ -2895,8 +2905,11 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
           : 'Akun user biasa.';
       }
 
-      $('#monthPopover')?.classList.toggle('hidden', !STATE.ui.monthPopoverOpen);
-      $('#filtersWrap')?.classList.toggle('hidden', !STATE.ui.monthPopoverOpen);
+      $('#monthPopover')?.classList.toggle('hidden', !STATE.ui.monthPopoverOpen || !isDesktopViewport());
+      $('#filtersWrap')?.classList.toggle('hidden', !STATE.ui.monthPopoverOpen || !isDesktopViewport());
+      $('#saldoFilterMenu')?.classList.toggle('hidden', !STATE.ui.saldoFilterOpen || isDesktopViewport());
+      const saldoFilterType = $('#saldoFilterType');
+      if (saldoFilterType) saldoFilterType.value = STATE.filters.type || '';
 
       // Desktop filter now renders inline above tx list (not as overlay)
       const filterBackdrop = $('#desktopFilterBackdrop');
@@ -3003,6 +3016,27 @@ if (isAdminUser && $('#logoUrl')) {
 renderAccountsSettings();
 }
 
+   function heroBudgetBarColor(pct) {
+      if (pct <= 50) return '#10b981';
+      if (pct <= 75) return '#eab308';
+      if (pct <= 90) return '#f97316';
+      return '#ef4444';
+    }
+    function renderHeroBudgetProgress(s, masked) {
+      const bar = $('#heroBudgetBar');
+      if (!bar) return;
+      const { planned } = budgetForPeriod();
+      const actual = s.expense;
+      if (masked || !planned) {
+        bar.style.width = '0%';
+        bar.style.background = 'rgba(148,163,184,.3)';
+        return;
+      }
+      const pct = Math.min(100, (actual / planned) * 100);
+      bar.style.width = `${pct}%`;
+      bar.style.background = heroBudgetBarColor(pct);
+    }
+
    function renderSaldo() {
   const key = STATE.period.end;
   const saldo = estimateSaldoUpToPeriodEnd();
@@ -3024,7 +3058,7 @@ renderAccountsSettings();
     if (isCalculating) {
       el.textContent = '';
       const skelCls = (sel === '#kpiSaldo' || sel === '#kpiSaldoTopbar')
-        ? 'hero-saldo-card__amount saldo-amount mt-2 skeleton-green'
+        ? 'hero-saldo-card__amount saldo-amount skeleton-green'
         : 'saldo-amount mt-1 skeleton-green';
       el.className = skelCls + (masked ? ' saldo-masked' : '');
       el.style.minHeight = '28px';
@@ -3032,7 +3066,7 @@ renderAccountsSettings();
       el.style.display = 'block';
     } else if (masked) {
       el.className = (sel === '#kpiSaldo' || sel === '#kpiSaldoTopbar')
-        ? 'hero-saldo-card__amount saldo-amount mt-2 saldo-masked'
+        ? 'hero-saldo-card__amount saldo-amount saldo-masked'
         : 'saldo-amount mt-1 saldo-masked';
       el.style.minHeight = '';
       el.style.minWidth = '';
@@ -3044,7 +3078,7 @@ renderAccountsSettings();
       const startAt = performance.now();
       const duration = 360;
       el.className = (sel === '#kpiSaldo' || sel === '#kpiSaldoTopbar')
-        ? 'hero-saldo-card__amount saldo-amount mt-2'
+        ? 'hero-saldo-card__amount saldo-amount'
         : 'saldo-amount mt-1';
       el.style.minHeight = '';
       el.style.minWidth = '';
@@ -3078,16 +3112,13 @@ renderAccountsSettings();
   const s = sumByType(txs);
   const netStr = formatCompactIDR(s.net);
 
-  const subHtmlMobile = `
-    <div class="kpi-metric kpi-metric--income">
-      <span aria-hidden="true">↑ +${formatCompactIDR(s.income)}</span>
-      <span class="kpi-metric__value">Income</span>
-    </div>
-    <div class="kpi-metric kpi-metric--expense">
-      <span aria-hidden="true">↓ −${formatCompactIDR(s.expense)}</span>
-      <span class="kpi-metric__value">Expense</span>
-    </div>
-  `;
+  const incomeText = masked ? '••••' : `+${formatCompactIDR(s.income)}`;
+  const expenseText = masked ? '••••' : `−${formatCompactIDR(s.expense)}`;
+  const elIncome = $('#kpiSaldoIncome');
+  if (elIncome) elIncome.textContent = incomeText;
+  const elExpense = $('#kpiSaldoExpense');
+  if (elExpense) elExpense.textContent = expenseText;
+
   const subHtmlDesktop = `
     <div class="kpi-metric kpi-metric--income">
       <span aria-hidden="true">↑ +${formatCompactIDR(s.income)}</span>
@@ -3099,17 +3130,17 @@ renderAccountsSettings();
     </div>
   `;
 
-  const elSubMobile = $('#kpiSaldoSub');
-  if (elSubMobile) elSubMobile.innerHTML = subHtmlMobile;
   const elSubDesktop = $('#kpiSaldoSubDesktop');
   if (elSubDesktop) elSubDesktop.innerHTML = subHtmlDesktop;
+
+  renderHeroBudgetProgress(s, masked);
   
   const elIncomeTopbar = $('#kpiIncomeTopbarVal');
   if (elIncomeTopbar) elIncomeTopbar.textContent = `+${formatCompactIDR(s.income)}`;
   const elExpenseTopbar = $('#kpiExpenseTopbarVal');
   if (elExpenseTopbar) elExpenseTopbar.textContent = `-${formatCompactIDR(s.expense)}`;
 
-  try { renderHeroSparkline('#heroSaldoSparkline'); } catch (_) {}
+  try { renderHeroSparkline('#heroSaldoSparklineDesktop'); } catch (_) {}
   try { renderHeroSparklineDesktop(); } catch (_) {}
   try { renderHeroSparkline('#heroSaldoSparklineTopbar'); } catch (_) {}
 
@@ -4048,7 +4079,7 @@ function generateSmartBudgetRecommendation() {
                 </div>
               </div>
 
-              <div class="tx-card-dropdown absolute right-2 top-10 z-20 min-w-[120px] rounded-lg app-card-opaque border border-[var(--app-border)] shadow-lg py-1${showCardRow ? '' : ' hidden'}" data-tx-dropdown="${escapeHtmlAttr(tx.id)}">
+              <div class="tx-card-dropdown absolute right-2 top-10 z-20 min-w-[120px] rounded-lg app-card-opaque border border-[var(--app-border)] shadow-lg py-1 hidden" data-tx-dropdown="${escapeHtmlAttr(tx.id)}">
                 <button type="button" class="tap w-full text-left px-3 py-2 text-xs" data-tx-edit="${escapeHtmlAttr(tx.id)}">${t('tx.menu.edit') || 'Edit'}</button>
                 <button type="button" class="tap w-full text-left px-3 py-2 text-xs" style="color:var(--accent-danger)" data-tx-del="${escapeHtmlAttr(tx.id)}">${t('tx.menu.delete') || 'Hapus'}</button>
               </div>
@@ -8533,8 +8564,18 @@ function toggleNav(view, triggerEl) {
 
     document.addEventListener('click', () => $('#actionMenu')?.classList.add('hidden'));
 
+    function setSaldoFilterMenu(open) {
+      STATE.ui.saldoFilterOpen = !!open;
+      if (open) STATE.ui.monthPopoverOpen = false;
+      rerender();
+    }
+    function toggleSaldoFilterMenu() {
+      setSaldoFilterMenu(!STATE.ui.saldoFilterOpen);
+    }
+
     function setMonthPopover(open){
       STATE.ui.monthPopoverOpen = open;
+      if (open) STATE.ui.saldoFilterOpen = false;
       placeFilterPanel();
       rerender();
     }
@@ -8582,7 +8623,11 @@ function toggleNav(view, triggerEl) {
 
   el.addEventListener('click', (e) => {
     e.stopPropagation();
-    toggleMonthPopover();   // fungsi lama tetap dipakai
+    if (sel === '#btnPeriodToggle' && !isDesktopViewport()) {
+      toggleSaldoFilterMenu();
+    } else {
+      toggleMonthPopover();
+    }
   });
 });
 
@@ -8899,9 +8944,39 @@ function toggleNav(view, triggerEl) {
       e.stopPropagation();
       openMenu();
     });
+    $('#btnSettingsMobile')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openSettings();
+    });
     $('#btnNotifDesktop')?.addEventListener('click', (e) => {
       e.stopPropagation();
       openMenu();
+    });
+
+    $('#heroBudgetProgress')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openBudget();
+    });
+
+    $('#saldoFilterType')?.addEventListener('change', () => {
+      STATE.filters.type = $('#saldoFilterType').value || '';
+      if ($('#fType')) $('#fType').value = STATE.filters.type;
+      if ($('#dfType')) $('#dfType').value = STATE.filters.type;
+      STATE.ui.txVisibleCount = 50;
+      rerender();
+    });
+
+    $('#btnPrintReportMobile')?.addEventListener('click', () => {
+      printReport();
+      setSaldoFilterMenu(false);
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!STATE.ui.saldoFilterOpen || isDesktopViewport()) return;
+      const menu = $('#saldoFilterMenu');
+      const btn = $('#btnPeriodToggle');
+      if (menu?.contains(e.target) || btn?.contains(e.target)) return;
+      setSaldoFilterMenu(false);
     });
 
     ['#btnSaldoMask', '#btnSaldoMaskDesktop', '#btnSaldoMaskTopbar'].forEach((sel) => {
@@ -9121,6 +9196,7 @@ function toggleNav(view, triggerEl) {
         const elapsed = Date.now() - bootStarted;
         await sleep(Math.max(0, MIN_LOADER_MS - elapsed));
         hideLoadingOverlay();
+        document.body.classList.add('app-ready');
       }
     })();
 
@@ -9172,8 +9248,7 @@ function toggleNav(view, triggerEl) {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
         navigator.serviceWorker
-          // Gunakan path relatif terhadap `index.html` agar kompatibel untuk deploy subfolder
-          .register('./sw.js')
+          .register('./sw.js', { scope: '/app/' })
           .catch(function (err) {
             console.error('Service worker registration failed:', err);
           });
