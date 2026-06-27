@@ -586,51 +586,61 @@ html, body {
 
     /* Mobile header — logo | periode | search · settings · profile */
     .mobile-header-row {
-      display: flex;
+      display: grid;
+      grid-template-columns: 36px minmax(0, 1fr) auto;
       align-items: center;
       gap: 8px;
     }
     .mobile-header-logo {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       flex-shrink: 0;
+      width: 36px;
+      height: 36px;
       padding: 0;
       border: none;
       background: transparent;
     }
     .mobile-header-period-wrap {
-      flex: 1;
       min-width: 0;
     }
     .mobile-header-period {
-      display: inline-flex;
+      display: flex;
       align-items: center;
-      gap: 6px;
-      max-width: 100%;
-      padding: 7px 12px;
+      gap: 4px;
+      width: 100%;
+      min-width: 0;
+      padding: 7px 10px;
       border-radius: var(--radius-pill);
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
       background: rgba(255,255,255,.08);
       border: 1px solid rgba(255,255,255,.12);
       color: var(--app-text);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
     .mobile-header-period #saldoMonth {
+      flex: 1;
+      min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .mobile-header-period__chev {
+      flex-shrink: 0;
+      font-size: 10px;
+      opacity: 0.75;
+      line-height: 1;
     }
     .mobile-header-actions {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
       flex-shrink: 0;
     }
     .mobile-header-avatar {
-      width: 36px;
-      height: 36px;
+      width: 34px;
+      height: 34px;
       padding: 0;
       border: none;
       background: transparent;
@@ -643,17 +653,19 @@ html, body {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 36px;
-      height: 36px;
+      width: 34px;
+      height: 34px;
       border-radius: 999px;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
       background: rgba(20,184,166,.20);
       color: rgba(153,246,228,.95);
     }
     .mobile-header-ghost {
-      width: 36px;
-      height: 36px;
+      box-sizing: border-box;
+      width: 34px;
+      height: 34px;
+      padding: 0;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -661,6 +673,10 @@ html, body {
       border: 1px solid var(--app-border);
       background: transparent;
       color: var(--app-muted);
+      flex-shrink: 0;
+    }
+    .mobile-header-ghost svg {
+      display: block;
       flex-shrink: 0;
     }
     .mobile-header-ghost:hover { color: var(--app-text); border-color: color-mix(in srgb, var(--accent-primary) 40%, var(--app-border)); }
@@ -759,14 +775,34 @@ html, body {
     .hero-budget-progress {
       display: block;
       width: 100%;
-      margin-top: 10px;
+      margin-top: 12px;
       padding: 0;
       border: none;
       background: transparent;
       cursor: pointer;
+      text-align: left;
+    }
+    .hero-budget-progress__head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .hero-budget-progress__label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--app-muted);
+      letter-spacing: 0.01em;
+    }
+    .hero-budget-progress__pct {
+      font-size: 12px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--accent-primary);
     }
     .hero-budget-progress__track {
-      height: 6px;
+      height: 7px;
       border-radius: 999px;
       background: rgba(255,255,255,.08);
       overflow: hidden;
@@ -2194,7 +2230,7 @@ html, body {
         border-bottom: none;
       }
       .hero-saldo-card__amount.saldo-amount {
-        font-size: clamp(20px, 5.5vw, 26px);
+        font-size: clamp(26px, 7.2vw, 34px);
         font-weight: 800;
         max-width: 100%;
       }

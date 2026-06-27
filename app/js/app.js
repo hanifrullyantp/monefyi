@@ -3055,17 +3055,28 @@ renderAccountsSettings();
     }
     function renderHeroBudgetProgress(s, masked) {
       const bar = $('#heroBudgetBar');
+      const pctEl = $('#heroBudgetPct');
       if (!bar) return;
       const { planned } = budgetForPeriod();
       const actual = s.expense;
       if (masked || !planned) {
         bar.style.width = '0%';
         bar.style.background = 'rgba(148,163,184,.3)';
+        if (pctEl) {
+          pctEl.textContent = masked ? '•••' : '—';
+          pctEl.style.color = 'var(--app-muted)';
+        }
         return;
       }
       const pct = Math.min(100, (actual / planned) * 100);
+      const pctRounded = Math.round(pct);
+      const color = heroBudgetBarColor(pct);
       bar.style.width = `${pct}%`;
-      bar.style.background = heroBudgetBarColor(pct);
+      bar.style.background = color;
+      if (pctEl) {
+        pctEl.textContent = `${pctRounded}%`;
+        pctEl.style.color = color;
+      }
     }
 
    function renderSaldo() {
