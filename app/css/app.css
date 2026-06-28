@@ -650,9 +650,45 @@ html, body {
     .mobile-header-actions {
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 2px;
       flex-shrink: 0;
       min-width: 0;
+    }
+    .mobile-header-actions .mobile-header-ghost,
+    .mobile-header-actions .mobile-header-user {
+      box-sizing: border-box;
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      max-width: 32px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      color: var(--app-muted);
+      flex-shrink: 0;
+    }
+    .mobile-header-actions .mobile-header-ghost svg,
+    .mobile-header-actions .mobile-header-user .user-btn__icon {
+      display: block;
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+    }
+    .mobile-header-actions .mobile-header-ghost:hover,
+    .mobile-header-actions .mobile-header-user:hover {
+      color: var(--app-text);
+      background: transparent;
+      border: none;
+    }
+    .mobile-header-actions .mobile-header-user #userPlanBadge,
+    .mobile-header-actions .mobile-header-user .user-btn__name,
+    .mobile-header-actions .mobile-header-user .user-btn__chev {
+      display: none !important;
     }
     .mobile-header-ghost {
       box-sizing: border-box;
