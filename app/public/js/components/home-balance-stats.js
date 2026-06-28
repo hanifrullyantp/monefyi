@@ -7,15 +7,15 @@ import { Icon } from './icons.js';
 
 /**
  * @param {object} summary
- * @param {Function} formatIDR
+ * @param {Function} formatValue - compact or full IDR formatter
  * @param {boolean} masked
  * @returns {HTMLElement}
  */
-export function renderHomeBalanceStats(summary, formatIDR, masked = false) {
+export function renderHomeBalanceStats(summary, formatValue, masked = false) {
   const el = document.createElement('section');
   el.className = 'home-stats-row';
 
-  const mask = (v) => (masked ? '••••••' : formatIDR(v));
+  const mask = (v) => (masked ? '••••••' : `Rp ${formatValue(v)}`);
   const changeHtml = (val, invert = false) => {
     if (val === null || val === undefined) return '';
     const up = val >= 0;
@@ -27,7 +27,7 @@ export function renderHomeBalanceStats(summary, formatIDR, masked = false) {
 
   el.innerHTML = `
     <div class="home-stat-card home-stat-card--income">
-      <div class="home-stat-card__icon">${Icon('arrowUpRight', { size: 18, color: '#10b981' })}</div>
+      <div class="home-stat-card__icon">${Icon('arrowUpRight', { size: 14, color: '#10b981' })}</div>
       <div class="home-stat-card__label">Pemasukan</div>
       <div class="home-stat-card__value">${mask(summary.totalIncome)}</div>
       ${changeHtml(summary.incomeChange)}

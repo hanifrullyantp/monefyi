@@ -27,7 +27,7 @@ export function renderHomePage(container, ctx, callbacks = {}) {
   container.innerHTML = '';
   container.className = 'home-page';
 
-  container.appendChild(renderHomeBalanceStats(data.summary, formatIDR, masked));
+  container.appendChild(renderHomeBalanceStats(data.summary, formatCompactIDR, masked));
   container.appendChild(renderAccountCards(data.accounts, formatIDR, masked, {
     onViewAll: callbacks.onViewAccounts,
     onAccountClick: callbacks.onAccountClick,
