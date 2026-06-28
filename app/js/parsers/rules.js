@@ -522,16 +522,16 @@ export function resolveAccount(text) {
  * is high enough to stop the pipeline (threshold: ≥ 0.75).
  *
  * @param {{ text: string, tokens: string[] }} input - L0 normalised input
- * @returns {Promise<ParseResult|null>}
+ * @returns {ParseResult|null}
  *
  * @example
  * const normalized = normalizeInput('beli kopi 25rb gopay');
- * const result = await L2_applyRules(normalized);
+ * const result = L2_applyRules(normalized);
  * // => { type:'expense', merchant:'kopi', amount:25000,
  * //      category:'Food & Drink', account:'GoPay', confidence:0.85,
  * //      source:'rule', matchedRules:['expense_verb_merchant_amount_account'], flags:[] }
  */
-export async function L2_applyRules(input) {
+export function L2_applyRules(input) {
   const grammarResult = applyGrammarRules(input);
   if (!grammarResult) return null;
 

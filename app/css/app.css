@@ -1803,6 +1803,34 @@ html, body {
       background: rgba(16, 185, 129, 0.1);
       border-color: rgba(16, 185, 129, 0.35);
     }
+    .quick-reco-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      width: 100%;
+      padding: 2px 0;
+      border: none;
+      background: transparent;
+      color: #10b981;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: left;
+    }
+    .quick-reco-toggle__chev {
+      flex-shrink: 0;
+      font-size: 12px;
+      line-height: 1;
+      opacity: 0.85;
+      transition: transform 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+    .quick-reco-toggle[aria-expanded="true"] .quick-reco-toggle__chev {
+      transform: rotate(180deg);
+    }
+    .quick-reco-list:not(.hidden) {
+      margin-top: 8px;
+    }
 
     .sheet-close-btn {
       color: #991b1b !important;

@@ -34,7 +34,7 @@
 
 
  
-  <link rel="stylesheet" crossorigin href="/app/assets/index-BUBLp4Pa.css">
+  <link rel="stylesheet" crossorigin href="/app/assets/index-BECwyT3b.css">
 </head>
 <body>
   <!-- Logo Monefyi (satu sumber untuk loading, sidebar, header, auth) -->
@@ -1061,9 +1061,12 @@
               </div>
             </div>
 
-            <div class="mt-3">
-              <div id="quickRecoTitle" class="text-[11px] font-bold mb-2" style="color:#10b981;">Rekomendasi input</div>
-              <div id="quickRecoList" class="flex flex-wrap gap-2"></div>
+            <div class="mt-3 quick-reco-section">
+              <button type="button" id="btnQuickRecoToggle" class="quick-reco-toggle tap" aria-expanded="false" aria-controls="quickRecoList">
+                <span id="quickRecoTitle">Rekomendasi input</span>
+                <span class="quick-reco-toggle__chev" aria-hidden="true">▾</span>
+              </button>
+              <div id="quickRecoList" class="quick-reco-list hidden flex flex-wrap gap-2"></div>
             </div>
           </div>
 

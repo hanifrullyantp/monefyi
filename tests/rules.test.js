@@ -6,8 +6,8 @@ import {
   classifyCategory,
   resolveAccount,
   L2_applyRules,
-} from '../js/parsers/rules.js';
-import { normalizeInput } from '../js/parsers/normalize.js';
+} from '../app/js/parsers/rules.js';
+import { normalizeInput } from '../app/js/parsers/normalize.js';
 import { assertEquals, assert } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 
 // ---------------------------------------------------------------------------
@@ -272,9 +272,16 @@ Deno.test('L2: resolveAccount — undefined when no match', () => {
 // L2_applyRules — integration (grammar + enrichment)
 // ---------------------------------------------------------------------------
 
-Deno.test('L2: L2_applyRules — enriches category and canonicalises account', async () => {
+Deno.test('L2: L2_applyRules — returns plain object not Promise', () => {
+  const input = normalizeInput('makan malam 40rb');
+  const result = L2_applyRules(input);
+  assert(!(result instanceof Promise), 'L2_applyRules must be synchronous');
+  assertEquals(result?.amount, 40000);
+});
+
+Deno.test('L2: L2_applyRules — enriches category and canonicalises account', () => {
   const input = normalizeInput('beli kopi 25000 gopay');
-  const result = await L2_applyRules(input);
+  const result = L2_applyRules(input);
 
   assert(result !== null);
   assertEquals(result.type, 'expense');
@@ -285,9 +292,9 @@ Deno.test('L2: L2_applyRules — enriches category and canonicalises account', a
   assert(result.confidence >= 0.75);
 });
 
-Deno.test('L2: L2_applyRules — income_salary keeps preset category', async () => {
+Deno.test('L2: L2_applyRules — income_salary keeps preset category', () => {
   const input = normalizeInput('gaji 5000000 bca');
-  const result = await L2_applyRules(input);
+  const result = L2_applyRules(input);
 
   assert(result !== null);
   assertEquals(result.type, 'income');
@@ -295,9 +302,9 @@ Deno.test('L2: L2_applyRules — income_salary keeps preset category', async () 
   assertEquals(result.account, 'BCA');
 });
 
-Deno.test('L2: L2_applyRules — no grammar match returns null', async () => {
+Deno.test('L2: L2_applyRules — no grammar match returns null', () => {
   const input = normalizeInput('abcxyz lorem ipsum');
-  const result = await L2_applyRules(input);
+  const result = L2_applyRules(input);
   assertEquals(result, null);
 });
 

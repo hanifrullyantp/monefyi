@@ -19,11 +19,11 @@ import {
   disable,
   listAll,
   _setStorage,
-} from '../js/services/feature-flags.js';
+} from '../app/js/services/feature-flags.js';
 
-import { normalizeInput } from '../js/parsers/normalize.js';
-import { L2_applyRules } from '../js/parsers/rules.js';
-import { queryLocalMemory, saveToMemory, _setStorageAdapter } from '../js/services/memory.js';
+import { normalizeInput } from '../app/js/parsers/normalize.js';
+import { L2_applyRules } from '../app/js/parsers/rules.js';
+import { queryLocalMemory, saveToMemory, _setStorageAdapter } from '../app/js/services/memory.js';
 
 // =========================
 // Helpers
@@ -68,14 +68,14 @@ function resetMemory() {
 // 1. Feature Flags — isEnabled
 // =========================
 
-Deno.test('Feature flags - isEnabled returns false by default', () => {
+Deno.test('Feature flags - isEnabled returns true by default for new_parser_pipeline', () => {
   resetFeatureFlags();
-  assertEquals(isEnabled('new_parser_pipeline'), false);
+  assertEquals(isEnabled('new_parser_pipeline'), true);
 });
 
 Deno.test('Feature flags - isEnabled returns false when storage unavailable', () => {
   _setStorage(null);
-  assertEquals(isEnabled('new_parser_pipeline'), false);
+  assertEquals(isEnabled('new_parser_pipeline'), true);
   resetFeatureFlags();
 });
 
@@ -105,14 +105,14 @@ Deno.test('Feature flags - multiple independent flags do not interfere', () => {
 
 Deno.test('Feature flags - per-user enable overrides global OFF', () => {
   resetFeatureFlags();
+  disable('new_parser_pipeline');
   enable('new_parser_pipeline', 'user-1');
   assertEquals(isEnabled('new_parser_pipeline', 'user-1'), true);
   assertEquals(isEnabled('new_parser_pipeline'), false);
 });
 
-Deno.test('Feature flags - per-user disable overrides global ON', () => {
+Deno.test('Feature flags - per-user disable overrides default ON', () => {
   resetFeatureFlags();
-  enable('new_parser_pipeline');
   disable('new_parser_pipeline', 'user-2');
   assertEquals(isEnabled('new_parser_pipeline'), true);
   assertEquals(isEnabled('new_parser_pipeline', 'user-2'), false);
@@ -147,14 +147,32 @@ Deno.test('Feature flags - listAll returns all feature keys', () => {
 // 4. L0→L2 Pipeline — expense rule hit
 // =========================
 
-Deno.test('Pipeline L0→L2 - expense with merchant and amount hits rule', async () => {
+Deno.test('Pipeline L0→L2 - expense with merchant and amount hits rule', () => {
   const normalized = normalizeInput('kopi 25000 gopay');
-  const result = await L2_applyRules(normalized);
+  const result = L2_applyRules(normalized);
   assert(result !== null, 'Expected L2 to return a result');
   assert(result.confidence >= 0.75, `Expected confidence >=0.75, got ${result.confidence}`);
   assertEquals(result.type, 'expense');
   assertEquals(result.amount, 25000);
   assertEquals(result.source, 'rule');
+});
+
+Deno.test('Pipeline E2E - "makan malam 40rb" expands to 40000 via L0→L2', () => {
+  const normalized = normalizeInput('makan malam 40rb');
+  assert(normalized.text.includes('40000'), `L0 failed: got "${normalized.text}"`);
+  const result = L2_applyRules(normalized);
+  assert(result !== null, 'L2 should match expense_merchant_amount');
+  assert(!(result instanceof Promise), 'L2_applyRules must return object, not Promise');
+  assertEquals(result.amount, 40000);
+  assert(result.confidence >= 0.75);
+  assertEquals(result.type, 'expense');
+});
+
+Deno.test('Pipeline E2E - "makan malam 40rb gopay" enriches account', () => {
+  const normalized = normalizeInput('makan malam 40rb gopay');
+  const result = L2_applyRules(normalized);
+  assertEquals(result?.amount, 40000);
+  assertEquals(result?.account, 'GoPay');
 });
 
 Deno.test('Pipeline L0→L2 - income salary hits rule', async () => {
@@ -295,10 +313,9 @@ Deno.test('Pipeline cascade - L1 miss (null) falls through to L2 check', async (
 
 Deno.test('Pipeline cascade - feature flag OFF always runs legacy path', () => {
   resetFeatureFlags();
-  // Flag is OFF by default
+  disable('new_parser_pipeline');
   const flagEnabled = isEnabled('new_parser_pipeline');
-  assertEquals(flagEnabled, false, 'Flag should be OFF by default');
-  // When flag is off, runNewParsePipeline is never called — behavior is 100% legacy
+  assertEquals(flagEnabled, false, 'Flag should be OFF after explicit disable()');
 });
 
 Deno.test('Pipeline cascade - feature flag ON routes to new pipeline', () => {

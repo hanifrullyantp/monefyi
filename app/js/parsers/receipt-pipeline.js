@@ -80,7 +80,7 @@ function emitOCREvent(type, detail) {
 async function genericParse(rawText) {
   try {
     const normalized = normalizeInput(rawText);
-    const ruleResult = await L2_applyRules(normalized);
+    const ruleResult = L2_applyRules(normalized);
 
     // Extract total from common Indonesian receipt patterns
     const totalRe = /(?:total|jumlah|grand total|bayar|charge)[^\d]*(\d[\d,.]*)/i;
