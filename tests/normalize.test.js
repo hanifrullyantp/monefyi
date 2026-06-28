@@ -3,7 +3,7 @@ import {
   TYPO_MAP,
   AMOUNT_PATTERNS,
   DATE_KEYWORDS,
-} from '../js/parsers/normalize.js';
+} from '../app/js/parsers/normalize.js';
 import { assertEquals, assert } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 
 // --- Amount parsing ---
@@ -195,6 +195,48 @@ Deno.test('L0: Constants - DATE_KEYWORDS includes kemarin/hari ini/besok/lusa', 
   assertEquals(DATE_KEYWORDS['hari ini'], 0);
   assertEquals(DATE_KEYWORDS['besok'], 1);
   assertEquals(DATE_KEYWORDS['lusa'], 2);
+});
+
+// --- Amount edge-case regression tests ---
+
+Deno.test('L0: Amount "10rb" compact (no space) converts to 10000', () => {
+  const result = normalizeInput('makan 10rb');
+  assertEquals(result.text.includes('10000'), true, 'compact "10rb" must become 10000');
+});
+
+Deno.test('L0: Amount "10 rb" with space converts to 10000', () => {
+  const result = normalizeInput('makan 10 rb');
+  assertEquals(result.text.includes('10000'), true, '"10 rb" with space must become 10000');
+});
+
+Deno.test('L0: Amount "10RB" uppercase converts to 10000', () => {
+  const result = normalizeInput('beli 25RB kopi');
+  assertEquals(result.text.includes('25000'), true, 'uppercase RB must become 25000');
+});
+
+Deno.test('L0: Amount "1.5jt" decimal converts to 1500000', () => {
+  const result = normalizeInput('gaji 1.5jt');
+  assertEquals(result.text.includes('1500000'), true, '"1.5jt" decimal must become 1500000');
+});
+
+Deno.test('L0: Amount NOT falsely triggered inside word "berbicara"', () => {
+  const result = normalizeInput('saya berbicara dengan teman');
+  assertEquals(result.text.includes('berbicara'), true, '"berbicara" must not be mangled');
+  // "rb" inside "berbicara" must NOT trigger the ribu conversion
+  assert(!result.text.match(/\d{3,}/), '"berbicara" must not produce a large number');
+});
+
+Deno.test('L0: Multiple amounts in one input all converted', () => {
+  const result = normalizeInput('makan 10rb minum 5rb');
+  assertEquals(result.text.includes('10000'), true);
+  assertEquals(result.text.includes('5000'), true);
+});
+
+Deno.test('L0: Amount with merchant after: "makan malam 10rb gopay"', () => {
+  const result = normalizeInput('makan malam 10rb gopay');
+  assertEquals(result.text.includes('10000'), true, '"10rb" must become 10000');
+  assertEquals(result.text.includes('gopay'), true, 'gopay must be preserved');
+  assertEquals(result.text.includes('10rb'), false, 'original "10rb" must be gone');
 });
 
 // --- Performance ---

@@ -70,13 +70,25 @@ export const TYPO_MAP = {
 /**
  * Amount shorthand patterns — expanded to plain integer strings in normalized text.
  *
+ * Rules:
+ * - juta/jt match with or without space, case-insensitive
+ * - m is kept but requires a word boundary on BOTH sides to avoid "malam"/"makan"
+ * - ribu/rb/k match with or without space, case-insensitive, word boundary after
+ * - Thousand-separator dots stripped last (85.000 → 85000)
+ *
  * @type {Array<{ regex: RegExp, multiplier?: number, replacer?: (match: string, ...groups: string[]) => string }>}
  */
 export const AMOUNT_PATTERNS = [
-  { regex: /(\d+(?:[.,]\d+)?)\s*(?:juta|jt|m)(?!\w)/gi, multiplier: 1_000_000 },
-  { regex: /(\d+(?:[.,]\d+)?)\s*(?:ribu|rb|k)(?!\w)/gi, multiplier: 1_000 },
+  // juta / jt  — most specific first
+  { regex: /\b(\d+(?:[.,]\d+)?)\s*(?:juta|jt)\b/gi, multiplier: 1_000_000 },
+  // m suffix for juta — kept for backward compat ("10m") but requires \b on both sides
+  // to avoid matching "m" in words like "makan", "malam", etc.
+  { regex: /\b(\d+(?:[.,]\d+)?)\s*m\b/gi, multiplier: 1_000_000 },
+  // ribu / rb / k — handles "10rb", "10 rb", "10RB", "10k", etc.
+  { regex: /\b(\d+(?:[.,]\d+)?)\s*(?:ribu|rb|k)\b/gi, multiplier: 1_000 },
+  // Indonesian thousand separator: 85.000 → 85000
   {
-    regex: /(\d{1,3}(?:\.\d{3})+)(?!\d)/g,
+    regex: /\b(\d{1,3}(?:\.\d{3})+)\b/g,
     replacer: (_match, grouped) => grouped.replace(/\./g, ''),
   },
 ];

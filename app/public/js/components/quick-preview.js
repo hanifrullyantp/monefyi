@@ -196,12 +196,34 @@ export function renderQuickPreview(parsed, callbacks = {}) {
     </div>
   `;
 
-  container.querySelector('.qp-btn-save')?.addEventListener('click', () => {
+  container.querySelector('.qp-btn-save')?.addEventListener('click', async () => {
     const edited = getFormData(container);
     if (!edited.amount || edited.amount <= 0) {
       container.querySelector('.qp-field-amount')?.classList.add('qp-field--warn');
       return;
     }
+
+    // ── Learning loop: capture user corrections (fire-and-forget) ──────────
+    try {
+      const { diffCorrections, extractPatterns, saveLearntPatterns }
+        = await import('../services/correction-learner.js');
+
+      const rawInput = parsed.rawInput ?? parsed.original ?? parsed.notes ?? '';
+      const diffs = diffCorrections(parsed, edited);
+
+      if (diffs.length > 0 && rawInput) {
+        const patterns = extractPatterns(rawInput, diffs);
+        if (patterns.length > 0) {
+          await saveLearntPatterns(patterns);
+          _showLearningToast(`💡 Sistem belajar ${patterns.length} pattern baru!`);
+        }
+      }
+    } catch (learnErr) {
+      // Learning MUST NOT block save
+      console.error('[quick-preview] learning failed (non-fatal):', learnErr);
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
     onSave?.(edited, parsed);
   });
 
@@ -214,4 +236,25 @@ export function renderQuickPreview(parsed, callbacks = {}) {
   });
 
   return container;
+}
+
+/**
+ * Shows a brief learning confirmation toast.
+ * Self-removes after 3 s. Silent no-op in non-browser environments.
+ * @param {string} message
+ */
+function _showLearningToast(message) {
+  if (typeof document === 'undefined') return;
+  const toast = document.createElement('div');
+  toast.className = 'qp-learning-toast';
+  toast.textContent = message;
+  toast.style.cssText = [
+    'position:fixed', 'top:20px', 'left:50%', 'transform:translateX(-50%)',
+    'background:linear-gradient(135deg,#10b981,#059669)', 'color:#fff',
+    'padding:10px 22px', 'border-radius:24px', 'font-size:13px', 'font-weight:600',
+    'z-index:10001', 'box-shadow:0 4px 12px rgba(0,0,0,.3)',
+    'animation:qpToastIn .25s ease', 'pointer-events:none',
+  ].join(';');
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
 }

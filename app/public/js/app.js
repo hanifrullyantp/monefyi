@@ -765,7 +765,7 @@ async function loadBudgets(){
       const quickLab = $('#quickTextLabel');
       if (quickLab) quickLab.innerHTML = t('quick.label_html') || t('quick.label');
       $('#quickText')?.setAttribute('placeholder', t('quick.placeholder'));
-      $('#btnParseTitle') && ($('#btnParseTitle').textContent = t('quick.process'));
+      $('#btnParse')?.setAttribute('aria-label', t('quick.process'));
       $('#quickAiBadge') && ($('#quickAiBadge').textContent = t('quick.badge') || 'Cepat & Praktis');
       $('#quickRecoTitle') && ($('#quickRecoTitle').textContent = t('quick.reco_title') || 'Rekomendasi input');
       $('#quickSecureText') && ($('#quickSecureText').textContent = t('quick.secure') || 'Data Anda aman dan terenkripsi');
@@ -1682,14 +1682,39 @@ async function upsertTransaction_legacy_local(tx) {
       await showTxPreviewFlow(input.value.trim(), preview, () => { input.value = ''; });
     }
 
+    /**
+     * Scroll add-transaction sheet so the parse preview/confirmation is visible.
+     * @param {HTMLElement|null} previewEl
+     */
+    function scrollToPreviewConfirm(previewEl) {
+      if (!previewEl || previewEl.classList.contains('hidden')) return;
+      const motion = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const body = previewEl.closest('.sheet-body');
+          if (body) {
+            const bodyRect = body.getBoundingClientRect();
+            const elRect = previewEl.getBoundingClientRect();
+            const padding = 16;
+            const targetTop = body.scrollTop + (elRect.bottom - bodyRect.top) - body.clientHeight + padding;
+            body.scrollTo({ top: Math.max(0, targetTop), behavior: motion });
+            return;
+          }
+          previewEl.scrollIntoView({ behavior: motion, block: 'end' });
+        });
+      });
+    }
+
     async function showTxPreviewFlow(text, previewEl, onDone){
       if (!previewEl) return;
       previewEl.classList.remove('hidden');
       previewEl.innerHTML = `<div class="text-xs app-muted p-2">${t('tx.pending') || 'Memproses…'}</div>`;
+      scrollToPreviewConfirm(previewEl);
       try {
         const tx = await parseOneLineToTx(text);
         if (!tx?.amount) {
           previewEl.innerHTML = `<div class="text-xs app-muted p-2">${t('toast.error')}</div>`;
+          scrollToPreviewConfirm(previewEl);
           return;
         }
         const dup = findPotentialDuplicate(tx);
@@ -1721,9 +1746,11 @@ async function upsertTransaction_legacy_local(tx) {
           },
         });
         previewEl.appendChild(card);
+        scrollToPreviewConfirm(previewEl);
       } catch (e) {
         console.warn(e);
         previewEl.innerHTML = `<div class="text-xs app-muted p-2">${t('toast.error')}</div>`;
+        scrollToPreviewConfirm(previewEl);
       }
     }
 
@@ -2098,9 +2125,9 @@ async function upsertTransaction_legacy_local(tx) {
     async function _loadParseMods() {
       if (_parseMods) return _parseMods;
       const [normMod, memMod, rulesMod] = await Promise.all([
-        import('./js/parsers/normalize.js'),
-        import('./js/services/memory.js'),
-        import('./js/parsers/rules.js'),
+        import('./parsers/normalize.js'),
+        import('./services/memory.js'),
+        import('./parsers/rules.js'),
       ]);
       _parseMods = {
         normalizeInput: normMod.normalizeInput,
@@ -2143,6 +2170,9 @@ async function upsertTransaction_legacy_local(tx) {
         merchant: result.merchant || '',
         payment_method: result.account || guessPayment(text) || 'Cash',
         notes: (text || '').trim(),
+        // rawInput + original exposed for the correction-learner in quick-preview.js
+        rawInput: text,
+        original: text,
         created_at: now,
         updated_at: now,
         meta: {
@@ -2167,8 +2197,20 @@ async function upsertTransaction_legacy_local(tx) {
     async function runNewParsePipeline(text, userId = null) {
       const mods = await _loadParseMods();
 
+      // Pre-L0: Apply learnt patterns from user corrections (non-blocking, best-effort)
+      let processedText = text;
+      try {
+        const { applyLearntPatterns } = await import('./services/correction-learner.js');
+        processedText = await applyLearntPatterns(text);
+        if (processedText !== text) {
+          console.log('[parser] learnt patterns applied', { before: text, after: processedText });
+        }
+      } catch (_e) {
+        processedText = text; // safe fallback
+      }
+
       // L0: Normalize
-      const normalized = mods.normalizeInput(text);
+      const normalized = mods.normalizeInput(processedText);
 
       // L1: Memory (exact ≥0.95, fuzzy ≥0.80)
       const memHit = await mods.queryLocalMemory(normalized);
@@ -2210,6 +2252,11 @@ async function upsertTransaction_legacy_local(tx) {
 
       if (!parsed) {
         parsed = await legacyParseAIFirst(text);
+        // Expose rawInput so correction-learner can access it in the preview
+        if (parsed && typeof parsed === 'object') {
+          parsed.rawInput = text;
+          parsed.original = text;
+        }
       }
 
       // Log metrics (non-blocking, fire-and-forget)
@@ -3055,17 +3102,28 @@ renderAccountsSettings();
     }
     function renderHeroBudgetProgress(s, masked) {
       const bar = $('#heroBudgetBar');
+      const pctEl = $('#heroBudgetPct');
       if (!bar) return;
       const { planned } = budgetForPeriod();
       const actual = s.expense;
       if (masked || !planned) {
         bar.style.width = '0%';
         bar.style.background = 'rgba(148,163,184,.3)';
+        if (pctEl) {
+          pctEl.textContent = masked ? '•••' : '—';
+          pctEl.style.color = 'var(--app-muted)';
+        }
         return;
       }
       const pct = Math.min(100, (actual / planned) * 100);
+      const pctRounded = Math.round(pct);
+      const color = heroBudgetBarColor(pct);
       bar.style.width = `${pct}%`;
-      bar.style.background = heroBudgetBarColor(pct);
+      bar.style.background = color;
+      if (pctEl) {
+        pctEl.textContent = `${pctRounded}%`;
+        pctEl.style.color = color;
+      }
     }
 
    function renderSaldo() {
@@ -6820,6 +6878,60 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
       $('#parseStatus').textContent = '';
       STATE.parsedDraft = null;
     });
+
+    // ── OCR Scan button (lazy-loaded, zero cost client-side Tesseract) ──────
+    (function initOCRButton() {
+      const loadOCR     = () => import('./parsers/receipt-pipeline.js');
+      const loadScanner = () => import('./components/receipt-scanner.js');
+
+      const ocrBtn = document.createElement('button');
+      ocrBtn.type      = 'button';
+      ocrBtn.id        = 'btnOCR';
+      ocrBtn.className = 'ocr-scan-btn tap';
+      ocrBtn.innerHTML = '📷 Scan Struk';
+      ocrBtn.setAttribute('aria-label', 'Scan struk belanja');
+      $('#btnParse')?.insertAdjacentElement('afterend', ocrBtn);
+
+      ocrBtn.addEventListener('click', async () => {
+        try {
+          const [{ renderReceiptScanner, renderReceiptPreview }, { parseReceipt, confirmReceiptParse }]
+            = await Promise.all([loadScanner(), loadOCR()]);
+
+          const scanner = renderReceiptScanner({
+            onScanComplete: async (imageFile) => {
+              const userId = STATE.db?.user?.id ?? null;
+              const result = await parseReceipt(imageFile, userId);
+
+              const preview = renderReceiptPreview(result, {
+                onSave: async (finalData) => {
+                  await confirmReceiptParse(result, finalData, userId, STATE.db?.supa ?? null);
+                  await upsertTransaction({
+                    ...finalData,
+                    type:     finalData.type     || 'expense',
+                    currency: finalData.currency || 'IDR',
+                  });
+                  preview.remove();
+                  scanner.remove();
+                  refreshAllUI();
+                  showToast('✓ Struk tersimpan');
+                },
+                onCancel: () => { preview.remove(); scanner.remove(); },
+              });
+
+              scanner.replaceWith(preview);
+            },
+            onCancel: () => scanner.remove(),
+          });
+
+          document.body.appendChild(scanner);
+        } catch (err) {
+          console.error('[OCR] failed to load scanner:', err);
+          showToast('Gagal memuat scanner', 'warn');
+        }
+      });
+    })();
+    // ─────────────────────────────────────────────────────────────────────────
+
     $('#btnQuickGoBatch')?.addEventListener('click', () => {
       setTab('batch');
       updateAddSheetHeader('batch');
@@ -8512,8 +8624,7 @@ if (btnDelete) {
     // Header interactions
     // =========================
     $('#fab')?.addEventListener('click', () => openAddSheet('quick'));
-    // Advisor dibuka lewat logo (auto-generate jika ada perubahan transaksi/periode)
-    $('#btnLogo')?.addEventListener('click', () => openAdvisorAuto());
+    $('#btnLogo')?.addEventListener('click', () => openAddSheet('quick'));
     $('#btnMenu')?.addEventListener('click', () => openMenu());
     $('#btnUser')?.addEventListener('click', () => openUser());
     $('#btnUserDesktop')?.addEventListener('click', () => openUser());
@@ -8588,12 +8699,9 @@ function toggleNav(view, triggerEl) {
     });
 
     $('#btnMainAction')?.addEventListener('click', (e) => {
-      const menu = $('#actionMenu');
-      menu.classList.toggle('hidden');
       e.stopPropagation();
+      openAddSheet('quick');
     });
-
-    document.addEventListener('click', () => $('#actionMenu')?.classList.add('hidden'));
 
     function setSaldoFilterMenu(open) {
       STATE.ui.saldoFilterOpen = !!open;
@@ -9336,3 +9444,75 @@ function toggleNav(view, triggerEl) {
           });
       });
     }
+
+    // ── Saldo card scroll-collapse (mobile) ─────────────────────────────────
+    // Collapses the saldo card into a compact bar as the user scrolls down,
+    // giving more visual space for the transaction list.
+    (function setupSaldoCollapseOnScroll() {
+      const COLLAPSE_AT = 55;   // px — collapse when scrolled past this
+      const EXPAND_AT   = 18;   // px — re-expand when back near top
+      let collapsed = false;
+      let ticking   = false;
+
+      function applyCollapse(scrollTop) {
+        const wrap = document.querySelector('.mobile-saldo-wrap');
+        if (!wrap) return;
+
+        if (!collapsed && scrollTop > COLLAPSE_AT) {
+          collapsed = true;
+          wrap.classList.add('saldo-collapsed');
+          const details = wrap.querySelector('.saldo-details-wrap');
+          if (details) details.setAttribute('aria-hidden', 'true');
+        } else if (collapsed && scrollTop < EXPAND_AT) {
+          collapsed = false;
+          wrap.classList.remove('saldo-collapsed');
+          const details = wrap.querySelector('.saldo-details-wrap');
+          if (details) details.setAttribute('aria-hidden', 'false');
+        }
+        ticking = false;
+      }
+
+      function onScroll() {
+        if (ticking) return;
+        ticking = true;
+        const shell = document.getElementById('appShell');
+        const scrollTop = shell ? shell.scrollTop : 0;
+        requestAnimationFrame(function () { applyCollapse(scrollTop); });
+      }
+
+      function bind() {
+        const shell = document.getElementById('appShell');
+        if (!shell) return;
+        // Only active on mobile widths
+        if (window.matchMedia('(max-width: 767px)').matches) {
+          shell.addEventListener('scroll', onScroll, { passive: true });
+        }
+        window.matchMedia('(max-width: 767px)').addEventListener('change', function (mq) {
+          if (mq.matches) {
+            shell.addEventListener('scroll', onScroll, { passive: true });
+          } else {
+            shell.removeEventListener('scroll', onScroll);
+            // Ensure expanded on desktop
+            const wrap = document.querySelector('.mobile-saldo-wrap');
+            if (wrap) wrap.classList.remove('saldo-collapsed');
+            collapsed = false;
+          }
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bind);
+      } else {
+        bind();
+      }
+    })();
+
+    // Block pinch/double-tap zoom (iOS Safari + trackpad ctrl+scroll)
+    (function preventAppZoom() {
+      document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false });
+      document.addEventListener('gesturechange', (e) => e.preventDefault(), { passive: false });
+      document.addEventListener('gestureend', (e) => e.preventDefault(), { passive: false });
+      document.addEventListener('wheel', (e) => {
+        if (e.ctrlKey) e.preventDefault();
+      }, { passive: false });
+    })();

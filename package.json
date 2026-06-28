@@ -5,6 +5,9 @@
   "engines": {
     "node": ">=20.x"
   },
+  "dependencies": {
+    "tesseract.js": "^5.0.4"
+  },
   "devDependencies": {
     "vite": "^7.1.0"
   },
