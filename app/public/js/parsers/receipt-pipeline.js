@@ -191,6 +191,9 @@ export function detectMerchant(text) {
     { pattern: /\bGOPAY\b/i, name: 'GoPay' },
     { pattern: /\bOVO\b/i, name: 'OVO' },
     { pattern: /\bDANA\b/i, name: 'DANA' },
+    { pattern: /\bJANJI\s*JIWA\b/i, name: 'Janji Jiwa' },
+    { pattern: /\bKOPI\s*KENANGAN\b/i, name: 'Kopi Kenangan' },
+    { pattern: /\bWARUN[GK]?\b/i, name: 'Warung' },
   ];
 
   for (const { pattern, name } of KNOWN_MERCHANTS) {
@@ -220,8 +223,11 @@ export function detectTotal(text) {
   const priorityPatterns = [
     /TOTAL\s*BAYAR\s*:?\s*(\d[\d.,]*)/i,
     /GRAND\s*TOTAL\s*:?\s*(\d[\d.,]*)/i,
+    /TOTAL\s*BELANJA\s*:?\s*(\d[\d.,]*)/i,
     /JUMLAH\s*BAYAR\s*:?\s*(\d[\d.,]*)/i,
-    /(?<!SUB\s)TOTAL\s*:?\s*(\d[\d.,]*)/i,
+    // Plain TOTAL — only when NOT preceded by SUB, HARGA or similar keywords
+    /^[ \t]*TOTAL\s*:?\s*(\d[\d.,]*)/im,
+    /TOTAL\s*:?\s*(\d[\d.,]*)/i,
     /SUB\s*TOTAL\s*:?\s*(\d[\d.,]*)/i,
   ];
 
@@ -290,13 +296,13 @@ export function detectCategory(text, merchant) {
   const lower = `${text} ${merchant || ''}`.toLowerCase();
 
   const merchantCategories = {
-    Shopping: /indomaret|alfamart|alfamidi|circle.*k|lawson|family.*mart|superindo|giant|hypermart|carrefour|lotte/i,
-    'Food & Drink': /starbucks|mcdonald|kfc|burger.*king|pizza|domino|kopi|cafe|resto|warung|makan|food|gofood|grabfood/i,
-    Transport: /spbu|pertamina|shell|bensin|grab|gojek|uber|maxim|taxi|tol|parkir/i,
-    'Bills & Utilities': /pln|listrik|air|pdam|telkom|indihome|wifi|internet|tagihan|bayar|pulsa/i,
-    Health: /apotek|apotik|dokter|klinik|rumah.*sakit|rs\s|hospital|kimia.*farma|guardian|century/i,
-    Entertainment: /xxi|cgv|cinepolis|cinema|nonton|tiket|konser/i,
-    Education: /sekolah|kuliah|spp|kursus|buku|gramedia/i,
+    Shopping: /indomaret|alfamart|alfamidi|circle[\s\-]*k|lawson|family[\s\-]*mart|superindo|giant|hypermart|carrefour|lotte[\s\-]*mart|grocery|swalayan|supermarket|mini[\s\-]*market/i,
+    'Food & Drink': /starbucks|mcdonald|kfc|burger[\s\-]*king|pizza|domino|janji[\s\-]*jiwa|kopi[\s\-]*kenangan|kopi|caf[eé]|cafe|resto|restaurant|warung|makan|minuman|food|gofood|grabfood|shopeefood/i,
+    Transport: /spbu|pertamina|shell|bensin|fuel|grab|gojek|uber|maxim|taxi|tol|parkir|parking|kereta|krl|mrt|transjakarta/i,
+    'Bills & Utilities': /pln|listrik|air\s+bersih|pdam|telkom|indihome|wifi|internet|tagihan|pulsa|paket\s*data/i,
+    Health: /apotek|apotik|dokter|klinik|rumah[\s\-]*sakit|\brs\b|hospital|kimia[\s\-]*farma|guardian|century[\s\-]*health/i,
+    Entertainment: /\bxxi\b|\bcgv\b|cinepolis|cinema|bioskop|nonton|tiket\.com|konser|spotify|netflix/i,
+    Education: /sekolah|universitas|kuliah|spp|kursus|buku|gramedia|toko[\s\-]*buku/i,
   };
 
   for (const [category, regex] of Object.entries(merchantCategories)) {
@@ -355,14 +361,22 @@ export async function genericParse(rawText) {
     const category = detectCategory(rawText, merchant);
     const extractedItems = extractItems(rawText);
 
+    const today = new Date().toISOString().split('T')[0];
+
     const notes = extractedItems.length > 0
-      ? `${extractedItems.length} items: ${extractedItems.slice(0, 3).map((i) => i.name).join(', ')}${extractedItems.length > 3 ? '...' : ''}`
+      ? `${extractedItems.length} items: ${extractedItems.slice(0, 3).map((i) => i.name).join(', ')}${extractedItems.length > 3 ? ` +${extractedItems.length - 3} lainnya` : ''}`
       : '';
 
     const uiItems = extractedItems.map((i) => ({
       name: i.name,
       amount: i.subtotal ?? i.price,
     }));
+
+    let confidence = 0.30;
+    if (totalAmount > 0) confidence += 0.30;
+    if (merchant) confidence += 0.20;
+    if (date !== today) confidence += 0.10;
+    if (extractedItems.length > 0) confidence += 0.10;
 
     return {
       type: 'expense',
@@ -374,7 +388,7 @@ export async function genericParse(rawText) {
       category,
       notes,
       items: uiItems,
-      confidence: totalAmount > 0 ? (merchant ? 0.75 : 0.60) : 0.30,
+      confidence: Math.min(0.95, confidence),
       source: 'generic',
     };
   } catch (err) {
