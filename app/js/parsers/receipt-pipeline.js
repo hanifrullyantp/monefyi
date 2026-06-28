@@ -398,6 +398,239 @@ export async function genericParse(rawText) {
 }
 
 // ---------------------------------------------------------------------------
+// Quality assessment (OCR + parse sanity checks)
+// ---------------------------------------------------------------------------
+
+/** @type {{ good: number, medium: number, warnBelow: number, ocrPoor: number, ocrMedium: number, amountMin: number, amountMax: number }} */
+export const DEFAULT_QUALITY_THRESHOLDS = {
+  good: 0.75,
+  medium: 0.50,
+  warnBelow: 0.75,
+  ocrPoor: 0.50,
+  ocrMedium: 0.70,
+  amountMin: 100,
+  amountMax: 50000000,
+};
+
+/**
+ * Normalizes Tesseract confidence (0–100) or ratio (0–1) to 0–1.
+ * @param {number} raw
+ * @returns {number}
+ */
+export function normalizeOcrConfidence(raw) {
+  const n = Number(raw) || 0;
+  if (n > 1) return Math.min(1, n / 100);
+  return Math.max(0, Math.min(1, n));
+}
+
+/**
+ * @param {'good'|'medium'|'poor'} level
+ * @param {object[]} issues
+ * @param {object[]} warnings
+ * @returns {string}
+ */
+function generateQualitySummary(level, issues, warnings) {
+  if (level === 'good') return '✅ Struk terbaca dengan baik';
+  if (level === 'poor') {
+    return `⚠️ Struk sulit dibaca: ${issues.length} masalah, ${warnings.length} peringatan`;
+  }
+  return `⚠️ Struk terbaca sebagian: ${warnings.length} perlu dicek ulang`;
+}
+
+/**
+ * Evaluate OCR + parsing quality for user-facing warnings.
+ *
+ * @param {object} scanResult - Output from parseReceipt()
+ * @param {{ thresholds?: Partial<typeof DEFAULT_QUALITY_THRESHOLDS> }} [options]
+ * @returns {object}
+ */
+export function assessQuality(scanResult, options = {}) {
+  const thresholds = { ...DEFAULT_QUALITY_THRESHOLDS, ...options.thresholds };
+  const issues = [];
+  const warnings = [];
+  let score = 1.0;
+
+  const parsed = scanResult?.parsed ?? {};
+  const rawText = scanResult?.rawText ?? '';
+  const ocrConfidence = normalizeOcrConfidence(
+    scanResult?.ocrConfidence ?? scanResult?.confidence ?? 0,
+  );
+  const today = new Date().toISOString().split('T')[0];
+
+  if (ocrConfidence < thresholds.ocrPoor) {
+    issues.push({
+      severity: 'high',
+      code: 'low_ocr_confidence',
+      message: `OCR sangat tidak yakin (${Math.round(ocrConfidence * 100)}%). Teks mungkin salah baca.`,
+    });
+    score -= 0.40;
+  } else if (ocrConfidence < thresholds.ocrMedium) {
+    warnings.push({
+      severity: 'medium',
+      code: 'medium_ocr_confidence',
+      message: `OCR kurang yakin (${Math.round(ocrConfidence * 100)}%). Periksa hasil dengan teliti.`,
+    });
+    score -= 0.20;
+  }
+
+  const amount = Number(parsed.amount ?? parsed.total ?? 0) || 0;
+
+  if (!amount || amount === 0) {
+    issues.push({
+      severity: 'high',
+      code: 'no_amount',
+      message: 'Total tidak terdeteksi. Foto mungkin terlalu buram atau total tidak terlihat.',
+      field: 'amount',
+    });
+    score -= 0.30;
+  }
+
+  const merchant = String(parsed.merchant ?? '').trim();
+  if (!merchant || merchant.length < 3) {
+    warnings.push({
+      severity: 'medium',
+      code: 'no_merchant',
+      message: 'Nama merchant tidak terdeteksi.',
+      field: 'merchant',
+    });
+    score -= 0.15;
+  }
+
+  if (amount > 0) {
+    if (amount < thresholds.amountMin) {
+      warnings.push({
+        severity: 'medium',
+        code: 'amount_too_small',
+        message: `Total Rp ${amount} terlalu kecil. Periksa lagi.`,
+        field: 'amount',
+      });
+      score -= 0.15;
+    } else if (amount > thresholds.amountMax) {
+      warnings.push({
+        severity: 'medium',
+        code: 'amount_very_large',
+        message: `Total Rp ${amount.toLocaleString('id-ID')} sangat besar. Pastikan benar.`,
+        field: 'amount',
+      });
+      score -= 0.10;
+    }
+  }
+
+  if (merchant) {
+    const weirdChars = (merchant.match(/[~`!@#$%^&*()_+={}\[\]|\\:";'<>,./?]/g) || []).length;
+    if (weirdChars > 2) {
+      warnings.push({
+        severity: 'medium',
+        code: 'merchant_has_noise',
+        message: `Nama merchant "${merchant}" mengandung karakter aneh.`,
+        field: 'merchant',
+      });
+      score -= 0.15;
+    }
+    if (merchant.length > 40) {
+      warnings.push({
+        severity: 'low',
+        code: 'merchant_too_long',
+        message: 'Nama merchant terlalu panjang — mungkin noise OCR.',
+        field: 'merchant',
+      });
+      score -= 0.05;
+    }
+  }
+
+  if (parsed.date) {
+    const parsedDate = new Date(parsed.date);
+    const now = new Date();
+    const year = parsedDate.getFullYear();
+
+    if (!Number.isNaN(parsedDate.getTime()) && parsedDate > now) {
+      warnings.push({
+        severity: 'low',
+        code: 'date_in_future',
+        message: 'Tanggal di masa depan.',
+        field: 'date',
+      });
+      score -= 0.05;
+    } else if (year < 1990 || year > 2030) {
+      warnings.push({
+        severity: 'medium',
+        code: 'date_implausible',
+        message: 'Tanggal tidak masuk akal.',
+        field: 'date',
+      });
+      score -= 0.10;
+    } else if (parsed.date === today) {
+      warnings.push({
+        severity: 'low',
+        code: 'date_defaulted',
+        message: 'Tanggal tidak terdeteksi, menggunakan hari ini.',
+        field: 'date',
+      });
+      score -= 0.05;
+    }
+  }
+
+  if (rawText) {
+    const textLength = rawText.length;
+    const symbolRatio = textLength > 0
+      ? (rawText.match(/[^\w\s]/g) || []).length / textLength
+      : 0;
+
+    if (textLength < 50) {
+      warnings.push({
+        severity: 'medium',
+        code: 'text_too_short',
+        message: 'Teks hasil OCR terlalu pendek. Foto mungkin tidak menangkap seluruh struk.',
+      });
+      score -= 0.15;
+    }
+
+    if (symbolRatio > 0.25) {
+      warnings.push({
+        severity: 'medium',
+        code: 'text_too_noisy',
+        message: 'Teks banyak karakter aneh. Foto mungkin terlalu buram.',
+      });
+      score -= 0.15;
+    }
+  } else if (!scanResult?.error) {
+    warnings.push({
+      severity: 'medium',
+      code: 'text_too_short',
+      message: 'Teks hasil OCR kosong.',
+    });
+    score -= 0.20;
+  }
+
+  score = Math.max(0, Math.min(1, score));
+
+  let level;
+  if (score >= thresholds.good) level = 'good';
+  else if (score >= thresholds.medium) level = 'medium';
+  else level = 'poor';
+
+  return {
+    score,
+    level,
+    shouldWarn: score < thresholds.warnBelow,
+    ocrConfidence,
+    issues,
+    warnings,
+    summary: generateQualitySummary(level, issues, warnings),
+  };
+}
+
+/**
+ * Attaches quality assessment to a parse result.
+ * @param {object} result
+ * @returns {object}
+ */
+function attachQuality(result) {
+  result.quality = assessQuality(result);
+  return result;
+}
+
+// ---------------------------------------------------------------------------
 // Main pipeline
 // ---------------------------------------------------------------------------
 
@@ -497,6 +730,7 @@ export async function parseReceipt(imageFile, userId = null, options = {}) {
       }
 
       result.rawText = ocrResult.text;
+      result.ocrConfidence = normalizeOcrConfidence(ocrResult.confidence ?? 0);
       log('OCR text length:', ocrResult.text.length);
     } catch (e) {
       log('OCR failed:', e.message);
@@ -506,7 +740,7 @@ export async function parseReceipt(imageFile, userId = null, options = {}) {
       result.latency.ocr_ms = Date.now() - ocrStart;
       result.latency.total_ms = Date.now() - startTime;
       emitOCREvent('ocr:error', { error: e.message });
-      return result;
+      return attachQuality(result);
     }
 
     const rawText = result.rawText;
@@ -636,9 +870,12 @@ export async function parseReceipt(imageFile, userId = null, options = {}) {
     result.latency.total_ms = Date.now() - startTime;
     result.success = true;
 
+    attachQuality(result);
+
     log('Pipeline complete:', {
       source: result.source,
       confidence: result.confidence,
+      quality: result.quality?.level,
       latency: result.latency,
       warnings: result.warnings,
     });
@@ -653,7 +890,7 @@ export async function parseReceipt(imageFile, userId = null, options = {}) {
     result.warnings.push('critical_error');
     result.latency.total_ms = Date.now() - startTime;
     emitOCREvent('ocr:error', { error: result.error });
-    return result;
+    return attachQuality(result);
   }
 }
 

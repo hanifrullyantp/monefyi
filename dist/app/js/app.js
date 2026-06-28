@@ -1351,6 +1351,33 @@ function computeSubscriptionStatus(profile){
       const minISO = (new Date(startISO) < new Date(minTrendISO)) ? startISO : minTrendISO;
       const maxISO = endISO;
 
+      const applyLocalRows = (rows) => {
+        STATE.transactions = (rows || []).map(t => ({
+          ...t,
+          amount: Number(t.amount||0),
+          meta: (t.meta && typeof t.meta === 'object') ? t.meta : (t.meta ? JSON.parse(t.meta) : {})
+        }));
+        STATE.ui.txLoading = false;
+        STATE.ui.txVisibleCount = 50;
+        ensureSelectOptions();
+        rerender();
+        updateSaldoAsync();
+      };
+
+      if (!navigator.onLine && window.dataStore?.getTransactions) {
+        try {
+          const local = await window.dataStore.getTransactions({
+            userId: STATE.db.user.id,
+            startDate: minISO,
+            endDate: maxISO,
+          });
+          applyLocalRows(local);
+          return;
+        } catch (e) {
+          console.warn('offline transactions read', e);
+        }
+      }
+
       const { data, error } = await supa
         .from('transactions')
         .select('*')
@@ -1361,23 +1388,42 @@ function computeSubscriptionStatus(profile){
 
       if (error) {
         console.warn('transactions fetch error', error);
+        if (window.dataStore?.getTransactions) {
+          try {
+            const local = await window.dataStore.getTransactions({
+              userId: STATE.db.user.id,
+              startDate: minISO,
+              endDate: maxISO,
+            });
+            if (local?.length) {
+              applyLocalRows(local);
+              return;
+            }
+          } catch (e2) {
+            console.warn('local transactions fallback', e2);
+          }
+        }
         STATE.ui.txLoading = false;
         rerender();
         return;
       }
-      STATE.transactions = (data || []).map(t => ({
-        ...t,
-        amount: Number(t.amount||0),
-        meta: (t.meta && typeof t.meta === 'object') ? t.meta : (t.meta ? JSON.parse(t.meta) : {})
-      }));
-      STATE.ui.txLoading = false;
-      STATE.ui.txVisibleCount = 50;
-      ensureSelectOptions();
-      rerender();
-      updateSaldoAsync();
+      applyLocalRows(data || []);
+      window.dataStore?.mirrorTransactionsBulk?.(STATE.transactions).catch(() => {});
     }
 
     async function dbUpsertTransaction(tx){
+      if (!navigator.onLine && window.dataStore) {
+        const existing = await window.dataStore.getTransaction?.(tx.id);
+        const saved = existing
+          ? await window.dataStore.updateTransaction(tx.id, tx)
+          : await window.dataStore.createTransaction(tx);
+        return {
+          ...saved,
+          amount: Number(saved.amount || 0),
+          meta: saved.meta || {},
+        };
+      }
+
       const supa = STATE.db.supa;
       const row = {
         id: tx.id,
@@ -1406,12 +1452,18 @@ function computeSubscriptionStatus(profile){
       else STATE.transactions.push(normalized);
 
       ensureAccountRegistered(normalized.account);
+      window.dataStore?.mirrorTransaction?.(normalized).catch(() => {});
       return normalized;
     }
 
     // Fungsi untuk menghapus data real di Supabase
 async function dbDeleteTransaction(id) {
   if (!STATE.db.enabled || !STATE.db.user) return;
+
+  if (!navigator.onLine && window.dataStore?.deleteTransaction) {
+    await window.dataStore.deleteTransaction(id);
+    return;
+  }
   
   const { error } = await STATE.db.supa
     .from('transactions')
@@ -1419,6 +1471,12 @@ async function dbDeleteTransaction(id) {
     .eq('id', id);
 
   if (error) throw error;
+
+  try {
+    const { getDb } = await loadAppModule('js/services/offline-db.js');
+    const db = await getDb();
+    await db.transactions.delete(id);
+  } catch (_) {}
 }
 
 // Fungsi Update (Upsert) - versi duplikat (dinonaktifkan untuk menghindari deklarasi ganda)
@@ -1509,6 +1567,39 @@ async function upsertTransaction_legacy_local(tx) {
     }
     window.ensureAppShellVisible = ensureAppShellVisible;
 
+    async function initOfflineFirst() {
+      try {
+        await loadAppModule('js/services/offline-db.js').then((m) => m.initOfflineDB());
+        const syncMod = await loadAppModule('js/services/sync-engine.js');
+        window.dataStore = await loadAppModule('js/services/data-store.js');
+
+        const { getDb } = await loadAppModule('js/services/offline-db.js');
+        const db = await getDb();
+        const lastSync = await db.app_state.get('last_sync_at');
+
+        syncMod.initSyncEngine();
+
+        const { mountSyncIndicator } = await loadAppModule('js/components/sync-indicator.js');
+        mountSyncIndicator({ showToast: typeof showToast === 'function' ? showToast : undefined });
+
+        if (navigator.onLine && STATE.db.user && !lastSync?.value) {
+          await syncMod.initialDataPull();
+        } else if (navigator.onLine && STATE.db.user) {
+          syncMod.triggerSync('bootstrap');
+        }
+
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.addEventListener('message', (event) => {
+            if (event.data?.type === 'MONEYFYI_BG_SYNC') {
+              syncMod.triggerSync('background');
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('[offline] init failed (non-blocking):', e);
+      }
+    }
+
     async function bootstrapAuthed(){
       enterAppShell();
       try {
@@ -1518,7 +1609,9 @@ async function upsertTransaction_legacy_local(tx) {
           console.warn('loadProfileAndSettings', e);
           return null;
         });
+        try { await initOfflineFirst(); } catch (e) { console.warn('initOfflineFirst', e); }
         try { STATE.budgetsByMonth = await withTimeout(loadBudgets(), 10000, 'budgets'); } catch (e) { console.warn('loadBudgets', e); }
+        window.dataStore?.mirrorBudgetsFromState?.(STATE.budgetsByMonth).catch(() => {});
         try { await withTimeout(refreshTransactionsRange(), 15000, 'transactions'); } catch (e) { console.warn('refreshTransactionsRange', e); }
         try { initCoachChat({ reset: true }); } catch (e) { console.warn('initCoachChat', e); }
         if (!STATE.ui.enhancementsReady) {
@@ -6950,12 +7043,13 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
      */
     async function openReceiptScanner() {
       try {
-        const [{ renderReceiptScanner, renderReceiptPreview, mountReceiptPreview, showScanToast }, { parseReceipt, confirmReceiptParse }]
+        const [{ renderReceiptScanner, renderReceiptPreview, mountReceiptPreview, showScanToast, restoreScannerUpload }, { parseReceipt, confirmReceiptParse, assessQuality }]
           = await Promise.all([
             loadAppModule('js/components/receipt-scanner.js'),
             loadAppModule('js/parsers/receipt-pipeline.js'),
           ]);
 
+        /** @param {HTMLElement} scanner */
         /** @param {object} result */
         function showPreview(scanner, result) {
           const preview = renderReceiptPreview(result, {
@@ -6981,7 +7075,12 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
                 notes: finalData.notes || '',
                 created_at: now,
                 updated_at: now,
-                meta: { source: 'ocr', parsed: true },
+                meta: {
+                  source: 'ocr',
+                  parsed: true,
+                  qualityLevel: result.quality?.level ?? null,
+                  lowConfidence: result.quality?.shouldWarn ?? false,
+                },
               });
               preview.remove();
               scanner.remove();
@@ -6990,13 +7089,48 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
               showToast('✓ Struk tersimpan');
             },
             onCancel: () => { preview.remove(); scanner.remove(); },
+            onRescan: () => {
+              preview.remove();
+              restoreScannerUpload(scanner, scannerCallbacks);
+            },
+            onManual: () => {
+              preview.remove();
+              showPreview(scanner, {
+                success: true,
+                source: 'manual',
+                confidence: 0,
+                ocrConfidence: 0,
+                parsed: {
+                  type: 'expense',
+                  amount: 0,
+                  merchant: '',
+                  category: 'Lainnya',
+                  account: 'Cash',
+                  date: toISODate(new Date()),
+                  notes: '',
+                },
+                rawText: '',
+                quality: {
+                  score: 0,
+                  level: 'manual',
+                  shouldWarn: false,
+                  issues: [],
+                  warnings: [],
+                  summary: '✏️ Input manual',
+                },
+              });
+            },
           });
           mountReceiptPreview(scanner, preview);
           if (result.error && showScanToast) showScanToast(result.error);
           if (result.warnings?.length) console.warn('[receipt-scanner] Warnings:', result.warnings);
+          if (result.quality?.shouldWarn) {
+            console.warn('[receipt-scanner] Quality:', result.quality.level, result.quality.summary);
+          }
         }
 
-        const scanner = renderReceiptScanner({
+        /** @type {{ onScanComplete: (file: File) => Promise<void>, onCancel: () => void }} */
+        const scannerCallbacks = {
           onScanComplete: async (imageFile) => {
             const userId = STATE.db?.user?.id ?? null;
             console.log('[receipt-scanner] Starting parseReceipt for userId:', userId);
@@ -7024,16 +7158,19 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
                 },
                 source: 'manual',
                 confidence: 0,
+                ocrConfidence: 0,
                 rawText: '',
                 error: `Error: ${e.message}. Silakan input manual.`,
                 warnings: ['critical_error'],
               };
+              result.quality = assessQuality(result);
             }
 
             console.log('[receipt-scanner] parseReceipt result:', {
               success: result.success,
               source: result.source,
               confidence: result.confidence,
+              quality: result.quality?.level,
               hasError: !!result.error,
               warnings: result.warnings,
               latency: result.latency,
@@ -7042,7 +7179,9 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
             showPreview(scanner, result);
           },
           onCancel: () => scanner.remove(),
-        });
+        };
+
+        const scanner = renderReceiptScanner(scannerCallbacks);
 
         document.body.appendChild(scanner);
       } catch (err) {
@@ -9571,6 +9710,19 @@ function toggleNav(view, triggerEl) {
       window.addEventListener('load', function () {
         navigator.serviceWorker
           .register('/app/sw.js', { scope: '/app/' })
+          .then(function (reg) {
+            reg.addEventListener('updatefound', function () {
+              const newWorker = reg.installing;
+              if (!newWorker) return;
+              newWorker.addEventListener('statechange', function () {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  if (typeof showToast === 'function') {
+                    showToast('Versi baru tersedia — refresh untuk update.', 'info');
+                  }
+                }
+              });
+            });
+          })
           .catch(function (err) {
             console.error('Service worker registration failed:', err);
           });

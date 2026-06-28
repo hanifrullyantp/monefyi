@@ -75,32 +75,9 @@ export function mountReceiptPreview(scanner, preview) {
 
 export { showScanToast };
 
-/**
- * Renders a drag-drop / file-upload scanner zone.
- *
- * @param {{
- *   onScanComplete: (file: File) => Promise<void>,
- *   onCancel: () => void
- * }} callbacks
- * @returns {HTMLElement}
- *
- * @example
- * const scanner = renderReceiptScanner({
- *   onScanComplete: async (file) => { ... },
- *   onCancel: () => scanner.remove(),
- * });
- * document.body.appendChild(scanner);
- */
-export function renderReceiptScanner({ onScanComplete, onCancel } = {}) {
-  ensureCSS();
-
-  const overlay = document.createElement('div');
-  overlay.className = 'receipt-scanner-modal';
-  overlay.setAttribute('role', 'dialog');
-  overlay.setAttribute('aria-modal', 'true');
-  overlay.setAttribute('aria-label', 'Scan Struk');
-
-  overlay.innerHTML = `
+/** @returns {string} */
+function getScannerCardHTML() {
+  return `
     <div class="scanner-card">
       <div class="scanner-header">
         <span class="scanner-title">📷 Scan Struk</span>
@@ -135,12 +112,23 @@ export function renderReceiptScanner({ onScanComplete, onCancel } = {}) {
         <p class="scanner-progress-label">Memproses…</p>
       </div>
 
+      <p class="scanner-photo-tips">
+        💡 Tips foto bagus: pencahayaan terang · struk diluruskan · fokus tajam
+      </p>
+
       <p class="scanner-privacy-notice">
         🔒 Gambar tidak diunggah · hanya teks yang diekstrak
       </p>
     </div>
   `;
+}
 
+/**
+ * Wires upload/drag-drop handlers on a scanner overlay element.
+ * @param {HTMLElement} overlay
+ * @param {{ onScanComplete?: (file: File) => Promise<void>, onCancel?: () => void }} callbacks
+ */
+function wireScannerCard(overlay, { onScanComplete, onCancel } = {}) {
   const fileInput = overlay.querySelector('#scanFileInput');
   const uploadBtn = overlay.querySelector('.scanner-upload-btn');
   const dropZone = overlay.querySelector('#scanDropZone');
@@ -153,25 +141,23 @@ export function renderReceiptScanner({ onScanComplete, onCancel } = {}) {
 
   /** @param {number} pct 0–1 */
   function setProgress(pct, label = '') {
-    progressFill.style.width = `${Math.round(pct * 100)}%`;
-    if (label) progressLabel.textContent = label;
+    if (progressFill) progressFill.style.width = `${Math.round(pct * 100)}%`;
+    if (label && progressLabel) progressLabel.textContent = label;
   }
 
   /** @param {File} file */
   async function handleFile(file) {
-    if (!file || !file.type.startsWith('image/')) {
-      return;
-    }
+    if (!file || !file.type.startsWith('image/')) return;
     if (file.size > 10 * 1024 * 1024) {
       alert('File terlalu besar (maks 10 MB)');
       return;
     }
 
-    thumb.src = URL.createObjectURL(file);
-    thumbWrap.hidden = false;
-    dropZone.querySelector('.scanner-upload-content').hidden = true;
+    if (thumb) thumb.src = URL.createObjectURL(file);
+    if (thumbWrap) thumbWrap.hidden = false;
+    dropZone?.querySelector('.scanner-upload-content')?.setAttribute('hidden', '');
 
-    progressBox.hidden = false;
+    if (progressBox) progressBox.hidden = false;
     setProgress(0.05, 'Memproses gambar…');
 
     const progressHandler = (/** @type {CustomEvent} */ e) => {
@@ -201,33 +187,71 @@ export function renderReceiptScanner({ onScanComplete, onCancel } = {}) {
     } finally {
       clearTimeout(timeoutId);
       window.removeEventListener('ocr:progress', progressHandler);
-      progressBox.hidden = true;
-      if (thumb.src?.startsWith('blob:')) URL.revokeObjectURL(thumb.src);
+      if (progressBox) progressBox.hidden = true;
+      if (thumb?.src?.startsWith('blob:')) URL.revokeObjectURL(thumb.src);
     }
   }
 
-  // Trigger file picker
-  uploadBtn.addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', () => {
+  uploadBtn?.addEventListener('click', () => fileInput?.click());
+  fileInput?.addEventListener('change', () => {
     const file = fileInput.files?.[0];
     if (file) handleFile(file);
   });
 
-  // Drag-and-drop (desktop)
-  dropZone.addEventListener('dragover', (e) => {
+  dropZone?.addEventListener('dragover', (e) => {
     e.preventDefault();
     dropZone.classList.add('is-dragging');
   });
-  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('is-dragging'));
-  dropZone.addEventListener('drop', (e) => {
+  dropZone?.addEventListener('dragleave', () => dropZone.classList.remove('is-dragging'));
+  dropZone?.addEventListener('drop', (e) => {
     e.preventDefault();
     dropZone.classList.remove('is-dragging');
     const file = e.dataTransfer?.files?.[0];
     if (file) handleFile(file);
   });
 
-  // Close
-  closeBtn.addEventListener('click', () => { if (onCancel) onCancel(); });
+  closeBtn?.addEventListener('click', () => { if (onCancel) onCancel(); });
+}
+
+/**
+ * Restores upload zone after preview (re-scan flow).
+ * @param {HTMLElement} overlay
+ * @param {{ onScanComplete?: (file: File) => Promise<void>, onCancel?: () => void }} callbacks
+ */
+export function restoreScannerUpload(overlay, callbacks = {}) {
+  ensureCSS();
+  overlay.innerHTML = getScannerCardHTML();
+  wireScannerCard(overlay, callbacks);
+}
+
+/**
+ * Renders a drag-drop / file-upload scanner zone.
+ *
+ * @param {{
+ *   onScanComplete: (file: File) => Promise<void>,
+ *   onCancel: () => void
+ * }} callbacks
+ * @returns {HTMLElement}
+ *
+ * @example
+ * const scanner = renderReceiptScanner({
+ *   onScanComplete: async (file) => { ... },
+ *   onCancel: () => scanner.remove(),
+ * });
+ * document.body.appendChild(scanner);
+ */
+export function renderReceiptScanner({ onScanComplete, onCancel } = {}) {
+  ensureCSS();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'receipt-scanner-modal';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', 'Scan Struk');
+
+  overlay.innerHTML = getScannerCardHTML();
+  wireScannerCard(overlay, { onScanComplete, onCancel });
+
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) { if (onCancel) onCancel(); }
   });
@@ -247,6 +271,81 @@ const SOURCE_BADGES = {
   manual:      { icon: '✏️', text: 'Manual',    cls: 'generic' },
   error:       { icon: '⚠️', text: 'Error',     cls: 'generic' },
 };
+
+/**
+ * @param {object|null|undefined} quality
+ * @param {string} fieldName
+ * @returns {object|null}
+ */
+function getFieldQualityFlag(quality, fieldName) {
+  if (!quality) return null;
+  const all = [...(quality.issues || []), ...(quality.warnings || [])];
+  return all.find((item) => item.field === fieldName) ?? null;
+}
+
+/**
+ * @param {object|null|undefined} quality
+ * @returns {string}
+ */
+function renderQualityWarningBanner(quality) {
+  if (!quality?.shouldWarn) return '';
+
+  const bannerClass = quality.level === 'poor'
+    ? 'receipt-warning-banner receipt-warning-poor'
+    : 'receipt-warning-banner receipt-warning-medium';
+  const icon = quality.level === 'poor' ? '🚫' : '⚠️';
+
+  const itemsList = [...(quality.issues || []), ...(quality.warnings || [])]
+    .slice(0, 3)
+    .map((item) => `<li>${h(item.message)}</li>`)
+    .join('');
+
+  const continueBtn = quality.level !== 'poor'
+    ? '<button type="button" class="receipt-btn receipt-btn-ghost" data-action="continue">⚠️ Lanjut Saja</button>'
+    : '';
+
+  return `
+    <div class="${bannerClass}" data-quality-banner>
+      <div class="receipt-warning-header">
+        <span class="receipt-warning-icon">${icon}</span>
+        <div class="receipt-warning-content">
+          <h4>${h(quality.summary)}</h4>
+          <ul class="receipt-warning-list">${itemsList}</ul>
+        </div>
+      </div>
+      <div class="receipt-warning-actions">
+        <button type="button" class="receipt-btn receipt-btn-warning" data-action="rescan">📷 Foto Lagi</button>
+        <button type="button" class="receipt-btn receipt-btn-outline" data-action="manual">✏️ Input Manual</button>
+        ${continueBtn}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * @param {string} name
+ * @param {string} label
+ * @param {string} value
+ * @param {string} inputHtml
+ * @param {object|null|undefined} quality
+ * @param {string} [extraClass]
+ * @returns {string}
+ */
+function renderPreviewField(name, label, value, inputHtml, quality, extraClass = '') {
+  const flag = getFieldQualityFlag(quality, name);
+  const warnClass = flag ? ' receipt-field--warning' : '';
+
+  return `
+    <div class="receipt-field${extraClass}${warnClass}">
+      <label class="receipt-field-label">
+        ${h(label)}
+        ${flag ? `<span class="receipt-field-warning-icon" title="${h(flag.message)}">⚠️</span>` : ''}
+      </label>
+      ${inputHtml}
+      ${flag ? `<small class="receipt-field-warning-text">${h(flag.message)}</small>` : ''}
+    </div>
+  `;
+}
 
 /**
  * Extracts current form values from the preview card.
@@ -291,39 +390,49 @@ function getPreviewFormData(container) {
  * @param {{
  *   onSave: (finalData: object) => Promise<void>,
  *   onCancel: () => void,
- *   onEdit?: () => void
+ *   onEdit?: () => void,
+ *   onRescan?: () => void,
+ *   onManual?: () => void
  * }} callbacks
  * @returns {HTMLElement}
  */
 export function renderReceiptPreview(scanResult, callbacks = {}) {
   ensureCSS();
 
-  const { parsed = {}, source = 'generic', confidence = 0.6, error = null } = scanResult;
-  const { onSave, onCancel, onEdit } = callbacks;
+  const { parsed = {}, source = 'generic', confidence = 0.6, error = null, quality = null } = scanResult;
+  const { onSave, onCancel, onEdit, onRescan, onManual } = callbacks;
 
   const badge = SOURCE_BADGES[source] ?? SOURCE_BADGES.generic;
-  const conf = Math.max(0, Math.min(1, confidence));
-  const confPct = Math.round(conf * 100);
-  const confClass = conf >= 0.90 ? 'high' : conf >= 0.70 ? 'medium' : 'low';
+  const displayScore = quality?.score ?? Math.max(0, Math.min(1, confidence));
+  const confPct = Math.round(displayScore * 100);
+  const confClass = quality?.level === 'good' ? 'high'
+    : quality?.level === 'medium' ? 'medium'
+    : quality?.level === 'poor' ? 'low'
+    : (displayScore >= 0.90 ? 'high' : displayScore >= 0.70 ? 'medium' : 'low');
 
   const today = new Date().toISOString().split('T')[0];
-  const date = parsed.date
-    ? normaliseDate(parsed.date)
-    : today;
-
+  const date = parsed.date ? normaliseDate(parsed.date) : today;
   const items = Array.isArray(parsed.items) ? parsed.items : [];
+
+  const typeSelect = `
+    <select name="type" class="receipt-field-input">
+      <option value="expense" ${parsed.type !== 'income' && parsed.type !== 'transfer' ? 'selected' : ''}>Pengeluaran</option>
+      <option value="income" ${parsed.type === 'income' ? 'selected' : ''}>Pemasukan</option>
+      <option value="transfer" ${parsed.type === 'transfer' ? 'selected' : ''}>Transfer</option>
+    </select>`;
 
   const card = document.createElement('div');
   card.className = 'receipt-preview-card';
 
   card.innerHTML = `
     ${error ? `<div class="receipt-error-banner" role="alert">${h(error)}</div>` : ''}
+    ${renderQualityWarningBanner(quality)}
     <div class="receipt-preview-header">
       <span class="receipt-source-badge receipt-source-badge--${h(badge.cls)}"
             title="Sumber: ${h(source)}">
         ${badge.icon} ${h(badge.text)}
       </span>
-      <div class="receipt-confidence receipt-confidence--${h(confClass)}">
+      <div class="receipt-confidence receipt-confidence--${h(confClass)}" title="Skor kualitas OCR">
         <div class="receipt-conf-bar-track">
           <div class="receipt-conf-bar-fill" style="width:${confPct}%"></div>
         </div>
@@ -333,52 +442,34 @@ export function renderReceiptPreview(scanResult, callbacks = {}) {
     </div>
 
     <div class="receipt-fields">
-      <div class="receipt-field">
-        <label class="receipt-field-label">Tanggal</label>
-        <input type="date" name="date" class="receipt-field-input" value="${h(date)}" />
-      </div>
-      <div class="receipt-field">
-        <label class="receipt-field-label">Tipe</label>
-        <select name="type" class="receipt-field-input">
-          <option value="expense" ${parsed.type !== 'income' && parsed.type !== 'transfer' ? 'selected' : ''}>Pengeluaran</option>
-          <option value="income" ${parsed.type === 'income' ? 'selected' : ''}>Pemasukan</option>
-          <option value="transfer" ${parsed.type === 'transfer' ? 'selected' : ''}>Transfer</option>
-        </select>
-      </div>
-      <div class="receipt-field receipt-field--amount">
-        <label class="receipt-field-label">Total</label>
-        <input type="number" name="amount" class="receipt-field-input"
-               value="${h(parsed.amount ?? parsed.total ?? 0)}" min="0" required />
-      </div>
-      <div class="receipt-field">
-        <label class="receipt-field-label">Merchant</label>
-        <input type="text" name="merchant" class="receipt-field-input"
-               value="${h(parsed.merchant ?? '')}" />
-      </div>
-      <div class="receipt-field">
-        <label class="receipt-field-label">Kategori</label>
-        <input type="text" name="category" class="receipt-field-input"
-               value="${h(parsed.category ?? '')}" list="rs-categories" />
-        <datalist id="rs-categories">
-          <option value="Food & Drink"><option value="Transport">
-          <option value="Shopping"><option value="Bills & Utilities">
-          <option value="Health"><option value="Entertainment">
-          <option value="Salary"><option value="Lainnya">
-        </datalist>
-      </div>
-      <div class="receipt-field">
-        <label class="receipt-field-label">Akun</label>
-        <input type="text" name="account" class="receipt-field-input"
-               value="${h(parsed.account ?? '')}" list="rs-accounts" />
-        <datalist id="rs-accounts">
-          <option value="GoPay"><option value="OVO"><option value="DANA">
-          <option value="BCA"><option value="Mandiri"><option value="Cash">
-        </datalist>
-      </div>
-      <div class="receipt-field">
-        <label class="receipt-field-label">Notes</label>
-        <textarea name="notes" class="receipt-field-input" rows="2">${h(parsed.notes ?? '')}</textarea>
-      </div>
+      ${renderPreviewField('date', 'Tanggal', date,
+        `<input type="date" name="date" class="receipt-field-input" value="${h(date)}" />`, quality)}
+      ${renderPreviewField('type', 'Tipe', parsed.type ?? 'expense', typeSelect, quality)}
+      ${renderPreviewField('amount', 'Total', String(parsed.amount ?? parsed.total ?? 0),
+        `<input type="number" name="amount" class="receipt-field-input"
+                value="${h(parsed.amount ?? parsed.total ?? 0)}" min="0" required />`,
+        quality, ' receipt-field--amount')}
+      ${renderPreviewField('merchant', 'Merchant', parsed.merchant ?? '',
+        `<input type="text" name="merchant" class="receipt-field-input"
+                value="${h(parsed.merchant ?? '')}" />`, quality)}
+      ${renderPreviewField('category', 'Kategori', parsed.category ?? '',
+        `<input type="text" name="category" class="receipt-field-input"
+                value="${h(parsed.category ?? '')}" list="rs-categories" />`, quality)}
+      ${renderPreviewField('account', 'Akun', parsed.account ?? '',
+        `<input type="text" name="account" class="receipt-field-input"
+                value="${h(parsed.account ?? '')}" list="rs-accounts" />`, quality)}
+      ${renderPreviewField('notes', 'Notes', parsed.notes ?? '',
+        `<textarea name="notes" class="receipt-field-input" rows="2">${h(parsed.notes ?? '')}</textarea>`, quality)}
+      <datalist id="rs-categories">
+        <option value="Food & Drink"><option value="Transport">
+        <option value="Shopping"><option value="Bills & Utilities">
+        <option value="Health"><option value="Entertainment">
+        <option value="Salary"><option value="Lainnya">
+      </datalist>
+      <datalist id="rs-accounts">
+        <option value="GoPay"><option value="OVO"><option value="DANA">
+        <option value="QRIS"><option value="BCA"><option value="Mandiri"><option value="Cash">
+      </datalist>
     </div>
 
     ${items.length ? `
@@ -391,6 +482,12 @@ export function renderReceiptPreview(scanResult, callbacks = {}) {
         ${items.map((item, i) => renderItemRow(item, i)).join('')}
       </ul>
     </div>` : ''}
+
+    ${scanResult.rawText ? `
+    <details class="receipt-raw-text">
+      <summary>📄 Lihat teks OCR mentah</summary>
+      <pre>${h(scanResult.rawText)}</pre>
+    </details>` : ''}
 
     <p class="receipt-privacy-notice">🔒 Gambar tidak disimpan · hanya teks yang diekstrak</p>
 
@@ -413,6 +510,18 @@ export function renderReceiptPreview(scanResult, callbacks = {}) {
 
   itemsList?.querySelectorAll('.receipt-item-remove').forEach((btn) => {
     btn.addEventListener('click', () => btn.closest('.receipt-item-row')?.remove());
+  });
+
+  card.querySelector('[data-action="rescan"]')?.addEventListener('click', () => {
+    if (onRescan) onRescan();
+  });
+
+  card.querySelector('[data-action="manual"]')?.addEventListener('click', () => {
+    if (onManual) onManual();
+  });
+
+  card.querySelector('[data-action="continue"]')?.addEventListener('click', () => {
+    card.querySelector('[data-quality-banner]')?.remove();
   });
 
   // Actions

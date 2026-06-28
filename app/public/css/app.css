@@ -686,6 +686,57 @@ html, body {
     .mobile-header-actions .mobile-header-user .user-btn__chev {
       display: none !important;
     }
+    .sync-indicator-wrap {
+      display: inline-flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .sync-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 0 6px;
+      height: 32px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--app-muted);
+      font-size: 10px;
+      line-height: 1;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .sync-indicator:hover {
+      color: var(--app-text);
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .sync-indicator .sync-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .sync-indicator .sync-icon.syncing {
+      animation: sync-spin 1s linear infinite;
+    }
+    .sync-indicator .sync-label {
+      max-width: 72px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .sync-indicator[data-online='false'] {
+      color: #f59e0b;
+    }
+    @keyframes sync-spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @media (max-width: 380px) {
+      .sync-indicator .sync-label {
+        display: none;
+      }
+    }
     .mobile-header-ghost {
       box-sizing: border-box;
       width: 36px;
