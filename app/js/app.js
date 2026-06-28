@@ -765,7 +765,7 @@ async function loadBudgets(){
       const quickLab = $('#quickTextLabel');
       if (quickLab) quickLab.innerHTML = t('quick.label_html') || t('quick.label');
       $('#quickText')?.setAttribute('placeholder', t('quick.placeholder'));
-      $('#btnParseTitle') && ($('#btnParseTitle').textContent = t('quick.process'));
+      $('#btnParse')?.setAttribute('aria-label', t('quick.process'));
       $('#quickAiBadge') && ($('#quickAiBadge').textContent = t('quick.badge') || 'Cepat & Praktis');
       $('#quickRecoTitle') && ($('#quickRecoTitle').textContent = t('quick.reco_title') || 'Rekomendasi input');
       $('#quickSecureText') && ($('#quickSecureText').textContent = t('quick.secure') || 'Data Anda aman dan terenkripsi');
@@ -8523,8 +8523,7 @@ if (btnDelete) {
     // Header interactions
     // =========================
     $('#fab')?.addEventListener('click', () => openAddSheet('quick'));
-    // Advisor dibuka lewat logo (auto-generate jika ada perubahan transaksi/periode)
-    $('#btnLogo')?.addEventListener('click', () => openAdvisorAuto());
+    $('#btnLogo')?.addEventListener('click', () => openAddSheet('quick'));
     $('#btnMenu')?.addEventListener('click', () => openMenu());
     $('#btnUser')?.addEventListener('click', () => openUser());
     $('#btnUserDesktop')?.addEventListener('click', () => openUser());
@@ -8599,12 +8598,9 @@ function toggleNav(view, triggerEl) {
     });
 
     $('#btnMainAction')?.addEventListener('click', (e) => {
-      const menu = $('#actionMenu');
-      menu.classList.toggle('hidden');
       e.stopPropagation();
+      openAddSheet('quick');
     });
-
-    document.addEventListener('click', () => $('#actionMenu')?.classList.add('hidden'));
 
     function setSaldoFilterMenu(open) {
       STATE.ui.saldoFilterOpen = !!open;
@@ -9408,4 +9404,14 @@ function toggleNav(view, triggerEl) {
       } else {
         bind();
       }
+    })();
+
+    // Block pinch/double-tap zoom (iOS Safari + trackpad ctrl+scroll)
+    (function preventAppZoom() {
+      document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false });
+      document.addEventListener('gesturechange', (e) => e.preventDefault(), { passive: false });
+      document.addEventListener('gestureend', (e) => e.preventDefault(), { passive: false });
+      document.addEventListener('wheel', (e) => {
+        if (e.ctrlKey) e.preventDefault();
+      }, { passive: false });
     })();
