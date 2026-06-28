@@ -1553,7 +1553,12 @@ async function upsertTransaction_legacy_local(tx) {
       $('#unifiedAiInput')?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); handleUnifiedAiParse(); }
       });
-      $('#btnUnifiedPhoto')?.addEventListener('click', () => openReceiptAdd());
+      $('#btnUnifiedPhoto')?.addEventListener('click', () => {
+        // Legacy receipt tab disabled — use OCR scanner (same as camera icon in quick input)
+        if (typeof window.openReceiptScanner === 'function') {
+          window.openReceiptScanner();
+        }
+      });
       $('#btnOnboardingStart')?.addEventListener('click', () => {
         window.MonefyiUI?.hideOnboarding?.();
         ensureAppShellVisible();
@@ -4604,8 +4609,11 @@ $('#btnAddSheetBack')?.addEventListener('click', () => {
 });
 
 $('#btnQuickGoReceipt')?.addEventListener('click', () => {
-  setTab('receipt');
-  updateAddSheetHeader('receipt');
+  if (typeof window.openReceiptScanner === 'function') {
+    window.openReceiptScanner();
+  } else {
+    showToast('Scanner belum siap, coba refresh halaman', 'warn');
+  }
 });
 
 // Buka input manual sebagai bottom sheet
@@ -4616,8 +4624,12 @@ function openManualAdd() {
   }
 }
 
-// Buka foto struk (receipt) sebagai bottom sheet
+// Buka foto struk (receipt) — legacy tab disabled, uses OCR scanner modal
 function openReceiptAdd() {
+  if (typeof window.openReceiptScanner === 'function') {
+    window.openReceiptScanner();
+    return;
+  }
   setSheetPosition('bottom');
   if (typeof openAddSheet === 'function') {
     openAddSheet('receipt');
@@ -6893,64 +6905,70 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
       }
     });
 
+    /**
+     * Opens the self-learning receipt OCR scanner (Phase OCR-1).
+     * Wired to #btnQuickGoReceipt camera icon in quick input toolbar.
+     */
+    async function openReceiptScanner() {
+      try {
+        const [{ renderReceiptScanner, renderReceiptPreview }, { parseReceipt, confirmReceiptParse }]
+          = await Promise.all([
+            loadAppModule('js/components/receipt-scanner.js'),
+            loadAppModule('js/parsers/receipt-pipeline.js'),
+          ]);
+
+        const scanner = renderReceiptScanner({
+          onScanComplete: async (imageFile) => {
+            const userId = STATE.db?.user?.id ?? null;
+            const result = await parseReceipt(imageFile, userId);
+
+            const preview = renderReceiptPreview(result, {
+              onSave: async (finalData) => {
+                await confirmReceiptParse(result, finalData, userId, STATE.db?.supa ?? null);
+                const now = new Date().toISOString();
+                await upsertTransaction({
+                  id: uuid(),
+                  date: finalData.date || toISODate(new Date()),
+                  type: finalData.type || 'expense',
+                  amount: Number(finalData.amount) || 0,
+                  currency: finalData.currency || 'IDR',
+                  category: finalData.category || 'Lainnya',
+                  subcategory: '',
+                  account: finalData.account || 'Cash',
+                  merchant: finalData.merchant || '',
+                  payment_method: finalData.account || 'Cash',
+                  notes: finalData.notes || '',
+                  created_at: now,
+                  updated_at: now,
+                  meta: { source: 'ocr', parsed: true },
+                });
+                preview.remove();
+                scanner.remove();
+                refreshAllUI();
+                closeAddSheet();
+                showToast('✓ Struk tersimpan');
+              },
+              onCancel: () => { preview.remove(); scanner.remove(); },
+            });
+
+            scanner.replaceWith(preview);
+          },
+          onCancel: () => scanner.remove(),
+        });
+
+        document.body.appendChild(scanner);
+      } catch (err) {
+        console.error('[OCR] openReceiptScanner failed:', err);
+        showToast('Gagal memuat scanner', 'warn');
+      }
+    }
+    window.openReceiptScanner = openReceiptScanner;
+
     $('#btnQuickClear').addEventListener('click', () => {
       $('#quickText').value = '';
       $('#parseStatus').textContent = '';
       STATE.parsedDraft = null;
     });
-
-    // ── OCR Scan button (lazy-loaded, zero cost client-side Tesseract) ──────
-    (function initOCRButton() {
-      const loadOCR     = () => loadAppModule('js/parsers/receipt-pipeline.js');
-      const loadScanner = () => loadAppModule('js/components/receipt-scanner.js');
-
-      const ocrBtn = document.createElement('button');
-      ocrBtn.type      = 'button';
-      ocrBtn.id        = 'btnOCR';
-      ocrBtn.className = 'ocr-scan-btn tap';
-      ocrBtn.innerHTML = '📷 Scan Struk';
-      ocrBtn.setAttribute('aria-label', 'Scan struk belanja');
-      $('#btnParse')?.insertAdjacentElement('afterend', ocrBtn);
-
-      ocrBtn.addEventListener('click', async () => {
-        try {
-          const [{ renderReceiptScanner, renderReceiptPreview }, { parseReceipt, confirmReceiptParse }]
-            = await Promise.all([loadScanner(), loadOCR()]);
-
-          const scanner = renderReceiptScanner({
-            onScanComplete: async (imageFile) => {
-              const userId = STATE.db?.user?.id ?? null;
-              const result = await parseReceipt(imageFile, userId);
-
-              const preview = renderReceiptPreview(result, {
-                onSave: async (finalData) => {
-                  await confirmReceiptParse(result, finalData, userId, STATE.db?.supa ?? null);
-                  await upsertTransaction({
-                    ...finalData,
-                    type:     finalData.type     || 'expense',
-                    currency: finalData.currency || 'IDR',
-                  });
-                  preview.remove();
-                  scanner.remove();
-                  refreshAllUI();
-                  showToast('✓ Struk tersimpan');
-                },
-                onCancel: () => { preview.remove(); scanner.remove(); },
-              });
-
-              scanner.replaceWith(preview);
-            },
-            onCancel: () => scanner.remove(),
-          });
-
-          document.body.appendChild(scanner);
-        } catch (err) {
-          console.error('[OCR] failed to load scanner:', err);
-          showToast('Gagal memuat scanner', 'warn');
-        }
-      });
-    })();
-    // ─────────────────────────────────────────────────────────────────────────
 
     $('#btnQuickGoBatch')?.addEventListener('click', () => {
       setTab('batch');
@@ -7180,7 +7198,12 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
       }
     }
 
-    $('#btnPickReceipt').addEventListener('click', () => $('#rFile')?.click());
+    // Legacy receipt tab OCR disabled — redirect to new scanner modal
+    $('#btnPickReceipt')?.addEventListener('click', () => {
+      if (typeof window.openReceiptScanner === 'function') {
+        window.openReceiptScanner();
+      }
+    });
 
     $('#rFile').addEventListener('change', async () => {
       const files = Array.from($('#rFile').files || []);

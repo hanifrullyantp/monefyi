@@ -17,7 +17,11 @@ function ensureCSS() {
   _cssLoaded = true;
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = '/css/receipt-scanner.css';
+  try {
+    link.href = new URL('css/receipt-scanner.css', document.baseURI).href;
+  } catch {
+    link.href = '/app/css/receipt-scanner.css';
+  }
   document.head.appendChild(link);
 }
 

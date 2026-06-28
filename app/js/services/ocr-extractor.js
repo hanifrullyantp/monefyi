@@ -295,12 +295,18 @@ export async function extractTextFromImage(imageInput, options = {}) {
       processedInput = await preprocessImage(imageInput);
     }
 
-    // Load Tesseract worker (injected in tests, dynamic import in browser)
+    // Load Tesseract worker (injected in tests, CDN global in browser, npm import fallback)
     let worker;
     if (_tesseractLoader) {
       worker = await _tesseractLoader(language);
+    } else if (typeof window !== 'undefined' && window.Tesseract?.createWorker) {
+      const langs = language.split('+');
+      worker = await window.Tesseract.createWorker(langs, 1, {
+        logger: logger ?? (() => {}),
+        errorHandler: (e) => console.error('[ocr] worker error:', e),
+      });
     } else {
-      // Dynamic import — no bundle bloat when OCR is not used
+      // Fallback: dynamic import (dev with bundler / npm)
       const Tesseract = await import('tesseract.js');
       const langs = language.split('+');
 
