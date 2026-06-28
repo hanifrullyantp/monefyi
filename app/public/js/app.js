@@ -875,7 +875,7 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
       editId: null,
       focusCategory: null,
       ui: {
-        dashboardOpen: false,
+        dashboardOpen: true,
         txDesktopFiltersOpen: false,
         saldoFilterOpen: false,
         monthPopoverOpen: false,
@@ -2985,6 +2985,15 @@ async function upsertTransaction_legacy_local(tx) {
         if (nav === 'list' && !STATE.ui.dashboardOpen) el.classList.add('active');
       });
 
+      if (!STATE.ui.budgetOpen && !STATE.ui.advisorOpen) {
+        $$('.nav-item[data-nav]').forEach((el) => {
+          const nav = el.getAttribute('data-nav');
+          if (nav === 'beranda' || nav === 'transaksi') {
+            el.classList.toggle('active', (nav === 'beranda' && STATE.ui.dashboardOpen) || (nav === 'transaksi' && !STATE.ui.dashboardOpen));
+          }
+        });
+      }
+
       // label utama header menggunakan bulan (contoh: Des 2025)
       const mk = toMonthKey(STATE.period.end);
       const mkLabel = monthLabel(mk);
@@ -3141,7 +3150,10 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       }
       $('#rangeCard')?.classList.toggle('hidden', (STATE.period.preset || 'this_month') !== 'custom');
 
-      $('#dashboardExpanded').classList.toggle('hidden', !STATE.ui.dashboardOpen);
+      const showDesktopDashboard = STATE.ui.dashboardOpen && isDesktopViewport();
+      const showMobileHome = STATE.ui.dashboardOpen && !isDesktopViewport();
+      $('#dashboardExpanded').classList.toggle('hidden', !showDesktopDashboard);
+      $('#homePageRoot')?.classList.toggle('hidden', !showMobileHome);
       $('#txSection')?.classList.toggle('hidden', STATE.ui.dashboardOpen);
       const pageTitleDesktop = $('#pageTitleTxDesktop');
       if (pageTitleDesktop) {
@@ -4481,6 +4493,68 @@ function generateSmartBudgetRecommendation() {
       requestAnimationFrame(() => window.MonefyiUI?.syncChipIndicator?.());
     }
 
+    function getHomePageContext() {
+      return {
+        transactions: STATE.transactions,
+        period: STATE.period,
+        settings: STATE.settings,
+        user: STATE.user,
+        ui: STATE.ui,
+        helpers: {
+          sumByType,
+          budgetForPeriod,
+          computeAccountBalancesUpto,
+          getTransactionsInPeriod,
+          toMonthKey,
+          monthsBetween,
+          formatIDR,
+          formatCompactIDR,
+          estimateSaldoUpToPeriodEnd,
+        },
+      };
+    }
+
+    function handleHomeQuickAction(actionId) {
+      switch (actionId) {
+        case 'budget': openBudget(); break;
+        case 'scan': openReceiptAdd(); break;
+        case 'analytics': openAdvisorAuto(); break;
+        case 'add': openAddSheet('quick'); break;
+        case 'search': toggleNav('list'); break;
+        case 'settings': $('#btnSettingsMobile')?.click(); break;
+        default: break;
+      }
+    }
+
+    function handleHomeTipAction(target) {
+      switch (target) {
+        case 'budget': openBudget(); break;
+        case 'advisor': openAdvisorAuto(); break;
+        case 'add-transaction': openAddSheet('quick'); break;
+        default: openAdvisorAuto(); break;
+      }
+    }
+
+    async function renderMobileHome() {
+      const root = $('#homePageRoot');
+      if (!root || isDesktopViewport() || !STATE.ui.dashboardOpen) return;
+      try {
+        const { renderHomePage } = await loadAppModule('js/pages/home-page.js');
+        renderHomePage(root, getHomePageContext(), {
+          onViewTransactions: () => toggleNav('list'),
+          onViewBudget: () => openBudget(),
+          onViewAdvisor: () => openAdvisorAuto(),
+          onViewAccounts: () => openAccounts(),
+          onAccountClick: (name) => openAccountDetail(name),
+          onTransactionClick: (tx) => openEdit(tx.id),
+          onQuickAction: handleHomeQuickAction,
+          onTipAction: handleHomeTipAction,
+        });
+      } catch (err) {
+        console.error('[home] render failed:', err);
+      }
+    }
+
   function rerender(){
   // keep static UI labels synced with selected language
   try { applyLanguageToUI(); } catch {}
@@ -4496,6 +4570,7 @@ function generateSmartBudgetRecommendation() {
   else requestAnimationFrame(() => renderCharts());
 
   renderTransactions();
+  if (STATE.ui.dashboardOpen && !isDesktopViewport()) renderMobileHome();
 }
     // =========================
     // UI: Sheet helpers

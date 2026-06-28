@@ -32,6 +32,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.48.1/dist/umd/supabase.js" integrity="sha384-Tgoms7a53eyQOCcKXlBrA1X967mm3BHK43f3979dACl74tZlLW+O85pmfCuhfUtx" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="css/app.css" />
+  <link rel="stylesheet" href="css/home-page.css" />
 
 
  
@@ -588,8 +589,11 @@
 
       <!-- Render Content Area: isi halaman (dashboard / list transaksi) -->
       <div id="dynamicContent" class="flex-1 min-h-0 space-y-6 w-full max-w-full md:overflow-y-auto">
-        <!-- Expanded dashboard -->
-        <div id="dashboardExpanded" class="hidden">
+        <!-- Mobile Beranda (premium home) -->
+        <div id="homePageRoot" class="home-page hidden md:hidden" aria-label="Beranda"></div>
+
+        <!-- Expanded dashboard (desktop only) -->
+        <div id="dashboardExpanded" class="hidden md:block">
           <!-- Account balances (top 3) -->
           <section id="accountsBalancesSection" class="mt-4">
             <div class="flex items-center justify-between gap-3 px-1">
@@ -923,7 +927,7 @@
   <nav class="fixed bottom-0 left-0 right-0 z-[110] nav-bar bottom-nav block md:hidden">
     <div class="nav-bar-inner safe-bottom">
       <div class="nav-bar-grid bottom-nav__grid">
-      <button type="button" data-nav="beranda" class="nav-item bottom-nav__item flex flex-col items-center gap-1 tap">
+      <button type="button" data-nav="beranda" class="nav-item bottom-nav__item flex flex-col items-center gap-1 tap active">
         <span class="nav-item__icon text-xl">
           <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
         </span>
