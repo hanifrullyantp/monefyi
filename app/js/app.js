@@ -1066,6 +1066,7 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
       });
       STATE.db.enabled = true;
+      if (typeof window !== 'undefined') window.__monefyiSupabase = STATE.db.supa;
 
       try {
         const { data } = await withTimeout(STATE.db.supa.auth.getSession(), 8000, 'session');
@@ -6949,47 +6950,96 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
      */
     async function openReceiptScanner() {
       try {
-        const [{ renderReceiptScanner, renderReceiptPreview }, { parseReceipt, confirmReceiptParse }]
+        const [{ renderReceiptScanner, renderReceiptPreview, mountReceiptPreview, showScanToast }, { parseReceipt, confirmReceiptParse }]
           = await Promise.all([
             loadAppModule('js/components/receipt-scanner.js'),
             loadAppModule('js/parsers/receipt-pipeline.js'),
           ]);
 
+        /** @param {object} result */
+        function showPreview(scanner, result) {
+          const preview = renderReceiptPreview(result, {
+            onSave: async (finalData) => {
+              try {
+                const userId = STATE.db?.user?.id ?? null;
+                await confirmReceiptParse(result, finalData, userId, STATE.db?.supa ?? null);
+              } catch (e) {
+                console.warn('[OCR] template learning failed (non-blocking):', e);
+              }
+              const now = new Date().toISOString();
+              await upsertTransaction({
+                id: uuid(),
+                date: finalData.date || toISODate(new Date()),
+                type: finalData.type || 'expense',
+                amount: Number(finalData.amount) || 0,
+                currency: finalData.currency || 'IDR',
+                category: finalData.category || 'Lainnya',
+                subcategory: '',
+                account: finalData.account || 'Cash',
+                merchant: finalData.merchant || '',
+                payment_method: finalData.account || 'Cash',
+                notes: finalData.notes || '',
+                created_at: now,
+                updated_at: now,
+                meta: { source: 'ocr', parsed: true },
+              });
+              preview.remove();
+              scanner.remove();
+              refreshAllUI();
+              closeAddSheet();
+              showToast('✓ Struk tersimpan');
+            },
+            onCancel: () => { preview.remove(); scanner.remove(); },
+          });
+          mountReceiptPreview(scanner, preview);
+          if (result.error && showScanToast) showScanToast(result.error);
+          if (result.warnings?.length) console.warn('[receipt-scanner] Warnings:', result.warnings);
+        }
+
         const scanner = renderReceiptScanner({
           onScanComplete: async (imageFile) => {
             const userId = STATE.db?.user?.id ?? null;
-            const result = await parseReceipt(imageFile, userId);
+            console.log('[receipt-scanner] Starting parseReceipt for userId:', userId);
 
-            const preview = renderReceiptPreview(result, {
-              onSave: async (finalData) => {
-                await confirmReceiptParse(result, finalData, userId, STATE.db?.supa ?? null);
-                const now = new Date().toISOString();
-                await upsertTransaction({
-                  id: uuid(),
-                  date: finalData.date || toISODate(new Date()),
-                  type: finalData.type || 'expense',
-                  amount: Number(finalData.amount) || 0,
-                  currency: finalData.currency || 'IDR',
-                  category: finalData.category || 'Lainnya',
-                  subcategory: '',
-                  account: finalData.account || 'Cash',
-                  merchant: finalData.merchant || '',
-                  payment_method: finalData.account || 'Cash',
-                  notes: finalData.notes || '',
-                  created_at: now,
-                  updated_at: now,
-                  meta: { source: 'ocr', parsed: true },
-                });
-                preview.remove();
-                scanner.remove();
-                refreshAllUI();
-                closeAddSheet();
-                showToast('✓ Struk tersimpan');
-              },
-              onCancel: () => { preview.remove(); scanner.remove(); },
+            let result;
+            try {
+              result = await Promise.race([
+                parseReceipt(imageFile, userId),
+                new Promise((_, reject) =>
+                  setTimeout(() => reject(new Error('OCR timeout. Silakan input manual atau coba foto lain.')), 90000),
+                ),
+              ]);
+            } catch (e) {
+              console.error('[receipt-scanner] CRITICAL ERROR (recovered):', e);
+              result = {
+                success: false,
+                parsed: {
+                  type: 'expense',
+                  amount: 0,
+                  merchant: '',
+                  category: 'Lainnya',
+                  account: 'Cash',
+                  date: new Date().toISOString().split('T')[0],
+                  notes: '',
+                },
+                source: 'manual',
+                confidence: 0,
+                rawText: '',
+                error: `Error: ${e.message}. Silakan input manual.`,
+                warnings: ['critical_error'],
+              };
+            }
+
+            console.log('[receipt-scanner] parseReceipt result:', {
+              success: result.success,
+              source: result.source,
+              confidence: result.confidence,
+              hasError: !!result.error,
+              warnings: result.warnings,
+              latency: result.latency,
             });
 
-            scanner.replaceWith(preview);
+            showPreview(scanner, result);
           },
           onCancel: () => scanner.remove(),
         });
@@ -9454,6 +9504,7 @@ function toggleNav(view, triggerEl) {
                 auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
               });
               STATE.db.enabled = true;
+              if (typeof window !== 'undefined') window.__monefyiSupabase = STATE.db.supa;
             } catch (_) {}
           }
         }

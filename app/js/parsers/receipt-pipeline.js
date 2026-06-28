@@ -20,6 +20,7 @@ import {
   applyTemplate,
   calculateMatchConfidence,
   CONFIDENCE_THRESHOLDS,
+  getSupabase,
 } from '../services/template-matcher.js';
 import {
   createTemplateFromCorrection,
@@ -32,7 +33,7 @@ import {
 import { normalizeInput } from './normalize.js';
 import { L2_applyRules } from './rules.js';
 
-/** @typedef {'user_memory'|'community'|'generic'|'review'|'error'} ReceiptSource */
+/** @typedef {'user_memory'|'community'|'generic'|'review'|'error'|'manual'} ReceiptSource */
 
 // ---------------------------------------------------------------------------
 // Supabase client resolver (same pattern as metrics.js)
@@ -48,9 +49,8 @@ export function _setSupabaseClient(client) { _injectedSupa = client; }
  * @returns {import('@supabase/supabase-js').SupabaseClient|null}
  */
 function resolveSupa() {
-  if (_injectedSupa) return _injectedSupa;
-  if (typeof window !== 'undefined') return window.STATE?.db?.supa ?? null;
-  return null;
+  if (_injectedSupa && typeof _injectedSupa.from === 'function') return _injectedSupa;
+  return getSupabase();
 }
 
 // ---------------------------------------------------------------------------
@@ -64,6 +64,23 @@ function resolveSupa() {
 function emitOCREvent(type, detail) {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new CustomEvent(type, { detail, bubbles: false }));
+}
+
+/**
+ * @returns {object}
+ */
+function getDefaultParsed() {
+  return {
+    type: 'expense',
+    amount: 0,
+    merchant: '',
+    category: 'Lainnya',
+    account: 'Cash',
+    date: new Date().toISOString().split('T')[0],
+    notes: '',
+    confidence: 0.30,
+    source: 'manual',
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -82,19 +99,16 @@ async function genericParse(rawText) {
     const normalized = normalizeInput(rawText);
     const ruleResult = L2_applyRules(normalized);
 
-    // Extract total from common Indonesian receipt patterns
     const totalRe = /(?:total|jumlah|grand total|bayar|charge)[^\d]*(\d[\d,.]*)/i;
     const totalMatch = rawText.match(totalRe);
     const total = totalMatch
       ? parseInt(totalMatch[1].replace(/[.,](?=\d{3})/g, ''), 10)
       : ruleResult?.amount ?? null;
 
-    // Extract date
     const dateRe = /(\d{2}[\/\-]\d{2}[\/\-]\d{4}|\d{4}[\/\-]\d{2}[\/\-]\d{2})/;
     const dateMatch = rawText.match(dateRe);
     const date = dateMatch ? dateMatch[1] : null;
 
-    // Merchant: first non-empty line
     const firstLine = rawText.split('\n').map((l) => l.trim()).find((l) => l.length > 2) ?? null;
 
     return {
@@ -124,6 +138,7 @@ async function genericParse(rawText) {
 
 /**
  * @typedef {Object} ReceiptParseResult
+ * @property {boolean} success
  * @property {object} parsed - Extracted transaction fields
  * @property {ReceiptSource} source - Which pipeline layer produced the result
  * @property {object|null} template - Matched template (if any)
@@ -132,11 +147,14 @@ async function genericParse(rawText) {
  * @property {string} rawText - Full OCR text
  * @property {object} layout - Layout features
  * @property {string} imageHash - SHA-256 of original image
- * @property {{ ocr_ms: number, parse_ms: number }} latency
+ * @property {{ ocr_ms: number, parse_ms: number, total_ms?: number }} latency
+ * @property {string[]} [warnings]
+ * @property {string|null} [error]
  */
 
 /**
  * Runs the full 5-layer receipt parse pipeline on an image file.
+ * Never throws — always returns a valid result object for the UI.
  *
  * @param {File|Blob} imageFile
  * @param {string|null} [userId]
@@ -146,149 +164,232 @@ async function genericParse(rawText) {
  *   logger?: (m: object) => void
  * }} [options]
  * @returns {Promise<ReceiptParseResult>}
- *
- * @example
- * const result = await parseReceipt(file, userId, { logger: (m) => setOCRProgress(m.progress) });
- * console.log(result.source, result.confidence, result.parsed.total);
  */
 export async function parseReceipt(imageFile, userId = null, options = {}) {
   const { language = 'ind+eng', logger = null } = options;
+  const startTime = Date.now();
+  const debug = typeof localStorage !== 'undefined'
+    && localStorage.getItem('monefyi_debug') === 'true';
+  const log = (...args) => debug && console.log('[receipt-pipeline]', ...args);
 
-  const t0 = Date.now();
-  emitOCREvent('ocr:progress', { stage: 'preprocessing', progress: 0.05 });
-
-  let ocrResult;
-  let imageHash = '';
-
-  // --- L0: preprocess ---
-  const processed = await preprocessImage(imageFile).catch(() => imageFile);
-
-  emitOCREvent('ocr:progress', { stage: 'ocr', progress: 0.15 });
-
-  // --- L1: OCR ---
-  try {
-    [ocrResult, imageHash] = await Promise.all([
-      extractTextFromImage(processed, {
-        language,
-        logger: logger ?? ((m) => {
-          if (m.status === 'recognizing text') {
-            emitOCREvent('ocr:progress', { stage: 'ocr', progress: 0.15 + m.progress * 0.55 });
-          }
-        }),
-      }),
-      hashImage(imageFile).catch(() => ''),
-    ]);
-  } catch (err) {
-    console.error('[receipt-pipeline] OCR failed:', err);
-    emitOCREvent('ocr:error', { error: err.message });
-    return {
-      parsed: { merchant: null, total: null, date: null, category: 'Lainnya' },
-      source: 'error', template: null, templateId: null, confidence: 0,
-      rawText: '', layout: {}, imageHash, latency: { ocr_ms: Date.now() - t0, parse_ms: 0 },
-    };
-  }
-
-  const ocrMs = Date.now() - t0;
-  const t1 = Date.now();
-
-  const { text: rawText, layout } = ocrResult;
-
-  // Empty OCR result (Tesseract failed gracefully) → surface as error
-  if (!rawText?.trim()) {
-    emitOCREvent('ocr:error', { error: 'No text extracted from image' });
-    return {
-      parsed: { merchant: null, total: null, date: null, category: 'Lainnya' },
-      source: 'error', template: null, templateId: null, confidence: 0,
-      rawText: '', layout: layout ?? {}, imageHash, latency: { ocr_ms: ocrMs, parse_ms: 0 },
-    };
-  }
-
-  emitOCREvent('ocr:progress', { stage: 'matching', progress: 0.72 });
-  const signature = generateLayoutSignature(layout);
-  const supa = resolveSupa();
-
-  // --- L2: user template ---
-  const userMatch = userId && supa
-    ? await findMatchingTemplate(signature, userId, supa).catch(() => null)
-    : null;
-
-  if (userMatch && userMatch.source === 'user_memory') {
-    const extracted = applyTemplate(rawText, userMatch.template);
-    // Blend stored accuracy (historical) with live match score — take the higher
-    const liveConf = calculateMatchConfidence(userMatch.template, extracted);
-    const storedAcc = Number(userMatch.template.accuracy_score || 0);
-    const confidence = Math.max(liveConf, storedAcc);
-
-    if (confidence >= CONFIDENCE_THRESHOLDS.user_memory) {
-      emitOCREvent('ocr:complete', { source: 'user_memory', confidence });
-      return {
-        parsed: { ...extracted, type: 'expense', currency: 'IDR', amount: extracted.total },
-        source: 'user_memory',
-        template: userMatch.template,
-        templateId: userMatch.template.id,
-        confidence,
-        rawText,
-        layout,
-        imageHash,
-        latency: { ocr_ms: ocrMs, parse_ms: Date.now() - t1 },
-      };
-    }
-  }
-
-  emitOCREvent('ocr:progress', { stage: 'community', progress: 0.82 });
-
-  // --- L3: community template ---
-  const communityMatch = supa
-    ? await findMatchingTemplate(signature, null, supa).catch(() => null)
-    : null;
-
-  if (communityMatch && communityMatch.source === 'community') {
-    const extracted = applyTemplate(rawText, communityMatch.template);
-    const liveConf = calculateMatchConfidence(communityMatch.template, extracted);
-    const storedScore = Number(communityMatch.template.community_score || 0);
-    const confidence = Math.max(liveConf, storedScore);
-
-    if (confidence >= CONFIDENCE_THRESHOLDS.community) {
-      emitOCREvent('ocr:complete', { source: 'community', confidence });
-      return {
-        parsed: { ...extracted, type: 'expense', currency: 'IDR', amount: extracted.total },
-        source: 'community',
-        template: communityMatch.template,
-        templateId: communityMatch.template.id,
-        confidence,
-        rawText,
-        layout,
-        imageHash,
-        latency: { ocr_ms: ocrMs, parse_ms: Date.now() - t1 },
-      };
-    }
-  }
-
-  emitOCREvent('ocr:progress', { stage: 'generic', progress: 0.90 });
-
-  // --- L4: generic parse via Phase 1 rules ---
-  const generic = await genericParse(rawText);
-  const genericConf = generic.confidence ?? 0.60;
-
-  emitOCREvent('ocr:complete', { source: 'generic', confidence: genericConf });
-
-  // --- L5: return for user review (always, since user must confirm) ---
-  return {
-    parsed: {
-      ...generic,
-      type: 'expense',
-      currency: 'IDR',
-      amount: generic.total ?? generic.amount ?? 0,
-    },
-    source: genericConf >= CONFIDENCE_THRESHOLDS.generic ? 'generic' : 'review',
+  /** @type {ReceiptParseResult} */
+  const result = {
+    success: false,
+    source: 'manual',
     template: null,
     templateId: null,
-    confidence: genericConf,
-    rawText,
-    layout,
-    imageHash,
-    latency: { ocr_ms: ocrMs, parse_ms: Date.now() - t1 },
+    parsed: getDefaultParsed(),
+    rawText: '',
+    layout: { signature: 'unknown', merchant_keywords: [] },
+    confidence: 0,
+    imageHash: '',
+    latency: { ocr_ms: 0, parse_ms: 0, total_ms: 0 },
+    warnings: [],
+    error: null,
   };
+
+  log('Pipeline start');
+
+  try {
+    emitOCREvent('ocr:progress', { stage: 'preprocessing', progress: 0.05 });
+
+    // --- L0: preprocess (non-critical) ---
+    let processed = imageFile;
+    try {
+      processed = await preprocessImage(imageFile);
+    } catch (e) {
+      log('Preprocess failed (non-critical):', e.message);
+      result.warnings.push('preprocess_failed');
+    }
+
+    emitOCREvent('ocr:progress', { stage: 'ocr', progress: 0.15 });
+
+    // --- L1: OCR (critical) ---
+    let ocrResult;
+    const ocrStart = Date.now();
+    try {
+      log('Starting OCR...');
+      [ocrResult, result.imageHash] = await Promise.all([
+        extractTextFromImage(processed, {
+          language,
+          logger: logger ?? ((m) => {
+            if (m.status === 'recognizing text') {
+              emitOCREvent('ocr:progress', { stage: 'ocr', progress: 0.15 + m.progress * 0.55 });
+            }
+          }),
+        }),
+        hashImage(imageFile).catch(() => ''),
+      ]);
+      result.latency.ocr_ms = Date.now() - ocrStart;
+      log('OCR done:', result.latency.ocr_ms + 'ms');
+
+      if (!ocrResult) {
+        throw new Error('OCR returned no result');
+      }
+
+      if (!ocrResult.text || !ocrResult.text.trim()) {
+        throw new Error('OCR extracted empty text. Image too blurry?');
+      }
+
+      result.rawText = ocrResult.text;
+      log('OCR text length:', ocrResult.text.length);
+    } catch (e) {
+      log('OCR failed:', e.message);
+      result.error = `OCR gagal: ${e.message}`;
+      result.success = true;
+      result.source = 'manual';
+      result.latency.ocr_ms = Date.now() - ocrStart;
+      result.latency.total_ms = Date.now() - startTime;
+      emitOCREvent('ocr:error', { error: e.message });
+      return result;
+    }
+
+    const rawText = result.rawText;
+    const layout = ocrResult.layout ?? {};
+    result.layout = layout;
+
+    // --- Layout signature (non-critical) ---
+    let signature = 'unknown';
+    try {
+      signature = generateLayoutSignature(layout);
+      result.layout = { ...layout, signature };
+      log('Layout signature:', signature);
+    } catch (e) {
+      log('Layout failed:', e.message);
+      result.warnings.push('layout_failed');
+    }
+
+    emitOCREvent('ocr:progress', { stage: 'matching', progress: 0.72 });
+    const supa = resolveSupa();
+    const parseStart = Date.now();
+    let matched = false;
+
+    // --- L2: user template (non-critical) ---
+    if (userId && supa) {
+      try {
+        const userMatch = await findMatchingTemplate(signature, userId, supa);
+        if (userMatch && userMatch.source === 'user_memory') {
+          try {
+            const extracted = applyTemplate(rawText, userMatch.template);
+            const liveConf = calculateMatchConfidence(userMatch.template, extracted);
+            const storedAcc = Number(userMatch.template.accuracy_score || 0);
+            const confidence = Math.max(liveConf, storedAcc, userMatch.confidence ?? 0);
+
+            if (confidence >= CONFIDENCE_THRESHOLDS.user_memory) {
+              result.parsed = {
+                ...extracted,
+                type: 'expense',
+                currency: 'IDR',
+                amount: extracted.total ?? extracted.amount ?? 0,
+              };
+              result.source = 'user_memory';
+              result.template = userMatch.template;
+              result.templateId = userMatch.template.id;
+              result.confidence = confidence;
+              matched = true;
+              log('Template matched: user_memory');
+              emitOCREvent('ocr:complete', { source: 'user_memory', confidence });
+            }
+          } catch (e) {
+            log('Template apply failed:', e.message);
+            result.warnings.push('template_apply_failed');
+          }
+        }
+      } catch (e) {
+        log('Template query failed:', e.message);
+        result.warnings.push('template_query_failed');
+      }
+    } else {
+      log('Skipping user template (no userId or supabase)');
+    }
+
+    // --- L3: community template (non-critical) ---
+    if (!matched && supa) {
+      emitOCREvent('ocr:progress', { stage: 'community', progress: 0.82 });
+      try {
+        const communityMatch = await findMatchingTemplate(signature, null, supa);
+        if (communityMatch && communityMatch.source === 'community') {
+          try {
+            const extracted = applyTemplate(rawText, communityMatch.template);
+            const liveConf = calculateMatchConfidence(communityMatch.template, extracted);
+            const storedScore = Number(communityMatch.template.community_score || 0);
+            const confidence = Math.max(liveConf, storedScore, communityMatch.confidence ?? 0);
+
+            if (confidence >= CONFIDENCE_THRESHOLDS.community) {
+              result.parsed = {
+                ...extracted,
+                type: 'expense',
+                currency: 'IDR',
+                amount: extracted.total ?? extracted.amount ?? 0,
+              };
+              result.source = 'community';
+              result.template = communityMatch.template;
+              result.templateId = communityMatch.template.id;
+              result.confidence = confidence;
+              matched = true;
+              log('Template matched: community');
+              emitOCREvent('ocr:complete', { source: 'community', confidence });
+            }
+          } catch (e) {
+            log('Community template apply failed:', e.message);
+            result.warnings.push('template_apply_failed');
+          }
+        }
+      } catch (e) {
+        log('Community query failed:', e.message);
+        result.warnings.push('template_query_failed');
+      }
+    }
+
+    emitOCREvent('ocr:progress', { stage: 'generic', progress: 0.90 });
+
+    // --- L4: generic parse fallback ---
+    if (!matched) {
+      try {
+        log('Running generic parse...');
+        const generic = await genericParse(rawText);
+        const genericConf = generic.confidence ?? 0.60;
+        result.parsed = {
+          ...generic,
+          type: 'expense',
+          currency: 'IDR',
+          amount: generic.total ?? generic.amount ?? 0,
+        };
+        result.source = genericConf >= CONFIDENCE_THRESHOLDS.generic ? 'generic' : 'review';
+        result.confidence = genericConf;
+        log('Generic parse done');
+        emitOCREvent('ocr:complete', { source: result.source, confidence: genericConf });
+      } catch (e) {
+        log('Generic parse failed:', e.message);
+        result.parsed = getDefaultParsed();
+        result.source = 'review';
+        result.warnings.push('generic_parse_failed');
+      }
+    }
+
+    result.latency.parse_ms = Date.now() - parseStart;
+    result.latency.total_ms = Date.now() - startTime;
+    result.success = true;
+
+    log('Pipeline complete:', {
+      source: result.source,
+      confidence: result.confidence,
+      latency: result.latency,
+      warnings: result.warnings,
+    });
+
+    return result;
+  } catch (e) {
+    console.error('[receipt-pipeline] Unexpected error (recovered):', e);
+    result.error = e.message || 'Unknown pipeline error';
+    result.success = true;
+    result.source = 'manual';
+    result.parsed = getDefaultParsed();
+    result.warnings.push('critical_error');
+    result.latency.total_ms = Date.now() - startTime;
+    emitOCREvent('ocr:error', { error: result.error });
+    return result;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -305,15 +406,14 @@ export async function parseReceipt(imageFile, userId = null, options = {}) {
  * @param {string|null} userId
  * @param {import('@supabase/supabase-js').SupabaseClient} [supabaseClient]
  * @returns {Promise<{ saved: boolean, templateAction: 'created'|'updated'|'voted'|'none' }>}
- *
- * @example
- * const { saved, templateAction } = await confirmReceiptParse(result, editedTx, userId);
- * if (templateAction === 'created') showToast('✨ Template baru terbentuk!');
  */
 export async function confirmReceiptParse(scanResult, finalData, userId, supabaseClient) {
-  const supa = supabaseClient ?? resolveSupa();
+  const supa = (supabaseClient && typeof supabaseClient.from === 'function')
+    ? supabaseClient
+    : resolveSupa();
 
   if (!supa || !userId) {
+    console.warn('[receipt-pipeline] confirmReceiptParse skipped — no supabase or userId');
     return { saved: false, templateAction: 'none' };
   }
 
@@ -326,7 +426,6 @@ export async function confirmReceiptParse(scanResult, finalData, userId, supabas
     parsed,
   } = scanResult;
 
-  // Detect which fields the user edited
   const editedFields = Object.keys(finalData).filter(
     (k) => finalData[k] != null && String(finalData[k]) !== String((parsed ?? {})[k] ?? ''),
   );
@@ -336,24 +435,21 @@ export async function confirmReceiptParse(scanResult, finalData, userId, supabas
 
   try {
     if (templateId && (source === 'user_memory' || source === 'community')) {
-      // Existing template
       if (editedFields.length === 0) {
-        // Perfect match — vote confirm + increment success
         await voteTemplate(templateId, userId, 'confirm', [], supa);
-        await supa.rpc('increment_template_success', { p_template_id: templateId });
+        await supa.rpc('increment_template_success', { p_template_id: templateId }).catch((e) => {
+          console.warn('[receipt-pipeline] increment_template_success failed:', e.message);
+        });
         templateAction = 'voted';
 
-        // Check auto-promotion to community
         const promoted = await checkAndPromoteTemplate(templateId, supa);
-        if (promoted) templateAction = 'created'; // reuse 'created' toast signal
+        if (promoted) templateAction = 'created';
       } else {
-        // User edited — refine template
         await updateTemplateFromEdit(templateId, { rawText }, finalData, supa);
         await voteTemplate(templateId, userId, 'edit', editedFields, supa);
         templateAction = 'updated';
       }
     } else {
-      // No template used — create one if user edited anything (they confirmed from generic)
       const { templateId: newId, success } = await createTemplateFromCorrection(
         userId,
         { rawText, imageHash, layout },
@@ -362,12 +458,10 @@ export async function confirmReceiptParse(scanResult, finalData, userId, supabas
       );
       if (success && newId) {
         templateAction = 'created';
-        // Check auto-promotion if the new template is suspiciously good
         await checkAndPromoteTemplate(newId, supa);
       }
     }
 
-    // Log scan (non-blocking)
     supa.from('receipt_scans').insert({
       user_id: userId,
       image_hash: imageHash,

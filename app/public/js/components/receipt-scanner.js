@@ -44,9 +44,36 @@ function isMobile() {
     /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
 }
 
-// ---------------------------------------------------------------------------
-// Receipt Scanner (upload / camera zone)
-// ---------------------------------------------------------------------------
+function showScanToast(message) {
+  if (typeof document === 'undefined') return;
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    padding: 12px 20px; background: rgba(245, 158, 11, 0.95); color: white;
+    border-radius: 12px; font-size: 13px; font-weight: 600; z-index: 10001;
+    max-width: 90vw;
+  `;
+  toast.textContent = '⚠️ ' + message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 5000);
+}
+
+/**
+ * Swaps scanner card content for the preview while keeping the modal overlay.
+ * @param {HTMLElement} scanner
+ * @param {HTMLElement} preview
+ */
+export function mountReceiptPreview(scanner, preview) {
+  const card = scanner.querySelector('.scanner-card');
+  if (card) {
+    card.replaceWith(preview);
+  } else {
+    scanner.innerHTML = '';
+    scanner.appendChild(preview);
+  }
+}
+
+export { showScanToast };
 
 /**
  * Renders a drag-drop / file-upload scanner zone.
@@ -140,16 +167,13 @@ export function renderReceiptScanner({ onScanComplete, onCancel } = {}) {
       return;
     }
 
-    // Show thumbnail
     thumb.src = URL.createObjectURL(file);
     thumbWrap.hidden = false;
     dropZone.querySelector('.scanner-upload-content').hidden = true;
 
-    // Show progress bar
     progressBox.hidden = false;
     setProgress(0.05, 'Memproses gambar…');
 
-    // Listen to OCR progress events
     const progressHandler = (/** @type {CustomEvent} */ e) => {
       const { stage, progress } = e.detail ?? {};
       const stageLabelMap = {
@@ -163,17 +187,22 @@ export function renderReceiptScanner({ onScanComplete, onCancel } = {}) {
     };
     window.addEventListener('ocr:progress', progressHandler);
 
+    const timeoutId = setTimeout(() => {
+      console.warn('[receipt-scanner] OCR timeout 90s');
+      showScanToast('OCR timeout. Silakan input manual atau coba foto lain.');
+    }, 90000);
+
     try {
       setProgress(0.1, 'Memulai OCR…');
       if (onScanComplete) await onScanComplete(file);
     } catch (err) {
-      console.error('[receipt-scanner] scan failed:', err);
-      progressLabel.textContent = '⚠️ Gagal membaca struk';
-      setProgress(0, '');
+      console.error('[receipt-scanner] scan failed (recovered):', err);
+      showScanToast(`Error: ${err.message}. Silakan input manual.`);
     } finally {
+      clearTimeout(timeoutId);
       window.removeEventListener('ocr:progress', progressHandler);
       progressBox.hidden = true;
-      URL.revokeObjectURL(thumb.src);
+      if (thumb.src?.startsWith('blob:')) URL.revokeObjectURL(thumb.src);
     }
   }
 
@@ -215,6 +244,7 @@ const SOURCE_BADGES = {
   community:   { icon: '🌐', text: 'Komunitas', cls: 'community' },
   generic:     { icon: '📐', text: 'Generic',   cls: 'generic' },
   review:      { icon: '✏️', text: 'Manual',    cls: 'generic' },
+  manual:      { icon: '✏️', text: 'Manual',    cls: 'generic' },
   error:       { icon: '⚠️', text: 'Error',     cls: 'generic' },
 };
 
@@ -268,7 +298,7 @@ function getPreviewFormData(container) {
 export function renderReceiptPreview(scanResult, callbacks = {}) {
   ensureCSS();
 
-  const { parsed = {}, source = 'generic', confidence = 0.6 } = scanResult;
+  const { parsed = {}, source = 'generic', confidence = 0.6, error = null } = scanResult;
   const { onSave, onCancel, onEdit } = callbacks;
 
   const badge = SOURCE_BADGES[source] ?? SOURCE_BADGES.generic;
@@ -287,6 +317,7 @@ export function renderReceiptPreview(scanResult, callbacks = {}) {
   card.className = 'receipt-preview-card';
 
   card.innerHTML = `
+    ${error ? `<div class="receipt-error-banner" role="alert">${h(error)}</div>` : ''}
     <div class="receipt-preview-header">
       <span class="receipt-source-badge receipt-source-badge--${h(badge.cls)}"
             title="Sumber: ${h(source)}">

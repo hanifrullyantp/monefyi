@@ -255,6 +255,18 @@
   animation: rsSlideUp 0.22s ease;
 }
 
+/* Error banner (OCR / DB failures — user can still edit manually) */
+.receipt-error-banner {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 10px;
+  color: #fbbf24;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 /* Header */
 .receipt-preview-header {
   display: flex;

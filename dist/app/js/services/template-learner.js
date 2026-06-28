@@ -6,7 +6,18 @@
  * @module services/template-learner
  */
 
-import { generateLayoutSignature } from './template-matcher.js';
+import { generateLayoutSignature, getSupabase } from './template-matcher.js';
+
+/**
+ * @param {import('@supabase/supabase-js').SupabaseClient|null|undefined} supabaseClient
+ * @returns {import('@supabase/supabase-js').SupabaseClient|null}
+ */
+function resolveClient(supabaseClient) {
+  if (supabaseClient && typeof supabaseClient.from === 'function') {
+    return supabaseClient;
+  }
+  return getSupabase();
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -172,7 +183,9 @@ export function inferFieldRules(rawText, finalData) {
  * @returns {Promise<{ templateId: string|null, success: boolean }>}
  */
 export async function createTemplateFromCorrection(userId, scanData, finalData, supabaseClient) {
-  if (!userId || !supabaseClient || !scanData?.rawText) {
+  const supa = resolveClient(supabaseClient);
+  if (!userId || !supa || !scanData?.rawText) {
+    if (!supa) console.warn('[template-learner] No Supabase client — skip createTemplate');
     return { templateId: null, success: false };
   }
 
@@ -182,7 +195,7 @@ export async function createTemplateFromCorrection(userId, scanData, finalData, 
     const merchant_name = finalData.merchant ?? null;
     const merchant_category = finalData.category ?? null;
 
-    const { data, error } = await supabaseClient
+    const { data, error } = await supa
       .from('receipt_templates')
       .upsert({
         user_id: userId,
@@ -231,13 +244,13 @@ export async function createTemplateFromCorrection(userId, scanData, finalData, 
  * @returns {Promise<{ success: boolean }>}
  */
 export async function updateTemplateFromEdit(templateId, scanData, editedData, supabaseClient) {
-  if (!templateId || !supabaseClient) return { success: false };
+  const supa = resolveClient(supabaseClient);
+  if (!templateId || !supa) return { success: false };
 
   try {
     const newRules = inferFieldRules(scanData?.rawText ?? '', editedData);
 
-    // Fetch existing field_rules and merge
-    const { data: existing, error: fetchErr } = await supabaseClient
+    const { data: existing, error: fetchErr } = await supa
       .from('receipt_templates')
       .select('field_rules')
       .eq('id', templateId)
@@ -250,7 +263,7 @@ export async function updateTemplateFromEdit(templateId, scanData, editedData, s
 
     const mergedRules = { ...(existing.field_rules ?? {}), ...newRules };
 
-    const { error: updateErr } = await supabaseClient
+    const { error: updateErr } = await supa
       .from('receipt_templates')
       .update({ field_rules: mergedRules, updated_at: new Date().toISOString() })
       .eq('id', templateId);
@@ -261,7 +274,7 @@ export async function updateTemplateFromEdit(templateId, scanData, editedData, s
     }
 
     // Increment edit counter via RPC
-    await supabaseClient.rpc('increment_template_edit', { p_template_id: templateId });
+    await supa.rpc('increment_template_edit', { p_template_id: templateId });
 
     return { success: true };
   } catch (err) {
@@ -285,10 +298,11 @@ export async function updateTemplateFromEdit(templateId, scanData, editedData, s
  * @returns {Promise<{ success: boolean }>}
  */
 export async function voteTemplate(templateId, userId, voteType, editedFields = [], supabaseClient) {
-  if (!templateId || !userId || !supabaseClient) return { success: false };
+  const supa = resolveClient(supabaseClient);
+  if (!templateId || !userId || !supa) return { success: false };
 
   try {
-    const { error: voteErr } = await supabaseClient
+    const { error: voteErr } = await supa
       .from('receipt_template_votes')
       .upsert({
         template_id: templateId,
@@ -303,7 +317,7 @@ export async function voteTemplate(templateId, userId, voteType, editedFields = 
     }
 
     // Recalculate community score asynchronously
-    supabaseClient
+    supa
       .rpc('recalc_community_score', { p_template_id: templateId })
       .catch((e) => console.error('[template-learner] recalc_community_score failed:', e));
 
@@ -327,10 +341,11 @@ export async function voteTemplate(templateId, userId, voteType, editedFields = 
  * @returns {Promise<boolean>}
  */
 export async function checkAndPromoteTemplate(templateId, supabaseClient) {
-  if (!templateId || !supabaseClient) return false;
+  const supa = resolveClient(supabaseClient);
+  if (!templateId || !supa) return false;
 
   try {
-    const { data, error } = await supabaseClient
+    const { data, error } = await supa
       .rpc('promote_template_to_community', { p_template_id: templateId });
 
     if (error) {

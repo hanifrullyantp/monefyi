@@ -1066,6 +1066,7 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
       });
       STATE.db.enabled = true;
+      if (typeof window !== 'undefined') window.__monefyiSupabase = STATE.db.supa;
 
       try {
         const { data } = await withTimeout(STATE.db.supa.auth.getSession(), 8000, 'session');
@@ -2163,14 +2164,21 @@ async function upsertTransaction_legacy_local(tx) {
     }
 
     /**
-     * Returns whether the new parse pipeline is enabled via localStorage.
-     * Defaults to false (safe for production until build pipeline is updated).
+     * Returns whether the new parse pipeline is enabled.
+     * Default ON after Phase 1 stable; user can opt out via localStorage 'false'.
      * @returns {boolean}
      */
     function _isNewPipelineEnabled() {
       try {
-        return localStorage.getItem('feature_new_parser_pipeline') === 'true';
-      } catch { return false; }
+        const stored = localStorage.getItem('feature_new_parser_pipeline');
+        if (stored === 'true') return true;
+        if (stored === 'false') return false;
+        // First run: persist default ON
+        localStorage.setItem('feature_new_parser_pipeline', 'true');
+        return true;
+      } catch {
+        return true;
+      }
     }
 
     /**
@@ -2183,19 +2191,22 @@ async function upsertTransaction_legacy_local(tx) {
      */
     function _buildTxFromPipelineResult(text, result, provider) {
       const now = new Date().toISOString();
+      const parsedAmount = Number(result.amount);
+      const merchantRaw = result.merchant || '';
+      const merchant = merchantRaw ? titleCase(String(merchantRaw)) : '';
+
       return {
         id: uuid(),
         date: result.date || parseDateFromText(text) || toISODate(new Date()),
         type: result.type || 'expense',
-        amount: Number(result.amount || parseIDRAmount(text) || 0),
+        amount: parsedAmount > 0 ? parsedAmount : (parseIDRAmount(text) || 0),
         currency: 'IDR',
         category: result.category || 'Lainnya',
         subcategory: '',
         account: result.account || guessAccount(text, null) || 'Cash',
-        merchant: result.merchant || '',
+        merchant,
         payment_method: result.account || guessPayment(text) || 'Cash',
-        notes: (text || '').trim(),
-        // rawInput + original exposed for the correction-learner in quick-preview.js
+        notes: result.notes || '',
         rawInput: text,
         original: text,
         created_at: now,
@@ -2243,8 +2254,8 @@ async function upsertTransaction_legacy_local(tx) {
         return _buildTxFromPipelineResult(text, memHit, 'memory');
       }
 
-      // L2: Grammar rules (confident match ≥0.75)
-      const ruleHit = await mods.L2_applyRules(normalized);
+      // L2: Grammar rules (confident match ≥0.75) — synchronous pure function
+      const ruleHit = mods.L2_applyRules(normalized);
       if (ruleHit && ruleHit.confidence >= 0.75) {
         return _buildTxFromPipelineResult(text, ruleHit, 'rule');
       }
@@ -2255,20 +2266,27 @@ async function upsertTransaction_legacy_local(tx) {
 
     /**
      * Parses quick-entry text into a transaction object.
-     * When feature flag 'feature_new_parser_pipeline' is ON:
+     * When feature flag 'feature_new_parser_pipeline' is ON (default):
      *   Tries L0→L1→L2; on miss or error cascades to legacyParseAIFirst.
-     * When flag is OFF (default): delegates directly to legacyParseAIFirst.
      * @param {string} text - raw user input
      * @returns {Promise<object>} transaction object
      */
     async function parseQuickText(text) {
       const startTime = Date.now();
       let parsed;
+      const useNew = _isNewPipelineEnabled();
 
-      if (_isNewPipelineEnabled()) {
+      if (useNew) {
         try {
           const pipelineResult = await runNewParsePipeline(text);
-          if (pipelineResult) parsed = pipelineResult;
+          if (pipelineResult && Number(pipelineResult.amount) > 0) {
+            parsed = pipelineResult;
+          } else if (pipelineResult) {
+            console.warn('[parseQuickText] pipeline returned low/zero amount, falling back to legacy', {
+              text,
+              amount: pipelineResult.amount,
+            });
+          }
         } catch (err) {
           console.error('[parseQuickText] new pipeline error, falling back:', err);
           if (typeof Sentry !== 'undefined') Sentry.captureException(err);
@@ -4460,7 +4478,10 @@ function openAddSheet(tab = 'quick') {
   });
   updateAddSheetHeader(tab);
   setTab(tab);
-  if (tab === 'quick') renderQuickInputRecommendations();
+  if (tab === 'quick') {
+    setQuickRecoExpanded(false);
+    renderQuickInputRecommendations();
+  }
 
   // 3. Buka Sheet
   if (backdropEl && sheetEl) {
@@ -4578,6 +4599,15 @@ function getQuickInputRecommendations(limit = 6) {
   return out.slice(0, limit);
 }
 
+function setQuickRecoExpanded(open) {
+  const toggle = $('#btnQuickRecoToggle');
+  const list = $('#quickRecoList');
+  if (!toggle || !list) return;
+  const expanded = !!open;
+  toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  list.classList.toggle('hidden', !expanded);
+}
+
 function renderQuickInputRecommendations() {
   const wrap = $('#quickRecoList');
   if (!wrap) return;
@@ -4602,6 +4632,12 @@ function renderQuickInputRecommendations() {
     });
   });
 }
+
+$('#btnQuickRecoToggle')?.addEventListener('click', () => {
+  const toggle = $('#btnQuickRecoToggle');
+  const expanded = toggle?.getAttribute('aria-expanded') === 'true';
+  setQuickRecoExpanded(!expanded);
+});
 
 $('#btnAddSheetBack')?.addEventListener('click', () => {
   setTab('quick');
@@ -5452,7 +5488,10 @@ function openTutorialTopic(id) {
       });
       $$('.tabPanel').forEach(p => p.classList.toggle('hidden', p.dataset.tabPanel !== tab));
       updateAddSheetHeader(tab);
-      if (tab === 'quick') renderQuickInputRecommendations();
+      if (tab === 'quick') {
+        setQuickRecoExpanded(false);
+        renderQuickInputRecommendations();
+      }
 
       if (tab === 'receipt') {
         requestAnimationFrame(()=>{
@@ -6911,47 +6950,96 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
      */
     async function openReceiptScanner() {
       try {
-        const [{ renderReceiptScanner, renderReceiptPreview }, { parseReceipt, confirmReceiptParse }]
+        const [{ renderReceiptScanner, renderReceiptPreview, mountReceiptPreview, showScanToast }, { parseReceipt, confirmReceiptParse }]
           = await Promise.all([
             loadAppModule('js/components/receipt-scanner.js'),
             loadAppModule('js/parsers/receipt-pipeline.js'),
           ]);
 
+        /** @param {object} result */
+        function showPreview(scanner, result) {
+          const preview = renderReceiptPreview(result, {
+            onSave: async (finalData) => {
+              try {
+                const userId = STATE.db?.user?.id ?? null;
+                await confirmReceiptParse(result, finalData, userId, STATE.db?.supa ?? null);
+              } catch (e) {
+                console.warn('[OCR] template learning failed (non-blocking):', e);
+              }
+              const now = new Date().toISOString();
+              await upsertTransaction({
+                id: uuid(),
+                date: finalData.date || toISODate(new Date()),
+                type: finalData.type || 'expense',
+                amount: Number(finalData.amount) || 0,
+                currency: finalData.currency || 'IDR',
+                category: finalData.category || 'Lainnya',
+                subcategory: '',
+                account: finalData.account || 'Cash',
+                merchant: finalData.merchant || '',
+                payment_method: finalData.account || 'Cash',
+                notes: finalData.notes || '',
+                created_at: now,
+                updated_at: now,
+                meta: { source: 'ocr', parsed: true },
+              });
+              preview.remove();
+              scanner.remove();
+              refreshAllUI();
+              closeAddSheet();
+              showToast('✓ Struk tersimpan');
+            },
+            onCancel: () => { preview.remove(); scanner.remove(); },
+          });
+          mountReceiptPreview(scanner, preview);
+          if (result.error && showScanToast) showScanToast(result.error);
+          if (result.warnings?.length) console.warn('[receipt-scanner] Warnings:', result.warnings);
+        }
+
         const scanner = renderReceiptScanner({
           onScanComplete: async (imageFile) => {
             const userId = STATE.db?.user?.id ?? null;
-            const result = await parseReceipt(imageFile, userId);
+            console.log('[receipt-scanner] Starting parseReceipt for userId:', userId);
 
-            const preview = renderReceiptPreview(result, {
-              onSave: async (finalData) => {
-                await confirmReceiptParse(result, finalData, userId, STATE.db?.supa ?? null);
-                const now = new Date().toISOString();
-                await upsertTransaction({
-                  id: uuid(),
-                  date: finalData.date || toISODate(new Date()),
-                  type: finalData.type || 'expense',
-                  amount: Number(finalData.amount) || 0,
-                  currency: finalData.currency || 'IDR',
-                  category: finalData.category || 'Lainnya',
-                  subcategory: '',
-                  account: finalData.account || 'Cash',
-                  merchant: finalData.merchant || '',
-                  payment_method: finalData.account || 'Cash',
-                  notes: finalData.notes || '',
-                  created_at: now,
-                  updated_at: now,
-                  meta: { source: 'ocr', parsed: true },
-                });
-                preview.remove();
-                scanner.remove();
-                refreshAllUI();
-                closeAddSheet();
-                showToast('✓ Struk tersimpan');
-              },
-              onCancel: () => { preview.remove(); scanner.remove(); },
+            let result;
+            try {
+              result = await Promise.race([
+                parseReceipt(imageFile, userId),
+                new Promise((_, reject) =>
+                  setTimeout(() => reject(new Error('OCR timeout. Silakan input manual atau coba foto lain.')), 90000),
+                ),
+              ]);
+            } catch (e) {
+              console.error('[receipt-scanner] CRITICAL ERROR (recovered):', e);
+              result = {
+                success: false,
+                parsed: {
+                  type: 'expense',
+                  amount: 0,
+                  merchant: '',
+                  category: 'Lainnya',
+                  account: 'Cash',
+                  date: new Date().toISOString().split('T')[0],
+                  notes: '',
+                },
+                source: 'manual',
+                confidence: 0,
+                rawText: '',
+                error: `Error: ${e.message}. Silakan input manual.`,
+                warnings: ['critical_error'],
+              };
+            }
+
+            console.log('[receipt-scanner] parseReceipt result:', {
+              success: result.success,
+              source: result.source,
+              confidence: result.confidence,
+              hasError: !!result.error,
+              warnings: result.warnings,
+              latency: result.latency,
             });
 
-            scanner.replaceWith(preview);
+            showPreview(scanner, result);
           },
           onCancel: () => scanner.remove(),
         });
@@ -9416,6 +9504,7 @@ function toggleNav(view, triggerEl) {
                 auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
               });
               STATE.db.enabled = true;
+              if (typeof window !== 'undefined') window.__monefyiSupabase = STATE.db.supa;
             } catch (_) {}
           }
         }

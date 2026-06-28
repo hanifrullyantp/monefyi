@@ -28,20 +28,24 @@ import {
  */
 function mockSupa(config = {}) {
   const { data = null, error = null } = config;
-  // Non-terminal chain methods (return another proxy)
-  const chainMethods = ['select', 'eq', 'order', 'limit', 'insert', 'update', 'upsert'];
+  const chainMethods = ['select', 'eq', 'order', 'gte', 'limit', 'insert', 'update', 'upsert'];
   const handler = {
     get(_, prop) {
-      if (prop === 'then') return undefined; // not a Promise
+      if (prop === 'then') return undefined;
       if (prop === 'rpc') {
         return () => Promise.resolve({ data: config.rpcData ?? null, error: config.rpcError ?? null });
       }
       if (prop === 'from') {
         return () => new Proxy({}, handler);
       }
-      // Terminal read methods
       if (prop === 'maybeSingle' || prop === 'single') {
         return () => Promise.resolve({ data, error });
+      }
+      if (prop === 'limit') {
+        return () => Promise.resolve({
+          data: data != null ? (Array.isArray(data) ? data : [data]) : [],
+          error,
+        });
       }
       if (chainMethods.includes(String(prop))) {
         return (..._args) => new Proxy({}, handler);
@@ -144,12 +148,15 @@ Deno.test('Template matcher - no user template falls back to community', async (
       select: () => ({
         eq: (..._a) => ({
           eq: (..._b) => ({
-            order: () => ({
-              limit: () => ({
-                maybeSingle: () => {
+            gte: () => ({
+              order: () => ({
+                limit: () => {
                   callIndex++;
-                  // 1st call (user query) → null, 2nd call (community) → communityTpl
-                  return Promise.resolve({ data: callIndex === 1 ? null : communityTpl, error: null });
+                  const tpl = callIndex === 1 ? null : communityTpl;
+                  return Promise.resolve({
+                    data: tpl ? [tpl] : [],
+                    error: null,
+                  });
                 },
               }),
             }),
@@ -379,11 +386,11 @@ Deno.test('Pipeline integration - L2 user template hit → returns user_memory i
   const supaWithUser = {
     from: () => ({
       select: () => ({
-        eq: (..._a) => ({
-          eq: (..._b) => ({
-            order: () => ({
-              limit: () => ({
-                maybeSingle: () => Promise.resolve({ data: fakeTemplate, error: null }),
+        eq: () => ({
+          eq: () => ({
+            gte: () => ({
+              order: () => ({
+                limit: () => Promise.resolve({ data: [fakeTemplate], error: null }),
               }),
             }),
           }),
@@ -420,15 +427,15 @@ Deno.test('Pipeline integration - L3 community template used when user has none'
   const supa = {
     from: () => ({
       select: () => ({
-        eq: (..._a) => ({
-          eq: (..._b) => ({
-            order: () => ({
-              limit: () => ({
-                maybeSingle: () => {
+        eq: () => ({
+          eq: () => ({
+            gte: () => ({
+              order: () => ({
+                limit: () => {
                   callCount++;
-                  // 1st call = user template (null), 2nd = community template
+                  const tpl = callCount >= 2 ? communityTpl : null;
                   return Promise.resolve({
-                    data: callCount >= 2 ? communityTpl : null,
+                    data: tpl ? [tpl] : [],
                     error: null,
                   });
                 },
@@ -447,7 +454,7 @@ Deno.test('Pipeline integration - L3 community template used when user has none'
     `confidence ${result.confidence} must be >= ${CONFIDENCE_THRESHOLDS.community}`);
 });
 
-Deno.test('Pipeline integration - OCR failure returns error source with empty text', async () => {
+Deno.test('Pipeline integration - OCR failure returns manual fallback with empty text', async () => {
   _setTesseractLoader(async () => ({
     recognize: async () => { throw new Error('OCR timeout'); },
     terminate: async () => {},
@@ -456,8 +463,10 @@ Deno.test('Pipeline integration - OCR failure returns error source with empty te
 
   const result = await parseReceipt(fakeImageBlob, null, { language: 'eng' });
 
-  assertEquals(result.source, 'error');
+  assertEquals(result.source, 'manual');
+  assertEquals(result.success, true);
   assertEquals(result.rawText, '');
+  assertExists(result.error);
   assertEquals(result.confidence, 0);
 });
 

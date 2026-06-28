@@ -18,6 +18,50 @@ export const CONFIDENCE_THRESHOLDS = {
   generic: 0.70,
 };
 
+const QUERY_TIMEOUT_MS = 5000;
+
+/**
+ * Resolves a valid Supabase client instance (not the library namespace).
+ * @returns {import('@supabase/supabase-js').SupabaseClient|null}
+ */
+export function getSupabase() {
+  if (typeof window === 'undefined') return null;
+
+  const candidates = [
+    window.__monefyiSupabase,
+    window.STATE?.db?.supa,
+    window._supabase,
+    window.sb,
+    window.supabaseClient,
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate && typeof candidate.from === 'function') {
+      return candidate;
+    }
+  }
+
+  if (window.supabase && typeof window.supabase.from === 'function') {
+    return window.supabase;
+  }
+
+  return null;
+}
+
+/**
+ * @param {Promise<unknown>} promise
+ * @param {number} [ms]
+ * @returns {Promise<unknown>}
+ */
+function queryWithTimeout(promise, ms = QUERY_TIMEOUT_MS) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Query timeout')), ms),
+    ),
+  ]);
+}
+
 // ---------------------------------------------------------------------------
 // Session cache (avoids repeated DB round-trips for community templates)
 // ---------------------------------------------------------------------------
@@ -121,53 +165,101 @@ export function generateLayoutSignature(layout) {
  * @param {import('@supabase/supabase-js').SupabaseClient} supabaseClient
  * @returns {Promise<{ template: object, source: 'user_memory'|'community', confidence: number }|null>}
  */
-export async function findMatchingTemplate(signature, userId, supabaseClient) {
-  if (!supabaseClient || !signature) return null;
-
-  const cacheKey = `${userId ?? 'anon'}:${signature}`;
-  if (_templateCache.has(cacheKey)) {
-    return _templateCache.get(cacheKey) ?? null;
-  }
-
+export async function findMatchingTemplate(signature, userId, supabaseClient = null) {
   try {
+    if (!signature) return null;
+
+    const supabase = (supabaseClient && typeof supabaseClient.from === 'function')
+      ? supabaseClient
+      : getSupabase();
+
+    if (!supabase) {
+      console.warn('[template-matcher] No Supabase client — skipping template lookup');
+      return null;
+    }
+
+    if (typeof supabase.from !== 'function') {
+      console.error('[template-matcher] Invalid client: missing .from() method');
+      return null;
+    }
+
+    const cacheKey = `${userId ?? 'anon'}:${signature}`;
+    if (_templateCache.has(cacheKey)) {
+      return _templateCache.get(cacheKey) ?? null;
+    }
+
     // 1. User's personal template
     if (userId) {
-      const { data: userTpl, error: userErr } = await supabaseClient
-        .from('receipt_templates')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('template_signature', signature)
-        .order('accuracy_score', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      try {
+        const result = /** @type {{ data: object[]|null, error: { message: string }|null }} */ (
+          await queryWithTimeout(
+            supabase
+              .from('receipt_templates')
+              .select('*')
+              .eq('user_id', userId)
+              .eq('template_signature', signature)
+              .gte('accuracy_score', 0.70)
+              .order('use_count', { ascending: false })
+              .limit(1),
+          )
+        );
 
-      if (!userErr && userTpl) {
-        const result = { template: userTpl, source: 'user_memory', confidence: Number(userTpl.accuracy_score || 0.95) };
-        _templateCache.set(cacheKey, result);
-        return result;
+        if (!result.error && result.data?.length > 0) {
+          const tpl = result.data[0];
+          const match = {
+            template: tpl,
+            source: 'user_memory',
+            confidence: Number(tpl.accuracy_score || 0.95),
+          };
+          _templateCache.set(cacheKey, match);
+          return match;
+        }
+
+        if (result.error) {
+          console.warn('[template-matcher] User query error:', result.error.message);
+        }
+      } catch (e) {
+        console.warn('[template-matcher] User query failed:', e.message);
       }
     }
 
     // 2. Community template
-    const { data: communityTpl, error: commErr } = await supabaseClient
-      .from('receipt_templates')
-      .select('*')
-      .eq('is_community', true)
-      .eq('template_signature', signature)
-      .order('community_score', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    try {
+      const result = /** @type {{ data: object[]|null, error: { message: string }|null }} */ (
+        await queryWithTimeout(
+          supabase
+            .from('receipt_templates')
+            .select('*')
+            .eq('is_community', true)
+            .eq('template_signature', signature)
+            .gte('community_score', 0.70)
+            .order('community_score', { ascending: false })
+            .limit(1),
+        )
+      );
 
-    if (!commErr && communityTpl) {
-      const result = { template: communityTpl, source: 'community', confidence: Number(communityTpl.community_score || 0.85) };
-      _templateCache.set(cacheKey, result);
-      return result;
+      if (!result.error && result.data?.length > 0) {
+        const tpl = result.data[0];
+        const match = {
+          template: tpl,
+          source: 'community',
+          confidence: Number(tpl.community_score || 0.85),
+        };
+        _templateCache.set(cacheKey, match);
+        return match;
+      }
+
+      if (result.error) {
+        console.warn('[template-matcher] Community query error:', result.error.message);
+      }
+    } catch (e) {
+      console.warn('[template-matcher] Community query failed:', e.message);
     }
 
     _templateCache.set(cacheKey, null);
     return null;
   } catch (err) {
-    console.error('[template-matcher] findMatchingTemplate failed:', err);
+    console.error('[template-matcher] Unexpected error (recovered):', err.message);
     return null;
   }
 }
@@ -345,4 +437,29 @@ export function calculateMatchConfidence(_template, extracted) {
   const itemsBonus = extracted.items?.length > 0 ? 0.05 : 0;
 
   return Math.min(1, base + itemsBonus);
+}
+
+// ---------------------------------------------------------------------------
+// Debug helpers (browser console)
+// ---------------------------------------------------------------------------
+
+if (typeof window !== 'undefined') {
+  window.__monefyiOCRDebug = {
+    testSupabase: () => {
+      const candidates = {
+        __monefyiSupabase: window.__monefyiSupabase,
+        'STATE.db.supa': window.STATE?.db?.supa,
+        _supabase: window._supabase,
+        sb: window.sb,
+        supabaseClient: window.supabaseClient,
+        supabase: window.supabase,
+      };
+
+      for (const [name, client] of Object.entries(candidates)) {
+        const isValid = client && typeof client.from === 'function';
+        console.log(`window.${name}:`, isValid ? '✅ VALID' : '❌ INVALID', client);
+      }
+    },
+    getActiveSupabase: () => getSupabase(),
+  };
 }
