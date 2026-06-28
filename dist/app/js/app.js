@@ -1720,7 +1720,7 @@ async function upsertTransaction_legacy_local(tx) {
         const dup = findPotentialDuplicate(tx);
         if (dup) tx.meta = { ...(tx.meta || {}), duplicateWarning: dup.id };
 
-        const { renderQuickPreview, txToPreviewModel } = await import('./components/quick-preview.js');
+        const { renderQuickPreview, txToPreviewModel } = await loadAppModule('js/components/quick-preview.js');
         const model = txToPreviewModel(tx);
         previewEl.innerHTML = '';
         const card = renderQuickPreview(model, {
@@ -2114,20 +2114,40 @@ async function upsertTransaction_legacy_local(tx) {
     // TODO(PHASE-1): Update prebuild in package.json to copy js/parsers/ and js/services/
     // =========================
 
+    /** @type {((path: string) => Promise<object>)|null} */
+    let _loadModuleFn = null;
+
+    /**
+     * Base-path-aware dynamic import for classic scripts.
+     * Resolves js/... paths to /app/js/... in production and /js/... locally.
+     * @param {string} relativePath - e.g. 'js/parsers/normalize.js'
+     * @returns {Promise<object>}
+     */
+    async function loadAppModule(relativePath) {
+      if (!_loadModuleFn) {
+        const base =
+          location.pathname === '/app' || location.pathname.startsWith('/app/')
+            ? '/app'
+            : '';
+        const loader = await import(`${base}/js/utils/module-loader.js`);
+        _loadModuleFn = loader.loadModule;
+      }
+      return _loadModuleFn(relativePath);
+    }
+
     /** @type {{ normalizeInput: Function, queryLocalMemory: Function, L2_applyRules: Function }|null} */
     let _parseMods = null;
 
     /**
      * Lazily loads L0-L2 parser modules and caches them.
-     * Import paths are relative to document root (app.js is a classic script).
      * @returns {Promise<{normalizeInput: Function, queryLocalMemory: Function, L2_applyRules: Function}>}
      */
     async function _loadParseMods() {
       if (_parseMods) return _parseMods;
       const [normMod, memMod, rulesMod] = await Promise.all([
-        import('./parsers/normalize.js'),
-        import('./services/memory.js'),
-        import('./parsers/rules.js'),
+        loadAppModule('js/parsers/normalize.js'),
+        loadAppModule('js/services/memory.js'),
+        loadAppModule('js/parsers/rules.js'),
       ]);
       _parseMods = {
         normalizeInput: normMod.normalizeInput,
@@ -2200,7 +2220,7 @@ async function upsertTransaction_legacy_local(tx) {
       // Pre-L0: Apply learnt patterns from user corrections (non-blocking, best-effort)
       let processedText = text;
       try {
-        const { applyLearntPatterns } = await import('./services/correction-learner.js');
+        const { applyLearntPatterns } = await loadAppModule('js/services/correction-learner.js');
         processedText = await applyLearntPatterns(text);
         if (processedText !== text) {
           console.log('[parser] learnt patterns applied', { before: text, after: processedText });
@@ -2263,7 +2283,7 @@ async function upsertTransaction_legacy_local(tx) {
       try {
         const userId = STATE.db.user?.id || null;
         if (userId) {
-          import('./services/metrics.js').then(({ logParseEvent }) => {
+          loadAppModule('js/services/metrics.js').then(({ logParseEvent }) => {
             logParseEvent({
               userId,
               input: text,
@@ -6881,8 +6901,8 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
 
     // ── OCR Scan button (lazy-loaded, zero cost client-side Tesseract) ──────
     (function initOCRButton() {
-      const loadOCR     = () => import('./parsers/receipt-pipeline.js');
-      const loadScanner = () => import('./components/receipt-scanner.js');
+      const loadOCR     = () => loadAppModule('js/parsers/receipt-pipeline.js');
+      const loadScanner = () => loadAppModule('js/components/receipt-scanner.js');
 
       const ocrBtn = document.createElement('button');
       ocrBtn.type      = 'button';

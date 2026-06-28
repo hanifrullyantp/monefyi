@@ -205,8 +205,9 @@ export function renderQuickPreview(parsed, callbacks = {}) {
 
     // ── Learning loop: capture user corrections (fire-and-forget) ──────────
     try {
+      const { loadModule } = await import('../utils/module-loader.js');
       const { diffCorrections, extractPatterns, saveLearntPatterns }
-        = await import('../services/correction-learner.js');
+        = await loadModule('js/services/correction-learner.js');
 
       const rawInput = parsed.rawInput ?? parsed.original ?? parsed.notes ?? '';
       const diffs = diffCorrections(parsed, edited);
