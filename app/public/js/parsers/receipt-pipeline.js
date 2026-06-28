@@ -29,10 +29,6 @@ import {
   checkAndPromoteTemplate,
 } from '../services/template-learner.js';
 
-// Reuse Phase 1 parsers for generic (L4) fallback
-import { normalizeInput } from './normalize.js';
-import { L2_applyRules } from './rules.js';
-
 /** @typedef {'user_memory'|'community'|'generic'|'review'|'error'|'manual'} ReceiptSource */
 
 // ---------------------------------------------------------------------------
@@ -84,51 +80,306 @@ function getDefaultParsed() {
 }
 
 // ---------------------------------------------------------------------------
-// Generic L4 parse using Phase 1 normalizer + rule engine
+// Indonesian receipt field extractors (L4 generic parse)
 // ---------------------------------------------------------------------------
 
 /**
- * Extracts transaction fields from raw OCR text using Phase 1 parsers.
- * Returns a best-effort result even without a template.
+ * Parse Indonesian number format.
+ * "." = thousand separator (9.200 → 9200), "," = decimal (9,50 → 9.50).
+ *
+ * @param {string} str
+ * @returns {number}
+ */
+export function parseIndonesianAmount(str) {
+  if (!str) return 0;
+
+  let cleaned = String(str).trim().replace(/[^\d.,]/g, '');
+  if (!cleaned) return 0;
+
+  const hasComma = cleaned.includes(',');
+  const hasDot = cleaned.includes('.');
+
+  if (hasComma && hasDot) {
+    cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+    return Math.round(parseFloat(cleaned));
+  }
+  if (hasDot && !hasComma) {
+    const parts = cleaned.split('.');
+    const last = parts[parts.length - 1];
+    if (last.length === 3 && parts.every((p, i) => i === 0 || p.length === 3)) {
+      return parseInt(cleaned.replace(/\./g, ''), 10);
+    }
+    return Math.round(parseFloat(cleaned));
+  }
+  if (hasComma && !hasDot) {
+    const parts = cleaned.split(',');
+    const last = parts[parts.length - 1];
+    if (last.length === 3) {
+      return parseInt(cleaned.replace(/,/g, ''), 10);
+    }
+    return Math.round(parseFloat(cleaned.replace(',', '.')));
+  }
+
+  return parseInt(cleaned, 10) || 0;
+}
+
+/**
+ * Parse Indonesian date formats → ISO YYYY-MM-DD.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+export function parseIndonesianDate(text) {
+  const today = new Date().toISOString().split('T')[0];
+
+  const patterns = [
+    /\b(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{4})\b/,
+    /\b(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{2})\b/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      let [, d, m, y] = match;
+      if (y.length === 2) {
+        y = parseInt(y, 10) < 50 ? `20${y}` : `19${y}`;
+      }
+      const day = parseInt(d, 10);
+      const month = parseInt(m, 10);
+      const year = parseInt(y, 10);
+      if (day >= 1 && day <= 31 && month >= 1 && month <= 12 && year >= 1990 && year <= 2100) {
+        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      }
+    }
+  }
+
+  return today;
+}
+
+/**
+ * Detect merchant from OCR text using known Indonesian retail patterns.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+export function detectMerchant(text) {
+  const KNOWN_MERCHANTS = [
+    { pattern: /\bINDO\s*MARET\b/i, name: 'Indomaret' },
+    { pattern: /\bALFA\s*MART\b/i, name: 'Alfamart' },
+    { pattern: /\bALFA\s*MIDI\b/i, name: 'Alfamidi' },
+    { pattern: /\bCIRCLE\s*K\b/i, name: 'Circle K' },
+    { pattern: /\bLAWSON\b/i, name: 'Lawson' },
+    { pattern: /\bFAMILY\s*MART\b/i, name: 'FamilyMart' },
+    { pattern: /\bSUPER\s*INDO\b/i, name: 'Superindo' },
+    { pattern: /\bGIANT\b/i, name: 'Giant' },
+    { pattern: /\bHYPERMART\b/i, name: 'Hypermart' },
+    { pattern: /\bCARREFOUR\b/i, name: 'Carrefour' },
+    { pattern: /\bLOTTE\s*MART\b/i, name: 'Lotte Mart' },
+    { pattern: /\bSPBU\b/i, name: 'SPBU' },
+    { pattern: /\bPERTAMINA\b/i, name: 'Pertamina' },
+    { pattern: /\bSHELL\b/i, name: 'Shell' },
+    { pattern: /\bSTARBUCKS\b/i, name: 'Starbucks' },
+    { pattern: /\bMCDONALD/i, name: "McDonald's" },
+    { pattern: /\bKFC\b/i, name: 'KFC' },
+    { pattern: /\bBURGER\s*KING\b/i, name: 'Burger King' },
+    { pattern: /\bDOMINOS?\b/i, name: "Domino's Pizza" },
+    { pattern: /\bPIZZA\s*HUT\b/i, name: 'Pizza Hut' },
+    { pattern: /\bGOJEK\b/i, name: 'Gojek' },
+    { pattern: /\bGRAB\b/i, name: 'Grab' },
+    { pattern: /\bTOKOPEDIA\b/i, name: 'Tokopedia' },
+    { pattern: /\bSHOPEE\b/i, name: 'Shopee' },
+    { pattern: /\bGOPAY\b/i, name: 'GoPay' },
+    { pattern: /\bOVO\b/i, name: 'OVO' },
+    { pattern: /\bDANA\b/i, name: 'DANA' },
+  ];
+
+  for (const { pattern, name } of KNOWN_MERCHANTS) {
+    if (pattern.test(text)) return name;
+  }
+
+  const lines = text.split('\n').filter((l) => l.trim());
+  for (const line of lines.slice(0, 5)) {
+    const cleaned = line.trim();
+    if (cleaned.length < 3 || cleaned.length > 40) continue;
+    if (/^\d/.test(cleaned)) continue;
+    if (/\bJL\b|\bJALAN\b|\bNPWP\b|\bNo\.\b/i.test(cleaned)) continue;
+    if (/\d{4,}/.test(cleaned)) continue;
+    return cleaned.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  return '';
+}
+
+/**
+ * Detect total amount from receipt text (avoids TUNAI/KEMBALI).
+ *
+ * @param {string} text
+ * @returns {number}
+ */
+export function detectTotal(text) {
+  const priorityPatterns = [
+    /TOTAL\s*BAYAR\s*:?\s*(\d[\d.,]*)/i,
+    /GRAND\s*TOTAL\s*:?\s*(\d[\d.,]*)/i,
+    /JUMLAH\s*BAYAR\s*:?\s*(\d[\d.,]*)/i,
+    /(?<!SUB\s)TOTAL\s*:?\s*(\d[\d.,]*)/i,
+    /SUB\s*TOTAL\s*:?\s*(\d[\d.,]*)/i,
+  ];
+
+  for (const pattern of priorityPatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const amount = parseIndonesianAmount(match[1]);
+      if (amount > 0) return amount;
+    }
+  }
+
+  const lines = text.split('\n');
+  let maxAmount = 0;
+
+  for (const line of lines) {
+    if (/TUNAI|KEMBALI|CHANGE|BAYAR\s*TUNAI/i.test(line)) continue;
+
+    const amounts = line.match(/\d+(?:[.,]\d{3})+|\d{4,}/g) || [];
+    for (const amtStr of amounts) {
+      const amt = parseIndonesianAmount(amtStr);
+      if (amt > maxAmount && amt < 100000000) maxAmount = amt;
+    }
+  }
+
+  return maxAmount;
+}
+
+/**
+ * Detect payment method from receipt text.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+export function detectAccount(text) {
+  const patterns = [
+    { regex: /TUNAI|CASH/i, name: 'Cash' },
+    { regex: /GOPAY/i, name: 'GoPay' },
+    { regex: /\bOVO\b/i, name: 'OVO' },
+    { regex: /\bDANA\b/i, name: 'DANA' },
+    { regex: /QRIS/i, name: 'QRIS' },
+    { regex: /SHOPEEPAY/i, name: 'ShopeePay' },
+    { regex: /LINKAJA/i, name: 'LinkAja' },
+    { regex: /KARTU\s*DEBIT|DEBIT\s*CARD|DEBIT\s*BCA|DEBIT\s*MANDIRI/i, name: 'Debit Card' },
+    { regex: /KARTU\s*KREDIT|CREDIT\s*CARD|VISA|MASTER\s*CARD/i, name: 'Credit Card' },
+    { regex: /\bBCA\b/i, name: 'BCA' },
+    { regex: /MANDIRI/i, name: 'Mandiri' },
+    { regex: /\bBNI\b/i, name: 'BNI' },
+    { regex: /\bBRI\b/i, name: 'BRI' },
+  ];
+
+  for (const { regex, name } of patterns) {
+    if (regex.test(text)) return name;
+  }
+
+  return 'Cash';
+}
+
+/**
+ * Detect category from merchant and receipt keywords.
+ *
+ * @param {string} text
+ * @param {string} merchant
+ * @returns {string}
+ */
+export function detectCategory(text, merchant) {
+  const lower = `${text} ${merchant || ''}`.toLowerCase();
+
+  const merchantCategories = {
+    Shopping: /indomaret|alfamart|alfamidi|circle.*k|lawson|family.*mart|superindo|giant|hypermart|carrefour|lotte/i,
+    'Food & Drink': /starbucks|mcdonald|kfc|burger.*king|pizza|domino|kopi|cafe|resto|warung|makan|food|gofood|grabfood/i,
+    Transport: /spbu|pertamina|shell|bensin|grab|gojek|uber|maxim|taxi|tol|parkir/i,
+    'Bills & Utilities': /pln|listrik|air|pdam|telkom|indihome|wifi|internet|tagihan|bayar|pulsa/i,
+    Health: /apotek|apotik|dokter|klinik|rumah.*sakit|rs\s|hospital|kimia.*farma|guardian|century/i,
+    Entertainment: /xxi|cgv|cinepolis|cinema|nonton|tiket|konser/i,
+    Education: /sekolah|kuliah|spp|kursus|buku|gramedia/i,
+  };
+
+  for (const [category, regex] of Object.entries(merchantCategories)) {
+    if (regex.test(lower)) return category;
+  }
+
+  return 'Shopping';
+}
+
+/**
+ * Extract line items from receipt text (best effort).
+ *
+ * @param {string} text
+ * @returns {Array<{ name: string, price: number, subtotal: number }>}
+ */
+export function extractItems(text) {
+  const items = [];
+  const lines = text.split('\n');
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    // Parse from right: SUBTOTAL  PRICE  QTY  NAME (handles "250" in product names)
+    const match = trimmed.match(/^(.+?)\s+(\d{1,3})\s+([\d.,]+)\s+([\d.,]+)$/);
+    if (match) {
+      const [, name, , price, subtotal] = match;
+      const cleanName = name.trim();
+      if (!/^[A-Z]/i.test(cleanName)) continue;
+      if (/^(TOTAL|HARGA|TUNAI|KEMBALI|SUB)/i.test(cleanName)) continue;
+      items.push({
+        name: cleanName.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()),
+        price: parseIndonesianAmount(price),
+        subtotal: parseIndonesianAmount(subtotal),
+      });
+    }
+  }
+
+  return items;
+}
+
+/**
+ * Extracts transaction fields from raw OCR text (Indonesian receipt heuristics).
  *
  * @param {string} rawText
- * @returns {object}
+ * @returns {Promise<object>}
  */
-async function genericParse(rawText) {
+export async function genericParse(rawText) {
+  if (!rawText || !rawText.trim()) {
+    return getDefaultParsed();
+  }
+
   try {
-    const normalized = normalizeInput(rawText);
-    const ruleResult = L2_applyRules(normalized);
+    const merchant = detectMerchant(rawText);
+    const totalAmount = detectTotal(rawText);
+    const date = parseIndonesianDate(rawText);
+    const account = detectAccount(rawText);
+    const category = detectCategory(rawText, merchant);
+    const extractedItems = extractItems(rawText);
 
-    const totalRe = /(?:total|jumlah|grand total|bayar|charge)[^\d]*(\d[\d,.]*)/i;
-    const totalMatch = rawText.match(totalRe);
-    const total = totalMatch
-      ? parseInt(totalMatch[1].replace(/[.,](?=\d{3})/g, ''), 10)
-      : ruleResult?.amount ?? null;
+    const notes = extractedItems.length > 0
+      ? `${extractedItems.length} items: ${extractedItems.slice(0, 3).map((i) => i.name).join(', ')}${extractedItems.length > 3 ? '...' : ''}`
+      : '';
 
-    const dateRe = /(\d{2}[\/\-]\d{2}[\/\-]\d{4}|\d{4}[\/\-]\d{2}[\/\-]\d{2})/;
-    const dateMatch = rawText.match(dateRe);
-    const date = dateMatch ? dateMatch[1] : null;
-
-    const firstLine = rawText.split('\n').map((l) => l.trim()).find((l) => l.length > 2) ?? null;
+    const uiItems = extractedItems.map((i) => ({
+      name: i.name,
+      amount: i.subtotal ?? i.price,
+    }));
 
     return {
-      merchant: ruleResult?.merchant ?? firstLine,
-      total,
-      amount: total,
+      type: 'expense',
+      merchant,
+      total: totalAmount,
+      amount: totalAmount,
       date,
-      items: [],
-      account: ruleResult?.account ?? null,
-      category: ruleResult?.category ?? 'Lainnya',
-      confidence: ruleResult?.confidence ?? 0.60,
+      account,
+      category,
+      notes,
+      items: uiItems,
+      confidence: totalAmount > 0 ? (merchant ? 0.75 : 0.60) : 0.30,
       source: 'generic',
     };
   } catch (err) {
     console.error('[receipt-pipeline] genericParse failed:', err);
-    return {
-      merchant: null, total: null, amount: null, date: null,
-      items: [], account: null, category: 'Lainnya',
-      confidence: 0.50, source: 'generic',
-    };
+    return getDefaultParsed();
   }
 }
 
