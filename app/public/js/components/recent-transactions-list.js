@@ -39,7 +39,7 @@ export function renderRecentTransactionsList(transactions, formatIDR, callbacks 
     const title = tx.merchant || tx.category || tx.notes || '(tanpa keterangan)';
     return `
       <button type="button" class="home-tx-row tap" data-tx-id="${tx.id}">
-        <span class="home-tx-row__icon">${Icon(catIcon, { size: 20, color: isIncome ? '#10b981' : '#94a3b8' })}</span>
+        <span class="home-tx-row__icon">${Icon(catIcon, { size: 20, color: '#2ecc71' })}</span>
         <span class="home-tx-row__body">
           <span class="home-tx-row__title">${title}</span>
           <span class="home-tx-row__meta">${formatTxDate(tx.date)} · ${tx.category || tx.type}</span>

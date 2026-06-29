@@ -4,7 +4,6 @@
  */
 
 import { buildHomePageData } from '../services/home-data.js';
-import { renderHomeBalanceStats } from '../components/home-balance-stats.js';
 import { renderAccountCards } from '../components/account-cards.js';
 import { renderQuickAccess } from '../components/quick-access.js';
 import { renderRecentTransactionsList } from '../components/recent-transactions-list.js';
@@ -27,7 +26,6 @@ export function renderHomePage(container, ctx, callbacks = {}) {
   container.innerHTML = '';
   container.className = 'home-page';
 
-  container.appendChild(renderHomeBalanceStats(data.summary, formatCompactIDR, masked));
   container.appendChild(renderAccountCards(data.accounts, formatIDR, masked, {
     onViewAll: callbacks.onViewAccounts,
     onAccountClick: callbacks.onAccountClick,

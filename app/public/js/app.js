@@ -3153,8 +3153,13 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       const showDesktopDashboard = STATE.ui.dashboardOpen && isDesktopViewport();
       const showMobileHome = STATE.ui.dashboardOpen && !isDesktopViewport();
       $('#dashboardExpanded').classList.toggle('hidden', !showDesktopDashboard);
-      $('#homePageRoot')?.classList.toggle('hidden', !showMobileHome);
+      const homeRoot = $('#homePageRoot');
+      if (homeRoot) {
+        homeRoot.classList.toggle('hidden', !showMobileHome);
+        if (!showMobileHome) homeRoot.replaceChildren();
+      }
       $('#txSection')?.classList.toggle('hidden', STATE.ui.dashboardOpen);
+      $('#homeTxSectionHead')?.classList.add('hidden');
       const pageTitleDesktop = $('#pageTitleTxDesktop');
       if (pageTitleDesktop) {
         pageTitleDesktop.textContent = STATE.ui.dashboardOpen ? 'Dashboard' : 'Transaksi';

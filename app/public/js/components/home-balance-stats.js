@@ -33,13 +33,13 @@ export function renderHomeBalanceStats(summary, formatValue, masked = false) {
       ${changeHtml(summary.incomeChange)}
     </div>
     <div class="home-stat-card home-stat-card--expense">
-      <div class="home-stat-card__icon">${Icon('arrowDownRight', { size: 18, color: '#ef4444' })}</div>
+      <div class="home-stat-card__icon">${Icon('arrowDownRight', { size: 14, color: '#ef4444' })}</div>
       <div class="home-stat-card__label">Pengeluaran</div>
       <div class="home-stat-card__value">${mask(summary.totalExpense)}</div>
       ${changeHtml(summary.expenseChange, true)}
     </div>
     <div class="home-stat-card home-stat-card--savings">
-      <div class="home-stat-card__icon">${Icon('trendingUp', { size: 18, color: '#3b82f6' })}</div>
+      <div class="home-stat-card__icon">${Icon('trendingUp', { size: 14, color: '#3b82f6' })}</div>
       <div class="home-stat-card__label">Surplus</div>
       <div class="home-stat-card__value">${mask(summary.totalSavings)}</div>
       ${changeHtml(summary.savingsChange)}

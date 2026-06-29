@@ -26,7 +26,7 @@ export function renderMiniChart7Day(chartData, formatCompactIDR, callbacks = {})
     const x = i * (barW + gap);
     const y = height - h - 16;
     const isMax = chartData?.maxDay?.date === d.date && d.amount > 0;
-    const fill = isMax ? '#10b981' : 'rgba(16,185,129,0.35)';
+    const fill = isMax ? '#2ecc71' : 'rgba(46, 204, 113, 0.32)';
     return `
       <g class="home-chart-bar" data-date="${d.date}">
         <rect x="${x}" y="${y}" width="${barW}" height="${h}" rx="4" fill="${fill}"/>
