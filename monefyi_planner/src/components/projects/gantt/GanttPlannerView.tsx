@@ -23,6 +23,7 @@ interface GanttPlannerViewProps {
   onSetView: (v: ProjectView) => void;
   focusProjectId?: string | null;
   onOpenProject: (p: Project) => void;
+  onOpenProjectDetail: (p: Project) => void;
 }
 
 export default function GanttPlannerView({
@@ -31,6 +32,7 @@ export default function GanttPlannerView({
   onSetView,
   focusProjectId,
   onOpenProject,
+  onOpenProjectDetail,
 }: GanttPlannerViewProps) {
   const tenant = useAppStore(s => s.tenant);
   const showToast = useUiStore(s => s.showToast);
@@ -39,7 +41,7 @@ export default function GanttPlannerView({
     leftWidth, setLeftWidth, detailOpen,
     searchQuery, filterStatus, advancedFilters,
     editTaskId, setEditTaskId, isDirty, discardToBaseline,
-    orgId, setHasDraft, undo, redo,
+    orgId, setHasDraft, undo, redo, expandedView, setExpandedView,
   } = useGanttStore();
 
   const { commitDates, saveAll, workItemsRef } = useGanttData(projects, tenant?.id, tenant?.currency);
@@ -113,6 +115,9 @@ export default function GanttPlannerView({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && expandedView) {
+        setExpandedView(false);
+      }
       if (e.ctrlKey || e.metaKey) {
         if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
         if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) { e.preventDefault(); redo(); }
@@ -121,7 +126,7 @@ export default function GanttPlannerView({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [undo, redo, saveAll]);
+  }, [undo, redo, saveAll, expandedView, setExpandedView]);
 
   useEffect(() => {
     if (!focusProjectId) return;
@@ -179,6 +184,11 @@ export default function GanttPlannerView({
     setProjectOrder(order);
   }, [setProjectOrder]);
 
+  const handleOpenProjectDetail = useCallback((projectId: string) => {
+    const p = projects.find(x => x.id === projectId);
+    if (p) onOpenProjectDetail(p);
+  }, [projects, onOpenProjectDetail]);
+
   const startResizeLeft = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     const startX = e.clientX;
@@ -201,7 +211,7 @@ export default function GanttPlannerView({
   }
 
   return (
-    <div className="space-y-3">
+    <div className={expandedView ? 'flex flex-col flex-1 min-h-0 gap-2' : 'space-y-3'}>
       <GanttToolbar
         projectCount={projects.length}
         projectView={projectView}
@@ -211,11 +221,19 @@ export default function GanttPlannerView({
       />
 
       <div
-        className="relative flex bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden gantt-planner"
-        style={{ height: 'calc(100vh - 300px)', minHeight: 540 }}
+        className="relative flex bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden gantt-planner flex-1 min-h-0"
+        style={{
+          height: expandedView ? undefined : 'calc(100vh - 300px)',
+          minHeight: expandedView ? 0 : 540,
+        }}
       >
         <div style={{ width: leftWidth }} className="shrink-0 h-full overflow-hidden">
-          <TaskListPanel rows={rows} onReorder={handleReorder} onEditTask={setEditTaskId} />
+          <TaskListPanel
+            rows={rows}
+            onReorder={handleReorder}
+            onEditTask={setEditTaskId}
+            onOpenProjectDetail={handleOpenProjectDetail}
+          />
         </div>
 
         <div

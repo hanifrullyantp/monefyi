@@ -296,6 +296,10 @@ html:not(.dark) main,
   transition: box-shadow 0.15s ease, opacity 0.15s ease;
 }
 
+.gantt-pan-surface {
+  touch-action: none;
+}
+
 .gantt-bar:active {
   cursor: grabbing;
 }

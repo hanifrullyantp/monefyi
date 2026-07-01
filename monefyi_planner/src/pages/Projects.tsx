@@ -27,7 +27,7 @@ function readStoredView(): ProjectView {
     const v = localStorage.getItem(VIEW_STORAGE_KEY);
     if (v === 'list' || v === 'kanban' || v === 'timeline' || v === 'calendar') return v;
   } catch { /* ignore */ }
-  return 'list';
+  return 'timeline';
 }
 
 function CreateProjectModal({ onClose }: { onClose: () => void }) {
@@ -165,6 +165,8 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [ganttFocusId, setGanttFocusId] = useState<string | null>(null);
+  const ganttExpanded = useGanttStore(s => s.expandedView);
+  const fullscreenGantt = projectView === 'timeline' && ganttExpanded;
 
   const canCreate = user?.role === 'owner' || user?.role === 'manager' || user?.role === 'admin';
   const showToast = useUiStore(s => s.showToast);
@@ -195,7 +197,16 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
     onOpenProject?.(p.id);
   };
 
+  const openProjectDetail = (p: Project) => {
+    setSelectedProject(p);
+    setSelectedProjectId(p.id);
+    onOpenProject?.(p.id);
+  };
+
   const setView = (v: ProjectView) => {
+    if (v !== 'timeline') {
+      useGanttStore.getState().setExpandedView(false);
+    }
     if (v === 'timeline' && projectView !== 'timeline') {
       setGanttFocusId(null);
     }
@@ -329,7 +340,13 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
   };
 
   return (
-    <div className={`p-4 md:p-6 mx-auto space-y-6 ${projectView === 'timeline' ? 'max-w-[100%]' : 'max-w-7xl'}`}>
+    <div className={
+      fullscreenGantt
+        ? 'fixed inset-0 z-40 bg-slate-50 p-2 md:p-3 overflow-hidden flex flex-col'
+        : `p-4 md:p-6 mx-auto space-y-6 ${projectView === 'timeline' ? 'max-w-[100%]' : 'max-w-7xl'}`
+    }>
+      {!fullscreenGantt && (
+        <>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-black text-slate-900">Manajemen Proyek</h1>
@@ -365,6 +382,8 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
             </div>
           ))}
         </div>
+      )}
+        </>
       )}
 
       {projectView !== 'timeline' && (
@@ -417,13 +436,16 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
       )}
 
       {projectView === 'timeline' && (
-        <GanttPlannerView
-          projects={filtered}
-          projectView={projectView}
-          onSetView={setView}
-          focusProjectId={ganttFocusId}
-          onOpenProject={openProject}
-        />
+        <div className={fullscreenGantt ? 'flex-1 min-h-0 flex flex-col' : undefined}>
+          <GanttPlannerView
+            projects={filtered}
+            projectView={projectView}
+            onSetView={setView}
+            focusProjectId={ganttFocusId}
+            onOpenProject={openProject}
+            onOpenProjectDetail={openProjectDetail}
+          />
+        </div>
       )}
       {projectView === 'kanban' && (
         <KanbanView projects={filtered} onOpenProject={openProject} onStatusChange={handleStatusChange} />

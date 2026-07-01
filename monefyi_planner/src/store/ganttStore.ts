@@ -41,6 +41,7 @@ interface GanttState {
   isDirty: boolean;
   isSaving: boolean;
   hasDraft: boolean;
+  expandedView: boolean;
 
   init: (orgId: string) => void;
   setTasks: (tasks: GanttTask[]) => void;
@@ -79,6 +80,8 @@ interface GanttState {
   setHasDraft: (v: boolean) => void;
   getSnapshot: () => GanttSnapshot;
   discardToBaseline: () => void;
+  toggleExpandedView: () => void;
+  setExpandedView: (v: boolean) => void;
 }
 
 export const useGanttStore = create<GanttState>((set, get) => ({
@@ -107,6 +110,7 @@ export const useGanttStore = create<GanttState>((set, get) => ({
   isDirty: false,
   isSaving: false,
   hasDraft: false,
+  expandedView: false,
 
   init: orgId => {
     set({
@@ -306,4 +310,8 @@ export const useGanttStore = create<GanttState>((set, get) => ({
     get().restoreSnapshot(baseline);
     set({ isDirty: false, undoStack: [], redoStack: [] });
   },
+
+  toggleExpandedView: () => set(s => ({ expandedView: !s.expandedView })),
+
+  setExpandedView: v => set({ expandedView: v }),
 }));

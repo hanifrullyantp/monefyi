@@ -39,6 +39,13 @@ export default function GanttTimeline({
   const [viewportH, setViewportH] = useState(0);
   const [viewportW, setViewportW] = useState(0);
   const [depDrag, setDepDrag] = useState<{ fromId: string; x: number; y: number; curX: number; curY: number } | null>(null);
+  const [isPanning, setIsPanning] = useState(false);
+  const panRef = useRef<{ startX: number; startY: number; startSL: number; startST: number } | null>(null);
+
+  const isInteractiveTarget = (el: EventTarget | null) => {
+    if (!(el instanceof HTMLElement)) return false;
+    return !!el.closest('.gantt-bar, button, a, input, select, textarea');
+  };
 
   const activeRows = rows;
   const range = computeTimelineRange(tasks.length ? tasks : activeRows.map(r => r.task));
@@ -116,6 +123,49 @@ export default function GanttTimeline({
       if (scrollRef.current) scrollRef.current.scrollLeft = Math.max(0, next);
     }
   };
+
+  const handlePanMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0 || depDrag) return;
+    if (isInteractiveTarget(e.target)) return;
+    e.preventDefault();
+    const container = scrollRef.current;
+    if (!container) return;
+    panRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startSL: container.scrollLeft,
+      startST: container.scrollTop,
+    };
+    setIsPanning(true);
+  };
+
+  useEffect(() => {
+    if (!isPanning) return;
+
+    const onMove = (e: MouseEvent) => {
+      const container = scrollRef.current;
+      const pan = panRef.current;
+      if (!container || !pan) return;
+      container.scrollLeft = Math.max(0, pan.startSL - (e.clientX - pan.startX));
+      container.scrollTop = Math.max(0, pan.startST - (e.clientY - pan.startY));
+      setScrollLeft(container.scrollLeft);
+      setScrollTop(container.scrollTop);
+      const listEl = document.querySelector('[data-gantt-scroll="list"]');
+      if (listEl) listEl.scrollTop = container.scrollTop;
+    };
+
+    const onUp = () => {
+      panRef.current = null;
+      setIsPanning(false);
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+  }, [isPanning, setScrollLeft]);
 
   const handleStartDependency = (fromId: string, x: number, y: number) => {
     const container = scrollRef.current;
@@ -198,10 +248,13 @@ export default function GanttTimeline({
 
       <div
         ref={scrollRef}
-        className="flex-1 overflow-auto gantt-scroll gantt-sync-scroll relative"
+        className={`flex-1 overflow-auto gantt-scroll gantt-sync-scroll relative gantt-pan-surface ${
+          isPanning ? 'cursor-grabbing select-none' : 'cursor-grab'
+        }`}
         data-gantt-scroll="timeline"
         onScroll={handleScroll}
         onWheel={handleWheel}
+        onMouseDown={handlePanMouseDown}
       >
         <div className="relative" style={{ width: totalWidth, height: virtual.totalHeight }}>
           <div className="absolute inset-0 flex pointer-events-none">

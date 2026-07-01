@@ -13,6 +13,7 @@ interface TaskListPanelProps {
   rows: FlatGanttRow[];
   onReorder: (order: string[]) => void;
   onEditTask?: (taskId: string) => void;
+  onOpenProjectDetail?: (projectId: string) => void;
 }
 
 function TaskListRow({
@@ -24,6 +25,7 @@ function TaskListRow({
   onSelect,
   onToggle,
   onEditTask,
+  onOpenProjectDetail,
 }: {
   row: FlatGanttRow;
   isSelected: boolean;
@@ -33,6 +35,7 @@ function TaskListRow({
   onSelect: (id: string, multi: boolean) => void;
   onToggle: (id: string) => void;
   onEditTask?: (id: string) => void;
+  onOpenProjectDetail?: (projectId: string) => void;
 }) {
   const { task, depth, hasChildren, isExpanded } = row;
   const isDone = task.status === 'completed' || task.status === 'archived';
@@ -41,7 +44,13 @@ function TaskListRow({
   return (
     <div
       onClick={e => onSelect(task.id, e.ctrlKey || e.metaKey)}
-      onDoubleClick={() => onEditTask?.(task.id)}
+      onDoubleClick={() => {
+        if (task.type === 'project') {
+          onOpenProjectDetail?.(task.id);
+        } else {
+          onEditTask?.(task.id);
+        }
+      }}
       className={`gantt-task-row flex items-center gap-1 px-2 border-b border-slate-100 cursor-pointer transition-colors ${
         isSelected
           ? 'bg-blue-50 border-l-[3px] border-l-blue-500'
@@ -106,7 +115,7 @@ function TaskListRow({
   );
 }
 
-export default function TaskListPanel({ rows, onReorder, onEditTask }: TaskListPanelProps) {
+export default function TaskListPanel({ rows, onReorder, onEditTask, onOpenProjectDetail }: TaskListPanelProps) {
   const { selectedIds, selectTask, toggleExpand, projectOrder } = useGanttStore();
   const [dragId, setDragId] = useState<string | null>(null);
   const dragOverRef = useRef<string | null>(null);
@@ -195,6 +204,7 @@ export default function TaskListPanel({ rows, onReorder, onEditTask }: TaskListP
                     onSelect={selectTask}
                     onToggle={toggleExpand}
                     onEditTask={onEditTask}
+                    onOpenProjectDetail={onOpenProjectDetail}
                   />
                 </div>
               );

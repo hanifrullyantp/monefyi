@@ -1,7 +1,7 @@
 import {
   Search, Filter, Minus, Plus, List, Settings2, SlidersHorizontal,
   Undo2, Redo2, Save, PanelRightClose, PanelRightOpen,
-  Columns3, GanttChart, Calendar, LayoutList,
+  Columns3, GanttChart, Calendar, LayoutList, Maximize2, Minimize2,
 } from 'lucide-react';
 import { useGanttStore } from '../../../store/ganttStore';
 import type { GanttViewMode } from '../../../lib/gantt/types';
@@ -44,7 +44,7 @@ export default function GanttToolbar({
     detailOpen, toggleDetailOpen,
     undo, redo, undoStack, redoStack,
     isDirty, isSaving, advancedFilters, setShowAdvancedFilters,
-    hasDraft,
+    hasDraft, expandedView, toggleExpandedView,
   } = useGanttStore();
 
   const advCount = countActiveAdvancedFilters(advancedFilters);
@@ -181,6 +181,19 @@ export default function GanttToolbar({
               </button>
             ))}
           </div>
+
+          <button
+            type="button"
+            onClick={toggleExpandedView}
+            className={`p-2.5 rounded-xl border text-sm transition-colors ${
+              expandedView
+                ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+            title={expandedView ? 'Keluar layar penuh (Esc)' : 'Layar penuh Gantt'}
+          >
+            {expandedView ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
 
           <button
             type="button"
