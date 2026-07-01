@@ -2,6 +2,7 @@ import type { Project } from '../../store/appStore';
 import type { WorkItem } from '../../services/workItemService';
 import type {
   FlatGanttRow,
+  GanttAdvancedFilters,
   GanttDependency,
   GanttPriority,
   GanttTask,
@@ -114,11 +115,13 @@ export function getBarStyle(
   const width = Math.max(12, daysBetween(task.startDate, task.endDate) * pxPerDay - 2);
 
   let color = GANTT_COLORS.onTrack;
-  if (selected) color = GANTT_COLORS.selected;
+  if (task.barColor) color = task.barColor;
+  else if (selected) color = GANTT_COLORS.selected;
   else if (task.status === 'completed' || task.status === 'archived') color = GANTT_COLORS.completed;
   else if (task.healthStatus === 'behind') color = GANTT_COLORS.behind;
   else if (task.healthStatus === 'at_risk') color = GANTT_COLORS.atRisk;
   else if (task.progress <= 0 && task.status === 'pending') color = GANTT_COLORS.notStarted;
+  else if (selected) color = GANTT_COLORS.selected;
 
   return { left, width, color };
 }
@@ -232,4 +235,27 @@ export function getMonthGroups(days: Date[]): { label: string; span: number }[] 
     groups.push({ label, span });
   }
   return groups;
+}
+
+/** Returns true if task passes advanced filter criteria. */
+export function matchesAdvancedFilters(task: GanttTask, f: GanttAdvancedFilters): boolean {
+  if (f.clientName && !(task.clientName || '').toLowerCase().includes(f.clientName.toLowerCase())) {
+    return false;
+  }
+  if (f.priority !== 'all' && task.priority !== f.priority) return false;
+  if (f.healthStatus !== 'all' && task.healthStatus !== f.healthStatus) return false;
+  if (task.progress < f.progressMin || task.progress > f.progressMax) return false;
+  if (f.dateFrom && task.endDate < f.dateFrom) return false;
+  if (f.dateTo && task.startDate > f.dateTo) return false;
+  return true;
+}
+
+export function countActiveAdvancedFilters(f: GanttAdvancedFilters): number {
+  let n = 0;
+  if (f.clientName) n++;
+  if (f.priority !== 'all') n++;
+  if (f.healthStatus !== 'all') n++;
+  if (f.progressMin > 0 || f.progressMax < 100) n++;
+  if (f.dateFrom || f.dateTo) n++;
+  return n;
 }

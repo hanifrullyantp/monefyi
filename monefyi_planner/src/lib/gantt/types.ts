@@ -22,7 +22,28 @@ export interface GanttTask {
   assigneeId?: string;
   assigneeName?: string;
   sortOrder: number;
+  barColor?: string;
 }
+
+export interface GanttAdvancedFilters {
+  clientName: string;
+  priority: GanttPriority | 'all';
+  healthStatus: Project['health_status'] | 'all';
+  progressMin: number;
+  progressMax: number;
+  dateFrom: string;
+  dateTo: string;
+}
+
+export const DEFAULT_ADVANCED_FILTERS: GanttAdvancedFilters = {
+  clientName: '',
+  priority: 'all',
+  healthStatus: 'all',
+  progressMin: 0,
+  progressMax: 100,
+  dateFrom: '',
+  dateTo: '',
+};
 
 export interface GanttDependency {
   id: string;

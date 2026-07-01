@@ -3,32 +3,51 @@ import { AnimatePresence } from 'framer-motion';
 import type { Project } from '../../../store/appStore';
 import { useAppStore } from '../../../store/appStore';
 import { useGanttStore } from '../../../store/ganttStore';
-import { flattenTasks } from '../../../lib/gantt/utils';
-import { persistGanttDependency, removeGanttDependency } from '../../../services/ganttDependencyService';
+import { flattenTasks, matchesAdvancedFilters } from '../../../lib/gantt/utils';
+import { saveGanttDraft, clearGanttDraft, loadGanttDraft } from '../../../services/ganttDraftService';
 import { useGanttData } from './useGanttData';
 import GanttToolbar from './GanttToolbar';
 import TaskListPanel from './TaskListPanel';
 import GanttTimeline from './GanttTimeline';
 import GanttDetailPanel from './GanttDetailPanel';
 import GanttEditModal from './GanttEditModal';
+import GanttAdvancedFilterModal from './GanttAdvancedFilterModal';
+import GanttUnsavedDialog, { type UnsavedChoice } from './GanttUnsavedDialog';
+import { useUiStore } from '../../../store/uiStore';
+
+type ProjectView = 'list' | 'kanban' | 'timeline' | 'calendar';
 
 interface GanttPlannerViewProps {
   projects: Project[];
+  projectView: ProjectView;
+  onSetView: (v: ProjectView) => void;
+  focusProjectId?: string | null;
   onOpenProject: (p: Project) => void;
 }
 
-export default function GanttPlannerView({ projects, onOpenProject }: GanttPlannerViewProps) {
+export default function GanttPlannerView({
+  projects,
+  projectView,
+  onSetView,
+  focusProjectId,
+  onOpenProject,
+}: GanttPlannerViewProps) {
   const tenant = useAppStore(s => s.tenant);
+  const showToast = useUiStore(s => s.showToast);
   const {
     tasks, expandedIds, projectOrder, setProjectOrder,
-    leftWidth, rightWidth, setLeftWidth, setRightWidth, detailOpen,
-    searchQuery, filterStatus, editTaskId, setEditTaskId,
+    leftWidth, setLeftWidth, detailOpen,
+    searchQuery, filterStatus, advancedFilters,
+    editTaskId, setEditTaskId, isDirty, discardToBaseline,
+    orgId, setHasDraft, undo, redo,
   } = useGanttStore();
 
-  const { saveTaskDates, workItemsRef } = useGanttData(projects, tenant?.id, tenant?.currency);
+  const { commitDates, saveAll, workItemsRef } = useGanttData(projects, tenant?.id, tenant?.currency);
   const scrollToTodayRef = useRef<(() => void) | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [isWide, setIsWide] = useState(true);
+  const scrollToTaskRef = useRef<((id: string) => void) | null>(null);
+  const [unsavedOpen, setUnsavedOpen] = useState(false);
+  const pendingViewRef = useRef<ProjectView | null>(null);
+  const leaveResolveRef = useRef<((v: boolean) => void) | null>(null);
 
   const filteredTasks = useMemo(() => tasks.filter(t => {
     const q = searchQuery.toLowerCase();
@@ -42,16 +61,18 @@ export default function GanttPlannerView({ projects, onOpenProject }: GanttPlann
     else if (filterStatus === 'at_risk') matchFilter = t.healthStatus === 'at_risk' || t.healthStatus === 'behind';
     else if (filterStatus === 'completed') matchFilter = t.status === 'completed' || t.status === 'archived';
 
+    const matchAdvanced = matchesAdvancedFilters(t, advancedFilters);
+
     if (t.parentId && !matchSearch) {
       const parent = tasks.find(p => p.id === t.parentId);
       if (parent) {
         const parentMatch = !q || parent.name.toLowerCase().includes(q);
-        return matchFilter && parentMatch;
+        return matchFilter && matchAdvanced && parentMatch;
       }
     }
 
-    return matchSearch && matchFilter;
-  }), [tasks, searchQuery, filterStatus]);
+    return matchSearch && matchFilter && matchAdvanced;
+  }), [tasks, searchQuery, filterStatus, advancedFilters]);
 
   const rows = useMemo(
     () => flattenTasks(filteredTasks, expandedIds, projectOrder),
@@ -61,65 +82,115 @@ export default function GanttPlannerView({ projects, onOpenProject }: GanttPlann
   const editTask = editTaskId ? tasks.find(t => t.id === editTaskId) : null;
   const editProject = editTask?.type === 'project'
     ? projects.find(p => p.id === editTask.id)
-    : editTask
-      ? projects.find(p => p.id === editTask.projectId)
-      : undefined;
+    : editTask ? projects.find(p => p.id === editTask.projectId) : undefined;
+
+  const promptLeave = useCallback((): Promise<boolean> => {
+    if (!isDirty) return Promise.resolve(true);
+    return new Promise(resolve => {
+      leaveResolveRef.current = resolve;
+      setUnsavedOpen(true);
+    });
+  }, [isDirty]);
 
   useEffect(() => {
-    const check = () => setIsWide(window.innerWidth >= 1280);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
+    if (!isDirty) {
+      useUiStore.getState().setNavigationGuard(null);
+      return;
+    }
+    useUiStore.getState().setNavigationGuard({ promptLeave });
+    return () => useUiStore.getState().setNavigationGuard(null);
+  }, [isDirty, promptLeave]);
+
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!isDirty) return;
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [isDirty]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+        if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) { e.preventDefault(); redo(); }
+        if (e.key === 's') { e.preventDefault(); saveAll(); }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [undo, redo, saveAll]);
+
+  useEffect(() => {
+    if (!focusProjectId) return;
+    useGanttStore.getState().selectTask(focusProjectId);
+    useGanttStore.getState().setScrollToTaskId(focusProjectId);
+  }, [focusProjectId]);
+
+  const handleSetView = useCallback(async (v: ProjectView) => {
+    if (v === projectView) return;
+    if (isDirty) {
+      pendingViewRef.current = v;
+      setUnsavedOpen(true);
+      return;
+    }
+    onSetView(v);
+  }, [isDirty, onSetView, projectView]);
+
+  const handleUnsavedChoice = useCallback(async (choice: UnsavedChoice) => {
+    setUnsavedOpen(false);
+    const pendingView = pendingViewRef.current;
+    pendingViewRef.current = null;
+
+    if (choice === 'cancel') {
+      leaveResolveRef.current?.(false);
+      leaveResolveRef.current = null;
+      return;
+    }
+
+    if (choice === 'save') {
+      const ok = await saveAll();
+      if (!ok) {
+        leaveResolveRef.current?.(false);
+        leaveResolveRef.current = null;
+        return;
+      }
+    } else if (choice === 'draft') {
+      if (orgId) {
+        saveGanttDraft(orgId, useGanttStore.getState().getSnapshot());
+        setHasDraft(true);
+        showToast('Draft disimpan — dapat dipulihkan saat kembali', 'success');
+      }
+    } else if (choice === 'discard') {
+      discardToBaseline();
+      if (orgId) clearGanttDraft(orgId);
+      setHasDraft(false);
+    }
+
+    leaveResolveRef.current?.(true);
+    leaveResolveRef.current = null;
+
+    if (pendingView) onSetView(pendingView);
+  }, [saveAll, discardToBaseline, orgId, setHasDraft, showToast, onSetView]);
 
   const handleReorder = useCallback((order: string[]) => {
     setProjectOrder(order);
   }, [setProjectOrder]);
 
-  const handlePersistDependency = useCallback(async (dep: Parameters<typeof persistGanttDependency>[1]) => {
-    if (!tenant?.id) return;
-    await persistGanttDependency(tenant.id, dep, useGanttStore.getState().tasks, workItemsRef.current);
-    const wi = workItemsRef.current.find(w => w.id === dep.toTaskId);
-    if (wi && !(wi.dependencies || []).includes(dep.fromTaskId)) {
-      workItemsRef.current = workItemsRef.current.map(w =>
-        w.id === dep.toTaskId
-          ? { ...w, dependencies: [...(w.dependencies || []), dep.fromTaskId] }
-          : w,
-      );
-    }
-  }, [tenant?.id, workItemsRef]);
-
-  const handleRemoveDependency = useCallback(async (dep: Parameters<typeof removeGanttDependency>[1]) => {
-    if (!tenant?.id) return;
-    await removeGanttDependency(tenant.id, dep, workItemsRef.current);
-    workItemsRef.current = workItemsRef.current.map(w =>
-      w.id === dep.toTaskId
-        ? { ...w, dependencies: (w.dependencies || []).filter(id => id !== dep.fromTaskId) }
-        : w,
-    );
-  }, [tenant?.id, workItemsRef]);
-
-  const startResize = useCallback((side: 'left' | 'right', e: React.MouseEvent) => {
+  const startResizeLeft = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     const startX = e.clientX;
-    const startW = side === 'left' ? leftWidth : rightWidth;
-
-    const onMove = (ev: MouseEvent) => {
-      const dx = ev.clientX - startX;
-      if (side === 'left') setLeftWidth(startW + dx);
-      else setRightWidth(startW - dx);
-    };
-
+    const startW = leftWidth;
+    const onMove = (ev: MouseEvent) => setLeftWidth(startW + (ev.clientX - startX));
     const onUp = () => {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
     };
-
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
-  }, [leftWidth, rightWidth, setLeftWidth, setRightWidth]);
-
-  const scrollToToday = () => scrollToTodayRef.current?.();
+  }, [leftWidth, setLeftWidth]);
 
   if (!projects.length) {
     return (
@@ -131,53 +202,73 @@ export default function GanttPlannerView({ projects, onOpenProject }: GanttPlann
 
   return (
     <div className="space-y-3">
-      <GanttToolbar projectCount={projects.length} onScrollToToday={scrollToToday} />
+      <GanttToolbar
+        projectCount={projects.length}
+        projectView={projectView}
+        onSetView={handleSetView}
+        onScrollToToday={() => scrollToTodayRef.current?.()}
+        onSave={saveAll}
+      />
 
       <div
-        ref={containerRef}
         className="relative flex bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden gantt-planner"
-        style={{ height: 'calc(100vh - 320px)', minHeight: 520 }}
+        style={{ height: 'calc(100vh - 300px)', minHeight: 540 }}
       >
         <div style={{ width: leftWidth }} className="shrink-0 h-full overflow-hidden">
-          <TaskListPanel
-            rows={rows}
-            onReorder={handleReorder}
-            onEditTask={setEditTaskId}
-          />
+          <TaskListPanel rows={rows} onReorder={handleReorder} onEditTask={setEditTaskId} />
         </div>
 
         <div
           className="w-1.5 shrink-0 cursor-col-resize hover:bg-emerald-200/60 active:bg-emerald-300 transition-colors z-10"
-          onMouseDown={e => startResize('left', e)}
+          onMouseDown={startResizeLeft}
           role="separator"
           aria-orientation="vertical"
         />
 
         <GanttTimeline
           rows={rows}
-          onSaveDates={saveTaskDates}
+          onCommitDates={commitDates}
           scrollToTodayRef={scrollToTodayRef}
+          scrollToTaskRef={scrollToTaskRef}
           onEditTask={setEditTaskId}
-          onPersistDependency={handlePersistDependency}
-          onRemoveDependency={handleRemoveDependency}
         />
 
-        {(isWide || detailOpen) && (
+        {detailOpen && (
           <>
-            <div
-              className="w-1.5 shrink-0 cursor-col-resize hover:bg-emerald-200/60 active:bg-emerald-300 transition-colors z-10"
-              onMouseDown={e => startResize('right', e)}
-              role="separator"
-              aria-orientation="vertical"
-            />
-            <div style={{ width: isWide ? rightWidth : 0 }} className={`shrink-0 h-full overflow-hidden ${!isWide && detailOpen ? 'fixed right-0 top-0 bottom-0 w-80 z-50 shadow-2xl' : ''}`}>
+            <div className="w-1.5 shrink-0 bg-slate-100" />
+            <div className="w-72 xl:w-80 shrink-0 h-full overflow-hidden border-l border-slate-100">
               <GanttDetailPanel onEditTask={setEditTaskId} />
             </div>
           </>
         )}
-
-        {!isWide && !detailOpen && <GanttDetailPanel onEditTask={setEditTaskId} />}
       </div>
+
+      {orgId && useGanttStore.getState().hasDraft && isDirty && (
+        <div className="flex items-center justify-between px-4 py-2 bg-blue-50 border border-blue-100 rounded-xl text-sm">
+          <span className="text-blue-700">Draft tersimpan tersedia.</span>
+          <button
+            type="button"
+            onClick={() => {
+              const draft = loadGanttDraft(orgId);
+              if (draft) {
+                useGanttStore.getState().restoreSnapshot(draft.snapshot);
+                showToast('Draft dipulihkan', 'success');
+              }
+            }}
+            className="text-blue-600 font-bold hover:underline"
+          >
+            Pulihkan draft
+          </button>
+        </div>
+      )}
+
+      <GanttAdvancedFilterModal />
+
+      <GanttUnsavedDialog
+        open={unsavedOpen}
+        hasDraft={useGanttStore.getState().hasDraft}
+        onChoice={handleUnsavedChoice}
+      />
 
       <AnimatePresence>
         {editTask && (
@@ -186,7 +277,7 @@ export default function GanttPlannerView({ projects, onOpenProject }: GanttPlann
             task={editTask}
             project={editProject}
             onClose={() => setEditTaskId(null)}
-            onSaved={() => {}}
+            onSaved={() => setEditTaskId(null)}
           />
         )}
       </AnimatePresence>

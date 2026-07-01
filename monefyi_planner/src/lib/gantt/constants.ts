@@ -36,3 +36,14 @@ export const WORK_ITEM_STATUS_LABEL: Record<string, string> = {
   in_progress: 'Berjalan',
   pending: 'Belum Mulai',
 };
+
+export const BAR_COLOR_PRESETS = [
+  { id: 'auto', label: 'Otomatis (status)', color: '' },
+  { id: 'green', label: 'Hijau', color: '#10B981' },
+  { id: 'blue', label: 'Biru', color: '#3B82F6' },
+  { id: 'orange', label: 'Orange', color: '#F59E0B' },
+  { id: 'red', label: 'Merah', color: '#EF4444' },
+  { id: 'purple', label: 'Ungu', color: '#8B5CF6' },
+  { id: 'gray', label: 'Abu', color: '#6B7280' },
+  { id: 'teal', label: 'Teal', color: '#14B8A6' },
+] as const;

@@ -12,6 +12,7 @@ import ProjectTypeSelect from '../components/projects/ProjectTypeSelect';
 import KanbanView from '../components/projects/views/KanbanView';
 import GanttPlannerView from '../components/projects/gantt/GanttPlannerView';
 import CalendarView from '../components/projects/views/CalendarView';
+import { useGanttStore } from '../store/ganttStore';
 import { useUiStore } from '../store/uiStore';
 import {
   formatRupiah, HEALTH_CONFIG, STATUS_LABEL, sortProjects, type ProjectSort,
@@ -163,6 +164,7 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
   const [sort, setSort] = useState<ProjectSort>('recent');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [ganttFocusId, setGanttFocusId] = useState<string | null>(null);
 
   const canCreate = user?.role === 'owner' || user?.role === 'manager' || user?.role === 'admin';
   const showToast = useUiStore(s => s.showToast);
@@ -183,12 +185,20 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
   }, [projectsListFilter]);
 
   const openProject = (p: Project) => {
+    if (projectView === 'timeline') {
+      useGanttStore.getState().selectTask(p.id);
+      useGanttStore.getState().setScrollToTaskId(p.id);
+      return;
+    }
     setSelectedProject(p);
     setSelectedProjectId(p.id);
     onOpenProject?.(p.id);
   };
 
   const setView = (v: ProjectView) => {
+    if (v === 'timeline' && projectView !== 'timeline') {
+      setGanttFocusId(null);
+    }
     setProjectView(v);
     try { localStorage.setItem(VIEW_STORAGE_KEY, v); } catch { /* ignore */ }
   };
@@ -407,29 +417,16 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
       )}
 
       {projectView === 'timeline' && (
-        <div className="flex justify-end">
-          <div className="flex bg-slate-100 p-1 rounded-xl">
-            {([
-              { id: 'list' as const, icon: List, label: 'List' },
-              { id: 'kanban' as const, icon: Columns3, label: 'Kanban' },
-              { id: 'timeline' as const, icon: GanttChart, label: 'Gantt' },
-              { id: 'calendar' as const, icon: Calendar, label: 'Kalender' },
-            ]).map(v => (
-              <button key={v.id} type="button" onClick={() => setView(v.id)} title={v.label}
-                className={`p-2 rounded-lg ${projectView === v.id ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`} aria-label={v.label}>
-                <v.icon className="w-4 h-4" />
-              </button>
-            ))}
-          </div>
-        </div>
+        <GanttPlannerView
+          projects={filtered}
+          projectView={projectView}
+          onSetView={setView}
+          focusProjectId={ganttFocusId}
+          onOpenProject={openProject}
+        />
       )}
-
       {projectView === 'kanban' && (
         <KanbanView projects={filtered} onOpenProject={openProject} onStatusChange={handleStatusChange} />
-      )}
-
-      {projectView === 'timeline' && (
-        <GanttPlannerView projects={filtered} onOpenProject={openProject} />
       )}
 
       {projectView === 'calendar' && (

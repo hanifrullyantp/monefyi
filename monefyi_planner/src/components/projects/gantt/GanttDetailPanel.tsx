@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react';
-import { X, Plus, User, Pencil } from 'lucide-react';
+import { X, Plus, User, Pencil, Palette } from 'lucide-react';
 import { useGanttStore } from '../../../store/ganttStore';
-import { formatPeriod } from '../../../lib/gantt/utils';
-import { GANTT_COLORS, PRIORITY_LABEL, WORK_ITEM_STATUS_LABEL } from '../../../lib/gantt/constants';
+import { formatPeriod, daysBetween } from '../../../lib/gantt/utils';
+import { GANTT_COLORS, PRIORITY_LABEL, WORK_ITEM_STATUS_LABEL, BAR_COLOR_PRESETS } from '../../../lib/gantt/constants';
 import { STATUS_LABEL } from '../../../utils/projectUi';
 
 type DetailTab = 'detail' | 'subtasks' | 'documents' | 'notes';
 
 export default function GanttDetailPanel({ onEditTask }: { onEditTask?: (id: string) => void }) {
-  const { tasks, selectedIds, detailOpen, setDetailOpen } = useGanttStore();
+  const { tasks, selectedIds, detailOpen, setDetailOpen, setBarColor, pushHistory } = useGanttStore();
   const [tab, setTab] = useState<DetailTab>('subtasks');
 
   const selectedId = [...selectedIds][0];
@@ -118,6 +118,25 @@ export default function GanttDetailPanel({ onEditTask }: { onEditTask?: (id: str
         <div>
           <div className="text-[10px] text-slate-400 font-medium mb-1">Periode</div>
           <div className="text-xs text-slate-700">{formatPeriod(task.startDate, task.endDate)}</div>
+          <div className="text-[10px] text-slate-400 mt-0.5">{daysBetween(task.startDate, task.endDate)} hari</div>
+        </div>
+
+        <div>
+          <div className="text-[10px] text-slate-400 font-medium mb-1 flex items-center gap-1"><Palette className="w-3 h-3" /> Warna Bar</div>
+          <div className="flex flex-wrap gap-1.5 mt-1">
+            {BAR_COLOR_PRESETS.map(p => (
+              <button
+                key={p.id}
+                type="button"
+                title={p.label}
+                onClick={() => { pushHistory(); setBarColor(task.id, p.color || null); }}
+                className={`w-6 h-6 rounded-md border ${
+                  (task.barColor || '') === p.color ? 'border-slate-800 ring-1 ring-slate-400' : 'border-slate-200'
+                }`}
+                style={{ backgroundColor: p.color || '#E2E8F0' }}
+              />
+            ))}
+          </div>
         </div>
 
         {task.assigneeName && (

@@ -1,33 +1,57 @@
 import { create } from 'zustand';
 import type {
+  GanttAdvancedFilters,
   GanttDependency,
   GanttDragState,
   GanttTask,
   GanttViewMode,
 } from '../lib/gantt/types';
+import { DEFAULT_ADVANCED_FILTERS as DEFAULT_FILTERS } from '../lib/gantt/types';
+import { cloneSnapshot, pickSnapshot, snapshotsEqual, type GanttSnapshot } from '../lib/gantt/snapshot';
+
+const MAX_HISTORY = 50;
+
+function computeDirty(current: GanttSnapshot | null, baseline: GanttSnapshot | null): boolean {
+  return !snapshotsEqual(current, baseline);
+}
 
 interface GanttState {
   orgId: string | null;
   tasks: GanttTask[];
   dependencies: GanttDependency[];
   projectOrder: string[];
+  barColors: Record<string, string>;
+  baseline: GanttSnapshot | null;
+  undoStack: GanttSnapshot[];
+  redoStack: GanttSnapshot[];
   expandedIds: Set<string>;
   selectedIds: Set<string>;
   viewMode: GanttViewMode;
-  zoomLevel: number;
   scrollLeft: number;
+  scrollToTaskId: string | null;
   detailOpen: boolean;
   leftWidth: number;
   rightWidth: number;
   drag: GanttDragState | null;
   searchQuery: string;
   filterStatus: string;
+  advancedFilters: GanttAdvancedFilters;
+  showAdvancedFilters: boolean;
   editTaskId: string | null;
+  isDirty: boolean;
+  isSaving: boolean;
+  hasDraft: boolean;
 
   init: (orgId: string) => void;
   setTasks: (tasks: GanttTask[]) => void;
   setDependencies: (deps: GanttDependency[]) => void;
-  updateTask: (id: string, patch: Partial<GanttTask>) => void;
+  setBarColors: (colors: Record<string, string>) => void;
+  commitBaseline: () => void;
+  restoreSnapshot: (snap: GanttSnapshot) => void;
+  pushHistory: () => void;
+  undo: () => void;
+  redo: () => void;
+  updateTask: (id: string, patch: Partial<GanttTask>, recordHistory?: boolean) => void;
   setProjectOrder: (order: string[]) => void;
   toggleExpand: (id: string) => void;
   selectTask: (id: string, multi?: boolean) => void;
@@ -36,7 +60,9 @@ interface GanttState {
   zoomIn: () => void;
   zoomOut: () => void;
   setScrollLeft: (v: number) => void;
+  setScrollToTaskId: (id: string | null) => void;
   setDetailOpen: (v: boolean) => void;
+  toggleDetailOpen: () => void;
   setLeftWidth: (v: number) => void;
   setRightWidth: (v: number) => void;
   setDrag: (drag: GanttDragState | null) => void;
@@ -44,7 +70,15 @@ interface GanttState {
   removeDependency: (id: string) => void;
   setSearchQuery: (q: string) => void;
   setFilterStatus: (s: string) => void;
+  setAdvancedFilters: (f: Partial<GanttAdvancedFilters>) => void;
+  resetAdvancedFilters: () => void;
+  setShowAdvancedFilters: (v: boolean) => void;
   setEditTaskId: (id: string | null) => void;
+  setBarColor: (taskId: string, color: string | null) => void;
+  setIsSaving: (v: boolean) => void;
+  setHasDraft: (v: boolean) => void;
+  getSnapshot: () => GanttSnapshot;
+  discardToBaseline: () => void;
 }
 
 export const useGanttStore = create<GanttState>((set, get) => ({
@@ -52,18 +86,27 @@ export const useGanttStore = create<GanttState>((set, get) => ({
   tasks: [],
   dependencies: [],
   projectOrder: [],
+  barColors: {},
+  baseline: null,
+  undoStack: [],
+  redoStack: [],
   expandedIds: new Set(),
   selectedIds: new Set(),
   viewMode: 'month',
-  zoomLevel: 1,
   scrollLeft: 0,
+  scrollToTaskId: null,
   detailOpen: true,
   leftWidth: 280,
   rightWidth: 300,
   drag: null,
   searchQuery: '',
   filterStatus: 'all',
+  advancedFilters: { ...DEFAULT_FILTERS },
+  showAdvancedFilters: false,
   editTaskId: null,
+  isDirty: false,
+  isSaving: false,
+  hasDraft: false,
 
   init: orgId => {
     set({
@@ -71,19 +114,86 @@ export const useGanttStore = create<GanttState>((set, get) => ({
       dependencies: [],
       expandedIds: new Set(),
       selectedIds: new Set(),
+      undoStack: [],
+      redoStack: [],
+      isDirty: false,
     });
   },
 
-  setTasks: tasks => set({ tasks }),
+  getSnapshot: () => pickSnapshot(get()),
+
+  commitBaseline: () => {
+    const snap = pickSnapshot(get());
+    set({ baseline: snap, isDirty: false, undoStack: [], redoStack: [] });
+  },
+
+  restoreSnapshot: snap => {
+    set({
+      tasks: cloneSnapshot(snap).tasks,
+      dependencies: cloneSnapshot(snap).dependencies,
+      projectOrder: [...snap.projectOrder],
+      barColors: { ...snap.barColors },
+      isDirty: computeDirty(snap, get().baseline),
+    });
+  },
+
+  pushHistory: () => {
+    const snap = pickSnapshot(get());
+    set(s => ({
+      undoStack: [...s.undoStack.slice(-(MAX_HISTORY - 1)), snap],
+      redoStack: [],
+    }));
+  },
+
+  undo: () => {
+    const { undoStack, baseline } = get();
+    if (!undoStack.length) return;
+    const prev = undoStack[undoStack.length - 1];
+    const current = pickSnapshot(get());
+    set({
+      undoStack: undoStack.slice(0, -1),
+      redoStack: [...get().redoStack, current],
+    });
+    get().restoreSnapshot(prev);
+    set({ isDirty: computeDirty(prev, baseline) });
+  },
+
+  redo: () => {
+    const { redoStack, baseline } = get();
+    if (!redoStack.length) return;
+    const next = redoStack[redoStack.length - 1];
+    const current = pickSnapshot(get());
+    set({
+      redoStack: redoStack.slice(0, -1),
+      undoStack: [...get().undoStack, current],
+    });
+    get().restoreSnapshot(next);
+    set({ isDirty: computeDirty(next, baseline) });
+  },
+
+  setTasks: tasks => {
+    set({ tasks });
+    set({ isDirty: computeDirty(get().getSnapshot(), get().baseline) });
+  },
 
   setDependencies: deps => set({ dependencies: deps }),
 
-  updateTask: (id, patch) =>
+  setBarColors: colors => set({ barColors: colors }),
+
+  updateTask: (id, patch, recordHistory = true) => {
+    if (recordHistory) get().pushHistory();
     set(s => ({
       tasks: s.tasks.map(t => (t.id === id ? { ...t, ...patch } : t)),
-    })),
+      isDirty: true,
+    }));
+    set({ isDirty: computeDirty(get().getSnapshot(), get().baseline) });
+  },
 
-  setProjectOrder: order => set({ projectOrder: order }),
+  setProjectOrder: order => {
+    get().pushHistory();
+    set({ projectOrder: order, isDirty: true });
+    set({ isDirty: computeDirty(get().getSnapshot(), get().baseline) });
+  },
 
   toggleExpand: id =>
     set(s => {
@@ -99,9 +209,9 @@ export const useGanttStore = create<GanttState>((set, get) => ({
         const next = new Set(s.selectedIds);
         if (next.has(id)) next.delete(id);
         else next.add(id);
-        return { selectedIds: next, detailOpen: true };
+        return { selectedIds: next, scrollToTaskId: id };
       }
-      return { selectedIds: new Set([id]), detailOpen: true };
+      return { selectedIds: new Set([id]), scrollToTaskId: id };
     }),
 
   clearSelection: () => set({ selectedIds: new Set() }),
@@ -126,7 +236,11 @@ export const useGanttStore = create<GanttState>((set, get) => ({
 
   setScrollLeft: v => set({ scrollLeft: v }),
 
+  setScrollToTaskId: id => set({ scrollToTaskId: id }),
+
   setDetailOpen: v => set({ detailOpen: v }),
+
+  toggleDetailOpen: () => set(s => ({ detailOpen: !s.detailOpen })),
 
   setLeftWidth: v => set({ leftWidth: Math.max(200, Math.min(480, v)) }),
 
@@ -137,16 +251,59 @@ export const useGanttStore = create<GanttState>((set, get) => ({
   addDependency: dep => {
     const { dependencies } = get();
     if (dependencies.some(d => d.fromTaskId === dep.fromTaskId && d.toTaskId === dep.toTaskId)) return;
-    set({ dependencies: [...dependencies, dep] });
+    get().pushHistory();
+    set({
+      dependencies: [...dependencies, dep],
+      isDirty: true,
+    });
+    set({ isDirty: computeDirty(get().getSnapshot(), get().baseline) });
   },
 
   removeDependency: id => {
-    set(s => ({ dependencies: s.dependencies.filter(d => d.id !== id) }));
+    get().pushHistory();
+    set(s => ({
+      dependencies: s.dependencies.filter(d => d.id !== id),
+      isDirty: true,
+    }));
+    set({ isDirty: computeDirty(get().getSnapshot(), get().baseline) });
   },
 
   setSearchQuery: q => set({ searchQuery: q }),
 
   setFilterStatus: s => set({ filterStatus: s }),
 
+  setAdvancedFilters: f =>
+    set(s => ({ advancedFilters: { ...s.advancedFilters, ...f } })),
+
+  resetAdvancedFilters: () => set({ advancedFilters: { ...DEFAULT_FILTERS } }),
+
+  setShowAdvancedFilters: v => set({ showAdvancedFilters: v }),
+
   setEditTaskId: id => set({ editTaskId: id }),
+
+  setBarColor: (taskId, color) => {
+    get().pushHistory();
+    set(s => {
+      const next = { ...s.barColors };
+      if (color) next[taskId] = color;
+      else delete next[taskId];
+      return {
+        barColors: next,
+        tasks: s.tasks.map(t => t.id === taskId ? { ...t, barColor: color || undefined } : t),
+        isDirty: true,
+      };
+    });
+    set({ isDirty: computeDirty(get().getSnapshot(), get().baseline) });
+  },
+
+  setIsSaving: v => set({ isSaving: v }),
+
+  setHasDraft: v => set({ hasDraft: v }),
+
+  discardToBaseline: () => {
+    const { baseline } = get();
+    if (!baseline) return;
+    get().restoreSnapshot(baseline);
+    set({ isDirty: false, undoStack: [], redoStack: [] });
+  },
 }));
