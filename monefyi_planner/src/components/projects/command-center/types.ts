@@ -1,15 +1,13 @@
 import type { LucideIcon } from 'lucide-react';
 import {
-  LayoutDashboard, GanttChart, Wallet, Package, ArrowLeftRight,
-  FileText, Braces,
+  LayoutDashboard, Layers, TrendingUp, Package, FileText, Braces,
 } from 'lucide-react';
 
 export type CommandTabId =
   | 'overview'
   | 'planning'
-  | 'keuangan'
+  | 'realisasi'
   | 'bahan'
-  | 'hutang-piutang'
   | 'dokumen'
   | 'json';
 
@@ -22,17 +20,15 @@ export interface CommandTabDef {
 
 export const COMMAND_TABS: CommandTabDef[] = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard, shortcut: 1 },
-  { id: 'planning', label: 'Planning & Realisasi', icon: GanttChart, shortcut: 2 },
-  { id: 'keuangan', label: 'Keuangan', icon: Wallet, shortcut: 3 },
+  { id: 'planning', label: 'Planning', icon: Layers, shortcut: 2 },
+  { id: 'realisasi', label: 'Realisasi', icon: TrendingUp, shortcut: 3 },
   { id: 'bahan', label: 'Bahan & Tukang', icon: Package, shortcut: 4 },
-  { id: 'hutang-piutang', label: 'Hutang-Piutang', icon: ArrowLeftRight, shortcut: 5 },
-  { id: 'dokumen', label: 'Dokumen & Laporan', icon: FileText, shortcut: 6 },
-  { id: 'json', label: 'JSON', icon: Braces, shortcut: 7 },
+  { id: 'dokumen', label: 'Dokumen & Laporan', icon: FileText, shortcut: 5 },
+  { id: 'json', label: 'JSON', icon: Braces, shortcut: 6 },
 ];
 
 export interface TabBadges {
   planning?: number;
-  keuangan?: number;
+  realisasi?: number;
   bahan?: number;
-  'hutang-piutang'?: number;
 }

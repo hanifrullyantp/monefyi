@@ -79,7 +79,7 @@ export function buildRuleInsights(
       icon: '⚠️',
       title: 'Proyek terlambat',
       message: `Proyek sudah lewat deadline ${Math.abs(daysLeft)} hari dari jadwal.`,
-      tab: 'planning',
+      tab: 'realisasi',
       severity: 'critical',
     });
   } else if (daysLeft <= 3) {
@@ -99,7 +99,7 @@ export function buildRuleInsights(
       icon: '💰',
       title: 'Budget over burn',
       message: `Budget terpakai ${Math.round(budgetPct)}% tapi progress baru ${Math.round(progress)}% — efisiensi biaya perlu diperhatikan.`,
-      tab: 'keuangan',
+      tab: 'realisasi',
       severity: 'critical',
     });
   }
@@ -110,7 +110,7 @@ export function buildRuleInsights(
       icon: '🔔',
       title: 'Piutang belum lunas',
       message: `Sisa tagihan klien ${piutangOutstanding > 1e6 ? `${(piutangOutstanding / 1e6).toFixed(1)}jt` : piutangOutstanding} belum diterima.`,
-      tab: 'hutang-piutang',
+      tab: 'realisasi',
       severity: 'warning',
     });
   }
@@ -187,8 +187,8 @@ export function computeTabBadges(
 
   return {
     planning: pendingTasks || undefined,
+    realisasi: hpPending || undefined,
     bahan: materialCount || undefined,
-    'hutang-piutang': hpPending || undefined,
   };
 }
 

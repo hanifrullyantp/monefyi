@@ -152,7 +152,7 @@ export default function TabOverview({
           label="Cost Burn"
           value={`${Math.round(budgetPct)}%`}
           sub={budgetPct > project.progress_percentage + 10 ? 'Over burn' : 'Terkendali'}
-          onClick={() => onNavigateTab('keuangan')}
+          onClick={() => onNavigateTab('realisasi')}
           tone={budgetPct > 90 ? 'bad' : budgetPct > 70 ? 'warn' : 'good'}
         />
         <QuickCard
