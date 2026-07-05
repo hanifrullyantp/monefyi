@@ -63,6 +63,11 @@ npx supabase@latest functions deploy planner-analyze
 npx supabase@latest functions deploy planner-parse-command
 ```
 
+**Setelah GitHub Action “Supabase Planner migrate & deploy” jalan:** pastikan secret **`SUPABASE_PROJECT_REF`** sama persis dengan **Reference ID** project yang dipakai URL di `planner/js/config.js` (mis. `zzwqfmdyncxbolestkqp`). Kalau ref salah, migrasi terpasang ke project lain. Cek cepat di Supabase → **SQL Editor**:
+
+`select to_regclass('public.planner_organizations');`  
+— harus mengembalikan nama tabel, bukan `null`.
+
 **Secret function:** di Supabase → **Edge Functions** → **Secrets**, tambahkan `GEMINI_API_KEY` agar `planner-parse-command` bisa memanggil Gemini (opsional; tanpa secret, parser mengembalikan pesan “not configured”).
 
 Kode function yang dipakai deploy ada di `my-supabase-project/supabase/functions/planner-*` (disinkronkan dari `planner/supabase/functions/`).
