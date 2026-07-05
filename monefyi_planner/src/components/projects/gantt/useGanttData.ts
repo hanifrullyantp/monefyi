@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { Project } from '../../../store/appStore';
 import { useAppStore } from '../../../store/appStore';
 import { useGanttStore } from '../../../store/ganttStore';
-import { loadWorkItemsForOrg, type WorkItem } from '../../../services/workItemService';
+import { loadWorkItemsForOrg, createWorkItem, type WorkItem } from '../../../services/workItemService';
 import { loadAllGanttDependencies } from '../../../services/ganttDependencyService';
 import { loadBarColors } from '../../../services/ganttBarColorService';
 import { applyBarColors, loadProjectOrder, saveGanttChanges } from '../../../services/ganttSaveService';
@@ -75,14 +75,6 @@ export function useGanttData(projects: Project[], orgId: string | undefined, cur
         const missing = projects.map(p => p.id).filter(id => !order.includes(id));
         setProjectOrder([...order, ...missing]);
 
-        const withChildren = new Set<string>();
-        for (const wi of workItems) withChildren.add(wi.project_id);
-        if (withChildren.size) {
-          useGanttStore.setState(s => ({
-            expandedIds: new Set([...s.expandedIds, ...withChildren]),
-          }));
-        }
-
         if (!loadedRef.current) {
           loadedRef.current = true;
         }
@@ -142,5 +134,36 @@ export function useGanttData(projects: Project[], orgId: string | undefined, cur
     }
   }, [orgId, baseline, getSnapshot, currency, projects, updateProject, commitBaseline, setHasDraft, showToast, setIsSaving]);
 
-  return { commitDates, saveAll, workItemsRef };
+  const addWorkItem = useCallback(async (
+    projectId: string,
+    data: { name: string; planned_start: string; planned_end: string; progress_pct: number },
+  ): Promise<boolean> => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return false;
+
+    try {
+      const wi = await createWorkItem({
+        project_id: projectId,
+        name: data.name,
+        planned_start: data.planned_start,
+        planned_end: data.planned_end,
+        progress_pct: data.progress_pct,
+        sort_order: workItemsRef.current.filter(w => w.project_id === projectId).length,
+        status: 'pending',
+      });
+      workItemsRef.current = [...workItemsRef.current, wi];
+      const task = workItemToGanttTask(wi, project);
+      useGanttStore.setState(s => ({
+        tasks: [...s.tasks, task],
+        expandedIds: new Set([...s.expandedIds, projectId]),
+      }));
+      showToast('Pekerjaan ditambahkan', 'success');
+      return true;
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal menambah pekerjaan', 'error');
+      return false;
+    }
+  }, [projects, showToast]);
+
+  return { commitDates, saveAll, workItemsRef, addWorkItem };
 }

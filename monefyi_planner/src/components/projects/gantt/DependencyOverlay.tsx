@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useGanttStore } from '../../../store/ganttStore';
 import { bezierPath, getBarStyle } from '../../../lib/gantt/utils';
 import type { FlatGanttRow, TimelineRange } from '../../../lib/gantt/types';
-import { ROW_HEIGHT, PX_PER_DAY } from '../../../lib/gantt/constants';
+import { ROW_HEIGHT, getEffectivePxPerDay } from '../../../lib/gantt/constants';
 
 interface DependencyOverlayProps {
   rows: FlatGanttRow[];
@@ -12,8 +12,8 @@ interface DependencyOverlayProps {
 }
 
 export default function DependencyOverlay({ rows, range, scrollTop, onRemove }: DependencyOverlayProps) {
-  const { dependencies, viewMode } = useGanttStore();
-  const pxPerDay = PX_PER_DAY[viewMode];
+  const { dependencies, viewMode, zoomScale } = useGanttStore();
+  const pxPerDay = getEffectivePxPerDay(viewMode, zoomScale);
 
   const rowIndexMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -29,8 +29,8 @@ export default function DependencyOverlay({ rows, range, scrollTop, onRemove }: 
 
       const fromTask = rows[fromRow].task;
       const toTask = rows[toRow].task;
-      const fromBar = getBarStyle(fromTask, range, viewMode, false);
-      const toBar = getBarStyle(toTask, range, viewMode, false);
+      const fromBar = getBarStyle(fromTask, range, viewMode, false, zoomScale);
+      const toBar = getBarStyle(toTask, range, viewMode, false, zoomScale);
 
       const x1 = fromBar.left + fromBar.width;
       const y1 = fromRow * ROW_HEIGHT + ROW_HEIGHT / 2 - scrollTop;
@@ -43,7 +43,7 @@ export default function DependencyOverlay({ rows, range, scrollTop, onRemove }: 
         pending: dep.type === 'pending',
       };
     }).filter(Boolean) as { id: string; d: string; pending: boolean }[];
-  }, [dependencies, rows, range, viewMode, rowIndexMap, scrollTop]);
+  }, [dependencies, rows, range, viewMode, zoomScale, rowIndexMap, scrollTop]);
 
   const height = rows.length * ROW_HEIGHT;
 

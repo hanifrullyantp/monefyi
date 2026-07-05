@@ -2,18 +2,19 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useMemo } from 'react';
 import { generateTimelineDays, getMonthGroups, isWeekend } from '../../../lib/gantt/utils';
 import type { TimelineRange } from '../../../lib/gantt/types';
-import { GANTT_COLORS, HEADER_HEIGHT, PX_PER_DAY } from '../../../lib/gantt/constants';
+import { GANTT_COLORS, HEADER_HEIGHT, getEffectivePxPerDay } from '../../../lib/gantt/constants';
 import type { GanttViewMode } from '../../../lib/gantt/types';
 
 interface TimelineHeaderProps {
   range: TimelineRange;
   viewMode: GanttViewMode;
+  zoomScale?: number;
   scrollLeft: number;
   onScroll: (delta: number) => void;
 }
 
-export default function TimelineHeader({ range, viewMode, scrollLeft, onScroll }: TimelineHeaderProps) {
-  const pxPerDay = PX_PER_DAY[viewMode];
+export default function TimelineHeader({ range, viewMode, zoomScale = 1, scrollLeft, onScroll }: TimelineHeaderProps) {
+  const pxPerDay = getEffectivePxPerDay(viewMode, zoomScale);
   const totalWidth = range.rangeDays * pxPerDay;
 
   const days = useMemo(() => generateTimelineDays(range), [range]);

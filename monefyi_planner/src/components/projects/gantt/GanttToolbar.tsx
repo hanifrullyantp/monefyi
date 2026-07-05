@@ -40,7 +40,7 @@ export default function GanttToolbar({
 }: GanttToolbarProps) {
   const {
     searchQuery, setSearchQuery, filterStatus, setFilterStatus,
-    viewMode, setViewMode, zoomIn, zoomOut,
+    viewMode, setViewMode, zoomIn, zoomOut, zoomScale,
     detailOpen, toggleDetailOpen,
     undo, redo, undoStack, redoStack,
     isDirty, isSaving, advancedFilters, setShowAdvancedFilters,
@@ -99,6 +99,9 @@ export default function GanttToolbar({
             <button type="button" onClick={zoomOut} className="p-1.5 rounded-lg hover:bg-white" aria-label="Zoom out">
               <Minus className="w-4 h-4" />
             </button>
+            <span className="text-[10px] font-bold text-slate-600 min-w-[42px] text-center">
+              {Math.round(zoomScale * 100)}%
+            </span>
             <button type="button" onClick={zoomIn} className="p-1.5 rounded-lg hover:bg-white" aria-label="Zoom in">
               <Plus className="w-4 h-4" />
             </button>

@@ -4,7 +4,7 @@ import {
   computeTimelineRange, generateTimelineDays, getBarStyle, isWeekend, wouldCreateCycle,
 } from '../../../lib/gantt/utils';
 import type { FlatGanttRow, GanttDependency } from '../../../lib/gantt/types';
-import { GANTT_COLORS, ROW_HEIGHT, PX_PER_DAY } from '../../../lib/gantt/constants';
+import { GANTT_COLORS, ROW_HEIGHT, getEffectivePxPerDay } from '../../../lib/gantt/constants';
 import TimelineHeader from './TimelineHeader';
 import GanttTaskBar from './GanttTaskBar';
 import DependencyOverlay from './DependencyOverlay';
@@ -18,6 +18,7 @@ interface GanttTimelineProps {
   scrollToTodayRef: React.MutableRefObject<(() => void) | null>;
   scrollToTaskRef?: React.MutableRefObject<((id: string) => void) | null>;
   onEditTask?: (taskId: string) => void;
+  onOpenMiniDashboard?: (projectId: string) => void;
 }
 
 export default function GanttTimeline({
@@ -26,11 +27,12 @@ export default function GanttTimeline({
   scrollToTodayRef,
   scrollToTaskRef,
   onEditTask,
+  onOpenMiniDashboard,
 }: GanttTimelineProps) {
   const {
-    tasks, viewMode, scrollLeft, setScrollLeft,
+    tasks, viewMode, zoomScale, scrollLeft, setScrollLeft,
     addDependency, removeDependency, dependencies,
-    scrollToTaskId, setScrollToTaskId, pushHistory,
+    scrollToTaskId, setScrollToTaskId, pushHistory, zoomIn, zoomOut,
   } = useGanttStore();
 
   const showToast = useUiStore(s => s.showToast);
@@ -49,7 +51,7 @@ export default function GanttTimeline({
 
   const activeRows = rows;
   const range = computeTimelineRange(tasks.length ? tasks : activeRows.map(r => r.task));
-  const pxPerDay = PX_PER_DAY[viewMode];
+  const pxPerDay = getEffectivePxPerDay(viewMode, zoomScale);
   const totalWidth = range.rangeDays * pxPerDay;
   const days = generateTimelineDays(range);
   const virtual = useVirtualRows(scrollTop, activeRows.length, viewportH);
@@ -62,14 +64,14 @@ export default function GanttTimeline({
     const rowIdx = activeRows.findIndex(r => r.task.id === taskId);
     if (rowIdx < 0) return;
     const task = activeRows[rowIdx].task;
-    const barLeft = getBarStyle(task, range, viewMode, false).left;
+    const barLeft = getBarStyle(task, range, viewMode, false, zoomScale).left;
     container.scrollTop = Math.max(0, rowIdx * ROW_HEIGHT - container.clientHeight / 2 + ROW_HEIGHT / 2);
     container.scrollLeft = Math.max(0, barLeft - container.clientWidth / 3);
     setScrollTop(container.scrollTop);
     setScrollLeft(container.scrollLeft);
     const listEl = document.querySelector('[data-gantt-scroll="list"]');
     if (listEl) listEl.scrollTop = container.scrollTop;
-  }, [activeRows, range, viewMode, setScrollLeft]);
+  }, [activeRows, range, viewMode, zoomScale, setScrollLeft]);
 
   useEffect(() => {
     if (scrollToTaskRef) scrollToTaskRef.current = scrollToTask;
@@ -116,6 +118,12 @@ export default function GanttTimeline({
   };
 
   const handleWheel = (e: React.WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      if (e.deltaY < 0) zoomIn();
+      else zoomOut();
+      return;
+    }
     if (e.shiftKey) {
       e.preventDefault();
       const next = scrollLeft + e.deltaY;
@@ -238,6 +246,7 @@ export default function GanttTimeline({
       <TimelineHeader
         range={range}
         viewMode={viewMode}
+        zoomScale={zoomScale}
         scrollLeft={scrollLeft}
         onScroll={delta => {
           const next = Math.max(0, scrollLeft + delta);
@@ -290,6 +299,7 @@ export default function GanttTimeline({
                     onCommitDates={onCommitDates}
                     onStartDependency={handleStartDependency}
                     onOpenEdit={onEditTask}
+                    onOpenMiniDashboard={onOpenMiniDashboard}
                   />
                 </div>
               );

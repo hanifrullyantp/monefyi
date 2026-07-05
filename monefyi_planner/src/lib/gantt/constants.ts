@@ -23,7 +23,16 @@ export const PX_PER_DAY: Record<GanttViewMode, number> = {
   month: 4,
 };
 
+export const ZOOM_SCALE_MIN = 0.5;
+export const ZOOM_SCALE_MAX = 3;
+export const ZOOM_SCALE_STEP = 0.25;
+
 export const ZOOM_LEVELS: GanttViewMode[] = ['day', 'week', 'month'];
+
+/** Effective pixels per day after view mode + scale multiplier. */
+export function getEffectivePxPerDay(viewMode: GanttViewMode, zoomScale: number): number {
+  return PX_PER_DAY[viewMode] * zoomScale;
+}
 
 export const PRIORITY_LABEL: Record<string, string> = {
   low: 'Rendah',

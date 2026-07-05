@@ -6,9 +6,10 @@ import type {
   GanttDependency,
   GanttPriority,
   GanttTask,
+  GanttViewMode,
   TimelineRange,
 } from './types';
-import { GANTT_COLORS, PX_PER_DAY } from './constants';
+import { GANTT_COLORS, getEffectivePxPerDay } from './constants';
 
 const DAY_MS = 86400000;
 
@@ -107,10 +108,11 @@ export function computeTimelineRange(tasks: GanttTask[]): TimelineRange {
 export function getBarStyle(
   task: GanttTask,
   range: TimelineRange,
-  viewMode: keyof typeof PX_PER_DAY,
+  viewMode: GanttViewMode,
   selected: boolean,
+  zoomScale = 1,
 ): { left: number; width: number; color: string } {
-  const pxPerDay = PX_PER_DAY[viewMode];
+  const pxPerDay = getEffectivePxPerDay(viewMode, zoomScale);
   const left = ((parseDate(task.startDate) - range.minDate) / DAY_MS) * pxPerDay;
   const width = Math.max(12, daysBetween(task.startDate, task.endDate) * pxPerDay - 2);
 

@@ -13,6 +13,9 @@ import GanttDetailPanel from './GanttDetailPanel';
 import GanttEditModal from './GanttEditModal';
 import GanttAdvancedFilterModal from './GanttAdvancedFilterModal';
 import GanttUnsavedDialog, { type UnsavedChoice } from './GanttUnsavedDialog';
+import GanttMiniProjectDashboard from './GanttMiniProjectDashboard';
+import GanttAddWorkItemModal from './GanttAddWorkItemModal';
+import EditProjectModal from '../EditProjectModal';
 import { useUiStore } from '../../../store/uiStore';
 
 type ProjectView = 'list' | 'kanban' | 'timeline' | 'calendar';
@@ -31,24 +34,28 @@ export default function GanttPlannerView({
   projectView,
   onSetView,
   focusProjectId,
-  onOpenProject,
   onOpenProjectDetail,
 }: GanttPlannerViewProps) {
   const tenant = useAppStore(s => s.tenant);
+  const updateProject = useAppStore(s => s.updateProject);
   const showToast = useUiStore(s => s.showToast);
   const {
     tasks, expandedIds, projectOrder, setProjectOrder,
     leftWidth, setLeftWidth, detailOpen,
-    searchQuery, filterStatus, advancedFilters,
+    searchQuery, filterStatus, advancedFilters, hiddenProjectIds,
     editTaskId, setEditTaskId, isDirty, discardToBaseline,
     orgId, setHasDraft, undo, redo, expandedView, setExpandedView,
+    miniDashboardProjectId, setMiniDashboardProjectId,
+    editProjectId, setEditProjectId,
+    addWorkItemProjectId, setAddWorkItemProjectId,
   } = useGanttStore();
 
-  const { commitDates, saveAll, workItemsRef } = useGanttData(projects, tenant?.id, tenant?.currency);
+  const { commitDates, saveAll, addWorkItem } = useGanttData(projects, tenant?.id, tenant?.currency);
   const scrollToTodayRef = useRef<(() => void) | null>(null);
   const scrollToTaskRef = useRef<((id: string) => void) | null>(null);
   const [unsavedOpen, setUnsavedOpen] = useState(false);
   const pendingViewRef = useRef<ProjectView | null>(null);
+  const pendingActionRef = useRef<(() => void) | null>(null);
   const leaveResolveRef = useRef<((v: boolean) => void) | null>(null);
 
   const filteredTasks = useMemo(() => tasks.filter(t => {
@@ -76,9 +83,18 @@ export default function GanttPlannerView({
     return matchSearch && matchFilter && matchAdvanced;
   }), [tasks, searchQuery, filterStatus, advancedFilters]);
 
+  const visibleTasks = useMemo(
+    () => filteredTasks.filter(t => {
+      if (t.type === 'project' && hiddenProjectIds.has(t.id)) return false;
+      if (t.parentId && hiddenProjectIds.has(t.parentId)) return false;
+      return true;
+    }),
+    [filteredTasks, hiddenProjectIds],
+  );
+
   const rows = useMemo(
-    () => flattenTasks(filteredTasks, expandedIds, projectOrder),
-    [filteredTasks, expandedIds, projectOrder],
+    () => flattenTasks(visibleTasks, expandedIds, projectOrder),
+    [visibleTasks, expandedIds, projectOrder],
   );
 
   const editTask = editTaskId ? tasks.find(t => t.id === editTaskId) : null;
@@ -86,12 +102,31 @@ export default function GanttPlannerView({
     ? projects.find(p => p.id === editTask.id)
     : editTask ? projects.find(p => p.id === editTask.projectId) : undefined;
 
+  const miniDashboardProject = miniDashboardProjectId
+    ? projects.find(p => p.id === miniDashboardProjectId)
+    : null;
+  const addWorkItemProject = addWorkItemProjectId
+    ? projects.find(p => p.id === addWorkItemProjectId)
+    : null;
+  const editProjectModal = editProjectId
+    ? projects.find(p => p.id === editProjectId)
+    : null;
+
   const promptLeave = useCallback((): Promise<boolean> => {
     if (!isDirty) return Promise.resolve(true);
     return new Promise(resolve => {
       leaveResolveRef.current = resolve;
       setUnsavedOpen(true);
     });
+  }, [isDirty]);
+
+  const runGuarded = useCallback((action: () => void) => {
+    if (!isDirty) {
+      action();
+      return;
+    }
+    pendingActionRef.current = action;
+    setUnsavedOpen(true);
   }, [isDirty]);
 
   useEffect(() => {
@@ -115,8 +150,9 @@ export default function GanttPlannerView({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && expandedView) {
-        setExpandedView(false);
+      if (e.key === 'Escape') {
+        if (miniDashboardProjectId) setMiniDashboardProjectId(null);
+        else if (expandedView) setExpandedView(false);
       }
       if (e.ctrlKey || e.metaKey) {
         if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
@@ -126,7 +162,7 @@ export default function GanttPlannerView({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [undo, redo, saveAll, expandedView, setExpandedView]);
+  }, [undo, redo, saveAll, expandedView, setExpandedView, miniDashboardProjectId, setMiniDashboardProjectId]);
 
   useEffect(() => {
     if (!focusProjectId) return;
@@ -147,7 +183,9 @@ export default function GanttPlannerView({
   const handleUnsavedChoice = useCallback(async (choice: UnsavedChoice) => {
     setUnsavedOpen(false);
     const pendingView = pendingViewRef.current;
+    const pendingAction = pendingActionRef.current;
     pendingViewRef.current = null;
+    pendingActionRef.current = null;
 
     if (choice === 'cancel') {
       leaveResolveRef.current?.(false);
@@ -158,6 +196,8 @@ export default function GanttPlannerView({
     if (choice === 'save') {
       const ok = await saveAll();
       if (!ok) {
+        pendingViewRef.current = pendingView;
+        pendingActionRef.current = pendingAction;
         leaveResolveRef.current?.(false);
         leaveResolveRef.current = null;
         return;
@@ -178,6 +218,7 @@ export default function GanttPlannerView({
     leaveResolveRef.current = null;
 
     if (pendingView) onSetView(pendingView);
+    else pendingAction?.();
   }, [saveAll, discardToBaseline, orgId, setHasDraft, showToast, onSetView]);
 
   const handleReorder = useCallback((order: string[]) => {
@@ -186,8 +227,13 @@ export default function GanttPlannerView({
 
   const handleOpenProjectDetail = useCallback((projectId: string) => {
     const p = projects.find(x => x.id === projectId);
-    if (p) onOpenProjectDetail(p);
-  }, [projects, onOpenProjectDetail]);
+    if (!p) return;
+    runGuarded(() => onOpenProjectDetail(p));
+  }, [projects, onOpenProjectDetail, runGuarded]);
+
+  const handleOpenMiniDashboard = useCallback((projectId: string) => {
+    setMiniDashboardProjectId(projectId);
+  }, [setMiniDashboardProjectId]);
 
   const startResizeLeft = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -249,6 +295,7 @@ export default function GanttPlannerView({
           scrollToTodayRef={scrollToTodayRef}
           scrollToTaskRef={scrollToTaskRef}
           onEditTask={setEditTaskId}
+          onOpenMiniDashboard={handleOpenMiniDashboard}
         />
 
         {detailOpen && (
@@ -299,6 +346,44 @@ export default function GanttPlannerView({
           />
         )}
       </AnimatePresence>
+
+      {miniDashboardProject && tenant?.id && (
+        <GanttMiniProjectDashboard
+          project={miniDashboardProject}
+          orgId={tenant.id}
+          onClose={() => setMiniDashboardProjectId(null)}
+          onOpenDetail={() => {
+            setMiniDashboardProjectId(null);
+            handleOpenProjectDetail(miniDashboardProject.id);
+          }}
+        />
+      )}
+
+      {addWorkItemProject && (
+        <GanttAddWorkItemModal
+          project={addWorkItemProject}
+          onClose={() => setAddWorkItemProjectId(null)}
+          onSubmit={data => addWorkItem(addWorkItemProject.id, data)}
+        />
+      )}
+
+      {editProjectModal && (
+        <EditProjectModal
+          project={editProjectModal}
+          onClose={() => setEditProjectId(null)}
+          onSaved={updated => {
+            updateProject(updated.id, updated);
+            useGanttStore.getState().updateTask(updated.id, {
+              name: updated.name,
+              startDate: updated.start_date,
+              endDate: updated.end_date,
+              progress: updated.progress_percentage,
+              status: updated.status,
+            }, false);
+            setEditProjectId(null);
+          }}
+        />
+      )}
     </div>
   );
 }

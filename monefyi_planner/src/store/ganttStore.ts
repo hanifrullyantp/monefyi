@@ -8,6 +8,7 @@ import type {
 } from '../lib/gantt/types';
 import { DEFAULT_ADVANCED_FILTERS as DEFAULT_FILTERS } from '../lib/gantt/types';
 import { cloneSnapshot, pickSnapshot, snapshotsEqual, type GanttSnapshot } from '../lib/gantt/snapshot';
+import { ZOOM_SCALE_MAX, ZOOM_SCALE_MIN, ZOOM_SCALE_STEP } from '../lib/gantt/constants';
 
 const MAX_HISTORY = 50;
 
@@ -42,6 +43,11 @@ interface GanttState {
   isSaving: boolean;
   hasDraft: boolean;
   expandedView: boolean;
+  zoomScale: number;
+  hiddenProjectIds: Set<string>;
+  miniDashboardProjectId: string | null;
+  editProjectId: string | null;
+  addWorkItemProjectId: string | null;
 
   init: (orgId: string) => void;
   setTasks: (tasks: GanttTask[]) => void;
@@ -82,6 +88,11 @@ interface GanttState {
   discardToBaseline: () => void;
   toggleExpandedView: () => void;
   setExpandedView: (v: boolean) => void;
+  setZoomScale: (v: number) => void;
+  toggleHideProject: (id: string) => void;
+  setMiniDashboardProjectId: (id: string | null) => void;
+  setEditProjectId: (id: string | null) => void;
+  setAddWorkItemProjectId: (id: string | null) => void;
 }
 
 export const useGanttStore = create<GanttState>((set, get) => ({
@@ -98,7 +109,7 @@ export const useGanttStore = create<GanttState>((set, get) => ({
   viewMode: 'month',
   scrollLeft: 0,
   scrollToTaskId: null,
-  detailOpen: true,
+  detailOpen: false,
   leftWidth: 280,
   rightWidth: 300,
   drag: null,
@@ -111,6 +122,11 @@ export const useGanttStore = create<GanttState>((set, get) => ({
   isSaving: false,
   hasDraft: false,
   expandedView: false,
+  zoomScale: 1,
+  hiddenProjectIds: new Set(),
+  miniDashboardProjectId: null,
+  editProjectId: null,
+  addWorkItemProjectId: null,
 
   init: orgId => {
     set({
@@ -224,17 +240,23 @@ export const useGanttStore = create<GanttState>((set, get) => ({
 
   zoomIn: () =>
     set(s => {
+      if (s.zoomScale < ZOOM_SCALE_MAX) {
+        return { zoomScale: Math.min(ZOOM_SCALE_MAX, +(s.zoomScale + ZOOM_SCALE_STEP).toFixed(2)) };
+      }
       const modes: GanttViewMode[] = ['month', 'week', 'day'];
       const idx = modes.indexOf(s.viewMode);
-      if (idx < modes.length - 1) return { viewMode: modes[idx + 1] };
+      if (idx < modes.length - 1) return { viewMode: modes[idx + 1], zoomScale: 1 };
       return s;
     }),
 
   zoomOut: () =>
     set(s => {
+      if (s.zoomScale > ZOOM_SCALE_MIN) {
+        return { zoomScale: Math.max(ZOOM_SCALE_MIN, +(s.zoomScale - ZOOM_SCALE_STEP).toFixed(2)) };
+      }
       const modes: GanttViewMode[] = ['month', 'week', 'day'];
       const idx = modes.indexOf(s.viewMode);
-      if (idx > 0) return { viewMode: modes[idx - 1] };
+      if (idx > 0) return { viewMode: modes[idx - 1], zoomScale: 1 };
       return s;
     }),
 
@@ -314,4 +336,20 @@ export const useGanttStore = create<GanttState>((set, get) => ({
   toggleExpandedView: () => set(s => ({ expandedView: !s.expandedView })),
 
   setExpandedView: v => set({ expandedView: v }),
+
+  setZoomScale: v => set({ zoomScale: Math.max(ZOOM_SCALE_MIN, Math.min(ZOOM_SCALE_MAX, v)) }),
+
+  toggleHideProject: id =>
+    set(s => {
+      const next = new Set(s.hiddenProjectIds);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return { hiddenProjectIds: next };
+    }),
+
+  setMiniDashboardProjectId: id => set({ miniDashboardProjectId: id }),
+
+  setEditProjectId: id => set({ editProjectId: id }),
+
+  setAddWorkItemProjectId: id => set({ addWorkItemProjectId: id }),
 }));

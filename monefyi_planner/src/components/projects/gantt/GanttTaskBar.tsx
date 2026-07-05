@@ -1,10 +1,12 @@
 import { useCallback, useRef, useState } from 'react';
+import { Palette, RefreshCw } from 'lucide-react';
 import { useGanttStore } from '../../../store/ganttStore';
 import { addDays, daysBetween, getBarStyle } from '../../../lib/gantt/utils';
 import type { FlatGanttRow, GanttDragState } from '../../../lib/gantt/types';
-import { GANTT_COLORS, MIN_BAR_WIDTH, ROW_HEIGHT } from '../../../lib/gantt/constants';
-import { PX_PER_DAY } from '../../../lib/gantt/constants';
+import { BAR_COLOR_PRESETS, GANTT_COLORS, getEffectivePxPerDay, MIN_BAR_WIDTH, ROW_HEIGHT, WORK_ITEM_STATUS_LABEL } from '../../../lib/gantt/constants';
 import type { TimelineRange } from '../../../lib/gantt/types';
+import GanttContextMenu, { type GanttContextMenuItem } from './GanttContextMenu';
+import { STATUS_LABEL } from '../../../utils/projectUi';
 
 interface GanttTaskBarProps {
   row: FlatGanttRow;
@@ -12,17 +14,30 @@ interface GanttTaskBarProps {
   onCommitDates: (id: string, start: string, end: string) => void;
   onStartDependency: (fromId: string, x: number, y: number) => void;
   onOpenEdit?: (taskId: string) => void;
+  onOpenMiniDashboard?: (projectId: string) => void;
 }
 
-export default function GanttTaskBar({ row, range, onCommitDates, onStartDependency, onOpenEdit }: GanttTaskBarProps) {
+export default function GanttTaskBar({
+  row,
+  range,
+  onCommitDates,
+  onStartDependency,
+  onOpenEdit,
+  onOpenMiniDashboard,
+}: GanttTaskBarProps) {
   const { task, depth } = row;
-  const { viewMode, selectedIds, selectTask, setDrag, pushHistory } = useGanttStore();
+  const {
+    viewMode, zoomScale, selectedIds, selectTask, setDrag, pushHistory,
+    updateTask, setBarColor,
+  } = useGanttStore();
   const isSelected = selectedIds.has(task.id);
-  const { left, width, color } = getBarStyle(task, range, viewMode, isSelected && !task.barColor);
+  const isProject = task.type === 'project';
+  const { left, width, color } = getBarStyle(task, range, viewMode, isSelected && !task.barColor, zoomScale);
   const [hovered, setHovered] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const dayCount = daysBetween(task.startDate, task.endDate);
-  const pxPerDay = PX_PER_DAY[viewMode];
+  const pxPerDay = getEffectivePxPerDay(viewMode, zoomScale);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent, mode: GanttDragState['mode']) => {
@@ -76,6 +91,56 @@ export default function GanttTaskBar({ row, range, onCommitDates, onStartDepende
     [task, pxPerDay, onCommitDates, setDrag, pushHistory],
   );
 
+  const buildMenuItems = (): GanttContextMenuItem[] => {
+    const colorItems: GanttContextMenuItem[] = BAR_COLOR_PRESETS.map(preset => ({
+      id: `color-${preset.id}`,
+      label: preset.label,
+      icon: preset.color ? (
+        <span className="w-3 h-3 rounded-full border border-slate-200" style={{ backgroundColor: preset.color }} />
+      ) : (
+        <Palette className="w-4 h-4" />
+      ),
+      onClick: () => setBarColor(task.id, preset.color || null),
+    }));
+
+    const statusOptions = isProject
+      ? (['planning', 'active', 'on_hold', 'completed'] as const)
+      : (['pending', 'in_progress', 'completed'] as const);
+
+    const statusLabels = isProject ? STATUS_LABEL : WORK_ITEM_STATUS_LABEL;
+
+    const statusItems: GanttContextMenuItem[] = statusOptions.map(status => ({
+      id: `status-${status}`,
+      label: statusLabels[status] || status,
+      onClick: () => {
+        pushHistory();
+        updateTask(task.id, { status }, false);
+        useGanttStore.setState({ isDirty: true });
+      },
+    }));
+
+    return [
+      {
+        id: 'colors',
+        label: 'Ganti warna bar',
+        icon: <Palette className="w-4 h-4" />,
+        children: colorItems,
+      },
+      {
+        id: 'status',
+        label: 'Ganti status',
+        icon: <RefreshCw className="w-4 h-4" />,
+        children: statusItems,
+      },
+      { id: 'sep', label: '', separator: true },
+      {
+        id: 'edit',
+        label: isProject ? 'Edit bar proyek' : 'Edit pekerjaan',
+        onClick: () => onOpenEdit?.(task.id),
+      },
+    ];
+  };
+
   const barHeight = depth > 0 ? 24 : 28;
   const topOffset = (ROW_HEIGHT - barHeight) / 2;
   const barW = Math.max(width - depth * 8, MIN_BAR_WIDTH);
@@ -90,7 +155,15 @@ export default function GanttTaskBar({ row, range, onCommitDates, onStartDepende
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         onClick={e => selectTask(task.id, e.ctrlKey || e.metaKey)}
-        onDoubleClick={() => onOpenEdit?.(task.id)}
+        onDoubleClick={() => {
+          if (isProject) onOpenMiniDashboard?.(task.id);
+          else onOpenEdit?.(task.id);
+        }}
+        onContextMenu={e => {
+          e.preventDefault();
+          e.stopPropagation();
+          setContextMenu({ x: e.clientX, y: e.clientY });
+        }}
         title={`${task.name}\n${task.startDate} – ${task.endDate}\n${dayCount} hari · ${Math.round(task.progress)}%`}
         className={`gantt-bar absolute rounded-md flex items-center overflow-hidden transition-shadow ${
           hovered || isSelected ? 'shadow-md z-10' : 'shadow-sm'
@@ -150,6 +223,15 @@ export default function GanttTaskBar({ row, range, onCommitDates, onStartDepende
           </>
         )}
       </div>
+
+      {contextMenu && (
+        <GanttContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={buildMenuItems()}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </div>
   );
 }
