@@ -12,15 +12,11 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-
-const jsonHeaders = { "Content-Type": "application/json" };
-const APP_CORS_ORIGIN = Deno.env.get("APP_CORS_ORIGIN") || "*";
-const corsHeaders = {
-  "Access-Control-Allow-Origin": APP_CORS_ORIGIN,
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import {
+  errorResponse,
+  handleCorsPreflightRequest,
+  jsonResponse,
+} from "../_shared/cors.ts";
 
 function pickEnv(name: string, fallback = "") {
   return (Deno.env.get(name) ?? fallback).trim();
@@ -64,36 +60,24 @@ function decodeUserIdFromAuthHeader(authHeader: string): string | null {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  const corsResponse = handleCorsPreflightRequest(req);
+  if (corsResponse) return corsResponse;
 
   if (req.method !== "POST") {
-    return new Response(
-      JSON.stringify({ error: "Method not allowed" }),
-      { status: 405, headers: { ...corsHeaders, ...jsonHeaders } },
-    );
+    return errorResponse(req, "Method not allowed", 405);
   }
 
   try {
     const SUPABASE_URL = pickEnv("SUPABASE_URL");
     const SERVICE_ROLE = pickEnv("SUPABASE_SERVICE_ROLE_KEY");
     if (!SUPABASE_URL || !SERVICE_ROLE) {
-      return new Response(
-        JSON.stringify({
-          error: "Missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY",
-        }),
-        { status: 500, headers: { ...corsHeaders, ...jsonHeaders } },
-      );
+      return errorResponse(req, "Missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY", 500);
     }
 
     const authHeader = req.headers.get("Authorization") || "";
     const userId = decodeUserIdFromAuthHeader(authHeader);
     if (!userId) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized (invalid token)" }),
-        { status: 401, headers: { ...corsHeaders, ...jsonHeaders } },
-      );
+      return errorResponse(req, "Unauthorized (invalid token)", 401);
     }
 
     const supa = createClient(SUPABASE_URL, SERVICE_ROLE, {
@@ -143,22 +127,16 @@ serve(async (req) => {
     const usedToday = usageRow?.requests_count ?? 0;
     const remaining = Math.max(0, limit - usedToday);
 
-    return new Response(
-      JSON.stringify({
-        limit,
-        usedToday,
-        remaining,
-        resetTime: resetISO,
-        planType,
-        today: todayStr,
-      }),
-      { status: 200, headers: { ...corsHeaders, ...jsonHeaders } },
-    );
+    return jsonResponse(req, {
+      limit,
+      usedToday,
+      remaining,
+      resetTime: resetISO,
+      planType,
+      today: todayStr,
+    });
   } catch (e) {
     console.error("❌ ai-quota-status error:", e);
-    return new Response(
-      JSON.stringify({ error: String(e?.message || e) }),
-      { status: 500, headers: { ...corsHeaders, ...jsonHeaders } },
-    );
+    return errorResponse(req, String(e?.message || e));
   }
 });

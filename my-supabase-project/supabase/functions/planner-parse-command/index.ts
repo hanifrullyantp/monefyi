@@ -9,19 +9,11 @@ import {
   parseWithAI,
   type AIUsageLog,
 } from "../_shared/ai-providers.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": Deno.env.get("APP_CORS_ORIGIN") || "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
+import {
+  errorResponse,
+  handleCorsPreflightRequest,
+  jsonResponse,
+} from "../_shared/cors.ts";
 
 // ---------------------------------------------------------------------------
 // Prompts
@@ -97,8 +89,9 @@ Parse ke JSON.`;
 // ---------------------------------------------------------------------------
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  const corsResponse = handleCorsPreflightRequest(req);
+  if (corsResponse) return corsResponse;
+  if (req.method !== "POST") return errorResponse(req, "Method not allowed", 405);
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -106,20 +99,20 @@ serve(async (req) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
     const authHeader = req.headers.get("Authorization") ?? "";
-    if (!authHeader) return json({ error: "No auth" }, 401);
+    if (!authHeader) return jsonResponse(req,{ error: "No auth" }, 401);
 
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
     const { data: authData, error: authErr } = await userClient.auth.getUser();
-    if (authErr || !authData?.user) return json({ error: "Unauthorized" }, 401);
+    if (authErr || !authData?.user) return jsonResponse(req,{ error: "Unauthorized" }, 401);
 
     const sb = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
     const { input, context } = await req.json() as {
       input: string;
       context: Record<string, unknown> | null;
     };
-    if (!input) return json({ error: "No input" }, 400);
+    if (!input) return jsonResponse(req,{ error: "No input" }, 400);
 
     // Resolve Gemini key (user-owned key takes priority; falls back to platform quota).
     const gemini = await resolveGeminiForUser(sb, authData.user.id);
@@ -133,7 +126,7 @@ serve(async (req) => {
         gemini.source === "none" &&
         gemini.platformFallbackUsed >= gemini.platformFallbackLimit;
 
-      return json({
+      return jsonResponse(req,{
         intent: "record_cost",
         params: {},
         confidence: 0.35,
@@ -183,7 +176,7 @@ serve(async (req) => {
       }));
     } catch {
       // All providers exhausted — return graceful fallback.
-      return json({
+      return jsonResponse(req,{
         intent: "record_cost",
         params: {},
         confidence: 0.35,
@@ -207,7 +200,7 @@ serve(async (req) => {
       );
     }
 
-    return json({
+    return jsonResponse(req,{
       intent: parsed.intent,
       params: parsed.params,
       confidence: parsed.confidence,
@@ -225,6 +218,6 @@ serve(async (req) => {
       },
     });
   } catch (err) {
-    return json({ error: err instanceof Error ? err.message : "Unknown error" }, 500);
+    return jsonResponse(req,{ error: err instanceof Error ? err.message : "Unknown error" }, 500);
   }
 });

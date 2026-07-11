@@ -1,18 +1,10 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": Deno.env.get("APP_CORS_ORIGIN") || "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
+import {
+  errorResponse,
+  handleCorsPreflightRequest,
+  jsonResponse,
+} from "../_shared/cors.ts";
 
 async function requireAdmin(supa: ReturnType<typeof createClient>, callerId: string) {
   const { data: prof } = await supa.from("profiles").select("role").eq("id", callerId).maybeSingle();
@@ -22,8 +14,9 @@ async function requireAdmin(supa: ReturnType<typeof createClient>, callerId: str
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  const corsResponse = handleCorsPreflightRequest(req);
+  if (corsResponse) return corsResponse;
+  if (req.method !== "POST") return errorResponse(req, "Method not allowed", 405);
 
   try {
     const url = Deno.env.get("SUPABASE_URL")!;
@@ -33,26 +26,26 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization") || "";
     const userClient = createClient(url, anon, { global: { headers: { Authorization: authHeader } } });
     const { data: authData, error: authErr } = await userClient.auth.getUser();
-    if (authErr || !authData?.user) return json({ error: "Unauthorized" }, 401);
+    if (authErr || !authData?.user) return jsonResponse(req,{ error: "Unauthorized" }, 401);
 
     const sb = createClient(url, service, { auth: { persistSession: false } });
     await requireAdmin(sb, authData.user.id);
 
     const body = await req.json();
     const userId = String(body.user_id || "");
-    if (!userId) return json({ error: "user_id required" }, 400);
+    if (!userId) return jsonResponse(req,{ error: "user_id required" }, 400);
 
     const profilePatch: Record<string, unknown> = {};
     if (body.name !== undefined) profilePatch.name = String(body.name).slice(0, 200);
     if (body.phone !== undefined) profilePatch.phone = String(body.phone).slice(0, 50);
     if (body.role !== undefined) {
       const r = String(body.role).toLowerCase();
-      if (!["user", "admin"].includes(r)) return json({ error: "Invalid role" }, 400);
+      if (!["user", "admin"].includes(r)) return jsonResponse(req,{ error: "Invalid role" }, 400);
       profilePatch.role = r;
     }
     if (body.status !== undefined) {
       const s = String(body.status).toLowerCase();
-      if (!["active", "suspended", "pending"].includes(s)) return json({ error: "Invalid status" }, 400);
+      if (!["active", "suspended", "pending"].includes(s)) return jsonResponse(req,{ error: "Invalid status" }, 400);
       profilePatch.status = s;
     }
     if (body.gemini_key !== undefined) {
@@ -68,7 +61,7 @@ serve(async (req) => {
 
     if (Object.keys(profilePatch).length > 1) {
       const { error: profErr } = await sb.from("profiles").update(profilePatch).eq("id", userId);
-      if (profErr) return json({ error: profErr.message }, 500);
+      if (profErr) return jsonResponse(req,{ error: profErr.message }, 500);
     }
 
     if (body.plan_type !== undefined || body.ai_daily_limit !== undefined || body.plan_expires_at !== undefined) {
@@ -81,20 +74,20 @@ serve(async (req) => {
       if (body.ai_daily_limit !== undefined) planRow.ai_daily_limit = Number(body.ai_daily_limit);
 
       const { error: planErr } = await sb.from("user_plans").upsert(planRow, { onConflict: "user_id" });
-      if (planErr) return json({ error: planErr.message }, 500);
+      if (planErr) return jsonResponse(req,{ error: planErr.message }, 500);
     }
 
     if (body.new_password && String(body.new_password).length >= 8) {
       const { error: pwErr } = await sb.auth.admin.updateUserById(userId, {
         password: String(body.new_password),
       });
-      if (pwErr) return json({ error: pwErr.message }, 500);
+      if (pwErr) return jsonResponse(req,{ error: pwErr.message }, 500);
     }
 
-    return json({ ok: true });
+    return jsonResponse(req,{ ok: true });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
-    if (msg === "FORBIDDEN") return json({ error: "Forbidden" }, 403);
-    return json({ error: msg }, 500);
+    if (msg === "FORBIDDEN") return jsonResponse(req,{ error: "Forbidden" }, 403);
+    return jsonResponse(req,{ error: msg }, 500);
   }
 });

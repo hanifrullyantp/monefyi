@@ -1,22 +1,15 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": Deno.env.get("APP_CORS_ORIGIN") || "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
+import {
+  errorResponse,
+  handleCorsPreflightRequest,
+  jsonResponse,
+} from "../_shared/cors.ts";
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  const corsResponse = handleCorsPreflightRequest(req);
+  if (corsResponse) return corsResponse;
+  if (req.method !== "POST") return errorResponse(req, "Method not allowed", 405);
 
   try {
     const url = Deno.env.get("SUPABASE_URL")!;
@@ -26,11 +19,11 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization") || "";
     const userClient = createClient(url, anon, { global: { headers: { Authorization: authHeader } } });
     const { data: authData, error: authErr } = await userClient.auth.getUser();
-    if (authErr || !authData?.user) return json({ error: "Unauthorized" }, 401);
+    if (authErr || !authData?.user) return errorResponse(req, "Unauthorized", 401);
 
     const sb = createClient(url, service, { auth: { persistSession: false } });
     const { data: prof } = await sb.from("profiles").select("role").eq("id", authData.user.id).maybeSingle();
-    if (String(prof?.role) !== "admin") return json({ error: "Forbidden" }, 403);
+    if (String(prof?.role) !== "admin") return errorResponse(req, "Forbidden", 403);
 
     const { count: userCount } = await sb.from("profiles").select("id", { count: "exact", head: true });
     const { count: orgCount } = await sb.from("planner_organizations").select("id", { count: "exact", head: true });
@@ -48,7 +41,7 @@ serve(async (req) => {
 
     const { data: appCfg } = await sb.from("app_config").select("*").eq("id", "global").maybeSingle();
 
-    return json({
+    return jsonResponse(req, {
       ok: true,
       stats: {
         total_users: userCount || 0,
@@ -59,6 +52,6 @@ serve(async (req) => {
       app_config: appCfg,
     });
   } catch (e) {
-    return json({ error: e instanceof Error ? e.message : "Unknown error" }, 500);
+    return errorResponse(req, e instanceof Error ? e.message : "Unknown error");
   }
 });

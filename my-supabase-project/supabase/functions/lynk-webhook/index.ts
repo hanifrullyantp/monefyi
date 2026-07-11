@@ -23,14 +23,9 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { sendEmail } from "../_shared/email.ts";
+import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 
 const jsonHeaders = { "Content-Type": "application/json" };
-const APP_CORS_ORIGIN = Deno.env.get("APP_CORS_ORIGIN") || "*";
-const corsHeaders = {
-  "Access-Control-Allow-Origin": APP_CORS_ORIGIN,
-  "Access-Control-Allow-Headers": "content-type, x-lynk-signature",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
 
 function pickEnv(name: string, fallback = "") {
   return (Deno.env.get(name) ?? fallback).trim();
@@ -132,9 +127,13 @@ function buildConfirmationEmail(opts: {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  const corsResponse = handleCorsPreflightRequest(req);
+  if (corsResponse) return corsResponse;
+  const corsHeaders = {
+    ...getCorsHeaders(req),
+    "Access-Control-Allow-Headers":
+      "content-type, x-lynk-signature, authorization, x-client-info, apikey",
+  };
 
   console.log("🔔 Webhook received:", {
     method: req.method,

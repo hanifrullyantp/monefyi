@@ -1,6 +1,11 @@
 // supabase/functions/monefyi-landing-config/index.ts
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  errorResponse,
+  handleCorsPreflightRequest,
+  jsonResponse,
+} from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY =
@@ -12,20 +17,6 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
-
-function jsonResponse(body: unknown, status = 200) {
-  const APP_CORS_ORIGIN = Deno.env.get("APP_CORS_ORIGIN") || "*";
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": APP_CORS_ORIGIN,
-      "Access-Control-Allow-Headers":
-        "Content-Type, Authorization, apikey, x-client-info",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    },
-  });
-}
 
 async function assertAdminFromBearer(authHeader: string): Promise<{
   ok: boolean;
@@ -61,16 +52,13 @@ async function assertAdminFromBearer(authHeader: string): Promise<{
 }
 
 Deno.serve(async (req) => {
-  // CORS preflight
-  if (req.method === "OPTIONS") {
-    return jsonResponse({ ok: true });
-  }
+  const corsResponse = handleCorsPreflightRequest(req);
+  if (corsResponse) return corsResponse;
 
   const url = new URL(req.url);
   const slug = url.searchParams.get("slug") || "default";
 
   if (req.method === "GET") {
-    // Ambil config landing
     const { data, error } = await supabaseAdmin
       .from("landing_content")
       .select("content")
@@ -79,15 +67,14 @@ Deno.serve(async (req) => {
 
     if (error) {
       console.error("GET landing_content error:", error);
-      return jsonResponse({ error: "Failed to load content" }, 500);
+      return errorResponse(req, "Failed to load content", 500);
     }
 
     if (!data) {
-      // tidak ada row, kirim kosong
-      return jsonResponse({ slug, content: null }, 200);
+      return jsonResponse(req, { slug, content: null });
     }
 
-    return jsonResponse({ slug, content: data.content }, 200);
+    return jsonResponse(req, { slug, content: data.content });
   }
 
   if (req.method === "POST") {
@@ -95,23 +82,22 @@ Deno.serve(async (req) => {
       req.headers.get("Authorization") || "",
     );
     if (!authResult.ok) {
-      return jsonResponse({ error: authResult.error || "Unauthorized" }, authResult.status);
+      return jsonResponse(req, { error: authResult.error || "Unauthorized" }, authResult.status);
     }
 
-    let body: any;
+    let body: Record<string, unknown>;
     try {
       body = await req.json();
     } catch {
-      return jsonResponse({ error: "Invalid JSON" }, 400);
+      return errorResponse(req, "Invalid JSON", 400);
     }
 
-    const bodySlug = body.slug || slug || "default";
+    const bodySlug = String(body.slug || slug || "default");
     const content = body.content;
     if (!content) {
-      return jsonResponse({ error: "Missing content" }, 400);
+      return errorResponse(req, "Missing content", 400);
     }
 
-    // Upsert row
     const { error } = await supabaseAdmin.from("landing_content").upsert(
       {
         slug: bodySlug,
@@ -122,11 +108,11 @@ Deno.serve(async (req) => {
 
     if (error) {
       console.error("POST landing_content error:", error);
-      return jsonResponse({ error: "Failed to save content" }, 500);
+      return errorResponse(req, "Failed to save content", 500);
     }
 
-    return jsonResponse({ ok: true, slug: bodySlug }, 200);
+    return jsonResponse(req, { ok: true, slug: bodySlug });
   }
 
-  return jsonResponse({ error: "Method not allowed" }, 405);
+  return errorResponse(req, "Method not allowed", 405);
 });

@@ -20,25 +20,14 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-
-const jsonHeaders = { "Content-Type": "application/json" };
-const APP_CORS_ORIGIN = Deno.env.get("APP_CORS_ORIGIN") || "*";
-const corsHeaders = {
-  "Access-Control-Allow-Origin": APP_CORS_ORIGIN,
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import {
+  errorResponse,
+  handleCorsPreflightRequest,
+  jsonResponse,
+} from "../_shared/cors.ts";
 
 function pickEnv(name: string, fallback = "") {
   return (Deno.env.get(name) ?? fallback).trim();
-}
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, ...jsonHeaders },
-  });
 }
 
 // Decode JWT manual untuk ambil user_id (sub)
@@ -58,19 +47,18 @@ function decodeUserIdFromAuthHeader(authHeader: string): string | null {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  const corsResponse = handleCorsPreflightRequest(req);
+  if (corsResponse) return corsResponse;
 
   if (req.method !== "POST") {
-    return json({ error: "Method not allowed" }, 405);
+    return errorResponse(req, "Method not allowed", 405);
   }
 
   try {
     const SUPABASE_URL = pickEnv("SUPABASE_URL");
     const SERVICE_ROLE = pickEnv("SUPABASE_SERVICE_ROLE_KEY");
     if (!SUPABASE_URL || !SERVICE_ROLE) {
-      return json(
+      return jsonResponse(req,
         { error: "Missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY" },
         500,
       );
@@ -79,7 +67,7 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization") || "";
     const callerId = decodeUserIdFromAuthHeader(authHeader);
     if (!callerId) {
-      return json({ error: "Unauthorized (invalid token)" }, 401);
+      return jsonResponse(req,{ error: "Unauthorized (invalid token)" }, 401);
     }
 
     const supa = createClient(SUPABASE_URL, SERVICE_ROLE, {
@@ -95,12 +83,12 @@ serve(async (req) => {
 
     if (profErr) {
       console.error("monefyi-admin-users profErr:", profErr);
-      return json({ error: "Failed to load profile" }, 500);
+      return jsonResponse(req,{ error: "Failed to load profile" }, 500);
     }
 
     const callerRole = String(callerProfile?.role || "").toLowerCase();
     if (callerRole !== "admin") {
-      return json({ error: "Forbidden (admin only)" }, 403);
+      return jsonResponse(req,{ error: "Forbidden (admin only)" }, 403);
     }
 
     // 2) Parse filter dari body
@@ -133,7 +121,7 @@ serve(async (req) => {
 
       if (memberSeedErr) {
         console.error("monefyi-admin-users memberSeedErr:", memberSeedErr);
-        return json({ error: "Failed to load planner users" }, 500);
+        return jsonResponse(req,{ error: "Failed to load planner users" }, 500);
       }
 
       const plannerSeedIds = [
@@ -156,7 +144,7 @@ serve(async (req) => {
 
       if (listErr) {
         console.error("monefyi-admin-users listUsers error:", listErr);
-        return json({ error: "Failed to list users" }, 500);
+        return jsonResponse(req,{ error: "Failed to list users" }, 500);
       }
 
       users = (listData?.users || []) as AuthUserLite[];
@@ -171,7 +159,7 @@ serve(async (req) => {
 
     const ids = users.map((u) => u.id);
     if (ids.length === 0) {
-      return json({ ok: true, items: [], total: 0, page, pageSize: perPage }, 200);
+      return jsonResponse(req,{ ok: true, items: [], total: 0, page, pageSize: perPage }, 200);
     }
 
     // 4) Ambil user_plans & profiles untuk id tersebut
@@ -182,7 +170,7 @@ serve(async (req) => {
 
     if (planErr) {
       console.error("monefyi-admin-users planErr:", planErr);
-      return json({ error: "Failed to load user_plans" }, 500);
+      return jsonResponse(req,{ error: "Failed to load user_plans" }, 500);
     }
 
     const { data: profileRows, error: prof2Err } = await supa
@@ -192,7 +180,7 @@ serve(async (req) => {
 
     if (prof2Err) {
       console.error("monefyi-admin-users profilesErr:", prof2Err);
-      return json({ error: "Failed to load profiles" }, 500);
+      return jsonResponse(req,{ error: "Failed to load profiles" }, 500);
     }
 
     const { data: memberRows, error: memberErr } = await supa
@@ -203,7 +191,7 @@ serve(async (req) => {
 
     if (memberErr) {
       console.error("monefyi-admin-users memberErr:", memberErr);
-      return json({ error: "Failed to load planner memberships" }, 500);
+      return jsonResponse(req,{ error: "Failed to load planner memberships" }, 500);
     }
 
     const planByUser = new Map<string, any>();
@@ -291,7 +279,7 @@ serve(async (req) => {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
-    return json(
+    return jsonResponse(req,
       {
         ok: true,
         items,
@@ -303,6 +291,6 @@ serve(async (req) => {
     );
   } catch (e) {
     console.error("❌ monefyi-admin-users error:", e);
-    return json({ error: String(e?.message || e) }, 500);
+    return jsonResponse(req,{ error: String(e?.message || e) }, 500);
   }
 });

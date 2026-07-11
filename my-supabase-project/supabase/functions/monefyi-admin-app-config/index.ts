@@ -20,25 +20,14 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-
-const jsonHeaders = { "Content-Type": "application/json" };
-const APP_CORS_ORIGIN = Deno.env.get("APP_CORS_ORIGIN") || "*";
-const corsHeaders = {
-  "Access-Control-Allow-Origin": APP_CORS_ORIGIN,
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import {
+  errorResponse,
+  handleCorsPreflightRequest,
+  jsonResponse,
+} from "../_shared/cors.ts";
 
 function pickEnv(name: string, fallback = "") {
   return (Deno.env.get(name) ?? fallback).trim();
-}
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, ...jsonHeaders },
-  });
 }
 
 const ALLOWED_KEYS = new Set([
@@ -52,18 +41,17 @@ const ALLOWED_KEYS = new Set([
 ]);
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  const corsResponse = handleCorsPreflightRequest(req);
+  if (corsResponse) return corsResponse;
   if (req.method !== "POST") {
-    return json({ error: "Method not allowed" }, 405);
+    return errorResponse(req, "Method not allowed", 405);
   }
 
   const SUPABASE_URL = pickEnv("SUPABASE_URL");
   const ANON = pickEnv("SUPABASE_ANON_KEY");
   const SERVICE = pickEnv("SUPABASE_SERVICE_ROLE_KEY");
   if (!SUPABASE_URL || !ANON || !SERVICE) {
-    return json(
+    return jsonResponse(req,
       { error: "Missing SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY" },
       500,
     );
@@ -71,7 +59,7 @@ serve(async (req) => {
 
   const authHeader = req.headers.get("Authorization") || "";
   if (!authHeader) {
-    return json({ error: "Missing Authorization" }, 401);
+    return jsonResponse(req,{ error: "Missing Authorization" }, 401);
   }
 
   const supaUser = createClient(SUPABASE_URL, ANON, {
@@ -81,7 +69,7 @@ serve(async (req) => {
 
   const { data: authData, error: authErr } = await supaUser.auth.getUser();
   if (authErr || !authData?.user?.id) {
-    return json({ error: "Unauthorized" }, 401);
+    return jsonResponse(req,{ error: "Unauthorized" }, 401);
   }
 
   const supaAdmin = createClient(SUPABASE_URL, SERVICE, {
@@ -96,10 +84,10 @@ serve(async (req) => {
 
   if (profErr) {
     console.error("monefyi-admin-app-config profErr:", profErr);
-    return json({ error: "Failed to load profile" }, 500);
+    return jsonResponse(req,{ error: "Failed to load profile" }, 500);
   }
   if (String(prof?.role || "").toLowerCase() !== "admin") {
-    return json({ error: "Forbidden (admin only)" }, 403);
+    return jsonResponse(req,{ error: "Forbidden (admin only)" }, 403);
   }
 
   const raw = await req.json().catch(() => ({}));
@@ -115,7 +103,7 @@ serve(async (req) => {
 
   if (curErr) {
     console.error("monefyi-admin-app-config curErr:", curErr);
-    return json({ error: "Failed to read app_config" }, 500);
+    return jsonResponse(req,{ error: "Failed to read app_config" }, 500);
   }
 
   const merged: Record<string, unknown> = {
@@ -145,8 +133,8 @@ serve(async (req) => {
 
   if (saveErr) {
     console.error("monefyi-admin-app-config saveErr:", saveErr);
-    return json({ error: saveErr.message || "Upsert failed" }, 500);
+    return jsonResponse(req,{ error: saveErr.message || "Upsert failed" }, 500);
   }
 
-  return json({ ok: true, appConfig: saved }, 200);
+  return jsonResponse(req,{ ok: true, appConfig: saved }, 200);
 });

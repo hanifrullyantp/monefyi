@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { corsHeaders, handleOptions, jsonResponse } from "../_shared/cors.ts";
+import { handleOptions, jsonResponse } from "../_shared/cors.ts";
 import { getServiceClient } from "../_shared/supabase.ts";
 import { requireUser } from "../_shared/auth.ts";
 import { writeAudit, createNotification } from "../_shared/audit.ts";

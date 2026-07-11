@@ -5,14 +5,11 @@ import {
   recordGeminiUsage,
   resolveGeminiForUser,
 } from "../_shared/gemini.ts";
-
-const jsonHeaders = { "Content-Type": "application/json" };
-const APP_CORS_ORIGIN = Deno.env.get("APP_CORS_ORIGIN") || "*";
-const corsHeaders = {
-  "Access-Control-Allow-Origin": APP_CORS_ORIGIN,
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import {
+  errorResponse,
+  handleCorsPreflightRequest,
+  jsonResponse,
+} from "../_shared/cors.ts";
 
 function pickEnv(name: string, fallback = "") {
   return (Deno.env.get(name) ?? fallback).trim();
@@ -84,13 +81,9 @@ function buildFallbackInsights(
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, ...jsonHeaders },
-    });
-  }
+  const corsResponse = handleCorsPreflightRequest(req);
+  if (corsResponse) return corsResponse;
+  if (req.method !== "POST") return errorResponse(req, "Method not allowed", 405);
 
   try {
     const SUPABASE_URL = pickEnv("SUPABASE_URL");
@@ -98,10 +91,7 @@ serve(async (req) => {
     const SERVICE_KEY = pickEnv("SUPABASE_SERVICE_ROLE_KEY");
     const authHeader = req.headers.get("Authorization") || "";
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, ...jsonHeaders },
-      });
+      return errorResponse(req, "Unauthorized", 401);
     }
 
     const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -109,10 +99,7 @@ serve(async (req) => {
     });
     const { data: userData, error: userErr } = await userClient.auth.getUser();
     if (userErr || !userData?.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, ...jsonHeaders },
-      });
+      return errorResponse(req, "Unauthorized", 401);
     }
 
     const body = await req.json().catch(() => ({}));
@@ -139,10 +126,7 @@ serve(async (req) => {
     const gemini = await resolveGeminiForUser(adminClient, userData.user.id);
     if (!gemini.apiKey) {
       const fallback = buildFallbackInsights(rows, periodLabel, lang);
-      return new Response(JSON.stringify(fallback), {
-        status: 200,
-        headers: { ...corsHeaders, ...jsonHeaders },
-      });
+      return jsonResponse(req, fallback);
     }
 
     const s = sumByType(rows);
@@ -192,15 +176,9 @@ Singkat, actionable, ramah. Amount IDR sebagai angka tanpa format.`;
       source: parsed.source || "gemini",
     };
 
-    return new Response(JSON.stringify(out), {
-      status: 200,
-      headers: { ...corsHeaders, ...jsonHeaders },
-    });
+    return jsonResponse(req, out);
   } catch (e) {
     console.error("monefyi-generate-insights:", e);
-    return new Response(JSON.stringify({ error: String((e as Error)?.message || e) }), {
-      status: 500,
-      headers: { ...corsHeaders, ...jsonHeaders },
-    });
+    return errorResponse(req, String((e as Error)?.message || e));
   }
 });
