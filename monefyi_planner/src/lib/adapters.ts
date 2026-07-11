@@ -86,6 +86,8 @@ export interface DbWorkItem {
   actual_workers?: number | null;
   status?: string | null;
   sort_order?: number | null;
+  dependencies?: string[] | null;
+  dependency_type?: string | null;
   created_at?: string;
   updated_at?: string;
 }

@@ -1,8 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+﻿import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, TrendingUp, BarChart3, Target, Layers, Trash2,
-  Loader2, FileSpreadsheet, Download, Upload, Braces, Table2, List, CheckSquare,
+  Plus, Loader2, FileSpreadsheet, Download, Upload, Table2, List, CheckSquare, Trash2,
 } from 'lucide-react';
 import { useAppStore, Project } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
@@ -16,7 +15,14 @@ import { analyzeProject, type AnalyzeResult } from '../../services/analyzeServic
 import ConfirmDialog from '../ConfirmDialog';
 import RapRealizationDialog from './RapRealizationDialog';
 import RapImportWizard from './RapImportWizard';
-import ProjectDetailHeader from './ProjectDetailHeader';
+import ProjectCommandHeader from './command-center/ProjectCommandHeader';
+import ProjectCommandTabs from './command-center/ProjectCommandTabs';
+import TabOverview from './command-center/TabOverview';
+import TabBahanTukang from './command-center/TabBahanTukang';
+import TabDokumenLaporan from './command-center/TabDokumenLaporan';
+import type { CommandTabId } from './command-center/types';
+import { COMMAND_TABS } from './command-center/types';
+import { computeTabBadges } from '../../lib/projectCommandUtils';
 import ProjectEditModal from './ProjectEditModal';
 import ProjectJsonPanel from './ProjectJsonPanel';
 import ProjectIncomePanel from './ProjectIncomePanel';
@@ -25,21 +31,14 @@ import ProjectReceivablePanel from './ProjectReceivablePanel';
 import RapItemList from './RapItemList';
 import RapChecklistView from './RapChecklistView';
 import RapEditableTable from './RapEditableTable';
-import { computeRapRealizationStats } from '../../lib/rapRealizationStats';
-import ProjectOverviewDashboard from './ProjectOverviewDashboard';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { getProjectCashSummary } from '../../services/projectTransferService';
 import { loadReceivablesByProject } from '../../services/financeV2/receivableService';
 import { exportRapWorkbook } from '../../services/rapExcelService';
-import { useCollapsibleHeader } from './useCollapsibleHeader';
 import { todayStr } from '../../lib/adapters';
 import {
   formatRupiah, HEALTH_CONFIG, STATUS_LABEL, daysUntil, formatDateId,
 } from '../../utils/projectUi';
-import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  BarChart, Bar, CartesianGrid,
-} from 'recharts';
 
 interface ProjectDetailProps {
   project: Project;
@@ -50,7 +49,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   const { setCommandModalOpen, setSelectedProjectId, updateProject, removeProject, refreshData, tenant, user, projects } = useAppStore();
   const showToast = useUiStore(s => s.showToast);
   const [project, setProject] = useState(initialProject);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState<CommandTabId>('overview');
   const [activeSubTab, setActiveSubTab] = useState('rap');
   const [loading, setLoading] = useState(true);
   const [costs, setCosts] = useState<Awaited<ReturnType<typeof loadCostRealizations>>>([]);
@@ -82,22 +81,15 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   const [piutangSummary, setPiutangSummary] = useState({ outstanding: 0, total: 0, count: 0 });
   const [costSearch, setCostSearch] = useState('');
   const [repairingImport, setRepairingImport] = useState(false);
-  const [statusBusy, setStatusBusy] = useState(false);
   const importRepairAttempted = useRef<string | null>(null);
   const projectRef = useRef(project);
   projectRef.current = project;
   const reloadRef = useRef<() => Promise<void>>(async () => {});
+  const scrollRef = useRef<HTMLDivElement>(null);
   const isDesktop = useIsDesktop();
   const [rapView, setRapView] = useState<'spreadsheet' | 'list' | 'checklist'>('checklist');
   const [amountDrafts, setAmountDrafts] = useState<Record<string, string>>({});
   const [toggleRealizationBusy, setToggleRealizationBusy] = useState<string | null>(null);
-
-  const {
-    scrollRef,
-    isCollapsed,
-    handleHeaderTap,
-    toggleHeaderCompact,
-  } = useCollapsibleHeader();
 
   const canManage = user?.role === 'owner' || user?.role === 'manager' || user?.role === 'admin';
   const canArchive = user?.role === 'owner';
@@ -166,12 +158,22 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
     setSelectedProjectId(initialProject.id);
     void reloadRef.current();
     return () => setSelectedProjectId(null);
-    // reload via ref — hindari loop saat callback identity berubah (React #185)
+    // reload via ref â€” hindari loop saat callback identity berubah (React #185)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialProject.id, setSelectedProjectId]);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      if (e.altKey && !e.ctrlKey && !e.metaKey) {
+        const num = parseInt(e.key, 10);
+        const tab = COMMAND_TABS.find(t => t.shortcut === num);
+        if (tab) {
+          e.preventDefault();
+          setActiveTab(tab.id);
+        }
+      }
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
@@ -191,13 +193,6 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
 
   const rapTotal = rapItems.reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.unit_price) || 0), 0);
   const costsSum = costs.reduce((s, c) => s + (Number(c.total_amount) || 0), 0);
-  const realisasiStats = computeRapRealizationStats(
-    rapItems,
-    rapActuals,
-    costsSum,
-    rapTotal,
-    project.total_budget_planned || 0,
-  );
   const hasImportCosts = costs.some(c => String(c.description || '').startsWith('Import:'));
   const importCostSpike = rapTotal > 0 && costsSum > rapTotal * 1.5 && hasImportCosts;
 
@@ -210,7 +205,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
       await reload();
       await refreshData();
       showToast(
-        `Biaya import diperbaiki: ${result.removed} baris digabung → ${result.fixed} baris (${formatRupiah(result.totalSpent)})`,
+        `Biaya import diperbaiki: ${result.removed} baris digabung â†’ ${result.fixed} baris (${formatRupiah(result.totalSpent)})`,
         'success',
       );
     } catch (e) {
@@ -225,21 +220,6 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
     showToast('Excel RAP diekspor', 'success');
   };
 
-  const handleStatusChange = async (status: Project['status']) => {
-    if (status === project.status || statusBusy) return;
-    setStatusBusy(true);
-    try {
-      const updated = await updateProjectApi(project.id, { status }, tenant?.currency);
-      setProject(updated);
-      updateProject(project.id, updated);
-      showToast(`Status diubah ke ${STATUS_LABEL[status]}`, 'success');
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Gagal mengubah status', 'error');
-    } finally {
-      setStatusBusy(false);
-    }
-  };
-
   const evm = analysis?.evm;
   const budgetPct = project.total_budget_planned ? (project.spent_amount / project.total_budget_planned) * 100 : 0;
   const cpi = evm?.cpi ?? 1;
@@ -248,21 +228,25 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   const sv = evm ? evm.ev - evm.pv : 0;
   const opi = ((cpi + spi) / 2).toFixed(2);
 
-  const sCurveData = workItems.length
-    ? workItems.slice(0, 10).map((wi, i) => ({
-        week: wi.name.slice(0, 8) || `W${i + 1}`,
-        planned: Math.min(100, ((i + 1) / workItems.length) * 100),
-        actual: Number(wi.progress_pct) || 0,
-      }))
-    : [{ week: 'Now', planned: project.planned_progress, actual: project.progress_percentage }];
+  const tabBadges = computeTabBadges(
+    workItems,
+    rapItems.filter(r => r.type === 'material').length,
+    piutangSummary.outstanding,
+    cashSummary.debtOwed,
+  );
 
-  const tabs = [
-    { id: 'overview', label: 'Overview', icon: Target },
-    { id: 'planning', label: 'Planning', icon: Layers },
-    { id: 'realisasi', label: 'Realisasi', icon: TrendingUp },
-    { id: 'laporan', label: 'Laporan', icon: BarChart3 },
-    { id: 'json', label: 'JSON', icon: Braces },
-  ];
+  const navigateTab = (tab: CommandTabId) => setActiveTab(tab);
+
+  const evmPanel = (
+    <div className="bg-white border rounded-2xl p-5 flex flex-col items-center justify-center text-center">
+      <div className="text-4xl font-black text-slate-900">{opi}</div>
+      <div className="text-sm text-slate-500 mt-1">Overall Performance Index</div>
+      <div className={`mt-3 px-3 py-1 rounded-full text-xs font-bold ${Number(opi) >= 1 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+        {Number(opi) >= 1 ? 'Performa baik' : 'Perlu perhatian'}
+      </div>
+      <p className="text-xs text-slate-600 mt-3">CPI {cpi.toFixed(2)} · SPI {spi.toFixed(2)}</p>
+    </div>
+  );
 
   const handleSaveProject = async (patch: Partial<Project>) => {
     const updated = await updateProjectApi(project.id, patch, tenant?.currency);
@@ -441,7 +425,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
           project_id: project.id,
           work_item_id: wiId,
           date: todayStr(),
-          description: `Update progress ${wi.name} → ${pct}%`,
+          description: `Update progress ${wi.name} â†’ ${pct}%`,
           progress_increment: pct - (Number(wi.progress_pct) || 0),
           recorded_by: user.id,
         });
@@ -478,6 +462,52 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
     }
   };
 
+  const progressSection = (
+    <div className="space-y-4">
+      {workItems.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-2xl border border-dashed"><p className="text-sm text-slate-500">Belum ada pekerjaan.</p></div>
+      ) : (
+        <>
+          <div className="bg-white rounded-2xl border p-4 space-y-3">
+            <h3 className="text-sm font-bold text-slate-800">Update Progress Manual</h3>
+            {workItems.map(wi => (
+              <div key={wi.id} className="flex flex-wrap items-center gap-2 text-sm border-t pt-3 first:border-0 first:pt-0">
+                <span className="flex-1 min-w-[140px] font-medium">{wi.name}</span>
+                <input type="number" min={0} max={100} value={progressDrafts[wi.id] ?? String(Number(wi.progress_pct) || 0)} onChange={e => setProgressDrafts(d => ({ ...d, [wi.id]: e.target.value }))} onKeyDown={e => { if (e.key === 'Enter') handleManualProgress(wi.id, Number(progressDrafts[wi.id] ?? wi.progress_pct)); }} className="w-20 px-2 py-1.5 border rounded-lg text-center" />
+                <span className="text-xs text-slate-500">%</span>
+                <input type="range" min={0} max={100} value={Number(progressDrafts[wi.id] ?? wi.progress_pct) || 0} onChange={e => setProgressDrafts(d => ({ ...d, [wi.id]: e.target.value }))} className="w-24 accent-emerald-600" />
+                <button type="button" onClick={() => handleManualProgress(wi.id, Number(progressDrafts[wi.id] ?? wi.progress_pct))} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold">Simpan</button>
+              </div>
+            ))}
+          </div>
+          {canManage && (
+            <div className="bg-white rounded-2xl border p-4 space-y-2">
+              <h3 className="text-sm font-bold text-slate-800">Log Harian Manual</h3>
+              <input placeholder="Keterangan aktivitas..." value={logDraft.description} onChange={e => setLogDraft(d => ({ ...d, description: e.target.value }))} className="w-full px-3 py-2 border rounded-xl text-sm" />
+              <div className="flex gap-2">
+                <input type="number" placeholder="Progress +% (opsional)" value={logDraft.progress} onChange={e => setLogDraft(d => ({ ...d, progress: e.target.value }))} className="flex-1 px-3 py-2 border rounded-xl text-sm" />
+                <button type="button" onClick={handleManualLog} className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold">Catat</button>
+              </div>
+            </div>
+          )}
+          {logs.length === 0 ? (
+            <p className="text-sm text-slate-600 text-center py-8">Belum ada log harian.</p>
+          ) : logs.map(log => (
+            <div key={log.id} className="bg-white border rounded-xl p-4 text-sm flex justify-between gap-2">
+              <div>
+                <span>{log.description}</span>
+                {log.progress_increment ? (
+                  <span className="ml-2 text-emerald-600 text-xs font-bold">+{log.progress_increment}%</span>
+                ) : null}
+              </div>
+              <span className="text-slate-600 shrink-0">{log.date}</span>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+
   return (
     <>
       <motion.div
@@ -495,38 +525,27 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
           className="bg-white w-full h-full max-w-none rounded-none overflow-hidden flex flex-col shadow-2xl"
           onClick={e => e.stopPropagation()}
         >
-          <ProjectDetailHeader
+          <ProjectCommandHeader
             project={project}
             health={health}
             daysLeft={daysLeft}
             budgetPct={budgetPct}
-            opi={opi}
+            cpi={cpi}
+            spi={spi}
             received={cashSummary.received || project.total_received || 0}
             surplus={cashSummary.surplus}
-            activeTab={activeTab}
-            activeSubTab={activeSubTab}
-            realisasiStats={realisasiStats}
-            piutangSummary={piutangSummary}
-            cashSummary={cashSummary}
+            opi={opi}
             loading={loading}
-            isCollapsed={isCollapsed}
             onClose={onClose}
             onRefresh={() => reload()}
-            onHeaderTap={handleHeaderTap}
-            onToggleCompact={toggleHeaderCompact}
-            canManage={canManage}
             onEdit={() => setShowEdit(true)}
-            onStatusChange={canManage ? handleStatusChange : undefined}
-            statusBusy={statusBusy}
+            canManage={canManage}
+            onAddCost={() => { setActiveTab('realisasi'); setActiveSubTab('biaya'); }}
+            onUpdateProgress={() => { setActiveTab('realisasi'); setActiveSubTab('progres'); }}
+            onOpenReport={() => setActiveTab('dokumen')}
           />
 
-          <div className="flex overflow-x-auto border-b border-slate-200 bg-white px-2 shrink-0">
-            {tabs.map(tab => (
-              <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-4 py-3.5 text-sm font-bold whitespace-nowrap border-b-2 ${activeTab === tab.id ? 'text-emerald-600 border-emerald-600' : 'text-slate-600 border-transparent hover:text-slate-800'}`}>
-                <tab.icon className="w-4 h-4" /> {tab.label}
-              </button>
-            ))}
-          </div>
+          <ProjectCommandTabs activeTab={activeTab} badges={tabBadges} onChange={setActiveTab} />
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50">
             {loading && activeTab === 'overview' ? (
@@ -535,22 +554,21 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
               <AnimatePresence mode="wait">
                 {activeTab === 'overview' && (
                   <motion.div key="ov" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                    <ProjectOverviewDashboard
+                    <TabOverview
                       project={project}
                       health={health}
+                      daysLeft={daysLeft}
                       cpi={cpi}
                       spi={spi}
-                      cv={cv}
-                      sv={sv}
                       budgetPct={budgetPct}
-                      received={cashSummary.received || project.total_received || 0}
-                      surplus={cashSummary.surplus}
-                      sCurveData={sCurveData}
+                      workItems={workItems}
                       logs={logs}
+                      costs={costs}
                       analysis={analysis}
+                      piutangOutstanding={piutangSummary.outstanding}
+                      onNavigateTab={navigateTab}
                       onAddCost={() => { setActiveTab('realisasi'); setActiveSubTab('biaya'); }}
                       onUpdateProgress={() => { setActiveTab('realisasi'); setActiveSubTab('progres'); }}
-                      onOpenReport={() => setActiveTab('laporan')}
                     />
                   </motion.div>
                 )}
@@ -566,30 +584,12 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                       {activeSubTab === 'rap' && (
                         <>
                           <div className="flex gap-1 bg-slate-100 p-0.5 rounded-lg ml-auto">
-                            <button
-                              type="button"
-                              title="Tabel spreadsheet"
-                              onClick={() => setRapView('spreadsheet')}
-                              className={`p-1.5 rounded-md ${rapView === 'spreadsheet' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}
-                            >
-                              <Table2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              type="button"
-                              title="Tampilan list"
-                              onClick={() => setRapView('list')}
-                              className={`p-1.5 rounded-md ${rapView === 'list' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}
-                            >
-                              <List className="w-4 h-4" />
-                            </button>
+                            <button type="button" title="Tabel spreadsheet" onClick={() => setRapView('spreadsheet')} className={`p-1.5 rounded-md ${rapView === 'spreadsheet' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}><Table2 className="w-4 h-4" /></button>
+                            <button type="button" title="Tampilan list" onClick={() => setRapView('list')} className={`p-1.5 rounded-md ${rapView === 'list' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}><List className="w-4 h-4" /></button>
                           </div>
-                          <button type="button" onClick={handleExportRap} className="flex items-center gap-1 text-xs font-bold text-emerald-700 border border-emerald-200 px-2 py-1 rounded-lg">
-                            <Download className="w-3.5 h-3.5" /> Export
-                          </button>
+                          <button type="button" onClick={handleExportRap} className="flex items-center gap-1 text-xs font-bold text-emerald-700 border border-emerald-200 px-2 py-1 rounded-lg"><Download className="w-3.5 h-3.5" /> Export</button>
                           {canManage && (
-                            <button type="button" onClick={() => setShowRapImport(true)} className="flex items-center gap-1 text-xs font-bold text-emerald-600 border border-emerald-200 px-2 py-1 rounded-lg">
-                              <Upload className="w-3.5 h-3.5" /> Import
-                            </button>
+                            <button type="button" onClick={() => setShowRapImport(true)} className="flex items-center gap-1 text-xs font-bold text-emerald-600 border border-emerald-200 px-2 py-1 rounded-lg"><Upload className="w-3.5 h-3.5" /> Import</button>
                           )}
                         </>
                       )}
@@ -603,10 +603,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                     {activeSubTab === 'rap' && showRapForm && canManage && (
                       <div className="bg-white border rounded-xl p-4 grid grid-cols-2 gap-2 text-sm">
                         <select value={rapForm.type} onChange={e => setRapForm({ ...rapForm, type: e.target.value })} className="border rounded-lg px-2 py-1.5 col-span-2">
-                          <option value="material">Material</option>
-                          <option value="labor">Tenaga</option>
-                          <option value="equipment">Alat</option>
-                          <option value="overhead">Overhead</option>
+                          <option value="material">Material</option><option value="labor">Tenaga</option><option value="equipment">Alat</option><option value="overhead">Overhead</option>
                         </select>
                         <input placeholder="Nama item *" value={rapForm.name} onChange={e => setRapForm({ ...rapForm, name: e.target.value })} className="border rounded-lg px-2 py-1.5 col-span-2" />
                         <input placeholder="Satuan" value={rapForm.unit} onChange={e => setRapForm({ ...rapForm, unit: e.target.value })} className="border rounded-lg px-2 py-1.5" />
@@ -634,27 +631,9 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                           {canManage && <button type="button" onClick={() => setShowRapForm(true)} className="mt-2 text-emerald-600 text-sm font-bold">+ Tambah item pertama</button>}
                         </div>
                       ) : rapView === 'spreadsheet' && user?.id ? (
-                        <RapEditableTable
-                          projectId={project.id}
-                          items={rapItems}
-                          rapActuals={rapActuals}
-                          mode="planning"
-                          canManage={canManage}
-                          recordedBy={user.id}
-                          loading={loading}
-                          onRefresh={reload}
-                          onExport={handleExportRap}
-                        />
+                        <RapEditableTable projectId={project.id} items={rapItems} rapActuals={rapActuals} mode="planning" canManage={canManage} recordedBy={user.id} loading={loading} onRefresh={reload} onExport={handleExportRap} />
                       ) : (
-                        <RapItemList
-                          items={rapItems}
-                          rapActuals={rapActuals}
-                          mode="planning"
-                          canManage={canManage}
-                          rapTotal={rapTotal}
-                          onEdit={startEditRap}
-                          onDelete={id => setConfirmRapId(id)}
-                        />
+                        <RapItemList items={rapItems} rapActuals={rapActuals} mode="planning" canManage={canManage} rapTotal={rapTotal} onEdit={startEditRap} onDelete={id => setConfirmRapId(id)} />
                       )
                     ) : workItems.length === 0 ? (
                       <div className="text-center py-12 bg-white rounded-2xl border border-dashed">
@@ -692,273 +671,102 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                           { id: 'piutang', label: 'Piutang' },
                           { id: 'progres', label: 'Progres' },
                         ].map(t => (
-                          <button key={t.id} type="button" onClick={() => setActiveSubTab(t.id)} className={`px-4 py-1.5 rounded-lg text-xs font-bold ${activeSubTab === t.id ? 'bg-emerald-600 text-white' : 'bg-slate-200'}`}>{t.label}</button>
+                          <button key={t.id} type="button" onClick={() => setActiveSubTab(t.id)} className={`px-4 py-1.5 rounded-lg text-xs font-bold ${activeSubTab === t.id ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'}`}>{t.label}</button>
                         ))}
                         {activeSubTab === 'biaya' && rapItems.length > 0 && (
                           <div className="flex gap-1 bg-slate-100 p-0.5 rounded-lg">
-                            <button type="button" title="Checklist realisasi" onClick={() => setRapView('checklist')} className={`p-1.5 rounded-md ${rapView === 'checklist' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}>
-                              <CheckSquare className="w-4 h-4" />
-                            </button>
-                            <button type="button" title="Tabel spreadsheet" onClick={() => setRapView('spreadsheet')} className={`p-1.5 rounded-md ${rapView === 'spreadsheet' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}>
-                              <Table2 className="w-4 h-4" />
-                            </button>
-                            <button type="button" title="Tampilan list" onClick={() => setRapView('list')} className={`p-1.5 rounded-md ${rapView === 'list' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}>
-                              <List className="w-4 h-4" />
-                            </button>
+                            <button type="button" title="Checklist realisasi" onClick={() => setRapView('checklist')} className={`p-1.5 rounded-md ${rapView === 'checklist' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}><CheckSquare className="w-4 h-4" /></button>
+                            <button type="button" title="Tabel spreadsheet" onClick={() => setRapView('spreadsheet')} className={`p-1.5 rounded-md ${rapView === 'spreadsheet' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}><Table2 className="w-4 h-4" /></button>
+                            <button type="button" title="Tampilan list" onClick={() => setRapView('list')} className={`p-1.5 rounded-md ${rapView === 'list' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}><List className="w-4 h-4" /></button>
                           </div>
                         )}
                       </div>
                       <div className="flex flex-wrap gap-2 shrink-0">
-                        <button type="button" onClick={() => setCommandModalOpen(true)} className="flex items-center gap-1 bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap">
-                          <Plus className="w-3.5 h-3.5" /> Catat via Monefyi
-                        </button>
-                        <button type="button" onClick={handleExportRap} className="flex items-center gap-1 border border-emerald-200 text-emerald-700 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap">
-                          <FileSpreadsheet className="w-3.5 h-3.5" /> Export Excel
-                        </button>
+                        <button type="button" onClick={() => setCommandModalOpen(true)} className="flex items-center gap-1 bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap"><Plus className="w-3.5 h-3.5" /> Catat via Monefyi</button>
+                        <button type="button" onClick={handleExportRap} className="flex items-center gap-1 border border-emerald-200 text-emerald-700 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap"><FileSpreadsheet className="w-3.5 h-3.5" /> Export Excel</button>
                       </div>
                     </div>
+
                     {activeSubTab === 'biaya' ? (
                       <>
                         {rapItems.length === 0 ? (
-                          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">
-                            Buat RAP di tab Planning terlebih dahulu, lalu catat realisasi per item di sini.
-                          </div>
+                          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">Buat RAP di tab Planning terlebih dahulu, lalu catat realisasi per item di sini.</div>
                         ) : rapView === 'checklist' ? (
-                          <RapChecklistView
-                            items={rapItems}
-                            rapActuals={rapActuals}
-                            canManage={canManage}
-                            amountDrafts={amountDrafts}
-                            onAmountDraftChange={(id, v) => setAmountDrafts(d => ({ ...d, [id]: v }))}
-                            onToggle={handleToggleRealization}
-                            busyId={toggleRealizationBusy}
-                          />
+                          <RapChecklistView items={rapItems} rapActuals={rapActuals} canManage={canManage} amountDrafts={amountDrafts} onAmountDraftChange={(id, v) => setAmountDrafts(d => ({ ...d, [id]: v }))} onToggle={handleToggleRealization} busyId={toggleRealizationBusy} />
                         ) : rapView === 'spreadsheet' && user?.id ? (
-                          <RapEditableTable
-                            projectId={project.id}
-                            items={rapItems}
-                            rapActuals={rapActuals}
-                            mode="realisasi"
-                            canManage={canManage}
-                            recordedBy={user.id}
-                            loading={loading}
-                            onRefresh={reload}
-                            onExport={handleExportRap}
-                          />
+                          <RapEditableTable projectId={project.id} items={rapItems} rapActuals={rapActuals} mode="realisasi" canManage={canManage} recordedBy={user.id} loading={loading} onRefresh={reload} onExport={handleExportRap} />
                         ) : (
-                          <>
-                            <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3 text-xs text-emerald-800">
-                              Input qty lalu Enter — atau klik item. Gunakan <strong>minus</strong> (mis. −10) untuk koreksi realisasi.
-                            </div>
-                            <RapItemList
-                              items={rapItems}
-                              rapActuals={rapActuals}
-                              mode="realisasi"
-                              canManage={canManage}
-                              rapTotal={rapTotal}
-                              qtyDrafts={qtyDrafts}
-                              onQtyDraftChange={(id, v) => setQtyDrafts(d => ({ ...d, [id]: v }))}
-                              onSubmitQty={submitQtyDraft}
-                              onOpenRealization={row => canManage && openRealizationDialog(row)}
-                            />
-                          </>
+                          <RapItemList items={rapItems} rapActuals={rapActuals} mode="realisasi" canManage={canManage} rapTotal={rapTotal} onEdit={startEditRap} onDelete={id => setConfirmRapId(id)} />
                         )}
 
-                        {importCostSpike && canManage && (
-                          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 text-sm text-rose-900 space-y-2">
-                            <p>
-                              Total biaya tercatat ({formatRupiah(costsSum)}) jauh di atas total RAP ({formatRupiah(rapTotal)}).
-                              Biasanya karena import ganda atau kolom Realisasi Biaya Excel terbaca salah.
-                            </p>
-                            <button
-                              type="button"
-                              onClick={() => void handleRepairImportCosts()}
-                              disabled={repairingImport}
-                              className="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold disabled:opacity-50"
-                            >
-                              {repairingImport ? 'Memperbaiki…' : 'Perbaiki biaya import'}
+                        {importCostSpike && importRepairAttempted.current !== project.id && (
+                          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <p className="text-sm text-amber-900">Terdeteksi duplikasi biaya import. Perbaiki agar total realisasi akurat.</p>
+                            <button type="button" onClick={handleRepairImportCosts} disabled={repairingImport} className="px-4 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold shrink-0">
+                              {repairingImport ? 'Memperbaiki...' : 'Perbaiki Biaya Import'}
                             </button>
                           </div>
                         )}
 
-                        <div className="bg-white rounded-2xl border overflow-hidden">
-                          <div className="px-4 py-3 bg-slate-50 border-b space-y-2">
-                            <div className="flex justify-between text-xs font-bold text-slate-500">
-                              <span>Riwayat biaya tercatat</span>
-                              <span>{formatRupiah(costs.reduce((s, c) => s + Number(c.total_amount), 0))}</span>
-                            </div>
-                            <input
-                              value={costSearch}
-                              onChange={e => setCostSearch(e.target.value)}
-                              placeholder="Filter riwayat..."
-                              className="w-full px-3 py-1.5 border rounded-lg text-xs"
-                            />
-                          </div>
-                          <table className="w-full text-xs">
-                            <thead className="bg-slate-50 border-t"><tr><th className="p-3 text-left">Tanggal</th><th className="p-3 text-left">Keterangan</th><th className="p-3 text-right">Qty</th><th className="p-3 text-right">Total</th>{canManage && <th className="p-3 w-10" />}</tr></thead>
-                            <tbody>
-                              {costs.filter(c => !costSearch.trim() || c.description.toLowerCase().includes(costSearch.toLowerCase())).length === 0 ? (
-                                <tr><td colSpan={5} className="p-8 text-center text-slate-600">Belum ada biaya — input manual di atas atau gunakan Monefyi Button.</td></tr>
-                              ) : costs.filter(c => !costSearch.trim() || c.description.toLowerCase().includes(costSearch.toLowerCase())).map(tx => (
-                                <tr key={tx.id} className="border-t hover:bg-slate-50">
-                                  <td className="p-3 whitespace-nowrap">{tx.date}</td>
-                                  <td className="p-3 font-medium">{tx.description}</td>
-                                  <td className={`p-3 text-right ${Number(tx.quantity) < 0 ? 'text-amber-600 font-bold' : 'text-slate-500'}`}>{tx.quantity != null ? `${tx.quantity}` : '—'}</td>
-                                  <td className={`p-3 text-right font-bold ${Number(tx.total_amount) < 0 ? 'text-amber-600' : ''}`}>{formatRupiah(Number(tx.total_amount))}</td>
-                                  {canManage && (
-                                    <td className="p-3 text-center">
-                                      <button type="button" onClick={() => setConfirmCostId(tx.id)} className="p-1 hover:bg-rose-50 rounded"><Trash2 className="w-4 h-4 text-rose-500" /></button>
-                                    </td>
-                                  )}
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </>
-                    ) : activeSubTab === 'uangmasuk' && tenant?.id && user?.id ? (
-                      <ProjectIncomePanel
-                        projectId={project.id}
-                        orgId={tenant.id}
-                        userId={user.id}
-                        budget={project.total_budget_planned}
-                        canManage={canManage}
-                        onUpdated={() => { void refreshProjectData(); }}
-                      />
-                    ) : activeSubTab === 'hutang' && tenant?.id && user?.id ? (
-                      <ProjectTransferPanel
-                        projectId={project.id}
-                        orgId={tenant.id}
-                        userId={user.id}
-                        projects={projects}
-                        spentAmount={project.spent_amount}
-                        canManage={canManage}
-                        onUpdated={() => { void refreshProjectData(); }}
-                      />
-                    ) : activeSubTab === 'piutang' && tenant?.id && user?.id ? (
-                      <ProjectReceivablePanel
-                        projectId={project.id}
-                        projectName={project.name}
-                        orgId={tenant.id}
-                        userId={user.id}
-                        canManage={canManage}
-                        onUpdated={() => { void refreshProjectData(); }}
-                      />
-                    ) : activeSubTab === 'progres' ? (
-                      <>
-                        {canManage && workItems.length > 0 && (
+                        {costs.length > 0 && (
                           <div className="bg-white rounded-2xl border p-4 space-y-3">
-                            <h3 className="text-sm font-bold text-slate-800">Update Progress Manual</h3>
-                            <p className="text-xs text-slate-500">Isi persentase lalu Enter atau klik Simpan.</p>
-                            {workItems.map(wi => (
-                              <div key={wi.id} className="flex flex-wrap items-center gap-2 text-sm border-t pt-3 first:border-0 first:pt-0">
-                                <span className="flex-1 min-w-[140px] font-medium">{wi.name}</span>
-                                <input
-                                  type="number"
-                                  min={0}
-                                  max={100}
-                                  value={progressDrafts[wi.id] ?? String(Number(wi.progress_pct) || 0)}
-                                  onChange={e => setProgressDrafts(d => ({ ...d, [wi.id]: e.target.value }))}
-                                  onKeyDown={e => {
-                                    if (e.key === 'Enter') {
-                                      handleManualProgress(wi.id, Number(progressDrafts[wi.id] ?? wi.progress_pct));
-                                    }
-                                  }}
-                                  className="w-20 px-2 py-1.5 border rounded-lg text-center"
-                                />
-                                <span className="text-xs text-slate-500">%</span>
-                                <input
-                                  type="range"
-                                  min={0}
-                                  max={100}
-                                  value={Number(progressDrafts[wi.id] ?? wi.progress_pct) || 0}
-                                  onChange={e => setProgressDrafts(d => ({ ...d, [wi.id]: e.target.value }))}
-                                  className="w-24 accent-emerald-600"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => handleManualProgress(wi.id, Number(progressDrafts[wi.id] ?? wi.progress_pct))}
-                                  className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold"
-                                >
-                                  Simpan
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {canManage && (
-                          <div className="bg-white rounded-2xl border p-4 space-y-2">
-                            <h3 className="text-sm font-bold text-slate-800">Log Harian Manual</h3>
-                            <input
-                              placeholder="Keterangan aktivitas lapangan..."
-                              value={logDraft.description}
-                              onChange={e => setLogDraft(d => ({ ...d, description: e.target.value }))}
-                              className="w-full px-3 py-2 border rounded-xl text-sm"
-                            />
-                            <div className="flex gap-2">
-                              <input
-                                type="number"
-                                placeholder="Progress +% (opsional)"
-                                value={logDraft.progress}
-                                onChange={e => setLogDraft(d => ({ ...d, progress: e.target.value }))}
-                                className="flex-1 px-3 py-2 border rounded-xl text-sm"
-                              />
-                              <button
-                                type="button"
-                                onClick={handleManualLog}
-                                className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold"
-                              >
-                                Catat
-                              </button>
+                            <div className="flex items-center justify-between gap-2">
+                              <h3 className="text-sm font-bold text-slate-800">Riwayat Biaya</h3>
+                              <input value={costSearch} onChange={e => setCostSearch(e.target.value)} placeholder="Cari biaya..." className="px-3 py-1.5 border rounded-lg text-xs max-w-[200px]" />
+                            </div>
+                            <div className="space-y-2 max-h-80 overflow-y-auto">
+                              {costs
+                                .filter(c => {
+                                  const q = costSearch.trim().toLowerCase();
+                                  if (!q) return true;
+                                  return (c.description || '').toLowerCase().includes(q) || (c.date || '').includes(q);
+                                })
+                                .map(c => (
+                                  <div key={c.id} className="flex items-center justify-between gap-2 text-sm border-b border-slate-100 pb-2 last:border-0">
+                                    <div className="min-w-0">
+                                      <div className="font-medium truncate">{c.description || 'Biaya'}</div>
+                                      <div className="text-xs text-slate-500">{c.date}</div>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <span className="font-bold font-mono">{formatRupiah(Number(c.total_amount) || 0)}</span>
+                                      {canManage && (
+                                        <button type="button" onClick={() => setConfirmCostId(c.id)} className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg" aria-label="Hapus biaya"><Trash2 className="w-3.5 h-3.5" /></button>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
                             </div>
                           </div>
                         )}
-
-                        {logs.length === 0 ? (
-                          <p className="text-sm text-slate-600 text-center py-8">Belum ada log harian.</p>
-                        ) : logs.map(log => (
-                          <div key={log.id} className="bg-white border rounded-xl p-4 text-sm flex justify-between gap-2">
-                            <div>
-                              <span>{log.description}</span>
-                              {log.progress_increment ? (
-                                <span className="ml-2 text-emerald-600 text-xs font-bold">+{log.progress_increment}%</span>
-                              ) : null}
-                            </div>
-                            <span className="text-slate-600 shrink-0">{log.date}</span>
-                          </div>
-                        ))}
                       </>
+                    ) : activeSubTab === 'uangmasuk' ? (
+                      <ProjectIncomePanel projectId={project.id} orgId={tenant?.id || ''} userId={user?.id || ''} budget={project.total_budget_planned} canManage={canManage} onUpdated={reload} />
+                    ) : activeSubTab === 'hutang' ? (
+                      <ProjectTransferPanel projectId={project.id} orgId={tenant?.id || ''} userId={user?.id || ''} projects={projects} spentAmount={project.spent_amount} canManage={canManage} onUpdated={reload} />
+                    ) : activeSubTab === 'piutang' ? (
+                      <ProjectReceivablePanel projectId={project.id} projectName={project.name} orgId={tenant?.id || ''} userId={user?.id || ''} canManage={canManage} onUpdated={reload} />
+                    ) : activeSubTab === 'progres' ? (
+                      progressSection
                     ) : null}
                   </motion.div>
                 )}
 
-                {activeTab === 'laporan' && (
-                  <motion.div key="la" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="bg-white border rounded-2xl p-5">
-                        <h3 className="font-bold text-sm mb-4">RAP vs Realisasi (jt)</h3>
-                        <ResponsiveContainer width="100%" height={180}>
-                          <BarChart data={rapChartData.length ? rapChartData : [{ name: 'Total', planned: rapTotal / 1e6, actual: project.spent_amount / 1e6 }]}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                            <YAxis tick={{ fontSize: 10 }} />
-                            <Tooltip />
-                            <Bar dataKey="planned" name="RAP" fill="#e2e8f0" radius={4} />
-                            <Bar dataKey="actual" name="Realisasi" fill="#059669" radius={4} />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                      <div className="bg-white border rounded-2xl p-5 flex flex-col items-center justify-center text-center">
-                        <div className="text-4xl font-black text-slate-900">{opi}</div>
-                        <div className="text-sm text-slate-500 mt-1">Overall Performance Index</div>
-                        <div className={`mt-3 px-3 py-1 rounded-full text-xs font-bold ${Number(opi) >= 1 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                          {Number(opi) >= 1 ? 'Performa baik' : 'Perlu perhatian'}
-                        </div>
-                        <p className="text-xs text-slate-600 mt-3">CPI {cpi.toFixed(2)} · SPI {spi.toFixed(2)}</p>
-                      </div>
-                    </div>
-                    <div className="bg-white border rounded-2xl overflow-hidden">
+                {activeTab === 'bahan' && (
+                  <motion.div key="bh" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    <TabBahanTukang rapItems={rapItems} rapActuals={rapActuals} workItems={workItems} />
+                  </motion.div>
+                )}
+
+                {activeTab === 'dokumen' && (
+                  <motion.div key="doc" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    <TabDokumenLaporan
+                      rapChartData={rapChartData}
+                      rapTotal={rapTotal}
+                      spent={project.spent_amount}
+                      evmPanel={evmPanel}
+                      onExport={handleExportRap}
+                    />
+                    <div className="mt-4 bg-white border rounded-2xl overflow-hidden">
                       <table className="w-full text-xs">
                         <thead className="bg-slate-50"><tr><th className="p-3 text-left">Metrik EVM</th><th className="p-3 text-right">Nilai</th></tr></thead>
                         <tbody>
@@ -966,10 +774,9 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                             { m: 'PV (Planned Value)', v: formatRupiah(evm?.pv ?? 0) },
                             { m: 'EV (Earned Value)', v: formatRupiah(evm?.ev ?? 0) },
                             { m: 'AC (Actual Cost)', v: formatRupiah(evm?.ac ?? project.spent_amount) },
-                            { m: 'EAC (Estimate at Completion)', v: formatRupiah(evm?.eac ?? 0) },
-                            { m: 'ETC (Estimate to Complete)', v: formatRupiah(evm?.etc ?? 0) },
-                            { m: 'CV (Cost Variance)', v: formatRupiah(cv) },
-                            { m: 'SV (Schedule Variance)', v: formatRupiah(sv) },
+                            { m: 'EAC', v: formatRupiah(evm?.eac ?? 0) },
+                            { m: 'CV', v: formatRupiah(cv) },
+                            { m: 'SV', v: formatRupiah(sv) },
                           ].map(row => (
                             <tr key={row.m} className="border-t"><td className="p-3">{row.m}</td><td className="p-3 text-right font-semibold">{row.v}</td></tr>
                           ))}

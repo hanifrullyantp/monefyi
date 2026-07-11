@@ -10,8 +10,9 @@ import { createProject, updateProject as updateProjectApi } from '../services/pr
 import ProjectDetail from '../components/projects/ProjectDetail';
 import ProjectTypeSelect from '../components/projects/ProjectTypeSelect';
 import KanbanView from '../components/projects/views/KanbanView';
-import TimelineView from '../components/projects/views/TimelineView';
+import GanttPlannerView from '../components/projects/gantt/GanttPlannerView';
 import CalendarView from '../components/projects/views/CalendarView';
+import { useGanttStore } from '../store/ganttStore';
 import { useUiStore } from '../store/uiStore';
 import {
   formatRupiah, HEALTH_CONFIG, STATUS_LABEL, sortProjects, type ProjectSort,
@@ -26,7 +27,7 @@ function readStoredView(): ProjectView {
     const v = localStorage.getItem(VIEW_STORAGE_KEY);
     if (v === 'list' || v === 'kanban' || v === 'timeline' || v === 'calendar') return v;
   } catch { /* ignore */ }
-  return 'list';
+  return 'timeline';
 }
 
 function CreateProjectModal({ onClose }: { onClose: () => void }) {
@@ -163,6 +164,9 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
   const [sort, setSort] = useState<ProjectSort>('recent');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [ganttFocusId, setGanttFocusId] = useState<string | null>(null);
+  const ganttExpanded = useGanttStore(s => s.expandedView);
+  const fullscreenGantt = projectView === 'timeline' && ganttExpanded;
 
   const canCreate = user?.role === 'owner' || user?.role === 'manager' || user?.role === 'admin';
   const showToast = useUiStore(s => s.showToast);
@@ -183,12 +187,29 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
   }, [projectsListFilter]);
 
   const openProject = (p: Project) => {
+    if (projectView === 'timeline') {
+      useGanttStore.getState().selectTask(p.id);
+      useGanttStore.getState().setScrollToTaskId(p.id);
+      return;
+    }
+    setSelectedProject(p);
+    setSelectedProjectId(p.id);
+    onOpenProject?.(p.id);
+  };
+
+  const openProjectDetail = (p: Project) => {
     setSelectedProject(p);
     setSelectedProjectId(p.id);
     onOpenProject?.(p.id);
   };
 
   const setView = (v: ProjectView) => {
+    if (v !== 'timeline') {
+      useGanttStore.getState().setExpandedView(false);
+    }
+    if (v === 'timeline' && projectView !== 'timeline') {
+      setGanttFocusId(null);
+    }
     setProjectView(v);
     try { localStorage.setItem(VIEW_STORAGE_KEY, v); } catch { /* ignore */ }
   };
@@ -209,12 +230,18 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
     onCloseProject?.();
   };
 
-  const stats = useMemo(() => ({
-    total: projects.length,
-    active: projects.filter(p => p.status === 'active').length,
-    atRisk: projects.filter(p => p.health_status === 'at_risk' || p.health_status === 'behind').length,
-    totalBudget: projects.reduce((s, p) => s + p.total_budget_planned, 0),
-  }), [projects]);
+  const stats = useMemo(() => {
+    const avgProgress = projects.length
+      ? projects.reduce((s, p) => s + p.progress_percentage, 0) / projects.length
+      : 0;
+    return {
+      total: projects.length,
+      active: projects.filter(p => p.status === 'active').length,
+      atRisk: projects.filter(p => p.health_status === 'at_risk' || p.health_status === 'behind').length,
+      totalBudget: projects.reduce((s, p) => s + p.total_budget_planned, 0),
+      avgProgress,
+    };
+  }, [projects]);
 
   const filters = [
     { id: 'all', label: 'Semua', count: projects.length },
@@ -313,7 +340,13 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
   };
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
+    <div className={
+      fullscreenGantt
+        ? 'fixed inset-0 z-40 bg-slate-50 p-2 md:p-3 overflow-hidden flex flex-col'
+        : `p-4 md:p-6 mx-auto space-y-6 ${projectView === 'timeline' ? 'max-w-[100%]' : 'max-w-7xl'}`
+    }>
+      {!fullscreenGantt && (
+        <>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-black text-slate-900">Manajemen Proyek</h1>
@@ -327,12 +360,13 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
       </div>
 
       {projects.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
-            { label: 'Total Proyek', value: String(stats.total), icon: FolderOpen, color: 'text-emerald-600' },
-            { label: 'Aktif', value: String(stats.active), icon: TrendingUp, color: 'text-emerald-600' },
-            { label: 'Perlu Perhatian', value: String(stats.atRisk), icon: AlertTriangle, color: 'text-amber-600' },
-            { label: 'Total Budget', value: formatRupiah(stats.totalBudget), icon: Sparkles, color: 'text-emerald-600' },
+            { label: 'Total Proyek', value: String(stats.total), icon: FolderOpen, color: 'text-emerald-600', progress: null as number | null },
+            { label: 'Aktif', value: String(stats.active), icon: TrendingUp, color: 'text-emerald-600', progress: null },
+            { label: 'Perlu Perhatian', value: String(stats.atRisk), icon: AlertTriangle, color: 'text-amber-600', progress: null },
+            { label: 'Total Budget', value: formatRupiah(stats.totalBudget), icon: Sparkles, color: 'text-emerald-600', progress: null },
+            { label: 'Progres Rata-rata', value: `${Math.round(stats.avgProgress)}%`, icon: GanttChart, color: 'text-emerald-600', progress: stats.avgProgress },
           ].map((s, i) => (
             <div key={i} className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
               <div className="flex items-center gap-2 mb-1">
@@ -340,64 +374,81 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
                 <span className="text-xs text-slate-500 font-medium">{s.label}</span>
               </div>
               <div className="text-lg font-black text-slate-900 truncate">{s.value}</div>
+              {s.progress !== null && (
+                <div className="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${Math.min(s.progress, 100)}%` }} />
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
+        </>
+      )}
 
-      <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm space-y-4">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari nama, klien, atau kode..." className="w-full pl-10 pr-4 py-3 rounded-xl border text-sm" />
+      {projectView !== 'timeline' && (
+        <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm space-y-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari nama, klien, atau kode..." className="w-full pl-10 pr-4 py-3 rounded-xl border text-sm" />
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <div className="relative">
+                <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 pointer-events-none" />
+                <select value={sort} onChange={e => setSort(e.target.value as ProjectSort)} className="pl-9 pr-4 py-3 rounded-xl border text-sm appearance-none bg-white min-w-[140px]">
+                  <option value="recent">Terbaru</option>
+                  <option value="name">Nama A–Z</option>
+                  <option value="progress">Progress</option>
+                  <option value="budget">Budget</option>
+                  <option value="end_date">Deadline</option>
+                </select>
+              </div>
+              <div className="flex bg-slate-100 p-1 rounded-xl flex-wrap">
+                {([
+                  { id: 'list' as const, icon: List, label: 'List' },
+                  { id: 'kanban' as const, icon: Columns3, label: 'Kanban' },
+                  { id: 'timeline' as const, icon: GanttChart, label: 'Gantt' },
+                  { id: 'calendar' as const, icon: Calendar, label: 'Kalender' },
+                ]).map(v => (
+                  <button key={v.id} type="button" onClick={() => setView(v.id)} title={v.label}
+                    className={`p-2 rounded-lg ${projectView === v.id ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`} aria-label={v.label}>
+                    <v.icon className="w-4 h-4" />
+                  </button>
+                ))}
+                {projectView === 'list' && (
+                  <>
+                    <button type="button" onClick={() => setListLayout('card')} className={`p-2 rounded-lg ${listLayout === 'card' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`} aria-label="Kartu"><Grid className="w-4 h-4" /></button>
+                    <button type="button" onClick={() => setListLayout('compact')} className={`p-2 rounded-lg ${listLayout === 'compact' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`} aria-label="Baris"><List className="w-4 h-4" /></button>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="flex gap-2 shrink-0">
-            <div className="relative">
-              <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 pointer-events-none" />
-              <select value={sort} onChange={e => setSort(e.target.value as ProjectSort)} className="pl-9 pr-4 py-3 rounded-xl border text-sm appearance-none bg-white min-w-[140px]">
-                <option value="recent">Terbaru</option>
-                <option value="name">Nama A–Z</option>
-                <option value="progress">Progress</option>
-                <option value="budget">Budget</option>
-                <option value="end_date">Deadline</option>
-              </select>
-            </div>
-            <div className="flex bg-slate-100 p-1 rounded-xl flex-wrap">
-              {([
-                { id: 'list' as const, icon: List, label: 'List' },
-                { id: 'kanban' as const, icon: Columns3, label: 'Kanban' },
-                { id: 'timeline' as const, icon: GanttChart, label: 'Timeline' },
-                { id: 'calendar' as const, icon: Calendar, label: 'Kalender' },
-              ]).map(v => (
-                <button key={v.id} type="button" onClick={() => setView(v.id)} title={v.label}
-                  className={`p-2 rounded-lg ${projectView === v.id ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`} aria-label={v.label}>
-                  <v.icon className="w-4 h-4" />
-                </button>
-              ))}
-              {projectView === 'list' && (
-                <>
-                  <button type="button" onClick={() => setListLayout('card')} className={`p-2 rounded-lg ${listLayout === 'card' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`} aria-label="Kartu"><Grid className="w-4 h-4" /></button>
-                  <button type="button" onClick={() => setListLayout('compact')} className={`p-2 rounded-lg ${listLayout === 'compact' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`} aria-label="Baris"><List className="w-4 h-4" /></button>
-                </>
-              )}
-            </div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {filters.map(f => (
+              <button key={f.id} type="button" onClick={() => { setFilter(f.id); setProjectsListFilter(f.id); }} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap border-2 transition-colors ${filter === f.id ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-slate-100 text-slate-500 hover:border-slate-200'}`}>
+                {f.label} <span className={`px-2 py-0.5 rounded-full text-[10px] ${filter === f.id ? 'bg-white/20' : 'bg-slate-100'}`}>{f.count}</span>
+              </button>
+            ))}
           </div>
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {filters.map(f => (
-            <button key={f.id} type="button" onClick={() => { setFilter(f.id); setProjectsListFilter(f.id); }} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap border-2 transition-colors ${filter === f.id ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-slate-100 text-slate-500 hover:border-slate-200'}`}>
-              {f.label} <span className={`px-2 py-0.5 rounded-full text-[10px] ${filter === f.id ? 'bg-white/20' : 'bg-slate-100'}`}>{f.count}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {projectView === 'kanban' && (
-        <KanbanView projects={filtered} onOpenProject={openProject} onStatusChange={handleStatusChange} />
       )}
 
       {projectView === 'timeline' && (
-        <TimelineView projects={filtered} onOpenProject={openProject} />
+        <div className={fullscreenGantt ? 'flex-1 min-h-0 flex flex-col' : undefined}>
+          <GanttPlannerView
+            projects={filtered}
+            projectView={projectView}
+            onSetView={setView}
+            focusProjectId={ganttFocusId}
+            onOpenProject={openProject}
+            onOpenProjectDetail={openProjectDetail}
+          />
+        </div>
+      )}
+      {projectView === 'kanban' && (
+        <KanbanView projects={filtered} onOpenProject={openProject} onStatusChange={handleStatusChange} />
       )}
 
       {projectView === 'calendar' && (
