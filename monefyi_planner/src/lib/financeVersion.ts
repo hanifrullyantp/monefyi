@@ -12,7 +12,7 @@ export async function loadFinanceVersion(userId: string): Promise<FinanceVersion
   if (error) throw new Error(error.message);
 
   const v = (data?.settings as Record<string, unknown> | null)?.finance_version;
-  return v === 'v2' ? 'v2' : 'v1';
+  return v === 'v1' ? 'v1' : 'v2';
 }
 
 export async function setFinanceVersion(userId: string, version: FinanceVersion): Promise<void> {

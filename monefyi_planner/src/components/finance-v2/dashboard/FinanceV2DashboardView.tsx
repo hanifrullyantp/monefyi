@@ -61,7 +61,7 @@ function today(): string {
 }
 
 export default function FinanceV2DashboardView() {
-  const { tenant, user, migrationFlags } = useAppStore();
+  const { tenant, user } = useAppStore();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<FinanceAccount[]>([]);
@@ -75,10 +75,10 @@ export default function FinanceV2DashboardView() {
   const [balanceOpen, setBalanceOpen] = useState(false);
 
   const balanceCheck = useMemo(() => {
-    if (!migrationFlags.finance_dashboard_v2 || !tenant?.name) return null;
+    if (!tenant?.name) return null;
     const snap = buildBusinessSnapshotFromAccounts(tenant.name, accounts, totalHutangOpen);
     return validateBusinessBalance(snap);
-  }, [migrationFlags.finance_dashboard_v2, tenant?.name, accounts, totalHutangOpen]);
+  }, [tenant?.name, accounts, totalHutangOpen]);
 
   const load = useCallback(async () => {
     if (!tenant?.id) return;
@@ -243,7 +243,7 @@ export default function FinanceV2DashboardView() {
         isBalanced={totals.isBalanced}
       />
 
-      {migrationFlags.finance_dashboard_v2 && balanceCheck && (
+      {balanceCheck && (
         <div className="flex items-center justify-between bg-white rounded-2xl border border-slate-100 px-5 py-4">
           <div className="flex items-center gap-2">
             {balanceCheck.isBalanced ? (

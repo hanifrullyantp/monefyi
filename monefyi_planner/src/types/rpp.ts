@@ -77,8 +77,8 @@ export type MigrationFlags = {
 };
 
 export const DEFAULT_MIGRATION_FLAGS: MigrationFlags = {
-  project_view_v2: false,
-  database_master: false,
-  create_project_smart: false,
-  finance_dashboard_v2: false,
+  project_view_v2: true,
+  database_master: true,
+  create_project_smart: true,
+  finance_dashboard_v2: true,
 };

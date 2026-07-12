@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Plus, Search, Grid, List, ChevronRight, MapPin,
   FolderOpen, X, CheckCircle, Info, ArrowUpDown,
@@ -7,7 +7,6 @@ import {
 } from 'lucide-react';
 import { useAppStore, Project } from '../store/appStore';
 import { createProject, updateProject as updateProjectApi } from '../services/projectService';
-import ProjectDetail from '../components/projects/ProjectDetail';
 import ProjectDetailV2 from '../components/projects/v2/ProjectDetailV2';
 import CreateProjectRapDraft from '../components/projects/CreateProjectRapDraft';
 import { createProjectWithRap } from '../lib/migration/create-project';
@@ -229,7 +228,7 @@ interface ProjectsProps {
 }
 
 export default function Projects({ initialProjectId, onOpenProject, onCloseProject }: ProjectsProps) {
-  const { projects, projectsListFilter, setProjectsListFilter, setSelectedProjectId, user, updateProject, tenant, migrationFlags } = useAppStore();
+  const { projects, projectsListFilter, setProjectsListFilter, setSelectedProjectId, user, updateProject, tenant } = useAppStore();
   const [projectView, setProjectView] = useState<ProjectView>(readStoredView);
   const [listLayout, setListLayout] = useState<'card' | 'compact'>('card');
   const [search, setSearch] = useState('');
@@ -237,17 +236,12 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
   const [sort, setSort] = useState<ProjectSort>('recent');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [useV2View, setUseV2View] = useState(false);
   const [ganttFocusId, setGanttFocusId] = useState<string | null>(null);
   const ganttExpanded = useGanttStore(s => s.expandedView);
   const fullscreenGantt = projectView === 'timeline' && ganttExpanded;
 
   const canCreate = user?.role === 'owner' || user?.role === 'manager' || user?.role === 'admin';
   const showToast = useUiStore(s => s.showToast);
-
-  useEffect(() => {
-    setUseV2View(migrationFlags.project_view_v2);
-  }, [migrationFlags.project_view_v2]);
 
   useEffect(() => {
     if (!initialProjectId) {
@@ -270,9 +264,7 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
       useGanttStore.getState().setScrollToTaskId(p.id);
       return;
     }
-    setSelectedProject(p);
-    setSelectedProjectId(p.id);
-    onOpenProject?.(p.id);
+    openProjectDetail(p);
   };
 
   const openProjectDetail = (p: Project) => {
@@ -360,7 +352,7 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
 
     if (listLayout === 'compact') {
       return (
-        <motion.div key={proj.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={() => openProject(proj)} className="bg-white border rounded-2xl p-4 flex items-center gap-4 hover:shadow-lg cursor-pointer group">
+        <motion.div key={proj.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={() => openProject(proj)} onDoubleClick={() => openProjectDetail(proj)} className="bg-white border rounded-2xl p-4 flex items-center gap-4 hover:shadow-lg cursor-pointer group">
           <div className={`w-1.5 h-14 rounded-full ${health.dot}`} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -381,7 +373,7 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
     }
 
     return (
-      <motion.div key={proj.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} onClick={() => openProject(proj)} className="bg-white border rounded-3xl p-5 hover:shadow-xl hover:border-emerald-100 cursor-pointer group transition-all">
+      <motion.div key={proj.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} onClick={() => openProject(proj)} onDoubleClick={() => openProjectDetail(proj)} className="bg-white border rounded-3xl p-5 hover:shadow-xl hover:border-emerald-100 cursor-pointer group transition-all">
         <div className="flex justify-between gap-3 mb-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -416,6 +408,19 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
       </motion.div>
     );
   };
+
+  if (selectedProject) {
+    return (
+      <div className="flex flex-col min-h-[calc(100vh-4rem)]">
+        <ProjectDetailV2
+          key={selectedProject.id}
+          project={selectedProject}
+          onClose={closeProject}
+        />
+        {showCreate && <CreateProjectModal onClose={() => setShowCreate(false)} />}
+      </div>
+    );
+  }
 
   return (
     <div className={
@@ -578,20 +583,7 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
         </div>
       )}
 
-      <AnimatePresence>
-        {selectedProject && useV2View && (
-          <ProjectDetailV2
-            key={selectedProject.id}
-            project={selectedProject}
-            onClose={closeProject}
-            onSwitchClassic={() => setUseV2View(false)}
-          />
-        )}
-        {selectedProject && !useV2View && (
-          <ProjectDetail key={selectedProject.id} project={selectedProject} onClose={closeProject} />
-        )}
-        {showCreate && <CreateProjectModal onClose={() => setShowCreate(false)} />}
-      </AnimatePresence>
+      {showCreate && <CreateProjectModal onClose={() => setShowCreate(false)} />}
     </div>
   );
 }

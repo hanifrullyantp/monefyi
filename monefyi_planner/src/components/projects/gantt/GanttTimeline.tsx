@@ -18,7 +18,7 @@ interface GanttTimelineProps {
   scrollToTodayRef: React.MutableRefObject<(() => void) | null>;
   scrollToTaskRef?: React.MutableRefObject<((id: string) => void) | null>;
   onEditTask?: (taskId: string) => void;
-  onOpenMiniDashboard?: (projectId: string) => void;
+  onOpenProjectDetail?: (projectId: string) => void;
 }
 
 export default function GanttTimeline({
@@ -27,7 +27,7 @@ export default function GanttTimeline({
   scrollToTodayRef,
   scrollToTaskRef,
   onEditTask,
-  onOpenMiniDashboard,
+  onOpenProjectDetail,
 }: GanttTimelineProps) {
   const {
     tasks, viewMode, zoomScale, scrollLeft, setScrollLeft,
@@ -299,7 +299,7 @@ export default function GanttTimeline({
                     onCommitDates={onCommitDates}
                     onStartDependency={handleStartDependency}
                     onOpenEdit={onEditTask}
-                    onOpenMiniDashboard={onOpenMiniDashboard}
+                    onOpenProjectDetail={onOpenProjectDetail}
                   />
                 </div>
               );

@@ -18,6 +18,7 @@ import ToastHost from './ToastHost';
 import UndoToast from './ui/UndoToast';
 import { loadFinanceVersion } from '../lib/financeVersion';
 import { loadMigrationFlags } from '../lib/migrationFlags';
+import { DEFAULT_MIGRATION_FLAGS } from '../types/rpp';
 import { useOrgBrand } from '../hooks/useOrgBrand';
 import { MONEFYI_BRAND } from '../lib/orgBrand';
 
@@ -27,7 +28,7 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const {
-    user, tenant, activeTab, setActiveTab, financeVersion, setFinanceVersionPreference,
+    user, tenant, activeTab, setActiveTab, setFinanceVersionPreference,
     migrationFlags, setMigrationFlags,
     syncStatus, pendingSyncCount, isOnline, lastSynced, unreadCount, commandModalOpen,
     setCommandModalOpen, sidebarOpen, setSidebarOpen, navSidebarCollapsed, toggleNavSidebarCollapsed,
@@ -45,7 +46,7 @@ export default function Layout({ children }: LayoutProps) {
       .catch(() => setFinanceVersionPreference('v1'));
     loadMigrationFlags(user.id)
       .then(setMigrationFlags)
-      .catch(() => setMigrationFlags({ project_view_v2: false, database_master: false, create_project_smart: false, finance_dashboard_v2: false }));
+      .catch(() => setMigrationFlags({ ...DEFAULT_MIGRATION_FLAGS }));
   }, [user?.id, setFinanceVersionPreference, setMigrationFlags]);
 
   useEffect(() => {
@@ -100,11 +101,9 @@ export default function Layout({ children }: LayoutProps) {
   const ownerSidebarItems = [
     { id: 'home', label: 'Dashboard', icon: Home },
     { id: 'projects', label: 'Proyek', icon: FolderOpen },
-    ...(migrationFlags.database_master
-      ? [{ id: 'database', label: 'Database', icon: Database }]
-      : []),
+    { id: 'database', label: 'Database', icon: Database },
     { id: 'estimator', label: 'Estimator', icon: Calculator },
-    { id: 'finance', label: 'Keuangan', icon: Wallet },
+    { id: 'finance', label: 'Keuangan Bisnis', icon: Wallet },
     ...(canAccessHr
       ? [{ id: 'hr', label: 'HR & Karyawan', icon: Users }]
       : []),
@@ -132,7 +131,7 @@ export default function Layout({ children }: LayoutProps) {
     } else if (tabId === 'database') {
       setActiveTab('database');
       navigate('/app/database');
-    } else if (tabId === 'finance' && financeVersion === 'v2') {
+    } else if (tabId === 'finance') {
       setActiveTab('finance');
       navigate('/app/finance-v2');
     } else {

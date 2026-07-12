@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { X, LayoutGrid, Wallet, BarChart3, FileSpreadsheet, Brain, FileText, ToggleLeft } from 'lucide-react';
+import {
+  ArrowLeft, MoreVertical, LayoutGrid, Wallet, BarChart3, FileSpreadsheet, Brain, FileText,
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { Project } from '../../../store/appStore';
 import { useAppStore } from '../../../store/appStore';
@@ -10,7 +12,6 @@ import { loadProjectIncomes } from '../../../services/incomeService';
 import { mapPlannerProject } from '../../../lib/migration/planner-mapper';
 import { normalizeProjectView } from '../../../lib/migration/project-normalize';
 import { validateProjectBalance } from '../../../lib/migration/balance-sheet';
-import { setMigrationFlag } from '../../../lib/migrationFlags';
 import BalanceDiagnosisModal from '../../finance-v2/BalanceDiagnosisModal';
 import TabV2Overview from './TabV2Overview';
 import TabV2Keuangan from './TabV2Keuangan';
@@ -33,11 +34,10 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutGrid }[] = [
 type Props = {
   project: Project;
   onClose: () => void;
-  onSwitchClassic?: () => void;
 };
 
-export default function ProjectDetailV2({ project: initialProject, onClose, onSwitchClassic }: Props) {
-  const { user, migrationFlags, setMigrationFlags } = useAppStore();
+export default function ProjectDetailV2({ project: initialProject, onClose }: Props) {
+  const { user } = useAppStore();
   const [project] = useState(initialProject);
   const [tab, setTab] = useState<TabId>('overview');
   const [loading, setLoading] = useState(true);
@@ -124,23 +124,28 @@ export default function ProjectDetailV2({ project: initialProject, onClose, onSw
 
   const normalized = mapped ? normalizeProjectView(mapped) : null;
   const balanceCheck = mapped ? validateProjectBalance(mapped) : null;
-
-  const switchToClassic = async () => {
-    if (user?.id) {
-      await setMigrationFlag(user.id, 'project_view_v2', false);
-      setMigrationFlags({ ...migrationFlags, project_view_v2: false });
-    }
-    onSwitchClassic?.();
-  };
+  const keuanganBadge = rapItems.length > 0 ? rapItems.length : undefined;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-50 flex flex-col">
-      <header className="bg-white border-b px-4 py-3 flex items-center justify-between shrink-0">
-        <div>
-          <h2 className="font-black text-slate-900">{project.name}</h2>
-          <p className="text-xs text-slate-500">{project.client_name} · View V2</p>
+    <div className="flex flex-col min-h-0 -m-4 md:-m-6">
+      <header className="bg-white border-b px-4 py-3 flex items-center justify-between shrink-0 sticky top-0 z-10">
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 hover:bg-slate-100 rounded-xl shrink-0"
+            aria-label="Kembali"
+          >
+            <ArrowLeft className="w-5 h-5 text-slate-600" />
+          </button>
+          <div className="min-w-0">
+            <h2 className="font-black text-slate-900 truncate">{project.name}</h2>
+            <p className="text-xs text-slate-500 truncate">
+              {project.client_name || '—'} · {mapped?.type || 'Proyek'}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {balanceCheck && (
             <button
               type="button"
@@ -152,36 +157,43 @@ export default function ProjectDetailV2({ project: initialProject, onClose, onSw
               {balanceCheck.isBalanced ? 'Balance' : 'Tidak Balance'}
             </button>
           )}
-          <button type="button" onClick={switchToClassic} className="flex items-center gap-1 text-xs font-bold text-slate-600 px-3 py-1.5 border rounded-xl">
-            <ToggleLeft className="w-4 h-4" /> Klasik
-          </button>
-          <button type="button" onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl" aria-label="Tutup">
-            <X className="w-5 h-5" />
+          <button type="button" className="p-2 hover:bg-slate-100 rounded-xl" aria-label="Menu">
+            <MoreVertical className="w-5 h-5 text-slate-500" />
           </button>
         </div>
       </header>
 
-      <nav className="bg-white border-b px-2 flex gap-1 overflow-x-auto shrink-0">
+      <nav className="bg-white border-b px-2 flex gap-1 overflow-x-auto shrink-0 sticky top-[57px] z-10">
         {TABS.map(t => (
           <button
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold whitespace-nowrap border-b-2 ${
-              tab === t.id ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500'
+              tab === t.id ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
             <t.icon className="w-4 h-4" /> {t.label}
+            {t.id === 'keuangan' && keuanganBadge != null && keuanganBadge > 0 && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600">
+                {keuanganBadge}
+              </span>
+            )}
           </button>
         ))}
       </nav>
 
-      <main className="flex-1 overflow-y-auto p-4">
+      <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50">
         {loading || !normalized ? (
           <div className="text-center py-16 text-slate-500">Memuat...</div>
         ) : (
           <motion.div key={tab} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            {tab === 'overview' && <TabV2Overview normalized={normalized} project={project} />}
+            {tab === 'overview' && (
+              <TabV2Overview
+                normalized={normalized}
+                onSwitchTab={() => setTab('keuangan')}
+              />
+            )}
             {tab === 'keuangan' && (
               <TabV2Keuangan
                 normalized={normalized}

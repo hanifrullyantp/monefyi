@@ -14,7 +14,7 @@ interface GanttTaskBarProps {
   onCommitDates: (id: string, start: string, end: string) => void;
   onStartDependency: (fromId: string, x: number, y: number) => void;
   onOpenEdit?: (taskId: string) => void;
-  onOpenMiniDashboard?: (projectId: string) => void;
+  onOpenProjectDetail?: (projectId: string) => void;
 }
 
 export default function GanttTaskBar({
@@ -23,7 +23,7 @@ export default function GanttTaskBar({
   onCommitDates,
   onStartDependency,
   onOpenEdit,
-  onOpenMiniDashboard,
+  onOpenProjectDetail,
 }: GanttTaskBarProps) {
   const { task, depth } = row;
   const {
@@ -156,7 +156,7 @@ export default function GanttTaskBar({
         onMouseLeave={() => setHovered(false)}
         onClick={e => selectTask(task.id, e.ctrlKey || e.metaKey)}
         onDoubleClick={() => {
-          if (isProject) onOpenMiniDashboard?.(task.id);
+          if (isProject) onOpenProjectDetail?.(task.id);
           else onOpenEdit?.(task.id);
         }}
         onContextMenu={e => {

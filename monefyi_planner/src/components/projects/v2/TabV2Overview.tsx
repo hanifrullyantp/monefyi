@@ -1,30 +1,243 @@
-import type { Project } from '../../../store/appStore';
+import {
+  Calendar, Wallet, Package, HardHat, FileCheck, Clock, ListChecks,
+  ArrowDownCircle, ArrowUpCircle, ChevronRight, AlertTriangle,
+} from 'lucide-react';
 import type { NormalizedProjectView } from '../../../lib/migration/project-normalize';
-import { formatRupiah } from '../../../utils/projectUi';
+import type { MappedRapItem } from '../../../lib/migration/planner-mapper';
+import { formatRupiah, formatDateId } from '../../../utils/projectUi';
 
 type Props = {
   normalized: NormalizedProjectView;
-  project: Project;
+  onSwitchTab?: (tab: 'keuangan') => void;
 };
 
-export default function TabV2Overview({ normalized, project }: Props) {
+export default function TabV2Overview({ normalized, onSwitchTab }: Props) {
+  const p = normalized.project;
+  const realisasiPct = Math.min(
+    p.contractValue > 0 ? (normalized.totalRealisasi / p.contractValue) * 100 : 0,
+    100,
+  );
+  const bahanPlan = p.budget.bahan.plan || 1;
+  const tukangPlan = p.budget.tukang.plan || 1;
+  const bahanPct = Math.min((p.budget.bahan.actual / bahanPlan) * 100, 100);
+  const tukangPct = Math.min((p.budget.tukang.actual / tukangPlan) * 100, 100);
+  const bahanSisa = p.budget.bahan.plan - p.budget.bahan.actual;
+  const tukangSisa = p.budget.tukang.plan - p.budget.tukang.actual;
+
   return (
-    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      <Stat label="Nilai Kontrak" value={formatRupiah(project.total_budget_planned)} />
-      <Stat label="Realisasi" value={formatRupiah(normalized.totalRealisasi)} />
-      <Stat label="Dana Masuk" value={formatRupiah(normalized.totalPemasukan)} />
-      <Stat label="Est. Laba" value={formatRupiah(normalized.estLaba)} />
-      <Stat label="Progress" value={`${project.progress_percentage.toFixed(0)}%`} />
-      <Stat label="Sisa Kontrak" value={formatRupiah(normalized.sisaKontrak)} />
+    <div className="space-y-5 max-w-5xl">
+      {/* Hero */}
+      <div className="bg-white rounded-2xl border border-slate-100 p-5 md:p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
+          <div>
+            <h3 className="text-lg font-black text-slate-900">{p.name}</h3>
+            <p className="text-sm text-slate-500 flex items-center gap-1.5 mt-1">
+              <Calendar className="w-4 h-4" />
+              {formatDateId(p.startDate)} – {formatDateId(p.endDate)} ({p.duration} hari)
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => onSwitchTab?.('keuangan')}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-sm font-bold border border-emerald-100 hover:bg-emerald-100 transition-colors shrink-0"
+          >
+            <Wallet className="w-4 h-4" />
+            Saldo: {formatRupiah(p.saldo)}
+          </button>
+        </div>
+
+        <div className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-4">
+          {formatRupiah(p.contractValue)}
+        </div>
+
+        <div className="h-7 bg-slate-100 rounded-lg overflow-hidden relative">
+          <div
+            className="h-full bg-rose-500 rounded-lg flex items-center justify-center text-white text-xs font-bold min-w-[5rem] transition-all"
+            style={{ width: `${Math.max(realisasiPct, realisasiPct > 0 ? 18 : 0)}%` }}
+          >
+            {normalized.totalRealisasi > 0 && formatRupiah(normalized.totalRealisasi)}
+          </div>
+        </div>
+        <p className="text-center text-sm text-slate-500 mt-2">
+          Sisa: {formatRupiah(normalized.sisaKontrak)}
+        </p>
+      </div>
+
+      {/* Bahan / Tukang / Piutang */}
+      <div className="grid sm:grid-cols-3 gap-4">
+        <BudgetCard
+          label="Bahan"
+          icon={Package}
+          iconBg="bg-rose-50"
+          iconColor="text-rose-600"
+          plan={p.budget.bahan.plan}
+          actual={p.budget.bahan.actual}
+          pct={bahanPct}
+          sisa={bahanSisa}
+          barColor="bg-rose-500"
+        />
+        <BudgetCard
+          label="Tukang"
+          icon={HardHat}
+          iconBg="bg-emerald-50"
+          iconColor="text-emerald-600"
+          plan={p.budget.tukang.plan}
+          actual={p.budget.tukang.actual}
+          pct={tukangPct}
+          sisa={tukangSisa}
+          barColor="bg-emerald-500"
+        />
+        <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+              <FileCheck className="w-4 h-4 text-blue-600" />
+            </div>
+            <span className="text-xs font-semibold text-slate-500 uppercase">Piutang</span>
+          </div>
+          <div className="text-xl font-black text-slate-900 mb-2">
+            {formatRupiah(p.budget.piutang)}
+          </div>
+          <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full bg-rose-50 text-rose-600">
+            <Clock className="w-3 h-3" /> Belum Ditagih
+          </span>
+        </div>
+      </div>
+
+      {/* Item Pekerjaan */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-50">
+          <div className="flex items-center gap-2 font-bold text-slate-800">
+            <ListChecks className="w-5 h-5 text-slate-500" />
+            Item Pekerjaan
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+              {normalized.checkedCount}/{normalized.totalWorkItems} terealisasi
+            </span>
+          </div>
+        </div>
+        <div className="divide-y divide-slate-50">
+          {normalized.workItems.length === 0 ? (
+            <p className="text-sm text-slate-500 text-center py-8">Belum ada item RAP.</p>
+          ) : (
+            normalized.workItems.map(row => (
+              <WorkItemRow key={`${row.kind}-${row.idx}`} item={row.item} />
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Riwayat Transaksi */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-50">
+          <div className="flex items-center gap-2 font-bold text-slate-800">
+            <Clock className="w-5 h-5 text-slate-500" />
+            Riwayat Transaksi
+          </div>
+          <button
+            type="button"
+            onClick={() => onSwitchTab?.('keuangan')}
+            className="text-xs font-bold text-emerald-600 hover:text-emerald-700"
+          >
+            Lihat Semua
+          </button>
+        </div>
+        <div className="divide-y divide-slate-50">
+          {normalized.allTransactions.slice(0, 8).map(tx => (
+            <div key={`${tx.type}-${tx.id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50/50">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                tx.type === 'in' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
+              }`}>
+                {tx.type === 'in'
+                  ? <ArrowDownCircle className="w-4 h-4" />
+                  : <ArrowUpCircle className="w-4 h-4" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-slate-800 truncate">{tx.name}</div>
+                <div className="text-xs text-slate-500">{formatDateId(tx.date)}</div>
+              </div>
+              <div className={`text-sm font-bold shrink-0 ${tx.type === 'in' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {tx.type === 'in' ? '+' : '−'} {formatRupiah(tx.amount)}
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+            </div>
+          ))}
+          {normalized.allTransactions.length === 0 && (
+            <p className="text-sm text-slate-500 text-center py-8">Belum ada transaksi.</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function BudgetCard({
+  label, icon: Icon, iconBg, iconColor, plan, actual, pct, sisa, barColor,
+}: {
+  label: string;
+  icon: typeof Package;
+  iconBg: string;
+  iconColor: string;
+  plan: number;
+  actual: number;
+  pct: number;
+  sisa: number;
+  barColor: string;
+}) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 p-4">
-      <div className="text-xs text-slate-500 font-semibold uppercase">{label}</div>
-      <div className="text-lg font-black text-slate-900 mt-1">{value}</div>
+    <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+      <div className="flex items-center gap-2 mb-3">
+        <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center`}>
+          <Icon className={`w-4 h-4 ${iconColor}`} />
+        </div>
+        <span className="text-xs font-semibold text-slate-500 uppercase">{label}</span>
+      </div>
+      <div className="text-base font-bold text-slate-900 mb-2">{formatRupiah(plan)}</div>
+      <div className="h-5 bg-slate-100 rounded-md overflow-hidden">
+        <div
+          className={`h-full ${barColor} rounded-md flex items-center justify-center text-white text-[10px] font-bold min-w-[4rem]`}
+          style={{ width: `${Math.max(pct, actual > 0 ? 20 : 0)}%` }}
+        >
+          {actual > 0 && formatRupiah(actual)}
+        </div>
+      </div>
+      <p className="text-xs text-slate-500 mt-1.5">
+        Sisa: {formatRupiah(sisa)}
+      </p>
+    </div>
+  );
+}
+
+function WorkItemRow({ item }: { item: MappedRapItem }) {
+  const isOver = item.status === 'over';
+  const isPending = item.status === 'pending';
+  const statusColor = isOver ? 'bg-rose-500' : isPending ? 'bg-slate-300' : 'bg-emerald-500';
+
+  const formatQty = (v: number) => {
+    if (Math.abs(v - Math.round(v)) < 0.001) return String(Math.round(v));
+    return v.toLocaleString('id-ID', { maximumFractionDigits: 2 });
+  };
+
+  return (
+    <div className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50/50">
+      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${statusColor}`} />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm font-semibold text-slate-800 truncate">{item.name}</span>
+          {isOver && <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />}
+        </div>
+        <div className="text-xs text-slate-500 mt-0.5 flex flex-wrap gap-x-2">
+          <span>
+            <span className={isOver ? 'text-rose-600 font-semibold' : ''}>{formatQty(item.qtyActual)}</span>
+            <span> / {formatQty(item.qtyPlan)} {item.unit}</span>
+          </span>
+          <span>@{formatRupiah(item.unitPrice)}</span>
+          <span className={isOver ? 'text-rose-600 font-semibold' : 'text-slate-700'}>
+            = {formatRupiah(item.total)}
+          </span>
+          {!isPending && (
+            <span className="text-slate-400">(RAP: {formatRupiah(item.rapTotal)})</span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

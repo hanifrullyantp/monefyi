@@ -1,5 +1,11 @@
 import type { FinanceAccount } from '../../types/financeV2';
-import type { MappedProjectView } from './planner-mapper';
+import type { MappedProjectView, MappedRapItem } from './planner-mapper';
+
+export type WorkItemRow = {
+  item: MappedRapItem;
+  idx: number;
+  kind: 'material' | 'worker';
+};
 
 export type BusinessSnapshot = {
   name: string;
@@ -68,6 +74,13 @@ export type NormalizedProjectView = {
   totalAktiva: number;
   totalPasiva: number;
   estLaba: number;
+  workItems: WorkItemRow[];
+  checkedCount: number;
+  totalWorkItems: number;
+  allTransactions: Array<
+    | (MappedProjectView['payments'][number] & { sortDate: string })
+    | (MappedProjectView['expenses'][number] & { sortDate: string })
+  >;
 };
 
 export function normalizeProjectView(project: MappedProjectView): NormalizedProjectView {
@@ -79,6 +92,20 @@ export function normalizeProjectView(project: MappedProjectView): NormalizedProj
   const piutang = project.budget?.piutang || 0;
   const hutang = project.budget?.hutang || 0;
   const estLaba = project.rap?.estLaba || 0;
+  const materials = project.rap?.materials || [];
+  const workers = project.rap?.workers || [];
+
+  const workItems: WorkItemRow[] = [
+    ...materials.map((item, idx) => ({ item, idx, kind: 'material' as const })),
+    ...workers.map((item, idx) => ({ item, idx: materials.length + idx, kind: 'worker' as const })),
+  ];
+  const checkedCount = workItems.filter(
+    w => w.item.checked || w.item.qtyActual > 0,
+  ).length;
+  const allTransactions = [
+    ...project.payments.map(tx => ({ ...tx, sortDate: tx.date })),
+    ...project.expenses.map(tx => ({ ...tx, sortDate: tx.date })),
+  ].sort((a, b) => new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime());
 
   return {
     project,
@@ -93,5 +120,9 @@ export function normalizeProjectView(project: MappedProjectView): NormalizedProj
     totalAktiva: project.saldo + piutang,
     totalPasiva: totalPemasukan - hutang,
     estLaba,
+    workItems,
+    checkedCount,
+    totalWorkItems: workItems.length,
+    allTransactions,
   };
 }

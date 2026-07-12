@@ -295,7 +295,7 @@ export default function GanttPlannerView({
           scrollToTodayRef={scrollToTodayRef}
           scrollToTaskRef={scrollToTaskRef}
           onEditTask={setEditTaskId}
-          onOpenMiniDashboard={handleOpenMiniDashboard}
+          onOpenProjectDetail={handleOpenProjectDetail}
         />
 
         {detailOpen && (
