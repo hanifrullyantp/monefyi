@@ -191,7 +191,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
             {tab === 'overview' && (
               <TabV2Overview
                 normalized={normalized}
-                onSwitchTab={() => setTab('keuangan')}
+                onSwitchTab={tabId => setTab(tabId)}
               />
             )}
             {tab === 'keuangan' && (

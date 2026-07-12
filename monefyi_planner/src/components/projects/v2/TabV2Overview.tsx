@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Calendar, Wallet, Package, HardHat, FileCheck, Clock, ListChecks,
   ArrowDownCircle, ArrowUpCircle, ChevronRight, AlertTriangle,
@@ -5,13 +6,17 @@ import {
 import type { NormalizedProjectView } from '../../../lib/migration/project-normalize';
 import type { MappedRapItem } from '../../../lib/migration/planner-mapper';
 import { formatRupiah, formatDateId } from '../../../utils/projectUi';
+import CardPopup, { type PopupCard, type PopupListItem } from '../../migration/CardPopup';
+
+type PopupKind = 'bahan' | 'tukang' | 'piutang' | null;
 
 type Props = {
   normalized: NormalizedProjectView;
-  onSwitchTab?: (tab: 'keuangan') => void;
+  onSwitchTab?: (tab: 'keuangan' | 'rap') => void;
 };
 
 export default function TabV2Overview({ normalized, onSwitchTab }: Props) {
+  const [popup, setPopup] = useState<PopupKind>(null);
   const p = normalized.project;
   const realisasiPct = Math.min(
     p.contractValue > 0 ? (normalized.totalRealisasi / p.contractValue) * 100 : 0,
@@ -23,6 +28,8 @@ export default function TabV2Overview({ normalized, onSwitchTab }: Props) {
   const tukangPct = Math.min((p.budget.tukang.actual / tukangPlan) * 100, 100);
   const bahanSisa = p.budget.bahan.plan - p.budget.bahan.actual;
   const tukangSisa = p.budget.tukang.plan - p.budget.tukang.actual;
+
+  const popupConfig = buildPopupConfig(popup, normalized, p);
 
   return (
     <div className="space-y-5 max-w-5xl">
@@ -75,6 +82,7 @@ export default function TabV2Overview({ normalized, onSwitchTab }: Props) {
           pct={bahanPct}
           sisa={bahanSisa}
           barColor="bg-rose-500"
+          onClick={() => setPopup('bahan')}
         />
         <BudgetCard
           label="Tukang"
@@ -86,8 +94,13 @@ export default function TabV2Overview({ normalized, onSwitchTab }: Props) {
           pct={tukangPct}
           sisa={tukangSisa}
           barColor="bg-emerald-500"
+          onClick={() => setPopup('tukang')}
         />
-        <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+        <button
+          type="button"
+          onClick={() => setPopup('piutang')}
+          className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm text-left hover:shadow-md transition-shadow"
+        >
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
               <FileCheck className="w-4 h-4 text-blue-600" />
@@ -100,7 +113,7 @@ export default function TabV2Overview({ normalized, onSwitchTab }: Props) {
           <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full bg-rose-50 text-rose-600">
             <Clock className="w-3 h-3" /> Belum Ditagih
           </span>
-        </div>
+        </button>
       </div>
 
       {/* Item Pekerjaan */}
@@ -165,12 +178,83 @@ export default function TabV2Overview({ normalized, onSwitchTab }: Props) {
           )}
         </div>
       </div>
+
+      {popupConfig && (
+        <CardPopup
+          open={popup !== null}
+          onClose={() => setPopup(null)}
+          title={popupConfig.title}
+          cards={popupConfig.cards}
+          list={popupConfig.list}
+          detailLabel="Buka Detail"
+          onOpenDetail={() => onSwitchTab?.(popupConfig.detailTab)}
+        />
+      )}
     </div>
   );
 }
 
+function buildPopupConfig(
+  kind: PopupKind,
+  _normalized: NormalizedProjectView,
+  p: NormalizedProjectView['project'],
+): { title: string; cards: PopupCard[]; list: PopupListItem[]; detailTab: 'rap' | 'keuangan' } | null {
+  if (!kind) return null;
+  if (kind === 'bahan') {
+    const mats = p.rap.materials;
+    return {
+      title: 'Material / Bahan',
+      detailTab: 'rap',
+      cards: [
+        { value: `${mats.length} item`, label: 'Jumlah Item' },
+        { value: formatRupiah(p.budget.bahan.actual), label: 'Total Nominal' },
+        { value: `${new Set(mats.map(m => m.vendor).filter(Boolean)).size} vendor`, label: 'Vendor' },
+      ],
+      list: mats.map(m => ({
+        title: m.name,
+        meta: `${m.qtyActual} ${m.unit} × ${formatRupiah(m.unitPrice)}`,
+        value: formatRupiah(m.total),
+        valueColor: m.status === 'over' ? '#e11d48' : undefined,
+      })),
+    };
+  }
+  if (kind === 'tukang') {
+    const workers = p.rap.workers;
+    return {
+      title: 'Tenaga Kerja',
+      detailTab: 'rap',
+      cards: [
+        { value: `${workers.length} tukang`, label: 'Jumlah Tenaga' },
+        { value: formatRupiah(p.budget.tukang.actual), label: 'Total Upah' },
+        { value: `${workers.reduce((s, w) => s + w.qtyActual, 0)} hari`, label: 'Total Hari' },
+      ],
+      list: workers.map(w => ({
+        title: w.name,
+        meta: `${w.qtyActual} hari × ${formatRupiah(w.unitPrice)}`,
+        value: formatRupiah(w.total),
+      })),
+    };
+  }
+  const piutangItems = p.hutangPiutang.filter(h => h.type === 'piutang');
+  return {
+    title: 'Piutang Project',
+    detailTab: 'keuangan',
+    cards: [
+      { value: `${piutangItems.length} item`, label: 'Jumlah Piutang' },
+      { value: formatRupiah(p.budget.piutang), label: 'Total Piutang' },
+      { value: 'Belum Ditagih', label: 'Status' },
+    ],
+    list: piutangItems.map(item => ({
+      title: item.name,
+      meta: `Jatuh tempo: ${formatDateId(item.due)}`,
+      value: formatRupiah(item.amount),
+      valueColor: '#059669',
+    })),
+  };
+}
+
 function BudgetCard({
-  label, icon: Icon, iconBg, iconColor, plan, actual, pct, sisa, barColor,
+  label, icon: Icon, iconBg, iconColor, plan, actual, pct, sisa, barColor, onClick,
 }: {
   label: string;
   icon: typeof Package;
@@ -181,9 +265,14 @@ function BudgetCard({
   pct: number;
   sisa: number;
   barColor: string;
+  onClick?: () => void;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+    <button
+      type="button"
+      onClick={onClick}
+      className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm text-left hover:shadow-md transition-shadow w-full"
+    >
       <div className="flex items-center gap-2 mb-3">
         <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center`}>
           <Icon className={`w-4 h-4 ${iconColor}`} />
@@ -202,7 +291,7 @@ function BudgetCard({
       <p className="text-xs text-slate-500 mt-1.5">
         Sisa: {formatRupiah(sisa)}
       </p>
-    </div>
+    </button>
   );
 }
 
