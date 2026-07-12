@@ -3,6 +3,7 @@ import type { BalanceLine, BalanceSheet } from './types';
 
 /**
  * Build project balance sheet.
+ * Identity: Realisasi + Saldo + Piutang = Dana Masuk + Piutang (= Nilai Kontrak)
  */
 export function buildProjectSheet(project: MappedProjectView): BalanceSheet {
   const totalPemasukan = project.payments.reduce((s, p) => s + p.amount, 0);
@@ -12,6 +13,8 @@ export function buildProjectSheet(project: MappedProjectView): BalanceSheet {
   const received = totalPemasukan;
   const spent = project.rap?.realisasi ?? 0;
   const contractValue = project.contractValue;
+  const bahanActual = project.budget?.bahan?.actual || 0;
+  const tukangActual = project.budget?.tukang?.actual || 0;
   const hutangListSum = project.hutangPiutang
     .filter(h => h.type === 'hutang')
     .reduce((s, h) => s + h.amount, 0);
@@ -20,14 +23,17 @@ export function buildProjectSheet(project: MappedProjectView): BalanceSheet {
     .reduce((s, h) => s + h.amount, 0);
 
   const lines: BalanceLine[] = [
+    { key: 'bahan', label: 'Bahan (Actual)', side: 'aktiva', amount: bahanActual, icon: 'package' },
+    { key: 'tukang', label: 'Tukang (Actual)', side: 'aktiva', amount: tukangActual, icon: 'hardhat' },
     { key: 'saldo', label: 'Saldo Kas', side: 'aktiva', amount: saldo, icon: 'wallet' },
     { key: 'piutang', label: 'Piutang Klien', side: 'aktiva', amount: piutang, icon: 'file-check' },
     { key: 'pemasukan', label: 'Dana Masuk', side: 'pasiva', amount: totalPemasukan, icon: 'credit-card' },
+    { key: 'piutang_pasiva', label: 'Piutang (Sumber Klien)', side: 'pasiva', amount: piutang, icon: 'file-check' },
     { key: 'hutang', label: 'Hutang Vendor', side: 'pasiva', amount: hutang, icon: 'receipt' },
   ];
 
-  const aktiva = saldo + piutang;
-  const pasiva = totalPemasukan;
+  const aktiva = spent + saldo + piutang;
+  const pasiva = totalPemasukan + piutang;
   const ekuitas = 0;
 
   return {
@@ -35,7 +41,7 @@ export function buildProjectSheet(project: MappedProjectView): BalanceSheet {
     projectId: project.id,
     lines,
     aktiva,
-    pasiva: pasiva - hutang,
+    pasiva,
     ekuitas,
     meta: {
       totalPemasukan,

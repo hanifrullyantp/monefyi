@@ -113,10 +113,10 @@ export function normalizeProjectView(project: MappedProjectView): NormalizedProj
     ...project.expenses.map(tx => ({ ...tx, sortDate: tx.date })),
   ].sort((a, b) => new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime());
 
-  // Neraca gambar 3: Aktiva = Bahan + Tukang + Piutang + Saldo
-  const totalAktiva = bahanActual + tukangActual + piutang + project.saldo;
-  // Pasiva = Dana Masuk − Hutang + Est. Laba
-  const totalPasiva = totalPemasukan - hutang + estLaba;
+  // Neraca: Aktiva = Realisasi + Piutang + Saldo (= Dana Masuk + Piutang = Nilai Kontrak)
+  const totalAktiva = totalRealisasi + piutang + project.saldo;
+  // Pasiva = Dana Masuk + Piutang (sumber dari klien)
+  const totalPasiva = totalPemasukan + piutang;
 
   return {
     project,

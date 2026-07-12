@@ -18,7 +18,7 @@ describe('balance-validator', () => {
     expect(sheet.aktiva).toBe(rowSum);
   });
 
-  it('project aktiva = saldo + piutang', () => {
+  it('project aktiva = realisasi + saldo + piutang', () => {
     const mapped = mapPlannerProject({
       project: {
         id: 'p1',
@@ -37,7 +37,9 @@ describe('balance-validator', () => {
     });
 
     const check = validateProjectBalance(mapped);
-    expect(check.aktiva).toBe(mapped.saldo + (mapped.budget?.piutang || 0));
+    const piutang = mapped.budget?.piutang || 0;
+    expect(check.aktiva).toBe(mapped.rap.realisasi + mapped.saldo + piutang);
+    expect(check.pasiva).toBe(20_000_000 + piutang);
     expect(typeof check.isBalanced).toBe('boolean');
   });
 

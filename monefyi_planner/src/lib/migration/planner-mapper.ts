@@ -43,7 +43,16 @@ export type MappedProjectView = {
   payments: Array<{ id: number; type: 'in'; name: string; amount: number; date: string; time: string; icon: string }>;
   expenses: Array<{ id: number; type: 'out'; category: string; name: string; amount: number; date: string; time: string; icon: string }>;
   timeline: Array<{ id: number; name: string; weight: number; progress: number; planProgress: number; status: string; start: string; end: string }>;
-  hutangPiutang: Array<{ id: number; type: 'hutang' | 'piutang'; name: string; amount: number; due: string; status: string }>;
+  hutangPiutang: Array<{
+    id: number;
+    type: 'hutang' | 'piutang';
+    name: string;
+    /** Nama pihak lawan: vendor (hutang) atau klien (piutang) */
+    partyName?: string;
+    amount: number;
+    due: string;
+    status: string;
+  }>;
 };
 
 export type PlannerProjectRow = {
@@ -255,41 +264,16 @@ export function mapPlannerProject(input: {
   const estLaba = Math.max(0, budget - spent);
   const piutang = Math.max(0, budget - received);
   const hutang = Math.max(0, spent - received);
+  const saldo = received - spent;
 
-  const hutangPiutang: MappedProjectView['hutangPiutang'] = [];
-  if (hutang > 0) {
-    const supplierTotals = new Map<string, number>();
-    for (const cost of input.costs) {
-      const key = cost.supplier || cost.description || 'Vendor';
-      supplierTotals.set(key, (supplierTotals.get(key) || 0) + num(cost.total_amount));
-    }
-    let hid = 1;
-    if (spent > 0 && supplierTotals.size > 0) {
-      for (const [name, amount] of supplierTotals) {
-        hutangPiutang.push({
-          id: hid++,
-          type: 'hutang',
-          name,
-          amount: Math.round(amount * (hutang / spent)),
-          due: end,
-          status: 'upcoming',
-        });
-      }
-    }
-    if (!hutangPiutang.length) {
-      hutangPiutang.push({ id: 1, type: 'hutang', name: 'Hutang Vendor', amount: hutang, due: end, status: 'upcoming' });
-    }
-  }
-  if (piutang > 0) {
-    hutangPiutang.push({
-      id: hutangPiutang.length + 1,
-      type: 'piutang',
-      name: p.client_name || 'Klien',
-      amount: piutang,
-      due: end,
-      status: 'upcoming',
-    });
-  }
+  const hutangPiutang: MappedProjectView['hutangPiutang'] = buildHutangPiutangList({
+    costs: input.costs,
+    hutang,
+    spent,
+    piutang,
+    clientName: p.client_name || 'Klien',
+    end,
+  });
 
   return {
     id: p.id,
@@ -300,7 +284,7 @@ export function mapPlannerProject(input: {
     endDate: end,
     duration: daysBetween(start, end),
     contractValue: budget,
-    saldo: Math.max(0, received - spent),
+    saldo,
     status: mapProjectStatus(p.status, spent, budget),
     progress: { plan: progress, actual: progress, deviation: 0 },
     rap: {
@@ -321,4 +305,83 @@ export function mapPlannerProject(input: {
     timeline,
     hutangPiutang,
   };
+}
+
+const GENERIC_VENDOR = /^(import|vendor|realisasi|biaya|umum)$/i;
+
+function isRealVendorName(supplier: string, description: string): boolean {
+  const s = supplier.trim();
+  if (!s || GENERIC_VENDOR.test(s)) return false;
+  const d = description.trim();
+  if (d && s.toLowerCase() === d.toLowerCase()) return false;
+  if (d && d.toLowerCase().startsWith('realisasi') && !s.includes(' ')) return false;
+  return true;
+}
+
+/**
+ * Build hutang/piutang list with clear counterparty names (bukan deskripsi biaya).
+ */
+function buildHutangPiutangList(input: {
+  costs: PlannerCostRow[];
+  hutang: number;
+  spent: number;
+  piutang: number;
+  clientName: string;
+  end: string;
+}): MappedProjectView['hutangPiutang'] {
+  const items: MappedProjectView['hutangPiutang'] = [];
+  let id = 1;
+
+  if (input.hutang > 0) {
+    const vendorTotals = new Map<string, number>();
+    for (const cost of input.costs) {
+      const supplier = cost.supplier?.trim() || '';
+      if (!isRealVendorName(supplier, cost.description || '')) continue;
+      vendorTotals.set(supplier, (vendorTotals.get(supplier) || 0) + num(cost.total_amount));
+    }
+
+    if (vendorTotals.size > 0 && input.spent > 0) {
+      for (const [vendor, vendorSpent] of vendorTotals) {
+        const share = Math.round(input.hutang * (vendorSpent / input.spent));
+        if (share <= 0) continue;
+        items.push({
+          id: id++,
+          type: 'hutang',
+          name: `Hutang ke ${vendor}`,
+          partyName: vendor,
+          amount: share,
+          due: input.end,
+          status: 'upcoming',
+        });
+      }
+    }
+
+    const listed = items.reduce((s, h) => s + h.amount, 0);
+    const remainder = input.hutang - listed;
+    if (remainder > 0 || items.length === 0) {
+      items.push({
+        id: id++,
+        type: 'hutang',
+        name: 'Hutang Operasional',
+        partyName: 'Vendor / Pinjaman',
+        amount: remainder > 0 ? remainder : input.hutang,
+        due: input.end,
+        status: 'upcoming',
+      });
+    }
+  }
+
+  if (input.piutang > 0) {
+    items.push({
+      id: id++,
+      type: 'piutang',
+      name: `Piutang dari ${input.clientName}`,
+      partyName: input.clientName,
+      amount: input.piutang,
+      due: input.end,
+      status: 'upcoming',
+    });
+  }
+
+  return items;
 }

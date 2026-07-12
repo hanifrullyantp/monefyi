@@ -5,14 +5,15 @@ import {
 } from 'lucide-react';
 import type { NormalizedProjectView } from '../../../lib/migration/project-normalize';
 import { formatRupiah, formatDateId } from '../../../utils/projectUi';
-import CardPopup, { type PopupCard, type PopupListItem } from '../../migration/CardPopup';
+import CardPopup from '../../migration/CardPopup';
 import WorkItemRow from '../../sandbox-ui/WorkItemRow';
 import TransactionList from '../../sandbox-ui/TransactionList';
 import BottomActionBar from '../../sandbox-ui/BottomActionBar';
 import ProjectTransactionModals, { type ModalKind } from './ProjectTransactionModals';
+import { buildProjectPopupConfig, type ProjectPopupKind } from './project-popup-config';
 import type { Project } from '../../../store/appStore';
 
-type PopupKind = 'bahan' | 'tukang' | 'piutang' | null;
+type PopupKind = ProjectPopupKind;
 type SortKey = 'name' | 'status' | 'qty';
 
 type Props = {
@@ -23,10 +24,11 @@ type Props = {
   canManage?: boolean;
   onRefresh: () => void | Promise<void>;
   onSwitchTab?: (tab: 'keuangan' | 'rap') => void;
+  onEditProject?: () => void;
 };
 
 export default function TabV2Overview({
-  normalized, project, orgId, userId, canManage = true, onRefresh, onSwitchTab,
+  normalized, project, orgId, userId, canManage = true, onRefresh, onSwitchTab, onEditProject,
 }: Props) {
   const [popup, setPopup] = useState<PopupKind>(null);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -58,7 +60,7 @@ export default function TabV2Overview({
     return rows;
   }, [normalized.workItems, statusFilter, sortKey]);
 
-  const popupConfig = buildPopupConfig(popup, normalized, p);
+  const popupConfig = buildProjectPopupConfig(popup, normalized);
 
   return (
     <div className="space-y-5 pb-4">
@@ -169,7 +171,7 @@ export default function TabV2Overview({
 
       <BottomActionBar
         actions={[
-          { label: 'Edit Project', icon: <Pencil className="w-4 h-4" />, onClick: () => onSwitchTab?.('rap') },
+          { label: 'Edit Project', icon: <Pencil className="w-4 h-4" />, onClick: () => onEditProject?.() },
           { label: 'Tambah Transaksi', icon: <Plus className="w-4 h-4" />, onClick: () => setModal('income'), variant: 'primary' },
         ]}
       />
@@ -177,61 +179,13 @@ export default function TabV2Overview({
       {popupConfig && (
         <CardPopup open={popup !== null} onClose={() => setPopup(null)} title={popupConfig.title}
           cards={popupConfig.cards} list={popupConfig.list} detailLabel="Buka Detail"
-          onOpenDetail={() => onSwitchTab?.(popupConfig.detailTab)} />
+          onOpenDetail={() => popupConfig.detailTab && onSwitchTab?.(popupConfig.detailTab)} />
       )}
 
       <ProjectTransactionModals open={modal !== null} kind={modal} onClose={() => setModal(null)}
         project={project} orgId={orgId} userId={userId} canManage={canManage} onUpdated={onRefresh} />
     </div>
   );
-}
-
-function buildPopupConfig(
-  kind: PopupKind, _normalized: NormalizedProjectView, p: NormalizedProjectView['project'],
-): { title: string; cards: PopupCard[]; list: PopupListItem[]; detailTab: 'rap' | 'keuangan' } | null {
-  if (!kind) return null;
-  if (kind === 'bahan') {
-    const mats = p.rap.materials;
-    return {
-      title: 'Material / Bahan', detailTab: 'rap',
-      cards: [
-        { value: `${mats.length} item`, label: 'Jumlah Item' },
-        { value: formatRupiah(p.budget.bahan.actual), label: 'Total Nominal' },
-        { value: `${new Set(mats.map(m => m.vendor).filter(Boolean)).size} vendor`, label: 'Vendor' },
-      ],
-      list: mats.map(m => ({
-        title: m.name, meta: `${m.qtyActual} ${m.unit} × ${formatRupiah(m.unitPrice)}`,
-        value: formatRupiah(m.total), valueColor: m.status === 'over' ? '#e11d48' : undefined,
-      })),
-    };
-  }
-  if (kind === 'tukang') {
-    const workers = p.rap.workers;
-    return {
-      title: 'Tenaga Kerja', detailTab: 'rap',
-      cards: [
-        { value: `${workers.length} tukang`, label: 'Jumlah Tenaga' },
-        { value: formatRupiah(p.budget.tukang.actual), label: 'Total Upah' },
-        { value: `${workers.reduce((s, w) => s + w.qtyActual, 0)} hari`, label: 'Total Hari' },
-      ],
-      list: workers.map(w => ({
-        title: w.name, meta: `${w.qtyActual} hari × ${formatRupiah(w.unitPrice)}`, value: formatRupiah(w.total),
-      })),
-    };
-  }
-  const piutangItems = p.hutangPiutang.filter(h => h.type === 'piutang');
-  return {
-    title: 'Piutang Project', detailTab: 'keuangan',
-    cards: [
-      { value: `${piutangItems.length} item`, label: 'Jumlah Piutang' },
-      { value: formatRupiah(p.budget.piutang), label: 'Total Piutang' },
-      { value: 'Belum Ditagih', label: 'Status' },
-    ],
-    list: piutangItems.map(item => ({
-      title: item.name, meta: `Jatuh tempo: ${formatDateId(item.due)}`,
-      value: formatRupiah(item.amount), valueColor: '#059669',
-    })),
-  };
 }
 
 function BudgetCard({ label, icon: Icon, iconBg, iconColor, plan, actual, pct, sisa, barColor, onClick }: {

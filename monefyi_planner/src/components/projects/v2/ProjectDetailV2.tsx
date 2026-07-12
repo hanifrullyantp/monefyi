@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ArrowLeft, MoreVertical, LayoutGrid, Wallet, BarChart3, FileSpreadsheet, Brain, FileText,
+  ArrowLeft, MoreVertical, LayoutGrid, Wallet, BarChart3, FileSpreadsheet, Brain, FileText, Pencil,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { Project } from '../../../store/appStore';
 import { useAppStore } from '../../../store/appStore';
 import { useShellStore } from '../../../store/shellStore';
+import { updateProject as updateProjectApi } from '../../../services/projectService';
+import { showToast } from '../../../store/uiStore';
 import { loadRapItems } from '../../../services/rapService';
 import { loadWorkItems } from '../../../services/workItemService';
 import { loadCostRealizations, aggregateCostByRapItem } from '../../../services/costService';
@@ -20,6 +22,7 @@ import TabV2Progress from './TabV2Progress';
 import TabV2Rap from './TabV2Rap';
 import TabV2Analisa from './TabV2Analisa';
 import TabV2Laporan from './TabV2Laporan';
+import ProjectEditModal from '../ProjectEditModal';
 
 type TabId = 'overview' | 'keuangan' | 'progress' | 'rap' | 'analisa' | 'laporan';
 
@@ -38,12 +41,13 @@ type Props = {
 };
 
 export default function ProjectDetailV2({ project: initialProject, onClose }: Props) {
-  const { user, tenant } = useAppStore();
+  const { user, tenant, updateProject } = useAppStore();
   const { setShellMeta, clearShellMeta } = useShellStore();
-  const [project] = useState(initialProject);
+  const [project, setProject] = useState(initialProject);
   const [tab, setTab] = useState<TabId>('overview');
   const [loading, setLoading] = useState(true);
   const [balanceOpen, setBalanceOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [mapped, setMapped] = useState<ReturnType<typeof mapPlannerProject> | null>(null);
   const [rapItems, setRapItems] = useState<Awaited<ReturnType<typeof loadRapItems>>>([]);
   const [workItems, setWorkItems] = useState<Awaited<ReturnType<typeof loadWorkItems>>>([]);
@@ -138,6 +142,16 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
   const balanceCheck = mapped ? validateProjectBalance(mapped) : null;
   const keuanganBadge = rapItems.length > 0 ? rapItems.length : undefined;
 
+  const handleSaveProject = async (patch: Partial<Project>) => {
+    const updated = await updateProjectApi(project.id, patch, tenant?.currency);
+    setProject(updated);
+    updateProject(project.id, updated);
+    showToast('Detail proyek disimpan', 'success');
+    await reload();
+  };
+
+  const openEdit = () => setEditOpen(true);
+
   return (
     <div className="flex flex-col min-h-0">
       <header className="bg-white border-b px-4 py-3 flex items-center justify-between shrink-0 sticky top-0 z-10">
@@ -169,6 +183,9 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
               {balanceCheck.isBalanced ? 'Balance' : 'Tidak Balance'}
             </button>
           )}
+          <button type="button" onClick={openEdit} className="p-2 hover:bg-slate-100 rounded-xl" aria-label="Edit proyek" title="Edit proyek">
+            <Pencil className="w-5 h-5 text-slate-500" />
+          </button>
           <button type="button" className="p-2 hover:bg-slate-100 rounded-xl" aria-label="Menu">
             <MoreVertical className="w-5 h-5 text-slate-500" />
           </button>
@@ -208,6 +225,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
                 userId={user?.id || ''}
                 onRefresh={reload}
                 onSwitchTab={tabId => setTab(tabId)}
+                onEditProject={openEdit}
               />
             )}
             {tab === 'keuangan' && (
@@ -220,6 +238,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
                 userId={user?.id || ''}
                 canManage
                 onRefresh={reload}
+                onEditProject={openEdit}
               />
             )}
             {tab === 'progress' && (
@@ -254,6 +273,16 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
         onClose={() => setBalanceOpen(false)}
         check={balanceCheck}
       />
+
+      {editOpen && (
+        <ProjectEditModal
+          project={project}
+          canArchive={false}
+          onClose={() => setEditOpen(false)}
+          onSave={handleSaveProject}
+          onArchive={async () => {}}
+        />
+      )}
     </div>
   );
 }
