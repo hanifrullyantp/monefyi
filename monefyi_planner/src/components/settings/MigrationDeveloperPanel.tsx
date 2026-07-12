@@ -6,6 +6,7 @@ import {
   FLAG_KEYS,
 } from '../../lib/migrationFlags';
 import type { MigrationFlags } from '../../types/rpp';
+import { useAppStore } from '../../store/appStore';
 import { showToast } from '../../store/uiStore';
 
 const FLAG_LABELS: Record<keyof MigrationFlags, { title: string; desc: string }> = {
@@ -32,6 +33,7 @@ type Props = {
 };
 
 export default function MigrationDeveloperPanel({ userId }: Props) {
+  const setMigrationFlagsStore = useAppStore(s => s.setMigrationFlags);
   const [flags, setFlags] = useState<MigrationFlags | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -55,6 +57,7 @@ export default function MigrationDeveloperPanel({ userId }: Props) {
     try {
       const next = await setMigrationFlags(userId, { [key]: !flags[key] });
       setFlags(next);
+      setMigrationFlagsStore(next);
       showToast(`${FLAG_LABELS[key].title} ${next[key] ? 'aktif' : 'nonaktif'}`, 'success');
       window.dispatchEvent(new CustomEvent('monefyi:migration-flags-changed', { detail: next }));
     } catch (e) {
@@ -102,6 +105,14 @@ export default function MigrationDeveloperPanel({ userId }: Props) {
           </label>
         ))}
       </div>
+      {flags && (
+        <p className="text-xs text-slate-500 bg-slate-50 rounded-xl p-3 leading-relaxed">
+          Setelah centang: <strong>database_master</strong> muncul di sidebar ·
+          <strong> create_project_smart</strong> saat buat proyek ·
+          <strong> project_view_v2</strong> saat buka detail proyek ·
+          <strong> finance_dashboard_v2</strong> di Finance V2.
+        </p>
+      )}
     </div>
   );
 }

@@ -238,6 +238,7 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [useV2View, setUseV2View] = useState(false);
+  const [ganttFocusId, setGanttFocusId] = useState<string | null>(null);
   const ganttExpanded = useGanttStore(s => s.expandedView);
   const fullscreenGantt = projectView === 'timeline' && ganttExpanded;
 

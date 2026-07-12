@@ -89,7 +89,10 @@ export default function Layout({ children }: LayoutProps) {
       return location.pathname.startsWith('/app/database');
     }
     if (tabId === 'home') {
-      return activeTab === 'home' && !location.pathname.startsWith('/app/estimator') && !location.pathname.startsWith('/app/finance-v2');
+      return activeTab === 'home'
+        && !location.pathname.startsWith('/app/estimator')
+        && !location.pathname.startsWith('/app/finance-v2')
+        && !location.pathname.startsWith('/app/database');
     }
     return activeTab === tabId;
   };
