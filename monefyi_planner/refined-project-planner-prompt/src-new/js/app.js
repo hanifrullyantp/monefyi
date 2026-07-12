@@ -6,6 +6,12 @@
 import { initRouter } from "./router.js";
 import { initStore, syncFromServer, sidebarCollapsed } from "./store.js";
 import { initToast, showToast } from "./components/toast.js";
+import { initModal } from "./components/modal.js";
+import { initCardPopup } from "./components/card-popup.js";
+import { initAutosuggest } from "./components/autosuggest.js";
+import { initSidebar } from "./components/sidebar.js";
+import { initBottomNav } from "./components/bottomnav.js";
+import { initTopbar } from "./components/topbar.js";
 
 /**
  * Bootstrap the sandbox application.
@@ -13,6 +19,12 @@ import { initToast, showToast } from "./components/toast.js";
 export async function initApp() {
   initStore();
   initToast();
+  initModal();
+  initCardPopup();
+  initAutosuggest();
+  initSidebar();
+  initBottomNav();
+  initTopbar();
   initRouter();
 
   setupSidebarControl();
@@ -25,7 +37,7 @@ export async function initApp() {
     window.lucide.createIcons();
   }
 
-  console.info("[src-new] Foundation + toast.js ready (2.2.2)");
+  console.info("[src-new] Visual shell ready — layout + dashboard (2.3 + 2.4.1)");
 }
 
 /**

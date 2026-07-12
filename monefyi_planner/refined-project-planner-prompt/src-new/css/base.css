@@ -59,7 +59,6 @@ body {
 .overflow-hidden { overflow: hidden; }
 .relative { position: relative; }
 
-/* Sandbox placeholder until layout.css migrated */
 .sandbox-placeholder {
   padding: 48px 24px;
   text-align: center;

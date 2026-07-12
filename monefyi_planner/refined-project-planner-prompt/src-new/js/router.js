@@ -71,6 +71,10 @@ export function navigate(route, params = {}) {
     location.hash = `project/${id}/${tab}`;
     return;
   }
+  if (route.startsWith("finance/") || route.startsWith("database/")) {
+    location.hash = route;
+    return;
+  }
   location.hash = buildHash(route, params);
 }
 
@@ -101,6 +105,10 @@ async function renderCurrentRoute() {
   const mod = await handler();
   view.innerHTML = mod.render();
   view.className = "tab-content anim-fade-in-up";
+
+  if (typeof mod.afterRender === "function") {
+    mod.afterRender();
+  }
 
   updateBreadcrumb();
   updateNavActive();

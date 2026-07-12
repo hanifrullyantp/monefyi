@@ -18,3 +18,79 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Modal bottom sheet — mobile (from existing globals.css) */
+@media (max-width: 640px) {
+  .modal-dialog {
+    max-height: 95vh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+  .modal-backdrop {
+    align-items: flex-end;
+  }
+  .popup-3cards { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .popup-3card-value { font-size: 16px; }
+}
+/* Layout responsive — from globals.css */
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1023px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .sidebar-overlay.visible {
+    display: block;
+  }
+  .main-wrapper {
+    margin-left: 0;
+  }
+  .topbar-menu-btn {
+    display: flex;
+  }
+  .topbar-search {
+    display: none;
+  }
+  .bottom-nav {
+    display: flex;
+  }
+  .page-content {
+    padding: 16px;
+    padding-bottom: calc(var(--bottomnav-height) + 16px);
+  }
+  .grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .edit-toolbar {
+    bottom: calc(var(--bottomnav-height) + 12px);
+  }
+  .bottom-action-bar {
+    bottom: var(--bottomnav-height);
+  }
+}
+
+@media (max-width: 640px) {
+  html { font-size: 14px; }
+  .page-content { padding: 12px; }
+  .page-content { padding-bottom: calc(var(--bottomnav-height) + 12px); }
+  .grid-2 { grid-template-columns: 1fr; }
+  .grid-3 { grid-template-columns: 1fr; }
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .hero-card-amount { font-size: 28px; }
+  .hero-card-amount.large { font-size: 32px; }
+  .stat-card-amount { font-size: 18px; }
+  .popup-3cards { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .popup-3card-value { font-size: 16px; }
+  .neraca-grid { grid-template-columns: 1fr; }
+  .neraca-col:first-child { border-right: none; border-bottom: 1px solid var(--gray-100); }
+  .modal-dialog { max-height: 95vh; border-radius: var(--radius-xl) var(--radius-xl) 0 0; }
+  .modal-backdrop { align-items: flex-end; }
+}
+
+.hide-tablet { }
+@media (max-width: 1023px) { .hide-mobile { display: none !important; } }
+@media (min-width: 1024px) { .hide-tablet { } }
