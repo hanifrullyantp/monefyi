@@ -1,9 +1,17 @@
+import { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useAppStore } from '../../store/appStore';
+import { useShellStore } from '../../store/shellStore';
 import FinanceSandboxTabs from '../../components/finance-v2/FinanceSandboxTabs';
 
 export default function FinanceV2Layout() {
   const { tenant } = useAppStore();
+  const { setShellMeta, clearShellMeta } = useShellStore();
+
+  useEffect(() => {
+    setShellMeta({ breadcrumb: [{ label: 'Keuangan Bisnis' }] });
+    return () => clearShellMeta();
+  }, [setShellMeta, clearShellMeta]);
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-5">

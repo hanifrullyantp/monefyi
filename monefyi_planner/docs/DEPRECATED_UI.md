@@ -21,7 +21,7 @@ Daftar file yang **disimpan** di repo tetapi **tidak lagi di-route** setelah mig
 | `src/components/projects/command-center/types.ts` | Types Command Center |
 | `src/components/projects/ProjectDetailHeader.tsx` | Header legacy (masih di-import oleh TabHutangPiutang) |
 
-**Pengganti aktif:** `src/components/projects/v2/*`
+**Pengganti aktif:** `src/components/projects/v2/*` + `src/components/sandbox-ui/*` + `ProjectTransactionModals.tsx`
 
 ## Keuangan — Finance V1
 

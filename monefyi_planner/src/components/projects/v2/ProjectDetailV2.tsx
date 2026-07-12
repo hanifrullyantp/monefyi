@@ -5,6 +5,7 @@ import {
 import { motion } from 'framer-motion';
 import type { Project } from '../../../store/appStore';
 import { useAppStore } from '../../../store/appStore';
+import { useShellStore } from '../../../store/shellStore';
 import { loadRapItems } from '../../../services/rapService';
 import { loadWorkItems } from '../../../services/workItemService';
 import { loadCostRealizations, aggregateCostByRapItem } from '../../../services/costService';
@@ -37,7 +38,8 @@ type Props = {
 };
 
 export default function ProjectDetailV2({ project: initialProject, onClose }: Props) {
-  const { user } = useAppStore();
+  const { user, tenant } = useAppStore();
+  const { setShellMeta, clearShellMeta } = useShellStore();
   const [project] = useState(initialProject);
   const [tab, setTab] = useState<TabId>('overview');
   const [loading, setLoading] = useState(true);
@@ -122,12 +124,22 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
 
   useEffect(() => { void reload(); }, [reload]);
 
+  useEffect(() => {
+    setShellMeta({
+      breadcrumb: [{ label: 'Proyek' }, { label: project.name }],
+      projectId: project.id,
+      onOpenRap: () => setTab('rap'),
+      onOpenProgress: () => setTab('progress'),
+    });
+    return () => clearShellMeta();
+  }, [project.id, project.name, setShellMeta, clearShellMeta]);
+
   const normalized = mapped ? normalizeProjectView(mapped) : null;
   const balanceCheck = mapped ? validateProjectBalance(mapped) : null;
   const keuanganBadge = rapItems.length > 0 ? rapItems.length : undefined;
 
   return (
-    <div className="flex flex-col min-h-0 -m-4 md:-m-6">
+    <div className="flex flex-col min-h-0">
       <header className="bg-white border-b px-4 py-3 flex items-center justify-between shrink-0 sticky top-0 z-10">
         <div className="flex items-center gap-3 min-w-0">
           <button
@@ -191,6 +203,10 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
             {tab === 'overview' && (
               <TabV2Overview
                 normalized={normalized}
+                project={project}
+                orgId={tenant?.id || ''}
+                userId={user?.id || ''}
+                onRefresh={reload}
                 onSwitchTab={tabId => setTab(tabId)}
               />
             )}
@@ -199,20 +215,36 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
                 normalized={normalized}
                 balanceCheck={balanceCheck!}
                 onOpenDiagnosis={() => setBalanceOpen(true)}
+                project={project}
+                orgId={tenant?.id || ''}
+                userId={user?.id || ''}
+                canManage
+                onRefresh={reload}
               />
             )}
-            {tab === 'progress' && <TabV2Progress workItems={workItems} onRefresh={reload} />}
+            {tab === 'progress' && (
+              <TabV2Progress
+                normalized={normalized}
+                workItems={workItems}
+                onRefresh={reload}
+              />
+            )}
             {tab === 'rap' && (
               <TabV2Rap
                 projectId={project.id}
+                normalized={normalized}
                 rapItems={rapItems}
                 rapActuals={rapActuals}
                 onRefresh={reload}
                 userId={user?.id || ''}
               />
             )}
-            {tab === 'analisa' && <TabV2Analisa projectId={project.id} />}
-            {tab === 'laporan' && <TabV2Laporan project={project} rapItems={rapItems} />}
+            {tab === 'analisa' && (
+              <TabV2Analisa projectId={project.id} normalized={normalized} />
+            )}
+            {tab === 'laporan' && (
+              <TabV2Laporan project={project} normalized={normalized} rapItems={rapItems} />
+            )}
           </motion.div>
         )}
       </main>

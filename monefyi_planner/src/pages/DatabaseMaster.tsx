@@ -13,6 +13,7 @@ import { upsertJobTemplates, upsertDatabaseMeta } from '../services/rpp/template
 import type { DatabaseMeta, JobTemplate, RppMaterial, RppWorker } from '../types/rpp';
 import { formatRupiah } from '../utils/projectUi';
 import MaterialAutosuggest from '../components/migration/MaterialAutosuggest';
+import { useShellStore } from '../store/shellStore';
 import GenerateRapFromTemplateModal from '../components/migration/GenerateRapFromTemplateModal';
 
 type Tab = 'bahan' | 'tenaga' | 'alat' | 'vendor' | 'klien' | 'template';
@@ -28,6 +29,7 @@ const TABS: { id: Tab; label: string; icon: typeof Package }[] = [
 
 export default function DatabaseMaster() {
   const { tenant } = useAppStore();
+  const { setShellMeta, clearShellMeta } = useShellStore();
   const orgId = tenant?.id || '';
   const [tab, setTab] = useState<Tab>('bahan');
   const [search, setSearch] = useState('');
@@ -58,6 +60,11 @@ export default function DatabaseMaster() {
   }, [orgId]);
 
   useEffect(() => { void reload(); }, [reload]);
+
+  useEffect(() => {
+    setShellMeta({ breadcrumb: [{ label: 'Database Master' }] });
+    return () => clearShellMeta();
+  }, [setShellMeta, clearShellMeta]);
 
   const saveMeta = async (next: DatabaseMeta) => {
     if (!orgId) return;

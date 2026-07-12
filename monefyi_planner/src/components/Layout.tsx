@@ -21,6 +21,8 @@ import { loadMigrationFlags } from '../lib/migrationFlags';
 import { DEFAULT_MIGRATION_FLAGS } from '../types/rpp';
 import { useOrgBrand } from '../hooks/useOrgBrand';
 import { MONEFYI_BRAND } from '../lib/orgBrand';
+import RightPanel from './layout/RightPanel';
+import { useShellStore } from '../store/shellStore';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -164,6 +166,33 @@ export default function Layout({ children }: LayoutProps) {
 
   const sync = getSyncIndicator();
   const lastSyncText = lastSynced ? `${Math.floor((Date.now() - lastSynced.getTime()) / 60000)} mnt lalu` : 'Belum pernah';
+
+  const showRightPanel =
+    /^\/app\/projects\/[^/]+$/.test(location.pathname)
+    || location.pathname.startsWith('/app/finance-v2')
+    || location.pathname.startsWith('/app/database');
+
+  const { breadcrumb, projectId: shellProjectId, onOpenRap, onOpenProgress } = useShellStore();
+
+  const headerTitle = (() => {
+    if (breadcrumb.length > 0) {
+      return breadcrumb.map((b, i) => (
+        <span key={i} className="flex items-center gap-1.5">
+          {i > 0 && <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+          <span className={i === breadcrumb.length - 1 ? 'text-slate-800' : 'text-slate-500'}>{b.label}</span>
+        </span>
+      ));
+    }
+    if (location.pathname.startsWith('/app/finance-v2')) return 'Keuangan Bisnis';
+    if (location.pathname.startsWith('/app/database')) return 'Database Master';
+    const title = activeTab === 'home' ? 'Dashboard'
+      : activeTab === 'projects' ? 'Manajemen Proyek'
+        : activeTab === 'estimator' ? 'Estimator'
+          : activeTab === 'finance' ? 'Keuangan'
+            : activeTab === 'hr' ? 'HR & Karyawan'
+              : activeTab === 'settings' ? 'Pengaturan' : activeTab;
+    return title;
+  })();
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden org-branded" style={orgBrandStyle}>
@@ -349,13 +378,8 @@ export default function Layout({ children }: LayoutProps) {
               <Menu className="w-5 h-5 text-slate-600" />
             </button>
             <div className="hidden lg:block">
-              <div className="text-sm font-semibold text-slate-800 capitalize">
-                {activeTab === 'home' ? 'Dashboard' :
-                  activeTab === 'projects' ? 'Manajemen Proyek' :
-                    activeTab === 'estimator' ? 'Estimator' :
-                      activeTab === 'finance' ? 'Keuangan' :
-                        activeTab === 'hr' ? 'HR & Karyawan' :
-                          activeTab === 'settings' ? 'Pengaturan' : activeTab}
+              <div className="text-sm font-semibold capitalize flex items-center flex-wrap gap-0.5">
+                {headerTitle}
               </div>
             </div>
             <div className="lg:hidden flex items-center gap-2">
@@ -427,10 +451,19 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-y-auto">
-          {children}
-        </main>
+        {/* Page Content + Right Panel */}
+        <div className="flex-1 flex overflow-hidden min-h-0">
+          <main className="flex-1 overflow-y-auto min-w-0">
+            {children}
+          </main>
+          {showRightPanel && (
+            <RightPanel
+              projectId={shellProjectId}
+              onOpenRap={onOpenRap ?? undefined}
+              onOpenProgress={onOpenProgress ?? undefined}
+            />
+          )}
+        </div>
 
         {/* Bottom Navigation — Mobile */}
         <nav className="lg:hidden border-t border-slate-200 bg-white safe-bottom shrink-0">

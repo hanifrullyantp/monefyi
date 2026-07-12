@@ -2,12 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshCw, FileDown, BarChart3, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../../../store/appStore';
+import { useNavigate } from 'react-router-dom';
+import Sparkline from '../../sandbox-ui/Sparkline';
 import { showToast } from '../../../store/uiStore';
 import { getFinanceV2Snapshot } from '../../../services/financeV2/balanceSheetService';
 import { loadJournalEntries } from '../../../services/financeV2/journalService';
 import { loadPayables } from '../../../services/financeV2/payableService';
 import { buildFinanceReportBundle } from '../../../lib/financeV2/reports';
 import { downloadFinanceReportPdf } from '../../../lib/financeV2/reports/exportPdf';
+import { formatRupiah } from '../../../utils/projectUi';
 import ManualJournalModal from '../ManualJournalModal';
 import BalanceDiagnosisModal from '../BalanceDiagnosisModal';
 import { buildBusinessSnapshotFromAccounts } from '../../../lib/migration/project-normalize';
@@ -61,7 +64,8 @@ function today(): string {
 }
 
 export default function FinanceV2DashboardView() {
-  const { tenant, user } = useAppStore();
+  const { tenant, user, projects } = useAppStore();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<FinanceAccount[]>([]);
@@ -278,6 +282,68 @@ export default function FinanceV2DashboardView() {
       <FinanceChartsRow neraca={neraca} entries={entries} loading={loading && !kpis} />
 
       <RecentTransactions entries={entries} loading={loading && entries.length === 0} />
+
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b font-bold flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 text-emerald-600" />
+          Ringkasan Per Project
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-slate-500 uppercase border-b bg-slate-50">
+                <th className="px-5 py-3">Proyek</th>
+                <th className="px-5 py-3">Nilai Kontrak</th>
+                <th className="px-5 py-3">Realisasi</th>
+                <th className="px-5 py-3">Est. Laba</th>
+                <th className="px-5 py-3">Progress</th>
+                <th className="px-5 py-3">Trend</th>
+              </tr>
+            </thead>
+            <tbody>
+              {projects.slice(0, 12).map(p => {
+                const estLaba = Math.max(0, p.total_budget_planned - p.spent_amount);
+                const spark = [
+                  p.spent_amount * 0.6,
+                  p.spent_amount * 0.7,
+                  p.spent_amount * 0.75,
+                  p.spent_amount * 0.85,
+                  p.spent_amount,
+                ].map(v => Math.max(1, v / 1_000_000));
+                return (
+                  <tr
+                    key={p.id}
+                    onClick={() => navigate(`/app/projects/${p.id}`)}
+                    className="border-b border-slate-50 hover:bg-slate-50/80 cursor-pointer"
+                  >
+                    <td className="px-5 py-3">
+                      <div className="font-semibold text-slate-800">{p.name}</div>
+                      <div className="text-xs text-slate-400">{p.client_name || '—'}</div>
+                    </td>
+                    <td className="px-5 py-3 font-semibold">{formatRupiah(p.total_budget_planned)}</td>
+                    <td className="px-5 py-3 font-semibold text-rose-600">{formatRupiah(p.spent_amount)}</td>
+                    <td className="px-5 py-3 font-semibold text-emerald-600">{formatRupiah(estLaba)}</td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-2 min-w-[7rem]">
+                        <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(p.progress_percentage, 100)}%` }} />
+                        </div>
+                        <span className="text-xs font-bold">{Math.round(p.progress_percentage)}%</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3 w-24">
+                      <Sparkline data={spark} color="primary" height={28} />
+                    </td>
+                  </tr>
+                );
+              })}
+              {!projects.length && (
+                <tr><td colSpan={6} className="px-5 py-8 text-center text-slate-500">Belum ada proyek.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       <ManualJournalModal
         open={journalOpen}

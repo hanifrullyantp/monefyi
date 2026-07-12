@@ -74,6 +74,10 @@ export type NormalizedProjectView = {
   totalAktiva: number;
   totalPasiva: number;
   estLaba: number;
+  bahanActual: number;
+  tukangActual: number;
+  hutangItems: MappedProjectView['hutangPiutang'];
+  piutangItems: MappedProjectView['hutangPiutang'];
   workItems: WorkItemRow[];
   checkedCount: number;
   totalWorkItems: number;
@@ -102,10 +106,17 @@ export function normalizeProjectView(project: MappedProjectView): NormalizedProj
   const checkedCount = workItems.filter(
     w => w.item.checked || w.item.qtyActual > 0,
   ).length;
+  const hutangItems = project.hutangPiutang.filter(h => h.type === 'hutang');
+  const piutangItems = project.hutangPiutang.filter(h => h.type === 'piutang');
   const allTransactions = [
     ...project.payments.map(tx => ({ ...tx, sortDate: tx.date })),
     ...project.expenses.map(tx => ({ ...tx, sortDate: tx.date })),
   ].sort((a, b) => new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime());
+
+  // Neraca gambar 3: Aktiva = Bahan + Tukang + Piutang + Saldo
+  const totalAktiva = bahanActual + tukangActual + piutang + project.saldo;
+  // Pasiva = Dana Masuk − Hutang + Est. Laba
+  const totalPasiva = totalPemasukan - hutang + estLaba;
 
   return {
     project,
@@ -117,9 +128,13 @@ export function normalizeProjectView(project: MappedProjectView): NormalizedProj
       project.contractValue > 0
         ? ((totalRealisasi / project.contractValue) * 100).toFixed(1)
         : '0',
-    totalAktiva: project.saldo + piutang,
-    totalPasiva: totalPemasukan - hutang,
+    totalAktiva,
+    totalPasiva,
     estLaba,
+    bahanActual,
+    tukangActual,
+    hutangItems,
+    piutangItems,
     workItems,
     checkedCount,
     totalWorkItems: workItems.length,
