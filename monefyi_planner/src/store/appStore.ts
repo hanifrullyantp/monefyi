@@ -3,6 +3,8 @@ import { signOut as authSignOut } from '../services/authService';
 import { loadNotifications } from '../services/notificationService';
 import { loadProjects } from '../services/projectService';
 import type { FinanceVersion } from '../types/financeV2';
+import type { MigrationFlags } from '../types/rpp';
+import { DEFAULT_MIGRATION_FLAGS } from '../types/rpp';
 
 export type UserRole = 'owner' | 'admin' | 'manager' | 'staff' | 'worker';
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
@@ -128,6 +130,7 @@ interface AppState {
 
   activeTab: string;
   financeVersion: FinanceVersion;
+  migrationFlags: MigrationFlags;
   customDomainContext: import('../services/customDomainService').ResolvedDomainContext | null;
   sidebarOpen: boolean;
   /** Desktop nav sidebar disembunyikan untuk layar lebih lebar (estimator, dll). */
@@ -161,6 +164,7 @@ interface AppState {
   setLastSynced: (date: Date | null) => void;
   setActiveTab: (tab: string) => void;
   setFinanceVersionPreference: (version: FinanceVersion) => void;
+  setMigrationFlags: (flags: MigrationFlags) => void;
   setCustomDomainContext: (ctx: import('../services/customDomainService').ResolvedDomainContext | null) => void;
   setSidebarOpen: (val: boolean) => void;
   setNavSidebarCollapsed: (val: boolean) => void;
@@ -210,6 +214,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   activeTab: 'home',
   financeVersion: 'v1',
+  migrationFlags: { ...DEFAULT_MIGRATION_FLAGS },
   customDomainContext: null,
   sidebarOpen: false,
   navSidebarCollapsed: typeof localStorage !== 'undefined'
@@ -248,6 +253,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setLastSynced: lastSynced => set({ lastSynced }),
   setActiveTab: activeTab => set({ activeTab }),
   setFinanceVersionPreference: financeVersion => set({ financeVersion }),
+  setMigrationFlags: migrationFlags => set({ migrationFlags }),
   setCustomDomainContext: customDomainContext => set({ customDomainContext }),
   setSidebarOpen: sidebarOpen => set({ sidebarOpen }),
   setNavSidebarCollapsed: navSidebarCollapsed => {

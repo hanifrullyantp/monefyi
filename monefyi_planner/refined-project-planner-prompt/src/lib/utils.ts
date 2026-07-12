@@ -17,6 +17,18 @@ export function formatRupiah(amount: number, compact = false): string {
   }).format(amount);
 }
 
+/** Build project detail route with optional tab segment. */
+export function projectDetailRoute(id: number | string, tab?: string): string {
+  const base = `project/${encodeURIComponent(String(id))}`;
+  return tab ? `${base}/${tab}` : base;
+}
+
+/** Safe JS literal for project id in inline onclick handlers (supports UUID). */
+export function projectIdJs(id: number | string): string {
+  if (typeof id === "number") return String(id);
+  return `'${String(id).replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
+}
+
 export function formatDate(dateStr: string): string {
   if (!dateStr) return "-";
   const d = new Date(dateStr);

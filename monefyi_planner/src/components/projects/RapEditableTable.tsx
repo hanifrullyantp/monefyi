@@ -26,6 +26,7 @@ interface RapEditableTableProps {
   loading?: boolean;
   onRefresh: () => Promise<void>;
   onExport?: () => void;
+  materialSuggestions?: string[];
 }
 
 interface PendingSave {
@@ -52,6 +53,7 @@ export default function RapEditableTable({
   loading = false,
   onRefresh,
   onExport,
+  materialSuggestions,
 }: RapEditableTableProps) {
   const showToast = useUiStore(s => s.showToast);
   const { dark, toggle: toggleTheme } = useColorScheme();
@@ -75,12 +77,12 @@ export default function RapEditableTable({
   useRapRealtime(projectId, stableRefresh);
 
   const columnDefs = useMemo(() => {
-    const cols = buildRapColumnDefs(mode, canManage, cellErrors);
+    const cols = buildRapColumnDefs(mode, canManage, cellErrors, materialSuggestions);
     if (!groupByType) return cols;
     return cols.map(c =>
       c.field === 'type' ? { ...c, rowGroup: true, hide: true } : c,
     );
-  }, [mode, canManage, cellErrors, groupByType]);
+  }, [mode, canManage, cellErrors, groupByType, materialSuggestions]);
 
   useEffect(() => {
     const api = gridApiRef.current;

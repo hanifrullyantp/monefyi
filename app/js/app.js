@@ -9,6 +9,26 @@
     const SUPABASE_FN_INSIGHTS = CFG.fnInsights || 'monefyi-generate-insights';
     const SUPABASE_FN_ADMIN_APP_CONFIG = CFG.fnAdminAppConfig || 'monefyi-admin-app-config';
 
+    /** Read persisted Supabase auth from localStorage when getSession() times out offline. */
+    function readSupabaseSessionFromStorage() {
+      try {
+        const ref = SUPABASE_URL.match(/https?:\/\/([^.]+)\.supabase\.co/)?.[1];
+        if (!ref) return null;
+        const raw = localStorage.getItem(`sb-${ref}-auth-token`);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (parsed?.user) return parsed;
+        if (parsed?.session?.user) return parsed.session;
+        return null;
+      } catch {
+        return null;
+      }
+    }
+
+    function isOfflineMode() {
+      return !navigator.onLine;
+    }
+
     // Checkout links (fallback jika app_config tidak set)
     const MONTHLY_CHECKOUT_URL = String(CFG.checkoutMonthly || 'https://lynk.id/asfin-ai/9zexz9z5wom1/checkout');
     const LIFETIME_CHECKOUT_URL = String(CFG.checkoutLifetime || 'https://lynk.id/asfin-ai/j3q0x5ke3g49/checkout');
@@ -1074,8 +1094,15 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
         STATE.db.user = data?.session?.user || null;
       } catch (e) {
         console.warn('getSession', e);
-        STATE.db.session = null;
-        STATE.db.user = null;
+        const cached = readSupabaseSessionFromStorage();
+        if (cached?.user) {
+          STATE.db.session = cached;
+          STATE.db.user = cached.user;
+          console.log('[offline] Restored session from localStorage');
+        } else {
+          STATE.db.session = null;
+          STATE.db.user = null;
+        }
       }
 
       STATE.db.supa.auth.onAuthStateChange(async (event, session) => {
@@ -1274,7 +1301,36 @@ function computeSubscriptionStatus(profile){
     }
 
     async function loadProfileAndSettings(){
-      const p = await ensureProfile();
+      let p = null;
+
+      if (isOfflineMode() && window.dataStore?.getCachedUserProfile) {
+        const cached = await window.dataStore.getCachedUserProfile(STATE.db.user?.id);
+        if (cached?.profile) {
+          p = cached.profile;
+          if (cached.settings) {
+            STATE.settings = { ...DEFAULT_SETTINGS, ...cached.settings };
+          }
+        }
+      }
+
+      if (!p) {
+        if (!isOfflineMode()) {
+          p = await ensureProfile();
+        }
+        if (p && window.dataStore?.cacheUserProfile) {
+          const mergedForCache = { ...DEFAULT_SETTINGS, ...(p?.settings || {}) };
+          window.dataStore.cacheUserProfile(p, mergedForCache).catch(() => {});
+        }
+      }
+
+      if (!p && isOfflineMode()) {
+        p = {
+          id: STATE.db.user?.id,
+          name: STATE.db.user?.email?.split('@')[0] || 'User',
+          settings: DEFAULT_SETTINGS,
+        };
+      }
+
       STATE.db.profile = p;
 
       const email = STATE.db.user?.email || '';
@@ -1378,13 +1434,26 @@ function computeSubscriptionStatus(profile){
         }
       }
 
-      const { data, error } = await supa
-        .from('transactions')
-        .select('*')
-        .gte('date', minISO)
-        .lte('date', maxISO)
-        .order('date', { ascending: false })
-        .order('created_at', { ascending: false });
+      let data = null;
+      let error = null;
+      try {
+        const result = await withTimeout(
+          supa
+            .from('transactions')
+            .select('*')
+            .gte('date', minISO)
+            .lte('date', maxISO)
+            .order('date', { ascending: false })
+            .order('created_at', { ascending: false }),
+          8000,
+          'transactions',
+        );
+        data = result.data;
+        error = result.error;
+      } catch (e) {
+        console.warn('transactions fetch timeout/error', e);
+        error = e;
+      }
 
       if (error) {
         console.warn('transactions fetch error', error);
@@ -1412,16 +1481,19 @@ function computeSubscriptionStatus(profile){
     }
 
     async function dbUpsertTransaction(tx){
-      if (!navigator.onLine && window.dataStore) {
+      const normalizeSaved = (saved) => ({
+        ...saved,
+        amount: Number(saved.amount || 0),
+        meta: saved.meta || {},
+      });
+
+      if (isOfflineMode()) {
+        if (!window.dataStore) throw new Error('Offline storage not ready');
         const existing = await window.dataStore.getTransaction?.(tx.id);
         const saved = existing
           ? await window.dataStore.updateTransaction(tx.id, tx)
           : await window.dataStore.createTransaction(tx);
-        return {
-          ...saved,
-          amount: Number(saved.amount || 0),
-          meta: saved.meta || {},
-        };
+        return normalizeSaved(saved);
       }
 
       const supa = STATE.db.supa;
@@ -1444,7 +1516,13 @@ function computeSubscriptionStatus(profile){
       };
 
       const { data, error } = await supa.from('transactions').upsert(row).select('*').single();
-      if (error) throw error;
+      if (error) {
+        if (window.dataStore) {
+          const existing = await window.dataStore.getTransaction?.(tx.id);
+          if (existing) return normalizeSaved(existing);
+        }
+        throw error;
+      }
 
       const i = STATE.transactions.findIndex(t => t.id === data.id);
       const normalized = { ...data, amount: Number(data.amount||0), meta: data.meta || {} };
@@ -1567,6 +1645,40 @@ async function upsertTransaction_legacy_local(tx) {
     }
     window.ensureAppShellVisible = ensureAppShellVisible;
 
+    async function hydrateLocalTransactions() {
+      if (!window.dataStore?.getTransactions || !STATE.db.user) return false;
+      const anchor = toMonthKey(STATE.period.end);
+      const months = lastNMonths(6, anchor);
+      const minTrendISO = toISODate(startOfMonth(months[0]));
+      const minISO = (new Date(STATE.period.start) < new Date(minTrendISO))
+        ? STATE.period.start
+        : minTrendISO;
+      const maxISO = STATE.period.end;
+
+      try {
+        const local = await window.dataStore.getTransactions({
+          userId: STATE.db.user.id,
+          startDate: minISO,
+          endDate: maxISO,
+        });
+        if (!local?.length) return false;
+        STATE.transactions = local.map((t) => ({
+          ...t,
+          amount: Number(t.amount || 0),
+          meta: (t.meta && typeof t.meta === 'object') ? t.meta : {},
+        }));
+        STATE.ui.txLoading = false;
+        STATE.ui.txVisibleCount = 50;
+        ensureSelectOptions();
+        rerender();
+        console.log(`[offline] Hydrated ${local.length} transactions from IndexedDB`);
+        return true;
+      } catch (e) {
+        console.warn('[offline] hydrate failed', e);
+        return false;
+      }
+    }
+
     async function initOfflineFirst() {
       try {
         await loadAppModule('js/services/offline-db.js').then((m) => m.initOfflineDB());
@@ -1604,12 +1716,19 @@ async function upsertTransaction_legacy_local(tx) {
       enterAppShell();
       try {
         if (window.MonefyiI18n?.mergeIntoI18N) window.MonefyiI18n.mergeIntoI18N(I18N);
+
+        // Offline layer first — IndexedDB must be ready before network calls
+        try { await initOfflineFirst(); } catch (e) { console.warn('initOfflineFirst', e); }
+
+        if (isOfflineMode()) {
+          try { await hydrateLocalTransactions(); } catch (e) { console.warn('hydrateLocalTransactions', e); }
+        }
+
         await withTimeout(loadAppConfig(), 8000, 'app_config_boot').catch(() => null);
         await withTimeout(loadProfileAndSettings(), 12000, 'profile').catch((e) => {
           console.warn('loadProfileAndSettings', e);
           return null;
         });
-        try { await initOfflineFirst(); } catch (e) { console.warn('initOfflineFirst', e); }
         try { STATE.budgetsByMonth = await withTimeout(loadBudgets(), 10000, 'budgets'); } catch (e) { console.warn('loadBudgets', e); }
         window.dataStore?.mirrorBudgetsFromState?.(STATE.budgetsByMonth).catch(() => {});
         try { await withTimeout(refreshTransactionsRange(), 15000, 'transactions'); } catch (e) { console.warn('refreshTransactionsRange', e); }

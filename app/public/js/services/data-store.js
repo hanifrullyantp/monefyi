@@ -232,3 +232,32 @@ export async function hydrateStateTransactions(filters) {
     meta: normalizeMeta(t.meta),
   }));
 }
+
+/**
+ * Cache profile + settings for offline boot.
+ * @param {object} profile
+ * @param {object} settings
+ */
+export async function cacheUserProfile(profile, settings) {
+  const userId = getUserId() || profile?.id;
+  if (!userId) return;
+  const db = await getDb();
+  await db.app_state.put({
+    key: `profile_${userId}`,
+    value: {
+      profile,
+      settings,
+      cached_at: new Date().toISOString(),
+    },
+  });
+}
+
+/**
+ * @param {string} userId
+ */
+export async function getCachedUserProfile(userId) {
+  if (!userId) return null;
+  const db = await getDb();
+  const row = await db.app_state.get(`profile_${userId}`);
+  return row?.value || null;
+}

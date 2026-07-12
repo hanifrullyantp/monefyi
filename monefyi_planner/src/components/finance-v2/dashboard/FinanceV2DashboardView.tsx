@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { RefreshCw, FileDown, BarChart3 } from 'lucide-react';
+import { RefreshCw, FileDown, BarChart3, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../../../store/appStore';
 import { showToast } from '../../../store/uiStore';
@@ -9,6 +9,9 @@ import { loadPayables } from '../../../services/financeV2/payableService';
 import { buildFinanceReportBundle } from '../../../lib/financeV2/reports';
 import { downloadFinanceReportPdf } from '../../../lib/financeV2/reports/exportPdf';
 import ManualJournalModal from '../ManualJournalModal';
+import BalanceDiagnosisModal from '../BalanceDiagnosisModal';
+import { buildBusinessSnapshotFromAccounts } from '../../../lib/migration/project-normalize';
+import { validateBusinessBalance } from '../../../lib/migration/balance-sheet';
 import type { FinanceAccount, FinanceKpis, JournalEntry } from '../../../types/financeV2';
 import NeracaTable from './neraca/NeracaTable';
 import BalanceProofBar from './BalanceProofBar';
@@ -58,7 +61,7 @@ function today(): string {
 }
 
 export default function FinanceV2DashboardView() {
-  const { tenant, user } = useAppStore();
+  const { tenant, user, migrationFlags } = useAppStore();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<FinanceAccount[]>([]);
@@ -69,6 +72,13 @@ export default function FinanceV2DashboardView() {
   const [journalOpen, setJournalOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [staleBanner, setStaleBanner] = useState(false);
+  const [balanceOpen, setBalanceOpen] = useState(false);
+
+  const balanceCheck = useMemo(() => {
+    if (!migrationFlags.finance_dashboard_v2 || !tenant?.name) return null;
+    const snap = buildBusinessSnapshotFromAccounts(tenant.name, accounts, totalHutangOpen);
+    return validateBusinessBalance(snap);
+  }, [migrationFlags.finance_dashboard_v2, tenant?.name, accounts, totalHutangOpen]);
 
   const load = useCallback(async () => {
     if (!tenant?.id) return;
@@ -233,6 +243,33 @@ export default function FinanceV2DashboardView() {
         isBalanced={totals.isBalanced}
       />
 
+      {migrationFlags.finance_dashboard_v2 && balanceCheck && (
+        <div className="flex items-center justify-between bg-white rounded-2xl border border-slate-100 px-5 py-4">
+          <div className="flex items-center gap-2">
+            {balanceCheck.isBalanced ? (
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+            ) : (
+              <AlertTriangle className="w-5 h-5 text-rose-600" />
+            )}
+            <div>
+              <div className="font-bold text-sm">Neraca Ringkas — Validator</div>
+              <div className="text-xs text-slate-500">
+                {balanceCheck.isBalanced ? 'Aktiva = Pasiva + Ekuitas' : 'Selisih terdeteksi — klik untuk diagnosa'}
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setBalanceOpen(true)}
+            className={`text-xs font-bold px-4 py-2 rounded-xl ${
+              balanceCheck.isBalanced ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+            }`}
+          >
+            {balanceCheck.isBalanced ? 'Balance' : 'Diagnosa'}
+          </button>
+        </div>
+      )}
+
       <QuickActionsRow
         onIncome={() => setJournalOpen(true)}
         onExpense={() => setJournalOpen(true)}
@@ -249,6 +286,12 @@ export default function FinanceV2DashboardView() {
         userId={user?.id}
         accounts={accounts}
         onSaved={load}
+      />
+
+      <BalanceDiagnosisModal
+        open={balanceOpen}
+        onClose={() => setBalanceOpen(false)}
+        check={balanceCheck}
       />
     </div>
   );

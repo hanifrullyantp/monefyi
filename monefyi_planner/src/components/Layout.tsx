@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, FolderOpen, Wallet, Settings, Bell, Menu, X,
   Sparkles, Wifi, WifiOff, Clock, Users, Calculator,
-  BarChart3, Shield, ChevronRight,
+  BarChart3, Shield, ChevronRight, Database,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { useUiStore } from '../store/uiStore';
@@ -17,6 +17,7 @@ import { MonefyiLogo } from './MonefyiLogo';
 import ToastHost from './ToastHost';
 import UndoToast from './ui/UndoToast';
 import { loadFinanceVersion } from '../lib/financeVersion';
+import { loadMigrationFlags } from '../lib/migrationFlags';
 import { useOrgBrand } from '../hooks/useOrgBrand';
 import { MONEFYI_BRAND } from '../lib/orgBrand';
 
@@ -27,6 +28,7 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const {
     user, tenant, activeTab, setActiveTab, financeVersion, setFinanceVersionPreference,
+    migrationFlags, setMigrationFlags,
     syncStatus, pendingSyncCount, isOnline, lastSynced, unreadCount, commandModalOpen,
     setCommandModalOpen, sidebarOpen, setSidebarOpen, navSidebarCollapsed, toggleNavSidebarCollapsed,
     platformRole, uiViewMode,
@@ -41,7 +43,19 @@ export default function Layout({ children }: LayoutProps) {
     loadFinanceVersion(user.id)
       .then(setFinanceVersionPreference)
       .catch(() => setFinanceVersionPreference('v1'));
-  }, [user?.id, setFinanceVersionPreference]);
+    loadMigrationFlags(user.id)
+      .then(setMigrationFlags)
+      .catch(() => setMigrationFlags({ project_view_v2: false, database_master: false, create_project_smart: false, finance_dashboard_v2: false }));
+  }, [user?.id, setFinanceVersionPreference, setMigrationFlags]);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail) setMigrationFlags(detail);
+    };
+    window.addEventListener('monefyi:migration-flags-changed', handler);
+    return () => window.removeEventListener('monefyi:migration-flags-changed', handler);
+  }, [setMigrationFlags]);
 
   const { style: orgBrandStyle } = useOrgBrand(tenant?.brandColor);
   const isSuperAdmin = isPlatformAdmin(platformRole, user?.email);
@@ -71,6 +85,9 @@ export default function Layout({ children }: LayoutProps) {
     if (tabId === 'finance') {
       return activeTab === 'finance' || location.pathname.startsWith('/app/finance-v2');
     }
+    if (tabId === 'database') {
+      return location.pathname.startsWith('/app/database');
+    }
     if (tabId === 'home') {
       return activeTab === 'home' && !location.pathname.startsWith('/app/estimator') && !location.pathname.startsWith('/app/finance-v2');
     }
@@ -80,6 +97,9 @@ export default function Layout({ children }: LayoutProps) {
   const ownerSidebarItems = [
     { id: 'home', label: 'Dashboard', icon: Home },
     { id: 'projects', label: 'Proyek', icon: FolderOpen },
+    ...(migrationFlags.database_master
+      ? [{ id: 'database', label: 'Database', icon: Database }]
+      : []),
     { id: 'estimator', label: 'Estimator', icon: Calculator },
     { id: 'finance', label: 'Keuangan', icon: Wallet },
     ...(canAccessHr
@@ -106,6 +126,9 @@ export default function Layout({ children }: LayoutProps) {
     if (tabId === 'estimator') {
       setActiveTab('estimator');
       navigate('/app/estimator');
+    } else if (tabId === 'database') {
+      setActiveTab('database');
+      navigate('/app/database');
     } else if (tabId === 'finance' && financeVersion === 'v2') {
       setActiveTab('finance');
       navigate('/app/finance-v2');

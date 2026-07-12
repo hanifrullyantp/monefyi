@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { User, Globe, LogOut, Edit3, Check, Building2, Bell, Shield,
   Info, RefreshCw, Loader2, ChevronRight, Lock, Users, Wifi, WifiOff, Sparkles, Wallet,
-  CreditCard,
+  CreditCard, FlaskConical,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { showToast, useUiStore } from '../store/uiStore';
@@ -21,15 +21,16 @@ import { isPlatformAdmin } from '../services/adminService';
 import { Link } from 'react-router-dom';
 import { loadFinanceVersion, setFinanceVersion } from '../lib/financeVersion';
 import type { FinanceVersion } from '../types/financeV2';
+import MigrationDeveloperPanel from '../components/settings/MigrationDeveloperPanel';
 import UpgradePlansPanel from '../components/settings/UpgradePlansPanel';
 import CustomDomainPanel from '../components/settings/CustomDomainPanel';
 import { formatPlanPriceIdr, planForOrg, type PricingPlan } from '../lib/pricingPlans';
 import { countProjectsCreatedThisMonth, loadPricingPlans } from '../services/pricingPlanService';
 
-type SettingsTab = 'profil' | 'akun' | 'organisasi' | 'pricelist' | 'domain' | 'notifikasi' | 'keamanan' | 'tentang';
+type SettingsTab = 'profil' | 'akun' | 'organisasi' | 'pricelist' | 'domain' | 'notifikasi' | 'keamanan' | 'tentang' | 'developer';
 
 const VALID_SETTINGS_TABS: SettingsTab[] = [
-  'profil', 'akun', 'organisasi', 'pricelist', 'domain', 'notifikasi', 'keamanan', 'tentang',
+  'profil', 'akun', 'organisasi', 'pricelist', 'domain', 'notifikasi', 'keamanan', 'tentang', 'developer',
 ];
 
 const TIMEZONES = [
@@ -337,6 +338,7 @@ export default function Settings() {
     { id: 'domain', label: 'Custom Domain', icon: Globe, show: canEditOrg },
     { id: 'notifikasi', label: 'Notifikasi', icon: Bell, show: true },
     { id: 'keamanan', label: 'Keamanan', icon: Shield, show: true },
+    { id: 'developer', label: 'Developer', icon: FlaskConical, show: isOwner },
     { id: 'tentang', label: 'Tentang', icon: Info, show: true },
   ];
 
@@ -684,6 +686,12 @@ export default function Settings() {
           <button onClick={handleLogoutAll} className="w-full flex items-center justify-center gap-2 py-3 text-sm text-slate-600 hover:bg-slate-100 rounded-2xl border border-slate-200 transition-colors">
             Keluar dari semua perangkat
           </button>
+        </div>
+      )}
+
+      {tab === 'developer' && isOwner && user?.id && (
+        <div className="bg-white rounded-2xl border border-slate-100 p-6">
+          <MigrationDeveloperPanel userId={user.id} />
         </div>
       )}
 

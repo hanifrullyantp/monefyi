@@ -2051,6 +2051,64 @@ body {
 .neraca-row-label svg { width: 14px; height: 14px; color: var(--gray-400); }
 .neraca-row-value { font-weight: 700; color: var(--gray-800); }
 .neraca-total { margin-top: 10px; padding-top: 10px; border-top: 2px solid var(--gray-200); font-weight: 800; font-size: 14px; }
+.neraca-row--error { background: var(--danger-light); border-radius: var(--radius-sm); padding: 4px 6px; margin: 0 -6px; }
+
+/* ===== BALANCE BADGE & DIAGNOSIS ===== */
+.balance-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: opacity var(--trans-fast);
+}
+.balance-badge:hover { opacity: 0.85; }
+.balance-badge svg { width: 14px; height: 14px; }
+.balance-badge--ok { background: var(--success-light); color: var(--success-dark); }
+.balance-badge--error { background: var(--danger-light); color: var(--danger-dark); }
+.balance-badge-gap { font-size: 11px; opacity: 0.9; }
+
+.balance-diagnosis-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: var(--gray-50);
+}
+.balance-diagnosis-header svg { width: 24px; height: 24px; flex-shrink: 0; }
+
+.balance-issues { display: flex; flex-direction: column; gap: 10px; }
+.balance-issue {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: var(--danger-light);
+  border-left: 3px solid var(--danger);
+}
+.balance-issue--warn {
+  background: var(--warning-light);
+  border-color: var(--warning);
+}
+.balance-issue-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.balance-issue-title { font-size: 13px; font-weight: 600; color: var(--gray-800); line-height: 1.4; }
+.balance-issue-delta { font-size: 11px; color: var(--gray-500); margin-top: 4px; }
 
 /* ===== ALERT CARD ===== */
 .alert-card {

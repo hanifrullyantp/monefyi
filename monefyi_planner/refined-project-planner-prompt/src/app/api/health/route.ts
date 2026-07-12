@@ -1,13 +1,16 @@
-import { db } from "@/db";
-import { sql } from "drizzle-orm";
+import { checkDatabaseHealth, getDbBackend, isDataStoreConfigured } from "@/db/data-access";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  try {
-    await db.execute(sql`select 1`);
-    return Response.json({ ok: true });
-  } catch {
-    return Response.json({ ok: false }, { status: 500 });
+  if (!isDataStoreConfigured()) {
+    return Response.json({ ok: false, reason: "Database not configured" }, { status: 503 });
   }
+
+  const healthy = await checkDatabaseHealth();
+  if (!healthy) {
+    return Response.json({ ok: false, database: false, backend: getDbBackend() }, { status: 500 });
+  }
+
+  return Response.json({ ok: true, database: true, backend: getDbBackend() });
 }

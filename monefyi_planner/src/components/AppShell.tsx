@@ -10,6 +10,7 @@ import HrEmployees from '../pages/HrEmployees';
 import WorkerDashboard from '../pages/WorkerDashboard';
 import EstimatorRoutes from '../pages/estimator/EstimatorRoutes';
 import FinanceV2Routes from '../pages/finance-v2/FinanceV2Routes';
+import DatabaseMaster from '../pages/DatabaseMaster';
 import OnboardingChecklist from './OnboardingChecklist';
 import { useAppStore } from '../store/appStore';
 import { showWorkerShell, canAccessManagerFeatures } from '../utils/platformUi';
@@ -119,11 +120,20 @@ function FinanceV2Shell() {
   );
 }
 
+function DatabaseShell() {
+  return (
+    <Layout>
+      <DatabaseMaster />
+    </Layout>
+  );
+}
+
 export default function AppShell() {
   return (
     <Routes>
       <Route index element={<AppContent />} />
       <Route path="projects/:id" element={<AppContent />} />
+      <Route path="database" element={<DatabaseShell />} />
       <Route path="estimator/*" element={<EstimatorShell />} />
       <Route path="finance-v2/*" element={<FinanceV2Shell />} />
     </Routes>

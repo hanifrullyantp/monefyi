@@ -3,7 +3,7 @@
  * @module services/offline-db
  */
 
-const DEXIE_URL = 'https://unpkg.com/dexie@4.0.7/dist/modern/dexie.mjs';
+import Dexie from '../vendor/dexie.mjs';
 
 /** @type {import('dexie').Dexie|null} */
 let _db = null;
@@ -18,8 +18,6 @@ export async function initOfflineDB() {
   if (_initPromise) return _initPromise;
 
   _initPromise = (async () => {
-    const { default: Dexie } = await import(/* @vite-ignore */ DEXIE_URL);
-
     class MonefyiDB extends Dexie {
       constructor() {
         super('MonefyiDB');

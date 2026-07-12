@@ -20,7 +20,7 @@ const ACTIONS = [
  */
 export function renderQuickAccess(callbacks = {}) {
   const el = document.createElement('section');
-  el.className = 'home-section home-quick-access';
+  el.className = 'home-quick-access';
 
   const items = ACTIONS.map((a) => `
     <button type="button" class="home-quick-btn tap" data-action="${a.id}">
@@ -33,7 +33,7 @@ export function renderQuickAccess(callbacks = {}) {
     <div class="home-section-header">
       <h2 class="home-section-title">${Icon('sparkles', { size: 18 })} Akses Cepat</h2>
     </div>
-    <div class="home-quick-scroll hide-scrollbar">${items}</div>
+    <div class="home-quick-scroll">${items}</div>
   `;
 
   el.querySelectorAll('[data-action]').forEach((btn) => {

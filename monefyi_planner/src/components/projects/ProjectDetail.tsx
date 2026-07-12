@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useAppStore, Project } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
+import { loadMaterials } from '../../services/rpp/materialService';
 import { archiveProject, updateProject as updateProjectApi } from '../../services/projectService';
 import { loadRapItems, rapSummary, rapActualsFromCosts, createRapItem, removeRapItemWithCleanup, updateRapItem } from '../../services/rapService';
 import { findRapItemDuplicate } from '../../lib/rapDuplicateDetect';
@@ -46,7 +47,7 @@ interface ProjectDetailProps {
 }
 
 export default function ProjectDetail({ project: initialProject, onClose }: ProjectDetailProps) {
-  const { setCommandModalOpen, setSelectedProjectId, updateProject, removeProject, refreshData, tenant, user, projects } = useAppStore();
+  const { setCommandModalOpen, setSelectedProjectId, updateProject, removeProject, refreshData, tenant, user, projects, migrationFlags } = useAppStore();
   const showToast = useUiStore(s => s.showToast);
   const [project, setProject] = useState(initialProject);
   const [activeTab, setActiveTab] = useState<CommandTabId>('overview');
@@ -89,7 +90,17 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   const isDesktop = useIsDesktop();
   const [rapView, setRapView] = useState<'spreadsheet' | 'list' | 'checklist'>('checklist');
   const [amountDrafts, setAmountDrafts] = useState<Record<string, string>>({});
-  const [toggleRealizationBusy, setToggleRealizationBusy] = useState<string | null>(null);
+  const [materialSuggestions, setMaterialSuggestions] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!migrationFlags.database_master || !tenant?.id) {
+      setMaterialSuggestions([]);
+      return;
+    }
+    loadMaterials(tenant.id)
+      .then(rows => setMaterialSuggestions(rows.map(r => r.name)))
+      .catch(() => setMaterialSuggestions([]));
+  }, [migrationFlags.database_master, tenant?.id]);
 
   const canManage = user?.role === 'owner' || user?.role === 'manager' || user?.role === 'admin';
   const canArchive = user?.role === 'owner';
@@ -631,7 +642,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                           {canManage && <button type="button" onClick={() => setShowRapForm(true)} className="mt-2 text-emerald-600 text-sm font-bold">+ Tambah item pertama</button>}
                         </div>
                       ) : rapView === 'spreadsheet' && user?.id ? (
-                        <RapEditableTable projectId={project.id} items={rapItems} rapActuals={rapActuals} mode="planning" canManage={canManage} recordedBy={user.id} loading={loading} onRefresh={reload} onExport={handleExportRap} />
+                        <RapEditableTable projectId={project.id} items={rapItems} rapActuals={rapActuals} mode="planning" canManage={canManage} recordedBy={user.id} loading={loading} onRefresh={reload} onExport={handleExportRap} materialSuggestions={materialSuggestions} />
                       ) : (
                         <RapItemList items={rapItems} rapActuals={rapActuals} mode="planning" canManage={canManage} rapTotal={rapTotal} onEdit={startEditRap} onDelete={id => setConfirmRapId(id)} />
                       )
@@ -694,7 +705,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                         ) : rapView === 'checklist' ? (
                           <RapChecklistView items={rapItems} rapActuals={rapActuals} canManage={canManage} amountDrafts={amountDrafts} onAmountDraftChange={(id, v) => setAmountDrafts(d => ({ ...d, [id]: v }))} onToggle={handleToggleRealization} busyId={toggleRealizationBusy} />
                         ) : rapView === 'spreadsheet' && user?.id ? (
-                          <RapEditableTable projectId={project.id} items={rapItems} rapActuals={rapActuals} mode="realisasi" canManage={canManage} recordedBy={user.id} loading={loading} onRefresh={reload} onExport={handleExportRap} />
+                          <RapEditableTable projectId={project.id} items={rapItems} rapActuals={rapActuals} mode="realisasi" canManage={canManage} recordedBy={user.id} loading={loading} onRefresh={reload} onExport={handleExportRap} materialSuggestions={materialSuggestions} />
                         ) : (
                           <RapItemList items={rapItems} rapActuals={rapActuals} mode="realisasi" canManage={canManage} rapTotal={rapTotal} onEdit={startEditRap} onDelete={id => setConfirmRapId(id)} />
                         )}

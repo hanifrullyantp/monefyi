@@ -8,6 +8,12 @@ import {
 import { useAppStore, Project } from '../store/appStore';
 import { createProject, updateProject as updateProjectApi } from '../services/projectService';
 import ProjectDetail from '../components/projects/ProjectDetail';
+import ProjectDetailV2 from '../components/projects/v2/ProjectDetailV2';
+import CreateProjectRapDraft from '../components/projects/CreateProjectRapDraft';
+import { createProjectWithRap } from '../lib/migration/create-project';
+import { loadRppMaster } from '../services/rpp/masterLoader';
+import type { ProjectDraft } from '../lib/migration/suggestion-engine';
+import type { JobTemplate } from '../types/rpp';
 import ProjectTypeSelect from '../components/projects/ProjectTypeSelect';
 import KanbanView from '../components/projects/views/KanbanView';
 import GanttPlannerView from '../components/projects/gantt/GanttPlannerView';
@@ -31,11 +37,16 @@ function readStoredView(): ProjectView {
 }
 
 function CreateProjectModal({ onClose }: { onClose: () => void }) {
-  const { user, tenant, addProject } = useAppStore();
+  const { user, tenant, addProject, migrationFlags } = useAppStore();
   const showToast = useUiStore(s => s.showToast);
+  const smartCreate = migrationFlags.create_project_smart;
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [templates, setTemplates] = useState<JobTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+  const [volume, setVolume] = useState(3);
+  const [draft, setDraft] = useState<ProjectDraft | null>(null);
   const [form, setForm] = useState({
     name: '',
     client_name: '',
@@ -46,6 +57,14 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
     description: '',
     total_budget: 0,
   });
+
+  useEffect(() => {
+    if (!smartCreate || !tenant?.id || step !== 2) return;
+    loadRppMaster(tenant.id).then(m => {
+      setTemplates(m.templates);
+      if (m.templates[0]) setSelectedTemplateId(m.templates[0].id);
+    }).catch(() => {});
+  }, [smartCreate, tenant?.id, step]);
 
   const handleCreate = async () => {
     if (!user || !tenant) return;
@@ -60,7 +79,27 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
     setLoading(true);
     setError('');
     try {
-      const project = await createProject(
+      if (smartCreate && draft && selectedTemplateId) {
+        const project = await createProjectWithRap({
+          orgId: tenant.id,
+          userId: user.id,
+          currency: tenant.currency,
+          plan: tenant.plan,
+          draft,
+          meta: {
+            name: form.name.trim(),
+            client: form.client_name.trim(),
+            startDate: form.start_date,
+            endDate: form.end_date,
+            contractValue: form.total_budget || draft.totalSell,
+            notes: form.description.trim(),
+            type: form.type,
+            location: form.location.trim(),
+          },
+        });
+        addProject(project);
+      } else {
+        const project = await createProject(
         {
           name: form.name.trim(),
           description: form.description.trim(),
@@ -77,7 +116,8 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
         tenant.currency,
         tenant.plan,
       );
-      addProject(project);
+        addProject(project);
+      }
       showToast('Proyek berhasil dibuat', 'success');
       onClose();
     } catch (e) {
@@ -111,7 +151,33 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
               />
             </>
           )}
-          {step === 2 && (
+          {step === 2 && smartCreate && (
+            <>
+              <label className="text-xs text-slate-500 mb-1 block">Template Job</label>
+              <select
+                value={selectedTemplateId ?? ''}
+                onChange={e => setSelectedTemplateId(Number(e.target.value))}
+                className="w-full px-4 py-3 rounded-xl border text-sm mb-3"
+              >
+                {templates.map(t => (
+                  <option key={t.id} value={t.id}>{t.name} ({t.baseUnit})</option>
+                ))}
+              </select>
+              <label className="text-xs text-slate-500 mb-1 block">Volume ({templates.find(t => t.id === selectedTemplateId)?.baseUnit || 'unit'})</label>
+              <input type="number" min={0.1} step={0.1} value={volume} onChange={e => setVolume(Number(e.target.value))} className="w-full px-4 py-3 rounded-xl border text-sm mb-3" />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block">Mulai</label>
+                  <input type="date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} className="w-full px-4 py-3 rounded-xl border text-sm" />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block">Selesai</label>
+                  <input type="date" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })} className="w-full px-4 py-3 rounded-xl border text-sm" />
+                </div>
+              </div>
+            </>
+          )}
+          {step === 2 && !smartCreate && (
             <>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -128,7 +194,14 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
               <div className="p-3 bg-emerald-50 rounded-xl text-xs text-emerald-700 flex gap-2"><Info className="w-4 h-4 shrink-0" /> Budget menjadi acuan EVM & analisa AI.</div>
             </>
           )}
-          {step === 3 && (
+          {step === 3 && smartCreate && selectedTemplateId && tenant && (
+            <CreateProjectRapDraft
+              orgId={tenant.id}
+              selections={[{ templateId: selectedTemplateId, volume }]}
+              onDraftChange={setDraft}
+            />
+          )}
+          {step === 3 && !smartCreate && (
             <div className="text-center py-4 space-y-2">
               <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
               <h4 className="font-bold text-lg">{form.name || 'Proyek baru'}</h4>
@@ -156,7 +229,7 @@ interface ProjectsProps {
 }
 
 export default function Projects({ initialProjectId, onOpenProject, onCloseProject }: ProjectsProps) {
-  const { projects, projectsListFilter, setProjectsListFilter, setSelectedProjectId, user, updateProject, tenant } = useAppStore();
+  const { projects, projectsListFilter, setProjectsListFilter, setSelectedProjectId, user, updateProject, tenant, migrationFlags } = useAppStore();
   const [projectView, setProjectView] = useState<ProjectView>(readStoredView);
   const [listLayout, setListLayout] = useState<'card' | 'compact'>('card');
   const [search, setSearch] = useState('');
@@ -164,12 +237,16 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
   const [sort, setSort] = useState<ProjectSort>('recent');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [ganttFocusId, setGanttFocusId] = useState<string | null>(null);
+  const [useV2View, setUseV2View] = useState(false);
   const ganttExpanded = useGanttStore(s => s.expandedView);
   const fullscreenGantt = projectView === 'timeline' && ganttExpanded;
 
   const canCreate = user?.role === 'owner' || user?.role === 'manager' || user?.role === 'admin';
   const showToast = useUiStore(s => s.showToast);
+
+  useEffect(() => {
+    setUseV2View(migrationFlags.project_view_v2);
+  }, [migrationFlags.project_view_v2]);
 
   useEffect(() => {
     if (!initialProjectId) {
@@ -501,7 +578,15 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
       )}
 
       <AnimatePresence>
-        {selectedProject && (
+        {selectedProject && useV2View && (
+          <ProjectDetailV2
+            key={selectedProject.id}
+            project={selectedProject}
+            onClose={closeProject}
+            onSwitchClassic={() => setUseV2View(false)}
+          />
+        )}
+        {selectedProject && !useV2View && (
           <ProjectDetail key={selectedProject.id} project={selectedProject} onClose={closeProject} />
         )}
         {showCreate && <CreateProjectModal onClose={() => setShowCreate(false)} />}

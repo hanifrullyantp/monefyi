@@ -1,5 +1,5 @@
 // Offline-first service worker for Monefyi PWA.
-const CACHE_VERSION = 'v2-offline-first';
+const CACHE_VERSION = 'v2-offline-first-2';
 const STATIC_CACHE = `monefyi-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `monefyi-runtime-${CACHE_VERSION}`;
 
@@ -16,6 +16,7 @@ const shellUrls = [
   new URL('./js/monefyi-ui.js', self.location).href,
   new URL('./js/i18n.js', self.location).href,
   new URL('./js/utils/module-loader.js', self.location).href,
+  new URL('./js/vendor/dexie.mjs', self.location).href,
   new URL('./js/services/offline-db.js', self.location).href,
   new URL('./js/services/sync-engine.js', self.location).href,
   new URL('./js/services/data-store.js', self.location).href,

@@ -88,6 +88,7 @@ export function buildRapColumnDefs(
   mode: 'planning' | 'realisasi',
   canEdit: boolean,
   cellErrors: Record<string, string>,
+  materialSuggestions?: string[],
 ): ColDef<RapTableRow>[] {
   const planEditable = canEdit;
   const realisasiQtyEditable = canEdit && mode === 'realisasi';
@@ -109,6 +110,12 @@ export function buildRapColumnDefs(
       headerCheckboxSelection: true,
       cellClassRules: errClass('name'),
       valueSetter: makeSetter('name', mode),
+      ...(materialSuggestions?.length
+        ? {
+            cellEditor: 'agRichSelectCellEditor',
+            cellEditorParams: { values: materialSuggestions, allowTyping: true, filterList: true },
+          }
+        : {}),
     },
     {
       field: 'type',
