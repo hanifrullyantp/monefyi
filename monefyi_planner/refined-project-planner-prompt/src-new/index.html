@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Plan. Track. Profit. — Sistem Manajemen Bisnis Konstruksi Terintegrasi" />
+  <title>Project Planner by Monefyi.com</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <!-- CSS layers (Phase 2 will populate each file) -->
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/responsive.css" />
+  <link rel="stylesheet" href="css/pages/dashboard.css" />
+  <link rel="stylesheet" href="css/pages/projects.css" />
+  <link rel="stylesheet" href="css/pages/project-detail.css" />
+  <link rel="stylesheet" href="css/pages/finance.css" />
+  <link rel="stylesheet" href="css/pages/database.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+</head>
+<body>
+  <div id="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-brand">Monefyi<span class="logo-dot"></span>com</div>
+        <div class="logo-tagline">Plan. Track. Profit.</div>
+      </div>
+      <nav class="sidebar-nav" id="sidebar-nav"></nav>
+      <div class="sidebar-user">
+        <div class="user-avatar">BK</div>
+        <div class="user-info">
+          <div class="user-name">CV Berkah Konstruksi</div>
+          <div class="user-role">Administrator</div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <div class="main-wrapper">
+      <header class="topbar" id="topbar">
+        <div class="topbar-left">
+          <button class="topbar-menu-btn icon-btn" id="menu-btn" aria-label="Toggle menu">
+            <i data-lucide="menu"></i>
+          </button>
+          <div class="topbar-breadcrumb" id="topbar-breadcrumb">
+            <span class="breadcrumb-current">Dashboard</span>
+          </div>
+        </div>
+        <div class="topbar-center">
+          <div class="topbar-search" id="desktop-search-trigger">
+            <i data-lucide="search"></i>
+            <input type="text" placeholder="Cari cepat... (Ctrl+K)" id="global-search" aria-label="Global search" />
+            <span class="search-kbd">⌘K</span>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-btn hide-mobile" id="sync-btn" title="Refresh Data">
+            <i data-lucide="rotate-cw"></i>
+          </button>
+          <button class="icon-btn" aria-label="Notifications" id="notif-btn">
+            <i data-lucide="bell"></i>
+            <span class="notif-dot"></span>
+          </button>
+          <div class="user-profile-trigger">
+            <button class="avatar-btn" aria-label="Profile">BK</button>
+            <div class="user-name-desktop hide-mobile">CV Berkah</div>
+          </div>
+        </div>
+      </header>
+
+      <div class="content-layout-container">
+        <main class="page-content" id="page-content" role="main">
+          <div id="page-view"></div>
+        </main>
+
+        <aside class="right-panel hide-tablet" id="right-panel">
+          <div class="right-panel-section">
+            <div class="section-header">
+              <div class="section-title"><i data-lucide="zap"></i> Aksi Cepat</div>
+            </div>
+            <div class="quick-actions-grid" id="quick-actions-grid"></div>
+          </div>
+          <div class="right-panel-section">
+            <div class="section-header">
+              <div class="section-title"><i data-lucide="bell"></i> Notifikasi</div>
+            </div>
+            <div id="right-panel-notif-list"></div>
+          </div>
+          <div class="right-panel-section">
+            <div class="section-header">
+              <div class="section-title"><i data-lucide="history"></i> Aktivitas Terakhir</div>
+            </div>
+            <div id="right-panel-activity-list" class="timeline-mini"></div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <nav class="bottom-nav" id="bottom-nav" aria-label="Bottom navigation">
+      <div class="bottom-nav-inner" id="bottom-nav-inner"></div>
+    </nav>
+
+    <div class="toast-container" id="toast-container" aria-live="polite"></div>
+    <div id="modal-container"></div>
+    <div id="dropdown-overlay" style="position:fixed;inset:0;z-index:290;display:none;"></div>
+  </div>
+
+  <!-- JS modules (ES modules) -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+/* =====================================================
+   PROJECT PLANNER — Responsive Breakpoints
+   Breakpoints match existing globals.css:
+   - mobile: max 640px
+   - tablet: max 1023px
+   - desktop: min 1024px
+   - wide: min 1440px
+   Full rules migrate in Phase 2.3.4 (layout.css)
+   ===================================================== */
+
+@media (max-width: 640px) {
+  html { font-size: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

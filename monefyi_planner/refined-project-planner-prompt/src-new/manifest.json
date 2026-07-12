@@ -1,0 +1,11 @@
+{
+  "name": "Monefyi Project Planner",
+  "short_name": "Planner",
+  "description": "Plan. Track. Profit. — Sistem Manajemen Bisnis Konstruksi Terintegrasi",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F9FAFB",
+  "theme_color": "#2563EB",
+  "lang": "id",
+  "icons": []
+}

@@ -1,0 +1,49 @@
+/* =====================================================
+   PROJECT PLANNER — Shared Components
+   Phase 2.2 — incremental migration from globals.css
+   ===================================================== */
+
+/* ===== TOAST (2.2.2) ===== */
+.toast-container {
+  position: fixed;
+  top: 80px;
+  right: 16px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toast {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 12px 16px;
+  box-shadow: var(--shadow-xl);
+  border-left: 4px solid;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  max-width: 320px;
+  animation: toastIn 0.3s ease;
+}
+
+.toast.success { border-color: var(--success); }
+.toast.error { border-color: var(--danger); }
+.toast.warning { border-color: var(--warning); }
+.toast.info { border-color: var(--primary); }
+.toast svg { width: 18px; height: 18px; flex-shrink: 0; }
+.toast.success svg { color: var(--success); }
+.toast.error svg { color: var(--danger); }
+.toast.warning svg { color: var(--warning); }
+.toast.info svg { color: var(--primary); }
+.toast-close {
+  margin-left: auto;
+  cursor: pointer;
+  color: var(--gray-400);
+  background: none;
+  border: none;
+  font-family: var(--font-sans);
+}
+.toast-close:hover { color: var(--gray-600); }
