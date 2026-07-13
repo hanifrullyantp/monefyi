@@ -13,6 +13,7 @@ export interface MemberCompensation {
   salary_type: 'daily' | 'monthly';
   monthly_salary: number;
   daily_rate: number;
+  hourly_rate?: number;
   currency: string;
   updated_at?: string;
 }
@@ -78,6 +79,7 @@ export async function listCompensation(orgId: string): Promise<MemberCompensatio
     salary_type: (row.salary_type as 'daily' | 'monthly') || 'monthly',
     monthly_salary: Number(row.monthly_salary) || 0,
     daily_rate: Number(row.daily_rate) || 0,
+    hourly_rate: Number(row.hourly_rate) || 0,
   })) as MemberCompensation[];
 }
 

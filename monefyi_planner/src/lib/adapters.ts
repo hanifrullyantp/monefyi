@@ -63,6 +63,7 @@ export interface DbRapItem {
   unit_price: number;
   supplier?: string | null;
   notes?: string | null;
+  member_id?: string | null;
   is_critical?: boolean | null;
   sort_order?: number | null;
   updated_by?: string | null;

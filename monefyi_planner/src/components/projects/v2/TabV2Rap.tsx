@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  FileSignature, Calculator, Wallet, TrendingUp, AlertTriangle, CheckCircle2,
+  FileSignature, Calculator, Wallet, TrendingUp,
   Package, HardHat, Search, Filter, CheckSquare, Table2, Plus,
 } from 'lucide-react';
 import RapEditableTable from '../RapEditableTable';
@@ -20,6 +20,7 @@ import { useRapChecklistDraft } from '../../../hooks/useRapChecklistDraft';
 import WorkItemRow from '../../sandbox-ui/WorkItemRow';
 import StatCard from '../../sandbox-ui/StatCard';
 import RapAddItemsModal from './RapAddItemsModal';
+import LaborPlannerModal from './LaborPlannerModal';
 import RapItemDetailModal from './RapItemDetailModal';
 
 export type RapDraftControls = {
@@ -77,13 +78,14 @@ type ColumnPanelProps = {
   isInDatabase: (name: string) => boolean;
   onAddClick: () => void;
   onItemDetail: (item: MappedRapItem) => void;
+  onOpenLaborSchedule?: (item: MappedRapItem) => void;
   canManage: boolean;
 };
 
 function RapColumnPanel({
   title, icon: Icon, kind, items, totalRap, search, onSearchChange,
   statusFilter, onStatusFilterChange, onToggle, onFieldEdit, onSaveToDatabase,
-  isInDatabase, onAddClick, onItemDetail, canManage,
+  isInDatabase, onAddClick, onItemDetail, onOpenLaborSchedule, canManage,
 }: ColumnPanelProps) {
   const filtered = useMemo(() => filterItems(items, search, statusFilter), [items, search, statusFilter]);
   const groups = useMemo(() => groupRapItemsByKeyword(filtered), [filtered]);
@@ -174,6 +176,7 @@ function RapColumnPanel({
                   savedToDatabase={isInDatabase(item.name)}
                   onSaveToDatabase={canManage ? () => onSaveToDatabase(item) : undefined}
                   onDoubleClick={() => onItemDetail(item)}
+                  onOpenLaborSchedule={kind === 'labor' ? () => onOpenLaborSchedule?.(item) : undefined}
                   onFieldEdit={patch => item.plannerId && onFieldEdit(item.plannerId, patch)}
                   onToggleCheck={canManage && item.plannerId ? () => onToggle(item) : undefined}
                 />
@@ -189,7 +192,7 @@ function RapColumnPanel({
 export default function TabV2Rap({
   projectId, normalized, rapItems, rapActuals, onRefresh, userId, onDraftChange,
 }: Props) {
-  const { tenant } = useAppStore();
+  const { tenant, user } = useAppStore();
   const showToast = useUiStore(s => s.showToast);
   const [materialSuggestions, setMaterialSuggestions] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<RapViewMode>('checklist');
@@ -202,8 +205,15 @@ export default function TabV2Rap({
   const [excelControls, setExcelControls] = useState<RapDraftControls | null>(null);
   const [dbMaterialNames, setDbMaterialNames] = useState<Set<string>>(new Set());
   const [dbWorkerNames, setDbWorkerNames] = useState<Set<string>>(new Set());
-  const [addModal, setAddModal] = useState<'material' | 'labor' | null>(null);
+  const [addModal, setAddModal] = useState<'material' | null>(null);
+  const [laborModalOpen, setLaborModalOpen] = useState(false);
+  const [laborEditItem, setLaborEditItem] = useState<MappedRapItem | null>(null);
   const [detailItem, setDetailItem] = useState<MappedRapItem | null>(null);
+
+  const openLaborModal = useCallback((item?: MappedRapItem | null) => {
+    setLaborEditItem(item ?? null);
+    setLaborModalOpen(true);
+  }, []);
 
   const p = normalized.project;
 
@@ -322,10 +332,6 @@ export default function TabV2Rap({
     checklistDraft.toggle(item);
   }, [checklistDraft]);
 
-  const rapPct = p.contractValue > 0 ? ((p.rap.totalRAP / p.contractValue) * 100) : 0;
-  const realisasiPct = p.contractValue > 0 ? ((p.rap.realisasi / p.contractValue) * 100) : 0;
-  const overBudget = realisasiPct > rapPct;
-
   const materialTotal = p.rap.materials.reduce((s, i) => s + i.rapTotal, 0);
   const tenagaTotal = p.rap.workers.reduce((s, i) => s + i.rapTotal, 0);
 
@@ -361,27 +367,6 @@ export default function TabV2Rap({
           iconBg="bg-rose-50" iconColor="text-rose-600" />
         <StatCard label="Est. Laba" value={formatRupiah(p.rap.estLaba)} icon={TrendingUp}
           iconBg="bg-emerald-50" iconColor="text-emerald-600" barVariant="success" />
-      </div>
-
-      <div className="surface-card p-5">
-        <div className="flex justify-between text-xs font-bold mb-2">
-          <span className="text-blue-600">RAP {rapPct.toFixed(0)}%</span>
-          <span className="text-rose-600">Realisasi {realisasiPct.toFixed(0)}%</span>
-        </div>
-        <div className="relative h-5 bg-slate-100 rounded-full overflow-hidden">
-          <div className="absolute inset-y-0 left-0 bg-blue-200 border-2 border-blue-500 rounded-full"
-            style={{ width: `${Math.min(rapPct, 100)}%` }} />
-          <div className="absolute inset-y-0 left-0 bg-rose-500 rounded-full"
-            style={{ width: `${Math.min(realisasiPct, 100)}%` }} />
-        </div>
-        <div className={`flex items-center gap-2 mt-3 px-3 py-2 rounded-xl text-sm font-semibold ${
-          overBudget ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700'
-        }`}>
-          {overBudget ? <AlertTriangle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-          {overBudget
-            ? `Realisasi melebihi RAP ${(realisasiPct - rapPct).toFixed(0)}%`
-            : 'Realisasi masih dalam batas RAP'}
-        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -467,8 +452,9 @@ export default function TabV2Rap({
               onFieldEdit={handleFieldEdit}
               onSaveToDatabase={item => void handleSaveToDatabase(item, 'labor')}
               isInDatabase={isWorkerInDb}
-              onAddClick={() => setAddModal('labor')}
+              onAddClick={() => openLaborModal()}
               onItemDetail={setDetailItem}
+              onOpenLaborSchedule={item => openLaborModal(item)}
               canManage={Boolean(userId)}
             />
           )}
@@ -520,10 +506,10 @@ export default function TabV2Rap({
         </>
       )}
 
-      {addModal && userId && (
+      {addModal === 'material' && userId && (
         <RapAddItemsModal
           open
-          itemType={addModal}
+          itemType="material"
           projectId={projectId}
           sortOffset={rapItems.length}
           userId={userId}
@@ -532,11 +518,28 @@ export default function TabV2Rap({
         />
       )}
 
+      {laborModalOpen && tenant?.id && userId && (
+        <LaborPlannerModal
+          open
+          projectId={projectId}
+          orgId={tenant.id}
+          orgSlug={tenant.slug}
+          userId={userId}
+          userRole={user?.role}
+          sortOffset={rapItems.length}
+          editItem={laborEditItem}
+          onClose={() => { setLaborModalOpen(false); setLaborEditItem(null); }}
+          onSaved={onRefresh}
+        />
+      )}
+
       <RapItemDetailModal
         open={detailItem !== null}
         item={detailItem}
         onClose={() => setDetailItem(null)}
         canManage={Boolean(userId)}
+        isLabor={detailItem ? workersWithDraft.some(w => w.plannerId === detailItem.plannerId) : false}
+        onOpenLaborSchedule={detailItem ? () => openLaborModal(detailItem) : undefined}
         onSave={patch => {
           if (detailItem?.plannerId) handleFieldEdit(detailItem.plannerId, patch);
         }}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { X, CalendarDays } from 'lucide-react';
 import type { MappedRapItem } from '../../../lib/migration/planner-mapper';
 import type { RapFieldPatch } from '../../../lib/rapItemGrouping';
 import { formatRupiah, parseMoneyInput } from '../../../utils/projectUi';
@@ -10,9 +10,13 @@ type Props = {
   onClose: () => void;
   onSave: (patch: RapFieldPatch) => void;
   canManage: boolean;
+  isLabor?: boolean;
+  onOpenLaborSchedule?: () => void;
 };
 
-export default function RapItemDetailModal({ open, item, onClose, onSave, canManage }: Props) {
+export default function RapItemDetailModal({
+  open, item, onClose, onSave, canManage, isLabor, onOpenLaborSchedule,
+}: Props) {
   const [name, setName] = useState('');
   const [unit, setUnit] = useState('');
   const [qtyPlan, setQtyPlan] = useState('');
@@ -100,6 +104,16 @@ export default function RapItemDetailModal({ open, item, onClose, onSave, canMan
               </tbody>
             </table>
           </div>
+
+          {isLabor && onOpenLaborSchedule && (
+            <button
+              type="button"
+              onClick={() => { onClose(); onOpenLaborSchedule(); }}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-blue-200 bg-blue-50 text-blue-700 text-sm font-bold hover:bg-blue-100"
+            >
+              <CalendarDays className="w-4 h-4" /> Kelola jadwal tenaga
+            </button>
+          )}
 
           {canManage && (
             <div className="space-y-2">

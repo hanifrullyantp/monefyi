@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { GripVertical, Square, SquareCheck, AlertTriangle, Database } from 'lucide-react';
+import { GripVertical, Square, SquareCheck, AlertTriangle, Database, CalendarDays } from 'lucide-react';
 import type { MappedRapItem } from '../../lib/migration/planner-mapper';
 import type { RapFieldPatch } from '../../lib/rapItemGrouping';
 import { formatRupiah } from '../../utils/projectUi';
@@ -10,6 +10,7 @@ type Props = {
   savedToDatabase?: boolean;
   onSaveToDatabase?: () => void;
   onDoubleClick?: () => void;
+  onOpenLaborSchedule?: () => void;
   onFieldEdit?: (patch: RapFieldPatch) => void;
   canEdit?: boolean;
 };
@@ -21,7 +22,7 @@ function formatQty(v: number): string {
 
 export default function WorkItemRow({
   item, onToggleCheck, savedToDatabase = false, onSaveToDatabase,
-  onDoubleClick, onFieldEdit, canEdit = false,
+  onDoubleClick, onOpenLaborSchedule, onFieldEdit, canEdit = false,
 }: Props) {
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(item.name);
@@ -93,6 +94,17 @@ export default function WorkItemRow({
           )}
         </div>
       </div>
+      {onOpenLaborSchedule && (
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); onOpenLaborSchedule(); }}
+          title="Kelola jadwal tenaga"
+          className="p-1 rounded-lg shrink-0 text-blue-500 hover:bg-blue-50 transition-colors"
+          aria-label="Kelola jadwal"
+        >
+          <CalendarDays className="w-4 h-4" />
+        </button>
+      )}
       {onSaveToDatabase && (
         <button
           type="button"
