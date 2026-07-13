@@ -57,12 +57,70 @@ export async function removeRapItemWithCleanup(
   rapItemId: string,
 ): Promise<{ budget: number; spent: number }> {
   const { deleteCostsByRapItemId, recalculateProjectSpent } = await import('./costService');
+  const { deleteLaborSlotsByRapItem } = await import('./laborAssignmentService');
   await deleteCostsByRapItemId(projectId, rapItemId);
+  await deleteLaborSlotsByRapItem(rapItemId);
   const { error } = await supabase.from('planner_rap_items').delete().eq('id', rapItemId);
   if (error) throw new Error(error.message);
   const spent = await recalculateProjectSpent(projectId);
   const budget = await syncProjectBudgetFromRap(projectId);
   return { budget, spent };
+}
+
+/** Duplikat item RAP; untuk tenaga kerja salin juga slot jadwal. */
+export async function duplicateRapItem(
+  projectId: string,
+  sourceId: string,
+  userId: string,
+  sortOrder: number,
+): Promise<RapItem> {
+  const { data: source, error } = await supabase
+    .from('planner_rap_items')
+    .select('*')
+    .eq('id', sourceId)
+    .single();
+  if (error || !source) throw new Error(error?.message || 'Item tidak ditemukan');
+
+  const row = source as RapItem;
+  const created = await createRapItem({
+    project_id: projectId,
+    type: row.type,
+    name: `${row.name} (salinan)`,
+    description: row.description,
+    unit: row.unit,
+    quantity: row.quantity,
+    unit_price: row.unit_price,
+    supplier: row.supplier,
+    notes: row.notes,
+    member_id: row.member_id,
+    is_critical: row.is_critical,
+    sort_order: sortOrder,
+    updated_by: userId,
+  });
+
+  if (row.type === 'labor') {
+    const { loadLaborSlots, replaceLaborSlotsForRap } = await import('./laborAssignmentService');
+    const slots = await loadLaborSlots(projectId, sourceId);
+    if (slots.length) {
+      await replaceLaborSlotsForRap(created.id, slots.map(s => ({
+        org_id: s.org_id,
+        project_id: projectId,
+        rap_item_id: created.id,
+        member_id: s.member_id,
+        work_date: s.work_date,
+        slot_kind: s.slot_kind,
+        rate_type: s.rate_type,
+        day_fraction: s.day_fraction,
+        regular_hours: s.regular_hours,
+        overtime_hours: s.overtime_hours,
+        unit_rate: s.unit_rate,
+        notes: s.notes,
+        created_by: userId,
+      })));
+    }
+  }
+
+  return created;
 }
 
 export async function deleteAllRapItems(projectId: string) {

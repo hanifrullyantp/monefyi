@@ -92,7 +92,7 @@ export default function Settings() {
   const [department, setDepartment] = useState('');
   const [editingProfile, setEditingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
-  const [financeVersion, setFinanceVersionState] = useState<FinanceVersion>('v1');
+  const [financeVersion, setFinanceVersionState] = useState<FinanceVersion>('v2');
   const [savingFinanceVersion, setSavingFinanceVersion] = useState(false);
 
   const [orgName, setOrgName] = useState(tenant?.name || '');
@@ -175,13 +175,13 @@ export default function Settings() {
       setFinanceVersionState(version);
       setFinanceVersionPreference(version);
       showToast(
-        version === 'v2' ? 'Finance V2 aktif — menu Keuangan membuka neraca baru' : 'Finance V1 aktif',
+        version === 'v2' ? 'Keuangan Bisnis aktif' : 'Keuangan klasik aktif',
         'success',
       );
       if (version === 'v2') {
         navigate('/app/finance-v2');
       } else {
-        navigate('/app');
+        navigate('/app?tab=finance');
         setActiveTab('finance');
       }
     } catch (e) {
@@ -480,7 +480,7 @@ export default function Settings() {
               <h3 className="font-bold text-slate-800">Versi Finance</h3>
             </div>
             <p className="text-sm text-slate-500">
-              V1: keuangan proyek (pemasukan & biaya). V2: neraca double-entry terpisah dengan chart of accounts.
+              Keuangan Bisnis: neraca organisasi dengan 7 tab. Klasik: ringkasan per proyek di dashboard.
             </p>
             <div className="flex flex-col sm:flex-row gap-2">
               {(['v1', 'v2'] as const).map(v => (
@@ -495,9 +495,9 @@ export default function Settings() {
                       : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
                 >
-                  <div className="font-bold">{v === 'v1' ? 'Finance V1' : 'Finance V2'}</div>
+                  <div className="font-bold">{v === 'v1' ? 'Keuangan Klasik' : 'Keuangan Bisnis'}</div>
                   <div className="text-xs font-normal mt-0.5 opacity-80">
-                    {v === 'v1' ? 'Tab Keuangan klasik' : 'Neraca & jurnal terpisah'}
+                    {v === 'v1' ? 'Dashboard transaksi proyek' : 'Neraca & 7 tab sandbox'}
                   </div>
                 </button>
               ))}

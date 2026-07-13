@@ -71,14 +71,14 @@ export function calcQuickRatio(
 
 export function accountRouteForType(type: string): string | undefined {
   const map: Record<string, string> = {
-    kas: '/app/finance-v2/kas',
-    piutang: '/app/finance-v2/piutang',
-    hutang_dagang: '/app/finance-v2/hutang',
-    hutang_pajak: '/app/finance-v2/hutang',
-    hutang_lain: '/app/finance-v2/hutang',
-    stok: '/app/finance-v2/stok',
+    kas: '/app/finance-v2/kasbank',
+    piutang: '/app/finance-v2/hutangpiutang',
+    hutang_dagang: '/app/finance-v2/hutangpiutang',
+    hutang_pajak: '/app/finance-v2/hutangpiutang',
+    hutang_lain: '/app/finance-v2/hutangpiutang',
+    stok: '/app/finance-v2/aset',
     aset_tetap: '/app/finance-v2/aset',
-    prabayar: '/app/finance-v2/prabayar',
+    prabayar: '/app/finance-v2/aset',
   };
   return map[type];
 }

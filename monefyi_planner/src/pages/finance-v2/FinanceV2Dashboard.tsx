@@ -1,5 +1,5 @@
-import { FinanceV2DashboardView } from '../../components/finance-v2/dashboard';
+import FinanceSandboxOverview from './FinanceSandboxOverview';
 
 export default function FinanceV2Dashboard() {
-  return <FinanceV2DashboardView />;
+  return <FinanceSandboxOverview />;
 }

@@ -5,6 +5,7 @@ import Layout from './Layout';
 import Dashboard from '../pages/Dashboard';
 import Projects from '../pages/Projects';
 import FinanceV2Routes from '../pages/finance-v2/FinanceV2Routes';
+import Finance from '../pages/Finance';
 import DatabaseMaster from '../pages/DatabaseMaster';
 import Settings from '../pages/Settings';
 import HrEmployees from '../pages/HrEmployees';
@@ -18,7 +19,7 @@ function AppContent() {
   const { id: projectIdParam } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, activeTab, setOnline, setSyncStatus, setSelectedProjectId, setActiveTab, platformRole, uiViewMode } = useAppStore();
+  const { user, activeTab, setOnline, setSyncStatus, setSelectedProjectId, setActiveTab, platformRole, uiViewMode, financeVersion } = useAppStore();
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -54,10 +55,11 @@ function AppContent() {
   const canAccessHr = canAccessManagerFeatures(user?.role, platformRole, user?.email, uiViewMode);
 
   useEffect(() => {
-    if (activeTab === 'finance') {
+    if (activeTab !== 'finance') return;
+    if (financeVersion === 'v2') {
       navigate('/app/finance-v2', { replace: true });
     }
-  }, [activeTab, navigate]);
+  }, [activeTab, financeVersion, navigate]);
 
   const renderPage = () => {
     if (isWorker) return <WorkerDashboard />;
@@ -73,7 +75,7 @@ function AppContent() {
           />
         );
       case 'finance':
-        return null;
+        return financeVersion === 'v1' ? <Finance /> : null;
       case 'hr':
       case 'team':
         return canAccessHr

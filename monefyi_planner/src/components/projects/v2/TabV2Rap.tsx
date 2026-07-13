@@ -22,6 +22,10 @@ import StatCard from '../../sandbox-ui/StatCard';
 import RapAddItemsModal from './RapAddItemsModal';
 import LaborTenagaWizardModal from './labor/wizard/LaborTenagaWizardModal';
 import RapItemDetailModal from './RapItemDetailModal';
+import RapItemSelectionBar from './RapItemSelectionBar';
+import {
+  duplicateRapItem, removeRapItemWithCleanup, syncProjectBudgetFromRap,
+} from '../../../services/rapService';
 
 export type RapDraftControls = {
   changeCount: number;
@@ -80,15 +84,24 @@ type ColumnPanelProps = {
   onItemDetail: (item: MappedRapItem) => void;
   onOpenLaborSchedule?: (item: MappedRapItem) => void;
   canManage: boolean;
+  selectedIds: Set<string>;
+  onToggleSelect: (rapId: string) => void;
+  onSelectAllVisible: (ids: string[]) => void;
 };
 
 function RapColumnPanel({
   title, icon: Icon, kind, items, totalRap, search, onSearchChange,
   statusFilter, onStatusFilterChange, onToggle, onFieldEdit, onSaveToDatabase,
   isInDatabase, onAddClick, onItemDetail, onOpenLaborSchedule, canManage,
+  selectedIds, onToggleSelect, onSelectAllVisible,
 }: ColumnPanelProps) {
   const filtered = useMemo(() => filterItems(items, search, statusFilter), [items, search, statusFilter]);
   const groups = useMemo(() => groupRapItemsByKeyword(filtered), [filtered]);
+  const visibleIds = useMemo(
+    () => filtered.map(i => i.plannerId).filter((id): id is string => Boolean(id)),
+    [filtered],
+  );
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.has(id));
 
   return (
     <div className="surface-card flex flex-col min-h-0 max-h-[min(70vh,560px)]">
@@ -110,6 +123,15 @@ function RapColumnPanel({
               </button>
             )}
           </div>
+          {canManage && visibleIds.length > 0 && (
+            <button
+              type="button"
+              onClick={() => onSelectAllVisible(visibleIds)}
+              className="mb-2 text-[11px] font-bold text-blue-600 hover:text-blue-800"
+            >
+              {allVisibleSelected ? 'Batal pilih semua' : `Pilih semua (${visibleIds.length})`}
+            </button>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <div className="surface-inset px-3 py-2">
               <div className="text-[10px] font-bold text-slate-500 uppercase">Total RAP</div>
@@ -173,6 +195,12 @@ function RapColumnPanel({
                   key={item.plannerId || `${group.key}-${idx}`}
                   item={item}
                   canEdit={canManage}
+                  isSelected={Boolean(item.plannerId && selectedIds.has(item.plannerId))}
+                  onSelectionToggle={
+                    canManage && item.plannerId
+                      ? () => onToggleSelect(item.plannerId!)
+                      : undefined
+                  }
                   savedToDatabase={isInDatabase(item.name)}
                   onSaveToDatabase={canManage ? () => onSaveToDatabase(item) : undefined}
                   onDoubleClick={() => onItemDetail(item)}
@@ -209,6 +237,8 @@ export default function TabV2Rap({
   const [laborModalOpen, setLaborModalOpen] = useState(false);
   const [laborEditItem, setLaborEditItem] = useState<MappedRapItem | null>(null);
   const [detailItem, setDetailItem] = useState<MappedRapItem | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectionBusy, setSelectionBusy] = useState(false);
 
   const openLaborModal = useCallback((item?: MappedRapItem | null) => {
     setLaborEditItem(item ?? null);
@@ -333,6 +363,96 @@ export default function TabV2Rap({
     checklistDraft.toggle(item);
   }, [checklistDraft]);
 
+  const allMappedItems = useMemo(
+    () => [...materialsWithDraft, ...workersWithDraft],
+    [materialsWithDraft, workersWithDraft],
+  );
+
+  const selectedItems = useMemo(
+    () => allMappedItems.filter(i => i.plannerId && selectedIds.has(i.plannerId)),
+    [allMappedItems, selectedIds],
+  );
+
+  const toggleSelect = useCallback((rapId: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(rapId)) next.delete(rapId);
+      else next.add(rapId);
+      return next;
+    });
+  }, []);
+
+  const selectAllVisible = useCallback((ids: string[]) => {
+    setSelectedIds(prev => {
+      const allSelected = ids.every(id => prev.has(id));
+      const next = new Set(prev);
+      if (allSelected) {
+        for (const id of ids) next.delete(id);
+      } else {
+        for (const id of ids) next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+
+  const handleDeleteSelected = useCallback(async () => {
+    const ids = [...selectedIds];
+    if (!ids.length) return;
+    if (!window.confirm(`Hapus ${ids.length} item RAP? Tindakan ini tidak bisa dibatalkan.`)) return;
+    setSelectionBusy(true);
+    try {
+      for (const id of ids) {
+        await removeRapItemWithCleanup(projectId, id);
+      }
+      clearSelection();
+      await onRefresh();
+      showToast(`${ids.length} item dihapus`, 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal menghapus', 'error');
+    } finally {
+      setSelectionBusy(false);
+    }
+  }, [selectedIds, projectId, onRefresh, showToast, clearSelection]);
+
+  const handleDuplicateSelected = useCallback(async () => {
+    const ids = [...selectedIds];
+    if (!ids.length) return;
+    setSelectionBusy(true);
+    try {
+      let sort = rapItems.length;
+      for (const id of ids) {
+        await duplicateRapItem(projectId, id, userId, sort);
+        sort += 1;
+      }
+      await syncProjectBudgetFromRap(projectId);
+      clearSelection();
+      await onRefresh();
+      showToast(`${ids.length} item diduplikat`, 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal menduplikat', 'error');
+    } finally {
+      setSelectionBusy(false);
+    }
+  }, [selectedIds, projectId, userId, rapItems.length, onRefresh, showToast, clearSelection]);
+
+  const handleEditSelected = useCallback(() => {
+    const item = selectedItems[0];
+    if (!item) return;
+    setDetailItem(item);
+  }, [selectedItems]);
+
+  const handleScheduleSelected = useCallback(() => {
+    const item = selectedItems[0];
+    if (!item) return;
+    openLaborModal(item);
+    clearSelection();
+  }, [selectedItems, openLaborModal, clearSelection]);
+
+  const singleSelectedIsLabor = selectedItems.length === 1
+    && workersWithDraft.some(w => w.plannerId === selectedItems[0]?.plannerId);
+
   const materialTotal = p.rap.materials.reduce((s, i) => s + i.rapTotal, 0);
   const tenagaTotal = p.rap.workers.reduce((s, i) => s + i.rapTotal, 0);
 
@@ -355,7 +475,10 @@ export default function TabV2Rap({
       excelControls?.discard();
     }
     setViewMode(next);
+    clearSelection();
   };
+
+  useEffect(() => { clearSelection(); }, [columnTab, viewMode, clearSelection]);
 
   return (
     <div className="space-y-5 pb-20">
@@ -436,6 +559,9 @@ export default function TabV2Rap({
               onAddClick={() => setAddModal('material')}
               onItemDetail={setDetailItem}
               canManage={Boolean(userId)}
+              selectedIds={selectedIds}
+              onToggleSelect={toggleSelect}
+              onSelectAllVisible={selectAllVisible}
             />
           )}
           {showTenaga && (
@@ -457,6 +583,9 @@ export default function TabV2Rap({
               onItemDetail={setDetailItem}
               onOpenLaborSchedule={item => openLaborModal(item)}
               canManage={Boolean(userId)}
+              selectedIds={selectedIds}
+              onToggleSelect={toggleSelect}
+              onSelectAllVisible={selectAllVisible}
             />
           )}
         </div>
@@ -545,6 +674,20 @@ export default function TabV2Rap({
           if (detailItem?.plannerId) handleFieldEdit(detailItem.plannerId, patch);
         }}
       />
+
+      {viewMode === 'checklist' && (
+        <RapItemSelectionBar
+          count={selectedIds.size}
+          canEdit={Boolean(userId)}
+          isLabor={singleSelectedIsLabor}
+          onEdit={handleEditSelected}
+          onOpenSchedule={singleSelectedIsLabor ? handleScheduleSelected : undefined}
+          onDuplicate={() => void handleDuplicateSelected()}
+          onDelete={() => void handleDeleteSelected()}
+          onClear={clearSelection}
+          busy={selectionBusy}
+        />
+      )}
     </div>
   );
 }

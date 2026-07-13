@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { GripVertical, Square, SquareCheck, AlertTriangle, Database, CalendarDays } from 'lucide-react';
+import { GripVertical, Square, SquareCheck, AlertTriangle, Database, CalendarDays, Circle, CheckCircle2 } from 'lucide-react';
 import type { MappedRapItem } from '../../lib/migration/planner-mapper';
 import type { RapFieldPatch } from '../../lib/rapItemGrouping';
 import { formatRupiah } from '../../utils/projectUi';
@@ -13,6 +13,8 @@ type Props = {
   onOpenLaborSchedule?: () => void;
   onFieldEdit?: (patch: RapFieldPatch) => void;
   canEdit?: boolean;
+  isSelected?: boolean;
+  onSelectionToggle?: () => void;
 };
 
 function formatQty(v: number): string {
@@ -23,6 +25,7 @@ function formatQty(v: number): string {
 export default function WorkItemRow({
   item, onToggleCheck, savedToDatabase = false, onSaveToDatabase,
   onDoubleClick, onOpenLaborSchedule, onFieldEdit, canEdit = false,
+  isSelected = false, onSelectionToggle,
 }: Props) {
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(item.name);
@@ -41,10 +44,26 @@ export default function WorkItemRow({
 
   return (
     <div
-      className={`flex items-center gap-2 px-4 py-3 hover:bg-emerald-50/40 rounded-xl mx-1 transition-colors cursor-default ${isChecked ? 'bg-emerald-50/40' : ''}`}
+      className={`flex items-center gap-2 px-4 py-3 hover:bg-emerald-50/40 rounded-xl mx-1 transition-colors cursor-default ${
+        isChecked ? 'bg-emerald-50/40' : ''
+      } ${isSelected ? 'bg-blue-50/60 ring-2 ring-blue-200' : ''}`}
       onDoubleClick={onDoubleClick}
     >
       <GripVertical className="w-4 h-4 text-slate-300 shrink-0 cursor-grab" />
+      {onSelectionToggle && (
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); onSelectionToggle(); }}
+          className={`shrink-0 transition-colors ${
+            isSelected ? 'text-blue-600' : 'text-slate-300 hover:text-blue-500'
+          }`}
+          aria-label={isSelected ? 'Batal pilih item' : 'Pilih item'}
+        >
+          {isSelected
+            ? <CheckCircle2 className="w-5 h-5 fill-blue-100" />
+            : <Circle className="w-5 h-5" />}
+        </button>
+      )}
       <button
         type="button"
         onClick={onToggleCheck}

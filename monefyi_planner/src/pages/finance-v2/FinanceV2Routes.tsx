@@ -36,13 +36,13 @@ export default function FinanceV2Routes() {
       .then(version => {
         if (cancelled) return;
         setFinanceVersionPreference(version);
-        if (version === 'v1') {
-          navigate('/app/finance-v2', { replace: true });
+        if (version === 'v1' && location.pathname.startsWith('/app/finance-v2')) {
+          navigate('/app?tab=finance', { replace: true });
         }
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [user?.id, navigate, setFinanceVersionPreference]);
+  }, [user?.id, location.pathname, navigate, setFinanceVersionPreference]);
 
   return (
     <Routes>
