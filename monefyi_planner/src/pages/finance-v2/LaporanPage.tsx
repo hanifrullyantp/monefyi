@@ -13,6 +13,7 @@ import {
 } from '../../lib/financeV2/reports';
 import { downloadFinanceReportPdf } from '../../lib/financeV2/reports/exportPdf';
 import { downloadFinanceReportXlsx } from '../../lib/financeV2/reports/exportXlsx';
+import { closeFinancePeriod } from '../../services/financeV2/periodCloseService';
 import type { FinanceAccount } from '../../types/financeV2';
 
 const REPORT_TABS: { id: ReportKind; label: string }[] = [
@@ -32,6 +33,16 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+function yearStartISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-01-01`;
+}
+
+const REPORT_PRESETS = [
+  { id: 'mtd', label: 'Bulan ini', from: monthStartISO, to: todayISO },
+  { id: 'ytd', label: 'YTD', from: yearStartISO, to: todayISO },
+] as const;
+
 export default function LaporanPage() {
   const { tenant, projects } = useAppStore();
   const [tab, setTab] = useState<ReportKind>('pl');
@@ -45,6 +56,7 @@ export default function LaporanPage() {
   const [bundle, setBundle] = useState<FinanceReportBundle | null>(null);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [closingPeriod, setClosingPeriod] = useState(false);
 
   useEffect(() => {
     if (!tenant?.id) return;
@@ -97,6 +109,41 @@ export default function LaporanPage() {
     }
   };
 
+  const applyPreset = (preset: typeof REPORT_PRESETS[number]) => {
+    setDateFrom(preset.from());
+    setDateTo(preset.to());
+  };
+
+  const handleClosePeriod = async () => {
+    if (!tenant?.id) return;
+    if (!window.confirm('Tutup periode bulan ini? Laba periode akan dipindah ke laba ditahan.')) return;
+    setClosingPeriod(true);
+    try {
+      await closeFinancePeriod({ orgId: tenant.id, periodMonth: monthStartISO() });
+      showToast('Periode ditutup', 'success');
+      load();
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal tutup periode', 'error');
+    } finally {
+      setClosingPeriod(false);
+    }
+  };
+
+  const handleExportBundlePdf = async () => {
+    if (!bundle || !tenant) return;
+    setExporting(true);
+    try {
+      for (const t of REPORT_TABS) {
+        await downloadFinanceReportPdf(bundle, t.id, `${tenant.name} — ${t.label}`);
+      }
+      showToast('Paket PDF diunduh', 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal export paket', 'error');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const periodLabel = useMemo(
     () => `${formatDateId(dateFrom)} – ${formatDateId(dateTo)}`,
     [dateFrom, dateTo],
@@ -140,6 +187,16 @@ export default function LaporanPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          {REPORT_PRESETS.map(p => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => applyPreset(p)}
+              className="px-3 py-1.5 rounded-lg border text-xs font-semibold text-slate-600 hover:bg-slate-50"
+            >
+              {p.label}
+            </button>
+          ))}
           <button type="button" onClick={load} className="p-2.5 border border-slate-200 rounded-xl hover:bg-slate-50">
             <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -148,6 +205,12 @@ export default function LaporanPage() {
           </button>
           <button type="button" onClick={handleExportXlsx} disabled={!bundle} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-bold disabled:opacity-50">
             <FileSpreadsheet className="w-4 h-4" /> Excel
+          </button>
+          <button type="button" onClick={handleExportBundlePdf} disabled={!bundle || exporting} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 text-white text-sm font-bold disabled:opacity-50">
+            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />} Paket PDF
+          </button>
+          <button type="button" onClick={handleClosePeriod} disabled={closingPeriod} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-violet-200 text-violet-700 text-sm font-bold disabled:opacity-50">
+            {closingPeriod ? <Loader2 className="w-4 h-4 animate-spin" /> : null} Tutup Periode
           </button>
         </div>
       </div>

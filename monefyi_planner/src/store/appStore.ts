@@ -219,7 +219,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   lastSynced: null,
 
   activeTab: 'home',
-  financeVersion: 'v2',
+  financeVersion: 'v3',
   migrationFlags: { ...DEFAULT_MIGRATION_FLAGS },
   customDomainContext: null,
   sidebarOpen: false,

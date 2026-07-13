@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Wallet, CreditCard, TrendingUp, Receipt, Scale, Info,
+  Wallet, CreditCard, TrendingUp, Receipt, Scale, Info, Lock,
   Plus, ArrowLeftRight,
 } from 'lucide-react';
 import type { NormalizedProjectView } from '../../../lib/migration/project-normalize';
@@ -14,6 +14,7 @@ import BottomActionBar from '../../sandbox-ui/BottomActionBar';
 import ProgressBarLg from '../../sandbox-ui/ProgressBarLg';
 import CardPopup from '../../migration/CardPopup';
 import ProjectTransactionModals, { type ModalKind } from './ProjectTransactionModals';
+import ProjectCloseFinanceWizard from '../../finance-v2/ProjectCloseFinanceWizard';
 import { buildProjectPopupConfig, type ProjectPopupKind } from './project-popup-config';
 
 type Props = {
@@ -33,6 +34,7 @@ export default function TabV2Keuangan({
 }: Props) {
   const [modal, setModal] = useState<ModalKind>(null);
   const [popup, setPopup] = useState<ProjectPopupKind | null>(null);
+  const [closeWizardOpen, setCloseWizardOpen] = useState(false);
   const p = normalized.project;
   const hutang = p.budget.hutang || 0;
   const pemasukanPct = p.contractValue > 0
@@ -87,6 +89,38 @@ export default function TabV2Keuangan({
 
   return (
     <div className="space-y-5 pb-4">
+      {canManage && project.finance_status !== 'finance_closed'
+        && (project.status === 'completed' || normalized.totalPemasukan > 0) && (
+        <div className="bg-violet-50 border border-violet-100 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-start gap-2">
+            <Lock className="w-5 h-5 text-violet-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-violet-900 text-sm">Siap tutup keuangan?</p>
+              <p className="text-xs text-violet-700 mt-0.5">
+                Transfer sisa kas ke Kas Bisnis dan catat laba (basis kas) ke neraca organisasi.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setCloseWizardOpen(true)}
+            className="px-4 py-2 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700"
+          >
+            Tutup Keuangan
+          </button>
+        </div>
+      )}
+
+      {project.finance_status === 'finance_closed' && (
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm text-slate-600 flex items-center gap-2">
+          <Lock className="w-4 h-4" />
+          Keuangan proyek sudah ditutup.
+          {project.final_profit != null && (
+            <span className="font-bold text-emerald-700">Laba: {formatRupiah(project.final_profit)}</span>
+          )}
+        </div>
+      )}
+
       <button
         type="button"
         onClick={() => setPopup('saldo')}
@@ -283,6 +317,15 @@ export default function TabV2Keuangan({
         userId={userId}
         canManage={canManage}
         onUpdated={onRefresh}
+      />
+
+      <ProjectCloseFinanceWizard
+        open={closeWizardOpen}
+        onClose={() => setCloseWizardOpen(false)}
+        orgId={orgId}
+        projectId={project.id}
+        userId={userId}
+        onSuccess={onRefresh}
       />
     </div>
   );

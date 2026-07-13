@@ -27,6 +27,9 @@ export interface DbProject {
   actual_end?: string | null;
   finance_report_month?: string | null;
   finance_report_month_manual?: boolean | null;
+  finance_status?: string | null;
+  closed_at?: string | null;
+  final_profit?: number | null;
   status?: string | null;
   progress_pct?: number | null;
   total_budget?: number | null;
@@ -231,6 +234,9 @@ export function toProject(row: DbProject, currency = 'IDR'): Project {
     description: row.description || undefined,
     finance_report_month: row.finance_report_month || undefined,
     finance_report_month_manual: row.finance_report_month_manual ?? false,
+    finance_status: (row.finance_status as Project['finance_status']) || 'active',
+    closed_at: row.closed_at || undefined,
+    final_profit: row.final_profit != null ? Number(row.final_profit) : undefined,
   };
 }
 

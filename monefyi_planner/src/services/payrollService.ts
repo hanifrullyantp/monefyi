@@ -284,6 +284,23 @@ export async function updatePayrollStatus(
 
   assertNoDbError(error);
 
+  if (status === 'paid' && beforeSnapshot.status !== 'paid') {
+    try {
+      const { postPayrollDisbursementJournal } = await import('./financeV2/payrollJournalBridge');
+      await postPayrollDisbursementJournal({
+        orgId: existing.org_id as string,
+        payrollEntryId: entryId,
+        userId: existing.user_id as string,
+        periodMonth: existing.period_month as string,
+        netAmount: Number(data.net_amount) || 0,
+        employeeName: (data as PayrollEntry).profiles?.name || undefined,
+        createdBy: undoContext?.actorId,
+      });
+    } catch (journalErr) {
+      console.error('Payroll journal posting failed:', journalErr);
+    }
+  }
+
   let undoActionId: string | undefined;
   if (undoContext) {
     const { recordReversibleAction } = await import('./undoService');
@@ -362,6 +379,21 @@ export async function reviewBonRequest(
     .single();
 
   assertNoDbError(error);
+
+  if (status === 'paid' && existing.status !== 'paid') {
+    try {
+      const { postBonDisbursementJournal } = await import('./financeV2/payrollJournalBridge');
+      await postBonDisbursementJournal({
+        orgId: existing.org_id as string,
+        bonRequestId: requestId,
+        amount: Number(data.amount) || 0,
+        employeeName: (data as BonRequest).profiles?.name || undefined,
+        createdBy: reviewerId,
+      });
+    } catch (journalErr) {
+      console.error('Bon journal posting failed:', journalErr);
+    }
+  }
 
   let undoActionId: string | undefined;
   if (undoContext) {

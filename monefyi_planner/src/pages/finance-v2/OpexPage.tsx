@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Loader2, RefreshCw, Users } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { showToast } from '../../store/uiStore';
 import { formatFinanceRupiah } from '../../lib/financeV2Calc';
@@ -12,6 +13,7 @@ import {
   loadOpexRealizations,
   upsertOpexBudget,
 } from '../../services/financeV2/opexService';
+import { listPayrollEntries, monthStartIso } from '../../services/payrollService';
 import type { OpexComparisonRow } from '../../types/financeV2';
 
 type Tab = 'comparison' | 'budget' | 'realization';
@@ -24,6 +26,7 @@ export default function OpexPage() {
   const [tab, setTab] = useState<Tab>('comparison');
   const [loading, setLoading] = useState(true);
   const [comparison, setComparison] = useState<OpexComparisonRow[]>([]);
+  const [payrollOutstanding, setPayrollOutstanding] = useState(0);
 
   const [budgetCatId, setBudgetCatId] = useState('');
   const [budgetAmount, setBudgetAmount] = useState('');
@@ -35,12 +38,19 @@ export default function OpexPage() {
     if (!tenant?.id) return;
     setLoading(true);
     try {
-      const [cats, budgets, reals] = await Promise.all([
+      const [cats, budgets, reals, payroll] = await Promise.all([
         loadOpexCategories(tenant.id),
         loadOpexBudgets(tenant.id, month, year),
         loadOpexRealizations(tenant.id, month, year),
+        listPayrollEntries(tenant.id, 24),
       ]);
       setComparison(buildOpexComparison(cats, budgets, reals));
+      const periodIso = monthStartIso(new Date(year, month - 1, 1));
+      setPayrollOutstanding(
+        payroll
+          .filter(e => e.period_month === periodIso && e.status !== 'paid')
+          .reduce((s, e) => s + e.net_amount, 0),
+      );
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal memuat opex', 'error');
     } finally {
@@ -111,7 +121,7 @@ export default function OpexPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <div className="bg-white rounded-2xl border p-4">
           <div className="text-xs text-slate-500">Total Budget</div>
           <div className="font-black text-lg text-emerald-700">{formatFinanceRupiah(totalPlanned)}</div>
@@ -122,6 +132,15 @@ export default function OpexPage() {
             {formatFinanceRupiah(totalActual)}
           </div>
         </div>
+        <Link
+          to="/app/hr"
+          className="bg-amber-50 border border-amber-100 rounded-2xl p-4 hover:shadow-md transition-shadow col-span-2 sm:col-span-1"
+        >
+          <div className="flex items-center gap-1 text-xs text-amber-800">
+            <Users className="w-3.5 h-3.5" /> Gaji Belum Dibayar
+          </div>
+          <div className="font-black text-lg text-amber-700">{formatFinanceRupiah(payrollOutstanding)}</div>
+        </Link>
       </div>
 
       <div className="flex gap-2 overflow-x-auto">

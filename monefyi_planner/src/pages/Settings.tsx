@@ -19,7 +19,7 @@ import BrandIdentityPanel from '../components/branding/BrandIdentityPanel';
 import { syncPdfBrandFromOrg } from '../services/pdfSettingsService';
 import { isPlatformAdmin } from '../services/adminService';
 import { Link } from 'react-router-dom';
-import { loadFinanceVersion, setFinanceVersion } from '../lib/financeVersion';
+import { loadFinanceVersion, setFinanceVersion, isSandboxFinance } from '../lib/financeVersion';
 import type { FinanceVersion } from '../types/financeV2';
 import MigrationDeveloperPanel from '../components/settings/MigrationDeveloperPanel';
 import UpgradePlansPanel from '../components/settings/UpgradePlansPanel';
@@ -92,7 +92,7 @@ export default function Settings() {
   const [department, setDepartment] = useState('');
   const [editingProfile, setEditingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
-  const [financeVersion, setFinanceVersionState] = useState<FinanceVersion>('v2');
+  const [financeVersion, setFinanceVersionState] = useState<FinanceVersion>('v3');
   const [savingFinanceVersion, setSavingFinanceVersion] = useState(false);
 
   const [orgName, setOrgName] = useState(tenant?.name || '');
@@ -175,10 +175,10 @@ export default function Settings() {
       setFinanceVersionState(version);
       setFinanceVersionPreference(version);
       showToast(
-        version === 'v2' ? 'Keuangan Bisnis aktif' : 'Keuangan klasik aktif',
+        isSandboxFinance(version) ? 'Keuangan Bisnis (terbaru) aktif' : 'Keuangan klasik aktif',
         'success',
       );
-      if (version === 'v2') {
+      if (isSandboxFinance(version)) {
         navigate('/app/finance-v2');
       } else {
         navigate('/app?tab=finance');
@@ -480,24 +480,24 @@ export default function Settings() {
               <h3 className="font-bold text-slate-800">Versi Finance</h3>
             </div>
             <p className="text-sm text-slate-500">
-              Keuangan Bisnis: neraca organisasi dengan 7 tab. Klasik: ringkasan per proyek di dashboard.
+              Keuangan Bisnis (v3): neraca organisasi 7 tab dari mockup terbaru. Klasik (v1): ringkasan per proyek.
             </p>
             <div className="flex flex-col sm:flex-row gap-2">
-              {(['v1', 'v2'] as const).map(v => (
+              {(['v1', 'v3'] as const).map(v => (
                 <button
                   key={v}
                   type="button"
                   disabled={savingFinanceVersion}
                   onClick={() => handleFinanceVersionChange(v)}
                   className={`flex-1 px-4 py-3 rounded-xl border text-sm font-semibold text-left transition-colors ${
-                    financeVersion === v
+                    (v === 'v3' ? isSandboxFinance(financeVersion) : financeVersion === 'v1')
                       ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
                       : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
                 >
-                  <div className="font-bold">{v === 'v1' ? 'Keuangan Klasik' : 'Keuangan Bisnis'}</div>
+                  <div className="font-bold">{v === 'v1' ? 'Keuangan Klasik (v1)' : 'Keuangan Bisnis (v3)'}</div>
                   <div className="text-xs font-normal mt-0.5 opacity-80">
-                    {v === 'v1' ? 'Dashboard transaksi proyek' : 'Neraca & 7 tab sandbox'}
+                    {v === 'v1' ? 'Dashboard transaksi proyek' : 'Hero kas, Neraca Bisnis, 7 tab'}
                   </div>
                 </button>
               ))}

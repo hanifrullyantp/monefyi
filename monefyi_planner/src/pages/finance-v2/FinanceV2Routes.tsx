@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAppStore } from '../../store/appStore';
 import { loadFinanceVersion } from '../../lib/financeVersion';
 import { LEGACY_FINANCE_REDIRECTS } from '../../types/sandboxFinance';
@@ -11,6 +11,7 @@ import AsetPage from './AsetPage';
 import StokPage from './StokPage';
 import LaporanPage from './LaporanPage';
 import FinanceHutangPiutangTab, { FinanceLabaRugiTab } from './FinanceSandboxTabsContent';
+import FinancePlanningPage from './FinancePlanningPage';
 
 function LegacyRedirect({ from }: { from: string }) {
   const to = LEGACY_FINANCE_REDIRECTS[from] || 'overview';
@@ -19,15 +20,13 @@ function LegacyRedirect({ from }: { from: string }) {
 }
 
 export default function FinanceV2Routes() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const user = useAppStore(s => s.user);
   const setActiveTab = useAppStore(s => s.setActiveTab);
   const setFinanceVersionPreference = useAppStore(s => s.setFinanceVersionPreference);
+  const user = useAppStore(s => s.user);
 
   useEffect(() => {
     setActiveTab('finance');
-  }, [location.pathname, setActiveTab]);
+  }, [setActiveTab]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -36,13 +35,12 @@ export default function FinanceV2Routes() {
       .then(version => {
         if (cancelled) return;
         setFinanceVersionPreference(version);
-        if (version === 'v1' && location.pathname.startsWith('/app/finance-v2')) {
-          navigate('/app?tab=finance', { replace: true });
-        }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) setFinanceVersionPreference('v3');
+      });
     return () => { cancelled = true; };
-  }, [user?.id, location.pathname, navigate, setFinanceVersionPreference]);
+  }, [user?.id, setFinanceVersionPreference]);
 
   return (
     <Routes>
@@ -54,6 +52,7 @@ export default function FinanceV2Routes() {
         <Route path="operasional" element={<OpexPage />} />
         <Route path="aset" element={<AsetPage />} />
         <Route path="laporan" element={<LaporanPage />} />
+        <Route path="perencanaan" element={<FinancePlanningPage />} />
         {/* Legacy paths → sandbox tabs */}
         <Route path="kas" element={<LegacyRedirect from="kas" />} />
         <Route path="piutang" element={<LegacyRedirect from="piutang" />} />

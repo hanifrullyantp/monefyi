@@ -16,6 +16,8 @@ export interface ProjectIncome {
   invoice_ref?: string | null;
   status: IncomeStatus;
   recorded_by: string;
+  journal_entry_id?: string | null;
+  synced_at?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -89,6 +91,29 @@ export async function createProjectIncome(
   if (error) throw new Error(error.message);
 
   await recalcTotalReceived(item.project_id);
+
+  let journalEntryId: string | null = null;
+  if ((item.status || 'received') === 'received' && item.amount > 0) {
+    try {
+      const { postProjectIncomeJournal } = await import('./financeV2/projectJournalBridge');
+      journalEntryId = await postProjectIncomeJournal({
+        projectId: item.project_id,
+        amount: item.amount,
+        description: `Pemasukan proyek: ${item.description || item.category}`,
+        referenceId: data.id,
+        entryDate: item.date,
+        createdBy: item.recorded_by,
+      });
+      if (journalEntryId) {
+        await supabase
+          .from('planner_project_incomes')
+          .update({ journal_entry_id: journalEntryId, synced_at: new Date().toISOString() })
+          .eq('id', data.id);
+      }
+    } catch (e) {
+      console.error('Journal income post failed:', e);
+    }
+  }
 
   let undoActionId: string | undefined;
   if (undoContext) {

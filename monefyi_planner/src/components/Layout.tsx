@@ -46,7 +46,7 @@ export default function Layout({ children }: LayoutProps) {
     if (!user?.id) return;
     loadFinanceVersion(user.id)
       .then(setFinanceVersionPreference)
-      .catch(() => setFinanceVersionPreference('v2'));
+      .catch(() => setFinanceVersionPreference('v3'));
     loadMigrationFlags(user.id)
       .then(setMigrationFlags)
       .catch(() => setMigrationFlags({ ...DEFAULT_MIGRATION_FLAGS }));

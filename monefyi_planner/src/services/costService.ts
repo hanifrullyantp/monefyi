@@ -79,6 +79,29 @@ export async function createCostRealization(
 
   await recalculateProjectSpent(item.project_id);
 
+  const amount = Number(data.total_amount) || 0;
+  if (amount > 0) {
+    try {
+      const { postProjectExpenseJournal } = await import('./financeV2/projectJournalBridge');
+      const journalId = await postProjectExpenseJournal({
+        projectId: item.project_id,
+        amount,
+        description: `Biaya proyek: ${item.description || ''}`,
+        referenceId: data.id,
+        entryDate: item.date,
+        createdBy: item.recorded_by,
+      });
+      if (journalId) {
+        await supabase
+          .from('planner_cost_realizations')
+          .update({ journal_entry_id: journalId, synced_at: new Date().toISOString() })
+          .eq('id', data.id);
+      }
+    } catch (e) {
+      console.error('Journal expense post failed:', e);
+    }
+  }
+
   return data as CostRealization;
 }
 

@@ -11,8 +11,19 @@ import {
   runDepreciation,
 } from '../../services/financeV2/fixedAssetService';
 import type { FixedAsset } from '../../types/financeV2';
+import StokPage from './StokPage';
+import PraBayarPage from './PraBayarPage';
+
+type AsetTab = 'tetap' | 'stok' | 'prabayar';
+
+const TAB_LABELS: { id: AsetTab; label: string }[] = [
+  { id: 'tetap', label: 'Aset Tetap' },
+  { id: 'stok', label: 'Stok' },
+  { id: 'prabayar', label: 'Pra Bayar' },
+];
 
 export default function AsetPage() {
+  const [asetTab, setAsetTab] = useState<AsetTab>('tetap');
   const { tenant, user } = useAppStore();
   const [rows, setRows] = useState<FixedAsset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,6 +89,26 @@ export default function AsetPage() {
   };
 
   return (
+    <div className="space-y-6">
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {TAB_LABELS.map(t => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setAsetTab(t.id)}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap ${
+              asetTab === t.id ? 'bg-violet-100 text-violet-700' : 'bg-white border text-slate-600'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {asetTab === 'stok' && <StokPage />}
+      {asetTab === 'prabayar' && <PraBayarPage />}
+
+      {asetTab === 'tetap' && (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <p className="text-sm text-slate-500">Nilai buku bersih: <span className="font-bold text-emerald-700">{formatFinanceRupiah(totalNBV)}</span></p>
@@ -173,6 +204,8 @@ export default function AsetPage() {
             </tbody>
           </table>
         </div>
+      )}
+    </div>
       )}
     </div>
   );

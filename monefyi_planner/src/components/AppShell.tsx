@@ -13,6 +13,7 @@ import WorkerDashboard from '../pages/WorkerDashboard';
 import EstimatorRoutes from '../pages/estimator/EstimatorRoutes';
 import OnboardingChecklist from './OnboardingChecklist';
 import { useAppStore } from '../store/appStore';
+import { isSandboxFinance } from '../lib/financeVersion';
 import { showWorkerShell, canAccessManagerFeatures } from '../utils/platformUi';
 
 function AppContent() {
@@ -56,7 +57,7 @@ function AppContent() {
 
   useEffect(() => {
     if (activeTab !== 'finance') return;
-    if (financeVersion === 'v2') {
+    if (isSandboxFinance(financeVersion)) {
       navigate('/app/finance-v2', { replace: true });
     }
   }, [activeTab, financeVersion, navigate]);

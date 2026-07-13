@@ -5,12 +5,12 @@ import { showToast } from '../../store/uiStore';
 import { formatFinanceRupiah } from '../../lib/financeV2Calc';
 import { updateAccount } from '../../services/financeV2/accountService';
 import {
-  closeProjectFinance,
   createKasAccount,
   getOrCreateProjectKasAccount,
   loadKasAccounts,
 } from '../../services/financeV2/kasService';
 import KasTransferModal from '../../components/finance-v2/KasTransferModal';
+import ProjectCloseFinanceWizard from '../../components/finance-v2/ProjectCloseFinanceWizard';
 import type { FinanceAccount } from '../../types/financeV2';
 
 export default function KasPage() {
@@ -21,6 +21,7 @@ export default function KasPage() {
   const [newName, setNewName] = useState('');
   const [newProjectId, setNewProjectId] = useState('');
   const [closingId, setClosingId] = useState<string | null>(null);
+  const [closeWizardProjectId, setCloseWizardProjectId] = useState<string | null>(null);
 
   const projectMap = useMemo(
     () => Object.fromEntries(projects.map(p => [p.id, p.name])),
@@ -87,23 +88,8 @@ export default function KasPage() {
     }
   };
 
-  const handleCloseProject = async (projectId: string) => {
-    if (!tenant?.id) return;
-    if (!window.confirm('Tutup keuangan proyek dan transfer sisa kas ke Kas Bisnis?')) return;
-    setClosingId(projectId);
-    try {
-      const result = await closeProjectFinance({
-        orgId: tenant.id,
-        projectId,
-        createdBy: user?.id,
-      });
-      showToast(`Proyek ditutup. Transfer ${formatFinanceRupiah(result.transferred)}`, 'success');
-      load();
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Gagal tutup proyek', 'error');
-    } finally {
-      setClosingId(null);
-    }
+  const handleCloseProject = (projectId: string) => {
+    setCloseWizardProjectId(projectId);
   };
 
   const projectsWithoutKas = projects.filter(
@@ -211,6 +197,17 @@ export default function KasPage() {
         accounts={accounts}
         onSaved={load}
       />
+
+      {closeWizardProjectId && tenant?.id && (
+        <ProjectCloseFinanceWizard
+          open
+          onClose={() => setCloseWizardProjectId(null)}
+          orgId={tenant.id}
+          projectId={closeWizardProjectId}
+          userId={user?.id}
+          onSuccess={load}
+        />
+      )}
     </div>
   );
 }

@@ -1,4 +1,5 @@
-export type FinanceVersion = 'v1' | 'v2';
+/** v3 = Keuangan Bisnis sandbox (mockup terbaru). v2 = alias v3 (legacy DB). v1 = klasik. */
+export type FinanceVersion = 'v1' | 'v2' | 'v3';
 
 export type AccountType =
   | 'kas'
@@ -23,7 +24,12 @@ export type JournalReferenceType =
   | 'manual'
   | 'amortize'
   | 'depreciation'
-  | 'opening';
+  | 'opening'
+  | 'project_close'
+  | 'payroll_disbursement'
+  | 'bon_disbursement'
+  | 'payroll_accrual'
+  | 'period_close';
 
 export interface FinanceAccount {
   id: string;

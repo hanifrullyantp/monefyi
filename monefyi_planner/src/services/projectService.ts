@@ -30,15 +30,24 @@ export interface ArchivedProjectRow {
 export async function archiveProject(projectId: string, userId: string): Promise<void> {
   const { data: row, error: fetchErr } = await supabase
     .from('planner_projects')
-    .select('settings, status')
+    .select('settings, status, finance_status')
     .eq('id', projectId)
     .is('deleted_at', null)
     .maybeSingle();
   if (fetchErr) throw new Error(fetchErr.message);
   if (!row) throw new Error('Proyek tidak ditemukan');
 
+  if (row.finance_status !== 'finance_closed') {
+    const ok = typeof window !== 'undefined'
+      && window.confirm(
+        'Keuangan proyek belum ditutup. Arsipkan tetap? Laba belum masuk ke neraca bisnis.',
+      );
+    if (!ok) return;
+  }
+
   const purgeAt = new Date();
   purgeAt.setDate(purgeAt.getDate() + 30);
+
   const settings = {
     ...((row.settings as Record<string, unknown>) || {}),
     archive_previous_status: row.status,

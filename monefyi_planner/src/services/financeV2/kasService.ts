@@ -6,6 +6,7 @@ import {
   loadAccountsByType,
 } from './accountService';
 import { createJournalEntry } from './journalService';
+import { buildProjectClosePreview } from './projectCloseService';
 import type { FinanceAccount } from '../../types/financeV2';
 
 export async function loadKasAccounts(orgId: string): Promise<FinanceAccount[]> {
@@ -57,28 +58,71 @@ export async function transferKas(input: {
 export async function closeProjectFinance(input: {
   orgId: string;
   projectId: string;
-  finalProfit?: number;
   createdBy?: string;
+  force?: boolean;
 }) {
-  const kasAccounts = await loadKasAccounts(input.orgId);
-  const projectKas = kasAccounts.find(a => a.project_id === input.projectId);
-  if (!projectKas) throw new Error('Akun kas proyek tidak ditemukan.');
+  const preview = await buildProjectClosePreview(input.orgId, input.projectId);
+  if (!preview.canClose) throw new Error('Keuangan proyek sudah ditutup.');
+  if (!input.force && preview.interProjectDebt > 0) {
+    throw new Error('Selesaikan hutang antar-proyek sebelum menutup keuangan.');
+  }
 
+  await ensureChartOfAccounts(input.orgId);
+  const projectKas = await getOrCreateProjectKasAccount(
+    input.orgId,
+    input.projectId,
+    preview.projectName,
+  );
+
+  const kasAccounts = await loadKasAccounts(input.orgId);
   const businessKas = kasAccounts.find(a => !a.project_id && a.is_system)
     || await findSystemAccount(input.orgId, 'kas', 'bisnis');
   if (!businessKas) throw new Error('Akun Kas Bisnis tidak ditemukan.');
 
-  const amount = projectKas.current_balance;
-  if (amount > 0) {
+  const laba = await findSystemAccount(input.orgId, 'laba', 'periode');
+  const labaDitahan = await findSystemAccount(input.orgId, 'laba_ditahan');
+  if (!laba || !labaDitahan) throw new Error('Akun laba tidak ditemukan.');
+
+  const kasRemainder = Math.max(0, projectKas.current_balance);
+  const finalProfit = preview.finalProfit;
+
+  if (kasRemainder > 0) {
     await createJournalEntry({
       orgId: input.orgId,
-      description: `Tutup keuangan proyek — transfer ke Kas Bisnis`,
-      referenceType: 'transfer',
+      description: `Tutup proyek ${preview.projectName} — transfer kas`,
+      referenceType: 'project_close',
       referenceId: input.projectId,
       createdBy: input.createdBy,
       lines: [
-        { accountId: businessKas.id, debit: amount, credit: 0 },
-        { accountId: projectKas.id, debit: 0, credit: amount },
+        { accountId: businessKas.id, debit: kasRemainder, credit: 0 },
+        { accountId: projectKas.id, debit: 0, credit: kasRemainder },
+      ],
+    });
+  }
+
+  if (finalProfit > 0) {
+    await createJournalEntry({
+      orgId: input.orgId,
+      description: `Pengakuan laba proyek ${preview.projectName}`,
+      referenceType: 'project_close',
+      referenceId: input.projectId,
+      createdBy: input.createdBy,
+      lines: [
+        { accountId: laba.id, debit: finalProfit, credit: 0 },
+        { accountId: labaDitahan.id, debit: 0, credit: finalProfit },
+      ],
+    });
+  } else if (finalProfit < 0) {
+    const loss = Math.abs(finalProfit);
+    await createJournalEntry({
+      orgId: input.orgId,
+      description: `Pencatatan defisit proyek ${preview.projectName}`,
+      referenceType: 'project_close',
+      referenceId: input.projectId,
+      createdBy: input.createdBy,
+      lines: [
+        { accountId: labaDitahan.id, debit: loss, credit: 0 },
+        { accountId: laba.id, debit: 0, credit: loss },
       ],
     });
   }
@@ -88,13 +132,17 @@ export async function closeProjectFinance(input: {
     .update({
       finance_status: 'finance_closed',
       closed_at: new Date().toISOString(),
-      final_profit: input.finalProfit ?? amount,
+      final_profit: finalProfit,
     })
     .eq('id', input.projectId);
 
   if (error) throw new Error(error.message);
 
-  return { transferred: amount, projectKasId: projectKas.id };
+  return {
+    transferred: kasRemainder,
+    finalProfit,
+    projectKasId: projectKas.id,
+  };
 }
 
 export async function getOrCreateProjectKasAccount(
