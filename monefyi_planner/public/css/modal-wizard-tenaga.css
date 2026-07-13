@@ -63,13 +63,16 @@ body.wz-preview {
 .wz-backdrop {
   position: fixed;
   inset: 0;
+  z-index: 80;
   background: rgba(0,0,0,0.45);
   backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 16px;
   animation: wzFadeIn 0.3s ease;
+  isolation: isolate;
 }
 
 .wz-backdrop.mobile {

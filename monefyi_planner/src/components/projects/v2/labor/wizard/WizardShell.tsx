@@ -1,4 +1,5 @@
 import { useEffect, useCallback, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowLeft, X, CalendarPlus, Loader2 } from 'lucide-react';
 import type { WizardVariant } from '../../../../../hooks/useWizardVariant';
 import StepIndicator from './StepIndicator';
@@ -45,6 +46,13 @@ export default function WizardShell({
     return () => window.removeEventListener('keydown', handleKey);
   }, [handleKey]);
 
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
+
   if (!open) return null;
 
   const handlePrimary = () => {
@@ -52,7 +60,7 @@ export default function WizardShell({
     else onNext();
   };
 
-  return (
+  return createPortal(
     <div
       className={`wz-backdrop${isMobile ? ' mobile' : ''}`}
       role="dialog"
@@ -112,6 +120,7 @@ export default function WizardShell({
           </button>
         </footer>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
