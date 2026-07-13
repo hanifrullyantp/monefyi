@@ -13,11 +13,16 @@ interface UseAutoSaveOptions<T> {
  */
 export function useAutoSave<T>({ debounceMs = 800, onSave, onError }: UseAutoSaveOptions<T>) {
   const [status, setStatus] = useState<AutoSaveStatus>('idle');
+  const [changeCount, setChangeCount] = useState(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingRef = useRef<T | null>(null);
   const savingRef = useRef(false);
 
   const flush = useCallback(async () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
     if (savingRef.current || pendingRef.current === null) return;
     const payload = pendingRef.current;
     pendingRef.current = null;
@@ -25,6 +30,7 @@ export function useAutoSave<T>({ debounceMs = 800, onSave, onError }: UseAutoSav
     setStatus('saving');
     try {
       await onSave(payload);
+      setChangeCount(0);
       setStatus('saved');
       window.setTimeout(() => setStatus(s => (s === 'saved' ? 'idle' : s)), 2000);
     } catch (e) {
@@ -40,6 +46,7 @@ export function useAutoSave<T>({ debounceMs = 800, onSave, onError }: UseAutoSav
   const schedule = useCallback(
     (payload: T) => {
       pendingRef.current = payload;
+      setChangeCount(c => c + 1);
       setStatus('pending');
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
@@ -50,9 +57,19 @@ export function useAutoSave<T>({ debounceMs = 800, onSave, onError }: UseAutoSav
     [debounceMs, flush],
   );
 
+  const discard = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    pendingRef.current = null;
+    setChangeCount(0);
+    setStatus('idle');
+  }, []);
+
   useEffect(() => () => {
     if (timerRef.current) clearTimeout(timerRef.current);
   }, []);
 
-  return { status, schedule, flush };
+  return { status, changeCount, schedule, flush, discard };
 }

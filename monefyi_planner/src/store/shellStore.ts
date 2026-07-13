@@ -8,11 +8,13 @@ export type BreadcrumbItem = {
 type ShellState = {
   breadcrumb: BreadcrumbItem[];
   projectId: string | null;
+  hideRightPanel: boolean;
   onOpenRap: (() => void) | null;
   onOpenProgress: (() => void) | null;
   setShellMeta: (meta: {
     breadcrumb?: BreadcrumbItem[];
     projectId?: string | null;
+    hideRightPanel?: boolean;
     onOpenRap?: (() => void) | null;
     onOpenProgress?: (() => void) | null;
   }) => void;
@@ -22,17 +24,20 @@ type ShellState = {
 export const useShellStore = create<ShellState>(set => ({
   breadcrumb: [],
   projectId: null,
+  hideRightPanel: false,
   onOpenRap: null,
   onOpenProgress: null,
   setShellMeta: meta => set(state => ({
     breadcrumb: meta.breadcrumb ?? state.breadcrumb,
     projectId: meta.projectId !== undefined ? meta.projectId : state.projectId,
+    hideRightPanel: meta.hideRightPanel !== undefined ? meta.hideRightPanel : state.hideRightPanel,
     onOpenRap: meta.onOpenRap !== undefined ? meta.onOpenRap : state.onOpenRap,
     onOpenProgress: meta.onOpenProgress !== undefined ? meta.onOpenProgress : state.onOpenProgress,
   })),
   clearShellMeta: () => set({
     breadcrumb: [],
     projectId: null,
+    hideRightPanel: false,
     onOpenRap: null,
     onOpenProgress: null,
   }),

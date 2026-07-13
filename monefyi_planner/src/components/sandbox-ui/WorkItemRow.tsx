@@ -27,7 +27,12 @@ export default function WorkItemRow({ item, onToggleCheck, showMenu = true }: Pr
       <button
         type="button"
         onClick={onToggleCheck}
-        className="shrink-0 text-slate-400 hover:text-emerald-600"
+        disabled={!onToggleCheck}
+        className={`shrink-0 transition-colors ${
+          onToggleCheck
+            ? 'text-slate-400 hover:text-emerald-600 cursor-pointer'
+            : 'text-slate-300 cursor-not-allowed opacity-60'
+        }`}
         aria-label={isChecked ? 'Tandai belum' : 'Tandai selesai'}
       >
         {isChecked ? <SquareCheck className="w-5 h-5 text-emerald-600" /> : <Square className="w-5 h-5" />}

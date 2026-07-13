@@ -14,6 +14,7 @@ import { useRapRealtime } from '../../hooks/useRapRealtime';
 import { useColorScheme } from '../../hooks/useColorScheme';
 import { useUiStore } from '../../store/uiStore';
 import { validateRapCell, cellErrorKey } from '../../utils/rapCellValidation';
+import FloatingSaveToolbar from '../sandbox-ui/FloatingSaveToolbar';
 import { exportGridAsXlsx } from '../../utils/exportGridXlsx';
 
 interface RapEditableTableProps {
@@ -27,6 +28,7 @@ interface RapEditableTableProps {
   onRefresh: () => Promise<void>;
   onExport?: () => void;
   materialSuggestions?: string[];
+  showFloatingToolbar?: boolean;
 }
 
 interface PendingSave {
@@ -54,6 +56,7 @@ export default function RapEditableTable({
   onRefresh,
   onExport,
   materialSuggestions,
+  showFloatingToolbar = false,
 }: RapEditableTableProps) {
   const showToast = useUiStore(s => s.showToast);
   const { dark, toggle: toggleTheme } = useColorScheme();
@@ -91,7 +94,7 @@ export default function RapEditableTable({
     else api.setRowGroupColumns([]);
   }, [groupByType]);
 
-  const { status, schedule } = useAutoSave<PendingSave>({
+  const { status, changeCount, schedule, flush, discard } = useAutoSave<PendingSave>({
     debounceMs: 800,
     onSave: async (pending) => {
       await saveRapCellChange(pending.row, pending.field, pending.value, {
@@ -217,6 +220,25 @@ export default function RapEditableTable({
     exportGridAsXlsx(gridApiRef.current, `RAP_${projectId.slice(0, 8)}.xlsx`);
   };
 
+  const handleDiscardChanges = useCallback(() => {
+    discard();
+    setOptimisticRows(serverRows);
+    snapshotRef.current = serverRows;
+    setCellErrors({});
+    gridApiRef.current?.setGridOption('rowData', serverRows);
+    showToast('Perubahan dibatalkan', 'warning');
+  }, [discard, serverRows, showToast]);
+
+  const handleGridUndo = useCallback(() => {
+    gridApiRef.current?.undoCellEditing();
+  }, []);
+
+  const handleGridRedo = useCallback(() => {
+    gridApiRef.current?.redoCellEditing();
+  }, []);
+
+  const toolbarVisible = showFloatingToolbar && (changeCount > 0 || status === 'pending' || status === 'saving');
+
   const copyToClipboard = async () => {
     const api = gridApiRef.current;
     if (!api) return;
@@ -338,6 +360,18 @@ export default function RapEditableTable({
       <p className="text-[10px] text-slate-600 dark:text-slate-500 px-1">
         Klik 2× edit · Enter simpan · Ctrl+C/V · Ctrl+Z undo · Checkbox untuk bulk hapus · Realtime sync aktif
       </p>
+
+      <FloatingSaveToolbar
+        visible={toolbarVisible}
+        changeCount={changeCount}
+        saving={status === 'saving'}
+        canUndo
+        canRedo
+        onUndo={handleGridUndo}
+        onRedo={handleGridRedo}
+        onSave={() => void flush()}
+        onDiscard={handleDiscardChanges}
+      />
     </div>
   );
 }

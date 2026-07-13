@@ -1,10 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Calendar, Wallet, Package, HardHat, FileCheck, ListChecks,
   Filter, ArrowUpDown, Plus, Pencil,
 } from 'lucide-react';
 import type { NormalizedProjectView } from '../../../lib/migration/project-normalize';
+import type { MappedRapItem } from '../../../lib/migration/planner-mapper';
+import type { RapItem } from '../../../services/rapService';
+import { setRapItemRealization } from '../../../services/costService';
 import { formatRupiah, formatDateId } from '../../../utils/projectUi';
+import { useUiStore } from '../../../store/uiStore';
 import CardPopup from '../../migration/CardPopup';
 import WorkItemRow from '../../sandbox-ui/WorkItemRow';
 import TransactionList from '../../sandbox-ui/TransactionList';
@@ -21,6 +25,7 @@ type Props = {
   project: Project;
   orgId: string;
   userId: string;
+  rapItems: RapItem[];
   canManage?: boolean;
   onRefresh: () => void | Promise<void>;
   onSwitchTab?: (tab: 'keuangan' | 'rap') => void;
@@ -28,14 +33,47 @@ type Props = {
 };
 
 export default function TabV2Overview({
-  normalized, project, orgId, userId, canManage = true, onRefresh, onSwitchTab, onEditProject,
+  normalized, project, orgId, userId, rapItems, canManage = true, onRefresh, onSwitchTab, onEditProject,
 }: Props) {
+  const showToast = useUiStore(s => s.showToast);
   const [popup, setPopup] = useState<PopupKind>(null);
   const [filterOpen, setFilterOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'ok' | 'over' | 'pending'>('all');
   const [sortKey, setSortKey] = useState<SortKey>('name');
-  const [checked, setChecked] = useState<Record<number, boolean>>({});
+  const [toggleBusy, setToggleBusy] = useState<string | null>(null);
   const [modal, setModal] = useState<ModalKind>(null);
+
+  const rapByPlannerId = useMemo(() => {
+    const m = new Map<string, RapItem>();
+    for (const r of rapItems) m.set(r.id, r);
+    return m;
+  }, [rapItems]);
+
+  const handleToggleRealization = useCallback(async (item: MappedRapItem) => {
+    const rapId = item.plannerId;
+    if (!rapId || !userId || !canManage) return;
+    const row = rapByPlannerId.get(rapId);
+    if (!row) return;
+    const isRealized = item.qtyActual > 0 || item.checked;
+    setToggleBusy(rapId);
+    try {
+      await setRapItemRealization({
+        projectId: project.id,
+        rapItemId: rapId,
+        rapItemName: row.name,
+        plannedQty: Number(row.quantity) || 0,
+        plannedUnitPrice: Number(row.unit_price) || 0,
+        realized: !isRealized,
+        recordedBy: userId,
+      });
+      await onRefresh();
+      showToast(!isRealized ? 'Item ditandai realisasi' : 'Realisasi dihapus', 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal mengubah realisasi', 'error');
+    } finally {
+      setToggleBusy(null);
+    }
+  }, [project.id, rapByPlannerId, userId, canManage, onRefresh, showToast]);
 
   const p = normalized.project;
   const realisasiPct = Math.min(
@@ -154,8 +192,12 @@ export default function TabV2Overview({
           ) : workItems.map(row => (
             <WorkItemRow
               key={`${row.kind}-${row.idx}`}
-              item={{ ...row.item, checked: checked[row.idx] ?? row.item.checked }}
-              onToggleCheck={() => setChecked(c => ({ ...c, [row.idx]: !c[row.idx] }))}
+              item={row.item}
+              onToggleCheck={
+                canManage && row.item.plannerId && toggleBusy !== row.item.plannerId
+                  ? () => void handleToggleRealization(row.item)
+                  : undefined
+              }
             />
           ))}
         </div>

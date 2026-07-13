@@ -172,7 +172,7 @@ export default function Layout({ children }: LayoutProps) {
     || location.pathname.startsWith('/app/finance-v2')
     || location.pathname.startsWith('/app/database');
 
-  const { breadcrumb, projectId: shellProjectId, onOpenRap, onOpenProgress } = useShellStore();
+  const { breadcrumb, projectId: shellProjectId, hideRightPanel, onOpenRap, onOpenProgress } = useShellStore();
 
   const headerTitle = (() => {
     if (breadcrumb.length > 0) {
@@ -456,7 +456,7 @@ export default function Layout({ children }: LayoutProps) {
           <main className="flex-1 overflow-y-auto min-w-0">
             {children}
           </main>
-          {showRightPanel && (
+          {showRightPanel && !hideRightPanel && (
             <RightPanel
               projectId={shellProjectId}
               onOpenRap={onOpenRap ?? undefined}

@@ -132,11 +132,12 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
     setShellMeta({
       breadcrumb: [{ label: 'Proyek' }, { label: project.name }],
       projectId: project.id,
+      hideRightPanel: tab === 'rap',
       onOpenRap: () => setTab('rap'),
       onOpenProgress: () => setTab('progress'),
     });
     return () => clearShellMeta();
-  }, [project.id, project.name, setShellMeta, clearShellMeta]);
+  }, [project.id, project.name, tab, setShellMeta, clearShellMeta]);
 
   const normalized = mapped ? normalizeProjectView(mapped) : null;
   const balanceCheck = mapped ? validateProjectBalance(mapped) : null;
@@ -223,6 +224,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
                 project={project}
                 orgId={tenant?.id || ''}
                 userId={user?.id || ''}
+                rapItems={rapItems}
                 onRefresh={reload}
                 onSwitchTab={tabId => setTab(tabId)}
                 onEditProject={openEdit}
