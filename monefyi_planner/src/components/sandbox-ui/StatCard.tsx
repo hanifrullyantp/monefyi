@@ -25,8 +25,8 @@ export default function StatCard({
     <Wrapper
       type={onClick ? 'button' : undefined}
       onClick={onClick}
-      className={`bg-white rounded-2xl border border-slate-100 p-4 shadow-sm text-left w-full ${
-        onClick ? 'hover:shadow-md transition-shadow cursor-pointer' : ''
+      className={`surface-card surface-card-hover p-4 text-left w-full ${
+        onClick ? 'cursor-pointer' : ''
       }`}
     >
       <div className="flex items-center justify-between mb-3">

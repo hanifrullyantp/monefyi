@@ -56,6 +56,16 @@ export function groupRapItemsByKeyword(items: MappedRapItem[]): RapItemGroup[] {
 /**
  * Apply draft realization overrides to mapped items for optimistic UI.
  */
+export type RapFieldPatch = {
+  name?: string;
+  qtyPlan?: number;
+  unitPrice?: number;
+};
+
+export function groupRapTotal(items: MappedRapItem[]): number {
+  return items.reduce((s, i) => s + i.rapTotal, 0);
+}
+
 export function applyRealizationDraft(
   items: MappedRapItem[],
   draft: Record<string, boolean>,
@@ -71,4 +81,37 @@ export function applyRealizationDraft(
       status: realized ? (item.qtyActual > item.qtyPlan ? 'over' : 'ok') : 'pending',
     };
   });
+}
+
+/** Merge local field edits onto mapped RAP rows (optimistic UI). */
+export function applyFieldDraft(
+  items: MappedRapItem[],
+  fieldDraft: Record<string, RapFieldPatch>,
+): MappedRapItem[] {
+  return items.map(item => {
+    const rapId = item.plannerId;
+    if (!rapId || !fieldDraft[rapId]) return item;
+    const p = fieldDraft[rapId];
+    const qtyPlan = p.qtyPlan ?? item.qtyPlan;
+    const unitPrice = p.unitPrice ?? item.unitPrice;
+    const name = p.name ?? item.name;
+    const rapTotal = qtyPlan * unitPrice;
+    const total = item.qtyActual * unitPrice;
+    return {
+      ...item,
+      name,
+      qtyPlan,
+      unitPrice,
+      rapTotal,
+      total,
+    };
+  });
+}
+
+export function applyAllRapDrafts(
+  items: MappedRapItem[],
+  realizationDraft: Record<string, boolean>,
+  fieldDraft: Record<string, RapFieldPatch>,
+): MappedRapItem[] {
+  return applyFieldDraft(applyRealizationDraft(items, realizationDraft), fieldDraft);
 }

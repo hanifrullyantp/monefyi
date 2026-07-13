@@ -188,7 +188,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
 
   return (
     <div className="flex flex-col min-h-0">
-      <header className="bg-white border-b px-4 py-3 flex items-center justify-between shrink-0 sticky top-0 z-10">
+      <header className="surface-panel px-4 py-3 flex items-center justify-between shrink-0 sticky top-0 z-10 mx-2 mt-2 rounded-2xl">
         <div className="flex items-center gap-3 min-w-0">
           <button
             type="button"
@@ -263,14 +263,14 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
         </div>
       </header>
 
-      <nav className="bg-white border-b px-2 flex gap-1 overflow-x-auto shrink-0 sticky top-[57px] z-10">
+      <nav className="tab-pills mx-4 mt-3 mb-1 overflow-x-auto shrink-0 sticky top-[4.5rem] z-10">
         {TABS.map(t => (
           <button
             key={t.id}
             type="button"
             onClick={() => trySetTab(t.id)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold whitespace-nowrap border-b-2 ${
-              tab === t.id ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'
+            className={`tab-pill flex items-center gap-1.5 whitespace-nowrap ${
+              tab === t.id ? 'tab-pill-active' : ''
             }`}
           >
             <t.icon className="w-4 h-4" /> {t.label}
@@ -283,7 +283,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
         ))}
       </nav>
 
-      <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50">
+      <main className="flex-1 overflow-y-auto p-4 md:p-5">
         {loading || !normalized ? (
           <div className="text-center py-16 text-slate-500">Memuat...</div>
         ) : (

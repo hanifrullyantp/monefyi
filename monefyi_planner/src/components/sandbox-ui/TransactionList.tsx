@@ -24,8 +24,8 @@ export default function TransactionList({
   const list = limit ? transactions.slice(0, limit) : transactions;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-50">
+    <div className="surface-card overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-4">
         <h3 className="font-bold text-slate-800 text-sm">{title}</h3>
         <div className="flex gap-2">
           {onViewAll && (

@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { MappedRapItem } from '../lib/migration/planner-mapper';
+import type { RapFieldPatch } from '../lib/rapItemGrouping';
 import { setRapItemRealization } from '../services/costService';
-import type { RapItem } from '../services/rapService';
+import { updateRapItem, type RapItem } from '../services/rapService';
 
 type DraftAction = {
   rapId: string;
@@ -30,11 +31,14 @@ export function useRapChecklistDraft({
   onSaved,
 }: Options) {
   const [draft, setDraft] = useState<Record<string, boolean>>({});
+  const [fieldDraft, setFieldDraft] = useState<Record<string, RapFieldPatch>>({});
   const [undoStack, setUndoStack] = useState<DraftAction[]>([]);
   const [redoStack, setRedoStack] = useState<DraftAction[]>([]);
   const [saving, setSaving] = useState(false);
 
-  const changeCount = Object.keys(draft).length;
+  const realizationCount = Object.keys(draft).length;
+  const fieldCount = Object.keys(fieldDraft).length;
+  const changeCount = realizationCount + fieldCount;
   const hasChanges = changeCount > 0;
 
   const getEffectiveRealized = useCallback((item: MappedRapItem): boolean => {
@@ -91,8 +95,29 @@ export function useRapChecklistDraft({
     });
   }, []);
 
+  const patchField = useCallback((rapId: string, patch: RapFieldPatch) => {
+    const row = rapByPlannerId.get(rapId);
+    if (!row) return;
+    setFieldDraft(prev => {
+      const merged = { ...prev[rapId], ...patch };
+      const baseName = row.name;
+      const baseQty = Number(row.quantity) || 0;
+      const basePrice = Number(row.unit_price) || 0;
+      const same =
+        (merged.name === undefined || merged.name === baseName)
+        && (merged.qtyPlan === undefined || merged.qtyPlan === baseQty)
+        && (merged.unitPrice === undefined || merged.unitPrice === basePrice);
+      if (same) {
+        const { [rapId]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [rapId]: merged };
+    });
+  }, [rapByPlannerId]);
+
   const discard = useCallback(() => {
     setDraft({});
+    setFieldDraft({});
     setUndoStack([]);
     setRedoStack([]);
   }, []);
@@ -101,15 +126,27 @@ export function useRapChecklistDraft({
     if (!hasChanges || !userId) return;
     setSaving(true);
     try {
+      for (const [rapId, patch] of Object.entries(fieldDraft)) {
+        const row = rapByPlannerId.get(rapId);
+        if (!row) continue;
+        await updateRapItem(rapId, {
+          name: patch.name ?? row.name,
+          quantity: patch.qtyPlan ?? (Number(row.quantity) || 0),
+          unit_price: patch.unitPrice ?? (Number(row.unit_price) || 0),
+          updated_by: userId,
+        });
+      }
       for (const [rapId, realized] of Object.entries(draft)) {
         const row = rapByPlannerId.get(rapId);
         if (!row) continue;
+        const qty = fieldDraft[rapId]?.qtyPlan ?? (Number(row.quantity) || 0);
+        const price = fieldDraft[rapId]?.unitPrice ?? (Number(row.unit_price) || 0);
         await setRapItemRealization({
           projectId,
           rapItemId: rapId,
-          rapItemName: row.name,
-          plannedQty: Number(row.quantity) || 0,
-          plannedUnitPrice: Number(row.unit_price) || 0,
+          rapItemName: fieldDraft[rapId]?.name ?? row.name,
+          plannedQty: qty,
+          plannedUnitPrice: price,
           realized,
           recordedBy: userId,
         });
@@ -122,21 +159,23 @@ export function useRapChecklistDraft({
     } finally {
       setSaving(false);
     }
-  }, [hasChanges, userId, draft, rapByPlannerId, projectId, discard, onRefresh, onError, onSaved]);
+  }, [hasChanges, userId, draft, fieldDraft, rapByPlannerId, projectId, discard, onRefresh, onError, onSaved]);
 
   const state = useMemo(() => ({
     draft,
+    fieldDraft,
     changeCount,
     hasChanges,
     saving,
     canUndo: undoStack.length > 0,
     canRedo: redoStack.length > 0,
-  }), [draft, changeCount, hasChanges, saving, undoStack.length, redoStack.length]);
+  }), [draft, fieldDraft, changeCount, hasChanges, saving, undoStack.length, redoStack.length]);
 
   return {
     ...state,
     getEffectiveRealized,
     toggle,
+    patchField,
     undo,
     redo,
     discard,

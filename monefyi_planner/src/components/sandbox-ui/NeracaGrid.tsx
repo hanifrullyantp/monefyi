@@ -39,7 +39,7 @@ function NeracaCol({ title, rows, total }: { title: string; rows: NeracaRow[]; t
         const Icon = r.icon ? ICONS[r.icon] : null;
         const display = r.negative ? `-${formatRupiah(r.value)}` : formatRupiah(r.value);
         return (
-          <div key={i} className="flex items-center justify-between py-2 text-sm border-b border-slate-50 last:border-0">
+          <div key={i} className="flex items-center justify-between py-2 text-sm">
             <span className="flex items-center gap-1.5 text-slate-600">
               {Icon && <Icon className="w-3.5 h-3.5 text-slate-400" />}
               {r.label}
@@ -48,7 +48,7 @@ function NeracaCol({ title, rows, total }: { title: string; rows: NeracaRow[]; t
           </div>
         );
       })}
-      <div className="flex justify-between pt-3 mt-2 border-t-2 border-slate-200 font-black text-sm">
+      <div className="flex justify-between pt-3 mt-2 font-black text-sm text-emerald-800">
         <span>TOTAL</span>
         <span>{formatRupiah(total)}</span>
       </div>
@@ -67,8 +67,8 @@ export default function NeracaGrid({
   footer,
 }: Props) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-50">
+    <div className="surface-card overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-4">
         <h3 className="font-bold text-slate-800 text-sm">Neraca Posisi Keuangan</h3>
         {balanceBadge}
       </div>
@@ -76,7 +76,7 @@ export default function NeracaGrid({
         <NeracaCol title={aktivaTitle} rows={aktivaRows} total={totalAktiva} />
         <NeracaCol title={pasivaTitle} rows={pasivaRows} total={totalPasiva} />
       </div>
-      {footer && <div className="px-5 py-3 bg-slate-50 border-t text-xs text-slate-500">{footer}</div>}
+      {footer && <div className="px-5 py-3 bg-emerald-50/40 text-xs text-slate-500 rounded-b-[var(--radius-card)]">{footer}</div>}
     </div>
   );
 }

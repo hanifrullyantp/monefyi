@@ -1,21 +1,26 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FileSignature, Calculator, Wallet, TrendingUp, AlertTriangle, CheckCircle2,
-  Package, HardHat, Search, Filter, CheckSquare, Table2,
+  Package, HardHat, Search, Filter, CheckSquare, Table2, Plus,
 } from 'lucide-react';
 import RapEditableTable from '../RapEditableTable';
 import type { RapItem } from '../../../services/rapService';
 import type { RapActualAgg } from '../../../services/costService';
-import { loadMaterials } from '../../../services/rpp/materialService';
+import { loadMaterials, upsertMaterialFromRapLine } from '../../../services/rpp/materialService';
+import { loadWorkers, upsertWorkerFromRapLine } from '../../../services/rpp/workerService';
 import { useAppStore } from '../../../store/appStore';
 import { useUiStore } from '../../../store/uiStore';
 import type { NormalizedProjectView } from '../../../lib/migration/project-normalize';
 import type { MappedRapItem } from '../../../lib/migration/planner-mapper';
 import { formatRupiah } from '../../../utils/projectUi';
-import { groupRapItemsByKeyword, applyRealizationDraft } from '../../../lib/rapItemGrouping';
+import {
+  groupRapItemsByKeyword, groupRapTotal, applyAllRapDrafts, type RapFieldPatch,
+} from '../../../lib/rapItemGrouping';
 import { useRapChecklistDraft } from '../../../hooks/useRapChecklistDraft';
 import WorkItemRow from '../../sandbox-ui/WorkItemRow';
 import StatCard from '../../sandbox-ui/StatCard';
+import RapAddItemsModal from './RapAddItemsModal';
+import RapItemDetailModal from './RapItemDetailModal';
 
 export type RapDraftControls = {
   changeCount: number;
@@ -59,6 +64,7 @@ function filterItems(items: MappedRapItem[], search: string, status: StatusFilte
 type ColumnPanelProps = {
   title: string;
   icon: typeof Package;
+  kind: 'material' | 'labor';
   items: MappedRapItem[];
   totalRap: number;
   search: string;
@@ -66,39 +72,55 @@ type ColumnPanelProps = {
   statusFilter: StatusFilter;
   onStatusFilterChange: (v: StatusFilter) => void;
   onToggle: (item: MappedRapItem) => void;
+  onFieldEdit: (rapId: string, patch: RapFieldPatch) => void;
+  onSaveToDatabase: (item: MappedRapItem) => void;
+  isInDatabase: (name: string) => boolean;
+  onAddClick: () => void;
+  onItemDetail: (item: MappedRapItem) => void;
   canManage: boolean;
 };
 
 function RapColumnPanel({
-  title, icon: Icon, items, totalRap, search, onSearchChange,
-  statusFilter, onStatusFilterChange, onToggle, canManage,
+  title, icon: Icon, kind, items, totalRap, search, onSearchChange,
+  statusFilter, onStatusFilterChange, onToggle, onFieldEdit, onSaveToDatabase,
+  isInDatabase, onAddClick, onItemDetail, canManage,
 }: ColumnPanelProps) {
   const filtered = useMemo(() => filterItems(items, search, statusFilter), [items, search, statusFilter]);
   const groups = useMemo(() => groupRapItemsByKeyword(filtered), [filtered]);
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col min-h-0 max-h-[min(70vh,560px)]">
-      <div className="sticky top-0 z-10 shrink-0 bg-white rounded-t-2xl border-b border-slate-100 shadow-sm">
-        <div className="px-4 py-3 bg-slate-50/80">
+    <div className="surface-card flex flex-col min-h-0 max-h-[min(70vh,560px)]">
+      <div className="sticky top-0 z-10 shrink-0 rounded-t-[var(--radius-card)] shadow-sm">
+        <div className="px-4 py-3 bg-gradient-to-b from-emerald-50/50 to-white/80">
           <div className="flex items-center justify-between gap-2 mb-3">
             <div className="flex items-center gap-2 font-bold text-slate-800">
               <Icon className="w-5 h-5 text-slate-500" />
               {title}
             </div>
+            {canManage && (
+              <button
+                type="button"
+                onClick={onAddClick}
+                title={`Tambah ${title.toLowerCase()}`}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700"
+              >
+                <Plus className="w-3.5 h-3.5" /> Tambah
+              </button>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div className="bg-white rounded-xl border border-slate-100 px-3 py-2">
+            <div className="surface-inset px-3 py-2">
               <div className="text-[10px] font-bold text-slate-500 uppercase">Total RAP</div>
               <div className="text-sm font-black text-slate-800">{formatRupiah(totalRap)}</div>
             </div>
-            <div className="bg-white rounded-xl border border-slate-100 px-3 py-2">
+            <div className="surface-inset px-3 py-2">
               <div className="text-[10px] font-bold text-slate-500 uppercase">Jumlah Item</div>
               <div className="text-sm font-black text-slate-800">{items.length} item</div>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 px-4 py-2 bg-white">
+        <div className="flex flex-wrap items-center gap-2 px-4 py-2">
           <div className="relative flex-1 min-w-[120px]">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -132,10 +154,15 @@ function RapColumnPanel({
           groups.map(group => (
             <div key={group.key}>
               {group.label && (
-                <div className="sticky top-0 z-[5] px-4 py-2 bg-slate-100/95 backdrop-blur border-b border-slate-200 text-xs font-black text-slate-600 uppercase tracking-wide">
-                  {group.label}
-                  <span className="ml-2 font-semibold text-slate-400 normal-case">
-                    ({group.items.length})
+                <div className="sticky top-0 z-[5] flex items-center justify-between gap-2 px-4 py-2 bg-emerald-50/70 backdrop-blur rounded-lg mx-2 mt-1 mb-0.5 text-xs font-black text-slate-600 uppercase tracking-wide">
+                  <span>
+                    {group.label}
+                    <span className="ml-2 font-semibold text-slate-400 normal-case">
+                      ({group.items.length})
+                    </span>
+                  </span>
+                  <span className="text-slate-700 font-black normal-case shrink-0">
+                    {formatRupiah(groupRapTotal(group.items))}
                   </span>
                 </div>
               )}
@@ -143,7 +170,11 @@ function RapColumnPanel({
                 <WorkItemRow
                   key={item.plannerId || `${group.key}-${idx}`}
                   item={item}
-                  showMenu={false}
+                  canEdit={canManage}
+                  savedToDatabase={isInDatabase(item.name)}
+                  onSaveToDatabase={canManage ? () => onSaveToDatabase(item) : undefined}
+                  onDoubleClick={() => onItemDetail(item)}
+                  onFieldEdit={patch => item.plannerId && onFieldEdit(item.plannerId, patch)}
                   onToggleCheck={canManage && item.plannerId ? () => onToggle(item) : undefined}
                 />
               ))}
@@ -169,15 +200,29 @@ export default function TabV2Rap({
   const [tenagaFilter, setTenagaFilter] = useState<StatusFilter>('all');
   const [excelChangeCount, setExcelChangeCount] = useState(0);
   const [excelControls, setExcelControls] = useState<RapDraftControls | null>(null);
+  const [dbMaterialNames, setDbMaterialNames] = useState<Set<string>>(new Set());
+  const [dbWorkerNames, setDbWorkerNames] = useState<Set<string>>(new Set());
+  const [addModal, setAddModal] = useState<'material' | 'labor' | null>(null);
+  const [detailItem, setDetailItem] = useState<MappedRapItem | null>(null);
 
   const p = normalized.project;
 
-  useEffect(() => {
+  const reloadDbNames = useCallback(async () => {
     if (!tenant?.id) return;
-    loadMaterials(tenant.id)
-      .then(rows => setMaterialSuggestions(rows.map(r => r.name)))
-      .catch(() => setMaterialSuggestions([]));
+    try {
+      const [mats, workers] = await Promise.all([
+        loadMaterials(tenant.id),
+        loadWorkers(tenant.id),
+      ]);
+      setMaterialSuggestions(mats.map(r => r.name));
+      setDbMaterialNames(new Set(mats.map(r => r.name.trim().toLowerCase())));
+      setDbWorkerNames(new Set(workers.map(r => r.name.trim().toLowerCase())));
+    } catch {
+      setMaterialSuggestions([]);
+    }
   }, [tenant?.id]);
+
+  useEffect(() => { void reloadDbNames(); }, [reloadDbNames]);
 
   const rapByPlannerId = useMemo(() => {
     const m = new Map<string, RapItem>();
@@ -194,14 +239,54 @@ export default function TabV2Rap({
     onSaved: () => showToast('Perubahan RAP disimpan', 'success'),
   });
 
+  const applyDrafts = useCallback((items: MappedRapItem[]) => (
+    applyAllRapDrafts(items, checklistDraft.draft, checklistDraft.fieldDraft)
+  ), [checklistDraft.draft, checklistDraft.fieldDraft]);
+
   const materialsWithDraft = useMemo(
-    () => applyRealizationDraft(p.rap.materials, checklistDraft.draft),
-    [p.rap.materials, checklistDraft.draft],
+    () => applyDrafts(p.rap.materials),
+    [p.rap.materials, applyDrafts],
   );
   const workersWithDraft = useMemo(
-    () => applyRealizationDraft(p.rap.workers, checklistDraft.draft),
-    [p.rap.workers, checklistDraft.draft],
+    () => applyDrafts(p.rap.workers),
+    [p.rap.workers, applyDrafts],
   );
+
+  const isMaterialInDb = useCallback(
+    (name: string) => dbMaterialNames.has(name.trim().toLowerCase()),
+    [dbMaterialNames],
+  );
+  const isWorkerInDb = useCallback(
+    (name: string) => dbWorkerNames.has(name.trim().toLowerCase()),
+    [dbWorkerNames],
+  );
+
+  const handleSaveToDatabase = useCallback(async (item: MappedRapItem, kind: 'material' | 'labor') => {
+    if (!tenant?.id) return;
+    try {
+      if (kind === 'material') {
+        await upsertMaterialFromRapLine(tenant.id, {
+          name: item.name,
+          unit: item.unit,
+          unitPrice: item.unitPrice,
+          vendor: item.vendor,
+        });
+      } else {
+        await upsertWorkerFromRapLine(tenant.id, {
+          name: item.name,
+          unitPrice: item.unitPrice,
+        });
+      }
+      await reloadDbNames();
+      showToast(`${item.name} disimpan ke Database Master`, 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal simpan ke database', 'error');
+    }
+  }, [tenant?.id, reloadDbNames, showToast]);
+
+  const handleFieldEdit = useCallback((rapId: string, patch: RapFieldPatch) => {
+    checklistDraft.patchField(rapId, patch);
+  }, [checklistDraft]);
 
   const notifyDraft = useCallback(() => {
     if (viewMode === 'excel' && excelControls) {
@@ -278,7 +363,7 @@ export default function TabV2Rap({
           iconBg="bg-emerald-50" iconColor="text-emerald-600" barVariant="success" />
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+      <div className="surface-card p-5">
         <div className="flex justify-between text-xs font-bold mb-2">
           <span className="text-blue-600">RAP {rapPct.toFixed(0)}%</span>
           <span className="text-rose-600">Realisasi {realisasiPct.toFixed(0)}%</span>
@@ -300,7 +385,7 @@ export default function TabV2Rap({
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex bg-slate-100 p-1 rounded-xl">
+        <div className="flex bg-slate-100/80 p-1 rounded-xl">
           <button
             type="button"
             title="Checklist realisasi"
@@ -323,7 +408,7 @@ export default function TabV2Rap({
           </button>
         </div>
 
-        <div className="flex bg-white border border-slate-200 p-1 rounded-xl">
+        <div className="flex surface-inset p-1 rounded-xl">
           {([
             { id: 'semua' as const, label: 'Semua' },
             { id: 'material' as const, label: 'Material' },
@@ -351,6 +436,7 @@ export default function TabV2Rap({
             <RapColumnPanel
               title="Material"
               icon={Package}
+              kind="material"
               items={materialsWithDraft}
               totalRap={materialTotal}
               search={materialSearch}
@@ -358,6 +444,11 @@ export default function TabV2Rap({
               statusFilter={materialFilter}
               onStatusFilterChange={setMaterialFilter}
               onToggle={handleToggle}
+              onFieldEdit={handleFieldEdit}
+              onSaveToDatabase={item => void handleSaveToDatabase(item, 'material')}
+              isInDatabase={isMaterialInDb}
+              onAddClick={() => setAddModal('material')}
+              onItemDetail={setDetailItem}
               canManage={Boolean(userId)}
             />
           )}
@@ -365,6 +456,7 @@ export default function TabV2Rap({
             <RapColumnPanel
               title="Tenaga Kerja"
               icon={HardHat}
+              kind="labor"
               items={workersWithDraft}
               totalRap={tenagaTotal}
               search={tenagaSearch}
@@ -372,6 +464,11 @@ export default function TabV2Rap({
               statusFilter={tenagaFilter}
               onStatusFilterChange={setTenagaFilter}
               onToggle={handleToggle}
+              onFieldEdit={handleFieldEdit}
+              onSaveToDatabase={item => void handleSaveToDatabase(item, 'labor')}
+              isInDatabase={isWorkerInDb}
+              onAddClick={() => setAddModal('labor')}
+              onItemDetail={setDetailItem}
               canManage={Boolean(userId)}
             />
           )}
@@ -422,6 +519,28 @@ export default function TabV2Rap({
           />
         </>
       )}
+
+      {addModal && userId && (
+        <RapAddItemsModal
+          open
+          itemType={addModal}
+          projectId={projectId}
+          sortOffset={rapItems.length}
+          userId={userId}
+          onClose={() => setAddModal(null)}
+          onAdded={onRefresh}
+        />
+      )}
+
+      <RapItemDetailModal
+        open={detailItem !== null}
+        item={detailItem}
+        onClose={() => setDetailItem(null)}
+        canManage={Boolean(userId)}
+        onSave={patch => {
+          if (detailItem?.plannerId) handleFieldEdit(detailItem.plannerId, patch);
+        }}
+      />
     </div>
   );
 }

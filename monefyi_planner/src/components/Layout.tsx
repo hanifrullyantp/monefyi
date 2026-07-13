@@ -157,10 +157,10 @@ export default function Layout({ children }: LayoutProps) {
 
   const getSyncIndicator = () => {
     switch (syncStatus) {
-      case 'synced': return { color: 'bg-emerald-500', text: 'Tersinkron', textColor: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' };
-      case 'syncing': return { color: 'bg-amber-500 animate-pulse', text: 'Menyinkron...', textColor: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' };
-      case 'offline': return { color: 'bg-slate-400', text: `Offline${pendingSyncCount > 0 ? ` · ${pendingSyncCount} item` : ''}`, textColor: 'text-slate-600', bg: 'bg-slate-50 border-slate-200' };
-      case 'error': return { color: 'bg-rose-500', text: 'Sync error', textColor: 'text-rose-700', bg: 'bg-rose-50 border-rose-200' };
+      case 'synced': return { color: 'bg-emerald-500', text: 'Tersinkron', textColor: 'text-emerald-700', bg: 'bg-emerald-50' };
+      case 'syncing': return { color: 'bg-amber-500 animate-pulse', text: 'Menyinkron...', textColor: 'text-amber-700', bg: 'bg-amber-50' };
+      case 'offline': return { color: 'bg-slate-400', text: `Offline${pendingSyncCount > 0 ? ` · ${pendingSyncCount} item` : ''}`, textColor: 'text-slate-600', bg: 'bg-slate-100/80' };
+      case 'error': return { color: 'bg-rose-500', text: 'Sync error', textColor: 'text-rose-700', bg: 'bg-rose-50' };
     }
   };
 
@@ -195,15 +195,15 @@ export default function Layout({ children }: LayoutProps) {
   })();
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden org-branded" style={orgBrandStyle}>
+    <div className="flex h-screen overflow-hidden org-branded" style={orgBrandStyle}>
       {/* Desktop Sidebar */}
       <aside
-        className={`hidden lg:flex flex-col bg-white border-r border-slate-100 shadow-sm z-30 transition-[width] duration-200 shrink-0 ${
+        className={`hidden lg:flex flex-col shell-sidebar z-30 transition-[width] duration-200 shrink-0 ${
           navSidebarCollapsed ? 'w-[4.5rem]' : 'w-64'
         }`}
       >
         {/* Logo + collapse + Monefyi AI */}
-        <div className={`border-b border-slate-100 ${navSidebarCollapsed ? 'px-2 py-3' : 'p-4'}`}>
+        <div className={`${navSidebarCollapsed ? 'px-2 py-3' : 'p-4'}`}>
           <div className={`flex items-center gap-2 ${navSidebarCollapsed ? 'flex-col' : ''}`}>
             <MonefyiLogo
               className={`rounded-xl object-contain shadow-md shrink-0 ${
@@ -257,7 +257,7 @@ export default function Layout({ children }: LayoutProps) {
           </button>
 
           {tenant && !navSidebarCollapsed && (
-            <div className="mt-3 px-2 py-1.5 bg-org-soft border border-org-soft rounded-lg">
+            <div className="mt-3 px-2 py-1.5 bg-org-soft rounded-xl">
               <div className="flex items-center gap-2 min-w-0">
                 {tenant.logo ? (
                   <img src={tenant.logo} alt="" className="w-6 h-6 rounded object-cover shrink-0" />
@@ -288,8 +288,8 @@ export default function Layout({ children }: LayoutProps) {
                   : 'gap-3 px-3 py-2.5'
               } ${
                 isTabActive(item.id)
-                  ? 'bg-org-soft text-org-dark shadow-sm border border-org-soft'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  ? 'bg-org-soft text-org-dark shadow-sm'
+                  : 'text-slate-600 hover:bg-white/70 hover:text-slate-900'
               }`}
             >
               <item.icon className={`shrink-0 ${navSidebarCollapsed ? 'w-5 h-5' : 'w-4.5 h-4.5'} ${
@@ -331,7 +331,7 @@ export default function Layout({ children }: LayoutProps) {
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="fixed left-0 top-0 bottom-0 w-72 bg-white z-50 shadow-2xl lg:hidden flex flex-col"
             >
-              <div className="p-6 flex items-center justify-between border-b border-slate-100">
+              <div className="p-6 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <MonefyiLogo className="w-9 h-9 rounded-xl object-contain" />
                   <div>
@@ -369,7 +369,7 @@ export default function Layout({ children }: LayoutProps) {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="glass border-b border-slate-200 px-4 lg:px-6 h-14 flex items-center justify-between shrink-0 z-20">
+        <header className="shell-header px-4 lg:px-6 h-14 flex items-center justify-between shrink-0 z-20">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -390,7 +390,7 @@ export default function Layout({ children }: LayoutProps) {
 
           <div className="flex items-center gap-2">
             {/* Sync Status — desktop & tablet */}
-            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${sync.bg} ${sync.textColor}`}>
+            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${sync.bg} ${sync.textColor}`}>
               <div className={`w-1.5 h-1.5 rounded-full ${sync.color}`} />
               <span className="hidden sm:block">{sync.text}</span>
               <span className="hidden lg:inline text-slate-600 font-normal">· {lastSyncText}</span>
@@ -466,7 +466,7 @@ export default function Layout({ children }: LayoutProps) {
         </div>
 
         {/* Bottom Navigation — Mobile */}
-        <nav className="lg:hidden border-t border-slate-200 bg-white safe-bottom shrink-0">
+        <nav className="lg:hidden bg-white/90 backdrop-blur-lg safe-bottom shrink-0 shadow-[0_-4px_24px_rgba(15,23,42,0.06)]">
           <div className="flex items-end justify-around px-2 pt-2 pb-3">
             {mobileTabs.map((tab) => (
               tab.special ? (
@@ -475,7 +475,7 @@ export default function Layout({ children }: LayoutProps) {
                   onClick={() => setCommandModalOpen(true)}
                   className="relative -mt-6 flex flex-col items-center"
                 >
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-xl shadow-emerald-300/50 animate-breathe relative">
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-xl shadow-emerald-300/40 animate-breathe relative">
                     <Sparkles className="w-6 h-6 text-white" />
                     {pendingSyncCount > 0 && (
                       <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
@@ -489,10 +489,10 @@ export default function Layout({ children }: LayoutProps) {
                 <button
                   key={tab.id}
                   onClick={() => handleNav(tab.id)}
-                  className={`flex flex-col items-center gap-0.5 px-3 py-1 transition-colors duration-150 border-b-2 ${
+                  className={`flex flex-col items-center gap-0.5 px-3 py-1 transition-colors duration-150 rounded-xl ${
                     isTabActive(tab.id)
-                      ? 'text-emerald-600 border-emerald-600'
-                      : 'text-slate-600 border-transparent hover:text-slate-800'
+                      ? 'text-emerald-600 bg-emerald-50'
+                      : 'text-slate-600 hover:text-slate-800'
                   }`}
                 >
                   <tab.icon className="w-5 h-5" />
