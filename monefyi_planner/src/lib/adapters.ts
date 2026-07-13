@@ -195,10 +195,11 @@ export function toTenant(org: DbOrganization): Tenant {
 }
 
 export function toProject(row: DbProject, currency = 'IDR'): Project {
-  const settings = (row.settings || {}) as Record<string, string>;
+  const settings = (row.settings || {}) as Record<string, string | number>;
   const progress = Number(row.progress_pct) || 0;
   const spent = Number(row.total_spent) || 0;
   const budget = Number(row.total_budget) || 0;
+  const contractValue = Number(settings.contract_value) || 0;
   const plannedProgress = progress;
 
   return {
@@ -217,6 +218,7 @@ export function toProject(row: DbProject, currency = 'IDR'): Project {
     start_date: row.planned_start,
     end_date: row.planned_end,
     total_budget_planned: budget,
+    contract_value: contractValue > 0 ? contractValue : undefined,
     currency,
     manager_id: settings.manager_id,
     progress_percentage: progress,
@@ -276,7 +278,18 @@ export function fromProjectUpdate(data: Partial<Project>): Partial<DbProject> {
   if (data.status !== undefined) update.status = UI_TO_DB_STATUS[data.status];
   if (data.progress_percentage !== undefined) update.progress_pct = data.progress_percentage;
   if (data.total_budget_planned !== undefined) update.total_budget = data.total_budget_planned;
-  if (data.type !== undefined) update.settings = { type: data.type };
+  if (data.contract_value !== undefined) {
+    update.settings = {
+      ...((update.settings as Record<string, unknown>) || {}),
+      contract_value: data.contract_value,
+    };
+  }
+  if (data.type !== undefined) {
+    update.settings = {
+      ...((update.settings as Record<string, unknown>) || {}),
+      type: data.type,
+    };
+  }
   if (data.finance_report_month !== undefined) {
     update.finance_report_month = data.finance_report_month
       ? monthPickerToReportDate(data.finance_report_month)

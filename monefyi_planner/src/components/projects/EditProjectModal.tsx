@@ -22,6 +22,7 @@ export default function EditProjectModal({ project, onClose, onSaved }: EditProj
     start_date: project.start_date,
     end_date: project.end_date,
     total_budget_planned: project.total_budget_planned,
+    contract_value: project.contract_value ?? project.total_budget_planned,
     status: project.status,
     description: project.description || '',
   });
@@ -79,7 +80,11 @@ export default function EditProjectModal({ project, onClose, onSaved }: EditProj
             </div>
           </div>
           <div>
-            <label className="text-xs font-bold text-slate-500 uppercase">Budget (BAC)</label>
+            <label className="text-xs font-bold text-slate-500 uppercase">Nilai Kontrak</label>
+            <input type="number" value={form.contract_value || ''} onChange={e => setForm({ ...form, contract_value: Number(e.target.value) })} className="w-full mt-1 px-3 py-2 border rounded-xl text-sm" />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-slate-500 uppercase">Total RAP / Budget</label>
             <input type="number" value={form.total_budget_planned || ''} onChange={e => setForm({ ...form, total_budget_planned: Number(e.target.value) })} className="w-full mt-1 px-3 py-2 border rounded-xl text-sm" />
           </div>
           <div>

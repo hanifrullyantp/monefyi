@@ -26,6 +26,7 @@ export default function ProjectEditModal({ project, canArchive, onClose, onSave,
     end_date: project.end_date,
     description: project.description || '',
     total_budget_planned: project.total_budget_planned,
+    contract_value: project.contract_value ?? project.total_budget_planned,
     finance_report_month: project.finance_report_month
       ? reportDateToMonthPicker(project.finance_report_month)
       : new Date().toISOString().slice(0, 7),
@@ -59,6 +60,7 @@ export default function ProjectEditModal({ project, canArchive, onClose, onSave,
         end_date: form.end_date,
         description: form.description.trim() || undefined,
         total_budget_planned: form.total_budget_planned,
+        contract_value: form.contract_value,
         finance_report_month: form.finance_report_month,
         finance_report_month_manual: form.finance_report_month_manual,
       });
@@ -177,14 +179,34 @@ export default function ProjectEditModal({ project, canArchive, onClose, onSave,
               <p className="text-[11px] text-emerald-700 font-medium">Mode otomatis — berubah saat tanggal selesai diubah.</p>
             )}
           </div>
-          <input
-            type="number"
-            min={0}
-            value={form.total_budget_planned || ''}
-            onChange={e => setForm({ ...form, total_budget_planned: Number(e.target.value) })}
-            placeholder="Budget rencana (Rp)"
-            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
-          />
+          <div>
+            <label className="text-xs font-semibold text-slate-600 block mb-1">Nilai Kontrak (Rp)</label>
+            <input
+              type="number"
+              min={0}
+              value={form.contract_value || ''}
+              onChange={e => setForm({ ...form, contract_value: Number(e.target.value) })}
+              placeholder="Total nilai kontrak dengan klien"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
+            />
+            {form.contract_value > 0 && (
+              <p className="text-[11px] text-slate-500 mt-1">{formatRupiah(form.contract_value)}</p>
+            )}
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-600 block mb-1">Total RAP / Budget Rencana (Rp)</label>
+            <input
+              type="number"
+              min={0}
+              value={form.total_budget_planned || ''}
+              onChange={e => setForm({ ...form, total_budget_planned: Number(e.target.value) })}
+              placeholder="Jumlah RAP (material + tenaga)"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
+            />
+            {form.total_budget_planned > 0 && (
+              <p className="text-[11px] text-slate-500 mt-1">{formatRupiah(form.total_budget_planned)}</p>
+            )}
+          </div>
           <textarea
             value={form.description}
             onChange={e => setForm({ ...form, description: e.target.value })}

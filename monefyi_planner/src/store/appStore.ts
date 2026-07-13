@@ -46,6 +46,8 @@ export interface Project {
   start_date: string;
   end_date: string;
   total_budget_planned: number;
+  /** Nilai kontrak dengan klien (disimpan di settings.contract_value). */
+  contract_value?: number;
   currency: string;
   manager_id?: string;
   progress_percentage: number;

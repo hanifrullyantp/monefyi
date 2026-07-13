@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import type { Project } from '../../../store/appStore';
 import { useAppStore } from '../../../store/appStore';
 import { useShellStore } from '../../../store/shellStore';
-import { updateProject as updateProjectApi } from '../../../services/projectService';
+import { updateProject as updateProjectApi, getProject } from '../../../services/projectService';
 import { showToast } from '../../../store/uiStore';
 import { loadRapItems } from '../../../services/rapService';
 import { loadWorkItems } from '../../../services/workItemService';
@@ -58,28 +58,36 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
   const reload = useCallback(async () => {
     setLoading(true);
     try {
+      const fresh = await getProject(project.id, tenant?.currency);
+      const proj = fresh || project;
+      if (fresh) setProject(fresh);
+
       const [rap, costs, incomes, wi] = await Promise.all([
-        loadRapItems(project.id),
-        loadCostRealizations(project.id),
-        loadProjectIncomes(project.id),
-        loadWorkItems(project.id),
+        loadRapItems(proj.id),
+        loadCostRealizations(proj.id),
+        loadProjectIncomes(proj.id),
+        loadWorkItems(proj.id),
       ]);
       setRapItems(rap);
       setWorkItems(wi);
-      setRapActuals(await aggregateCostByRapItem(project.id));
+      setRapActuals(await aggregateCostByRapItem(proj.id));
       const view = mapPlannerProject({
         project: {
-          id: project.id,
-          org_id: project.tenant_id,
-          name: project.name,
-          client_name: project.client_name,
-          planned_start: project.start_date,
-          planned_end: project.end_date,
-          status: project.status,
-          progress_pct: project.progress_percentage,
-          total_budget: project.total_budget_planned,
-          total_spent: project.spent_amount,
-          total_received: project.total_received,
+          id: proj.id,
+          org_id: proj.tenant_id,
+          name: proj.name,
+          client_name: proj.client_name,
+          planned_start: proj.start_date,
+          planned_end: proj.end_date,
+          status: proj.status,
+          progress_pct: proj.progress_percentage,
+          total_budget: proj.total_budget_planned,
+          total_spent: proj.spent_amount,
+          total_received: proj.total_received,
+          settings: {
+            type: proj.type,
+            ...(proj.contract_value ? { contract_value: proj.contract_value } : {}),
+          },
         },
         rapItems: rap.map(r => ({
           id: r.id,
@@ -126,7 +134,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
     } finally {
       setLoading(false);
     }
-  }, [project]);
+  }, [project, tenant?.currency]);
 
   useEffect(() => { void reload(); }, [reload]);
 

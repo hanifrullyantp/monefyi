@@ -149,10 +149,11 @@ export async function updateProject(projectId: string, data: Partial<Project>, c
     .eq('id', projectId)
     .maybeSingle();
 
-  if (data.type !== undefined) {
+  if (data.type !== undefined || data.contract_value !== undefined) {
     payload.settings = {
       ...((existingRow?.settings as Record<string, unknown>) || {}),
-      type: data.type,
+      ...(data.type !== undefined ? { type: data.type } : {}),
+      ...(data.contract_value !== undefined ? { contract_value: data.contract_value } : {}),
     };
   }
 
