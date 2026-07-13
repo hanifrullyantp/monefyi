@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowLeft, MoreVertical, LayoutGrid, Wallet, BarChart3, FileSpreadsheet, Brain, FileText, Pencil,
   Undo2, Redo2, Save,
@@ -54,12 +54,15 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
   const [workItems, setWorkItems] = useState<Awaited<ReturnType<typeof loadWorkItems>>>([]);
   const [rapActuals, setRapActuals] = useState<Record<string, { qty: number; amount: number }>>({});
   const [rapDraft, setRapDraft] = useState<RapDraftControls | null>(null);
+  const loadedOnceRef = useRef(false);
+  const projectRef = useRef(project);
+  projectRef.current = project;
 
   const reload = useCallback(async () => {
-    setLoading(true);
+    if (!loadedOnceRef.current) setLoading(true);
     try {
       const fresh = await getProject(project.id, tenant?.currency);
-      const proj = fresh || project;
+      const proj = fresh || projectRef.current;
       if (fresh) setProject(fresh);
 
       const [rap, costs, incomes, wi] = await Promise.all([
@@ -132,9 +135,10 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
       });
       setMapped(view);
     } finally {
+      loadedOnceRef.current = true;
       setLoading(false);
     }
-  }, [project, tenant?.currency]);
+  }, [project.id, tenant?.currency]);
 
   useEffect(() => { void reload(); }, [reload]);
 

@@ -76,8 +76,9 @@ export default function TabV2Overview({
   }, [project.id, rapByPlannerId, userId, canManage, onRefresh, showToast]);
 
   const p = normalized.project;
+  const totalRap = p.rap?.totalRAP || 0;
   const realisasiPct = Math.min(
-    p.contractValue > 0 ? (normalized.totalRealisasi / p.contractValue) * 100 : 0,
+    totalRap > 0 ? (normalized.totalRealisasi / totalRap) * 100 : 0,
     100,
   );
   const bahanPlan = p.budget.bahan.plan || 1;
@@ -120,8 +121,9 @@ export default function TabV2Overview({
             Saldo: {formatRupiah(p.saldo)}
           </button>
         </div>
+        <p className="text-xs font-bold text-slate-500 uppercase mb-1">Total RAP</p>
         <div className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-4">
-          {formatRupiah(p.contractValue)}
+          {formatRupiah(totalRap)}
         </div>
         <div className="h-7 bg-slate-100 rounded-lg overflow-hidden relative">
           <div
@@ -132,7 +134,7 @@ export default function TabV2Overview({
           </div>
         </div>
         <p className="text-center text-sm text-slate-500 mt-2">
-          Sisa: {formatRupiah(normalized.sisaKontrak)}
+          Sisa RAP: {formatRupiah(Math.max(0, totalRap - normalized.totalRealisasi))}
         </p>
       </div>
 
