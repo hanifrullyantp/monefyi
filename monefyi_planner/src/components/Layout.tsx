@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, FolderOpen, Wallet, Settings, Bell, Menu, X,
   Sparkles, Wifi, WifiOff, Clock, Users, Calculator,
-  BarChart3, Shield, ChevronRight, Database,
+  BarChart3, Shield, ChevronRight, Database, PanelRightClose, PanelRight,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { useUiStore } from '../store/uiStore';
@@ -34,6 +34,7 @@ export default function Layout({ children }: LayoutProps) {
     migrationFlags, setMigrationFlags,
     syncStatus, pendingSyncCount, isOnline, lastSynced, unreadCount, commandModalOpen,
     setCommandModalOpen, sidebarOpen, setSidebarOpen, navSidebarCollapsed, toggleNavSidebarCollapsed,
+    rightPanelHidden, toggleRightPanelHidden,
     platformRole, uiViewMode,
   } = useAppStore();
   const navigate = useNavigate();
@@ -398,6 +399,19 @@ export default function Layout({ children }: LayoutProps) {
             </div>
 
             {/* Notifications */}
+            {showRightPanel && (
+              <button
+                type="button"
+                onClick={toggleRightPanelHidden}
+                className="hidden xl:flex p-2 rounded-xl hover:bg-slate-100 transition-colors"
+                title={rightPanelHidden ? 'Tampilkan panel kanan' : 'Sembunyikan panel kanan'}
+                aria-label={rightPanelHidden ? 'Tampilkan panel kanan' : 'Sembunyikan panel kanan'}
+              >
+                {rightPanelHidden
+                  ? <PanelRight className="w-5 h-5 text-slate-600" />
+                  : <PanelRightClose className="w-5 h-5 text-slate-600" />}
+              </button>
+            )}
             <div className="relative">
               <button
                 onClick={() => setNotifOpen(!notifOpen)}
@@ -456,12 +470,23 @@ export default function Layout({ children }: LayoutProps) {
           <main className="flex-1 overflow-y-auto min-w-0">
             {children}
           </main>
-          {showRightPanel && !hideRightPanel && (
+          {showRightPanel && !hideRightPanel && !rightPanelHidden && (
             <RightPanel
               projectId={shellProjectId}
               onOpenRap={onOpenRap ?? undefined}
               onOpenProgress={onOpenProgress ?? undefined}
             />
+          )}
+          {showRightPanel && !hideRightPanel && rightPanelHidden && (
+            <button
+              type="button"
+              onClick={toggleRightPanelHidden}
+              className="hidden xl:flex fixed right-0 top-1/2 -translate-y-1/2 z-20 items-center gap-1 pl-2 pr-1.5 py-3 rounded-l-xl bg-white border border-r-0 border-slate-200 shadow-md text-xs font-bold text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
+              title="Tampilkan panel kanan"
+              aria-label="Tampilkan panel kanan"
+            >
+              <PanelRight className="w-4 h-4" />
+            </button>
           )}
         </div>
 

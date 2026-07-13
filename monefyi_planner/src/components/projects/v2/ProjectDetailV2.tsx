@@ -146,12 +146,11 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
     setShellMeta({
       breadcrumb: [{ label: 'Proyek' }, { label: project.name }],
       projectId: project.id,
-      hideRightPanel: tab === 'rap',
       onOpenRap: () => trySetTab('rap'),
       onOpenProgress: () => trySetTab('progress'),
     });
     return () => clearShellMeta();
-  }, [project.id, project.name, tab, setShellMeta, clearShellMeta]);
+  }, [project.id, project.name, setShellMeta, clearShellMeta]);
 
   const normalized = mapped ? normalizeProjectView(mapped) : null;
   const balanceCheck = mapped ? validateProjectBalance(mapped) : null;

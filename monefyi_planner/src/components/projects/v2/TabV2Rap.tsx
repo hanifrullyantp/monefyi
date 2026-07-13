@@ -244,6 +244,7 @@ export default function TabV2Rap({
     projectId,
     userId,
     rapByPlannerId,
+    rapActuals,
     onRefresh,
     onError: msg => showToast(msg, 'error'),
     onSaved: () => showToast('Perubahan RAP disimpan', 'success'),

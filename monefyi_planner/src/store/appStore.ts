@@ -137,6 +137,8 @@ interface AppState {
   sidebarOpen: boolean;
   /** Desktop nav sidebar disembunyikan untuk layar lebih lebar (estimator, dll). */
   navSidebarCollapsed: boolean;
+  /** Panel kanan (aksi cepat) disembunyikan oleh user. */
+  rightPanelHidden: boolean;
   commandModalOpen: boolean;
   selectedProjectId: string | null;
 
@@ -171,6 +173,8 @@ interface AppState {
   setSidebarOpen: (val: boolean) => void;
   setNavSidebarCollapsed: (val: boolean) => void;
   toggleNavSidebarCollapsed: () => void;
+  setRightPanelHidden: (val: boolean) => void;
+  toggleRightPanelHidden: () => void;
   setCommandModalOpen: (val: boolean) => void;
   setSelectedProjectId: (id: string | null) => void;
   setProjects: (projects: Project[]) => void;
@@ -221,6 +225,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   sidebarOpen: false,
   navSidebarCollapsed: typeof localStorage !== 'undefined'
     && localStorage.getItem('monefyi_nav_sidebar_collapsed') === '1',
+  rightPanelHidden: typeof localStorage !== 'undefined'
+    && localStorage.getItem('monefyi_right_panel_hidden') === '1',
   commandModalOpen: false,
   selectedProjectId: null,
 
@@ -270,6 +276,19 @@ export const useAppStore = create<AppState>((set, get) => ({
       localStorage.setItem('monefyi_nav_sidebar_collapsed', next ? '1' : '0');
     }
     set({ navSidebarCollapsed: next });
+  },
+  setRightPanelHidden: rightPanelHidden => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('monefyi_right_panel_hidden', rightPanelHidden ? '1' : '0');
+    }
+    set({ rightPanelHidden });
+  },
+  toggleRightPanelHidden: () => {
+    const next = !get().rightPanelHidden;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('monefyi_right_panel_hidden', next ? '1' : '0');
+    }
+    set({ rightPanelHidden: next });
   },
   setCommandModalOpen: commandModalOpen => set({ commandModalOpen }),
   setSelectedProjectId: selectedProjectId => set({ selectedProjectId }),

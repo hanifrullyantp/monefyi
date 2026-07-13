@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   Calendar, Wallet, Package, HardHat, FileCheck, ListChecks,
-  Filter, ArrowUpDown, Plus, Pencil, Receipt,
+  Filter, ArrowUpDown, Plus, Pencil,
 } from 'lucide-react';
 import type { NormalizedProjectView } from '../../../lib/migration/project-normalize';
 import type { MappedRapItem } from '../../../lib/migration/planner-mapper';
@@ -181,19 +181,6 @@ export default function TabV2Overview({
             {p.saldo < 0 ? 'Defisit' : 'Tersedia'}
           </span>
         </button>
-        <button type="button" onClick={() => setPopup('hutang')}
-          className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm text-left hover:shadow-md transition-shadow col-span-2 lg:col-span-1">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center">
-              <Receipt className="w-4 h-4 text-rose-600" />
-            </div>
-            <span className="text-xs font-semibold text-slate-500 uppercase">Hutang</span>
-          </div>
-          <div className="text-xl font-black text-rose-600 mb-2">{formatRupiah(p.budget.hutang)}</div>
-          <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full bg-rose-50 text-rose-600">
-            {normalized.hutangItems.length} pihak
-          </span>
-        </button>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -263,15 +250,10 @@ export default function TabV2Overview({
           actions={
             popup === 'pembayaran' && canManage
               ? [{ label: 'Tambah Pembayaran', variant: 'primary' as const, onClick: () => { setPopup(null); setModal('income'); } }]
-              : popup === 'piutang' && canManage
-                ? [
-                    { label: 'Tambah Piutang', variant: 'primary' as const, onClick: () => { setPopup(null); setModal('receivable'); } },
-                    { label: 'Catat Pembayaran', onClick: () => { setPopup(null); setModal('receivable'); } },
-                  ]
-                : popup === 'hutang' && canManage
+                : popup === 'piutang' && canManage
                   ? [
-                      { label: 'Tambah Hutang', variant: 'primary' as const, onClick: () => { setPopup(null); setModal('hutang'); } },
-                      { label: 'Bayar Hutang', onClick: () => { setPopup(null); setModal('transfer'); } },
+                      { label: 'Tambah Piutang', variant: 'primary' as const, onClick: () => { setPopup(null); setModal('receivable'); } },
+                      { label: 'Catat Pembayaran', onClick: () => { setPopup(null); setModal('receivable'); } },
                     ]
                   : popup === 'saldo' && canManage
                     ? [{ label: 'Tambah Dana Masuk', variant: 'primary' as const, onClick: () => { setPopup(null); setModal('income'); } }]

@@ -39,10 +39,12 @@ export default function RapItemDetailModal({
   const selisih = planTotal - actualTotal;
 
   const handleApply = () => {
+    const parsedActual = parseMoneyInput(qtyActual);
     onSave({
       name: name.trim() || item.name,
       qtyPlan: parseMoneyInput(qtyPlan) || item.qtyPlan,
       unitPrice: parseMoneyInput(unitPrice) || item.unitPrice,
+      qtyActual: Number.isFinite(parsedActual) ? parsedActual : item.qtyActual,
     });
     onClose();
   };
@@ -97,7 +99,20 @@ export default function RapItemDetailModal({
                 </tr>
                 <tr className="border-t border-slate-100 bg-rose-50/30">
                   <td className="px-3 py-2 font-bold text-rose-700">Realisasi</td>
-                  <td className="px-3 py-2 text-right">{qtyActual} {unit}</td>
+                  <td className="px-3 py-2 text-right">
+                    {canManage ? (
+                      <div className="inline-flex items-center gap-1">
+                        <input
+                          value={qtyActual}
+                          onChange={e => setQtyActual(e.target.value)}
+                          className="w-20 text-right border rounded-lg px-2 py-1"
+                        />
+                        <span className="text-slate-500">{unit}</span>
+                      </div>
+                    ) : (
+                      <>{qtyActual} {unit}</>
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-right">{formatRupiah(parseMoneyInput(unitPrice) || 0)}</td>
                   <td className="px-3 py-2 text-right font-bold text-rose-700">{formatRupiah(actualTotal)}</td>
                 </tr>
@@ -124,7 +139,7 @@ export default function RapItemDetailModal({
               <input value={unit} onChange={e => setUnit(e.target.value)}
                 className="w-full px-3 py-2 border rounded-xl text-sm" disabled />
               <p className="text-[10px] text-slate-400">
-                Realisasi volume diubah lewat checkbox / tab Excel. Simpan header untuk apply perubahan planning.
+                Volume realisasi bisa diedit langsung di tabel. Simpan header untuk apply ke draft RAP.
               </p>
             </div>
           )}

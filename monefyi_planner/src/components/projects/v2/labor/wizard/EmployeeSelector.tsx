@@ -83,12 +83,14 @@ export default function EmployeeSelector({
       </div>
 
       <div className="wz-emp-list" ref={listRef}>
-        {filtered.map((m, i) => (
+        {filtered.map((m, i) => {
+          const isSelected = selected?.id === m.id;
+          return (
           <button
             key={m.id}
             type="button"
-            className="wz-emp-row w-full text-left"
-            style={highlight === i ? { background: 'var(--wz-primary-light)', paddingLeft: 20 } : undefined}
+            className={`wz-emp-row w-full text-left${isSelected ? ' selected' : ''}`}
+            style={!isSelected && highlight === i ? { background: 'var(--wz-primary-light)', paddingLeft: 20 } : undefined}
             onClick={() => onSelect(m)}
             onMouseEnter={() => setHighlight(i)}
           >
@@ -99,7 +101,8 @@ export default function EmployeeSelector({
             </div>
             <Database className="wz-db-badge w-4 h-4" />
           </button>
-        ))}
+          );
+        })}
         {showCreate && canCreateHr && (
           <button
             type="button"

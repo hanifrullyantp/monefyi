@@ -108,6 +108,7 @@ export async function setRapItemRealization(input: {
   plannedUnitPrice: number;
   realized: boolean;
   amount?: number | null;
+  actualQty?: number | null;
   recordedBy: string;
   date?: string;
 }) {
@@ -120,18 +121,25 @@ export async function setRapItemRealization(input: {
   const plannedQty = Math.max(0, Number(input.plannedQty) || 0);
   const plannedUnitPrice = Number(input.plannedUnitPrice) || 0;
   const plannedTotal = Math.round(plannedQty * plannedUnitPrice);
-  const customAmount = input.amount != null && input.amount > 0 ? Math.round(input.amount) : null;
-  const totalAmount = customAmount ?? plannedTotal;
-
-  if (totalAmount <= 0) return;
 
   let quantity = plannedQty;
   let unitPrice = plannedUnitPrice;
+  let totalAmount = plannedTotal;
 
-  if (customAmount != null && customAmount !== plannedTotal) {
-    quantity = 1;
-    unitPrice = customAmount;
+  if (input.actualQty != null && input.actualQty >= 0) {
+    quantity = input.actualQty;
+    unitPrice = plannedUnitPrice;
+    totalAmount = Math.round(quantity * unitPrice);
+  } else {
+    const customAmount = input.amount != null && input.amount > 0 ? Math.round(input.amount) : null;
+    totalAmount = customAmount ?? plannedTotal;
+    if (customAmount != null && customAmount !== plannedTotal) {
+      quantity = 1;
+      unitPrice = customAmount;
+    }
   }
+
+  if (totalAmount <= 0) return;
 
   await createCostRealization({
     project_id: projectId,

@@ -60,6 +60,7 @@ export type RapFieldPatch = {
   name?: string;
   qtyPlan?: number;
   unitPrice?: number;
+  qtyActual?: number;
 };
 
 export function groupRapTotal(items: MappedRapItem[]): number {
@@ -95,15 +96,20 @@ export function applyFieldDraft(
     const qtyPlan = p.qtyPlan ?? item.qtyPlan;
     const unitPrice = p.unitPrice ?? item.unitPrice;
     const name = p.name ?? item.name;
+    const qtyActual = p.qtyActual ?? item.qtyActual;
     const rapTotal = qtyPlan * unitPrice;
-    const total = item.qtyActual * unitPrice;
+    const total = qtyActual * unitPrice;
+    const checked = qtyActual > 0;
     return {
       ...item,
       name,
       qtyPlan,
       unitPrice,
+      qtyActual,
       rapTotal,
       total,
+      checked,
+      status: qtyActual <= 0 ? 'pending' : (qtyActual > qtyPlan || total > rapTotal ? 'over' : 'ok'),
     };
   });
 }

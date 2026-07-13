@@ -343,6 +343,17 @@ body.wz-preview {
 
 .wz-emp-row:hover { background: var(--wz-primary-light); padding-left: 20px; }
 
+.wz-emp-row.selected {
+  background: var(--wz-success-light);
+  border-left: 3px solid var(--wz-success);
+  padding-left: 17px;
+}
+
+.wz-emp-row.selected:hover {
+  background: var(--wz-success-light);
+  padding-left: 17px;
+}
+
 .wz-avatar {
   width: 40px;
   height: 40px;

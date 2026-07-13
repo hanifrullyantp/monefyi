@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import type { MappedRapItem } from '../lib/migration/planner-mapper';
 import type { RapFieldPatch } from '../lib/rapItemGrouping';
 import { setRapItemRealization } from '../services/costService';
+import type { RapActualAgg } from '../services/costService';
 import { updateRapItem, type RapItem } from '../services/rapService';
 
 type DraftAction = {
@@ -14,6 +15,7 @@ type Options = {
   projectId: string;
   userId: string;
   rapByPlannerId: Map<string, RapItem>;
+  rapActuals?: Record<string, RapActualAgg>;
   onRefresh: () => Promise<void>;
   onError?: (msg: string) => void;
   onSaved?: () => void;
@@ -26,6 +28,7 @@ export function useRapChecklistDraft({
   projectId,
   userId,
   rapByPlannerId,
+  rapActuals = {},
   onRefresh,
   onError,
   onSaved,
@@ -103,17 +106,19 @@ export function useRapChecklistDraft({
       const baseName = row.name;
       const baseQty = Number(row.quantity) || 0;
       const basePrice = Number(row.unit_price) || 0;
+      const baseActual = rapActuals[rapId]?.qty ?? 0;
       const same =
         (merged.name === undefined || merged.name === baseName)
         && (merged.qtyPlan === undefined || merged.qtyPlan === baseQty)
-        && (merged.unitPrice === undefined || merged.unitPrice === basePrice);
+        && (merged.unitPrice === undefined || merged.unitPrice === basePrice)
+        && (merged.qtyActual === undefined || merged.qtyActual === baseActual);
       if (same) {
         const { [rapId]: _, ...rest } = prev;
         return rest;
       }
       return { ...prev, [rapId]: merged };
     });
-  }, [rapByPlannerId]);
+  }, [rapByPlannerId, rapActuals]);
 
   const discard = useCallback(() => {
     setDraft({});
@@ -126,6 +131,7 @@ export function useRapChecklistDraft({
     if (!hasChanges || !userId) return;
     setSaving(true);
     try {
+      const qtyPatched = new Set<string>();
       for (const [rapId, patch] of Object.entries(fieldDraft)) {
         const row = rapByPlannerId.get(rapId);
         if (!row) continue;
@@ -135,8 +141,24 @@ export function useRapChecklistDraft({
           unit_price: patch.unitPrice ?? (Number(row.unit_price) || 0),
           updated_by: userId,
         });
+        if (patch.qtyActual !== undefined) {
+          const qtyPlan = patch.qtyPlan ?? (Number(row.quantity) || 0);
+          const price = patch.unitPrice ?? (Number(row.unit_price) || 0);
+          await setRapItemRealization({
+            projectId,
+            rapItemId: rapId,
+            rapItemName: patch.name ?? row.name,
+            plannedQty: qtyPlan,
+            plannedUnitPrice: price,
+            realized: patch.qtyActual > 0,
+            actualQty: patch.qtyActual,
+            recordedBy: userId,
+          });
+          qtyPatched.add(rapId);
+        }
       }
       for (const [rapId, realized] of Object.entries(draft)) {
+        if (qtyPatched.has(rapId)) continue;
         const row = rapByPlannerId.get(rapId);
         if (!row) continue;
         const qty = fieldDraft[rapId]?.qtyPlan ?? (Number(row.quantity) || 0);
