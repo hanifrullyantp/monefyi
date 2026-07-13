@@ -202,11 +202,12 @@ export function mapPlannerProject(input: {
   workItems: PlannerWorkRow[];
 }): MappedProjectView {
   const p = input.project;
+  const settings = (p.settings || {}) as Record<string, string | number>;
+  const contractValue = num(settings.contract_value) || num(p.total_budget);
   const budget = num(p.total_budget);
   const spent = num(p.total_spent);
   const received = num(p.total_received);
   const progress = num(p.progress_pct);
-  const settings = (p.settings || {}) as Record<string, string>;
   const actualByRapId = buildActualByRapId(input.costs);
 
   const materials = input.rapItems
@@ -261,8 +262,8 @@ export function mapPlannerProject(input: {
 
   const start = dateOnly(p.planned_start);
   const end = dateOnly(p.planned_end);
-  const estLaba = Math.max(0, budget - spent);
-  const piutang = Math.max(0, budget - received);
+  const estLaba = Math.max(0, contractValue - spent);
+  const piutang = Math.max(0, contractValue - received);
   const hutang = Math.max(0, spent - received);
   const saldo = received - spent;
 
@@ -283,7 +284,7 @@ export function mapPlannerProject(input: {
     startDate: start,
     endDate: end,
     duration: daysBetween(start, end),
-    contractValue: budget,
+    contractValue,
     saldo,
     status: mapProjectStatus(p.status, spent, budget),
     progress: { plan: progress, actual: progress, deviation: 0 },

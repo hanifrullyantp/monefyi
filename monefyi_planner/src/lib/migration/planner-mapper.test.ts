@@ -86,4 +86,28 @@ describe('planner-mapper', () => {
     const piutang = mapped.hutangPiutang.find(h => h.type === 'piutang');
     expect(piutang?.partyName).toBe('INTERO');
   });
+
+  it('contractValue prefers settings.contract_value over total_budget', () => {
+    const mapped = mapPlannerProject({
+      project: {
+        id: 'p3',
+        org_id: 'org-1',
+        name: 'Kitchen set Cece',
+        client_name: 'INTERO',
+        planned_start: '2026-01-01',
+        planned_end: '2026-06-01',
+        total_budget: 29_691_500,
+        total_spent: 27_200_000,
+        total_received: 20_000_000,
+        settings: { contract_value: 53_000_000, type: 'furniture' },
+      },
+      rapItems: [],
+      costs: [],
+      incomes: [],
+      workItems: [],
+    });
+
+    expect(mapped.contractValue).toBe(53_000_000);
+    expect(mapped.budget.piutang).toBe(33_000_000);
+  });
 });
