@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   ArrowLeft, MoreVertical, LayoutGrid, Wallet, BarChart3, FileSpreadsheet, Brain, FileText, Pencil,
+  Undo2, Redo2, Save,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { Project } from '../../../store/appStore';
@@ -19,7 +20,7 @@ import BalanceDiagnosisModal from '../../finance-v2/BalanceDiagnosisModal';
 import TabV2Overview from './TabV2Overview';
 import TabV2Keuangan from './TabV2Keuangan';
 import TabV2Progress from './TabV2Progress';
-import TabV2Rap from './TabV2Rap';
+import TabV2Rap, { type RapDraftControls } from './TabV2Rap';
 import TabV2Analisa from './TabV2Analisa';
 import TabV2Laporan from './TabV2Laporan';
 import ProjectEditModal from '../ProjectEditModal';
@@ -52,6 +53,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
   const [rapItems, setRapItems] = useState<Awaited<ReturnType<typeof loadRapItems>>>([]);
   const [workItems, setWorkItems] = useState<Awaited<ReturnType<typeof loadWorkItems>>>([]);
   const [rapActuals, setRapActuals] = useState<Record<string, { qty: number; amount: number }>>({});
+  const [rapDraft, setRapDraft] = useState<RapDraftControls | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -133,8 +135,8 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
       breadcrumb: [{ label: 'Proyek' }, { label: project.name }],
       projectId: project.id,
       hideRightPanel: tab === 'rap',
-      onOpenRap: () => setTab('rap'),
-      onOpenProgress: () => setTab('progress'),
+      onOpenRap: () => trySetTab('rap'),
+      onOpenProgress: () => trySetTab('progress'),
     });
     return () => clearShellMeta();
   }, [project.id, project.name, tab, setShellMeta, clearShellMeta]);
@@ -153,13 +155,44 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
 
   const openEdit = () => setEditOpen(true);
 
+  const confirmDiscardRapDraft = (): boolean => {
+    if (tab !== 'rap' || !rapDraft?.hasChanges) return true;
+    const ok = window.confirm(
+      'Ada perubahan RAP belum disimpan. Pindah halaman akan membuang perubahan. Lanjutkan?',
+    );
+    if (ok) rapDraft.discard();
+    return ok;
+  };
+
+  const trySetTab = (next: TabId) => {
+    if (next === tab) return;
+    if (!confirmDiscardRapDraft()) return;
+    setTab(next);
+  };
+
+  const tryClose = () => {
+    if (!confirmDiscardRapDraft()) return;
+    onClose();
+  };
+
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (tab === 'rap' && rapDraft?.hasChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [tab, rapDraft?.hasChanges]);
+
   return (
     <div className="flex flex-col min-h-0">
       <header className="bg-white border-b px-4 py-3 flex items-center justify-between shrink-0 sticky top-0 z-10">
         <div className="flex items-center gap-3 min-w-0">
           <button
             type="button"
-            onClick={onClose}
+            onClick={tryClose}
             className="p-2 hover:bg-slate-100 rounded-xl shrink-0"
             aria-label="Kembali"
           >
@@ -184,6 +217,43 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
               {balanceCheck.isBalanced ? 'Balance' : 'Tidak Balance'}
             </button>
           )}
+          {tab === 'rap' && rapDraft && rapDraft.hasChanges && (
+            <>
+              <span className="text-xs font-bold text-amber-600 hidden sm:inline">
+                {rapDraft.changeCount} perubahan
+              </span>
+              <button
+                type="button"
+                onClick={rapDraft.undo}
+                disabled={!rapDraft.canUndo}
+                className="p-2 hover:bg-slate-100 rounded-xl disabled:opacity-40"
+                title="Undo"
+                aria-label="Undo"
+              >
+                <Undo2 className="w-5 h-5 text-slate-500" />
+              </button>
+              <button
+                type="button"
+                onClick={rapDraft.redo}
+                disabled={!rapDraft.canRedo}
+                className="p-2 hover:bg-slate-100 rounded-xl disabled:opacity-40"
+                title="Redo"
+                aria-label="Redo"
+              >
+                <Redo2 className="w-5 h-5 text-slate-500" />
+              </button>
+              <button
+                type="button"
+                onClick={() => void rapDraft.save()}
+                disabled={rapDraft.saving}
+                className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 disabled:opacity-60"
+                title="Simpan"
+              >
+                <Save className="w-4 h-4" />
+                {rapDraft.saving ? '…' : 'Simpan'}
+              </button>
+            </>
+          )}
           <button type="button" onClick={openEdit} className="p-2 hover:bg-slate-100 rounded-xl" aria-label="Edit proyek" title="Edit proyek">
             <Pencil className="w-5 h-5 text-slate-500" />
           </button>
@@ -198,7 +268,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
           <button
             key={t.id}
             type="button"
-            onClick={() => setTab(t.id)}
+            onClick={() => trySetTab(t.id)}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold whitespace-nowrap border-b-2 ${
               tab === t.id ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
@@ -226,7 +296,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
                 userId={user?.id || ''}
                 rapItems={rapItems}
                 onRefresh={reload}
-                onSwitchTab={tabId => setTab(tabId)}
+                onSwitchTab={tabId => trySetTab(tabId)}
                 onEditProject={openEdit}
               />
             )}
@@ -258,6 +328,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
                 rapActuals={rapActuals}
                 onRefresh={reload}
                 userId={user?.id || ''}
+                onDraftChange={setRapDraft}
               />
             )}
             {tab === 'analisa' && (

@@ -29,6 +29,18 @@ interface RapEditableTableProps {
   onExport?: () => void;
   materialSuggestions?: string[];
   showFloatingToolbar?: boolean;
+  /** When true, edits are queued until explicit Simpan (no debounced auto-save). */
+  manualSave?: boolean;
+  onPendingChangeCount?: (count: number) => void;
+  onManualControls?: (controls: {
+    changeCount: number;
+    hasChanges: boolean;
+    saving: boolean;
+    undo: () => void;
+    redo: () => void;
+    save: () => Promise<void>;
+    discard: () => void;
+  } | null) => void;
 }
 
 interface PendingSave {
@@ -57,6 +69,9 @@ export default function RapEditableTable({
   onExport,
   materialSuggestions,
   showFloatingToolbar = false,
+  manualSave = false,
+  onPendingChangeCount,
+  onManualControls,
 }: RapEditableTableProps) {
   const showToast = useUiStore(s => s.showToast);
   const { dark, toggle: toggleTheme } = useColorScheme();
@@ -70,11 +85,19 @@ export default function RapEditableTable({
   const serverRows = useMemo(() => buildRapTableRows(items, rapActuals), [items, rapActuals]);
   const [optimisticRows, setOptimisticRows] = useState<RapTableRow[]>(serverRows);
   const snapshotRef = useRef<RapTableRow[]>(serverRows);
+  const pendingQueueRef = useRef<PendingSave[]>([]);
+  const [manualChangeCount, setManualChangeCount] = useState(0);
+  const [manualSaving, setManualSaving] = useState(false);
 
   useEffect(() => {
     setOptimisticRows(serverRows);
     snapshotRef.current = serverRows;
-  }, [serverRows]);
+    if (manualSave) {
+      pendingQueueRef.current = [];
+      setManualChangeCount(0);
+      onPendingChangeCount?.(0);
+    }
+  }, [serverRows, manualSave, onPendingChangeCount]);
 
   const stableRefresh = useCallback(() => { void onRefresh(); }, [onRefresh]);
   useRapRealtime(projectId, stableRefresh);
@@ -148,16 +171,26 @@ export default function RapEditableTable({
       applyOptimisticPatch(row.id, field, value);
 
       const actual = rapActuals[row.id];
-      schedule({
+      const pending: PendingSave = {
         row,
         field: field as RapCellField,
         value: value as string | number | boolean,
         currentActualQty: row.qty_realisasi,
         lastCostId: actual?.lastCostId,
         snapshot: snapshotRef.current,
-      });
+      };
+
+      if (manualSave) {
+        pendingQueueRef.current.push(pending);
+        const count = pendingQueueRef.current.length;
+        setManualChangeCount(count);
+        onPendingChangeCount?.(count);
+        return;
+      }
+
+      schedule(pending);
     },
-    [canManage, mode, schedule, showToast, applyOptimisticPatch, optimisticRows, rapActuals],
+    [canManage, mode, schedule, showToast, applyOptimisticPatch, optimisticRows, rapActuals, manualSave, onPendingChangeCount],
   );
 
   const handleAddRow = async () => {
@@ -222,12 +255,42 @@ export default function RapEditableTable({
 
   const handleDiscardChanges = useCallback(() => {
     discard();
+    pendingQueueRef.current = [];
+    setManualChangeCount(0);
+    onPendingChangeCount?.(0);
     setOptimisticRows(serverRows);
     snapshotRef.current = serverRows;
     setCellErrors({});
     gridApiRef.current?.setGridOption('rowData', serverRows);
     showToast('Perubahan dibatalkan', 'warning');
-  }, [discard, serverRows, showToast]);
+  }, [discard, serverRows, showToast, onPendingChangeCount]);
+
+  const handleManualSave = useCallback(async () => {
+    const queue = [...pendingQueueRef.current];
+    if (!queue.length) return;
+    setManualSaving(true);
+    try {
+      for (const pending of queue) {
+        await saveRapCellChange(pending.row, pending.field, pending.value, {
+          mode,
+          projectId,
+          recordedBy,
+          currentActualQty: pending.currentActualQty,
+          lastCostId: pending.lastCostId,
+        });
+      }
+      pendingQueueRef.current = [];
+      setManualChangeCount(0);
+      onPendingChangeCount?.(0);
+      await onRefresh();
+      showToast('Perubahan disimpan', 'success');
+    } catch (e) {
+      setOptimisticRows(snapshotRef.current);
+      showToast(e instanceof Error ? e.message : 'Gagal menyimpan', 'error');
+    } finally {
+      setManualSaving(false);
+    }
+  }, [mode, projectId, recordedBy, onRefresh, showToast, onPendingChangeCount]);
 
   const handleGridUndo = useCallback(() => {
     gridApiRef.current?.undoCellEditing();
@@ -237,7 +300,31 @@ export default function RapEditableTable({
     gridApiRef.current?.redoCellEditing();
   }, []);
 
-  const toolbarVisible = showFloatingToolbar && (changeCount > 0 || status === 'pending' || status === 'saving');
+  const effectiveChangeCount = manualSave ? manualChangeCount : changeCount;
+
+  useEffect(() => {
+    if (!manualSave || !onManualControls) {
+      onManualControls?.(null);
+      return;
+    }
+    onManualControls({
+      changeCount: manualChangeCount,
+      hasChanges: manualChangeCount > 0,
+      saving: manualSaving,
+      undo: handleGridUndo,
+      redo: handleGridRedo,
+      save: handleManualSave,
+      discard: handleDiscardChanges,
+    });
+    return () => onManualControls(null);
+  }, [
+    manualSave, onManualControls, manualChangeCount, manualSaving,
+    handleGridUndo, handleGridRedo, handleManualSave, handleDiscardChanges,
+  ]);
+
+  const toolbarVisible = showFloatingToolbar && (
+    effectiveChangeCount > 0 || status === 'pending' || status === 'saving' || manualSaving
+  );
 
   const copyToClipboard = async () => {
     const api = gridApiRef.current;
@@ -363,13 +450,13 @@ export default function RapEditableTable({
 
       <FloatingSaveToolbar
         visible={toolbarVisible}
-        changeCount={changeCount}
-        saving={status === 'saving'}
+        changeCount={effectiveChangeCount}
+        saving={manualSave ? manualSaving : status === 'saving'}
         canUndo
         canRedo
         onUndo={handleGridUndo}
         onRedo={handleGridRedo}
-        onSave={() => void flush()}
+        onSave={() => void (manualSave ? handleManualSave() : flush())}
         onDiscard={handleDiscardChanges}
       />
     </div>

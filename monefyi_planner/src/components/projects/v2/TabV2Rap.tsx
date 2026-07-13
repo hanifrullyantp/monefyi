@@ -6,15 +6,29 @@ import {
 import RapEditableTable from '../RapEditableTable';
 import type { RapItem } from '../../../services/rapService';
 import type { RapActualAgg } from '../../../services/costService';
-import { setRapItemRealization } from '../../../services/costService';
 import { loadMaterials } from '../../../services/rpp/materialService';
 import { useAppStore } from '../../../store/appStore';
 import { useUiStore } from '../../../store/uiStore';
 import type { NormalizedProjectView } from '../../../lib/migration/project-normalize';
 import type { MappedRapItem } from '../../../lib/migration/planner-mapper';
 import { formatRupiah } from '../../../utils/projectUi';
+import { groupRapItemsByKeyword, applyRealizationDraft } from '../../../lib/rapItemGrouping';
+import { useRapChecklistDraft } from '../../../hooks/useRapChecklistDraft';
 import WorkItemRow from '../../sandbox-ui/WorkItemRow';
 import StatCard from '../../sandbox-ui/StatCard';
+
+export type RapDraftControls = {
+  changeCount: number;
+  hasChanges: boolean;
+  saving: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
+  undo: () => void;
+  redo: () => void;
+  save: () => Promise<void>;
+  discard: () => void;
+};
+
 type Props = {
   projectId: string;
   normalized: NormalizedProjectView;
@@ -22,6 +36,7 @@ type Props = {
   rapActuals: Record<string, RapActualAgg>;
   onRefresh: () => Promise<void>;
   userId: string;
+  onDraftChange?: (controls: RapDraftControls | null) => void;
 };
 
 type RapViewMode = 'checklist' | 'excel';
@@ -51,76 +66,88 @@ type ColumnPanelProps = {
   statusFilter: StatusFilter;
   onStatusFilterChange: (v: StatusFilter) => void;
   onToggle: (item: MappedRapItem) => void;
-  toggleBusy: string | null;
   canManage: boolean;
 };
 
 function RapColumnPanel({
   title, icon: Icon, items, totalRap, search, onSearchChange,
-  statusFilter, onStatusFilterChange, onToggle, toggleBusy, canManage,
+  statusFilter, onStatusFilterChange, onToggle, canManage,
 }: ColumnPanelProps) {
   const filtered = useMemo(() => filterItems(items, search, statusFilter), [items, search, statusFilter]);
+  const groups = useMemo(() => groupRapItemsByKeyword(filtered), [filtered]);
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col min-h-0">
-      <div className="px-4 py-3 border-b bg-slate-50/80">
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2 font-bold text-slate-800">
-            <Icon className="w-5 h-5 text-slate-500" />
-            {title}
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col min-h-0 max-h-[min(70vh,560px)]">
+      <div className="sticky top-0 z-10 shrink-0 bg-white rounded-t-2xl border-b border-slate-100 shadow-sm">
+        <div className="px-4 py-3 bg-slate-50/80">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="flex items-center gap-2 font-bold text-slate-800">
+              <Icon className="w-5 h-5 text-slate-500" />
+              {title}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-white rounded-xl border border-slate-100 px-3 py-2">
+              <div className="text-[10px] font-bold text-slate-500 uppercase">Total RAP</div>
+              <div className="text-sm font-black text-slate-800">{formatRupiah(totalRap)}</div>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-100 px-3 py-2">
+              <div className="text-[10px] font-bold text-slate-500 uppercase">Jumlah Item</div>
+              <div className="text-sm font-black text-slate-800">{items.length} item</div>
+            </div>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="bg-white rounded-xl border border-slate-100 px-3 py-2">
-            <div className="text-[10px] font-bold text-slate-500 uppercase">Total RAP</div>
-            <div className="text-sm font-black text-slate-800">{formatRupiah(totalRap)}</div>
+
+        <div className="flex flex-wrap items-center gap-2 px-4 py-2 bg-white">
+          <div className="relative flex-1 min-w-[120px]">
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              value={search}
+              onChange={e => onSearchChange(e.target.value)}
+              placeholder="Cari item..."
+              className="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg"
+            />
           </div>
-          <div className="bg-white rounded-xl border border-slate-100 px-3 py-2">
-            <div className="text-[10px] font-bold text-slate-500 uppercase">Jumlah Item</div>
-            <div className="text-sm font-black text-slate-800">{items.length} item</div>
+          <div className="relative">
+            <Filter className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <select
+              value={statusFilter}
+              onChange={e => onStatusFilterChange(e.target.value as StatusFilter)}
+              className="pl-8 pr-6 py-1.5 text-xs border border-slate-200 rounded-lg appearance-none bg-white"
+            >
+              <option value="all">Semua</option>
+              <option value="pending">Belum realisasi</option>
+              <option value="realized">Sudah realisasi</option>
+              <option value="ok">OK</option>
+              <option value="over">Over budget</option>
+            </select>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 px-4 py-2 border-b bg-white">
-        <div className="relative flex-1 min-w-[120px]">
-          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            value={search}
-            onChange={e => onSearchChange(e.target.value)}
-            placeholder="Cari item..."
-            className="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg"
-          />
-        </div>
-        <div className="relative">
-          <Filter className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-          <select
-            value={statusFilter}
-            onChange={e => onStatusFilterChange(e.target.value as StatusFilter)}
-            className="pl-8 pr-6 py-1.5 text-xs border border-slate-200 rounded-lg appearance-none bg-white"
-          >
-            <option value="all">Semua</option>
-            <option value="pending">Belum realisasi</option>
-            <option value="realized">Sudah realisasi</option>
-            <option value="ok">OK</option>
-            <option value="over">Over budget</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto max-h-[min(55vh,480px)]">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {filtered.length === 0 ? (
           <p className="text-sm text-slate-500 text-center py-8">Tidak ada item cocok filter.</p>
         ) : (
-          filtered.map((item, idx) => (
-            <WorkItemRow
-              key={item.plannerId || `${title}-${idx}`}
-              item={item}
-              showMenu={false}
-              onToggleCheck={canManage && item.plannerId && toggleBusy !== item.plannerId
-                ? () => onToggle(item)
-                : undefined}
-            />
+          groups.map(group => (
+            <div key={group.key}>
+              {group.label && (
+                <div className="sticky top-0 z-[5] px-4 py-2 bg-slate-100/95 backdrop-blur border-b border-slate-200 text-xs font-black text-slate-600 uppercase tracking-wide">
+                  {group.label}
+                  <span className="ml-2 font-semibold text-slate-400 normal-case">
+                    ({group.items.length})
+                  </span>
+                </div>
+              )}
+              {group.items.map((item, idx) => (
+                <WorkItemRow
+                  key={item.plannerId || `${group.key}-${idx}`}
+                  item={item}
+                  showMenu={false}
+                  onToggleCheck={canManage && item.plannerId ? () => onToggle(item) : undefined}
+                />
+              ))}
+            </div>
           ))
         )}
       </div>
@@ -129,7 +156,7 @@ function RapColumnPanel({
 }
 
 export default function TabV2Rap({
-  projectId, normalized, rapItems, rapActuals, onRefresh, userId,
+  projectId, normalized, rapItems, rapActuals, onRefresh, userId, onDraftChange,
 }: Props) {
   const { tenant } = useAppStore();
   const showToast = useUiStore(s => s.showToast);
@@ -140,7 +167,8 @@ export default function TabV2Rap({
   const [tenagaSearch, setTenagaSearch] = useState('');
   const [materialFilter, setMaterialFilter] = useState<StatusFilter>('all');
   const [tenagaFilter, setTenagaFilter] = useState<StatusFilter>('all');
-  const [toggleBusy, setToggleBusy] = useState<string | null>(null);
+  const [excelChangeCount, setExcelChangeCount] = useState(0);
+  const [excelControls, setExcelControls] = useState<RapDraftControls | null>(null);
 
   const p = normalized.project;
 
@@ -157,31 +185,57 @@ export default function TabV2Rap({
     return m;
   }, [rapItems]);
 
-  const handleToggleRealization = useCallback(async (item: MappedRapItem) => {
-    const rapId = item.plannerId;
-    if (!rapId || !userId) return;
-    const row = rapByPlannerId.get(rapId);
-    if (!row) return;
-    const isRealized = item.qtyActual > 0 || item.checked;
-    setToggleBusy(rapId);
-    try {
-      await setRapItemRealization({
-        projectId,
-        rapItemId: rapId,
-        rapItemName: row.name,
-        plannedQty: Number(row.quantity) || 0,
-        plannedUnitPrice: Number(row.unit_price) || 0,
-        realized: !isRealized,
-        recordedBy: userId,
+  const checklistDraft = useRapChecklistDraft({
+    projectId,
+    userId,
+    rapByPlannerId,
+    onRefresh,
+    onError: msg => showToast(msg, 'error'),
+    onSaved: () => showToast('Perubahan RAP disimpan', 'success'),
+  });
+
+  const materialsWithDraft = useMemo(
+    () => applyRealizationDraft(p.rap.materials, checklistDraft.draft),
+    [p.rap.materials, checklistDraft.draft],
+  );
+  const workersWithDraft = useMemo(
+    () => applyRealizationDraft(p.rap.workers, checklistDraft.draft),
+    [p.rap.workers, checklistDraft.draft],
+  );
+
+  const notifyDraft = useCallback(() => {
+    if (viewMode === 'excel' && excelControls) {
+      onDraftChange?.({
+        ...excelControls,
+        canUndo: true,
+        canRedo: true,
       });
-      await onRefresh();
-      showToast(!isRealized ? 'Item ditandai realisasi' : 'Realisasi dihapus', 'success');
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Gagal mengubah realisasi', 'error');
-    } finally {
-      setToggleBusy(null);
+      return;
     }
-  }, [projectId, rapByPlannerId, userId, onRefresh, showToast]);
+    if (viewMode !== 'checklist') {
+      onDraftChange?.(null);
+      return;
+    }
+    onDraftChange?.({
+      changeCount: checklistDraft.changeCount,
+      hasChanges: checklistDraft.hasChanges,
+      saving: checklistDraft.saving,
+      canUndo: checklistDraft.canUndo,
+      canRedo: checklistDraft.canRedo,
+      undo: checklistDraft.undo,
+      redo: checklistDraft.redo,
+      save: checklistDraft.save,
+      discard: checklistDraft.discard,
+    });
+  }, [viewMode, onDraftChange, checklistDraft, excelControls]);
+
+  useEffect(() => { notifyDraft(); }, [notifyDraft]);
+
+  useEffect(() => () => onDraftChange?.(null), [onDraftChange]);
+
+  const handleToggle = useCallback((item: MappedRapItem) => {
+    checklistDraft.toggle(item);
+  }, [checklistDraft]);
 
   const rapPct = p.contractValue > 0 ? ((p.rap.totalRAP / p.contractValue) * 100) : 0;
   const realisasiPct = p.contractValue > 0 ? ((p.rap.realisasi / p.contractValue) * 100) : 0;
@@ -198,6 +252,18 @@ export default function TabV2Rap({
     if (columnTab === 'tenaga') return rapItems.filter(r => r.type === 'labor');
     return rapItems;
   }, [rapItems, columnTab]);
+
+  const trySwitchView = (next: RapViewMode) => {
+    if (viewMode === 'checklist' && checklistDraft.hasChanges) {
+      if (!window.confirm('Ada perubahan belum disimpan. Buang perubahan?')) return;
+      checklistDraft.discard();
+    }
+    if (viewMode === 'excel' && excelChangeCount > 0) {
+      if (!window.confirm('Ada perubahan Excel belum disimpan. Buang perubahan?')) return;
+      excelControls?.discard();
+    }
+    setViewMode(next);
+  };
 
   return (
     <div className="space-y-5 pb-20">
@@ -238,7 +304,7 @@ export default function TabV2Rap({
           <button
             type="button"
             title="Checklist realisasi"
-            onClick={() => setViewMode('checklist')}
+            onClick={() => trySwitchView('checklist')}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold ${
               viewMode === 'checklist' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'
             }`}
@@ -248,7 +314,7 @@ export default function TabV2Rap({
           <button
             type="button"
             title="Tabel spreadsheet"
-            onClick={() => setViewMode('excel')}
+            onClick={() => trySwitchView('excel')}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold ${
               viewMode === 'excel' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'
             }`}
@@ -285,14 +351,13 @@ export default function TabV2Rap({
             <RapColumnPanel
               title="Material"
               icon={Package}
-              items={p.rap.materials}
+              items={materialsWithDraft}
               totalRap={materialTotal}
               search={materialSearch}
               onSearchChange={setMaterialSearch}
               statusFilter={materialFilter}
               onStatusFilterChange={setMaterialFilter}
-              onToggle={handleToggleRealization}
-              toggleBusy={toggleBusy}
+              onToggle={handleToggle}
               canManage={Boolean(userId)}
             />
           )}
@@ -300,14 +365,13 @@ export default function TabV2Rap({
             <RapColumnPanel
               title="Tenaga Kerja"
               icon={HardHat}
-              items={p.rap.workers}
+              items={workersWithDraft}
               totalRap={tenagaTotal}
               search={tenagaSearch}
               onSearchChange={setTenagaSearch}
               statusFilter={tenagaFilter}
               onStatusFilterChange={setTenagaFilter}
-              onToggle={handleToggleRealization}
-              toggleBusy={toggleBusy}
+              onToggle={handleToggle}
               canManage={Boolean(userId)}
             />
           )}
@@ -333,16 +397,29 @@ export default function TabV2Rap({
             </div>
           )}
           <RapEditableTable
-          projectId={projectId}
-          items={filteredRapItems}
-          rapActuals={rapActuals}
-          mode="realisasi"
-          canManage
-          recordedBy={userId}
-          onRefresh={onRefresh}
-          materialSuggestions={materialSuggestions}
-          showFloatingToolbar
-        />
+            projectId={projectId}
+            items={filteredRapItems}
+            rapActuals={rapActuals}
+            mode="realisasi"
+            canManage
+            recordedBy={userId}
+            onRefresh={onRefresh}
+            materialSuggestions={materialSuggestions}
+            showFloatingToolbar
+            manualSave
+            onPendingChangeCount={setExcelChangeCount}
+            onManualControls={ctrl => setExcelControls(ctrl ? {
+              changeCount: ctrl.changeCount,
+              hasChanges: ctrl.hasChanges,
+              saving: ctrl.saving,
+              canUndo: true,
+              canRedo: true,
+              undo: ctrl.undo,
+              redo: ctrl.redo,
+              save: ctrl.save,
+              discard: ctrl.discard,
+            } : null)}
+          />
         </>
       )}
     </div>

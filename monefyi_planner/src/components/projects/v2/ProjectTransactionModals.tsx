@@ -2,13 +2,16 @@ import { useState, type ReactNode } from 'react';
 import { X, Plus, ArrowLeftRight } from 'lucide-react';
 import ProjectIncomePanel from '../ProjectIncomePanel';
 import ProjectTransferPanel from '../ProjectTransferPanel';
+import ProjectReceivablePanel from '../ProjectReceivablePanel';
 import { createCostRealization } from '../../../services/costService';
 import { todayStr } from '../../../lib/adapters';
 import { parseMoneyInput } from '../../../utils/projectUi';
 import { showToast } from '../../../store/uiStore';
 import { useAppStore, type Project } from '../../../store/appStore';
 
-type ModalKind = 'income' | 'cost' | 'transfer' | null;
+type ModalKind = 'income' | 'cost' | 'transfer' | 'receivable' | null;
+
+export type { ModalKind };
 
 type Props = {
   open: boolean;
@@ -29,7 +32,8 @@ export default function ProjectTransactionModals({
 
   const title = kind === 'income' ? 'Tambah Pemasukan'
     : kind === 'cost' ? 'Tambah Biaya'
-      : 'Transfer Dana';
+      : kind === 'receivable' ? 'Piutang & Pembayaran'
+        : 'Transfer Dana';
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40">
@@ -71,6 +75,16 @@ export default function ProjectTransactionModals({
               spentAmount={project.spent_amount}
               canManage={canManage}
               onUpdated={onUpdated}
+            />
+          )}
+          {kind === 'receivable' && (
+            <ProjectReceivablePanel
+              projectId={project.id}
+              projectName={project.name}
+              orgId={orgId}
+              userId={userId}
+              canManage={canManage}
+              onUpdated={async () => { await onUpdated(); onClose(); }}
             />
           )}
         </div>

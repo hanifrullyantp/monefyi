@@ -26,6 +26,7 @@ export type CardPopupProps = {
   list: PopupListItem[];
   detailLabel?: string;
   onOpenDetail?: () => void;
+  actions?: Array<{ label: string; onClick: () => void; variant?: 'primary' | 'secondary' }>;
 };
 
 export default function CardPopup({
@@ -36,6 +37,7 @@ export default function CardPopup({
   list,
   detailLabel = 'Buka Detail',
   onOpenDetail,
+  actions,
 }: CardPopupProps) {
   return (
     <AnimatePresence>
@@ -95,6 +97,25 @@ export default function CardPopup({
                 >
                   {detailLabel} <ChevronRight className="w-4 h-4" />
                 </button>
+              </div>
+            )}
+
+            {actions && actions.length > 0 && (
+              <div className={`p-4 border-t flex flex-wrap gap-2 ${onOpenDetail ? 'pt-0' : ''}`}>
+                {actions.map((action, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={action.onClick}
+                    className={`flex-1 min-w-[8rem] py-2.5 rounded-xl text-sm font-bold ${
+                      action.variant === 'primary'
+                        ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                        : 'border border-slate-200 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    {action.label}
+                  </button>
+                ))}
               </div>
             )}
           </motion.div>

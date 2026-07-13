@@ -122,18 +122,29 @@ export function buildProjectPopupConfig(
   }
 
   // piutang
+  const piutangList = normalized.piutangItems.length > 0
+    ? normalized.piutangItems.map(item => ({
+        title: item.partyName || item.name,
+        meta: `Piutang proyek · Jatuh tempo: ${formatDateId(item.due)}`,
+        value: formatRupiah(item.amount),
+        valueColor: '#059669',
+      }))
+    : p.budget.piutang > 0
+      ? [{
+          title: p.client || 'Klien',
+          meta: 'Piutang belum ditagih — sisa nilai kontrak',
+          value: formatRupiah(p.budget.piutang),
+          valueColor: '#059669',
+        }]
+      : [];
+
   return {
     title: 'Piutang Project', detailTab: 'keuangan',
     cards: [
-      { value: `${normalized.piutangItems.length} pihak`, label: 'Jumlah Piutang' },
+      { value: piutangList.length > 0 ? `${piutangList.length} pihak` : '0 pihak', label: 'Debitur' },
       { value: formatRupiah(p.budget.piutang), label: 'Total Piutang' },
-      { value: 'Belum Ditagih', label: 'Status' },
+      { value: p.client || '—', label: 'Klien' },
     ],
-    list: normalized.piutangItems.map(item => ({
-      title: item.name,
-      meta: `Dari: ${item.partyName || item.name} · Jatuh tempo: ${formatDateId(item.due)}`,
-      value: formatRupiah(item.amount),
-      valueColor: '#059669',
-    })),
+    list: piutangList,
   };
 }

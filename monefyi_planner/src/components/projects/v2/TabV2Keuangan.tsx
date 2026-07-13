@@ -186,9 +186,19 @@ export default function TabV2Keuangan({
         />
         <DetailCard
           title="Piutang"
-          subtitle={`Dari (${p.client})`}
+          subtitle={`Dari ${p.client || 'klien'}`}
           total={p.budget.piutang}
-          items={normalized.piutangItems}
+          items={
+            normalized.piutangItems.length > 0
+              ? normalized.piutangItems
+              : p.budget.piutang > 0
+                ? [{
+                    name: `Piutang ${p.client || 'Klien'}`,
+                    partyName: p.client || 'Klien',
+                    amount: p.budget.piutang,
+                  }]
+                : []
+          }
           color="emerald"
           onClick={() => setPopup('piutang')}
         />
@@ -224,6 +234,27 @@ export default function TabV2Keuangan({
           list={popupConfig.list}
           detailLabel="Buka Detail"
           onOpenDetail={() => popupConfig.detailTab && setPopup(null)}
+          actions={
+            popup === 'pembayaran' && canManage
+              ? [{
+                  label: 'Tambah Pembayaran',
+                  variant: 'primary' as const,
+                  onClick: () => { setPopup(null); setModal('income'); },
+                }]
+              : popup === 'piutang' && canManage
+                ? [
+                    {
+                      label: 'Tambah Piutang',
+                      variant: 'primary' as const,
+                      onClick: () => { setPopup(null); setModal('receivable'); },
+                    },
+                    {
+                      label: 'Catat Pembayaran',
+                      onClick: () => { setPopup(null); setModal('receivable'); },
+                    },
+                  ]
+                : undefined
+          }
         />
       )}
 
