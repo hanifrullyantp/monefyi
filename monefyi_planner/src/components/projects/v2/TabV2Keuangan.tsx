@@ -58,16 +58,16 @@ export default function TabV2Keuangan({
   ];
 
   const pasivaRows = [
-    ...p.payments.map(pay => ({
-      label: pay.name,
-      value: pay.amount,
-      icon: 'card' as const,
-    })),
     {
-      label: `Piutang (${p.client})`,
-      value: p.budget.piutang,
-      icon: 'file' as const,
-      valueClass: 'text-emerald-600',
+      label: 'Dana Masuk',
+      value: normalized.totalPemasukan,
+      icon: 'card' as const,
+    },
+    {
+      label: 'Hutang Vendor',
+      value: hutang,
+      icon: 'receipt' as const,
+      valueClass: hutang > 0 ? 'text-rose-600' : 'text-slate-800',
     },
   ];
 
@@ -165,8 +165,7 @@ export default function TabV2Keuangan({
           <div className="flex items-center justify-between flex-wrap gap-2">
             <span className="flex items-center gap-1">
               <Info className="w-3.5 h-3.5" />
-              Balance: Realisasi + Saldo + Piutang = Dana Masuk + Piutang
-              {hutang > 0 && ' · Hutang tercermin di saldo negatif'}
+              Balance: Realisasi + Saldo + Piutang = Dana Masuk + Hutang
             </span>
             <span className="font-bold text-emerald-600">
               Est. Laba: {formatRupiah(normalized.estLaba)}
@@ -253,7 +252,19 @@ export default function TabV2Keuangan({
                       onClick: () => { setPopup(null); setModal('receivable'); },
                     },
                   ]
-                : undefined
+                : popup === 'hutang' && canManage
+                  ? [
+                      {
+                        label: 'Tambah Hutang',
+                        variant: 'primary' as const,
+                        onClick: () => { setPopup(null); setModal('hutang'); },
+                      },
+                      {
+                        label: 'Bayar Hutang',
+                        onClick: () => { setPopup(null); setModal('transfer'); },
+                      },
+                    ]
+                  : undefined
           }
         />
       )}

@@ -3,7 +3,7 @@ import type { BalanceLine, BalanceSheet } from './types';
 
 /**
  * Build project balance sheet.
- * Identity: Realisasi + Saldo + Piutang = Dana Masuk + Piutang (= Nilai Kontrak)
+ * Identity: Realisasi + Saldo + Piutang = Dana Masuk + Hutang
  */
 export function buildProjectSheet(project: MappedProjectView): BalanceSheet {
   const totalPemasukan = project.payments.reduce((s, p) => s + p.amount, 0);
@@ -28,12 +28,11 @@ export function buildProjectSheet(project: MappedProjectView): BalanceSheet {
     { key: 'saldo', label: 'Saldo Kas', side: 'aktiva', amount: saldo, icon: 'wallet' },
     { key: 'piutang', label: 'Piutang Klien', side: 'aktiva', amount: piutang, icon: 'file-check' },
     { key: 'pemasukan', label: 'Dana Masuk', side: 'pasiva', amount: totalPemasukan, icon: 'credit-card' },
-    { key: 'piutang_pasiva', label: 'Piutang (Sumber Klien)', side: 'pasiva', amount: piutang, icon: 'file-check' },
     { key: 'hutang', label: 'Hutang Vendor', side: 'pasiva', amount: hutang, icon: 'receipt' },
   ];
 
   const aktiva = spent + saldo + piutang;
-  const pasiva = totalPemasukan + piutang;
+  const pasiva = totalPemasukan + hutang;
   const ekuitas = 0;
 
   return {

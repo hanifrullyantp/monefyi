@@ -247,6 +247,12 @@ export default function TaskListPanel({
         onClick: () => onEditTask?.(task.id),
       },
       {
+        id: 'todo',
+        label: 'Todo list',
+        icon: <ListTree className="w-4 h-4" />,
+        onClick: () => setTodoModalTaskId(task.id),
+      },
+      {
         id: 'edit-gantt',
         label: 'Edit di Gantt',
         icon: <Pencil className="w-4 h-4" />,
@@ -291,7 +297,7 @@ export default function TaskListPanel({
                   onDragEnd={() => { setDragId(null); dragOverRef.current = null; }}
                   onDoubleClick={() => {
                     if (task.type === 'project') onOpenProjectDetail?.(task.id);
-                    else setTodoModalTaskId(task.id);
+                    else onEditTask?.(task.id);
                   }}
                 >
                   <TaskListRow

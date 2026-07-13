@@ -98,10 +98,10 @@ export default function ProjectScheduleGantt({ project, workItems, onRefresh }: 
       </div>
 
       <div
-        className="relative flex bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden gantt-planner"
+        className="relative flex bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden gantt-planner min-w-0"
         style={{ height: 'calc(100vh - 380px)', minHeight: 400 }}
       >
-        <div style={{ width: leftWidth }} className="shrink-0 h-full overflow-hidden">
+        <div style={{ width: leftWidth, minWidth: 160, maxWidth: '45vw' }} className="shrink-0 h-full overflow-hidden">
           <TaskListPanel rows={rows} onReorder={() => {}} onEditTask={setEditTaskId} />
         </div>
         <div className="w-1.5 shrink-0 cursor-col-resize hover:bg-emerald-200/60 active:bg-emerald-300 z-10" onMouseDown={startResizeLeft} role="separator" />
@@ -114,8 +114,8 @@ export default function ProjectScheduleGantt({ project, workItems, onRefresh }: 
         />
         {detailOpen && (
           <>
-            <div className="w-1.5 shrink-0 bg-slate-100" />
-            <div className="w-72 shrink-0 h-full overflow-hidden border-l border-slate-100">
+            <div className="w-1.5 shrink-0 bg-slate-100 hidden md:block" />
+            <div className="w-full md:w-72 shrink-0 h-full overflow-hidden border-l border-slate-100 max-md:absolute max-md:right-0 max-md:top-0 max-md:bottom-0 max-md:z-20 max-md:shadow-xl max-md:bg-white">
               <GanttDetailPanel onEditTask={setEditTaskId} />
             </div>
           </>

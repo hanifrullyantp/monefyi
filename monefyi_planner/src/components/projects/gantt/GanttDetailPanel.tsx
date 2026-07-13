@@ -1,15 +1,20 @@
 import { useMemo, useState } from 'react';
-import { X, Plus, User, Pencil, Palette } from 'lucide-react';
+import { X, Plus, User, Pencil, Palette, ListChecks } from 'lucide-react';
 import { useGanttStore } from '../../../store/ganttStore';
+import { useAppStore } from '../../../store/appStore';
 import { formatPeriod, daysBetween } from '../../../lib/gantt/utils';
 import { GANTT_COLORS, PRIORITY_LABEL, WORK_ITEM_STATUS_LABEL, BAR_COLOR_PRESETS } from '../../../lib/gantt/constants';
 import { STATUS_LABEL } from '../../../utils/projectUi';
+import GanttTodoSection from './GanttTodoSection';
 
 type DetailTab = 'detail' | 'subtasks' | 'documents' | 'notes';
 
 export default function GanttDetailPanel({ onEditTask }: { onEditTask?: (id: string) => void }) {
   const { tasks, selectedIds, detailOpen, setDetailOpen, setBarColor, pushHistory, setTodoModalTaskId } = useGanttStore();
+  const tenant = useAppStore(s => s.tenant);
+  const user = useAppStore(s => s.user);
   const [tab, setTab] = useState<DetailTab>('subtasks');
+  const [todoTargetId, setTodoTargetId] = useState<string | null>(null);
 
   const selectedId = [...selectedIds][0];
   const task = tasks.find(t => t.id === selectedId);
@@ -17,6 +22,16 @@ export default function GanttDetailPanel({ onEditTask }: { onEditTask?: (id: str
     () => (task ? tasks.filter(t => t.parentId === task.id) : []),
     [tasks, task],
   );
+
+  const todoTarget = useMemo(() => {
+    if (todoTargetId) {
+      const t = tasks.find(x => x.id === todoTargetId);
+      if (t && t.type === 'work_item') return t;
+    }
+    if (task?.type === 'work_item') return task;
+    const first = subTasks[0];
+    return first || null;
+  }, [todoTargetId, task, subTasks, tasks]);
 
   if (!detailOpen) {
     return (
@@ -33,7 +48,7 @@ export default function GanttDetailPanel({ onEditTask }: { onEditTask?: (id: str
 
   if (!task) {
     return (
-      <div className="flex flex-col h-full bg-white border-l border-slate-100 shrink-0">
+      <div className="flex flex-col h-full bg-white border-l border-slate-100 shrink-0 min-w-0">
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
           <span className="text-sm font-bold text-slate-500">Detail</span>
           <button type="button" onClick={() => setDetailOpen(false)} className="p-1 rounded hover:bg-slate-100">
@@ -65,7 +80,7 @@ export default function GanttDetailPanel({ onEditTask }: { onEditTask?: (id: str
   ];
 
   return (
-    <div className="flex flex-col h-full bg-white border-l border-slate-100 shrink-0">
+    <div className="flex flex-col h-full bg-white border-l border-slate-100 shrink-0 min-w-0 w-full max-w-full">
       <div className="flex items-start justify-between px-4 py-3 border-b border-slate-100 gap-2">
         <div className="min-w-0 flex-1">
           <h3 className="text-sm font-black text-slate-900 truncate">{task.name}</h3>
@@ -80,6 +95,16 @@ export default function GanttDetailPanel({ onEditTask }: { onEditTask?: (id: str
               title="Edit task"
             >
               <Pencil className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {task.type === 'work_item' && (
+            <button
+              type="button"
+              onClick={() => setTodoModalTaskId(task.id)}
+              className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600"
+              title="Todo list penuh"
+            >
+              <ListChecks className="w-3.5 h-3.5" />
             </button>
           )}
           <button type="button" onClick={() => setDetailOpen(false)} className="p-1 rounded hover:bg-slate-100">
@@ -167,7 +192,7 @@ export default function GanttDetailPanel({ onEditTask }: { onEditTask?: (id: str
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 gantt-scroll">
+      <div className="flex-1 overflow-y-auto p-4 gantt-scroll min-h-0">
         {tab === 'subtasks' && (
           <div className="space-y-2">
             {subTasks.length === 0 ? (
@@ -180,23 +205,52 @@ export default function GanttDetailPanel({ onEditTask }: { onEditTask?: (id: str
                   : st.status === 'in_progress'
                     ? 'bg-emerald-50 text-emerald-700'
                     : 'bg-slate-50 text-slate-500';
+                const isTodoTarget = todoTarget?.id === st.id;
 
                 return (
-                  <div
-                    key={st.id}
-                    role="button"
-                    tabIndex={0}
-                    onDoubleClick={() => setTodoModalTaskId(st.id)}
-                    className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/40 transition-colors cursor-pointer"
-                    title="Double-click untuk buka todo list"
-                  >
-                    <div className="min-w-0">
-                      <div className="text-xs font-semibold text-slate-800 truncate">{st.name}</div>
-                      <div className="text-[10px] text-slate-400">{Math.round(st.progress)}%</div>
+                  <div key={st.id} className="rounded-xl border border-slate-100 overflow-hidden">
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setTodoTargetId(st.id)}
+                      onDoubleClick={() => onEditTask?.(st.id)}
+                      className={`flex items-center justify-between p-2.5 transition-colors cursor-pointer ${
+                        isTodoTarget ? 'bg-emerald-50/60 border-b border-emerald-100' : 'hover:bg-slate-50'
+                      }`}
+                      title="Klik pilih · Double-click edit"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-semibold text-slate-800 truncate">{st.name}</div>
+                        <div className="text-[10px] text-slate-400">{Math.round(st.progress)}%</div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {onEditTask && (
+                          <button
+                            type="button"
+                            onClick={e => { e.stopPropagation(); onEditTask(st.id); }}
+                            className="p-1 rounded hover:bg-emerald-100 text-emerald-600"
+                            title="Edit sub tugas"
+                          >
+                            <Pencil className="w-3 h-3" />
+                          </button>
+                        )}
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${stBadge}`}>
+                          {stLabel}{st.status === 'completed' ? ' ✓' : ''}
+                        </span>
+                      </div>
                     </div>
-                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${stBadge}`}>
-                      {stLabel}{st.status === 'completed' ? ' ✓' : ''}
-                    </span>
+                    {isTodoTarget && tenant?.id && (
+                      <div className="px-2.5 pb-2.5">
+                        <GanttTodoSection
+                          workItemId={st.id}
+                          workItemName={st.name}
+                          projectId={st.projectId}
+                          orgId={tenant.id}
+                          userId={user?.id}
+                          onOpenFull={() => setTodoModalTaskId(st.id)}
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })
@@ -204,6 +258,17 @@ export default function GanttDetailPanel({ onEditTask }: { onEditTask?: (id: str
             <button type="button" className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl border-2 border-dashed border-slate-200 text-xs font-bold text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50 transition-colors">
               <Plus className="w-3.5 h-3.5" /> Tambah Sub Tugas
             </button>
+
+            {subTasks.length === 0 && task.type === 'work_item' && tenant?.id && (
+              <GanttTodoSection
+                workItemId={task.id}
+                workItemName={task.name}
+                projectId={task.projectId}
+                orgId={tenant.id}
+                userId={user?.id}
+                onOpenFull={() => setTodoModalTaskId(task.id)}
+              />
+            )}
           </div>
         )}
 
@@ -213,6 +278,16 @@ export default function GanttDetailPanel({ onEditTask }: { onEditTask?: (id: str
             <p><span className="font-bold text-slate-800">Tipe:</span> {task.type === 'project' ? 'Proyek' : 'Sub Tugas'}</p>
             {task.healthStatus && (
               <p><span className="font-bold text-slate-800">Kesehatan:</span> {task.healthStatus.replace('_', ' ')}</p>
+            )}
+            {task.type === 'work_item' && tenant?.id && (
+              <GanttTodoSection
+                workItemId={task.id}
+                workItemName={task.name}
+                projectId={task.projectId}
+                orgId={tenant.id}
+                userId={user?.id}
+                onOpenFull={() => setTodoModalTaskId(task.id)}
+              />
             )}
           </div>
         )}

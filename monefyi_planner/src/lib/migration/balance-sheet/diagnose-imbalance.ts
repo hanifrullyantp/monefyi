@@ -278,18 +278,18 @@ function diagnoseProject(sheet: BalanceSheet, gap: number, issues: BalanceIssue[
   }
 
   const identityLeft = spent + saldo + piutang;
-  const identityRight = received + piutang;
+  const identityRight = received + hutang;
   if (Math.abs(identityLeft - identityRight) > BALANCE_TOLERANCE) {
     issues.push(
       issue({
         code: "FUND_IDENTITY_BREAK",
         field: "total",
-        message: `Realisasi + Saldo + Piutang (${formatRp(identityLeft)}) ≠ Dana Masuk + Piutang (${formatRp(identityRight)})`,
+        message: `Realisasi + Saldo + Piutang (${formatRp(identityLeft)}) ≠ Dana Masuk + Hutang (${formatRp(identityRight)})`,
         expected: identityRight,
         actual: identityLeft,
         delta: identityLeft - identityRight,
         fix: {
-          action: "Pastikan saldo = dana masuk − realisasi (boleh negatif) dan piutang = kontrak − dana masuk",
+          action: "Pastikan saldo = dana masuk − realisasi, piutang = kontrak − dana masuk, hutang = realisasi − dana masuk",
           route: projectId ? `project/${projectId}/keuangan` : "projects",
           cta: "Perbaiki Posisi",
         },

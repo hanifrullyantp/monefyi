@@ -271,13 +271,13 @@ export default function GanttPlannerView({
       />
 
       <div
-        className="relative flex bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden gantt-planner flex-1 min-h-0"
+        className="relative flex bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden gantt-planner flex-1 min-h-0 min-w-0"
         style={{
           height: expandedView ? undefined : 'calc(100vh - 300px)',
-          minHeight: expandedView ? 0 : 540,
+          minHeight: expandedView ? 0 : 480,
         }}
       >
-        <div style={{ width: leftWidth }} className="shrink-0 h-full overflow-hidden">
+        <div style={{ width: leftWidth, minWidth: 160, maxWidth: '45vw' }} className="shrink-0 h-full overflow-hidden">
           <TaskListPanel
             rows={rows}
             onReorder={handleReorder}
@@ -304,8 +304,8 @@ export default function GanttPlannerView({
 
         {detailOpen && (
           <>
-            <div className="w-1.5 shrink-0 bg-slate-100" />
-            <div className="w-72 xl:w-80 shrink-0 h-full overflow-hidden border-l border-slate-100">
+            <div className="w-1.5 shrink-0 bg-slate-100 hidden md:block" />
+            <div className="w-full md:w-72 xl:w-80 shrink-0 h-full overflow-hidden border-l border-slate-100 max-md:absolute max-md:right-0 max-md:top-0 max-md:bottom-0 max-md:z-20 max-md:shadow-xl max-md:bg-white">
               <GanttDetailPanel onEditTask={setEditTaskId} />
             </div>
           </>

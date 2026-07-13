@@ -38,8 +38,9 @@ describe('balance-validator', () => {
 
     const check = validateProjectBalance(mapped);
     const piutang = mapped.budget?.piutang || 0;
+    const hutang = mapped.budget?.hutang || 0;
     expect(check.aktiva).toBe(mapped.rap.realisasi + mapped.saldo + piutang);
-    expect(check.pasiva).toBe(20_000_000 + piutang);
+    expect(check.pasiva).toBe(20_000_000 + hutang);
     expect(typeof check.isBalanced).toBe('boolean');
   });
 

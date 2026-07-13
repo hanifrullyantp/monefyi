@@ -9,7 +9,7 @@ import { parseMoneyInput } from '../../../utils/projectUi';
 import { showToast } from '../../../store/uiStore';
 import { useAppStore, type Project } from '../../../store/appStore';
 
-type ModalKind = 'income' | 'cost' | 'transfer' | 'receivable' | null;
+type ModalKind = 'income' | 'cost' | 'transfer' | 'receivable' | 'hutang' | null;
 
 export type { ModalKind };
 
@@ -33,7 +33,8 @@ export default function ProjectTransactionModals({
   const title = kind === 'income' ? 'Tambah Pemasukan'
     : kind === 'cost' ? 'Tambah Biaya'
       : kind === 'receivable' ? 'Piutang & Pembayaran'
-        : 'Transfer Dana';
+        : kind === 'hutang' ? 'Hutang Project'
+          : 'Transfer Dana';
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40">
@@ -83,6 +84,17 @@ export default function ProjectTransactionModals({
               projectName={project.name}
               orgId={orgId}
               userId={userId}
+              canManage={canManage}
+              onUpdated={async () => { await onUpdated(); onClose(); }}
+            />
+          )}
+          {kind === 'hutang' && (
+            <ProjectTransferPanel
+              projectId={project.id}
+              orgId={orgId}
+              userId={userId}
+              projects={projects}
+              spentAmount={project.spent_amount}
               canManage={canManage}
               onUpdated={async () => { await onUpdated(); onClose(); }}
             />

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   Calendar, Wallet, Package, HardHat, FileCheck, ListChecks,
-  Filter, ArrowUpDown, Plus, Pencil,
+  Filter, ArrowUpDown, Plus, Pencil, Receipt,
 } from 'lucide-react';
 import type { NormalizedProjectView } from '../../../lib/migration/project-normalize';
 import type { MappedRapItem } from '../../../lib/migration/planner-mapper';
@@ -77,8 +77,9 @@ export default function TabV2Overview({
 
   const p = normalized.project;
   const totalRap = p.rap?.totalRAP || 0;
+  const nilaiProyek = normalized.totalAktiva;
   const realisasiPct = Math.min(
-    totalRap > 0 ? (normalized.totalRealisasi / totalRap) * 100 : 0,
+    nilaiProyek > 0 ? (normalized.totalRealisasi / nilaiProyek) * 100 : 0,
     100,
   );
   const bahanPlan = p.budget.bahan.plan || 1;
@@ -121,10 +122,15 @@ export default function TabV2Overview({
             Saldo: {formatRupiah(p.saldo)}
           </button>
         </div>
-        <p className="text-xs font-bold text-slate-500 uppercase mb-1">Total RAP</p>
-        <div className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-4">
-          {formatRupiah(totalRap)}
+        <p className="text-xs font-bold text-slate-500 uppercase mb-1">Total Nilai Proyek</p>
+        <div className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-2">
+          {formatRupiah(nilaiProyek)}
         </div>
+        <p className="text-xs text-slate-500 mb-4">
+          Realisasi {formatRupiah(normalized.totalRealisasi)}
+          {' + '}Saldo {formatRupiah(p.saldo)}
+          {' + '}Piutang {formatRupiah(p.budget.piutang)}
+        </p>
         <div className="h-7 bg-slate-100 rounded-lg overflow-hidden relative">
           <div
             className="h-full bg-rose-500 rounded-lg flex items-center justify-center text-white text-xs font-bold min-w-[5rem] transition-all"
@@ -134,11 +140,11 @@ export default function TabV2Overview({
           </div>
         </div>
         <p className="text-center text-sm text-slate-500 mt-2">
-          Sisa RAP: {formatRupiah(Math.max(0, totalRap - normalized.totalRealisasi))}
+          Total RAP: {formatRupiah(totalRap)} · Sisa RAP: {formatRupiah(Math.max(0, totalRap - normalized.totalRealisasi))}
         </p>
       </div>
 
-      <div className="grid sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <BudgetCard label="Bahan" icon={Package} iconBg="bg-rose-50" iconColor="text-rose-600"
           plan={p.budget.bahan.plan} actual={p.budget.bahan.actual} pct={bahanPct}
           sisa={p.budget.bahan.plan - p.budget.bahan.actual} barColor="bg-rose-500" onClick={() => setPopup('bahan')} />
@@ -156,6 +162,36 @@ export default function TabV2Overview({
           <div className="text-xl font-black text-slate-900 mb-2">{formatRupiah(p.budget.piutang)}</div>
           <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full bg-rose-50 text-rose-600">
             Belum Ditagih
+          </span>
+        </button>
+        <button type="button" onClick={() => setPopup('saldo')}
+          className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm text-left hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-2 mb-3">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${p.saldo < 0 ? 'bg-rose-50' : 'bg-emerald-50'}`}>
+              <Wallet className={`w-4 h-4 ${p.saldo < 0 ? 'text-rose-600' : 'text-emerald-600'}`} />
+            </div>
+            <span className="text-xs font-semibold text-slate-500 uppercase">Cash / Kas</span>
+          </div>
+          <div className={`text-xl font-black mb-2 ${p.saldo < 0 ? 'text-rose-600' : 'text-slate-900'}`}>
+            {formatRupiah(p.saldo)}
+          </div>
+          <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${
+            p.saldo < 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'
+          }`}>
+            {p.saldo < 0 ? 'Defisit' : 'Tersedia'}
+          </span>
+        </button>
+        <button type="button" onClick={() => setPopup('hutang')}
+          className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm text-left hover:shadow-md transition-shadow col-span-2 lg:col-span-1">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center">
+              <Receipt className="w-4 h-4 text-rose-600" />
+            </div>
+            <span className="text-xs font-semibold text-slate-500 uppercase">Hutang</span>
+          </div>
+          <div className="text-xl font-black text-rose-600 mb-2">{formatRupiah(p.budget.hutang)}</div>
+          <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full bg-rose-50 text-rose-600">
+            {normalized.hutangItems.length} pihak
           </span>
         </button>
       </div>
@@ -223,7 +259,24 @@ export default function TabV2Overview({
       {popupConfig && (
         <CardPopup open={popup !== null} onClose={() => setPopup(null)} title={popupConfig.title}
           cards={popupConfig.cards} list={popupConfig.list} detailLabel="Buka Detail"
-          onOpenDetail={() => popupConfig.detailTab && onSwitchTab?.(popupConfig.detailTab)} />
+          onOpenDetail={() => popupConfig.detailTab && onSwitchTab?.(popupConfig.detailTab)}
+          actions={
+            popup === 'pembayaran' && canManage
+              ? [{ label: 'Tambah Pembayaran', variant: 'primary' as const, onClick: () => { setPopup(null); setModal('income'); } }]
+              : popup === 'piutang' && canManage
+                ? [
+                    { label: 'Tambah Piutang', variant: 'primary' as const, onClick: () => { setPopup(null); setModal('receivable'); } },
+                    { label: 'Catat Pembayaran', onClick: () => { setPopup(null); setModal('receivable'); } },
+                  ]
+                : popup === 'hutang' && canManage
+                  ? [
+                      { label: 'Tambah Hutang', variant: 'primary' as const, onClick: () => { setPopup(null); setModal('hutang'); } },
+                      { label: 'Bayar Hutang', onClick: () => { setPopup(null); setModal('transfer'); } },
+                    ]
+                  : popup === 'saldo' && canManage
+                    ? [{ label: 'Tambah Dana Masuk', variant: 'primary' as const, onClick: () => { setPopup(null); setModal('income'); } }]
+                    : undefined
+          } />
       )}
 
       <ProjectTransactionModals open={modal !== null} kind={modal} onClose={() => setModal(null)}
