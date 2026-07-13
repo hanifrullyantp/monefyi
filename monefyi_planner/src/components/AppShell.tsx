@@ -10,7 +10,6 @@ import Settings from '../pages/Settings';
 import HrEmployees from '../pages/HrEmployees';
 import WorkerDashboard from '../pages/WorkerDashboard';
 import EstimatorRoutes from '../pages/estimator/EstimatorRoutes';
-import WizardTenagaDemo from '../pages/dev/WizardTenagaDemo';
 import OnboardingChecklist from './OnboardingChecklist';
 import { useAppStore } from '../store/appStore';
 import { showWorkerShell, canAccessManagerFeatures } from '../utils/platformUi';
@@ -142,9 +141,6 @@ export default function AppShell() {
       <Route path="database" element={<DatabaseShell />} />
       <Route path="estimator/*" element={<EstimatorShell />} />
       <Route path="finance-v2/*" element={<FinanceV2Shell />} />
-      {import.meta.env.DEV && (
-        <Route path="dev/wizard-tenaga" element={<Layout><WizardTenagaDemo /></Layout>} />
-      )}
     </Routes>
   );
 }

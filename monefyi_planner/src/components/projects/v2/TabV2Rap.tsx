@@ -20,9 +20,7 @@ import { useRapChecklistDraft } from '../../../hooks/useRapChecklistDraft';
 import WorkItemRow from '../../sandbox-ui/WorkItemRow';
 import StatCard from '../../sandbox-ui/StatCard';
 import RapAddItemsModal from './RapAddItemsModal';
-import LaborPlannerModal from './LaborPlannerModal';
 import LaborTenagaWizardModal from './labor/wizard/LaborTenagaWizardModal';
-import { shouldUseLaborWizard } from '../../../lib/laborWizardFlag';
 import RapItemDetailModal from './RapItemDetailModal';
 
 export type RapDraftControls = {
@@ -520,23 +518,8 @@ export default function TabV2Rap({
         />
       )}
 
-      {laborModalOpen && tenant?.id && userId && shouldUseLaborWizard() && (
+      {laborModalOpen && tenant?.id && userId && (
         <LaborTenagaWizardModal
-          open
-          projectId={projectId}
-          orgId={tenant.id}
-          orgSlug={tenant.slug}
-          userId={userId}
-          userRole={user?.role}
-          sortOffset={rapItems.length}
-          editItem={laborEditItem}
-          onClose={() => { setLaborModalOpen(false); setLaborEditItem(null); }}
-          onSaved={onRefresh}
-        />
-      )}
-
-      {laborModalOpen && tenant?.id && userId && !shouldUseLaborWizard() && (
-        <LaborPlannerModal
           open
           projectId={projectId}
           orgId={tenant.id}

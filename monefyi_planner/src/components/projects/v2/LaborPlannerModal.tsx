@@ -40,6 +40,7 @@ function defaultDraft(date: string): LaborSlotDraft {
   };
 }
 
+/** @deprecated Use LaborTenagaWizardModal. Kept for reference during transition. */
 export default function LaborPlannerModal({
   open, onClose, projectId, orgId, orgSlug, userId, userRole,
   sortOffset = 0, editItem, onSaved,

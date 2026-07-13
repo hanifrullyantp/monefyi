@@ -9,8 +9,19 @@ import SummaryCard from './SummaryCard';
 const WEEKDAYS_DESKTOP = ['MIN', 'SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB'];
 const WEEKDAYS_MOBILE = ['M', 'S', 'S', 'R', 'K', 'J', 'S'];
 
+const MONTH_OPTIONS = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+];
+
 function pad(n: number) { return String(n).padStart(2, '0'); }
 function toIso(y: number, m: number, d: number) { return `${y}-${pad(m + 1)}-${pad(d)}`; }
+
+function yearOptions(anchor: number) {
+  const years: number[] = [];
+  for (let y = anchor - 3; y <= anchor + 3; y++) years.push(y);
+  return years;
+}
 
 function defaultDraft(date: string): LaborSlotDraft {
   return { work_date: date, day_fraction: 1, regular_hours: 8, overtime_hours: 0 };
@@ -47,6 +58,7 @@ export default function MultiDatePicker({
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; date: string } | null>(null);
   const dragRef = useRef<{ active: boolean; add: boolean } | null>(null);
+  const swipeRef = useRef<{ x: number; y: number } | null>(null);
 
   const { year, mon, cells } = useMemo(() => {
     const y = month.getFullYear();
@@ -64,7 +76,24 @@ export default function MultiDatePicker({
     return { year: y, mon: m, cells: list };
   }, [month]);
 
+  const shiftMonth = useCallback((delta: number) => {
+    onMonthChange(new Date(year, mon + delta, 1));
+    setEditingDate(null);
+    setContextMenu(null);
+  }, [onMonthChange, year, mon]);
+
   const monthLabel = month.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+  const years = useMemo(() => yearOptions(year), [year]);
+
+  const handleSwipeEnd = (clientX: number, clientY: number) => {
+    const start = swipeRef.current;
+    swipeRef.current = null;
+    if (!start || !isMobile) return;
+    const dx = clientX - start.x;
+    const dy = clientY - start.y;
+    if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy)) return;
+    shiftMonth(dx > 0 ? -1 : 1);
+  };
 
   const toggleDate = (date: string, forceAdd?: boolean) => {
     setSlots(prev => {
@@ -139,14 +168,47 @@ export default function MultiDatePicker({
         </button>
       )}
       <div className="wz-cal-nav">
-        <button type="button" className="wz-icon-btn" onClick={() => onMonthChange(new Date(year, mon - 1, 1))}>
+        <button type="button" className="wz-icon-btn" onClick={() => shiftMonth(-1)} aria-label="Bulan sebelumnya">
           <ChevronLeft className="w-5 h-5" />
         </button>
-        <strong className="capitalize">{monthLabel}</strong>
-        <button type="button" className="wz-icon-btn" onClick={() => onMonthChange(new Date(year, mon + 1, 1))}>
+        <div className="wz-cal-month-picker">
+          <select
+            className="wz-cal-month-select"
+            value={mon}
+            onChange={e => onMonthChange(new Date(year, Number(e.target.value), 1))}
+            aria-label="Pilih bulan"
+          >
+            {MONTH_OPTIONS.map((label, i) => (
+              <option key={label} value={i}>{label}</option>
+            ))}
+          </select>
+          <select
+            className="wz-cal-year-select"
+            value={year}
+            onChange={e => onMonthChange(new Date(Number(e.target.value), mon, 1))}
+            aria-label="Pilih tahun"
+          >
+            {years.map(y => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        </div>
+        <button type="button" className="wz-icon-btn" onClick={() => shiftMonth(1)} aria-label="Bulan berikutnya">
           <ChevronRight className="w-5 h-5" />
         </button>
       </div>
+      <p className="wz-cal-month-caption capitalize">{monthLabel}</p>
+      <div
+        className="wz-cal-swipe-area"
+        onTouchStart={e => {
+          const t = e.touches[0];
+          swipeRef.current = { x: t.clientX, y: t.clientY };
+        }}
+        onTouchEnd={e => {
+          const t = e.changedTouches[0];
+          handleSwipeEnd(t.clientX, t.clientY);
+        }}
+      >
       <div className="wz-cal-grid">
         {(isMobile ? WEEKDAYS_MOBILE : WEEKDAYS_DESKTOP).map(w => (
           <div key={w} className="wz-cal-dow">{w}</div>
@@ -182,6 +244,7 @@ export default function MultiDatePicker({
             </button>
           );
         })}
+      </div>
       </div>
       <div className="wz-quick-actions">
         <button type="button" className="wz-quick-btn" onClick={selectWeekdays}>Sen–Jum bulan ini</button>

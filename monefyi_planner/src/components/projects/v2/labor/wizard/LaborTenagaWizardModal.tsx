@@ -94,6 +94,8 @@ export default function LaborTenagaWizardModal({
           member: memberMatch,
           position: editItem.name,
         });
+        const firstDate = Object.keys(planned)[0] || Object.keys(actual)[0];
+        if (firstDate) setMonth(new Date(firstDate));
       }
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal memuat data', 'error');
