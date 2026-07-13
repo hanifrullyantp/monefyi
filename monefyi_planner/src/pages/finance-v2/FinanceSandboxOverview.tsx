@@ -14,6 +14,7 @@ import { formatRupiah } from '../../utils/projectUi';
 import NeracaGrid from '../../components/sandbox-ui/NeracaGrid';
 import Sparkline from '../../components/sandbox-ui/Sparkline';
 import BalanceDiagnosisModal from '../../components/finance-v2/BalanceDiagnosisModal';
+import FinanceIntegrationPanel from '../../components/finance-v2/FinanceIntegrationPanel';
 
 const BASE = '/app/finance-v2';
 
@@ -24,7 +25,7 @@ function formatHeroKas(amount: number): string {
 
 export default function FinanceSandboxOverview() {
   const navigate = useNavigate();
-  const { tenant, projects } = useAppStore();
+  const { tenant, projects, user } = useAppStore();
   const [loading, setLoading] = useState(true);
   const [balanceOpen, setBalanceOpen] = useState(false);
   const [totalKas, setTotalKas] = useState(0);
@@ -183,14 +184,11 @@ export default function FinanceSandboxOverview() {
             )}
           </div>
         </button>
-        <button
-          type="button"
-          onClick={() => navigate(`${BASE}/perencanaan`)}
-          className="mt-3 text-xs font-semibold text-violet-200 hover:text-white underline-offset-2 hover:underline"
-        >
-          Perencanaan keuangan →
-        </button>
       </div>
+
+      {tenant?.id && (
+        <FinanceIntegrationPanel orgId={tenant.id} userId={user?.id} compact />
+      )}
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <button

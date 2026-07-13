@@ -73,9 +73,15 @@ export async function deleteRevenueForecast(id: string): Promise<void> {
 }
 
 /**
- * Simple 3-month cash forecast from opex budget + revenue forecasts.
+ * 3-month cash forecast from opex budget + revenue forecasts.
+ * Starts from opening kas balance.
  */
-export async function buildCashForecast(orgId: string, startMonth: string): Promise<{
+export async function buildCashForecast(
+  orgId: string,
+  startMonth: string,
+  openingBalance = 0,
+): Promise<{
+  openingBalance: number;
   months: Array<{ period: string; inflow: number; outflow: number; net: number; cumulative: number }>;
 }> {
   const months: string[] = [];
@@ -85,7 +91,7 @@ export async function buildCashForecast(orgId: string, startMonth: string): Prom
     months.push(`${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}-01`);
   }
 
-  let cumulative = 0;
+  let cumulative = openingBalance;
   const result = [];
   for (const period of months) {
     const month = parseInt(period.slice(5, 7), 10);
@@ -112,5 +118,5 @@ export async function buildCashForecast(orgId: string, startMonth: string): Prom
     result.push({ period, inflow, outflow, net, cumulative });
   }
 
-  return { months: result };
+  return { openingBalance, months: result };
 }

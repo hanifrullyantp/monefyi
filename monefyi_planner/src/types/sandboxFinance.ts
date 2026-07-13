@@ -7,6 +7,7 @@ export const SANDBOX_FINANCE_TABS = [
   { slug: 'labarugi', label: 'Laba Rugi', path: 'labarugi' },
   { slug: 'operasional', label: 'Operasional', path: 'operasional' },
   { slug: 'aset', label: 'Aset', path: 'aset' },
+  { slug: 'perencanaan', label: 'Perencanaan', path: 'perencanaan' },
   { slug: 'laporan', label: 'Laporan', path: 'laporan' },
 ] as const;
 

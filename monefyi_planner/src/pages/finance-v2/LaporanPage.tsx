@@ -13,7 +13,7 @@ import {
 } from '../../lib/financeV2/reports';
 import { downloadFinanceReportPdf } from '../../lib/financeV2/reports/exportPdf';
 import { downloadFinanceReportXlsx } from '../../lib/financeV2/reports/exportXlsx';
-import { closeFinancePeriod } from '../../services/financeV2/periodCloseService';
+import { closeFinancePeriod, listPeriodSnapshots } from '../../services/financeV2/periodCloseService';
 import type { FinanceAccount } from '../../types/financeV2';
 
 const REPORT_TABS: { id: ReportKind; label: string }[] = [
@@ -57,11 +57,13 @@ export default function LaporanPage() {
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [closingPeriod, setClosingPeriod] = useState(false);
+  const [periodSnapshots, setPeriodSnapshots] = useState<Awaited<ReturnType<typeof listPeriodSnapshots>>>([]);
 
   useEffect(() => {
     if (!tenant?.id) return;
     loadAccounts(tenant.id).then(setAccounts).catch(() => {});
     loadOpexCategories(tenant.id).then(setCategories).catch(() => {});
+    listPeriodSnapshots(tenant.id).then(setPeriodSnapshots).catch(() => {});
   }, [tenant?.id]);
 
   const load = useCallback(async () => {
@@ -121,6 +123,7 @@ export default function LaporanPage() {
     try {
       await closeFinancePeriod({ orgId: tenant.id, periodMonth: monthStartISO() });
       showToast('Periode ditutup', 'success');
+      listPeriodSnapshots(tenant.id).then(setPeriodSnapshots).catch(() => {});
       load();
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal tutup periode', 'error');
@@ -235,6 +238,42 @@ export default function LaporanPage() {
       ) : bundle ? (
         <ReportContent tab={tab} bundle={bundle} />
       ) : null}
+
+      {periodSnapshots.length > 0 && (
+        <section className="bg-white rounded-2xl border overflow-hidden">
+          <div className="px-5 py-4 border-b font-bold text-slate-800">Riwayat Tutup Periode</div>
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+              <tr>
+                <th className="text-left p-3">Bulan</th>
+                <th className="text-right p-3">Laba Bersih</th>
+                <th className="text-right p-3">Total Kas</th>
+                <th className="text-right p-3">Ditutup</th>
+              </tr>
+            </thead>
+            <tbody>
+              {periodSnapshots.map(row => {
+                const snap = (row.snapshot_json || {}) as {
+                  profitLoss?: { netProfit?: number };
+                  totalKas?: number;
+                };
+                return (
+                  <tr key={row.id as string} className="border-t border-slate-50">
+                    <td className="p-3 font-semibold">{String(row.period_month).slice(0, 7)}</td>
+                    <td className="p-3 text-right font-bold text-violet-700">
+                      {formatFinanceRupiah(snap.profitLoss?.netProfit || 0)}
+                    </td>
+                    <td className="p-3 text-right">{formatFinanceRupiah(snap.totalKas || 0)}</td>
+                    <td className="p-3 text-right text-xs text-slate-500">
+                      {formatDateId(String(row.closed_at).slice(0, 10))}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </section>
+      )}
     </div>
   );
 }

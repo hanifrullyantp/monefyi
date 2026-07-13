@@ -22,6 +22,7 @@ import { Link } from 'react-router-dom';
 import { loadFinanceVersion, setFinanceVersion, isSandboxFinance } from '../lib/financeVersion';
 import type { FinanceVersion } from '../types/financeV2';
 import MigrationDeveloperPanel from '../components/settings/MigrationDeveloperPanel';
+import FinanceIntegrationPanel from '../components/finance-v2/FinanceIntegrationPanel';
 import UpgradePlansPanel from '../components/settings/UpgradePlansPanel';
 import CustomDomainPanel from '../components/settings/CustomDomainPanel';
 import { formatPlanPriceIdr, planForOrg, type PricingPlan } from '../lib/pricingPlans';
@@ -480,7 +481,7 @@ export default function Settings() {
               <h3 className="font-bold text-slate-800">Versi Finance</h3>
             </div>
             <p className="text-sm text-slate-500">
-              Keuangan Bisnis (v3): neraca organisasi 7 tab dari mockup terbaru. Klasik (v1): ringkasan per proyek.
+              Keuangan Bisnis (v3): neraca organisasi 8 tab dari mockup terbaru. Klasik (v1): ringkasan per proyek.
             </p>
             <div className="flex flex-col sm:flex-row gap-2">
               {(['v1', 'v3'] as const).map(v => (
@@ -497,12 +498,16 @@ export default function Settings() {
                 >
                   <div className="font-bold">{v === 'v1' ? 'Keuangan Klasik (v1)' : 'Keuangan Bisnis (v3)'}</div>
                   <div className="text-xs font-normal mt-0.5 opacity-80">
-                    {v === 'v1' ? 'Dashboard transaksi proyek' : 'Hero kas, Neraca Bisnis, 7 tab'}
+                    {v === 'v1' ? 'Dashboard transaksi proyek' : 'Hero kas, Neraca Bisnis, 8 tab'}
                   </div>
                 </button>
               ))}
             </div>
           </div>
+
+          {tenant?.id && isSandboxFinance(financeVersion) && (
+            <FinanceIntegrationPanel orgId={tenant.id} userId={user?.id} />
+          )}
         </div>
       )}
 
