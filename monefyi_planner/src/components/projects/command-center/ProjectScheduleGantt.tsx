@@ -11,6 +11,7 @@ import TaskListPanel from '../gantt/TaskListPanel';
 import GanttTimeline from '../gantt/GanttTimeline';
 import GanttDetailPanel from '../gantt/GanttDetailPanel';
 import GanttEditModal from '../gantt/GanttEditModal';
+import GanttTodoModal from '../gantt/GanttTodoModal';
 
 interface ProjectScheduleGanttProps {
   project: Project;
@@ -20,9 +21,11 @@ interface ProjectScheduleGanttProps {
 
 export default function ProjectScheduleGantt({ project, workItems, onRefresh }: ProjectScheduleGanttProps) {
   const tenant = useAppStore(s => s.tenant);
+  const user = useAppStore(s => s.user);
   const {
     tasks, expandedIds, leftWidth, setLeftWidth, detailOpen, toggleDetailOpen,
     viewMode, setViewMode, zoomIn, zoomOut, editTaskId, setEditTaskId,
+    todoModalTaskId, setTodoModalTaskId,
     isDirty, isSaving,
   } = useGanttStore();
 
@@ -36,6 +39,7 @@ export default function ProjectScheduleGantt({ project, workItems, onRefresh }: 
   );
 
   const editTask = editTaskId ? tasks.find(t => t.id === editTaskId) : null;
+  const todoTask = todoModalTaskId ? tasks.find(t => t.id === todoModalTaskId) : null;
 
   const startResizeLeft = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -129,6 +133,15 @@ export default function ProjectScheduleGantt({ project, workItems, onRefresh }: 
           />
         )}
       </AnimatePresence>
+
+      {todoTask && tenant?.id && (
+        <GanttTodoModal
+          task={todoTask}
+          orgId={tenant.id}
+          userId={user?.id}
+          onClose={() => setTodoModalTaskId(null)}
+        />
+      )}
     </div>
   );
 }

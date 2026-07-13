@@ -28,7 +28,7 @@ export default function GanttTaskBar({
   const { task, depth } = row;
   const {
     viewMode, zoomScale, selectedIds, selectTask, setDrag, pushHistory,
-    updateTask, setBarColor,
+    updateTask, setBarColor, setTodoModalTaskId,
   } = useGanttStore();
   const isSelected = selectedIds.has(task.id);
   const isProject = task.type === 'project';
@@ -157,7 +157,7 @@ export default function GanttTaskBar({
         onClick={e => selectTask(task.id, e.ctrlKey || e.metaKey)}
         onDoubleClick={() => {
           if (isProject) onOpenProjectDetail?.(task.id);
-          else onOpenEdit?.(task.id);
+          else setTodoModalTaskId(task.id);
         }}
         onContextMenu={e => {
           e.preventDefault();

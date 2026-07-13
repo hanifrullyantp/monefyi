@@ -48,6 +48,7 @@ interface GanttState {
   miniDashboardProjectId: string | null;
   editProjectId: string | null;
   addWorkItemProjectId: string | null;
+  todoModalTaskId: string | null;
 
   init: (orgId: string) => void;
   setTasks: (tasks: GanttTask[]) => void;
@@ -93,6 +94,7 @@ interface GanttState {
   setMiniDashboardProjectId: (id: string | null) => void;
   setEditProjectId: (id: string | null) => void;
   setAddWorkItemProjectId: (id: string | null) => void;
+  setTodoModalTaskId: (id: string | null) => void;
 }
 
 export const useGanttStore = create<GanttState>((set, get) => ({
@@ -127,6 +129,7 @@ export const useGanttStore = create<GanttState>((set, get) => ({
   miniDashboardProjectId: null,
   editProjectId: null,
   addWorkItemProjectId: null,
+  todoModalTaskId: null,
 
   init: orgId => {
     set({
@@ -352,4 +355,6 @@ export const useGanttStore = create<GanttState>((set, get) => ({
   setEditProjectId: id => set({ editProjectId: id }),
 
   setAddWorkItemProjectId: id => set({ addWorkItemProjectId: id }),
+
+  setTodoModalTaskId: id => set({ todoModalTaskId: id }),
 }));

@@ -15,6 +15,7 @@ import GanttAdvancedFilterModal from './GanttAdvancedFilterModal';
 import GanttUnsavedDialog, { type UnsavedChoice } from './GanttUnsavedDialog';
 import GanttMiniProjectDashboard from './GanttMiniProjectDashboard';
 import GanttAddWorkItemModal from './GanttAddWorkItemModal';
+import GanttTodoModal from './GanttTodoModal';
 import EditProjectModal from '../EditProjectModal';
 import { useUiStore } from '../../../store/uiStore';
 
@@ -37,6 +38,7 @@ export default function GanttPlannerView({
   onOpenProjectDetail,
 }: GanttPlannerViewProps) {
   const tenant = useAppStore(s => s.tenant);
+  const user = useAppStore(s => s.user);
   const updateProject = useAppStore(s => s.updateProject);
   const showToast = useUiStore(s => s.showToast);
   const {
@@ -48,6 +50,7 @@ export default function GanttPlannerView({
     miniDashboardProjectId, setMiniDashboardProjectId,
     editProjectId, setEditProjectId,
     addWorkItemProjectId, setAddWorkItemProjectId,
+    todoModalTaskId, setTodoModalTaskId,
   } = useGanttStore();
 
   const { commitDates, saveAll, addWorkItem } = useGanttData(projects, tenant?.id, tenant?.currency);
@@ -98,6 +101,7 @@ export default function GanttPlannerView({
   );
 
   const editTask = editTaskId ? tasks.find(t => t.id === editTaskId) : null;
+  const todoTask = todoModalTaskId ? tasks.find(t => t.id === todoModalTaskId) : null;
   const editProject = editTask?.type === 'project'
     ? projects.find(p => p.id === editTask.id)
     : editTask ? projects.find(p => p.id === editTask.projectId) : undefined;
@@ -346,6 +350,15 @@ export default function GanttPlannerView({
           />
         )}
       </AnimatePresence>
+
+      {todoTask && tenant?.id && (
+        <GanttTodoModal
+          task={todoTask}
+          orgId={tenant.id}
+          userId={user?.id}
+          onClose={() => setTodoModalTaskId(null)}
+        />
+      )}
 
       {miniDashboardProject && tenant?.id && (
         <GanttMiniProjectDashboard

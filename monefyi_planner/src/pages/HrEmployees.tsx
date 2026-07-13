@@ -24,6 +24,7 @@ import {
   type PayrollEntry, type BonRequest, type MemberCompensation,
 } from '../services/payrollService';
 import InviteMemberModal from '../components/team/InviteMemberModal';
+import TeamTodoBoard from '../components/team/TeamTodoBoard';
 import EmployeeDetailSheet from '../components/hr/EmployeeDetailSheet';
 import { showToast, useUiStore } from '../store/uiStore';
 import { useUndoableAction } from '../hooks/useUndoableAction';
@@ -263,6 +264,10 @@ export default function HrEmployees() {
               </motion.div>
             ))}
           </div>
+
+          {tenant?.id && (
+            <TeamTodoBoard orgId={tenant.id} members={members} title="Todo Tim (Semua Proyek)" />
+          )}
 
           <div className="grid md:grid-cols-2 gap-4">
             {canInvite && undoableActions.length > 0 && (

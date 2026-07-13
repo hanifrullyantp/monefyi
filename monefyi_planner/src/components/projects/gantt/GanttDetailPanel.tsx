@@ -8,7 +8,7 @@ import { STATUS_LABEL } from '../../../utils/projectUi';
 type DetailTab = 'detail' | 'subtasks' | 'documents' | 'notes';
 
 export default function GanttDetailPanel({ onEditTask }: { onEditTask?: (id: string) => void }) {
-  const { tasks, selectedIds, detailOpen, setDetailOpen, setBarColor, pushHistory } = useGanttStore();
+  const { tasks, selectedIds, detailOpen, setDetailOpen, setBarColor, pushHistory, setTodoModalTaskId } = useGanttStore();
   const [tab, setTab] = useState<DetailTab>('subtasks');
 
   const selectedId = [...selectedIds][0];
@@ -182,7 +182,14 @@ export default function GanttDetailPanel({ onEditTask }: { onEditTask?: (id: str
                     : 'bg-slate-50 text-slate-500';
 
                 return (
-                  <div key={st.id} className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 hover:border-slate-200 transition-colors">
+                  <div
+                    key={st.id}
+                    role="button"
+                    tabIndex={0}
+                    onDoubleClick={() => setTodoModalTaskId(st.id)}
+                    className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/40 transition-colors cursor-pointer"
+                    title="Double-click untuk buka todo list"
+                  >
                     <div className="min-w-0">
                       <div className="text-xs font-semibold text-slate-800 truncate">{st.name}</div>
                       <div className="text-[10px] text-slate-400">{Math.round(st.progress)}%</div>

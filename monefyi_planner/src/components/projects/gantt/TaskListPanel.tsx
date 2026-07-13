@@ -129,7 +129,7 @@ export default function TaskListPanel({
   const {
     selectedIds, selectTask, toggleExpand, projectOrder, hiddenProjectIds,
     toggleHideProject, setAddWorkItemProjectId, setEditProjectId, setEditTaskId,
-    expandedIds,
+    setTodoModalTaskId, expandedIds,
   } = useGanttStore();
   const [dragId, setDragId] = useState<string | null>(null);
   const dragOverRef = useRef<string | null>(null);
@@ -291,7 +291,7 @@ export default function TaskListPanel({
                   onDragEnd={() => { setDragId(null); dragOverRef.current = null; }}
                   onDoubleClick={() => {
                     if (task.type === 'project') onOpenProjectDetail?.(task.id);
-                    else onEditTask?.(task.id);
+                    else setTodoModalTaskId(task.id);
                   }}
                 >
                   <TaskListRow
