@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Wallet, Scale, FolderKanban, TrendingUp } from 'lucide-react';
+import { Loader2, Building2, FolderKanban, TrendingUp, CheckCircle2 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { showToast } from '../../store/uiStore';
 import { getFinanceV2Snapshot } from '../../services/financeV2/balanceSheetService';
@@ -14,6 +14,11 @@ import Sparkline from '../../components/sandbox-ui/Sparkline';
 import BalanceDiagnosisModal from '../../components/finance-v2/BalanceDiagnosisModal';
 
 const BASE = '/app/finance-v2';
+
+function formatHeroKas(amount: number): string {
+  const abs = Math.abs(amount).toLocaleString('id-ID');
+  return amount < 0 ? `-Rp ${abs}` : `Rp ${abs}`;
+}
 
 export default function FinanceSandboxOverview() {
   const navigate = useNavigate();
@@ -92,10 +97,16 @@ export default function FinanceSandboxOverview() {
     return Math.round(((last - prev) / Math.abs(prev)) * 100);
   }, [cashflow]);
 
+  const sparkData = useMemo(() => {
+    if (cashflow.length >= 2) return cashflow;
+    if (totalKas !== 0) return [totalKas * 0.3, totalKas * 0.35, totalKas * 0.32, totalKas * 0.38];
+    return [30, 35, 32, 38];
+  }, [cashflow, totalKas]);
+
   if (loading) {
     return (
       <div className="flex justify-center py-20">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
       </div>
     );
   }
@@ -104,11 +115,16 @@ export default function FinanceSandboxOverview() {
     <button
       type="button"
       onClick={() => setBalanceOpen(true)}
-      className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-        balanceCheck.isBalanced ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+      className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full transition-opacity hover:opacity-85 ${
+        balanceCheck.isBalanced
+          ? 'bg-emerald-50 text-emerald-700'
+          : 'bg-rose-50 text-rose-700'
       }`}
     >
-      {balanceCheck.isBalanced ? '✓ Balance' : 'Tidak Balance'}
+      {balanceCheck.isBalanced ? (
+        <CheckCircle2 className="w-3.5 h-3.5" />
+      ) : null}
+      {balanceCheck.isBalanced ? 'Balance' : 'Tidak Balance'}
     </button>
   );
 
@@ -117,29 +133,28 @@ export default function FinanceSandboxOverview() {
       <button
         type="button"
         onClick={() => navigate(`${BASE}/kasbank`)}
-        className="w-full rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-700 text-white p-6 text-left shadow-lg hover:shadow-xl transition-shadow"
+        className="w-full rounded-2xl text-white p-6 text-left shadow-lg hover:shadow-xl transition-shadow relative overflow-hidden"
+        style={{ background: 'linear-gradient(135deg, #4C1D95, #6D28D9, #8B5CF6)' }}
       >
-        <div className="flex items-center gap-2 text-sm font-bold opacity-90 mb-2">
-          <Wallet className="w-5 h-5" />
+        <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide opacity-70 mb-1">
+          <Building2 className="w-3.5 h-3.5" />
           Total Kas Bisnis
         </div>
-        <div className="text-4xl font-black tracking-tight mb-3">{formatRupiah(totalKas)}</div>
-        {cashflow.length >= 2 && (
-          <div className="flex items-center gap-3">
-            <Sparkline data={cashflow} color="white" width={140} height={36} />
-            {growthPct != null && (
-              <span className="inline-flex items-center gap-1 text-xs font-bold bg-white/20 px-2.5 py-1 rounded-full">
-                <TrendingUp className="w-3.5 h-3.5" />
-                {growthPct >= 0 ? '+' : ''}{growthPct}% bulan ini
-              </span>
-            )}
-          </div>
-        )}
+        <div className="text-[40px] font-black tracking-tight leading-none mb-2">
+          {formatHeroKas(totalKas)}
+        </div>
+        <div className="flex flex-wrap items-center gap-3 mt-2">
+          <Sparkline data={sparkData} color="white" variant="bars" width={160} />
+          {growthPct != null && (
+            <span className="inline-flex items-center gap-1 text-xs font-semibold bg-emerald-500/20 text-emerald-200 px-2.5 py-1 rounded-full">
+              <TrendingUp className="w-3.5 h-3.5" />
+              {growthPct >= 0 ? '+' : ''}{growthPct}% bulan ini
+            </span>
+          )}
+        </div>
       </button>
 
       <NeracaGrid
-        aktivaTitle="Aktiva"
-        pasivaTitle="Pasiva + Ekuitas"
         aktivaRows={[
           { label: 'Kas & Bank', value: totalKas, icon: 'wallet' },
           { label: 'Piutang Klien', value: piutang, icon: 'file' },
@@ -155,12 +170,6 @@ export default function FinanceSandboxOverview() {
         totalAktiva={totalAktiva}
         totalPasiva={totalPasiva}
         balanceBadge={balanceBadge}
-        footer={
-          <span className="flex items-center gap-1.5">
-            <Scale className="w-3.5 h-3.5" />
-            Klik baris di tab Kas, Hutang Piutang, atau Aset untuk detail & edit.
-          </span>
-        }
       />
 
       <div className="surface-card overflow-hidden">
@@ -186,7 +195,7 @@ export default function FinanceSandboxOverview() {
                 return (
                   <tr
                     key={p.id}
-                    className="border-t border-slate-100 hover:bg-emerald-50/40 cursor-pointer"
+                    className="border-t border-slate-100 hover:bg-blue-50/40 cursor-pointer"
                     onClick={() => navigate(`/app/projects/${p.id}`)}
                   >
                     <td className="px-4 py-3 font-semibold text-slate-800">{p.name}</td>

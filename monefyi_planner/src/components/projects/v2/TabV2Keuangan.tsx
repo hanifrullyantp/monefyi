@@ -156,6 +156,11 @@ export default function TabV2Keuangan({
       </div>
 
       <NeracaGrid
+        title="Neraca Project"
+        aktivaTitle="Aktiva (Penggunaan)"
+        pasivaTitle="Pasiva (Sumber)"
+        totalAktivaLabel="TOTAL AKTIVA"
+        totalPasivaLabel="TOTAL PASIVA"
         aktivaRows={aktivaRows}
         pasivaRows={pasivaRows}
         totalAktiva={normalized.totalAktiva}

@@ -3,6 +3,7 @@ type Props = {
   color?: 'primary' | 'success' | 'danger' | 'white';
   height?: number;
   width?: number;
+  variant?: 'line' | 'bars';
 };
 
 const STROKE: Record<string, string> = {
@@ -12,8 +13,42 @@ const STROKE: Record<string, string> = {
   white: '#ffffff',
 };
 
-export default function Sparkline({ data, color = 'primary', height = 32, width = 120 }: Props) {
+const FILL: Record<string, string> = {
+  primary: '#2563eb',
+  success: '#10b981',
+  danger: '#ef4444',
+  white: 'rgba(255,255,255,0.5)',
+};
+
+export default function Sparkline({
+  data,
+  color = 'primary',
+  height = 32,
+  width = 120,
+  variant = 'line',
+}: Props) {
   if (data.length < 2) return null;
+
+  if (variant === 'bars') {
+    const max = Math.max(...data, 1);
+    const fill = FILL[color] || FILL.primary;
+    return (
+      <div className="flex items-end gap-0.5 h-7" style={{ width }} aria-hidden>
+        {data.map((v, i) => (
+          <div
+            key={i}
+            className="flex-1 rounded-t-sm min-h-1"
+            style={{
+              height: `${Math.max(Math.round((v / max) * 28), 4)}px`,
+              background: fill,
+              opacity: 0.6,
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
   const min = Math.min(...data);
   const max = Math.max(...data);
   const range = max - min || 1;

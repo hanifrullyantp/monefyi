@@ -6,7 +6,7 @@ export default function FinanceSandboxTabs() {
   const base = '/app/finance-v2';
 
   return (
-    <nav className="flex gap-1 overflow-x-auto pb-1 -mx-1 px-1 border-b border-slate-100">
+    <nav className="flex gap-0.5 overflow-x-auto pb-0 border-b-2 border-slate-200">
       {SANDBOX_FINANCE_TABS.map(tab => {
         const to = tab.path ? `${base}/${tab.path}` : base;
         const isActive = tab.path
@@ -18,10 +18,10 @@ export default function FinanceSandboxTabs() {
             to={to}
             end={!tab.path}
             className={() =>
-              `px-4 py-2.5 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${
+              `px-4 py-3 text-[13px] font-semibold whitespace-nowrap border-b-2 -mb-px transition-colors ${
                 isActive
-                  ? 'border-emerald-600 text-emerald-700'
-                  : 'border-transparent text-slate-500 hover:text-slate-700'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
               }`
             }
           >
