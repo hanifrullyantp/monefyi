@@ -12,6 +12,7 @@ import StokPage from './StokPage';
 import LaporanPage from './LaporanPage';
 import FinanceHutangPiutangTab, { FinanceLabaRugiTab } from './FinanceSandboxTabsContent';
 import FinancePlanningPage from './FinancePlanningPage';
+import FinanceBudgetPage from './FinanceBudgetPage';
 
 function LegacyRedirect({ from }: { from: string }) {
   const to = LEGACY_FINANCE_REDIRECTS[from] || 'overview';
@@ -53,6 +54,7 @@ export default function FinanceV2Routes() {
         <Route path="aset" element={<AsetPage />} />
         <Route path="laporan" element={<LaporanPage />} />
         <Route path="perencanaan" element={<FinancePlanningPage />} />
+        <Route path="budget" element={<FinanceBudgetPage />} />
         {/* Legacy paths → sandbox tabs */}
         <Route path="kas" element={<LegacyRedirect from="kas" />} />
         <Route path="piutang" element={<LegacyRedirect from="piutang" />} />

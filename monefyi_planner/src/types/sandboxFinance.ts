@@ -1,4 +1,4 @@
-/** Tab Keuangan Bisnis — struktur sandbox (7 tab). */
+/** Tab Keuangan Bisnis — struktur sandbox (9 tab). */
 
 export const SANDBOX_FINANCE_TABS = [
   { slug: 'overview', label: 'Overview', path: '' },
@@ -8,6 +8,7 @@ export const SANDBOX_FINANCE_TABS = [
   { slug: 'operasional', label: 'Operasional', path: 'operasional' },
   { slug: 'aset', label: 'Aset', path: 'aset' },
   { slug: 'perencanaan', label: 'Perencanaan', path: 'perencanaan' },
+  { slug: 'budget', label: 'Budget', path: 'budget' },
   { slug: 'laporan', label: 'Laporan', path: 'laporan' },
 ] as const;
 
