@@ -1,0 +1,41 @@
+{
+  "typingTexts": [
+    "Solusi Keuangan Pintar",
+    "Catat Rapi & Detail",
+    "Dashboard Interaktif",
+    "Analisa AI Cerdas",
+    "Laporan PDF Lengkap"
+  ],
+  "gradientStart": "#6366F1",
+  "gradientMiddle": "#38bdf8",
+  "gradientEnd": "#22C55E",
+  "featureSlides": [
+    { "id": 0, "title": "Foto Struk", "icon": "📷", "imageUrl": "" },
+    { "id": 1, "title": "Input Teks", "icon": "✏️", "imageUrl": "" },
+    { "id": 2, "title": "Dashboard", "icon": "📊", "imageUrl": "" },
+    { "id": 3, "title": "Budgeting", "icon": "📈", "imageUrl": "" },
+    { "id": 4, "title": "AI Advisor", "icon": "🤖", "imageUrl": "" }
+  ],
+  "howItWorks": [
+    { "id": 1, "title": "Login / Buat Akun", "description": "Buka /app/, aktivasi via email, lalu login.", "icon": "🔐" },
+    { "id": 2, "title": "Input via Foto/Teks", "description": "Foto struk atau ketik 'makan 50k di warteg'.", "icon": "📷" },
+    { "id": 3, "title": "Dikategorikan Otomatis", "description": "AI parsing tanggal, jumlah, kategori, metode bayar.", "icon": "📝" },
+    { "id": 4, "title": "Rekap di Dashboard", "description": "Total income, expense, breakdown kategori & tren.", "icon": "📊" },
+    { "id": 5, "title": "Analisa Budget", "description": "AI bandingkan budget vs realisasi per kategori.", "icon": "📈" },
+    { "id": 6, "title": "Rekomendasi AI", "description": "Saran konkret untuk hemat & estimasi tabungan.", "icon": "💡" }
+  ],
+  "pricing1Name": "Paket Bulanan",
+  "pricing1Price": "Rp 49.000 <span>/ bulan</span>",
+  "pricing1Note": "Cocok untuk mencoba",
+  "pricing1Url": "",
+  "pricing2Badge": "HEMAT 60%",
+  "pricing2Name": "Paket Lifetime",
+  "pricing2Price": "Rp 299.000 <span>sekali bayar</span>",
+  "pricing2Note": "Akses selamanya",
+  "pricing2Url": "",
+  "pixels": [],
+  "loginUrl": "/app/",
+  "heroCtaUrl": "#daftar",
+  "privacyUrl": "#",
+  "termsUrl": "#"
+}

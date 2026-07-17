@@ -1,7 +1,7 @@
 {
   "name": "monefyi",
   "private": true,
-  "description": "Monefyi — landing (monefyi.com) + app (monefyi.com/app)",
+  "description": "Monefyi — landing page (monefyi.com) + app (monefyi.com/app)",
   "engines": {
     "node": ">=20.x"
   },

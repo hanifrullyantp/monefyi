@@ -2,7 +2,7 @@
 const path = require("path");
 
 module.exports = {
-  root: path.join(__dirname, "landing"),
+  root: path.join(__dirname, "landing page"),
   base: "/",
   publicDir: "public",
   build: {

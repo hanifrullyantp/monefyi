@@ -283,7 +283,7 @@ src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
                 links: {
                     // Button/link destinations (admin can override)
                     nav_text: "LogIn",
-                    nav_url: "/app/",
+                    nav_url: "https://app.monefyi.com",
                     hero_cta_url: "#daftar",
                     closing_cta_url: "#daftar",
                     pricing_monthly_url: "",
@@ -355,7 +355,7 @@ src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
                 title: "CARA KERJA MONEFYI",
                 subtitle: "6 langkah mudah dari input sampai rekomendasi AI",
                 steps: [
-                    { title: "Login / Buat Akun", desc: "Buka /app/, aktivasi via email, lalu login.", iconKey: "login" },
+                    { title: "Login / Buat Akun", desc: "Buka app.monefyi.com, aktivasi via email, lalu login.", iconKey: "login" },
                     { title: "Input via Foto/Teks", desc: "Foto struk atau ketik \"makan 50k di warteg\".", iconKey: "camera" },
                     { title: "Dikategorikan Otomatis", desc: "AI parsing tanggal, jumlah, kategori, metode bayar.", iconKey: "list" },
                     { title: "Rekap di Dashboard", desc: "Total income, expense, breakdown kategori & tren.", iconKey: "chart_bar" },
@@ -458,7 +458,7 @@ src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
                 <img id="nav-logo-full-img" alt="Monefyi" class="h-6 w-auto hidden" />
                 <span id="nav-brand-text" class="text-xl font-bold tracking-tight">Monefyi</span>
             </div>
-            <a id="nav-cta" href="/app/" class="bg-green-600 hover:bg-green-500 text-white px-5 py-2 rounded-full font-medium transition text-sm">LogIn</a>
+            <a id="nav-cta" href="#daftar" class="bg-green-600 hover:bg-green-500 text-white px-5 py-2 rounded-full font-medium transition text-sm">LogIn</a>
         </div>
     </nav>
 
@@ -1267,7 +1267,7 @@ src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
                 const navCta = document.getElementById('nav-cta');
                 if (navCta) {
                     navCta.textContent = links.nav_text || 'LogIn';
-                    navCta.setAttribute('href', links.nav_url || '/app/');
+                    navCta.setAttribute('href', links.nav_url || '#daftar');
                 }
             } catch (e) {}
 

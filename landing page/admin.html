@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monefyi Admin</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Supabase client (for Storage upload). IMPORTANT: fill SUPABASE_ANON_KEY in <script> -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #cbd5e1; height: 100vh; overflow: hidden; }
+        .input-field {
+            width: 100%; background: #1e293b; border: 1px solid #334155; color: white;
+            padding: 8px 12px; rounded-lg; margin-bottom: 12px; font-size: 14px;
+        }
+        .input-field:focus { outline: none; border-color: #22C55E; ring: 1px solid #22C55E; }
+        .label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 4px; font-weight: 600; text-transform: uppercase;}
+        
+        /* Tabs */
+        .tab-btn { padding: 10px 14px; border-bottom: 2px solid transparent; color: #64748b; font-weight: 600; cursor: pointer; font-size: 13px; }
+        .tab-btn.active { color: #22C55E; border-bottom-color: #22C55E; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .sub-tab-btn { padding: 4px 8px; border: 1px solid #334155; border-radius: 4px; color: #94a3b8; font-size: 11px; margin-right: 4px; cursor: pointer; }
+        .sub-tab-btn.active { background: #334155; color: white; border-color: #475569; }
+
+        /* JSON Editor tree style */
+        .json-group { margin-left: 12px; padding-left: 12px; border-left: 1px solid #334155; margin-bottom: 16px; }
+        .group-title { font-size: 14px; color: #22C55E; margin-bottom: 8px; font-weight: bold; display: flex; align-items: center; gap: 8px; cursor: pointer;}
+        
+        /* Buttons */
+        .btn-add { font-size: 12px; padding: 4px 8px; background: #334155; border-radius: 4px; color: white; margin-top: 4px; }
+        .btn-add:hover { background: #475569; }
+        .btn-remove { font-size: 10px; padding: 2px 6px; background: #991b1b; color: white; border-radius: 4px; margin-left: auto; }
+        
+        /* Range Slider */
+        input[type=range] {
+            -webkit-appearance: none; width: 100%; background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #22C55E; margin-top: -6px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; background: #334155; border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- LOGIN MODAL -->
+    <div id="login-modal" class="fixed inset-0 z-50 bg-[#020617] flex items-center justify-center">
+        <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800 w-full max-w-sm shadow-2xl">
+            <h1 class="text-2xl font-bold text-white mb-6 text-center">Monefyi Admin</h1>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Username</label>
+                    <input type="text" id="username" class="input-field" placeholder="Username">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Password</label>
+                    <input type="password" id="password" class="input-field" placeholder="Password">
+                </div>
+                <button onclick="attemptLogin()" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg transition">Login</button>
+                <p id="login-error" class="text-red-500 text-xs text-center hidden">Username atau Password salah!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD (SPLIT VIEW) -->
+    <div id="dashboard" class="hidden h-screen min-h-0 flex flex-col">
+        <!-- Header -->
+        <header class="bg-slate-900 border-b border-slate-800 flex-shrink-0 z-40">
+            <div class="px-6 h-14 flex items-center justify-between">
+                <div class="font-bold text-white flex items-center gap-3">
+                    <div class="w-6 h-6 bg-green-500 rounded flex items-center justify-center text-black text-xs">M</div>
+                    Admin Dashboard
+                    <div id="sb-status" class="flex items-center gap-1 bg-slate-800 px-2 py-1 rounded text-[10px] text-slate-300 border border-white/10">
+                        <div id="sb-dot" class="w-2 h-2 rounded-full bg-slate-500"></div>
+                        <span id="sb-text">Checking Supabase...</span>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <button onclick="saveChanges()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2">
+                        <span id="save-icon">💾</span> Simpan & Publish
+                    </button>
+                    <button onclick="clearDraftCache()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-sm font-semibold border border-white/10">
+                        Clear Draft
+                    </button>
+                    <button onclick="logout()" class="text-red-400 hover:text-red-300 text-sm">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Grid -->
+        <div class="flex-1 min-h-0 grid grid-cols-12 overflow-hidden">
+            
+            <!-- LEFT PANEL: EDITOR (4 Columns) -->
+            <div class="col-span-4 bg-slate-900 border-r border-slate-800 flex flex-col min-h-0 overflow-hidden">
+                <!-- Tab Headers -->
+                <div class="flex border-b border-slate-800 bg-slate-900/50">
+                    <button class="tab-btn active" onclick="switchTab('config')">⚙️ Config & Style</button>
+                    <button class="tab-btn" onclick="switchTab('text')">📝 Content</button>
+                    <button class="tab-btn" onclick="switchTab('media')">🖼️ Media</button>
+                </div>
+                
+                <!-- Tab Contents (Scrollable) -->
+                <div class="flex-1 min-h-0 overflow-y-auto p-4 pb-24 custom-scrollbar">
+                    
+                    <!-- TAB: CONFIGURATION -->
+                    <div id="tab-config" class="tab-content active space-y-6">
+                        
+                        <!-- Appearance (Responsive) -->
+                        <div class="border border-slate-700 p-4 rounded-lg">
+                            <h3 class="font-bold text-green-400 mb-3 text-xs uppercase tracking-wider flex justify-between">
+                                Visual Appearance
+                            </h3>
+                            
+                            <!-- Toggle Desktop/Mobile -->
+                            <div class="flex mb-4">
+                                <button class="sub-tab-btn active w-1/2" onclick="switchSubTab('desktop', this)">Desktop View</button>
+                                <button class="sub-tab-btn w-1/2" onclick="switchSubTab('mobile', this)">Mobile View</button>
+                            </div>
+
+                            <!-- Desktop Settings -->
+                            <div id="view-desktop" class="sub-view">
+                                <label class="label">Desktop Headline Font Size</label>
+                                <select id="conf-desk-font" class="input-field" onchange="updateLivePreview()">
+                                    <option value="48px">Large (48px)</option>
+                                    <option value="56px">Extra Large (56px)</option>
+                                    <option value="72px">Huge (72px)</option>
+                                </select>
+                                <label class="label">Desktop Spacing Top (px)</label>
+                                <input type="number" id="conf-desk-space-top" class="input-field" value="40" oninput="updateLivePreview()">
+                                <label class="label">Desktop Hero Scale</label>
+                                <input type="range" id="conf-desk-scale" min="0.5" max="1.5" step="0.1" value="1.0" oninput="updateLivePreview()">
+                            </div>
+
+                            <!-- Mobile Settings -->
+                            <div id="view-mobile" class="sub-view hidden">
+                                <label class="label">Mobile Headline Font Size</label>
+                                <select id="conf-mob-font" class="input-field" onchange="updateLivePreview()">
+                                    <option value="28px">Small (28px)</option>
+                                    <option value="32px">Medium (32px)</option>
+                                    <option value="40px">Large (40px)</option>
+                                </select>
+                                <label class="label">Mobile Spacing Top (px)</label>
+                                <input type="number" id="conf-mob-space-top" class="input-field" value="20" oninput="updateLivePreview()">
+                                <label class="label">Mobile Hero Scale</label>
+                                <input type="range" id="conf-mob-scale" min="0.4" max="1.2" step="0.1" value="0.8" oninput="updateLivePreview()">
+                            </div>
+                        </div>
+
+                        <!-- Typing Effect -->
+                        <div class="border border-slate-700 p-4 rounded-lg">
+                            <h3 class="font-bold text-green-400 mb-3 text-xs uppercase tracking-wider">Typing Effect</h3>
+                            <label class="label">Static Text (Top Line)</label>
+                            <input type="text" id="hero-static" class="input-field" oninput="updateLivePreview()">
+                            <label class="label">Typing Strings (One per line)</label>
+                            <textarea id="hero-typing" class="input-field h-24" placeholder="Text 1&#10;Text 2" oninput="updateLivePreview()"></textarea>
+                        </div>
+
+                        <!-- Pixels -->
+                        <div class="border border-slate-700 p-4 rounded-lg">
+                            <h3 class="font-bold text-green-400 mb-3 text-xs uppercase tracking-wider">Tracking & Pixels</h3>
+
+                            <label class="label">Meta (Facebook) Pixel ID (cukup angka)</label>
+                            <input type="text" id="config-meta-pixel-id" class="input-field" placeholder="Contoh: 288418147246485" onchange="updateLivePreview()">
+                            <div class="text-[11px] text-slate-500 -mt-2 mb-2">Isi ID saja. Landing akan otomatis memasang Meta Pixel (fbq) tanpa Anda paste snippet lengkap.</div>
+
+                            <label class="label">Trigger Event on Page Load</label>
+                            <select id="config-pixel-event" class="input-field" onchange="updateLivePreview()">
+                                <option value="ViewContent">ViewContent</option>
+                                <option value="PageView">PageView</option>
+                                <option value="Lead">Lead</option>
+                                <option value="AddToCart">AddToCart</option>
+                                <option value="InitiateCheckout">InitiateCheckout</option>
+                                <option value="Purchase">Purchase</option>
+                            </select>
+
+                            <label class="label">Trigger Event on CTA Buttons (Hero & Closing)</label>
+                            <select id="config-pixel-event-button" class="input-field" onchange="updateLivePreview()">
+                                <option value="InitiateCheckout">InitiateCheckout</option>
+                                <option value="AddToCart">AddToCart</option>
+                                <option value="Lead">Lead</option>
+                                <option value="ViewContent">ViewContent</option>
+                                <option value="Purchase">Purchase</option>
+                            </select>
+
+                            <details class="mt-2">
+                                <summary class="text-xs text-slate-400 cursor-pointer select-none">Advanced: Custom Pixel Code (optional)</summary>
+                                <div class="mt-3">
+                                    <label class="label">Custom Pixel Snippet (Raw JS atau &lt;script&gt;...&lt;/script&gt;)</label>
+                                    <textarea id="config-pixel-code" class="input-field h-24 font-mono text-xs text-gray-400" placeholder="(optional) paste full pixel snippet here" onchange="updateLivePreview()"></textarea>
+                                    <div class="text-[11px] text-slate-500 -mt-2">Jika diisi, snippet ini bisa menggantikan pemasangan otomatis berdasarkan Pixel ID.</div>
+                                </div>
+                            </details>
+                        </div>
+
+                        <!-- Notifications -->
+                        <div class="border border-slate-700 p-4 rounded-lg">
+                            <h3 class="font-bold text-green-400 mb-3 text-xs uppercase tracking-wider">Notification Banner</h3>
+                            
+                            <div class="flex items-center gap-2 mb-2">
+                                <input type="checkbox" id="config-notify-active" onchange="updateLivePreview()" checked>
+                                <label class="text-sm text-gray-300">Enable Banner</label>
+                            </div>
+
+                            <label class="label">Interval (ms)</label>
+                            <input type="number" id="config-notify-interval" class="input-field" value="10000" onchange="updateLivePreview()">
+
+                            <label class="label">Action Text</label>
+                            <input type="text" id="config-notify-action" class="input-field" placeholder="baru saja memesan" onchange="updateLivePreview()">
+
+                            <label class="label">Sound URL (optional)</label>
+                            <input type="text" id="config-notify-sound" class="input-field" placeholder="https://.../notif.mp3" onchange="updateLivePreview()">
+
+                            <label class="label">Names List (Comma Separated)</label>
+                            <input type="text" id="config-notify-names" class="input-field" onchange="updateLivePreview()">
+
+                            <label class="label">Packages List (Comma Separated)</label>
+                            <input type="text" id="config-notify-packages" class="input-field" onchange="updateLivePreview()">
+                        </div>
+
+                        <!-- Links & Buttons -->
+                        <div class="border border-slate-700 p-4 rounded-lg">
+                            <h3 class="font-bold text-green-400 mb-3 text-xs uppercase tracking-wider">Links & Buttons</h3>
+
+                            <div class="grid grid-cols-1 gap-3">
+                                <div>
+                                    <label class="label">Navbar Button Text</label>
+                                    <input type="text" id="links-nav-text" class="input-field" placeholder="LogIn" onchange="updateLivePreview()">
+                                </div>
+                                <div>
+                                    <label class="label">Navbar Button URL</label>
+                                    <input type="text" id="links-nav-url" class="input-field" placeholder="https://app.monefyi.com" onchange="updateLivePreview()">
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="label">Hero CTA URL</label>
+                                        <input type="text" id="links-hero-cta-url" class="input-field" placeholder="#daftar" onchange="updateLivePreview()">
+                                    </div>
+                                    <div>
+                                        <label class="label">Closing CTA URL</label>
+                                        <input type="text" id="links-closing-cta-url" class="input-field" placeholder="#daftar" onchange="updateLivePreview()">
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="label">Pricing Monthly URL</label>
+                                        <input type="text" id="links-pricing-monthly-url" class="input-field" placeholder="https://..." onchange="updateLivePreview()">
+                                        <div class="text-[11px] text-slate-500 -mt-2 mb-2">URL untuk tombol <span class="text-slate-200 font-semibold">PILIH PAKET INI</span> (Paket Bulanan). Jika kosong, tombol akan scroll ke section pricing.</div>
+                                    </div>
+                                    <div>
+                                        <label class="label">Pricing Lifetime URL</label>
+                                        <input type="text" id="links-pricing-lifetime-url" class="input-field" placeholder="https://..." onchange="updateLivePreview()">
+                                        <div class="text-[11px] text-slate-500 -mt-2 mb-2">URL untuk tombol <span class="text-slate-200 font-semibold">PILIH PAKET INI</span> (Paket Lifetime). Jika kosong, tombol akan scroll ke section pricing.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- TAB: TEXT CONTENT -->
+                    <div id="tab-text" class="tab-content">
+                        <div id="text-editor-container">
+                            <!-- Generated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- TAB: MEDIA -->
+                    <div id="tab-media" class="tab-content space-y-6">
+                        <div class="border border-slate-700 p-4 rounded-lg">
+                            <h3 class="font-bold text-white mb-2">Brand Assets (Logo & Favicon)</h3>
+                            <p class="text-[11px] text-slate-500 mb-4">
+                                Upload akan tersimpan ke Supabase Storage (bucket <span class="text-slate-300 font-semibold">landing-assets</span>) dan URL-nya akan dipublish ke landing.
+                                Jika masih muncul error <span class="text-slate-300">blob:... ERR_FILE_NOT_FOUND</span>, artinya file belum diupload ke Storage (masih preview-only).
+                                Isi <span class="text-slate-300">SUPABASE_ANON_KEY</span> di script admin.html dan pastikan bucket public.
+                            </p>
+                            <div class="grid gap-4">
+                                <div>
+                                    <label class="label">Logo Full (Header/Footer)</label>
+                                    <input type="file" id="upload-logo-full" class="text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-green-500/10 file:text-green-500"/>
+                                    <div class="text-[11px] text-slate-500 mt-1">Disarankan PNG/SVG horizontal.</div>
+                                </div>
+                                <div>
+                                    <label class="label">Logo Mark (Ikon Kotak)</label>
+                                    <input type="file" id="upload-logo-mark" class="text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-green-500/10 file:text-green-500"/>
+                                    <div class="text-[11px] text-slate-500 mt-1">Disarankan PNG kotak (1:1).</div>
+                                </div>
+                                <div>
+                                    <label class="label">Favicon</label>
+                                    <input type="file" id="upload-favicon" accept="image/png,image/svg+xml,image/x-icon" class="text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-green-500/10 file:text-green-500"/>
+                                    <div class="text-[11px] text-slate-500 mt-1">PNG 32x32 atau ICO.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border border-slate-700 p-4 rounded-lg">
+                            <h3 class="font-bold text-white mb-4">Hero Dashboard Image</h3>
+                            <input type="file" id="upload-hero" class="text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-green-500/10 file:text-green-500"/>
+                        </div>
+                        <div class="border border-slate-700 p-4 rounded-lg">
+                            <h3 class="font-bold text-white mb-4">Feature Icons & Screens</h3>
+                            <div id="feature-uploads" class="space-y-4"></div>
+                        </div>
+                        <div class="border border-slate-700 p-4 rounded-lg">
+                            <label class="label">Video Demo URL</label>
+                            <input type="text" id="config-video" class="input-field" placeholder="https://youtube.com/embed/...">
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL: PREVIEW (8 Columns) -->
+            <div class="col-span-8 bg-black relative flex flex-col min-h-0">
+                <div class="bg-slate-800 text-xs py-2 text-gray-400 border-b border-slate-700 flex items-center justify-between px-4">
+                    <div class="font-semibold text-gray-300">Live Preview</div>
+                    <div class="flex items-center gap-2">
+                        <button class="sub-tab-btn active" id="preview-desktop-btn" onclick="setPreviewMode('desktop', this)">Desktop</button>
+                        <button class="sub-tab-btn" id="preview-mobile-btn" onclick="setPreviewMode('mobile', this)">HP</button>
+                    </div>
+                </div>
+
+                <div class="flex-1 min-h-0 overflow-auto bg-slate-950">
+                    <div id="preview-wrap" class="w-full h-full flex items-start justify-center p-4">
+                        <div id="preview-device" class="w-full h-full">
+                            <iframe id="preview-frame" src="index.html" class="w-full h-full bg-white border-0 rounded-xl"></iframe>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- LOGIC -->
+    <script>
+        const SUPABASE_URL = 'https://zzwqfmdyncxbolestkqp.supabase.co';
+        const LANDING_FN   = 'monefyi-landing-config';
+        const SLUG         = 'default';
+        const API_BASE     = `${SUPABASE_URL}/functions/v1/${LANDING_FN}`;
+        const ADMIN_USER   = 'hanif';
+        const ADMIN_PASS   = '12345678';
+
+        // --- Supabase Storage (for image upload) ---
+        // IMPORTANT: Fill this with your Supabase Project Anon Key so uploads work.
+        // You can find it in Supabase Dashboard → Project Settings → API → anon public.
+        // NOTE: This is an anon/public key; it is safe to embed in static admin pages.
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6d3FmbWR5bmN4Ym9sZXN0a3FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYzNDI3OTQsImV4cCI6MjA4MTkxODc5NH0.qtvqzDicRmIixFh3A46ExuitpAXDWaYHmB7NVBxsc7w';
+
+        // Bucket must exist in Supabase Storage.
+        // Recommended: create bucket named "landing-assets" and set it to Public.
+        const STORAGE_BUCKET = 'landing-assets';
+
+        // Supabase client instance (avoid name collision with global `supabase` from CDN)
+        const sb = (window.supabase && SUPABASE_ANON_KEY)
+            ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+            : null;
+
+        // Version marker (helps debugging cache issues)
+        console.log('[Admin] admin.html loaded: v2026-01-03-1', { hasAnonKey: !!SUPABASE_ANON_KEY, hasSupabaseCdn: !!window.supabase, sbReady: !!sb });
+
+        function adminLog(...args) {
+            console.log('[Admin]', ...args);
+        }
+
+        // --- Utils: deep merge so older published content won't miss new nested fields ---
+        function isPlainObject(v) {
+            return v && typeof v === 'object' && !Array.isArray(v);
+        }
+        function mergeDeep(target, source) {
+            if (!isPlainObject(target) || !isPlainObject(source)) return source;
+            for (const key of Object.keys(source)) {
+                const sv = source[key];
+                const tv = target[key];
+                if (isPlainObject(tv) && isPlainObject(sv)) {
+                    target[key] = mergeDeep({ ...tv }, sv);
+                } else {
+                    target[key] = sv;
+                }
+            }
+            return target;
+        }
+
+        async function fetchPublishedContent() {
+            const url = `${API_BASE}?slug=${encodeURIComponent(SLUG)}`;
+            adminLog('Fetching published content...', url);
+            const res = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+            const raw = await res.text();
+            adminLog('Fetch status:', res.status);
+            adminLog('Fetch raw response:', raw);
+            if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+            let parsed;
+            try { parsed = JSON.parse(raw); } catch { throw new Error('Invalid JSON from server'); }
+            return parsed?.content || parsed?.data?.content || parsed;
+        }
+
+        async function publishContent(content) {
+            adminLog('Publishing content...', { slug: SLUG });
+            const res = await fetch(API_BASE, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Admin-User': ADMIN_USER,
+                    'X-Admin-Pass': ADMIN_PASS
+                },
+                body: JSON.stringify({ slug: SLUG, content }),
+            });
+            const raw = await res.text();
+            adminLog('Publish status:', res.status);
+            adminLog('Publish raw response:', raw);
+            if (!res.ok) throw new Error(`Publish failed: ${res.status}`);
+            return raw;
+        }
+
+        // Copied from index.html to ensure sync
+        const defaultContent = {
+            config: {
+                // Responsive Settings
+                responsive: {
+                    mobile: {
+                        headline_size: "28px",
+                        subheadline_size: "16px",
+                        spacing_top: "20",
+                        spacing_bottom: "20",
+                        hero_scale: 0.7
+                    },
+                    desktop: {
+                        headline_size: "56px",
+                        subheadline_size: "18px",
+                        spacing_top: "40",
+                        spacing_bottom: "40",
+                        hero_scale: 1.0
+                    }
+                },
+
+                // Pixels
+                meta_pixel_id: "",
+                pixel_code: "", // optional advanced snippet
+                pixel_event_onload: "ViewContent",
+                pixel_event_button: "InitiateCheckout",
+
+                notification: {
+                    active: true,
+                    action_text: "baru saja memesan",
+                    sound_url: "",
+                    names: ["Andi", "Budi", "Sarah", "Citra", "Eko", "Dian"],
+                    packages: ["Paket Bulanan", "Paket Lifetime"],
+                    interval: 10000
+                },
+
+                branding: {
+                    logo_url: "",
+                    logo_mark_url: "",
+                    favicon_url: ""
+                },
+
+                links: {
+                    nav_text: "LogIn",
+                    nav_url: "https://app.monefyi.com",
+                    hero_cta_url: "#daftar",
+                    closing_cta_url: "#daftar",
+                    pricing_monthly_url: "",
+                    pricing_lifetime_url: ""
+                }
+            },
+
+            hero: {
+                static_headline: "SUSAH ATUR KEUANGAN, UANG SELALU HABIS TAPI",
+                typing_strings: ["TIDAK TAHU KE MANA?", "TABUNGAN STAGNAN?", "PUSING CATAT MANUAL?"],
+                subheadline: "Bayangkan: cukup foto struk, bukti transfer, atau nota belanja, lalu semua transaksi otomatis tercatat rapi, tampil di dashboard lengkap, dan dianalisa oleh AI yang memberitahu pola pengeluaran, potensi pengeluaran berikutnya, sampai peluang penghematan Anda. Itulah yang dilakukan <strong>Monefyi</strong> – aplikasi pengatur keuangan lengkap dengan AI, dari pencatatan yang super mudah sampai analisa keuangan pintar.",
+                cta: "Beli 1x, Pakai Selamanya",
+                image: null
+            },
+
+            problems: {
+                title: "MUNGKIN ANDA MENGALAMI INI",
+                items: [
+                    "Struk, nota, dan bukti transfer menumpuk, tapi catatan keuangan tetap kosong.",
+                    "Setiap kali mau mencatat pengeluaran, malah malas karena harus input satu-satu.",
+                    "Punya banyak aplikasi keuangan, tapi tetap bingung uang habis di mana.",
+                    "Laporan di Excel membingungkan, angka ada tapi tidak memberi jawaban."
+                ]
+            },
+
+            secondary_problems: {
+                title: "ATAU ANDA JUGA MENGALAMI HAL INI?",
+                items: [
+                    "Tiap akhir bulan selalu berkata: “Kok udah habis aja ya?” tanpa tahu detailnya.",
+                    "Sulit merencanakan tabungan atau investasi karena tidak punya gambaran pengeluaran sebenarnya.",
+                    "Pengeluaran kecil tapi sering (ngopi, ongkir, jajan online) terasa sepele tapi diam-diam menguras saldo.",
+                    "Tidak punya gambaran jelas: bulan depan kira-kira habis berapa? Bisa hemat di mana?"
+                ]
+            },
+
+            desires: {
+                title: "MUNGKIN INI YANG ANDA INGINKAN",
+                items: [
+                    "Semua transaksi tercatat otomatis, cukup lewat foto, tanpa ribet input manual.",
+                    "Satu aplikasi yang memperlihatkan keuangan Anda secara utuh: pemasukan, pengeluaran, kategori, sampai tren bulanan.",
+                    "Sistem pintar yang bukan hanya mencatat, tapi juga memahami pola pengeluaran Anda.",
+                    "Insight jelas: di mana kebocoran, apa potensi pengeluaran berikutnya, dan berapa besar potensi penghematan setiap bulan."
+                ]
+            },
+
+            intro: {
+                title: "PERKENALKAN: MONEFYI – PENGATUR KEUANGAN DENGAN OTAK AI",
+                text: "<strong>Monefyi</strong> adalah aplikasi pengatur keuangan lengkap dengan AI yang membantu Anda: <br><br> • Mencatat transaksi cukup dari foto (struk, nota, bukti transfer, screenshot).<br> • Melihat kondisi keuangan lewat dashboard yang jelas dan mudah dibaca.<br> • Menerima analisa keuangan dari AI yang mempelajari pola pengeluaran bulanan, memprediksi potensi pengeluaran berikutnya, dan menunjukkan potensi penghematan Anda.<br><br>Semua dalam satu aplikasi, tanpa perlu spreadsheet rumit atau mencatat manual berjam-jam."
+            },
+
+            benefits: {
+                title: "PENGALAMAN SETELAH PAKAI MONEFYI",
+                items: [
+                    "Lebih tenang karena semua pengeluaran tercatat, tidak lagi “menghilang begitu saja”.",
+                    "Merasa lebih terkontrol: tahu pasti ke mana larinya uang setiap bulan.",
+                    "Tidak perlu pusing analisa sendiri, cukup baca insight dan rekomendasi dari AI.",
+                    "Lebih mudah mengambil keputusan: mana yang harus dikurangi, mana yang masih aman.",
+                    "Pelan-pelan mulai bisa menyisihkan uang untuk nabung dan tujuan keuangan lain, karena tahu bagian mana yang bisa dihemat."
+                ]
+            },
+
+            how_it_works: {
+                title: "CARA KERJA MONEFYI DALAM 3 LANGKAH MUDAH",
+                steps: [
+                    { title: "Foto atau Upload Transaksi", text: "Foto struk belanja, nota, bukti transfer, invoice, atau screenshot transaksi digital langsung dari HP Anda." },
+                    { title: "Monefyi Baca dan Proses dengan AI", text: "Sistem AI Monefyi mengekstrak angka, tanggal, dan informasi penting, lalu memasukkannya ke dalam catatan transaksi secara otomatis." },
+                    { title: "Lihat Dashboard & Analisa Keuangan", text: "Anda mendapatkan tampilan keuangan yang rapi: grafik, kategori, ringkasan bulanan, plus analisa dan rekomendasi dari AI." }
+                ]
+            },
+
+            how_timeline: {
+                title: "CARA KERJA MONEFYI",
+                subtitle: "6 langkah mudah dari input sampai rekomendasi AI",
+                steps: [
+                    { title: "Login / Buat Akun", desc: "Buka app.monefyi.com, aktivasi via email, lalu login.", iconKey: "login" },
+                    { title: "Input via Foto/Teks", desc: "Foto struk atau ketik \"makan 50k di warteg\".", iconKey: "camera" },
+                    { title: "Dikategorikan Otomatis", desc: "AI parsing tanggal, jumlah, kategori, metode bayar.", iconKey: "list" },
+                    { title: "Rekap di Dashboard", desc: "Total income, expense, breakdown kategori & tren.", iconKey: "chart_bar" },
+                    { title: "Analisa Budget", desc: "AI bandingkan budget vs realisasi per kategori.", iconKey: "chart_line" },
+                    { title: "Rekomendasi AI", desc: "Saran konkret untuk hemat & estimasi tabungan.", iconKey: "bulb" }
+                ]
+            },
+
+            features: [
+                { title: "Input dari Foto Struk", desc: "Cukup foto struk, AI otomatis membaca nominal & item.", icon: "camera" },
+                { title: "Pencatatan Mudah", desc: "Kategori lengkap, cepat, dan anti ribet.", icon: "edit" },
+                { title: "Dashboard Lengkap", desc: "Ringkasan visual pemasukan vs pengeluaran.", icon: "chart" },
+                { title: "Analisa Cerdas AI", desc: "Mempelajari pola & prediksi pengeluaran.", icon: "brain" },
+                { title: "Insight & Hemat", desc: "Rekomendasi penghematan cerdas.", icon: "bulb" }
+            ],
+
+            target: {
+                title: "UNTUK SIAPA MONEFYI?",
+                items: [
+                    "Individu yang ingin mulai serius mengatur keuangan pribadi.",
+                    "Pasangan / keluarga yang ingin transparan dan rapi mengelola uang bersama.",
+                    "Freelancer dan pekerja lepas yang pemasukan dan pengeluarannya tidak tetap, tapi tetap ingin terkontrol.",
+                    "Pemilik usaha kecil yang ingin memisahkan uang pribadi dan usaha dengan lebih rapi."
+                ]
+            },
+
+            demo: {
+                title: "CONTOH HASIL YANG BISA ANDA DAPATKAN",
+                video_url: ""
+            },
+
+            pricing: {
+                title: "PAKET & AKSES MONEFYI",
+                plans: [
+                    {
+                        name: "Paket Bulanan",
+                        price: "Rp 39.000",
+                        period: "/ Bulan",
+                        benefits: ["Akses fitur dasar", "Input dari foto", "Dashboard keuangan", "Export PDF Standar"],
+                        highlight: false,
+                        pixel_event: "InitiateCheckout"
+                    },
+                    {
+                        name: "Paket Lifetime",
+                        price: "Rp 299.000",
+                        period: "/ Seumur Hidup",
+                        benefits: ["Akses aplikasi seumur hidup", "Input transaksi Unlimited", "Analisa AI & Insight Premium", "Prioritas Support", "Export Excel & PDF"],
+                        highlight: true,
+                        pixel_event: "InitiateCheckout"
+                    }
+                ],
+                cta: "DAFTAR & COBA MONEFYI SEKARANG"
+            },
+
+            faq: {
+                title: "PERTANYAAN YANG SERING DITANYAKAN",
+                subtitle: "Beberapa hal yang paling sering ditanyain calon pengguna sebelum coba Monefyi.",
+                items: [
+                    {
+                        question: "Apakah data keuangan saya aman?",
+                        answer: "Data kamu disimpan di server yang aman dan terenkripsi. Monefyi menggunakan Supabase (platform backend modern) dan mengikuti praktik keamanan standar industri. Kami tidak akan menjual atau membagikan data transaksimu ke pihak ketiga tanpa izin."
+                    },
+                    {
+                        question: "Apakah Monefyi menggantikan akuntan atau perencana keuangan?",
+                        answer: "Monefyi bukan pengganti akuntan atau penasihat keuangan berlisensi. Monefyi membantu kamu mencatat, merapikan, dan menganalisa data keuangan secara otomatis dengan AI, sehingga kamu punya gambaran jelas untuk mengambil keputusan. Jika perlu keputusan besar (investasi, pajak, dll), kamu tetap bisa konsultasi dengan profesional."
+                    },
+                    {
+                        question: "Apakah Monefyi bisa dipakai untuk usaha kecil / UMKM?",
+                        answer: "Bisa. Banyak pengguna Monefyi yang pakai untuk usaha kecil, online shop, dan jasa freelance. Kamu bisa bedakan kategori pribadi vs usaha, melihat arus kas per kategori, dan menyiapkan laporan bulanan yang rapi."
+                    },
+                    {
+                        question: "Harus selalu online kah untuk pakai Monefyi?",
+                        answer: "Untuk proses AI (baca struk, analisa dashboard) dan sinkron data, kamu memang perlu koneksi internet. Tapi kamu bisa membuka kembali data yang sudah pernah dimuat meskipun koneksi tidak stabil. Ke depannya kami juga merencanakan mode offline sederhana."
+                    },
+                    {
+                        question: "Apa bedanya Monefyi dengan aplikasi keuangan lain?",
+                        answer: "Fokus Monefyi adalah input super cepat dan analisa cerdas. Kamu cukup foto struk atau ketik kalimat bebas, AI Monefyi yang akan membaca dan mengkategorikan. Lalu Monefyi menampilkan dashboard yang gampang dipahami dan memberikan insight & rekomendasi, bukan sekadar daftar angka."
+                    },
+                    {
+                        question: "Bagaimana kalau saya lupa mencatat transaksi?",
+                        answer: "Selama kamu masih punya struk, nota, atau screenshot bukti transfer, kamu bisa foto dan kirim ke Monefyi kapan saja. AI akan tetap membaca dan memasukkannya ke riwayat transaksi. Jadi kamu tidak wajib disiplin catat setiap detik; cukup kumpulkan bukti lalu serahkan sisanya ke Monefyi."
+                    }
+                ]
+            },
+
+            closing: {
+                text: "Anda sudah bekerja keras untuk menghasilkan uang.<br>Biarkan <strong>Monefyi</strong> membantu Anda mengatur, memahami, dan mengoptimalkan penggunaannya.<br><br>Dari pencatatan yang mudah, informasi yang lengkap, sampai analisa keuangan yang pintar – semua dalam satu aplikasi.",
+                cta: "Beli 1x, Pakai Selamanya"
+            }
+        };
+
+        let currentContent = JSON.parse(JSON.stringify(defaultContent));
+        let debounceTimer;
+
+        // --- DRAFT STORAGE (so edits persist and preview always updates) ---
+        const DRAFT_KEY = 'monefyi_admin_draft_content_v1';
+        function loadDraft() {
+            try {
+                const raw = localStorage.getItem(DRAFT_KEY);
+                if (!raw) return;
+                const parsed = JSON.parse(raw);
+                if (parsed && typeof parsed === 'object') {
+                    // Merge draft into defaultContent so any new fields exist
+                    currentContent = mergeDeep(JSON.parse(JSON.stringify(defaultContent)), parsed);
+                }
+            } catch (e) {}
+        }
+        function saveDraft() {
+            try {
+                localStorage.setItem(DRAFT_KEY, JSON.stringify(currentContent));
+            } catch (e) {}
+        }
+
+        // Send current content to iframe (safe)
+        function pushPreview() {
+            const frame = document.getElementById('preview-frame');
+            if (!frame || !frame.contentWindow) return;
+            frame.contentWindow.postMessage({ type: 'UPDATE_CONTENT', payload: currentContent }, '*');
+        }
+
+        // Listen ready handshake from iframe
+        window.addEventListener('message', (e) => {
+            if (e?.data?.type === 'PREVIEW_READY') {
+                pushPreview();
+            }
+        });
+
+        // --- AUTH (persisted via localStorage) ---
+        function applyAuthState() {
+            const authed = localStorage.getItem('monefyi_admin_authed') === '1';
+            const loginModal = document.getElementById('login-modal');
+            const dashboard = document.getElementById('dashboard');
+            if (!loginModal || !dashboard) return;
+
+            if (authed) {
+                loginModal.classList.add('hidden');
+                dashboard.classList.remove('hidden');
+                loadContent();
+            } else {
+                dashboard.classList.add('hidden');
+                loginModal.classList.remove('hidden');
+            }
+        }
+
+        // Run auth check reliably on refresh (even if DOM already ready)
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', applyAuthState);
+        } else {
+            applyAuthState();
+        }
+
+        function attemptLogin() {
+            const u = (document.getElementById('username')?.value || '').trim();
+            const p = (document.getElementById('password')?.value || '').trim();
+            const err = document.getElementById('login-error');
+
+            if (u === 'hanif' && p === '12345678') {
+                localStorage.setItem('monefyi_admin_authed', '1');
+                if (err) err.classList.add('hidden');
+                applyAuthState();
+            } else {
+                if (err) err.classList.remove('hidden');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('monefyi_admin_authed');
+            // optional: clear inputs
+            try {
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+            } catch (e) {}
+            applyAuthState();
+        }
+
+        function clearDraftCache() {
+            try {
+                localStorage.removeItem(DRAFT_KEY);
+                adminLog('Draft cleared:', DRAFT_KEY);
+                alert('Draft cache cleared. Halaman akan reload untuk mengambil data publish/default.');
+                window.location.reload();
+            } catch (e) {
+                alert('Gagal clear draft. Cek console.');
+            }
+        }
+
+        // --- LOAD ---
+        async function updateSupabaseStatus() {
+            const dot = document.getElementById('sb-dot');
+            const text = document.getElementById('sb-text');
+            if (!dot || !text) return;
+
+            try {
+                const url = `${API_BASE}?slug=${encodeURIComponent(SLUG)}`;
+                const res = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+                if (res.ok) {
+                    dot.className = 'w-2 h-2 rounded-full bg-green-500';
+                    text.textContent = 'Connected to Supabase';
+                } else {
+                    dot.className = 'w-2 h-2 rounded-full bg-yellow-500';
+                    text.textContent = `Supabase error (${res.status})`;
+                }
+            } catch (e) {
+                dot.className = 'w-2 h-2 rounded-full bg-red-500';
+                text.textContent = 'Supabase unreachable';
+            }
+        }
+
+        async function loadContent() {
+            await updateSupabaseStatus();
+            // Prefer draft if exists, otherwise load published from Supabase
+            let hadDraft = false;
+            try {
+                const rawDraft = localStorage.getItem(DRAFT_KEY);
+                hadDraft = !!rawDraft;
+            } catch (e) {}
+
+            if (hadDraft) {
+                loadDraft();
+                adminLog('Loaded draft from localStorage.');
+            } else {
+                try {
+                    const published = await fetchPublishedContent();
+                    if (published && typeof published === 'object') {
+                        // Merge with defaultContent to ensure new fields exist (branding, links, etc.)
+                        currentContent = mergeDeep(JSON.parse(JSON.stringify(defaultContent)), published);
+                        saveDraft();
+                        adminLog('Loaded published content from Supabase and cached to draft.');
+                    }
+                } catch (e) {
+                    console.error('[Admin] Failed to fetch published content. Using defaultContent.', e);
+                }
+            }
+
+            // Self-heal for older drafts/published payloads
+            try {
+                if (!currentContent.config) currentContent.config = JSON.parse(JSON.stringify(defaultContent.config));
+                if (!currentContent.config.branding) currentContent.config.branding = JSON.parse(JSON.stringify(defaultContent.config.branding));
+                if (!currentContent.config.links) currentContent.config.links = JSON.parse(JSON.stringify(defaultContent.config.links));
+                if (!currentContent.config.notification) currentContent.config.notification = JSON.parse(JSON.stringify(defaultContent.config.notification));
+
+                // Auto-clean blob URLs (blob: only works in the same tab session; will break after refresh)
+                const b = currentContent.config.branding;
+                if (b?.logo_url && String(b.logo_url).startsWith('blob:')) b.logo_url = '';
+                if (b?.logo_mark_url && String(b.logo_mark_url).startsWith('blob:')) b.logo_mark_url = '';
+                if (b?.favicon_url && String(b.favicon_url).startsWith('blob:')) b.favicon_url = '';
+                if (currentContent.hero?.image && String(currentContent.hero.image).startsWith('blob:')) currentContent.hero.image = null;
+                if (Array.isArray(currentContent.features)) {
+                    currentContent.features.forEach(f => {
+                        if (f?.image && String(f.image).startsWith('blob:')) f.image = '';
+                    });
+                }
+            } catch (e) {}
+
+            renderTextEditor(currentContent, document.getElementById('text-editor-container'));
+            setupMediaUploads();
+            bindConfigValues();
+
+            // When iframe loads/reloads, push preview again
+            const frame = document.getElementById('preview-frame');
+            if (frame) {
+                frame.addEventListener('load', () => {
+                    pushPreview();
+                });
+            }
+
+            // Initial push (in case iframe already loaded)
+            pushPreview();
+        }
+
+        function bindConfigValues() {
+            const c = currentContent.config || {};
+            const res = c.responsive || { mobile: {}, desktop: {} };
+            
+            // Visuals Desktop
+            document.getElementById('conf-desk-font').value = res.desktop.headline_size || "56px";
+            document.getElementById('conf-desk-space-top').value = res.desktop.spacing_top || "40";
+            document.getElementById('conf-desk-scale').value = res.desktop.hero_scale || 1.0;
+
+            // Visuals Mobile
+            document.getElementById('conf-mob-font').value = res.mobile.headline_size || "32px";
+            document.getElementById('conf-mob-space-top').value = res.mobile.spacing_top || "20";
+            document.getElementById('conf-mob-scale').value = res.mobile.hero_scale || 0.8;
+
+            // Typing
+            document.getElementById('hero-static').value = currentContent.hero.static_headline || "";
+            document.getElementById('hero-typing').value = (currentContent.hero.typing_strings || []).join('\n');
+
+            // Pixels
+            document.getElementById('config-meta-pixel-id').value = c.meta_pixel_id || "";
+            document.getElementById('config-pixel-code').value = c.pixel_code || "";
+            document.getElementById('config-pixel-event').value = c.pixel_event_onload || "ViewContent";
+            document.getElementById('config-pixel-event-button').value = c.pixel_event_button || "InitiateCheckout";
+
+            // Notification
+            document.getElementById('config-notify-active').checked = c.notification?.active !== false;
+            document.getElementById('config-notify-interval').value = c.notification?.interval || 10000;
+            document.getElementById('config-notify-action').value = c.notification?.action_text || 'baru saja memesan';
+            document.getElementById('config-notify-sound').value = c.notification?.sound_url || '';
+            document.getElementById('config-notify-names').value = (c.notification?.names || []).join(', ');
+            document.getElementById('config-notify-packages').value = (c.notification?.packages || []).join(', ');
+
+            // Links
+            const links = c.links || {};
+            document.getElementById('links-nav-text').value = links.nav_text || 'LogIn';
+            document.getElementById('links-nav-url').value = links.nav_url || 'https://app.monefyi.com';
+            document.getElementById('links-hero-cta-url').value = links.hero_cta_url || '#daftar';
+            document.getElementById('links-closing-cta-url').value = links.closing_cta_url || '#daftar';
+            document.getElementById('links-pricing-monthly-url').value = links.pricing_monthly_url || '';
+            document.getElementById('links-pricing-lifetime-url').value = links.pricing_lifetime_url || '';
+
+            // Video
+            document.getElementById('config-video').value = currentContent.demo.video_url || "";
+        }
+
+        // --- UPDATE & PREVIEW ---
+        
+        function updateLivePreview() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                syncFormToCurrentContent();
+            }, 300);
+        }
+
+        // --- FORM GENERATION (For Text Content Tab) ---
+        function renderTextEditor(data, container, path = '') {
+            container.innerHTML = '';
+            
+            for (const key in data) {
+                if(key === 'config') continue; // Handled separately
+                if(key === 'features') continue; // Handled in media tab roughly
+                
+                const val = data[key];
+                const currentPath = path ? `${path}.${key}` : key;
+                
+                if (typeof val === 'string') {
+                    createInput(container, key, val, currentPath);
+                } else if (Array.isArray(val)) {
+                     if (val.length > 0 && typeof val[0] === 'string') {
+                         createArrayInput(container, key, val, currentPath);
+                    } else if (val.length === 0 || typeof val[0] === 'object') {
+                        createObjectArrayInput(container, key, val, currentPath);
+                    }
+                } else if (typeof val === 'object' && val !== null) {
+                    const group = document.createElement('div');
+                    group.className = 'json-group';
+                    const title = document.createElement('div');
+                    title.className = 'group-title';
+                    title.innerText = key.toUpperCase().replace('_', ' ');
+                    
+                    title.onclick = () => {
+                       const content = group.querySelector('.group-content');
+                       content.style.display = content.style.display === 'none' ? 'block' : 'none';
+                    };
+
+                    group.appendChild(title);
+                    
+                    const contentDiv = document.createElement('div');
+                    contentDiv.className = 'group-content';
+                    renderTextEditor(val, contentDiv, currentPath);
+                    
+                    group.appendChild(contentDiv);
+                    container.appendChild(group);
+                }
+            }
+        }
+
+        function createInput(container, label, value, path) {
+            const wrap = document.createElement('div');
+            const lbl = document.createElement('label');
+            lbl.className = 'label';
+            lbl.innerText = label;
+            
+            const inp = document.createElement(value.length > 60 ? 'textarea' : 'input');
+            inp.className = 'input-field';
+            if(value.length > 60) inp.rows = 4;
+            inp.value = value;
+            inp.oninput = (e) => {
+                updateValue(path, e.target.value);
+                updateLivePreview();
+            };
+            
+            wrap.appendChild(lbl);
+            wrap.appendChild(inp);
+            container.appendChild(wrap);
+        }
+
+        function createArrayInput(container, label, array, path) {
+            // Skipping raw arrays here if managed elsewhere (like typing_strings), but useful for generic lists
+             if(label === 'typing_strings') return; 
+
+             const wrap = document.createElement('div');
+             wrap.className = 'mb-4 border-l-2 border-slate-700 pl-4';
+             const lbl = document.createElement('label');
+             lbl.className = 'label';
+             lbl.innerText = label + ' (List)';
+             wrap.appendChild(lbl);
+
+             array.forEach((item, idx) => {
+                 const inp = document.createElement('input');
+                 inp.className = 'input-field';
+                 inp.value = item;
+                 inp.oninput = (e) => {
+                    updateValue(`${path}[${idx}]`, e.target.value);
+                    updateLivePreview();
+                 };
+                 wrap.appendChild(inp);
+             });
+             container.appendChild(wrap);
+        }
+
+        function createObjectArrayInput(container, key, array, path) {
+            const wrap = document.createElement('div');
+            wrap.className = 'json-group';
+            const titleContainer = document.createElement('div');
+            titleContainer.className = 'flex justify-between items-center group-title';
+            
+            const title = document.createElement('span');
+            title.innerText = key.toUpperCase() + ' [List Items]';
+            titleContainer.appendChild(title);
+
+            const addBtn = document.createElement('button');
+            addBtn.className = 'btn-add';
+            addBtn.innerText = '+ Add Item';
+            addBtn.onclick = (e) => {
+                e.stopPropagation();
+                addItemToArray(path, array);
+            };
+            titleContainer.appendChild(addBtn);
+
+            wrap.appendChild(titleContainer);
+
+            array.forEach((item, idx) => {
+                const itemWrap = document.createElement('div');
+                itemWrap.className = 'mb-4 border border-slate-700 p-2 rounded';
+                
+                const header = document.createElement('div');
+                header.className = 'flex justify-between mb-2';
+                header.innerHTML = `<span class="text-xs text-green-500">Item ${idx+1}</span>`;
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'btn-remove';
+                removeBtn.innerText = 'Remove';
+                removeBtn.onclick = () => removeItemFromArray(path, idx);
+                header.appendChild(removeBtn);
+                itemWrap.appendChild(header);
+                
+                const contentDiv = document.createElement('div');
+                renderTextEditor(item, contentDiv, `${path}[${idx}]`);
+                itemWrap.appendChild(contentDiv);
+                wrap.appendChild(itemWrap);
+            });
+            container.appendChild(wrap);
+        }
+
+        function updateValue(path, value) {
+            // Robust setter: will create missing objects/arrays along the path.
+            // Supports: "config.branding.logo_url" and "features[0].image".
+            // This version avoids edge cases that can lead to: Cannot set properties of undefined.
+            if (!path || typeof path !== 'string') return;
+            if (!currentContent || typeof currentContent !== 'object') currentContent = {};
+
+            // Convert bracket notation to dot notation: features[0].image -> features.0.image
+            const normalized = path.replace(/\[(\d+)\]/g, '.$1');
+            const keys = normalized.split('.').filter(Boolean);
+            if (!keys.length) return;
+
+            const isIndexKey = (k) => /^\d+$/.test(String(k));
+
+            let obj = currentContent;
+            for (let i = 0; i < keys.length - 1; i++) {
+                const k = keys[i];
+                const nextKey = keys[i + 1];
+                const shouldBeArray = isIndexKey(nextKey);
+
+                // If path segment doesn't exist (or is not an object), create it.
+                if (obj[k] === undefined || obj[k] === null || typeof obj[k] !== 'object') {
+                    obj[k] = shouldBeArray ? [] : {};
+                }
+
+                obj = obj[k];
+                if (obj === undefined || obj === null) {
+                    // Extremely defensive fallback (should not happen)
+                    obj = obj[k] = shouldBeArray ? [] : {};
+                }
+            }
+
+            const last = keys[keys.length - 1];
+            obj[last] = value;
+        }
+        
+        function addItemToArray(path, currentArray) {
+            let newItem = {};
+            if (currentArray.length > 0) {
+                const template = currentArray[0];
+                for (let k in template) newItem[k] = ""; 
+            } else {
+                newItem = { title: "New Item", desc: "Description" };
+            }
+            const keys = path.replace(/\]/g, '').split(/[.\[]/);
+            let obj = currentContent;
+            for (let i = 0; i < keys.length; i++) { obj = obj[keys[i]]; }
+            obj.push(newItem);
+            
+            renderTextEditor(currentContent, document.getElementById('text-editor-container'));
+            updateLivePreview();
+        }
+
+        function removeItemFromArray(path, index) {
+            if(!confirm('Hapus item ini?')) return;
+            const keys = path.replace(/\]/g, '').split(/[.\[]/);
+            let obj = currentContent;
+            for (let i = 0; i < keys.length; i++) { obj = obj[keys[i]]; }
+            obj.splice(index, 1);
+            
+            renderTextEditor(currentContent, document.getElementById('text-editor-container'));
+            updateLivePreview();
+        }
+
+
+        // --- MEDIA ---
+        function setupMediaUploads() {
+            // Brand assets
+            const logoFullUpload = document.getElementById('upload-logo-full');
+            const logoMarkUpload = document.getElementById('upload-logo-mark');
+            const faviconUpload  = document.getElementById('upload-favicon');
+
+            if (logoFullUpload) logoFullUpload.onchange = (e) => handleUpload(e.target.files[0], 'config.branding.logo_url');
+            if (logoMarkUpload) logoMarkUpload.onchange = (e) => handleUpload(e.target.files[0], 'config.branding.logo_mark_url');
+            if (faviconUpload) faviconUpload.onchange = (e) => handleUpload(e.target.files[0], 'config.branding.favicon_url');
+
+            // Hero
+            const heroUpload = document.getElementById('upload-hero');
+            if (heroUpload) heroUpload.onchange = (e) => handleUpload(e.target.files[0], 'hero.image');
+            
+            // Features
+            const featContainer = document.getElementById('feature-uploads');
+            if (!featContainer) return;
+
+            featContainer.innerHTML = '';
+            currentContent.features.forEach((f, i) => {
+                const div = document.createElement('div');
+                div.className = "flex items-center gap-4 bg-slate-800 p-2 rounded";
+                div.innerHTML = `
+                    <div class="text-xs font-bold w-24 truncate">${f.title}</div>
+                    <input type="file" class="text-xs text-slate-400 file:py-1 file:px-2 file:rounded file:bg-slate-700 file:border-0 file:text-white" onchange="handleUpload(this.files[0], 'features[${i}].image')">
+                    <div class="w-8 h-8 bg-black rounded flex items-center justify-center img-prev overflow-hidden">
+                        ${f.image ? '<img src="'+f.image+'" class="w-full h-full object-cover">' : '?'}
+                    </div>
+                `;
+                featContainer.appendChild(div);
+            });
+        }
+
+        async function handleUpload(file, path) {
+            if(!file) return;
+
+            // If anon key isn't set, fallback to blob URL (preview-only) with a clear warning.
+            // NOTE: blob: URLs will NOT work after publish / on real monefyi.com refresh.
+            if (!sb) {
+                console.warn('[Admin] SUPABASE_ANON_KEY is empty. Upload will use blob: URL (preview only).');
+                const mockUrl = URL.createObjectURL(file);
+                updateValue(path, mockUrl);
+                saveDraft();
+                updateLivePreview();
+                return;
+            }
+
+            try {
+                const uploadedUrl = await uploadToSupabaseStorage(file);
+                adminLog('Upload success:', { path, uploadedUrl });
+
+                // Debug snapshot before update
+                try {
+                    adminLog('Before updateValue snapshot:', {
+                        path,
+                        hasConfig: !!currentContent?.config,
+                        hasBranding: !!currentContent?.config?.branding,
+                        branding: currentContent?.config?.branding
+                    });
+                } catch (e) {}
+
+                updateValue(path, uploadedUrl);
+
+                // Debug snapshot after update
+                try {
+                    adminLog('After updateValue snapshot:', {
+                        path,
+                        hasConfig: !!currentContent?.config,
+                        hasBranding: !!currentContent?.config?.branding,
+                        branding: currentContent?.config?.branding
+                    });
+                } catch (e) {}
+
+                // Persist immediately and push to preview right away
+                saveDraft();
+                pushPreview();
+                updateLivePreview();
+            } catch (e) {
+                console.error('[Admin] Upload failed:', e);
+                const msg = (e && (e.message || e.error_description || e.error)) ? (e.message || e.error_description || e.error) : String(e);
+                alert('Upload gagal. Detail: ' + msg + '\n\nChecklist Supabase Storage:\n- Bucket "' + STORAGE_BUCKET + '" sudah dibuat\n- Bucket diset Public\n- Policy upload (INSERT) mengizinkan anon/auth\n- Policy upload (UPDATE) mengizinkan upsert\n- CORS/Domain ok\n\nCek console untuk payload error lengkap.');
+            }
+        }
+
+        async function uploadToSupabaseStorage(file) {
+            // Upload path: landing/<yyyy-mm>/<random>_<filename>
+            const now = new Date();
+            const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+            const safeName = (file.name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_');
+            const rand = (crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()));
+            const objectPath = `landing/${ym}/${rand}_${safeName}`;
+
+            const { error } = await sb.storage.from(STORAGE_BUCKET).upload(objectPath, file, {
+                cacheControl: '3600',
+                upsert: true,
+                contentType: file.type || undefined
+            });
+            if (error) throw error;
+
+            const { data } = sb.storage.from(STORAGE_BUCKET).getPublicUrl(objectPath);
+            const publicUrl = data?.publicUrl;
+            if (!publicUrl) throw new Error('No public URL returned. Make sure bucket is public.');
+
+            return publicUrl;
+        }
+
+        // --- UTILS ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('tab-' + tabId).classList.add('active');
+        }
+
+        function switchSubTab(view, btn) {
+            document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.querySelectorAll('.sub-view').forEach(v => v.classList.add('hidden'));
+            document.getElementById('view-' + view).classList.remove('hidden');
+        }
+
+        function setPreviewMode(mode, btn) {
+            document.querySelectorAll('#preview-desktop-btn, #preview-mobile-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+
+            const device = document.getElementById('preview-device');
+            if (!device) return;
+
+            if (mode === 'mobile') {
+                device.style.width = '390px';
+                device.style.maxWidth = '100%';
+                device.style.height = '844px';
+                device.style.borderRadius = '26px';
+                device.style.border = '1px solid rgba(255,255,255,0.12)';
+                device.style.boxShadow = '0 25px 80px rgba(0,0,0,0.55)';
+                device.style.overflow = 'hidden';
+                localStorage.setItem('monefyi_preview_mode', 'mobile');
+            } else {
+                device.style.width = '100%';
+                device.style.maxWidth = 'none';
+                device.style.height = '100%';
+                device.style.borderRadius = '12px';
+                device.style.border = 'none';
+                device.style.boxShadow = 'none';
+                device.style.overflow = 'hidden';
+                localStorage.setItem('monefyi_preview_mode', 'desktop');
+            }
+
+            // Reload iframe so responsive breakpoints apply correctly
+            const frame = document.getElementById('preview-frame');
+            if (frame) {
+                const src = frame.getAttribute('src');
+                frame.setAttribute('src', src);
+                // push after reload (load event will also push)
+                setTimeout(() => pushPreview(), 300);
+            }
+        }
+
+        function syncFormToCurrentContent() {
+            // Same logic as updateLivePreview, but immediate (no debounce)
+            const c = currentContent.config || {};
+
+            c.responsive = {
+                mobile: {
+                    headline_size: document.getElementById('conf-mob-font').value,
+                    spacing_top: parseInt(document.getElementById('conf-mob-space-top').value),
+                    spacing_bottom: parseInt(document.getElementById('conf-mob-space-top').value),
+                    hero_scale: parseFloat(document.getElementById('conf-mob-scale').value),
+                    subheadline_size: "16px"
+                },
+                desktop: {
+                    headline_size: document.getElementById('conf-desk-font').value,
+                    spacing_top: parseInt(document.getElementById('conf-desk-space-top').value),
+                    spacing_bottom: parseInt(document.getElementById('conf-desk-space-top').value),
+                    hero_scale: parseFloat(document.getElementById('conf-desk-scale').value),
+                    subheadline_size: "18px"
+                }
+            };
+
+            currentContent.hero.static_headline = document.getElementById('hero-static').value;
+            currentContent.hero.typing_strings = document.getElementById('hero-typing').value.split('\n').filter(s => s.trim() !== "");
+
+            c.meta_pixel_id = (document.getElementById('config-meta-pixel-id').value || '').trim();
+            c.pixel_code = document.getElementById('config-pixel-code').value;
+            c.pixel_event_onload = document.getElementById('config-pixel-event').value;
+            c.pixel_event_button = document.getElementById('config-pixel-event-button').value;
+
+            c.notification = {
+                active: document.getElementById('config-notify-active').checked,
+                interval: parseInt(document.getElementById('config-notify-interval').value),
+                action_text: document.getElementById('config-notify-action').value,
+                sound_url: document.getElementById('config-notify-sound').value,
+                names: document.getElementById('config-notify-names').value.split(',').map(s=>s.trim()).filter(Boolean),
+                packages: document.getElementById('config-notify-packages').value.split(',').map(s=>s.trim()).filter(Boolean)
+            };
+
+            // Links & Buttons
+            c.links = {
+                nav_text: (document.getElementById('links-nav-text').value || 'LogIn').trim(),
+                nav_url: (document.getElementById('links-nav-url').value || 'https://app.monefyi.com').trim(),
+                hero_cta_url: (document.getElementById('links-hero-cta-url').value || '#daftar').trim(),
+                closing_cta_url: (document.getElementById('links-closing-cta-url').value || '#daftar').trim(),
+                pricing_monthly_url: (document.getElementById('links-pricing-monthly-url').value || '').trim(),
+                pricing_lifetime_url: (document.getElementById('links-pricing-lifetime-url').value || '').trim()
+            };
+
+            currentContent.config = c;
+            currentContent.demo.video_url = document.getElementById('config-video').value;
+
+            saveDraft();
+            pushPreview();
+        }
+
+        async function saveChanges() {
+            // ensure state is synced NOW
+            syncFormToCurrentContent();
+            await updateSupabaseStatus();
+
+            const btn = document.querySelector('button[onclick="saveChanges()"]');
+            const oldHtml = btn.innerHTML;
+            btn.innerHTML = 'Publishing...';
+            btn.disabled = true;
+
+            try {
+                await publishContent(currentContent);
+                await updateSupabaseStatus();
+                btn.innerHTML = oldHtml;
+                btn.disabled = false;
+                alert('Berhasil publish! Silakan refresh monefyi.com untuk melihat perubahan.');
+            } catch (e) {
+                console.error('[Admin] Publish failed:', e);
+                btn.innerHTML = oldHtml;
+                btn.disabled = false;
+                alert('Gagal publish ke Supabase. Cek console untuk detail error.');
+            }
+        }
+
+        // Apply preview mode on load
+        (function initPreviewMode() {
+            const mode = localStorage.getItem('monefyi_preview_mode') || 'desktop';
+            const btn = document.getElementById(mode === 'mobile' ? 'preview-mobile-btn' : 'preview-desktop-btn');
+            setPreviewMode(mode, btn);
+        })();
+
+    </script>
+</body>
+</html>
