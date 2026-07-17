@@ -11,5 +11,8 @@ module.exports = {
   },
   server: {
     port: 5173,
+    fs: {
+      allow: [path.join(__dirname, "app"), path.join(__dirname, "shared")],
+    },
   },
 };

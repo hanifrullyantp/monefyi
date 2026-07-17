@@ -3,17 +3,17 @@
  */
 
 .home-page {
-  --bg-primary: #0a0f0d;
-  --bg-card: #0f1812;
-  --bg-card-elevated: #152019;
+  --bg-primary: var(--mf-bg, #0B1118);
+  --bg-card: var(--mf-bg-elevated, #131A24);
+  --bg-card-elevated: var(--mf-surface, #161D28);
   --bg-overlay: rgba(255, 255, 255, 0.04);
-  --accent-primary: #2ecc71;
-  --accent-primary-dim: #10b981;
-  --accent-glow: rgba(46, 204, 113, 0.15);
-  --accent-warning: #f59e0b;
-  --accent-danger: #ef4444;
-  --accent-info: #60a5fa;
-  --accent-purple: #a78bfa;
+  --accent-primary: var(--mf-primary, #10B981);
+  --accent-primary-dim: var(--mf-primary-hover, #059669);
+  --accent-glow: var(--mf-primary-soft, rgba(16, 185, 129, 0.12));
+  --accent-warning: var(--mf-warning, #f59e0b);
+  --accent-danger: var(--mf-danger, #ef4444);
+  --accent-info: var(--mf-info, #0EA5E9);
+  --accent-purple: var(--mf-secondary, #1E3A5F);
   --text-primary: #ffffff;
   --text-secondary: rgba(255, 255, 255, 0.78);
   --text-tertiary: rgba(255, 255, 255, 0.52);

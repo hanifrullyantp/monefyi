@@ -13,7 +13,8 @@
     "vite": "^7.1.0"
   },
   "scripts": {
-    "prebuild": "mkdir -p app/public/locales app/public/js app/public/icons app/public/js/services app/public/js/parsers app/public/js/components app/public/js/utils app/public/js/pages app/public/js/vendor app/public/css && cp app/locales/*.json app/public/locales/ && cp app/js/i18n.js app/js/monefyi-ui.js app/js/app.js app/js/config.js app/public/js/ && cp -r app/js/services app/js/parsers app/js/components app/js/utils app/js/pages app/js/vendor app/public/js/ && cp app/css/*.css app/public/css/ && cp app/sw.js app/public/sw.js",
+    "prebuild": "npm run sync:brand && mkdir -p app/public/locales app/public/js app/public/icons app/public/js/services app/public/js/parsers app/public/js/components app/public/js/utils app/public/js/pages app/public/js/vendor app/public/css && cp app/locales/*.json app/public/locales/ && cp app/js/i18n.js app/js/monefyi-ui.js app/js/app.js app/js/config.js app/public/js/ && cp -r app/js/services app/js/parsers app/js/components app/js/utils app/js/pages app/js/vendor app/public/js/ && cp app/css/*.css app/public/css/ && cp app/sw.js app/public/sw.js",
+    "sync:brand": "cp shared/brand-tokens.css app/css/brand-tokens.css && cp shared/brand-tokens.css \"landing page/css/brand-tokens.css\"",
     "build": "npm run build:landing && npm run build:app",
     "build:landing": "vite build --config vite.landing.config.js",
     "build:app": "vite build --config vite.app.config.js",

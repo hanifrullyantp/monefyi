@@ -1,0 +1,61 @@
+/**
+ * Landing — brand token overrides (maps Tailwind utilities → Monefyi tokens).
+ */
+@import './brand-tokens.css';
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  font-family: var(--mf-font) !important;
+  background-color: var(--mf-bg) !important;
+  color: var(--mf-text) !important;
+}
+
+/* Primary CTA & emerald utilities → brand tokens */
+.bg-green-500 { background-color: var(--mf-primary) !important; }
+.bg-green-600 { background-color: var(--mf-primary-hover) !important; }
+.hover\:bg-green-500:hover { background-color: var(--mf-primary) !important; }
+.text-green-400,
+.text-green-500 { color: var(--mf-primary-light) !important; }
+.border-green-500 { border-color: var(--mf-primary) !important; }
+.border-green-500\/20 { border-color: var(--mf-primary-border) !important; }
+.bg-green-500\/10 { background-color: var(--mf-primary-soft) !important; }
+.bg-green-500\/20 { background-color: color-mix(in srgb, var(--mf-primary) 20%, transparent) !important; }
+.bg-green-500\/30 { background-color: color-mix(in srgb, var(--mf-primary) 30%, transparent) !important; }
+.bg-green-500\/40 { background-color: color-mix(in srgb, var(--mf-primary) 40%, transparent) !important; }
+.bg-green-500\/50 { background-color: color-mix(in srgb, var(--mf-primary) 50%, transparent) !important; }
+.bg-green-500\/80 { background-color: color-mix(in srgb, var(--mf-primary) 80%, transparent) !important; }
+.shadow-green-500\/40 { --tw-shadow-color: var(--mf-primary-glow) !important; }
+.from-green-900\/20 { --tw-gradient-from: color-mix(in srgb, var(--mf-primary-hover) 20%, transparent) !important; }
+
+/* Info badge (hero eyebrow) — align with brand sky, not default blue */
+.bg-blue-500\/10 { background-color: var(--mf-info-soft) !important; }
+.border-blue-500\/20 { border-color: var(--mf-info-muted) !important; }
+.text-blue-400 { color: var(--mf-info) !important; }
+.bg-blue-400 { background-color: var(--mf-info) !important; }
+.bg-blue-500 { background-color: var(--mf-info) !important; }
+.from-blue-900\/20 { --tw-gradient-from: color-mix(in srgb, var(--mf-secondary) 35%, transparent) !important; }
+
+/* Legacy slate-950 backgrounds → app bg */
+.bg-\[\#020617\],
+.bg-\[\#020617\]\/80 {
+  background-color: var(--mf-bg) !important;
+}
+.bg-\[\#020617\]\/80 {
+  background-color: color-mix(in srgb, var(--mf-bg) 80%, transparent) !important;
+}
+.from-\[\#020617\] { --tw-gradient-from: var(--mf-bg) !important; }
+.via-\[\#020617\] { --tw-gradient-via: var(--mf-bg) !important; }
+.to-\[\#020617\] { --tw-gradient-to: var(--mf-bg) !important; }
+
+/* Card surfaces closer to app */
+.bg-slate-900\/30 { background-color: color-mix(in srgb, var(--mf-bg-elevated) 55%, transparent) !important; }
+.bg-slate-800\/50 { background-color: color-mix(in srgb, var(--mf-surface) 70%, transparent) !important; }
+.bg-slate-800\/30 { background-color: color-mix(in srgb, var(--mf-surface) 45%, transparent) !important; }
+
+.selection\:bg-green-500 ::selection,
+.selection\:bg-green-500::selection {
+  background-color: var(--mf-primary) !important;
+}

@@ -1,3 +1,4 @@
+@import './brand-tokens.css';
     :root { color-scheme: light; }
     .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
     .safe-top { padding-top: max(0.75rem, env(safe-area-inset-top)); }
@@ -14,47 +15,21 @@
       touch-action: manipulation;
     }
 
-    /* App theme — Monefyi design system (emerald + white / dark blue) */
+    /* App theme — aliases from shared/brand-tokens.css */
     body {
-      --app-bg: #0B1118;
-      --app-card: #131A24;
-      --app-surface: #161D28;
-      --app-surface2: rgba(255,255,255,.05);
-      --app-text: #F1F5F9;
-      --app-muted: #8B9CB3;
-      --app-muted2: #64748B;
-      --app-border: rgba(255,255,255,.08);
-      --app-divider: rgba(255,255,255,.08);
-      --app-backdrop: rgba(11,17,24,.92);
-      --app-sheet: #131A24;
-      --accent-primary: #10B981;
-      --accent-primary-hover: #059669;
-      --accent-danger: #F43F5E;
-      --accent-warning: #F59E0B;
-      --accent-info: #1E3A5F;
-      --brand-blue: #1E3A5F;
-      --brand-green: #10B981;
-      --brand-grad: linear-gradient(135deg, #0ea5e9 0%, #10B981 100%);
-      --brand-blue-soft: rgba(30,58,95,.22);
-      --brand-green-soft: rgba(16,185,129,.12);
-      --brand-border: rgba(16,185,129,.24);
-      --brand-shadow: 0 8px 32px rgba(16,185,129,.10);
-      --nav-surface: #0E1520;
       --app-card-elevated: rgba(20, 28, 40, 0.88);
       --app-card-mid: rgba(15, 22, 32, 0.52);
       --app-card-fade: rgba(11, 17, 24, 0);
       --grad-card-surface: linear-gradient(180deg, var(--app-card-elevated) 0%, var(--app-card-mid) 58%, var(--app-card-fade) 100%);
       --grad-card-surface-soft: linear-gradient(180deg, rgba(18, 26, 38, 0.75) 0%, rgba(11, 17, 24, 0) 100%);
       --grad-hero-surface: linear-gradient(165deg, rgba(21, 34, 56, 0.92) 0%, rgba(14, 22, 34, 0.58) 42%, rgba(11, 17, 24, 0) 100%);
-      --radius-card: 16px;
-      --radius-btn: 12px;
-      --radius-pill: 50px;
-      --focus-ring: 0 0 0 2px var(--accent-primary);
-      --font-sans: 'Montserrat', system-ui, -apple-system, sans-serif;
+      --radius-card: var(--mf-radius-card);
+      --radius-btn: var(--mf-radius-btn);
+      --radius-pill: var(--mf-radius-pill);
 
       background-color: var(--app-bg);
       background-image:
-        linear-gradient(180deg, #0B1118 0%, #0D1520 38%, #0B1118 100%),
+        linear-gradient(180deg, var(--mf-bg) 0%, #0D1520 38%, var(--mf-bg) 100%),
         radial-gradient(800px circle at 15% -5%, rgba(16,185,129,.06), transparent 50%),
         radial-gradient(600px circle at 95% 5%, rgba(14,165,233,.05), transparent 45%);
       background-attachment: fixed;
@@ -80,11 +55,7 @@
       --grad-card-surface: linear-gradient(180deg, var(--app-card-elevated) 0%, var(--app-card-mid) 60%, var(--app-card-fade) 100%);
       --grad-card-surface-soft: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(248,250,252,0) 100%);
       --grad-hero-surface: linear-gradient(165deg, rgba(240,253,250,0.95) 0%, rgba(248,250,252,0.5) 50%, rgba(255,255,255,0) 100%);
-      --accent-primary: #10B981;
-      --accent-primary-hover: #059669;
       --accent-danger: #EF4444;
-      --accent-info: #1E3A5F;
-      --brand-green: #10B981;
       --brand-green-soft: rgba(16,185,129,.12);
       --brand-border: rgba(16,185,129,.25);
       --brand-shadow: 0 8px 24px rgba(16,185,129,.10);

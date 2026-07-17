@@ -6,9 +6,9 @@
     "Analisa AI Cerdas",
     "Laporan PDF Lengkap"
   ],
-  "gradientStart": "#6366F1",
-  "gradientMiddle": "#38bdf8",
-  "gradientEnd": "#22C55E",
+  "gradientStart": "#0EA5E9",
+  "gradientMiddle": "#14B8A6",
+  "gradientEnd": "#10B981",
   "featureSlides": [
     { "id": 0, "title": "Foto Struk", "icon": "📷", "imageUrl": "" },
     { "id": 1, "title": "Input Teks", "icon": "✏️", "imageUrl": "" },
