@@ -1,5 +1,5 @@
-// Offline-first service worker for Monefyi PWA.
-const CACHE_VERSION = 'v2-offline-first-2';
+// Offline-capable service worker — network-first so installed PWA stays online.
+const CACHE_VERSION = 'v3-network-first-1';
 const STATIC_CACHE = `monefyi-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `monefyi-runtime-${CACHE_VERSION}`;
 
@@ -57,39 +57,35 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
+  // API & auth — never intercept
   if (url.hostname.includes('supabase.co')) return;
-
-  if (url.hostname.includes('jsdelivr.net') || url.hostname.includes('unpkg.com')) {
-    event.respondWith(cacheFirst(event.request, RUNTIME_CACHE));
-    return;
-  }
+  if (url.hostname.includes('googleapis.com') || url.hostname.includes('gstatic.com')) return;
 
   const isNavigation =
     event.request.mode === 'navigate' || event.request.destination === 'document';
 
   if (isNavigation) {
-    event.respondWith(
-      caches.match(new URL('./index.html', self.location).href).then((cached) => {
-        if (cached) return cached;
-        return fetch(event.request).catch(() => cached);
-      })
-    );
+    event.respondWith(networkFirst(event.request, STATIC_CACHE, { fallbackToIndex: true }));
+    return;
+  }
+
+  if (url.hostname.includes('jsdelivr.net') || url.hostname.includes('unpkg.com')) {
+    event.respondWith(networkFirst(event.request, RUNTIME_CACHE));
     return;
   }
 
   if (url.origin === self.location.origin) {
-    event.respondWith(cacheFirst(event.request, STATIC_CACHE));
+    event.respondWith(networkFirst(event.request, STATIC_CACHE));
   }
 });
 
 /**
+ * Prefer network; fall back to cache when offline.
  * @param {Request} request
  * @param {string} cacheName
+ * @param {{ fallbackToIndex?: boolean }} [opts]
  */
-async function cacheFirst(request, cacheName) {
-  const cached = await caches.match(request);
-  if (cached) return cached;
-
+async function networkFirst(request, cacheName, opts = {}) {
   try {
     const response = await fetch(request);
     if (response.ok && request.url.startsWith(self.location.origin)) {
@@ -98,8 +94,19 @@ async function cacheFirst(request, cacheName) {
     }
     return response;
   } catch {
+    const cached = await caches.match(request);
     if (cached) return cached;
-    return new Response('Offline', { status: 503, statusText: 'Offline' });
+
+    if (opts.fallbackToIndex) {
+      const index = await caches.match(new URL('./index.html', self.location).href);
+      if (index) return index;
+    }
+
+    return new Response('Offline', {
+      status: 503,
+      statusText: 'Offline',
+      headers: { 'Content-Type': 'text/plain' },
+    });
   }
 }
 

@@ -25,8 +25,48 @@
       }
     }
 
+    /** @type {boolean|null} Verified reachability (PWA can lie about navigator.onLine). */
+    let _verifiedOnline = null;
+
+    /**
+     * Probe Supabase reachability — fixes false "offline" in installed PWA.
+     * @returns {Promise<boolean>}
+     */
+    async function verifyNetworkAccess() {
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+        _verifiedOnline = !!navigator.onLine;
+        return _verifiedOnline;
+      }
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 5000);
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+          method: 'HEAD',
+          headers: { apikey: SUPABASE_ANON_KEY },
+          cache: 'no-store',
+          signal: ctrl.signal,
+        });
+        clearTimeout(timer);
+        _verifiedOnline = res.status > 0 && res.status < 500;
+      } catch {
+        _verifiedOnline = false;
+      }
+      if (_verifiedOnline && !navigator.onLine) {
+        try { window.dispatchEvent(new Event('online')); } catch {}
+      }
+      return _verifiedOnline;
+    }
+
     function isOfflineMode() {
+      if (_verifiedOnline !== null) return !_verifiedOnline;
       return !navigator.onLine;
+    }
+
+    if (typeof window !== 'undefined') {
+      window.monefyiConnectivity = {
+        verifyNetworkAccess,
+        isOnline: () => !isOfflineMode(),
+      };
     }
 
     // Checkout links (fallback jika app_config tidak set)
@@ -9821,6 +9861,8 @@ function toggleNav(view, triggerEl) {
 
         try { applyLanguageToUI(); } catch {}
 
+        await verifyNetworkAccess().catch(() => null);
+
         try {
           if (!window.supabase?.createClient) {
             $('#authOverlay')?.classList.remove('hidden');
@@ -9904,12 +9946,19 @@ function toggleNav(view, triggerEl) {
       }
     })();
 
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        verifyNetworkAccess().catch(() => null);
+      }
+    });
+
     // PWA: Service worker registration
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
         navigator.serviceWorker
           .register('/app/sw.js', { scope: '/app/' })
           .then(function (reg) {
+            reg.update().catch(function () {});
             reg.addEventListener('updatefound', function () {
               const newWorker = reg.installing;
               if (!newWorker) return;

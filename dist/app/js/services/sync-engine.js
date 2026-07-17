@@ -19,6 +19,16 @@ function getUserId() {
 }
 
 /**
+ * @returns {boolean}
+ */
+function isBrowserOnline() {
+  if (typeof window !== 'undefined' && window.monefyiConnectivity?.isOnline) {
+    return window.monefyiConnectivity.isOnline();
+  }
+  return navigator.onLine;
+}
+
+/**
  * Initialize sync engine — online/offline listeners + periodic sync.
  */
 export function initSyncEngine() {
@@ -34,11 +44,15 @@ export function initSyncEngine() {
   });
 
   setInterval(() => {
-    if (navigator.onLine) triggerSync('periodic');
+    if (isBrowserOnline()) triggerSync('periodic');
   }, 5 * 60 * 1000);
 
-  if (navigator.onLine) {
+  if (isBrowserOnline()) {
     setTimeout(() => triggerSync('startup'), 2000);
+  } else {
+    window.monefyiConnectivity?.verifyNetworkAccess?.().then((ok) => {
+      if (ok) triggerSync('startup');
+    });
   }
 }
 
@@ -61,7 +75,7 @@ export async function queueSync(operation, table, recordId, payload) {
     created_at: new Date().toISOString(),
   });
 
-  if (navigator.onLine) triggerSync('immediate');
+  if (isBrowserOnline()) triggerSync('immediate');
 }
 
 /**
@@ -73,7 +87,7 @@ export async function triggerSync(reason = 'manual') {
     console.log('[sync] Already in progress, skipping');
     return;
   }
-  if (!navigator.onLine) {
+  if (!isBrowserOnline()) {
     console.log('[sync] Offline, skipping');
     return;
   }
@@ -125,7 +139,7 @@ export async function triggerSync(reason = 'manual') {
  * First-time or manual full pull from server into IndexedDB.
  */
 export async function initialDataPull() {
-  if (!navigator.onLine) return { count: 0 };
+  if (!isBrowserOnline()) return { count: 0 };
   const supabase = window.__monefyiSupabase;
   if (!supabase || !getUserId()) return { count: 0 };
 
@@ -378,7 +392,7 @@ function notifyListeners(event, data) {
  */
 export function getSyncStatus() {
   return {
-    isOnline: navigator.onLine,
+    isOnline: isBrowserOnline(),
     isSyncing: _syncInProgress,
   };
 }
