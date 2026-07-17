@@ -546,10 +546,25 @@
   font: inherit;
 }
 
+.bsh-insight-entry {
+  border: none;
+  font: inherit;
+  color: inherit;
+}
+
 .bsh-status-btn .bsh-status-chev { opacity: 0.5; }
 
-.income-sources-card .isc-title { display: flex; align-items: center; gap: 6px; }
-.income-sources-card .isc-edit { display: flex; align-items: center; gap: 4px; background: none; border: none; color: rgba(255,255,255,0.5); font-size: 12px; cursor: pointer; }
+.income-sources-card .isc-edit {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.5);
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
 
 @media (max-width: 480px) {
   .filter-popup { width: 95%; }

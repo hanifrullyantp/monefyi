@@ -732,7 +732,7 @@
 
 .budget-page-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding-top: 4px;
@@ -753,16 +753,22 @@
 }
 
 .budget-page-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   width: 40px;
   height: 40px;
   border-radius: 12px;
   border: 1px solid rgba(16, 185, 129, 0.35);
   background: rgba(16, 185, 129, 0.12);
   color: var(--accent-primary);
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 1;
+  padding: 0;
   cursor: pointer;
+}
+
+.budget-page-add svg {
+  display: block;
 }
 
 .budget-rec-banner-host.hidden { display: none; }
@@ -1274,32 +1280,64 @@
 .bsh-separator { color: var(--app-muted); font-weight: 500; margin: 0 4px; }
 .bsh-total { color: var(--app-muted); font-size: 14px; font-weight: 600; }
 
+.bsh-progress-bar-wrap {
+  position: relative;
+  padding-top: 18px;
+  margin-top: 2px;
+}
+
 .bsh-progress-bar {
   position: relative;
-  height: 8px;
+  height: 10px;
   background: var(--app-surface);
-  border-radius: 4px;
-  overflow: visible;
+  border-radius: 999px;
+  overflow: hidden;
 }
 
 .bsh-progress-fill {
   height: 100%;
-  border-radius: 4px;
+  border-radius: 999px;
   background: #10b981;
-  transition: width 0.3s;
+  transition: width 0.3s, background 0.3s;
 }
 
-.bsh-progress-fill.status-over { background: #ef4444; }
-.bsh-progress-fill.status-critical { background: #f97316; }
-.bsh-progress-fill.status-warning { background: #f59e0b; }
+.bsh-progress-fill.fill-healthy { background: linear-gradient(90deg, #10b981, #34d399); }
+.bsh-progress-fill.fill-moderate { background: linear-gradient(90deg, #14b8a6, #10b981); }
+.bsh-progress-fill.fill-warning { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.bsh-progress-fill.fill-critical { background: linear-gradient(90deg, #f97316, #fb923c); }
+.bsh-progress-fill.fill-over { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+.bsh-time-marker-wrap {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.bsh-time-marker-label {
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--app-text);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
 
 .bsh-time-marker {
-  position: absolute;
-  top: -3px;
+  display: block;
   width: 2px;
-  height: 14px;
-  background: rgba(255, 255, 255, 0.5);
-  transform: translateX(-50%);
+  height: 16px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 1px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
 }
 
 .bsh-progress-meta {
@@ -1359,13 +1397,62 @@
 
 .bsh-recommendation {
   margin-top: 10px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   background: rgba(245, 158, 11, 0.08);
-  border-radius: 8px;
+  border: 1px solid rgba(245, 158, 11, 0.16);
+  border-radius: 10px;
   font-size: 11px;
   color: var(--app-muted);
   display: flex;
-  gap: 6px;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+}
+
+.bsh-insight-entry {
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.bsh-insight-entry:hover {
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.bsh-insight-entry.over {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.bsh-insight-entry.over:hover { background: rgba(239, 68, 68, 0.12); }
+
+.bsh-insight-entry.critical {
+  background: rgba(249, 115, 22, 0.08);
+  border-color: rgba(249, 115, 22, 0.18);
+}
+
+.bsh-insight-entry.warning {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.16);
+}
+
+.bsh-insight-entry.healthy,
+.bsh-insight-entry.excellent {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.16);
+}
+
+.bsh-rec-text { flex: 1; line-height: 1.45; }
+
+.bsh-rec-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--app-muted);
+  white-space: nowrap;
 }
 
 /* ===== Income sources card ===== */
@@ -1375,13 +1462,58 @@
   border: 1px solid var(--app-border);
   border-radius: 14px;
   padding: 12px 14px;
-  cursor: pointer;
 }
 
 .isc-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.isc-month-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.isc-title-icon {
+  display: inline-flex;
+  color: var(--accent-primary);
+}
+
+.isc-title-text {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--app-text);
+}
+
+.isc-month-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--app-muted);
+}
+
+.isc-month-trigger:hover .isc-month-pill {
+  border-color: rgba(16, 185, 129, 0.35);
+  color: var(--app-text);
 }
 
 .isc-title {
