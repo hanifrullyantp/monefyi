@@ -981,6 +981,7 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
       focusCategory: null,
       ui: {
         dashboardOpen: true,
+        budgetPageOpen: false,
         txDesktopFiltersOpen: false,
         saldoFilterOpen: false,
         monthPopoverOpen: false,
@@ -3332,11 +3333,11 @@ async function upsertTransaction_legacy_local(tx) {
         if (nav === 'list' && !STATE.ui.dashboardOpen) el.classList.add('active');
       });
 
-      if (!STATE.ui.budgetOpen && !STATE.ui.advisorOpen) {
+      if (!STATE.ui.budgetOpen && !STATE.ui.advisorOpen && !STATE.ui.budgetPageOpen) {
         $$('.nav-item[data-nav]').forEach((el) => {
           const nav = el.getAttribute('data-nav');
-          if (nav === 'beranda' || nav === 'transaksi') {
-            el.classList.toggle('active', (nav === 'beranda' && STATE.ui.dashboardOpen) || (nav === 'transaksi' && !STATE.ui.dashboardOpen));
+          if (nav === 'beranda' || nav === 'transaksi' || nav === 'budget') {
+            el.classList.toggle('active', (nav === 'beranda' && STATE.ui.dashboardOpen) || (nav === 'transaksi' && !STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen) || (nav === 'budget' && STATE.ui.budgetPageOpen));
           }
         });
       }
@@ -3497,26 +3498,33 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       }
       $('#rangeCard')?.classList.toggle('hidden', (STATE.period.preset || 'this_month') !== 'custom');
 
-      const showDesktopDashboard = STATE.ui.dashboardOpen && isDesktopViewport();
-      const showMobileHome = STATE.ui.dashboardOpen && !isDesktopViewport();
+      const showDesktopDashboard = STATE.ui.dashboardOpen && isDesktopViewport() && !STATE.ui.budgetPageOpen;
+      const showMobileHome = STATE.ui.dashboardOpen && !isDesktopViewport() && !STATE.ui.budgetPageOpen;
       $('#dashboardExpanded').classList.toggle('hidden', !showDesktopDashboard);
       const homeRoot = $('#homePageRoot');
       if (homeRoot) {
         homeRoot.classList.toggle('hidden', !showMobileHome);
         if (!showMobileHome) homeRoot.replaceChildren();
       }
-      $('#txSection')?.classList.toggle('hidden', STATE.ui.dashboardOpen);
+      const budgetRoot = $('#budgetPageRoot');
+      if (budgetRoot) {
+        budgetRoot.classList.toggle('hidden', !STATE.ui.budgetPageOpen);
+      }
+      $('#txSection')?.classList.toggle('hidden', STATE.ui.dashboardOpen || STATE.ui.budgetPageOpen);
       $('#homeTxSectionHead')?.classList.add('hidden');
       const pageTitleDesktop = $('#pageTitleTxDesktop');
       if (pageTitleDesktop) {
-        pageTitleDesktop.textContent = STATE.ui.dashboardOpen ? 'Dashboard' : 'Transaksi';
+        pageTitleDesktop.textContent = STATE.ui.budgetPageOpen
+          ? 'Budgeting'
+          : (STATE.ui.dashboardOpen ? 'Dashboard' : 'Transaksi');
       }
       const dynamicContent = $('#dynamicContent');
       if (dynamicContent) {
-        dynamicContent.classList.toggle('dynamic-content--dashboard', STATE.ui.dashboardOpen);
-        dynamicContent.classList.toggle('dynamic-content--tx', !STATE.ui.dashboardOpen);
+        dynamicContent.classList.toggle('dynamic-content--dashboard', STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen);
+        dynamicContent.classList.toggle('dynamic-content--tx', !STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen);
+        dynamicContent.classList.toggle('dynamic-content--budget', !!STATE.ui.budgetPageOpen);
       }
-      const showTxUi = !STATE.ui.dashboardOpen;
+      const showTxUi = !STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen;
       const showTxFilters = showTxUi && !!STATE.ui.txDesktopFiltersOpen;
       const txFilterBar = $('#txDesktopFilterBar');
       if (txFilterBar) {
@@ -4923,6 +4931,7 @@ function generateSmartBudgetRecommendation() {
 
   renderTransactions();
   if (STATE.ui.dashboardOpen && !isDesktopViewport()) renderMobileHome();
+  if (STATE.ui.budgetPageOpen) renderBudgetPageView();
 }
     // =========================
     // UI: Sheet helpers
@@ -5213,95 +5222,114 @@ function setSheetPosition(mode) {
       if (e.target?.dataset?.close === 'true') closeAddSheet();
     });
 
-    // Budget sheet
+    // Budget page (full screen, not sheet)
     const budgetBackdrop = $('#budgetBackdrop');
     const budgetSheet = $('#budgetSheet');
 
-    // GANTI FUNGSI openBudget DENGAN INI:
+    async function prepareBudgetDraft() {
+      const mk = STATE.selectedMonth;
+      const saved = STATE.budgetsByMonth[mk] || getBudgetMonth(mk);
 
-async function openBudget(){
-  const mk = STATE.selectedMonth; // Pastikan variabel ini sesuai dengan navigasi bulan di app Anda
-  
-  // 1. Ambil Data Tersimpan dari Memory (STATE)
-  // Kita coba ambil dari STATE.budgetsByMonth dulu agar real-time setelah save
-  const saved = STATE.budgetsByMonth[mk] || getBudgetMonth(mk); 
+      let rows = [];
+      let income = 0;
+      let status = 'new';
 
-  let rows = [];
-  let income = 0;
-  let status = 'new';
-
-  if (saved && saved.categories && Array.isArray(saved.categories.rows)) {
-    rows = JSON.parse(JSON.stringify(saved.categories.rows));
-    income = Number(saved.income || 0);
-    status = 'saved';
-  } 
-  else if (saved && saved.categories && !Array.isArray(saved.categories.rows)) {
-     for (const [cat, amt] of Object.entries(saved.categories)) {
-        rows.push({ id: uuid(), name: cat, amount: Number(amt), items: [] });
-     }
-     income = Number(saved.income || 0);
-     status = 'migrated';
-  }
-  else {
-    const ai = computeAIBudgetRecommendationForMonth(mk);
-    income = estimateIncomeForMonth(mk) || (ai ? ai.income : 0) || 0;
-    rows = []; 
-    status = 'new';
-  }
-
-  try {
-    const { migrateBudgetCategories, computeHistoricalBaselines } = await import('./services/budget-model.js');
-    const migrated = migrateBudgetCategories({ rows });
-    rows = computeHistoricalBaselines(
-      migrated.rows,
-      STATE.transactions || [],
-      mk
-    );
-  } catch (e) {
-    console.warn('[budget] draft migration failed', e);
-  }
-
-  // Set ke Global Draft
-  STATE.budgetDraft = {
-    month: mk,
-    income: income,
-    rows: rows,
-    ai: null, // Kita load AI nanti saja via tombol "Gunakan Rekomendasi"
-    initialFrom: status
-  };
-
-  // Render & Buka Popup
-  renderBudgetSheet();
-  
-  if (isDesktopViewport()) {
-    STATE.ui.budgetOpen = true;
-    budgetBackdrop.classList.add('open', 'desktop-sidebar');
-    budgetSheet.classList.add('open');
-    $('#appShell')?.classList.add('budget-open');
-    document.body.style.overflow = '';
-  } else {
-    STATE.ui.budgetOpen = true;
-    openSheet(budgetBackdrop, budgetSheet);
-  }
-
-  $$('.nav-item[data-nav]').forEach((el) => {
-    el.classList.toggle('active', el.getAttribute('data-nav') === 'budget');
-  });
-  
-  // Auto focus ke income jika masih kosong
-  if(income === 0) {
-      setTimeout(()=>$('#bIncome')?.focus(), 120);
-  }
-}
-    function closeBudget(){ 
-      STATE.ui.budgetOpen = false;
-      if (isDesktopViewport()) {
-        budgetBackdrop.classList.remove('open', 'desktop-sidebar');
-        budgetSheet.classList.remove('open');
-        $('#appShell')?.classList.remove('budget-open');
+      if (saved && saved.categories && Array.isArray(saved.categories.rows)) {
+        rows = JSON.parse(JSON.stringify(saved.categories.rows));
+        income = Number(saved.income || 0);
+        status = 'saved';
+      } else if (saved && saved.categories && !Array.isArray(saved.categories.rows)) {
+        for (const [cat, amt] of Object.entries(saved.categories)) {
+          rows.push({ id: uuid(), name: cat, amount: Number(amt), items: [] });
+        }
+        income = Number(saved.income || 0);
+        status = 'migrated';
       } else {
-        closeSheet(budgetBackdrop, budgetSheet); 
+        const ai = computeAIBudgetRecommendationForMonth(mk);
+        income = estimateIncomeForMonth(mk) || (ai ? ai.income : 0) || 0;
+        rows = [];
+        status = 'new';
       }
+
+      try {
+        const { migrateBudgetCategories, computeHistoricalBaselines } = await import('./services/budget-model.js');
+        const migrated = migrateBudgetCategories({ rows });
+        rows = computeHistoricalBaselines(migrated.rows, STATE.transactions || [], mk);
+      } catch (e) {
+        console.warn('[budget] draft migration failed', e);
+      }
+
+      STATE.budgetDraft = {
+        month: mk,
+        income,
+        rows,
+        ai: null,
+        initialFrom: status,
+      };
+      return STATE.budgetDraft;
+    }
+
+    async function renderBudgetPageView() {
+      const root = $('#budgetPageRoot');
+      if (!root || !STATE.ui.budgetPageOpen) return;
+      const d = STATE.budgetDraft || await prepareBudgetDraft();
+      try {
+        const { renderBudgetPage } = await import('./components/budget-page.js');
+        await renderBudgetPage(root, {
+          month: d.month,
+          rows: d.rows || [],
+          income: Number(d.income || 0),
+          transactions: getTransactionsInPeriod(),
+          onRefresh: async () => {
+            await prepareBudgetDraft();
+            await renderBudgetPageView();
+            updateBudgetSheetDerived();
+          },
+          onSave: () => handleSaveBudget(),
+        });
+      } catch (e) {
+        console.error('[budget] page render failed', e);
+      }
+    }
+    window.renderBudgetPageView = renderBudgetPageView;
+
+    async function openBudget() {
+      closeBudgetSheetOnly();
+      closeAdvisor();
+      closeAddSheet();
+
+      await prepareBudgetDraft();
+      STATE.ui.budgetPageOpen = true;
+      STATE.ui.dashboardOpen = false;
+      STATE.ui.budgetOpen = false;
+
+      $$('.nav-item[data-nav]').forEach((el) => {
+        el.classList.toggle('active', el.getAttribute('data-nav') === 'budget');
+      });
+      $$('.sidebar-item[data-nav]').forEach((el) => {
+        el.classList.toggle('active', el.getAttribute('data-nav') === 'budget');
+      });
+
+      rerender();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    window.openBudget = openBudget;
+
+    function closeBudgetSheetOnly() {
+      STATE.ui.budgetOpen = false;
+      if (budgetBackdrop && budgetSheet) {
+        if (isDesktopViewport()) {
+          budgetBackdrop.classList.remove('open', 'desktop-sidebar');
+          budgetSheet.classList.remove('open');
+          $('#appShell')?.classList.remove('budget-open');
+        } else {
+          closeSheet(budgetBackdrop, budgetSheet);
+        }
+      }
+    }
+
+    function closeBudget() {
+      closeBudgetSheetOnly();
     }
     budgetBackdrop.addEventListener('click', (e)=>{
       if (e.target?.dataset?.closeBudget === 'true') closeBudget();
@@ -7284,6 +7312,13 @@ async function handleSaveBudget() {
     const d = STATE.budgetDraft;
     if (!d) return;
 
+    const pageIncome = $('#budgetPageIncome');
+    if (pageIncome && STATE.ui.budgetPageOpen) {
+      d.income = parseNumberInput(pageIncome.value) || d.income;
+    } else {
+      d.income = parseNumberInput($('#bIncome')?.value) || d.income;
+    }
+
     if (Number(d.income) <= 0) { $('#bStatus').textContent = 'Income wajib diisi.'; return; }
     if (!d.rows || d.rows.length === 0) { $('#bStatus').textContent = 'Tambah minimal 1 kategori.'; return; }
 
@@ -7313,7 +7348,11 @@ async function handleSaveBudget() {
         if(typeof rerender === 'function') rerender();
         
         setTimeout(() => { 
-            closeBudget(); 
+            if (STATE.ui.budgetPageOpen) {
+              renderBudgetPageView();
+            } else {
+              closeBudget();
+            }
             if (btn) btn.innerText = oldText; 
         }, 500);
     } catch (e) {
@@ -9471,12 +9510,19 @@ function toggleNav(view, triggerEl) {
         setTimeout(() => btn.classList.remove('animate-bounce-soft'), 300);
       }
 
+      if (view === 'budget') {
+        openBudget();
+        return;
+      }
+
       if (view === 'list') {
         STATE.ui.dashboardOpen = false;
+        STATE.ui.budgetPageOpen = false;
       } else if (view === 'dash') {
         STATE.ui.dashboardOpen = true;
+        STATE.ui.budgetPageOpen = false;
       }
-      const map = { dash: 'beranda', list: 'transaksi' };
+      const map = { dash: 'beranda', list: 'transaksi', budget: 'budget' };
       const active = map[view] || '';
       $$('.nav-item[data-nav]').forEach((el) => {
         el.classList.toggle('active', el.getAttribute('data-nav') === active);
@@ -9492,14 +9538,14 @@ function toggleNav(view, triggerEl) {
     $$('.sidebar-item[data-nav]').forEach((el) => {
       el.addEventListener('click', () => {
         const view = el.getAttribute('data-nav');
-        if (view === 'dash' || view === 'list') toggleNav(view, el);
+        if (view === 'dash' || view === 'list' || view === 'budget') toggleNav(view, el);
       });
     });
 
     $$('.nav-item[data-nav]').forEach((el) => {
       el.addEventListener('click', (e) => {
         const nav = el.getAttribute('data-nav');
-        const map = { beranda: 'dash', transaksi: 'list' };
+        const map = { beranda: 'dash', transaksi: 'list', budget: 'budget' };
         const view = map[nav];
         if (view) {
           e.preventDefault();

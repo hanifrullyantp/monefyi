@@ -440,7 +440,7 @@
           <span class="sidebar-item__label sidebar-label" data-i18n="nav.transactions">Semua Transaksi</span>
         </button>
 
-        <button type="button" onclick="openBudget()" class="sidebar-item sidebar-item--primary tap group">
+        <button type="button" data-nav="budget" class="sidebar-item sidebar-item--primary tap group">
           <span class="sidebar-item__icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>
           </span>
@@ -599,6 +599,9 @@
       <div id="dynamicContent" class="flex-1 min-h-0 space-y-6 w-full max-w-full md:overflow-y-auto">
         <!-- Mobile Beranda (premium home) -->
         <div id="homePageRoot" class="home-page hidden md:hidden" aria-label="Beranda"></div>
+
+        <!-- Budget full page (mobile + desktop) -->
+        <div id="budgetPageRoot" class="budget-page-root hidden" aria-label="Budgeting"></div>
 
         <!-- Expanded dashboard (desktop only) -->
         <div id="dashboardExpanded" class="hidden md:block">
@@ -969,7 +972,7 @@
         </div>
       </div>
 
-      <button onclick="openBudget()" class="nav-item flex flex-col items-center gap-1 tap" data-nav="budget">
+      <button type="button" class="nav-item flex flex-col items-center gap-1 tap" data-nav="budget">
         <span class="text-xl">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>
         </span>

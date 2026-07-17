@@ -9,6 +9,7 @@ import {
   createBudgetRow,
   createBudgetItem,
   normalizeBudgetRow,
+  calculateProgress,
 } from '../services/budget-model.js';
 
 /**
@@ -49,6 +50,32 @@ function renderItemRow(item, idx) {
   `;
 }
 
+function renderSummaryCard(row, transactions, month) {
+  if (!row?.id || !month) return '';
+  const progress = calculateProgress(row, transactions || [], month);
+  const priority = PRIORITY_LEVELS[row.priority?.toUpperCase()] || PRIORITY_LEVELS.PENTING;
+  const fmt = (n) => new Intl.NumberFormat('id-ID').format(Math.round(n || 0));
+
+  return `
+    <div class="budget-form-summary">
+      <div class="budget-form-summary__head">
+        <span style="color:${priority.color}">${priority.icon} ${priority.label}</span>
+        <strong>${escapeHtml(row.name)}</strong>
+      </div>
+      <div class="budget-form-summary__stats">
+        <div><span>Terpakai</span><strong>${progress.percentUsed}%</strong></div>
+        <div><span>Realisasi</span><strong>Rp ${fmt(progress.spent)}</strong></div>
+        <div><span>Budget</span><strong>Rp ${fmt(row.amount)}</strong></div>
+        <div><span>Sisa</span><strong class="${progress.remaining < 0 ? 'over' : ''}">Rp ${fmt(progress.remaining)}</strong></div>
+      </div>
+      <div class="budget-form-summary__bar">
+        <div class="budget-form-summary__fill ${progress.status}" style="width:${Math.min(progress.percentUsed, 100)}%"></div>
+      </div>
+      ${progress.daysLeft > 0 ? `<div class="budget-form-summary__hint">💡 Rp ${fmt(progress.dailyBudget)}/hari · ${progress.daysLeft} hari tersisa</div>` : ''}
+    </div>
+  `;
+}
+
 /**
  * @param {object} defaults
  * @param {object} [options]
@@ -59,6 +86,9 @@ export function showBudgetFormModal(defaults = {}, options = {}) {
 
   const row = normalizeBudgetRow(defaults.id ? defaults : createBudgetRow(defaults));
   const isEdit = Boolean(defaults.id);
+  const summaryHtml = options.showSummary
+    ? renderSummaryCard(row, options.transactions, options.month)
+    : '';
 
   const modal = document.createElement('div');
   modal.className = 'budget-modal-overlay';
@@ -72,6 +102,7 @@ export function showBudgetFormModal(defaults = {}, options = {}) {
         <button type="button" class="close-btn" data-action="close" aria-label="Tutup">✕</button>
       </header>
       <div class="modal-body">
+        ${summaryHtml}
         <div class="form-section">
           <label class="form-label">Prioritas *</label>
           <div class="priority-selector">
