@@ -7,6 +7,7 @@ const BADGES = {
   memory: { icon: '🧠', text: 'Memory', color: 'purple' },
   rule: { icon: '📏', text: 'Rule', color: 'blue' },
   ai: { icon: '✨', text: 'AI', color: 'green' },
+  pending: { icon: '⏳', text: 'Pending', color: 'amber' },
   manual: { icon: '✍️', text: 'Manual', color: 'gray' },
 };
 
@@ -73,7 +74,11 @@ export function txToPreviewModel(tx) {
     rule: 'rule',
     fuzzy: 'rule',
     supabase_edge: 'ai',
+    server_ai: 'ai',
+    local_ai: 'ai',
     ai: 'ai',
+    pending: 'pending',
+    queue: 'pending',
     heuristic: 'manual',
     manual: 'manual',
   };

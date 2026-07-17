@@ -132,6 +132,9 @@ export async function triggerSync(reason = 'manual') {
     notifyListeners('sync-error', { error: e?.message || String(e) });
   } finally {
     _syncInProgress = false;
+    if (typeof window !== 'undefined' && window.monefyiPending?.processPendingQueue) {
+      window.monefyiPending.processPendingQueue().catch(() => {});
+    }
   }
 }
 
@@ -395,4 +398,8 @@ export function getSyncStatus() {
     isOnline: isBrowserOnline(),
     isSyncing: _syncInProgress,
   };
+}
+
+if (typeof window !== 'undefined') {
+  window.monefyiSync = { triggerSync, getSyncStatus, onSyncEvent, initialDataPull };
 }

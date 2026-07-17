@@ -1752,6 +1752,42 @@ async function upsertTransaction_legacy_local(tx) {
       }
     }
 
+    async function initPwaUi() {
+      try {
+        const { renderOfflineIndicator } = await loadAppModule('js/components/offline-indicator.js');
+        if (!document.querySelector('.offline-indicator')) {
+          document.body.appendChild(renderOfflineIndicator());
+        }
+        const { renderPendingIndicator } = await loadAppModule('js/components/pending-indicator.js');
+        if (!document.querySelector('.pending-indicator-wrapper')) {
+          document.body.appendChild(await renderPendingIndicator());
+        }
+        const { setupInstallBanner } = await loadAppModule('js/services/install-prompt.js');
+        setupInstallBanner({ delayAfterInteractions: 3, dismissDays: 7 });
+      } catch (e) {
+        console.warn('[pwa] ui init failed (non-blocking):', e);
+      }
+    }
+
+    function handlePwaUrlActions() {
+      const params = new URLSearchParams(location.search);
+      const action = params.get('action');
+      if (action === 'add-transaction') {
+        setTimeout(() => openAddSheet('quick'), 500);
+      } else if (action === 'scan-receipt') {
+        setTimeout(() => openReceiptScanner?.(), 500);
+      } else if (action === 'share-received') {
+        const text = params.get('text') || params.get('title') || '';
+        if (text) {
+          setTimeout(() => {
+            const input = $('#quickText');
+            if (input) input.value = text;
+            openAddSheet('quick');
+          }, 500);
+        }
+      }
+    }
+
     async function initOfflineFirst() {
       try {
         await loadAppModule('js/services/offline-db.js').then((m) => m.initOfflineDB());
@@ -1776,7 +1812,11 @@ async function upsertTransaction_legacy_local(tx) {
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
           navigator.serviceWorker.addEventListener('message', (event) => {
             if (event.data?.type === 'MONEYFYI_BG_SYNC') {
-              syncMod.triggerSync('background');
+              if (event.data.tag === 'sync-pending') {
+                window.monefyiPending?.processPendingQueue?.();
+              } else {
+                syncMod.triggerSync('background');
+              }
             }
           });
         }
@@ -1792,6 +1832,8 @@ async function upsertTransaction_legacy_local(tx) {
 
         // Offline layer first — IndexedDB must be ready before network calls
         try { await initOfflineFirst(); } catch (e) { console.warn('initOfflineFirst', e); }
+        try { await initPwaUi(); } catch (e) { console.warn('initPwaUi', e); }
+        handlePwaUrlActions();
 
         if (isOfflineMode()) {
           try { await hydrateLocalTransactions(); } catch (e) { console.warn('hydrateLocalTransactions', e); }
@@ -2003,12 +2045,15 @@ async function upsertTransaction_legacy_local(tx) {
       scrollToPreviewConfirm(previewEl);
       try {
         const tx = await parseOneLineToTx(text);
-        if (!tx?.amount) {
+        if (!tx?.amount && !tx?._isPending) {
           previewEl.innerHTML = `<div class="text-xs app-muted p-2">${t('toast.error')}</div>`;
           scrollToPreviewConfirm(previewEl);
           return;
         }
-        const dup = findPotentialDuplicate(tx);
+        if (tx._isPending && typeof showToast === 'function') {
+          showToast(tx._parseMessage || 'Tersimpan, akan diproses saat online', 'info');
+        }
+        const dup = tx.amount > 0 ? findPotentialDuplicate(tx) : null;
         if (dup) tx.meta = { ...(tx.meta || {}), duplicateWarning: dup.id };
 
         const { renderQuickPreview, txToPreviewModel } = await loadAppModule('js/components/quick-preview.js');
@@ -2550,44 +2595,48 @@ async function upsertTransaction_legacy_local(tx) {
     }
 
     /**
-     * Parses quick-entry text into a transaction object.
-     * When feature flag 'feature_new_parser_pipeline' is ON (default):
-     *   Tries L0→L1→L2; on miss or error cascades to legacyParseAIFirst.
+     * Parses quick-entry text via parser orchestrator (local first, never reject).
      * @param {string} text - raw user input
      * @returns {Promise<object>} transaction object
      */
     async function parseQuickText(text) {
       const startTime = Date.now();
+
+      window.monefyiParseHelpers = {
+        buildTxFromPipelineResult: _buildTxFromPipelineResult,
+        fetchServerAI: fetchAIParsedTransactionViaSupabase,
+        buildHeuristicTx: parseTransactionTextHeuristic,
+      };
+
       let parsed;
-      const useNew = _isNewPipelineEnabled();
+      try {
+        const { parseTransaction } = await loadAppModule('js/services/parser-orchestrator.js');
+        const result = await parseTransaction(text, {
+          userId: STATE.db.user?.id,
+          tryLocalAI: true,
+        });
 
-      if (useNew) {
-        try {
-          const pipelineResult = await runNewParsePipeline(text);
-          if (pipelineResult && Number(pipelineResult.amount) > 0) {
-            parsed = pipelineResult;
-          } else if (pipelineResult) {
-            console.warn('[parseQuickText] pipeline returned low/zero amount, falling back to legacy', {
-              text,
-              amount: pipelineResult.amount,
-            });
-          }
-        } catch (err) {
-          console.error('[parseQuickText] new pipeline error, falling back:', err);
-          if (typeof Sentry !== 'undefined') Sentry.captureException(err);
+        if (result.status === 'parsed') {
+          parsed = result.transaction;
+        } else if (result.status === 'pending') {
+          parsed = result.transaction;
+          parsed._isPending = true;
+          parsed._parseMessage = result.message;
+          parsed._pendingId = result.pendingId;
+        } else {
+          parsed = parseTransactionTextHeuristic(text, { source: 'quick' });
         }
-      }
-
-      if (!parsed) {
+      } catch (err) {
+        console.error('[parseQuickText] orchestrator error, falling back:', err);
+        if (typeof Sentry !== 'undefined') Sentry.captureException(err);
         parsed = await legacyParseAIFirst(text);
-        // Expose rawInput so correction-learner can access it in the preview
-        if (parsed && typeof parsed === 'object') {
-          parsed.rawInput = text;
-          parsed.original = text;
-        }
       }
 
-      // Log metrics (non-blocking, fire-and-forget)
+      if (parsed && typeof parsed === 'object') {
+        parsed.rawInput = text;
+        parsed.original = text;
+      }
+
       try {
         const userId = STATE.db.user?.id || null;
         if (userId) {
@@ -2597,12 +2646,12 @@ async function upsertTransaction_legacy_local(tx) {
               input: text,
               result: parsed,
               latency: Date.now() - startTime,
-              pipeline: _isNewPipelineEnabled() ? 'new' : 'legacy',
+              pipeline: 'orchestrator',
             });
           }).catch(() => {});
         }
-      } catch (err) {
-        // Silent fail — metrics must not break parsing
+      } catch {
+        /* metrics must not break parsing */
       }
 
       return parsed;
@@ -9994,6 +10043,15 @@ function toggleNav(view, triggerEl) {
           .register('/app/sw.js', { scope: '/app/' })
           .then(function (reg) {
             reg.update().catch(function () {});
+            navigator.serviceWorker.addEventListener('message', function (event) {
+              if (event.data?.type === 'MONEYFYI_BG_SYNC') {
+                if (event.data.tag === 'sync-pending') {
+                  window.monefyiPending?.processPendingQueue?.();
+                } else {
+                  window.monefyiSync?.triggerSync?.('background');
+                }
+              }
+            });
             reg.addEventListener('updatefound', function () {
               const newWorker = reg.installing;
               if (!newWorker) return;
@@ -10028,11 +10086,13 @@ function toggleNav(view, triggerEl) {
         if (!collapsed && scrollTop > COLLAPSE_AT) {
           collapsed = true;
           wrap.classList.add('saldo-collapsed');
+          wrap.setAttribute('aria-expanded', 'false');
           const details = wrap.querySelector('.saldo-details-wrap');
           if (details) details.setAttribute('aria-hidden', 'true');
         } else if (collapsed && scrollTop < EXPAND_AT) {
           collapsed = false;
           wrap.classList.remove('saldo-collapsed');
+          wrap.setAttribute('aria-expanded', 'true');
           const details = wrap.querySelector('.saldo-details-wrap');
           if (details) details.setAttribute('aria-hidden', 'false');
         }
@@ -10050,6 +10110,8 @@ function toggleNav(view, triggerEl) {
       function bind() {
         const shell = document.getElementById('appShell');
         if (!shell) return;
+        const wrap = document.querySelector('.mobile-saldo-wrap');
+        if (wrap) wrap.setAttribute('aria-expanded', 'true');
         // Only active on mobile widths
         if (window.matchMedia('(max-width: 767px)').matches) {
           shell.addEventListener('scroll', onScroll, { passive: true });

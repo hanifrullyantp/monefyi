@@ -32,6 +32,10 @@ export async function initOfflineDB() {
           app_state: 'key',
           cached_pages: 'url, data, cached_at',
         });
+
+        this.version(2).stores({
+          pending_transactions: 'id, status, userId, createdAt',
+        });
       }
     }
 

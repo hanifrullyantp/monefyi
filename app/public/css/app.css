@@ -2555,6 +2555,28 @@ html, body {
       /* iOS-native easing: decelerate */
       :root { --ease-ios: cubic-bezier(0.25, 0.46, 0.45, 0.94); }
 
+      #appShell {
+        overscroll-behavior-y: contain;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .mobile-saldo-wrap {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        contain: layout style;
+        background: var(--bg-primary, #0a1219);
+        transition: min-height 0.25s var(--ease-ios);
+        min-height: 0;
+      }
+
+      #homePageRoot,
+      #txSection {
+        position: relative;
+        z-index: 1;
+        contain: layout style;
+      }
+
       /* Card padding animates */
       .hero-saldo-card {
         transition:
