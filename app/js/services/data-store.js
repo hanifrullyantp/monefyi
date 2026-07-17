@@ -221,6 +221,51 @@ export async function getBudgets(period) {
 }
 
 /**
+ * @param {string} month
+ * @returns {Promise<object[]>}
+ */
+export async function getBudgetRowsForMonth(month) {
+  const { migrateBudgetCategories } = await import('./budget-model.js');
+  const state = typeof window !== 'undefined' ? window.STATE : null;
+  const fromState = state?.budgetsByMonth?.[month]?.categories;
+  if (fromState) return migrateBudgetCategories(fromState).rows;
+
+  const rows = await getBudgets(month);
+  if (rows[0]?.categories) return migrateBudgetCategories(rows[0].categories).rows;
+  return [];
+}
+
+/**
+ * @param {string} month
+ * @returns {number}
+ */
+export function getIncomeForMonth(month) {
+  const state = typeof window !== 'undefined' ? window.STATE : null;
+  return Number(state?.budgetsByMonth?.[month]?.income || 0);
+}
+
+/**
+ * Persist budget rows for a month (caller handles Supabase via saveBudgetMonth).
+ * @param {string} month
+ * @param {number} income
+ * @param {object[]} rows
+ */
+export async function saveBudgetRowsLocal(month, income, rows) {
+  const { serializeBudgetRows } = await import('./budget-model.js');
+  const state = typeof window !== 'undefined' ? window.STATE : null;
+  if (!state) return;
+
+  const categories = { rows: serializeBudgetRows(rows) };
+  state.budgetsByMonth = state.budgetsByMonth || {};
+  state.budgetsByMonth[month] = {
+    income: Number(income || 0),
+    categories,
+    updated_at: new Date().toISOString(),
+  };
+  await mirrorBudgetsFromState(state.budgetsByMonth);
+}
+
+/**
  * Hydrate in-memory STATE.transactions from IndexedDB when offline.
  * @returns {Promise<object[]>}
  */

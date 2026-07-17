@@ -95,6 +95,7 @@ export function txToPreviewModel(tx) {
     notes: tx?.notes || '',
     matchedRules: tx?.meta?.matchedRules ?? tx?.matchedRules ?? [],
     flags: tx?.meta?.pipelineFlags ?? tx?.flags ?? [],
+    budgetEvaluation: tx?._budget_evaluation ?? tx?.budgetEvaluation ?? null,
   };
 }
 
@@ -151,6 +152,11 @@ export function renderQuickPreview(parsed, callbacks = {}) {
       </div>
     </div>
     ${parsed.matchedRules?.length ? `<div class="qp-rules" title="${escapeHtml(parsed.matchedRules.join(', '))}">Rules: ${escapeHtml(parsed.matchedRules.join(', '))}</div>` : ''}
+    ${parsed.budgetEvaluation?.message ? `
+      <div class="qp-budget-hint severity-${parsed.budgetEvaluation.severity || 'info'}">
+        ${escapeHtml(parsed.budgetEvaluation.message)}
+      </div>
+    ` : ''}
     <div class="qp-fields">
       <div class="qp-field">
         <label for="qp-date">Tanggal</label>

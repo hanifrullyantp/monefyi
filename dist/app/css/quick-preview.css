@@ -111,6 +111,33 @@ body.theme-light .qp-badge-gray { background: #F3F4F6; color: #374151; }
   white-space: nowrap;
 }
 
+.qp-budget-hint {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.qp-budget-hint.severity-info {
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  color: #93c5fd;
+}
+
+.qp-budget-hint.severity-warning {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fcd34d;
+}
+
+.qp-budget-hint.severity-danger {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+}
+
 .qp-fields {
   display: grid;
   gap: 10px;

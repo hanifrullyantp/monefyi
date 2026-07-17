@@ -1,5 +1,5 @@
-// Offline-capable service worker — v6 offline parser + undo/history.
-const CACHE_VERSION = 'v6-offline-undo-1';
+// Offline-capable service worker — v7 budget killer feature.
+const CACHE_VERSION = 'v7-budget-killer-1';
 const STATIC_CACHE = `monefyi-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `monefyi-runtime-${CACHE_VERSION}`;
 const IMAGES_CACHE = `monefyi-images-${CACHE_VERSION}`;
@@ -16,6 +16,7 @@ const shellPaths = [
   './css/receipt-scanner.css',
   './css/preview-card.css',
   './css/quick-preview.css',
+  './css/budget-enhanced.css',
   './js/app.js',
   './js/config.js',
   './js/monefyi-ui.js',
@@ -37,6 +38,9 @@ const shellPaths = [
   './js/services/home-data.js',
   './js/services/undo-redo.js',
   './js/services/activity-log.js',
+  './js/services/budget-model.js',
+  './js/services/budget-linker.js',
+  './js/services/budget-recommender.js',
   './js/services/install-prompt.js',
   './js/components/quick-preview.js',
   './js/components/pending-badge.js',
@@ -52,6 +56,10 @@ const shellPaths = [
   './js/components/account-cards.js',
   './js/components/quick-access.js',
   './js/components/budget-summary-card.js',
+  './js/components/budget-page.js',
+  './js/components/budget-form-modal.js',
+  './js/components/budget-detail-modal.js',
+  './js/components/budget-evaluation.js',
   './js/components/daily-tip-card.js',
   './js/components/mini-chart-7day.js',
   './js/components/recent-transactions-list.js',

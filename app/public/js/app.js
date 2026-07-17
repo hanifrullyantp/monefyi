@@ -272,13 +272,25 @@ async function loadBudgets(){
   for (const b of (data||[])) {
     out[b.month] = {
       income: Number(b.income||0),
-      categories: b.categories || {}, // Ini berisi { rows: [...] }
+      categories: b.categories || {},
       updated_at: b.updated_at || null,
     };
   }
+
+  try {
+    const { migrateBudgetCategories } = await import('./services/budget-model.js');
+    for (const mk of Object.keys(out)) {
+      out[mk].categories = migrateBudgetCategories(out[mk].categories);
+    }
+  } catch (e) {
+    console.warn('[budget] migration skipped', e);
+  }
   
-  // Masukkan data ke memori STATE agar bisa dipakai dropdown
-  STATE.budgetsByMonth = out; 
+  STATE.budgetsByMonth = out;
+  try {
+    const { mirrorBudgetsFromState } = await import('./services/data-store.js');
+    await mirrorBudgetsFromState(out);
+  } catch (_) { /* offline mirror optional */ }
   return out;
 }
     // =========================
@@ -1672,6 +1684,10 @@ async function upsertTransaction_legacy_local(tx) {
       const { error } = await supa.from('budgets').upsert(row, { onConflict: 'user_id,month' });
       if (error) throw error;
       STATE.budgetsByMonth[mk] = { income: Number(income||0), categories: categories||{}, updated_at: row.updated_at };
+      try {
+        const { mirrorBudgetsFromState } = await import('./services/data-store.js');
+        await mirrorBudgetsFromState(STATE.budgetsByMonth);
+      } catch (_) { /* mirror optional */ }
     }
 
     async function updateSaldoAsync(){
@@ -1763,6 +1779,10 @@ async function upsertTransaction_legacy_local(tx) {
         'js/services/undo-redo.js',
         'js/services/activity-log.js',
         'js/components/pending-badge.js',
+        'js/services/budget-model.js',
+        'js/services/budget-linker.js',
+        'js/services/budget-recommender.js',
+        'js/components/budget-page.js',
       ];
       await Promise.allSettled(modules.map((p) => loadAppModule(p)));
     }
@@ -2087,6 +2107,16 @@ async function upsertTransaction_legacy_local(tx) {
         const dup = tx.amount > 0 ? findPotentialDuplicate(tx) : null;
         if (dup) tx.meta = { ...(tx.meta || {}), duplicateWarning: dup.id };
 
+        try {
+          const { evaluateTransaction } = await loadAppModule('js/services/budget-linker.js');
+          tx._budget_evaluation = await evaluateTransaction(tx, {
+            month: STATE.selectedMonth || toMonthKey(new Date()),
+            transactions: STATE.transactions || [],
+          });
+        } catch (budgetErr) {
+          console.warn('[preview] budget evaluation skipped', budgetErr);
+        }
+
         let renderQuickPreview;
         let txToPreviewModel;
         try {
@@ -2113,6 +2143,7 @@ async function upsertTransaction_legacy_local(tx) {
         }
 
         const model = txToPreviewModel(tx);
+        if (tx._budget_evaluation) model.budgetEvaluation = tx._budget_evaluation;
         previewEl.innerHTML = '';
         const card = renderQuickPreview(model, {
           onSave: async (edited) => {
@@ -5188,7 +5219,7 @@ function setSheetPosition(mode) {
 
     // GANTI FUNGSI openBudget DENGAN INI:
 
-function openBudget(){
+async function openBudget(){
   const mk = STATE.selectedMonth; // Pastikan variabel ini sesuai dengan navigasi bulan di app Anda
   
   // 1. Ambil Data Tersimpan dari Memory (STATE)
@@ -5200,15 +5231,11 @@ function openBudget(){
   let status = 'new';
 
   if (saved && saved.categories && Array.isArray(saved.categories.rows)) {
-    // === SKENARIO 1: DATA DITEMUKAN (FORMAT BARU/BENAR) ===
-    // Kita copy datanya agar aman saat diedit (Deep Copy)
     rows = JSON.parse(JSON.stringify(saved.categories.rows));
     income = Number(saved.income || 0);
     status = 'saved';
   } 
   else if (saved && saved.categories && !Array.isArray(saved.categories.rows)) {
-     // === SKENARIO 2: DATA LAMA (FORMAT JADUL) ===
-     // Migrasi darurat jika ketemu format {'Makan': 5000}
      for (const [cat, amt] of Object.entries(saved.categories)) {
         rows.push({ id: uuid(), name: cat, amount: Number(amt), items: [] });
      }
@@ -5216,14 +5243,22 @@ function openBudget(){
      status = 'migrated';
   }
   else {
-    // === SKENARIO 3: BULAN BARU (BELUM ADA DATA) ===
-    // Biarkan rows kosong agar bersih. 
-    // User disarankan menekan tombol "Gunakan Rekomendasi" di UI.
-    // Kita coba estimasi income saja biar user terbantu.
-    const ai = computeAIBudgetRecommendationForMonth(mk); // Fungsi lama Anda (opsional)
+    const ai = computeAIBudgetRecommendationForMonth(mk);
     income = estimateIncomeForMonth(mk) || (ai ? ai.income : 0) || 0;
     rows = []; 
     status = 'new';
+  }
+
+  try {
+    const { migrateBudgetCategories, computeHistoricalBaselines } = await import('./services/budget-model.js');
+    const migrated = migrateBudgetCategories({ rows });
+    rows = computeHistoricalBaselines(
+      migrated.rows,
+      STATE.transactions || [],
+      mk
+    );
+  } catch (e) {
+    console.warn('[budget] draft migration failed', e);
   }
 
   // Set ke Global Draft
@@ -6003,6 +6038,15 @@ function openTutorialTopic(id) {
     tx.meta = { ...(tx.meta || {}), pending: true };
   }
 
+  if (tx.type === 'expense' || !tx.type) {
+    try {
+      const { applyBudgetLinkOnSave } = await import('./services/budget-linker.js');
+      await applyBudgetLinkOnSave(tx);
+    } catch (linkErr) {
+      console.warn('[budget] link on save skipped', linkErr);
+    }
+  }
+
   const index = STATE.transactions.findIndex(t => t.id === tx.id);
   const before = index >= 0 ? { ...STATE.transactions[index] } : null;
   const isCreate = index < 0;
@@ -6647,6 +6691,20 @@ function generateSmartBudgetRows(income) {
   // 5. Urutkan dari terbesar
   rows.sort((a,b) => b.amount - a.amount);
 
+  const priorityMap = {
+    'tagihan': 'harus', 'rumah': 'harus', 'listrik': 'harus', 'cicilan': 'harus',
+    'tabungan': 'simpan', 'invest': 'simpan', 'emergency': 'simpan',
+    'belanja': 'mau', 'hiburan': 'mau', 'jajan': 'mau',
+  };
+  rows.forEach((row) => {
+    if (row.priority) return;
+    const lower = String(row.name || '').toLowerCase();
+    row.priority = 'penting';
+    for (const [hint, pri] of Object.entries(priorityMap)) {
+      if (lower.includes(hint)) { row.priority = pri; break; }
+    }
+  });
+
   return { rows, source };
 }
     function renderBudgetRecoPills(){
@@ -6676,15 +6734,48 @@ function generateSmartBudgetRows(income) {
       $('#bStatus').textContent = d.initialFrom === 'saved' ? 'Budget tersimpan.' : 'Draft rekomendasi.';
 
       renderBudgetRecoPills();
-      renderBudgetRows();
       updateBudgetSheetDerived();
+
+      const enhancedRoot = $('#budgetEnhancedRoot');
+      if (enhancedRoot) {
+        import('./components/budget-page.js').then(({ renderBudgetEnhancedSections }) => {
+          renderBudgetEnhancedSections(enhancedRoot, {
+            month: d.month,
+            rows: d.rows || [],
+            income: Number(d.income || 0),
+            transactions: getTransactionsInPeriod(),
+            onRefresh: () => renderBudgetSheet(),
+          });
+        }).catch((e) => {
+          console.warn('[budget] enhanced render failed, fallback', e);
+          renderBudgetRows();
+        });
+      } else {
+        renderBudgetRows();
+      }
     }
+    window.renderBudgetSheet = renderBudgetSheet;
 
     // --- LOGIC DETAIL BUDGET BARU (POPUP TENGAH & SAVE DB) ---
 
 // --- KODE BARU: AUTO-CREATE POPUP HTML & OPEN ---
 
 function openBudgetCategoryDetail(rowId) {
+  const row = STATE.budgetDraft?.rows?.find(r => r.id === rowId);
+  if (!row) return;
+
+  import('./components/budget-detail-modal.js').then(({ showBudgetDetailModal }) => {
+    const month = STATE.budgetDraft?.month || STATE.selectedMonth;
+    showBudgetDetailModal(row, STATE.transactions || getTransactionsInPeriod(), month, {
+      onRefresh: () => renderBudgetSheet(),
+    });
+  }).catch(() => {
+    _openBudgetCategoryDetailLegacy(rowId);
+  });
+}
+window.openBudgetCategoryDetail = openBudgetCategoryDetail;
+
+function _openBudgetCategoryDetailLegacy(rowId) {
   // 1. Cek dulu, apakah HTML Popup sudah ada? Jika belum, kita buat sekarang!
   if (!document.getElementById('budgetDetailBackdrop')) {
     const modalHTML = `
@@ -6932,14 +7023,34 @@ function closeBudgetDetail() {
       updateBudgetSheetDerived();
     });
 
-    $('#btnAddBudgetCategory').addEventListener('click', () => {
+    $('#btnAddBudgetCategory').addEventListener('click', async () => {
       if (!STATE.budgetDraft) return;
-      const newId = uuid();
-      STATE.budgetDraft.rows.push({ id: newId, name: '', amount: 0, items: [] });
-      renderBudgetRows();
-      updateBudgetSheetDerived();
-      // Langsung buka popup detail untuk kategori baru
-      openBudgetCategoryDetail(newId);
+      try {
+        const { showBudgetFormModal } = await import('./components/budget-form-modal.js');
+        showBudgetFormModal({ priority: 'penting', month: STATE.budgetDraft.month }, {
+          onSaved: () => renderBudgetSheet(),
+        });
+      } catch (e) {
+        const newId = uuid();
+        STATE.budgetDraft.rows.push({ id: newId, name: '', amount: 0, items: [], priority: 'penting' });
+        renderBudgetRows();
+        updateBudgetSheetDerived();
+        openBudgetCategoryDetail(newId);
+      }
+    });
+
+    $('#btnBudgetEvaluation')?.addEventListener('click', async () => {
+      try {
+        const { showEvaluation } = await import('./components/budget-evaluation.js');
+        const d = STATE.budgetDraft;
+        showEvaluation({
+          month: d?.month || STATE.selectedMonth,
+          rows: d?.rows || [],
+          transactions: STATE.transactions || getTransactionsInPeriod(),
+        });
+      } catch (e) {
+        console.warn('[budget] evaluation failed', e);
+      }
     });
 
 function getLiveBudgetCategories() {
@@ -7173,26 +7284,23 @@ async function handleSaveBudget() {
     const d = STATE.budgetDraft;
     if (!d) return;
 
-    // Validasi
-    // Asumsi fungsi validateAndNormalizeBudgetDraft ada di file Anda
-    // Jika tidak ada, bisa pakai validasi manual sederhana
-    let normalized = { income: d.income, categories: {}, total: 0 };
-    
-    // Validasi Manual (Safe Mode)
     if (Number(d.income) <= 0) { $('#bStatus').textContent = 'Income wajib diisi.'; return; }
     if (!d.rows || d.rows.length === 0) { $('#bStatus').textContent = 'Tambah minimal 1 kategori.'; return; }
-    
-    // Susun data untuk DB
-    const cleanRows = d.rows.map(r => ({
-        id: r.id, name: r.name, amount: r.amount, items: r.items || []
-    }));
-    normalized.categories = { rows: cleanRows };
+
+    let cleanRows;
+    try {
+      const { serializeBudgetRows } = await import('./services/budget-model.js');
+      cleanRows = serializeBudgetRows(d.rows);
+    } catch (_) {
+      cleanRows = d.rows.map(r => ({ id: r.id, name: r.name, amount: r.amount, items: r.items || [] }));
+    }
+
+    const normalized = { categories: { rows: cleanRows } };
     const total = cleanRows.reduce((a,b)=>a+Number(b.amount), 0);
     
     if (total > d.income) { $('#bStatus').textContent = 'Total budget melebihi income.'; return; }
 
     try {
-        // Tampilkan loading text
         const btn = $('#btnSaveBudget');
         const oldText = btn ? btn.innerText : '';
         if (btn) btn.innerText = 'Menyimpan...';
@@ -7202,7 +7310,6 @@ async function handleSaveBudget() {
         $('#bStatus').innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> Budget tersimpan.';
         $('#bStatus').style.color = '#10b981';
         
-        // Refresh halaman utama jika ada fungsi rerender()
         if(typeof rerender === 'function') rerender();
         
         setTimeout(() => { 
