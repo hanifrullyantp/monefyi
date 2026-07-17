@@ -1906,6 +1906,24 @@ async function upsertTransaction_legacy_local(tx) {
           const { initNotificationBell } = await import('./components/notification-bell.js');
           await initNotificationBell();
         } catch (e) { console.warn('initNotificationBell', e); }
+        try {
+          const { mountFilterIcon } = await import('./components/global-filter-popup.js');
+          mountFilterIcon();
+        } catch (e) { console.warn('mountFilterIcon', e); }
+        try {
+          const { initFloatingSaveBar } = await import('./components/floating-save-bar.js');
+          initFloatingSaveBar(async () => {
+            if (typeof window.monefyiCurrentSaveHandler === 'function') {
+              await window.monefyiCurrentSaveHandler();
+            } else if (typeof handleSaveBudget === 'function') {
+              await handleSaveBudget();
+            }
+          });
+        } catch (e) { console.warn('initFloatingSaveBar', e); }
+        try {
+          const { syncPeriodFromState } = await import('./services/global-filter.js');
+          syncPeriodFromState();
+        } catch { /* ignore */ }
         rerender();
         ensureAppShellVisible();
       } catch (e) {
@@ -5274,6 +5292,10 @@ function setSheetPosition(mode) {
         ai: null,
         initialFrom: status,
       };
+      try {
+        const { clearChanges } = await import('./services/budget-changes-tracker.js');
+        clearChanges();
+      } catch { /* ignore */ }
       return STATE.budgetDraft;
     }
 
@@ -7357,6 +7379,11 @@ async function handleSaveBudget() {
         if (btn) btn.innerText = 'Menyimpan...';
         
         await saveBudgetMonth(d.month, d.income, normalized.categories);
+        
+        try {
+          const { clearChanges } = await import('./services/budget-changes-tracker.js');
+          clearChanges();
+        } catch { /* ignore */ }
         
         $('#bStatus').innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> Budget tersimpan.';
         $('#bStatus').style.color = '#10b981';

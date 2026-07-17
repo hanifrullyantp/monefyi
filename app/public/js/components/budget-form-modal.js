@@ -253,7 +253,12 @@ function wireModalHandlers(modal, originalRow, defaults, options) {
     if (!confirm('Hapus budget kategori ini?')) return;
     const state = window.STATE;
     if (state?.budgetDraft?.rows) {
+      const before = JSON.parse(JSON.stringify(state.budgetDraft.rows));
       state.budgetDraft.rows = state.budgetDraft.rows.filter((r) => r.id !== originalRow.id);
+      try {
+        const { recordBudgetRowsChange } = await import('../services/budget-changes-tracker.js');
+        recordBudgetRowsChange('Hapus budget', before, state.budgetDraft.rows);
+      } catch { /* ignore */ }
     }
     showToast('✓ Budget dihapus');
     close();
@@ -267,7 +272,13 @@ function wireModalHandlers(modal, originalRow, defaults, options) {
     const data = collectFormData(modal, originalRow);
     if (!validateForm(data, modal)) return;
     try {
+      const state = window.STATE;
+      const before = JSON.parse(JSON.stringify(state?.budgetDraft?.rows || []));
       await saveToDraft(data, defaults.month);
+      try {
+        const { recordBudgetRowsChange } = await import('../services/budget-changes-tracker.js');
+        recordBudgetRowsChange('Edit budget', before, state.budgetDraft.rows);
+      } catch { /* ignore */ }
       showToast('✓ Budget tersimpan');
       close();
       options.onSaved?.();

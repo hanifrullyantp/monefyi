@@ -5,12 +5,13 @@
 
 import {
   PRIORITY_LEVELS,
-  calculatePriorityTotals,
   calculateProgress,
   computeHistoricalBaselines,
 } from '../services/budget-model.js';
+import { Icon } from './icons.js';
+import { filterBudgets, getFilter, onFilterChange } from '../services/global-filter.js';
 
-const FILTER_KEY = 'monefyi_budget_filter';
+const SORT_KEY = 'budget_sort';
 
 /**
  * @param {unknown} str
@@ -166,13 +167,11 @@ function renderBudgetListRow(budget, transactions, month) {
   return `
     <button type="button" class="budget-list-row ${statusClass} ${allDone ? 'all-done' : ''}" data-budget-id="${budget.id}">
       <div class="budget-list-row__strip" style="background:${pl.color}"></div>
-      <div class="budget-list-row__icon" aria-hidden="true">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18"/></svg>
-      </div>
+      <div class="budget-list-row__icon" aria-hidden="true">${Icon('target', { size: 18 })}</div>
       <div class="budget-list-row__main">
         <div class="budget-list-row__title">
           ${escapeHtml(budget.name)}
-          ${allDone ? '<span class="done-badge">✓ Selesai</span>' : ''}
+          ${allDone ? `<span class="done-badge">${Icon('check', { size: 10 })} Selesai</span>` : ''}
         </div>
         <div class="budget-list-row__sub ${remaining < 0 ? 'over' : ''}">${remainingLabel}</div>
         <div class="budget-list-row__track">
@@ -182,7 +181,7 @@ function renderBudgetListRow(budget, transactions, month) {
       <div class="budget-list-row__right">
         <div class="budget-list-row__pct">${progress.percentUsed}%</div>
         <div class="budget-list-row__budget">${formatCompact(budget.amount)}</div>
-        <svg class="budget-list-row__chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+        <span class="budget-list-row__chev">${Icon('chevronRight', { size: 16 })}</span>
       </div>
     </button>
   `;
@@ -227,14 +226,20 @@ function renderGroupedByPriority(sorted, transactions, month) {
  * @param {string} month
  * @param {string} filter
  */
-function renderBudgetListSection(section, rows, transactions, month, filter) {
-  const sorted = sortBudgets(rows, transactions, month, filter);
+function renderBudgetListSection(section, rows, transactions, month, sort) {
+  const sorted = sortBudgets(rows, transactions, month, sort);
   if (!sorted.length) {
-    section.innerHTML = '<div class="budget-list-empty">Belum ada budget. Tap + untuk tambah.</div>';
+    section.innerHTML = `
+      <div class="blc-empty">
+        <div class="blc-empty-icon">${Icon('target', { size: 40 })}</div>
+        <div class="blc-empty-title">Belum ada budget</div>
+        <div class="blc-empty-desc">Buat budget pertama atau generate otomatis</div>
+      </div>
+    `;
     return;
   }
 
-  if (filter === 'priority') {
+  if (sort === 'priority') {
     section.innerHTML = renderGroupedByPriority(sorted, transactions, month);
   } else {
     section.innerHTML = `
@@ -246,137 +251,43 @@ function renderBudgetListSection(section, rows, transactions, month, filter) {
 }
 
 /**
- * @param {Record<string, object>} priorityTotals
- * @param {object[]} transactions
- * @param {string} month
- * @param {number} totalBudget
- */
-function renderPriorityStackBar(priorityTotals, transactions, month, totalBudget) {
-  const segments = Object.values(PRIORITY_LEVELS).map((pl) => {
-    const data = priorityTotals[pl.key] || { amount: 0, budgets: [] };
-    const widthPct = totalBudget > 0 ? (data.amount / totalBudget) * 100 : 0;
-    return { pl, data, widthPct };
-  }).filter((s) => s.widthPct > 0.5);
-
-  if (!segments.length) {
-    return '<div class="priority-stack-empty">Belum ada alokasi budget</div>';
-  }
-
-  const bar = segments.map(({ pl, widthPct }) => `
-    <div class="priority-stack-segment" style="width:${widthPct}%;background:${pl.color}" title="${pl.label}"></div>
-  `).join('');
-
-  const legend = Object.values(PRIORITY_LEVELS).map((pl) => {
-    const data = priorityTotals[pl.key] || { amount: 0, count: 0, percentOfIncome: 0 };
-    if (!data.count && !data.amount) return '';
-    return `
-      <span class="priority-legend-item">
-        <span class="priority-legend-dot" style="background:${pl.color}"></span>
-        ${pl.label} ${data.percentOfIncome}%
-      </span>
-    `;
-  }).filter(Boolean).join('');
-
-  return `
-    <button type="button" class="priority-stack-wrap tap" data-action="allocation-detail" aria-label="Detail alokasi prioritas">
-      <div class="priority-stack-bar">${bar}</div>
-      <div class="priority-stack-legend">${legend}</div>
-    </button>
-  `;
-}
-
-/**
- * @param {Record<string, object>} priorityTotals
- * @param {object[]} transactions
- * @param {string} month
- * @param {number} income
- */
-function showAllocationDetail(priorityTotals, transactions, month, income) {
-  const existing = document.querySelector('.allocation-detail-overlay');
-  if (existing) existing.remove();
-
-  const overlay = document.createElement('div');
-  overlay.className = 'allocation-detail-overlay';
-  overlay.innerHTML = `
-    <div class="allocation-detail-sheet">
-      <header class="allocation-detail-head">
-        <h3>Alokasi Prioritas</h3>
-        <button type="button" class="close-btn" data-action="close">✕</button>
-      </header>
-      <div class="allocation-detail-body">
-        ${Object.values(PRIORITY_LEVELS).map((pl) => {
-          const data = priorityTotals[pl.key] || { amount: 0, percentOfIncome: 0, budgets: [] };
-          const spent = groupTotals(data.budgets || [], transactions, month).spent;
-          return `
-            <div class="allocation-detail-row">
-              <div class="allocation-detail-row__label">
-                <span style="color:${pl.color}">${pl.icon}</span> ${pl.label}
-              </div>
-              <div class="allocation-detail-row__vals">
-                <div><span>Budget</span><strong>Rp ${formatIDR(data.amount)}</strong></div>
-                <div><span>Realisasi</span><strong>Rp ${formatIDR(spent)}</strong></div>
-                <div><span>% Income</span><strong>${data.percentOfIncome}%</strong></div>
-              </div>
-            </div>
-          `;
-        }).join('')}
-        <div class="allocation-detail-footer">
-          <div>Total budget: Rp ${formatIDR(Object.values(priorityTotals).reduce((s, p) => s + p.amount, 0))}</div>
-          <div>Income: Rp ${formatIDR(income)}</div>
-        </div>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-  const close = () => overlay.remove();
-  overlay.querySelector('[data-action="close"]')?.addEventListener('click', close);
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-}
-
-/**
  * @param {HTMLElement} container
  * @param {object} ctx
  */
 function wireHandlers(container, ctx) {
   const { rows, transactions, month, onRefresh, onSave } = ctx;
-  const currentFilter = localStorage.getItem(FILTER_KEY) || 'urgent';
+  const currentSort = localStorage.getItem(SORT_KEY) || 'urgent';
 
-  container.querySelector('[data-action="allocation-detail"]')?.addEventListener('click', () => {
-    const priorityTotals = calculatePriorityTotals(rows, ctx.income);
-    showAllocationDetail(priorityTotals, transactions, month, ctx.income);
-  });
+  if (onSave) {
+    window.monefyiCurrentSaveHandler = () => onSave();
+  }
 
-  container.querySelector('[data-action="evaluation"]')?.addEventListener('click', async () => {
+  container.querySelector('[data-action="show-evaluation"]')?.addEventListener('click', async () => {
     const { showEvaluation } = await import('./budget-evaluation.js');
     showEvaluation({ month, rows, transactions });
   });
-
-  container.querySelector('[data-action="save-budget"]')?.addEventListener('click', () => onSave?.());
 
   container.querySelector('[data-action="manage-income"]')?.addEventListener('click', async () => {
     const { showIncomeManagerModal } = await import('./income-manager.js');
     showIncomeManagerModal(() => onRefresh?.());
   });
 
-  container.querySelector('[data-action="ask-ai"]')?.addEventListener('click', () => {
-    if (typeof window.openAdvisorAuto === 'function') window.openAdvisorAuto({ context: 'budget' });
-  });
-
-  container.querySelector('#budget-filter')?.addEventListener('change', (e) => {
-    const filter = e.target.value;
-    localStorage.setItem(FILTER_KEY, filter);
-    const section = container.querySelector('#budget-list-inner');
-    if (section) renderBudgetListSection(section, rows, transactions, month, filter);
+  container.querySelector('#budget-sort')?.addEventListener('change', (e) => {
+    const sort = e.target.value;
+    localStorage.setItem(SORT_KEY, sort);
+    const section = container.querySelector('#budget-list-content');
+    if (section) renderBudgetListSection(section, rows, transactions, month, sort);
     wireRowClicks(container, ctx);
   });
 
-  container.querySelectorAll('[data-action="add-budget"], [data-action="add-in-priority"]').forEach((btn) => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const priority = btn.dataset.priority || 'penting';
-      const { showBudgetFormModal } = await import('./budget-form-modal.js');
-      showBudgetFormModal({ priority, month }, { onSaved: () => onRefresh?.(), showSummary: false });
-    });
+  container.querySelector('[data-action="add-budget"]')?.addEventListener('click', async () => {
+    const { showBudgetFormModal } = await import('./budget-form-modal.js');
+    showBudgetFormModal({ priority: 'penting', month }, { onSaved: () => onRefresh?.(), showSummary: false });
+  });
+
+  container.querySelector('[data-action="generate-budget"]')?.addEventListener('click', async () => {
+    const { showBudgetGeneratorModal } = await import('./budget-generator-modal.js');
+    showBudgetGeneratorModal(() => onRefresh?.());
   });
 
   wireRowClicks(container, ctx);
@@ -422,7 +333,9 @@ export async function renderBudgetPage(container, ctx) {
     onSave,
   } = ctx;
 
-  const rows = computeHistoricalBaselines(rawRows || [], transactions || [], month);
+  let rows = computeHistoricalBaselines(rawRows || [], transactions || [], month);
+  rows = filterBudgets(rows);
+
   const { getTotalIncome, migrateLegacyIncome, getIncomeSources } = await import('../services/income-source.js');
   await migrateLegacyIncome(month, Number(ctxIncome || 0));
   const sources = await getIncomeSources(month);
@@ -433,13 +346,17 @@ export async function renderBudgetPage(container, ctx) {
     window.STATE.budgetDraft.income = income;
   }
 
-  const priorityTotals = calculatePriorityTotals(rows, income);
-  const totalBudget = Object.values(priorityTotals).reduce((sum, p) => sum + p.amount, 0);
-  const totalSpent = rows.reduce((s, r) => s + calculateProgress(r, transactions, month).spent, 0);
-  const usedPct = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
-  const currentFilter = localStorage.getItem(FILTER_KEY) || 'urgent';
+  const filter = getFilter();
+  const currentSort = localStorage.getItem(SORT_KEY) || 'urgent';
   const sourcesLen = sources.length;
 
+  const overBudgetCount = rows.filter((b) => calculateProgress(b, transactions, month).status === 'over').length;
+  const criticalCount = rows.filter((b) => {
+    const s = calculateProgress(b, transactions, month).status;
+    return s === 'critical' || s === 'warning';
+  }).length;
+
+  container.className = 'budget-page-container';
   container.innerHTML = `
     <div class="budget-page">
       <header class="budget-page-header">
@@ -447,77 +364,96 @@ export async function renderBudgetPage(container, ctx) {
           <p class="budget-page-kicker">Budgeting</p>
           <h1 class="budget-page-title">Bulan budget: ${formatMonthLabel(month)}</h1>
         </div>
-        <button type="button" class="budget-page-add tap" data-action="add-budget" aria-label="Tambah budget">+</button>
+        <button type="button" class="budget-page-add tap" data-action="add-budget" aria-label="Tambah budget">${Icon('plus', { size: 20 })}</button>
       </header>
 
       <div id="budget-summary-hero"></div>
 
-      <button type="button" class="budget-eval-link tap" data-action="evaluation">
-        <span>📊 Evaluasi Bulan</span>
-        <span class="budget-eval-link__cta">Lihat detail ›</span>
+      <button type="button" class="budget-warning-entry ${overBudgetCount === 0 && criticalCount === 0 ? 'positive' : ''}" data-action="show-evaluation">
+        <div class="warning-icon-wrap ${overBudgetCount === 0 && criticalCount === 0 ? 'positive' : ''}">
+          ${overBudgetCount > 0 || criticalCount > 0 ? Icon('alertTriangle', { size: 20 }) : Icon('check', { size: 20 })}
+        </div>
+        <div class="warning-content">
+          <div class="warning-title">
+            ${overBudgetCount > 0 ? `${overBudgetCount} kategori Over Budget` : criticalCount > 0 ? `${criticalCount} perlu perhatian` : 'Budget On-Track'}
+            ${overBudgetCount > 0 && criticalCount > 0 ? ` · ${criticalCount} perlu perhatian` : ''}
+          </div>
+          <div class="warning-hint">Lihat evaluasi bulanan lengkap</div>
+        </div>
+        <div class="warning-arrow">${Icon('chevronRight', { size: 18 })}</div>
       </button>
-
-      <section class="budget-allocation-card">
-        <div class="budget-allocation-card__head">
-          <h2>Alokasi Prioritas</h2>
-          <span class="budget-allocation-card__remain ${income - totalBudget < 0 ? 'over' : ''}">
-            ${income - totalBudget >= 0
-              ? `Sisa alokasi Rp ${formatIDR(income - totalBudget)}`
-              : `Over Rp ${formatIDR(-(income - totalBudget))}`}
-          </span>
-        </div>
-        ${renderPriorityStackBar(priorityTotals, transactions, month, totalBudget)}
-        <div class="budget-allocation-card__foot">
-          <span>Total budget: Rp ${formatIDR(totalBudget)}</span>
-          <span>Terpakai: Rp ${formatIDR(totalSpent)} (${usedPct}%)</span>
-        </div>
-      </section>
 
       <section class="income-sources-card tap" data-action="manage-income" role="button" tabindex="0">
         <div class="isc-header">
           <div class="isc-title">
-            <span class="isc-icon">💰</span>
+            ${Icon('wallet', { size: 16 })}
             <span>Income Bulan Ini</span>
           </div>
-          <span class="isc-edit">Kelola →</span>
+          <span class="isc-edit">Kelola ${Icon('chevronRight', { size: 12 })}</span>
         </div>
         <div class="isc-amount">Rp ${formatIDR(income)}</div>
         <div class="isc-hint">${sourcesLen === 0 ? 'Belum ada sumber income — tap untuk kelola' : `${sourcesLen} sumber · tap untuk kelola`}</div>
       </section>
 
-      <section class="budget-filter-bar">
-        <label class="filter-label" for="budget-filter">Urutkan:</label>
-        <select class="filter-select" id="budget-filter">
-          <option value="urgent" ${currentFilter === 'urgent' ? 'selected' : ''}>🔥 Urgent</option>
-          <option value="priority" ${currentFilter === 'priority' ? 'selected' : ''}>🎯 Prioritas</option>
-          <option value="progress" ${currentFilter === 'progress' ? 'selected' : ''}>📊 Progress</option>
-          <option value="amount" ${currentFilter === 'amount' ? 'selected' : ''}>💵 Nominal</option>
-          <option value="name" ${currentFilter === 'name' ? 'selected' : ''}>🔤 Nama</option>
-        </select>
-      </section>
-
-      <section class="budget-list-section">
-        <h2 class="budget-list-section__title">Daftar Budget (${rows.length})</h2>
-        <div id="budget-list-inner"></div>
-      </section>
-
-      <div class="budget-page-footer">
-        <button type="button" class="btn-primary-budget tap" data-action="save-budget">💾 Simpan Budget</button>
-        <div class="budget-actions-row">
-          <button type="button" class="btn-secondary-budget tap" data-action="ask-ai">🧠 Tanya Monevisor</button>
+      <section class="budget-list-card">
+        <div class="blc-header">
+          <div class="blc-header-top">
+            <h3 class="blc-title">
+              ${Icon('target', { size: 16 })}
+              Daftar Budget
+              <span class="blc-count">(${rows.length})</span>
+            </h3>
+            <select class="blc-sort" id="budget-sort">
+              <option value="urgent" ${currentSort === 'urgent' ? 'selected' : ''}>Urgent</option>
+              <option value="priority" ${currentSort === 'priority' ? 'selected' : ''}>Prioritas</option>
+              <option value="progress" ${currentSort === 'progress' ? 'selected' : ''}>Progress</option>
+              <option value="amount" ${currentSort === 'amount' ? 'selected' : ''}>Nominal</option>
+              <option value="name" ${currentSort === 'name' ? 'selected' : ''}>Nama</option>
+            </select>
+          </div>
+          ${filter.priority !== 'all' ? `
+            <div class="blc-filter-active">
+              ${Icon('filter', { size: 12 })}
+              <span>Filter: Prioritas ${PRIORITY_LEVELS[filter.priority.toUpperCase()]?.label || filter.priority}</span>
+            </div>
+          ` : ''}
         </div>
-      </div>
+        <div class="blc-content" id="budget-list-content"></div>
+        <div class="blc-footer">
+          <button type="button" class="btn-add-budget-full tap" data-action="add-budget">
+            ${Icon('plus', { size: 16 })}
+            <span>Tambah Budget</span>
+          </button>
+          <button type="button" class="btn-generate-budget tap" data-action="generate-budget">
+            ${Icon('wand', { size: 16 })}
+            <span>Generate Budget Otomatis</span>
+          </button>
+        </div>
+      </section>
     </div>
   `;
 
   const heroEl = container.querySelector('#budget-summary-hero');
   const { renderBudgetSummaryHero } = await import('./budget-summary-hero.js');
-  await renderBudgetSummaryHero(heroEl, { rows, transactions, month, income });
+  await renderBudgetSummaryHero(heroEl, {
+    rows,
+    transactions,
+    month,
+    income,
+    onEvaluation: () => container.querySelector('[data-action="show-evaluation"]')?.click(),
+  });
 
-  const listSection = container.querySelector('#budget-list-inner');
-  renderBudgetListSection(listSection, rows, transactions, month, currentFilter);
+  const listSection = container.querySelector('#budget-list-content');
+  renderBudgetListSection(listSection, rows, transactions, month, currentSort);
 
-  wireHandlers(container, { ...ctx, rows, income });
+  wireHandlers(container, { ...ctx, rows, income, onSave });
+
+  if (!container.dataset.filterWired) {
+    container.dataset.filterWired = '1';
+    onFilterChange(() => {
+      if (window.STATE?.ui?.budgetPageOpen) onRefresh?.();
+    });
+  }
 }
 
 /** @deprecated */

@@ -4,6 +4,7 @@
  */
 
 import { calculateProgress, calculatePriorityTotals } from '../services/budget-model.js';
+import { Icon } from './icons.js';
 
 /**
  * @param {HTMLElement} container
@@ -12,7 +13,7 @@ import { calculateProgress, calculatePriorityTotals } from '../services/budget-m
 export async function renderBudgetSummaryHero(container, ctx) {
   if (!container) return;
 
-  const { rows = [], transactions = [], month, income = 0 } = ctx;
+  const { rows = [], transactions = [], month, income = 0, onEvaluation } = ctx;
   const totalBudget = rows.reduce((sum, b) => sum + Number(b.amount || 0), 0);
   const totalSpent = rows.reduce((sum, b) => sum + calculateProgress(b, transactions, month).spent, 0);
   const remaining = totalBudget - totalSpent;
@@ -33,10 +34,11 @@ export async function renderBudgetSummaryHero(container, ctx) {
   container.innerHTML = `
     <div class="budget-summary-hero">
       <div class="bsh-header">
-        <div class="bsh-status ${status.className}">
-          <span class="bsh-status-icon">${status.icon}</span>
+        <button type="button" class="bsh-status bsh-status-btn ${status.className}" data-action="hero-evaluation" title="Lihat evaluasi bulanan">
+          <span class="bsh-status-icon">${status.iconHtml}</span>
           <span class="bsh-status-label">${status.label}</span>
-        </div>
+          <span class="bsh-status-chev">${Icon('chevronRight', { size: 14 })}</span>
+        </button>
         <div class="bsh-period">${formatPeriod(month)}</div>
       </div>
       <div class="bsh-main">
@@ -60,21 +62,21 @@ export async function renderBudgetSummaryHero(container, ctx) {
         </div>
         <div class="bsh-stats-grid">
           <div class="bsh-stat">
-            <div class="bsh-stat-label">💰 Sisa</div>
+            <div class="bsh-stat-label">${Icon('wallet', { size: 12 })} Sisa</div>
             <div class="bsh-stat-value ${remaining < 0 ? 'negative' : ''}">
               ${remaining >= 0 ? '' : '-'}Rp ${fmt(Math.abs(remaining))}
             </div>
           </div>
           <div class="bsh-stat">
-            <div class="bsh-stat-label">📅 Sisa Hari</div>
+            <div class="bsh-stat-label">${Icon('calendar', { size: 12 })} Sisa Hari</div>
             <div class="bsh-stat-value">${daysLeft} hari</div>
           </div>
           <div class="bsh-stat">
-            <div class="bsh-stat-label">💡 Per Hari</div>
+            <div class="bsh-stat-label">${Icon('lightBulb', { size: 12 })} Per Hari</div>
             <div class="bsh-stat-value">Rp ${fmt(Math.max(0, dailyRemaining))}</div>
           </div>
           <div class="bsh-stat">
-            <div class="bsh-stat-label">📊 Rata-rata</div>
+            <div class="bsh-stat-label">${Icon('chartBar', { size: 12 })} Rata-rata</div>
             <div class="bsh-stat-value">Rp ${fmt(dailyAvg)}</div>
           </div>
         </div>
@@ -82,12 +84,16 @@ export async function renderBudgetSummaryHero(container, ctx) {
       <div class="bsh-priority-mini">${renderPriorityMini(priorityTotals, totalBudget)}</div>
       ${status.recommendation ? `
         <div class="bsh-recommendation">
-          <span class="bsh-rec-icon">💡</span>
+          <span class="bsh-rec-icon">${Icon('lightBulb', { size: 14 })}</span>
           <span class="bsh-rec-text">${status.recommendation}</span>
         </div>
       ` : ''}
     </div>
   `;
+
+  container.querySelector('[data-action="hero-evaluation"]')?.addEventListener('click', () => {
+    onEvaluation?.();
+  });
 }
 
 /**
@@ -100,7 +106,7 @@ function getHealthStatus(percentUsed, timeProgress) {
   if (percentUsed > 100) {
     return {
       className: 'over',
-      icon: '🚨',
+      iconHtml: Icon('alertTriangle', { size: 16 }),
       label: 'Over Budget',
       recommendation: 'Pengeluaran melebihi budget. Review kategori yang boros.',
     };
@@ -108,7 +114,7 @@ function getHealthStatus(percentUsed, timeProgress) {
   if (diff > 20) {
     return {
       className: 'critical',
-      icon: '⚠️',
+      iconHtml: Icon('alertTriangle', { size: 16 }),
       label: 'Terlalu Cepat',
       recommendation: `Kamu sudah pakai ${percentUsed}% budget tapi baru ${timeProgress}% bulan berlalu. Rem sedikit!`,
     };
@@ -116,15 +122,15 @@ function getHealthStatus(percentUsed, timeProgress) {
   if (diff > 10) {
     return {
       className: 'warning',
-      icon: '⚡',
+      iconHtml: Icon('exclamation', { size: 16 }),
       label: 'Perhatian',
       recommendation: 'Pengeluaran lebih cepat dari waktu. Perhatikan sisa budget.',
     };
   }
   if (diff < -10) {
-    return { className: 'excellent', icon: '🎯', label: 'Sangat Hemat', recommendation: null };
+    return { className: 'excellent', iconHtml: Icon('target', { size: 16 }), label: 'Sangat Hemat', recommendation: null };
   }
-  return { className: 'healthy', icon: '✅', label: 'On Track', recommendation: null };
+  return { className: 'healthy', iconHtml: Icon('check', { size: 16 }), label: 'On Track', recommendation: null };
 }
 
 /**
