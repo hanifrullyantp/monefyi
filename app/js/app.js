@@ -69,6 +69,39 @@
       };
     }
 
+    const ASSET_REPAIR_KEY = 'monefyi_asset_repair_v4';
+
+    /**
+     * Detect stale cached index.html (wrong hashed CSS → 404) and self-heal.
+     * @returns {Promise<boolean>} true if page is reloading for repair
+     */
+    async function verifyBundledAssets() {
+      const cssLink = document.querySelector('link[href*="/app/assets/index-"]');
+      const href = cssLink?.getAttribute('href') || '';
+      if (!href) return false;
+
+      try {
+        const res = await fetch(href, { method: 'HEAD', cache: 'no-store' });
+        if (res.ok) return false;
+        if (sessionStorage.getItem(ASSET_REPAIR_KEY)) return false;
+
+        sessionStorage.setItem(ASSET_REPAIR_KEY, '1');
+
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map((r) => r.unregister()));
+        }
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.filter((k) => k.startsWith('monefyi-')).map((k) => caches.delete(k)));
+        }
+        location.reload();
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
     // Checkout links (fallback jika app_config tidak set)
     const MONTHLY_CHECKOUT_URL = String(CFG.checkoutMonthly || 'https://lynk.id/asfin-ai/9zexz9z5wom1/checkout');
     const LIFETIME_CHECKOUT_URL = String(CFG.checkoutLifetime || 'https://lynk.id/asfin-ai/j3q0x5ke3g49/checkout');
@@ -9841,6 +9874,8 @@ function toggleNav(view, triggerEl) {
     (async function init(){
       const bootStarted = Date.now();
       const MIN_LOADER_MS = 450;
+
+      if (await verifyBundledAssets()) return;
 
       function hideLoadingOverlay() {
         const loader = $('#loadingOverlay');

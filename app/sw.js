@@ -1,10 +1,10 @@
 // Offline-capable service worker — network-first so installed PWA stays online.
-const CACHE_VERSION = 'v3-network-first-1';
+const CACHE_VERSION = 'v4-fresh-shell-1';
 const STATIC_CACHE = `monefyi-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `monefyi-runtime-${CACHE_VERSION}`;
+const INDEX_URL = new URL('./index.html', self.location).href;
 
 const shellUrls = [
-  new URL('./index.html', self.location).href,
   new URL('./manifest.webmanifest', self.location).href,
   new URL('./css/app.css', self.location).href,
   new URL('./css/home-page.css', self.location).href,
@@ -39,16 +39,22 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(
-          keys
-            .filter((k) => k.startsWith('monefyi-') && !k.includes(CACHE_VERSION))
-            .map((k) => caches.delete(k))
-        )
-      )
-      .then(() => self.clients.claim())
+    caches.keys().then(async (keys) => {
+      await Promise.all(
+        keys
+          .filter((k) => k.startsWith('monefyi-') && !k.includes(CACHE_VERSION))
+          .map((k) => caches.delete(k))
+      );
+      await Promise.all(
+        keys
+          .filter((k) => k.startsWith('monefyi-'))
+          .map(async (k) => {
+            const cache = await caches.open(k);
+            await cache.delete(INDEX_URL);
+          })
+      );
+      await self.clients.claim();
+    })
   );
 });
 
@@ -65,7 +71,7 @@ self.addEventListener('fetch', (event) => {
     event.request.mode === 'navigate' || event.request.destination === 'document';
 
   if (isNavigation) {
-    event.respondWith(networkFirst(event.request, STATIC_CACHE, { fallbackToIndex: true }));
+    event.respondWith(handleNavigation(event.request));
     return;
   }
 
@@ -80,15 +86,42 @@ self.addEventListener('fetch', (event) => {
 });
 
 /**
+ * Navigation must always use fresh index.html (hashed asset URLs change each deploy).
+ * @param {Request} request
+ */
+async function handleNavigation(request) {
+  try {
+    const response = await fetch(request, { cache: 'no-store' });
+    if (response.ok) return response;
+  } catch {
+    /* try index below */
+  }
+
+  try {
+    const response = await fetch(INDEX_URL, { cache: 'no-store' });
+    if (response.ok) return response;
+  } catch {
+    /* offline */
+  }
+
+  return new Response('Offline', {
+    status: 503,
+    statusText: 'Offline',
+    headers: { 'Content-Type': 'text/plain' },
+  });
+}
+
+/**
  * Prefer network; fall back to cache when offline.
  * @param {Request} request
  * @param {string} cacheName
- * @param {{ fallbackToIndex?: boolean }} [opts]
  */
-async function networkFirst(request, cacheName, opts = {}) {
+async function networkFirst(request, cacheName) {
+  const skipCache = request.url === INDEX_URL;
+
   try {
     const response = await fetch(request);
-    if (response.ok && request.url.startsWith(self.location.origin)) {
+    if (response.ok && request.url.startsWith(self.location.origin) && !skipCache) {
       const cache = await caches.open(cacheName);
       cache.put(request, response.clone());
     }
@@ -96,11 +129,6 @@ async function networkFirst(request, cacheName, opts = {}) {
   } catch {
     const cached = await caches.match(request);
     if (cached) return cached;
-
-    if (opts.fallbackToIndex) {
-      const index = await caches.match(new URL('./index.html', self.location).href);
-      if (index) return index;
-    }
 
     return new Response('Offline', {
       status: 503,
