@@ -1,5 +1,5 @@
 // Offline-capable service worker — v7 budget killer feature.
-const CACHE_VERSION = 'v7-budget-killer-1';
+const CACHE_VERSION = 'v8-budget-refine-1';
 const STATIC_CACHE = `monefyi-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `monefyi-runtime-${CACHE_VERSION}`;
 const IMAGES_CACHE = `monefyi-images-${CACHE_VERSION}`;
@@ -41,6 +41,11 @@ const shellPaths = [
   './js/services/budget-model.js',
   './js/services/budget-linker.js',
   './js/services/budget-recommender.js',
+  './js/services/notification-center.js',
+  './js/services/income-source.js',
+  './js/components/notification-bell.js',
+  './js/components/budget-summary-hero.js',
+  './js/components/income-manager.js',
   './js/services/install-prompt.js',
   './js/components/quick-preview.js',
   './js/components/pending-badge.js',

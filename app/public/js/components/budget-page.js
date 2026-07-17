@@ -1,5 +1,5 @@
 /**
- * Full-page budget UI — compact priority bar, list rows, top recommendations.
+ * Full-page budget UI — summary hero, filter/sort, compact list rows.
  * @module components/budget-page
  */
 
@@ -10,7 +10,7 @@ import {
   computeHistoricalBaselines,
 } from '../services/budget-model.js';
 
-const DISMISSED_REC_KEY = 'monefyi_budget_rec_dismissed';
+const FILTER_KEY = 'monefyi_budget_filter';
 
 /**
  * @param {unknown} str
@@ -54,7 +54,6 @@ function formatMonthLabel(month) {
  * @param {object[]} budgets
  * @param {object[]} transactions
  * @param {string} month
- * @returns {{ spent: number, total: number, pct: number }}
  */
 function groupTotals(budgets, transactions, month) {
   let total = 0;
@@ -67,18 +66,196 @@ function groupTotals(budgets, transactions, month) {
 }
 
 /**
+ * @param {string|null} str
+ */
+function parseTargetDay(str) {
+  if (!str) return null;
+  const s = String(str).trim();
+  if (s.includes('-')) return parseInt(s.split('-')[0], 10);
+  const day = parseInt(s, 10);
+  return Number.isNaN(day) ? null : day;
+}
+
+/**
+ * @param {object} budget
+ */
+function isBudgetFullyDone(budget) {
+  if (!budget.items?.length) return false;
+  return budget.items.every((i) => i.status === 'done' || i.status === 'skipped');
+}
+
+/**
+ * @param {object[]} budgets
+ * @param {object[]} transactions
+ * @param {string} month
+ * @param {string} filter
+ */
+function sortBudgets(budgets, transactions, month, filter) {
+  const today = new Date().getDate();
+
+  const enriched = budgets.map((b) => {
+    const progress = calculateProgress(b, transactions, month);
+    let urgencyScore = 0;
+
+    for (const item of b.items || []) {
+      if (item.status === 'done' || item.status === 'skipped') continue;
+      const dayStr = item.target_date_day || item.target_date;
+      const targetDay = parseTargetDay(dayStr);
+      if (targetDay) {
+        const dayDiff = Math.abs(targetDay - today);
+        urgencyScore = Math.max(urgencyScore, 100 - dayDiff * 5);
+      }
+    }
+
+    if (progress.status === 'over') urgencyScore += 100;
+    else if (progress.status === 'critical') urgencyScore += 50;
+    else if (progress.status === 'warning') urgencyScore += 20;
+
+    return {
+      ...b,
+      _progress: progress,
+      _urgency: urgencyScore,
+      _allDone: isBudgetFullyDone(b),
+    };
+  });
+
+  const priorityOrder = { harus: 0, penting: 1, mau: 2, simpan: 3 };
+  const activeFirst = (a, b) => (a._allDone ? 1 : 0) - (b._allDone ? 1 : 0);
+
+  let sorted;
+  switch (filter) {
+    case 'priority':
+      sorted = enriched.sort((a, b) =>
+        activeFirst(a, b)
+        || (priorityOrder[a.priority || 'penting'] - priorityOrder[b.priority || 'penting'])
+        || b._urgency - a._urgency);
+      break;
+    case 'progress':
+      sorted = enriched.sort((a, b) => activeFirst(a, b) || b._progress.percentUsed - a._progress.percentUsed);
+      break;
+    case 'amount':
+      sorted = enriched.sort((a, b) => activeFirst(a, b) || (b.amount || 0) - (a.amount || 0));
+      break;
+    case 'name':
+      sorted = enriched.sort((a, b) => activeFirst(a, b) || (a.name || '').localeCompare(b.name || '', 'id'));
+      break;
+    case 'urgent':
+    default:
+      sorted = enriched.sort((a, b) => activeFirst(a, b) || b._urgency - a._urgency);
+      break;
+  }
+
+  return sorted;
+}
+
+/**
+ * @param {object} budget
+ * @param {object[]} transactions
+ * @param {string} month
+ */
+function renderBudgetListRow(budget, transactions, month) {
+  const progress = budget._progress || calculateProgress(budget, transactions, month);
+  const pl = PRIORITY_LEVELS[(budget.priority || 'penting').toUpperCase()] || PRIORITY_LEVELS.PENTING;
+  const statusClass = progress.status === 'over' ? 'over' : progress.status === 'critical' ? 'critical' : progress.status === 'warning' ? 'warning' : '';
+  const remaining = progress.remaining;
+  const remainingLabel = remaining >= 0
+    ? `Sisa: ${formatCompact(remaining)}`
+    : `Over ${formatCompact(-remaining)}`;
+  const allDone = budget._allDone || isBudgetFullyDone(budget);
+
+  return `
+    <button type="button" class="budget-list-row ${statusClass} ${allDone ? 'all-done' : ''}" data-budget-id="${budget.id}">
+      <div class="budget-list-row__strip" style="background:${pl.color}"></div>
+      <div class="budget-list-row__icon" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18"/></svg>
+      </div>
+      <div class="budget-list-row__main">
+        <div class="budget-list-row__title">
+          ${escapeHtml(budget.name)}
+          ${allDone ? '<span class="done-badge">✓ Selesai</span>' : ''}
+        </div>
+        <div class="budget-list-row__sub ${remaining < 0 ? 'over' : ''}">${remainingLabel}</div>
+        <div class="budget-list-row__track">
+          <div class="budget-list-row__fill ${statusClass}" style="width:${Math.min(progress.percentUsed, 100)}%"></div>
+        </div>
+      </div>
+      <div class="budget-list-row__right">
+        <div class="budget-list-row__pct">${progress.percentUsed}%</div>
+        <div class="budget-list-row__budget">${formatCompact(budget.amount)}</div>
+        <svg class="budget-list-row__chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+    </button>
+  `;
+}
+
+/**
+ * @param {object[]} sorted
+ * @param {object[]} transactions
+ * @param {string} month
+ */
+function renderGroupedByPriority(sorted, transactions, month) {
+  const groups = {};
+  for (const pl of Object.values(PRIORITY_LEVELS)) groups[pl.key] = [];
+
+  for (const b of sorted) {
+    const key = (b.priority || 'penting').toLowerCase();
+    if (groups[key]) groups[key].push(b);
+  }
+
+  return Object.values(PRIORITY_LEVELS).map((pl) => {
+    const list = groups[pl.key] || [];
+    if (!list.length) return '';
+    const totals = groupTotals(list, transactions, month);
+    return `
+      <section class="budget-list-group" data-priority="${pl.key}">
+        <div class="budget-list-group__head">
+          <span class="budget-list-group__dot" style="background:${pl.color}"></span>
+          <span class="budget-list-group__label">${pl.label.toUpperCase()}</span>
+          <span class="budget-list-group__meta">${list.length} item</span>
+          <span class="budget-list-group__summary">${formatCompact(totals.spent)} / ${formatCompact(totals.total)} (${totals.pct}%)</span>
+        </div>
+        ${list.map((b) => renderBudgetListRow(b, transactions, month)).join('')}
+      </section>
+    `;
+  }).join('');
+}
+
+/**
+ * @param {HTMLElement} section
+ * @param {object[]} rows
+ * @param {object[]} transactions
+ * @param {string} month
+ * @param {string} filter
+ */
+function renderBudgetListSection(section, rows, transactions, month, filter) {
+  const sorted = sortBudgets(rows, transactions, month, filter);
+  if (!sorted.length) {
+    section.innerHTML = '<div class="budget-list-empty">Belum ada budget. Tap + untuk tambah.</div>';
+    return;
+  }
+
+  if (filter === 'priority') {
+    section.innerHTML = renderGroupedByPriority(sorted, transactions, month);
+  } else {
+    section.innerHTML = `
+      <div class="budget-list-flat">
+        ${sorted.map((b) => renderBudgetListRow(b, transactions, month)).join('')}
+      </div>
+    `;
+  }
+}
+
+/**
  * @param {Record<string, object>} priorityTotals
  * @param {object[]} transactions
  * @param {string} month
  * @param {number} totalBudget
- * @returns {string}
  */
 function renderPriorityStackBar(priorityTotals, transactions, month, totalBudget) {
   const segments = Object.values(PRIORITY_LEVELS).map((pl) => {
     const data = priorityTotals[pl.key] || { amount: 0, budgets: [] };
     const widthPct = totalBudget > 0 ? (data.amount / totalBudget) * 100 : 0;
-    const groupSpent = groupTotals(data.budgets || [], transactions, month).spent;
-    return { pl, data, widthPct, groupSpent };
+    return { pl, data, widthPct };
   }).filter((s) => s.widthPct > 0.5);
 
   if (!segments.length) {
@@ -106,119 +283,6 @@ function renderPriorityStackBar(priorityTotals, transactions, month, totalBudget
       <div class="priority-stack-legend">${legend}</div>
     </button>
   `;
-}
-
-/**
- * @param {object} budget
- * @param {object[]} transactions
- * @param {string} month
- * @returns {string}
- */
-function renderBudgetListRow(budget, transactions, month) {
-  const progress = calculateProgress(budget, transactions, month);
-  const statusClass = progress.status === 'over' ? 'over' : progress.status === 'critical' ? 'critical' : progress.status === 'warning' ? 'warning' : '';
-  const remaining = progress.remaining;
-  const remainingLabel = remaining >= 0
-    ? `Sisa: ${formatCompact(remaining)}`
-    : `Over ${formatCompact(-remaining)}`;
-
-  return `
-    <button type="button" class="budget-list-row ${statusClass}" data-budget-id="${budget.id}">
-      <div class="budget-list-row__icon" aria-hidden="true">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18"/></svg>
-      </div>
-      <div class="budget-list-row__main">
-        <div class="budget-list-row__title">${escapeHtml(budget.name)}</div>
-        <div class="budget-list-row__sub ${remaining < 0 ? 'over' : ''}">${remainingLabel}</div>
-        <div class="budget-list-row__track">
-          <div class="budget-list-row__fill ${statusClass}" style="width:${Math.min(progress.percentUsed, 100)}%"></div>
-        </div>
-      </div>
-      <div class="budget-list-row__right">
-        <div class="budget-list-row__budget">${formatCompact(budget.amount)}</div>
-        <svg class="budget-list-row__chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
-      </div>
-    </button>
-  `;
-}
-
-/**
- * @param {Record<string, object>} priorityTotals
- * @param {object[]} transactions
- * @param {string} month
- * @returns {string}
- */
-function renderBudgetList(priorityTotals, transactions, month) {
-  return Object.values(PRIORITY_LEVELS).map((pl) => {
-    const data = priorityTotals[pl.key] || { budgets: [], count: 0 };
-    const totals = groupTotals(data.budgets || [], transactions, month);
-
-    return `
-      <section class="budget-list-group" data-priority="${pl.key}">
-        <div class="budget-list-group__head">
-          <span class="budget-list-group__dot" style="background:${pl.color}"></span>
-          <span class="budget-list-group__label">${pl.label.toUpperCase()}</span>
-          <span class="budget-list-group__meta">${data.count} item</span>
-          <span class="budget-list-group__summary">${formatCompact(totals.spent)} / ${formatCompact(totals.total)} (${totals.pct}%)</span>
-        </div>
-        ${data.budgets.length
-          ? data.budgets.map((b) => renderBudgetListRow(b, transactions, month)).join('')
-          : `<div class="budget-list-empty">Belum ada budget ${pl.label.toLowerCase()}</div>`}
-        <button type="button" class="budget-list-add tap" data-action="add-in-priority" data-priority="${pl.key}">
-          + Tambah ${pl.label}
-        </button>
-      </section>
-    `;
-  }).join('');
-}
-
-/**
- * @param {HTMLElement} bannerEl
- * @param {object} ctx
- */
-async function renderRecBanner(bannerEl, ctx) {
-  if (!bannerEl) return;
-  const dismissed = sessionStorage.getItem(DISMISSED_REC_KEY);
-  if (dismissed) {
-    bannerEl.classList.add('hidden');
-    return;
-  }
-
-  try {
-    const { generateRecommendations } = await import('../services/budget-recommender.js');
-    const recs = await generateRecommendations({
-      month: ctx.month,
-      budgets: ctx.rows,
-      transactions: ctx.transactions,
-      income: ctx.income,
-    });
-
-    if (!recs.length) {
-      bannerEl.classList.add('hidden');
-      return;
-    }
-
-    const rec = recs[0];
-    bannerEl.classList.remove('hidden');
-    bannerEl.innerHTML = `
-      <div class="budget-rec-banner severity-${rec.severity}">
-        <div class="budget-rec-banner__icon">${rec.icon}</div>
-        <div class="budget-rec-banner__body">
-          <div class="budget-rec-banner__title">Rekomendasi untukmu</div>
-          <div class="budget-rec-banner__msg">${escapeHtml(rec.message)}</div>
-          ${rec.actions?.[0] ? `
-            <button type="button" class="budget-rec-banner__action" data-action="${rec.actions[0].action}"
-              data-budget-id="${rec.actions[0].budgetId || ''}" data-priority="${rec.actions[0].priority || ''}">
-              ${escapeHtml(rec.actions[0].label)}
-            </button>
-          ` : ''}
-        </div>
-        <button type="button" class="budget-rec-banner__close" data-action="dismiss-rec" aria-label="Tutup">✕</button>
-      </div>
-    `;
-  } catch {
-    bannerEl.classList.add('hidden');
-  }
 }
 
 /**
@@ -275,6 +339,7 @@ function showAllocationDetail(priorityTotals, transactions, month, income) {
  */
 function wireHandlers(container, ctx) {
   const { rows, transactions, month, onRefresh, onSave } = ctx;
+  const currentFilter = localStorage.getItem(FILTER_KEY) || 'urgent';
 
   container.querySelector('[data-action="allocation-detail"]')?.addEventListener('click', () => {
     const priorityTotals = calculatePriorityTotals(rows, ctx.income);
@@ -288,10 +353,21 @@ function wireHandlers(container, ctx) {
 
   container.querySelector('[data-action="save-budget"]')?.addEventListener('click', () => onSave?.());
 
-  container.querySelector('#budgetPageIncome')?.addEventListener('input', (e) => {
-    if (window.STATE?.budgetDraft) {
-      window.STATE.budgetDraft.income = Number(String(e.target.value).replace(/\D/g, '')) || 0;
-    }
+  container.querySelector('[data-action="manage-income"]')?.addEventListener('click', async () => {
+    const { showIncomeManagerModal } = await import('./income-manager.js');
+    showIncomeManagerModal(() => onRefresh?.());
+  });
+
+  container.querySelector('[data-action="ask-ai"]')?.addEventListener('click', () => {
+    if (typeof window.openAdvisorAuto === 'function') window.openAdvisorAuto({ context: 'budget' });
+  });
+
+  container.querySelector('#budget-filter')?.addEventListener('change', (e) => {
+    const filter = e.target.value;
+    localStorage.setItem(FILTER_KEY, filter);
+    const section = container.querySelector('#budget-list-inner');
+    if (section) renderBudgetListSection(section, rows, transactions, month, filter);
+    wireRowClicks(container, ctx);
   });
 
   container.querySelectorAll('[data-action="add-budget"], [data-action="add-in-priority"]').forEach((btn) => {
@@ -303,8 +379,19 @@ function wireHandlers(container, ctx) {
     });
   });
 
+  wireRowClicks(container, ctx);
+
+  import('../services/notification-center.js').then((m) => m.refreshNotifications()).catch(() => {});
+}
+
+/**
+ * @param {HTMLElement} container
+ * @param {object} ctx
+ */
+function wireRowClicks(container, ctx) {
+  const { rows, transactions, month, onRefresh } = ctx;
   container.querySelectorAll('.budget-list-row').forEach((row) => {
-    row.addEventListener('click', async () => {
+    row.onclick = async () => {
       const budget = rows.find((b) => b.id === row.dataset.budgetId);
       if (!budget) return;
       const { showBudgetFormModal } = await import('./budget-form-modal.js');
@@ -314,28 +401,7 @@ function wireHandlers(container, ctx) {
         transactions,
         month,
       });
-    });
-  });
-
-  container.querySelector('[data-action="dismiss-rec"]')?.addEventListener('click', () => {
-    sessionStorage.setItem(DISMISSED_REC_KEY, '1');
-    container.querySelector('#budgetRecBanner')?.classList.add('hidden');
-  });
-
-  container.querySelectorAll('.budget-rec-banner__action').forEach((btn) => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const action = btn.dataset.action;
-      const budgetId = btn.dataset.budgetId;
-      const budget = rows.find((b) => b.id === budgetId);
-      const priority = btn.dataset.priority || budget?.priority || 'simpan';
-      const { showBudgetFormModal } = await import('./budget-form-modal.js');
-      if (action === 'add_to_savings' || action === 'increase_savings') {
-        showBudgetFormModal({ priority: 'simpan', name: 'Tabungan', month }, { onSaved: () => onRefresh?.() });
-      } else {
-        showBudgetFormModal(budget || { priority }, { onSaved: () => onRefresh?.(), showSummary: true, transactions, month });
-      }
-    });
+    };
   });
 }
 
@@ -350,18 +416,29 @@ export async function renderBudgetPage(container, ctx) {
   const {
     month,
     rows: rawRows,
-    income,
+    income: ctxIncome,
     transactions,
     onRefresh,
     onSave,
   } = ctx;
 
   const rows = computeHistoricalBaselines(rawRows || [], transactions || [], month);
+  const { getTotalIncome, migrateLegacyIncome, getIncomeSources } = await import('../services/income-source.js');
+  await migrateLegacyIncome(month, Number(ctxIncome || 0));
+  const sources = await getIncomeSources(month);
+  const incomeFromSources = await getTotalIncome(month);
+  const income = incomeFromSources > 0 ? incomeFromSources : Number(ctxIncome || 0);
+
+  if (window.STATE?.budgetDraft) {
+    window.STATE.budgetDraft.income = income;
+  }
+
   const priorityTotals = calculatePriorityTotals(rows, income);
   const totalBudget = Object.values(priorityTotals).reduce((sum, p) => sum + p.amount, 0);
   const totalSpent = rows.reduce((s, r) => s + calculateProgress(r, transactions, month).spent, 0);
-  const unallocated = income - totalBudget;
   const usedPct = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
+  const currentFilter = localStorage.getItem(FILTER_KEY) || 'urgent';
+  const sourcesLen = sources.length;
 
   container.innerHTML = `
     <div class="budget-page">
@@ -373,7 +450,7 @@ export async function renderBudgetPage(container, ctx) {
         <button type="button" class="budget-page-add tap" data-action="add-budget" aria-label="Tambah budget">+</button>
       </header>
 
-      <div id="budgetRecBanner" class="budget-rec-banner-host hidden"></div>
+      <div id="budget-summary-hero"></div>
 
       <button type="button" class="budget-eval-link tap" data-action="evaluation">
         <span>📊 Evaluasi Bulan</span>
@@ -383,8 +460,10 @@ export async function renderBudgetPage(container, ctx) {
       <section class="budget-allocation-card">
         <div class="budget-allocation-card__head">
           <h2>Alokasi Prioritas</h2>
-          <span class="budget-allocation-card__remain ${unallocated < 0 ? 'over' : ''}">
-            ${unallocated >= 0 ? `Sisa budget Rp ${formatIDR(unallocated)}` : `Over Rp ${formatIDR(-unallocated)}`}
+          <span class="budget-allocation-card__remain ${income - totalBudget < 0 ? 'over' : ''}">
+            ${income - totalBudget >= 0
+              ? `Sisa alokasi Rp ${formatIDR(income - totalBudget)}`
+              : `Over Rp ${formatIDR(-(income - totalBudget))}`}
           </span>
         </div>
         ${renderPriorityStackBar(priorityTotals, transactions, month, totalBudget)}
@@ -394,28 +473,54 @@ export async function renderBudgetPage(container, ctx) {
         </div>
       </section>
 
-      <section class="budget-income-row">
-        <label for="budgetPageIncome">Income bulan ini</label>
-        <input id="budgetPageIncome" type="text" inputmode="numeric" class="budget-income-input"
-          value="${income ? formatIDR(income) : ''}" placeholder="Rp 0">
+      <section class="income-sources-card tap" data-action="manage-income" role="button" tabindex="0">
+        <div class="isc-header">
+          <div class="isc-title">
+            <span class="isc-icon">💰</span>
+            <span>Income Bulan Ini</span>
+          </div>
+          <span class="isc-edit">Kelola →</span>
+        </div>
+        <div class="isc-amount">Rp ${formatIDR(income)}</div>
+        <div class="isc-hint">${sourcesLen === 0 ? 'Belum ada sumber income — tap untuk kelola' : `${sourcesLen} sumber · tap untuk kelola`}</div>
+      </section>
+
+      <section class="budget-filter-bar">
+        <label class="filter-label" for="budget-filter">Urutkan:</label>
+        <select class="filter-select" id="budget-filter">
+          <option value="urgent" ${currentFilter === 'urgent' ? 'selected' : ''}>🔥 Urgent</option>
+          <option value="priority" ${currentFilter === 'priority' ? 'selected' : ''}>🎯 Prioritas</option>
+          <option value="progress" ${currentFilter === 'progress' ? 'selected' : ''}>📊 Progress</option>
+          <option value="amount" ${currentFilter === 'amount' ? 'selected' : ''}>💵 Nominal</option>
+          <option value="name" ${currentFilter === 'name' ? 'selected' : ''}>🔤 Nama</option>
+        </select>
       </section>
 
       <section class="budget-list-section">
-        <h2 class="budget-list-section__title">Daftar Budget</h2>
-        ${renderBudgetList(priorityTotals, transactions, month)}
+        <h2 class="budget-list-section__title">Daftar Budget (${rows.length})</h2>
+        <div id="budget-list-inner"></div>
       </section>
 
       <div class="budget-page-footer">
         <button type="button" class="btn-primary-budget tap" data-action="save-budget">💾 Simpan Budget</button>
+        <div class="budget-actions-row">
+          <button type="button" class="btn-secondary-budget tap" data-action="ask-ai">🧠 Tanya Monevisor</button>
+        </div>
       </div>
     </div>
   `;
 
-  await renderRecBanner(container.querySelector('#budgetRecBanner'), { ...ctx, rows });
-  wireHandlers(container, { ...ctx, rows });
+  const heroEl = container.querySelector('#budget-summary-hero');
+  const { renderBudgetSummaryHero } = await import('./budget-summary-hero.js');
+  await renderBudgetSummaryHero(heroEl, { rows, transactions, month, income });
+
+  const listSection = container.querySelector('#budget-list-inner');
+  renderBudgetListSection(listSection, rows, transactions, month, currentFilter);
+
+  wireHandlers(container, { ...ctx, rows, income });
 }
 
-/** @deprecated sheet sections — use renderBudgetPage */
+/** @deprecated */
 export async function renderBudgetEnhancedSections(container, ctx) {
   return renderBudgetPage(container, ctx);
 }

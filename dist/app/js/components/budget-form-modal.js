@@ -1,11 +1,10 @@
 /**
- * Enhanced budget form modal — priority, items, keywords, advanced options.
+ * Simplified budget form modal — compact priority, item list, auto status.
  * @module components/budget-form-modal
  */
 
 import {
   PRIORITY_LEVELS,
-  TARGET_TYPES,
   createBudgetRow,
   createBudgetItem,
   normalizeBudgetRow,
@@ -24,32 +23,48 @@ function escapeHtml(str) {
 
 /**
  * @param {object} item
- * @param {number} idx
- * @returns {string}
  */
-function renderItemRow(item, idx) {
+function renderItemRowSimplified(item) {
+  const isDone = item.status === 'done' || item.status === 'skipped';
+  const dayVal = item.target_date_day || '';
+
   return `
-    <div class="item-row" data-item-id="${item.id}">
-      <div class="item-fields">
-        <input type="text" class="item-name form-input" placeholder="Nama item" value="${escapeHtml(item.name)}">
-        <input type="number" class="item-qty form-input" placeholder="Qty" value="${item.qty || 1}" min="1">
-        <input type="number" class="item-price form-input" placeholder="Harga" value="${item.price || ''}" min="0">
+    <div class="item-row-simplified ${isDone ? 'item-done' : ''}" data-item-id="${item.id}">
+      <div class="item-row-main">
+        <label class="item-checkbox-wrap" title="Tandai selesai">
+          <input type="checkbox" class="item-checkbox" ${isDone ? 'checked' : ''}>
+          <span class="item-check-visual">${isDone ? '✓' : ''}</span>
+        </label>
+        <input type="text" class="item-name form-input" placeholder="Nama item" value="${escapeHtml(item.name || '')}">
       </div>
-      <div class="item-meta">
-        <input type="date" class="item-date form-input" value="${item.target_date || ''}" title="Target tanggal">
-        <select class="item-status form-input">
-          <option value="planned" ${item.status === 'planned' ? 'selected' : ''}>📋 Direncanakan</option>
-          <option value="pending" ${item.status === 'pending' ? 'selected' : ''}>⏳ Berjalan</option>
-          <option value="done" ${item.status === 'done' ? 'selected' : ''}>✅ Selesai</option>
-          <option value="skipped" ${item.status === 'skipped' ? 'selected' : ''}>⏭️ Dilewati</option>
-        </select>
+      <div class="item-row-details">
+        <div class="item-detail-field">
+          <label class="item-detail-label">Tgl</label>
+          <input type="text" class="item-date-day form-input" placeholder="5 atau 5-10" value="${escapeHtml(dayVal)}" inputmode="numeric">
+        </div>
+        <div class="item-detail-field">
+          <label class="item-detail-label">Qty</label>
+          <input type="number" class="item-qty form-input" placeholder="1" value="${item.qty || 1}" min="1">
+        </div>
+        <div class="item-detail-field">
+          <label class="item-detail-label">Harga</label>
+          <input type="number" class="item-price form-input" placeholder="0" value="${item.price || ''}" min="0">
+        </div>
+        <button type="button" class="btn-remove-item tap" data-action="remove-item" title="Hapus">🗑️</button>
       </div>
-      <div class="item-subtotal">Rp <span class="subtotal-value">0</span></div>
-      <button type="button" class="btn-remove-item" data-action="remove-item" aria-label="Hapus">🗑️</button>
+      <div class="item-subtotal-row">
+        <span class="item-subtotal-label">Subtotal:</span>
+        <span class="item-subtotal-value">Rp <span class="subtotal-value">0</span></span>
+      </div>
     </div>
   `;
 }
 
+/**
+ * @param {object} row
+ * @param {object[]} transactions
+ * @param {string} month
+ */
 function renderSummaryCard(row, transactions, month) {
   if (!row?.id || !month) return '';
   const progress = calculateProgress(row, transactions || [], month);
@@ -57,23 +72,35 @@ function renderSummaryCard(row, transactions, month) {
   const fmt = (n) => new Intl.NumberFormat('id-ID').format(Math.round(n || 0));
 
   return `
-    <div class="budget-form-summary">
-      <div class="budget-form-summary__head">
-        <span style="color:${priority.color}">${priority.icon} ${priority.label}</span>
-        <strong>${escapeHtml(row.name)}</strong>
+    <div class="category-info-card budget-form-summary" data-priority="${row.priority}">
+      <div class="cic-header">
+        <div class="cic-priority" style="color:${priority.color}">${priority.icon} ${priority.label}</div>
       </div>
-      <div class="budget-form-summary__stats">
-        <div><span>Terpakai</span><strong>${progress.percentUsed}%</strong></div>
-        <div><span>Realisasi</span><strong>Rp ${fmt(progress.spent)}</strong></div>
-        <div><span>Budget</span><strong>Rp ${fmt(row.amount)}</strong></div>
-        <div><span>Sisa</span><strong class="${progress.remaining < 0 ? 'over' : ''}">Rp ${fmt(progress.remaining)}</strong></div>
+      <div class="cic-title">${escapeHtml(row.name)}</div>
+      <div class="cic-stats-grid">
+        <div class="cic-stat"><div class="cic-stat-label">Terpakai</div><div class="cic-stat-value">${progress.percentUsed}%</div></div>
+        <div class="cic-stat"><div class="cic-stat-label">Realisasi</div><div class="cic-stat-value">Rp ${fmt(progress.spent)}</div></div>
+        <div class="cic-stat"><div class="cic-stat-label">Budget</div><div class="cic-stat-value">Rp ${fmt(row.amount)}</div></div>
+        <div class="cic-stat"><div class="cic-stat-label">Sisa</div><div class="cic-stat-value ${progress.remaining < 0 ? 'over' : ''}">Rp ${fmt(progress.remaining)}</div></div>
       </div>
-      <div class="budget-form-summary__bar">
-        <div class="budget-form-summary__fill ${progress.status}" style="width:${Math.min(progress.percentUsed, 100)}%"></div>
+      <div class="cic-progress-bar">
+        <div class="cic-progress-fill ${progress.status}" style="width:${Math.min(progress.percentUsed, 100)}%"></div>
       </div>
-      ${progress.daysLeft > 0 ? `<div class="budget-form-summary__hint">💡 Rp ${fmt(progress.dailyBudget)}/hari · ${progress.daysLeft} hari tersisa</div>` : ''}
+      ${progress.daysLeft > 0 ? `<div class="cic-hint">💡 Rp ${fmt(progress.dailyBudget)}/hari · ${progress.daysLeft} hari tersisa</div>` : ''}
     </div>
   `;
+}
+
+/**
+ * Sort items: active first, done/skipped last.
+ * @param {object[]} items
+ */
+function sortItemsForDisplay(items) {
+  return [...items].sort((a, b) => {
+    const aDone = a.status === 'done' || a.status === 'skipped' ? 1 : 0;
+    const bDone = b.status === 'done' || b.status === 'skipped' ? 1 : 0;
+    return aDone - bDone;
+  });
 }
 
 /**
@@ -86,6 +113,7 @@ export function showBudgetFormModal(defaults = {}, options = {}) {
 
   const row = normalizeBudgetRow(defaults.id ? defaults : createBudgetRow(defaults));
   const isEdit = Boolean(defaults.id);
+  const items = sortItemsForDisplay(row.items?.length ? row.items : [createBudgetItem()]);
   const summaryHtml = options.showSummary
     ? renderSummaryCard(row, options.transactions, options.month)
     : '';
@@ -93,11 +121,11 @@ export function showBudgetFormModal(defaults = {}, options = {}) {
   const modal = document.createElement('div');
   modal.className = 'budget-modal-overlay';
   modal.innerHTML = `
-    <div class="budget-modal" role="dialog" aria-modal="true">
+    <div class="budget-modal budget-form-simplified" role="dialog" aria-modal="true">
       <header class="modal-header">
         <div>
           <h2>${isEdit ? 'Edit Budget' : 'Tambah Budget'}</h2>
-          <p class="modal-subtitle">Rencanakan pengeluaran dengan detail</p>
+          <p class="modal-subtitle">Rencanakan pengeluaran</p>
         </div>
         <button type="button" class="close-btn" data-action="close" aria-label="Tutup">✕</button>
       </header>
@@ -105,15 +133,12 @@ export function showBudgetFormModal(defaults = {}, options = {}) {
         ${summaryHtml}
         <div class="form-section">
           <label class="form-label">Prioritas *</label>
-          <div class="priority-selector">
+          <div class="priority-selector-compact">
             ${Object.values(PRIORITY_LEVELS).map((pl) => `
-              <label class="priority-option ${row.priority === pl.key ? 'selected' : ''}">
+              <label class="priority-option-compact ${row.priority === pl.key ? 'selected' : ''}" style="--priority-color:${pl.color}">
                 <input type="radio" name="priority" value="${pl.key}" ${row.priority === pl.key ? 'checked' : ''}>
-                <div class="priority-card" style="border-color:${pl.color}">
-                  <div class="priority-card-icon">${pl.icon}</div>
-                  <div class="priority-card-label">${pl.label}</div>
-                  <div class="priority-card-desc">${pl.description}</div>
-                </div>
+                <span class="po-icon">${pl.icon}</span>
+                <span class="po-label">${pl.label}</span>
               </label>
             `).join('')}
           </div>
@@ -125,87 +150,40 @@ export function showBudgetFormModal(defaults = {}, options = {}) {
             value="${escapeHtml(row.name)}">
         </div>
         <div class="form-section">
-          <label class="form-label">Tipe Target</label>
-          <div class="target-type-selector">
-            ${Object.values(TARGET_TYPES).map((tt) => `
-              <label class="target-option ${row.target_type === tt.key ? 'selected' : ''}">
-                <input type="radio" name="target_type" value="${tt.key}" ${row.target_type === tt.key ? 'checked' : ''}>
-                <div class="target-card">
-                  <div class="target-label">${tt.label}</div>
-                  <div class="target-desc">${tt.description}</div>
-                </div>
-              </label>
-            `).join('')}
-          </div>
-        </div>
-        <div class="form-section date-range-section" id="date-range-section" style="display:none">
-          <label class="form-label">Rentang Tanggal Target</label>
-          <div class="date-range-inputs">
-            <input type="date" id="target-start" class="form-input" value="${row.target_start || ''}">
-            <span>—</span>
-            <input type="date" id="target-end" class="form-input" value="${row.target_end || ''}">
-          </div>
-        </div>
-        <div class="form-section">
           <div class="form-label-row">
             <label class="form-label">Detail Item</label>
-            <button type="button" class="btn-add-item" data-action="add-item">+ Tambah Item</button>
+            <button type="button" class="btn-add-item tap" data-action="add-item">+ Tambah Item</button>
           </div>
-          <div class="items-list" id="items-list">
-            ${(row.items?.length ? row.items : [createBudgetItem()])
-              .map((item, idx) => renderItemRow(item, idx)).join('')}
+          <div class="items-list-simplified" id="items-list">
+            ${items.map((item) => renderItemRowSimplified(item)).join('')}
           </div>
           <div class="items-total">Total: Rp <span id="items-total">0</span></div>
         </div>
-        <div class="form-section">
-          <label class="form-label">
-            🔗 Auto-Link Keywords
-            <span class="label-hint">Transaksi dengan kata kunci ini otomatis masuk budget ini</span>
-          </label>
-          <div class="keyword-tags" id="keyword-tags">
-            ${(row.auto_link_keywords || []).map((kw) => `
-              <span class="keyword-tag" data-keyword="${escapeHtml(kw)}">
-                ${escapeHtml(kw)}
-                <button type="button" data-action="remove-keyword">×</button>
-              </span>
-            `).join('')}
-          </div>
-          <div class="keyword-input-row">
-            <input type="text" id="keyword-input" class="form-input" placeholder="Ketik keyword lalu Enter">
-            <button type="button" class="btn-add-keyword" data-action="add-keyword">+</button>
-          </div>
-        </div>
-        <details class="form-section advanced-options">
-          <summary>⚙️ Pengaturan Lanjutan</summary>
-          <div class="option-row">
-            <label class="switch-label">
-              <input type="checkbox" id="allow-overspend" ${row.allow_overspend !== false ? 'checked' : ''}>
-              <span>Izinkan melebihi budget</span>
-            </label>
-          </div>
-          <div class="option-row">
-            <label class="switch-label">
-              <input type="checkbox" id="rollover-enabled" ${row.rollover_enabled ? 'checked' : ''}>
-              <span>Sisa masuk bulan depan</span>
-            </label>
-          </div>
-          <div class="option-row">
-            <label class="form-label">Notifikasi saat mencapai:</label>
-            <div class="threshold-chips">
-              ${[50, 75, 90, 100].map((t) => `
-                <label class="chip">
-                  <input type="checkbox" value="${t}" name="threshold"
-                    ${(row.notification_thresholds || [75, 100]).includes(t) ? 'checked' : ''}>
-                  <span>${t}%</span>
-                </label>
+        <details class="form-section keywords-section">
+          <summary>🔗 Auto-Link Keywords (opsional)</summary>
+          <div class="keywords-content">
+            <div class="label-hint">Transaksi dengan kata kunci ini otomatis masuk budget ini</div>
+            <div class="keyword-tags" id="keyword-tags">
+              ${(row.auto_link_keywords || []).map((kw) => `
+                <span class="keyword-tag" data-keyword="${escapeHtml(kw)}">
+                  ${escapeHtml(kw)}
+                  <button type="button" data-action="remove-keyword">×</button>
+                </span>
               `).join('')}
+            </div>
+            <div class="keyword-input-row">
+              <input type="text" id="keyword-input" class="form-input" placeholder="Ketik keyword lalu Enter">
+              <button type="button" class="btn-add-keyword tap" data-action="add-keyword">+</button>
             </div>
           </div>
         </details>
       </div>
-      <footer class="modal-footer">
-        <button type="button" class="btn-secondary-budget" data-action="close">Batal</button>
-        <button type="button" class="btn-primary-budget" data-action="save">💾 ${isEdit ? 'Simpan Perubahan' : 'Simpan Budget'}</button>
+      <footer class="modal-footer modal-footer--split">
+        ${isEdit ? '<button type="button" class="btn-danger-outline tap" data-action="delete-budget">🗑️ Hapus</button>' : '<span></span>'}
+        <div class="modal-footer__actions">
+          <button type="button" class="btn-secondary-budget tap" data-action="close">Batal</button>
+          <button type="button" class="btn-primary-budget tap" data-action="save">💾 ${isEdit ? 'Simpan Perubahan' : 'Simpan Budget'}</button>
+        </div>
       </footer>
     </div>
   `;
@@ -213,7 +191,6 @@ export function showBudgetFormModal(defaults = {}, options = {}) {
   document.body.appendChild(modal);
   wireModalHandlers(modal, row, defaults, options);
   updateItemsTotal(modal);
-  updateDateRangeVisibility(modal);
 }
 
 /**
@@ -229,35 +206,32 @@ function wireModalHandlers(modal, originalRow, defaults, options) {
 
   modal.querySelectorAll('input[name="priority"]').forEach((radio) => {
     radio.onchange = () => {
-      modal.querySelectorAll('.priority-option').forEach((o) => o.classList.remove('selected'));
-      radio.closest('.priority-option')?.classList.add('selected');
-    };
-  });
-
-  modal.querySelectorAll('input[name="target_type"]').forEach((radio) => {
-    radio.onchange = () => {
-      modal.querySelectorAll('.target-option').forEach((o) => o.classList.remove('selected'));
-      radio.closest('.target-option')?.classList.add('selected');
-      updateDateRangeVisibility(modal);
+      modal.querySelectorAll('.priority-option-compact').forEach((o) => o.classList.remove('selected'));
+      radio.closest('.priority-option-compact')?.classList.add('selected');
     };
   });
 
   modal.querySelector('[data-action="add-item"]')?.addEventListener('click', () => {
     const list = modal.querySelector('#items-list');
     const div = document.createElement('div');
-    div.innerHTML = renderItemRow(createBudgetItem(), list.children.length);
-    list.appendChild(div.firstElementChild);
-    wireItemHandlers(modal, list.lastElementChild);
+    div.innerHTML = renderItemRowSimplified(createBudgetItem());
+    const newRow = div.firstElementChild;
+    list?.insertBefore(newRow, list.querySelector('.item-done') || null);
+    wireItemRow(modal, newRow);
     updateItemsTotal(modal);
   });
 
-  modal.querySelectorAll('.item-row').forEach((rowEl) => wireItemHandlers(modal, rowEl));
+  modal.querySelectorAll('.item-row-simplified').forEach((rowEl) => wireItemRow(modal, rowEl));
 
   const keywordInput = modal.querySelector('#keyword-input');
   const addKeyword = () => {
     const val = keywordInput?.value.trim();
     if (!val) return;
     const tags = modal.querySelector('#keyword-tags');
+    if (tags?.querySelector(`[data-keyword="${CSS.escape(val)}"]`)) {
+      keywordInput.value = '';
+      return;
+    }
     const tag = document.createElement('span');
     tag.className = 'keyword-tag';
     tag.dataset.keyword = val;
@@ -271,21 +245,35 @@ function wireModalHandlers(modal, originalRow, defaults, options) {
   keywordInput?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); addKeyword(); }
   });
-
   modal.querySelectorAll('[data-action="remove-keyword"]').forEach((btn) => {
     btn.addEventListener('click', () => btn.closest('.keyword-tag')?.remove());
+  });
+
+  modal.querySelector('[data-action="delete-budget"]')?.addEventListener('click', async () => {
+    if (!confirm('Hapus budget kategori ini?')) return;
+    const state = window.STATE;
+    if (state?.budgetDraft?.rows) {
+      state.budgetDraft.rows = state.budgetDraft.rows.filter((r) => r.id !== originalRow.id);
+    }
+    showToast('✓ Budget dihapus');
+    close();
+    options.onSaved?.();
+    if (typeof window.renderBudgetPageView === 'function' && window.STATE?.ui?.budgetPageOpen) {
+      window.renderBudgetPageView();
+    }
   });
 
   modal.querySelector('[data-action="save"]')?.addEventListener('click', async () => {
     const data = collectFormData(modal, originalRow);
     if (!validateForm(data, modal)) return;
-
     try {
       await saveToDraft(data, defaults.month);
       showToast('✓ Budget tersimpan');
       close();
       options.onSaved?.();
-      if (typeof window.renderBudgetSheet === 'function') window.renderBudgetSheet();
+      if (typeof window.renderBudgetPageView === 'function' && window.STATE?.ui?.budgetPageOpen) {
+        window.renderBudgetPageView();
+      }
       if (typeof window.rerender === 'function') window.rerender();
     } catch (e) {
       showToast('❌ Gagal simpan: ' + e.message);
@@ -297,9 +285,20 @@ function wireModalHandlers(modal, originalRow, defaults, options) {
  * @param {HTMLElement} modal
  * @param {HTMLElement} rowEl
  */
-function wireItemHandlers(modal, rowEl) {
+function wireItemRow(modal, rowEl) {
+  const checkbox = rowEl.querySelector('.item-checkbox');
+  checkbox?.addEventListener('change', () => {
+    const done = checkbox.checked;
+    rowEl.classList.toggle('item-done', done);
+    const visual = rowEl.querySelector('.item-check-visual');
+    if (visual) visual.textContent = done ? '✓' : '';
+    const list = modal.querySelector('#items-list');
+    if (done && list) list.appendChild(rowEl);
+    else if (!done && list) list.insertBefore(rowEl, list.querySelector('.item-done') || null);
+  });
+
   rowEl.querySelector('[data-action="remove-item"]')?.addEventListener('click', () => {
-    if (modal.querySelectorAll('.item-row').length <= 1) return;
+    if (modal.querySelectorAll('.item-row-simplified').length <= 1) return;
     rowEl.remove();
     updateItemsTotal(modal);
   });
@@ -322,7 +321,7 @@ function wireItemHandlers(modal, rowEl) {
  */
 function updateItemsTotal(modal) {
   let total = 0;
-  modal.querySelectorAll('.item-row').forEach((rowEl) => {
+  modal.querySelectorAll('.item-row-simplified').forEach((rowEl) => {
     const qty = parseFloat(rowEl.querySelector('.item-qty')?.value) || 0;
     const price = parseFloat(rowEl.querySelector('.item-price')?.value) || 0;
     total += qty * price;
@@ -332,31 +331,35 @@ function updateItemsTotal(modal) {
 }
 
 /**
- * @param {HTMLElement} modal
+ * @param {string|null} dayStr
+ * @param {boolean} markedDone
  */
-function updateDateRangeVisibility(modal) {
-  const type = modal.querySelector('input[name="target_type"]:checked')?.value;
-  const section = modal.querySelector('#date-range-section');
-  if (section) {
-    section.style.display = ['one-time', 'flexible'].includes(type || '') ? 'block' : 'none';
+function inferItemStatus(dayStr, markedDone) {
+  if (markedDone) return 'done';
+  if (dayStr) {
+    const today = new Date().getDate();
+    const startDay = parseInt(String(dayStr).split('-')[0], 10);
+    if (!Number.isNaN(startDay) && today >= startDay) return 'pending';
   }
+  return 'planned';
 }
 
 /**
  * @param {HTMLElement} modal
  * @param {object} originalRow
- * @returns {object}
  */
 function collectFormData(modal, originalRow) {
   const items = [];
-  modal.querySelectorAll('.item-row').forEach((rowEl) => {
+  modal.querySelectorAll('.item-row-simplified').forEach((rowEl) => {
+    const markedDone = rowEl.querySelector('.item-checkbox')?.checked === true;
+    const dayStr = rowEl.querySelector('.item-date-day')?.value?.trim() || null;
     items.push(createBudgetItem({
       id: rowEl.dataset.itemId,
       name: rowEl.querySelector('.item-name')?.value || '',
       qty: parseFloat(rowEl.querySelector('.item-qty')?.value) || 0,
       price: parseFloat(rowEl.querySelector('.item-price')?.value) || 0,
-      target_date: rowEl.querySelector('.item-date')?.value || null,
-      status: rowEl.querySelector('.item-status')?.value || 'planned',
+      target_date_day: dayStr,
+      status: inferItemStatus(dayStr, markedDone),
     }));
   });
 
@@ -365,32 +368,24 @@ function collectFormData(modal, originalRow) {
     keywords.push(tag.dataset.keyword || tag.textContent.replace(/×$/, '').trim());
   });
 
-  const thresholds = [];
-  modal.querySelectorAll('input[name="threshold"]:checked').forEach((cb) => {
-    thresholds.push(parseInt(cb.value, 10));
-  });
-
   return createBudgetRow({
     id: originalRow.id,
     name: modal.querySelector('#budget-category')?.value.trim() || '',
     priority: modal.querySelector('input[name="priority"]:checked')?.value || 'penting',
-    target_type: modal.querySelector('input[name="target_type"]:checked')?.value || 'monthly',
-    target_start: modal.querySelector('#target-start')?.value || null,
-    target_end: modal.querySelector('#target-end')?.value || null,
     items,
     auto_link_keywords: keywords,
-    allow_overspend: modal.querySelector('#allow-overspend')?.checked !== false,
-    rollover_enabled: modal.querySelector('#rollover-enabled')?.checked === true,
-    notification_thresholds: thresholds,
     amount: items.reduce((sum, i) => sum + i.qty * i.price, 0),
     created_at: originalRow.created_at,
+    target_type: originalRow.target_type || 'monthly',
+    allow_overspend: originalRow.allow_overspend !== false,
+    rollover_enabled: originalRow.rollover_enabled === true,
+    notification_thresholds: originalRow.notification_thresholds || [75, 100],
   });
 }
 
 /**
  * @param {object} data
  * @param {HTMLElement} modal
- * @returns {boolean}
  */
 function validateForm(data, modal) {
   if (!data.name) {
@@ -415,28 +410,17 @@ async function saveToDraft(row, monthOverride) {
     const mk = monthOverride || state?.selectedMonth || getCurrentPeriod();
     state.budgetDraft = { month: mk, income: 0, rows: [], initialFrom: 'new' };
   }
-
   const idx = state.budgetDraft.rows.findIndex((r) => r.id === row.id);
-  if (idx >= 0) {
-    state.budgetDraft.rows[idx] = row;
-  } else {
-    state.budgetDraft.rows.push(row);
-  }
-
+  if (idx >= 0) state.budgetDraft.rows[idx] = row;
+  else state.budgetDraft.rows.push(row);
   row.amount = row.items.reduce((s, i) => s + i.qty * i.price, 0) || row.amount;
 }
 
-/**
- * @returns {string}
- */
 function getCurrentPeriod() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
-/**
- * @param {string} msg
- */
 function showToast(msg) {
   if (typeof window.showToast === 'function') {
     window.showToast(msg, 'info');

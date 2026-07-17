@@ -1902,6 +1902,10 @@ async function upsertTransaction_legacy_local(tx) {
           STATE.ui.enhancementsReady = true;
           try { initMonefyiEnhancements(); } catch (e) { console.warn('initMonefyiEnhancements', e); }
         }
+        try {
+          const { initNotificationBell } = await import('./components/notification-bell.js');
+          await initNotificationBell();
+        } catch (e) { console.warn('initNotificationBell', e); }
         rerender();
         ensureAppShellVisible();
       } catch (e) {
@@ -3509,6 +3513,10 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       const budgetRoot = $('#budgetPageRoot');
       if (budgetRoot) {
         budgetRoot.classList.toggle('hidden', !STATE.ui.budgetPageOpen);
+      }
+      const mobileSaldoWrap = document.querySelector('.mobile-saldo-wrap');
+      if (mobileSaldoWrap) {
+        mobileSaldoWrap.classList.toggle('hidden', !!STATE.ui.budgetPageOpen);
       }
       $('#txSection')?.classList.toggle('hidden', STATE.ui.dashboardOpen || STATE.ui.budgetPageOpen);
       $('#homeTxSectionHead')?.classList.add('hidden');
@@ -7312,10 +7320,18 @@ async function handleSaveBudget() {
     const d = STATE.budgetDraft;
     if (!d) return;
 
+    try {
+      const { getTotalIncome } = await import('./services/income-source.js');
+      const fromSources = await getTotalIncome(d.month);
+      if (fromSources > 0) {
+        d.income = fromSources;
+      }
+    } catch { /* ignore */ }
+
     const pageIncome = $('#budgetPageIncome');
-    if (pageIncome && STATE.ui.budgetPageOpen) {
+    if (pageIncome && STATE.ui.budgetPageOpen && !d.income) {
       d.income = parseNumberInput(pageIncome.value) || d.income;
-    } else {
+    } else if (!d.income) {
       d.income = parseNumberInput($('#bIncome')?.value) || d.income;
     }
 
@@ -9957,7 +9973,11 @@ function toggleNav(view, triggerEl) {
     });
     $('#btnNotifDesktop')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      openMenu();
+      if (typeof window.monefyiNotifBell?.showNotificationPanel === 'function') {
+        window.monefyiNotifBell.showNotificationPanel();
+      } else {
+        openMenu();
+      }
     });
 
     $('#heroBudgetProgress')?.addEventListener('click', (e) => {

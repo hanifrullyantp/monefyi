@@ -116,10 +116,21 @@ export function createBudgetItem(data = {}) {
     subtotal: qty * price,
     priority: data.priority || null,
     target_date: data.target_date || null,
+    target_date_day: data.target_date_day || extractDayFromDate(data.target_date) || null,
     status: data.status || 'planned',
     notes: data.notes || '',
     linked_transactions: Array.isArray(data.linked_transactions) ? [...data.linked_transactions] : [],
   };
+}
+
+/**
+ * @param {string|null} iso
+ * @returns {string|null}
+ */
+function extractDayFromDate(iso) {
+  if (!iso) return null;
+  const m = String(iso).match(/^\d{4}-\d{2}-(\d{2})/);
+  return m ? String(parseInt(m[1], 10)) : null;
 }
 
 /**
@@ -208,6 +219,7 @@ export function serializeBudgetRows(rows) {
         price: item.price,
         priority: item.priority,
         target_date: item.target_date,
+        target_date_day: item.target_date_day || extractDayFromDate(item.target_date),
         status: item.status,
         notes: item.notes,
         linked_transactions: item.linked_transactions || [],

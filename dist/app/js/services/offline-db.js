@@ -41,6 +41,11 @@ export async function initOfflineDB() {
           undo_stack: '++id, createdAt',
           activity_log: '++id, action, entityType, entityId, createdAt',
         });
+
+        this.version(4).stores({
+          notifications: 'id, timestamp, type, read, dismissed, dedupKey',
+          income_sources: 'id, period, type, updated_at',
+        });
       }
     }
 
