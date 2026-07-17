@@ -2137,10 +2137,14 @@ async function upsertTransaction_legacy_local(tx) {
           },
         });
         previewEl.appendChild(card);
+        const parseStatus = $('#parseStatus');
+        if (parseStatus) parseStatus.textContent = '';
         scrollToPreviewConfirm(previewEl);
       } catch (e) {
         console.warn(e);
         previewEl.innerHTML = `<div class="text-xs app-muted p-2">${t('toast.error')}</div>`;
+        const parseStatus = $('#parseStatus');
+        if (parseStatus) parseStatus.textContent = '';
         scrollToPreviewConfirm(previewEl);
       }
     }
