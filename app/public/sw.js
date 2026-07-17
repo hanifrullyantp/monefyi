@@ -1,5 +1,5 @@
-// Offline-capable service worker — native PWA v5 (fresh index + smart asset caching).
-const CACHE_VERSION = 'v5-native-pwa-1';
+// Offline-capable service worker — v6 offline parser + undo/history.
+const CACHE_VERSION = 'v6-offline-undo-1';
 const STATIC_CACHE = `monefyi-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `monefyi-runtime-${CACHE_VERSION}`;
 const IMAGES_CACHE = `monefyi-images-${CACHE_VERSION}`;
@@ -8,35 +8,61 @@ const OFFLINE_URL = new URL('./offline.html', self.location).href;
 
 const HASHED_ASSET = /-[a-zA-Z0-9]{8,}\.(js|css|woff2?)$/;
 
-const shellUrls = [
-  OFFLINE_URL,
-  new URL('./manifest.webmanifest', self.location).href,
-  new URL('./css/app.css', self.location).href,
-  new URL('./css/home-page.css', self.location).href,
-  new URL('./css/native-pwa.css', self.location).href,
-  new URL('./css/receipt-scanner.css', self.location).href,
-  new URL('./css/preview-card.css', self.location).href,
-  new URL('./css/quick-preview.css', self.location).href,
-  new URL('./js/app.js', self.location).href,
-  new URL('./js/config.js', self.location).href,
-  new URL('./js/monefyi-ui.js', self.location).href,
-  new URL('./js/i18n.js', self.location).href,
-  new URL('./js/utils/module-loader.js', self.location).href,
-  new URL('./js/vendor/dexie.mjs', self.location).href,
-  new URL('./js/services/offline-db.js', self.location).href,
-  new URL('./js/services/sync-engine.js', self.location).href,
-  new URL('./js/services/data-store.js', self.location).href,
-  new URL('./js/services/pending-queue.js', self.location).href,
-  new URL('./js/services/parser-orchestrator.js', self.location).href,
-  new URL('./js/services/install-prompt.js', self.location).href,
-  new URL('./js/components/sync-indicator.js', self.location).href,
-  new URL('./js/components/offline-indicator.js', self.location).href,
-  new URL('./js/components/pending-indicator.js', self.location).href,
-  new URL('./icons/icon-192.svg', self.location).href,
-  new URL('./icons/icon-512.svg', self.location).href,
-  new URL('./icons/monefyi-logo.png', self.location).href,
-  new URL('./icons/monefyi-mark.svg', self.location).href,
+const shellPaths = [
+  './manifest.webmanifest',
+  './css/app.css',
+  './css/home-page.css',
+  './css/native-pwa.css',
+  './css/receipt-scanner.css',
+  './css/preview-card.css',
+  './css/quick-preview.css',
+  './js/app.js',
+  './js/config.js',
+  './js/monefyi-ui.js',
+  './js/i18n.js',
+  './js/utils/module-loader.js',
+  './js/vendor/dexie.mjs',
+  './js/parsers/normalize.js',
+  './js/parsers/rules.js',
+  './js/parsers/receipt-pipeline.js',
+  './js/services/offline-db.js',
+  './js/services/sync-engine.js',
+  './js/services/data-store.js',
+  './js/services/pending-queue.js',
+  './js/services/parser-orchestrator.js',
+  './js/services/memory.js',
+  './js/services/correction-learner.js',
+  './js/services/metrics.js',
+  './js/services/feature-flags.js',
+  './js/services/home-data.js',
+  './js/services/undo-redo.js',
+  './js/services/activity-log.js',
+  './js/services/install-prompt.js',
+  './js/components/quick-preview.js',
+  './js/components/pending-badge.js',
+  './js/components/pending-indicator.js',
+  './js/components/undo-toast.js',
+  './js/components/activity-history.js',
+  './js/components/icons.js',
+  './js/components/receipt-scanner.js',
+  './js/components/preview-card.js',
+  './js/components/sync-indicator.js',
+  './js/components/offline-indicator.js',
+  './js/components/home-balance-stats.js',
+  './js/components/account-cards.js',
+  './js/components/quick-access.js',
+  './js/components/budget-summary-card.js',
+  './js/components/daily-tip-card.js',
+  './js/components/mini-chart-7day.js',
+  './js/components/recent-transactions-list.js',
+  './js/pages/home-page.js',
+  './icons/icon-192.svg',
+  './icons/icon-512.svg',
+  './icons/monefyi-logo.png',
+  './icons/monefyi-mark.svg',
 ];
+
+const shellUrls = [OFFLINE_URL, ...shellPaths.map((p) => new URL(p, self.location).href)];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

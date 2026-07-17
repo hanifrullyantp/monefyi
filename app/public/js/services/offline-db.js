@@ -36,6 +36,11 @@ export async function initOfflineDB() {
         this.version(2).stores({
           pending_transactions: 'id, status, userId, createdAt',
         });
+
+        this.version(3).stores({
+          undo_stack: '++id, createdAt',
+          activity_log: '++id, action, entityType, entityId, createdAt',
+        });
       }
     }
 

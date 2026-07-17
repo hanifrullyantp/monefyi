@@ -150,9 +150,103 @@ textarea {
   animation: pwa-pulse-dot 2s ease-in-out infinite;
 }
 
-/* Pending indicator */
+/* Pending indicator (legacy bottom — hidden; use top-right badge) */
 .pending-indicator-wrapper {
+  display: none !important;
   animation: pwa-slide-in-right 0.3s ease-out;
+}
+
+/* Top-right pending badge */
+.pending-badge {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top));
+  right: calc(12px + env(safe-area-inset-right));
+  z-index: 999;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.45);
+  animation: pwa-slide-in-right 0.3s ease-out;
+}
+
+.pending-badge__count {
+  min-width: 20px;
+  text-align: center;
+}
+
+.pending-modal--wide {
+  max-width: 520px;
+}
+
+.pending-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.pending-tab {
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.7);
+  border-radius: 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.pending-tab.active {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: white;
+}
+
+.pending-tab-panel.hidden {
+  display: none;
+}
+
+.activity-history-mount {
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.activity-history {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+}
+
+.activity-item__icon {
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
+.activity-item__summary {
+  color: white;
+  font-size: 13px;
+}
+
+.activity-item__meta {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  margin-top: 2px;
 }
 
 .pending-btn {

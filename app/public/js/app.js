@@ -1752,15 +1752,42 @@ async function upsertTransaction_legacy_local(tx) {
       }
     }
 
+    async function warmOfflineModules() {
+      const modules = [
+        'js/services/parser-orchestrator.js',
+        'js/components/quick-preview.js',
+        'js/services/memory.js',
+        'js/parsers/normalize.js',
+        'js/parsers/rules.js',
+        'js/services/pending-queue.js',
+        'js/services/undo-redo.js',
+        'js/services/activity-log.js',
+        'js/components/pending-badge.js',
+      ];
+      await Promise.allSettled(modules.map((p) => loadAppModule(p)));
+    }
+
+    function initUndoRedo() {
+      window.monefyiUndoHandlers = {
+        restoreTransaction: async (tx) => {
+          const restored = { ...tx, _sync_status: 'pending', updated_at: new Date().toISOString() };
+          await upsertTransaction(restored, { silent: true, skipUndo: true });
+        },
+        removeTransaction: async (id) => {
+          await deleteTransaction(id, { confirmed: true, skipConfirm: true, skipUndo: true });
+        },
+      };
+    }
+
     async function initPwaUi() {
       try {
         const { renderOfflineIndicator } = await loadAppModule('js/components/offline-indicator.js');
         if (!document.querySelector('.offline-indicator')) {
           document.body.appendChild(renderOfflineIndicator());
         }
-        const { renderPendingIndicator } = await loadAppModule('js/components/pending-indicator.js');
-        if (!document.querySelector('.pending-indicator-wrapper')) {
-          document.body.appendChild(await renderPendingIndicator());
+        const { renderPendingBadge } = await loadAppModule('js/components/pending-badge.js');
+        if (!document.querySelector('.pending-badge')) {
+          document.body.appendChild(await renderPendingBadge());
         }
         const { setupInstallBanner } = await loadAppModule('js/services/install-prompt.js');
         setupInstallBanner({ delayAfterInteractions: 3, dismissDays: 7 });
@@ -1791,6 +1818,8 @@ async function upsertTransaction_legacy_local(tx) {
     async function initOfflineFirst() {
       try {
         await loadAppModule('js/services/offline-db.js').then((m) => m.initOfflineDB());
+        initUndoRedo();
+        await warmOfflineModules();
         const syncMod = await loadAppModule('js/services/sync-engine.js');
         window.dataStore = await loadAppModule('js/services/data-store.js');
 
@@ -1871,6 +1900,8 @@ async function upsertTransaction_legacy_local(tx) {
           setTimeout(() => $('#txSearchInput')?.focus(), 80);
         },
         onNewTx: () => openAddSheet('quick'),
+        onUndo: () => window.monefyiUndo?.undo?.(),
+        onRedo: () => window.monefyiUndo?.redo?.(),
         onEscape: () => {
           document.querySelectorAll('[data-tx-dropdown]').forEach(el => el.classList.add('hidden'));
           if (STATE.ui.monthPopoverOpen) setMonthPopover(false);
@@ -2045,18 +2076,42 @@ async function upsertTransaction_legacy_local(tx) {
       scrollToPreviewConfirm(previewEl);
       try {
         const tx = await parseOneLineToTx(text);
-        if (!tx?.amount && !tx?._isPending) {
+        if (!tx?.amount && !tx?._isPending && !tx?._isDraft) {
           previewEl.innerHTML = `<div class="text-xs app-muted p-2">${t('toast.error')}</div>`;
           scrollToPreviewConfirm(previewEl);
           return;
         }
-        if (tx._isPending && typeof showToast === 'function') {
+        if ((tx._isPending || tx._isDraft) && typeof showToast === 'function') {
           showToast(tx._parseMessage || 'Tersimpan, akan diproses saat online', 'info');
         }
         const dup = tx.amount > 0 ? findPotentialDuplicate(tx) : null;
         if (dup) tx.meta = { ...(tx.meta || {}), duplicateWarning: dup.id };
 
-        const { renderQuickPreview, txToPreviewModel } = await loadAppModule('js/components/quick-preview.js');
+        let renderQuickPreview;
+        let txToPreviewModel;
+        try {
+          const mod = await loadAppModule('js/components/quick-preview.js');
+          renderQuickPreview = mod.renderQuickPreview;
+          txToPreviewModel = mod.txToPreviewModel;
+        } catch (importErr) {
+          console.warn('[preview] quick-preview import failed, using fallback', importErr);
+          previewEl.innerHTML = `
+            <div class="rounded-xl p-4 app-card-opaque">
+              <div class="text-xs app-muted">${tx._isPending ? 'Pending' : tx._isDraft ? 'Draft' : 'Preview'}</div>
+              <div class="mt-2 text-lg font-semibold">${escapeHtml(tx.merchant || tx.notes || text)}</div>
+              <div class="text-sm app-muted">${escapeHtml(tx.category || 'Lainnya')} • ${Number(tx.amount || 0).toLocaleString('id-ID')}</div>
+              <button type="button" class="mt-3 tap rounded-xl px-4 py-2 text-sm" id="fallbackPreviewSave">Simpan</button>
+            </div>`;
+          previewEl.querySelector('#fallbackPreviewSave')?.addEventListener('click', async () => {
+            await upsertTransaction(tx, { pending: true });
+            previewEl.classList.add('hidden');
+            previewEl.innerHTML = '';
+            onDone?.();
+          });
+          scrollToPreviewConfirm(previewEl);
+          return;
+        }
+
         const model = txToPreviewModel(tx);
         previewEl.innerHTML = '';
         const card = renderQuickPreview(model, {
@@ -2623,13 +2678,29 @@ async function upsertTransaction_legacy_local(tx) {
           parsed._isPending = true;
           parsed._parseMessage = result.message;
           parsed._pendingId = result.pendingId;
+        } else if (result.status === 'draft') {
+          parsed = result.transaction;
+          parsed._isDraft = true;
+          parsed._parseMessage = result.message;
         } else {
           parsed = parseTransactionTextHeuristic(text, { source: 'quick' });
         }
       } catch (err) {
         console.error('[parseQuickText] orchestrator error, falling back:', err);
         if (typeof Sentry !== 'undefined') Sentry.captureException(err);
-        parsed = await legacyParseAIFirst(text);
+        if (isOfflineMode() || !navigator.onLine) {
+          parsed = parseTransactionTextHeuristic(text, { source: 'quick' });
+          if (!parsed?.amount) {
+            parsed = {
+              ...parseTransactionTextHeuristic(text, { source: 'quick' }),
+              amount: 0,
+              _isDraft: true,
+              _parseMessage: 'Disimpan sebagai draft offline',
+            };
+          }
+        } else {
+          parsed = await legacyParseAIFirst(text);
+        }
       }
 
       if (parsed && typeof parsed === 'object') {
@@ -5929,6 +6000,9 @@ function openTutorialTopic(id) {
   }
 
   const index = STATE.transactions.findIndex(t => t.id === tx.id);
+  const before = index >= 0 ? { ...STATE.transactions[index] } : null;
+  const isCreate = index < 0;
+
   if (index >= 0) {
     STATE.transactions[index] = { ...tx };
   } else {
@@ -5959,6 +6033,25 @@ function openTutorialTopic(id) {
       return;
     }
   }
+
+  if (!opts.skipUndo) {
+    const action = isCreate ? 'create' : 'update';
+    window.monefyiUndo?.pushAction?.({
+      action,
+      entityType: 'transaction',
+      entityId: tx.id,
+      before,
+      after: { ...tx },
+    });
+    window.monefyiActivity?.logActivity?.({
+      action,
+      entityType: 'transaction',
+      entityId: tx.id,
+      summary: `${isCreate ? 'Buat' : 'Ubah'} transaksi: ${tx.merchant || tx.category || tx.amount}`,
+    });
+    window.dispatchEvent(new CustomEvent('monefyi-pending-change'));
+  }
+
   if (!opts.silent) showToast(t('toast.saved') || 'Transaksi tersimpan', 'success');
 }
 
@@ -5981,12 +6074,27 @@ function openTutorialTopic(id) {
       return;
     }
   }
+
+  if (!opts.skipUndo) {
+    window.monefyiUndo?.pushAction?.({
+      action: 'delete',
+      entityType: 'transaction',
+      entityId: id,
+      before: removed,
+      after: null,
+    });
+    window.monefyiActivity?.logActivity?.({
+      action: 'delete',
+      entityType: 'transaction',
+      entityId: id,
+      summary: `Hapus: ${removed.merchant || removed.category || removed.amount}`,
+    });
+    window.dispatchEvent(new CustomEvent('monefyi-pending-change'));
+  }
+
   showToast(t('toast.deleted') || 'Transaksi dihapus', 'success', {
-    undo: () => {
-      STATE.transactions.unshift(removed);
-      rerender();
-      if (STATE.db.enabled && STATE.db.user) dbUpsertTransaction(removed).catch(() => {});
-    },
+    duration: 10000,
+    undo: () => window.monefyiUndo?.undo?.(),
   });
 }
 

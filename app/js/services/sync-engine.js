@@ -127,6 +127,18 @@ export async function triggerSync(reason = 'manual') {
       errors: errorCount,
       duration: Date.now() - startTime,
     });
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('monefyi-sync-complete', { detail: { pushed: pushedCount } }));
+      window.dispatchEvent(new CustomEvent('monefyi-pending-change'));
+      if (pushedCount > 0) {
+        window.monefyiActivity?.logActivity?.({
+          action: 'sync_push',
+          entityType: 'sync',
+          summary: `Sync: ${pushedCount} perubahan terkirim`,
+        });
+      }
+    }
   } catch (e) {
     console.error('[sync] Failed:', e);
     notifyListeners('sync-error', { error: e?.message || String(e) });

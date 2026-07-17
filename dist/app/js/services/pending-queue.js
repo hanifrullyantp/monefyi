@@ -206,6 +206,9 @@ async function notifyListeners() {
       /* ignore */
     }
   });
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('monefyi-pending-change'));
+  }
 }
 
 /**

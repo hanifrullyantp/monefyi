@@ -81,6 +81,13 @@
         e.preventDefault();
         handlers.onNewTx?.();
       }
+      if (mod && e.key.toLowerCase() === 'z' && e.shiftKey) {
+        e.preventDefault();
+        handlers.onRedo?.();
+      } else if (mod && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        handlers.onUndo?.();
+      }
       if (e.key === 'Escape') {
         handlers.onEscape?.();
       }
