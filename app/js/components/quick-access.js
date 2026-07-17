@@ -33,7 +33,7 @@ export function renderQuickAccess(callbacks = {}) {
     <div class="home-section-header">
       <h2 class="home-section-title">${Icon('sparkles', { size: 18 })} Akses Cepat</h2>
     </div>
-    <div class="home-quick-scroll">${items}</div>
+    <div class="home-quick-scroll hide-scrollbar">${items}</div>
   `;
 
   el.querySelectorAll('[data-action]').forEach((btn) => {
