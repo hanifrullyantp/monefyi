@@ -8,6 +8,12 @@ module.exports = {
   build: {
     outDir: path.join(__dirname, "dist"),
     emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: path.join(__dirname, "landing page", "index.html"),
+        admin: path.join(__dirname, "landing page", "admin.html"),
+      },
+    },
   },
   server: {
     port: 5174,

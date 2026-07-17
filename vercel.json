@@ -7,9 +7,18 @@
       "source": "/app",
       "destination": "/app/",
       "permanent": true
+    },
+    {
+      "source": "/admin",
+      "destination": "/admin/",
+      "permanent": true
     }
   ],
   "rewrites": [
+    {
+      "source": "/admin/",
+      "destination": "/admin.html"
+    },
     {
       "source": "/app/((?!.*\\.(?:js|css|svg|png|jpg|jpeg|webp|gif|ico|json|webmanifest|txt|map|xml)$).*)",
       "destination": "/app/index.html"

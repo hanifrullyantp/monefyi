@@ -13,22 +13,28 @@ import { Icon } from './icons.js';
 export async function renderBudgetSummaryHero(container, ctx) {
   if (!container) return;
 
-  const { rows = [], transactions = [], month, income = 0, onEvaluation } = ctx;
+  const {
+    rows = [],
+    transactions = [],
+    month,
+    income = 0,
+    onEvaluation,
+    overBudgetCount = 0,
+    criticalCount = 0,
+  } = ctx;
   const totalBudget = rows.reduce((sum, b) => sum + Number(b.amount || 0), 0);
   const totalSpent = rows.reduce((sum, b) => sum + calculateProgress(b, transactions, month).spent, 0);
   const remaining = totalBudget - totalSpent;
   const percentUsed = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
 
-  const now = new Date();
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const daysLeft = Math.max(0, Math.ceil((monthEnd - now) / 86400000));
-  const daysPassed = now.getDate();
-  const daysInMonth = monthEnd.getDate();
-  const timeProgress = Math.round((daysPassed / daysInMonth) * 100);
+  const time = getMonthTimeProgress(month);
+  const { daysLeft, daysPassed, timeProgress, timeMarkerLabel } = time;
 
   const dailyRemaining = daysLeft > 0 ? remaining / daysLeft : 0;
   const dailyAvg = daysPassed > 0 ? totalSpent / daysPassed : 0;
   const status = getHealthStatus(percentUsed, timeProgress);
+  const fillClass = getProgressFillClass(percentUsed);
+  const insight = buildInsightMessage(status, overBudgetCount, criticalCount);
   const priorityTotals = calculatePriorityTotals(rows, income);
 
   container.innerHTML = `
@@ -50,12 +56,15 @@ export async function renderBudgetSummaryHero(container, ctx) {
             <span class="bsh-total">Rp ${fmt(totalBudget)}</span>
           </div>
           <div class="bsh-progress-bar-wrap">
+            <div class="bsh-time-marker-wrap" style="left:${timeProgress}%">
+              <span class="bsh-time-marker-label">${escapeHtml(timeMarkerLabel)}</span>
+              <span class="bsh-time-marker" aria-hidden="true"></span>
+            </div>
             <div class="bsh-progress-bar">
-              <div class="bsh-progress-fill status-${status.className}" style="width:${Math.min(percentUsed, 100)}%"></div>
-              <div class="bsh-time-marker" style="left:${timeProgress}%" title="Progress waktu ${timeProgress}%"></div>
+              <div class="bsh-progress-fill ${fillClass}" style="width:${Math.min(percentUsed, 100)}%"></div>
             </div>
             <div class="bsh-progress-meta">
-              <span class="bsh-percent">${percentUsed}%</span>
+              <span class="bsh-percent">${percentUsed}% realisasi</span>
               <span class="bsh-time-percent">Waktu: ${timeProgress}%</span>
             </div>
           </div>
@@ -82,18 +91,91 @@ export async function renderBudgetSummaryHero(container, ctx) {
         </div>
       </div>
       <div class="bsh-priority-mini">${renderPriorityMini(priorityTotals, totalBudget)}</div>
-      ${status.recommendation ? `
-        <div class="bsh-recommendation">
-          <span class="bsh-rec-icon">${Icon('lightBulb', { size: 14 })}</span>
-          <span class="bsh-rec-text">${status.recommendation}</span>
-        </div>
+      ${insight ? `
+        <button type="button" class="bsh-recommendation bsh-insight-entry ${status.className}" data-action="hero-evaluation">
+          <span class="bsh-rec-icon">${Icon(overBudgetCount > 0 ? 'alertTriangle' : 'lightBulb', { size: 14 })}</span>
+          <span class="bsh-rec-text">${escapeHtml(insight)}</span>
+          <span class="bsh-rec-action">Lihat evaluasi ${Icon('chevronRight', { size: 14 })}</span>
+        </button>
       ` : ''}
     </div>
   `;
 
-  container.querySelector('[data-action="hero-evaluation"]')?.addEventListener('click', () => {
-    onEvaluation?.();
+  container.querySelectorAll('[data-action="hero-evaluation"]').forEach((el) => {
+    el.addEventListener('click', () => onEvaluation?.());
   });
+}
+
+/**
+ * @param {string} month YYYY-MM
+ */
+function getMonthTimeProgress(month) {
+  const now = new Date();
+  const [y, m] = (month || '').split('-').map(Number);
+  const monthEnd = new Date(y, m, 0);
+  const daysInMonth = monthEnd.getDate();
+  const isCurrentMonth = now.getFullYear() === y && now.getMonth() === m - 1;
+  const isPastMonth = new Date(y, m - 1, daysInMonth) < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  let daysPassed;
+  let daysLeft;
+  let timeMarkerLabel;
+
+  if (isCurrentMonth) {
+    daysPassed = now.getDate();
+    daysLeft = Math.max(0, daysInMonth - daysPassed);
+    timeMarkerLabel = `Hari ${daysPassed}`;
+  } else if (isPastMonth) {
+    daysPassed = daysInMonth;
+    daysLeft = 0;
+    timeMarkerLabel = 'Akhir bulan';
+  } else {
+    daysPassed = 0;
+    daysLeft = daysInMonth;
+    timeMarkerLabel = 'Awal bulan';
+  }
+
+  const timeProgress = daysInMonth > 0 ? Math.round((daysPassed / daysInMonth) * 100) : 0;
+  return { daysPassed, daysLeft, daysInMonth, timeProgress, timeMarkerLabel };
+}
+
+/**
+ * @param {number} percentUsed
+ */
+function getProgressFillClass(percentUsed) {
+  if (percentUsed > 100) return 'fill-over';
+  if (percentUsed >= 90) return 'fill-critical';
+  if (percentUsed >= 75) return 'fill-warning';
+  if (percentUsed >= 50) return 'fill-moderate';
+  return 'fill-healthy';
+}
+
+/**
+ * @param {object} status
+ * @param {number} overBudgetCount
+ * @param {number} criticalCount
+ */
+function buildInsightMessage(status, overBudgetCount, criticalCount) {
+  const parts = [];
+  if (status.recommendation) parts.push(status.recommendation);
+
+  const extras = [];
+  if (overBudgetCount > 0) extras.push(`${overBudgetCount} kategori Over Budget`);
+  if (criticalCount > 0) extras.push(`${criticalCount} perlu perhatian`);
+
+  if (extras.length) {
+    parts.push(extras.join(' · '));
+  } else if (!parts.length) {
+    parts.push('Budget on-track. Lihat evaluasi bulanan lengkap.');
+  }
+
+  return parts.join(' ');
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = String(str ?? '');
+  return div.innerHTML;
 }
 
 /**

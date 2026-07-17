@@ -262,12 +262,14 @@ function wireHandlers(container, ctx) {
     window.monefyiCurrentSaveHandler = () => onSave();
   }
 
-  container.querySelector('[data-action="show-evaluation"]')?.addEventListener('click', async () => {
-    const { showEvaluation } = await import('./budget-evaluation.js');
-    showEvaluation({ month, rows, transactions });
+  container.querySelector('[data-action="open-filter"]')?.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const { showFilterPopup } = await import('./global-filter-popup.js');
+    await showFilterPopup();
   });
 
-  container.querySelector('[data-action="manage-income"]')?.addEventListener('click', async () => {
+  container.querySelector('[data-action="manage-income"]')?.addEventListener('click', async (e) => {
+    e.stopPropagation();
     const { showIncomeManagerModal } = await import('./income-manager.js');
     showIncomeManagerModal(() => onRefresh?.());
   });
@@ -357,42 +359,36 @@ export async function renderBudgetPage(container, ctx) {
   }).length;
 
   container.className = 'budget-page-container';
+  const displayMonth = filter.period || month;
+
   container.innerHTML = `
     <div class="budget-page">
       <header class="budget-page-header">
         <div>
           <p class="budget-page-kicker">Budgeting</p>
-          <h1 class="budget-page-title">Bulan budget: ${formatMonthLabel(month)}</h1>
+          <h1 class="budget-page-title">Budget</h1>
         </div>
         <button type="button" class="budget-page-add tap" data-action="add-budget" aria-label="Tambah budget">${Icon('plus', { size: 20 })}</button>
       </header>
 
       <div id="budget-summary-hero"></div>
 
-      <button type="button" class="budget-warning-entry ${overBudgetCount === 0 && criticalCount === 0 ? 'positive' : ''}" data-action="show-evaluation">
-        <div class="warning-icon-wrap ${overBudgetCount === 0 && criticalCount === 0 ? 'positive' : ''}">
-          ${overBudgetCount > 0 || criticalCount > 0 ? Icon('alertTriangle', { size: 20 }) : Icon('check', { size: 20 })}
-        </div>
-        <div class="warning-content">
-          <div class="warning-title">
-            ${overBudgetCount > 0 ? `${overBudgetCount} kategori Over Budget` : criticalCount > 0 ? `${criticalCount} perlu perhatian` : 'Budget On-Track'}
-            ${overBudgetCount > 0 && criticalCount > 0 ? ` · ${criticalCount} perlu perhatian` : ''}
-          </div>
-          <div class="warning-hint">Lihat evaluasi bulanan lengkap</div>
-        </div>
-        <div class="warning-arrow">${Icon('chevronRight', { size: 18 })}</div>
-      </button>
-
-      <section class="income-sources-card tap" data-action="manage-income" role="button" tabindex="0">
+      <section class="income-sources-card">
         <div class="isc-header">
-          <div class="isc-title">
-            ${Icon('wallet', { size: 16 })}
-            <span>Income Bulan Ini</span>
-          </div>
-          <span class="isc-edit">Kelola ${Icon('chevronRight', { size: 12 })}</span>
+          <button type="button" class="isc-month-trigger tap" data-action="open-filter" aria-label="Pilih periode budget">
+            <span class="isc-title-icon">${Icon('wallet', { size: 16 })}</span>
+            <span class="isc-title-text">Budget Income</span>
+            <span class="isc-month-pill">
+              ${formatMonthLabel(displayMonth)}
+              ${Icon('chevronDown', { size: 12 })}
+            </span>
+          </button>
+          <button type="button" class="isc-edit tap" data-action="manage-income">
+            Kelola ${Icon('chevronRight', { size: 12 })}
+          </button>
         </div>
         <div class="isc-amount">Rp ${formatIDR(income)}</div>
-        <div class="isc-hint">${sourcesLen === 0 ? 'Belum ada sumber income — tap untuk kelola' : `${sourcesLen} sumber · tap untuk kelola`}</div>
+        <div class="isc-hint">${sourcesLen === 0 ? 'Belum ada sumber income — tap Kelola untuk menambah' : `${sourcesLen} sumber income`}</div>
       </section>
 
       <section class="budget-list-card">
@@ -440,7 +436,12 @@ export async function renderBudgetPage(container, ctx) {
     transactions,
     month,
     income,
-    onEvaluation: () => container.querySelector('[data-action="show-evaluation"]')?.click(),
+    overBudgetCount,
+    criticalCount,
+    onEvaluation: async () => {
+      const { showEvaluation } = await import('./budget-evaluation.js');
+      showEvaluation({ month, rows, transactions });
+    },
   });
 
   const listSection = container.querySelector('#budget-list-content');

@@ -240,7 +240,7 @@ fbq('track', 'PageView');
 src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
 /></noscript>
 <!-- End Meta Pixel Code -->
-  <link rel="stylesheet" crossorigin href="/assets/index-DCIMbBdX.css">
+  <link rel="stylesheet" crossorigin href="/assets/main-DCIMbBdX.css">
 </head>
 <body class="antialiased selection:bg-green-500 selection:text-white">
 
@@ -968,6 +968,23 @@ src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
             } catch (e) {}
         });
 
+        function normalizeAppLink(url) {
+            if (!url || typeof url !== 'string') return '/app/';
+            const trimmed = url.trim();
+            if (!trimmed || trimmed.startsWith('#')) return trimmed;
+            if (trimmed.includes('app.monefyi.com')) return '/app/';
+            if (trimmed.startsWith('/app')) return trimmed.endsWith('/') ? trimmed : `${trimmed}/`;
+            return trimmed;
+        }
+
+        function migrateLegacyLinks(content) {
+            if (!content?.config?.links) return content;
+            if (content.config.links.nav_url) {
+                content.config.links.nav_url = normalizeAppLink(content.config.links.nav_url);
+            }
+            return content;
+        }
+
         function logDebug(...args) {
             if (!MONEFYI_DEBUG) return;
             console.log('[Monefyi]', ...args);
@@ -1017,6 +1034,7 @@ src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
                     const cached = safeJsonParse(localStorage.getItem('monefyi_cached_content_v1') || 'null');
                     if (cached && typeof cached === 'object') {
                         window.appData = mergeDeep(JSON.parse(JSON.stringify(defaultContent)), cached);
+                        migrateLegacyLinks(window.appData);
                         logDebug('Using cached content from localStorage.');
                     } else {
                         logDebug('Using defaultContent (no cache).');
@@ -1039,6 +1057,7 @@ src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
 
                 // Merge with defaultContent so new fields won't break older saved payloads
                 window.appData = mergeDeep(JSON.parse(JSON.stringify(defaultContent)), content);
+                migrateLegacyLinks(window.appData);
 
                 try {
                     localStorage.setItem('monefyi_cached_content_v1', JSON.stringify(content));
@@ -1050,6 +1069,7 @@ src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
                 const cached = safeJsonParse(localStorage.getItem('monefyi_cached_content_v1') || 'null');
                 if (cached && typeof cached === 'object') {
                     window.appData = mergeDeep(JSON.parse(JSON.stringify(defaultContent)), cached);
+                    migrateLegacyLinks(window.appData);
                     logDebug('Using cached content from localStorage due to network error.');
                 }
             }
@@ -1269,7 +1289,7 @@ src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
                 const navCta = document.getElementById('nav-cta');
                 if (navCta) {
                     navCta.textContent = links.nav_text || 'LogIn';
-                    navCta.setAttribute('href', links.nav_url || '/app/');
+                    navCta.setAttribute('href', normalizeAppLink(links.nav_url || '/app/'));
                 }
             } catch (e) {}
 
