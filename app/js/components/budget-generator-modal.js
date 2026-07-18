@@ -10,9 +10,9 @@ import { PRIORITY_LEVELS } from '../services/budget-model.js';
 const STRATEGY_INFO = {
   no_history: {
     icon: 'sparkles',
-    title: 'Budget Otomatis untuk Pemula',
-    subtitle: 'Menggunakan aturan 50/30/20',
-    description: 'Karena belum ada budget bulan lalu, kami buatkan budget default berdasarkan best practice keuangan.',
+    title: 'Auto Budget',
+    subtitle: 'Aturan 50/30/20 & data transaksi',
+    description: 'Membuat budget otomatis berdasarkan income Anda — template pemula atau pola pengeluaran jika ada data transaksi.',
   },
   copy_improve: {
     icon: 'refresh',
@@ -32,6 +32,10 @@ const STRATEGY_INFO = {
  * @param {() => void} [onGenerated]
  */
 export async function showBudgetGeneratorModal(onGenerated = null) {
+  if (!window.STATE?.budgetDraft && typeof window.renderBudgetPageView === 'function') {
+    await window.renderBudgetPageView();
+  }
+
   const strategy = await detectStrategy();
   const info = STRATEGY_INFO[strategy] || STRATEGY_INFO.no_history;
 
@@ -58,7 +62,7 @@ export async function showBudgetGeneratorModal(onGenerated = null) {
       </div>
       <footer class="modal-footer" id="gen-footer" style="display:none">
         <button type="button" class="btn-secondary" data-action="close">Batal</button>
-        <button type="button" class="btn-primary" data-action="apply">${Icon('check', { size: 14 })} Terapkan Budget</button>
+        <button type="button" class="btn-primary" data-action="apply">${Icon('check', { size: 14 })} Terapkan Auto Budget</button>
       </footer>
     </div>
   `;
@@ -84,7 +88,7 @@ export async function showBudgetGeneratorModal(onGenerated = null) {
     modal.querySelector('#gen-error').innerHTML = `
       <div class="error-box">
         ${Icon('alertTriangle', { size: 32 })}
-        <div class="error-title">Gagal Generate Budget</div>
+        <div class="error-title">Gagal Auto Budget</div>
         <div class="error-message">${escapeHtml(e.message)}</div>
       </div>
     `;
@@ -97,7 +101,7 @@ export async function showBudgetGeneratorModal(onGenerated = null) {
     );
     try {
       await applyGeneratedBudgets(generatedResult.budgets, { replaceExisting: replace });
-      showToast(`${generatedResult.budgets.length} budget berhasil diterapkan`);
+      showToast(`${generatedResult.budgets.length} kategori Auto Budget diterapkan`);
       close();
       onGenerated?.();
       if (typeof window.renderBudgetPageView === 'function') await window.renderBudgetPageView();

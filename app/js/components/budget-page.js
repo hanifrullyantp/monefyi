@@ -233,7 +233,7 @@ function renderBudgetListSection(section, rows, transactions, month, sort) {
       <div class="blc-empty">
         <div class="blc-empty-icon">${Icon('target', { size: 40 })}</div>
         <div class="blc-empty-title">Belum ada budget</div>
-        <div class="blc-empty-desc">Buat budget pertama atau generate otomatis</div>
+        <div class="blc-empty-desc">Buat budget pertama atau gunakan Auto Budget</div>
       </div>
     `;
     return;
@@ -290,6 +290,19 @@ function wireHandlers(container, ctx) {
   container.querySelector('[data-action="generate-budget"]')?.addEventListener('click', async () => {
     const { showBudgetGeneratorModal } = await import('./budget-generator-modal.js');
     showBudgetGeneratorModal(() => onRefresh?.());
+  });
+
+  container.querySelector('[data-action="save-template"]')?.addEventListener('click', async () => {
+    if (!rows.length) return;
+    try {
+      const { saveBudgetTemplate } = await import('../services/budget-template.js');
+      const { serializeBudgetRows } = await import('../services/budget-model.js');
+      await saveBudgetTemplate(month, income, serializeBudgetRows(rows));
+      showPageToast('Template budget tersimpan — akan dipakai otomatis di bulan baru');
+      onRefresh?.();
+    } catch (e) {
+      showPageToast('Gagal simpan template: ' + e.message);
+    }
   });
 
   wireRowClicks(container, ctx);
@@ -361,6 +374,12 @@ export async function renderBudgetPage(container, ctx) {
   container.className = 'budget-page-container';
   const displayMonth = filter.period || month;
 
+  const { getBudgetTemplate } = await import('../services/budget-template.js');
+  const savedTemplate = await getBudgetTemplate();
+  const templateHint = savedTemplate
+    ? `Template dari ${formatMonthLabel(savedTemplate.source_month || month)} — otomatis dipakai di bulan baru`
+    : 'Simpan setup budget ini agar dipakai otomatis di bulan berikutnya';
+
   container.innerHTML = `
     <div class="budget-page">
       <header class="budget-page-header">
@@ -389,6 +408,18 @@ export async function renderBudgetPage(container, ctx) {
         </div>
         <div class="isc-amount">Rp ${formatIDR(income)}</div>
         <div class="isc-hint">${sourcesLen === 0 ? 'Belum ada sumber income — tap Kelola untuk menambah' : `${sourcesLen} sumber income`}</div>
+      </section>
+
+      <section class="budget-template-card">
+        <div class="btc-header">
+          <span class="btc-title">${Icon('save', { size: 14 })} Template Budget</span>
+          ${savedTemplate ? `<span class="btc-badge">Aktif</span>` : ''}
+        </div>
+        <p class="btc-hint">${templateHint}</p>
+        <button type="button" class="btn-save-template tap" data-action="save-template" ${rows.length === 0 ? 'disabled' : ''}>
+          ${Icon('save', { size: 14 })}
+          <span>Simpan sebagai Template</span>
+        </button>
       </section>
 
       <section class="budget-list-card">
@@ -422,7 +453,7 @@ export async function renderBudgetPage(container, ctx) {
           </button>
           <button type="button" class="btn-generate-budget tap" data-action="generate-budget">
             ${Icon('wand', { size: 16 })}
-            <span>Generate Budget Otomatis</span>
+            <span>Auto Budget</span>
           </button>
         </div>
       </section>
@@ -464,4 +495,16 @@ export async function renderBudgetEnhancedSections(container, ctx) {
 
 if (typeof window !== 'undefined') {
   window.monefyiBudgetPage = { renderBudgetPage, renderBudgetEnhancedSections };
+}
+
+function showPageToast(msg) {
+  if (typeof window.showToast === 'function') {
+    window.showToast(msg, 'success');
+    return;
+  }
+  const t = document.createElement('div');
+  t.className = 'action-toast success';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
 }

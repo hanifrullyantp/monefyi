@@ -566,6 +566,73 @@
   flex-shrink: 0;
 }
 
+.budget-template-card {
+  background: var(--app-card);
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.btc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.btc-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--app-text);
+}
+
+.btc-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--accent-primary);
+  border: 1px solid rgba(16, 185, 129, 0.24);
+}
+
+.btc-hint {
+  font-size: 11px;
+  color: var(--app-muted);
+  line-height: 1.45;
+  margin: 0 0 10px;
+}
+
+.btn-save-template {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  justify-content: center;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(16, 185, 129, 0.24);
+  background: rgba(16, 185, 129, 0.08);
+  color: var(--accent-primary);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-save-template:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-save-template:not(:disabled):hover {
+  background: rgba(16, 185, 129, 0.14);
+}
+
 @media (max-width: 480px) {
   .filter-popup { width: 95%; }
   .fsb-text { display: none; }

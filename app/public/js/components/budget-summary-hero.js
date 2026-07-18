@@ -34,7 +34,6 @@ export async function renderBudgetSummaryHero(container, ctx) {
   const dailyAvg = daysPassed > 0 ? totalSpent / daysPassed : 0;
   const status = getHealthStatus(percentUsed, timeProgress);
   const fillClass = getProgressFillClass(percentUsed);
-  const insight = buildInsightMessage(status, overBudgetCount, criticalCount);
   const priorityTotals = calculatePriorityTotals(rows, income);
 
   container.innerHTML = `
@@ -91,19 +90,97 @@ export async function renderBudgetSummaryHero(container, ctx) {
         </div>
       </div>
       <div class="bsh-priority-mini">${renderPriorityMini(priorityTotals, totalBudget)}</div>
-      ${insight ? `
-        <button type="button" class="bsh-recommendation bsh-insight-entry ${status.className}" data-action="hero-evaluation">
-          <span class="bsh-rec-icon">${Icon(overBudgetCount > 0 ? 'alertTriangle' : 'lightBulb', { size: 14 })}</span>
-          <span class="bsh-rec-text">${escapeHtml(insight)}</span>
-          <span class="bsh-rec-action">Lihat evaluasi ${Icon('chevronRight', { size: 14 })}</span>
-        </button>
-      ` : ''}
+      ${renderInsightCard(status, overBudgetCount, criticalCount)}
     </div>
   `;
 
   container.querySelectorAll('[data-action="hero-evaluation"]').forEach((el) => {
     el.addEventListener('click', () => onEvaluation?.());
   });
+}
+
+/**
+ * @param {object} status
+ * @param {number} overBudgetCount
+ * @param {number} criticalCount
+ */
+function renderInsightCard(status, overBudgetCount, criticalCount) {
+  const content = buildInsightContent(status, overBudgetCount, criticalCount);
+  if (!content) return '';
+
+  const tagsHtml = content.tags.map((tag) =>
+    `<span class="bsh-insight-tag bsh-insight-tag--${tag.type}">${escapeHtml(tag.label)}</span>`,
+  ).join('');
+
+  return `
+    <button type="button" class="bsh-insight-entry ${status.className}" data-action="hero-evaluation">
+      <div class="bsh-insight-top">
+        <span class="bsh-insight-icon">${Icon(content.icon, { size: 16 })}</span>
+        <span class="bsh-insight-title">${escapeHtml(content.title)}</span>
+      </div>
+      <p class="bsh-insight-message">${escapeHtml(content.message)}</p>
+      ${tagsHtml ? `<div class="bsh-insight-tags">${tagsHtml}</div>` : ''}
+      <div class="bsh-insight-footer">
+        <span>Lihat evaluasi bulanan</span>
+        ${Icon('chevronRight', { size: 14 })}
+      </div>
+    </button>
+  `;
+}
+
+/**
+ * @param {object} status
+ * @param {number} overBudgetCount
+ * @param {number} criticalCount
+ */
+function buildInsightContent(status, overBudgetCount, criticalCount) {
+  const tags = [];
+  if (overBudgetCount > 0) {
+    tags.push({ label: `${overBudgetCount} kategori over budget`, type: 'danger' });
+  }
+  if (criticalCount > 0) {
+    tags.push({ label: `${criticalCount} perlu perhatian`, type: 'warning' });
+  }
+
+  if (status.className === 'over') {
+    return {
+      icon: 'alertTriangle',
+      title: 'Pengeluaran melebihi budget',
+      message: 'Review kategori yang boros dan pertimbangkan realokasi.',
+      tags,
+    };
+  }
+  if (status.className === 'critical') {
+    return {
+      icon: 'alertTriangle',
+      title: status.label,
+      message: status.recommendation || 'Pengeluaran lebih cepat dari waktu.',
+      tags,
+    };
+  }
+  if (status.className === 'warning') {
+    return {
+      icon: 'exclamation',
+      title: status.label,
+      message: status.recommendation || 'Perhatikan sisa budget bulan ini.',
+      tags,
+    };
+  }
+  if (status.className === 'excellent' || status.className === 'healthy') {
+    return {
+      icon: 'check',
+      title: status.label,
+      message: tags.length ? 'Budget masih terkendali, tapi ada area yang perlu dicek.' : 'Budget on-track. Lihat evaluasi untuk detail lengkap.',
+      tags,
+    };
+  }
+
+  return {
+    icon: 'lightBulb',
+    title: 'Insight budget',
+    message: status.recommendation || 'Lihat evaluasi bulanan lengkap.',
+    tags,
+  };
 }
 
 /**
@@ -154,22 +231,13 @@ function getProgressFillClass(percentUsed) {
  * @param {object} status
  * @param {number} overBudgetCount
  * @param {number} criticalCount
+ * @deprecated Use buildInsightContent
  */
 function buildInsightMessage(status, overBudgetCount, criticalCount) {
-  const parts = [];
-  if (status.recommendation) parts.push(status.recommendation);
-
-  const extras = [];
-  if (overBudgetCount > 0) extras.push(`${overBudgetCount} kategori Over Budget`);
-  if (criticalCount > 0) extras.push(`${criticalCount} perlu perhatian`);
-
-  if (extras.length) {
-    parts.push(extras.join(' · '));
-  } else if (!parts.length) {
-    parts.push('Budget on-track. Lihat evaluasi bulanan lengkap.');
-  }
-
-  return parts.join(' ');
+  const content = buildInsightContent(status, overBudgetCount, criticalCount);
+  if (!content) return '';
+  const extras = content.tags.map((t) => t.label).join(' · ');
+  return extras ? `${content.message} ${extras}` : content.message;
 }
 
 function escapeHtml(str) {

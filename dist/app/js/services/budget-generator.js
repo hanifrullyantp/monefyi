@@ -84,26 +84,79 @@ export async function detectStrategy() {
 }
 
 /**
+ * Resolve income for budget generation (sources, draft, saved month, transactions).
+ * @param {string} [period]
+ */
+async function resolveBudgetIncome(period) {
+  const p = period || getCurrentPeriod();
+  const state = typeof window !== 'undefined' ? window.STATE : null;
+  const draftIncome = state?.budgetDraft?.month === p ? Number(state.budgetDraft.income || 0) : 0;
+  const legacy = draftIncome || Number(state?.budgetsByMonth?.[p]?.income || 0);
+
+  try {
+    const { getTotalIncome, migrateLegacyIncome } = await import('./income-source.js');
+    await migrateLegacyIncome(p, legacy);
+    let income = await getTotalIncome(p);
+    if (!income) income = legacy;
+    if (!income && state?.transactions?.length) {
+      income = state.transactions
+        .filter((t) => t.type === 'income' && String(t.date || '').startsWith(p))
+        .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    }
+    return income;
+  } catch {
+    return legacy;
+  }
+}
+
+/**
  * @param {object} [options]
  */
 export async function generateBudget(options = {}) {
   const strategy = options.strategy || await detectStrategy();
-  const { getTotalIncome } = await import('./income-source.js');
-  const income = await getTotalIncome(getCurrentPeriod());
+  const period = getCurrentPeriod();
+  const income = Number(options.income) || await resolveBudgetIncome(period);
 
-  if (!income) {
-    throw new Error('Income belum diisi. Set income dulu sebelum generate budget.');
+  if (!income || income <= 0) {
+    throw new Error('Income belum diisi. Isi Budget Income atau sumber income dulu.');
   }
 
+  let result;
   switch (strategy) {
     case 'copy_improve':
-      return generateFromLastMonth(income);
+      result = await generateFromLastMonth(income);
+      break;
     case 'learned':
-      return generateFromLearning(income);
+      result = await generateFromLearning(income);
+      break;
     case 'no_history':
     default:
-      return generateFromRule(income);
+      result = generateFromRule(income);
+      break;
   }
+
+  if (!result?.budgets?.length && typeof window.generateSmartBudgetRows === 'function') {
+    const smart = window.generateSmartBudgetRows(income);
+    if (smart?.rows?.length) {
+      result = {
+        budgets: smart.rows.map((r) => createBudgetRow(r)),
+        strategy: 'no_history',
+        strategy_label: 'Auto Budget',
+        summary: {
+          total: smart.rows.reduce((s, b) => s + Number(b.amount || 0), 0),
+          count: smart.rows.length,
+          by_priority: countByPriority(smart.rows),
+        },
+        explanation: `Auto Budget dari ${smart.source || 'data transaksi & template 50/30/20'}.`,
+      };
+    }
+  }
+
+  if (!result?.budgets?.length) {
+    throw new Error('Tidak ada kategori budget yang bisa dibuat. Cek income dan coba lagi.');
+  }
+
+  return result;
 }
 
 /**
@@ -134,7 +187,7 @@ function generateFromRule(income) {
   return {
     budgets,
     strategy: 'no_history',
-    strategy_label: 'Aturan 50/30/20',
+    strategy_label: 'Auto Budget',
     summary: {
       total: budgets.reduce((s, b) => s + b.amount, 0),
       count: budgets.length,
@@ -340,18 +393,32 @@ function fmt(num) {
 export async function applyGeneratedBudgets(budgets, options = {}) {
   const { replaceExisting = false } = options;
   const state = typeof window !== 'undefined' ? window.STATE : null;
-  if (!state?.budgetDraft) throw new Error('Budget draft belum siap');
 
-  const before = JSON.parse(JSON.stringify(state.budgetDraft.rows || []));
-  if (replaceExisting) {
-    state.budgetDraft.rows = budgets.map((b) => createBudgetRow(b));
-  } else {
-    state.budgetDraft.rows = [...(state.budgetDraft.rows || []), ...budgets.map((b) => createBudgetRow(b))];
+  if (!state?.budgetDraft) {
+    if (typeof window.renderBudgetPageView === 'function') {
+      await window.renderBudgetPageView();
+    }
+  }
+  if (!state?.budgetDraft) {
+    throw new Error('Budget draft belum siap. Buka halaman Budget dulu.');
   }
 
+  const before = JSON.parse(JSON.stringify(state.budgetDraft.rows || []));
+  const normalized = (budgets || []).map((b) => createBudgetRow(b));
+
+  if (replaceExisting) {
+    state.budgetDraft.rows = normalized;
+  } else {
+    state.budgetDraft.rows = [...(state.budgetDraft.rows || []), ...normalized];
+  }
+
+  const period = getCurrentPeriod();
+  const income = await resolveBudgetIncome(period);
+  if (income > 0) state.budgetDraft.income = income;
+
   const { recordBudgetRowsChange } = await import('./budget-changes-tracker.js');
-  recordBudgetRowsChange('Generate budget', before, state.budgetDraft.rows);
-  return budgets.length;
+  recordBudgetRowsChange('Auto Budget', before, state.budgetDraft.rows);
+  return normalized.length;
 }
 
 if (typeof window !== 'undefined') {
