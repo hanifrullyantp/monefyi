@@ -62,15 +62,9 @@ export async function mountNotificationBell() {
   bell.id = 'notifBellMobile';
   bell.classList.add('mobile-header-ghost', 'top-bar__icon-btn');
 
-  const settingsBtn = document.getElementById('btnSettingsMobile');
-  if (settingsBtn?.parentElement) {
-    settingsBtn.parentElement.insertBefore(bell, settingsBtn);
-    return bell;
-  }
-
-  const userBtn = document.getElementById('btnUser');
-  if (userBtn?.parentElement) {
-    userBtn.parentElement.insertBefore(bell, userBtn);
+  const searchBtn = document.getElementById('btnTopSearchMobile');
+  if (searchBtn?.parentElement) {
+    searchBtn.parentElement.appendChild(bell);
     return bell;
   }
 

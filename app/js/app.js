@@ -3401,9 +3401,9 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
   el.textContent = open ? '▴' : '▾';
 });
 
-      $('#userNameTop').textContent = STATE.user.name || 'User';
+      if ($('#userNameTop')) $('#userNameTop').textContent = STATE.user.name || 'User';
       $('#dashboardUserName') && ($('#dashboardUserName').textContent = STATE.user.name || 'Akun');
-      $('#userBadge').textContent = (STATE.user.name||'U').trim().slice(0,1).toUpperCase();
+      if ($('#userBadge')) $('#userBadge').textContent = (STATE.user.name||'U').trim().slice(0,1).toUpperCase();
       const sidebarName = $('#sidebarUserName');
       const sidebarAvatar = $('#sidebarUserAvatar');
       if (sidebarName) sidebarName.textContent = STATE.user.name || 'User';
@@ -4907,8 +4907,37 @@ function generateSmartBudgetRecommendation() {
         case 'analytics': openAdvisorAuto(); break;
         case 'add': openAddSheet('quick'); break;
         case 'search': toggleNav('list'); break;
-        case 'settings': $('#btnSettingsMobile')?.click(); break;
+        case 'tutorial': openTutorial(); break;
+        case 'profile': openUser(); break;
+        case 'affiliate': openAffiliate(); break;
+        case 'install': handleInstallApp(); break;
+        case 'accounts': openAccounts(); break;
+        case 'advisor': openAdvisorAuto(); break;
+        case 'settings': openSettings(); break;
         default: break;
+      }
+    }
+
+    async function handleInstallApp() {
+      try {
+        const mod = await loadAppModule('js/services/install-prompt.js');
+        if (mod.isInstalled?.()) {
+          showToast('App sudah terpasang di perangkat ini', 'info');
+          return;
+        }
+        if (mod.isIOS?.()) {
+          showToast('Tap Share → Add to Home Screen untuk install', 'info');
+          return;
+        }
+        const result = await mod.showInstallPrompt?.();
+        if (result?.outcome === 'accepted') {
+          showToast('Monefyi berhasil ditambahkan', 'success');
+        } else if (result?.outcome === 'unavailable') {
+          showToast('Install belum tersedia di browser ini', 'warn');
+        }
+      } catch (e) {
+        console.warn('handleInstallApp', e);
+        showToast('Gagal membuka prompt install', 'error');
       }
     }
 
@@ -9563,7 +9592,7 @@ if (btnDelete) {
     // Header interactions
     // =========================
     $('#fab')?.addEventListener('click', () => openAddSheet('quick'));
-    $('#btnLogo')?.addEventListener('click', () => openAddSheet('quick'));
+    $('#btnLogo')?.addEventListener('click', () => toggleNav('dash'));
     $('#btnMenu')?.addEventListener('click', () => openMenu());
     $('#btnUser')?.addEventListener('click', () => openUser());
     $('#btnUserDesktop')?.addEventListener('click', () => openUser());

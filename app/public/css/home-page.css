@@ -104,20 +104,24 @@
 .home-accounts-scroll {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(0, calc((100% - 16px) / 3));
+  grid-auto-columns: calc((100% - (2 * var(--space-2))) / 2.5);
   gap: var(--space-2);
   overflow-x: auto;
   padding-bottom: 4px;
   scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
 }
 
 .home-account-card {
   scroll-snap-align: start;
+  aspect-ratio: 1 / 2;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  justify-content: space-between;
   gap: 5px;
   min-width: 0;
+  width: 100%;
   padding: 12px 10px 10px;
   border-radius: var(--radius-md);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -189,6 +193,23 @@
   border: none;
   box-shadow: none;
   padding: 0;
+}
+
+.home-quick-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.home-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.home-quick-grid.hidden {
+  display: none;
 }
 
 .home-quick-scroll {
@@ -421,7 +442,11 @@
 
 @media (max-width: 379px) {
   .home-accounts-scroll {
-    grid-auto-columns: minmax(108px, calc((100% - 12px) / 3));
+    grid-auto-columns: calc((100% - 12px) / 2.5);
+  }
+
+  .home-quick-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .home-quick-btn__icon {

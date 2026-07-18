@@ -182,15 +182,20 @@ export function mountFilterIcon() {
   const btn = renderFilterIcon();
   btn.id = 'globalFilterBtn';
 
+  const searchBtn = document.getElementById('btnTopSearchMobile');
   const bell = document.getElementById('notifBellMobile');
   if (bell?.parentElement) {
     bell.parentElement.insertBefore(btn, bell);
     return btn;
   }
+  if (searchBtn?.parentElement) {
+    searchBtn.parentElement.appendChild(btn);
+    return btn;
+  }
 
-  const settingsBtn = document.getElementById('btnSettingsMobile');
-  if (settingsBtn?.parentElement) {
-    settingsBtn.parentElement.insertBefore(btn, settingsBtn);
+  const actions = document.querySelector('.mobile-header-actions');
+  if (actions) {
+    actions.appendChild(btn);
     return btn;
   }
 
