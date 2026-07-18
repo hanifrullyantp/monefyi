@@ -130,93 +130,48 @@ export async function generateInsights(options = {}) {
   }
 }
 
+/**
+ * Gather rich context from the same sources as Beranda / financial report.
+ * Uses STATE.transactions + date-key filtering (not brittle datetime string compare).
+ * @param {object} [options]
+ */
 async function gatherContext(options = {}) {
-  const state = window.STATE || {};
-  const lang = options.lang || state.settings?.lang || 'id';
-
-  const now = new Date();
-  const periodStart = options.periodStart || state.period?.start
-    || new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-  const periodEnd = options.periodEnd || state.period?.end
-    || new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
-  const month = periodEnd.slice(0, 7);
-
-  let transactions = Array.isArray(state.transactions) ? state.transactions : [];
   try {
-    const { getTransactions } = await import('./data-store.js');
-    const fromDb = await getTransactions();
-    if (fromDb?.length) transactions = fromDb;
-  } catch (_) { /* use STATE */ }
-
-  const periodTx = transactions.filter((t) => t.date >= periodStart && t.date <= periodEnd);
-
-  const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 10);
-  const prevEnd = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0, 10);
-  const prevMonthTx = transactions.filter((t) => t.date >= prevStart && t.date <= prevEnd);
-
-  const { rowsToBudgetList, calculateProgress } = await import('./budget-model.js');
-  let rows = rowsToBudgetList(month, state.budgetsByMonth || {});
-  if (!rows.length) {
-    try {
-      const { getBudgetRowsForMonth } = await import('./data-store.js');
-      rows = await getBudgetRowsForMonth(month);
-    } catch (_) { /* empty */ }
-  }
-
-  let incomeTotal = Number(state.budgetsByMonth?.[month]?.income || state.budgetDraft?.income || 0);
-  let sources = [];
-  try {
-    const { getTotalIncome, getIncomeSources } = await import('./income-source.js');
-    const fromSources = await getTotalIncome(month);
-    if (fromSources > 0) incomeTotal = fromSources;
-    sources = await getIncomeSources(month);
-  } catch (_) { /* ignore */ }
-
-  // Income from transactions as fallback
-  if (!incomeTotal) {
-    incomeTotal = periodTx
-      .filter((t) => t.type === 'income')
-      .reduce((s, t) => s + Number(t.amount || 0), 0);
-  }
-
-  const enrichedBudgets = (rows || []).map((b) => {
-    const p = calculateProgress(b, periodTx, month);
+    const { gatherReportContext } = await import('./financial-report.js');
+    const ctx = await gatherReportContext(options);
     return {
-      id: b.id,
-      category: b.name || b.category,
-      priority: b.priority || 'penting',
-      amount: Number(b.amount || 0),
-      spent: p.spent,
-      remaining: p.remaining,
-      percent_used: p.percentUsed,
-      items: b.items,
+      ...ctx,
+      user_prefs: _state.prefs,
     };
-  });
-
-  return {
-    periodStart,
-    periodEnd,
-    start: periodStart,
-    end: periodEnd,
-    periodLabel: state.period?.label || `${periodStart} – ${periodEnd}`,
-    lang,
-    budgets: enrichedBudgets,
-    income: { total: incomeTotal, sources },
-    transactions: periodTx.slice(0, 200),
-    previous_month_summary: summarize(prevMonthTx),
-    user_prefs: _state.prefs,
-  };
-}
-
-function summarize(transactions) {
-  const income = transactions.filter((t) => t.type === 'income').reduce((s, t) => s + Number(t.amount || 0), 0);
-  const expense = transactions.filter((t) => t.type === 'expense').reduce((s, t) => s + Number(t.amount || 0), 0);
-  return {
-    income,
-    expense,
-    savings: income - expense,
-    saving_rate: income > 0 ? (income - expense) / income : 0,
-  };
+  } catch (e) {
+    console.warn('[monevisor] gatherReportContext failed, using minimal fallback:', e);
+    const state = window.STATE || {};
+    const lang = options.lang || state.settings?.lang || 'id';
+    const now = new Date();
+    const periodStart = options.periodStart || state.period?.start
+      || new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+    const periodEnd = options.periodEnd || state.period?.end
+      || new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+    const toKey = (d) => String(d || '').slice(0, 10);
+    const txs = Array.isArray(state.transactions) ? state.transactions : [];
+    const periodTx = txs.filter((t) => {
+      const d = toKey(t.date);
+      return d >= toKey(periodStart) && d <= toKey(periodEnd);
+    });
+    return {
+      periodStart: toKey(periodStart),
+      periodEnd: toKey(periodEnd),
+      start: toKey(periodStart),
+      end: toKey(periodEnd),
+      periodLabel: state.period?.label || `${periodStart} – ${periodEnd}`,
+      lang,
+      budgets: [],
+      income: { total: 0, sources: [] },
+      transactions: periodTx.slice(0, 200),
+      previous_month_summary: { income: 0, expense: 0, savings: 0, saving_rate: 0 },
+      user_prefs: _state.prefs,
+    };
+  }
 }
 
 async function callInsightsEdgeFn(context) {

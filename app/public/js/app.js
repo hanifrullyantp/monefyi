@@ -986,6 +986,7 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
       ui: {
         dashboardOpen: true,
         budgetPageOpen: false,
+        monevisorPageOpen: false,
         txDesktopFiltersOpen: false,
         saldoFilterOpen: false,
         monthPopoverOpen: false,
@@ -3366,15 +3367,26 @@ async function upsertTransaction_legacy_local(tx) {
       $$('.sidebar-item[data-nav]').forEach((el) => {
         el.classList.remove('active');
         const nav = el.getAttribute('data-nav');
-        if (nav === 'dash' && STATE.ui.dashboardOpen) el.classList.add('active');
-        if (nav === 'list' && !STATE.ui.dashboardOpen) el.classList.add('active');
+        if (STATE.ui.monevisorPageOpen) {
+          if (nav === 'advisor') el.classList.add('active');
+        } else if (STATE.ui.budgetPageOpen) {
+          if (nav === 'budget') el.classList.add('active');
+        } else {
+          if (nav === 'dash' && STATE.ui.dashboardOpen) el.classList.add('active');
+          if (nav === 'list' && !STATE.ui.dashboardOpen) el.classList.add('active');
+        }
       });
 
-      if (!STATE.ui.budgetOpen && !STATE.ui.advisorOpen && !STATE.ui.budgetPageOpen) {
+      if (!STATE.ui.budgetOpen && !STATE.ui.advisorOpen) {
         $$('.nav-item[data-nav]').forEach((el) => {
           const nav = el.getAttribute('data-nav');
-          if (nav === 'beranda' || nav === 'transaksi' || nav === 'budget') {
-            el.classList.toggle('active', (nav === 'beranda' && STATE.ui.dashboardOpen) || (nav === 'transaksi' && !STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen) || (nav === 'budget' && STATE.ui.budgetPageOpen));
+          if (nav === 'beranda' || nav === 'transaksi' || nav === 'budget' || nav === 'advisor') {
+            el.classList.toggle('active',
+              (nav === 'beranda' && STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen)
+              || (nav === 'transaksi' && !STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen)
+              || (nav === 'budget' && STATE.ui.budgetPageOpen)
+              || (nav === 'advisor' && STATE.ui.monevisorPageOpen)
+            );
           }
         });
       }
@@ -3535,8 +3547,9 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       }
       $('#rangeCard')?.classList.toggle('hidden', (STATE.period.preset || 'this_month') !== 'custom');
 
-      const showDesktopDashboard = STATE.ui.dashboardOpen && isDesktopViewport() && !STATE.ui.budgetPageOpen;
-      const showMobileHome = STATE.ui.dashboardOpen && !isDesktopViewport() && !STATE.ui.budgetPageOpen;
+      const specialPageOpen = !!(STATE.ui.budgetPageOpen || STATE.ui.monevisorPageOpen);
+      const showDesktopDashboard = STATE.ui.dashboardOpen && isDesktopViewport() && !specialPageOpen;
+      const showMobileHome = STATE.ui.dashboardOpen && !isDesktopViewport() && !specialPageOpen;
       $('#dashboardExpanded').classList.toggle('hidden', !showDesktopDashboard);
       const homeRoot = $('#homePageRoot');
       if (homeRoot) {
@@ -3547,25 +3560,32 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       if (budgetRoot) {
         budgetRoot.classList.toggle('hidden', !STATE.ui.budgetPageOpen);
       }
+      const monevisorRoot = $('#monevisorPageRoot');
+      if (monevisorRoot) {
+        monevisorRoot.classList.toggle('hidden', !STATE.ui.monevisorPageOpen);
+      }
       const mobileSaldoWrap = document.querySelector('.mobile-saldo-wrap');
       if (mobileSaldoWrap) {
-        mobileSaldoWrap.classList.toggle('hidden', !!STATE.ui.budgetPageOpen);
+        mobileSaldoWrap.classList.toggle('hidden', specialPageOpen);
       }
-      $('#txSection')?.classList.toggle('hidden', STATE.ui.dashboardOpen || STATE.ui.budgetPageOpen);
+      $('#txSection')?.classList.toggle('hidden', STATE.ui.dashboardOpen || specialPageOpen);
       $('#homeTxSectionHead')?.classList.add('hidden');
       const pageTitleDesktop = $('#pageTitleTxDesktop');
       if (pageTitleDesktop) {
-        pageTitleDesktop.textContent = STATE.ui.budgetPageOpen
-          ? 'Budgeting'
-          : (STATE.ui.dashboardOpen ? 'Dashboard' : 'Transaksi');
+        pageTitleDesktop.textContent = STATE.ui.monevisorPageOpen
+          ? 'Monevisor'
+          : (STATE.ui.budgetPageOpen
+            ? 'Budgeting'
+            : (STATE.ui.dashboardOpen ? 'Dashboard' : 'Transaksi'));
       }
       const dynamicContent = $('#dynamicContent');
       if (dynamicContent) {
-        dynamicContent.classList.toggle('dynamic-content--dashboard', STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen);
-        dynamicContent.classList.toggle('dynamic-content--tx', !STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen);
+        dynamicContent.classList.toggle('dynamic-content--dashboard', STATE.ui.dashboardOpen && !specialPageOpen);
+        dynamicContent.classList.toggle('dynamic-content--tx', !STATE.ui.dashboardOpen && !specialPageOpen);
         dynamicContent.classList.toggle('dynamic-content--budget', !!STATE.ui.budgetPageOpen);
+        dynamicContent.classList.toggle('dynamic-content--monevisor', !!STATE.ui.monevisorPageOpen);
       }
-      const showTxUi = !STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen;
+      const showTxUi = !STATE.ui.dashboardOpen && !specialPageOpen;
       const showTxFilters = showTxUi && !!STATE.ui.txDesktopFiltersOpen;
       const txFilterBar = $('#txDesktopFilterBar');
       if (txFilterBar) {
@@ -5022,6 +5042,7 @@ function generateSmartBudgetRecommendation() {
   renderTransactions();
   if (STATE.ui.dashboardOpen && !isDesktopViewport()) renderMobileHome();
   if (STATE.ui.budgetPageOpen) renderBudgetPageView();
+  if (STATE.ui.monevisorPageOpen) renderMonevisorPageView();
 }
     // =========================
     // UI: Sheet helpers
@@ -5408,6 +5429,7 @@ function setSheetPosition(mode) {
 
       await prepareBudgetDraft();
       STATE.ui.budgetPageOpen = true;
+      STATE.ui.monevisorPageOpen = false;
       STATE.ui.dashboardOpen = false;
       STATE.ui.budgetOpen = false;
 
@@ -5443,43 +5465,89 @@ function setSheetPosition(mode) {
       if (e.target?.dataset?.closeBudget === 'true') closeBudget();
     });
 
-    // Advisor sheet (legacy DOM kept for print/fallback; primary UX = Monevisor panel)
+    // Advisor / Monevisor — full page (same tab system as Budget); legacy sheet kept as fallback
     const advisorBackdrop = $('#advisorBackdrop');
     const advisorSheet = $('#advisorSheet');
-    async function openAdvisor(options = {}){
-      $$('.nav-item[data-nav]').forEach((el) => {
-        el.classList.toggle('active', el.getAttribute('data-nav') === 'advisor');
-      });
+    let _monevisorOpenOptions = {};
+
+    async function renderMonevisorPageView(options = {}) {
+      const root = $('#monevisorPageRoot');
+      if (!root || !STATE.ui.monevisorPageOpen) return;
+      const incoming = { ..._monevisorOpenOptions, ...options };
+      const forceMount = incoming.forceMount
+        || incoming.prefillMessage
+        || incoming.expandChat
+        || incoming.focus
+        || root.dataset.ready !== '1';
       try {
-        const { openMonevisor } = await import('./components/monevisor-panel.js');
-        await openMonevisor(options || {});
-        STATE.ui.advisorOpen = true;
-        return;
+        if (!forceMount) {
+          const { refreshMonevisorPage } = await import('./pages/monevisor-page.js');
+          await refreshMonevisorPage();
+          return;
+        }
+        const { renderMonevisorPage } = await import('./pages/monevisor-page.js');
+        await renderMonevisorPage(root, { ...incoming, formatIDR, formatCompactIDR });
+        root.dataset.ready = '1';
+        _monevisorOpenOptions = {};
       } catch (e) {
-        console.error('[app] Open Monevisor failed, falling back to sheet:', e);
-      }
-      if (isDesktopViewport()) {
-        STATE.ui.advisorOpen = true;
-        advisorBackdrop.classList.add('open', 'desktop-sidebar');
-        advisorSheet.classList.add('open');
-        $('#appShell')?.classList.add('advisor-open');
-        document.body.style.overflow = '';
-      } else {
-        STATE.ui.advisorOpen = true;
-        openSheet(advisorBackdrop, advisorSheet);
+        console.error('[monevisor] page render failed', e);
       }
     }
-    function closeAdvisor(){
-      STATE.ui.advisorOpen = false;
+    window.renderMonevisorPageView = renderMonevisorPageView;
+
+    async function openAdvisor(options = {}){
+      closeBudgetSheetOnly();
+      closeAddSheet();
       try {
         window.monefyiMonevisorPanel?.closeMonevisor?.();
       } catch (_) { /* ignore */ }
-      if (isDesktopViewport()) {
-        advisorBackdrop.classList.remove('open', 'desktop-sidebar');
-        advisorSheet.classList.remove('open');
-        $('#appShell')?.classList.remove('advisor-open');
-      } else {
-        closeSheet(advisorBackdrop, advisorSheet);
+
+      _monevisorOpenOptions = {
+        ...(options || {}),
+        forceMount: true,
+        expandChat: !!(options?.expandChat || options?.prefillMessage || options?.focus),
+      };
+
+      STATE.ui.monevisorPageOpen = true;
+      STATE.ui.budgetPageOpen = false;
+      STATE.ui.dashboardOpen = false;
+      STATE.ui.advisorOpen = false;
+      STATE.ui.budgetOpen = false;
+
+      const root = $('#monevisorPageRoot');
+      if (root) delete root.dataset.ready;
+
+      $$('.nav-item[data-nav]').forEach((el) => {
+        el.classList.toggle('active', el.getAttribute('data-nav') === 'advisor');
+      });
+      $$('.sidebar-item[data-nav]').forEach((el) => {
+        el.classList.toggle('active', el.getAttribute('data-nav') === 'advisor');
+      });
+
+      rerender();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      await renderMonevisorPageView(_monevisorOpenOptions);
+    }
+    function closeAdvisor(){
+      STATE.ui.advisorOpen = false;
+      STATE.ui.monevisorPageOpen = false;
+      try {
+        window.monefyiMonevisorPanel?.closeMonevisor?.();
+      } catch (_) { /* ignore */ }
+      const root = $('#monevisorPageRoot');
+      if (root) {
+        root.classList.add('hidden');
+        root.replaceChildren();
+        delete root.dataset.ready;
+      }
+      if (advisorBackdrop && advisorSheet) {
+        if (isDesktopViewport()) {
+          advisorBackdrop.classList.remove('open', 'desktop-sidebar');
+          advisorSheet.classList.remove('open');
+          $('#appShell')?.classList.remove('advisor-open');
+        } else {
+          closeSheet(advisorBackdrop, advisorSheet);
+        }
       }
     }
     advisorBackdrop.addEventListener('click', (e)=>{
@@ -8411,18 +8479,19 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
     window.openAdvisorAuto = openAdvisorAuto;
     window.saveBudgetMonth = saveBudgetMonth;
 
-    // Monevisor CSS + client warm-up
+    // Monevisor page CSS + client warm-up (panel CSS kept for optional deep-link fallback)
     (function ensureMonevisorCss(){
-      if (document.getElementById('monevisor-panel-css')) return;
-      const link = document.createElement('link');
-      link.id = 'monevisor-panel-css';
-      link.rel = 'stylesheet';
-      try {
-        link.href = new URL('css/monevisor-panel.css', document.baseURI).href;
-      } catch (_) {
-        link.href = (CFG.basePath || '/app').replace(/\/$/, '') + '/css/monevisor-panel.css';
+      const base = (() => {
+        try { return new URL('css/', document.baseURI).href; }
+        catch (_) { return (CFG.basePath || '/app').replace(/\/$/, '') + '/css/'; }
+      })();
+      if (!document.getElementById('monevisor-page-css')) {
+        const link = document.createElement('link');
+        link.id = 'monevisor-page-css';
+        link.rel = 'stylesheet';
+        link.href = `${base}monevisor-page.css`;
+        document.head.appendChild(link);
       }
-      document.head.appendChild(link);
     })();
     setTimeout(async () => {
       try {
@@ -9668,15 +9737,21 @@ function toggleNav(view, triggerEl) {
         openBudget();
         return;
       }
+      if (view === 'advisor') {
+        openAdvisorAuto();
+        return;
+      }
 
       if (view === 'list') {
         STATE.ui.dashboardOpen = false;
         STATE.ui.budgetPageOpen = false;
+        STATE.ui.monevisorPageOpen = false;
       } else if (view === 'dash') {
         STATE.ui.dashboardOpen = true;
         STATE.ui.budgetPageOpen = false;
+        STATE.ui.monevisorPageOpen = false;
       }
-      const map = { dash: 'beranda', list: 'transaksi', budget: 'budget' };
+      const map = { dash: 'beranda', list: 'transaksi', budget: 'budget', advisor: 'advisor' };
       const active = map[view] || '';
       $$('.nav-item[data-nav]').forEach((el) => {
         el.classList.toggle('active', el.getAttribute('data-nav') === active);
@@ -9692,14 +9767,14 @@ function toggleNav(view, triggerEl) {
     $$('.sidebar-item[data-nav]').forEach((el) => {
       el.addEventListener('click', () => {
         const view = el.getAttribute('data-nav');
-        if (view === 'dash' || view === 'list' || view === 'budget') toggleNav(view, el);
+        if (view === 'dash' || view === 'list' || view === 'budget' || view === 'advisor') toggleNav(view, el);
       });
     });
 
     $$('.nav-item[data-nav]').forEach((el) => {
       el.addEventListener('click', (e) => {
         const nav = el.getAttribute('data-nav');
-        const map = { beranda: 'dash', transaksi: 'list', budget: 'budget' };
+        const map = { beranda: 'dash', transaksi: 'list', budget: 'budget', advisor: 'advisor' };
         const view = map[nav];
         if (view) {
           e.preventDefault();

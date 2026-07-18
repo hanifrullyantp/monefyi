@@ -25,12 +25,12 @@
 openAdvisor / openAdvisorAuto
         │
         ▼
- monevisor-panel.js  (conversational UI)
+ monevisor-page.js  (full tab page: report primary + collapsible chat)
         │
-        ▼
- monevisor-client.js (unified API, cache, prefs)
-        ├─ online → monefyi-generate-insights / ai-user-coach / monevisor-apply-action
-        └─ offline → monevisor-heuristic.js (same response shape)
+        ├─ financial-report.js (offline metrics / breakdown / trends)
+        └─ monevisor-client.js (insights + chat + apply)
+             ├─ online → monefyi-generate-insights / ai-user-coach / monevisor-apply-action
+             └─ offline → monevisor-heuristic.js (same response shape)
         │
         ▼
  Local apply via STATE.budgetsByMonth + saveBudgetRowsLocal / saveBudgetMonth
@@ -40,11 +40,14 @@ openAdvisor / openAdvisorAuto
 
 | File | Peran |
 |------|-------|
-| `app/js/components/monevisor-panel.js` | Panel UI (story, health, insights, chat, voice) |
+| `app/js/pages/monevisor-page.js` | Full-page UI (report + collapsible chat) |
+| `app/js/services/financial-report.js` | Offline financial report from STATE / data-store |
+| `app/css/monevisor-page.css` | Page styles |
+| `app/js/components/monevisor-panel.js` | Legacy overlay panel (unused by main nav) |
 | `app/js/services/monevisor-client.js` | Client unified + offline-first |
 | `app/js/services/monevisor-heuristic.js` | Fallback lokal |
-| `app/css/monevisor-panel.css` | Panel styles |
-| `app/js/app.js` | `openAdvisor` → panel; warm-up client |
+| `app/css/monevisor-panel.css` | Legacy panel styles |
+| `app/js/app.js` | `openAdvisor` → monevisor page tab; warm-up client |
 
 ### Backend
 
