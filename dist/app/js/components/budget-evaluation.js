@@ -165,8 +165,13 @@ export async function showEvaluation(options = {}) {
       window.STATE.advisorBudgetContext = context;
     } catch (_) { /* ignore */ }
     close();
-    if (typeof window.openAdvisorAuto === 'function') window.openAdvisorAuto();
-    else if (typeof window.openAdvisor === 'function') window.openAdvisor();
+    const openOpts = {
+      focus: 'over',
+      context: 'over_budget',
+      prefillMessage: 'Jelaskan evaluasi budget bulanan saya dan saran realokasi terbaik.',
+    };
+    if (typeof window.openAdvisorAuto === 'function') window.openAdvisorAuto(openOpts);
+    else if (typeof window.openAdvisor === 'function') window.openAdvisor(openOpts);
   });
 
   if (options.tab === 'recommendations') {

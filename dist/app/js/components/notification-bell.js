@@ -318,7 +318,15 @@ function wireItemHandlers(modal) {
           }
         }, 400);
       } else if (action === 'ask_monevisor' || action === 'reallocate') {
-        if (typeof window.openAdvisorAuto === 'function') window.openAdvisorAuto({ context: 'budget' });
+        if (typeof window.openAdvisorAuto === 'function') {
+          window.openAdvisorAuto({
+            context: action === 'reallocate' ? 'over_budget' : 'budget',
+            focus: 'over',
+            prefillMessage: action === 'reallocate'
+              ? 'Bantu saya realokasi budget yang over.'
+              : 'Ada notifikasi budget — tolong analisa dan kasih langkah konkret.',
+          });
+        }
       }
     };
   });

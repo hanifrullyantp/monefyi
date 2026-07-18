@@ -5271,10 +5271,24 @@ function setSheetPosition(mode) {
         income = Number(saved.income || 0);
         status = 'migrated';
       } else {
-        const ai = computeAIBudgetRecommendationForMonth(mk);
-        income = estimateIncomeForMonth(mk) || (ai ? ai.income : 0) || 0;
-        rows = [];
-        status = 'new';
+        let fromTemplate = null;
+        try {
+          const { applyTemplateForNewMonth } = await import('./services/budget-template.js');
+          fromTemplate = await applyTemplateForNewMonth(mk);
+        } catch (e) {
+          console.warn('[budget] template apply failed', e);
+        }
+
+        if (fromTemplate?.rows?.length) {
+          rows = fromTemplate.rows;
+          income = fromTemplate.income || estimateIncomeForMonth(mk) || 0;
+          status = 'template';
+        } else {
+          const ai = computeAIBudgetRecommendationForMonth(mk);
+          income = estimateIncomeForMonth(mk) || (ai ? ai.income : 0) || 0;
+          rows = [];
+          status = 'new';
+        }
       }
 
       try {
@@ -5365,10 +5379,21 @@ function setSheetPosition(mode) {
       if (e.target?.dataset?.closeBudget === 'true') closeBudget();
     });
 
-    // Advisor sheet
+    // Advisor sheet (legacy DOM kept for print/fallback; primary UX = Monevisor panel)
     const advisorBackdrop = $('#advisorBackdrop');
     const advisorSheet = $('#advisorSheet');
-    function openAdvisor(){
+    async function openAdvisor(options = {}){
+      $$('.nav-item[data-nav]').forEach((el) => {
+        el.classList.toggle('active', el.getAttribute('data-nav') === 'advisor');
+      });
+      try {
+        const { openMonevisor } = await import('./components/monevisor-panel.js');
+        await openMonevisor(options || {});
+        STATE.ui.advisorOpen = true;
+        return;
+      } catch (e) {
+        console.error('[app] Open Monevisor failed, falling back to sheet:', e);
+      }
       if (isDesktopViewport()) {
         STATE.ui.advisorOpen = true;
         advisorBackdrop.classList.add('open', 'desktop-sidebar');
@@ -5379,12 +5404,12 @@ function setSheetPosition(mode) {
         STATE.ui.advisorOpen = true;
         openSheet(advisorBackdrop, advisorSheet);
       }
-      $$('.nav-item[data-nav]').forEach((el) => {
-        el.classList.toggle('active', el.getAttribute('data-nav') === 'advisor');
-      });
     }
     function closeAdvisor(){
       STATE.ui.advisorOpen = false;
+      try {
+        window.monefyiMonevisorPanel?.closeMonevisor?.();
+      } catch (_) { /* ignore */ }
       if (isDesktopViewport()) {
         advisorBackdrop.classList.remove('open', 'desktop-sidebar');
         advisorSheet.classList.remove('open');
@@ -7379,6 +7404,13 @@ async function handleSaveBudget() {
         if (btn) btn.innerText = 'Menyimpan...';
         
         await saveBudgetMonth(d.month, d.income, normalized.categories);
+
+        try {
+          const { saveBudgetTemplate } = await import('./services/budget-template.js');
+          await saveBudgetTemplate(d.month, d.income, cleanRows);
+        } catch (e) {
+          console.warn('[budget] save template failed', e);
+        }
         
         try {
           const { clearChanges } = await import('./services/budget-changes-tracker.js');
@@ -8308,19 +8340,34 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
       $('#advisorStatus').textContent = ins.source === 'gemini' ? 'AI ✓' : 'Selesai.';
     }
 
-    async function openAdvisorAuto(){
-      openAdvisor();
-      const fp = advisorCurrentFingerprint();
-      if (STATE.advisorCache.data && STATE.advisorCache.fingerprint === fp) {
-        renderAdvisorData(STATE.advisorCache.data);
-        initCoachChat({ reset: false });
-        $('#advisorStatus').textContent = 'Selesai.';
-        return;
-      }
-      await generateInsightsAndRender();
+    async function openAdvisorAuto(options = {}){
+      await openAdvisor(options || {});
     }
     window.openAdvisor = openAdvisor;
     window.openAdvisorAuto = openAdvisorAuto;
+    window.saveBudgetMonth = saveBudgetMonth;
+
+    // Monevisor CSS + client warm-up
+    (function ensureMonevisorCss(){
+      if (document.getElementById('monevisor-panel-css')) return;
+      const link = document.createElement('link');
+      link.id = 'monevisor-panel-css';
+      link.rel = 'stylesheet';
+      try {
+        link.href = new URL('css/monevisor-panel.css', document.baseURI).href;
+      } catch (_) {
+        link.href = (CFG.basePath || '/app').replace(/\/$/, '') + '/css/monevisor-panel.css';
+      }
+      document.head.appendChild(link);
+    })();
+    setTimeout(async () => {
+      try {
+        const { initMonevisor } = await import('./services/monevisor-client.js');
+        await initMonevisor();
+      } catch (e) {
+        console.warn('[app] Init Monevisor failed:', e);
+      }
+    }, 2000);
 
     // tombol manual refresh (tetap ada)
     $('#btnGenerateInsights').addEventListener('click', async () => {

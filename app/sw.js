@@ -1,5 +1,5 @@
 // Offline-capable service worker — v7 budget killer feature.
-const CACHE_VERSION = 'v9-budget-refine-2';
+const CACHE_VERSION = 'v11-monevisor-uvp';
 const STATIC_CACHE = `monefyi-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `monefyi-runtime-${CACHE_VERSION}`;
 const IMAGES_CACHE = `monefyi-images-${CACHE_VERSION}`;
@@ -18,6 +18,7 @@ const shellPaths = [
   './css/quick-preview.css',
   './css/budget-enhanced.css',
   './css/budget-final-refinements.css',
+  './css/monevisor-panel.css',
   './js/app.js',
   './js/config.js',
   './js/monefyi-ui.js',
@@ -46,7 +47,11 @@ const shellPaths = [
   './js/services/income-source.js',
   './js/services/global-filter.js',
   './js/services/budget-generator.js',
+  './js/services/budget-template.js',
   './js/services/budget-changes-tracker.js',
+  './js/services/monevisor-client.js',
+  './js/services/monevisor-heuristic.js',
+  './js/components/monevisor-panel.js',
   './js/components/global-filter-popup.js',
   './js/components/budget-generator-modal.js',
   './js/components/floating-save-bar.js',

@@ -117,18 +117,30 @@ async function incrementQuota(adminClient: any, userId: string, usageDate: strin
   }
 }
 
-function buildSystemPrompt(summary: any) {
+function buildSystemPrompt(summary: any, prefs: any = null) {
   const hasData = summary.kpi.income > 0 || summary.kpi.expense > 0;
-  
+  const tone = String(prefs?.tone || "friendly");
+  const goal = String(prefs?.primary_goal || "keuangan stabil");
+  const facts = Array.isArray(prefs?.learned_facts) ? prefs.learned_facts.join("; ") : "";
+
+  const jsonTail = `
+Setelah jawaban teks, jika memungkinkan sertakan di AKHIR baris JSON terpisah dengan format:
+<<<ACTIONS>>>{"suggested_actions":[{"type":"increase_budget|reallocate|ask_deeper|view_category|set_goal","label":"string","payload":{}}],"quick_replies":["string"]}<<<END>>>
+Jika tidak ada aksi, kirim quick_replies saja.`;
+
   if (!hasData) {
-    return `Kamu adalah AI Financial Coach Monefyi. User tidak punya data transaksi di periode ini.
+    return `Kamu adalah Monevisor, sahabat keuangan AI Monefyi. User tidak punya data transaksi di periode ini.
+Tone: ${tone}. Tujuan user: ${goal}.
 Tugasmu:
 1. Katakan dengan jujur bahwa data kosong/kurang untuk dianalisa.
 2. Berikan 3-5 poin saran praktis cara mulai mencatat (foto struk, catat manual, atau set budget).
-3. Jangan basa-basi "Halo", langsung ke poin. Maksimal 10 kalimat.`;
+3. Jangan basa-basi panjang. Maksimal 10 kalimat.
+${jsonTail}`;
   }
 
-  return `Kamu adalah AI Financial Coach Monefyi. Sangat Cerdas, Analitis, dan To-The-Point.
+  return `Kamu adalah Monevisor, sahabat keuangan AI Monefyi. Cerdas, empatik, actionable.
+Tone: ${tone}. Tujuan user: ${goal}.
+Fakta tentang user: ${facts || "belum ada"}.
 Data Ringkasan (${summary.periodLabel}):
 - Kas: Income ${summary.kpi.income}, Expense ${summary.kpi.expense}, Net ${summary.kpi.net}.
 - Top Spender: ${summary.topCategories.map((x: any) => `${x.category}: ${x.amount}`).join(", ")}.
@@ -136,15 +148,29 @@ Data Ringkasan (${summary.periodLabel}):
 - Budget: Target ${summary.budgetIncome}, Terencana ${summary.budgetTotal}, Sisa ${summary.budgetRemaining}.
 
 Tugasmu:
-1. SATU KALIMAT ringkasan arus kas (Pendapatan, Pengeluaran, Net).
-2. Judul "Rekomendasi Budget Bulan Depan:".
-3. Berikan 3-7 poin rekomendasi budget spesifik kategori berdasarkan data pengeluaran di atas. Sertakan nominal dan alasan singkat yang cerdas.
-4. Berikan 1 tips "Out-of-the-box" untuk menghemat (misal: membandingkan satu kategori dengan target tabungan).
+1. Jawab pertanyaan user secara spesifik berdasarkan data.
+2. Jika relevan, beri 1-3 langkah konkret.
+3. Hindari basa-basi panjang. Maksimal 12 kalimat. Jujur dan tajam.
+${jsonTail}`;
+}
 
-Aturan Ketat:
-- DILARANG basa-basi perkenalan (Halo, saya AI, senang membantu, dll).
-- WAJIB gunakan POIN-POIN (bullet points).
-- Maksimal total 12 kalimat. Jujur dan tajam.`;
+function parseCoachReply(raw: string) {
+  const text = String(raw || "").trim();
+  const match = text.match(/<<<ACTIONS>>>([\s\S]*?)<<<END>>>/);
+  if (!match) {
+    return { reply: text, suggested_actions: [], quick_replies: [] };
+  }
+  const reply = text.replace(match[0], "").trim();
+  try {
+    const meta = JSON.parse(match[1]);
+    return {
+      reply,
+      suggested_actions: Array.isArray(meta.suggested_actions) ? meta.suggested_actions.slice(0, 5) : [],
+      quick_replies: Array.isArray(meta.quick_replies) ? meta.quick_replies.slice(0, 5) : [],
+    };
+  } catch {
+    return { reply: text, suggested_actions: [], quick_replies: [] };
+  }
 }
 
 // Helper to detect month in user message
@@ -218,6 +244,33 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const question = String(body?.message || "").trim();
     if (!question) return new Response(JSON.stringify({ error: "message is required" }), { status: 400, headers: { ...corsHeaders, ...jsonHeaders } });
+    const threadId = String(body?.thread_id || body?.threadId || "default");
+    const clientContext = body?.context || {};
+
+    // Load prefs + recent history (best-effort; tables may not exist yet)
+    let prefs: any = null;
+    let conversationHistory: { role: string; content: string }[] = [];
+    try {
+      const { data: prefRow } = await supa
+        .from("monevisor_prefs")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      prefs = prefRow;
+    } catch (_) { /* optional */ }
+    try {
+      const { data: history } = await supa
+        .from("monevisor_messages")
+        .select("role, content, metadata")
+        .eq("user_id", user.id)
+        .eq("thread_id", threadId)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      conversationHistory = (history || []).reverse().map((m: any) => ({
+        role: m.role === "assistant" ? "assistant" : "user",
+        content: String(m.content || ""),
+      }));
+    } catch (_) { /* optional */ }
 
     const q = await getQuotaState(supaAdmin, user.id);
     if (!q.canUse) {
@@ -355,11 +408,19 @@ serve(async (req) => {
       budgetIncome: `Rp ${new Intl.NumberFormat("id-ID").format(summary.budgetIncome)}`,
       budgetTotal: `Rp ${new Intl.NumberFormat("id-ID").format(summary.budgetTotal)}`,
       budgetRemaining: `Rp ${new Intl.NumberFormat("id-ID").format(summary.budgetRemaining)}`,
-    });
+    }, prefs);
 
-    let reply = "";
+    const historyBlock = conversationHistory.length
+      ? `\n\nRiwayat chat (terbaru):\n${conversationHistory.map((m) => `${m.role}: ${m.content}`).join("\n")}`
+      : "";
+    const contextBlock = clientContext && Object.keys(clientContext).length
+      ? `\n\nKonteks klien: ${JSON.stringify(clientContext).slice(0, 800)}`
+      : "";
+    const userPrompt = `${question}${historyBlock}${contextBlock}`;
+
+    let rawReply = "";
     try {
-      reply = await callGemini({ apiKey, systemPrompt, userPrompt: question });
+      rawReply = await callGemini({ apiKey, systemPrompt, userPrompt });
     } catch (err) {
       const msg = String(err.message || err).toLowerCase();
       if (msg.includes("429") || msg.includes("quota")) {
@@ -372,12 +433,45 @@ serve(async (req) => {
       throw err;
     }
 
+    const parsed = parseCoachReply(rawReply);
+    const reply = parsed.reply || rawReply;
+    const suggested_actions = parsed.suggested_actions;
+    const quick_replies = parsed.quick_replies.length
+      ? parsed.quick_replies
+      : ["Jelaskan lebih detail", "Apa langkah berikutnya?", "Tidak sekarang"];
+
+    // Persist messages (best-effort)
+    try {
+      await supa.from("monevisor_messages").insert([
+        {
+          user_id: user.id,
+          thread_id: threadId,
+          role: "user",
+          content: question,
+          metadata: { context: clientContext },
+        },
+        {
+          user_id: user.id,
+          thread_id: threadId,
+          role: "assistant",
+          content: reply,
+          metadata: { suggested_actions, quick_replies },
+          model: "gemini-1.5-flash",
+        },
+      ]);
+    } catch (persistErr) {
+      console.warn("monevisor_messages persist skipped:", persistErr);
+    }
+
     // Count only successful AI responses.
     await incrementQuota(supaAdmin, user.id, q.usageDate, q.used + 1);
 
     return new Response(JSON.stringify({ 
       ok: true, 
-      reply, 
+      reply,
+      suggested_actions,
+      quick_replies,
+      thread_id: threadId,
       meta: { period: { start: startISO, end: endISO }, budgetMonth },
       quota: { limit: q.limit, usedToday: q.used + 1, remaining: Math.max(0, q.limit - (q.used + 1)), planType: q.planType },
     }), {

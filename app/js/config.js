@@ -10,6 +10,7 @@
     fnParse: "asfin-parse-transaction",
     fnCoach: "ai-user-coach",
     fnInsights: "monefyi-generate-insights",
+    fnMonevisorApply: "monevisor-apply-action",
     fnAdminAppConfig: "monefyi-admin-app-config",
     checkoutMonthly: "https://lynk.id/asfin-ai/9zexz9z5wom1/checkout",
     checkoutLifetime: "https://lynk.id/asfin-ai/j3q0x5ke3g49/checkout",
