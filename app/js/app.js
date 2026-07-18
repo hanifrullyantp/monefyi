@@ -10572,22 +10572,36 @@ function toggleNav(view, triggerEl) {
     // Collapses the saldo card into a compact bar as the user scrolls down,
     // giving more visual space for the transaction list.
     (function setupSaldoCollapseOnScroll() {
-      const COLLAPSE_AT = 55;   // px — collapse when scrolled past this
-      const EXPAND_AT   = 18;   // px — re-expand when back near top
+      const COLLAPSE_AT = 55;
+      const EXPAND_AT   = 18;
       let collapsed = false;
+      let pinned = false;
       let ticking   = false;
-      let collapseDelta = 0;
 
-      function syncShellCompensation(wrap, isCollapsed) {
+      function getHeaderOffset() {
+        const header = document.querySelector('.app-header');
+        return header ? header.getBoundingClientRect().height : 0;
+      }
+
+      function syncPin(wrap, shouldPin) {
         const shell = document.getElementById('mobileSaldoShell');
-        if (!shell || !wrap) return;
-        if (isCollapsed && collapseDelta > 0) {
-          shell.style.setProperty('--saldo-collapse-delta', `${collapseDelta}px`);
-          shell.classList.add('saldo-shell-compensated');
-        } else {
-          shell.classList.remove('saldo-shell-compensated');
-          shell.style.removeProperty('--saldo-collapse-delta');
+        if (!wrap || !shell) return;
+
+        if (shouldPin) {
+          const headerTop = getHeaderOffset();
+          wrap.style.setProperty('--saldo-pin-top', `${headerTop}px`);
+          wrap.classList.add('saldo-pinned');
+          shell.classList.add('saldo-shell-pinned');
+          shell.style.minHeight = `${wrap.offsetHeight}px`;
+          pinned = true;
+          return;
         }
+
+        wrap.classList.remove('saldo-pinned');
+        wrap.style.removeProperty('--saldo-pin-top');
+        shell.classList.remove('saldo-shell-pinned');
+        shell.style.minHeight = '';
+        pinned = false;
       }
 
       function applyCollapse(scrollTop) {
@@ -10595,24 +10609,23 @@ function toggleNav(view, triggerEl) {
         if (!wrap) return;
 
         if (!collapsed && scrollTop > COLLAPSE_AT) {
-          const expandedH = wrap.offsetHeight;
           collapsed = true;
           wrap.classList.add('saldo-collapsed');
           wrap.setAttribute('aria-expanded', 'false');
           const details = wrap.querySelector('.saldo-details-wrap');
           if (details) details.setAttribute('aria-hidden', 'true');
-          requestAnimationFrame(() => {
-            collapseDelta = Math.max(0, expandedH - wrap.offsetHeight);
-            syncShellCompensation(wrap, true);
-          });
+          requestAnimationFrame(() => syncPin(wrap, true));
         } else if (collapsed && scrollTop < EXPAND_AT) {
           collapsed = false;
           wrap.classList.remove('saldo-collapsed');
           wrap.setAttribute('aria-expanded', 'true');
           const details = wrap.querySelector('.saldo-details-wrap');
           if (details) details.setAttribute('aria-hidden', 'false');
-          syncShellCompensation(wrap, false);
+          syncPin(wrap, false);
+        } else if (collapsed && !pinned && scrollTop > COLLAPSE_AT) {
+          syncPin(wrap, true);
         }
+
         ticking = false;
       }
 
@@ -10633,15 +10646,25 @@ function toggleNav(view, triggerEl) {
         if (window.matchMedia('(max-width: 767px)').matches) {
           shell.addEventListener('scroll', onScroll, { passive: true });
         }
+        window.addEventListener('resize', () => {
+          const liveWrap = document.querySelector('.mobile-saldo-wrap');
+          if (liveWrap?.classList.contains('saldo-pinned')) {
+            liveWrap.style.setProperty('--saldo-pin-top', `${getHeaderOffset()}px`);
+            const shellEl = document.getElementById('mobileSaldoShell');
+            if (shellEl) shellEl.style.minHeight = `${liveWrap.offsetHeight}px`;
+          }
+        }, { passive: true });
         window.matchMedia('(max-width: 767px)').addEventListener('change', function (mq) {
           if (mq.matches) {
             shell.addEventListener('scroll', onScroll, { passive: true });
           } else {
             shell.removeEventListener('scroll', onScroll);
-            // Ensure expanded on desktop
             const wrap = document.querySelector('.mobile-saldo-wrap');
-            if (wrap) wrap.classList.remove('saldo-collapsed');
-            syncShellCompensation(wrap, false);
+            if (wrap) {
+              wrap.classList.remove('saldo-collapsed', 'saldo-pinned');
+              wrap.style.removeProperty('--saldo-pin-top');
+            }
+            syncPin(wrap, false);
             collapsed = false;
           }
         });
