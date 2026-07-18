@@ -146,11 +146,10 @@ export async function showFilterPopup() {
   popup.querySelector('[data-action="reset"]').onclick = () => { resetFilter(); close(); };
   popup.querySelector('[data-action="apply"]').onclick = () => {
     updateFilter(localState);
-    const state = window.STATE;
-    if (localState.period && state?.selectedMonth !== localState.period) {
-      state.selectedMonth = localState.period;
-      if (typeof window.setSelectedMonth === 'function') window.setSelectedMonth(localState.period);
-      else if (typeof window.rerender === 'function') window.rerender();
+    if (localState.period && window.STATE && window.STATE.selectedMonth !== localState.period) {
+      if (typeof window.monefyiSetPeriodMonth === 'function') {
+        window.monefyiSetPeriodMonth(localState.period);
+      }
     }
     close();
   };

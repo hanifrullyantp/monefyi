@@ -25,11 +25,15 @@ export function renderAccountCards(accounts, formatIDR, masked = false, callback
     return `
       <button type="button" class="home-account-card tap" data-account="${encodeURIComponent(acc.name)}" style="--acc-color:${color}">
         <div class="home-account-card__icon">${Icon(iconName, { size: 18, color: '#fff' })}</div>
-        <div class="home-account-card__name">${initial} · ${acc.name}</div>
-        <div class="home-account-card__balance">${balance}</div>
-        <div class="home-account-card__pct">${pct}%</div>
-        <div class="home-account-card__bar" aria-hidden="true">
-          <span class="home-account-card__bar-fill" style="width:${pct}%;background:${color}"></span>
+        <div class="home-account-card__body">
+          <div class="home-account-card__name">${initial} · ${acc.name}</div>
+          <div class="home-account-card__balance">${balance}</div>
+          <div class="home-account-card__meta">
+            <div class="home-account-card__bar" aria-hidden="true">
+              <span class="home-account-card__bar-fill" style="width:${pct}%;background:${color}"></span>
+            </div>
+            <div class="home-account-card__pct">${pct}%</div>
+          </div>
         </div>
       </button>
     `;

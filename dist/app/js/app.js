@@ -42,12 +42,16 @@
         const timer = setTimeout(() => ctrl.abort(), 5000);
         const res = await fetch(`${SUPABASE_URL}/rest/v1/`, {
           method: 'HEAD',
-          headers: { apikey: SUPABASE_ANON_KEY },
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          },
           cache: 'no-store',
           signal: ctrl.signal,
         });
         clearTimeout(timer);
-        _verifiedOnline = res.status > 0 && res.status < 500;
+        // 401 = server reachable (auth required); treat as online for connectivity probe
+        _verifiedOnline = res.ok || res.status === 401 || (res.status > 0 && res.status < 500);
       } catch {
         _verifiedOnline = false;
       }
@@ -1130,6 +1134,17 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
       refreshTransactionsRange().catch(()=>{});
       loadBudgets().then(b => { STATE.budgetsByMonth = b; rerender(); }).catch(()=>{});
       updateSaldoAsync().catch(()=>{});
+    }
+
+    if (typeof window !== 'undefined') {
+      window.monefyiSetPeriodMonth = (mk) => {
+        setPeriod({
+          preset: 'this_month',
+          startISO: toISODate(startOfMonth(mk)),
+          endISO: toISODate(endOfMonth(mk)),
+          label: monthLabel(mk),
+        });
+      };
     }
 
     function initDefaultPeriod(){
@@ -4902,19 +4917,39 @@ function generateSmartBudgetRecommendation() {
 
     function handleHomeQuickAction(actionId) {
       switch (actionId) {
-        case 'budget': openBudget(); break;
-        case 'scan': openReceiptAdd(); break;
-        case 'analytics': openAdvisorAuto(); break;
-        case 'add': openAddSheet('quick'); break;
-        case 'search': toggleNav('list'); break;
-        case 'tutorial': openTutorial(); break;
-        case 'profile': openUser(); break;
-        case 'affiliate': openAffiliate(); break;
-        case 'install': handleInstallApp(); break;
-        case 'accounts': openAccounts(); break;
-        case 'advisor': openAdvisorAuto(); break;
-        case 'settings': openSettings(); break;
-        default: break;
+        case 'transactions':
+        case 'search':
+          toggleNav('list');
+          break;
+        case 'budgeting':
+        case 'budget':
+          openBudget();
+          break;
+        case 'analisa':
+        case 'analytics':
+        case 'advisor':
+          openAdvisorAuto();
+          break;
+        case 'tutorial':
+          openTutorial();
+          break;
+        case 'profile':
+          openUser();
+          break;
+        case 'affiliate':
+          openAffiliate();
+          break;
+        case 'install':
+          handleInstallApp();
+          break;
+        case 'accounts':
+          openAccounts();
+          break;
+        case 'settings':
+          openSettings();
+          break;
+        default:
+          break;
       }
     }
 
@@ -10466,23 +10501,42 @@ function toggleNav(view, triggerEl) {
       const EXPAND_AT   = 18;   // px — re-expand when back near top
       let collapsed = false;
       let ticking   = false;
+      let collapseDelta = 0;
+
+      function syncShellCompensation(wrap, isCollapsed) {
+        const shell = document.getElementById('mobileSaldoShell');
+        if (!shell || !wrap) return;
+        if (isCollapsed && collapseDelta > 0) {
+          shell.style.setProperty('--saldo-collapse-delta', `${collapseDelta}px`);
+          shell.classList.add('saldo-shell-compensated');
+        } else {
+          shell.classList.remove('saldo-shell-compensated');
+          shell.style.removeProperty('--saldo-collapse-delta');
+        }
+      }
 
       function applyCollapse(scrollTop) {
         const wrap = document.querySelector('.mobile-saldo-wrap');
         if (!wrap) return;
 
         if (!collapsed && scrollTop > COLLAPSE_AT) {
+          const expandedH = wrap.offsetHeight;
           collapsed = true;
           wrap.classList.add('saldo-collapsed');
           wrap.setAttribute('aria-expanded', 'false');
           const details = wrap.querySelector('.saldo-details-wrap');
           if (details) details.setAttribute('aria-hidden', 'true');
+          requestAnimationFrame(() => {
+            collapseDelta = Math.max(0, expandedH - wrap.offsetHeight);
+            syncShellCompensation(wrap, true);
+          });
         } else if (collapsed && scrollTop < EXPAND_AT) {
           collapsed = false;
           wrap.classList.remove('saldo-collapsed');
           wrap.setAttribute('aria-expanded', 'true');
           const details = wrap.querySelector('.saldo-details-wrap');
           if (details) details.setAttribute('aria-hidden', 'false');
+          syncShellCompensation(wrap, false);
         }
         ticking = false;
       }
@@ -10512,6 +10566,7 @@ function toggleNav(view, triggerEl) {
             // Ensure expanded on desktop
             const wrap = document.querySelector('.mobile-saldo-wrap');
             if (wrap) wrap.classList.remove('saldo-collapsed');
+            syncShellCompensation(wrap, false);
             collapsed = false;
           }
         });

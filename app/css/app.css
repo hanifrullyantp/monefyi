@@ -2541,6 +2541,15 @@ html, body {
         min-height: 0;
       }
 
+      #mobileSaldoShell {
+        flex-shrink: 0;
+        transition: margin-bottom 0.38s var(--ease-ios);
+      }
+
+      #mobileSaldoShell.saldo-shell-compensated {
+        margin-bottom: calc(-1 * var(--saldo-collapse-delta, 0px));
+      }
+
       #homePageRoot,
       #txSection {
         position: relative;
