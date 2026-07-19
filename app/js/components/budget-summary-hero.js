@@ -25,9 +25,16 @@ export async function renderBudgetSummaryHero(container, ctx) {
   const totalBudget = rows.reduce((sum, b) => sum + Math.abs(Number(b.amount || 0)), 0);
   const linkedSpent = rows.reduce((sum, b) => sum + calculateProgress(b, transactions, month).spent, 0);
 
-  const monthExpenses = (transactions || []).filter(
-    (t) => t.type === 'expense' && (!month || String(t.date || '').startsWith(month)),
-  );
+  // Prefer explicit list; fall back to full STATE so realisasi never stuck at 0 from empty ctx
+  const txSource = (transactions && transactions.length)
+    ? transactions
+    : (typeof window !== 'undefined' ? (window.STATE?.transactions || []) : []);
+  const monthExpenses = txSource.filter((t) => {
+    const typ = String(t.type || 'expense').toLowerCase();
+    if (typ !== 'expense') return false;
+    if (!month) return true;
+    return String(t.date || '').slice(0, 10).startsWith(month);
+  });
   // Realisasi = total pengeluaran bulan ini / total budgeting (not only linked)
   const totalExpenseMonth = monthExpenses.reduce((s, t) => s + Math.abs(Number(t.amount || 0)), 0);
   const totalSpent = totalExpenseMonth;

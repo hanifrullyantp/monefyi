@@ -1147,6 +1147,11 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
 
       STATE.focusCategory = null;
       if (window.MonefyiUI?.cachePeriod) window.MonefyiUI.cachePeriod(STATE.period);
+      // Keep budget global-filter period aligned with period chip (fixes realisasi 0 on wrong month)
+      import('./services/global-filter.js')
+        .then((m) => m.syncPeriodFromState?.(STATE.selectedMonth))
+        .catch(() => {});
+      if (STATE.budgetDraft) STATE.budgetDraft.month = STATE.selectedMonth;
       rerender();
       refreshTransactionsRange().catch(()=>{});
       loadBudgets().then(b => { STATE.budgetsByMonth = b; rerender(); }).catch(()=>{});
@@ -5380,7 +5385,12 @@ function setSheetPosition(mode) {
     const budgetSheet = $('#budgetSheet');
 
     async function prepareBudgetDraft() {
-      const mk = STATE.selectedMonth;
+      // Always follow the same month as the header period chip
+      const mk = toMonthKey(STATE.period?.end || STATE.selectedMonth || new Date());
+      STATE.selectedMonth = mk;
+      import('./services/global-filter.js')
+        .then((m) => m.syncPeriodFromState?.(mk))
+        .catch(() => {});
       const saved = STATE.budgetsByMonth[mk] || getBudgetMonth(mk);
 
       let rows = [];
@@ -5443,14 +5453,20 @@ function setSheetPosition(mode) {
     async function renderBudgetPageView() {
       const root = $('#budgetPageRoot');
       if (!root || !STATE.ui.budgetPageOpen) return;
+      // Rebuild draft when period month drifted (e.g. chip Jun vs draft Jul)
+      const periodMk = toMonthKey(STATE.period?.end || STATE.selectedMonth || new Date());
+      if (!STATE.budgetDraft || STATE.budgetDraft.month !== periodMk) {
+        await prepareBudgetDraft();
+      }
       const d = STATE.budgetDraft || await prepareBudgetDraft();
       try {
         const { renderBudgetPage } = await import('./components/budget-page.js');
         await renderBudgetPage(root, {
-          month: d.month,
+          month: periodMk,
           rows: d.rows || [],
           income: Number(d.income || 0),
-          transactions: getTransactionsInPeriod(),
+          // Full in-memory list — page filters by display month (avoids empty if period range quirks)
+          transactions: STATE.transactions || [],
           onRefresh: async () => {
             await prepareBudgetDraft();
             await renderBudgetPageView();

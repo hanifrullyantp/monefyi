@@ -724,6 +724,24 @@
   display: none !important;
 }
 
+/* Kill Tailwind space-y gap so budgeting starts mepet under header */
+#dynamicContent.dynamic-content--budget {
+  gap: 0 !important;
+  row-gap: 0 !important;
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+#dynamicContent.dynamic-content--budget > * + * {
+  margin-top: 0 !important;
+}
+#dynamicContent.dynamic-content--tx {
+  gap: 0.25rem !important;
+  padding-top: 0 !important;
+}
+.budget-page-root {
+  padding-top: 4px;
+}
+
 .budget-page {
   display: flex;
   flex-direction: column;
