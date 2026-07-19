@@ -5444,6 +5444,7 @@ function setSheetPosition(mode) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     window.openBudget = openBudget;
+    window.openAddSheet = openAddSheet;
 
     function closeBudgetSheetOnly() {
       STATE.ui.budgetOpen = false;

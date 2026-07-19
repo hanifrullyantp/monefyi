@@ -1,36 +1,21 @@
 /**
- * Monevisor full-page UI — financial report primary, chat secondary.
+ * Monevisor Financial Coach — full-page diagnosis UI.
+ * Chat AI is secondary (collapsible).
  * @module pages/monevisor-page
  */
 
 import { Icon } from '../components/icons.js';
 import { buildFinancialReport } from '../services/financial-report.js';
-import {
-  initMonevisor,
-  getState as getMonevisorState,
-  onStateChange,
-  generateInsights,
-  sendMessage,
-  applyAction,
-  clearConversation,
-  loadMessageHistory,
-} from '../services/monevisor-client.js';
+import { diagnoseFinancials } from '../services/financial-diagnosis.js';
+import { sendMessage, initMonevisor, loadMessageHistory } from '../services/monevisor-client.js';
 
 let _root = null;
-let _unsub = null;
-let _chatExpanded = false;
-let _pendingOptions = {};
-let _report = null;
 let _formatIDR = (n) => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
+let _pendingOptions = {};
 
 /**
  * @param {HTMLElement} container
  * @param {object} [options]
- * @param {function} [options.formatIDR]
- * @param {string} [options.prefillMessage]
- * @param {boolean} [options.expandChat]
- * @param {string} [options.focus]
- * @param {string} [options.context]
  */
 export async function renderMonevisorPage(container, options = {}) {
   if (!container) return;
@@ -40,63 +25,57 @@ export async function renderMonevisorPage(container, options = {}) {
 
   ensureCss();
   container.className = 'monevisor-page';
-  container.innerHTML = renderShell();
+  container.innerHTML = `
+    <div class="mv-loading">
+      <div class="mv-spinner"></div>
+      <p>Menganalisis keuanganmu...</p>
+    </div>
+  `;
 
-  _chatExpanded = !!(options.expandChat || options.prefillMessage || options.focus);
+  try {
+    await initMonevisor().catch(() => {});
+    const report = await buildFinancialReport();
+    const diagnosis = diagnoseFinancials(report);
+    renderDiagnosis(container, report, diagnosis);
 
-  await initMonevisor();
-  if (_unsub) _unsub();
-  _unsub = onStateChange((state) => paintChat(state));
+    if (options.prefillMessage || options.expandChat || options.focus) {
+      setTimeout(() => {
+        const details = container.querySelector('.mv-chat-collapse');
+        if (details) details.open = true;
+        const input = container.querySelector('#mv-input');
+        if (input && options.prefillMessage) {
+          input.value = options.prefillMessage;
+          input.focus();
+        }
+      }, 200);
+    }
 
-  await refreshReport();
-  wirePageHandlers();
-
-  loadMessageHistory().catch(() => {});
-  const mv = getMonevisorState();
-  if (!mv.insights && !mv.loading) {
-    setTimeout(() => generateInsights(), 200);
-  } else {
-    paintChat(mv);
-  }
-
-  if (options.prefillMessage) {
-    setTimeout(() => {
-      expandChat(true);
-      const input = _root?.querySelector('#mvp-chat-input');
-      if (input) {
-        input.value = options.prefillMessage;
-        input.focus();
-      }
-    }, 250);
-  } else if (_chatExpanded) {
-    expandChat(true);
+    loadMessageHistory().catch(() => {});
+  } catch (e) {
+    console.error('[monevisor]', e);
+    container.innerHTML = `
+      <div class="mv-error">
+        <p>Gagal memuat analisa</p>
+        <button type="button" data-action="refresh">Retry</button>
+      </div>
+    `;
+    container.querySelector('[data-action="refresh"]')?.addEventListener('click', () => {
+      renderMonevisorPage(container, _pendingOptions);
+    });
   }
 }
 
 /**
- * Re-render report when filter/period changes.
+ * Re-render when filter/period changes.
  */
 export async function refreshMonevisorPage() {
   if (!_root || !window.STATE?.ui?.monevisorPageOpen) return;
-  await refreshReport();
-}
-
-async function refreshReport() {
-  if (!_root) return;
-  const reportEl = _root.querySelector('#mvp-report');
-  if (reportEl) {
-    reportEl.innerHTML = `<div class="mvp-loading">${Icon('refresh', { size: 18 })} Memuat laporan...</div>`;
-  }
   try {
-    _report = await buildFinancialReport();
-    if (reportEl) reportEl.innerHTML = renderReport(_report);
-    const periodEl = _root.querySelector('#mvp-period');
-    if (periodEl) periodEl.textContent = _report.periodLabel || _report.month;
+    const report = await buildFinancialReport();
+    const diagnosis = diagnoseFinancials(report);
+    renderDiagnosis(_root, report, diagnosis);
   } catch (e) {
-    console.error('[monevisor-page] report failed:', e);
-    if (reportEl) {
-      reportEl.innerHTML = `<div class="mvp-empty">Gagal memuat laporan. Coba refresh.</div>`;
-    }
+    console.error('[monevisor] refresh failed', e);
   }
 }
 
@@ -113,320 +92,449 @@ function ensureCss() {
   document.head.appendChild(link);
 }
 
-function renderShell() {
-  return `
-    <header class="mvp-header">
-      <div class="mvp-header-main">
-        <div class="mvp-brand">
-          <span class="mvp-brand-icon">${Icon('sparkles', { size: 20 })}</span>
+function renderDiagnosis(container, report, dx) {
+  const h = dx.health;
+  const m = report.metrics || {};
+  const income = Number(m.income ?? m.totalIncome ?? 0);
+  const expense = Number(m.expense ?? m.totalExpense ?? 0);
+  const net = Number(m.net ?? (income - expense));
+  const savingRate = Number(m.saving_rate ?? m.savingRate ?? 0);
+  const cats = report.categories || report.categoryBreakdown || [];
+  const comparison = report.comparison
+    ? {
+      current: { expense: report.comparison.current?.expense ?? expense },
+      previous: { expense: report.comparison.previous?.expense || 0 },
+      changes: {
+        expense: report.comparison.previous?.expense > 0
+          ? ((expense - report.comparison.previous.expense) / report.comparison.previous.expense) * 100
+          : null,
+      },
+    }
+    : null;
+
+  container.innerHTML = `
+    <div class="mv-page">
+      <header class="mv-header">
+        <div class="mv-brand">
+          <div class="mv-logo">${Icon('sparkles', { size: 18 })}</div>
           <div>
-            <h1 class="mvp-title">Monevisor</h1>
-            <p class="mvp-subtitle" id="mvp-period">Laporan keuangan</p>
+            <div class="mv-title">Monevisor</div>
+            <div class="mv-period">${escapeHtml(report.periodLabel || '')}</div>
           </div>
         </div>
-        <button type="button" class="mvp-icon-btn" data-action="refresh-report" title="Refresh">
-          ${Icon('refresh', { size: 16 })}
+        <button type="button" class="mv-refresh" data-action="refresh" title="Refresh" aria-label="Refresh">
+          ${Icon('refresh', { size: 18 })}
         </button>
-      </div>
-    </header>
+      </header>
 
-    <div id="mvp-report" class="mvp-report" aria-label="Laporan keuangan"></div>
-
-    <section class="mvp-chat-dock ${ _chatExpanded ? 'is-expanded' : '' }" id="mvp-chat-dock" aria-label="Chat Monevisor">
-      <button type="button" class="mvp-chat-toggle" data-action="toggle-chat" aria-expanded="${_chatExpanded}">
-        <span class="mvp-chat-toggle-left">
-          ${Icon('sparkles', { size: 16 })}
-          <span>Tanya Monevisor</span>
-          <span class="mvp-chat-badge" id="mvp-chat-badge" hidden></span>
-        </span>
-        <span class="mvp-chat-chevron">${Icon('chevronDown', { size: 16 })}</span>
-      </button>
-      <div class="mvp-chat-body" id="mvp-chat-body">
-        <div class="mvp-chat-insights" id="mvp-chat-insights"></div>
-        <div class="mvp-chat-messages" id="mvp-chat-messages"></div>
-        <div class="mvp-chat-starters" id="mvp-chat-starters"></div>
-        <div class="mvp-chat-input-row">
-          <input type="text" id="mvp-chat-input" placeholder="Tanya tentang laporan ini..." autocomplete="off" />
-          <button type="button" class="mvp-send-btn" data-action="send-chat" title="Kirim">
-            ${Icon('check', { size: 16 })}
-          </button>
+      <section class="mv-coach-card">
+        <div class="mv-coach-text">${escapeHtml(dx.summary.greeting)}</div>
+        <div class="mv-health-row">
+          <div class="mv-health-ring-wrap">${renderHealthRing(h.score, h.color)}</div>
+          <div class="mv-health-detail">
+            <div class="mv-health-label" style="color:${h.color}">
+              Kondisi Keuangan: ${escapeHtml(h.label)} (${h.score}/100)
+            </div>
+            <div class="mv-health-msg">${escapeHtml(h.message)}</div>
+            ${h.factors?.length ? `
+              <div class="mv-health-factors">
+                ${h.factors.map((f) => `
+                  <span class="mv-factor ${escapeHtml(f.status)}">${escapeHtml(f.name)}: ${escapeHtml(f.score)}</span>
+                `).join('')}
+              </div>
+            ` : ''}
+          </div>
         </div>
-        <p class="mvp-disclaimer">Bukan nasihat keuangan berlisensi. Analisis dari data lokalmu.</p>
-      </div>
-    </section>
-  `;
-}
+      </section>
 
-function renderReport(report) {
-  const m = report.metrics || {};
-  const cats = report.categories || [];
-  const top = report.topSpending || [];
-  const budgets = report.budgets || [];
-  const trend = report.dailyTrend || [];
-  const cmp = report.comparison || {};
-  const maxCat = cats[0]?.amount || 1;
-  const maxDay = Math.max(1, ...trend.map((d) => d.expense));
+      ${dx.dataQuality.quality !== 'good' ? `
+        <section class="mv-data-quality">
+          <div class="mv-dq-header">
+            ${Icon('alertTriangle', { size: 14 })}
+            <span>Kualitas Data: ${dx.dataQuality.quality === 'poor' ? 'Kurang' : 'Cukup'}</span>
+          </div>
+          <div class="mv-dq-issues">
+            ${dx.dataQuality.issues.map((i) => `
+              <div class="mv-dq-issue ${escapeHtml(i.severity)}">
+                <span>${escapeHtml(i.message)}</span>
+              </div>
+            `).join('')}
+          </div>
+        </section>
+      ` : ''}
 
-  if (!m.count && !budgets.length) {
-    return `
-      <div class="mvp-empty">
-        <div class="mvp-empty-icon">${Icon('chartBar', { size: 32 })}</div>
-        <div class="mvp-empty-title">Belum ada data di periode ini</div>
-        <div class="mvp-empty-text">Catat transaksi atau ubah filter periode untuk melihat laporan.</div>
-      </div>
-    `;
-  }
+      <section class="mv-metrics">
+        ${renderMetricCard('Income', income, 'income', income === 0 ? 'Belum tercatat' : null)}
+        ${renderMetricCard('Expense', expense, 'expense', null)}
+        ${renderMetricCard('Net', net, net >= 0 ? 'positive' : 'negative', null)}
+        ${renderMetricCard(
+          'Saving',
+          `${Math.round(savingRate * 100)}%`,
+          savingRate >= 0.2 ? 'good' : savingRate >= 0.1 ? 'warning' : 'bad',
+          savingRate >= 0.2 ? 'Target tercapai' : 'Target: 20%',
+        )}
+      </section>
 
-  return `
-    <section class="mvp-metrics">
-      ${metricCard('Income', m.income, 'income', 'wallet')}
-      ${metricCard('Expense', m.expense, 'expense', 'trendingDown')}
-      ${metricCard('Net', m.net, m.net >= 0 ? 'positive' : 'negative', 'trendingUp')}
-      ${metricCard('Saving', `${Math.round((m.saving_rate || 0) * 100)}%`, 'neutral', 'target', true)}
-    </section>
+      ${dx.diagnoses.filter(Boolean).length ? `
+        <section class="mv-section">
+          <h3 class="mv-section-title">${Icon('stethoscope', { size: 14 })} Diagnosa Keuangan</h3>
+          <div class="mv-diagnoses">
+            ${dx.diagnoses.filter(Boolean).map((d) => renderDiagnosisCard(d)).join('')}
+          </div>
+        </section>
+      ` : ''}
 
-    <section class="mvp-section">
-      <h2 class="mvp-section-title">${Icon('chartBar', { size: 16 })} Breakdown Kategori</h2>
+      ${(dx.rule503020?.length || dx.benchmarks?.length) ? `
+        <section class="mv-section">
+          <h3 class="mv-section-title">${Icon('chartBar', { size: 14 })} Benchmark: Posisi Kamu vs Standar</h3>
+          ${dx.rule503020?.length ? `
+            <div class="mv-bench-subtitle">Aturan 50/30/20</div>
+            <div class="mv-benchmarks mv-benchmarks--503020">
+              ${dx.rule503020.map((b) => renderBenchmarkBar(b)).join('')}
+            </div>
+          ` : ''}
+          <div class="mv-benchmarks">
+            ${(dx.benchmarks || []).map((b) => renderBenchmarkBar(b)).join('')}
+          </div>
+        </section>
+      ` : ''}
+
+      ${dx.actionPlan.length ? `
+        <section class="mv-section">
+          <h3 class="mv-section-title">${Icon('target', { size: 14 })} Action Plan</h3>
+          <div class="mv-actions">
+            ${dx.actionPlan.map((a) => renderActionStep(a)).join('')}
+          </div>
+        </section>
+      ` : ''}
+
+      ${dx.projection?.message ? `
+        <section class="mv-section">
+          <h3 class="mv-section-title">${Icon('trendingUp', { size: 14 })} Proyeksi: Jika Konsisten</h3>
+          <div class="mv-projection ${escapeHtml(dx.projection.type || 'neutral')}">
+            ${dx.projection.title ? `<div class="mv-proj-title">${escapeHtml(dx.projection.title)}</div>` : ''}
+            <div class="mv-proj-msg">${escapeHtml(dx.projection.message)}</div>
+            ${dx.projection.chart ? renderProjectionChart(dx.projection) : ''}
+            ${dx.projection.suggestion ? `
+              <div class="mv-proj-sug">
+                ${Icon('lightBulb', { size: 12 })}
+                ${escapeHtml(dx.projection.suggestion)}
+              </div>
+            ` : ''}
+          </div>
+        </section>
+      ` : ''}
+
       ${cats.length ? `
-        <div class="mvp-cat-list">
-          ${cats.slice(0, 8).map((c) => `
-            <div class="mvp-cat-row">
-              <div class="mvp-cat-meta">
-                <span class="mvp-cat-name">${escapeHtml(c.category)}</span>
-                <span class="mvp-cat-amt">${_formatIDR(c.amount)} · ${c.percent}%</span>
-              </div>
-              <div class="mvp-bar"><div class="mvp-bar-fill" style="width:${Math.round((c.amount / maxCat) * 100)}%"></div></div>
-            </div>
-          `).join('')}
-        </div>
-      ` : `<div class="mvp-muted">Tidak ada pengeluaran di periode ini.</div>`}
-    </section>
-
-    <section class="mvp-section">
-      <h2 class="mvp-section-title">${Icon('shoppingBag', { size: 16 })} Top Spending</h2>
-      ${top.length ? `
-        <div class="mvp-top-list">
-          ${top.map((t) => `
-            <div class="mvp-top-row">
-              <div class="mvp-top-main">
-                <div class="mvp-top-name">${escapeHtml(t.merchant)}</div>
-                <div class="mvp-top-sub">${escapeHtml(t.category)} · ${escapeHtml(t.date)}</div>
-              </div>
-              <div class="mvp-top-amt">${_formatIDR(t.amount)}</div>
-            </div>
-          `).join('')}
-        </div>
-      ` : `<div class="mvp-muted">Belum ada pengeluaran besar.</div>`}
-    </section>
-
-    <section class="mvp-section">
-      <h2 class="mvp-section-title">${Icon('budget', { size: 16 })} Budget vs Aktual</h2>
-      ${budgets.length ? `
-        <div class="mvp-budget-list">
-          ${budgets.map((b) => {
-            const pct = Math.min(100, Number(b.percent_used || 0));
-            const status = b.status || 'healthy';
-            return `
-              <div class="mvp-budget-row status-${escapeHtml(status)}">
-                <div class="mvp-budget-head">
-                  <span>${escapeHtml(b.category)}</span>
-                  <span>${pct}%</span>
+        <section class="mv-section">
+          <h3 class="mv-section-title">${Icon('chartPie', { size: 14 })} Breakdown Pengeluaran</h3>
+          <div class="mv-categories">
+            ${cats.slice(0, 6).map((c, i) => `
+              <div class="mv-cat-row">
+                <span class="mv-cat-rank">${i + 1}</span>
+                <div class="mv-cat-info">
+                  <span class="mv-cat-name">${escapeHtml(c.category)}</span>
+                  <div class="mv-cat-bar"><div style="width:${Math.min(c.percent || 0, 100)}%"></div></div>
                 </div>
-                <div class="mvp-bar"><div class="mvp-bar-fill mvp-bar-fill--${escapeHtml(status)}" style="width:${pct}%"></div></div>
-                <div class="mvp-budget-foot">
-                  ${_formatIDR(b.spent)} / ${_formatIDR(b.amount)}
-                  <span class="mvp-priority">${escapeHtml(String(b.priority || '').toUpperCase())}</span>
+                <div class="mv-cat-val">
+                  <div>${_formatIDR(c.amount)}</div>
+                  <div class="mv-cat-pct">${Math.round(c.percent || 0)}%</div>
                 </div>
               </div>
-            `;
-          }).join('')}
-        </div>
-      ` : `<div class="mvp-muted">Belum ada budget untuk bulan ini.</div>`}
-    </section>
+            `).join('')}
+          </div>
+        </section>
+      ` : ''}
 
-    <section class="mvp-section">
-      <h2 class="mvp-section-title">${Icon('calendar', { size: 16 })} Tren Harian</h2>
-      ${trend.length ? `
-        <div class="mvp-trend" role="img" aria-label="Tren pengeluaran harian">
-          ${trend.map((d) => {
-            const h = Math.max(4, Math.round((d.expense / maxDay) * 72));
-            return `<div class="mvp-trend-col" title="${escapeHtml(d.date)}: ${_formatIDR(d.expense)}">
-              <div class="mvp-trend-bar" style="height:${h}px"></div>
-            </div>`;
-          }).join('')}
-        </div>
-        <div class="mvp-trend-legend">
-          <span>Max hari: ${_formatIDR(maxDay)}</span>
-          <span>${trend.length} hari</span>
-        </div>
-      ` : `<div class="mvp-muted">Tren belum tersedia.</div>`}
-    </section>
+      ${comparison ? `
+        <section class="mv-section">
+          <h3 class="mv-section-title">${Icon('calendar', { size: 14 })} vs Bulan Lalu</h3>
+          <div class="mv-compare-grid">
+            <div class="mv-compare-col">
+              <div class="mv-compare-period">Bulan Ini</div>
+              <div class="mv-compare-amt expense">${_formatIDR(comparison.current.expense)}</div>
+            </div>
+            <div class="mv-compare-col">
+              <div class="mv-compare-period">Bulan Lalu</div>
+              <div class="mv-compare-amt">${_formatIDR(comparison.previous.expense)}</div>
+            </div>
+            ${comparison.changes.expense !== null ? `
+              <div class="mv-compare-delta ${comparison.changes.expense > 0 ? 'up' : 'down'}">
+                ${comparison.changes.expense > 0 ? '↑' : '↓'}
+                ${Math.round(Math.abs(comparison.changes.expense))}%
+              </div>
+            ` : ''}
+          </div>
+        </section>
+      ` : ''}
 
-    <section class="mvp-section">
-      <h2 class="mvp-section-title">${Icon('refresh', { size: 16 })} Bandingkan Bulan</h2>
-      <div class="mvp-compare">
-        <div class="mvp-compare-card">
-          <div class="mvp-compare-label">${escapeHtml(cmp.current?.month || report.month)}</div>
-          <div class="mvp-compare-row"><span>Expense</span><strong>${_formatIDR(cmp.current?.expense || 0)}</strong></div>
-          <div class="mvp-compare-row"><span>Income</span><strong>${_formatIDR(cmp.current?.income || 0)}</strong></div>
-          <div class="mvp-compare-row"><span>Net</span><strong class="${(cmp.current?.net || 0) >= 0 ? 'pos' : 'neg'}">${_formatIDR(cmp.current?.net || 0)}</strong></div>
-        </div>
-        <div class="mvp-compare-card">
-          <div class="mvp-compare-label">${escapeHtml(cmp.previous?.month || '—')}</div>
-          <div class="mvp-compare-row"><span>Expense</span><strong>${_formatIDR(cmp.previous?.expense || 0)}</strong></div>
-          <div class="mvp-compare-row"><span>Income</span><strong>${_formatIDR(cmp.previous?.income || 0)}</strong></div>
-          <div class="mvp-compare-row"><span>Net</span><strong class="${(cmp.previous?.net || 0) >= 0 ? 'pos' : 'neg'}">${_formatIDR(cmp.previous?.net || 0)}</strong></div>
-        </div>
-      </div>
-      <div class="mvp-compare-delta">
-        Δ Expense ${fmtDelta(cmp.expenseDelta)} · Δ Net ${fmtDelta(cmp.netDelta)}
-      </div>
-    </section>
+      <section class="mv-section mv-chat-section">
+        <details class="mv-chat-collapse">
+          <summary class="mv-chat-trigger">
+            ${Icon('sparkles', { size: 14 })}
+            <span>Tanya Monevisor AI</span>
+            <span class="mv-ai-badge">AI</span>
+          </summary>
+          <div class="mv-chat-body">
+            <div class="mv-chat-msgs" id="mv-msgs"></div>
+            <div class="mv-chat-starters" id="mv-starters">
+              <button type="button" class="mv-starter" data-q="Kenapa saving rate saya rendah?">Kenapa saving rate rendah?</button>
+              <button type="button" class="mv-starter" data-q="Kategori mana yang perlu dikurangi?">Kategori mana dikurangi?</button>
+              <button type="button" class="mv-starter" data-q="Buatkan rencana keuangan bulan depan">Rencana bulan depan</button>
+            </div>
+            <div class="mv-chat-input">
+              <input type="text" id="mv-input" placeholder="Tanya apapun..." autocomplete="off" />
+              <button type="button" id="mv-send" aria-label="Kirim">${Icon('check', { size: 14 })}</button>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <div class="mv-spacer"></div>
+    </div>
+  `;
+
+  wireHandlers(container);
+}
+
+function renderHealthRing(score, color) {
+  const r = 30;
+  const c = 2 * Math.PI * r;
+  const offset = c * (1 - score / 100);
+  return `
+    <svg width="72" height="72" viewBox="0 0 72 72" aria-hidden="true">
+      <circle cx="36" cy="36" r="${r}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="6"/>
+      <circle cx="36" cy="36" r="${r}" fill="none" stroke="${color}" stroke-width="6"
+              stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${offset}"
+              transform="rotate(-90 36 36)" class="mv-ring-anim"/>
+      <text x="36" y="40" text-anchor="middle" fill="white" font-size="18" font-weight="800">${score}</text>
+    </svg>
   `;
 }
 
-function metricCard(label, value, tone, icon, raw = false) {
-  const display = raw ? escapeHtml(String(value)) : _formatIDR(value);
+function renderProjectionChart(projection) {
+  const points = projection.chart || [];
+  if (points.length < 2) return '';
+
+  const w = 280;
+  const h = 100;
+  const pad = 8;
+  const values = points.map((p) => p.value);
+  const min = Math.min(0, ...values);
+  const max = Math.max(...values, 1);
+  const range = max - min || 1;
+
+  const coords = points.map((p, i) => {
+    const x = pad + (i / (points.length - 1)) * (w - pad * 2);
+    const y = h - pad - ((p.value - min) / range) * (h - pad * 2);
+    return { x, y };
+  });
+
+  const line = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x},${c.y}`).join(' ');
+  const area = `${line} L${coords[coords.length - 1].x},${h - pad} L${coords[0].x},${h - pad} Z`;
+  const stroke = projection.type === 'negative' ? '#ef4444' : '#10b981';
+  const fill = projection.type === 'negative' ? 'rgba(239,68,68,0.12)' : 'rgba(16,185,129,0.15)';
+  const last = coords[coords.length - 1];
+
   return `
-    <div class="mvp-metric tone-${tone}">
-      <div class="mvp-metric-icon">${Icon(icon, { size: 16 })}</div>
-      <div class="mvp-metric-label">${escapeHtml(label)}</div>
-      <div class="mvp-metric-value">${display}</div>
+    <div class="mv-proj-chart" role="img" aria-label="Proyeksi 12 bulan">
+      <svg viewBox="0 0 ${w} ${h}" width="100%" height="100">
+        <path d="${area}" fill="${fill}"/>
+        <path d="${line}" fill="none" stroke="${stroke}" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="${last.x}" cy="${last.y}" r="4" fill="${stroke}"/>
+      </svg>
+      <div class="mv-proj-x">
+        <span>1</span><span>6</span><span>12 bln</span>
+      </div>
     </div>
   `;
 }
 
-function fmtDelta(n) {
-  const v = Number(n || 0);
-  const sign = v > 0 ? '+' : '';
-  return `${sign}${_formatIDR(v)}`;
+function renderMetricCard(label, value, type, note) {
+  const displayValue = typeof value === 'number'
+    ? `${value < 0 ? '-' : ''}${_formatIDR(Math.abs(value))}`
+    : escapeHtml(String(value));
+
+  return `
+    <div class="mv-metric ${escapeHtml(type)}">
+      <div class="mv-metric-label">${escapeHtml(label)}</div>
+      <div class="mv-metric-value">${displayValue}</div>
+      ${note ? `<div class="mv-metric-note">${escapeHtml(note)}</div>` : ''}
+    </div>
+  `;
 }
 
-function paintChat(state) {
-  if (!_root) return;
-  const insightsEl = _root.querySelector('#mvp-chat-insights');
-  const messagesEl = _root.querySelector('#mvp-chat-messages');
-  const startersEl = _root.querySelector('#mvp-chat-starters');
-  const badge = _root.querySelector('#mvp-chat-badge');
+function renderDiagnosisCard(d) {
+  const statusColors = {
+    critical: '#ef4444',
+    warning: '#f59e0b',
+    good: '#10b981',
+    excellent: '#10b981',
+    info: '#3b82f6',
+    neutral: '#6b7280',
+  };
+  const color = statusColors[d.status] || '#6b7280';
+  const iconName = d.icon || 'sparkles';
 
-  if (insightsEl) {
-    if (state.loading && !state.insights) {
-      insightsEl.innerHTML = `<div class="mvp-muted">Menyiapkan insight...</div>`;
-    } else if (state.insights) {
-      const i = state.insights;
-      insightsEl.innerHTML = `
-        <div class="mvp-insight-card">
-          <div class="mvp-insight-greeting">${escapeHtml(i.greeting || 'Halo!')}</div>
-          <div class="mvp-insight-story">${escapeHtml(i.story || i.summary || '')}</div>
-          <div class="mvp-health-mini">
-            Skor ${Number(i.healthScore || 0)} · ${escapeHtml(i.healthLabel || 'fair')}
+  return `
+    <div class="mv-dx-card" style="border-left-color:${color}">
+      <div class="mv-dx-header">
+        <div class="mv-dx-icon" style="color:${color}">${Icon(iconName, { size: 18 })}</div>
+        <div>
+          <div class="mv-dx-title">${escapeHtml(d.title)}</div>
+          <div class="mv-dx-area">
+            <span class="mv-dx-status" style="color:${color}">${escapeHtml(d.status)}</span>
+            · ${escapeHtml(d.area)}
           </div>
         </div>
-      `;
-    } else {
-      insightsEl.innerHTML = '';
-    }
-  }
-
-  if (messagesEl) {
-    const msgs = state.messages || [];
-    messagesEl.innerHTML = msgs.map((m) => `
-      <div class="mvp-msg mvp-msg-${m.role}${m.isError ? ' is-error' : ''}">
-        <div class="mvp-msg-bubble">${escapeHtml(m.content || '').replace(/\n/g, '<br>')}</div>
       </div>
-    `).join('');
-    if (msgs.length) {
-      requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight; });
-    }
-  }
-
-  if (startersEl) {
-    const qs = state.insights?.suggested_questions || [];
-    if ((!state.messages || !state.messages.length) && qs.length) {
-      startersEl.innerHTML = qs.slice(0, 4).map((q) =>
-        `<button type="button" class="mvp-starter" data-action="ask" data-q="${escapeHtml(q)}">${escapeHtml(q)}</button>`
-      ).join('');
-    } else {
-      startersEl.innerHTML = '';
-    }
-  }
-
-  if (badge) {
-    const n = (state.messages || []).filter((m) => m.role === 'assistant').length;
-    badge.hidden = n < 1 || _chatExpanded;
-    badge.textContent = String(n);
-  }
+      <div class="mv-dx-explain">${escapeHtml(d.explanation)}</div>
+      ${d.benchmark ? `
+        <div class="mv-dx-bench">
+          ${Icon('chartBar', { size: 10 })}
+          ${escapeHtml(d.benchmark)}
+        </div>
+      ` : ''}
+      ${d.action ? `
+        <button type="button" class="mv-dx-action" data-target="${escapeHtml(d.action.target || '')}" data-type="${escapeHtml(d.action.type || '')}">
+          ${escapeHtml(d.action.label)}
+          ${Icon('chevronRight', { size: 12 })}
+        </button>
+      ` : ''}
+    </div>
+  `;
 }
 
-function expandChat(open) {
-  _chatExpanded = !!open;
-  const dock = _root?.querySelector('#mvp-chat-dock');
-  const toggle = _root?.querySelector('.mvp-chat-toggle');
-  if (dock) dock.classList.toggle('is-expanded', _chatExpanded);
-  if (toggle) toggle.setAttribute('aria-expanded', String(_chatExpanded));
+function renderBenchmarkBar(b) {
+  const maxVal = Math.max(b.yours || 0, b.ideal || 0, 1);
+  const scale = b.lowerIsBetter ? (b.ideal || 1) * 1.5 : maxVal * 1.2;
+  const yoursWidth = Math.min(100, ((b.yours || 0) / scale) * 100);
+  const idealPos = Math.min(100, ((b.ideal || 0) / scale) * 100);
+  const colors = { good: '#10b981', warning: '#f59e0b', bad: '#ef4444' };
+  const color = colors[b.status] || '#6b7280';
+
+  return `
+    <div class="mv-bench-item">
+      <div class="mv-bench-header">
+        <span class="mv-bench-name">${escapeHtml(b.name)}</span>
+        <span class="mv-bench-values">
+          <span style="color:${color};font-weight:700">${b.yours}${escapeHtml(b.unit || '')}</span>
+          <span class="mv-bench-sep">/</span>
+          <span class="mv-bench-ideal">${b.ideal}${escapeHtml(b.unit || '')}</span>
+        </span>
+      </div>
+      <div class="mv-bench-bar">
+        <div class="mv-bench-fill" style="width:${yoursWidth}%;background:${color}"></div>
+        <div class="mv-bench-marker" style="left:${idealPos}%" title="Ideal: ${b.ideal}${b.unit || ''}"></div>
+      </div>
+      ${b.description ? `<div class="mv-bench-desc">${escapeHtml(b.description)}</div>` : ''}
+    </div>
+  `;
 }
 
-function wirePageHandlers() {
-  if (!_root || _root.dataset.wired === '1') return;
-  _root.dataset.wired = '1';
+function renderActionStep(a) {
+  const urgencyColors = { high: '#ef4444', medium: '#f59e0b', low: '#10b981' };
+  const color = urgencyColors[a.urgency] || '#6b7280';
 
-  _root.addEventListener('click', async (e) => {
-    const btn = e.target.closest('[data-action]');
-    if (!btn || !_root.contains(btn)) return;
-    const action = btn.getAttribute('data-action');
+  return `
+    <div class="mv-action-step">
+      <div class="mv-action-num" style="background:${color}20;color:${color}">${a.step}</div>
+      <div class="mv-action-body">
+        <div class="mv-action-title">${escapeHtml(a.title)}</div>
+        <div class="mv-action-desc">${escapeHtml(a.description)}</div>
+        ${a.target ? `
+          <button type="button" class="mv-action-btn" data-target="${escapeHtml(a.target)}" data-type="navigate">
+            Lakukan ${Icon('chevronRight', { size: 12 })}
+          </button>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}
 
-    if (action === 'toggle-chat') {
-      expandChat(!_chatExpanded);
-      return;
-    }
-    if (action === 'refresh-report') {
-      await refreshReport();
-      generateInsights().catch(() => {});
-      return;
-    }
-    if (action === 'send-chat') {
-      await handleSend();
-      return;
-    }
-    if (action === 'ask') {
-      const q = btn.getAttribute('data-q') || '';
-      const input = _root.querySelector('#mvp-chat-input');
-      if (input) input.value = q;
-      expandChat(true);
-      await handleSend();
-    }
+function wireHandlers(container) {
+  container.querySelector('[data-action="refresh"]')?.addEventListener('click', async () => {
+    await renderMonevisorPage(container, _pendingOptions);
   });
 
-  _root.querySelector('#mvp-chat-input')?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleSend();
+  container.querySelectorAll('[data-target]').forEach((btn) => {
+    btn.addEventListener('click', () => handleNavigation(btn.dataset.target));
+  });
+
+  const input = container.querySelector('#mv-input');
+  const sendBtn = container.querySelector('#mv-send');
+  const msgs = container.querySelector('#mv-msgs');
+  const starters = container.querySelector('#mv-starters');
+
+  const doSend = async (text) => {
+    if (!text?.trim() || !msgs) return;
+    if (input) input.value = '';
+    if (starters) starters.style.display = 'none';
+
+    msgs.innerHTML += `<div class="mv-msg-user"><div class="mv-bubble">${escapeHtml(text)}</div></div>`;
+    msgs.innerHTML += `
+      <div class="mv-msg-ai" id="mv-typing">
+        <div class="mv-bubble"><div class="mv-dots"><span></span><span></span><span></span></div></div>
+      </div>
+    `;
+    msgs.scrollTop = msgs.scrollHeight;
+
+    try {
+      const reply = await sendMessage(text);
+      container.querySelector('#mv-typing')?.remove();
+      const content = escapeHtml(reply?.content || '').replace(/\n/g, '<br>');
+      msgs.innerHTML += `<div class="mv-msg-ai${reply?.isError ? ' error' : ''}"><div class="mv-bubble">${content}</div></div>`;
+    } catch (_) {
+      container.querySelector('#mv-typing')?.remove();
+      msgs.innerHTML += `
+        <div class="mv-msg-ai error">
+          <div class="mv-bubble">${navigator.onLine ? 'Gagal mengirim' : 'Butuh internet untuk chat AI'}</div>
+        </div>
+      `;
     }
+    msgs.scrollTop = msgs.scrollHeight;
+  };
+
+  if (sendBtn) sendBtn.onclick = () => doSend(input?.value);
+  if (input) {
+    input.onkeydown = (e) => {
+      if (e.key === 'Enter') doSend(input.value);
+    };
+  }
+  container.querySelectorAll('.mv-starter').forEach((btn) => {
+    btn.onclick = () => doSend(btn.dataset.q);
   });
 }
 
-async function handleSend() {
-  const input = _root?.querySelector('#mvp-chat-input');
-  const text = (input?.value || '').trim();
-  if (!text) return;
-  input.value = '';
-  expandChat(true);
-  await sendMessage(text, { context: { report: _report } });
+function handleNavigation(target) {
+  switch (target) {
+    case 'budget':
+      if (typeof window.openBudget === 'function') window.openBudget();
+      else if (typeof window.toggleNav === 'function') window.toggleNav('budget');
+      break;
+    case 'transactions':
+      if (typeof window.toggleNav === 'function') window.toggleNav('list');
+      break;
+    case 'income':
+      import('../components/income-manager.js')
+        .then((mod) => mod.showIncomeManagerModal())
+        .catch((e) => console.error('[monevisor] income modal', e));
+      break;
+    case 'add-transaction':
+      if (typeof window.openAddSheet === 'function') window.openAddSheet('quick');
+      else if (typeof window.showAddTransactionUI === 'function') window.showAddTransactionUI();
+      break;
+    default:
+      console.error('[monevisor] Unknown nav target:', target);
+  }
 }
 
 function escapeHtml(s) {
-  return String(s ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  const d = document.createElement('div');
+  d.textContent = String(s ?? '');
+  return d.innerHTML;
 }
 
 if (typeof window !== 'undefined') {
-  window.monefyiMonevisorPage = {
-    renderMonevisorPage,
-    refreshMonevisorPage,
-    applyAction,
-    clearConversation,
-  };
+  window.monefyiMonevisorPage = { renderMonevisorPage, refreshMonevisorPage };
 }
