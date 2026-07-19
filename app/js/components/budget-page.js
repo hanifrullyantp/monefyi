@@ -441,21 +441,37 @@ export async function renderBudgetPage(container, ctx) {
   } = ctx;
 
   const filter = getFilter();
-  const displayMonth = filter.period
+  // Source of truth: main period chip (same as "Jun 2026" in header), not stale filter.period
+  const periodMonth = window.STATE?.period?.end
+    ? String(window.STATE.period.end).slice(0, 7)
+    : null;
+  const displayMonth = periodMonth
     || window.STATE?.selectedMonth
     || ctxMonth
-    || new Date().toISOString().slice(0, 7);
+    || filter.period
+    || (() => {
+      const n = new Date();
+      return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`;
+    })();
 
-  // Keep draft / selected month in sync with filter
+  // Keep draft / selected month / global filter in sync with period chip
   if (window.STATE) {
     window.STATE.selectedMonth = displayMonth;
     if (window.STATE.budgetDraft) window.STATE.budgetDraft.month = displayMonth;
   }
+  try {
+    const { syncPeriodFromState } = await import('../services/global-filter.js');
+    syncPeriodFromState(displayMonth);
+  } catch { /* ignore */ }
 
   const allTx = Array.isArray(window.STATE?.transactions) && window.STATE.transactions.length
     ? window.STATE.transactions
     : (ctxTransactions || []);
-  const monthTransactions = allTx.filter((t) => String(t.date || '').startsWith(displayMonth));
+  // Match by YYYY-MM prefix; also accept date objects / ISO timestamps
+  const monthTransactions = allTx.filter((t) => {
+    const d = String(t.date || '').slice(0, 10);
+    return d.startsWith(displayMonth);
+  });
 
   let rows = computeHistoricalBaselines(rawRows || [], monthTransactions, displayMonth);
   rows = filterBudgets(rows);
