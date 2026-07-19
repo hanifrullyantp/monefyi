@@ -4,6 +4,7 @@
  */
 
 import { Icon } from './icons.js';
+import { shouldShowInstallShortcut } from '../services/install-prompt.js';
 
 const QUICK_ACTIONS = [
   { id: 'transactions', label: 'Transaksi', icon: 'list', color: '#3b82f6', bg: 'rgba(59,130,246,0.14)' },
@@ -17,8 +18,13 @@ const QUICK_ACTIONS = [
   { id: 'settings', label: 'Pengaturan', icon: 'settings', color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
 ];
 
-/** Satu baris default — 4 akses paling sering */
-const PRIMARY_ACTIONS = QUICK_ACTIONS.slice(0, 4);
+/**
+ * @returns {typeof QUICK_ACTIONS}
+ */
+function visibleActions() {
+  const showInstall = shouldShowInstallShortcut();
+  return QUICK_ACTIONS.filter((a) => a.id !== 'install' || showInstall);
+}
 
 /**
  * @param {object} action
@@ -53,8 +59,10 @@ export function renderQuickAccess(callbacks = {}) {
   const el = document.createElement('section');
   el.className = 'home-quick-access';
 
-  const primaryItems = PRIMARY_ACTIONS.map(renderQuickBtn).join('');
-  const allItems = QUICK_ACTIONS.map(renderQuickBtn).join('');
+  const actions = visibleActions();
+  const primaryActions = actions.slice(0, 4);
+  const primaryItems = primaryActions.map(renderQuickBtn).join('');
+  const allItems = actions.map(renderQuickBtn).join('');
 
   el.innerHTML = `
     <div class="home-section-header">

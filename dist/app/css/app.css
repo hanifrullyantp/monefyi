@@ -138,6 +138,12 @@ html, body {
         display: none !important;
       }
     }
+    /* Login-only: hide chrome outside #appShell */
+    body.auth-only .nav-bar,
+    body.auth-only .app-header {
+      display: none !important;
+    }
+
     .app-header { background: var(--app-backdrop); border-bottom: 1px solid var(--app-border); }
     .nav-bar {
       background: var(--nav-surface);
@@ -2893,5 +2899,17 @@ html, body {
 
     /* Tutorial overlay animation */
     @keyframes popIn { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-    #tourBubble { animation: popIn .18s ease; }
+    #tourOverlay {
+      pointer-events: auto;
+    }
+    #tourSpotlight {
+      pointer-events: none;
+      z-index: 1;
+      transition: top 0.28s ease, left 0.28s ease, width 0.28s ease, height 0.28s ease;
+    }
+    #tourBubble {
+      z-index: 2;
+      pointer-events: auto;
+      animation: popIn .18s ease;
+    }
   

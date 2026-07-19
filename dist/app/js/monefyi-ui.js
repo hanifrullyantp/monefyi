@@ -180,24 +180,38 @@
   }
 
   function showOnboardingIfNeeded() {
-    if (localStorage.getItem('monefyi_onboarding_done')) return;
+    if (localStorage.getItem('monefyi_tour_done') === '1'
+      || localStorage.getItem('monefyi_onboarding_done') === '1') {
+      return;
+    }
     const auth = $('#authOverlay');
     if (auth && !auth.classList.contains('hidden')) return;
     const shell = $('#appShell');
     if (shell && shell.classList.contains('hidden')) return;
-    const el = $('#onboardingBackdrop');
-    if (!el) return;
-    el.classList.remove('hidden');
-    el.classList.add('open');
+
+    // Prefer bubble tour; keep welcome modal as fallback if module fails
+    // Absolute path: this file is a classic script (import base = document URL)
+    import('/app/js/components/product-tour.js')
+      .then((mod) => mod.startProductTour({ delayMs: 700 }))
+      .catch(() => {
+        const el = $('#onboardingBackdrop');
+        if (!el) return;
+        el.classList.remove('hidden');
+        el.classList.add('open');
+      });
   }
 
   function hideOnboarding() {
     localStorage.setItem('monefyi_onboarding_done', '1');
+    localStorage.setItem('monefyi_tour_done', '1');
     const el = $('#onboardingBackdrop');
     if (el) {
       el.classList.remove('open');
       el.classList.add('hidden');
     }
+    try {
+      document.getElementById('tourOverlay')?.classList.add('hidden');
+    } catch (_) {}
     global.ensureAppShellVisible?.();
   }
 

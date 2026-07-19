@@ -1738,6 +1738,7 @@ async function upsertTransaction_legacy_local(tx) {
 
     function enterAppShell() {
       $('#appShell')?.classList.remove('hidden');
+      document.body.classList.remove('auth-only');
       hideAuth();
     }
 
@@ -1745,6 +1746,7 @@ async function upsertTransaction_legacy_local(tx) {
       if (!STATE.db?.user) return;
       $('#appShell')?.classList.remove('hidden');
       $('#authOverlay')?.classList.add('hidden');
+      document.body.classList.remove('auth-only');
       if (!STATE.subscription?.expired) {
         document.body.style.overflow = '';
       }
@@ -1977,10 +1979,20 @@ async function upsertTransaction_legacy_local(tx) {
           window.openReceiptScanner();
         }
       });
-      $('#btnOnboardingStart')?.addEventListener('click', () => {
-        window.MonefyiUI?.hideOnboarding?.();
+      $('#btnOnboardingStart')?.addEventListener('click', async () => {
+        const ob = document.getElementById('onboardingBackdrop');
+        if (ob) {
+          ob.classList.remove('open');
+          ob.classList.add('hidden');
+        }
         ensureAppShellVisible();
-        setTimeout(() => openAddSheet('quick'), 350);
+        try {
+          const mod = await loadAppModule('js/components/product-tour.js');
+          await mod.startProductTour?.({ force: true, delayMs: 200 });
+        } catch {
+          window.MonefyiUI?.hideOnboarding?.();
+          setTimeout(() => openAddSheet('quick'), 350);
+        }
       });
       $('#btnOnboardingSkip')?.addEventListener('click', () => {
         window.MonefyiUI?.hideOnboarding?.();
@@ -1989,7 +2001,8 @@ async function upsertTransaction_legacy_local(tx) {
       window.MonefyiUI?.initInfoSaldoPillDismiss?.();
       window.MonefyiUI?.initOnboardingDismiss?.();
       window.MonefyiUI?.initTxListKeyboard?.();
-      setTimeout(() => window.MonefyiUI?.showOnboardingIfNeeded?.(), 500);
+      // First-login bubble tour (replaces static welcome modal as primary path)
+      setTimeout(() => window.MonefyiUI?.showOnboardingIfNeeded?.(), 800);
       initManualFormEnhancements();
       initTxToolbar();
       initPwaInstall();
@@ -2009,26 +2022,17 @@ async function upsertTransaction_legacy_local(tx) {
     }
     window.syncSidebarCollapsedUI = syncSidebarCollapsedUI;
 
-    let deferredPwaPrompt = null;
     function initPwaInstall(){
-      window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPwaPrompt = e;
-        $('#btnPwaInstall')?.classList.remove('hidden');
-      });
-      $('#btnPwaInstall')?.addEventListener('click', async () => {
-        if (!deferredPwaPrompt) {
-          try { showToast('Install tidak tersedia di perangkat ini.', 'info'); } catch (_) {}
-          return;
-        }
-        deferredPwaPrompt.prompt();
-        try { await deferredPwaPrompt.userChoice; } catch (_) {}
-        deferredPwaPrompt = null;
-        $('#btnPwaInstall')?.classList.add('hidden');
+      $('#btnPwaInstall')?.addEventListener('click', () => {
+        handleInstallApp();
       });
       if (window.matchMedia('(display-mode: standalone)').matches) {
         $('#btnPwaInstall')?.classList.add('hidden');
       }
+      loadAppModule('js/services/install-prompt.js').then((mod) => {
+        if (mod?.canInstall?.()) $('#btnPwaInstall')?.classList.remove('hidden');
+        if (mod?.isInstalled?.()) $('#btnPwaInstall')?.classList.add('hidden');
+      }).catch(() => {});
     }
 
     function applyDataTip(selectors) {
@@ -2227,6 +2231,7 @@ async function upsertTransaction_legacy_local(tx) {
         ensureAppShellVisible();
         return;
       }
+      document.body.classList.add('auth-only');
       $('#authOverlay').classList.remove('hidden');
       $('#appShell').classList.add('hidden');
       document.body.style.overflow = 'hidden';
@@ -2235,6 +2240,7 @@ async function upsertTransaction_legacy_local(tx) {
 
     function hideAuth(){
       $('#authOverlay').classList.add('hidden');
+      document.body.classList.remove('auth-only');
       document.body.style.overflow = '';
     }
 
@@ -4976,19 +4982,14 @@ function generateSmartBudgetRecommendation() {
     async function handleInstallApp() {
       try {
         const mod = await loadAppModule('js/services/install-prompt.js');
-        if (mod.isInstalled?.()) {
+        const result = await mod.runInstallFlow?.();
+        if (result?.outcome === 'already_installed') {
           showToast('App sudah terpasang di perangkat ini', 'info');
           return;
         }
-        if (mod.isIOS?.()) {
-          showToast('Tap Share → Add to Home Screen untuk install', 'info');
-          return;
-        }
-        const result = await mod.showInstallPrompt?.();
         if (result?.outcome === 'accepted') {
           showToast('Monefyi berhasil ditambahkan', 'success');
-        } else if (result?.outcome === 'unavailable') {
-          showToast('Install belum tersedia di browser ini', 'warn');
+          $('#btnPwaInstall')?.classList.add('hidden');
         }
       } catch (e) {
         console.warn('handleInstallApp', e);
