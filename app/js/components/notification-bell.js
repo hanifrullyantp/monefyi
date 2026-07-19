@@ -45,7 +45,7 @@ export async function renderNotificationBell() {
   await update();
   const nm = await getNotif();
   nm.onNotificationChange(update);
-  bell.onclick = () => showNotificationPanel();
+  bell.onclick = () => showNotificationPanel(bell);
   return bell;
 }
 
@@ -104,16 +104,55 @@ export async function wireDesktopNotificationBell() {
 
   btn.onclick = (e) => {
     e.stopPropagation();
-    showNotificationPanel();
+    showNotificationPanel(btn);
   };
 }
 
 /**
- * Show notification panel.
+ * Position panel below anchor bell (top-right origin).
+ * @param {HTMLElement} panel
+ * @param {HTMLElement|null} anchor
  */
-export async function showNotificationPanel() {
+function positionNotifPanel(panel, anchor) {
+  const pad = 12;
+  const gap = 8;
+
+  if (anchor) {
+    const rect = anchor.getBoundingClientRect();
+    const top = Math.round(rect.bottom + gap);
+    const right = Math.max(pad, Math.round(window.innerWidth - rect.right));
+    panel.style.setProperty('--notif-panel-top', `${top}px`);
+    panel.style.setProperty('--notif-panel-right', `${right}px`);
+    return;
+  }
+
+  panel.style.setProperty('--notif-panel-top', '56px');
+  panel.style.setProperty('--notif-panel-right', `${pad}px`);
+}
+
+/**
+ * @param {HTMLElement} overlay
+ * @param {() => void} [onDone]
+ */
+function closeNotifPanel(overlay, onDone) {
+  overlay.classList.remove('is-open');
+  window.setTimeout(() => {
+    overlay.remove();
+    onDone?.();
+  }, 280);
+}
+
+/**
+ * Show notification panel anchored to bell icon.
+ * @param {HTMLElement} [anchorEl]
+ */
+export async function showNotificationPanel(anchorEl) {
   const existing = document.querySelector('.notif-modal-overlay');
   if (existing) existing.remove();
+
+  const anchor = anchorEl
+    || document.getElementById('notifBellMobile')
+    || document.getElementById('btnNotifDesktop');
 
   const nm = await getNotif();
   const notifications = await nm.getNotifications();
@@ -122,7 +161,7 @@ export async function showNotificationPanel() {
   const modal = document.createElement('div');
   modal.className = 'notif-modal-overlay';
   modal.innerHTML = `
-    <div class="notif-modal" role="dialog" aria-modal="true">
+    <div class="notif-modal" role="dialog" aria-modal="true" aria-label="Notifikasi">
       <header class="notif-header">
         <div class="notif-header-title">
           <h3>🔔 Notifikasi</h3>
@@ -149,7 +188,14 @@ export async function showNotificationPanel() {
   `;
 
   document.body.appendChild(modal);
-  wireHandlers(modal, notifications);
+  const panel = modal.querySelector('.notif-modal');
+  if (panel) positionNotifPanel(panel, anchor);
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => modal.classList.add('is-open'));
+  });
+
+  wireHandlers(modal, notifications, anchor);
 }
 
 /**
@@ -215,16 +261,16 @@ function renderNotifItem(n) {
 /**
  * @param {HTMLElement} modal
  * @param {object[]} notifications
+ * @param {HTMLElement|null} [anchor]
  */
-function wireHandlers(modal, notifications) {
-  const close = () => modal.remove();
-  modal.querySelectorAll('[data-action="close"]').forEach((b) => { b.onclick = close; });
+function wireHandlers(modal, notifications, anchor) {
+  const close = (onDone) => closeNotifPanel(modal, onDone);
+  modal.querySelectorAll('[data-action="close"]').forEach((b) => { b.onclick = () => close(); });
   modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
 
   modal.querySelector('[data-action="mark-all"]')?.addEventListener('click', async () => {
     await window.monefyiNotif?.markAllAsRead();
-    close();
-    showNotificationPanel();
+    close(() => showNotificationPanel(anchor));
   });
 
   modal.querySelector('[data-action="clear-all"]')?.addEventListener('click', async () => {
@@ -283,7 +329,7 @@ function wireItemHandlers(modal) {
       const priority = btn.dataset.priority;
       const notifId = btn.dataset.notifId;
       if (notifId) await nm.markAsRead(notifId);
-      modal.remove();
+      closeNotifPanel(modal);
 
       if (action === 'open_budget' || action === 'increase_budget' || action === 'increase_savings' || action === 'add_to_savings' || action === 'review_priority') {
         if (typeof window.openBudget === 'function') window.openBudget();
