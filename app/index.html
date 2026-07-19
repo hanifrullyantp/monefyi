@@ -466,10 +466,10 @@
         </button>
       </div>
       <!-- Topbar Desktop (Header) -->
-      <div id="desktopHeader" class="hidden md:flex items-center justify-between gap-4 mb-6 shrink-0">
+      <div id="desktopHeader" class="hidden md:flex items-center justify-between gap-3 mb-2 shrink-0 pt-0">
         <div class="min-w-0">
-          <h2 id="pageTitleTxDesktop" class="text-2xl font-bold tracking-tight leading-none text-white">Transaksi</h2>
-          <div class="text-sm app-muted mt-1">Kelola transaksi keuangan Anda</div>
+          <h2 id="pageTitleTxDesktop" class="text-xl font-bold tracking-tight leading-none text-white">Transaksi</h2>
+          <div class="text-xs app-muted mt-0.5">Kelola transaksi keuangan Anda</div>
         </div>
         <div class="flex items-center gap-3">
           <div class="relative hidden lg:block">
@@ -500,7 +500,7 @@
       </div>
 
       <!-- Topbar Saldo Card (Desktop) -->
-      <div id="topbarSaldoWrap" class="hidden md:block mb-6">
+      <div id="topbarSaldoWrap" class="hidden md:block mb-2">
         <div id="btnSaldoToggleTopbar" role="button" tabindex="0" class="hero-saldo-card tap cursor-pointer w-full" style="border-radius: 20px; margin-bottom: 0;">
           <div class="hero-saldo-card__top">
             <div class="hero-saldo-card__label-row">
@@ -789,7 +789,7 @@
         </div>
 
         <!-- Transactions list -->
-        <section id="txSection" class="mt-1 md:mt-0 space-y-2 md:space-y-2 flex-1 min-h-0 flex flex-col">
+        <section id="txSection" class="mt-0 md:mt-0 space-y-1 md:space-y-1 flex-1 min-h-0 flex flex-col">
           <div id="txTitle" class="hidden">Transaksi</div>
           <div id="txCount" class="hidden">—</div>
           <div id="txToolbarMobile" class="hidden"></div>
@@ -842,15 +842,7 @@
             <button class="tap rounded-full app-chip px-3 py-1.5 text-xs tx-chip" data-type="transfer">Transfer</button>
           </div>
 
-          <div id="txListHost" class="mt-1 md:mt-0 flex-1 min-h-0 transactions-list">
-            <div id="homeTxSectionHead" class="home-tx-section-header transactions-section__head md:hidden hidden">
-              <h2 class="home-tx-section-header__title">Transaksi Terbaru</h2>
-              <button type="button" class="home-tx-section-header__link link-see-all tap" onclick="toggleNav('list')">
-                Lihat semua
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-              </button>
-            </div>
-
+          <div id="txListHost" class="mt-0 md:mt-0 flex-1 min-h-0 transactions-list">
             <div id="saldoFilterMenu" class="mobile-filter-panel hidden md:hidden shrink-0">
               <div class="mobile-filter-grid">
                 <select id="saldoFilterType" class="mobile-filter-select tap" aria-label="Filter tipe">

@@ -129,12 +129,28 @@
     const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     function pad(n){ return String(n).padStart(2,'0'); }
+    /** Parse YYYY-MM-DD as local calendar date (avoids UTC off-by-one). */
+    function parseLocalISODate(iso){
+      if (!iso) return new Date(NaN);
+      if (iso instanceof Date) return new Date(iso.getFullYear(), iso.getMonth(), iso.getDate());
+      const s = String(iso).slice(0, 10);
+      const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      const dt = new Date(iso);
+      return Number.isNaN(dt.getTime()) ? dt : new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+    }
     function toISODate(d){
-      const dt = (d instanceof Date) ? d : new Date(d);
+      if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}/.test(d)) {
+        return String(d).slice(0, 10);
+      }
+      const dt = (d instanceof Date) ? d : parseLocalISODate(d);
       return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
     }
     function toMonthKey(d){
-      const dt = (d instanceof Date) ? d : new Date(d);
+      if (typeof d === 'string' && /^\d{4}-\d{2}/.test(d)) {
+        return String(d).slice(0, 7);
+      }
+      const dt = (d instanceof Date) ? d : parseLocalISODate(d);
       return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}`;
     }
     function startOfMonth(monthKey){
@@ -1510,11 +1526,23 @@ function computeSubscriptionStatus(profile){
       const maxISO = endISO;
 
       const applyLocalRows = (rows) => {
-        STATE.transactions = (rows || []).map(t => ({
+        const remote = (rows || []).map(t => ({
           ...t,
-          amount: Number(t.amount||0),
+          amount: Math.abs(Number(t.amount||0)),
           meta: (t.meta && typeof t.meta === 'object') ? t.meta : (t.meta ? JSON.parse(t.meta) : {})
         }));
+        // Keep optimistic/local txs that remote pull has not returned yet
+        const remoteIds = new Set(remote.map((t) => t.id));
+        const retained = (STATE.transactions || []).filter((t) => {
+          if (!t?.id || remoteIds.has(t.id)) return false;
+          if (t.meta?.pending) return true;
+          const updated = Date.parse(t.updated_at || t.created_at || 0);
+          return Number.isFinite(updated) && (Date.now() - updated) < 120_000;
+        });
+        STATE.transactions = retained.length ? [...retained, ...remote] : remote;
+        STATE.transactions.sort((a, b) =>
+          String(b.date || '').localeCompare(String(a.date || ''))
+          || String(b.created_at || '').localeCompare(String(a.created_at || '')));
         STATE.ui.txLoading = false;
         STATE.ui.txVisibleCount = 50;
         ensureSelectOptions();
@@ -1585,7 +1613,7 @@ function computeSubscriptionStatus(profile){
     async function dbUpsertTransaction(tx){
       const normalizeSaved = (saved) => ({
         ...saved,
-        amount: Number(saved.amount || 0),
+        amount: Math.abs(Number(saved.amount || 0)),
         meta: saved.meta || {},
       });
 
@@ -1619,17 +1647,26 @@ function computeSubscriptionStatus(profile){
 
       const { data, error } = await supa.from('transactions').upsert(row).select('*').single();
       if (error) {
+        // Prefer offline mirror over dropping the optimistic row
         if (window.dataStore) {
-          const existing = await window.dataStore.getTransaction?.(tx.id);
-          if (existing) return normalizeSaved(existing);
+          try {
+            const existing = await window.dataStore.getTransaction?.(tx.id);
+            const saved = existing
+              ? await window.dataStore.updateTransaction(tx.id, { ...tx, meta: { ...(tx.meta || {}), pending: true } })
+              : await window.dataStore.createTransaction({ ...tx, meta: { ...(tx.meta || {}), pending: true } });
+            return normalizeSaved(saved || tx);
+          } catch (_) {
+            const existing = await window.dataStore.getTransaction?.(tx.id);
+            if (existing) return normalizeSaved(existing);
+          }
         }
         throw error;
       }
 
       const i = STATE.transactions.findIndex(t => t.id === data.id);
-      const normalized = { ...data, amount: Number(data.amount||0), meta: data.meta || {} };
+      const normalized = { ...data, amount: Math.abs(Number(data.amount||0)), meta: data.meta || {} };
       if (i >= 0) STATE.transactions[i] = normalized;
-      else STATE.transactions.push(normalized);
+      else STATE.transactions.unshift(normalized);
 
       ensureAccountRegistered(normalized.account);
       window.dataStore?.mirrorTransaction?.(normalized).catch(() => {});
@@ -2199,6 +2236,11 @@ async function upsertTransaction_legacy_local(tx) {
             await upsertTransaction(saved, { pending: true });
             previewEl.classList.add('hidden');
             previewEl.innerHTML = '';
+            if (typeof refreshAllUI === 'function') refreshAllUI({ syncRemote: false });
+            // Ensure user sees the new row on list page
+            if (!STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen) {
+              if (typeof renderTransactions === 'function') renderTransactions();
+            }
             onDone?.();
           },
           onEdit: (edited) => {
@@ -2832,8 +2874,8 @@ async function upsertTransaction_legacy_local(tx) {
     // Aggregations
     // =========================
     function getActiveRange(){
-      const start = new Date(STATE.period.start); start.setHours(0,0,0,0);
-      const end = new Date(STATE.period.end); end.setHours(23,59,59,999);
+      const start = parseLocalISODate(STATE.period.start); start.setHours(0,0,0,0);
+      const end = parseLocalISODate(STATE.period.end); end.setHours(23,59,59,999);
       return { start, end };
     }
 
@@ -2858,7 +2900,8 @@ async function upsertTransaction_legacy_local(tx) {
 
       return STATE.transactions
         .filter(tx => {
-          const d = new Date(tx.date);
+          const d = parseLocalISODate(tx.date);
+          d.setHours(12, 0, 0, 0);
           if (d < start || d > end) return false;
           if (type && tx.type !== type) return false;
           if (category && tx.category !== category) return false;
@@ -2876,7 +2919,8 @@ async function upsertTransaction_legacy_local(tx) {
     function getTransactionsInPeriod(){
       const { start, end } = getActiveRange();
       return STATE.transactions.filter(tx => {
-        const d = new Date(tx.date);
+        const d = parseLocalISODate(tx.date);
+        d.setHours(12, 0, 0, 0);
         return d >= start && d <= end;
       });
     }
@@ -3575,7 +3619,6 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
         mobileSaldoWrap.classList.toggle('hidden', specialPageOpen);
       }
       $('#txSection')?.classList.toggle('hidden', STATE.ui.dashboardOpen || specialPageOpen);
-      $('#homeTxSectionHead')?.classList.add('hidden');
       const pageTitleDesktop = $('#pageTitleTxDesktop');
       if (pageTitleDesktop) {
         pageTitleDesktop.textContent = STATE.ui.monevisorPageOpen
@@ -4852,9 +4895,7 @@ function generateSmartBudgetRecommendation() {
         const newCat = clone.querySelector('.inline-edit-cat').value;
         const newAcc = clone.querySelector('.inline-edit-acc').value;
         const newDate = clone.querySelector('.inline-edit-date').value;
-        let newAmount = Number(clone.querySelector('.inline-edit-amount').value);
-        if (tx.type === 'expense') newAmount = -Math.abs(newAmount);
-        else if (tx.type === 'income') newAmount = Math.abs(newAmount);
+        const newAmount = Math.abs(Number(clone.querySelector('.inline-edit-amount').value) || 0);
 
         tx.merchant = newTitle;
         tx.category = newCat;
@@ -4864,8 +4905,8 @@ function generateSmartBudgetRecommendation() {
 
         saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true">...</span>';
         await upsertTransaction(tx);
-        if(typeof refreshAllUI === 'function') refreshAllUI();
-        rerender();
+        if (typeof refreshAllUI === 'function') refreshAllUI({ syncRemote: false });
+        else rerender();
       });
 
       cancelBtn.addEventListener('click', (e) => {
@@ -6251,6 +6292,13 @@ function openTutorialTopic(id) {
     async function upsertTransaction(tx, opts = {}) {
   if (!Array.isArray(STATE.transactions)) STATE.transactions = [];
 
+  // Normalize: amount always positive; date always YYYY-MM-DD local
+  tx.amount = Math.abs(Number(tx.amount || 0));
+  if (tx.date) tx.date = toISODate(tx.date);
+  tx.updated_at = tx.updated_at || new Date().toISOString();
+  tx.created_at = tx.created_at || tx.updated_at;
+  if (!tx.type) tx.type = 'expense';
+
   if (opts.pending) {
     tx.meta = { ...(tx.meta || {}), pending: true };
   }
@@ -6274,28 +6322,62 @@ function openTutorialTopic(id) {
     STATE.transactions.unshift({ ...tx });
   }
 
-  STATE.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+  STATE.transactions.sort((a, b) =>
+    String(b.date || '').localeCompare(String(a.date || ''))
+    || String(b.created_at || '').localeCompare(String(a.created_at || '')));
 
-  setTimeout(() => {
-    if (typeof rerender === 'function') rerender();
-  }, opts.pending ? 0 : 50);
+  // Immediate list refresh so new tx appears without waiting for DB
+  if (typeof renderTransactions === 'function') renderTransactions();
+  if (STATE.ui.dashboardOpen && !isDesktopViewport() && typeof renderMobileHome === 'function') {
+    renderMobileHome();
+  }
+  if (STATE.ui.budgetPageOpen && typeof renderBudgetPageView === 'function') {
+    renderBudgetPageView();
+  }
 
   if (STATE.db.enabled && STATE.db.user) {
     try {
-      await dbUpsertTransaction(tx);
-      if (tx.meta?.pending) {
+      const saved = await dbUpsertTransaction(tx);
+      if (saved && saved.id) {
+        const i = STATE.transactions.findIndex((t) => t.id === saved.id);
+        const merged = {
+          ...tx,
+          ...saved,
+          amount: Math.abs(Number(saved.amount ?? tx.amount ?? 0)),
+          meta: { ...(tx.meta || {}), ...(saved.meta || {}) },
+        };
+        if (merged.meta?.pending) delete merged.meta.pending;
+        if (i >= 0) STATE.transactions[i] = merged;
+        else STATE.transactions.unshift(merged);
+        Object.assign(tx, merged);
+      } else if (tx.meta?.pending) {
         delete tx.meta.pending;
         tx.updated_at = new Date().toISOString();
       }
       if (typeof updateSaldoAsync === 'function') updateSaldoAsync();
+      if (typeof renderTransactions === 'function') renderTransactions();
+      if (STATE.ui.dashboardOpen && !isDesktopViewport() && typeof renderMobileHome === 'function') {
+        renderMobileHome();
+      }
+      if (STATE.ui.budgetPageOpen && typeof renderBudgetPageView === 'function') {
+        renderBudgetPageView();
+      }
     } catch (e) {
       console.error("DB Save failed:", e);
-      if (opts.pending) {
-        STATE.transactions = STATE.transactions.filter(t => t.id !== tx.id);
-        rerender();
+      // Keep optimistic row; queue offline instead of removing from list
+      try {
+        if (window.dataStore?.createTransaction || window.dataStore?.updateTransaction) {
+          const existing = await window.dataStore.getTransaction?.(tx.id);
+          if (existing) await window.dataStore.updateTransaction(tx.id, tx);
+          else await window.dataStore.createTransaction?.(tx);
+          tx.meta = { ...(tx.meta || {}), pending: true };
+        }
+      } catch (offlineErr) {
+        console.warn('[tx] offline fallback failed', offlineErr);
       }
-      showToast(t('toast.error') || 'Gagal menyimpan. Coba lagi', 'error');
-      return;
+      showToast(t('toast.error') || 'Gagal sync — tersimpan lokal', 'warn');
+      if (typeof renderTransactions === 'function') renderTransactions();
+      // Do not return early: still allow undo/activity for local row
     }
   }
 
@@ -7769,7 +7851,7 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
       if (status) status.textContent = '';
       renderBatchPreview();
       showToast(`Batch selesai: ${saved} tersimpan, ${skippedDup} duplikat, ${failed} gagal`, failed ? 'warn' : 'success');
-      refreshAllUI();
+      refreshAllUI({ syncRemote: false });
       refreshAppSchedules();
       closeAddSheet();
     }
@@ -7872,7 +7954,7 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
               });
               preview.remove();
               scanner.remove();
-              refreshAllUI();
+              refreshAllUI({ syncRemote: false });
               closeAddSheet();
               showToast('✓ Struk tersimpan');
             },
@@ -8068,6 +8150,7 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
   try {
     await upsertTransaction(tx);
     $('#manualStatus').textContent = 'Berhasil disimpan!';
+    if (typeof refreshAllUI === 'function') refreshAllUI({ syncRemote: false });
   } finally {
     if (saveBtn) {
       saveBtn.disabled = false;

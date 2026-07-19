@@ -22,16 +22,18 @@ export async function renderBudgetSummaryHero(container, ctx) {
     overBudgetCount = 0,
     criticalCount = 0,
   } = ctx;
-  const totalBudget = rows.reduce((sum, b) => sum + Number(b.amount || 0), 0);
-  const totalSpent = rows.reduce((sum, b) => sum + calculateProgress(b, transactions, month).spent, 0);
-  const remaining = totalBudget - totalSpent;
-  const percentUsed = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
+  const totalBudget = rows.reduce((sum, b) => sum + Math.abs(Number(b.amount || 0)), 0);
+  const linkedSpent = rows.reduce((sum, b) => sum + calculateProgress(b, transactions, month).spent, 0);
 
   const monthExpenses = (transactions || []).filter(
     (t) => t.type === 'expense' && (!month || String(t.date || '').startsWith(month)),
   );
-  const totalExpenseMonth = monthExpenses.reduce((s, t) => s + Number(t.amount || 0), 0);
-  const unlinkedExpense = Math.max(0, totalExpenseMonth - totalSpent);
+  // Realisasi = total pengeluaran bulan ini / total budgeting (not only linked)
+  const totalExpenseMonth = monthExpenses.reduce((s, t) => s + Math.abs(Number(t.amount || 0)), 0);
+  const totalSpent = totalExpenseMonth;
+  const remaining = totalBudget - totalSpent;
+  const percentUsed = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
+  const unlinkedExpense = Math.max(0, totalExpenseMonth - linkedSpent);
   const linkedIds = new Set();
   for (const row of rows) {
     for (const t of getLinkedTransactions(row, monthExpenses, month)) {
@@ -62,7 +64,7 @@ export async function renderBudgetSummaryHero(container, ctx) {
       </div>
       <div class="bsh-main">
         <div class="bsh-progress-section">
-          <div class="bsh-progress-label">Realisasi Budget</div>
+          <div class="bsh-progress-label">Realisasi Budgeting</div>
           <div class="bsh-progress-amount">
             <span class="bsh-spent">Rp ${fmt(totalSpent)}</span>
             <span class="bsh-separator">/</span>
