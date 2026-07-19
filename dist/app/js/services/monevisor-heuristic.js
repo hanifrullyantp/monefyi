@@ -100,7 +100,7 @@ export async function generateInsights(context = {}) {
         title: lang === 'en' ? 'Smart reallocation' : 'Realokasi Cerdas',
         body: lang === 'en'
           ? `"${source.category}" (Want) is only ${source.percent_used}% used. Move Rp ${fmt(amount)} to "${overHarus.category}" (Must).`
-          : `Kategori "${source.category}" (Mau) baru terpakai ${source.percent_used}%. Pindahkan Rp ${fmt(amount)} ke "${overHarus.category}" (Harus).`,
+          : `Kategori "${source.category}" (Keinginan) baru terpakai ${source.percent_used}%. Pindahkan Rp ${fmt(amount)} ke "${overHarus.category}" (Wajib).`,
         severity: 'medium',
         action: {
           type: 'reallocate',

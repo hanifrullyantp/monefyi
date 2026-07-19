@@ -138,10 +138,9 @@ export async function generateRecommendations(options = {}) {
  * @returns {number}
  */
 function estimateIncome(transactions, month) {
-  const income = (transactions || [])
+  return (transactions || [])
     .filter((t) => t.type === 'income' && t.date?.startsWith(month))
     .reduce((s, t) => s + Number(t.amount || 0), 0);
-  return income || 5500000;
 }
 
 /**

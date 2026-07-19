@@ -3,7 +3,7 @@
  * @module components/budget-summary-hero
  */
 
-import { calculateProgress, calculatePriorityTotals } from '../services/budget-model.js';
+import { calculateProgress, calculatePriorityTotals, getLinkedTransactions } from '../services/budget-model.js';
 import { Icon } from './icons.js';
 
 /**
@@ -27,8 +27,22 @@ export async function renderBudgetSummaryHero(container, ctx) {
   const remaining = totalBudget - totalSpent;
   const percentUsed = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
 
+  const monthExpenses = (transactions || []).filter(
+    (t) => t.type === 'expense' && (!month || String(t.date || '').startsWith(month)),
+  );
+  const totalExpenseMonth = monthExpenses.reduce((s, t) => s + Number(t.amount || 0), 0);
+  const unlinkedExpense = Math.max(0, totalExpenseMonth - totalSpent);
+  const linkedIds = new Set();
+  for (const row of rows) {
+    for (const t of getLinkedTransactions(row, monthExpenses, month)) {
+      if (t.id) linkedIds.add(t.id);
+    }
+  }
+  const unlinkedCount = monthExpenses.filter((t) => t.id && !linkedIds.has(t.id)).length;
+
   const time = getMonthTimeProgress(month);
   const { daysLeft, daysPassed, timeProgress, timeMarkerLabel } = time;
+  const markerLeft = Math.min(96, Math.max(4, timeProgress));
 
   const dailyRemaining = daysLeft > 0 ? remaining / daysLeft : 0;
   const dailyAvg = daysPassed > 0 ? totalSpent / daysPassed : 0;
@@ -55,7 +69,7 @@ export async function renderBudgetSummaryHero(container, ctx) {
             <span class="bsh-total">Rp ${fmt(totalBudget)}</span>
           </div>
           <div class="bsh-progress-bar-wrap">
-            <div class="bsh-time-marker-wrap" style="left:${timeProgress}%">
+            <div class="bsh-time-marker-wrap" style="left:${markerLeft}%">
               <span class="bsh-time-marker-label">${escapeHtml(timeMarkerLabel)}</span>
               <span class="bsh-time-marker" aria-hidden="true"></span>
             </div>
@@ -64,9 +78,15 @@ export async function renderBudgetSummaryHero(container, ctx) {
             </div>
             <div class="bsh-progress-meta">
               <span class="bsh-percent">${percentUsed}% realisasi</span>
-              <span class="bsh-time-percent">Waktu: ${timeProgress}%</span>
+              <span class="bsh-time-percent">Hari ${daysPassed}/${time.daysInMonth}</span>
             </div>
           </div>
+          ${unlinkedExpense > 0 ? `
+            <div class="bsh-unlinked-hint">
+              Rp ${fmt(unlinkedExpense)} pengeluaran belum ter-link ke budget
+              ${unlinkedCount > 0 ? `(~${unlinkedCount} trx)` : ''}
+            </div>
+          ` : ''}
         </div>
         <div class="bsh-stats-grid">
           <div class="bsh-stat">
@@ -188,11 +208,16 @@ function buildInsightContent(status, overBudgetCount, criticalCount) {
  */
 function getMonthTimeProgress(month) {
   const now = new Date();
-  const [y, m] = (month || '').split('-').map(Number);
-  const monthEnd = new Date(y, m, 0);
-  const daysInMonth = monthEnd.getDate();
+  const [y, m] = String(month || '').split('-').map(Number);
+  if (!y || !m) {
+    return { daysPassed: 0, daysLeft: 0, daysInMonth: 30, timeProgress: 0, timeMarkerLabel: '—' };
+  }
+
+  const daysInMonth = new Date(y, m, 0).getDate();
   const isCurrentMonth = now.getFullYear() === y && now.getMonth() === m - 1;
-  const isPastMonth = new Date(y, m - 1, daysInMonth) < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const monthEndDay = new Date(y, m - 1, daysInMonth);
+  const isPastMonth = monthEndDay < todayStart;
 
   let daysPassed;
   let daysLeft;
@@ -201,18 +226,22 @@ function getMonthTimeProgress(month) {
   if (isCurrentMonth) {
     daysPassed = now.getDate();
     daysLeft = Math.max(0, daysInMonth - daysPassed);
-    timeMarkerLabel = `Hari ${daysPassed}`;
+    // Day number only (e.g. "19") above the white marker line
+    timeMarkerLabel = String(daysPassed);
   } else if (isPastMonth) {
     daysPassed = daysInMonth;
     daysLeft = 0;
-    timeMarkerLabel = 'Akhir bulan';
+    timeMarkerLabel = String(daysInMonth);
   } else {
     daysPassed = 0;
     daysLeft = daysInMonth;
-    timeMarkerLabel = 'Awal bulan';
+    timeMarkerLabel = '1';
   }
 
-  const timeProgress = daysInMonth > 0 ? Math.round((daysPassed / daysInMonth) * 100) : 0;
+  // Position by calendar day so day 19 of 31 ≈ 61%, not stuck at end
+  const timeProgress = daysInMonth > 0
+    ? Math.min(100, Math.max(0, (daysPassed / daysInMonth) * 100))
+    : 0;
   return { daysPassed, daysLeft, daysInMonth, timeProgress, timeMarkerLabel };
 }
 
@@ -289,7 +318,7 @@ function getHealthStatus(percentUsed, timeProgress) {
  */
 function renderPriorityMini(priorityTotals, totalBudget) {
   const colors = { harus: '#ef4444', penting: '#f59e0b', mau: '#eab308', simpan: '#10b981' };
-  const labels = { harus: 'Harus', penting: 'Penting', mau: 'Mau', simpan: 'Simpan' };
+  const labels = { harus: 'Wajib', penting: 'Kebutuhan', mau: 'Keinginan', simpan: 'Simpan' };
 
   const bars = Object.keys(colors).map((key) => {
     const data = priorityTotals[key] || { amount: 0 };

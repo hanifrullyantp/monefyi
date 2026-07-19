@@ -109,7 +109,18 @@ export async function getIncomeSources(period = null) {
 
   const p = period || getCurrentPeriod();
   const all = await db.income_sources.toArray();
-  return all.filter((s) => s.period === p);
+  const sources = all.filter((s) => s.period === p);
+
+  // Purge known recommender mock (5.5jt) seeded as legacy "Income Bulanan"
+  const mocks = sources.filter(
+    (s) => Number(s.amount) === 5500000 && /income bulanan/i.test(s.name || ''),
+  );
+  if (mocks.length && mocks.length === sources.length) {
+    await Promise.all(mocks.map((s) => db.income_sources.delete(s.id)));
+    return [];
+  }
+
+  return sources;
 }
 
 /**
@@ -128,13 +139,15 @@ export async function getTotalIncome(period = null) {
  */
 export async function migrateLegacyIncome(period, legacyIncome) {
   const existing = await getIncomeSources(period);
-  if (existing.length > 0 || !legacyIncome) return;
+  const amount = Number(legacyIncome || 0);
+  // Skip empty or known mock/recommender fallback (5.5jt)
+  if (existing.length > 0 || amount <= 0 || amount === 5500000) return;
 
   await saveIncomeSource(createIncomeSource({
     period,
     name: 'Income Bulanan',
     type: 'salary',
-    amount: legacyIncome,
+    amount,
     is_recurring: true,
   }));
 }

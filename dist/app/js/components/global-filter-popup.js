@@ -95,9 +95,9 @@ export async function showFilterPopup() {
           <label>${Icon('target', { size: 14 })} Prioritas Budget</label>
           <select class="filter-select" data-filter="priority">
             <option value="all" ${f.priority === 'all' ? 'selected' : ''}>Semua Prioritas</option>
-            <option value="harus" ${f.priority === 'harus' ? 'selected' : ''}>Harus</option>
-            <option value="penting" ${f.priority === 'penting' ? 'selected' : ''}>Penting</option>
-            <option value="mau" ${f.priority === 'mau' ? 'selected' : ''}>Mau</option>
+            <option value="harus" ${f.priority === 'harus' ? 'selected' : ''}>Wajib</option>
+            <option value="penting" ${f.priority === 'penting' ? 'selected' : ''}>Kebutuhan</option>
+            <option value="mau" ${f.priority === 'mau' ? 'selected' : ''}>Keinginan</option>
             <option value="simpan" ${f.priority === 'simpan' ? 'selected' : ''}>Simpan</option>
           </select>
         </div>
@@ -129,7 +129,9 @@ export async function showFilterPopup() {
   `;
 
   document.body.appendChild(popup);
-  requestAnimationFrame(() => popup.classList.add('show'));
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => popup.classList.add('show'));
+  });
 
   const localState = { ...f };
   popup.querySelectorAll('[data-filter]').forEach((sel) => {
@@ -138,19 +140,25 @@ export async function showFilterPopup() {
 
   const close = () => {
     popup.classList.remove('show');
-    setTimeout(() => popup.remove(), 200);
+    setTimeout(() => popup.remove(), 280);
   };
 
   popup.querySelectorAll('[data-action="close"]').forEach((b) => { b.onclick = close; });
   popup.onclick = (e) => { if (e.target === popup) close(); };
-  popup.querySelector('[data-action="reset"]').onclick = () => { resetFilter(); close(); };
+  popup.querySelector('[data-action="reset"]').onclick = () => {
+    resetFilter();
+    if (typeof window.rerender === 'function') window.rerender();
+    close();
+  };
   popup.querySelector('[data-action="apply"]').onclick = () => {
     updateFilter(localState);
-    if (localState.period && window.STATE && window.STATE.selectedMonth !== localState.period) {
-      if (typeof window.monefyiSetPeriodMonth === 'function') {
+    if (localState.period && window.STATE) {
+      if (window.STATE.selectedMonth !== localState.period
+        && typeof window.monefyiSetPeriodMonth === 'function') {
         window.monefyiSetPeriodMonth(localState.period);
       }
     }
+    if (typeof window.rerender === 'function') window.rerender();
     close();
   };
 

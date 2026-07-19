@@ -8,6 +8,7 @@ import {
   getLinkedTransactions,
   PRIORITY_LEVELS,
 } from '../services/budget-model.js';
+import { Icon } from './icons.js';
 
 /**
  * @param {unknown} str
@@ -55,7 +56,7 @@ export function showBudgetDetailModal(budget, transactions, month, options = {})
     <div class="budget-detail-modal" role="dialog" aria-modal="true">
       <header class="budget-detail-header">
         <div>
-          <span class="budget-detail-priority" style="color:${priority.color}">${priority.icon} ${priority.label}</span>
+          <span class="budget-detail-priority" style="color:${priority.color}">${Icon(priority.icon || 'target', { size: 14 })} ${priority.label}</span>
           <h2>${escapeHtml(budget.name)}</h2>
         </div>
         <button type="button" class="close-btn" data-action="close" aria-label="Tutup">✕</button>

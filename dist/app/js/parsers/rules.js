@@ -144,6 +144,39 @@ export const GRAMMAR_RULES = [
   },
 
   {
+    id: 'income_uang_masuk',
+    pattern: /^(uang\s+masuk|masuk\s+uang|terima\s+uang|pemasukan|income)\s+(\d+)\s*(?:dari|ke)?\s*(.+?)?\s*(?:ke|via|di)?\s*(\w+)?$/i,
+    extract: (match) => ({
+      type: 'income',
+      amount: parseInt(match[2], 10),
+      merchant: match[3]?.trim() || 'Pemasukan',
+      account: match[4]?.trim() || undefined,
+      category: 'Income',
+    }),
+    confidence: 0.88,
+    examples: [
+      'uang masuk 3000000',
+      'masuk uang 1500000 dari client',
+      'terima uang 500000 gopay',
+      'pemasukan 2000000',
+    ],
+  },
+
+  {
+    id: 'income_amount_uang_masuk',
+    pattern: /^(\d+)\s+(uang\s+masuk|masuk|pemasukan|income)\s*(?:dari|ke)?\s*(.+?)?\s*(?:ke|via|di)?\s*(\w+)?$/i,
+    extract: (match) => ({
+      type: 'income',
+      amount: parseInt(match[1], 10),
+      merchant: match[3]?.trim() || 'Pemasukan',
+      account: match[4]?.trim() || undefined,
+      category: 'Income',
+    }),
+    confidence: 0.86,
+    examples: ['3000000 uang masuk', '1500000 pemasukan bca'],
+  },
+
+  {
     id: 'income_refund',
     pattern: /^(refund|pengembalian|kembali)\s+(\d+)\s*(?:dari)?\s*(.+?)?\s*(?:ke)?\s*(\w+)?$/i,
     extract: (match) => ({

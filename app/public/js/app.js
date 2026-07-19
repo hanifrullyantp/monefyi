@@ -9844,20 +9844,24 @@ function toggleNav(view, triggerEl) {
       }
     });
 
-    // Periode toggle (mobile header + desktop filter card + strip)
+    // Periode / filter — unified top-slide popup on all pages
     ['#btnPeriodToggle', '#btnFilterCardDesktop', '#btnFilterStripDesktop', '#btnPeriodToggleTopbar'].forEach((sel) => {
-  const el = $(sel);
-  if (!el) return;
+      const el = $(sel);
+      if (!el) return;
 
-  el.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (sel === '#btnPeriodToggle' && !isDesktopViewport()) {
-      toggleSaldoFilterMenu();
-    } else {
-      toggleMonthPopover();
-    }
-  });
-});
+      el.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        try {
+          const { showFilterPopup } = await import('./components/global-filter-popup.js');
+          await showFilterPopup();
+        } catch (err) {
+          console.error('[filter] popup failed', err);
+          if (sel === '#btnPeriodToggle' && !isDesktopViewport()) toggleSaldoFilterMenu();
+          else toggleMonthPopover();
+        }
+      });
+    });
 
     $('#btnMonthClose').addEventListener('click', () => setMonthPopover(false));
 

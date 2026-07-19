@@ -271,7 +271,7 @@ function wireHandlers(container, ctx) {
   container.querySelector('[data-action="manage-income"]')?.addEventListener('click', async (e) => {
     e.stopPropagation();
     const { showIncomeManagerModal } = await import('./income-manager.js');
-    showIncomeManagerModal(() => onRefresh?.());
+    showIncomeManagerModal(() => onRefresh?.(), month);
   });
 
   container.querySelector('#budget-sort')?.addEventListener('change', (e) => {
@@ -292,22 +292,104 @@ function wireHandlers(container, ctx) {
     showBudgetGeneratorModal(() => onRefresh?.());
   });
 
-  container.querySelector('[data-action="save-template"]')?.addEventListener('click', async () => {
-    if (!rows.length) return;
-    try {
-      const { saveBudgetTemplate } = await import('../services/budget-template.js');
-      const { serializeBudgetRows } = await import('../services/budget-model.js');
-      await saveBudgetTemplate(month, income, serializeBudgetRows(rows));
-      showPageToast('Template budget tersimpan — akan dipakai otomatis di bulan baru');
-      onRefresh?.();
-    } catch (e) {
-      showPageToast('Gagal simpan template: ' + e.message);
-    }
-  });
-
+  wireTemplateCard(container, ctx);
   wireRowClicks(container, ctx);
 
   import('../services/notification-center.js').then((m) => m.refreshNotifications()).catch(() => {});
+}
+
+/**
+ * @param {HTMLElement} container
+ * @param {object} ctx
+ */
+function wireTemplateCard(container, ctx) {
+  const { rows, month, income, onRefresh } = ctx;
+  const select = container.querySelector('#budget-template-select');
+  const syncActions = () => {
+    const id = select?.value || '';
+    const builtin = String(id).startsWith('builtin_');
+    const editBtn = container.querySelector('[data-action="template-edit"]');
+    const delBtn = container.querySelector('[data-action="template-delete"]');
+    if (editBtn) editBtn.disabled = !id || builtin;
+    if (delBtn) delBtn.disabled = !id || builtin;
+  };
+  select?.addEventListener('change', syncActions);
+  syncActions();
+
+  container.querySelector('[data-action="template-apply"]')?.addEventListener('click', async () => {
+    const id = select?.value;
+    if (!id) return;
+    if (!confirm('Terapkan template ini? Budget bulan ini akan diganti.')) return;
+    try {
+      const { applyTemplateById } = await import('../services/budget-template.js');
+      const applied = await applyTemplateById(id, month);
+      if (!applied?.rows?.length) {
+        showPageToast('Template kosong atau income belum diisi');
+        return;
+      }
+      if (window.STATE?.budgetDraft) {
+        window.STATE.budgetDraft.rows = applied.rows;
+        window.STATE.budgetDraft.income = applied.income || income || 0;
+        window.STATE.budgetDraft.initialFrom = 'template';
+        window.STATE.budgetDraft.month = month;
+      }
+      showPageToast(`Template "${applied.template_label}" diterapkan — simpan budget untuk persist`);
+      // Re-render from draft without reloading saved month (would wipe apply)
+      if (typeof window.renderBudgetPageView === 'function') {
+        await window.renderBudgetPageView();
+      } else {
+        onRefresh?.();
+      }
+    } catch (e) {
+      showPageToast('Gagal terapkan: ' + e.message);
+    }
+  });
+
+  container.querySelector('[data-action="template-save"]')?.addEventListener('click', async () => {
+    if (!rows.length) {
+      showPageToast('Belum ada budget untuk disimpan');
+      return;
+    }
+    const label = prompt('Nama template', `Template ${formatMonthLabel(month)}`);
+    if (label === null) return;
+    try {
+      const { saveBudgetTemplate } = await import('../services/budget-template.js');
+      await saveBudgetTemplate(month, income, rows, { label: label.trim() || `Template ${month}` });
+      showPageToast('Template tersimpan');
+      onRefresh?.();
+    } catch (e) {
+      showPageToast('Gagal simpan: ' + e.message);
+    }
+  });
+
+  container.querySelector('[data-action="template-edit"]')?.addEventListener('click', async () => {
+    const id = select?.value;
+    if (!id || String(id).startsWith('builtin_')) return;
+    const label = prompt('Rename template');
+    if (!label?.trim()) return;
+    try {
+      const { updateBudgetTemplate } = await import('../services/budget-template.js');
+      await updateBudgetTemplate(id, { label: label.trim() });
+      showPageToast('Template diupdate');
+      onRefresh?.();
+    } catch (e) {
+      showPageToast(e.message);
+    }
+  });
+
+  container.querySelector('[data-action="template-delete"]')?.addEventListener('click', async () => {
+    const id = select?.value;
+    if (!id || String(id).startsWith('builtin_')) return;
+    if (!confirm('Hapus template ini?')) return;
+    try {
+      const { deleteBudgetTemplate } = await import('../services/budget-template.js');
+      await deleteBudgetTemplate(id);
+      showPageToast('Template dihapus');
+      onRefresh?.();
+    } catch (e) {
+      showPageToast(e.message);
+    }
+  });
 }
 
 /**
@@ -340,45 +422,65 @@ export async function renderBudgetPage(container, ctx) {
   if (!container) return;
 
   const {
-    month,
+    month: ctxMonth,
     rows: rawRows,
     income: ctxIncome,
-    transactions,
+    transactions: ctxTransactions,
     onRefresh,
     onSave,
   } = ctx;
 
-  let rows = computeHistoricalBaselines(rawRows || [], transactions || [], month);
+  const filter = getFilter();
+  const displayMonth = filter.period
+    || window.STATE?.selectedMonth
+    || ctxMonth
+    || new Date().toISOString().slice(0, 7);
+
+  // Keep draft / selected month in sync with filter
+  if (window.STATE) {
+    window.STATE.selectedMonth = displayMonth;
+    if (window.STATE.budgetDraft) window.STATE.budgetDraft.month = displayMonth;
+  }
+
+  const allTx = Array.isArray(window.STATE?.transactions) && window.STATE.transactions.length
+    ? window.STATE.transactions
+    : (ctxTransactions || []);
+  const monthTransactions = allTx.filter((t) => String(t.date || '').startsWith(displayMonth));
+
+  let rows = computeHistoricalBaselines(rawRows || [], monthTransactions, displayMonth);
   rows = filterBudgets(rows);
 
   const { getTotalIncome, migrateLegacyIncome, getIncomeSources } = await import('../services/income-source.js');
-  await migrateLegacyIncome(month, Number(ctxIncome || 0));
-  const sources = await getIncomeSources(month);
-  const incomeFromSources = await getTotalIncome(month);
-  const income = incomeFromSources > 0 ? incomeFromSources : Number(ctxIncome || 0);
+  // Only migrate real legacy income (never 5.5jt mock)
+  const legacy = Number(ctxIncome || 0);
+  if (legacy > 0 && legacy !== 5500000) {
+    await migrateLegacyIncome(displayMonth, legacy);
+  }
+  const sources = await getIncomeSources(displayMonth);
+  const income = await getTotalIncome(displayMonth);
 
   if (window.STATE?.budgetDraft) {
     window.STATE.budgetDraft.income = income;
   }
 
-  const filter = getFilter();
   const currentSort = localStorage.getItem(SORT_KEY) || 'urgent';
   const sourcesLen = sources.length;
 
-  const overBudgetCount = rows.filter((b) => calculateProgress(b, transactions, month).status === 'over').length;
+  const overBudgetCount = rows.filter((b) => calculateProgress(b, monthTransactions, displayMonth).status === 'over').length;
   const criticalCount = rows.filter((b) => {
-    const s = calculateProgress(b, transactions, month).status;
+    const s = calculateProgress(b, monthTransactions, displayMonth).status;
     return s === 'critical' || s === 'warning';
   }).length;
 
   container.className = 'budget-page-container';
-  const displayMonth = filter.period || month;
 
-  const { getBudgetTemplate } = await import('../services/budget-template.js');
-  const savedTemplate = await getBudgetTemplate();
-  const templateHint = savedTemplate
-    ? `Template dari ${formatMonthLabel(savedTemplate.source_month || month)} — otomatis dipakai di bulan baru`
-    : 'Simpan setup budget ini agar dipakai otomatis di bulan berikutnya';
+  const {
+    listBudgetTemplates,
+    getActiveTemplateId,
+  } = await import('../services/budget-template.js');
+  const templates = await listBudgetTemplates();
+  const activeId = await getActiveTemplateId();
+  const selectedTemplateId = activeId || templates[0]?.id || '';
 
   container.innerHTML = `
     <div class="budget-page">
@@ -408,18 +510,6 @@ export async function renderBudgetPage(container, ctx) {
         </div>
         <div class="isc-amount">Rp ${formatIDR(income)}</div>
         <div class="isc-hint">${sourcesLen === 0 ? 'Belum ada sumber income — tap Kelola untuk menambah' : `${sourcesLen} sumber income`}</div>
-      </section>
-
-      <section class="budget-template-card">
-        <div class="btc-header">
-          <span class="btc-title">${Icon('save', { size: 14 })} Template Budget</span>
-          ${savedTemplate ? `<span class="btc-badge">Aktif</span>` : ''}
-        </div>
-        <p class="btc-hint">${templateHint}</p>
-        <button type="button" class="btn-save-template tap" data-action="save-template" ${rows.length === 0 ? 'disabled' : ''}>
-          ${Icon('save', { size: 14 })}
-          <span>Simpan sebagai Template</span>
-        </button>
       </section>
 
       <section class="budget-list-card">
@@ -457,6 +547,26 @@ export async function renderBudgetPage(container, ctx) {
           </button>
         </div>
       </section>
+
+      <section class="budget-template-card">
+        <div class="btc-header">
+          <span class="btc-title">${Icon('save', { size: 14 })} Template Budget</span>
+        </div>
+        <p class="btc-hint">Pilih template bawaan atau simpan setup bulan ini</p>
+        <select class="btc-select" id="budget-template-select" aria-label="Pilih template">
+          ${templates.map((t) => `
+            <option value="${escapeHtml(t.id)}" ${t.id === selectedTemplateId ? 'selected' : ''}>
+              ${escapeHtml(t.label)}${t.builtin ? ' (bawaan)' : ''}
+            </option>
+          `).join('')}
+        </select>
+        <div class="btc-actions">
+          <button type="button" class="btc-btn primary tap" data-action="template-apply">${Icon('check', { size: 14 })} Terapkan</button>
+          <button type="button" class="btc-btn tap" data-action="template-save" ${rows.length === 0 ? 'disabled' : ''}>${Icon('save', { size: 14 })} Simpan</button>
+          <button type="button" class="btc-btn tap" data-action="template-edit">${Icon('edit', { size: 14 })} Edit</button>
+          <button type="button" class="btc-btn danger tap" data-action="template-delete">${Icon('trash', { size: 14 })} Hapus</button>
+        </div>
+      </section>
     </div>
   `;
 
@@ -464,21 +574,28 @@ export async function renderBudgetPage(container, ctx) {
   const { renderBudgetSummaryHero } = await import('./budget-summary-hero.js');
   await renderBudgetSummaryHero(heroEl, {
     rows,
-    transactions,
-    month,
+    transactions: monthTransactions,
+    month: displayMonth,
     income,
     overBudgetCount,
     criticalCount,
     onEvaluation: async () => {
       const { showEvaluation } = await import('./budget-evaluation.js');
-      showEvaluation({ month, rows, transactions });
+      showEvaluation({ month: displayMonth, rows, transactions: monthTransactions });
     },
   });
 
   const listSection = container.querySelector('#budget-list-content');
-  renderBudgetListSection(listSection, rows, transactions, month, currentSort);
+  renderBudgetListSection(listSection, rows, monthTransactions, displayMonth, currentSort);
 
-  wireHandlers(container, { ...ctx, rows, income, onSave });
+  wireHandlers(container, {
+    ...ctx,
+    month: displayMonth,
+    rows,
+    income,
+    transactions: monthTransactions,
+    onSave,
+  });
 
   if (!container.dataset.filterWired) {
     container.dataset.filterWired = '1';

@@ -530,7 +530,7 @@ function diagnoseSpendingPattern(dailyTrend, m) {
     status: 'info',
     title: 'Ada Pengeluaran Besar',
     explanation: `Tanggal ${maxDay?.day || '?'} ada pengeluaran Rp ${fmt(max)} — ${Math.round((max / m.totalExpense) * 100)}% dari total bulan ini. Apakah ini pengeluaran rutin atau satu kali?`,
-    benchmark: 'Tip: Pengeluaran besar sebaiknya direncanakan dan masuk budget "Harus" atau "Penting".',
+    benchmark: 'Tip: Pengeluaran besar sebaiknya direncanakan dan masuk budget "Wajib" atau "Kebutuhan".',
     impact: 'low',
     action: { label: 'Review Transaksi', type: 'navigate', target: 'transactions' },
   };
@@ -662,7 +662,7 @@ function generate503020(m, report) {
 
   return [
     {
-      name: 'Needs (Harus+Penting)',
+      name: 'Needs (Wajib+Kebutuhan)',
       yours: needsPct,
       ideal: ideal.needs,
       unit: '%',
@@ -670,7 +670,7 @@ function generate503020(m, report) {
       lowerIsBetter: true,
     },
     {
-      name: 'Wants (Mau)',
+      name: 'Wants (Keinginan)',
       yours: wantsPct,
       ideal: ideal.wants,
       unit: '%',

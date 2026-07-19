@@ -193,7 +193,7 @@ function generateFromRule(income) {
       count: budgets.length,
       by_priority: countByPriority(budgets),
     },
-    explanation: 'Menggunakan aturan 50/30/20:\n• 35% kebutuhan wajib (Harus)\n• 40% kebutuhan pokok (Penting)\n• 10% lifestyle (Mau)\n• 15% tabungan (Simpan)',
+    explanation: 'Menggunakan aturan 50/30/20:\n• 35% kebutuhan wajib (Wajib)\n• 40% kebutuhan pokok (Kebutuhan)\n• 10% lifestyle (Keinginan)\n• 15% tabungan (Simpan)',
   };
 }
 

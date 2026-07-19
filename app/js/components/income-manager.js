@@ -15,9 +15,10 @@ import {
 
 /**
  * @param {() => void|null} [onSaved]
+ * @param {string} [periodOverride] YYYY-MM
  */
-export async function showIncomeManagerModal(onSaved = null) {
-  const period = getCurrentPeriod();
+export async function showIncomeManagerModal(onSaved = null, periodOverride = null) {
+  const period = periodOverride || getCurrentPeriod();
   const sources = await getIncomeSources(period);
   const total = await getTotalIncome(period);
 
@@ -53,7 +54,7 @@ export async function showIncomeManagerModal(onSaved = null) {
   `;
 
   document.body.appendChild(modal);
-  wireHandlers(modal, onSaved);
+  wireHandlers(modal, onSaved, period);
 }
 
 /**
@@ -93,10 +94,11 @@ function renderEmptyState() {
 
 /**
  * @param {HTMLElement} modal
+ * @param {string} period
  */
-async function refreshList(modal) {
-  const sources = await getIncomeSources();
-  const total = await getTotalIncome();
+async function refreshList(modal, period) {
+  const sources = await getIncomeSources(period);
+  const total = await getTotalIncome(period);
   const totalEl = modal.querySelector('#income-total');
   if (totalEl) totalEl.textContent = `Rp ${fmt(total)}`;
   const countEl = modal.querySelector('.income-summary-count');
@@ -105,42 +107,51 @@ async function refreshList(modal) {
   if (list) {
     list.innerHTML = sources.length ? sources.map((s) => renderSourceRow(s)).join('') : renderEmptyState();
   }
-  wireItemHandlers(modal);
+  wireItemHandlers(modal, period);
 }
 
 /**
  * @param {HTMLElement} modal
  * @param {() => void|null} onSaved
+ * @param {string} period
  */
-function wireHandlers(modal, onSaved) {
-  const close = () => {
+function wireHandlers(modal, onSaved, period) {
+  const close = async () => {
+    const total = await getTotalIncome(period);
+    if (window.STATE?.budgetDraft) {
+      window.STATE.budgetDraft.income = total;
+    }
+    if (window.STATE?.budgetsByMonth?.[period]) {
+      window.STATE.budgetsByMonth[period].income = total;
+    }
     modal.remove();
     onSaved?.();
   };
   modal.querySelectorAll('[data-action="close"]').forEach((b) => { b.onclick = close; });
   modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
   modal.querySelector('[data-action="add-source"]')?.addEventListener('click', () => {
-    showSourceFormModal(null, () => refreshList(modal));
+    showSourceFormModal(null, () => refreshList(modal, period), period);
   });
-  wireItemHandlers(modal);
+  wireItemHandlers(modal, period);
 }
 
 /**
  * @param {HTMLElement} modal
+ * @param {string} period
  */
-function wireItemHandlers(modal) {
+function wireItemHandlers(modal, period) {
   modal.querySelectorAll('[data-action="edit"]').forEach((btn) => {
     btn.onclick = async () => {
-      const sources = await getIncomeSources();
+      const sources = await getIncomeSources(period);
       const source = sources.find((s) => s.id === btn.dataset.id);
-      if (source) showSourceFormModal(source, () => refreshList(modal));
+      if (source) showSourceFormModal(source, () => refreshList(modal, period), period);
     };
   });
   modal.querySelectorAll('[data-action="delete"]').forEach((btn) => {
     btn.onclick = async () => {
       if (!confirm('Hapus sumber income ini?')) return;
       await deleteIncomeSource(btn.dataset.id);
-      await refreshList(modal);
+      await refreshList(modal, period);
     };
   });
 }
@@ -148,10 +159,11 @@ function wireItemHandlers(modal) {
 /**
  * @param {object|null} source
  * @param {() => void|null} onSaved
+ * @param {string} [period]
  */
-function showSourceFormModal(source = null, onSaved = null) {
+function showSourceFormModal(source = null, onSaved = null, period = null) {
   const isEdit = !!source;
-  const data = source || createIncomeSource();
+  const data = source || createIncomeSource({ period: period || getCurrentPeriod() });
 
   const modal = document.createElement('div');
   modal.className = 'budget-modal-overlay';
@@ -228,6 +240,7 @@ function showSourceFormModal(source = null, onSaved = null) {
     }
     const updated = createIncomeSource({
       ...data,
+      period: period || data.period || getCurrentPeriod(),
       type: modal.querySelector('input[name="type"]:checked')?.value || 'salary',
       name: modal.querySelector('#income-name')?.value.trim() || '',
       amount,
