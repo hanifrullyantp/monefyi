@@ -303,8 +303,9 @@ export function getLinkedTransactions(row, transactions, month) {
  */
 export function calculateProgress(row, transactions, month) {
   const linked = getLinkedTransactions(row, transactions, month);
-  const spent = linked.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-  const budgetAmount = Number(row.amount || 0);
+  // Amounts are stored as positive; use abs for legacy negative expenses
+  const spent = linked.reduce((sum, t) => sum + Math.abs(Number(t.amount || 0)), 0);
+  const budgetAmount = Math.abs(Number(row.amount || 0));
   const remaining = budgetAmount - spent;
   const percentUsed = budgetAmount > 0 ? (spent / budgetAmount) * 100 : 0;
 

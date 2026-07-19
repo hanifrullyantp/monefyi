@@ -735,7 +735,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding-top: 4px;
+  padding-top: 0;
+  margin-top: 0;
 }
 
 .budget-page-kicker {
@@ -749,7 +750,7 @@
   font-size: 20px;
   font-weight: 800;
   color: var(--app-text);
-  margin: 4px 0 0;
+  margin: 0;
 }
 
 .budget-page-add {
@@ -1622,6 +1623,50 @@
 .isc-amount { font-size: 20px; font-weight: 800; color: var(--app-text); margin-top: 6px; }
 .isc-hint { font-size: 10px; color: var(--app-muted); margin-top: 2px; }
 
+.income-sources-card[data-action="manage-income"] {
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.income-sources-card[data-action="manage-income"]:hover {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: color-mix(in srgb, var(--app-card) 92%, rgba(16, 185, 129, 0.08));
+}
+
+/* Allocation strip — dibudgetkan / sisa / income */
+.budget-allocation-strip {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.bas-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 11px;
+  color: var(--app-muted);
+  line-height: 1.35;
+}
+.bas-row strong {
+  color: var(--app-text);
+  font-weight: 700;
+}
+.bas-row .over { color: #f87171; }
+.bas-track {
+  margin-top: 8px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+.bas-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #10b981;
+  transition: width 0.25s ease;
+}
+.bas-fill.over { background: #f87171; }
+
 /* ===== Filter bar ===== */
 
 .budget-filter-bar {
@@ -2090,8 +2135,8 @@
 }
 
 .btn-danger-outline {
-  width: 100%;
-  padding: 10px;
+  width: auto;
+  padding: 10px 12px;
   border: 1px solid rgba(239, 68, 68, 0.35);
   border-radius: 10px;
   background: transparent;
@@ -2099,6 +2144,9 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .dynamic-content--budget .mobile-saldo-wrap { display: none !important; }

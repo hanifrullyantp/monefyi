@@ -145,6 +145,16 @@ html, body {
     }
 
     .app-header { background: var(--app-backdrop); border-bottom: 1px solid var(--app-border); }
+    /* Tighten tx list header — maximize content upward */
+    #desktopHeader { margin-bottom: 0.5rem !important; }
+    #topbarSaldoWrap { margin-bottom: 0.5rem !important; }
+    @media (max-width: 767px) {
+      .app-header.safe-top { padding-top: max(0.35rem, env(safe-area-inset-top)); }
+      .app-header .max-w-xl { padding-bottom: 0.35rem; }
+      .mobile-saldo-wrap { margin-bottom: 0.35rem; }
+      #txSection { margin-top: 0 !important; }
+      #txListHost { margin-top: 0 !important; }
+    }
     .nav-bar {
       background: var(--nav-surface);
       border-top: none;
