@@ -415,6 +415,7 @@ async function loadBudgets(){
         'accounts.hint_balances': 'Saldo estimasi per akun.',
         'accounts.none': 'Belum ada akun.',
         'accounts.balance_upto': 'Saldo estimasi sampai {{date}}',
+        'quick_access.title': 'Akses Cepat',
 
         // KPI
         'kpi.income': 'Pemasukan (periode)',
@@ -819,8 +820,8 @@ async function loadBudgets(){
       $('#btnPrintReport') && ($('#btnPrintReport').textContent = t('print.button'));
 
       // ===== Accounts (dashboard) =====
-      const accH2 = $('#accountsBalancesSection h2');
-      if (accH2) accH2.textContent = t('accounts.title');
+      const accTitle = $('#accountsBalancesTitle') || $('#accountsBalancesSection h2');
+      if (accTitle) accTitle.textContent = t('accounts.title');
       $('#btnMoreAccounts') && ($('#btnMoreAccounts').textContent = t('accounts.view_all'));
       $('#accountsBalancesHint') && ($('#accountsBalancesHint').textContent = t('accounts.hint'));
 
@@ -3435,7 +3436,10 @@ async function upsertTransaction_legacy_local(tx) {
       row.innerHTML = '';
 
       if (!top.length) {
-        $('#accountsBalancesHint').textContent = 'Belum ada akun.';
+        const hintEl = $('#accountsBalancesHint');
+        if (hintEl) {
+          hintEl.textContent = (typeof t === 'function' ? t('accounts.none') : null) || 'Belum ada akun.';
+        }
         return;
       }
 
@@ -3488,7 +3492,10 @@ async function upsertTransaction_legacy_local(tx) {
       });
 
       $('#btnMoreAccounts').style.display = (list.length > 3) ? '' : 'none';
-      $('#accountsBalancesHint').textContent = 'Tap akun untuk lihat detail.';
+      const hintEl = $('#accountsBalancesHint');
+      if (hintEl) {
+        hintEl.textContent = (typeof t === 'function' ? t('accounts.hint') : null) || 'Tap akun untuk lihat detail.';
+      }
     }
 
     async function renderDashboardQuickAccess() {
@@ -3592,7 +3599,6 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
 });
 
       if ($('#userNameTop')) $('#userNameTop').textContent = STATE.user.name || 'User';
-      $('#dashboardUserName') && ($('#dashboardUserName').textContent = STATE.user.name || 'Akun');
       if ($('#userBadge')) $('#userBadge').textContent = (STATE.user.name||'U').trim().slice(0,1).toUpperCase();
       const sidebarName = $('#sidebarUserName');
       const sidebarAvatar = $('#sidebarUserAvatar');
@@ -3723,6 +3729,7 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       $('#rangeCard')?.classList.toggle('hidden', (STATE.period.preset || 'this_month') !== 'custom');
 
       const specialPageOpen = !!(STATE.ui.budgetPageOpen || STATE.ui.monevisorPageOpen);
+      applySpecialPageVisibility();
       const showDesktopDashboard = STATE.ui.dashboardOpen && isDesktopViewport() && !specialPageOpen;
       const showMobileHome = STATE.ui.dashboardOpen && !isDesktopViewport() && !specialPageOpen;
       $('#dashboardExpanded').classList.toggle('hidden', !showDesktopDashboard);
@@ -3743,7 +3750,7 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       if (mobileSaldoWrap) {
         mobileSaldoWrap.classList.toggle('hidden', specialPageOpen);
       }
-      $('#txSection')?.classList.toggle('hidden', STATE.ui.dashboardOpen || specialPageOpen);
+      // txSection visibility handled in applySpecialPageVisibility()
       const pageTitleDesktop = $('#pageTitleTxDesktop');
       const pageSubtitleDesktop = $('#pageSubtitleTxDesktop');
       if (pageTitleDesktop) {
@@ -5203,10 +5210,16 @@ function generateSmartBudgetRecommendation() {
       };
 
       let catOptions = '';
-      const cats = getLiveBudgetCategories();
-      if (tx.category && !cats.includes(tx.category)) cats.push(tx.category);
+      // Prefer budget categories for the TX's own month (realisasi), else selected month
+      const txMonth = toMonthKey(tx.date || STATE.selectedMonth || new Date());
+      const cats = (getBudgetCategoryNamesForMonth(txMonth).length
+        ? getBudgetCategoryNamesForMonth(txMonth)
+        : getLiveBudgetCategories()).slice();
+      const txCat = String(tx.category || '').trim();
+      const txCatNorm = normalizeCategoryName(txCat);
+      if (txCat && !cats.some((c) => normalizeCategoryName(c) === txCatNorm)) cats.push(txCat);
       cats.forEach(c => {
-        const sel = c === tx.category ? 'selected' : '';
+        const sel = normalizeCategoryName(c) === txCatNorm ? 'selected' : '';
         catOptions += `<option value="${escapeHtmlAttr(c)}" ${sel}>${escapeHtml(c)}</option>`;
       });
 
@@ -5479,7 +5492,10 @@ function generateSmartBudgetRecommendation() {
   if (!STATE.ui.dashboardOpen) destroyCharts();
   else requestAnimationFrame(() => renderCharts());
 
-  renderTransactions();
+  // Skip TX list rebuild on Budget / Monevisor — avoids flash + wasted work
+  if (!STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen) {
+    renderTransactions();
+  }
   if (STATE.ui.dashboardOpen && !isDesktopViewport()) renderMobileHome();
   if (STATE.ui.budgetPageOpen) renderBudgetPageView();
   if (STATE.ui.monevisorPageOpen) renderMonevisorPageView();
@@ -5926,6 +5942,31 @@ function setSheetPosition(mode) {
     const budgetBackdrop = $('#budgetBackdrop');
     const budgetSheet = $('#budgetSheet');
 
+    /**
+     * Hide TX / dashboard chrome immediately when Budget or Monevisor is open.
+     * Must beat CSS rules like `.tx-main-panel #txSection { display:flex }`.
+     */
+    function applySpecialPageVisibility() {
+      const specialPageOpen = !!(STATE.ui.budgetPageOpen || STATE.ui.monevisorPageOpen);
+      const showDesktopDashboard = STATE.ui.dashboardOpen && isDesktopViewport() && !specialPageOpen;
+      const showTx = !STATE.ui.dashboardOpen && !specialPageOpen;
+
+      $('#txSection')?.classList.toggle('hidden', !showTx);
+      $('#dashboardExpanded')?.classList.toggle('hidden', !showDesktopDashboard);
+      $('#budgetPageRoot')?.classList.toggle('hidden', !STATE.ui.budgetPageOpen);
+      $('#monevisorPageRoot')?.classList.toggle('hidden', !STATE.ui.monevisorPageOpen);
+
+      const dynamicContent = $('#dynamicContent');
+      if (dynamicContent) {
+        dynamicContent.classList.toggle('dynamic-content--dashboard', STATE.ui.dashboardOpen && !specialPageOpen);
+        dynamicContent.classList.toggle('dynamic-content--tx', showTx);
+        dynamicContent.classList.toggle('dynamic-content--budget', !!STATE.ui.budgetPageOpen);
+        dynamicContent.classList.toggle('dynamic-content--monevisor', !!STATE.ui.monevisorPageOpen);
+      }
+
+      document.querySelector('.mobile-saldo-wrap')?.classList.toggle('hidden', specialPageOpen);
+    }
+
     async function prepareBudgetDraft() {
       // Always follow the same month as the header period chip
       const mk = toMonthKey(STATE.period?.end || STATE.selectedMonth || new Date());
@@ -6027,7 +6068,7 @@ function setSheetPosition(mode) {
       closeAdvisor();
       closeAddSheet();
 
-      await prepareBudgetDraft();
+      // Switch view flags FIRST so TX list never flashes during async draft prep
       STATE.ui.budgetPageOpen = true;
       STATE.ui.monevisorPageOpen = false;
       STATE.ui.dashboardOpen = false;
@@ -6039,6 +6080,16 @@ function setSheetPosition(mode) {
       $$('.sidebar-item[data-nav]').forEach((el) => {
         el.classList.toggle('active', el.getAttribute('data-nav') === 'budget');
       });
+
+      // Immediate chrome swap (hide TX / dashboard before any await)
+      applySpecialPageVisibility();
+      $('#budgetPageRoot')?.classList.remove('hidden');
+
+      try {
+        await prepareBudgetDraft();
+      } catch (e) {
+        console.warn('[budget] prepare draft failed', e);
+      }
 
       rerender();
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -6109,6 +6160,7 @@ function setSheetPosition(mode) {
         expandChat: !!(options?.expandChat || options?.prefillMessage || options?.focus),
       };
 
+      // Switch view flags FIRST — never flash TX list while page mounts
       STATE.ui.monevisorPageOpen = true;
       STATE.ui.budgetPageOpen = false;
       STATE.ui.dashboardOpen = false;
@@ -6124,6 +6176,9 @@ function setSheetPosition(mode) {
       $$('.sidebar-item[data-nav]').forEach((el) => {
         el.classList.toggle('active', el.getAttribute('data-nav') === 'advisor');
       });
+
+      applySpecialPageVisibility();
+      root?.classList.remove('hidden');
 
       rerender();
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -7069,6 +7124,92 @@ function openTutorialTopic(id) {
       return [...new Set([...base, ...fromTx])].filter(Boolean);
     }
 
+    /**
+     * Extract category display names from a budgetsByMonth.categories payload.
+     * @param {object|null|undefined} categories
+     * @returns {string[]}
+     */
+    function extractBudgetCategoryNames(categories) {
+      const out = [];
+      if (!categories || typeof categories !== 'object') return out;
+      if (Array.isArray(categories.rows)) {
+        for (const r of categories.rows) {
+          const n = String(r?.name || '').trim();
+          if (n) out.push(n);
+        }
+        return out;
+      }
+      for (const [k, v] of Object.entries(categories)) {
+        if (k === 'rows') continue;
+        if (v && typeof v === 'object') {
+          const n = String(v.name || '').trim();
+          if (n) out.push(n);
+        } else {
+          const n = String(k || '').trim();
+          if (n) out.push(n);
+        }
+      }
+      return out;
+    }
+
+    /**
+     * Budget category names for one month — same source as "Daftar Budgeting".
+     * @param {string} [monthKey]
+     * @returns {string[]}
+     */
+    function getBudgetCategoryNamesForMonth(monthKey) {
+      const mk = monthKey
+        || STATE.selectedMonth
+        || toMonthKey(STATE.period?.end || new Date());
+      const seen = new Set();
+      const list = [];
+
+      const add = (raw) => {
+        const name = String(raw || '').trim();
+        if (!name) return;
+        const key = normalizeCategoryName(name);
+        if (seen.has(key)) return;
+        seen.add(key);
+        list.push(name);
+      };
+
+      // Live draft for the same month (unsaved edits on budgeting page)
+      if (STATE.budgetDraft?.month === mk && Array.isArray(STATE.budgetDraft.rows)) {
+        for (const r of STATE.budgetDraft.rows) add(r?.name);
+      }
+
+      const saved = STATE.budgetsByMonth?.[mk] || getBudgetMonth(mk);
+      for (const n of extractBudgetCategoryNames(saved?.categories)) add(n);
+
+      list.sort((a, b) => a.localeCompare(b, 'id'));
+      return list;
+    }
+
+    /**
+     * Category options for TX forms = Daftar Budgeting (selected month).
+     * Falls back to other months' budgets only if current month has none.
+     * Does NOT dump historical TX categories into the dropdown.
+     * @returns {string[]}
+     */
+    function collectAllBudgetCategoryNames() {
+      const preferred = STATE.selectedMonth || toMonthKey(STATE.period?.end || new Date());
+      const primary = getBudgetCategoryNamesForMonth(preferred);
+      if (primary.length) return primary;
+
+      const seen = new Set();
+      const list = [];
+      for (const mk of Object.keys(STATE.budgetsByMonth || {})) {
+        for (const n of getBudgetCategoryNamesForMonth(mk)) {
+          const key = normalizeCategoryName(n);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          list.push(n);
+        }
+      }
+      list.sort((a, b) => a.localeCompare(b, 'id'));
+      return list.length ? list : ['Lainnya'];
+    }
+
     function setSelectOptions(selectEl, options, currentValue){
       if (!selectEl) return;
       const raw = (Array.isArray(options) ? options : []).map((o) => String(o ?? '').trim()).filter(Boolean);
@@ -7076,59 +7217,26 @@ function openTutorialTopic(id) {
         ? [...new Set(raw)]
         : (currentValue ? [String(currentValue)] : ['Lainnya']);
       selectEl.innerHTML = list.map((o) => `<option value="${escapeHtmlAttr(o)}">${escapeHtml(o)}</option>`).join('');
-      if (list.includes(currentValue)) selectEl.value = currentValue;
+      const cur = String(currentValue || '').trim();
+      if (!cur) {
+        selectEl.selectedIndex = 0;
+        return;
+      }
+      if (list.includes(cur)) {
+        selectEl.value = cur;
+        return;
+      }
+      const curNorm = normalizeCategoryName(cur);
+      const matched = list.find((o) => normalizeCategoryName(o) === curNorm);
+      if (matched) selectEl.value = matched;
       else selectEl.selectedIndex = 0;
-    }
-
-    /**
-     * All category names from budgeting (all months), then TX fallback.
-     * @returns {string[]}
-     */
-    function collectAllBudgetCategoryNames() {
-      const set = new Set();
-      const budgets = STATE.budgetsByMonth || {};
-      const preferred = STATE.selectedMonth || toMonthKey(STATE.period?.end || new Date());
-      const months = [preferred, ...Object.keys(budgets)];
-
-      for (const mk of months) {
-        if (!mk) continue;
-        const b = budgets[mk] || getBudgetMonth(mk);
-        const cats = b?.categories;
-        if (!cats) continue;
-        if (Array.isArray(cats.rows)) {
-          for (const r of cats.rows) {
-            const n = String(r?.name || '').trim();
-            if (n) set.add(n);
-          }
-        } else if (typeof cats === 'object') {
-          for (const [k, v] of Object.entries(cats)) {
-            if (k === 'rows') continue;
-            if (v && typeof v === 'object') {
-              const n = String(v.name || '').trim();
-              if (n) set.add(n);
-            } else {
-              const n = String(k || '').trim();
-              if (n) set.add(n);
-            }
-          }
-        }
-      }
-
-      if (set.size === 0) {
-        for (const t of (STATE.transactions || [])) {
-          const n = String(t?.category || '').trim();
-          if (n) set.add(n);
-        }
-      }
-
-      const list = [...set].sort((a, b) => a.localeCompare(b, 'id'));
-      return list.length ? list : ['Lainnya'];
     }
 
     function populateManualTxSelects(preferredCategory) {
       const cats = collectAllBudgetCategoryNames();
-      const currentCat = preferredCategory && cats.includes(preferredCategory)
-        ? preferredCategory
+      const preferredNorm = preferredCategory ? normalizeCategoryName(preferredCategory) : '';
+      const currentCat = preferredNorm
+        ? (cats.find((c) => normalizeCategoryName(c) === preferredNorm) || cats[0])
         : cats[0];
       setSelectOptions($('#mCategory'), cats, currentCat);
 
@@ -7146,21 +7254,19 @@ function openTutorialTopic(id) {
     }
 
     function collectBudgetCategoriesForPeriod(){
+      // Same source as TX category dropdown: budgeting list for months in period
       const ms = monthsBetween(STATE.period.start, STATE.period.end);
-      const set = new Set();
+      const seen = new Set();
+      const list = [];
       for (const mk of ms) {
-        const b = getBudgetMonth(mk);
-        const cats = b?.categories || {};
-        if (Array.isArray(cats.rows)) {
-          for (const r of cats.rows) if (r?.name) set.add(normalizeCategoryName(r.name));
-        } else {
-          for (const k of Object.keys(cats)) set.add(normalizeCategoryName(k));
+        for (const n of getBudgetCategoryNamesForMonth(mk)) {
+          const key = normalizeCategoryName(n);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          list.push(n);
         }
       }
-      // fallback to categories from transactions in range
-      for (const tx of getTransactionsInPeriod()) if (tx.category) set.add(String(tx.category));
-      const list = [...set].map(normalizeCategoryName).filter(Boolean);
-      list.sort((a,b)=>a.localeCompare(b));
+      list.sort((a, b) => a.localeCompare(b, 'id'));
       return list.length ? list : ['Lainnya'];
     }
 
@@ -7174,13 +7280,17 @@ function openTutorialTopic(id) {
   $('#eType').value = tx.type;
   $('#eAmount').value = String(tx.amount||0);
 
-  // KATEGORI LIVE (SINKRON 100% DENGAN BUDGET)
-  const cats = getLiveBudgetCategories();
-  // Jika kategori transaksi lama tidak ada di budget baru, tambahkan ke list agar tidak hilang
-  if (tx.category && !cats.includes(tx.category)) {
-      cats.push(tx.category);
-  }
-  setSelectOptions($('#eCategory'), cats, tx.category || 'Lainnya');
+  // Kategori = Daftar Budgeting bulan transaksi (realisasi budget)
+  const txMonth = toMonthKey(tx.date || STATE.selectedMonth || new Date());
+  const cats = (getBudgetCategoryNamesForMonth(txMonth).length
+    ? getBudgetCategoryNamesForMonth(txMonth)
+    : getLiveBudgetCategories()).slice();
+  const txCat = String(tx.category || '').trim();
+  const txCatNorm = normalizeCategoryName(txCat);
+  const inBudget = txCat && cats.some((c) => normalizeCategoryName(c) === txCatNorm);
+  // Keep orphan current value so existing TX isn't forced silently; user can re-pick a budget cat
+  if (txCat && !inBudget) cats.push(txCat);
+  setSelectOptions($('#eCategory'), cats, txCat || cats[0] || 'Lainnya');
 
   // Akun & Payment
   const accounts = [...new Set([...(STATE.settings.accounts || []), ...STATE.transactions.map(t=>t.account).filter(Boolean)])].filter(Boolean).sort();
@@ -8026,6 +8136,7 @@ function closeBudgetDetail() {
     });
 
 function getLiveBudgetCategories() {
+  // TX category dropdown source of truth = Daftar Budgeting (selected month)
   return collectAllBudgetCategoryNames();
 }
 
@@ -10465,13 +10576,14 @@ function toggleNav_legacy(mode) {
 
 function toggleNav(view, triggerEl) {
       closeAddSheet();
-      closeAdvisor();
+      // Don't tear down destination page chrome before openBudget/openAdvisor runs
+      if (view !== 'advisor') closeAdvisor();
       closeMenu();
       closeUser();
       closeAccounts();
       closeAccountDetail();
       closeEditModal();
-      closeBudget();
+      if (view !== 'budget') closeBudget();
 
       const btn = triggerEl || (typeof event !== 'undefined' ? event.currentTarget : null);
       if (btn && btn.classList) {
@@ -10505,6 +10617,7 @@ function toggleNav(view, triggerEl) {
       $$('.sidebar-item[data-nav]').forEach((el) => {
         el.classList.toggle('active', el.getAttribute('data-nav') === view);
       });
+      applySpecialPageVisibility();
       rerender();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }

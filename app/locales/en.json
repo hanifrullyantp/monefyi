@@ -62,6 +62,7 @@
   "accounts.hint_balances": "Estimated balance per account.",
   "accounts.none": "No accounts yet.",
   "accounts.balance_upto": "Estimated balance up to {{date}}",
+  "quick_access.title": "Quick Access",
   "kpi.income": "Income (period)",
   "kpi.expense": "Expense (period)",
   "kpi.net": "Surplus / Deficit",

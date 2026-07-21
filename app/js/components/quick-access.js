@@ -19,6 +19,18 @@ const QUICK_ACTIONS = [
 ];
 
 /**
+ * @returns {string}
+ */
+function quickAccessTitle() {
+  try {
+    if (typeof window !== 'undefined' && typeof window.t === 'function') {
+      return window.t('quick_access.title') || 'Akses Cepat';
+    }
+  } catch (_) { /* ignore */ }
+  return 'Akses Cepat';
+}
+
+/**
  * @returns {typeof QUICK_ACTIONS}
  */
 function visibleActions() {
@@ -69,7 +81,7 @@ export function renderQuickAccess(callbacks = {}) {
   if (variant === 'all-row') {
     el.innerHTML = `
       <div class="home-section-header">
-        <h2 class="home-section-title">${Icon('sparkles', { size: 18 })} Akses Cepat</h2>
+        <h2 class="home-section-title">${Icon('sparkles', { size: 18 })} ${quickAccessTitle()}</h2>
       </div>
       <div class="home-quick-row home-quick-row--all">${allItems}</div>
     `;
@@ -82,7 +94,7 @@ export function renderQuickAccess(callbacks = {}) {
 
   el.innerHTML = `
     <div class="home-section-header">
-      <h2 class="home-section-title">${Icon('sparkles', { size: 18 })} Akses Cepat</h2>
+      <h2 class="home-section-title">${Icon('sparkles', { size: 18 })} ${quickAccessTitle()}</h2>
       <button type="button" class="home-section-action tap" data-toggle-quick-access aria-expanded="false">
         Lihat semua ${Icon('chevronRight', { size: 14 })}
       </button>

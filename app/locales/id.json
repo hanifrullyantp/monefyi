@@ -62,6 +62,7 @@
   "accounts.hint_balances": "Saldo estimasi per akun.",
   "accounts.none": "Belum ada akun.",
   "accounts.balance_upto": "Saldo estimasi sampai {{date}}",
+  "quick_access.title": "Akses Cepat",
   "kpi.income": "Pemasukan (periode)",
   "kpi.expense": "Pengeluaran (periode)",
   "kpi.net": "Surplus / Defisit",

@@ -38,7 +38,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
  
-  <link rel="stylesheet" crossorigin href="/app/assets/index-Cx6zfhvz.css">
+  <link rel="stylesheet" crossorigin href="/app/assets/index-BQ46DHq_.css">
 </head>
 <body>
   <!-- Logo Monefyi (satu sumber untuk loading, sidebar, header, auth) -->
@@ -623,13 +623,13 @@
         <!-- Expanded dashboard (desktop only) -->
         <div id="dashboardExpanded" class="hidden md:block">
           <!-- Account balances (top 3) -->
-          <section id="accountsBalancesSection" class="mt-4">
+          <section id="accountsBalancesSection" class="mt-4" aria-labelledby="accountsBalancesTitle">
             <div class="flex items-center justify-between gap-3 px-1">
-              <h2 class="text-lg font-bold tracking-tight text-white">Halo, <span id="dashboardUserName" style="color: var(--mf-primary, #10b981);">Akun</span></h2>
+              <h2 id="accountsBalancesTitle" class="text-base font-bold tracking-tight text-white m-0">Akun</h2>
               <button id="btnMoreAccounts" class="tap text-xs app-muted hover:opacity-80 rounded-lg px-2.5 py-1" style="border: 1px solid var(--mf-border)">Lihat semua ›</button>
             </div>
-            <div id="accountsBalancesRow" class="mt-4 flex gap-3 overflow-x-auto pb-2 snap-x px-1 hide-scrollbar"></div>
-            <div id="accountsBalancesHint" class="mt-1 text-xs app-muted px-1">Tap akun untuk lihat detail.</div>
+            <div id="accountsBalancesRow" class="mt-3 flex gap-3 overflow-x-auto pb-2 snap-x px-1 hide-scrollbar"></div>
+            <p id="accountsBalancesHint" class="mt-1.5 mb-0 text-xs app-muted px-1">Tap akun untuk lihat detail.</p>
           </section>
 
           <section id="dashboardQuickAccess" class="hidden md:block" aria-label="Akses cepat"></section>

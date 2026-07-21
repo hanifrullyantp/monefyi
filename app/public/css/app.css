@@ -576,12 +576,20 @@ html, body {
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
       }
-      .tx-main-panel #txSection {
+      .tx-main-panel #txSection:not(.hidden) {
         flex: 1;
         min-height: 0;
         display: flex;
         flex-direction: column;
         margin-top: 0 !important;
+      }
+      .tx-main-panel #txSection.hidden,
+      #txSection.hidden,
+      #dashboardExpanded.hidden,
+      #budgetPageRoot.hidden,
+      #monevisorPageRoot.hidden,
+      #homePageRoot.hidden {
+        display: none !important;
       }
       .tx-main-panel #txListHost {
         flex: 1;

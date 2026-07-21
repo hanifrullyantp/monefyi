@@ -239,7 +239,8 @@ export async function applyBudgetLinkOnSave(tx) {
   if (tx.type !== 'expense') return null;
 
   try {
-    const link = await linkTransactionToBudget(tx);
+    const month = tx?.date ? String(tx.date).slice(0, 7) : undefined;
+    const link = await linkTransactionToBudget(tx, month ? { month } : {});
     if (link) updateBudgetRowLinks(tx, link);
     return link;
   } catch (e) {
