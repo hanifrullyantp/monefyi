@@ -52,9 +52,9 @@
 }
 
 .preview-badge--purple {
-  background: rgba(139, 92, 246, 0.18);
-  color: #C4B5FD;
-  border: 1px solid rgba(139, 92, 246, 0.35);
+  background: var(--mf-secondary-soft, rgba(30, 58, 95, 0.22));
+  color: #93C5FD;
+  border: 1px solid rgba(14, 165, 233, 0.35);
 }
 
 .preview-badge--blue {
@@ -76,9 +76,9 @@
 }
 
 body.theme-light .preview-badge--purple {
-  background: #E9D5FF;
-  color: #6B21A8;
-  border-color: #C4B5FD;
+  background: #E0F2FE;
+  color: #075985;
+  border-color: #7DD3FC;
 }
 
 body.theme-light .preview-badge--blue {

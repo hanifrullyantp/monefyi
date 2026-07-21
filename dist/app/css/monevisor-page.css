@@ -874,7 +874,7 @@
 @media (min-width: 768px) {
   .monevisor-page {
     max-width: 1080px;
-    padding: 0 24px 48px;
+    padding: 0 8px 48px;
   }
 
   .mv-metrics {
@@ -899,5 +899,9 @@
 
   .mv-page > .mv-section {
     margin-bottom: 0;
+  }
+
+  .mv-header {
+    padding: 8px 0 12px;
   }
 }

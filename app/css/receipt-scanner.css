@@ -309,9 +309,9 @@
 }
 
 .receipt-source-badge--personal {
-  background: color-mix(in srgb, #8b5cf6 18%, transparent);
-  color: #c4b5fd;
-  border: 1px solid #7c3aed44;
+  background: var(--mf-primary-soft, rgba(16, 185, 129, 0.18));
+  color: #6ee7b7;
+  border: 1px solid var(--mf-primary-border, rgba(16, 185, 129, 0.35));
 }
 
 .receipt-source-badge--community {

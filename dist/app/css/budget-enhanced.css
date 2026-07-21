@@ -2226,16 +2226,16 @@
     top: 8px;
   }
 
+  /* Page scrolls via #dynamicContent — avoid nested viewport lock */
   .budget-page-list {
-    min-height: 420px;
-    max-height: calc(100dvh - 180px);
+    min-height: 0;
+    max-height: none;
     display: flex;
     flex-direction: column;
   }
 
   .budget-page-list .blc-content {
-    flex: 1;
-    overflow-y: auto;
+    overflow: visible;
     min-height: 0;
   }
 
