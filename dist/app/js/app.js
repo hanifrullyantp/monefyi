@@ -3877,19 +3877,25 @@ renderAccountsSettings();
   const elExpense = $('#kpiSaldoExpense');
   if (elExpense) elExpense.textContent = expenseText;
 
-  const subHtmlDesktop = `
-    <div class="kpi-metric kpi-metric--income">
-      <span aria-hidden="true">↑ +${formatCompactIDR(s.income)}</span>
-      <span class="kpi-metric__value">Income</span>
-    </div>
-    <div class="kpi-metric kpi-metric--expense">
-      <span aria-hidden="true">↓ −${formatCompactIDR(s.expense)}</span>
-      <span class="kpi-metric__value">Expense</span>
-    </div>
-  `;
+  const elIncomeDesktop = $('#kpiSaldoIncomeDesktop');
+  if (elIncomeDesktop) elIncomeDesktop.textContent = incomeText;
+  const elExpenseDesktop = $('#kpiSaldoExpenseDesktop');
+  if (elExpenseDesktop) elExpenseDesktop.textContent = expenseText;
 
+  // Legacy inject target (may be absent after sidebar hero markup)
   const elSubDesktop = $('#kpiSaldoSubDesktop');
-  if (elSubDesktop) elSubDesktop.innerHTML = subHtmlDesktop;
+  if (elSubDesktop) {
+    elSubDesktop.innerHTML = `
+      <div class="hero-saldo-stat hero-saldo-stat--income">
+        <div class="hero-saldo-stat__icon" aria-hidden="true">↑</div>
+        <span class="hero-saldo-stat__value">${incomeText}</span>
+      </div>
+      <div class="hero-saldo-stat hero-saldo-stat--expense">
+        <div class="hero-saldo-stat__icon" aria-hidden="true">↓</div>
+        <span class="hero-saldo-stat__value">${expenseText}</span>
+      </div>
+    `;
+  }
 
   renderHeroBudgetProgress(s, masked);
   
@@ -4788,11 +4794,11 @@ function generateSmartBudgetRecommendation() {
               const pct = Math.min(100, (spent / planned) * 100);
               const barColor = pct > 90 ? 'var(--accent-danger)' : pct > 75 ? 'var(--accent-warning)' : 'var(--accent-primary)';
               budgetHtml = `
-                <div class="tx-budget-cell flex flex-col justify-center w-full max-w-[120px]">
-                  <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden mb-1">
+                <div class="tx-budget-cell flex flex-col justify-center w-full max-w-[110px]">
+                  <div class="h-[3px] w-full bg-slate-800 rounded-full overflow-hidden">
                     <div class="h-full rounded-full" style="width: ${pct}%; background-color: ${barColor}"></div>
                   </div>
-                  <div class="text-[10px] app-muted text-right">${formatCompactIDR(spent)} / ${formatCompactIDR(planned)}</div>
+                  <div class="text-[9px] app-muted text-right leading-none mt-0.5">${formatCompactIDR(spent)} / ${formatCompactIDR(planned)}</div>
                 </div>
               `;
             } else {
@@ -4820,13 +4826,13 @@ function generateSmartBudgetRecommendation() {
               </div>
               
               <!-- Desktop / mobile-table row layout -->
-              <div class="tx-card-row-table grid grid-cols-[48px_2fr_1fr_1fr_1fr_1fr_1.5fr] gap-3 items-center w-full py-1${showTableRow ? '' : ' hidden'}">
+              <div class="tx-card-row-table grid grid-cols-[32px_2fr_1fr_1fr_1fr_1fr_1.4fr] gap-2.5 items-center w-full${showTableRow ? '' : ' hidden'}">
                 <div class="tx-icon shrink-0" style="background:${categoryIconBg(tx.category)}">${categoryIconHtml(tx.category)}</div>
-                <div class="text-sm font-semibold truncate">${escapeHtml(title)}</div>
+                <div class="text-sm font-semibold truncate leading-tight">${escapeHtml(title)}</div>
                 <div class="text-xs app-muted truncate">${escapeHtml(tx.category || 'Lainnya')}</div>
                 <div class="text-xs app-muted truncate">${escapeHtml(tx.account || 'Cash')}</div>
                 <div class="text-xs app-muted truncate">${escapeHtml(dateFormatted)}</div>
-                <div class="text-sm font-bold text-right" style="color:${amtColor}">${sign}${formatIDR(Math.abs(Number(tx.amount||0)))}</div>
+                <div class="text-sm font-bold text-right tabular-nums" style="color:${amtColor}">${sign}${formatIDR(Math.abs(Number(tx.amount||0)))}</div>
                 <div class="flex items-center justify-between">
                   ${budgetHtml}
                   <div class="tx-row-del opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">

@@ -320,22 +320,27 @@ html, body {
     }
 
     .sidebar-saldo-card {
-      padding: 14px;
+      padding: 14px 14px 12px;
       border-radius: 16px;
       background:
-        linear-gradient(145deg, rgba(16, 185, 129, 0.16) 0%, var(--mf-bg-elevated, #131A24) 48%, var(--mf-bg, #0B1118) 100%);
-      border: 1px solid var(--mf-primary-border, rgba(16, 185, 129, 0.24));
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+        linear-gradient(145deg, rgba(16, 185, 129, 0.18) 0%, var(--mf-bg-elevated, #131A24) 48%, var(--mf-bg, #0B1118) 100%);
+      border: 1px solid var(--mf-primary-border, rgba(16, 185, 129, 0.28));
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
       overflow: hidden;
       position: relative;
+    }
+    .sidebar-saldo-card.sidebar-glass,
+    .sidebar-saldo-card.saldo-card-glow {
+      background:
+        linear-gradient(145deg, rgba(16, 185, 129, 0.18) 0%, var(--mf-bg-elevated, #131A24) 48%, var(--mf-bg, #0B1118) 100%) !important;
     }
     .sidebar-saldo-card::before {
       content: '';
       position: absolute;
       inset: 0;
       background:
-        radial-gradient(ellipse 80% 50% at 20% 0%, rgba(16,185,129,.08), transparent 55%),
-        radial-gradient(ellipse 60% 40% at 90% 100%, rgba(14,165,233,.06), transparent 50%);
+        radial-gradient(ellipse 65% 55% at 88% 18%, rgba(16, 185, 129, 0.14), transparent 58%),
+        radial-gradient(ellipse 80% 50% at 15% 0%, rgba(16, 185, 129, 0.08), transparent 55%);
       pointer-events: none;
     }
     .sidebar-saldo-card > * { position: relative; z-index: 1; }
@@ -348,13 +353,30 @@ html, body {
       font-weight: 500;
     }
     .sidebar-saldo-card__amount {
-      font-size: clamp(1.45rem, 2.4vw, 1.95rem);
-      font-weight: 700;
-      line-height: 1.1;
+      font-size: clamp(1.35rem, 2.1vw, 1.7rem);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
       max-width: 100%;
       word-break: break-word;
       overflow-wrap: anywhere;
       white-space: normal;
+      margin-top: 6px;
+      margin-bottom: 2px;
+    }
+    .sidebar-saldo-metrics-row {
+      margin-top: 10px !important;
+      gap: 8px !important;
+    }
+    .sidebar-saldo-card .hero-saldo-stat__icon {
+      width: 30px;
+      height: 30px;
+    }
+    .sidebar-saldo-card .hero-saldo-stat__value {
+      font-size: 12px;
+    }
+    .sidebar-saldo-card__footer {
+      margin-top: 12px;
     }
     .sidebar-saldo-card__body {
       display: flex;
@@ -392,8 +414,8 @@ html, body {
       border-radius: 999px;
       font-size: 12px;
       font-weight: 600;
-      background: var(--app-surface2);
-      border: 1px solid var(--app-border);
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.12);
       color: var(--app-text);
     }
     .sidebar-saldo-filter:hover {
@@ -732,23 +754,24 @@ html, body {
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
       }
 
-      /* Tx list cards — solid mobile card surface, keep table columns */
+      /* Tx list — compact single-line rows */
       #txList {
-        gap: 10px !important;
+        gap: 6px !important;
         padding-bottom: 16px;
       }
       .tx-card-v2,
       .tx-card-compact {
-        border-radius: 16px;
+        border-radius: 12px;
       }
       .tx-card-v2 .tx-card-inner,
       .tx-card-compact .tx-card-inner,
       .tx-card-mockup.tx-card-inner {
         background: #131826 !important;
         border: 1px solid rgba(255, 255, 255, 0.06) !important;
-        border-radius: 16px !important;
-        padding: 12px 14px !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+        border-radius: 12px !important;
+        padding: 6px 10px !important;
+        box-shadow: none;
+        min-height: 0;
       }
       .tx-card-v2 .tx-card-inner::after,
       .tx-card-compact .tx-card-inner::after,
@@ -761,19 +784,69 @@ html, body {
         border-color: rgba(16, 185, 129, 0.22) !important;
       }
       #txListDesktopHeader {
-        background: rgba(19, 24, 38, 0.85);
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        border-radius: 12px;
-        margin-bottom: 10px !important;
-        padding: 10px 14px !important;
+        background: transparent;
+        border: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 0;
+        margin-bottom: 6px !important;
+        padding: 6px 10px !important;
+        gap: 10px !important;
+        align-items: center;
+        grid-template-columns: 32px 2fr 1fr 1fr 1fr 1fr 1.4fr !important;
       }
       .tx-card-row-table {
-        min-height: 44px;
+        min-height: 36px !important;
+        height: auto;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        gap: 10px !important;
+        align-items: center !important;
+        grid-template-columns: 32px 2fr 1fr 1fr 1fr 1fr 1.4fr !important;
+      }
+      .tx-card-row-table > * {
+        display: flex;
+        align-items: center;
+        min-height: 36px;
+        line-height: 1.25;
       }
       .tx-card-row-table .tx-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 12px;
+        width: 28px !important;
+        height: 28px !important;
+        min-width: 28px;
+        border-radius: 8px !important;
+        font-size: 13px !important;
+        grid-row: auto !important;
+        align-self: center !important;
+      }
+      .tx-card-row-table .tx-icon svg {
+        width: 14px;
+        height: 14px;
+      }
+      .tx-card-row-table .text-sm {
+        font-size: 13px !important;
+        line-height: 1.25;
+      }
+      .tx-card-row-table .text-xs {
+        font-size: 12px !important;
+        line-height: 1.25;
+      }
+      .tx-card-row-table .tx-budget-cell {
+        min-height: 0 !important;
+        width: 100%;
+        gap: 2px;
+        justify-content: center;
+      }
+      .tx-card-row-table .tx-budget-cell .h-1\.5,
+      .tx-card-row-table .tx-budget-cell [class*="h-1"] {
+        height: 3px !important;
+        margin-bottom: 0 !important;
+      }
+      .tx-card-row-table .tx-budget-cell .text-\[10px\] {
+        font-size: 9px !important;
+        line-height: 1.1;
+      }
+      .tx-card-row-table .tx-row-del {
+        align-self: center;
       }
 
       /* Dashboard — mobile home card language */

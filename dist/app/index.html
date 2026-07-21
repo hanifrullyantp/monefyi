@@ -39,7 +39,7 @@
 
 
  
-  <link rel="stylesheet" crossorigin href="/app/assets/index-C0BAssD2.css">
+  <link rel="stylesheet" crossorigin href="/app/assets/index-CmE3yuXH.css">
 </head>
 <body>
   <!-- Logo Monefyi (satu sumber untuk loading, sidebar, header, auth) -->
@@ -333,33 +333,41 @@
         </div>
       </div>
 
-      <!-- Kartu Saldo + filter periode di dalam -->
+      <!-- Kartu Saldo + filter periode — hero style seperti mobile -->
       <div id="sidebarSaldoWrap" class="hidden md:block sidebar-saldo-wrap sidebar-label">
         <div
           id="btnSaldoToggleDesktop"
           role="button"
           tabindex="0"
-          class="sidebar-saldo-card tap saldo-card-glow sidebar-glass cursor-pointer"
+          class="sidebar-saldo-card hero-saldo-card tap cursor-pointer"
           title="Tap untuk ringkasan lengkap"
         >
-          <div class="sidebar-saldo-card__top">
-            <div class="hero-saldo-card__label-row">
-              <span>Saldo (estimasi)</span>
-              <button id="btnSaldoMaskDesktop" type="button" class="tap opacity-80 hover:opacity-100" aria-label="Sembunyikan saldo">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="block"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-              </button>
+          <div class="hero-saldo-card__label-row">
+            <span>Saldo (estimasi)</span>
+            <button id="btnSaldoMaskDesktop" type="button" class="tap opacity-80 hover:opacity-100" aria-label="Sembunyikan saldo">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="block"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <div id="kpiSaldoDesktop" class="hero-saldo-card__amount sidebar-saldo-card__amount saldo-amount">—</div>
+          <div class="hero-saldo-card__metrics-row income-expense-row sidebar-saldo-metrics-row">
+            <div class="hero-saldo-stat hero-saldo-stat--income">
+              <div class="hero-saldo-stat__icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/></svg>
+              </div>
+              <span id="kpiSaldoIncomeDesktop" class="hero-saldo-stat__value">—</span>
             </div>
-            <div id="kpiSaldoDesktop" class="sidebar-saldo-card__amount saldo-amount">—</div>
-            <div class="hero-saldo-card__body">
-              <div id="kpiSaldoSubDesktop" class="hero-saldo-metrics"></div>
-              <canvas id="heroSaldoSparklineDesktop" class="hero-saldo-sparkline"></canvas>
+            <div class="hero-saldo-stat hero-saldo-stat--expense">
+              <div class="hero-saldo-stat__icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 17h6v-6"/><path d="m22 17-8.5-8.5-5 5L2 7"/></svg>
+              </div>
+              <span id="kpiSaldoExpenseDesktop" class="hero-saldo-stat__value">—</span>
             </div>
           </div>
           <div class="sidebar-saldo-card__footer">
             <button
               id="btnFilterCardDesktop"
               type="button"
-              class="sidebar-saldo-filter tap"
+              class="sidebar-saldo-filter hero-saldo-card__period tap"
               title="Filter periode & transaksi"
               aria-expanded="false"
             >
@@ -876,14 +884,14 @@
             </div>
 
             <!-- Desktop Table Header -->
-            <div id="txListDesktopHeader" class="hidden md:grid grid-cols-[48px_2fr_1fr_1fr_1fr_1fr_1.5fr] gap-3 px-4 py-2 text-xs font-medium text-slate-400 border-b border-slate-800/50 mb-2">
-              <div>Ikon</div>
+            <div id="txListDesktopHeader" class="hidden md:grid grid-cols-[32px_2fr_1fr_1fr_1fr_1fr_1.4fr] gap-2.5 px-2.5 py-1.5 text-[11px] font-medium text-slate-400 mb-1.5">
+              <div></div>
               <div>Deskripsi</div>
               <div>Kategori</div>
               <div>Akun</div>
               <div>Tanggal</div>
               <div class="text-right">Jumlah</div>
-              <div>Anggaran Terkait</div>
+              <div>Anggaran</div>
             </div>
             <div id="txList" class="flex flex-col gap-2"></div>
             <div id="txLoadMoreWrap" class="hidden mt-3">
