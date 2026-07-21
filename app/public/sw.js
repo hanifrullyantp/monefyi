@@ -1,5 +1,5 @@
 // Offline-capable service worker — v7 budget killer feature.
-const CACHE_VERSION = 'v24-tx-ux';
+const CACHE_VERSION = 'v26-smart-push';
 const STATIC_CACHE = `monefyi-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `monefyi-runtime-${CACHE_VERSION}`;
 const IMAGES_CACHE = `monefyi-images-${CACHE_VERSION}`;
@@ -22,6 +22,7 @@ const shellPaths = [
   './css/monevisor-page.css',
   './css/desktop-layout.css',
   './css/transaction-detail.css',
+  './css/notification-settings.css',
   './js/app.js',
   './js/config.js',
   './js/monefyi-ui.js',
@@ -47,6 +48,8 @@ const shellPaths = [
   './js/services/budget-linker.js',
   './js/services/budget-recommender.js',
   './js/services/notification-center.js',
+  './js/services/push-notification.js',
+  './js/services/notification-scheduler.js',
   './js/services/income-source.js',
   './js/services/global-filter.js',
   './js/services/budget-generator.js',
@@ -65,6 +68,7 @@ const shellPaths = [
   './js/components/budget-generator-modal.js',
   './js/components/floating-save-bar.js',
   './js/components/notification-bell.js',
+  './js/components/notification-settings.js',
   './js/components/budget-summary-hero.js',
   './js/components/income-manager.js',
   './js/services/install-prompt.js',
@@ -311,11 +315,15 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = event.notification.data?.url || new URL('./', self.location).href;
+  const data = event.notification.data || {};
+  const url = data.url || new URL('./', self.location).href;
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
       for (const client of list) {
+        try {
+          client.postMessage({ type: 'NOTIFICATION_CLICKED', data });
+        } catch { /* ignore */ }
         if ('focus' in client) return client.focus();
       }
       return self.clients.openWindow(url);

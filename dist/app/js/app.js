@@ -1930,6 +1930,11 @@ async function upsertTransaction_legacy_local(tx) {
                 syncMod.triggerSync('background');
               }
             }
+            if (event.data?.type === 'NOTIFICATION_CLICKED') {
+              if (typeof window.handleNotificationDeepLink === 'function') {
+                window.handleNotificationDeepLink(event.data.data || {});
+              }
+            }
           });
         }
       } catch (e) {
@@ -1968,6 +1973,14 @@ async function upsertTransaction_legacy_local(tx) {
           const { initNotificationBell } = await import('./components/notification-bell.js');
           await initNotificationBell();
         } catch (e) { console.warn('initNotificationBell', e); }
+        try {
+          const { initScheduler } = await import('./services/notification-scheduler.js');
+          initScheduler();
+        } catch (e) { console.warn('initScheduler', e); }
+        try {
+          const { initNotifPermissionPrompt } = await import('./components/notification-settings.js');
+          initNotifPermissionPrompt();
+        } catch (e) { console.warn('initNotifPermissionPrompt', e); }
         try {
           const { mountFilterIcon } = await import('./components/global-filter-popup.js');
           mountFilterIcon();
@@ -4038,18 +4051,14 @@ renderAccountsSettings();
     }
 
     function checkBudgetNotifications(pct, planned) {
-      if (!planned || typeof Notification === 'undefined') return;
-      
+      // Legacy OS path disabled — milestones handled by notification-scheduler
+      // Keep toast-only soft warn to avoid double-fire with push milestones.
+      if (!planned) return;
       const threshold = STATE.appConfig?.notif_threshold || 80;
-      if (pct >= threshold && Notification.permission === 'granted') {
+      if (pct >= threshold) {
         const lastNotif = localStorage.getItem('last_budget_notif');
         const today = new Date().toDateString();
-        
         if (lastNotif !== today) {
-          new Notification("Monefyi Warning", {
-            body: `Budget Anda sudah terpakai ${pct.toFixed(0)}%. Waktunya berhemat!`,
-            icon: "./icons/monefyi-logo.png"
-          });
           localStorage.setItem('last_budget_notif', today);
           showToast(`Budget hampir habis (${pct.toFixed(0)}%)`, 'warn');
         }
@@ -5682,15 +5691,12 @@ function openAddSheet(tab = 'quick') {
   const sheetEl = document.getElementById('sheet');
   sheetEl?.classList.toggle('sheet-form-panel', isDesktopViewport());
   setSheetPosition('bottom');
-  // 1. Isi Dropdown Kategori, Akun, Metode (Agar Manual selalu siap)
-  const cats = getActiveBudgetCats();
-  const mCat = document.getElementById('mCategory');
-  if (mCat) setSelectOptions(mCat, cats, cats[0] || 'Lainnya');
-
-  const accounts = [...new Set([...STATE.settings.accounts, ...STATE.transactions.map(t=>t.account).filter(Boolean)])].sort();
-  const lastAcc = getLastUsedAccount();
-  setSelectOptions($('#mAccount'), accounts, lastAcc || 'Cash');
-  setSelectOptions($('#mPayment'), paymentMethodOptions(), lastAcc || 'Cash');
+  // Isi dropdown dari budgeting (semua bulan) + akun/metode
+  try {
+    populateManualTxSelects();
+  } catch (err) {
+    console.warn('[app] populate manual selects failed', err);
+  }
 
   // 2. Logic Pindah Tab (Tanpa showTab)
   document.querySelectorAll('.tabPanel').forEach(panel => {
@@ -5731,15 +5737,14 @@ const btnQuickGoManual = document.getElementById('btnQuickGoManual');
 if (btnQuickGoManual) {
     btnQuickGoManual.onclick = function(e) {
         e.preventDefault();
-        const cats = getActiveBudgetCats();
-        const mCat = document.getElementById('mCategory');
-        if (mCat) setSelectOptions(mCat, cats, cats[0] || 'Lainnya');
+        try { populateManualTxSelects(); } catch (_) {}
         setTab('manual');
         updateAddSheetHeader('manual');
-        if($('#mAmount')) $('#mAmount').value = '';
-        if($('#mMerchant')) $('#mMerchant').value = '';
+        if ($('#mAmount')) $('#mAmount').value = '';
+        if ($('#mMerchant')) $('#mMerchant').value = '';
         if ($('#mDate') && !$('#mDate').value) $('#mDate').value = toISODate(new Date());
         validateManualForm();
+        setTimeout(() => $('#mAmount')?.focus(), 120);
     };
 }
 
@@ -5900,16 +5905,16 @@ function setSheetPosition(mode) {
   if (!sheet) return;
 
   if (mode === 'center') {
-    // popup di tengah
     sheet.classList.remove('bottom-0');
     sheet.classList.add('top-1/2');
-    sheet.classList.add('-translate-y-1/2');
+    // Avoid Tailwind -translate-y-1/2 (transform breaks native <select>)
+    sheet.style.marginTop = '-40vh';
   } else {
-    // bottom sheet biasa
     sheet.classList.add('bottom-0');
     sheet.classList.remove('top-1/2');
-    sheet.classList.remove('-translate-y-1/2');
+    sheet.style.marginTop = '';
   }
+  sheet.classList.remove('-translate-y-1/2');
 }
     function closeAddSheet(){ closeSheet(sheetBackdrop, sheet); }
 
@@ -6169,6 +6174,51 @@ function setSheetPosition(mode) {
       }, 80);
     }
     window.openSettings = openSettings;
+
+    /**
+     * Deep-link from OS notification / SW postMessage.
+     * @param {object} [data]
+     */
+    function handleNotificationDeepLink(data = {}) {
+      const url = String(data.url || '');
+      const hash = (url.includes('#') ? url.split('#')[1] : url.replace(/^\//, '')).toLowerCase();
+
+      if (data.transactionId && typeof openEdit === 'function') {
+        try {
+          if (typeof toggleNav === 'function') toggleNav('list');
+          openEdit(data.transactionId);
+          return;
+        } catch (e) {
+          console.warn('[notif] openEdit failed', e);
+        }
+      }
+
+      if (hash.includes('budget') || url.includes('#budget')) {
+        if (typeof openBudget === 'function') openBudget();
+        else if (typeof toggleNav === 'function') toggleNav('budget');
+        return;
+      }
+      if (hash.includes('transaction') || url.includes('#transactions')) {
+        if (typeof toggleNav === 'function') toggleNav('list');
+        return;
+      }
+      if (hash.includes('advisor') || url.includes('#advisor')) {
+        if (typeof openAdvisorAuto === 'function') openAdvisorAuto();
+        else if (typeof toggleNav === 'function') toggleNav('advisor');
+        return;
+      }
+      if (typeof toggleNav === 'function') toggleNav('dash');
+    }
+    window.handleNotificationDeepLink = handleNotificationDeepLink;
+
+    window.showNotificationSettings = async function showNotificationSettings() {
+      try {
+        const mod = await import('./components/notification-settings.js');
+        await mod.showNotificationSettings();
+      } catch (e) {
+        console.warn('showNotificationSettings', e);
+      }
+    };
 
     function openAffiliate(){
       // openAffModal is defined later (affiliate modal section)
@@ -6956,6 +7006,13 @@ function openTutorialTopic(id) {
   }
 
   if (!opts.silent) showToast(t('toast.saved') || 'Transaksi tersimpan', 'success');
+
+  if (!opts.silent && tx.type === 'expense') {
+    try {
+      const { checkSpendingAlert } = await import('./services/notification-scheduler.js');
+      checkSpendingAlert(tx).catch(() => {});
+    } catch { /* ignore */ }
+  }
 }
 
    async function deleteTransaction(id, opts = {}) {
@@ -7013,8 +7070,79 @@ function openTutorialTopic(id) {
     }
 
     function setSelectOptions(selectEl, options, currentValue){
-      selectEl.innerHTML = options.map(o => `<option value="${escapeHtmlAttr(o)}">${escapeHtml(o)}</option>`).join('');
-      if (options.includes(currentValue)) selectEl.value = currentValue;
+      if (!selectEl) return;
+      const raw = (Array.isArray(options) ? options : []).map((o) => String(o ?? '').trim()).filter(Boolean);
+      const list = raw.length
+        ? [...new Set(raw)]
+        : (currentValue ? [String(currentValue)] : ['Lainnya']);
+      selectEl.innerHTML = list.map((o) => `<option value="${escapeHtmlAttr(o)}">${escapeHtml(o)}</option>`).join('');
+      if (list.includes(currentValue)) selectEl.value = currentValue;
+      else selectEl.selectedIndex = 0;
+    }
+
+    /**
+     * All category names from budgeting (all months), then TX fallback.
+     * @returns {string[]}
+     */
+    function collectAllBudgetCategoryNames() {
+      const set = new Set();
+      const budgets = STATE.budgetsByMonth || {};
+      const preferred = STATE.selectedMonth || toMonthKey(STATE.period?.end || new Date());
+      const months = [preferred, ...Object.keys(budgets)];
+
+      for (const mk of months) {
+        if (!mk) continue;
+        const b = budgets[mk] || getBudgetMonth(mk);
+        const cats = b?.categories;
+        if (!cats) continue;
+        if (Array.isArray(cats.rows)) {
+          for (const r of cats.rows) {
+            const n = String(r?.name || '').trim();
+            if (n) set.add(n);
+          }
+        } else if (typeof cats === 'object') {
+          for (const [k, v] of Object.entries(cats)) {
+            if (k === 'rows') continue;
+            if (v && typeof v === 'object') {
+              const n = String(v.name || '').trim();
+              if (n) set.add(n);
+            } else {
+              const n = String(k || '').trim();
+              if (n) set.add(n);
+            }
+          }
+        }
+      }
+
+      if (set.size === 0) {
+        for (const t of (STATE.transactions || [])) {
+          const n = String(t?.category || '').trim();
+          if (n) set.add(n);
+        }
+      }
+
+      const list = [...set].sort((a, b) => a.localeCompare(b, 'id'));
+      return list.length ? list : ['Lainnya'];
+    }
+
+    function populateManualTxSelects(preferredCategory) {
+      const cats = collectAllBudgetCategoryNames();
+      const currentCat = preferredCategory && cats.includes(preferredCategory)
+        ? preferredCategory
+        : cats[0];
+      setSelectOptions($('#mCategory'), cats, currentCat);
+
+      const accounts = [...new Set([
+        ...(STATE.settings?.accounts || []),
+        ...(STATE.transactions || []).map((t) => t.account).filter(Boolean),
+      ])].map((a) => String(a).trim()).filter(Boolean).sort((a, b) => a.localeCompare(b, 'id'));
+      const accList = accounts.length ? accounts : ['Cash'];
+      const lastAcc = getLastUsedAccount();
+      setSelectOptions($('#mAccount'), accList, (lastAcc && accList.includes(lastAcc)) ? lastAcc : accList[0]);
+
+      const pays = paymentMethodOptions();
+      const payList = pays.length ? pays : ['Cash'];
+      setSelectOptions($('#mPayment'), payList, (lastAcc && payList.includes(lastAcc)) ? lastAcc : payList[0]);
     }
 
     function collectBudgetCategoriesForPeriod(){
@@ -7055,8 +7183,9 @@ function openTutorialTopic(id) {
   setSelectOptions($('#eCategory'), cats, tx.category || 'Lainnya');
 
   // Akun & Payment
-  const accounts = [...new Set([...STATE.settings.accounts, ...STATE.transactions.map(t=>t.account).filter(Boolean)])].sort();
-  setSelectOptions($('#eAccount'), accounts, tx.account || accounts[0] || 'Cash');
+  const accounts = [...new Set([...(STATE.settings.accounts || []), ...STATE.transactions.map(t=>t.account).filter(Boolean)])].filter(Boolean).sort();
+  const accList = accounts.length ? accounts : ['Cash'];
+  setSelectOptions($('#eAccount'), accList, tx.account || accList[0]);
   setSelectOptions($('#ePayment'), paymentMethodOptions(), tx.payment_method || tx.account || 'Cash');
 
   $('#eMerchant').value = tx.merchant||'';
@@ -7177,50 +7306,22 @@ function openTutorialTopic(id) {
     }
 
 function openManualInput() {
-  // 1. Tentukan Bulan Aktif
-  const mk = STATE.selectedMonth || toMonthKey(new Date());
-  
-  // 2. Ambil data budget TERBARU dari STATE
-  const b = STATE.budgetsByMonth[mk] || getBudgetMonth(mk);
-  
-  // 3. Ambil Nama Kategori (Masuk ke dalam .categories.rows)
-  let liveCats = [];
-  if (b && b.categories && Array.isArray(b.categories.rows)) {
-    // Mengambil nama dari tiap baris budget
-    liveCats = b.categories.rows.map(r => r.name).filter(Boolean).sort();
+  try { populateManualTxSelects(); } catch (err) {
+    console.warn('[app] populateManualTxSelects failed', err);
   }
 
-  // 4. Jika budget kosong, ambil history transaksi sebagai cadangan
-  if (liveCats.length === 0) {
-    liveCats = [...new Set(STATE.transactions.map(t => t.category))].filter(Boolean).sort();
-  }
-  
-  // 5. Jika benar-benar tidak ada data, gunakan 'Lainnya'
-  if (liveCats.length === 0) liveCats = ['Lainnya'];
+  if ($('#mDate')) $('#mDate').value = toISODate(new Date());
+  if ($('#mType')) $('#mType').value = 'expense';
+  if ($('#mAmount')) $('#mAmount').value = '';
+  if ($('#mMerchant')) $('#mMerchant').value = '';
+  if ($('#mNotes')) $('#mNotes').value = '';
+  if ($('#manualStatus')) $('#manualStatus').textContent = '-';
 
-  // 6. ISI DROPDOWN (PENTING: Ini yang membuat dropdown terupdate)
-  setSelectOptions($('#mCategory'), liveCats, liveCats[0]);
-
-  // 7. ISI AKUN & METODE (Sinkron dengan transaksi terakhir)
-  const accounts = [...new Set([...STATE.settings.accounts, ...STATE.transactions.map(t=>t.account).filter(Boolean)])].sort();
-  const lastAcc = getLastUsedAccount();
-  setSelectOptions($('#mAccount'), accounts, lastAcc || 'Cash');
-  setSelectOptions($('#mPayment'), paymentMethodOptions(), lastAcc || 'Cash');
-
-  // 8. RESET FIELD LAINNYA
-  $('#mDate').value = toISODate(new Date());
-  $('#mType').value = 'expense';
-  $('#mAmount').value = '';
-  $('#mMerchant').value = '';
-  $('#mNotes').value = '';
-  $('#manualStatus').textContent = '-';
-
-  // 9. PINDAH TAB SECARA VISUAL
   document.querySelectorAll('.tabPanel').forEach(p => p.classList.add('hidden'));
   const manualPanel = document.querySelector('[data-tab-panel="manual"]');
   if (manualPanel) manualPanel.classList.remove('hidden');
-  
-  console.log("Form Manual dibuka dengan kategori:", liveCats);
+  if (typeof updateAddSheetHeader === 'function') updateAddSheetHeader('manual');
+  if (typeof validateManualForm === 'function') validateManualForm();
 }
 
 // HUBUNGKAN KE TOMBOL
@@ -7243,16 +7344,7 @@ function showManualTab() {
 
 
 function getActiveBudgetCats() {
-  const mk = STATE.selectedMonth || toMonthKey(new Date());
-  const b = STATE.budgetsByMonth[mk] || getBudgetMonth(mk);
-  
-  if (b && b.categories && Array.isArray(b.categories.rows)) {
-    return b.categories.rows.map(r => r.name).filter(Boolean).sort();
-  }
-  
-  // Fallback jika budget kosong
-  const fromTx = [...new Set(STATE.transactions.slice(0, 50).map(t => t.category))].filter(Boolean);
-  return fromTx.length ? fromTx.sort() : ['Lainnya'];
+  return collectAllBudgetCategoryNames();
 }
 // --- HELPER DATABASE ---
 
@@ -7934,19 +8026,7 @@ function closeBudgetDetail() {
     });
 
 function getLiveBudgetCategories() {
-  // Ambil bulan yang sedang aktif di aplikasi
-  const mk = STATE.selectedMonth || toMonthKey(new Date());
-  const b = STATE.budgetsByMonth[mk] || getBudgetMonth(mk);
-  
-  if (b && b.categories && Array.isArray(b.categories.rows)) {
-    // Mengambil nama dari tiap baris budget, buang yang kosong
-    const names = b.categories.rows.map(r => r.name).filter(Boolean);
-    if (names.length > 0) return names.sort();
-  }
-  
-  // Jika budget benar-benar kosong, ambil dari transaksi bulan ini sebagai cadangan
-  const fallback = [...new Set(getTransactionsInPeriod().map(t => t.category))].filter(Boolean);
-  return fallback.length ? fallback.sort() : ['Lainnya'];
+  return collectAllBudgetCategoryNames();
 }
 
     // ============================================================
@@ -10848,6 +10928,19 @@ function toggleNav(view, triggerEl) {
       rerender();
     });
 
+    $('#btnNotifSettings')?.addEventListener('click', () => {
+      try { closeMenu?.(); } catch { /* ignore */ }
+      if (typeof window.showNotificationSettings === 'function') {
+        window.showNotificationSettings();
+      }
+    });
+
+    window.addEventListener('monefyi-notif-navigate', (event) => {
+      if (typeof window.handleNotificationDeepLink === 'function') {
+        window.handleNotificationDeepLink(event.detail || {});
+      }
+    });
+
     $('#btnThemeToggle')?.addEventListener('click', (e) => {
       e.stopPropagation();
       toggleAppTheme();
@@ -11224,6 +11317,11 @@ function toggleNav(view, triggerEl) {
                   window.monefyiPending?.processPendingQueue?.();
                 } else {
                   window.monefyiSync?.triggerSync?.('background');
+                }
+              }
+              if (event.data?.type === 'NOTIFICATION_CLICKED') {
+                if (typeof window.handleNotificationDeepLink === 'function') {
+                  window.handleNotificationDeepLink(event.data.data || {});
                 }
               }
             });

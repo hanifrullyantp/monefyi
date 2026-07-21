@@ -2069,6 +2069,10 @@ html, body {
       border-color: rgba(244, 114, 182, 0.55) !important;
       box-shadow: 0 0 0 3px rgba(244, 114, 182, 0.18);
     }
+    .add-tool-btn.voice-busy {
+      opacity: 0.65;
+      pointer-events: none;
+    }
 
     /* Health score ring */
     .health-ring {
@@ -2243,9 +2247,12 @@ html, body {
       inset: 0 0 0 auto !important;
       width: min(420px, 100vw) !important;
       max-width: 100%;
-      transform: translateX(100%);
+      transform: none !important;
+      right: -110%;
+      left: auto !important;
+      transition: right 0.25s ease, opacity 0.18s ease;
     }
-    #sheet.sheet-form-panel.open { transform: translateX(0) !important; }
+    #sheet.sheet-form-panel.open { transform: none !important; right: 0; opacity: 1; }
 
     /* Focus accessibility */
     .tap:focus-visible { outline: none; box-shadow: var(--focus-ring); }
@@ -2352,13 +2359,16 @@ html, body {
       }
 
       #sheet.sheet-form-panel.open {
-        transform: translateX(0) !important;
+        transform: none !important;
+        right: 0;
       }
       #sheet.sheet-form-panel {
         inset: 0 0 0 auto !important;
         width: min(420px, 100vw) !important;
         max-width: 100%;
-        transform: translateX(100%);
+        transform: none !important;
+        right: -110%;
+        left: auto !important;
       }
       #sheetBackdrop.open {
         justify-content: flex-end;
@@ -2466,14 +2476,56 @@ html, body {
     .sheet { transform: translateY(16px); opacity: 0; pointer-events: none; transition: transform .18s ease, opacity .18s ease; }
     .sheet.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
 
+    /*
+     * Native <select> pickers break when any ancestor has CSS transform.
+     * Animate #sheet with opacity only (no transform) so dropdown options appear.
+     */
+    #sheet.sheet {
+      transform: none !important;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease;
+    }
+    #sheet.sheet.open {
+      transform: none !important;
+      opacity: 1;
+      pointer-events: auto;
+    }
+    #sheet.sheet-form-panel {
+      transform: none !important;
+      right: -110%;
+      left: auto !important;
+      transition: right 0.25s ease, opacity 0.18s ease;
+    }
+    #sheet.sheet-form-panel.open {
+      transform: none !important;
+      right: 0;
+      opacity: 1;
+    }
+    #sheet select,
+    #sheet .field-float select {
+      font-size: 16px !important;
+      min-height: 44px;
+      color: var(--app-text);
+      background: var(--app-surface2);
+      -webkit-appearance: menulist;
+      appearance: menulist;
+    }
+    /* Select labels always floated (value always visible once options exist) */
+    .field-float select + label {
+      top: 8px;
+      font-size: 10px;
+      color: var(--accent-primary);
+    }
+
     /* Edit card: no transform (breaks native <select> picker on mobile) */
     #editCard.sheet {
-      transform: none;
+      transform: none !important;
       opacity: 0;
       transition: opacity .18s ease;
     }
     #editCard.sheet.open {
-      transform: none;
+      transform: none !important;
       opacity: 1;
     }
     #editCard select.app-input,
