@@ -14,23 +14,27 @@
 
   #saldoBarDesktopHost.is-visible,
   body.desktop-saldo-bar #saldoBarDesktopHost {
-    display: block !important;
-    margin: 0 0 6px;
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+    margin: 10px 0 12px;
+    width: 100%;
   }
 
   .saldo-bar-desktop {
     display: none;
     align-items: center;
     justify-content: space-between;
-    padding: 7px 12px;
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.02) 100%);
-    border: 1px solid rgba(16, 185, 129, 0.16);
-    border-radius: 12px;
-    gap: 10px;
-    margin: 0;
+    padding: 14px 18px;
+    min-height: 72px;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.03) 100%);
+    border: 1px solid rgba(16, 185, 129, 0.18);
+    border-radius: 14px;
+    gap: 12px;
+    margin: 0 auto;
     flex-shrink: 0;
     width: 100%;
-    max-width: none;
+    max-width: 1100px;
   }
 
   body.desktop-saldo-bar .saldo-bar-desktop {
@@ -64,7 +68,7 @@
   }
 
   .saldo-bar-amount {
-    font-size: clamp(1.05rem, 1.4vw, 1.3rem);
+    font-size: clamp(1.25rem, 1.8vw, 1.55rem);
     font-weight: 800;
     color: #fff;
     letter-spacing: -0.02em;
@@ -109,11 +113,11 @@
     flex-direction: column;
     align-items: flex-start;
     justify-content: center;
-    gap: 1px;
-    padding: 4px 9px;
+    gap: 2px;
+    padding: 8px 12px;
     border-radius: 10px 8px 12px 8px;
     background: rgba(255, 255, 255, 0.04);
-    min-width: 58px;
+    min-width: 68px;
     border: none;
     color: inherit;
     text-align: left;

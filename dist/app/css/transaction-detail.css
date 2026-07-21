@@ -5,6 +5,7 @@
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding-bottom: 12px;
+  transform: none !important;
 }
 
 #txInsightHost,

@@ -297,7 +297,10 @@ export async function parseTransaction(rawText, options = {}) {
 
   let normalized;
   try {
-    normalized = normalizeInput(processedText);
+    const channel = options.channel
+      || window.monefyiVoice?.getLastInputChannel?.()
+      || 'text';
+    normalized = normalizeInput(processedText, { channel });
   } catch (e) {
     console.error('[parser] Normalize failed:', e);
     return pendingFallback(rawText, userId, 'normalize_error', start);

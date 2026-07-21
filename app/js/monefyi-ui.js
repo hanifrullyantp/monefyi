@@ -156,27 +156,39 @@
   }
 
   function initVoiceInput(inputEl, btnEl) {
-    const SR = global.SpeechRecognition || global.webkitSpeechRecognition;
-    if (!SR || !inputEl || !btnEl) {
-      btnEl?.classList.add('hidden');
-      return;
-    }
-    const rec = new SR();
-    rec.lang = document.documentElement.lang === 'en' ? 'en-ID' : 'id-ID';
-    rec.interimResults = false;
-    btnEl.addEventListener('click', () => {
-      try {
-        rec.start();
-        btnEl.classList.add('voice-active');
-      } catch (_) {}
-    });
-    rec.onresult = (ev) => {
-      const text = ev.results?.[0]?.[0]?.transcript || '';
-      inputEl.value = (inputEl.value ? inputEl.value + ' ' : '') + text.trim();
-      inputEl.dispatchEvent(new Event('input', { bubbles: true }));
-    };
-    rec.onend = () => btnEl.classList.remove('voice-active');
-    rec.onerror = () => btnEl.classList.remove('voice-active');
+    // Prefer hardened module; fallback keeps classic script working offline of modules
+    import('/app/js/services/voice-input.js')
+      .then((mod) => {
+        mod.initVoiceInput(inputEl, btnEl);
+      })
+      .catch(() => {
+        const SR = global.SpeechRecognition || global.webkitSpeechRecognition;
+        if (!SR || !inputEl || !btnEl) {
+          btnEl?.classList.add('hidden');
+          return;
+        }
+        const rec = new SR();
+        rec.lang = document.documentElement.lang === 'en' ? 'en-US' : 'id-ID';
+        rec.interimResults = false;
+        btnEl.addEventListener('click', () => {
+          try {
+            rec.start();
+            btnEl.classList.add('voice-active');
+          } catch (_) {}
+        });
+        rec.onresult = (ev) => {
+          const text = ev.results?.[0]?.[0]?.transcript || '';
+          inputEl.value = (inputEl.value ? inputEl.value + ' ' : '') + text.trim();
+          inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+        };
+        rec.onend = () => btnEl.classList.remove('voice-active');
+        rec.onerror = (ev) => {
+          btnEl.classList.remove('voice-active');
+          const code = ev?.error;
+          if (code === 'not-allowed') showToast('Izinkan akses mikrofon', 'warn');
+          else if (code === 'no-speech') showToast('Tidak terdengar suara', 'warn');
+        };
+      });
   }
 
   function showOnboardingIfNeeded() {

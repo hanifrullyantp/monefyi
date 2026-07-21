@@ -122,6 +122,132 @@ const DATE_KEYWORD_ALIASES = {
   tomorrow: 'besok',
 };
 
+/** Spoken Indonesian number words → digits (for voice STT hygiene). */
+const SPOKEN_DIGIT = {
+  nol: 0, kosong: 0,
+  satu: 1, se: 1,
+  dua: 2,
+  tiga: 3,
+  empat: 4,
+  lima: 5,
+  enam: 6,
+  tujuh: 7,
+  delapan: 8,
+  sembilan: 9,
+  sepuluh: 10,
+  sebelas: 11,
+  seratus: 100,
+  seribu: 1000,
+};
+
+const SPOKEN_UNIT = {
+  belas: 10,
+  puluh: 10,
+  ratus: 100,
+  ribu: 1000,
+  juta: 1_000_000,
+};
+
+/**
+ * Convert a short Indonesian spoken number phrase to integer.
+ * Handles: "empat lima" → 45, "lima puluh" → 50, "seratus" → 100, "dua ratus lima puluh" → 250
+ * @param {string[]} words
+ * @returns {number|null}
+ */
+function spokenWordsToNumber(words) {
+  if (!words.length) return null;
+  let total = 0;
+  let current = 0;
+  let digitSeq = '';
+
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i];
+    if (/^\d+$/.test(w)) {
+      digitSeq += w;
+      continue;
+    }
+    if (digitSeq) {
+      current += Number(digitSeq);
+      digitSeq = '';
+    }
+
+    if (w === 'puluh' || w === 'belas') {
+      if (w === 'belas') {
+        current = (current || 1) + 10;
+      } else {
+        current = (current || 1) * 10;
+      }
+      continue;
+    }
+    if (w === 'ratus') {
+      current = (current || 1) * 100;
+      continue;
+    }
+    if (w === 'ribu') {
+      total += (current || 1) * 1000;
+      current = 0;
+      continue;
+    }
+    if (w === 'juta') {
+      total += (current || 1) * 1_000_000;
+      current = 0;
+      continue;
+    }
+
+    const d = SPOKEN_DIGIT[w];
+    if (d !== undefined) {
+      // Digit sequence style: "empat lima" → 45 (when no unit follows soon)
+      if (d >= 0 && d <= 9 && current > 0 && current < 10 && !SPOKEN_UNIT[words[i + 1]]) {
+        digitSeq = String(current) + String(d);
+        current = 0;
+        continue;
+      }
+      if (d >= 10) {
+        current += d;
+      } else {
+        current += d;
+      }
+      continue;
+    }
+    return null;
+  }
+
+  if (digitSeq) current += Number(digitSeq);
+  total += current;
+  return total > 0 ? total : null;
+}
+
+/**
+ * Expand spoken Indonesian amounts to numeric form for parsers.
+ * Examples: "empat lima ribu" → "45000", "lima puluh ribu" → "50000"
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+export function expandSpokenAmounts(text) {
+  if (!text) return text;
+  let result = String(text).toLowerCase();
+
+  // Compound: "<spoken number> ribu|juta|rb|jt"
+  result = result.replace(
+    /\b((?:nol|kosong|satu|se|dua|tiga|empat|lima|enam|tujuh|delapan|sembilan|sepuluh|sebelas|seratus|seribu|puluh|belas|ratus|\d+)(?:\s+(?:nol|kosong|satu|se|dua|tiga|empat|lima|enam|tujuh|delapan|sembilan|sepuluh|sebelas|seratus|seribu|puluh|belas|ratus|\d+)){0,6})\s*(ribu|rb|juta|jt)\b/gi,
+    (match, phrase, unit) => {
+      const words = String(phrase).toLowerCase().split(/\s+/).filter(Boolean);
+      let n = spokenWordsToNumber(words);
+      if (n == null) return match;
+      const u = unit.toLowerCase();
+      if (u === 'ribu' || u === 'rb') n *= 1000;
+      if (u === 'juta' || u === 'jt') n *= 1_000_000;
+      return String(n);
+    },
+  );
+
+  // Standalone "seribu" / "seratus ribu" already handled; also "empat lima" before merchant without unit → treat as ribuan if 2-digit-ish
+  // Skip aggressive bare digit-seq without unit to avoid mangling dates.
+
+  return result;
+}
+
 /** Pre-sorted typo keys (longest first) for greedy phrase matching. */
 const TYPO_KEYS_SORTED = Object.keys(TYPO_MAP).sort((a, b) => b.length - a.length);
 
@@ -284,6 +410,9 @@ export function normalizeInput(rawInput, options = {}) {
   text = text.toLowerCase();
   text = normalizeWhitespace(text);
   text = applyTypoCorrections(text);
+  if (channel === 'voice') {
+    text = expandSpokenAmounts(text);
+  }
   text = expandAmounts(text);
   text = normalizeNumericDates(text);
   text = normalizeDateKeywords(text);

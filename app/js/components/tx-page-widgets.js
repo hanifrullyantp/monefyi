@@ -64,18 +64,18 @@ function buildSaldoBarHtml(data) {
       </button>
     </div>
     <div class="saldo-bar-metrics">
-      <div class="saldo-bar-metric">
+      <button type="button" class="saldo-bar-metric saldo-bar-metric--action" id="btnIncomeBarDesktop" title="Buka Dashboard">
         <div class="saldo-bar-metric-label">Income</div>
         <div class="saldo-bar-metric-value income" id="kpiIncomeBarDesktop">${masked ? '••••' : `+${fmtShort(income)}`}</div>
-      </div>
-      <div class="saldo-bar-metric">
+      </button>
+      <button type="button" class="saldo-bar-metric saldo-bar-metric--action" id="btnExpenseBarDesktop" title="Buka Dashboard">
         <div class="saldo-bar-metric-label">Expense</div>
         <div class="saldo-bar-metric-value expense" id="kpiExpenseBarDesktop">${masked ? '••••' : `−${fmtShort(expense)}`}</div>
-      </div>
-      <div class="saldo-bar-metric">
+      </button>
+      <button type="button" class="saldo-bar-metric saldo-bar-metric--action" id="btnNetBarDesktop" title="Buka Dashboard">
         <div class="saldo-bar-metric-label">Net</div>
         <div class="saldo-bar-metric-value net${net < 0 ? ' negative' : ''}" id="kpiNetBarDesktop">${masked ? '••••' : `${net >= 0 ? '+' : '−'}${fmtShort(Math.abs(net))}`}</div>
-      </div>
+      </button>
       <div class="saldo-bar-metric saldo-bar-metric--soft">
         <div class="saldo-bar-metric-label">Transaksi</div>
         <div class="saldo-bar-metric-value" id="kpiTxCountBarDesktop">${txCount}</div>

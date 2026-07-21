@@ -1013,12 +1013,14 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
         txView: 'card',
         txLoading: false,
         txVisibleCount: 50,
+        txGroupBy: (typeof localStorage !== 'undefined' && localStorage.getItem('monefyi_tx_group_by')) || 'date',
         txTableSort: { col: 'date', dir: 'desc' },
         txTableColumns: null,
         enhancementsReady: false,
         txToolbarReady: false,
         saldoMasked: false,
         lastSaldoAnimated: 0,
+        inlineEditId: null,
       },
       accountDetail: {
         account: null,
@@ -2011,6 +2013,18 @@ async function upsertTransaction_legacy_local(tx) {
         },
       });
       window.MonefyiUI?.initVoiceInput?.($('#unifiedAiInput'), $('#btnUnifiedVoice'));
+      // Mic on Tambah Transaksi popup — leftmost toolbar icon
+      loadAppModule('js/services/voice-input.js').then((mod) => {
+        mod.initVoiceInput?.($('#quickText'), $('#btnQuickVoice'));
+        $('#quickText')?.addEventListener('input', () => {
+          // Typing resets channel unless voice just wrote
+          if (!$('#btnQuickVoice')?.classList.contains('voice-active')) {
+            mod.setLastInputChannel?.('text');
+          }
+        });
+      }).catch(() => {
+        window.MonefyiUI?.initVoiceInput?.($('#quickText'), $('#btnQuickVoice'));
+      });
       $('#btnUnifiedParse')?.addEventListener('click', () => handleUnifiedAiParse());
       $('#unifiedAiInput')?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); handleUnifiedAiParse(); }
@@ -2777,7 +2791,8 @@ async function upsertTransaction_legacy_local(tx) {
       }
 
       // L0: Normalize
-      const normalized = mods.normalizeInput(processedText);
+      const channel = window.monefyiVoice?.getLastInputChannel?.() || 'text';
+      const normalized = mods.normalizeInput(processedText, { channel });
 
       // L1: Memory (exact ≥0.95, fuzzy ≥0.80)
       const memHit = await mods.queryLocalMemory(normalized);
@@ -2815,6 +2830,7 @@ async function upsertTransaction_legacy_local(tx) {
         const result = await parseTransaction(text, {
           userId: STATE.db.user?.id,
           tryLocalAI: true,
+          channel: window.monefyiVoice?.getLastInputChannel?.() || 'text',
         });
 
         if (result.status === 'parsed') {
@@ -3943,6 +3959,12 @@ renderAccountsSettings();
   const elExpenseDesktop = $('#kpiSaldoExpenseDesktop');
   if (elExpenseDesktop) elExpenseDesktop.textContent = expenseText;
 
+  const txCountText = masked ? '••' : String(txs.length);
+  const elTxCount = $('#kpiSaldoTxCount');
+  if (elTxCount) elTxCount.textContent = txCountText;
+  const elTxCountDesktop = $('#kpiSaldoTxCountDesktop');
+  if (elTxCountDesktop) elTxCountDesktop.textContent = txCountText;
+
   // Legacy inject target (may be absent after sidebar hero markup)
   const elSubDesktop = $('#kpiSaldoSubDesktop');
   if (elSubDesktop) {
@@ -4889,6 +4911,68 @@ function generateSmartBudgetRecommendation() {
       return 'rgba(148,163,184,.18)';
     }
 
+    function getTxGroupByMode() {
+      const mode = String(STATE.ui.txGroupBy || 'date');
+      return ['date', 'category', 'account', 'none'].includes(mode) ? mode : 'date';
+    }
+
+    function txGroupKey(tx, mode) {
+      if (mode === 'none') return null;
+      if (mode === 'category') return String(tx.category || 'Lainnya');
+      if (mode === 'account') return String(tx.account || 'Cash');
+      return String(tx.date || '').slice(0, 10) || 'Tanpa tanggal';
+    }
+
+    function txGroupLabel(key, mode) {
+      if (mode !== 'date') return key;
+      try {
+        const today = toISODate(new Date());
+        const y = new Date();
+        y.setDate(y.getDate() - 1);
+        const yesterday = toISODate(y);
+        if (key === today) return 'Hari ini';
+        if (key === yesterday) return 'Kemarin';
+        const d = new Date(`${key}T12:00:00`);
+        if (!Number.isNaN(d.getTime())) {
+          return d.toLocaleDateString('id-ID', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          });
+        }
+      } catch (_) {}
+      return key;
+    }
+
+    /**
+     * @param {object[]} txs
+     * @param {string} mode
+     * @returns {{ key: string|null, label: string, items: object[] }[]}
+     */
+    function groupTransactions(txs, mode) {
+      if (!mode || mode === 'none') {
+        return [{ key: null, label: '', items: txs }];
+      }
+      const map = new Map();
+      for (const tx of txs) {
+        const key = txGroupKey(tx, mode);
+        if (!map.has(key)) map.set(key, []);
+        map.get(key).push(tx);
+      }
+      const entries = [...map.entries()];
+      if (mode === 'date') {
+        entries.sort((a, b) => String(b[0]).localeCompare(String(a[0])));
+      } else {
+        entries.sort((a, b) => String(a[0]).localeCompare(String(b[0]), 'id'));
+      }
+      return entries.map(([key, items]) => ({
+        key,
+        label: txGroupLabel(key, mode),
+        items,
+      }));
+    }
+
     function renderTransactionsCards(txs){
       const list = $('#txList');
       list.innerHTML = '';
@@ -4896,6 +4980,8 @@ function generateSmartBudgetRecommendation() {
 
       const showTableRow = isDesktopViewport() || isMobileTableView();
       const showCardRow = !showTableRow;
+      const groupMode = getTxGroupByMode();
+      const groups = groupTransactions(txs, groupMode);
       
       const budgetRow = budgetForPeriod();
       const catBudgets = budgetRow?.categories || {};
@@ -4908,7 +4994,18 @@ function generateSmartBudgetRecommendation() {
         }
       });
 
-      for (const tx of txs) {
+      for (const group of groups) {
+        if (groupMode !== 'none' && group.label) {
+          const header = document.createElement('div');
+          header.className = 'tx-group-header';
+          header.innerHTML = `
+            <span class="tx-group-header__label">${escapeHtml(group.label)}</span>
+            <span class="tx-group-header__count">${group.items.length}</span>
+          `;
+          list.appendChild(header);
+        }
+
+        for (const tx of group.items) {
           const row = document.createElement('div');
           row.className = 'tx-card-v2 tx-card-compact app-card w-full text-left' + (tx.meta?.pending ? ' tx-pending' : '');
           row.style.animationDelay = `${animIdx * 30}ms`;
@@ -4979,6 +5076,9 @@ function generateSmartBudgetRecommendation() {
                 <div class="flex items-center justify-between">
                   ${budgetHtml}
                   <div class="tx-row-del opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                    <button type="button" class="p-1.5 text-slate-400 hover:text-emerald-400 rounded-md hover:bg-slate-700" data-tx-inline="${escapeHtmlAttr(tx.id)}" aria-label="Edit cepat" title="Edit cepat (atau double-click)">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                    </button>
                     <button type="button" class="p-1.5 text-slate-400 hover:text-white rounded-md hover:bg-slate-700" data-tx-del-quick="${escapeHtmlAttr(tx.id)}" aria-label="Hapus">
                       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                     </button>
@@ -5021,34 +5121,78 @@ function generateSmartBudgetRecommendation() {
               }
             });
           }
+          let rowClickTimer = null;
           row.addEventListener('click', (e) => {
-            if (e.target.closest('[data-tx-menu]') || e.target.closest('[data-tx-dropdown]') || e.target.closest('.tx-card-actions') || e.target.closest('[data-tx-del-quick]')) return;
-            if (showTableRow) {
-              openInlineEdit(tx.id, row);
-            } else {
-              openEdit(tx.id);
-            }
+            if (e.target.closest('[data-tx-menu]') || e.target.closest('[data-tx-dropdown]') || e.target.closest('.tx-card-actions') || e.target.closest('[data-tx-del-quick]') || e.target.closest('[data-tx-inline]')) return;
+            if (STATE.ui.inlineEditId) return;
+            clearTimeout(rowClickTimer);
+            rowClickTimer = setTimeout(() => openEdit(tx.id), showTableRow ? 220 : 0);
+          });
+          row.addEventListener('dblclick', (e) => {
+            if (!showTableRow) return;
+            if (e.target.closest('[data-tx-menu]') || e.target.closest('.tx-card-actions') || e.target.closest('[data-tx-del-quick]')) return;
+            e.preventDefault();
+            e.stopPropagation();
+            clearTimeout(rowClickTimer);
+            openInlineEdit(tx.id, row);
+          });
+          row.querySelector('[data-tx-inline]')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            clearTimeout(rowClickTimer);
+            openInlineEdit(tx.id, row);
           });
           list.appendChild(row);
+        }
       }
       document.addEventListener('click', () => {
         document.querySelectorAll('[data-tx-dropdown]').forEach(el => el.classList.add('hidden'));
       }, { once: true });
     }
 
+    let _inlineEditOutsideHandler = null;
+
+    function cancelInlineEdit(force = false) {
+      if (!STATE.ui.inlineEditId) return true;
+      if (_inlineEditOutsideHandler) {
+        document.removeEventListener('pointerdown', _inlineEditOutsideHandler, true);
+        _inlineEditOutsideHandler = null;
+      }
+      STATE.ui.inlineEditId = null;
+      if (!force && typeof rerender === 'function') rerender();
+      else if (force && typeof rerender === 'function') rerender();
+      return true;
+    }
+
     function openInlineEdit(txId, rowElement) {
       const tx = STATE.transactions.find(t => t.id === txId);
       if (!tx) return;
 
-      const isInc = tx.type === 'income';
-      const isExp = tx.type === 'expense';
-      const title = tx.merchant || tx.category || 'Lainnya';
-      const dateFormatted = tx.date; // Use raw date for input
-      
+      if (STATE.ui.inlineEditId && STATE.ui.inlineEditId !== txId) {
+        if (_inlineEditOutsideHandler) {
+          document.removeEventListener('pointerdown', _inlineEditOutsideHandler, true);
+          _inlineEditOutsideHandler = null;
+        }
+        STATE.ui.inlineEditId = null;
+        rerender();
+        // Re-find row after rerender
+        requestAnimationFrame(() => {
+          const next = document.querySelector(`[data-tx-id="${CSS.escape(txId)}"]`);
+          if (next) openInlineEdit(txId, next);
+        });
+        return;
+      }
+
       const desktopRow = rowElement.querySelector('.tx-card-row-table');
       if (!desktopRow) return;
 
-      // Generate category options
+      const snapshot = {
+        merchant: tx.merchant || '',
+        category: tx.category || '',
+        account: tx.account || '',
+        date: tx.date || '',
+        amount: Math.abs(Number(tx.amount || 0)),
+      };
+
       let catOptions = '';
       const cats = getLiveBudgetCategories();
       if (tx.category && !cats.includes(tx.category)) cats.push(tx.category);
@@ -5057,7 +5201,6 @@ function generateSmartBudgetRecommendation() {
         catOptions += `<option value="${escapeHtmlAttr(c)}" ${sel}>${escapeHtml(c)}</option>`;
       });
 
-      // Generate account options
       let accOptions = '';
       const accs = [...new Set([...STATE.settings.accounts, ...STATE.transactions.map(t=>t.account).filter(Boolean)])].sort();
       accs.forEach(a => {
@@ -5070,8 +5213,8 @@ function generateSmartBudgetRecommendation() {
         <div><input type="text" class="w-full bg-[#161D28] border border-slate-700 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-emerald-500 inline-edit-title" value="${escapeHtmlAttr(tx.merchant || '')}" placeholder="Deskripsi"></div>
         <div><select class="w-full bg-[#161D28] border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500 inline-edit-cat">${catOptions}</select></div>
         <div><select class="w-full bg-[#161D28] border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500 inline-edit-acc">${accOptions}</select></div>
-        <div><input type="date" class="w-full bg-[#161D28] border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500 inline-edit-date" value="${dateFormatted}"></div>
-        <div><input type="number" class="w-full bg-[#161D28] border border-slate-700 rounded px-2 py-1 text-sm text-white text-right focus:outline-none focus:border-emerald-500 inline-edit-amount" value="${Math.abs(Number(tx.amount||0))}"></div>
+        <div><input type="date" class="w-full bg-[#161D28] border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500 inline-edit-date" value="${snapshot.date}"></div>
+        <div><input type="number" class="w-full bg-[#161D28] border border-slate-700 rounded px-2 py-1 text-sm text-white text-right focus:outline-none focus:border-emerald-500 inline-edit-amount" value="${snapshot.amount}"></div>
         <div class="flex items-center justify-end gap-2">
           <button type="button" class="p-1 text-emerald-400 hover:text-emerald-300 inline-edit-save" title="Simpan">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -5082,42 +5225,84 @@ function generateSmartBudgetRecommendation() {
         </div>
       `;
 
-      // Remove click listener to prevent re-triggering
-      const clone = rowElement.cloneNode(true);
-      rowElement.parentNode.replaceChild(clone, rowElement);
+      rowElement.classList.add('tx-row-inline-editing');
+      STATE.ui.inlineEditId = txId;
 
-      const saveBtn = clone.querySelector('.inline-edit-save');
-      const cancelBtn = clone.querySelector('.inline-edit-cancel');
+      const readValues = () => ({
+        merchant: (desktopRow.querySelector('.inline-edit-title')?.value || '').trim(),
+        category: desktopRow.querySelector('.inline-edit-cat')?.value || '',
+        account: desktopRow.querySelector('.inline-edit-acc')?.value || '',
+        date: desktopRow.querySelector('.inline-edit-date')?.value || '',
+        amount: Math.abs(Number(desktopRow.querySelector('.inline-edit-amount')?.value) || 0),
+      });
 
-      saveBtn.addEventListener('click', async (e) => {
+      const isDirty = () => {
+        const cur = readValues();
+        return cur.merchant !== snapshot.merchant
+          || cur.category !== snapshot.category
+          || cur.account !== snapshot.account
+          || cur.date !== snapshot.date
+          || cur.amount !== snapshot.amount;
+      };
+
+      const exitInline = (skipConfirm = false) => {
+        if (!skipConfirm && isDirty()) {
+          const ok = confirm('Ada perubahan data yang belum disimpan. Buang perubahan?');
+          if (!ok) return false;
+        }
+        if (_inlineEditOutsideHandler) {
+          document.removeEventListener('pointerdown', _inlineEditOutsideHandler, true);
+          _inlineEditOutsideHandler = null;
+        }
+        STATE.ui.inlineEditId = null;
+        rerender();
+        return true;
+      };
+
+      const saveBtn = desktopRow.querySelector('.inline-edit-save');
+      const cancelBtn = desktopRow.querySelector('.inline-edit-cancel');
+
+      saveBtn?.addEventListener('click', async (e) => {
         e.stopPropagation();
-        const newTitle = clone.querySelector('.inline-edit-title').value.trim();
-        const newCat = clone.querySelector('.inline-edit-cat').value;
-        const newAcc = clone.querySelector('.inline-edit-acc').value;
-        const newDate = clone.querySelector('.inline-edit-date').value;
-        const newAmount = Math.abs(Number(clone.querySelector('.inline-edit-amount').value) || 0);
-
-        tx.merchant = newTitle;
-        tx.category = newCat;
-        tx.account = newAcc;
-        tx.date = newDate;
-        tx.amount = newAmount;
-
-        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true">...</span>';
+        const cur = readValues();
+        tx.merchant = cur.merchant;
+        tx.category = cur.category;
+        tx.account = cur.account;
+        tx.date = cur.date;
+        tx.amount = cur.amount;
+        saveBtn.innerHTML = '<span class="text-[10px]">…</span>';
+        if (_inlineEditOutsideHandler) {
+          document.removeEventListener('pointerdown', _inlineEditOutsideHandler, true);
+          _inlineEditOutsideHandler = null;
+        }
+        STATE.ui.inlineEditId = null;
         await upsertTransaction(tx);
         if (typeof refreshAllUI === 'function') refreshAllUI({ syncRemote: false });
         else rerender();
       });
 
-      cancelBtn.addEventListener('click', (e) => {
+      cancelBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
-        rerender(); // Re-render to restore original state
+        exitInline(true);
       });
-      
-      // Prevent clicks inside inputs from bubbling up
-      clone.querySelectorAll('input, select').forEach(el => {
-        el.addEventListener('click', e => e.stopPropagation());
+
+      desktopRow.querySelectorAll('input, select').forEach((el) => {
+        el.addEventListener('click', (e) => e.stopPropagation());
+        el.addEventListener('pointerdown', (e) => e.stopPropagation());
       });
+
+      // Click outside → exit (warn if dirty)
+      setTimeout(() => {
+        _inlineEditOutsideHandler = (e) => {
+          if (!STATE.ui.inlineEditId) return;
+          if (rowElement.contains(e.target)) return;
+          if (e.target.closest?.('#editBackdrop, .sheet-backdrop.open')) return;
+          e.preventDefault();
+          e.stopPropagation();
+          exitInline(false);
+        };
+        document.addEventListener('pointerdown', _inlineEditOutsideHandler, true);
+      }, 0);
     }
 
     function renderTransactions(){
@@ -5128,6 +5313,9 @@ function generateSmartBudgetRecommendation() {
       const countText = t('tx.count', { n: total }) + (STATE.focusCategory ? t('tx.focus', { cat: STATE.focusCategory }) : '');
       $('#txCount').textContent = countText;
       if ($('#txCountDesktop')) $('#txCountDesktop').textContent = countText;
+
+      const groupByEl = $('#txGroupBy');
+      if (groupByEl) groupByEl.value = getTxGroupByMode();
 
       const list = $('#txList');
       const tableWrap = $('#txTableWrap');
@@ -5414,6 +5602,13 @@ function generateSmartBudgetRecommendation() {
               } else if (e.target.closest('#btnScoreBarDesktop')) {
                 e.stopPropagation();
                 if (typeof openAdvisor === 'function') openAdvisor();
+              } else if (
+                e.target.closest('#btnIncomeBarDesktop')
+                || e.target.closest('#btnExpenseBarDesktop')
+                || e.target.closest('#btnNetBarDesktop')
+              ) {
+                e.stopPropagation();
+                if (typeof toggleNav === 'function') toggleNav('dash');
               }
             });
             _txDesktopWidgetsWired = true;
@@ -10531,6 +10726,13 @@ function toggleNav(view, triggerEl) {
       if ($('#fType')) $('#fType').value = STATE.filters.type;
       rerender();
       closeTxDesktopFilters();
+    });
+
+    $('#txGroupBy')?.addEventListener('change', () => {
+      const v = $('#txGroupBy')?.value || 'date';
+      STATE.ui.txGroupBy = ['date', 'category', 'account', 'none'].includes(v) ? v : 'date';
+      try { localStorage.setItem('monefyi_tx_group_by', STATE.ui.txGroupBy); } catch (_) {}
+      rerender();
     });
     $('#dfCategory')?.addEventListener('change', () => {
       STATE.filters.category = $('#dfCategory').value || '';

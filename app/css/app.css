@@ -368,7 +368,13 @@ html, body {
     }
     .sidebar-saldo-metrics-row {
       margin-top: 10px !important;
-      gap: 8px !important;
+      gap: 6px !important;
+      display: flex !important;
+      flex-wrap: wrap;
+    }
+    .sidebar-saldo-metrics-row .hero-saldo-stat {
+      flex: 1 1 auto;
+      min-width: 0;
     }
     .sidebar-saldo-card .hero-saldo-stat__icon {
       width: 30px;
@@ -2058,6 +2064,11 @@ html, body {
       resize: none;
     }
     .voice-active { color: var(--accent-primary) !important; animation: saldo-pulse 1s infinite; }
+    .add-tool-btn.voice-active {
+      background: rgba(244, 114, 182, 0.28) !important;
+      border-color: rgba(244, 114, 182, 0.55) !important;
+      box-shadow: 0 0 0 3px rgba(244, 114, 182, 0.18);
+    }
 
     /* Health score ring */
     .health-ring {
@@ -2402,11 +2413,78 @@ html, body {
 
     ::placeholder { color: color-mix(in srgb, var(--app-muted2) 85%, transparent); }
 
+    .hero-saldo-stat--count .hero-saldo-stat__value {
+      font-variant-numeric: tabular-nums;
+      color: rgba(255, 255, 255, 0.72);
+    }
+    .hero-saldo-stat__icon--muted {
+      background: rgba(255, 255, 255, 0.06) !important;
+      color: rgba(255, 255, 255, 0.55) !important;
+    }
+
+    .tx-group-bar {
+      margin-top: 4px;
+    }
+    .tx-group-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 6px 4px;
+      margin-top: 6px;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: color-mix(in srgb, var(--app-bg, #0B1118) 92%, transparent);
+      backdrop-filter: blur(6px);
+    }
+    .tx-group-header:first-child {
+      margin-top: 0;
+    }
+    .tx-group-header__label {
+      font-size: 12px;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.78);
+      letter-spacing: -0.01em;
+    }
+    .tx-group-header__count {
+      font-size: 10px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.4);
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .tx-row-inline-editing {
+      outline: 1px solid rgba(16, 185, 129, 0.35);
+      border-radius: 10px;
+    }
+
     /* Bottom sheet animation */
     .sheet-backdrop { opacity: 0; pointer-events: none; transition: opacity .18s ease; }
     .sheet-backdrop.open { opacity: 1; pointer-events: auto; }
     .sheet { transform: translateY(16px); opacity: 0; pointer-events: none; transition: transform .18s ease, opacity .18s ease; }
     .sheet.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
+
+    /* Edit card: no transform (breaks native <select> picker on mobile) */
+    #editCard.sheet {
+      transform: none;
+      opacity: 0;
+      transition: opacity .18s ease;
+    }
+    #editCard.sheet.open {
+      transform: none;
+      opacity: 1;
+    }
+    #editCard select.app-input,
+    #editCard select {
+      font-size: 16px !important;
+      line-height: 1.35;
+      min-height: 44px;
+    }
+    #editCard input.app-input {
+      font-size: 16px;
+    }
     
     @media (min-width: 768px) {
       #budgetSheet.sheet.open { transform: translateX(0) !important; }
@@ -3215,8 +3293,14 @@ html, body {
         top: auto;
         bottom: var(--mobile-nav-offset);
         max-height: calc(100dvh - var(--mobile-nav-offset) - 1rem);
+        overflow: visible;
+        -webkit-overflow-scrolling: touch;
+      }
+      #editBackdrop #editCard {
+        max-height: calc(100dvh - var(--mobile-nav-offset) - 1.5rem);
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
+        transform: none !important;
       }
       #affSheet.sheet {
         top: auto;
