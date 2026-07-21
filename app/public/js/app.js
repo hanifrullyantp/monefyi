@@ -3381,7 +3381,7 @@ async function upsertTransaction_legacy_local(tx) {
 
       const endISO = STATE.period.end;
       const list = computeAccountBalancesUpto(endISO);
-      const top = list.slice(0,3);
+      const top = list.slice(0, 3);
 
       const row = $('#accountsBalancesRow');
       row.innerHTML = '';
@@ -3391,18 +3391,54 @@ async function upsertTransaction_legacy_local(tx) {
         return;
       }
 
-      for (const it of top) {
-        const card = document.createElement('button');
-        card.className = 'tap rounded-2xl app-chip p-3 text-left hover:opacity-90';
-        card.innerHTML = `
-          <div class="text-xs app-muted truncate">${escapeHtml(it.account)}</div>
-          <div class="mt-1 text-sm font-semibold truncate">${formatCompactIDR(it.balance)}</div>
-        `;
-        card.onclick = () => openAccountDetail(it.account);
-        row.appendChild(card);
-      }
+      const totalPos = list.reduce((s, x) => s + Math.max(0, Number(x.balance || 0)), 0) || 1;
+      const masked = !!STATE.ui.saldoMasked;
 
-      // toggle “lihat semua” if more than 3
+      import('./components/icons.js').then(({ Icon, getAccountIcon, getAccountColor }) => {
+        if (!$('#accountsBalancesRow') || !STATE.ui.dashboardOpen) return;
+        row.innerHTML = '';
+        for (const it of top) {
+          const name = String(it.account || 'Akun');
+          const color = getAccountColor(name);
+          const iconName = getAccountIcon(name);
+          const pct = Math.round((Math.max(0, Number(it.balance || 0)) / totalPos) * 100);
+          const balance = masked ? '••••••' : formatCompactIDR(it.balance);
+          const card = document.createElement('button');
+          card.type = 'button';
+          card.className = 'home-account-card tap';
+          card.style.setProperty('--acc-color', color);
+          card.setAttribute('data-account', name);
+          card.innerHTML = `
+            <div class="home-account-card__accent" aria-hidden="true"></div>
+            <div class="home-account-card__head">
+              <div class="home-account-card__icon">${Icon(iconName, { size: 18, color: '#fff' })}</div>
+              <div class="home-account-card__name">${escapeHtml(name)}</div>
+            </div>
+            <div class="home-account-card__balance">${escapeHtml(balance)}</div>
+            <div class="home-account-card__footer">
+              <div class="home-account-card__bar" aria-hidden="true">
+                <span class="home-account-card__bar-fill" style="width:${pct}%;background:${color}"></span>
+              </div>
+              <span class="home-account-card__pct">${pct}%</span>
+            </div>
+          `;
+          card.onclick = () => openAccountDetail(name);
+          row.appendChild(card);
+        }
+      }).catch((err) => {
+        console.error('Account cards render failed:', err);
+        for (const it of top) {
+          const card = document.createElement('button');
+          card.className = 'home-account-card tap';
+          card.innerHTML = `
+            <div class="home-account-card__name">${escapeHtml(it.account)}</div>
+            <div class="home-account-card__balance">${formatCompactIDR(it.balance)}</div>
+          `;
+          card.onclick = () => openAccountDetail(it.account);
+          row.appendChild(card);
+        }
+      });
+
       $('#btnMoreAccounts').style.display = (list.length > 3) ? '' : 'none';
       $('#accountsBalancesHint').textContent = 'Tap akun untuk lihat detail.';
     }
@@ -3858,9 +3894,9 @@ renderAccountsSettings();
   renderHeroBudgetProgress(s, masked);
   
   const elIncomeTopbar = $('#kpiIncomeTopbarVal');
-  if (elIncomeTopbar) elIncomeTopbar.textContent = `+${formatCompactIDR(s.income)}`;
+  if (elIncomeTopbar) elIncomeTopbar.textContent = masked ? '••••' : `+${formatCompactIDR(s.income)}`;
   const elExpenseTopbar = $('#kpiExpenseTopbarVal');
-  if (elExpenseTopbar) elExpenseTopbar.textContent = `-${formatCompactIDR(s.expense)}`;
+  if (elExpenseTopbar) elExpenseTopbar.textContent = masked ? '••••' : `−${formatCompactIDR(s.expense)}`;
 
   try { renderHeroSparkline('#heroSaldoSparklineDesktop'); } catch (_) {}
   try { renderHeroSparklineDesktop(); } catch (_) {}

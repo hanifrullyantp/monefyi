@@ -321,11 +321,11 @@ html, body {
 
     .sidebar-saldo-card {
       padding: 14px;
-      border-radius: var(--mf-radius-card, 16px);
-      background: var(--mf-bg-elevated, #131A24);
-      border: 1px solid var(--mf-border);
-      border-top: 1px solid var(--mf-border);
-      box-shadow: none;
+      border-radius: 16px;
+      background:
+        linear-gradient(145deg, rgba(16, 185, 129, 0.16) 0%, var(--mf-bg-elevated, #131A24) 48%, var(--mf-bg, #0B1118) 100%);
+      border: 1px solid var(--mf-primary-border, rgba(16, 185, 129, 0.24));
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
       overflow: hidden;
       position: relative;
     }
@@ -682,37 +682,132 @@ html, body {
         background: var(--mf-primary-hover) !important;
       }
 
-      /* Topbar saldo — brand surface, lighter than mobile hero */
+      /* Topbar saldo — same emerald hero as mobile */
       #topbarSaldoWrap {
-        margin-bottom: 0.5rem !important;
+        margin-bottom: 0.75rem !important;
         max-width: 1080px;
         margin-left: auto;
         margin-right: auto;
         width: 100%;
       }
       #topbarSaldoWrap .hero-saldo-card {
-        padding: 14px 16px;
-        border-radius: var(--mf-radius-card);
-        background: var(--mf-bg-elevated);
-        border: 1px solid var(--mf-border);
-        box-shadow: none;
+        padding: 18px 18px 16px;
+        border-radius: 18px;
+        background:
+          linear-gradient(145deg, rgba(16, 185, 129, 0.18) 0%, var(--mf-bg-elevated, #131A24) 48%, var(--mf-bg, #0B1118) 100%);
+        border: 1px solid var(--mf-primary-border, rgba(16, 185, 129, 0.28));
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.22);
       }
       #topbarSaldoWrap .hero-saldo-card::before {
         background:
-          radial-gradient(ellipse 70% 50% at 90% 10%, rgba(16, 185, 129, 0.1), transparent 55%);
+          radial-gradient(ellipse 65% 55% at 88% 18%, rgba(16, 185, 129, 0.14), transparent 58%),
+          radial-gradient(ellipse 80% 50% at 15% 0%, rgba(16, 185, 129, 0.08), transparent 55%);
       }
-      #topbarSaldoWrap .kpi-metric {
-        border: 1px solid var(--mf-border);
-        background: var(--mf-surface-2);
-        border-radius: 10px;
+      #topbarSaldoWrap .hero-saldo-card__amount.saldo-amount {
+        margin-top: 8px;
+        margin-bottom: 4px;
+        font-size: clamp(1.75rem, 2.4vw, 2.25rem);
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+      #topbarSaldoWrap .hero-saldo-card__metrics-row {
+        margin-top: 12px;
+        max-width: 420px;
+      }
+      #topbarSaldoWrap .hero-saldo-sparkline {
+        width: 42%;
+        height: 52px;
+        bottom: 14px;
+        right: 16px;
+        opacity: 0.55;
       }
       #desktopSaldoStrip {
         max-width: 1080px;
         margin-left: auto;
         margin-right: auto;
-        background: var(--mf-bg-elevated) !important;
-        border: 1px solid var(--mf-border) !important;
-        border-radius: var(--mf-radius-card) !important;
+        background:
+          linear-gradient(145deg, rgba(16, 185, 129, 0.14) 0%, var(--mf-bg-elevated, #131A24) 60%) !important;
+        border: 1px solid var(--mf-primary-border, rgba(16, 185, 129, 0.24)) !important;
+        border-radius: 16px !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+      }
+
+      /* Tx list cards — solid mobile card surface, keep table columns */
+      #txList {
+        gap: 10px !important;
+        padding-bottom: 16px;
+      }
+      .tx-card-v2,
+      .tx-card-compact {
+        border-radius: 16px;
+      }
+      .tx-card-v2 .tx-card-inner,
+      .tx-card-compact .tx-card-inner,
+      .tx-card-mockup.tx-card-inner {
+        background: #131826 !important;
+        border: 1px solid rgba(255, 255, 255, 0.06) !important;
+        border-radius: 16px !important;
+        padding: 12px 14px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+      }
+      .tx-card-v2 .tx-card-inner::after,
+      .tx-card-compact .tx-card-inner::after,
+      .tx-card-mockup.tx-card-inner::after {
+        display: none !important;
+      }
+      .tx-card-mockup .tx-card-inner:hover,
+      .tx-card-compact:hover .tx-card-inner {
+        background: #171e2e !important;
+        border-color: rgba(16, 185, 129, 0.22) !important;
+      }
+      #txListDesktopHeader {
+        background: rgba(19, 24, 38, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 12px;
+        margin-bottom: 10px !important;
+        padding: 10px 14px !important;
+      }
+      .tx-card-row-table {
+        min-height: 44px;
+      }
+      .tx-card-row-table .tx-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+      }
+
+      /* Dashboard — mobile home card language */
+      #dashboardExpanded {
+        --text-primary: #ffffff;
+        --text-secondary: rgba(255, 255, 255, 0.78);
+        --radius-lg: 16px;
+        --accent-primary-dim: var(--mf-primary-hover, #059669);
+      }
+      #dashboardExpanded .app-card,
+      #kpiSection > div,
+      #budgetSection .app-card,
+      #chartsSection .app-card {
+        background: linear-gradient(155deg, rgba(24, 28, 36, 0.98) 0%, rgba(14, 17, 22, 0.98) 100%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.07) !important;
+        border-radius: 16px !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+      }
+      #accountsBalancesRow {
+        display: flex;
+        gap: 12px;
+        overflow-x: auto;
+        padding: 2px 2px 8px;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+      }
+      #accountsBalancesRow .home-account-card {
+        flex: 0 0 240px;
+        scroll-snap-align: start;
+        min-height: 112px;
+      }
+      #accountsBalancesRow .home-account-card:hover {
+        border-color: color-mix(in srgb, var(--acc-color, var(--mf-primary)) 40%, transparent);
+        transform: translateY(-1px);
       }
     }
 

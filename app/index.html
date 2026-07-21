@@ -499,14 +499,14 @@
         </div>
       </div>
 
-      <!-- Topbar Saldo Card (Desktop) -->
+      <!-- Topbar Saldo Card (Desktop) — same hero language as mobile -->
       <div id="topbarSaldoWrap" class="hidden md:block mb-2">
-        <div id="btnSaldoToggleTopbar" role="button" tabindex="0" class="hero-saldo-card tap cursor-pointer w-full" style="border-radius: 20px; margin-bottom: 0;">
+        <div id="btnSaldoToggleTopbar" role="button" tabindex="0" class="hero-saldo-card tap cursor-pointer w-full">
           <div class="hero-saldo-card__top">
             <div class="hero-saldo-card__label-row">
               <span>Saldo (estimasi)</span>
               <button id="btnSaldoMaskTopbar" type="button" class="tap opacity-80 hover:opacity-100" aria-label="Sembunyikan saldo">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="block"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="block"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
               </button>
             </div>
             <button id="btnPeriodToggleTopbar" type="button" class="hero-saldo-card__period tap" aria-expanded="false" aria-label="Filter periode">
@@ -514,20 +514,22 @@
               <span class="text-xs opacity-80" aria-hidden="true">▾</span>
             </button>
           </div>
-          <div class="flex items-end justify-between mt-2">
-            <div id="kpiSaldoTopbar" class="hero-saldo-card__amount saldo-amount">—</div>
-            <div class="flex gap-3 relative z-10">
-              <div class="kpi-metric kpi-metric--income flex flex-col items-start px-4 py-2">
-                <span class="text-emerald-400 font-bold text-lg leading-none" id="kpiIncomeTopbarVal">+0</span>
-                <span class="text-slate-400 text-xs mt-1">Income</span>
+          <div id="kpiSaldoTopbar" class="hero-saldo-card__amount saldo-amount">—</div>
+          <div class="hero-saldo-card__metrics-row income-expense-row">
+            <div class="hero-saldo-stat hero-saldo-stat--income">
+              <div class="hero-saldo-stat__icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/></svg>
               </div>
-              <div class="kpi-metric kpi-metric--expense flex flex-col items-start px-4 py-2">
-                <span class="text-rose-400 font-bold text-lg leading-none" id="kpiExpenseTopbarVal">-0</span>
-                <span class="text-slate-400 text-xs mt-1">Expense</span>
+              <span id="kpiIncomeTopbarVal" class="hero-saldo-stat__value">—</span>
+            </div>
+            <div class="hero-saldo-stat hero-saldo-stat--expense">
+              <div class="hero-saldo-stat__icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 17h6v-6"/><path d="m22 17-8.5-8.5-5 5L2 7"/></svg>
               </div>
+              <span id="kpiExpenseTopbarVal" class="hero-saldo-stat__value">—</span>
             </div>
           </div>
-          <canvas id="heroSaldoSparklineTopbar" class="hero-saldo-sparkline" style="width: 50%; height: 60px; bottom: 10px; right: 20px;"></canvas>
+          <canvas id="heroSaldoSparklineTopbar" class="hero-saldo-sparkline" aria-hidden="true"></canvas>
         </div>
       </div>
 
