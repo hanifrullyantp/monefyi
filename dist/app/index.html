@@ -39,7 +39,7 @@
 
 
  
-  <link rel="stylesheet" crossorigin href="/app/assets/index-CmE3yuXH.css">
+  <link rel="stylesheet" crossorigin href="/app/assets/index-Z7F-fszj.css">
 </head>
 <body>
   <!-- Logo Monefyi (satu sumber untuk loading, sidebar, header, auth) -->
@@ -501,6 +501,9 @@
         </div>
       </div>
 
+      <!-- Desktop Transaksi: compact saldo bar (≥1024, filled by JS) -->
+      <div id="saldoBarDesktopHost" class="hidden w-full max-w-[1200px] shrink-0"></div>
+
       <!-- Topbar Saldo Card (Desktop) — same hero language as mobile -->
       <div id="topbarSaldoWrap" class="hidden md:block mb-2">
         <div id="btnSaldoToggleTopbar" role="button" tabindex="0" class="hero-saldo-card tap cursor-pointer w-full">
@@ -847,6 +850,7 @@
           </div>
 
           <div id="txListHost" class="mt-0 md:mt-0 flex-1 min-h-0 transactions-list">
+            <div id="txDesktopWidgets" class="tx-desktop-widgets" aria-label="Ringkasan transaksi desktop"></div>
             <div id="saldoFilterMenu" class="mobile-filter-panel hidden md:hidden shrink-0">
               <div class="mobile-filter-grid">
                 <select id="saldoFilterType" class="mobile-filter-select tap" aria-label="Filter tipe">

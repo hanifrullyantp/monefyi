@@ -3532,16 +3532,22 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       const desktopAvatar = $('#userAvatarDesktop');
       if (desktopAvatar) desktopAvatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(STATE.user.name || 'User')}&background=0D8ABC&color=fff`;
       
-      // Toggle Saldo Position
+      // Toggle Saldo Position (Dashboard). Transaksi ≥1024 uses Saldo Bar instead.
       const isTopbar = STATE.settings.saldoPosition === 'topbar';
       const sidebarWrap = $('#sidebarSaldoWrap');
       const topbarWrap = $('#topbarSaldoWrap');
       const onDesktop = isDesktopViewport();
+      const txDesktopEnhanced = isTxDesktopEnhanced();
+      document.body.classList.toggle('tx-desktop-enhanced', txDesktopEnhanced);
       if (sidebarWrap) {
-        sidebarWrap.style.display = (!isTopbar && onDesktop) ? '' : 'none';
+        sidebarWrap.style.display = (!isTopbar && onDesktop && !txDesktopEnhanced) ? '' : 'none';
       }
       if (topbarWrap) {
-        topbarWrap.style.display = (isTopbar && onDesktop) ? '' : 'none';
+        topbarWrap.style.display = (isTopbar && onDesktop && !txDesktopEnhanced) ? '' : 'none';
+      }
+      const saldoBarHost = $('#saldoBarDesktopHost');
+      if (saldoBarHost) {
+        saldoBarHost.classList.toggle('hidden', !txDesktopEnhanced);
       }
       
       $('#uName').value = STATE.user.name || '';
@@ -4802,10 +4808,10 @@ function generateSmartBudgetRecommendation() {
                 </div>
               `;
             } else {
-              budgetHtml = `<div class="tx-budget-cell text-[10px] app-muted">—</div>`;
+              budgetHtml = `<div class="tx-budget-cell tx-budget-none">Tanpa budget</div>`;
             }
           } else {
-            budgetHtml = `<div class="tx-budget-cell text-[10px] app-muted">—</div>`;
+            budgetHtml = `<div class="tx-budget-cell tx-budget-none">—</div>`;
           }
 
           row.innerHTML = `
@@ -5142,7 +5148,140 @@ function generateSmartBudgetRecommendation() {
   if (STATE.ui.dashboardOpen && !isDesktopViewport()) renderMobileHome();
   if (STATE.ui.budgetPageOpen) renderBudgetPageView();
   if (STATE.ui.monevisorPageOpen) renderMonevisorPageView();
+  enhanceTransactionPageDesktop();
 }
+
+    /** Desktop Transaksi layout (≥1024): saldo bar + summary + insights */
+    function isTxDesktopEnhanced() {
+      return window.innerWidth >= 1024
+        && !STATE.ui.dashboardOpen
+        && !STATE.ui.budgetPageOpen
+        && !STATE.ui.monevisorPageOpen;
+    }
+
+    let _txDesktopWidgetsWired = false;
+
+    async function enhanceTransactionPageDesktop() {
+      const host = $('#saldoBarDesktopHost');
+      const widgetsRoot = $('#txDesktopWidgets');
+      const active = isTxDesktopEnhanced();
+      document.body.classList.toggle('tx-desktop-enhanced', active);
+
+      if (!active) {
+        if (host) {
+          host.classList.add('hidden');
+          host.innerHTML = '';
+        }
+        if (widgetsRoot) widgetsRoot.innerHTML = '';
+        return;
+      }
+
+      try {
+        const {
+          renderSaldoBarDesktop,
+          updateSaldoBarDesktop,
+          renderTxSummaryStrip,
+          renderTxQuickInsights,
+        } = await import('./components/tx-page-widgets.js');
+
+        const txs = getTransactionsInPeriod().filter((tx) => {
+          if (STATE.filters.type && tx.type !== STATE.filters.type) return false;
+          if (STATE.filters.category && (tx.category || '') !== STATE.filters.category) return false;
+          if (STATE.filters.account && (tx.account || '') !== STATE.filters.account) return false;
+          const q = String(STATE.filters.q || '').trim().toLowerCase();
+          if (q) {
+            const hay = `${tx.merchant || ''} ${tx.notes || ''} ${tx.category || ''}`.toLowerCase();
+            if (!hay.includes(q)) return false;
+          }
+          return true;
+        });
+        const s = sumByType(txs);
+        const saldo = estimateSaldoUpToPeriodEnd();
+        const masked = !!STATE.ui.saldoMasked;
+        const periodLabel = STATE.period?.label || '—';
+        const budget = budgetForPeriod();
+        const planned = Number(budget.planned || 0);
+        const spent = s.expense;
+
+        let healthScore = null;
+        let healthLabel = 'Lihat analisa';
+        let healthColor = '#34d399';
+        if (s.income > 0) {
+          const savingPct = Math.round(((s.income - s.expense) / s.income) * 100);
+          healthScore = Math.max(0, Math.min(100, Math.round(50 + savingPct * 0.5)));
+          if (healthScore >= 70) {
+            healthLabel = 'Baik';
+            healthColor = '#34d399';
+          } else if (healthScore >= 45) {
+            healthLabel = 'Waspada';
+            healthColor = '#fbbf24';
+          } else {
+            healthLabel = 'Perlu perhatian';
+            healthColor = '#f87171';
+          }
+        }
+
+        if (host) {
+          host.classList.remove('hidden');
+          let bar = host.querySelector('.saldo-bar-desktop');
+          const barData = { saldo, income: s.income, expense: s.expense, periodLabel, masked };
+          if (!bar) {
+            bar = renderSaldoBarDesktop(barData);
+            host.innerHTML = '';
+            host.appendChild(bar);
+            if (!_txDesktopWidgetsWired) {
+              host.addEventListener('click', (e) => {
+                if (e.target.closest('#btnSaldoMaskBarDesktop')) {
+                  e.stopPropagation();
+                  toggleSaldoMask();
+                } else if (e.target.closest('#btnPeriodBarDesktop')) {
+                  e.stopPropagation();
+                  import('./components/global-filter-popup.js')
+                    .then(({ showFilterPopup }) => showFilterPopup())
+                    .catch(() => {
+                      ($('#btnPeriodToggleTopbar') || $('#btnFilterCardDesktop'))?.click?.();
+                    });
+                }
+              });
+              _txDesktopWidgetsWired = true;
+            }
+          } else {
+            updateSaldoBarDesktop(bar, barData);
+          }
+        }
+
+        if (widgetsRoot) {
+          widgetsRoot.innerHTML = '';
+          widgetsRoot.appendChild(renderTxSummaryStrip({
+            count: txs.length,
+            income: s.income,
+            expense: s.expense,
+          }));
+          widgetsRoot.appendChild(renderTxQuickInsights({
+            transactions: txs,
+            budgetPlanned: planned,
+            budgetSpent: spent,
+            healthScore,
+            healthLabel,
+            healthColor,
+            onBudget: () => { if (typeof openBudget === 'function') openBudget(); },
+            onAdvisor: () => { if (typeof openAdvisor === 'function') openAdvisor(); },
+          }));
+        }
+      } catch (err) {
+        console.warn('[app] Enhance desktop TX failed:', err);
+      }
+    }
+
+    let _txDesktopResizeTimer = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(_txDesktopResizeTimer);
+      _txDesktopResizeTimer = setTimeout(() => {
+        try { enhanceTransactionPageDesktop(); } catch (_) {}
+        try { renderHeader(); } catch (_) {}
+      }, 250);
+    });
+
     // =========================
     // UI: Sheet helpers
     // =========================
