@@ -1,5 +1,5 @@
 // Offline-capable service worker — v7 budget killer feature.
-const CACHE_VERSION = 'v21-tx-bar-charts';
+const CACHE_VERSION = 'v23-tx-insight';
 const STATIC_CACHE = `monefyi-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `monefyi-runtime-${CACHE_VERSION}`;
 const IMAGES_CACHE = `monefyi-images-${CACHE_VERSION}`;
@@ -21,6 +21,7 @@ const shellPaths = [
   './css/monevisor-panel.css',
   './css/monevisor-page.css',
   './css/desktop-layout.css',
+  './css/transaction-detail.css',
   './js/app.js',
   './js/config.js',
   './js/monefyi-ui.js',
@@ -55,6 +56,8 @@ const shellPaths = [
   './js/services/monevisor-heuristic.js',
   './js/services/financial-report.js',
   './js/services/financial-diagnosis.js',
+  './js/services/transaction-insight.js',
+  './js/components/transaction-detail-modal.js',
   './js/components/monevisor-panel.js',
   './js/pages/monevisor-page.js',
   './js/components/global-filter-popup.js',

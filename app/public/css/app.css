@@ -353,15 +353,15 @@ html, body {
       font-weight: 500;
     }
     .sidebar-saldo-card__amount {
-      font-size: clamp(0.95rem, 0.7rem + 0.55vw, 1.25rem);
+      font-size: clamp(0.95rem, 0.7rem + 0.55vw, 1.15rem);
       font-weight: 800;
-      line-height: 1.2;
+      line-height: 1.15;
       letter-spacing: -0.03em;
       max-width: 100%;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      word-break: normal;
+      word-break: keep-all;
       overflow-wrap: normal;
       margin-top: 6px;
       margin-bottom: 2px;
@@ -584,19 +584,19 @@ html, body {
         -webkit-overflow-scrolling: touch;
       }
       body.sidebar-collapsed #desktopSaldoStrip {
-        display: flex !important;
+        display: none !important;
       }
 
       /* Shared desktop content canvas — Budget / Monevisor / Dashboard / Tx */
       #dashboardExpanded,
       #txSection {
         width: 100%;
-        max-width: 1080px;
-        margin-left: auto;
-        margin-right: auto;
+        max-width: none;
+        margin-left: 0;
+        margin-right: 0;
       }
       #dashboardExpanded {
-        padding-bottom: 32px;
+        padding-bottom: 20px;
       }
       #dashboardExpanded .app-card,
       #txDesktopFilterBar select.app-input,
@@ -709,15 +709,15 @@ html, body {
 
       /* Topbar saldo — same emerald hero as mobile */
       #topbarSaldoWrap {
-        margin-bottom: 0.75rem !important;
-        max-width: 1080px;
-        margin-left: auto;
-        margin-right: auto;
+        margin-bottom: 0.4rem !important;
+        max-width: none;
+        margin-left: 0;
+        margin-right: 0;
         width: 100%;
       }
       #topbarSaldoWrap .hero-saldo-card {
-        padding: 18px 18px 16px;
-        border-radius: 18px;
+        padding: 12px 14px 12px;
+        border-radius: 14px;
         background:
           linear-gradient(145deg, rgba(16, 185, 129, 0.18) 0%, var(--mf-bg-elevated, #131A24) 48%, var(--mf-bg, #0B1118) 100%);
         border: 1px solid var(--mf-primary-border, rgba(16, 185, 129, 0.28));
@@ -729,14 +729,14 @@ html, body {
           radial-gradient(ellipse 80% 50% at 15% 0%, rgba(16, 185, 129, 0.08), transparent 55%);
       }
       #topbarSaldoWrap .hero-saldo-card__amount.saldo-amount {
-        margin-top: 8px;
-        margin-bottom: 4px;
-        font-size: clamp(1.75rem, 2.4vw, 2.25rem);
+        margin-top: 4px;
+        margin-bottom: 2px;
+        font-size: clamp(1.35rem, 2vw, 1.75rem);
         font-weight: 800;
         letter-spacing: -0.03em;
       }
       #topbarSaldoWrap .hero-saldo-card__metrics-row {
-        margin-top: 12px;
+        margin-top: 8px;
         max-width: 420px;
       }
       #topbarSaldoWrap .hero-saldo-sparkline {
@@ -747,9 +747,10 @@ html, body {
         opacity: 0.55;
       }
       #desktopSaldoStrip {
-        max-width: 1080px;
-        margin-left: auto;
-        margin-right: auto;
+        display: none !important;
+        max-width: none;
+        margin-left: 0;
+        margin-right: 0;
         background:
           linear-gradient(145deg, rgba(16, 185, 129, 0.14) 0%, var(--mf-bg-elevated, #131A24) 60%) !important;
         border: 1px solid var(--mf-primary-border, rgba(16, 185, 129, 0.24)) !important;
@@ -2247,7 +2248,9 @@ html, body {
 
     @media (min-width: 768px) {
       #appShell {
-        max-width: 1200px;
+        max-width: none;
+        padding-left: 12px;
+        padding-right: 12px;
       }
       .sheet-panel {
         max-height: 85vh;

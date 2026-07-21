@@ -1,0 +1,305 @@
+/* Transaction Detail Insights — injected into #editCard */
+
+#editCard.tx-edit-with-insights {
+  max-height: min(90vh, 820px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 12px;
+}
+
+#txInsightHost,
+.tx-insight-host {
+  margin-top: 12px;
+}
+
+.tx-insight-loading {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  padding: 8px 0;
+}
+
+.tx-insight-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.tx-detail-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 16px 0 4px;
+}
+
+/* === Hero === */
+.tx-insight-hero {
+  margin-bottom: 16px;
+}
+
+.tx-hero-amount {
+  font-size: clamp(1.75rem, 6vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+  line-height: 1.15;
+}
+
+.tx-hero-merchant {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.tx-hero-icon {
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.75);
+  flex-shrink: 0;
+}
+
+/* === Trend === */
+.tx-trend-section {
+  margin-bottom: 12px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 14px;
+}
+
+.tx-trend-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.tx-trend-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.tx-trend-category {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.tx-trend-period {
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  font-size: 10px;
+  margin-left: 4px;
+}
+
+.tx-trend-chart {
+  margin-bottom: 0;
+}
+
+.tx-sparkline {
+  width: 100%;
+  height: 80px;
+  display: block;
+}
+
+.tx-trend-labels {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 2px 0;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.tx-trend-labels .current {
+  color: #fff;
+  font-weight: 700;
+}
+
+/* === Narrative === */
+.tx-insight-narrative {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.55;
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+.tx-insight-narrative.warning {
+  background: rgba(245, 158, 11, 0.08);
+  border-left: 3px solid #f59e0b;
+  color: #fbbf24;
+}
+
+.tx-insight-narrative.good {
+  background: rgba(16, 185, 129, 0.08);
+  border-left: 3px solid #10b981;
+  color: #34d399;
+}
+
+.tx-insight-narrative.stable {
+  background: rgba(59, 130, 246, 0.08);
+  border-left: 3px solid #3b82f6;
+  color: #93c5fd;
+}
+
+.tx-insight-narrative.no_data,
+.tx-insight-narrative.neutral {
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* === Budget === */
+.tx-budget-section {
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+.tx-budget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  gap: 8px;
+}
+
+.tx-budget-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.tx-budget-priority {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.tx-budget-priority.priority-harus {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+.tx-budget-priority.priority-penting {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+.tx-budget-priority.priority-mau {
+  background: rgba(234, 179, 8, 0.15);
+  color: #eab308;
+}
+.tx-budget-priority.priority-simpan {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.tx-budget-stats {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 8px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tx-budget-percent {
+  font-weight: 700;
+}
+
+.tx-budget-bar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.tx-budget-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* === Warning === */
+.tx-insight-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 14px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fbbf24;
+  line-height: 1.5;
+}
+
+.tx-insight-warning .icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* === Meta === */
+.tx-insight-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.tx-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+}
+
+/* === Rank === */
+.tx-insight-rank {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  text-align: center;
+  padding: 6px 4px 0;
+  line-height: 1.4;
+}
+
+/* Header label tweak when insights present */
+#editCard.tx-edit-with-insights .text-xs.app-muted {
+  letter-spacing: 0.01em;
+}
+
+@media (min-width: 768px) {
+  #editCard.tx-edit-with-insights {
+    max-height: min(85vh, 760px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tx-budget-bar-fill {
+    transition: none;
+  }
+}

@@ -2053,22 +2053,20 @@ async function upsertTransaction_legacy_local(tx) {
     }
 
     function syncSidebarCollapsedUI(){
-      const collapsed = $('#appSidebar')?.classList.contains('sidebar--collapsed');
+      const collapsed = isSidebarCollapsed();
       document.body.classList.toggle('sidebar-collapsed', !!collapsed);
       const strip = $('#desktopSaldoStrip');
       if (strip) {
-        // Prefer compact saldo bar on TX when collapsed; strip only as fallback elsewhere
-        const useTxBar = collapsed && window.innerWidth >= 1024
-          && !STATE.ui.dashboardOpen
-          && !STATE.ui.budgetPageOpen
-          && !STATE.ui.monevisorPageOpen;
-        strip.classList.toggle('hidden', !collapsed || useTxBar);
-        strip.classList.toggle('md:flex', !!collapsed && !useTxBar);
+        // Legacy strip: never on ≥1024 (saldo bar / sidebar / topbar cover it)
+        strip.classList.add('hidden');
+        strip.classList.remove('md:flex');
+        strip.style.display = 'none';
       }
       const btn = $('#btnSidebarCollapse');
       if (btn) btn.textContent = collapsed ? '›' : '‹';
       try { enhanceTransactionPageDesktop(); } catch (_) {}
       try { renderHeader(); } catch (_) {}
+      try { renderDashboardQuickAccess(); } catch (_) {}
     }
     window.syncSidebarCollapsedUI = syncSidebarCollapsedUI;
 
@@ -3471,14 +3469,18 @@ async function upsertTransaction_legacy_local(tx) {
       mount.classList.toggle('hidden', !show);
       if (!show) {
         mount.innerHTML = '';
+        mount.dataset.ready = '';
         return;
       }
-      if (mount.dataset.ready === '1' && mount.childElementCount) return;
+      if (mount.dataset.ready === 'all-row' && mount.childElementCount) return;
       try {
         const { renderQuickAccess } = await import('./components/quick-access.js');
         mount.innerHTML = '';
-        mount.appendChild(renderQuickAccess({ onActionClick: handleHomeQuickAction }));
-        mount.dataset.ready = '1';
+        mount.appendChild(renderQuickAccess({
+          onActionClick: handleHomeQuickAction,
+          variant: 'all-row',
+        }));
+        mount.dataset.ready = 'all-row';
       } catch (err) {
         console.warn('[app] dashboard quick access failed', err);
       }
@@ -3573,25 +3575,28 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       const desktopAvatar = $('#userAvatarDesktop');
       if (desktopAvatar) desktopAvatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(STATE.user.name || 'User')}&background=0D8ABC&color=fff`;
       
-      // Toggle Saldo Position (Dashboard). Transaksi + sidebar collapsed uses Saldo Bar.
+      // Full saldo bar only when sidebar collapsed (TX + Dashboard ≥1024).
       const isTopbar = STATE.settings.saldoPosition === 'topbar';
       const sidebarWrap = $('#sidebarSaldoWrap');
       const topbarWrap = $('#topbarSaldoWrap');
       const onDesktop = isDesktopViewport();
       const txDesktopEnhanced = isTxDesktopEnhanced();
-      const sidebarCollapsed = !!$('#appSidebar')?.classList.contains('sidebar--collapsed');
+      const sidebarCollapsed = isSidebarCollapsed();
+      const useDesktopSaldoBar = shouldShowDesktopSaldoBar();
       document.body.classList.toggle('tx-desktop-enhanced', txDesktopEnhanced);
+      document.body.classList.toggle('desktop-saldo-bar', useDesktopSaldoBar);
       document.body.classList.toggle('sidebar-collapsed', sidebarCollapsed);
-      const useTxSaldoBar = txDesktopEnhanced && sidebarCollapsed;
       if (sidebarWrap) {
-        sidebarWrap.style.display = (!isTopbar && onDesktop && !useTxSaldoBar) ? '' : 'none';
+        sidebarWrap.style.display = (!isTopbar && onDesktop && !useDesktopSaldoBar) ? '' : 'none';
       }
       if (topbarWrap) {
-        topbarWrap.style.display = (isTopbar && onDesktop && !useTxSaldoBar) ? '' : 'none';
+        topbarWrap.style.display = (isTopbar && onDesktop && !useDesktopSaldoBar) ? '' : 'none';
       }
       const saldoBarHost = $('#saldoBarDesktopHost');
       if (saldoBarHost) {
-        saldoBarHost.classList.toggle('hidden', !useTxSaldoBar);
+        saldoBarHost.classList.toggle('hidden', !useDesktopSaldoBar);
+        saldoBarHost.classList.toggle('is-visible', useDesktopSaldoBar);
+        if (!useDesktopSaldoBar) saldoBarHost.innerHTML = '';
       }
       
       $('#uName').value = STATE.user.name || '';
@@ -3857,6 +3862,19 @@ renderAccountsSettings();
   const saldoText = isCalculating ? t('saldo.calculating') : formatIDR(saldo);
   const masked = !!STATE.ui.saldoMasked;
 
+  const saldoClassName = (sel, extra = '') => {
+    if (sel === '#kpiSaldo' || sel === '#kpiSaldoTopbar') {
+      return `hero-saldo-card__amount saldo-amount${extra}`;
+    }
+    if (sel === '#kpiSaldoDesktop') {
+      return `hero-saldo-card__amount sidebar-saldo-card__amount saldo-amount${extra}`;
+    }
+    return `saldo-amount mt-1${extra}`;
+  };
+  const formatSaldoFor = (sel, val) => (
+    sel === '#kpiSaldoDesktop' ? `Rp ${formatCompactIDR(val)}` : formatIDR(val)
+  );
+
   // Update angka saldo (mobile + desktop + strip + topbar)
   ['#kpiSaldo', '#kpiSaldoDesktop', '#kpiSaldoStrip', '#kpiSaldoTopbar'].forEach((sel) => {
     const el = $(sel);
@@ -3865,17 +3883,12 @@ renderAccountsSettings();
 
     if (isCalculating) {
       el.textContent = '';
-      const skelCls = (sel === '#kpiSaldo' || sel === '#kpiSaldoTopbar')
-        ? 'hero-saldo-card__amount saldo-amount skeleton-green'
-        : 'saldo-amount mt-1 skeleton-green';
-      el.className = skelCls + (masked ? ' saldo-masked' : '');
+      el.className = saldoClassName(sel, ' skeleton-green' + (masked ? ' saldo-masked' : ''));
       el.style.minHeight = '28px';
       el.style.minWidth = '0';
       el.style.display = 'block';
     } else if (masked) {
-      el.className = (sel === '#kpiSaldo' || sel === '#kpiSaldoTopbar')
-        ? 'hero-saldo-card__amount saldo-amount saldo-masked'
-        : 'saldo-amount mt-1 saldo-masked';
+      el.className = saldoClassName(sel, ' saldo-masked');
       el.style.minHeight = '';
       el.style.minWidth = '';
       el.style.display = '';
@@ -3885,16 +3898,14 @@ renderAccountsSettings();
       const next = Number(saldo || 0);
       const startAt = performance.now();
       const duration = 360;
-      el.className = (sel === '#kpiSaldo' || sel === '#kpiSaldoTopbar')
-        ? 'hero-saldo-card__amount saldo-amount'
-        : 'saldo-amount mt-1';
+      el.className = saldoClassName(sel);
       el.style.minHeight = '';
       el.style.minWidth = '';
       el.style.display = '';
       const step = (ts) => {
         const p = Math.min(1, (ts - startAt) / duration);
         const val = Math.round(prev + ((next - prev) * p));
-        el.textContent = formatIDR(val);
+        el.textContent = formatSaldoFor(sel, val);
         if (p < 1) requestAnimationFrame(step);
       };
       requestAnimationFrame(step);
@@ -5278,7 +5289,7 @@ function generateSmartBudgetRecommendation() {
   enhanceTransactionPageDesktop();
 }
 
-    /** Desktop Transaksi: saldo bar only when sidebar collapsed (≥1024) */
+    /** Desktop Transaksi list chrome (≥1024) */
     function isTxDesktopEnhanced() {
       return window.innerWidth >= 1024
         && !STATE.ui.dashboardOpen
@@ -5286,8 +5297,20 @@ function generateSmartBudgetRecommendation() {
         && !STATE.ui.monevisorPageOpen;
     }
 
+    /** Full-width saldo bar context: TX or Dashboard at ≥1024 (not Budget/Monevisor) */
+    function isDesktopSaldoBarPage() {
+      return window.innerWidth >= 1024
+        && !STATE.ui.budgetPageOpen
+        && !STATE.ui.monevisorPageOpen;
+    }
+
     function isSidebarCollapsed() {
       return !!$('#appSidebar')?.classList.contains('sidebar--collapsed');
+    }
+
+    /** Full saldo bar ONLY when sidebar is collapsed */
+    function shouldShowDesktopSaldoBar() {
+      return isDesktopSaldoBarPage() && isSidebarCollapsed();
     }
 
     let _txDesktopWidgetsWired = false;
@@ -5297,8 +5320,9 @@ function generateSmartBudgetRecommendation() {
       const widgetsRoot = $('#txDesktopWidgets');
       const onTxPage = isTxDesktopEnhanced();
       const collapsed = isSidebarCollapsed();
-      const showBar = onTxPage && collapsed;
+      const showBar = shouldShowDesktopSaldoBar();
       document.body.classList.toggle('tx-desktop-enhanced', onTxPage);
+      document.body.classList.toggle('desktop-saldo-bar', showBar);
       document.body.classList.toggle('sidebar-collapsed', collapsed);
 
       if (widgetsRoot) widgetsRoot.innerHTML = '';
@@ -5306,6 +5330,7 @@ function generateSmartBudgetRecommendation() {
       if (!showBar) {
         if (host) {
           host.classList.add('hidden');
+          host.classList.remove('is-visible');
           host.innerHTML = '';
         }
         return;
@@ -5349,6 +5374,7 @@ function generateSmartBudgetRecommendation() {
 
         if (host) {
           host.classList.remove('hidden');
+          host.classList.add('is-visible');
           let bar = host.querySelector('.saldo-bar-desktop');
           const barData = {
             saldo,
@@ -6584,9 +6610,12 @@ function openTutorialTopic(id) {
     }
     function closeEditModal(){
       editCard.classList.remove('open');
+      editCard.classList.remove('tx-edit-with-insights');
       editBackdrop.classList.remove('open');
       document.body.style.overflow = '';
       STATE.editId = null;
+      const host = $('#txInsightHost');
+      if (host) host.innerHTML = '';
     }
     editBackdrop.addEventListener('click', (e)=>{
       if (e.target?.dataset?.closeEdit === 'true') closeEditModal();
@@ -6838,7 +6867,32 @@ function openTutorialTopic(id) {
   $('#eMerchant').value = tx.merchant||'';
   $('#eNotes').value = tx.notes||'';
   $('#editStatus').textContent = '—';
+
+  // Local financial insights above edit form (no AI)
+  const editCardEl = $('#editCard');
+  const insightHost = $('#txInsightHost');
+  if (insightHost) insightHost.innerHTML = '';
   openEditModal();
+  (async () => {
+    try {
+      const { loadAndInjectInsights } = await import('./components/transaction-detail-modal.js');
+      const mk = String(tx.date || '').substring(0, 7);
+      let budgets = [];
+      try {
+        const { getBudgetRowsForMonth } = await import('./services/data-store.js');
+        budgets = await getBudgetRowsForMonth(mk);
+      } catch {
+        const fromState = STATE.budgetsByMonth?.[mk]?.categories;
+        budgets = Array.isArray(fromState?.rows) ? fromState.rows : [];
+      }
+      await loadAndInjectInsights(editCardEl, tx, {
+        allTransactions: STATE.transactions || [],
+        budgets,
+      });
+    } catch (err) {
+      console.warn('[app] tx insight inject failed', err);
+    }
+  })();
 }
     window.openEdit = openEdit;
 

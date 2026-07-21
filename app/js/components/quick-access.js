@@ -1,5 +1,5 @@
 /**
- * Quick access shortcut icons for mobile Beranda.
+ * Quick access shortcut icons for mobile Beranda / desktop Dashboard.
  * @module components/quick-access
  */
 
@@ -53,16 +53,32 @@ function wireQuickButtons(root, callbacks) {
 
 /**
  * @param {object} [callbacks]
+ * @param {'default'|'all-row'} [callbacks.variant]
  * @returns {HTMLElement}
  */
 export function renderQuickAccess(callbacks = {}) {
   const el = document.createElement('section');
-  el.className = 'home-quick-access';
+  const variant = callbacks.variant === 'all-row' ? 'all-row' : 'default';
+  el.className = variant === 'all-row'
+    ? 'home-quick-access home-quick-access--all-row'
+    : 'home-quick-access';
 
   const actions = visibleActions();
+  const allItems = actions.map(renderQuickBtn).join('');
+
+  if (variant === 'all-row') {
+    el.innerHTML = `
+      <div class="home-section-header">
+        <h2 class="home-section-title">${Icon('sparkles', { size: 18 })} Akses Cepat</h2>
+      </div>
+      <div class="home-quick-row home-quick-row--all">${allItems}</div>
+    `;
+    wireQuickButtons(el, callbacks);
+    return el;
+  }
+
   const primaryActions = actions.slice(0, 4);
   const primaryItems = primaryActions.map(renderQuickBtn).join('');
-  const allItems = actions.map(renderQuickBtn).join('');
 
   el.innerHTML = `
     <div class="home-section-header">
