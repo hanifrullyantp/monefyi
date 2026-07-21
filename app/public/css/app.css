@@ -353,14 +353,16 @@ html, body {
       font-weight: 500;
     }
     .sidebar-saldo-card__amount {
-      font-size: clamp(1.35rem, 2.1vw, 1.7rem);
+      font-size: clamp(0.95rem, 0.7rem + 0.55vw, 1.25rem);
       font-weight: 800;
-      line-height: 1.15;
-      letter-spacing: -0.02em;
+      line-height: 1.2;
+      letter-spacing: -0.03em;
       max-width: 100%;
-      word-break: break-word;
-      overflow-wrap: anywhere;
-      white-space: normal;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      word-break: normal;
+      overflow-wrap: normal;
       margin-top: 6px;
       margin-bottom: 2px;
     }
@@ -489,11 +491,12 @@ html, body {
     }
     #kpiSaldoDesktop.saldo-amount,
     .sidebar-saldo-card__amount.saldo-amount {
-      font-size: clamp(1.45rem, 2.4vw, 1.95rem);
-      white-space: normal;
-      word-break: break-word;
-      overflow-wrap: anywhere;
-      line-height: 1.1;
+      font-size: clamp(0.95rem, 0.7rem + 0.55vw, 1.25rem);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      word-break: normal;
+      overflow-wrap: normal;
     }
 
     .filter-row-compact {

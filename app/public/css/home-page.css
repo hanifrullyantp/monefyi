@@ -264,7 +264,7 @@
 .home-quick-btn__icon {
   width: 52px;
   height: 52px;
-  border-radius: 16px;
+  border-radius: 16px 12px 18px 10px;
   display: flex;
   align-items: center;
   justify-content: center;

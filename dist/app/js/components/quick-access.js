@@ -9,11 +9,11 @@ import { shouldShowInstallShortcut } from '../services/install-prompt.js';
 const QUICK_ACTIONS = [
   { id: 'transactions', label: 'Transaksi', icon: 'list', color: '#3b82f6', bg: 'rgba(59,130,246,0.14)' },
   { id: 'budgeting', label: 'Budgeting', icon: 'budget', color: '#10b981', bg: 'rgba(16,185,129,0.14)' },
-  { id: 'analisa', label: 'Analisa', icon: 'chartBar', color: '#8b5cf6', bg: 'rgba(139,92,246,0.14)' },
+  { id: 'analisa', label: 'Analisa', icon: 'chartBar', color: '#0ea5e9', bg: 'rgba(14,165,233,0.14)' },
   { id: 'tutorial', label: 'Tutorial', icon: 'academic', color: '#f59e0b', bg: 'rgba(245,158,11,0.14)' },
-  { id: 'profile', label: 'Profil', icon: 'user', color: '#0ea5e9', bg: 'rgba(14,165,233,0.14)' },
+  { id: 'profile', label: 'Profil', icon: 'user', color: '#34d399', bg: 'rgba(52,211,153,0.14)' },
   { id: 'affiliate', label: 'Affiliate', icon: 'trophy', color: '#eab308', bg: 'rgba(234,179,8,0.14)' },
-  { id: 'install', label: 'Install App', icon: 'smartphone', color: '#34d399', bg: 'rgba(52,211,153,0.14)' },
+  { id: 'install', label: 'Install App', icon: 'smartphone', color: '#10b981', bg: 'rgba(16,185,129,0.14)' },
   { id: 'accounts', label: 'Akun', icon: 'wallet', color: '#14b8a6', bg: 'rgba(20,184,166,0.14)' },
   { id: 'settings', label: 'Pengaturan', icon: 'settings', color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
 ];

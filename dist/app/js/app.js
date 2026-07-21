@@ -2049,6 +2049,7 @@ async function upsertTransaction_legacy_local(tx) {
       initTxToolbar();
       initPwaInstall();
       syncSidebarCollapsedUI();
+      initSidebarExpandOnEmptyClick();
     }
 
     function syncSidebarCollapsedUI(){
@@ -2056,13 +2057,33 @@ async function upsertTransaction_legacy_local(tx) {
       document.body.classList.toggle('sidebar-collapsed', !!collapsed);
       const strip = $('#desktopSaldoStrip');
       if (strip) {
-        strip.classList.toggle('hidden', !collapsed);
-        strip.classList.toggle('md:flex', !!collapsed);
+        // Prefer compact saldo bar on TX when collapsed; strip only as fallback elsewhere
+        const useTxBar = collapsed && window.innerWidth >= 1024
+          && !STATE.ui.dashboardOpen
+          && !STATE.ui.budgetPageOpen
+          && !STATE.ui.monevisorPageOpen;
+        strip.classList.toggle('hidden', !collapsed || useTxBar);
+        strip.classList.toggle('md:flex', !!collapsed && !useTxBar);
       }
       const btn = $('#btnSidebarCollapse');
       if (btn) btn.textContent = collapsed ? '›' : '‹';
+      try { enhanceTransactionPageDesktop(); } catch (_) {}
+      try { renderHeader(); } catch (_) {}
     }
     window.syncSidebarCollapsedUI = syncSidebarCollapsedUI;
+
+    function initSidebarExpandOnEmptyClick() {
+      const aside = $('#appSidebar');
+      if (!aside || aside.dataset.expandClickWired === '1') return;
+      aside.dataset.expandClickWired = '1';
+      aside.addEventListener('click', (e) => {
+        if (!aside.classList.contains('sidebar--collapsed')) return;
+        if (e.target.closest('.sidebar-item, #btnSidebarCollapse, button, a, input, select')) return;
+        aside.classList.remove('sidebar--collapsed');
+        localStorage.setItem('monefyi_sidebar_collapsed', '0');
+        syncSidebarCollapsedUI();
+      });
+    }
 
     function initPwaInstall(){
       $('#btnPwaInstall')?.addEventListener('click', () => {
@@ -3443,6 +3464,26 @@ async function upsertTransaction_legacy_local(tx) {
       $('#accountsBalancesHint').textContent = 'Tap akun untuk lihat detail.';
     }
 
+    async function renderDashboardQuickAccess() {
+      const mount = $('#dashboardQuickAccess');
+      if (!mount) return;
+      const show = !!STATE.ui.dashboardOpen && isDesktopViewport();
+      mount.classList.toggle('hidden', !show);
+      if (!show) {
+        mount.innerHTML = '';
+        return;
+      }
+      if (mount.dataset.ready === '1' && mount.childElementCount) return;
+      try {
+        const { renderQuickAccess } = await import('./components/quick-access.js');
+        mount.innerHTML = '';
+        mount.appendChild(renderQuickAccess({ onActionClick: handleHomeQuickAction }));
+        mount.dataset.ready = '1';
+      } catch (err) {
+        console.warn('[app] dashboard quick access failed', err);
+      }
+    }
+
     function shortDateDMY(dt){
       // output: d/m/yy (contoh 7/9/25)
       const d = (dt instanceof Date) ? dt : new Date(dt);
@@ -3532,22 +3573,25 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       const desktopAvatar = $('#userAvatarDesktop');
       if (desktopAvatar) desktopAvatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(STATE.user.name || 'User')}&background=0D8ABC&color=fff`;
       
-      // Toggle Saldo Position (Dashboard). Transaksi ≥1024 uses Saldo Bar instead.
+      // Toggle Saldo Position (Dashboard). Transaksi + sidebar collapsed uses Saldo Bar.
       const isTopbar = STATE.settings.saldoPosition === 'topbar';
       const sidebarWrap = $('#sidebarSaldoWrap');
       const topbarWrap = $('#topbarSaldoWrap');
       const onDesktop = isDesktopViewport();
       const txDesktopEnhanced = isTxDesktopEnhanced();
+      const sidebarCollapsed = !!$('#appSidebar')?.classList.contains('sidebar--collapsed');
       document.body.classList.toggle('tx-desktop-enhanced', txDesktopEnhanced);
+      document.body.classList.toggle('sidebar-collapsed', sidebarCollapsed);
+      const useTxSaldoBar = txDesktopEnhanced && sidebarCollapsed;
       if (sidebarWrap) {
-        sidebarWrap.style.display = (!isTopbar && onDesktop && !txDesktopEnhanced) ? '' : 'none';
+        sidebarWrap.style.display = (!isTopbar && onDesktop && !useTxSaldoBar) ? '' : 'none';
       }
       if (topbarWrap) {
-        topbarWrap.style.display = (isTopbar && onDesktop && !txDesktopEnhanced) ? '' : 'none';
+        topbarWrap.style.display = (isTopbar && onDesktop && !useTxSaldoBar) ? '' : 'none';
       }
       const saldoBarHost = $('#saldoBarDesktopHost');
       if (saldoBarHost) {
-        saldoBarHost.classList.toggle('hidden', !txDesktopEnhanced);
+        saldoBarHost.classList.toggle('hidden', !useTxSaldoBar);
       }
       
       $('#uName').value = STATE.user.name || '';
@@ -4211,18 +4255,38 @@ function generateSmartBudgetRecommendation() {
           if (showIncome) datasets.push({
             label: 'Income',
             data: inc,
-            backgroundColor: 'rgba(34, 197, 94, .18)',
-            borderColor: 'rgba(34, 197, 94, .85)',
-            borderWidth: 1,
-            borderRadius: 8,
+            backgroundColor: (ctx) => {
+              const { chart } = ctx;
+              const { ctx: c, chartArea } = chart;
+              if (!chartArea) return 'rgba(16, 185, 129, 0.35)';
+              const g = c.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+              g.addColorStop(0, 'rgba(16, 185, 129, 0.08)');
+              g.addColorStop(1, 'rgba(16, 185, 129, 0.55)');
+              return g;
+            },
+            borderColor: 'rgba(52, 211, 153, 0.95)',
+            borderWidth: 0,
+            borderRadius: 6,
+            borderSkipped: false,
+            maxBarThickness: 18,
           });
           if (showExpense) datasets.push({
             label: 'Expense',
             data: exp,
-            backgroundColor: 'rgba(244, 63, 94, .14)',
-            borderColor: 'rgba(244, 63, 94, .85)',
-            borderWidth: 1,
-            borderRadius: 8,
+            backgroundColor: (ctx) => {
+              const { chart } = ctx;
+              const { ctx: c, chartArea } = chart;
+              if (!chartArea) return 'rgba(244, 63, 94, 0.3)';
+              const g = c.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+              g.addColorStop(0, 'rgba(244, 63, 94, 0.06)');
+              g.addColorStop(1, 'rgba(244, 63, 94, 0.5)');
+              return g;
+            },
+            borderColor: 'rgba(251, 113, 133, 0.95)',
+            borderWidth: 0,
+            borderRadius: 6,
+            borderSkipped: false,
+            maxBarThickness: 18,
           });
         } else {
           const anchor = toMonthKey(STATE.period.end);
@@ -4240,18 +4304,22 @@ function generateSmartBudgetRecommendation() {
           if (showIncome) datasets.push({
             label: 'Income',
             data: sums.map(s=>s.income),
-            backgroundColor: 'rgba(34, 197, 94, .25)',
-            borderColor: 'rgba(34, 197, 94, .85)',
-            borderWidth: 1,
+            backgroundColor: 'rgba(16, 185, 129, 0.45)',
+            borderColor: 'rgba(52, 211, 153, 0.95)',
+            borderWidth: 0,
             borderRadius: 8,
+            borderSkipped: false,
+            maxBarThickness: 28,
           });
           if (showExpense) datasets.push({
             label: 'Expense',
             data: sums.map(s=>s.expense),
-            backgroundColor: 'rgba(244, 63, 94, .20)',
-            borderColor: 'rgba(244, 63, 94, .85)',
-            borderWidth: 1,
+            backgroundColor: 'rgba(244, 63, 94, 0.4)',
+            borderColor: 'rgba(251, 113, 133, 0.95)',
+            borderWidth: 0,
             borderRadius: 8,
+            borderSkipped: false,
+            maxBarThickness: 28,
           });
         }
 
@@ -4263,15 +4331,42 @@ function generateSmartBudgetRecommendation() {
             options: {
               responsive: true,
               maintainAspectRatio: false,
+              interaction: { mode: 'index', intersect: false },
               plugins: {
-                legend: { labels: { color: colors.legend } },
-                tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatIDR(ctx.parsed.y)}` } }
+                legend: {
+                  labels: {
+                    color: colors.legend,
+                    usePointStyle: true,
+                    pointStyle: 'rectRounded',
+                    boxWidth: 10,
+                    padding: 16,
+                    font: { size: 11, weight: '600' },
+                  },
+                },
+                tooltip: {
+                  backgroundColor: 'rgba(19, 26, 38, 0.95)',
+                  titleColor: '#fff',
+                  bodyColor: 'rgba(255,255,255,0.8)',
+                  borderColor: 'rgba(16,185,129,0.25)',
+                  borderWidth: 1,
+                  padding: 10,
+                  cornerRadius: 10,
+                  callbacks: { label: (c) => `${c.dataset.label}: ${formatIDR(c.parsed.y)}` },
+                },
               },
               scales: {
-                x: { ticks: { color: colors.tick }, grid: { color: colors.grid } },
-                y: { ticks: { color: colors.tick, callback: (v)=>formatCompactIDR(v) }, grid: { color: colors.grid } }
-              }
-            }
+                x: {
+                  ticks: { color: colors.tick, maxRotation: 0, autoSkip: true, maxTicksLimit: 8, font: { size: 10 } },
+                  grid: { display: false },
+                  border: { display: false },
+                },
+                y: {
+                  ticks: { color: colors.tick, callback: (v)=>formatCompactIDR(v), font: { size: 10 } },
+                  grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
+                  border: { display: false },
+                },
+              },
+            },
           });
         } else {
           chartTrend.data.labels = labels;
@@ -4279,8 +4374,6 @@ function generateSmartBudgetRecommendation() {
           chartTrend.options.plugins.legend.labels.color = colors.legend;
           chartTrend.options.scales.x.ticks.color = colors.tick;
           chartTrend.options.scales.y.ticks.color = colors.tick;
-          chartTrend.options.scales.x.grid.color = colors.grid;
-          chartTrend.options.scales.y.grid.color = colors.grid;
           chartTrend.update();
         }
       }
@@ -4294,13 +4387,13 @@ function generateSmartBudgetRecommendation() {
         const donutData = top.map(c=>c.amount).concat(other>0?[other]:[]);
 
         const palette = [
-          'rgba(99, 102, 241, .85)',
+          'rgba(16, 185, 129, .88)',
           'rgba(14, 165, 233, .85)',
-          'rgba(34, 197, 94, .85)',
-          'rgba(234, 179, 8, .85)',
-          'rgba(244, 63, 94, .85)',
-          'rgba(168, 85, 247, .85)',
-          'rgba(148, 163, 184, .65)',
+          'rgba(52, 211, 153, .8)',
+          'rgba(245, 158, 11, .85)',
+          'rgba(244, 63, 94, .82)',
+          'rgba(56, 189, 248, .8)',
+          'rgba(148, 163, 184, .55)',
         ];
 
         const ctx2 = $('#chartCategory');
@@ -4309,15 +4402,27 @@ function generateSmartBudgetRecommendation() {
             type: 'doughnut',
             data: {
               labels: donutLabels,
-              datasets: [{ data: donutData, backgroundColor: donutLabels.map((_,i)=>palette[i%palette.length]), borderColor: 'rgba(255,255,255,.08)', borderWidth: 1 }]
+              datasets: [{
+                data: donutData,
+                backgroundColor: donutLabels.map((_,i)=>palette[i%palette.length]),
+                borderColor: '#0B1118',
+                borderWidth: 3,
+                hoverOffset: 6,
+              }],
             },
             options: {
-              cutout: '65%',
+              cutout: '72%',
               plugins: {
                 legend: { display: false },
-                tooltip: { callbacks: { label: (ctx)=> `${ctx.label}: ${formatIDR(ctx.parsed)}` } }
-              }
-            }
+                tooltip: {
+                  backgroundColor: 'rgba(19, 26, 38, 0.95)',
+                  borderColor: 'rgba(16,185,129,0.25)',
+                  borderWidth: 1,
+                  cornerRadius: 10,
+                  callbacks: { label: (c)=> `${c.label}: ${formatIDR(c.parsed)}` },
+                },
+              },
+            },
           });
         } else {
           chartCategory.data.labels = donutLabels;
@@ -4330,9 +4435,9 @@ function generateSmartBudgetRecommendation() {
         $('#catLegend').innerHTML = donutLabels.map((lab,i)=>{
           const amt = donutData[i] || 0;
           const pct = (amt/total)*100;
-          const dot = `<span class="inline-block w-2.5 h-2.5 rounded-full" style="background:${palette[i%palette.length]}"></span>`;
-          const focus = (STATE.focusCategory === lab) ? 'ring-1 ring-indigo-400/60' : '';
-          return `<button class="tap w-full text-left flex items-center gap-2 rounded-xl px-2 py-1.5 hover:opacity-90 ${focus}" style="border: 1px solid var(--app-border); background: transparent" data-focus-cat="${escapeHtmlAttr(lab)}" title="Klik untuk filter kategori">${dot}<span class="flex-1 truncate">${escapeHtml(lab)}</span><span class="app-muted">${pct.toFixed(0)}%</span></button>`;
+          const dot = `<span class="inline-block w-2.5 h-2.5" style="border-radius:6px 4px 7px 3px;background:${palette[i%palette.length]}"></span>`;
+          const focus = (STATE.focusCategory === lab) ? 'ring-1 ring-emerald-400/50' : '';
+          return `<button class="tap w-full text-left flex items-center gap-2 rounded-xl px-2 py-1.5 hover:opacity-90 ${focus}" style="border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02)" data-focus-cat="${escapeHtmlAttr(lab)}" title="Klik untuk filter kategori">${dot}<span class="flex-1 truncate">${escapeHtml(lab)}</span><span class="app-muted">${pct.toFixed(0)}%</span></button>`;
         }).join('');
 
         $$('[data-focus-cat]').forEach(btn => {
@@ -4354,25 +4459,46 @@ function generateSmartBudgetRecommendation() {
             type: 'bar',
             data: {
               labels: wk.weekdays,
-              datasets: [{ label:'Expense', data: wk.values, backgroundColor: 'rgba(14,165,233,.28)', borderColor:'rgba(14,165,233,.85)', borderWidth:1, borderRadius: 8 }]
+              datasets: [{
+                label: 'Expense',
+                data: wk.values,
+                backgroundColor: 'rgba(16, 185, 129, 0.4)',
+                borderColor: 'rgba(52, 211, 153, 0.9)',
+                borderWidth: 0,
+                borderRadius: 8,
+                borderSkipped: false,
+                maxBarThickness: 28,
+              }],
             },
             options: {
+              responsive: true,
+              maintainAspectRatio: false,
               plugins: {
-                legend: { display:false },
-                tooltip: { callbacks: { label: (ctx)=> formatIDR(ctx.parsed.y) } }
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: 'rgba(19, 26, 38, 0.95)',
+                  borderColor: 'rgba(16,185,129,0.25)',
+                  borderWidth: 1,
+                  cornerRadius: 10,
+                  callbacks: { label: (c)=> formatIDR(c.parsed.y) },
+                },
               },
               scales: {
-                x: { ticks: { color: colors.tick }, grid: { display:false } },
-                y: { ticks: { color: colors.tick, callback:(v)=>formatCompactIDR(v) }, grid: { color: colors.grid } },
-              }
-            }
+                x: { ticks: { color: colors.tick, font: { size: 10 } }, grid: { display: false }, border: { display: false } },
+                y: {
+                  ticks: { color: colors.tick, callback: (v)=>formatCompactIDR(v), font: { size: 10 } },
+                  grid: { color: 'rgba(255,255,255,0.04)' },
+                  border: { display: false },
+                },
+              },
+            },
           });
         } else {
           chartWeek.data.labels = wk.weekdays;
           chartWeek.data.datasets[0].data = wk.values;
+          chartWeek.data.datasets[0].backgroundColor = 'rgba(16, 185, 129, 0.4)';
           chartWeek.options.scales.x.ticks.color = colors.tick;
           chartWeek.options.scales.y.ticks.color = colors.tick;
-          chartWeek.options.scales.y.grid.color = colors.grid;
           chartWeek.update();
         }
       }
@@ -5137,6 +5263,7 @@ function generateSmartBudgetRecommendation() {
   ensureSelectOptions();
   renderHeader();
   renderAccountsBalances();
+  renderDashboardQuickAccess();
   renderSaldo();
   if (STATE.ui.dashboardOpen && STATE.settings.showKPI) renderKPIs();
   if (STATE.ui.dashboardOpen && STATE.settings.showBudget) renderBudget();
@@ -5151,7 +5278,7 @@ function generateSmartBudgetRecommendation() {
   enhanceTransactionPageDesktop();
 }
 
-    /** Desktop Transaksi layout (≥1024): saldo bar + summary + insights */
+    /** Desktop Transaksi: saldo bar only when sidebar collapsed (≥1024) */
     function isTxDesktopEnhanced() {
       return window.innerWidth >= 1024
         && !STATE.ui.dashboardOpen
@@ -5159,20 +5286,28 @@ function generateSmartBudgetRecommendation() {
         && !STATE.ui.monevisorPageOpen;
     }
 
+    function isSidebarCollapsed() {
+      return !!$('#appSidebar')?.classList.contains('sidebar--collapsed');
+    }
+
     let _txDesktopWidgetsWired = false;
 
     async function enhanceTransactionPageDesktop() {
       const host = $('#saldoBarDesktopHost');
       const widgetsRoot = $('#txDesktopWidgets');
-      const active = isTxDesktopEnhanced();
-      document.body.classList.toggle('tx-desktop-enhanced', active);
+      const onTxPage = isTxDesktopEnhanced();
+      const collapsed = isSidebarCollapsed();
+      const showBar = onTxPage && collapsed;
+      document.body.classList.toggle('tx-desktop-enhanced', onTxPage);
+      document.body.classList.toggle('sidebar-collapsed', collapsed);
 
-      if (!active) {
+      if (widgetsRoot) widgetsRoot.innerHTML = '';
+
+      if (!showBar) {
         if (host) {
           host.classList.add('hidden');
           host.innerHTML = '';
         }
-        if (widgetsRoot) widgetsRoot.innerHTML = '';
         return;
       }
 
@@ -5180,8 +5315,6 @@ function generateSmartBudgetRecommendation() {
         const {
           renderSaldoBarDesktop,
           updateSaldoBarDesktop,
-          renderTxSummaryStrip,
-          renderTxQuickInsights,
         } = await import('./components/tx-page-widgets.js');
 
         const txs = getTransactionsInPeriod().filter((tx) => {
@@ -5202,71 +5335,63 @@ function generateSmartBudgetRecommendation() {
         const budget = budgetForPeriod();
         const planned = Number(budget.planned || 0);
         const spent = s.expense;
+        const budgetPercent = planned > 0 ? Math.round((spent / planned) * 100) : null;
 
         let healthScore = null;
-        let healthLabel = 'Lihat analisa';
-        let healthColor = '#34d399';
+        let healthLabel = '—';
         if (s.income > 0) {
           const savingPct = Math.round(((s.income - s.expense) / s.income) * 100);
           healthScore = Math.max(0, Math.min(100, Math.round(50 + savingPct * 0.5)));
-          if (healthScore >= 70) {
-            healthLabel = 'Baik';
-            healthColor = '#34d399';
-          } else if (healthScore >= 45) {
-            healthLabel = 'Waspada';
-            healthColor = '#fbbf24';
-          } else {
-            healthLabel = 'Perlu perhatian';
-            healthColor = '#f87171';
-          }
+          if (healthScore >= 70) healthLabel = 'Baik';
+          else if (healthScore >= 45) healthLabel = 'Waspada';
+          else healthLabel = 'Perlu perhatian';
         }
 
         if (host) {
           host.classList.remove('hidden');
           let bar = host.querySelector('.saldo-bar-desktop');
-          const barData = { saldo, income: s.income, expense: s.expense, periodLabel, masked };
-          if (!bar) {
-            bar = renderSaldoBarDesktop(barData);
-            host.innerHTML = '';
-            host.appendChild(bar);
-            if (!_txDesktopWidgetsWired) {
-              host.addEventListener('click', (e) => {
-                if (e.target.closest('#btnSaldoMaskBarDesktop')) {
-                  e.stopPropagation();
-                  toggleSaldoMask();
-                } else if (e.target.closest('#btnPeriodBarDesktop')) {
-                  e.stopPropagation();
-                  import('./components/global-filter-popup.js')
-                    .then(({ showFilterPopup }) => showFilterPopup())
-                    .catch(() => {
-                      ($('#btnPeriodToggleTopbar') || $('#btnFilterCardDesktop'))?.click?.();
-                    });
-                }
-              });
-              _txDesktopWidgetsWired = true;
-            }
-          } else {
-            updateSaldoBarDesktop(bar, barData);
-          }
-        }
-
-        if (widgetsRoot) {
-          widgetsRoot.innerHTML = '';
-          widgetsRoot.appendChild(renderTxSummaryStrip({
-            count: txs.length,
+          const barData = {
+            saldo,
             income: s.income,
             expense: s.expense,
-          }));
-          widgetsRoot.appendChild(renderTxQuickInsights({
-            transactions: txs,
+            periodLabel,
+            masked,
+            txCount: txs.length,
+            budgetPercent,
             budgetPlanned: planned,
             budgetSpent: spent,
             healthScore,
             healthLabel,
-            healthColor,
-            onBudget: () => { if (typeof openBudget === 'function') openBudget(); },
-            onAdvisor: () => { if (typeof openAdvisor === 'function') openAdvisor(); },
-          }));
+          };
+          if (!bar) {
+            bar = renderSaldoBarDesktop(barData);
+            host.innerHTML = '';
+            host.appendChild(bar);
+          } else {
+            updateSaldoBarDesktop(bar, barData);
+          }
+          if (!_txDesktopWidgetsWired) {
+            host.addEventListener('click', (e) => {
+              if (e.target.closest('#btnSaldoMaskBarDesktop')) {
+                e.stopPropagation();
+                toggleSaldoMask();
+              } else if (e.target.closest('#btnPeriodBarDesktop')) {
+                e.stopPropagation();
+                import('./components/global-filter-popup.js')
+                  .then(({ showFilterPopup }) => showFilterPopup())
+                  .catch(() => {
+                    ($('#btnPeriodToggleTopbar') || $('#btnFilterCardDesktop'))?.click?.();
+                  });
+              } else if (e.target.closest('#btnBudgetBarDesktop')) {
+                e.stopPropagation();
+                if (typeof openBudget === 'function') openBudget();
+              } else if (e.target.closest('#btnScoreBarDesktop')) {
+                e.stopPropagation();
+                if (typeof openAdvisor === 'function') openAdvisor();
+              }
+            });
+            _txDesktopWidgetsWired = true;
+          }
         }
       } catch (err) {
         console.warn('[app] Enhance desktop TX failed:', err);

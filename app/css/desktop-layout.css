@@ -1,55 +1,63 @@
 /**
- * Desktop layout improvements for Transaksi page (≥1024px only).
- * Mobile / tablet ≤1023px unchanged.
+ * Desktop layout (≥1024px): saldo bar when sidebar collapsed, chart polish.
  */
 
 @media (min-width: 1024px) {
-  /* === Saldo bar (full-width, below header, Transaksi only) === */
+  /* === Saldo bar — only when sidebar collapsed + Transaksi === */
   .saldo-bar-desktop {
     display: none;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 16px;
+    padding: 8px 14px;
     background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.02) 100%);
-    border: 1px solid rgba(16, 185, 129, 0.18);
+    border: 1px solid rgba(16, 185, 129, 0.16);
     border-radius: 12px;
-    gap: 16px;
-    margin: 0 0 12px;
+    gap: 12px;
+    margin: 0 0 8px;
     flex-shrink: 0;
     width: 100%;
     max-width: 1200px;
   }
 
-  body.tx-desktop-enhanced .saldo-bar-desktop {
+  body.tx-desktop-enhanced.sidebar-collapsed .saldo-bar-desktop {
     display: flex;
   }
 
-  body.tx-desktop-enhanced #topbarSaldoWrap,
-  body.tx-desktop-enhanced #sidebarSaldoWrap,
-  body.tx-desktop-enhanced #desktopSaldoStrip {
+  body.tx-desktop-enhanced.sidebar-collapsed #topbarSaldoWrap,
+  body.tx-desktop-enhanced.sidebar-collapsed #sidebarSaldoWrap,
+  body.tx-desktop-enhanced.sidebar-collapsed #desktopSaldoStrip {
     display: none !important;
+  }
+
+  #saldoBarDesktopHost {
+    margin-bottom: 0;
+  }
+
+  body.tx-desktop-enhanced.sidebar-collapsed #saldoBarDesktopHost {
+    margin-bottom: 4px;
   }
 
   .saldo-bar-main {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     min-width: 0;
   }
 
   .saldo-bar-label {
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.5);
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.48);
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
 
   .saldo-bar-amount {
-    font-size: 1.35rem;
+    font-size: clamp(1.05rem, 1.4vw, 1.35rem);
     font-weight: 800;
     color: #fff;
     letter-spacing: -0.02em;
     line-height: 1.15;
+    white-space: nowrap;
   }
 
   .saldo-bar-amount.saldo-masked {
@@ -61,7 +69,7 @@
     height: 28px;
     background: rgba(255, 255, 255, 0.05);
     border: none;
-    border-radius: 8px;
+    border-radius: 10px 8px 12px 8px;
     color: rgba(255, 255, 255, 0.55);
     cursor: pointer;
     display: flex;
@@ -77,33 +85,69 @@
 
   .saldo-bar-metrics {
     display: flex;
-    gap: 10px;
-    align-items: center;
+    gap: 6px;
+    align-items: stretch;
     flex-wrap: wrap;
+    flex: 1;
+    justify-content: flex-end;
   }
 
   .saldo-bar-metric {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 2px;
-    padding: 6px 12px;
-    border-radius: 10px;
+    justify-content: center;
+    gap: 1px;
+    padding: 5px 10px;
+    border-radius: 10px 8px 12px 8px;
     background: rgba(255, 255, 255, 0.04);
-    min-width: 72px;
+    min-width: 64px;
+    border: none;
+    color: inherit;
+    text-align: left;
+  }
+
+  .saldo-bar-metric--soft {
+    background: rgba(255, 255, 255, 0.025);
+  }
+
+  .saldo-bar-metric--action {
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+    border: 1px solid transparent;
+  }
+
+  .saldo-bar-metric--action:hover {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.22);
   }
 
   .saldo-bar-metric-label {
-    font-size: 10px;
-    color: rgba(255, 255, 255, 0.5);
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.45);
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
 
   .saldo-bar-metric-value {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
+    color: #fff;
+    line-height: 1.2;
+  }
+
+  .saldo-bar-metric-suffix {
+    font-size: 10px;
+    font-weight: 600;
+    opacity: 0.55;
+    margin-left: 1px;
+  }
+
+  .saldo-bar-metric-hint {
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.4);
+    line-height: 1.1;
   }
 
   .saldo-bar-metric-value.income { color: #34d399; }
@@ -112,17 +156,17 @@
   .saldo-bar-metric-value.net.negative { color: #f87171; }
 
   .saldo-bar-period {
-    padding: 6px 12px;
+    padding: 6px 11px;
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 999px;
     color: #fff;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     flex-shrink: 0;
   }
 
@@ -150,164 +194,24 @@
     color: #10b981;
   }
 
-  /* === Summary strip + insights === */
+  /* Hide legacy strip/insights hosts */
   #txDesktopWidgets {
-    display: none;
-    flex-direction: column;
-    gap: 12px;
-    margin-bottom: 12px;
-    flex-shrink: 0;
+    display: none !important;
   }
 
-  body.tx-desktop-enhanced #txDesktopWidgets {
-    display: flex;
-  }
-
-  .tx-summary-strip {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 10px 14px;
-    background: #131826;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 12px;
-    flex-wrap: wrap;
-  }
-
-  .tx-summary-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.7);
-  }
-
-  .tx-summary-item strong {
-    color: #fff;
-    font-weight: 700;
-  }
-
-  .tx-summary-item.income strong { color: #34d399; }
-  .tx-summary-item.expense strong { color: #f87171; }
-  .tx-summary-item.negative strong { color: #f87171; }
-
-  .tx-summary-divider {
-    width: 1px;
-    height: 18px;
-    background: rgba(255, 255, 255, 0.1);
-    flex-shrink: 0;
-  }
-
-  .tx-quick-insights {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-  }
-
-  .tx-insight-card {
-    padding: 12px 14px;
-    background: #131826;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 12px;
-    cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    text-align: left;
-    color: inherit;
-    width: 100%;
-  }
-
-  .tx-insight-card:hover {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.12);
-    transform: translateY(-1px);
-  }
-
-  .tx-insight-icon {
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  .tx-insight-icon.budget {
-    background: rgba(245, 158, 11, 0.15);
-    color: #fbbf24;
-  }
-
-  .tx-insight-icon.category {
-    background: rgba(14, 165, 233, 0.15);
-    color: #38bdf8;
-  }
-
-  .tx-insight-icon.health {
-    background: rgba(16, 185, 129, 0.15);
-    color: #34d399;
-  }
-
-  .tx-insight-info {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .tx-insight-label {
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.5);
-    margin-bottom: 2px;
-  }
-
-  .tx-insight-value {
-    font-size: 15px;
-    font-weight: 800;
-    color: #fff;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .tx-insight-sub {
-    font-size: 10px;
-    color: rgba(255, 255, 255, 0.4);
-    margin-top: 2px;
-  }
-
-  .tx-insight-progress {
-    height: 4px;
-    background: rgba(255, 255, 255, 0.06);
-    border-radius: 2px;
-    margin-top: 6px;
-    overflow: hidden;
-  }
-
-  .tx-insight-progress-fill {
-    height: 100%;
-    border-radius: 2px;
-    transition: width 0.3s ease;
-  }
-
-  .tx-insight-progress-fill.healthy { background: #10b981; }
-  .tx-insight-progress-fill.warning { background: #f59e0b; }
-  .tx-insight-progress-fill.critical { background: #f97316; }
-  .tx-insight-progress-fill.over { background: #ef4444; }
-
-  /* === Table shell polish === */
+  /* Table shell */
   body.tx-desktop-enhanced #txListHost {
     background: #131826;
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 14px;
-    padding: 10px 12px 12px;
+    padding: 8px 10px 10px;
   }
 
   body.tx-desktop-enhanced #txListDesktopHeader {
     background: rgba(255, 255, 255, 0.02);
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 8px 8px 0 0;
-    margin-bottom: 8px !important;
+    margin-bottom: 6px !important;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     font-size: 10px !important;
@@ -316,6 +220,105 @@
   body.tx-desktop-enhanced .tx-budget-none {
     font-size: 11px;
     color: rgba(255, 255, 255, 0.3);
+  }
+
+  /* Asymmetric soft icons (tx + quick access on desktop) */
+  body.tx-desktop-enhanced .tx-card-row-table .tx-icon,
+  #dashboardExpanded .home-quick-btn__icon {
+    border-radius: 12px 9px 14px 8px !important;
+  }
+
+  /* Dashboard quick access */
+  #dashboardQuickAccess {
+    margin-top: 14px;
+    margin-bottom: 4px;
+  }
+
+  #dashboardQuickAccess .home-quick-access {
+    --text-secondary: rgba(255, 255, 255, 0.72);
+  }
+
+  #dashboardQuickAccess .home-section-title {
+    font-size: 14px;
+    color: #fff;
+  }
+
+  #dashboardQuickAccess .home-quick-btn__icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px 10px 16px 9px;
+  }
+
+  /* Modern chart cards */
+  #chartsSection .app-card,
+  #cardTrend,
+  #cardCategory,
+  #cardWeek {
+    background: linear-gradient(160deg, rgba(22, 29, 40, 0.98) 0%, rgba(14, 18, 26, 0.98) 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18) !important;
+  }
+
+  #chartsSection h2 {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  #chartsSection .mt-3 {
+    margin-top: 10px;
+  }
+
+  #chartTrend,
+  #chartCategory,
+  #chartWeek {
+    max-height: 220px;
+  }
+
+  #catLegend button {
+    border-radius: 10px 8px 12px 8px !important;
+    border-color: rgba(255, 255, 255, 0.06) !important;
+    background: rgba(255, 255, 255, 0.02) !important;
+  }
+}
+
+/* Collapsed sidebar: keep secondary icons; empty-area expand cue */
+@media (min-width: 768px) {
+  #appSidebar.sidebar--collapsed .sidebar-nav-secondary {
+    display: flex !important;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: auto;
+    padding-top: 8px;
+  }
+
+  #appSidebar.sidebar--collapsed .sidebar-nav-secondary .sidebar-item {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  #appSidebar.sidebar--collapsed .sidebar-nav-secondary .sidebar-label,
+  #appSidebar.sidebar--collapsed .sidebar-nav-secondary .sidebar-footer-text {
+    display: none !important;
+  }
+
+  #appSidebar.sidebar--collapsed {
+    cursor: e-resize;
+  }
+
+  #appSidebar.sidebar--collapsed .sidebar-item,
+  #appSidebar.sidebar--collapsed #btnSidebarCollapse {
+    cursor: pointer;
+  }
+
+  #appSidebar.sidebar--collapsed::after {
+    content: '';
+    flex: 1 1 auto;
+    min-height: 48px;
+    width: 100%;
+    cursor: e-resize;
   }
 }
 
