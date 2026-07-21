@@ -718,10 +718,44 @@
   padding-bottom: calc(88px + env(safe-area-inset-bottom));
 }
 
-.dynamic-content--budget #desktopHeader,
+/* Keep desktop header for title + global filter; hide tx-only chrome */
 .dynamic-content--budget #topbarSaldoWrap,
-.dynamic-content--budget #unifiedAiBarWrap {
+.dynamic-content--budget #unifiedAiBarWrap,
+.dynamic-content--monevisor #topbarSaldoWrap,
+.dynamic-content--monevisor #unifiedAiBarWrap {
   display: none !important;
+}
+
+.dynamic-content--budget #desktopSearchInput,
+.dynamic-content--budget #btnDesktopFilter,
+.dynamic-content--budget #btnHeaderNewTxDesktop,
+.dynamic-content--monevisor #desktopSearchInput,
+.dynamic-content--monevisor #btnDesktopFilter,
+.dynamic-content--monevisor #btnHeaderNewTxDesktop {
+  display: none !important;
+}
+
+.dynamic-content--budget #desktopHeader .relative.hidden.lg\:block,
+.dynamic-content--monevisor #desktopHeader .relative.hidden.lg\:block {
+  display: none !important;
+}
+
+/* Kill Tailwind space-y gap so budgeting starts mepet under header */
+#dynamicContent.dynamic-content--budget {
+  gap: 0 !important;
+  row-gap: 0 !important;
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+#dynamicContent.dynamic-content--budget > * + * {
+  margin-top: 0 !important;
+}
+#dynamicContent.dynamic-content--tx {
+  gap: 0.25rem !important;
+  padding-top: 0 !important;
+}
+.budget-page-root {
+  padding-top: 4px;
 }
 
 .budget-page {
@@ -735,7 +769,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding-top: 4px;
+  padding-top: 0;
+  margin-top: 0;
 }
 
 .budget-page-kicker {
@@ -749,7 +784,7 @@
   font-size: 20px;
   font-weight: 800;
   color: var(--app-text);
-  margin: 4px 0 0;
+  margin: 0;
 }
 
 .budget-page-add {
@@ -1622,6 +1657,50 @@
 .isc-amount { font-size: 20px; font-weight: 800; color: var(--app-text); margin-top: 6px; }
 .isc-hint { font-size: 10px; color: var(--app-muted); margin-top: 2px; }
 
+.income-sources-card[data-action="manage-income"] {
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.income-sources-card[data-action="manage-income"]:hover {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: color-mix(in srgb, var(--app-card) 92%, rgba(16, 185, 129, 0.08));
+}
+
+/* Allocation strip — dibudgetkan / sisa / income */
+.budget-allocation-strip {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.bas-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 11px;
+  color: var(--app-muted);
+  line-height: 1.35;
+}
+.bas-row strong {
+  color: var(--app-text);
+  font-weight: 700;
+}
+.bas-row .over { color: #f87171; }
+.bas-track {
+  margin-top: 8px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+.bas-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #10b981;
+  transition: width 0.25s ease;
+}
+.bas-fill.over { background: #f87171; }
+
 /* ===== Filter bar ===== */
 
 .budget-filter-bar {
@@ -2090,8 +2169,8 @@
 }
 
 .btn-danger-outline {
-  width: 100%;
-  padding: 10px;
+  width: auto;
+  padding: 10px 12px;
   border: 1px solid rgba(239, 68, 68, 0.35);
   border-radius: 10px;
   background: transparent;
@@ -2099,6 +2178,9 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .dynamic-content--budget .mobile-saldo-wrap { display: none !important; }
@@ -2115,3 +2197,59 @@
   gap: 8px;
   margin-left: auto;
 }
+
+/* ===== Desktop parity: wider Budget canvas + 2-col layout ===== */
+@media (min-width: 768px) {
+  .budget-page-root {
+    max-width: 1080px;
+    padding-bottom: 40px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .budget-page {
+    gap: 16px;
+  }
+
+  .budget-page-main {
+    display: grid;
+    grid-template-columns: minmax(320px, 0.95fr) minmax(360px, 1.05fr);
+    gap: 16px;
+    align-items: start;
+  }
+
+  .budget-page-aside {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    position: sticky;
+    top: 8px;
+  }
+
+  .budget-page-list {
+    min-height: 420px;
+    max-height: calc(100dvh - 180px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .budget-page-list .blc-content {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  .budget-template-card {
+    margin-top: 4px;
+  }
+
+  .budget-modal {
+    max-width: 600px;
+  }
+
+  /* Desktop title lives in #desktopHeader — avoid duplicate page H1 */
+  .budget-page-header {
+    display: none;
+  }
+}
+

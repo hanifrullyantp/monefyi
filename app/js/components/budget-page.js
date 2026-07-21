@@ -521,72 +521,76 @@ export async function renderBudgetPage(container, ctx) {
         <button type="button" class="budget-page-add tap" data-action="add-budget" aria-label="Tambah budgeting">${Icon('plus', { size: 20 })}</button>
       </header>
 
-      <div id="budget-summary-hero"></div>
+      <div class="budget-page-main">
+        <div class="budget-page-aside">
+          <div id="budget-summary-hero"></div>
 
-      <section class="income-sources-card" data-action="manage-income" role="button" tabindex="0" aria-label="Kelola budget income">
-        <div class="isc-header">
-          <button type="button" class="isc-month-trigger tap" data-action="open-filter" aria-label="Pilih periode budgeting">
-            <span class="isc-title-icon">${Icon('wallet', { size: 16 })}</span>
-            <span class="isc-title-text">Budget Income</span>
-            <span class="isc-month-pill">
-              ${formatMonthLabel(displayMonth)}
-              ${Icon('chevronDown', { size: 12 })}
-            </span>
-          </button>
-          <span class="isc-edit" aria-hidden="true">
-            Kelola ${Icon('chevronRight', { size: 12 })}
-          </span>
-        </div>
-        <div class="isc-amount">Rp ${formatIDR(income)}</div>
-        <div class="isc-hint">${sourcesLen === 0 ? 'Belum ada sumber income — tap untuk menambah' : `${sourcesLen} sumber income`}</div>
-      </section>
-
-      <section class="budget-allocation-strip" aria-label="Ringkasan alokasi budgeting">
-        <div class="bas-row">
-          <span>Sudah dibudgetkan <strong>Rp ${formatCompact(totalBudgeted)}</strong></span>
-          <span>Sisa <strong class="${allocationRemaining < 0 ? 'over' : ''}">Rp ${formatCompact(allocationRemaining)}</strong></span>
-          <span>Income <strong>Rp ${formatCompact(income)}</strong></span>
-        </div>
-        <div class="bas-track" aria-hidden="true">
-          <div class="bas-fill ${allocationRemaining < 0 ? 'over' : ''}" style="width:${allocationPct}%"></div>
-        </div>
-      </section>
-
-      <section class="budget-list-card">
-        <div class="blc-header">
-          <div class="blc-header-top">
-            <h3 class="blc-title">
-              ${Icon('target', { size: 16 })}
-              Daftar Budgeting
-              <span class="blc-count">(${rows.length})</span>
-            </h3>
-            <select class="blc-sort" id="budget-sort">
-              <option value="urgent" ${currentSort === 'urgent' ? 'selected' : ''}>Urgent</option>
-              <option value="priority" ${currentSort === 'priority' ? 'selected' : ''}>Prioritas</option>
-              <option value="progress" ${currentSort === 'progress' ? 'selected' : ''}>Progress</option>
-              <option value="amount" ${currentSort === 'amount' ? 'selected' : ''}>Nominal</option>
-              <option value="name" ${currentSort === 'name' ? 'selected' : ''}>Nama</option>
-            </select>
-          </div>
-          ${filter.priority !== 'all' ? `
-            <div class="blc-filter-active">
-              ${Icon('filter', { size: 12 })}
-              <span>Filter: Prioritas ${PRIORITY_LEVELS[filter.priority.toUpperCase()]?.label || filter.priority}</span>
+          <section class="income-sources-card" data-action="manage-income" role="button" tabindex="0" aria-label="Kelola budget income">
+            <div class="isc-header">
+              <button type="button" class="isc-month-trigger tap" data-action="open-filter" aria-label="Pilih periode budgeting">
+                <span class="isc-title-icon">${Icon('wallet', { size: 16 })}</span>
+                <span class="isc-title-text">Budget Income</span>
+                <span class="isc-month-pill">
+                  ${formatMonthLabel(displayMonth)}
+                  ${Icon('chevronDown', { size: 12 })}
+                </span>
+              </button>
+              <span class="isc-edit" aria-hidden="true">
+                Kelola ${Icon('chevronRight', { size: 12 })}
+              </span>
             </div>
-          ` : ''}
+            <div class="isc-amount">Rp ${formatIDR(income)}</div>
+            <div class="isc-hint">${sourcesLen === 0 ? 'Belum ada sumber income — tap untuk menambah' : `${sourcesLen} sumber income`}</div>
+          </section>
+
+          <section class="budget-allocation-strip" aria-label="Ringkasan alokasi budgeting">
+            <div class="bas-row">
+              <span>Sudah dibudgetkan <strong>Rp ${formatCompact(totalBudgeted)}</strong></span>
+              <span>Sisa <strong class="${allocationRemaining < 0 ? 'over' : ''}">Rp ${formatCompact(allocationRemaining)}</strong></span>
+              <span>Income <strong>Rp ${formatCompact(income)}</strong></span>
+            </div>
+            <div class="bas-track" aria-hidden="true">
+              <div class="bas-fill ${allocationRemaining < 0 ? 'over' : ''}" style="width:${allocationPct}%"></div>
+            </div>
+          </section>
         </div>
-        <div class="blc-content" id="budget-list-content"></div>
-        <div class="blc-footer">
-          <button type="button" class="btn-add-budget-full tap" data-action="add-budget">
-            ${Icon('plus', { size: 16 })}
-            <span>Tambah Budgeting</span>
-          </button>
-          <button type="button" class="btn-generate-budget tap" data-action="generate-budget">
-            ${Icon('wand', { size: 16 })}
-            <span>Auto Budget</span>
-          </button>
-        </div>
-      </section>
+
+        <section class="budget-list-card budget-page-list">
+          <div class="blc-header">
+            <div class="blc-header-top">
+              <h3 class="blc-title">
+                ${Icon('target', { size: 16 })}
+                Daftar Budgeting
+                <span class="blc-count">(${rows.length})</span>
+              </h3>
+              <select class="blc-sort" id="budget-sort">
+                <option value="urgent" ${currentSort === 'urgent' ? 'selected' : ''}>Urgent</option>
+                <option value="priority" ${currentSort === 'priority' ? 'selected' : ''}>Prioritas</option>
+                <option value="progress" ${currentSort === 'progress' ? 'selected' : ''}>Progress</option>
+                <option value="amount" ${currentSort === 'amount' ? 'selected' : ''}>Nominal</option>
+                <option value="name" ${currentSort === 'name' ? 'selected' : ''}>Nama</option>
+              </select>
+            </div>
+            ${filter.priority !== 'all' ? `
+              <div class="blc-filter-active">
+                ${Icon('filter', { size: 12 })}
+                <span>Filter: Prioritas ${PRIORITY_LEVELS[filter.priority.toUpperCase()]?.label || filter.priority}</span>
+              </div>
+            ` : ''}
+          </div>
+          <div class="blc-content" id="budget-list-content"></div>
+          <div class="blc-footer">
+            <button type="button" class="btn-add-budget-full tap" data-action="add-budget">
+              ${Icon('plus', { size: 16 })}
+              <span>Tambah Budgeting</span>
+            </button>
+            <button type="button" class="btn-generate-budget tap" data-action="generate-budget">
+              ${Icon('wand', { size: 16 })}
+              <span>Auto Budget</span>
+            </button>
+          </div>
+        </section>
+      </div>
 
       <section class="budget-template-card">
         <div class="btc-header">

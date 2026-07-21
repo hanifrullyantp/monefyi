@@ -11,6 +11,10 @@ let _state = loadState();
 
 function getDefaultPeriod() {
   const state = typeof window !== 'undefined' ? window.STATE : null;
+  // Prefer main period chip (STATE.period) so budget matches transaksi list
+  if (state?.period?.end && /^\d{4}-\d{2}/.test(String(state.period.end))) {
+    return String(state.period.end).slice(0, 7);
+  }
   if (state?.selectedMonth) return state.selectedMonth;
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -112,12 +116,19 @@ export function filterBudgets(budgets) {
 }
 
 /**
- * Sync period from app STATE on boot.
+ * Sync period from app STATE (period chip / selectedMonth).
+ * @param {string} [monthOverride] YYYY-MM
  */
-export function syncPeriodFromState() {
-  const period = getDefaultPeriod();
+export function syncPeriodFromState(monthOverride) {
+  const period = (monthOverride && /^\d{4}-\d{2}/.test(monthOverride))
+    ? String(monthOverride).slice(0, 7)
+    : getDefaultPeriod();
   if (_state.period !== period) {
     _state.period = period;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(_state));
+    } catch { /* ignore */ }
+    _notify();
   }
 }
 

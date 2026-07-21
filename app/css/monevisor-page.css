@@ -873,11 +873,31 @@
 
 @media (min-width: 768px) {
   .monevisor-page {
-    padding-left: 24px;
-    padding-right: 24px;
+    max-width: 1080px;
+    padding: 0 24px 48px;
   }
 
   .mv-metrics {
     grid-template-columns: repeat(4, 1fr);
+  }
+
+  .mv-page {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    align-items: start;
+  }
+
+  .mv-page > .mv-header,
+  .mv-page > .mv-coach-card,
+  .mv-page > .mv-data-quality,
+  .mv-page > .mv-metrics,
+  .mv-page > .mv-chat-section,
+  .mv-page > .mv-spacer {
+    grid-column: 1 / -1;
+  }
+
+  .mv-page > .mv-section {
+    margin-bottom: 0;
   }
 }

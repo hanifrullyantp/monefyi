@@ -182,43 +182,65 @@ function generatePeriodOptions() {
  * @returns {HTMLButtonElement|null}
  */
 export function mountFilterIcon() {
-  if (document.getElementById('globalFilterBtn')) {
-    return document.getElementById('globalFilterBtn');
+  let btn = document.getElementById('globalFilterBtn');
+  if (!btn) {
+    btn = renderFilterIcon();
+    btn.id = 'globalFilterBtn';
   }
 
-  const btn = renderFilterIcon();
-  btn.id = 'globalFilterBtn';
+  const isDesktop = typeof window !== 'undefined'
+    && window.matchMedia('(min-width: 768px)').matches;
 
-  const searchBtn = document.getElementById('btnTopSearchMobile');
-  const bell = document.getElementById('notifBellMobile');
-  if (bell?.parentElement) {
-    bell.parentElement.insertBefore(btn, bell);
-    return btn;
-  }
-  if (searchBtn?.parentElement) {
-    searchBtn.parentElement.appendChild(btn);
-    return btn;
-  }
+  /** @type {HTMLElement|null} */
+  let parent = null;
+  /** @type {HTMLElement|null} */
+  let before = null;
 
-  const actions = document.querySelector('.mobile-header-actions');
-  if (actions) {
-    actions.appendChild(btn);
-    return btn;
+  if (isDesktop) {
+    const desktopBell = document.getElementById('btnNotifDesktop');
+    if (desktopBell?.parentElement) {
+      parent = desktopBell.parentElement;
+      before = desktopBell;
+    }
   }
 
-  const desktopActions = document.querySelector('.header-actions, .top-bar-actions');
-  if (desktopActions) {
-    const desktopBell = desktopActions.querySelector('#btnNotifDesktop, .notif-bell');
-    if (desktopBell) desktopActions.insertBefore(btn, desktopBell);
-    else desktopActions.appendChild(btn);
-    return btn;
+  if (!parent) {
+    const bell = document.getElementById('notifBellMobile');
+    if (bell?.parentElement) {
+      parent = bell.parentElement;
+      before = bell;
+    } else {
+      const searchBtn = document.getElementById('btnTopSearchMobile');
+      if (searchBtn?.parentElement) {
+        parent = searchBtn.parentElement;
+        before = null;
+      } else {
+        parent = document.querySelector('.mobile-header-actions');
+        before = null;
+      }
+    }
   }
 
-  btn.style.position = 'fixed';
-  btn.style.top = 'calc(env(safe-area-inset-top, 0px) + 12px)';
-  btn.style.right = '60px';
-  btn.style.zIndex = '999';
-  document.body.appendChild(btn);
+  if (parent) {
+    if (btn.parentElement !== parent || (before && btn.nextElementSibling !== before)) {
+      parent.insertBefore(btn, before);
+    }
+  } else if (!btn.parentElement) {
+    btn.style.position = 'fixed';
+    btn.style.top = 'calc(env(safe-area-inset-top, 0px) + 12px)';
+    btn.style.right = '60px';
+    btn.style.zIndex = '999';
+    document.body.appendChild(btn);
+  }
+
+  if (typeof window !== 'undefined' && !window._filterIconResizeWired) {
+    window._filterIconResizeWired = true;
+    window.addEventListener('resize', () => {
+      clearTimeout(window._filterIconResizeT);
+      window._filterIconResizeT = setTimeout(() => mountFilterIcon(), 160);
+    });
+  }
+
   return btn;
 }
 

@@ -1,7 +1,8 @@
 @import './brand-tokens.css';
     :root { color-scheme: light; }
     .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
-    .safe-top { padding-top: max(0.75rem, env(safe-area-inset-top)); }
+    /* Exact status-bar inset only — no extra rem gap under the clock */
+    .safe-top { padding-top: env(safe-area-inset-top, 0px); }
     .tap { -webkit-tap-highlight-color: transparent; }
 
     /* Mobile rendering fixes + disable zoom */
@@ -145,6 +146,29 @@ html, body {
     }
 
     .app-header { background: var(--app-backdrop); border-bottom: 1px solid var(--app-border); }
+    /* Tighten tx list header — maximize content upward */
+    #desktopHeader { margin-bottom: 0.5rem !important; }
+    #topbarSaldoWrap { margin-bottom: 0.5rem !important; }
+    @media (max-width: 767px) {
+      .app-header.safe-top {
+        padding-top: env(safe-area-inset-top, 0px) !important;
+      }
+      .app-header .max-w-xl {
+        padding-top: 2px;
+        padding-bottom: 4px;
+      }
+      .mobile-header-row { min-height: 36px; }
+      .mobile-saldo-wrap { margin-bottom: 0.25rem; margin-top: 0; }
+      #txSection { margin-top: 0 !important; }
+      #txListHost { margin-top: 0 !important; }
+      #budgetPageRoot,
+      .budget-page-container,
+      .budget-page {
+        margin-top: 0;
+        padding-top: 0;
+      }
+      .budget-page-header { padding-top: 0 !important; margin-top: 0 !important; }
+    }
     .nav-bar {
       background: var(--nav-surface);
       border-top: none;

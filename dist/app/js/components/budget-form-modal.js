@@ -58,43 +58,77 @@ function matchItemTransactions(item, linkedTxs) {
  * @param {object} item
  * @param {number} maxAmount
  * @param {object[]} matchedTxs
+ * @param {boolean} [expanded]
  */
-function renderItemCard(item, maxAmount, matchedTxs) {
+function renderItemCard(item, maxAmount, matchedTxs, expanded = false) {
   const isDone = item.status === 'done' || item.status === 'skipped';
   const amount = Math.round(Number(item.qty || 1) * Number(item.price || 0));
   const sliderMax = Math.max(maxAmount, amount, 1000000);
+  const label = item.name?.trim() || 'Item baru';
 
   return `
-    <div class="bfm-item-card ${isDone ? 'item-done' : ''}" data-item-id="${item.id}">
-      <div class="bfm-item-top">
-        <input type="text" class="item-name form-input bfm-item-name" placeholder="Nama detail item" value="${escapeHtml(item.name || '')}">
-        <button type="button" class="bfm-icon-btn danger tap" data-action="remove-item" title="Hapus item" aria-label="Hapus">
-          ${Icon('trash', { size: 14 })}
-        </button>
-      </div>
-      <div class="bfm-item-amount-row">
-        <input type="range" class="item-amount-slider" min="0" max="${sliderMax}" step="1000" value="${amount}">
-        <div class="bfm-inline-amount">
-          <span>Rp</span>
-          <input type="number" class="item-price form-input" min="0" step="1000" value="${amount || ''}" inputmode="numeric">
+    <div class="bfm-item-card ${isDone ? 'item-done' : ''} ${expanded ? 'is-expanded' : ''}" data-item-id="${item.id}" data-expanded="${expanded ? 'true' : 'false'}">
+      <button type="button" class="bfm-item-summary tap" data-action="toggle-item" aria-expanded="${expanded ? 'true' : 'false'}">
+        <span class="bfm-item-summary__check ${isDone ? 'done' : ''}" aria-hidden="true">${isDone ? Icon('check', { size: 12 }) : ''}</span>
+        <span class="bfm-item-summary__name">${escapeHtml(label)}</span>
+        <span class="bfm-item-summary__amt">Rp ${fmt(amount)}</span>
+        <span class="bfm-item-summary__chev">${Icon('chevronDown', { size: 14 })}</span>
+      </button>
+      <div class="bfm-item-detail ${expanded ? '' : 'hidden'}">
+        <div class="bfm-item-top">
+          <input type="text" class="item-name form-input bfm-item-name" placeholder="Nama detail item" value="${escapeHtml(item.name || '')}">
+        </div>
+        <div class="bfm-item-amount-row">
+          <input type="range" class="item-amount-slider" min="0" max="${sliderMax}" step="1000" value="${amount}" aria-label="Slider jumlah">
+          <div class="bfm-inline-amount">
+            <span>Rp</span>
+            <input type="number" class="item-price form-input" min="0" step="1000" value="${amount || ''}" inputmode="numeric" aria-label="Jumlah">
+          </div>
+        </div>
+        <input type="hidden" class="item-qty" value="1">
+        <div class="bfm-item-actions">
+          <label class="bfm-done-toggle">
+            <input type="checkbox" class="item-checkbox" ${isDone ? 'checked' : ''}>
+            <span>Selesai</span>
+          </label>
+          <button type="button" class="bfm-action-btn danger tap" data-action="remove-item" title="Hapus item" aria-label="Hapus">
+            ${Icon('trash', { size: 14 })} Hapus
+          </button>
+        </div>
+        <div class="bfm-item-matches">
+          <div class="bfm-matches-title">Realisasi cocok</div>
+          ${matchedTxs.length ? matchedTxs.map((t) => `
+            <div class="bfm-tx-row">
+              <div class="bfm-tx-main">
+                <div class="bfm-tx-name">${escapeHtml(t.merchant || t.notes || t.category || '—')}</div>
+                <div class="bfm-tx-sub">${escapeHtml(String(t.date || '').slice(0, 10))}</div>
+              </div>
+              <div class="bfm-tx-amt">Rp ${fmt(t.amount)}</div>
+            </div>
+          `).join('') : '<div class="bfm-empty-soft">Belum ada transaksi yang cocok</div>'}
         </div>
       </div>
-      <input type="hidden" class="item-qty" value="1">
-      <label class="bfm-done-toggle">
-        <input type="checkbox" class="item-checkbox" ${isDone ? 'checked' : ''}>
-        <span>Selesai</span>
-      </label>
-      <div class="bfm-item-matches">
-        <div class="bfm-matches-title">Realisasi cocok dengan item</div>
-        ${matchedTxs.length ? matchedTxs.map((t) => `
-          <div class="bfm-tx-row">
-            <div class="bfm-tx-main">
-              <div class="bfm-tx-name">${escapeHtml(t.merchant || t.notes || t.category || '—')}</div>
-              <div class="bfm-tx-sub">${escapeHtml(String(t.date || '').slice(0, 10))}</div>
-            </div>
-            <div class="bfm-tx-amt">Rp ${fmt(t.amount)}</div>
-          </div>
-        `).join('') : '<div class="bfm-empty-soft">Belum ada transaksi yang cocok</div>'}
+    </div>
+  `;
+}
+
+/**
+ * Sticky allocation strip for detail modal (max 2 lines).
+ * @param {number} income
+ * @param {number} totalBudgeted
+ * @param {number} rowAmount
+ */
+function renderStickyAllocation(income, totalBudgeted, rowAmount) {
+  const remaining = income - totalBudgeted;
+  return `
+    <div class="bfm-sticky-alloc" aria-live="polite">
+      <div class="bfm-sticky-alloc__line">
+        Sudah dibudgetkan <strong>Rp ${fmt(totalBudgeted)}</strong>
+        · Sisa <strong class="${remaining < 0 ? 'over' : ''}">Rp ${fmt(remaining)}</strong>
+      </div>
+      <div class="bfm-sticky-alloc__line bfm-sticky-alloc__line--muted">
+        Income <strong>Rp ${fmt(income)}</strong>
+        · Item ini <strong>Rp ${fmt(rowAmount)}</strong>
       </div>
     </div>
   `;
@@ -154,17 +188,25 @@ export function showBudgetFormModal(defaults = {}, options = {}) {
   const maxItem = Math.max(row.amount || 0, progress.spent || 0, 5_000_000);
   const priority = PRIORITY_LEVELS[(row.priority || 'penting').toUpperCase()] || PRIORITY_LEVELS.PENTING;
 
+  const draftRows = window.STATE?.budgetDraft?.rows || [];
+  const income = Number(window.STATE?.budgetDraft?.income || 0);
+  const totalBudgeted = draftRows.reduce((s, b) => {
+    if (b.id === row.id) return s + Math.abs(Number(row.amount || 0));
+    return s + Math.abs(Number(b.amount || 0));
+  }, draftRows.some((b) => b.id === row.id) ? 0 : Math.abs(Number(row.amount || 0)));
+
   const modal = document.createElement('div');
   modal.className = 'budget-modal-overlay';
   modal.innerHTML = `
     <div class="budget-modal budget-form-simplified bfm-modal" role="dialog" aria-modal="true">
       <header class="modal-header">
         <div>
-          <h2>${isEdit ? 'Detail Budget' : 'Tambah Budget'}</h2>
+          <h2>${isEdit ? 'Detail Budgeting' : 'Tambah Budgeting'}</h2>
           <p class="modal-subtitle">${escapeHtml(month)}</p>
         </div>
         <button type="button" class="close-btn" data-action="close" aria-label="Tutup">${Icon('x', { size: 18 })}</button>
       </header>
+      ${renderStickyAllocation(income, totalBudgeted, row.amount || 0)}
       <div class="modal-body">
         <section class="bfm-info-card" data-expanded="false">
           <button type="button" class="bfm-info-toggle tap" data-action="toggle-info">
@@ -172,9 +214,9 @@ export function showBudgetFormModal(defaults = {}, options = {}) {
               <span class="bfm-priority" style="color:${priority.color}">
                 ${Icon(priority.icon || 'target', { size: 14 })} ${priority.label}
               </span>
-              <div class="bfm-info-title">${escapeHtml(row.name || 'Budget baru')}</div>
+              <div class="bfm-info-title">${escapeHtml(row.name || 'Budgeting baru')}</div>
               <div class="bfm-info-stats">
-                Realisasi Rp ${fmt(progress.spent)} · Budget Rp ${fmt(row.amount)} · Sisa Rp ${fmt(progress.remaining)}
+                Realisasi Rp ${fmt(progress.spent)} · Budgeting Rp ${fmt(row.amount)} · Sisa Rp ${fmt(progress.remaining)}
               </div>
             </div>
             <span class="bfm-info-chev">${Icon('chevronDown', { size: 16 })}</span>
@@ -198,10 +240,10 @@ export function showBudgetFormModal(defaults = {}, options = {}) {
                 placeholder="Contoh: Belanja Pasar, Listrik..."
                 value="${escapeHtml(row.name)}">
             </div>
-            <details class="form-section keywords-section" open>
+            <details class="form-section keywords-section">
               <summary>Auto-Link Keywords</summary>
               <div class="keywords-content">
-                <div class="label-hint">Transaksi dengan kata kunci ini otomatis masuk budget ini</div>
+                <div class="label-hint">Transaksi dengan kata kunci ini otomatis masuk budgeting ini</div>
                 <div class="keyword-tags" id="keyword-tags">
                   ${(row.auto_link_keywords || []).map((kw) => `
                     <span class="keyword-tag" data-keyword="${escapeHtml(kw)}">
@@ -225,7 +267,7 @@ export function showBudgetFormModal(defaults = {}, options = {}) {
             <button type="button" class="btn-add-item tap" data-action="add-item">${Icon('plus', { size: 12 })} Tambah</button>
           </div>
           <div class="bfm-items-list" id="items-list">
-            ${items.map((item) => renderItemCard(item, maxItem, matchItemTransactions(item, linkedTxs))).join('')}
+            ${items.map((item, idx) => renderItemCard(item, maxItem, matchItemTransactions(item, linkedTxs), idx === 0 && !item.name)).join('')}
           </div>
           <div class="items-total">Total item: Rp <span id="items-total">0</span></div>
         </section>
@@ -248,8 +290,17 @@ export function showBudgetFormModal(defaults = {}, options = {}) {
   `;
 
   document.body.appendChild(modal);
-  wireModalHandlers(modal, row, defaults, { ...options, month, transactions, linkedTxs, maxItem });
-  updateItemsTotal(modal);
+  const formOpts = {
+    ...options,
+    month,
+    transactions,
+    linkedTxs,
+    maxItem,
+    income,
+    totalBudgetedBase: totalBudgeted - Math.abs(Number(row.amount || 0)),
+  };
+  wireModalHandlers(modal, row, defaults, formOpts);
+  updateItemsTotal(modal, formOpts);
 }
 
 /**
@@ -280,12 +331,15 @@ function wireModalHandlers(modal, originalRow, defaults, options) {
 
   modal.querySelector('[data-action="add-item"]')?.addEventListener('click', () => {
     const list = modal.querySelector('#items-list');
+    // Collapse others
+    list?.querySelectorAll('.bfm-item-card').forEach((card) => setItemExpanded(card, false));
     const div = document.createElement('div');
-    div.innerHTML = renderItemCard(createBudgetItem(), options.maxItem || 5_000_000, []);
+    div.innerHTML = renderItemCard(createBudgetItem(), options.maxItem || 5_000_000, [], true);
     const newRow = div.firstElementChild;
     list?.appendChild(newRow);
     wireItemRow(modal, newRow, options);
     updateItemsTotal(modal);
+    newRow?.querySelector('.item-name')?.focus();
   });
 
   modal.querySelectorAll('.bfm-item-card').forEach((rowEl) => wireItemRow(modal, rowEl, options));
@@ -360,6 +414,20 @@ function wireModalHandlers(modal, originalRow, defaults, options) {
 }
 
 /**
+ * @param {HTMLElement} card
+ * @param {boolean} open
+ */
+function setItemExpanded(card, open) {
+  if (!card) return;
+  card.dataset.expanded = open ? 'true' : 'false';
+  card.classList.toggle('is-expanded', open);
+  const detail = card.querySelector('.bfm-item-detail');
+  detail?.classList.toggle('hidden', !open);
+  const toggle = card.querySelector('[data-action="toggle-item"]');
+  if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+/**
  * @param {HTMLElement} modal
  * @param {HTMLElement} rowEl
  * @param {object} options
@@ -367,11 +435,20 @@ function wireModalHandlers(modal, originalRow, defaults, options) {
 function wireItemRow(modal, rowEl, options = {}) {
   const slider = rowEl.querySelector('.item-amount-slider');
   const priceInput = rowEl.querySelector('.item-price');
+  const nameInput = rowEl.querySelector('.item-name');
+  const summaryName = rowEl.querySelector('.bfm-item-summary__name');
+  const summaryAmt = rowEl.querySelector('.bfm-item-summary__amt');
+
+  const syncSummary = () => {
+    if (summaryName) summaryName.textContent = nameInput?.value?.trim() || 'Item baru';
+    if (summaryAmt) summaryAmt.textContent = `Rp ${fmt(Number(priceInput?.value || 0))}`;
+  };
 
   const syncFromSlider = () => {
     const v = Number(slider?.value || 0);
     if (priceInput) priceInput.value = String(v);
-    updateItemsTotal(modal);
+    syncSummary();
+    updateItemsTotal(modal, options);
   };
   const syncFromInput = () => {
     const v = Math.max(0, Number(priceInput?.value || 0));
@@ -379,33 +456,73 @@ function wireItemRow(modal, rowEl, options = {}) {
       if (v > Number(slider.max)) slider.max = String(v);
       slider.value = String(v);
     }
-    updateItemsTotal(modal);
+    syncSummary();
+    updateItemsTotal(modal, options);
   };
+
+  rowEl.querySelector('[data-action="toggle-item"]')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    const open = rowEl.dataset.expanded !== 'true';
+    if (open) {
+      modal.querySelectorAll('.bfm-item-card').forEach((card) => {
+        if (card !== rowEl) setItemExpanded(card, false);
+      });
+    }
+    setItemExpanded(rowEl, open);
+  });
 
   slider?.addEventListener('input', syncFromSlider);
   priceInput?.addEventListener('input', syncFromInput);
+  nameInput?.addEventListener('input', syncSummary);
 
   rowEl.querySelector('.item-checkbox')?.addEventListener('change', (e) => {
-    rowEl.classList.toggle('item-done', e.target.checked);
+    const done = e.target.checked;
+    rowEl.classList.toggle('item-done', done);
+    const check = rowEl.querySelector('.bfm-item-summary__check');
+    if (check) {
+      check.classList.toggle('done', done);
+      check.innerHTML = done ? Icon('check', { size: 12 }) : '';
+    }
   });
 
-  rowEl.querySelector('[data-action="remove-item"]')?.addEventListener('click', () => {
+  rowEl.querySelector('[data-action="remove-item"]')?.addEventListener('click', (e) => {
+    e.stopPropagation();
     if (modal.querySelectorAll('.bfm-item-card').length <= 1) return;
     rowEl.remove();
-    updateItemsTotal(modal);
+    updateItemsTotal(modal, options);
   });
 }
 
 /**
  * @param {HTMLElement} modal
+ * @param {object} [options]
  */
-function updateItemsTotal(modal) {
+function updateItemsTotal(modal, options = {}) {
   let total = 0;
   modal.querySelectorAll('.bfm-item-card').forEach((rowEl) => {
     total += parseFloat(rowEl.querySelector('.item-price')?.value) || 0;
   });
   const el = modal.querySelector('#items-total');
   if (el) el.textContent = fmt(total);
+
+  // Live sticky allocation strip
+  const income = Number(options.income || 0);
+  const base = Number(options.totalBudgetedBase || 0);
+  const totalBudgeted = base + total;
+  const remaining = income - totalBudgeted;
+  const sticky = modal.querySelector('.bfm-sticky-alloc');
+  if (sticky) {
+    sticky.innerHTML = `
+      <div class="bfm-sticky-alloc__line">
+        Sudah dibudgetkan <strong>Rp ${fmt(totalBudgeted)}</strong>
+        · Sisa <strong class="${remaining < 0 ? 'over' : ''}">Rp ${fmt(remaining)}</strong>
+      </div>
+      <div class="bfm-sticky-alloc__line bfm-sticky-alloc__line--muted">
+        Income <strong>Rp ${fmt(income)}</strong>
+        · Item ini <strong>Rp ${fmt(total)}</strong>
+      </div>
+    `;
+  }
 }
 
 /**

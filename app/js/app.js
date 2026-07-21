@@ -3625,12 +3625,22 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       }
       $('#txSection')?.classList.toggle('hidden', STATE.ui.dashboardOpen || specialPageOpen);
       const pageTitleDesktop = $('#pageTitleTxDesktop');
+      const pageSubtitleDesktop = $('#pageSubtitleTxDesktop');
       if (pageTitleDesktop) {
         pageTitleDesktop.textContent = STATE.ui.monevisorPageOpen
           ? 'Monevisor'
           : (STATE.ui.budgetPageOpen
             ? 'Budgeting'
             : (STATE.ui.dashboardOpen ? 'Dashboard' : 'Transaksi'));
+      }
+      if (pageSubtitleDesktop) {
+        pageSubtitleDesktop.textContent = STATE.ui.monevisorPageOpen
+          ? 'Financial coach — diagnosa & action plan'
+          : (STATE.ui.budgetPageOpen
+            ? 'Rencana & realisasi budget bulanan'
+            : (STATE.ui.dashboardOpen
+              ? 'Ringkasan keuangan Anda'
+              : 'Kelola transaksi keuangan Anda'));
       }
       const dynamicContent = $('#dynamicContent');
       if (dynamicContent) {

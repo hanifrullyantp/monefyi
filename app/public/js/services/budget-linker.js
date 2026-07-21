@@ -151,7 +151,7 @@ export async function evaluateTransaction(transaction, ctx = {}) {
 
   const { budget } = suggestion;
   const currentProgress = calculateProgress(budget, transactions, month);
-  const txAmt = Number(transaction.amount || 0);
+  const txAmt = Math.abs(Number(transaction.amount || 0));
   const newSpent = currentProgress.spent + txAmt;
   const budgetAmount = Number(budget.amount || 0);
   const newPercent = budgetAmount > 0 ? (newSpent / budgetAmount) * 100 : 0;
