@@ -123,8 +123,10 @@ function fmtShort(n) {
 
 /**
  * Run all scheduled checks.
+ * @param {{ ignoreSchedule?: boolean }} [opts]
  */
-export async function runScheduledChecks() {
+export async function runScheduledChecks(opts = {}) {
+  const ignoreSchedule = !!opts.ignoreSchedule;
   const now = new Date();
   const hour = now.getHours();
   const dayOfWeek = now.getDay();
@@ -134,53 +136,73 @@ export async function runScheduledChecks() {
   const expenses = monthExpenses(transactions, month);
   const totalExpense = expenses.reduce((s, t) => s + (Number(t.amount) || 0), 0);
 
-  if (hour >= 7 && hour <= 8 && !checkedToday('morning_briefing')) {
-    if (isCategoryEnabled('morningBriefing')) {
+  if (ignoreSchedule || (hour >= 7 && hour <= 8 && !checkedToday('morning_briefing'))) {
+    if (ignoreSchedule || isCategoryEnabled('morningBriefing')) {
       await sendMorningBriefing(budgetRows, expenses, totalExpense, income, now);
     }
-    markChecked('morning_briefing');
+    if (!ignoreSchedule) markChecked('morning_briefing');
   }
 
-  if (hour >= 8 && hour <= 20 && !checkedToday('bill_reminder')) {
-    if (isCategoryEnabled('billReminders')) {
+  if (ignoreSchedule || (hour >= 8 && hour <= 20 && !checkedToday('bill_reminder'))) {
+    if (ignoreSchedule || isCategoryEnabled('billReminders')) {
       await checkBillReminders(budgetRows, dayOfMonth);
     }
-    markChecked('bill_reminder');
+    if (!ignoreSchedule) markChecked('bill_reminder');
   }
 
-  if (hour >= 10 && hour <= 20 && isCategoryEnabled('budgetMilestones')) {
-    await checkBudgetMilestones(budgetRows, expenses);
+  if (ignoreSchedule || (hour >= 10 && hour <= 20 && isCategoryEnabled('budgetMilestones'))) {
+    if (ignoreSchedule || isCategoryEnabled('budgetMilestones')) {
+      await checkBudgetMilestones(budgetRows, expenses);
+    }
   }
 
-  if (dayOfWeek === 0 && hour === 20 && !checkedToday('weekly_recap')) {
-    if (isCategoryEnabled('weeklyRecap')) {
+  if (ignoreSchedule || (dayOfWeek === 0 && hour === 20 && !checkedToday('weekly_recap'))) {
+    if (ignoreSchedule || isCategoryEnabled('weeklyRecap')) {
       await sendWeeklyRecap(transactions, now);
     }
-    markChecked('weekly_recap');
+    if (!ignoreSchedule) markChecked('weekly_recap');
   }
 
-  if (dayOfMonth === 1 && hour === 9 && !checkedToday('monthly_report')) {
-    if (isCategoryEnabled('monthlyReport')) {
+  if (ignoreSchedule || (dayOfMonth === 1 && hour === 9 && !checkedToday('monthly_report'))) {
+    if (ignoreSchedule || isCategoryEnabled('monthlyReport')) {
       await sendMonthlyReport(transactions, income, now);
     }
-    markChecked('monthly_report');
+    if (!ignoreSchedule) markChecked('monthly_report');
   }
 
-  if (hour >= 18 && hour <= 20 && !checkedToday('achievements')) {
-    if (isCategoryEnabled('achievements')) {
+  if (ignoreSchedule || (hour >= 18 && hour <= 20 && !checkedToday('achievements'))) {
+    if (ignoreSchedule || isCategoryEnabled('achievements')) {
       await checkAchievements(transactions, budgetRows, expenses, now);
     }
-    markChecked('achievements');
+    if (!ignoreSchedule) markChecked('achievements');
   }
 
-  if (hour >= 12 && hour <= 14 && [1, 3, 5].includes(dayOfWeek) && !checkedToday('smart_tip')) {
-    if (isCategoryEnabled('smartTips')) {
+  if (ignoreSchedule || (hour >= 12 && hour <= 14 && [1, 3, 5].includes(dayOfWeek) && !checkedToday('smart_tip'))) {
+    if (ignoreSchedule || isCategoryEnabled('smartTips')) {
       await sendSmartTip(transactions, budgetRows, expenses, now);
     }
-    markChecked('smart_tip');
+    if (!ignoreSchedule) markChecked('smart_tip');
   }
 
-  persistChecks();
+  if (!ignoreSchedule) persistChecks();
+}
+
+/**
+ * Manually trigger all checks (for testing).
+ * Bypasses time/day checks and quiet-hour gates; does not mark schedule history.
+ */
+export async function forceRunAllChecks() {
+  console.log('[scheduler] Force running all checks...');
+  const { setForceBypass } = await import('./push-notification.js');
+  const backup = { ..._lastChecks };
+  setForceBypass(true);
+  try {
+    await runScheduledChecks({ ignoreSchedule: true });
+  } finally {
+    setForceBypass(false);
+    _lastChecks = backup;
+  }
+  console.log('[scheduler] Force run complete');
 }
 
 async function sendMorningBriefing(budgetRows, expenses, totalExpense, income, now) {
@@ -547,5 +569,6 @@ if (typeof window !== 'undefined') {
     checkSpendingAlert,
     runScheduledChecks,
     notifySyncStatus,
+    forceRunAllChecks,
   };
 }

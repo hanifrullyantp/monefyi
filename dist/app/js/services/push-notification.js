@@ -10,6 +10,17 @@ const DEDUP_MS = 4 * 60 * 60 * 1000;
 const ICON = '/app/icons/monefyi-logo.png';
 const BADGE = '/app/icons/icon-192.svg';
 
+/** Module-level bypass for scheduler force-run (avoids threading force through generators). */
+let _forceBypass = false;
+
+/**
+ * Enable/disable gate bypass for all showNotification calls.
+ * @param {boolean} on
+ */
+export function setForceBypass(on) {
+  _forceBypass = !!on;
+}
+
 const DEFAULT_PREFS = {
   enabled: true,
   morningBriefing: true,
@@ -231,6 +242,7 @@ export async function showNotification(options) {
     requireInteraction = false,
     renotify = false,
     urgent = false,
+    force = false,
     categoryKey,
     type = 'system',
     iconEmoji = '🔔',
@@ -240,14 +252,17 @@ export async function showNotification(options) {
 
   if (!title) return null;
 
-  if (!isCategoryEnabled(categoryKey)) {
+  const bypassGates = force || urgent || _forceBypass;
+
+  // Category prefs: skip when force/bypass so test helpers always work
+  if (!bypassGates && !isCategoryEnabled(categoryKey)) {
     return { sent: false, skipped: 'category_disabled' };
   }
 
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
     // Still dual-write inbox when permission missing (in-app only; don't burn OS daily limit)
     const t = tag || `monefyi-${Date.now()}`;
-    if (!isNotifDuplicate(t)) {
+    if (!isNotifDuplicate(t) || bypassGates) {
       await logNotification(t, title, { body, type, iconEmoji, severity, inboxActions }, { countDaily: false });
     }
     return { sent: false, skipped: 'no_permission' };
@@ -255,17 +270,17 @@ export async function showNotification(options) {
 
   const notifTag = tag || `monefyi-${Date.now()}`;
 
-  if (isNotifDuplicate(notifTag)) {
-    return { sent: false, skipped: 'duplicate' };
-  }
-
-  if (!urgent && isQuietHour()) {
-    await queueNotification({ ...options, tag: notifTag });
-    return { sent: false, skipped: 'quiet_hours' };
-  }
-
-  if (!urgent && isDailyLimitReached()) {
-    return { sent: false, skipped: 'daily_limit' };
+  if (!bypassGates) {
+    if (isNotifDuplicate(notifTag)) {
+      return { sent: false, skipped: 'duplicate' };
+    }
+    if (isQuietHour()) {
+      await queueNotification({ ...options, tag: notifTag });
+      return { sent: false, skipped: 'quiet_hours', queued: true };
+    }
+    if (isDailyLimitReached()) {
+      return { sent: false, skipped: 'daily_limit' };
+    }
   }
 
   const prefs = getNotifPrefs();
@@ -287,7 +302,12 @@ export async function showNotification(options) {
         renotify,
         vibrate: useVibrate ? [200, 100, 200] : undefined,
       });
-      await logNotification(notifTag, title, { body, type, iconEmoji, severity, inboxActions });
+      await logNotification(
+        notifTag,
+        title,
+        { body, type, iconEmoji, severity, inboxActions },
+        { countDaily: !(force || _forceBypass) },
+      );
       return { sent: true, method: 'service_worker' };
     }
 
@@ -305,7 +325,12 @@ export async function showNotification(options) {
         window.dispatchEvent(new CustomEvent('monefyi-notif-navigate', { detail: data }));
       }
     };
-    await logNotification(notifTag, title, { body, type, iconEmoji, severity, inboxActions });
+    await logNotification(
+      notifTag,
+      title,
+      { body, type, iconEmoji, severity, inboxActions },
+      { countDaily: !(force || _forceBypass) },
+    );
     return { sent: true, method: 'notification_api' };
   } catch (e) {
     console.error('[push] Send failed:', e);
@@ -322,5 +347,47 @@ if (typeof window !== 'undefined') {
     updateNotifPrefs,
     getNotifStatus,
     isCategoryEnabled,
+    setForceBypass,
+
+    /** One-shot test notification (bypasses quiet hours / limits). */
+    test: async (title = 'Test Monefyi', body = 'Notifikasi berhasil!') => showNotification({
+      title,
+      body,
+      tag: `test_${Date.now()}`,
+      force: true,
+      data: { url: '/app/#home' },
+    }),
+
+    /** Sample morning briefing (force only — does not mutate quiet prefs). */
+    testMorning: async () => showNotification({
+      title: 'Test Morning Briefing',
+      body: 'Ini simulasi notifikasi pagi.',
+      tag: `test_morning_${Date.now()}`,
+      force: true,
+      categoryKey: 'morningBriefing',
+      type: 'system',
+      data: { url: '/app/#home' },
+    }),
+
+    /** Fire 5 sample notifications, 2s apart. */
+    testAll: async () => {
+      const tests = [
+        { title: 'Morning Briefing', body: 'Sisa budget harian: Rp 85.000', data: { url: '/app/#home' } },
+        { title: 'Bill Reminder', body: 'Tagihan Listrik dalam 3 hari (Rp 300.000)', data: { url: '/app/#budget' } },
+        { title: 'Spending Alert', body: 'Rp 500.000 untuk Shopping. Budget sisa 30%.', data: { url: '/app/#transactions' } },
+        { title: 'Budget Milestone', body: 'Budget Food & Drink 90% terpakai!', data: { url: '/app/#budget' } },
+        { title: 'Weekly Recap', body: 'Pengeluaran Rp 850.000 (turun 12% vs minggu lalu)', data: { url: '/app/#advisor' } },
+      ];
+      for (let i = 0; i < tests.length; i += 1) {
+        setTimeout(() => {
+          showNotification({
+            ...tests[i],
+            tag: `test_all_${i}_${Date.now()}`,
+            force: true,
+          }).catch(() => {});
+        }, i * 2000);
+      }
+      return `Sending ${tests.length} test notifications...`;
+    },
   };
 }

@@ -528,3 +528,14 @@
   transition: border-color 0.2s ease, transform 0.2s ease;
   cursor: pointer;
 }
+
+@media (min-width: 1024px) {
+  #dashboardExpanded .home-account-card,
+  #accountsBalancesRow .home-account-card {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: none;
+    width: auto;
+    scroll-snap-align: unset;
+  }
+}

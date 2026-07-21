@@ -17,8 +17,12 @@
     display: flex !important;
     justify-content: center;
     align-items: center;
-    margin: 10px 0 12px;
+    /* Equal breathing room above/below — card sits centered in the band */
+    margin: 0;
+    padding: 12px 0;
     width: 100%;
+    max-width: none;
+    flex-shrink: 0;
   }
 
   .saldo-bar-desktop {
@@ -34,11 +38,54 @@
     margin: 0 auto;
     flex-shrink: 0;
     width: 100%;
-    max-width: 1100px;
+    max-width: none;
   }
 
   body.desktop-saldo-bar .saldo-bar-desktop {
     display: flex;
+  }
+
+  /* No leftover gap from hidden topbar when full bar is active */
+  body.desktop-saldo-bar #topbarSaldoWrap {
+    display: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Pull TX list up toward saldo */
+  body.desktop-saldo-bar #txSection,
+  body.desktop-saldo-bar #dynamicContent.dynamic-content--tx {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  body.desktop-saldo-bar #txGroupBar {
+    margin-top: 0 !important;
+    margin-bottom: 6px !important;
+  }
+
+  body.desktop-saldo-bar #txListHost {
+    margin-top: 0 !important;
+  }
+
+  /* Pull dashboard content up toward saldo */
+  body.desktop-saldo-bar #dashboardExpanded {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  body.desktop-saldo-bar #accountsBalancesSection {
+    margin-top: 0 !important;
+  }
+
+  body.desktop-saldo-bar #dashboardQuickAccess {
+    margin-top: 4px;
+  }
+
+  body.desktop-saldo-bar #kpiSection.mt-4 {
+    margin-top: 0.45rem !important;
   }
 
   /* Hide other saldo surfaces whenever full bar is active */
@@ -215,11 +262,19 @@
   }
 
   #dynamicContent.space-y-6 {
-    row-gap: 0.5rem !important;
+    row-gap: 0.35rem !important;
   }
 
   #dynamicContent.space-y-6 > :not([hidden]) ~ :not([hidden]) {
-    margin-top: 0.5rem !important;
+    margin-top: 0.35rem !important;
+  }
+
+  body.desktop-saldo-bar #dynamicContent.space-y-6 {
+    row-gap: 0 !important;
+  }
+
+  body.desktop-saldo-bar #dynamicContent.space-y-6 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0 !important;
   }
 
   #dashboardExpanded,
@@ -245,9 +300,70 @@
     margin-top: 0.65rem !important;
   }
 
+  /* Akun cards — justify full width */
   #accountsBalancesRow {
     margin-top: 0.5rem !important;
     padding-bottom: 4px !important;
+    display: flex !important;
+    flex-wrap: nowrap;
+    gap: 12px !important;
+    overflow-x: visible !important;
+    width: 100%;
+  }
+
+  #accountsBalancesRow .home-account-card {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    width: auto !important;
+  }
+
+  /* Dashboard quick access — justify icons to full width */
+  #dashboardQuickAccess {
+    margin-top: 8px;
+    margin-bottom: 2px;
+  }
+
+  #dashboardQuickAccess .home-quick-access {
+    --text-secondary: rgba(255, 255, 255, 0.72);
+  }
+
+  #dashboardQuickAccess .home-section-title {
+    font-size: 13px;
+    color: #fff;
+  }
+
+  #dashboardQuickAccess .home-section-header {
+    margin-bottom: 8px;
+  }
+
+  #dashboardQuickAccess .home-quick-row--all {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 4px;
+    overflow-x: visible;
+    padding-bottom: 2px;
+    width: 100%;
+  }
+
+  #dashboardQuickAccess .home-quick-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: none;
+  }
+
+  #dashboardQuickAccess .home-quick-btn__icon {
+    width: 42px;
+    height: 42px;
+    margin-left: auto;
+    margin-right: auto;
+    border-radius: 14px 10px 16px 9px;
+  }
+
+  #dashboardQuickAccess .home-quick-btn__label {
+    font-size: 10px;
   }
 
   /* === Sidebar wider with labels === */
@@ -320,49 +436,7 @@
     border-radius: 12px 9px 14px 8px !important;
   }
 
-  /* Dashboard quick access — all icons one row */
-  #dashboardQuickAccess {
-    margin-top: 8px;
-    margin-bottom: 2px;
-  }
-
-  #dashboardQuickAccess .home-quick-access {
-    --text-secondary: rgba(255, 255, 255, 0.72);
-  }
-
-  #dashboardQuickAccess .home-section-title {
-    font-size: 13px;
-    color: #fff;
-  }
-
-  #dashboardQuickAccess .home-section-header {
-    margin-bottom: 8px;
-  }
-
-  #dashboardQuickAccess .home-quick-row--all {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 6px;
-    overflow-x: auto;
-    padding-bottom: 2px;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  #dashboardQuickAccess .home-quick-btn {
-    flex: 1 1 0;
-    min-width: 64px;
-    max-width: 88px;
-  }
-
-  #dashboardQuickAccess .home-quick-btn__icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 14px 10px 16px 9px;
-  }
-
-  #dashboardQuickAccess .home-quick-btn__label {
-    font-size: 10px;
-  }
+  /* Dashboard quick access — all icons one row (rules above) */
 
   /* Dashboard cards = same surface as TX list when sidebar collapsed */
   body.sidebar-collapsed #dashboardExpanded .app-card,

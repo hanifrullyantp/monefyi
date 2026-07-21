@@ -878,14 +878,15 @@ html, body {
       #accountsBalancesRow {
         display: flex;
         gap: 12px;
-        overflow-x: auto;
-        padding: 2px 2px 8px;
-        scroll-snap-type: x mandatory;
-        -webkit-overflow-scrolling: touch;
+        overflow-x: visible;
+        padding: 2px 0 8px;
+        width: 100%;
       }
       #accountsBalancesRow .home-account-card {
-        flex: 0 0 240px;
-        scroll-snap-align: start;
+        flex: 1 1 0;
+        min-width: 0;
+        max-width: none;
+        scroll-snap-align: unset;
         min-height: 112px;
       }
       #accountsBalancesRow .home-account-card:hover {
