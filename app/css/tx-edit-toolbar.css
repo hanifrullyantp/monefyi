@@ -13,13 +13,70 @@
 .tx-edit-toolbar__group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   min-width: 0;
 }
 
 .tx-edit-toolbar__group #txGroupBy {
-  min-width: 140px;
-  max-width: 200px;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tx-icon-menu {
+  position: relative;
+}
+
+.tx-icon-menu__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  min-width: 180px;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #131a24;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tx-icon-menu__panel.hidden {
+  display: none !important;
+}
+
+.tx-icon-menu__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.tx-icon-menu__item:hover {
+  background: rgba(16, 185, 129, 0.12);
+  color: #fff;
+}
+
+.tx-icon-menu__item.is-active {
+  background: rgba(16, 185, 129, 0.18);
+  color: #6ee7b7;
+}
+
+.tx-edit-btn.is-active {
+  color: #fff;
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.14);
 }
 
 .tx-edit-toolbar__actions {

@@ -70,13 +70,13 @@ const ICONS = {
  */
 export function Icon(name, options = {}) {
   const { size = 24, color = 'currentColor', className = '' } = options;
-  const svg = ICONS[name];
-  if (!svg) {
+  const svg = ICONS[name] || ICONS.tag;
+  if (!ICONS[name]) {
     console.warn(`[icons] Icon not found: ${name}`);
-    return '';
   }
+  if (!svg) return '';
   return svg
-    .replace('<svg', `<svg width="${size}" height="${size}" class="icon icon-${name} ${className}"`.trim())
+    .replace('<svg', `<svg width="${size}" height="${size}" class="icon icon-${name || 'tag'} ${className}"`.trim())
     .replace(/stroke="currentColor"/g, `stroke="${color}"`)
     .replace(/fill="currentColor"/g, `fill="${color}"`);
 }
@@ -87,15 +87,17 @@ export function Icon(name, options = {}) {
  */
 export function getCategoryIcon(category) {
   const c = String(category || '').toLowerCase();
-  if (c.includes('makan') || c.includes('minum') || c.includes('food')) return 'food';
-  if (c.includes('belanja') || c.includes('shop')) return 'shoppingBag';
-  if (c.includes('transport') || c.includes('ojek')) return 'transport';
-  if (c.includes('tagihan') || c.includes('util') || c.includes('listrik')) return 'bills';
-  if (c.includes('kesehatan') || c.includes('health')) return 'health';
+  if (c.includes('makan') || c.includes('minum') || c.includes('food') || c.includes('jajan')) return 'food';
+  if (c.includes('belanja') || c.includes('shop') || c.includes('pasar') || c.includes('dapur')) return 'shoppingBag';
+  if (c.includes('transport') || c.includes('ojek') || c.includes('bensin') || c.includes('parkir')) return 'transport';
+  if (c.includes('tagihan') || c.includes('util') || c.includes('listrik') || c.includes('air') || c.includes('internet')) return 'bills';
+  if (c.includes('kesehatan') || c.includes('health') || c.includes('obat')) return 'health';
   if (c.includes('hiburan') || c.includes('hobi')) return 'entertainment';
-  if (c.includes('gaji') || c.includes('pendapatan') || c.includes('salary')) return 'salary';
-  if (c.includes('pendidikan')) return 'academic';
-  if (c.includes('rumah')) return 'home';
+  if (c.includes('gaji') || c.includes('pendapatan') || c.includes('salary') || c.includes('income')) return 'salary';
+  if (c.includes('tabung') || c.includes('invest') || c.includes('saving')) return 'wallet';
+  if (c.includes('pendidikan') || c.includes('sekolah') || c.includes('kuliah')) return 'academic';
+  if (c.includes('rumah') || c.includes('kost') || c.includes('sewa')) return 'home';
+  if (c.includes('transfer')) return 'creditCard';
   return 'tag';
 }
 

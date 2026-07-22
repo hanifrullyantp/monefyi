@@ -774,20 +774,23 @@ html, body {
 
       /* Tx list — compact single-line rows */
       #txList {
-        gap: 6px !important;
+        gap: 2px !important;
         padding-bottom: 16px;
       }
       .tx-card-v2,
       .tx-card-compact {
-        border-radius: 12px;
+        border-radius: 10px;
       }
+      body.tx-desktop-enhanced .tx-card-v2 .tx-card-inner,
+      body.tx-desktop-enhanced .tx-card-compact .tx-card-inner,
+      body.tx-desktop-enhanced .tx-card-mockup.tx-card-inner,
       .tx-card-v2 .tx-card-inner,
       .tx-card-compact .tx-card-inner,
       .tx-card-mockup.tx-card-inner {
         background: #131826 !important;
         border: 1px solid rgba(255, 255, 255, 0.06) !important;
-        border-radius: 12px !important;
-        padding: 6px 10px !important;
+        border-radius: 10px !important;
+        padding: 2px 8px !important;
         box-shadow: none;
         min-height: 0;
       }
@@ -806,69 +809,107 @@ html, body {
         border: none;
         border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         border-radius: 0;
-        margin-bottom: 6px !important;
-        padding: 6px 10px !important;
+        margin-bottom: 4px !important;
+        padding: 4px 8px !important;
         gap: 8px !important;
         align-items: center;
-        grid-template-columns: 20px 28px 32px 2fr 1fr 1fr 1fr 1fr 1.4fr !important;
+        display: grid !important;
+        grid-template-columns: 20px 28px 28px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 1.2fr) !important;
       }
       .tx-card-row-table {
-        min-height: 36px !important;
-        height: auto;
+        display: grid !important;
+        min-height: 34px !important;
+        height: 34px !important;
+        max-height: 34px !important;
         padding-top: 0 !important;
         padding-bottom: 0 !important;
         gap: 8px !important;
         align-items: center !important;
-        grid-template-columns: 20px 28px 32px 2fr 1fr 1fr 1fr 1fr 1.4fr !important;
+        grid-template-columns: 20px 28px 28px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 1.2fr) !important;
+        width: 100%;
       }
       .tx-card-row-table > * {
         display: flex;
         align-items: center;
-        min-height: 36px;
-        line-height: 1.25;
+        min-width: 0;
+        min-height: 0;
+        height: 34px;
+        line-height: 1.2;
+        overflow: hidden;
       }
       .tx-card-row-table .tx-icon {
-        width: 28px !important;
-        height: 28px !important;
-        min-width: 28px;
+        width: 26px !important;
+        height: 26px !important;
+        min-width: 26px;
         border-radius: 50% !important;
-        font-size: 13px !important;
+        font-size: 12px !important;
         grid-row: auto !important;
         align-self: center !important;
         display: flex !important;
         align-items: center;
         justify-content: center;
         overflow: hidden;
+        color: #fff !important;
+        line-height: 1;
       }
-      .tx-card-row-table .tx-icon svg {
-        width: 14px;
-        height: 14px;
+      .tx-card-row-table .tx-icon svg,
+      .tx-card-row-table .tx-icon .tx-cat-icon {
+        width: 13px !important;
+        height: 13px !important;
+        min-width: 13px;
+        display: block !important;
+        flex-shrink: 0;
+        color: #fff !important;
+        stroke: #fff !important;
+      }
+      .tx-card-row-table .tx-icon .tx-cat-emoji {
+        display: block;
+        font-size: 12px;
+        line-height: 1;
+      }
+      .tx-card-row-table .text-sm,
+      .tx-card-row-table .text-xs {
+        display: block !important;
+        width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap !important;
+        line-height: 1.2 !important;
       }
       .tx-card-row-table .text-sm {
         font-size: 13px !important;
-        line-height: 1.25;
       }
       .tx-card-row-table .text-xs {
         font-size: 12px !important;
-        line-height: 1.25;
       }
       .tx-card-row-table .tx-budget-cell {
         min-height: 0 !important;
+        height: auto !important;
         width: 100%;
         gap: 2px;
+        flex-direction: column;
         justify-content: center;
+        overflow: hidden;
       }
       .tx-card-row-table .tx-budget-cell .h-1\.5,
       .tx-card-row-table .tx-budget-cell [class*="h-1"] {
         height: 3px !important;
         margin-bottom: 0 !important;
       }
-      .tx-card-row-table .tx-budget-cell .text-\[10px\] {
+      .tx-card-row-table .tx-budget-cell .text-\[10px\],
+      .tx-card-row-table .tx-budget-cell .text-\[9px\] {
         font-size: 9px !important;
         line-height: 1.1;
+        white-space: nowrap;
       }
       .tx-card-row-table .tx-row-del {
         align-self: center;
+        flex-shrink: 0;
+      }
+      .tx-card-row-table .tabular-nums {
+        justify-content: flex-end;
+        width: 100%;
+        white-space: nowrap !important;
       }
 
       /* Dashboard — mobile home card language */
@@ -2642,6 +2683,14 @@ html, body {
       position: relative;
       padding: 14px 16px 18px;
       background: var(--grad-card-surface-soft);
+    }
+    @media (min-width: 768px) {
+      body.tx-desktop-enhanced .tx-card-compact .tx-card-inner,
+      .tx-list-host--table .tx-card-compact .tx-card-inner,
+      #txList .tx-card-compact .tx-card-inner {
+        padding: 2px 8px !important;
+        background: #131826 !important;
+      }
     }
     @media (max-width: 767px) {
       .tx-card-compact .tx-card-row {

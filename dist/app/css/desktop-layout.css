@@ -444,12 +444,27 @@
     color: rgba(255, 255, 255, 0.3);
   }
 
-  /* Asymmetric soft icons — TX list icons stay circular */
+  /* TX list icons — circular + visible stroke */
   body.tx-desktop-enhanced .tx-card-row-table .tx-icon {
     border-radius: 50% !important;
+    color: #fff !important;
+  }
+  body.tx-desktop-enhanced .tx-card-row-table .tx-icon svg {
+    display: block !important;
+    width: 14px !important;
+    height: 14px !important;
+    stroke: #fff !important;
+    color: #fff !important;
   }
   #dashboardExpanded .home-quick-btn__icon {
     border-radius: 12px 9px 14px 8px !important;
+  }
+  #dashboardExpanded .home-quick-btn__icon svg,
+  #dashboardExpanded .home-quick-btn__icon .icon {
+    display: block !important;
+    width: 20px !important;
+    height: 20px !important;
+    color: inherit;
   }
 
   /* Dashboard quick access — all icons one row (rules above) */

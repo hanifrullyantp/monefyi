@@ -867,8 +867,33 @@
           </div>
           <div id="txGroupBar" class="tx-group-bar tx-edit-toolbar shrink-0 mb-1.5 px-0.5">
             <div class="tx-edit-toolbar__group">
-              <label for="txGroupBy" class="text-[11px] app-muted whitespace-nowrap">Kelompokkan</label>
-              <select id="txGroupBy" class="tap min-w-0 rounded-xl app-input px-2.5 py-1.5 text-xs md:text-sm" aria-label="Kelompokkan transaksi">
+              <div class="tx-icon-menu" data-menu="group">
+                <button type="button" id="btnTxGroupBy" class="tx-edit-btn tap" title="Kelompokkan" aria-label="Kelompokkan" aria-haspopup="listbox" aria-expanded="false">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M4 12h10"/><path d="M4 18h14"/><path d="M18 10v8"/><path d="m15 15 3 3 3-3"/></svg>
+                </button>
+                <div id="txGroupByMenu" class="tx-icon-menu__panel hidden" role="listbox" aria-label="Kelompokkan transaksi">
+                  <button type="button" class="tx-icon-menu__item" role="option" data-group="date">Tanggal</button>
+                  <button type="button" class="tx-icon-menu__item" role="option" data-group="category">Kategori</button>
+                  <button type="button" class="tx-icon-menu__item" role="option" data-group="account">Akun</button>
+                  <button type="button" class="tx-icon-menu__item" role="option" data-group="none">Tanpa kelompok</button>
+                </div>
+              </div>
+              <div class="tx-icon-menu" data-menu="sort">
+                <button type="button" id="btnTxSortBy" class="tx-edit-btn tap" title="Urutkan" aria-label="Urutkan" aria-haspopup="listbox" aria-expanded="false">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/></svg>
+                </button>
+                <div id="txSortByMenu" class="tx-icon-menu__panel hidden" role="listbox" aria-label="Urutkan transaksi">
+                  <button type="button" class="tx-icon-menu__item" role="option" data-sort-col="date" data-sort-dir="desc">Tanggal · terbaru</button>
+                  <button type="button" class="tx-icon-menu__item" role="option" data-sort-col="date" data-sort-dir="asc">Tanggal · terlama</button>
+                  <button type="button" class="tx-icon-menu__item" role="option" data-sort-col="amount" data-sort-dir="desc">Jumlah · terbesar</button>
+                  <button type="button" class="tx-icon-menu__item" role="option" data-sort-col="amount" data-sort-dir="asc">Jumlah · terkecil</button>
+                  <button type="button" class="tx-icon-menu__item" role="option" data-sort-col="merchant" data-sort-dir="asc">Deskripsi · A–Z</button>
+                  <button type="button" class="tx-icon-menu__item" role="option" data-sort-col="category" data-sort-dir="asc">Kategori · A–Z</button>
+                  <button type="button" class="tx-icon-menu__item" role="option" data-sort-col="account" data-sort-dir="asc">Akun · A–Z</button>
+                </div>
+              </div>
+              <!-- Hidden selects kept for sync / a11y fallback -->
+              <select id="txGroupBy" class="sr-only" tabindex="-1" aria-hidden="true">
                 <option value="date">Tanggal</option>
                 <option value="category">Kategori</option>
                 <option value="account">Akun</option>
@@ -947,7 +972,7 @@
             </div>
 
             <!-- Desktop Table Header -->
-            <div id="txListDesktopHeader" class="hidden md:grid grid-cols-[20px_28px_32px_2fr_1fr_1fr_1fr_1fr_1.4fr] gap-2.5 px-2.5 py-1.5 text-[11px] font-medium text-slate-400 mb-1.5">
+            <div id="txListDesktopHeader" class="hidden md:grid grid-cols-[20px_28px_28px_2fr_1fr_1fr_0.9fr_1fr_1.2fr] gap-2 px-2 py-1 text-[11px] font-medium text-slate-400 mb-1">
               <div class="tx-col-drag" aria-hidden="true"></div>
               <div class="flex items-center justify-center">
                 <input type="checkbox" id="txSelectAll" class="tx-row-check tap" title="Pilih semua" aria-label="Pilih semua" />

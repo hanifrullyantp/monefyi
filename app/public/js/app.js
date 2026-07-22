@@ -249,23 +249,56 @@
     }
     function categoryEmoji(cat){
       const c = normalizeText(cat);
-      if (c.includes('makan') || c.includes('minum')) return '🍔';
-      if (c.includes('belanja') || c.includes('grocer')) return '🛒';
-      if (c.includes('transport')) return '🚗';
-      if (c.includes('rumah') || c.includes('utilit')) return '🏠';
+      if (c.includes('makan') || c.includes('minum') || c.includes('jajan')) return '🍔';
+      if (c.includes('belanja') || c.includes('grocer') || c.includes('shop') || c.includes('pasar')) return '🛒';
+      if (c.includes('transport') || c.includes('bensin')) return '🚗';
+      if (c.includes('rumah') || c.includes('utilit') || c.includes('tagihan')) return '🏠';
       if (c.includes('kesehatan')) return '💊';
       if (c.includes('hiburan') || c.includes('hobi')) return '🎮';
       if (c.includes('pendidikan')) return '📚';
       if (c.includes('pakaian') || c.includes('gaya')) return '👗';
       if (c.includes('tabung') || c.includes('invest')) return '💰';
-      if (c.includes('bisnis') || c.includes('kerja')) return '💼';
+      if (c.includes('bisnis') || c.includes('kerja') || c.includes('gaji')) return '💼';
       if (c.includes('hadiah') || c.includes('donasi')) return '🎁';
-      return '➕';
+      return '🏷️';
     }
+
+    /** Cached icons.js API for sync TX-row rendering */
+    let _txIconApi = null;
+    import('./components/icons.js')
+      .then((m) => {
+        _txIconApi = m;
+        window.__monefyiIcons = m;
+        // Refresh list once SVG icons are ready (replace emoji fallback)
+        try {
+          if (typeof renderTransactions === 'function'
+            && !STATE.ui.dashboardOpen
+            && !STATE.ui.budgetPageOpen
+            && !STATE.ui.monevisorPageOpen) {
+            renderTransactions();
+          }
+        } catch (_) { /* ignore */ }
+      })
+      .catch((e) => console.warn('[icons] load failed', e));
+
+    /**
+     * Always-visible category glyph for TX list (SVG preferred, emoji fallback).
+     * @param {string} cat
+     * @returns {string}
+     */
     function categoryIconHtml(cat){
-      const emoji = categoryEmoji(cat);
-      if (emoji !== '➕') return escapeHtml(emoji);
-      return '<svg class="tx-cat-logo-fallback" width="18" height="18" aria-hidden="true"><use href="#monefyi-mark"/></svg>';
+      try {
+        const api = _txIconApi || window.__monefyiIcons;
+        if (api?.Icon && api?.getCategoryIcon) {
+          const name = api.getCategoryIcon(cat);
+          const html = api.Icon(name, { size: 14, color: '#ffffff', className: 'tx-cat-icon' });
+          if (html) return html;
+        }
+      } catch (e) {
+        console.warn('[icons] categoryIconHtml failed', e);
+      }
+      // Emoji fallback — never empty
+      return `<span class="tx-cat-emoji" aria-hidden="true">${escapeHtml(categoryEmoji(cat))}</span>`;
     }
 async function loadBudgets(){
   // Pastikan koneksi database aktif
@@ -2957,7 +2990,7 @@ async function upsertTransaction_legacy_local(tx) {
       const { q, type, category, account } = STATE.filters;
       const qn = normalizeText(q);
 
-      return STATE.transactions
+      const filtered = STATE.transactions
         .filter(tx => {
           const d = parseLocalISODate(tx.date);
           d.setHours(12, 0, 0, 0);
@@ -2971,8 +3004,8 @@ async function upsertTransaction_legacy_local(tx) {
           }
           if (STATE.focusCategory && tx.category !== STATE.focusCategory) return false;
           return true;
-        })
-        .sort((a,b) => (b.date.localeCompare(a.date)) || ((b.created_at||'').localeCompare(a.created_at||'')));
+        });
+      return sortTxList(filtered);
     }
 
     function getTransactionsInPeriod(){
@@ -5108,7 +5141,7 @@ function generateSmartBudgetRecommendation() {
               </div>
               
               <!-- Desktop / mobile-table row layout -->
-              <div class="tx-card-row-table grid grid-cols-[20px_28px_32px_2fr_1fr_1fr_1fr_1fr_1.4fr] gap-2.5 items-center w-full${showTableRow ? '' : ' hidden'}">
+              <div class="tx-card-row-table grid grid-cols-[20px_28px_28px_2fr_1fr_1fr_0.9fr_1fr_1.2fr] gap-2 items-center w-full${showTableRow ? '' : ' hidden'}">
                 <div class="justify-center">${dragHtml}</div>
                 <div class="justify-center">${checkHtml}</div>
                 <div class="tx-icon shrink-0" style="background:${categoryIconBg(tx.category)}">${categoryIconHtml(tx.category)}</div>
@@ -5584,6 +5617,85 @@ function generateSmartBudgetRecommendation() {
         console.warn('[tx] edit session load failed', e);
       });
 
+      const closeTxIconMenus = () => {
+        document.querySelectorAll('.tx-icon-menu__panel').forEach((p) => p.classList.add('hidden'));
+        document.querySelectorAll('#btnTxGroupBy, #btnTxSortBy').forEach((b) => {
+          b.setAttribute('aria-expanded', 'false');
+          b.classList.remove('is-active');
+        });
+      };
+
+      const syncTxIconMenuActive = () => {
+        const group = getTxGroupByMode();
+        $$('#txGroupByMenu [data-group]').forEach((btn) => {
+          btn.classList.toggle('is-active', btn.getAttribute('data-group') === group);
+        });
+        const sort = STATE.ui.txTableSort || { col: 'date', dir: 'desc' };
+        $$('#txSortByMenu [data-sort-col]').forEach((btn) => {
+          const on = btn.getAttribute('data-sort-col') === sort.col
+            && btn.getAttribute('data-sort-dir') === sort.dir;
+          btn.classList.toggle('is-active', on);
+        });
+        const groupByEl = $('#txGroupBy');
+        if (groupByEl) groupByEl.value = group;
+      };
+
+      const toggleMenu = (btnId, panelId) => {
+        const btn = $(btnId);
+        const panel = $(panelId);
+        if (!btn || !panel) return;
+        const open = panel.classList.contains('hidden');
+        closeTxIconMenus();
+        if (open) {
+          panel.classList.remove('hidden');
+          btn.setAttribute('aria-expanded', 'true');
+          btn.classList.add('is-active');
+          syncTxIconMenuActive();
+        }
+      };
+
+      $('#btnTxGroupBy')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleMenu('#btnTxGroupBy', '#txGroupByMenu');
+      });
+      $('#btnTxSortBy')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleMenu('#btnTxSortBy', '#txSortByMenu');
+      });
+
+      $$('#txGroupByMenu [data-group]').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const v = btn.getAttribute('data-group') || 'date';
+          STATE.ui.txGroupBy = ['date', 'category', 'account', 'none'].includes(v) ? v : 'date';
+          try { localStorage.setItem('monefyi_tx_group_by', STATE.ui.txGroupBy); } catch (_) {}
+          const sel = $('#txGroupBy');
+          if (sel) sel.value = STATE.ui.txGroupBy;
+          closeTxIconMenus();
+          rerender();
+        });
+      });
+
+      $$('#txSortByMenu [data-sort-col]').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          STATE.ui.txTableSort = {
+            col: btn.getAttribute('data-sort-col') || 'date',
+            dir: btn.getAttribute('data-sort-dir') || 'desc',
+          };
+          closeTxIconMenus();
+          rerender();
+        });
+      });
+
+      document.addEventListener('click', (e) => {
+        if (e.target.closest?.('.tx-icon-menu')) return;
+        closeTxIconMenus();
+      });
+
+      syncTxIconMenuActive();
+      window.syncTxIconMenuActive = syncTxIconMenuActive;
+
       $('#btnTxUndo')?.addEventListener('click', async () => {
         await window.monefyiUndo?.undo?.();
         updateTxEditToolbar();
@@ -5640,6 +5752,7 @@ function generateSmartBudgetRecommendation() {
 
       const groupByEl = $('#txGroupBy');
       if (groupByEl) groupByEl.value = getTxGroupByMode();
+      try { window.syncTxIconMenuActive?.(); } catch (_) {}
 
       const list = $('#txList');
       const tableWrap = $('#txTableWrap');
