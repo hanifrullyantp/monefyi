@@ -1022,6 +1022,7 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
         saldoMasked: false,
         lastSaldoAnimated: 0,
         inlineEditId: null,
+        txDragId: null,
       },
       accountDetail: {
         account: null,
@@ -1846,6 +1847,7 @@ async function upsertTransaction_legacy_local(tx) {
         'js/services/budget-model.js',
         'js/services/budget-linker.js',
         'js/services/budget-recommender.js',
+        'js/services/tx-edit-session.js',
         'js/components/budget-page.js',
       ];
       await Promise.allSettled(modules.map((p) => loadAppModule(p)));
@@ -1982,6 +1984,9 @@ async function upsertTransaction_legacy_local(tx) {
           const { initNotifPermissionPrompt } = await import('./components/notification-settings.js');
           initNotifPermissionPrompt();
         } catch (e) { console.warn('initNotifPermissionPrompt', e); }
+        try {
+          initEmailImportRealtime();
+        } catch (e) { console.warn('initEmailImportRealtime', e); }
         try {
           const { mountFilterIcon } = await import('./components/global-filter-popup.js');
           mountFilterIcon();
@@ -4998,6 +5003,14 @@ function generateSmartBudgetRecommendation() {
       const showCardRow = !showTableRow;
       const groupMode = getTxGroupByMode();
       const groups = groupTransactions(txs, groupMode);
+      try {
+        const sortFn = window.monefyiTxEditSession?.sortTxsByManualOrder;
+        if (typeof sortFn === 'function') {
+          for (const g of groups) {
+            if (Array.isArray(g.items)) g.items = sortFn(g.items);
+          }
+        }
+      } catch (_) { /* ignore */ }
       
       const budgetRow = budgetForPeriod();
       const catBudgets = budgetRow?.categories || {};
@@ -5021,13 +5034,21 @@ function generateSmartBudgetRecommendation() {
           list.appendChild(header);
         }
 
-        for (const tx of group.items) {
+        for (const txRaw of group.items) {
+          const draftWrap = window.monefyiTxEditSession?.getTxDraft?.(txRaw.id);
+          const tx = window.monefyiTxEditSession?.applyTxDraft?.(txRaw) || txRaw;
           const row = document.createElement('div');
-          row.className = 'tx-card-v2 tx-card-compact app-card w-full text-left' + (tx.meta?.pending ? ' tx-pending' : '');
+          const isSelected = !!window.monefyiTxEditSession?.isTxSelected?.(tx.id);
+          const hasDraft = !!draftWrap;
+          row.className = 'tx-card-v2 tx-card-compact app-card w-full text-left'
+            + (tx.meta?.pending ? ' tx-pending' : '')
+            + (isSelected ? ' is-selected' : '')
+            + (hasDraft ? ' has-draft' : '');
           row.style.animationDelay = `${animIdx * 30}ms`;
           row.setAttribute('tabindex', '0');
           row.setAttribute('data-tx-row', '1');
           row.setAttribute('data-tx-id', tx.id);
+          row.setAttribute('draggable', 'false');
           row.setAttribute('role', 'button');
           row.setAttribute('aria-label', `${tx.merchant || tx.category || 'Transaksi'} ${formatIDR(Number(tx.amount||0))}`);
           animIdx++;
@@ -5064,9 +5085,14 @@ function generateSmartBudgetRecommendation() {
             budgetHtml = `<div class="tx-budget-cell tx-budget-none">—</div>`;
           }
 
+          const checkHtml = `<input type="checkbox" class="tx-row-check tap" data-tx-check="${escapeHtmlAttr(tx.id)}" ${isSelected ? 'checked' : ''} aria-label="Pilih transaksi" />`;
+          const dragHtml = `<button type="button" class="tx-row-drag" data-tx-drag="${escapeHtmlAttr(tx.id)}" title="Geser untuk urutkan" aria-label="Geser urutan" draggable="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/></svg>
+          </button>`;
+
           row.innerHTML = `
             <div class="tx-card-swipe-delete" aria-hidden="true">${t('tx.swipe.delete') || 'Hapus'}</div>
-            <div class="tx-card-inner tx-card-mockup group">
+            <div class="tx-card-inner tx-card-mockup group relative">
               <!-- Mobile card layout -->
               <div class="tx-card-row tx-card-row-mobile${showCardRow ? '' : ' hidden'}">
                 <div class="tx-icon shrink-0" style="background:${categoryIconBg(tx.category)}">${categoryIconHtml(tx.category)}</div>
@@ -5082,7 +5108,9 @@ function generateSmartBudgetRecommendation() {
               </div>
               
               <!-- Desktop / mobile-table row layout -->
-              <div class="tx-card-row-table grid grid-cols-[32px_2fr_1fr_1fr_1fr_1fr_1.4fr] gap-2.5 items-center w-full${showTableRow ? '' : ' hidden'}">
+              <div class="tx-card-row-table grid grid-cols-[20px_28px_32px_2fr_1fr_1fr_1fr_1fr_1.4fr] gap-2.5 items-center w-full${showTableRow ? '' : ' hidden'}">
+                <div class="justify-center">${dragHtml}</div>
+                <div class="justify-center">${checkHtml}</div>
                 <div class="tx-icon shrink-0" style="background:${categoryIconBg(tx.category)}">${categoryIconHtml(tx.category)}</div>
                 <div class="text-sm font-semibold truncate leading-tight">${escapeHtml(title)}</div>
                 <div class="text-xs app-muted truncate">${escapeHtml(tx.category || 'Lainnya')}</div>
@@ -5108,6 +5136,54 @@ function generateSmartBudgetRecommendation() {
               </div>
             </div>
           `;
+
+          row.querySelector('[data-tx-check]')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+          });
+          row.querySelector('[data-tx-check]')?.addEventListener('change', (e) => {
+            e.stopPropagation();
+            window.monefyiTxEditSession?.toggleTxSelected?.(tx.id, e.target.checked);
+            row.classList.toggle('is-selected', e.target.checked);
+            updateTxEditToolbar();
+          });
+
+          const dragBtn = row.querySelector('[data-tx-drag]');
+          if (dragBtn) {
+            dragBtn.addEventListener('click', (e) => e.stopPropagation());
+            dragBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
+            dragBtn.addEventListener('dragstart', (e) => {
+              e.stopPropagation();
+              e.dataTransfer?.setData('text/plain', tx.id);
+              e.dataTransfer.effectAllowed = 'move';
+              row.classList.add('tx-row-dragging');
+              STATE.ui.txDragId = tx.id;
+            });
+            dragBtn.addEventListener('dragend', () => {
+              row.classList.remove('tx-row-dragging');
+              STATE.ui.txDragId = null;
+              document.querySelectorAll('.tx-row-drag-over').forEach((el) => el.classList.remove('tx-row-drag-over'));
+            });
+          }
+          row.addEventListener('dragover', (e) => {
+            if (!STATE.ui.txDragId || STATE.ui.txDragId === tx.id) return;
+            e.preventDefault();
+            row.classList.add('tx-row-drag-over');
+          });
+          row.addEventListener('dragleave', () => row.classList.remove('tx-row-drag-over'));
+          row.addEventListener('drop', (e) => {
+            e.preventDefault();
+            row.classList.remove('tx-row-drag-over');
+            const fromId = e.dataTransfer?.getData('text/plain') || STATE.ui.txDragId;
+            if (!fromId || fromId === tx.id) return;
+            const visibleIds = [...document.querySelectorAll('#txList [data-tx-id]')]
+              .map((el) => el.getAttribute('data-tx-id'))
+              .filter(Boolean);
+            const fromIndex = visibleIds.indexOf(fromId);
+            const toIndex = visibleIds.indexOf(tx.id);
+            if (fromIndex < 0 || toIndex < 0) return;
+            window.monefyiTxEditSession?.reorderVisibleTx?.(visibleIds, fromIndex, toIndex);
+            rerender();
+          });
 
           row.querySelector('[data-tx-menu]')?.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -5139,23 +5215,23 @@ function generateSmartBudgetRecommendation() {
           }
           let rowClickTimer = null;
           row.addEventListener('click', (e) => {
-            if (e.target.closest('[data-tx-menu]') || e.target.closest('[data-tx-dropdown]') || e.target.closest('.tx-card-actions') || e.target.closest('[data-tx-del-quick]') || e.target.closest('[data-tx-inline]')) return;
+            if (e.target.closest('[data-tx-menu]') || e.target.closest('[data-tx-dropdown]') || e.target.closest('.tx-card-actions') || e.target.closest('[data-tx-del-quick]') || e.target.closest('[data-tx-inline]') || e.target.closest('.tx-row-check') || e.target.closest('[data-tx-drag]')) return;
             if (STATE.ui.inlineEditId) return;
             clearTimeout(rowClickTimer);
-            rowClickTimer = setTimeout(() => openEdit(tx.id), showTableRow ? 220 : 0);
+            rowClickTimer = setTimeout(() => openEdit(txRaw.id), showTableRow ? 220 : 0);
           });
           row.addEventListener('dblclick', (e) => {
             if (!showTableRow) return;
-            if (e.target.closest('[data-tx-menu]') || e.target.closest('.tx-card-actions') || e.target.closest('[data-tx-del-quick]')) return;
+            if (e.target.closest('[data-tx-menu]') || e.target.closest('.tx-card-actions') || e.target.closest('[data-tx-del-quick]') || e.target.closest('.tx-row-check') || e.target.closest('[data-tx-drag]')) return;
             e.preventDefault();
             e.stopPropagation();
             clearTimeout(rowClickTimer);
-            openInlineEdit(tx.id, row);
+            openInlineEdit(txRaw.id, row);
           });
           row.querySelector('[data-tx-inline]')?.addEventListener('click', (e) => {
             e.stopPropagation();
             clearTimeout(rowClickTimer);
-            openInlineEdit(tx.id, row);
+            openInlineEdit(txRaw.id, row);
           });
           list.appendChild(row);
         }
@@ -5180,17 +5256,19 @@ function generateSmartBudgetRecommendation() {
     }
 
     function openInlineEdit(txId, rowElement) {
-      const tx = STATE.transactions.find(t => t.id === txId);
-      if (!tx) return;
+      const baseTx = STATE.transactions.find(t => t.id === txId);
+      if (!baseTx) return;
+      const tx = window.monefyiTxEditSession?.applyTxDraft?.(baseTx) || baseTx;
 
       if (STATE.ui.inlineEditId && STATE.ui.inlineEditId !== txId) {
+        // Commit previous row to draft (no prompt), then open next
+        commitInlineEditToDraft();
         if (_inlineEditOutsideHandler) {
           document.removeEventListener('pointerdown', _inlineEditOutsideHandler, true);
           _inlineEditOutsideHandler = null;
         }
         STATE.ui.inlineEditId = null;
         rerender();
-        // Re-find row after rerender
         requestAnimationFrame(() => {
           const next = document.querySelector(`[data-tx-id="${CSS.escape(txId)}"]`);
           if (next) openInlineEdit(txId, next);
@@ -5210,7 +5288,6 @@ function generateSmartBudgetRecommendation() {
       };
 
       let catOptions = '';
-      // Prefer budget categories for the TX's own month (realisasi), else selected month
       const txMonth = toMonthKey(tx.date || STATE.selectedMonth || new Date());
       const cats = (getBudgetCategoryNamesForMonth(txMonth).length
         ? getBudgetCategoryNamesForMonth(txMonth)
@@ -5230,7 +5307,10 @@ function generateSmartBudgetRecommendation() {
         accOptions += `<option value="${escapeHtmlAttr(a)}" ${sel}>${escapeHtml(a)}</option>`;
       });
 
+      const isSelected = !!window.monefyiTxEditSession?.isTxSelected?.(tx.id);
       desktopRow.innerHTML = `
+        <div class="justify-center"><button type="button" class="tx-row-drag" data-tx-drag="${escapeHtmlAttr(tx.id)}" draggable="true" aria-label="Geser urutan"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/></svg></button></div>
+        <div class="justify-center"><input type="checkbox" class="tx-row-check tap" data-tx-check="${escapeHtmlAttr(tx.id)}" ${isSelected ? 'checked' : ''} aria-label="Pilih" /></div>
         <div class="tx-icon shrink-0" style="background:${categoryIconBg(tx.category)}">${categoryIconHtml(tx.category)}</div>
         <div><input type="text" class="w-full bg-[#161D28] border border-slate-700 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-emerald-500 inline-edit-title" value="${escapeHtmlAttr(tx.merchant || '')}" placeholder="Deskripsi"></div>
         <div><select class="w-full bg-[#161D28] border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500 inline-edit-cat">${catOptions}</select></div>
@@ -5238,10 +5318,10 @@ function generateSmartBudgetRecommendation() {
         <div><input type="date" class="w-full bg-[#161D28] border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500 inline-edit-date" value="${snapshot.date}"></div>
         <div><input type="number" class="w-full bg-[#161D28] border border-slate-700 rounded px-2 py-1 text-sm text-white text-right focus:outline-none focus:border-emerald-500 inline-edit-amount" value="${snapshot.amount}"></div>
         <div class="flex items-center justify-end gap-2">
-          <button type="button" class="p-1 text-emerald-400 hover:text-emerald-300 inline-edit-save" title="Simpan">
+          <button type="button" class="p-1 text-emerald-400 hover:text-emerald-300 inline-edit-save" title="Simpan ke draft">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
           </button>
-          <button type="button" class="p-1 text-slate-400 hover:text-slate-300 inline-edit-cancel" title="Batal">
+          <button type="button" class="p-1 text-slate-400 hover:text-slate-300 inline-edit-cancel" title="Batalkan perubahan baris">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
         </div>
@@ -5267,16 +5347,52 @@ function generateSmartBudgetRecommendation() {
           || cur.amount !== snapshot.amount;
       };
 
-      const exitInline = (skipConfirm = false) => {
-        if (!skipConfirm && isDirty()) {
-          const ok = confirm('Ada perubahan data yang belum disimpan. Buang perubahan?');
-          if (!ok) return false;
+      const commitInlineEditToDraft = () => {
+        if (!STATE.ui.inlineEditId) return;
+        const id = STATE.ui.inlineEditId;
+        const el = document.querySelector(`[data-tx-id="${CSS.escape(id)}"] .tx-card-row-table`);
+        if (!el) return;
+        const cur = {
+          merchant: (el.querySelector('.inline-edit-title')?.value || '').trim(),
+          category: el.querySelector('.inline-edit-cat')?.value || '',
+          account: el.querySelector('.inline-edit-acc')?.value || '',
+          date: el.querySelector('.inline-edit-date')?.value || '',
+          amount: Math.abs(Number(el.querySelector('.inline-edit-amount')?.value) || 0),
+        };
+        const original = STATE.transactions.find((t) => t.id === id);
+        if (!original) return;
+        const origSnap = {
+          merchant: original.merchant || '',
+          category: original.category || '',
+          account: original.account || '',
+          date: original.date || '',
+          amount: Math.abs(Number(original.amount || 0)),
+        };
+        const dirty = cur.merchant !== origSnap.merchant
+          || cur.category !== origSnap.category
+          || cur.account !== origSnap.account
+          || cur.date !== origSnap.date
+          || cur.amount !== origSnap.amount;
+        if (dirty) {
+          window.monefyiTxEditSession?.setTxDraft?.(id, cur, origSnap);
+        }
+      };
+
+      // Expose for switch-row path
+      openInlineEdit._commit = commitInlineEditToDraft;
+
+      const exitInline = (discardRow = false) => {
+        if (!discardRow && isDirty()) {
+          commitInlineEditToDraft();
+        } else if (discardRow) {
+          window.monefyiTxEditSession?.clearTxDraft?.(txId);
         }
         if (_inlineEditOutsideHandler) {
           document.removeEventListener('pointerdown', _inlineEditOutsideHandler, true);
           _inlineEditOutsideHandler = null;
         }
         STATE.ui.inlineEditId = null;
+        updateTxEditToolbar();
         rerender();
         return true;
       };
@@ -5284,23 +5400,9 @@ function generateSmartBudgetRecommendation() {
       const saveBtn = desktopRow.querySelector('.inline-edit-save');
       const cancelBtn = desktopRow.querySelector('.inline-edit-cancel');
 
-      saveBtn?.addEventListener('click', async (e) => {
+      saveBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
-        const cur = readValues();
-        tx.merchant = cur.merchant;
-        tx.category = cur.category;
-        tx.account = cur.account;
-        tx.date = cur.date;
-        tx.amount = cur.amount;
-        saveBtn.innerHTML = '<span class="text-[10px]">…</span>';
-        if (_inlineEditOutsideHandler) {
-          document.removeEventListener('pointerdown', _inlineEditOutsideHandler, true);
-          _inlineEditOutsideHandler = null;
-        }
-        STATE.ui.inlineEditId = null;
-        await upsertTransaction(tx);
-        if (typeof refreshAllUI === 'function') refreshAllUI({ syncRemote: false });
-        else rerender();
+        exitInline(false);
       });
 
       cancelBtn?.addEventListener('click', (e) => {
@@ -5308,24 +5410,224 @@ function generateSmartBudgetRecommendation() {
         exitInline(true);
       });
 
+      desktopRow.querySelector('[data-tx-check]')?.addEventListener('click', (e) => e.stopPropagation());
+      desktopRow.querySelector('[data-tx-check]')?.addEventListener('change', (e) => {
+        e.stopPropagation();
+        window.monefyiTxEditSession?.toggleTxSelected?.(tx.id, e.target.checked);
+        updateTxEditToolbar();
+      });
+      desktopRow.querySelector('[data-tx-drag]')?.addEventListener('click', (e) => e.stopPropagation());
+
       desktopRow.querySelectorAll('input, select').forEach((el) => {
         el.addEventListener('click', (e) => e.stopPropagation());
         el.addEventListener('pointerdown', (e) => e.stopPropagation());
+        el.addEventListener('change', () => {
+          if (isDirty()) {
+            window.monefyiTxEditSession?.setTxDraft?.(txId, readValues(), snapshot);
+            updateTxEditToolbar();
+          }
+        });
+        el.addEventListener('input', () => {
+          if (isDirty()) {
+            window.monefyiTxEditSession?.setTxDraft?.(txId, readValues(), snapshot);
+            updateTxEditToolbar();
+          }
+        });
       });
 
-      // Click outside → exit (warn if dirty)
+      // Click outside → keep draft, no confirm — user can keep working on the page
       setTimeout(() => {
         _inlineEditOutsideHandler = (e) => {
           if (!STATE.ui.inlineEditId) return;
           if (rowElement.contains(e.target)) return;
-          if (e.target.closest?.('#editBackdrop, .sheet-backdrop.open')) return;
-          e.preventDefault();
-          e.stopPropagation();
-          exitInline(false);
+          if (e.target.closest?.('#editBackdrop, .sheet-backdrop.open, #txGroupBar, .tx-edit-toolbar')) return;
+          commitInlineEditToDraft();
+          if (_inlineEditOutsideHandler) {
+            document.removeEventListener('pointerdown', _inlineEditOutsideHandler, true);
+            _inlineEditOutsideHandler = null;
+          }
+          STATE.ui.inlineEditId = null;
+          updateTxEditToolbar();
+          rerender();
         };
         document.addEventListener('pointerdown', _inlineEditOutsideHandler, true);
       }, 0);
     }
+
+    function commitInlineEditToDraft() {
+      if (typeof openInlineEdit._commit === 'function') openInlineEdit._commit();
+    }
+
+    async function updateTxEditToolbar() {
+      const st = window.monefyiTxEditSession?.getTxEditState?.() || {
+        draftCount: 0, selectedCount: 0, isDirty: false,
+      };
+      const saveBtn = $('#btnTxBulkSave');
+      const badge = $('#txDraftCountBadge');
+      const delBtn = $('#btnTxBulkDelete');
+      const copyBtn = $('#btnTxBulkCopy');
+      const dupBtn = $('#btnTxBulkDuplicate');
+      const undoBtn = $('#btnTxUndo');
+      const redoBtn = $('#btnTxRedo');
+
+      if (saveBtn) {
+        saveBtn.disabled = !st.isDirty;
+        saveBtn.classList.toggle('is-dirty', !!st.isDirty);
+      }
+      if (badge) {
+        badge.textContent = String(st.draftCount || 0);
+        badge.classList.toggle('hidden', !st.draftCount);
+      }
+      const hasSel = st.selectedCount > 0;
+      if (delBtn) delBtn.disabled = !hasSel;
+      if (copyBtn) copyBtn.disabled = !hasSel;
+      if (dupBtn) dupBtn.disabled = !hasSel;
+
+      try {
+        const canU = await window.monefyiUndo?.canUndo?.();
+        const canR = !!window.monefyiUndo?.canRedo?.();
+        if (undoBtn) undoBtn.disabled = !canU;
+        if (redoBtn) redoBtn.disabled = !canR;
+      } catch (_) {
+        if (undoBtn) undoBtn.disabled = true;
+        if (redoBtn) redoBtn.disabled = true;
+      }
+
+      const selectAll = $('#txSelectAll');
+      if (selectAll) {
+        const checks = [...document.querySelectorAll('#txList [data-tx-check]')];
+        const checked = checks.filter((c) => c.checked).length;
+        selectAll.checked = checks.length > 0 && checked === checks.length;
+        selectAll.indeterminate = checked > 0 && checked < checks.length;
+      }
+    }
+
+    async function saveAllTxDrafts() {
+      commitInlineEditToDraft();
+      const drafts = window.monefyiTxEditSession?.listTxDrafts?.() || [];
+      if (!drafts.length) return;
+      const saveBtn = $('#btnTxBulkSave');
+      if (saveBtn) saveBtn.disabled = true;
+      try {
+        for (const d of drafts) {
+          const tx = STATE.transactions.find((t) => t.id === d.id);
+          if (!tx) continue;
+          Object.assign(tx, d.patch);
+          await upsertTransaction(tx);
+          window.monefyiTxEditSession?.clearTxDraft?.(d.id);
+        }
+        if (typeof showToast === 'function') showToast('Perubahan tersimpan', 'success');
+        else if (typeof window.showToast === 'function') window.showToast('Perubahan tersimpan', 'success');
+      } catch (e) {
+        console.error('[tx] bulk save failed', e);
+        if (typeof showToast === 'function') showToast('Gagal menyimpan sebagian perubahan', 'warn');
+      }
+      updateTxEditToolbar();
+      if (typeof refreshAllUI === 'function') refreshAllUI({ syncRemote: false });
+      else rerender();
+    }
+
+    async function bulkDeleteSelectedTx() {
+      const ids = window.monefyiTxEditSession?.getTxEditState?.()?.selectedIds || [];
+      if (!ids.length) return;
+      if (!confirm(`Hapus ${ids.length} transaksi terpilih?`)) return;
+      for (const id of ids) {
+        await deleteTransaction(id, { confirmed: true });
+        window.monefyiTxEditSession?.clearTxDraft?.(id);
+      }
+      window.monefyiTxEditSession?.clearTxSelection?.();
+      updateTxEditToolbar();
+    }
+
+    function bulkCopySelectedTx() {
+      const ids = window.monefyiTxEditSession?.getTxEditState?.()?.selectedIds || [];
+      const rows = ids.map((id) => STATE.transactions.find((t) => t.id === id)).filter(Boolean);
+      if (!rows.length) return;
+      const text = rows.map((tx) => {
+        const sign = tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : '';
+        return `${tx.date}\t${tx.merchant || ''}\t${tx.category || ''}\t${tx.account || ''}\t${sign}${Math.abs(Number(tx.amount || 0))}`;
+      }).join('\n');
+      navigator.clipboard?.writeText?.(text).then(() => {
+        if (typeof showToast === 'function') showToast(`${rows.length} transaksi disalin`, 'success');
+      }).catch(() => {
+        if (typeof showToast === 'function') showToast('Gagal salin ke clipboard', 'warn');
+      });
+    }
+
+    async function bulkDuplicateSelectedTx() {
+      const ids = window.monefyiTxEditSession?.getTxEditState?.()?.selectedIds || [];
+      if (!ids.length) return;
+      for (const id of ids) {
+        const src = STATE.transactions.find((t) => t.id === id);
+        if (!src) continue;
+        const copy = {
+          ...src,
+          id: uuid(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          meta: { ...(src.meta || {}), duplicated_from: src.id },
+        };
+        delete copy._sync_status;
+        await upsertTransaction(copy);
+      }
+      window.monefyiTxEditSession?.clearTxSelection?.();
+      updateTxEditToolbar();
+      if (typeof refreshAllUI === 'function') refreshAllUI({ syncRemote: false });
+      else rerender();
+    }
+
+    function wireTxEditToolbar() {
+      if (STATE.ui.txToolbarReady) return;
+      STATE.ui.txToolbarReady = true;
+
+      import('./services/tx-edit-session.js').catch((e) => {
+        console.warn('[tx] edit session load failed', e);
+      });
+
+      $('#btnTxUndo')?.addEventListener('click', async () => {
+        await window.monefyiUndo?.undo?.();
+        updateTxEditToolbar();
+        rerender();
+      });
+      $('#btnTxRedo')?.addEventListener('click', async () => {
+        await window.monefyiUndo?.redo?.();
+        updateTxEditToolbar();
+        rerender();
+      });
+      $('#btnTxBulkSave')?.addEventListener('click', () => saveAllTxDrafts());
+      $('#btnTxBulkDelete')?.addEventListener('click', () => bulkDeleteSelectedTx());
+      $('#btnTxBulkCopy')?.addEventListener('click', () => bulkCopySelectedTx());
+      $('#btnTxBulkDuplicate')?.addEventListener('click', () => bulkDuplicateSelectedTx());
+
+      $('#txSelectAll')?.addEventListener('change', (e) => {
+        const on = !!e.target.checked;
+        const ids = [...document.querySelectorAll('#txList [data-tx-check]')]
+          .map((el) => el.getAttribute('data-tx-check'))
+          .filter(Boolean);
+        window.monefyiTxEditSession?.setTxSelectedMany?.(ids, on);
+        document.querySelectorAll('#txList [data-tx-check]').forEach((el) => {
+          el.checked = on;
+          el.closest('[data-tx-id]')?.classList.toggle('is-selected', on);
+        });
+        updateTxEditToolbar();
+      });
+
+      try {
+        window.monefyiTxEditSession?.onTxEditChange?.(() => updateTxEditToolbar());
+        window.monefyiUndo?.onUndoChange?.(() => updateTxEditToolbar());
+      } catch (_) { /* ignore */ }
+
+      updateTxEditToolbar();
+    }
+
+    // Wire once DOM ready path reaches here
+    try { wireTxEditToolbar(); } catch (e) { console.warn('[tx] toolbar wire failed', e); }
+
+    window.addEventListener('beforeunload', (e) => {
+      if (!window.monefyiTxEditSession?.getTxEditState?.()?.isDirty) return;
+      e.preventDefault();
+      e.returnValue = '';
+    });
 
     function renderTransactions(){
       const allTxs = getFilteredTransactions();
@@ -5369,6 +5671,7 @@ function generateSmartBudgetRecommendation() {
       }
       renderTransactionsCards(txs);
       requestAnimationFrame(() => window.MonefyiUI?.syncChipIndicator?.());
+      try { updateTxEditToolbar(); } catch (_) { /* ignore */ }
     }
 
     function getHomePageContext() {
@@ -6238,6 +6541,13 @@ function setSheetPosition(mode) {
       const url = String(data.url || '');
       const hash = (url.includes('#') ? url.split('#')[1] : url.replace(/^\//, '')).toLowerCase();
 
+      if (data.action === 'show_imports' || hash.includes('email-import')) {
+        if (typeof window.showEmailImportSetup === 'function') {
+          window.showEmailImportSetup();
+        }
+        return;
+      }
+
       if (data.transactionId && typeof openEdit === 'function') {
         try {
           if (typeof toggleNav === 'function') toggleNav('list');
@@ -6274,6 +6584,42 @@ function setSheetPosition(mode) {
         console.warn('showNotificationSettings', e);
       }
     };
+
+    window.showEmailImportSetup = async function showEmailImportSetup() {
+      try {
+        const mod = await import('./components/email-import-setup.js');
+        await mod.showEmailImportSetup();
+      } catch (e) {
+        console.warn('showEmailImportSetup', e);
+      }
+    };
+
+    function initEmailImportRealtime() {
+      if (window.__monefyiEmailImportRealtime) return;
+      window.__monefyiEmailImportRealtime = true;
+      setTimeout(async () => {
+        try {
+          const { subscribeToImports } = await import('./services/email-import-client.js');
+          const { showNotification } = await import('./services/push-notification.js');
+          const fmtAmt = (n) => new Intl.NumberFormat('id-ID').format(Math.round(Math.abs(n || 0)));
+
+          subscribeToImports(async (newImport) => {
+            if (!newImport || newImport.status === 'error') return;
+            const typePrefix = newImport.parsed_type === 'income' ? '+' : '-';
+            await showNotification({
+              title: `Import dari ${newImport.bank_id || 'Email'}`,
+              body: `${typePrefix}Rp ${fmtAmt(newImport.parsed_amount)} — ${newImport.parsed_merchant || 'Transaksi'}`,
+              tag: `email_import_${newImport.id}`,
+              force: true,
+              type: 'system',
+              data: { url: '/app/#email-import', action: 'show_imports' },
+            });
+          });
+        } catch (e) {
+          console.warn('[app] Email import realtime failed:', e);
+        }
+      }, 5000);
+    }
 
     function openAffiliate(){
       // openAffModal is defined later (affiliate modal section)
@@ -10575,6 +10921,19 @@ function toggleNav_legacy(mode) {
 
 
 function toggleNav(view, triggerEl) {
+      // Leaving TX list with unsaved drafts → warn once
+      const leavingTxList = (view === 'dash' || view === 'budget' || view === 'advisor')
+        && !STATE.ui.dashboardOpen
+        && !STATE.ui.budgetPageOpen
+        && !STATE.ui.monevisorPageOpen;
+      if (leavingTxList && window.monefyiTxEditSession?.getTxEditState?.()?.isDirty) {
+        const n = window.monefyiTxEditSession.getTxEditState().draftCount;
+        const ok = confirm(`Ada ${n} perubahan transaksi belum disimpan. Keluar tanpa menyimpan?`);
+        if (!ok) return;
+        window.monefyiTxEditSession.clearAllTxDrafts();
+        updateTxEditToolbar();
+      }
+
       closeAddSheet();
       // Don't tear down destination page chrome before openBudget/openAdvisor runs
       if (view !== 'advisor') closeAdvisor();
@@ -11045,6 +11404,13 @@ function toggleNav(view, triggerEl) {
       try { closeMenu?.(); } catch { /* ignore */ }
       if (typeof window.showNotificationSettings === 'function') {
         window.showNotificationSettings();
+      }
+    });
+
+    $('#btnEmailImport')?.addEventListener('click', () => {
+      try { closeMenu?.(); } catch { /* ignore */ }
+      if (typeof window.showEmailImportSetup === 'function') {
+        window.showEmailImportSetup();
       }
     });
 

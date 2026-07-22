@@ -403,6 +403,11 @@ enabled = true
 verify_jwt = false
 entrypoint = "./functions/auth-send-email/index.ts"
 
+[functions.email-import]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/email-import/index.ts"
+
 [functions.lynk-webhook]
 enabled = true
 verify_jwt = false

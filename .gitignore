@@ -14,3 +14,5 @@ monefyi_planner/refined-project-planner-prompt/.env.local
 # Next.js build cache (may embed local env/tokens)
 **/.next/
 *.tsbuildinfo
+.vercel
+.env*

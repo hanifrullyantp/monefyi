@@ -1,5 +1,5 @@
 // Offline-capable service worker — v7 budget killer feature.
-const CACHE_VERSION = 'v30-nav-no-tx-flash';
+const CACHE_VERSION = 'v32-email-import';
 const STATIC_CACHE = `monefyi-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `monefyi-runtime-${CACHE_VERSION}`;
 const IMAGES_CACHE = `monefyi-images-${CACHE_VERSION}`;
@@ -23,6 +23,7 @@ const shellPaths = [
   './css/desktop-layout.css',
   './css/transaction-detail.css',
   './css/notification-settings.css',
+  './css/email-import.css',
   './js/app.js',
   './js/config.js',
   './js/monefyi-ui.js',
@@ -50,6 +51,7 @@ const shellPaths = [
   './js/services/notification-center.js',
   './js/services/push-notification.js',
   './js/services/notification-scheduler.js',
+  './js/services/email-import-client.js',
   './js/services/income-source.js',
   './js/services/global-filter.js',
   './js/services/budget-generator.js',
@@ -69,6 +71,7 @@ const shellPaths = [
   './js/components/floating-save-bar.js',
   './js/components/notification-bell.js',
   './js/components/notification-settings.js',
+  './js/components/email-import-setup.js',
   './js/components/budget-summary-hero.js',
   './js/components/income-manager.js',
   './js/services/install-prompt.js',

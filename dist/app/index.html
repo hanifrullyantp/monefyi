@@ -38,7 +38,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
  
-  <link rel="stylesheet" crossorigin href="/app/assets/index-BQ46DHq_.css">
+  <link rel="stylesheet" crossorigin href="/app/assets/index-Ct9M8L0D.css">
 </head>
 <body>
   <!-- Logo Monefyi (satu sumber untuk loading, sidebar, header, auth) -->
@@ -854,14 +854,40 @@
           <div id="txSearchWrap" class="tx-search-wrap tx-search--collapsed shrink-0 md:hidden">
             <input id="txSearchInput" class="tap w-full rounded-xl app-input px-3 py-2 text-sm" placeholder="Cari merchant / catatan / kategori..." />
           </div>
-          <div id="txGroupBar" class="tx-group-bar shrink-0 flex items-center gap-2 mb-1.5 px-0.5">
-            <label for="txGroupBy" class="text-[11px] app-muted whitespace-nowrap">Kelompokkan</label>
-            <select id="txGroupBy" class="tap flex-1 min-w-0 rounded-xl app-input px-2.5 py-1.5 text-xs md:text-sm" aria-label="Kelompokkan transaksi">
-              <option value="date">Tanggal</option>
-              <option value="category">Kategori</option>
-              <option value="account">Akun</option>
-              <option value="none">Tanpa kelompok</option>
-            </select>
+          <div id="txGroupBar" class="tx-group-bar tx-edit-toolbar shrink-0 mb-1.5 px-0.5">
+            <div class="tx-edit-toolbar__group">
+              <label for="txGroupBy" class="text-[11px] app-muted whitespace-nowrap">Kelompokkan</label>
+              <select id="txGroupBy" class="tap min-w-0 rounded-xl app-input px-2.5 py-1.5 text-xs md:text-sm" aria-label="Kelompokkan transaksi">
+                <option value="date">Tanggal</option>
+                <option value="category">Kategori</option>
+                <option value="account">Akun</option>
+                <option value="none">Tanpa kelompok</option>
+              </select>
+            </div>
+            <div class="tx-edit-toolbar__actions" role="toolbar" aria-label="Aksi edit transaksi">
+              <button type="button" id="btnTxUndo" class="tx-edit-btn tap" title="Undo" aria-label="Undo" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6.7 2.9L3 13"/></svg>
+              </button>
+              <button type="button" id="btnTxRedo" class="tx-edit-btn tap" title="Redo" aria-label="Redo" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6.7 2.9L21 13"/></svg>
+              </button>
+              <span class="tx-edit-toolbar__sep" aria-hidden="true"></span>
+              <button type="button" id="btnTxBulkCopy" class="tx-edit-btn tap" title="Salin dipilih" aria-label="Salin" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+              </button>
+              <button type="button" id="btnTxBulkDuplicate" class="tx-edit-btn tap" title="Duplikat dipilih" aria-label="Duplikat" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/><path d="M12 12v6"/><path d="M9 15h6"/></svg>
+              </button>
+              <button type="button" id="btnTxBulkDelete" class="tx-edit-btn tx-edit-btn--danger tap" title="Hapus dipilih" aria-label="Hapus" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+              </button>
+              <span class="tx-edit-toolbar__sep" aria-hidden="true"></span>
+              <button type="button" id="btnTxBulkSave" class="tx-edit-btn tx-edit-btn--save tap" title="Simpan semua perubahan" aria-label="Simpan" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                <span>Simpan</span>
+                <span id="txDraftCountBadge" class="tx-edit-badge hidden">0</span>
+              </button>
+            </div>
           </div>
           <div id="txTypeChips" class="hidden" aria-hidden="true">
             <span id="txChipIndicator" class="tx-chip-indicator" aria-hidden="true"></span>
@@ -910,7 +936,11 @@
             </div>
 
             <!-- Desktop Table Header -->
-            <div id="txListDesktopHeader" class="hidden md:grid grid-cols-[32px_2fr_1fr_1fr_1fr_1fr_1.4fr] gap-2.5 px-2.5 py-1.5 text-[11px] font-medium text-slate-400 mb-1.5">
+            <div id="txListDesktopHeader" class="hidden md:grid grid-cols-[20px_28px_32px_2fr_1fr_1fr_1fr_1fr_1.4fr] gap-2.5 px-2.5 py-1.5 text-[11px] font-medium text-slate-400 mb-1.5">
+              <div class="tx-col-drag" aria-hidden="true"></div>
+              <div class="flex items-center justify-center">
+                <input type="checkbox" id="txSelectAll" class="tx-row-check tap" title="Pilih semua" aria-label="Pilih semua" />
+              </div>
               <div></div>
               <div>Deskripsi</div>
               <div>Kategori</div>
@@ -1666,6 +1696,14 @@
                   <span>
                     <div class="font-semibold">Pengaturan Notifikasi</div>
                     <div class="text-xs app-muted">Briefing, bill reminder, milestone &amp; batas harian.</div>
+                  </span>
+                  <span class="text-xs app-muted shrink-0">›</span>
+                </button>
+
+                <button type="button" id="btnEmailImport" class="tap w-full flex items-center justify-between gap-3 rounded-xl app-chip px-3 py-3 text-left text-sm hover:opacity-90">
+                  <span>
+                    <div class="font-semibold">Email Auto-Import</div>
+                    <div class="text-xs app-muted">Forward email bank → transaksi otomatis (konfirmasi).</div>
                   </span>
                   <span class="text-xs app-muted shrink-0">›</span>
                 </button>
