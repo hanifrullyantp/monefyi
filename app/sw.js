@@ -1,5 +1,5 @@
 // Offline-capable service worker — v7 budget killer feature.
-const CACHE_VERSION = 'v35-tx-list-visible';
+const CACHE_VERSION = 'v36-splash-boot';
 const STATIC_CACHE = `monefyi-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `monefyi-runtime-${CACHE_VERSION}`;
 const IMAGES_CACHE = `monefyi-images-${CACHE_VERSION}`;
@@ -103,7 +103,7 @@ const shellPaths = [
   './icons/monefyi-mark.svg',
 ];
 
-const shellUrls = [OFFLINE_URL, ...shellPaths.map((p) => new URL(p, self.location).href)];
+const shellUrls = [INDEX_URL, OFFLINE_URL, ...shellPaths.map((p) => new URL(p, self.location).href)];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -175,20 +175,45 @@ self.addEventListener('fetch', (event) => {
 });
 
 /**
- * Navigation: always fetch fresh index.html (hashed assets change each deploy).
+ * Navigation: stale-while-revalidate so splash HTML paints instantly from cache,
+ * then refresh index in the background after deploy.
  * @param {Request} request
  */
 async function handleNavigation(request) {
-  try {
-    const response = await fetch(request, { cache: 'no-store' });
-    if (response.ok) return response;
-  } catch {
-    /* offline fallback below */
+  const cache = await caches.open(RUNTIME_CACHE);
+  const cached =
+    (await cache.match(request)) ||
+    (await cache.match(INDEX_URL)) ||
+    (await caches.match(INDEX_URL));
+
+  const fetchPromise = fetch(request, { cache: 'no-store' })
+    .then(async (response) => {
+      if (response.ok) {
+        await cache.put(INDEX_URL, response.clone());
+        try {
+          await cache.put(request, response.clone());
+        } catch {
+          /* ignore put failures for opaque/navigate variants */
+        }
+      }
+      return response;
+    })
+    .catch(() => null);
+
+  if (cached) {
+    fetchPromise.catch(() => {});
+    return cached;
   }
 
+  const fetched = await fetchPromise;
+  if (fetched) return fetched;
+
   try {
-    const response = await fetch(INDEX_URL, { cache: 'no-store' });
-    if (response.ok) return response;
+    const indexFresh = await fetch(INDEX_URL, { cache: 'no-store' });
+    if (indexFresh.ok) {
+      await cache.put(INDEX_URL, indexFresh.clone());
+      return indexFresh;
+    }
   } catch {
     /* offline fallback below */
   }

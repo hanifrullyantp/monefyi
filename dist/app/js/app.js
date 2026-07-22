@@ -11778,35 +11778,35 @@ function toggleNav(view, triggerEl) {
     });
 
     // =========================
-    // Init
+    // Init (splash-gated boot)
     // =========================
-    (async function init(){
-      const bootStarted = Date.now();
-      const MIN_LOADER_MS = 450;
+    let __bootStarted = false;
+
+    /**
+     * Single app boot entry — integrates with inline #monefyi-splash.
+     * Does not re-implement auth/shell; uses initSupabase → bootstrapAuthed / auth-only.
+     */
+    async function bootApp() {
+      if (__bootStarted) return;
+      __bootStarted = true;
+
+      const splash = window.__splash;
 
       if (await verifyBundledAssets()) return;
 
-      function hideLoadingOverlay() {
-        const loader = $('#loadingOverlay');
-        if (!loader) return;
-        loader.style.opacity = '0';
-        loader.style.pointerEvents = 'none';
-        setTimeout(() => {
-          loader.style.visibility = 'hidden';
-          loader.style.display = 'none';
-        }, 500);
-      }
-
       try {
-        $('#appShell').classList.add('hidden');
+        splash?.updateStatus?.('Memuat aset…');
+        $('#appShell')?.classList.add('hidden');
         try { showAuth(); } catch {}
         initDefaultPeriod();
         setTab('quick');
 
         try { applyLanguageToUI(); } catch {}
 
+        splash?.updateStatus?.('Memeriksa koneksi…');
         await verifyNetworkAccess().catch(() => null);
 
+        splash?.updateStatus?.('Menghubungkan…');
         try {
           if (!window.supabase?.createClient) {
             $('#authOverlay')?.classList.remove('hidden');
@@ -11833,18 +11833,20 @@ function toggleNav(view, triggerEl) {
           }
         }
 
+        splash?.updateStatus?.(STATE.db?.user ? 'Menyiapkan data…' : 'Siap masuk…');
+
         $('#btnPrintReport')?.addEventListener('click', () => printReport());
         if ($('#mDate')) $('#mDate').value = toISODate(new Date());
         if ($('#mAccount')) $('#mAccount').value = getLastUsedAccount();
         applyAppBranding();
         rerender();
       } finally {
-        const elapsed = Date.now() - bootStarted;
-        await sleep(Math.max(0, MIN_LOADER_MS - elapsed));
-        hideLoadingOverlay();
+        splash?.dismiss?.();
         document.body.classList.add('app-ready');
       }
-    })();
+    }
+
+    bootApp();
 
     // =========================
     // Refresh UI (satu pintu masuk)

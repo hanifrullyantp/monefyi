@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <base href="/app/" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#0F1117" id="metaThemeColor" />
+  <meta name="theme-color" content="#0a0e1a" id="metaThemeColor" />
   <meta name="color-scheme" content="dark" />
   <meta name="format-detection" content="telephone=no" />
   <title>Monefyi — AI Personal Finance</title>
@@ -13,7 +13,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
   <!-- PWA Manifest (versioned to avoid stale cache) -->
-  <link rel="manifest" href="./manifest.webmanifest?v=2026-07-19" />
+  <link rel="manifest" href="./manifest.webmanifest?v=2026-07-23-splash" />
   <link rel="icon" href="./icons/monefyi-logo.png" type="image/png" />
 
   <!-- Android PWA -->
@@ -52,7 +52,216 @@
  
 </head>
 <body>
-  <!-- Logo Monefyi (satu sumber untuk loading, sidebar, header, auth) -->
+  <!-- ============================================
+       SPLASH SCREEN (Inline - No JS dependency)
+       ============================================ -->
+  <div id="monefyi-splash" class="splash-screen">
+    <div class="splash-content">
+      <div class="splash-logo-wrap">
+        <svg class="splash-logo" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect width="120" height="120" rx="28" fill="#B8E600"/>
+          <path d="
+            M 30 90
+            L 30 40
+            L 48 40
+            L 60 65
+            L 72 40
+            L 90 40
+            L 90 90
+            L 75 90
+            L 75 60
+            L 63 82
+            L 57 82
+            L 45 60
+            L 45 90
+            Z
+          " fill="#0a0e1a"/>
+          <path d="
+            M 52 35
+            L 68 35
+            L 80 95
+            L 64 95
+            Z
+          " fill="#B8E600"/>
+        </svg>
+        <div class="splash-shimmer"></div>
+      </div>
+      <div class="splash-title">Monefyi</div>
+      <div class="splash-loader">
+        <div class="splash-loader-bar">
+          <div class="splash-loader-fill"></div>
+        </div>
+      </div>
+      <div class="splash-status" id="splash-status">Memuat...</div>
+    </div>
+  </div>
+
+  <style>
+  .splash-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: #0a0e1a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+  }
+  .splash-screen.fade-out {
+    opacity: 0;
+    visibility: hidden;
+  }
+  .splash-content {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+  .splash-logo-wrap {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    animation: splashPulse 2s ease-in-out infinite;
+  }
+  .splash-logo {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 8px 24px rgba(184, 230, 0, 0.35));
+  }
+  .splash-shimmer {
+    position: absolute;
+    inset: 0;
+    border-radius: 28px;
+    overflow: hidden;
+  }
+  .splash-shimmer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.2) 50%,
+      transparent 100%
+    );
+    animation: splashShimmer 2s ease-in-out infinite;
+  }
+  .splash-title {
+    font-family: Montserrat, system-ui, sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: white;
+    letter-spacing: -0.02em;
+    opacity: 0;
+    animation: splashFadeIn 0.6s ease 0.3s forwards;
+  }
+  .splash-loader {
+    width: 120px;
+    opacity: 0;
+    animation: splashFadeIn 0.6s ease 0.6s forwards;
+  }
+  .splash-loader-bar {
+    height: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .splash-loader-fill {
+    height: 100%;
+    width: 30%;
+    background: linear-gradient(90deg, #B8E600, #d4f04a);
+    border-radius: 2px;
+    animation: splashProgress 2s ease-in-out infinite;
+  }
+  .splash-status {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.4);
+    opacity: 0;
+    animation: splashFadeIn 0.6s ease 0.9s forwards;
+    min-height: 16px;
+  }
+  #app-root.app-hidden {
+    visibility: hidden;
+    opacity: 0;
+  }
+  #app-root.app-visible {
+    visibility: visible;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+  }
+  @keyframes splashPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+  @keyframes splashShimmer {
+    0% { left: -100%; }
+    50%, 100% { left: 100%; }
+  }
+  @keyframes splashFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes splashProgress {
+    0% { width: 10%; margin-left: 0; }
+    50% { width: 60%; margin-left: 20%; }
+    100% { width: 10%; margin-left: 90%; }
+  }
+  </style>
+
+  <script>
+  window.__splash = {
+    el: null,
+    startTime: Date.now(),
+    MIN_DISPLAY: 1500,
+    MAX_DISPLAY: 8000,
+    _dismissed: false,
+
+    updateStatus: function(text) {
+      var statusEl = document.getElementById('splash-status');
+      if (statusEl) statusEl.textContent = text;
+    },
+
+    dismiss: function() {
+      if (this._dismissed) return;
+      this._dismissed = true;
+      var splash = document.getElementById('monefyi-splash');
+      var appRoot = document.getElementById('app-root');
+      if (!splash) {
+        if (appRoot) {
+          appRoot.classList.remove('app-hidden');
+          appRoot.classList.add('app-visible');
+        }
+        return;
+      }
+      var elapsed = Date.now() - this.startTime;
+      var remaining = Math.max(0, this.MIN_DISPLAY - elapsed);
+      setTimeout(function() {
+        splash.classList.add('fade-out');
+        if (appRoot) {
+          appRoot.classList.remove('app-hidden');
+          appRoot.classList.add('app-visible');
+        }
+        setTimeout(function() {
+          if (splash.parentNode) splash.parentNode.removeChild(splash);
+        }, 600);
+      }, remaining);
+    }
+  };
+
+  setTimeout(function() {
+    if (document.getElementById('monefyi-splash')) {
+      console.warn('[splash] Timeout reached, forcing dismiss');
+      window.__splash.dismiss();
+    }
+  }, window.__splash.MAX_DISPLAY);
+  </script>
+
+  <div id="app-root" class="app-hidden">
+  <!-- Logo Monefyi (satu sumber untuk sidebar, header, auth) -->
   <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" focusable="false" style="position:absolute;width:0;height:0;overflow:hidden">
     <symbol id="monefyi-logo" viewBox="0 0 800 807">
       <image width="800" height="807" href="./icons/monefyi-logo.png"/>
@@ -63,15 +272,6 @@
   </svg>
 
   <div class="min-h-dvh">
-
-    <!-- Loading Screen -->
-    <div id="loadingOverlay">
-      <div class="loading-logo brand-logo-slot">
-        <svg class="brand-logo-svg loading-logo-svg" width="80" height="80" aria-hidden="true"><use href="#monefyi-logo"/></svg>
-        <img id="loadingLogoImg" class="brand-logo-custom hidden w-full h-full object-cover" alt="" />
-      </div>
-      <div class="mt-5 text-sm app-muted loading-text">Initializing Monefyi...</div>
-    </div>
 
     <!-- Onboarding Tutorial Overlay -->
     <div id="tourOverlay" class="fixed inset-0 z-[130] hidden" style="background: rgba(0,0,0,.72)">
@@ -2219,8 +2419,6 @@
       <div id="desktopFilterSlot" class="relative w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl app-card-opaque p-4 shadow-2xl"></div>
     </div>
 
-    </div>
-
     <!-- Onboarding -->
     <div id="onboardingBackdrop" class="sheet-backdrop fixed inset-0 z-[125] hidden" style="background:rgba(0,0,0,.75)">
       <div class="flex items-center justify-center min-h-dvh p-4">
@@ -2238,6 +2436,8 @@
         </div>
       </div>
     </div>
+
+  </div><!-- /#app-root -->
 
   <script src="js/i18n.js"></script>
   <script src="js/monefyi-ui.js"></script>
