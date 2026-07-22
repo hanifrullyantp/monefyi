@@ -419,6 +419,21 @@ entrypoint = "./functions/lynk-webhook/index.ts"
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/lynk-webhook/*.html" ]
 
+[functions.start-trial]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/start-trial/index.ts"
+
+[functions.email-drip]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/email-drip/index.ts"
+
+[functions.monefyi-admin-revenue]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/monefyi-admin-revenue/index.ts"
+
 [functions.monefyi-landing-config]
 enabled = true
 verify_jwt = false

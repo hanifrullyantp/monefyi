@@ -808,7 +808,40 @@ src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
         <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-green-900/20 via-[#020617] to-[#020617]"></div>
         <div class="container mx-auto px-6 relative z-10">
             <h2 class="text-3xl md:text-4xl font-bold text-center mb-4 text-white">PILIH PAKET INVESTASI ANDA</h2>
-            <p class="text-center text-gray-400 mb-12">Mulai atur keuangan dengan cerdas hari ini.</p>
+            <p class="text-center text-gray-400 mb-4">Mulai atur keuangan dengan cerdas hari ini.</p>
+            <p class="text-center text-sm text-gray-500 mb-8">Digunakan 500+ pengguna aktif · ⭐ 4.8/5 · Rata-rata hemat Rp 500rb/bulan</p>
+
+            <div class="overflow-x-auto max-w-4xl mx-auto mb-10">
+              <table class="w-full text-sm text-left border border-white/10 rounded-xl overflow-hidden" id="pricing-compare">
+                <thead class="bg-slate-900/80 text-gray-300">
+                  <tr>
+                    <th class="p-3">Fitur</th>
+                    <th class="p-3">Trial</th>
+                    <th class="p-3">Monthly</th>
+                    <th class="p-3">Lifetime</th>
+                  </tr>
+                </thead>
+                <tbody class="text-gray-400">
+                  <tr class="border-t border-white/5"><td class="p-3 text-white">Harga</td><td class="p-3">Gratis 7 hari</td><td class="p-3">Rp 49rb/bln</td><td class="p-3">Rp 499rb</td></tr>
+                  <tr class="border-t border-white/5"><td class="p-3 text-white">Transaksi</td><td class="p-3">50</td><td class="p-3">Unlimited</td><td class="p-3">Unlimited</td></tr>
+                  <tr class="border-t border-white/5"><td class="p-3 text-white">AI Coach</td><td class="p-3">—</td><td class="p-3">✓</td><td class="p-3">✓</td></tr>
+                  <tr class="border-t border-white/5"><td class="p-3 text-white">OCR / Email import</td><td class="p-3">5 OCR</td><td class="p-3">✓</td><td class="p-3">✓</td></tr>
+                  <tr class="border-t border-white/5"><td class="p-3 text-white">Priority + Early access</td><td class="p-3">—</td><td class="p-3">—</td><td class="p-3">✓</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="text-center text-xs text-gray-500 mb-8">💯 Garansi 7 hari uang kembali untuk Monthly. Tidak puas? Hubungi kami.</p>
+
+            <div class="max-w-md mx-auto mb-12 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-6" id="trial-box">
+              <h3 class="text-lg font-bold text-white mb-2">Coba Gratis 7 Hari</h3>
+              <p class="text-sm text-gray-400 mb-4">Tanpa kartu kredit. Email konfirmasi + akses app langsung.</p>
+              <form id="trial-form" class="space-y-3">
+                <input id="trial-name" type="text" placeholder="Nama" class="w-full rounded-xl bg-slate-900 border border-white/10 px-3 py-2 text-sm text-white" />
+                <input id="trial-email" type="email" required placeholder="Email" class="w-full rounded-xl bg-slate-900 border border-white/10 px-3 py-2 text-sm text-white" />
+                <button type="submit" class="w-full rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-3 text-sm">Mulai Trial</button>
+                <p id="trial-status" class="text-xs text-gray-400 text-center"></p>
+              </form>
+            </div>
             
             <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto" id="pricing-grid">
                 <!-- JS GENERATED -->
@@ -882,8 +915,12 @@ src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
     <!-- MAIN JAVASCRIPT -->
     <script>
         const SUPABASE_URL = 'https://zzwqfmdyncxbolestkqp.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6d3FmbWR5bmN4Ym9sZXN0a3FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYzNDI3OTQsImV4cCI6MjA4MTkxODc5NH0.qtvqzDicRmIixFh3A46ExuitpAXDWaYHmB7NVBxsc7w';
         const LANDING_FN = 'monefyi-landing-config';
         const AFFILIATE_LANDING_FN = 'affiliate-landing';
+        const START_TRIAL_FN = 'start-trial';
+        const DEFAULT_MONTHLY_URL = 'https://lynk.id/asfin-ai/9zexz9z5wom1/checkout';
+        const DEFAULT_LIFETIME_URL = 'https://lynk.id/asfin-ai/j3q0x5ke3g49/checkout';
 
         // Default landing slug for content
         const SLUG = 'default';
@@ -924,6 +961,63 @@ src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
             }
 
             await fetchContent();
+
+            // UTM first-touch + landing_view
+            try {
+              const params = new URLSearchParams(location.search);
+              const touch = {
+                utm_source: params.get('utm_source') || '',
+                utm_medium: params.get('utm_medium') || '',
+                utm_campaign: params.get('utm_campaign') || '',
+                ref_code: params.get('ref') || '',
+                captured_at: new Date().toISOString(),
+              };
+              if ((touch.utm_source || touch.ref_code) && !localStorage.getItem('monefyi_acq_first_touch')) {
+                localStorage.setItem('monefyi_acq_first_touch', JSON.stringify(touch));
+              }
+              fetch(`${SUPABASE_URL}/rest/v1/acquisition_events`, {
+                method: 'POST',
+                headers: {
+                  apikey: SUPABASE_ANON_KEY,
+                  Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+                  'Content-Type': 'application/json',
+                  Prefer: 'return=minimal',
+                },
+                body: JSON.stringify({
+                  event: 'landing_view',
+                  ...(JSON.parse(localStorage.getItem('monefyi_acq_first_touch') || '{}')),
+                }),
+              }).catch(() => {});
+            } catch (_) {}
+
+            const trialForm = document.getElementById('trial-form');
+            trialForm?.addEventListener('submit', async (ev) => {
+              ev.preventDefault();
+              const status = document.getElementById('trial-status');
+              const email = document.getElementById('trial-email')?.value?.trim();
+              const name = document.getElementById('trial-name')?.value?.trim();
+              if (!email) return;
+              status.textContent = 'Membuat trial…';
+              try {
+                const touch = JSON.parse(localStorage.getItem('monefyi_acq_first_touch') || '{}');
+                const device_hash = btoa([navigator.userAgent, screen.width, screen.height].join('|')).slice(0, 64);
+                const res = await fetch(`${SUPABASE_URL}/functions/v1/${START_TRIAL_FN}`, {
+                  method: 'POST',
+                  headers: {
+                    apikey: SUPABASE_ANON_KEY,
+                    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ email, name, device_hash, ...touch }),
+                });
+                const out = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(out.error || res.statusText);
+                status.textContent = 'Trial aktif! Cek email lalu buka app.';
+                setTimeout(() => { location.href = out.app_url || '/app/'; }, 1200);
+              } catch (e) {
+                status.textContent = e.message || 'Gagal memulai trial.';
+              }
+            });
 
             // Allow admin preview to override data via message
             window.addEventListener('message', (e) => {
@@ -1693,12 +1787,35 @@ src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
             try { triggerButtonPixel(pixelEvent || 'InitiateCheckout'); } catch (e) {}
 
             const links = window.appData?.config?.links || {};
-            const url = planIndex === 0 ? (links.pricing_monthly_url || '') : (links.pricing_lifetime_url || '');
+            let url = planIndex === 0
+              ? (links.pricing_monthly_url || DEFAULT_MONTHLY_URL)
+              : (links.pricing_lifetime_url || DEFAULT_LIFETIME_URL);
+
+            try {
+              const touch = JSON.parse(localStorage.getItem('monefyi_acq_first_touch') || '{}');
+              if (url && (touch.utm_source || touch.ref_code)) {
+                const u = new URL(url);
+                if (touch.utm_source) u.searchParams.set('utm_source', touch.utm_source);
+                if (touch.utm_medium) u.searchParams.set('utm_medium', touch.utm_medium);
+                if (touch.utm_campaign) u.searchParams.set('utm_campaign', touch.utm_campaign);
+                if (touch.ref_code) u.searchParams.set('ref', touch.ref_code);
+                url = u.toString();
+              }
+              fetch(`${SUPABASE_URL}/rest/v1/acquisition_events`, {
+                method: 'POST',
+                headers: {
+                  apikey: SUPABASE_ANON_KEY,
+                  Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+                  'Content-Type': 'application/json',
+                  Prefer: 'return=minimal',
+                },
+                body: JSON.stringify({ event: 'cta_click', ...touch, meta: { plan: planIndex === 0 ? 'monthly' : 'lifetime' } }),
+              }).catch(() => {});
+            } catch (_) {}
 
             if (url) {
                 window.location.href = url;
             } else {
-                // fallback: scroll to pricing section
                 document.querySelector('#daftar').scrollIntoView({ behavior: 'smooth' });
             }
         }

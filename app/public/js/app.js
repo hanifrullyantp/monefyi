@@ -1392,20 +1392,35 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
     }
 
 function computeSubscriptionStatus(profile){
+      const api = window.__monefyiEntitlements;
+      if (api?.computeAccessState) {
+        const access = api.computeAccessState(profile);
+        STATE.access = access;
+        return {
+          planType: access.planType,
+          planExpiresAt: access.planExpiresAt,
+          expired: access.expired && !access.inGrace && access.accessMode !== 'full' && access.accessMode !== 'grace',
+          daysLeft: access.daysLeft,
+          inGrace: access.inGrace,
+          graceDaysLeft: access.graceDaysLeft,
+          readOnly: access.readOnly,
+          premiumDisabled: access.premiumDisabled,
+          accessMode: access.accessMode,
+        };
+      }
       const planType = (profile?.plan_type || 'none');
       const expiresRaw = profile?.plan_expires_at || null;
       const planExpiresAt = expiresRaw ? new Date(expiresRaw) : null;
 
       let expired = false;
       let daysLeft = null;
-      if (planType === 'monthly' && planExpiresAt) {
+      if ((planType === 'monthly' || planType === 'trial') && planExpiresAt) {
         const now = new Date();
         if (now.getTime() >= planExpiresAt.getTime()) {
           expired = true;
           daysLeft = 0;
         } else {
           daysLeft = differenceInDays(planExpiresAt, now);
-          // if within same day but still valid, floor might be 0; treat as 1 day left
           if (daysLeft <= 0) daysLeft = 1;
         }
       }
@@ -1415,6 +1430,8 @@ function computeSubscriptionStatus(profile){
 
     function applySubscriptionUI(){
       const sub = STATE.subscription;
+      const access = STATE.access || {};
+      const monthlyUrl = String(STATE.appConfig?.checkout_monthly_url || MONTHLY_CHECKOUT_URL || 'https://monefyi.com#daftar');
 
       // Aff button (always visible for members; opens modal)
       const btnAff = $('#btnAff');
@@ -1423,17 +1440,47 @@ function computeSubscriptionStatus(profile){
         btnAff.onclick = () => openAffModal();
       }
 
-      // Expired overlay
+      // Hard overlay only when fully blocked (none / trial past grace)
+      const hardBlock = access.accessMode === 'blocked' || (access.readOnly && access.planType === 'trial' && access.expired && !access.inGrace);
       const expiredOverlay = $('#expiredOverlay');
       if (expiredOverlay) {
-        expiredOverlay.classList.toggle('hidden', !sub.expired);
+        expiredOverlay.classList.toggle('hidden', !hardBlock);
       }
-      if (sub.expired) {
-        // lock scroll
+      if (hardBlock) {
         document.body.style.overflow = 'hidden';
+      } else if (!document.getElementById('upgradeSheetHost')?.classList.contains('is-open')) {
+        document.body.style.overflow = '';
       }
 
-      // Banner H-3
+      // Sticky entitlement / trial / grace banner
+      const entBanner = $('#entitlementBanner');
+      const entText = $('#entitlementBannerText');
+      const entCta = $('#entitlementBannerCta');
+      if (entBanner && entText) {
+        let msg = '';
+        if (access.planType === 'trial' && !access.expired && typeof access.daysLeft === 'number') {
+          msg = `Trial: ${access.daysLeft} hari tersisa`;
+        } else if (access.inGrace && access.planType === 'trial') {
+          msg = `Trial habis. Upgrade dalam ${access.graceDaysLeft} hari untuk lanjut.`;
+        } else if (access.inGrace && access.planType === 'monthly') {
+          msg = `Paket berakhir. Perpanjang sebelum grace habis (${access.graceDaysLeft} hari).`;
+        } else if (access.accessMode === 'degraded') {
+          msg = 'Paket berakhir — mode terbatas. Perpanjang untuk fitur premium.';
+        } else if (access.readOnly) {
+          msg = 'Akses read-only. Data aman — upgrade untuk lanjut catat.';
+        }
+        const showEnt = !!msg;
+        entBanner.classList.toggle('is-visible', showEnt);
+        if (showEnt) {
+          entText.textContent = msg;
+          if (entCta) {
+            entCta.href = monthlyUrl;
+            entCta.textContent = 'Upgrade →';
+          }
+        }
+      }
+
+      // Banner H-3 monthly renew
       const banner = $('#planBanner');
       if (banner) {
         const show = (sub.planType === 'monthly' && !sub.expired && typeof sub.daysLeft === 'number' && sub.daysLeft > 0 && sub.daysLeft <= 3);
@@ -1445,7 +1492,6 @@ function computeSubscriptionStatus(profile){
         }
       }
 
-      // Hook expired logout
       const btnExpiredLogout = $('#btnExpiredLogout');
       if (btnExpiredLogout) {
         btnExpiredLogout.onclick = async () => {
@@ -1454,11 +1500,19 @@ function computeSubscriptionStatus(profile){
         };
       }
 
-      // Renew link (monthly)
-      const monthlyUrl = String(STATE.appConfig?.checkout_monthly_url || MONTHLY_CHECKOUT_URL || 'https://monefyi.com#paket');
       $('#btnRenewPlan')?.setAttribute('href', monthlyUrl);
       $('#planBannerBtn')?.setAttribute('href', monthlyUrl);
     }
+
+    /** Soft-sell gate for premium features */
+    function requireEntitlement(featureKey) {
+      const access = STATE.access || window.__monefyiEntitlements?.computeAccessState?.(STATE.db?.profile);
+      if (window.monefyiUpgradeSheet?.requireFeature) {
+        return window.monefyiUpgradeSheet.requireFeature(featureKey, access);
+      }
+      return true;
+    }
+    window.requireEntitlement = requireEntitlement;
 
     async function loadProfileAndSettings(){
       let p = null;
@@ -1516,7 +1570,17 @@ function computeSubscriptionStatus(profile){
       STATE.subscription.planExpiresAt = sub.planExpiresAt;
       STATE.subscription.expired = sub.expired;
       STATE.subscription.daysLeft = sub.daysLeft;
+      STATE.subscription.inGrace = sub.inGrace;
+      STATE.subscription.readOnly = sub.readOnly;
+      STATE.subscription.accessMode = sub.accessMode;
       applySubscriptionUI();
+
+      // First-login wizard (after profile known)
+      try {
+        setTimeout(() => {
+          window.monefyiOnboarding?.maybeShowOnboardingWizard?.();
+        }, 600);
+      } catch (_) { /* ignore */ }
     }
 
     async function saveProfile(partial){
@@ -6957,6 +7021,7 @@ function openTutorialTopic(id) {
       $('#cfgMonthlyUrl').value = String(STATE.appConfig?.checkout_monthly_url || MONTHLY_CHECKOUT_URL || '');
       $('#cfgLifetimeUrl').value = String(STATE.appConfig?.checkout_lifetime_url || LIFETIME_CHECKOUT_URL);
       $('#cfgAffiliateCommission').value = String(STATE.appConfig?.affiliate_commission || 100000);
+      loadAdminPlansForm();
       $('#adminConfigStatus').textContent = '—';
       $('#adminUsersStatus').textContent = '—';
       $('#adminUsersList').innerHTML = '<div class="text-sm app-muted">Klik Refresh untuk memuat user (butuh Edge Function admin).</div>';
@@ -6968,24 +7033,137 @@ function openTutorialTopic(id) {
     });
 
     function setAdminTab(tab){
-      const isUsers = tab === 'users';
-      $('#adminUsersPanel').classList.toggle('hidden', !isUsers);
-      $('#adminConfigPanel').classList.toggle('hidden', isUsers);
-      const btn1 = $('#adminTabUsers');
-      const btn2 = $('#adminTabConfig');
-      if (btn1 && btn2) {
-        btn1.style.background = isUsers ? 'rgba(14,165,233,.14)' : '';
-        btn1.style.borderColor = isUsers ? 'rgba(56,189,248,.25)' : '';
-        btn1.style.color = isUsers ? 'rgba(186,230,253,.95)' : '';
-
-        btn2.style.background = !isUsers ? 'rgba(14,165,233,.14)' : '';
-        btn2.style.borderColor = !isUsers ? 'rgba(56,189,248,.25)' : '';
-        btn2.style.color = !isUsers ? 'rgba(186,230,253,.95)' : '';
-      }
+      const panels = {
+        users: '#adminUsersPanel',
+        plans: '#adminPlansPanel',
+        revenue: '#adminRevenuePanel',
+        config: '#adminConfigPanel',
+      };
+      Object.entries(panels).forEach(([k, sel]) => {
+        $(sel)?.classList.toggle('hidden', k !== tab);
+      });
+      const tabBtns = {
+        users: '#adminTabUsers',
+        plans: '#adminTabPlans',
+        revenue: '#adminTabRevenue',
+        config: '#adminTabConfig',
+      };
+      Object.entries(tabBtns).forEach(([k, sel]) => {
+        const btn = $(sel);
+        if (!btn) return;
+        const on = k === tab;
+        btn.style.background = on ? 'rgba(14,165,233,.14)' : '';
+        btn.style.borderColor = on ? 'rgba(56,189,248,.25)' : '';
+        btn.style.color = on ? 'rgba(186,230,253,.95)' : '';
+      });
+      if (tab === 'revenue') adminFetchRevenue();
     }
 
     $('#adminTabUsers')?.addEventListener('click', ()=>setAdminTab('users'));
+    $('#adminTabPlans')?.addEventListener('click', ()=>setAdminTab('plans'));
+    $('#adminTabRevenue')?.addEventListener('click', ()=>setAdminTab('revenue'));
     $('#adminTabConfig')?.addEventListener('click', ()=>setAdminTab('config'));
+
+    function loadAdminPlansForm(){
+      const plans = STATE.appConfig?.platform_settings?.plans || {};
+      const t = plans.trial || {};
+      const m = plans.monthly || {};
+      const l = plans.lifetime || {};
+      if ($('#cfgPlanTrialEnabled')) $('#cfgPlanTrialEnabled').checked = t.enabled !== false;
+      if ($('#cfgPlanTrialDays')) $('#cfgPlanTrialDays').value = t.duration_days ?? 7;
+      if ($('#cfgPlanTrialMaxTx')) $('#cfgPlanTrialMaxTx').value = t.max_transactions ?? 50;
+      if ($('#cfgPlanMonthlyEnabled')) $('#cfgPlanMonthlyEnabled').checked = m.enabled !== false;
+      if ($('#cfgPlanMonthlyPrice')) $('#cfgPlanMonthlyPrice').value = m.price_display || 'Rp 49rb/bln';
+      if ($('#cfgPlanLifetimeEnabled')) $('#cfgPlanLifetimeEnabled').checked = l.enabled !== false;
+      if ($('#cfgPlanLifetimePrice')) $('#cfgPlanLifetimePrice').value = l.price_display || 'Rp 499rb';
+    }
+
+    $('#btnSaveAdminPlans')?.addEventListener('click', async ()=>{
+      if (!isAdmin()) return;
+      $('#adminPlansStatus').textContent = 'Menyimpan…';
+      try {
+        const platform_settings = {
+          ...(STATE.appConfig?.platform_settings || {}),
+          plans: {
+            trial: {
+              enabled: !!$('#cfgPlanTrialEnabled')?.checked,
+              duration_days: Number($('#cfgPlanTrialDays')?.value) || 7,
+              max_transactions: Number($('#cfgPlanTrialMaxTx')?.value) || 50,
+              price_display: 'Gratis',
+            },
+            monthly: {
+              enabled: !!$('#cfgPlanMonthlyEnabled')?.checked,
+              duration_days: 30,
+              price_display: ($('#cfgPlanMonthlyPrice')?.value || 'Rp 49rb/bln').trim(),
+            },
+            lifetime: {
+              enabled: !!$('#cfgPlanLifetimeEnabled')?.checked,
+              duration_days: null,
+              price_display: ($('#cfgPlanLifetimePrice')?.value || 'Rp 499rb').trim(),
+            },
+          },
+        };
+        const data = await upsertAppConfigAdmin({
+          checkout_monthly_url: STATE.appConfig?.checkout_monthly_url || MONTHLY_CHECKOUT_URL,
+          checkout_lifetime_url: STATE.appConfig?.checkout_lifetime_url || LIFETIME_CHECKOUT_URL,
+          platform_settings,
+        });
+        STATE.appConfig = data || { ...STATE.appConfig, platform_settings };
+        $('#adminPlansStatus').textContent = 'Tersimpan.';
+      } catch (e) {
+        console.warn(e);
+        $('#adminPlansStatus').textContent = 'Gagal menyimpan.';
+      }
+    });
+
+    async function callAdminUpdateUser(body){
+      if (!STATE.db.enabled || !STATE.db.session?.access_token) throw new Error('Not authed');
+      const fn = (CFG.fnAdminUpdateUser || 'monefyi-admin-update-user');
+      const url = `${SUPABASE_URL.replace(/\/+$/,'')}/functions/v1/${fn}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: supabaseEdgeHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(body),
+      });
+      const txt = await res.text().catch(()=> '');
+      if (!res.ok) throw new Error(txt || `HTTP ${res.status}`);
+      return JSON.parse(txt || '{}');
+    }
+
+    async function adminFetchRevenue(){
+      const box = $('#adminRevenueMetrics');
+      if (!box) return;
+      box.textContent = 'Memuat…';
+      try {
+        const fn = CFG.fnAdminRevenue || 'monefyi-admin-revenue';
+        const url = `${SUPABASE_URL.replace(/\/+$/,'')}/functions/v1/${fn}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: supabaseEdgeHeaders({ 'Content-Type': 'application/json' }),
+          body: '{}',
+        });
+        const out = await res.json();
+        if (!res.ok) throw new Error(out?.error || res.status);
+        const m = out.metrics || {};
+        const f = m.funnel || {};
+        const fmt = (n) => new Intl.NumberFormat('id-ID').format(Math.round(Number(n) || 0));
+        box.innerHTML = `
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="rounded-xl app-card p-2"><div class="app-muted">MRR</div><div class="font-bold text-sm">Rp ${fmt(m.mrr)}</div></div>
+            <div class="rounded-xl app-card p-2"><div class="app-muted">ARR</div><div class="font-bold text-sm">Rp ${fmt(m.arr)}</div></div>
+            <div class="rounded-xl app-card p-2"><div class="app-muted">Revenue bulan ini</div><div class="font-bold text-sm">Rp ${fmt(m.revenue_this_month)}</div></div>
+            <div class="rounded-xl app-card p-2"><div class="app-muted">Lifetime total</div><div class="font-bold text-sm">Rp ${fmt(m.total_lifetime_revenue)}</div></div>
+          </div>
+          <div class="mt-3 text-xs">Users: Trial ${m.trial_users||0} · Monthly ${m.monthly_users||0} · Lifetime ${m.lifetime_users||0} · Expired ${m.expired_users||0}</div>
+          <div class="mt-1 text-xs">Trial→Paid: ${m.trial_to_paid_rate||0}% · Landing→Paid: ${m.conversion_rate||0}%</div>
+          <div class="mt-2 text-xs app-muted">Funnel 30d: Landing ${f.landing_views||0} → CTA ${f.cta_clicks||0} → Trial ${f.trial_starts||0} → Paid ${f.payments||0}</div>
+        `;
+      } catch (e) {
+        console.error(e);
+        box.textContent = 'Gagal memuat revenue (deploy edge function monefyi-admin-revenue).';
+      }
+    }
+    $('#btnAdminRefreshRevenue')?.addEventListener('click', adminFetchRevenue);
 
     $('#btnSaveAdminConfig')?.addEventListener('click', async ()=>{
       if (!isAdmin()) return;
@@ -7058,8 +7236,9 @@ function openTutorialTopic(id) {
           const planType = String(u.plan_type || 'none');
           const planStatus = String(u.plan_status || 'none');
           const expiry = u.expires_at ? new Date(u.expires_at).toLocaleDateString('id-ID') : '—';
+          const uid = escapeHtmlAttr(u.id || u.user_id || '');
           return `
-            <div class="rounded-2xl app-card p-3 text-sm mb-2">
+            <div class="rounded-2xl app-card p-3 text-sm mb-2" data-admin-user="${uid}">
               <div class="flex items-center justify-between gap-2">
                 <div class="font-semibold">${escapeHtml(u.name || u.email || 'User')}</div>
                 <div class="text-xs app-muted2">${escapeHtml(role)}</div>
@@ -7070,9 +7249,51 @@ function openTutorialTopic(id) {
                 Status: <span class="font-semibold">${escapeHtml(planStatus)}</span> •
                 Exp: ${escapeHtml(expiry)}
               </div>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <select class="tap rounded-lg app-input px-2 py-1 text-xs" data-admin-plan>
+                  ${['none','trial','monthly','lifetime'].map((p)=>`<option value="${p}" ${p===planType?'selected':''}>${p}</option>`).join('')}
+                </select>
+                <input type="date" class="tap rounded-lg app-input px-2 py-1 text-xs" data-admin-expiry value="${u.expires_at ? String(u.expires_at).slice(0,10) : ''}" />
+                <button type="button" class="tap rounded-lg px-2 py-1 text-xs font-semibold text-white" style="background:var(--brand-green)" data-admin-save-plan>Simpan</button>
+                <button type="button" class="tap rounded-lg px-2 py-1 text-xs font-semibold app-chip" data-admin-grant-trial>Grant Trial</button>
+              </div>
             </div>
           `;
         }).join('');
+        $('#adminUsersList').querySelectorAll('[data-admin-save-plan]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const row = btn.closest('[data-admin-user]');
+            const userId = row?.getAttribute('data-admin-user');
+            const plan_type = row?.querySelector('[data-admin-plan]')?.value;
+            const dateVal = row?.querySelector('[data-admin-expiry]')?.value;
+            try {
+              await callAdminUpdateUser({
+                user_id: userId,
+                plan_type,
+                plan_expires_at: plan_type === 'lifetime' ? null : (dateVal ? new Date(dateVal).toISOString() : null),
+              });
+              $('#adminUsersStatus').textContent = 'Plan diupdate.';
+              adminFetchUsers();
+            } catch (err) {
+              console.error(err);
+              $('#adminUsersStatus').textContent = 'Gagal update plan.';
+            }
+          });
+        });
+        $('#adminUsersList').querySelectorAll('[data-admin-grant-trial]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const row = btn.closest('[data-admin-user]');
+            const userId = row?.getAttribute('data-admin-user');
+            try {
+              await callAdminUpdateUser({ user_id: userId, grant_trial: true, trial_days: 7 });
+              $('#adminUsersStatus').textContent = 'Trial di-grant.';
+              adminFetchUsers();
+            } catch (err) {
+              console.error(err);
+              $('#adminUsersStatus').textContent = 'Gagal grant trial.';
+            }
+          });
+        });
         $('#adminUsersStatus').textContent = `${items.length} user`;
       } catch (e) {
         console.error('adminFetchUsers failed:', e);
@@ -7423,6 +7644,35 @@ function openTutorialTopic(id) {
     tx.meta = { ...(tx.meta || {}), pending: true };
   }
 
+  const index = STATE.transactions.findIndex(t => t.id === tx.id);
+  const before = index >= 0 ? { ...STATE.transactions[index] } : null;
+  const isCreate = index < 0;
+
+  // Entitlement: read-only / trial cap
+  if (!opts.skipEntitlement) {
+    const access = STATE.access || window.__monefyiEntitlements?.computeAccessState?.(STATE.db?.profile);
+    if (access?.readOnly && (isCreate || !opts.silent)) {
+      window.monefyiUpgradeSheet?.openUpgradeSheet?.({
+        title: 'Akses terbatas',
+        body: 'Paket kamu sudah berakhir atau dalam mode read-only. Upgrade untuk menambah/edit transaksi.',
+        preview: 'Data lama tetap aman dan bisa dibaca.',
+      });
+      return { success: false, error: 'read_only' };
+    }
+    if (isCreate && access?.entitlements) {
+      const max = access.entitlements.max_transactions;
+      const check = window.__monefyiEntitlements?.checkCap?.(STATE.transactions.length, max);
+      if (check && !check.ok) {
+        window.monefyiUpgradeSheet?.openUpgradeSheet?.({
+          title: 'Batas transaksi trial',
+          body: `Kamu sudah catat ${max} transaksi (max trial). Upgrade untuk unlimited.`,
+          preview: 'Monthly & Lifetime: transaksi tanpa batas.',
+        });
+        return { success: false, error: 'tx_cap' };
+      }
+    }
+  }
+
   if (tx.type === 'expense' || !tx.type) {
     try {
       const { applyBudgetLinkOnSave } = await import('./services/budget-linker.js');
@@ -7431,10 +7681,6 @@ function openTutorialTopic(id) {
       console.warn('[budget] link on save skipped', linkErr);
     }
   }
-
-  const index = STATE.transactions.findIndex(t => t.id === tx.id);
-  const before = index >= 0 ? { ...STATE.transactions[index] } : null;
-  const isCreate = index < 0;
 
   if (index >= 0) {
     STATE.transactions[index] = { ...tx };
@@ -9958,6 +10204,7 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
 
     async function sendCoachMessage(){
       if (COACH.sending) return;
+      if (typeof requireEntitlement === 'function' && !requireEntitlement('ai_coach')) return;
       const inp = $('#coachInput');
       const msg = (inp?.value || '').trim();
       if (!msg) return;

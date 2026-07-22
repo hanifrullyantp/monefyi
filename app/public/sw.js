@@ -1,5 +1,5 @@
 // Offline-capable service worker — v7 budget killer feature.
-const CACHE_VERSION = 'v36-splash-boot';
+const CACHE_VERSION = 'v36-funnel-monetization';
 const STATIC_CACHE = `monefyi-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `monefyi-runtime-${CACHE_VERSION}`;
 const IMAGES_CACHE = `monefyi-images-${CACHE_VERSION}`;
@@ -24,6 +24,7 @@ const shellPaths = [
   './css/transaction-detail.css',
   './css/notification-settings.css',
   './css/email-import.css',
+  './css/onboarding.css',
   './js/app.js',
   './js/config.js',
   './js/monefyi-ui.js',
@@ -55,6 +56,8 @@ const shellPaths = [
   './js/services/income-source.js',
   './js/services/global-filter.js',
   './js/services/budget-generator.js',
+  './js/services/entitlements.js',
+  './js/services/acquisition.js',
   './js/services/budget-template.js',
   './js/services/budget-changes-tracker.js',
   './js/services/monevisor-client.js',
@@ -68,6 +71,8 @@ const shellPaths = [
   './js/components/global-filter-popup.js',
   './js/components/tx-page-widgets.js',
   './js/components/budget-generator-modal.js',
+  './js/components/upgrade-sheet.js',
+  './js/components/onboarding-wizard.js',
   './js/components/floating-save-bar.js',
   './js/components/notification-bell.js',
   './js/components/notification-settings.js',

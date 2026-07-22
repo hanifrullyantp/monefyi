@@ -12,7 +12,8 @@
 // - LYNK_SIGNATURE_TOKEN          (if set, webhook must include header X-Lynk-Signature exactly equal to this token)
 // - RESEND_API_KEY                (if set, sends confirmation email via Resend)
 // - RESEND_FROM_EMAIL             (e.g. "Monefyi <noreply@support.monefyi.com>")
-// - APP_URL                       (default: https://planner.monefyi.com)
+// - APP_URL                       (default: https://app.monefyi.com)
+// - REQUIRE_LYNK_SIGNATURE        (optional: "true" requires LYNK_SIGNATURE_TOKEN)
 // - MONTHLY_DAYS                  (default: 30)
 //
 // Notes:
@@ -148,17 +149,27 @@ serve(async (req) => {
     });
   }
 
-  // Optional signature check (token-based)
-  const expectedSig = pickEnv("LYNK_SIGNATURE_TOKEN", "");
+  // Signature check — LYNK_SIGNATURE_TOKEN or legacy LYNK_WEBHOOK_SECRET
+  const expectedSig = pickEnv("LYNK_SIGNATURE_TOKEN", "") || pickEnv("LYNK_WEBHOOK_SECRET", "");
+  const requireSig = pickEnv("REQUIRE_LYNK_SIGNATURE", "false").toLowerCase() === "true";
+  if (requireSig && !expectedSig) {
+    console.error("❌ REQUIRE_LYNK_SIGNATURE=true but signature secret missing");
+    return new Response(JSON.stringify({ error: "Server misconfigured: signature required" }), {
+      status: 500,
+      headers: { ...corsHeaders, ...jsonHeaders },
+    });
+  }
   if (expectedSig) {
-    const got = (req.headers.get("X-Lynk-Signature") || "").trim();
+    const got = (req.headers.get("X-Lynk-Signature") || req.headers.get("x-lynk-signature") || "").trim();
     if (!got || got !== expectedSig) {
-      console.error("❌ Invalid signature:", { expected: expectedSig, got });
+      console.error("❌ Invalid signature");
       return new Response(JSON.stringify({ error: "Invalid signature" }), {
         status: 401,
         headers: { ...corsHeaders, ...jsonHeaders },
       });
     }
+  } else {
+    console.warn("⚠️ No Lynk signature secret set — webhook accepts unsigned requests");
   }
 
   const SUPABASE_URL = pickEnv("SUPABASE_URL");
@@ -278,7 +289,7 @@ serve(async (req) => {
   let isNewUser = false;
   let generatedPassword: string | null = null;
 
-  const appUrl = pickEnv("APP_URL", "https://planner.monefyi.com");
+  const appUrl = pickEnv("APP_URL", "https://app.monefyi.com");
 
   console.log("👥 Looking for existing user:", customerEmail);
 
@@ -408,9 +419,14 @@ serve(async (req) => {
     } else {
       const addDaysCount = (durationDays || 30) * Math.max(1, qty);
       let baseDate = now;
-      if (currentType === "monthly" && currentExpires && currentExpires.getTime() > now.getTime()) {
-        baseDate = currentExpires;
-        console.log("🔄 Extending from existing expiry:", toDateOnlyISO(baseDate));
+      if (
+        (currentType === "monthly" || currentType === "trial") &&
+        currentExpires &&
+        currentExpires.getTime() > now.getTime()
+      ) {
+        // Trial convert or renew: extend from now for trial→paid, from expiry for renew
+        baseDate = currentType === "trial" ? now : currentExpires;
+        console.log("🔄 Extending from:", toDateOnlyISO(baseDate), "prev:", currentType);
       } else {
         console.log("🆕 New monthly from today:", toDateOnlyISO(now));
       }
@@ -435,6 +451,35 @@ serve(async (req) => {
       endDateForEmail = newExpires;
     }
   }
+
+  // 4b) Sync profiles.plan_* so app gating matches user_plans
+  try {
+    const profileRow: Record<string, unknown> = {
+      id: userId,
+      plan_type: finalPlanType,
+      plan_expires_at: finalExpiresAt ? finalExpiresAt.toISOString() : null,
+      status: "active",
+      updated_at: new Date().toISOString(),
+    };
+    if (isNewUser) {
+      profileRow.onboarding_completed = false;
+      if (customerName) profileRow.name = customerName;
+    }
+    await supa.from("profiles").upsert(profileRow, { onConflict: "id" });
+    console.log("✅ profiles.plan_* synced:", finalPlanType);
+  } catch (syncErr) {
+    console.error("❌ profiles sync failed:", (syncErr as Error)?.message || syncErr);
+  }
+
+  // 4c) Acquisition event (payment)
+  try {
+    await supa.from("acquisition_events").insert({
+      event: "payment",
+      user_id: userId,
+      email: customerEmail,
+      meta: { plan_type: finalPlanType, amount, ref_id: refId, product: productLabel },
+    });
+  } catch (_) { /* non-blocking */ }
 
   // 5) Send confirmation email
   console.log("📧 Building confirmation email...");

@@ -54,8 +54,26 @@ serve(async (req) => {
     if (body.email_notifications !== undefined) profilePatch.email_notifications = !!body.email_notifications;
     if (body.push_notifications !== undefined) profilePatch.push_notifications = !!body.push_notifications;
     if (body.admin_notes !== undefined) profilePatch.admin_notes = String(body.admin_notes).slice(0, 2000);
-    if (body.plan_type !== undefined) profilePatch.plan_type = String(body.plan_type);
+    // Grant trial shortcut
+    if (body.grant_trial === true || body.action === "grant_trial") {
+      const days = Number(body.trial_days || 7) || 7;
+      const expires = new Date(Date.now() + days * 86400000).toISOString();
+      body.plan_type = "trial";
+      body.plan_expires_at = expires;
+      body.status = body.status || "active";
+    }
+
+    if (body.plan_type !== undefined) {
+      const pt = String(body.plan_type).toLowerCase();
+      if (!["none", "trial", "monthly", "lifetime"].includes(pt)) {
+        return jsonResponse(req, { error: "Invalid plan_type" }, 400);
+      }
+      profilePatch.plan_type = pt;
+    }
     if (body.plan_expires_at !== undefined) profilePatch.plan_expires_at = body.plan_expires_at;
+    if (body.onboarding_completed !== undefined) {
+      profilePatch.onboarding_completed = !!body.onboarding_completed;
+    }
 
     profilePatch.updated_at = new Date().toISOString();
 

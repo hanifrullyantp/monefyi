@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Monefyi — Funnel & Monetisasi Preview (Phase 0)</title>
+  <style>
+    :root { --bg:#0b1118; --card:#131a24; --line:rgba(255,255,255,.08); --text:#f1f5f9; --muted:#8b9cb3; --green:#10b981; --amber:#f59e0b; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: ui-sans-serif, system-ui, sans-serif; background:var(--bg); color:var(--text); line-height:1.5; }
+    .wrap { max-width:1100px; margin:0 auto; padding:32px 20px 80px; }
+    h1 { font-size:1.75rem; margin:0 0 8px; }
+    h2 { font-size:1.25rem; margin:40px 0 12px; border-top:1px solid var(--line); padding-top:28px; }
+    h3 { font-size:1rem; margin:20px 0 8px; color:var(--green); }
+    p, li { color:var(--muted); }
+    .hero { background:linear-gradient(145deg, rgba(16,185,129,.18), var(--card)); border:1px solid rgba(16,185,129,.28); border-radius:16px; padding:24px; }
+    .badge { display:inline-block; background:rgba(16,185,129,.15); color:var(--green); font-size:12px; font-weight:700; padding:4px 10px; border-radius:999px; }
+    .grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; }
+    .card strong { color:var(--text); }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th, td { border:1px solid var(--line); padding:8px 10px; text-align:left; }
+    th { background:rgba(255,255,255,.04); color:var(--text); }
+    .wf { border:1px dashed rgba(16,185,129,.35); border-radius:12px; padding:14px; background:#0f1620; font-family:ui-monospace,monospace; font-size:12px; white-space:pre-wrap; color:#cbd5e1; }
+    .email { border-left:3px solid var(--green); padding:12px 14px; background:#0f1620; border-radius:0 10px 10px 0; margin:10px 0; }
+    .email b { color:var(--text); }
+    a { color:var(--green); }
+    .cta { display:inline-block; margin-top:12px; padding:10px 16px; background:var(--green); color:#06251c; font-weight:700; border-radius:10px; text-decoration:none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <span class="badge">PHASE 0 PREVIEW — Sign-off sebelum production</span>
+      <h1>Funnel User + Monetisasi Admin</h1>
+      <p>Artefak review: funnel, wireframe admin/landing/app, entitlement, email drip, revenue, referral. Implementasi production mengikuti approve dokumen ini.</p>
+      <a class="cta" href="./ENTITLEMENT_MATRIX.md">Buka Entitlement Matrix</a>
+    </div>
+
+    <h2>1. Funnel map</h2>
+    <div class="wf">Channel (UTM/ref)
+  → Landing pricing
+      ├─ Coba Gratis → start-trial → welcome + drip → Login
+      └─ Bayar Lynk → webhook → konfirmasi email → Login
+  → Onboarding wizard (jika !onboarding_completed)
+  → App + entitlements
+      ├─ Locked feature → upgrade bottom sheet → Lynk
+      └─ Cap / expiry → grace → degrade / overlay → Lynk</div>
+    <div class="grid" style="margin-top:16px">
+      <div class="card"><strong>CTA Trial</strong><p>Coba Gratis — tanpa Lynk</p></div>
+      <div class="card"><strong>CTA Monthly</strong><p>Berlangganan → Lynk monthly</p></div>
+      <div class="card"><strong>CTA Lifetime</strong><p>Beli Sekarang → Lynk lifetime</p></div>
+    </div>
+
+    <h2>2. Mode bisnis (admin toggle)</h2>
+    <table>
+      <tr><th>Mode</th><th>CTA landing</th><th>Akses awal</th></tr>
+      <tr><td>A Bayar 1x</td><td>Lifetime only</td><td>Setelah bayar</td></tr>
+      <tr><td>B Langganan + trial</td><td>Trial + Monthly (+ Lifetime opsional)</td><td>Trial atau bayar</td></tr>
+      <tr><td>A+B</td><td>Semua SKU enabled</td><td>Admin pilih tanpa redeploy</td></tr>
+    </table>
+
+    <h2>3. Wireframe Admin</h2>
+    <h3>Plans & Mode</h3>
+    <div class="wf">[Toggle Trial] [Toggle Monthly] [Toggle Lifetime]
+Trial days: [7]  Caps: tx 50 / akun 2 / budget 3 / OCR 5
+price_display Monthly: Rp 49rb   Lifetime: Rp 499rb
+Lynk URLs: [...]  [Simpan]</div>
+    <h3>Users</h3>
+    <div class="wf">Search email | Plan filter | Status
+User row → [Edit plan] [Grant Trial] [Force sync]
+Edit: plan_type | expires_at | status | ai_daily_limit</div>
+    <h3>Revenue & Funnel</h3>
+    <div class="wf">MRR  ARR  Lifetime revenue  Revenue this month
+Trial / Monthly / Lifetime counts
+Trial→Paid %   Churn %
+Landing → CTA → Trial → Paid (30d)
+[Export]</div>
+
+    <h2>4. Wireframe Landing — comparison</h2>
+    <table>
+      <tr><th>Fitur</th><th>Trial</th><th>Monthly</th><th>Lifetime</th></tr>
+      <tr><td>Harga</td><td>Gratis 7 hari</td><td>Rp 49rb/bln</td><td>Rp 499rb</td></tr>
+      <tr><td>Transaksi</td><td>50</td><td>Unlimited</td><td>Unlimited</td></tr>
+      <tr><td>AI Coach</td><td>❌</td><td>✅</td><td>✅</td></tr>
+      <tr><td>OCR</td><td>5</td><td>50/bln</td><td>Unlimited</td></tr>
+      <tr><td>Priority / Early</td><td>❌</td><td>❌</td><td>✅</td></tr>
+      <tr><td>CTA</td><td>Coba Gratis</td><td>Berlangganan</td><td>Beli Sekarang</td></tr>
+    </table>
+    <p>Social proof: 500+ pengguna · 4.8/5 · hemat rata-rata Rp 500rb/bulan. Money-back 7 hari untuk Monthly.</p>
+
+    <h2>5. Wireframe App</h2>
+    <div class="grid">
+      <div class="card"><strong>Trial banner</strong><p>Trial: 2 hari tersisa | Upgrade →</p></div>
+      <div class="card"><strong>Cap banner</strong><p>50 transaksi (max trial). Upgrade untuk unlimited.</p></div>
+      <div class="card"><strong>Upgrade sheet</strong><p>✨ AI Coach + preview teaser · Nanti / Lihat Paket</p></div>
+      <div class="card"><strong>Grace / expired</strong><p>Full + banner → read-only overlay</p></div>
+    </div>
+    <h3>Onboarding 3 langkah</h3>
+    <div class="wf">1. Goal (hemat / hutang / investasi / track) → monevisor_prefs.primary_goal
+2. Income + sumber → income_sources
+3. Budget 50/30/20 Terima | Nanti → budget-generator
+✓ Confetti → CTA Tambah Transaksi | Dashboard
+Flag: profiles.onboarding_completed</div>
+
+    <h2>6. Email drip mocks</h2>
+    <h3>Trial</h3>
+    <div class="email"><b>Day 0</b> Selamat datang di Monefyi! — Quick start · CTA Buka Monefyi</div>
+    <div class="email"><b>Day 2</b> Sudah catat 5 transaksi? — Teaser insight · CTA Dashboard</div>
+    <div class="email"><b>Day 4</b> Fitur yang belum kamu coba · CTA Coba Sekarang</div>
+    <div class="email"><b>Day 5</b> Trial tinggal 2 hari · CTA Upgrade Monthly</div>
+    <div class="email"><b>Day 7</b> Hari terakhir trial · CTA Upgrade (−20%)</div>
+    <div class="email"><b>Day 8</b> Trial berakhir — data aman · CTA Aktifkan Kembali</div>
+    <div class="email"><b>Day 14</b> Win-back −30% · CTA Klaim Diskon</div>
+    <h3>Paid</h3>
+    <div class="email"><b>Day 0</b> Terima kasih! Premium aktif</div>
+    <div class="email"><b>Day 7</b> Minggu pertama: pencapaianmu</div>
+    <div class="email"><b>Day 25</b> Perpanjangan dalam 5 hari (monthly)</div>
+    <div class="email"><b>Day 30</b> Laporan Monefyi bulan ini</div>
+
+    <h2>7. Referral / affiliate sketch</h2>
+    <div class="wf">User ref: monefyi.com/ref/ABCDE → +7d referrer / +3d referee
+Affiliate: ?ref=AFF_ID cookie 30d · 20% first payment → affiliate_commissions
+Admin tab atau affiliator.monefyi.com</div>
+
+    <h2>8. Sign-off</h2>
+    <p>Approve matrix + wireframe ini sebelum Phase 1 production. Lihat juga <a href="../ADMIN_RUNBOOK.md">ADMIN_RUNBOOK.md</a> (Phase 5).</p>
+  </div>
+</body>
+</html>
