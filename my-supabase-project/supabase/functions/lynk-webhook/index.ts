@@ -11,7 +11,7 @@
 // Optional env vars:
 // - LYNK_SIGNATURE_TOKEN          (if set, webhook must include header X-Lynk-Signature exactly equal to this token)
 // - RESEND_API_KEY                (if set, sends confirmation email via Resend)
-// - RESEND_FROM_EMAIL             (e.g. "Monefyi <no-reply@monefyi.com>")
+// - RESEND_FROM_EMAIL             (e.g. "Monefyi <noreply@support.monefyi.com>")
 // - APP_URL                       (default: https://planner.monefyi.com)
 // - MONTHLY_DAYS                  (default: 30)
 //

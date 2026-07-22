@@ -110,8 +110,8 @@ Alternatif: GitHub Actions → **Supabase Planner migrate & deploy** (butuh secr
 
 | Jenis email | Mekanisme | Pengirim |
 |-------------|-----------|----------|
-| Daftar, verifikasi, reset password, magic link | **Auth Send Email Hook** → `auth-send-email` → Resend API | `Monefyi <noreply@monefyi.com>` |
-| Undangan tim, welcome, join request, approve/reject, role, remove | Edge Functions → `_shared/email.ts` | `RESEND_FROM_EMAIL` (default `Monefyi <noreply@monefyi.com>`) |
+| Daftar, verifikasi, reset password, magic link | **Auth Send Email Hook** → `auth-send-email` → Resend API | `Monefyi <noreply@support.monefyi.com>` |
+| Undangan tim, welcome, join request, approve/reject, role, remove | Edge Functions → `_shared/email.ts` | `RESEND_FROM_EMAIL` (default `Monefyi <noreply@support.monefyi.com>`) |
 | Konfirmasi pembayaran Lynk | `lynk-webhook` → shared Resend | sama |
 
 **Aktifkan hook (sekali, setelah deploy):**
@@ -128,7 +128,7 @@ Script ini deploy `auth-send-email`, set `SEND_EMAIL_HOOK_SECRET`, dan enable ho
 
 ```
 RESEND_API_KEY
-RESEND_FROM_EMAIL=Monefyi <noreply@monefyi.com>
+RESEND_FROM_EMAIL=Monefyi <noreply@support.monefyi.com>
 SEND_EMAIL_HOOK_SECRET=v1,whsec_...   # dari Auth → Hooks → Send Email
 APP_URL=https://planner.monefyi.com
 ```

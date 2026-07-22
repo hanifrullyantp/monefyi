@@ -82,7 +82,7 @@ export async function showEmailImportSetup() {
           <h3 class="ei-section-title">${Icon('helpCircle', { size: 14 })} Cara Kerja</h3>
           <div class="ei-instructions">
             <div class="ei-step"><div class="ei-step-num">1</div><div class="ei-step-text"><strong>Aktifkan import</strong> dan copy alamat email unik kamu</div></div>
-            <div class="ei-step"><div class="ei-step-num">2</div><div class="ei-step-text"><strong>Buat filter/rule</strong> di Gmail/Outlook untuk forward email dari bank ke alamat tersebut</div></div>
+            <div class="ei-step"><div class="ei-step-num">2</div><div class="ei-step-text"><strong>Buat filter/rule</strong> di Gmail/Outlook untuk forward email dari bank ke alamat <code>tx-…@support.monefyi.com</code></div></div>
             <div class="ei-step"><div class="ei-step-num">3</div><div class="ei-step-text"><strong>Setiap transaksi bank masuk</strong>, Monefyi parse dan tampilkan untuk konfirmasi</div></div>
             <div class="ei-step"><div class="ei-step-num">4</div><div class="ei-step-text"><strong>Konfirmasi atau edit</strong> sebelum disimpan sebagai transaksi</div></div>
           </div>

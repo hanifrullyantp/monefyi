@@ -147,7 +147,10 @@ serve(async (req: Request) => {
 
     console.log("[email-import] from:", from, "to:", to, "subject:", subject);
 
-    const recipientMatch = to.match(/tx-([a-f0-9]+)@import\.monefyi\.com/i);
+    // Prefer support.monefyi.com; accept legacy import.monefyi.com during transition
+    const recipientMatch = to.match(
+      /tx-([a-f0-9]+)@(?:support|import)\.monefyi\.com/i,
+    );
     if (!recipientMatch) {
       return errorResponse(req, "Invalid recipient address", 400);
     }

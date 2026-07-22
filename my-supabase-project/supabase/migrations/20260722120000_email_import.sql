@@ -103,7 +103,7 @@ BEGIN
   END IF;
 
   v_short_id := substr(replace(p_user_id::text, '-', ''), 1, 8);
-  v_address := 'tx-' || v_short_id || '@import.monefyi.com';
+  v_address := 'tx-' || v_short_id || '@support.monefyi.com';
 
   INSERT INTO public.email_import_config (user_id, import_address, is_active, updated_at)
   VALUES (p_user_id, v_address, true, now())

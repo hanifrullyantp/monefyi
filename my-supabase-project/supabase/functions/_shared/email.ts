@@ -8,7 +8,7 @@ import {
 } from "./email-templates.ts";
 
 /** Verified domain on Resend — keep in sync with Dashboard SMTP sender. */
-export const RESEND_DEFAULT_FROM = "Monefyi <noreply@monefyi.com>";
+export const RESEND_DEFAULT_FROM = "Monefyi <noreply@support.monefyi.com>";
 
 export type SendEmailResult = {
   ok: boolean;
