@@ -176,7 +176,7 @@ export function showInstallGuide(mode) {
     <div class="install-guide-sheet" role="dialog" aria-modal="true" aria-label="${content.title}">
       <div class="install-guide-head">
         <h3>${content.title}</h3>
-        <button type="button" class="install-guide-close" data-action="close" aria-label="Tutup">✕</button>
+        <button type="button" class="install-guide-close sheet-close-btn" data-action="close" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </div>
       <ol class="install-guide-steps">
         ${content.steps.map((s) => `<li>${s}</li>`).join('')}
@@ -278,7 +278,7 @@ export function setupInstallBanner(options = {}) {
         <div class="install-actions">
           ${showInstallBtn ? '<button type="button" class="btn-install" data-action="install">Install</button>' : ''}
           <button type="button" class="btn-install btn-install--soft" data-action="guide">Cara</button>
-          <button type="button" class="btn-dismiss" data-action="dismiss" aria-label="Tutup">✕</button>
+          <button type="button" class="btn-dismiss sheet-close-btn" data-action="dismiss" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
         </div>
       </div>
     `;

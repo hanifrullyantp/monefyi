@@ -38,8 +38,8 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
  
-  <script type="module" crossorigin src="/app/assets/index-DOSxZQsk.js"></script>
-  <link rel="stylesheet" crossorigin href="/app/assets/index-6DVLHA9R.css">
+  <script type="module" crossorigin src="/app/assets/index-A29RNG70.js"></script>
+  <link rel="stylesheet" crossorigin href="/app/assets/index-B3cZSFI9.css">
 </head>
 <body>
   <!-- ============================================
@@ -310,7 +310,7 @@
               </div>
 
               <div class="pt-2 flex items-center gap-2">
-                <button id="btnAuthSubmit" class="tap flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white hover:opacity-95" style="background: rgba(99,102,241,.95)">Masuk</button>
+                <button id="btnAuthSubmit" class="tap flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white hover:opacity-95" style="background: var(--brand-grad)">Masuk</button>
               </div>
 
               <div class="flex items-center justify-between">
@@ -334,7 +334,7 @@
       <div class="max-w-xl mx-auto px-4 pb-2">
         <div class="mt-2 rounded-2xl app-card p-3 flex items-start gap-3" style="background: color-mix(in srgb, rgba(14,165,233,.14) 70%, transparent)">
           <div class="mt-0.5 w-9 h-9 rounded-2xl flex items-center justify-center" style="background: rgba(14,165,233,.16); border:1px solid rgba(125,211,252,.28)">
-            <span class="text-sm">⏳</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:var(--mf-info)"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           </div>
           <div class="min-w-0 flex-1">
             <div id="planBannerText" class="text-sm font-semibold">—</div>
@@ -394,7 +394,7 @@
       <div class="max-w-xl mx-auto px-3 pb-2">
         <div class="mobile-header-row top-bar">
           <button id="btnLogo" class="tap mobile-header-logo top-bar__logo" aria-label="Beranda">
-            <div id="appLogo" class="brand-logo-slot overflow-hidden shrink-0" data-brand-lock="legacy">
+            <div id="appLogo" class="brand-logo-slot overflow-hidden shrink-0" data-brand-lock="brand">
               <svg class="brand-logo-svg" width="36" height="36" aria-hidden="true"><use href="#monefyi-logo-legacy"/></svg>
               <img id="appLogoImg" class="brand-logo-custom w-full h-full object-cover" src="/app/assets/monefyi-logo-legacy-Dl0ceDfS.png" alt="Logo Monefyi" />
             </div>
@@ -521,7 +521,7 @@
 
       <!-- Brand (legacy mark — top-left chrome kept on old logo) -->
       <div class="sidebar-brand flex items-center gap-2.5 px-1 pr-8">
-        <div class="w-10 h-10 rounded-2xl brand-logo-slot overflow-hidden shrink-0" data-brand-lock="legacy">
+        <div class="w-10 h-10 rounded-2xl brand-logo-slot overflow-hidden shrink-0" data-brand-lock="brand">
           <svg class="brand-logo-svg" width="40" height="40" aria-hidden="true"><use href="#monefyi-logo-legacy"/></svg>
           <img id="sidebarLogoImg" class="brand-logo-custom w-full h-full object-cover" src="/app/assets/monefyi-logo-legacy-Dl0ceDfS.png" alt="Logo Monefyi" />
         </div>
@@ -661,7 +661,7 @@
            <!-- KONTEN KANAN (DETAIL) -->
     <div class="flex-1 min-w-0 flex flex-col w-full max-w-full min-h-0 md:h-full tx-main-panel">
       <!-- Saldo strip saat sidebar collapsed -->
-      <div id="desktopSaldoStrip" class="hidden md:hidden items-center gap-3 mb-3 shrink-0 sidebar-glass rounded-xl app-card px-4 py-3 border border-slate-800/50">
+      <div id="desktopSaldoStrip" class="hidden md:hidden items-center gap-3 mb-3 shrink-0 sidebar-glass rounded-xl app-card px-4 py-3 border">
         <div class="min-w-0 flex-1">
           <div class="text-[10px] app-muted">Saldo (estimasi)</div>
           <div id="kpiSaldoStrip" class="saldo-amount text-lg leading-tight">—</div>
@@ -707,41 +707,6 @@
 
       <!-- Desktop Transaksi: compact saldo bar (≥1024, filled by JS) -->
       <div id="saldoBarDesktopHost" class="hidden w-full shrink-0"></div>
-
-      <!-- Topbar Saldo Card (Desktop) — same hero language as mobile -->
-      <div id="topbarSaldoWrap" class="hidden md:block mb-2">
-        <div id="btnSaldoToggleTopbar" role="button" tabindex="0" class="hero-saldo-card tap cursor-pointer w-full">
-          <div class="hero-saldo-card__top">
-            <div class="hero-saldo-card__label-row">
-              <span>Saldo (estimasi)</span>
-              <button id="btnSaldoMaskTopbar" type="button" class="tap opacity-80 hover:opacity-100" aria-label="Sembunyikan saldo">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="block"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-              </button>
-            </div>
-            <button id="btnPeriodToggleTopbar" type="button" class="hero-saldo-card__period tap" aria-expanded="false" aria-label="Filter periode">
-              <span id="saldoMonthTopbar">—</span>
-              <span class="text-xs opacity-80" aria-hidden="true">▾</span>
-            </button>
-          </div>
-          <div id="kpiSaldoTopbar" class="hero-saldo-card__amount saldo-amount">—</div>
-          <div class="hero-saldo-card__metrics-row income-expense-row">
-            <div class="hero-saldo-stat hero-saldo-stat--income">
-              <div class="hero-saldo-stat__icon" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/></svg>
-              </div>
-              <span id="kpiIncomeTopbarVal" class="hero-saldo-stat__value">—</span>
-            </div>
-            <div class="hero-saldo-stat hero-saldo-stat--expense">
-              <div class="hero-saldo-stat__icon" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 17h6v-6"/><path d="m22 17-8.5-8.5-5 5L2 7"/></svg>
-              </div>
-              <span id="kpiExpenseTopbarVal" class="hero-saldo-stat__value">—</span>
-            </div>
-          </div>
-          <canvas id="heroSaldoSparklineTopbar" class="hero-saldo-sparkline" aria-hidden="true"></canvas>
-        </div>
-      </div>
-
 
       <!-- AI input expandable (desktop + mobile toolbar) -->
       <div id="unifiedAiBarWrap" class="hidden mb-2 flex-none">
@@ -873,7 +838,7 @@
                 <div class="text-[11px] app-muted leading-tight">Surplus / Defisit</div>
               </div>
               <div>
-                <div id="kpiNet" class="text-lg font-bold" style="color: #10b981;">—</div>
+                <div id="kpiNet" class="text-lg font-bold" style="color: var(--mf-primary);">—</div>
                 <div id="kpiNetSub" class="mt-1 text-[10px] app-muted flex items-center gap-1">
                   <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
                   <span id="kpiNetSubText">—</span>
@@ -899,7 +864,7 @@
             <div class="rounded-2xl app-card p-4">
               <div class="flex items-start justify-between gap-3">
                 <div class="flex gap-2">
-                  <div class="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style="color: #10b981;">
+                  <div class="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style="color: var(--mf-primary);">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
                   </div>
                   <div>
@@ -921,7 +886,7 @@
                 </div>
                 <div class="rounded-xl app-chip p-3">
                   <div class="text-[10px] app-muted">Selisih</div>
-                  <div id="budgetDiff" class="mt-1 text-xs font-bold" style="color: #10b981;">—</div>
+                  <div id="budgetDiff" class="mt-1 text-xs font-bold" style="color: var(--mf-primary);">—</div>
                 </div>
               </div>
 
@@ -1232,16 +1197,13 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
         </button>
         <div id="actionMenu" class="hidden absolute bottom-full left-1/2 -translate-x-1/2 mb-4 flex flex-col gap-3 items-center">
-           <!-- Kamera = FOTO STRUK -->
-    <button onclick="openReceiptAdd()" class="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center shadow-xl tap animate-bounce-soft text-white">
-      <!-- ikon kamera -->
+          <button type="button" onclick="openReceiptAdd()" class="w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl tap animate-bounce-soft" style="background:var(--mf-sheet);border:1px solid var(--mf-primary-border);color:var(--mf-primary)" aria-label="Foto struk">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
           </button>
-            <!-- PEN = PARSING AI -->
-          <button onclick="openQuickAdd()" class="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center shadow-xl tap animate-bounce-soft text-white">
+          <button type="button" onclick="openQuickAdd()" class="w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl tap animate-bounce-soft" style="background:var(--mf-sheet);border:1px solid var(--mf-primary-border);color:var(--mf-primary)" aria-label="Input cepat">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           </button>
-          <button onclick="openManualAdd()" class="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center shadow-xl tap animate-bounce-soft text-white">
+          <button type="button" onclick="openManualAdd()" class="w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl tap animate-bounce-soft" style="background:var(--mf-sheet);border:1px solid var(--mf-primary-border);color:var(--mf-primary)" aria-label="Input manual">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M4 13.5V8a2 2 0 0 1 2-2h5.5"/><path d="M14.5 4.5 19 9l-8 8-4 1 1-4z"/></svg>
           </button>
         </div>
@@ -1308,7 +1270,7 @@
       <div class="sheet-body px-4 pb-5">
         <!-- QUICK: Ketik manual (AI) -->
         <div class="tabPanel" data-tab-panel="quick">
-          <div class="add-ai-card rounded-2xl p-4 border border-slate-800/60">
+          <div class="add-ai-card rounded-2xl p-4 border">
             <div class="flex items-start justify-between gap-2">
               <div class="flex items-center gap-2 min-w-0">
                 <div class="add-ai-badge w-8 h-8 rounded-lg flex items-center justify-center shrink-0">
@@ -1341,7 +1303,7 @@
                   <button type="button" id="btnQuickGoBatch" class="add-tool-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0 hover:brightness-110 transition-all" style="background:rgba(59,130,246,.12);color:#60a5fa;border:1px solid rgba(59,130,246,.22);" title="Impor Batch" aria-label="Impor Batch">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
                   </button>
-                  <button type="button" id="btnQuickGoReceipt" class="add-tool-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0 hover:brightness-110 transition-all" style="background:rgba(168,85,247,.12);color:#c084fc;border:1px solid rgba(168,85,247,.22);" title="Scan Struk" aria-label="Scan Struk">
+                  <button type="button" id="btnQuickGoReceipt" class="add-tool-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0 hover:brightness-110 transition-all" style="background:var(--mf-info-soft);color:var(--mf-info);border:1px solid var(--mf-info-muted);" title="Scan Struk" aria-label="Scan Struk">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
                   </button>
                   <button type="button" id="btnQuickClear" class="add-tool-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0 hover:brightness-110 transition-all" style="background:rgba(244,63,94,.12);color:#fb7185;border:1px solid rgba(244,63,94,.22);" title="Bersihkan" aria-label="Bersihkan">
@@ -1380,7 +1342,7 @@
               <div class="mt-1 text-xs app-muted">Paste chat transaksi multi tanggal, lalu parse & preview sebelum simpan.</div>
               <textarea id="batchText" rows="12" class="tap mt-2 w-full rounded-2xl app-input px-3 py-3 text-sm" placeholder="[09:32, 4/29/2026] Indra:&#10;Minggu, 26/4/2026&#10;Duit keluar :&#10;- 949.999 5 kping ACP ... (230.000 uang kas + 720.000 uang Indra)"></textarea>
               <div class="mt-2 flex items-center gap-2">
-                <button id="btnBatchParse" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: rgba(99,102,241,.95)">Parse & Preview</button>
+                <button id="btnBatchParse" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: var(--brand-grad)">Parse & Preview</button>
                 <button id="btnBatchPaste" class="tap rounded-2xl app-chip px-4 py-2 text-sm hover:opacity-90">Paste Clipboard</button>
                 <div id="batchStatus" class="ml-auto text-xs app-muted"> </div>
               </div>
@@ -1530,9 +1492,9 @@
           <div class="sheet-head px-4 pt-4 pb-2 shrink-0">
             <div class="flex items-start justify-between">
               <div class="min-w-0">
-                <div class="text-[11px] font-bold" style="color: #10b981;">Budgeting</div>
+                <div class="text-[11px] font-bold" style="color: var(--mf-primary);">Budgeting</div>
                 <div class="text-lg font-bold text-white mt-0.5">Atur budget per kategori</div>
-                <div class="mt-2 text-xs app-muted">Bulan budget: <span id="bMonthLabel" class="font-semibold" style="color: #10b981;">—</span></div>
+                <div class="mt-2 text-xs app-muted">Bulan budget: <span id="bMonthLabel" class="font-semibold" style="color: var(--mf-primary);">—</span></div>
               </div>
               <button type="button" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" data-close-budget="true" aria-label="Tutup">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
@@ -1540,15 +1502,15 @@
             </div>
           </div>
           <div class="sheet-body px-4 pb-5">
-            <div class="rounded-2xl app-card p-4 border border-slate-800/50">
+            <div class="rounded-2xl app-card p-4 border">
               <div class="flex items-center gap-2 text-sm font-bold text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--mf-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
                 Ringkasan
               </div>
               <div class="mt-4 grid grid-cols-2 gap-3">
                 <div class="rounded-xl app-chip p-3 flex flex-col justify-between">
                   <div class="flex items-center gap-1.5 text-[11px] app-muted">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--mf-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
                     Income (bulan ini)
                   </div>
                   <input id="bIncome" inputmode="numeric" class="tap mt-2 w-full rounded-lg app-input px-3 py-2 text-sm font-bold text-white text-center" placeholder="contoh: 10000000" />
@@ -1556,12 +1518,12 @@
                 </div>
                 <div class="rounded-xl app-chip p-3 flex flex-col justify-between">
                   <div class="flex items-center gap-1.5 text-[11px] app-muted">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--mf-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     Total budget
                   </div>
                   <div class="mt-2">
                     <div id="bTotalBudget" class="text-lg font-bold text-white">—</div>
-                    <div id="bRemaining" class="mt-1 text-[11px]" style="color: #10b981;">Sisa: —</div>
+                    <div id="bRemaining" class="mt-1 text-[11px]" style="color: var(--mf-primary);">Sisa: —</div>
                   </div>
                 </div>
               </div>
@@ -1578,10 +1540,10 @@
               </div>
               <div class="mt-3 flex items-center gap-2">
                 <button type="button" id="btnBudgetEvaluation" class="tap rounded-xl app-chip px-3 py-2 text-xs font-bold hover:opacity-90" style="color:#10b981;">
-                  📊 Evaluasi Bulan
+                  Evaluasi Bulan
                 </button>
               </div>
-              <div id="bStatus" class="mt-2 text-right text-[10px] flex items-center justify-end gap-1" style="color: #10b981;">
+              <div id="bStatus" class="mt-2 text-right text-[10px] flex items-center justify-end gap-1" style="color: var(--mf-primary);">
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
                 Budget tersimpan.
               </div>
@@ -1593,19 +1555,19 @@
               <div id="bRecoList" class="mt-2 flex flex-wrap gap-2 hidden"></div>
             </div>
 
-            <div class="mt-4 rounded-2xl app-card p-4 border border-slate-800/50 relative pb-20">
+            <div class="mt-4 rounded-2xl app-card p-4 border relative pb-20">
               <div id="budgetEnhancedRoot" class="budget-enhanced-root"></div>
 
               <div class="budget-legacy-rows">
               <div class="flex items-start justify-between gap-2">
                 <div>
                   <div class="flex items-center gap-2 text-sm font-bold text-white">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-4"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--mf-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-4"/></svg>
                     Budget per kategori
                   </div>
                   <div class="mt-1.5 text-[10px] app-muted leading-relaxed">Nominal akan mengurangi “Sisa”.<br>Total budget tidak bisa melebihi income.</div>
                 </div>
-                <button id="btnAddBudgetCategory" class="tap rounded-xl app-chip px-3 py-2 text-xs font-bold hover:opacity-90 flex items-center gap-1" style="color: #10b981;">
+                <button id="btnAddBudgetCategory" class="tap rounded-xl app-chip px-3 py-2 text-xs font-bold hover:opacity-90 flex items-center gap-1" style="color: var(--mf-primary);">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
                   Kategori
                 </button>
@@ -1615,7 +1577,7 @@
               </div>
               
               <!-- Sticky Footer inside card -->
-              <div id="btnSaveBudgetFooter" class="absolute bottom-0 left-0 right-0 p-3 bg-[#1A222C]/90 backdrop-blur rounded-b-2xl border-t border-slate-800/50 flex items-center justify-between cursor-pointer hover:bg-[#1A222C] transition-colors">
+              <div id="btnSaveBudgetFooter" class="absolute bottom-0 left-0 right-0 p-3 bg-[color-mix(in_srgb,var(--mf-sheet)_92%,transparent)] backdrop-blur rounded-b-2xl border-t border-slate-800/50 flex items-center justify-between cursor-pointer hover:bg-[var(--mf-surface)] transition-colors">
                 <div class="flex items-center gap-2">
                   <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background: rgba(234,179,8,0.15); color: #eab308;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
@@ -1628,7 +1590,7 @@
                 <div class="text-right flex items-center gap-3">
                   <div>
                     <div class="text-[10px] app-muted">Sisa</div>
-                    <div id="bFooterRemaining" class="text-xs font-bold" style="color: #10b981;">—</div>
+                    <div id="bFooterRemaining" class="text-xs font-bold" style="color: var(--mf-primary);">—</div>
                   </div>
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400"><path d="m9 18 6-6-6-6"/></svg>
                 </div>
@@ -1654,7 +1616,7 @@
           <div class="sheet-head px-4 pt-4 pb-2 shrink-0">
             <div class="flex items-start justify-between">
               <div class="min-w-0">
-                <div class="text-[11px] font-bold" style="color: #10b981;">Monevisor</div>
+                <div class="text-[11px] font-bold" style="color: var(--mf-primary);">Monevisor</div>
                 <div class="text-lg font-bold text-white mt-0.5">Insight & Rekomendasi</div>
                 <div class="mt-1 text-[11px] app-muted">AI bantu kamu kelola keuangan lebih cerdas.</div>
               </div>
@@ -1677,7 +1639,7 @@
                     <div id="btnGenerateInsightsSub" class="text-[11px] text-emerald-50/90 mt-1 leading-snug font-medium">Buat insight dari data terbaru</div>
                   </div>
                 </button>
-                <div class="rounded-2xl app-card p-4 flex items-center gap-3 border border-slate-800/50 cursor-pointer hover:bg-white/5 transition-colors">
+                <div class="rounded-2xl app-card p-4 flex items-center gap-3 border cursor-pointer hover:bg-white/5 transition-colors">
                   <div id="advisorHealthRing" class="health-ring shrink-0" style="--pct: 0%; width: 48px; height: 48px;"><span id="advisorHealthScore" class="text-sm font-bold">—</span></div>
                   <div class="flex-1 min-w-0">
                     <div class="text-[10px] app-muted">Skor kesehatan</div>
@@ -1685,7 +1647,7 @@
                       <span id="advisorHealthScoreRaw" class="text-lg font-bold text-white">—</span>
                       <span class="text-[10px] text-slate-400">/100</span>
                     </div>
-                    <div id="advisorHealthLabel" class="text-[10px] font-bold mt-0.5" style="color: #10b981;">—</div>
+                    <div id="advisorHealthLabel" class="text-[10px] font-bold mt-0.5" style="color: var(--mf-primary);">—</div>
                   </div>
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
                 </div>
@@ -1693,7 +1655,7 @@
               <div class="text-xs app-muted text-center" id="advisorStatus"></div>
 
               <!-- Insight Utama -->
-              <div class="rounded-2xl app-card p-4 border border-slate-800/50">
+              <div class="rounded-2xl app-card p-4 border">
                 <div class="flex items-start gap-3">
                   <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: rgba(16,185,129,0.15); color: #10b981;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.9 1.2 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
@@ -1720,7 +1682,7 @@
               </div>
 
               <!-- Rekomendasi Budget -->
-              <div class="rounded-2xl app-card p-4 border border-slate-800/50">
+              <div class="rounded-2xl app-card p-4 border">
                 <div class="flex items-start gap-3">
                   <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: rgba(16,185,129,0.15); color: #10b981;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
@@ -1738,7 +1700,7 @@
               </div>
 
               <!-- AI Financial Coach -->
-              <div class="rounded-2xl app-card p-4 border border-slate-800/50">
+              <div class="rounded-2xl app-card p-4 border">
                 <div class="flex items-start justify-between gap-3">
                   <div class="flex items-start gap-3">
                     <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: rgba(16,185,129,0.15); color: #10b981;">
@@ -1751,21 +1713,21 @@
                   </div>
                   <div class="text-right">
                     <div class="text-[10px] app-muted" id="coachQuotaText">Kuota: 999/999</div>
-                    <div class="text-[10px]" style="color: #10b981;" id="coachQuotaUsed">(terpakai 0)</div>
+                    <div class="text-[10px]" style="color: var(--mf-primary);" id="coachQuotaUsed">(terpakai 0)</div>
                   </div>
                 </div>
                 
                 <div id="coachPrompts" class="mt-4 grid grid-cols-3 gap-2">
                   <button class="tap rounded-xl app-chip p-2 text-[10px] font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition-colors flex flex-col items-center text-center gap-1.5 coach-prompt">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--mf-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
                     Bagaimana saving rate saya?
                   </button>
                   <button class="tap rounded-xl app-chip p-2 text-[10px] font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition-colors flex flex-col items-center text-center gap-1.5 coach-prompt">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--mf-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
                     Kategori apa yang boros?
                   </button>
                   <button class="tap rounded-xl app-chip p-2 text-[10px] font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition-colors flex flex-col items-center text-center gap-1.5 coach-prompt">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--mf-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
                     Buat rencana budget bulan depan
                   </button>
                 </div>
@@ -1785,7 +1747,7 @@
               </div>
 
               <!-- Pengaturan AI -->
-              <div class="rounded-2xl app-card p-4 border border-slate-800/50">
+              <div class="rounded-2xl app-card p-4 border">
                 <div id="advisorAiEmptyCta" class="hidden rounded-xl app-card-opaque p-3 mb-3">
                   <div class="text-sm font-semibold">Monevisor AI belum aktif</div>
                   <div class="mt-1 text-xs app-muted">Hubungkan API key untuk analisa keuangan personal.</div>
@@ -1858,16 +1820,11 @@
           </div>
           <div class="sheet-body px-4 pb-5 space-y-3">
             <div class="rounded-2xl app-card p-4">
-              <div class="text-sm font-semibold">Tutorial cepat</div>
-              <ol class="mt-2 text-xs app-muted space-y-1 list-decimal pl-5">
-                <li>Tap tombol <span class="font-semibold">+</span> untuk input transaksi.</li>
-                <li>Pakai tab <span class="font-semibold">Cepat (AI)</span> untuk parsing kalimat bebas.</li>
-                <li>Pakai <span class="font-semibold">Foto Struk</span> untuk OCR dan simpan otomatis.</li>
-                <li>Tap transaksi untuk edit / hapus.</li>
-                <li>Untuk filter/search/periode, klik <span class="font-semibold">Periode</span>.</li>
-              </ol>
+              <div class="text-sm font-semibold">Tutorial & Bantuan</div>
+              <p class="mt-1 text-xs app-muted leading-relaxed">Panduan lengkap semua fitur Monefyi — searchable, dengan progress baca.</p>
               <div class="mt-3 flex flex-wrap gap-2">
-                <button id="btnOpenQuick" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: rgba(99,102,241,.95)">Tambah transaksi</button>
+                <button id="btnOpenTutorialFull" type="button" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: var(--brand-grad); border: 1px solid rgba(167,243,208,.30)">Buka Tutorial lengkap</button>
+                <button id="btnOpenQuick" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: var(--brand-grad)">Tambah transaksi</button>
                 <button id="btnOpenBudget" class="tap rounded-2xl app-chip px-4 py-2 text-sm hover:opacity-90">Atur budget</button>
                 <button id="btnOpenAdvisor" class="tap rounded-2xl app-chip px-4 py-2 text-sm hover:opacity-90">Buka Advisor</button>
               </div>
@@ -1896,7 +1853,7 @@
                 </div>
 
                 <div class="flex items-center gap-2">
-                  <button id="btnSaveLogo" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: rgba(99,102,241,.95)">Simpan</button>
+                  <button id="btnSaveLogo" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: var(--brand-grad)">Simpan</button>
                   <button id="btnTestLogoUpload" class="tap rounded-2xl app-chip px-4 py-2 text-sm hover:opacity-90" type="button">Test koneksi</button>
                   <div class="ml-auto text-xs app-muted" id="logoStatus">—</div>
                 </div>
@@ -1947,21 +1904,10 @@
                     <option value="en">English</option>
                   </select>
                   <div class="flex items-center gap-2">
-                    <button id="btnSaveLang" class="tap rounded-xl px-3 py-2 text-sm font-semibold hover:opacity-90" style="background: rgba(99,102,241,.15); color: rgba(199,210,254,.95); border: 1px solid rgba(99,102,241,.28)">Simpan</button>
+                    <button id="btnSaveLang" class="tap rounded-xl px-3 py-2 text-sm font-semibold hover:opacity-90" style="background: var(--brand-green-soft); color: var(--mf-primary-light); border: 1px solid var(--mf-primary-border)">Simpan</button>
                     <div id="langStatus" class="ml-auto text-xs app-muted">—</div>
                   </div>
                   <div class="text-xs app-muted" data-i18n="settings.lang.desc">Mengubah seluruh bahasa aplikasi.</div>
-                </div>
-
-                <div class="grid grid-cols-1 gap-2">
-                  <div class="text-sm font-semibold">Tampilan Desktop</div>
-                  <label class="flex items-center justify-between gap-3 text-sm app-chip px-3 py-2 rounded-xl">
-                    <span>Posisi Kartu Saldo</span>
-                    <select id="saldoPositionSelect" class="tap rounded-xl app-input px-3 py-1 text-sm bg-transparent border-none outline-none">
-                      <option value="topbar">Topbar (Atas)</option>
-                      <option value="sidebar">Sidebar (Kiri)</option>
-                    </select>
-                  </label>
                 </div>
 
                 <div class="grid grid-cols-1 gap-2">
@@ -1997,7 +1943,7 @@
                   <div class="mt-1 text-xs app-muted">Tambah daftar akun (Cash, BCA, GoPay, dll.) untuk dipakai di filter & input.</div>
                   <div class="mt-2 flex gap-2">
                     <input id="newAccount" class="tap flex-1 rounded-xl app-input px-3 py-2 text-sm" placeholder="contoh: Jago" />
-                    <button id="btnAddAccount" class="tap rounded-xl px-3 py-2 text-sm hover:opacity-90" style="background: rgba(99,102,241,.15); color: rgba(199,210,254,.95); border: 1px solid rgba(99,102,241,.25)">Tambah</button>
+                    <button id="btnAddAccount" class="tap rounded-xl px-3 py-2 text-sm hover:opacity-90" style="background: var(--brand-green-soft); color: var(--mf-primary-light); border: 1px solid var(--mf-primary-border)">Tambah</button>
                   </div>
                   <div id="accountsList" class="mt-2 flex flex-wrap gap-2"></div>
                   <div class="mt-2 text-xs app-muted" id="accountsStatus">—</div>
@@ -2068,7 +2014,7 @@
             <div class="mt-3 flex flex-wrap gap-2">
               <button id="btnAccAddMoney" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: rgba(16,185,129,.92)">Tambah Uang</button>
               <button id="btnAccMoveMoney" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: rgba(14,165,233,.85)">Pindah Uang</button>
-              <button id="btnAccAddTx" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: rgba(99,102,241,.95)">Transaksi</button>
+              <button id="btnAccAddTx" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: var(--brand-grad)">Transaksi</button>
               <div id="accDetailStatus" class="ml-auto text-xs app-muted">—</div>
             </div>
           </div>
@@ -2101,7 +2047,7 @@
             <div class="rounded-2xl app-card-opaque p-4">
               <div class="flex items-center justify-between">
                 <div class="text-sm font-semibold">Ganti nama akun</div>
-                <button id="btnSaveAccRename" class="tap rounded-xl px-3 py-2 text-xs font-semibold hover:opacity-90" style="background: rgba(99,102,241,.15); color: rgba(199,210,254,.95); border: 1px solid rgba(99,102,241,.28)">Simpan</button>
+                <button id="btnSaveAccRename" class="tap rounded-xl px-3 py-2 text-xs font-semibold hover:opacity-90" style="background: var(--brand-green-soft); color: var(--mf-primary-light); border: 1px solid var(--mf-primary-border)">Simpan</button>
               </div>
               <div class="mt-2 flex items-center gap-2">
                 <input id="accRenameInput" class="tap flex-1 rounded-xl app-input px-3 py-2 text-sm" placeholder="Nama akun" />
@@ -2143,6 +2089,7 @@
               <button id="adminTabPlans" class="tap flex-1 min-w-[70px] rounded-2xl app-chip px-3 py-2 text-sm">Plans</button>
               <button id="adminTabRevenue" class="tap flex-1 min-w-[70px] rounded-2xl app-chip px-3 py-2 text-sm">Revenue</button>
               <button id="adminTabConfig" class="tap flex-1 min-w-[70px] rounded-2xl app-chip px-3 py-2 text-sm">Config</button>
+              <button id="adminTabTutorial" class="tap flex-1 min-w-[70px] rounded-2xl app-chip px-3 py-2 text-sm">Tutorial</button>
             </div>
           </div>
 
@@ -2268,6 +2215,24 @@
 
                   <div class="text-[11px] app-muted2">Konfigurasi ini disimpan di tabel app_config (id: global). Pastikan RLS mengizinkan admin mengubahnya via Edge Function / policy.</div>
                 </div>
+              </div>
+            </div>
+
+            <!-- Tutorial media tab -->
+            <div id="adminTutorialPanel" class="space-y-3 hidden">
+              <div class="rounded-2xl app-card p-4">
+                <div class="text-sm font-semibold">Tutorial Media</div>
+                <p class="mt-1 text-xs app-muted">Upload gambar/GIF/video per langkah. Jika media kosong, step hanya menampilkan teks (tanpa placeholder).</p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <button id="btnAdminSeedTutorial" type="button" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white" style="background: var(--brand-grad)">Seed konten default</button>
+                  <button id="btnAdminRefreshTutorial" type="button" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white" style="background: var(--brand-green)">Refresh list</button>
+                  <div id="adminTutorialStatus" class="ml-auto text-xs app-muted self-center">—</div>
+                </div>
+              </div>
+              <div class="rounded-2xl app-card p-4">
+                <div class="text-sm font-semibold">Langkah tutorial</div>
+                <input id="adminTutorialFilter" class="tap mt-2 w-full rounded-xl app-input px-3 py-2 text-sm" placeholder="Filter kategori / artikel / teks…" />
+                <div id="adminTutorialStepsList" class="mt-3 space-y-2 max-h-[50vh] overflow-y-auto"></div>
               </div>
             </div>
 
@@ -2403,7 +2368,7 @@
       </div>
     </div>
 
-    <!-- Tutorial Sheet -->
+    <!-- Tutorial / Help Center Sheet -->
 <div id="tutorialBackdrop" class="sheet-backdrop fixed inset-0 z-80" style="background: rgba(0,0,0,.70)">
   <div class="absolute inset-0" data-close-tutorial="true"></div>
   <div id="tutorialSheet" class="sheet absolute left-0 right-0 bottom-0 mx-auto max-w-xl">
@@ -2411,39 +2376,14 @@
       <div class="sheet-head px-4 pt-3 pb-2">
         <div class="flex items-center justify-between">
           <div>
-            <div class="text-xs app-muted">📖 Panduan Pengguna</div>
+            <div class="text-xs app-muted">Help Center</div>
             <div class="text-base font-semibold">Tutorial Monefyi</div>
           </div>
           <button type="button" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" data-close-tutorial="true" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
         </div>
       </div>
-      <div class="sheet-body px-4 pb-5 space-y-4">
-        <!-- Video di atas -->
-        <div class="rounded-2xl bg-slate-900/50 border border-slate-800 overflow-hidden">
-          <div class="aspect-video bg-black flex items-center justify-center relative">
-            <div id="tutorialVideoPlaceholder" class="text-center p-6">
-              <span class="text-4xl mb-2 block">📺</span>
-              <p class="text-xs app-muted">Pilih salah satu topik di bawah untuk melihat video / panduan langkah.</p>
-            </div>
-            <iframe
-              id="tutorialVideoFrame"
-              class="absolute inset-0 w-full h-full hidden"
-              src=""
-              frameborder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowfullscreen
-            ></iframe>
-          </div>
-        </div>
-
-        <div class="text-xs app-muted">
-          Tap salah satu topik di bawah. Satu topik akan terbuka, yang lain akan meredup.
-        </div>
-
-        <!-- Accordion Tutorial -->
-        <div id="tutorialStepsContainer" class="space-y-3">
-          <!-- Kartu tutorial akan di-render dari JS -->
-        </div>
+      <div class="sheet-body px-4 pb-5">
+        <div id="tutorial-content" class="tutorial-page"></div>
       </div>
     </div>
   </div>
@@ -2460,7 +2400,7 @@
     </div>
 
     <!-- Onboarding -->
-    <div id="onboardingBackdrop" class="sheet-backdrop fixed inset-0 z-[125] hidden" style="background:rgba(0,0,0,.75)">
+    <div id="onboardingBackdrop" class="sheet-backdrop fixed inset-0 z-[125] hidden" data-legacy-onboarding="1" style="background:rgba(0,0,0,.75)">
       <div class="flex items-center justify-center min-h-dvh p-4">
         <div class="w-full max-w-md rounded-2xl app-card-opaque p-6 shadow-2xl">
           <h2 class="text-xl font-bold" data-i18n="onboarding.welcome">Selamat datang di Monefyi</h2>

@@ -4,7 +4,7 @@
  */
 
 const BADGES = {
-  memory: { icon: '🧠', text: 'Memory', color: 'purple' },
+  memory: { icon: '🧠', text: 'Memory', color: 'sky' },
   rule: { icon: '📏', text: 'Rule', color: 'blue' },
   ai: { icon: '✨', text: 'AI', color: 'green' },
   pending: { icon: '⏳', text: 'Pending', color: 'amber' },

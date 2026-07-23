@@ -117,7 +117,7 @@ function generateDailyTip({ summary, budgetSummary, chartData, formatCompactIDR 
     tips.push({
       type: 'pattern',
       icon: 'lightBulb',
-      color: '#a855f7',
+      color: '#10B981',
       title: 'Pola Pengeluaran',
       message: `Pengeluaran tertinggi 7 hari terakhir di hari ${chartData.maxDay.dayName} (Rp ${formatCompactIDR(chartData.maxDay.amount)}).`,
       actionLabel: 'Lihat detail',
@@ -153,7 +153,7 @@ function generateDailyTip({ summary, budgetSummary, chartData, formatCompactIDR 
     tips.push({
       type: 'tips',
       icon: 'lightBulb',
-      color: '#a855f7',
+      color: '#10B981',
       title: 'Tips Hemat',
       message: 'Pantau pengeluaran harian untuk menjaga keuangan tetap sehat. Catat setiap transaksi sekecil apapun.',
       actionLabel: 'Lihat tips lainnya',

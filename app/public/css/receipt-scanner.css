@@ -14,7 +14,7 @@
   --rs-border:       var(--border-color, #3b3f54);
   --rs-text-primary: var(--text-primary, #e2e8f0);
   --rs-text-muted:   var(--text-muted, #94a3b8);
-  --rs-accent:       var(--color-accent, #6366f1);
+  --rs-accent:       var(--mf-primary);
   --rs-green:        #10b981;
   --rs-yellow:       #f59e0b;
   --rs-red:          #ef4444;

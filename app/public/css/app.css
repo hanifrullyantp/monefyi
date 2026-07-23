@@ -874,9 +874,11 @@ html, body {
         stroke: #fff !important;
       }
       .tx-card-row-table .tx-icon .tx-cat-emoji {
-        display: block;
-        font-size: 12px;
-        line-height: 1;
+        display: none; /* desktop table: prefer SVG icons for brand consistency */
+      }
+      .tx-card-row-table .tx-icon .tx-cat-icon,
+      .tx-card-row-table .tx-icon svg {
+        display: block !important;
       }
       .tx-card-row-table .text-sm,
       .tx-card-row-table .text-xs {

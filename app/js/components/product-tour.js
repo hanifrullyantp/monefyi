@@ -97,7 +97,7 @@ function positionAround(el, spotlight, bubble, placement = 'auto') {
 function defaultSteps() {
   return [
     {
-      selector: '#btnPeriodToggle, .mobile-header-period, #btnPeriodToggleTopbar',
+      selector: '#btnPeriodToggle, .mobile-header-period, #btnFilterCardDesktop',
       title: 'Filter periode',
       text: 'Pilih bulan atau rentang tanggal. Semua ringkasan dan daftar transaksi mengikuti periode ini.',
     },

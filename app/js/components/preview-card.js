@@ -29,7 +29,7 @@
 
 /** @type {Record<string, { icon: string, color: string, text: string, tooltip: string }>} */
 const BADGE_CONFIG = {
-  memory: { icon: '🧠', color: 'purple', text: 'Learned', tooltip: 'From your patterns' },
+  memory: { icon: '🧠', color: 'sky', text: 'Learned', tooltip: 'From your patterns' },
   rule: { icon: '📏', color: 'blue', text: 'Rule', tooltip: 'Matched grammar rules' },
   ai: { icon: '✨', color: 'green', text: 'AI', tooltip: 'Analyzed by Gemini' },
   manual: { icon: '✍️', color: 'gray', text: 'Manual', tooltip: 'Needs your input' },

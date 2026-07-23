@@ -15,7 +15,9 @@ function ensureRoot() {
     <div class="upgrade-sheet-backdrop" data-upgrade-close="1"></div>
     <div class="upgrade-sheet" role="dialog" aria-modal="true" aria-labelledby="upgradeSheetTitle">
       <div class="upgrade-sheet__handle"></div>
-      <div class="upgrade-sheet__icon">✨</div>
+      <div class="upgrade-sheet__icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
+      </div>
       <h2 id="upgradeSheetTitle" class="upgrade-sheet__title"></h2>
       <p class="upgrade-sheet__body"></p>
       <div class="upgrade-sheet__preview">

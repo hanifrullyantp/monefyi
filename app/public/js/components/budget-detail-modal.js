@@ -59,7 +59,7 @@ export function showBudgetDetailModal(budget, transactions, month, options = {})
           <span class="budget-detail-priority" style="color:${priority.color}">${Icon(priority.icon || 'target', { size: 14 })} ${priority.label}</span>
           <h2>${escapeHtml(budget.name)}</h2>
         </div>
-        <button type="button" class="close-btn" data-action="close" aria-label="Tutup">✕</button>
+        <button type="button" class="close-btn sheet-close-btn" data-action="close" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </header>
 
       <div class="budget-detail-body">
@@ -88,7 +88,7 @@ export function showBudgetDetailModal(budget, transactions, month, options = {})
 
         ${progress.daysLeft > 0 ? `
           <div class="budget-detail-hint">
-            💡 Sisa ${progress.daysLeft} hari — Rp ${formatIDR(progress.dailyBudget)}/hari
+            Sisa ${progress.daysLeft} hari — Rp ${formatIDR(progress.dailyBudget)}/hari
           </div>
         ` : ''}
 

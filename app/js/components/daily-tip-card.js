@@ -13,7 +13,7 @@ import { Icon } from './icons.js';
 export function renderDailyTipCard(tip, callbacks = {}) {
   const el = document.createElement('section');
   el.className = 'home-section home-daily-tip';
-  const color = tip?.color || '#a855f7';
+  const color = tip?.color || '#10B981';
 
   el.innerHTML = `
     <div class="home-daily-tip__inner" style="--tip-color:${color}">

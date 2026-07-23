@@ -15,7 +15,7 @@
   width: min(480px, 100%);
   max-height: min(92vh, 720px);
   overflow: auto;
-  background: #131826;
+  background: var(--mf-sheet);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px 20px 0 0;
   padding: 20px 18px 28px;
@@ -32,7 +32,7 @@
   border-radius: 99px;
   background: rgba(255, 255, 255, 0.1);
 }
-.onboarding-wizard__dot.is-active { background: #10b981; }
+.onboarding-wizard__dot.is-active { background: var(--mf-primary); }
 .onboarding-wizard__title {
   font-size: 1.35rem;
   font-weight: 800;
@@ -108,7 +108,7 @@
   cursor: pointer;
 }
 .onboarding-btn--primary {
-  background: #10b981;
+  background: var(--mf-primary);
   color: #06251c;
 }
 .onboarding-btn--ghost {
@@ -161,7 +161,7 @@
 .upgrade-sheet {
   position: relative;
   width: min(440px, 100%);
-  background: #131826;
+  background: var(--mf-sheet);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px 20px 0 0;
   padding: 16px 18px 28px;
@@ -197,7 +197,7 @@
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #10b981;
+  color: var(--mf-primary);
   font-weight: 700;
   margin-bottom: 4px;
 }
@@ -225,7 +225,7 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 .upgrade-sheet__btn--primary {
-  background: #10b981;
+  background: var(--mf-primary);
   color: #06251c;
 }
 
@@ -245,7 +245,7 @@
 }
 #entitlementBanner.is-visible { display: flex; }
 #entitlementBanner a {
-  color: #10b981;
+  color: var(--mf-primary);
   font-weight: 700;
   white-space: nowrap;
   text-decoration: none;

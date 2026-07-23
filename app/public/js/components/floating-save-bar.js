@@ -93,9 +93,12 @@ export function initFloatingSaveBar(onSave) {
 }
 
 function showSaveToast() {
+  const msg = 'Perubahan tersimpan';
+  if (window.MonefyiUI?.showToast) return window.MonefyiUI.showToast(msg, 'success');
+  if (typeof window.showToast === 'function') return window.showToast(msg, 'success');
   const t = document.createElement('div');
   t.className = 'action-toast success';
-  t.innerHTML = `${Icon('check', { size: 14 })} Perubahan tersimpan`;
+  t.innerHTML = `${Icon('check', { size: 14 })} ${msg}`;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 2500);
 }

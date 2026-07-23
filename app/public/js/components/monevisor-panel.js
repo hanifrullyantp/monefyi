@@ -617,10 +617,12 @@ function scrollToInsight(focus) {
 }
 
 function showToast(msg) {
+  if (window.MonefyiUI?.showToast) return window.MonefyiUI.showToast(msg, 'success');
+  if (typeof window.showToast === 'function') return window.showToast(msg, 'success');
   const t = document.createElement('div');
   t.className = 'action-toast';
   t.textContent = msg;
-  t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:10001;background:#111827;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.35)';
+  t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:10001;background:var(--mf-sheet);color:var(--mf-text);padding:10px 16px;border-radius:12px;font-size:13px;border:1px solid var(--mf-border);box-shadow:0 8px 24px rgba(0,0,0,.35)';
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 2500);
 }

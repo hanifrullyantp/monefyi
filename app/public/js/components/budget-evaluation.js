@@ -73,10 +73,10 @@ export async function showEvaluation(options = {}) {
     <div class="budget-eval-modal" role="dialog" aria-modal="true">
       <header class="budget-eval-header">
         <div>
-          <h2>📊 Evaluasi Budget</h2>
+          <h2>Evaluasi Budget</h2>
           <p>${formatMonthLabel(month)}</p>
         </div>
-        <button type="button" class="close-btn" data-action="close">✕</button>
+        <button type="button" class="close-btn sheet-close-btn" data-action="close" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </header>
 
       <div class="budget-eval-body">
@@ -146,7 +146,7 @@ export async function showEvaluation(options = {}) {
 
       <footer class="budget-eval-footer">
         <button type="button" class="btn-secondary-budget" data-action="close">Tutup</button>
-        <button type="button" class="btn-primary-budget" data-action="advisor">🧠 Tanya Monevisor</button>
+        <button type="button" class="btn-primary-budget" data-action="advisor">Tanya Monevisor</button>
       </footer>
     </div>
   `;

@@ -127,21 +127,25 @@
 --accent-info: #1E3A5F;        /* biru tua untuk header/brand */
 
 /* DARK MODE — biru tua + emerald */
---app-bg: #0F1117;
---app-surface: #1A1D27;
---app-card: #1E2130;
---app-text: #E2E8F0;
---app-muted: #94A3B8;
---accent-primary: #00E5A0;     /* emerald terang */
---accent-info: #1E3A5F;
+--mf-bg: #0B1118;
+--mf-sheet / --app-sheet: #131A24;
+--mf-text: #F1F5F9;
+--mf-muted: #8B9CB3;
+--mf-primary / --brand-green: #10B981;
+--mf-grad-brand / --brand-grad: sky → emerald;
+--accent-info / --mf-secondary: #1E3A5F;
 ```
+
+Sumber token: `shared/brand-tokens.css`. Referensi UI: Settings (`#menuSheet`/`#userSheet`) + Affiliate (`#affSheet`).
 
 Prinsip UI:
 - Minimalis, whitespace generous, hierarchy 3 level
-- Border radius: 12px card, 8px button, 20px pill
+- Border radius: 16px card, 12px button, 50px pill (`--mf-radius-*`)
 - Glassmorphism subtle pada sidebar cards
 - Animasi CSS only (stack vanilla JS, tanpa Framer Motion)
-- Font: Inter (Google Fonts CDN)
+- Font: Montserrat (Google Fonts CDN) — `--mf-font`
+- Primary CTA: `--brand-grad` / `--brand-green` (jangan indigo/purple)
+- Sheet close: `.sheet-close-btn`; icon header: SVG bukan emoji
 
 ### D. Internasionalisasi — EN + ID, Extensible
 
@@ -241,11 +245,11 @@ Dark mode:
 - Background: #0F1117
 - Card: #1A1D27, Surface: #1E2130
 - Text primary: #E2E8F0
-- Accent primary: #00E5A0 (bright emerald)
+- Accent primary: #10B981 (brand emerald / --mf-primary)
 - Brand: #1E3A5F + emerald gradient
 
 Danger: #EF4444 / #FF4D6D (destructive actions only)
-Typography: Inter, 3-level hierarchy (H1 28px, body 14px, caption 12px)
+Typography: Montserrat, 3-level hierarchy (H1 28px, body 14px, caption 12px)
 Radius: 12px cards, 8px buttons, 20px pills/badges
 Style: Modern minimalist, generous whitespace, subtle glassmorphism on sidebar cards
 
@@ -389,7 +393,7 @@ New: monefyi-generate-insights, optionally monefyi-parse-receipt-vision
 ```
 Update css/app.css design tokens for Monefyi.com:
 Light: white bg #FFFFFF, emerald accent #10B981, dark blue brand #1E3A5F
-Dark: bg #0F1117, card #1A1D27, emerald accent #00E5A0
+Dark: bg #0B1118, sheet/card #131A24, emerald accent #10B981 (--mf-* tokens)
 Keep existing body.theme-light toggle. Update all hardcoded rgba colors 
 in index.html and js/app.js to use CSS variables. Verify WCAG AA contrast.
 Do not touch monefyi_planner/.

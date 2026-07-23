@@ -32,8 +32,76 @@ serve(async (req) => {
     await requireAdmin(sb, authData.user.id);
 
     const body = await req.json();
+    const action = String(body.action || "update").toLowerCase();
+
+    // Create user (Auth Admin + profile)
+    if (action === "create") {
+      const email = String(body.email || "").trim().toLowerCase();
+      const password = String(body.password || body.new_password || "");
+      if (!email || !email.includes("@")) return jsonResponse(req, { error: "email required" }, 400);
+      if (password.length < 8) return jsonResponse(req, { error: "password min 8 chars" }, 400);
+
+      const { data: created, error: createErr } = await sb.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: body.email_confirm !== false,
+        user_metadata: { name: String(body.name || "").slice(0, 200) },
+      });
+      if (createErr || !created?.user) {
+        return jsonResponse(req, { error: createErr?.message || "create failed" }, 500);
+      }
+      const newId = created.user.id;
+      const { error: upsertErr } = await sb.from("profiles").upsert({
+        id: newId,
+        name: String(body.name || email.split("@")[0]).slice(0, 200),
+        phone: body.phone ? String(body.phone).slice(0, 50) : null,
+        role: ["user", "admin"].includes(String(body.role || "").toLowerCase())
+          ? String(body.role).toLowerCase()
+          : "user",
+        status: ["active", "suspended", "pending"].includes(String(body.status || "").toLowerCase())
+          ? String(body.status).toLowerCase()
+          : "active",
+        plan_type: ["none", "trial", "monthly", "lifetime"].includes(String(body.plan_type || "").toLowerCase())
+          ? String(body.plan_type).toLowerCase()
+          : "none",
+        plan_expires_at: body.plan_expires_at || null,
+        email_notifications: body.email_notifications !== false,
+        push_notifications: body.push_notifications !== false,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "id" });
+      if (upsertErr) return jsonResponse(req, { error: upsertErr.message }, 500);
+
+      if (body.plan_type) {
+        await sb.from("user_plans").upsert({
+          user_id: newId,
+          plan_type: String(body.plan_type),
+          expires_at: body.plan_expires_at || null,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id" });
+      }
+
+      return jsonResponse(req, { ok: true, user_id: newId });
+    }
+
     const userId = String(body.user_id || "");
     if (!userId) return jsonResponse(req,{ error: "user_id required" }, 400);
+
+    // Soft suspend / activate shortcut
+    if (action === "suspend") {
+      body.status = "suspended";
+    }
+    if (action === "activate") {
+      body.status = "active";
+    }
+
+    // Hard delete (auth + profile cascade where possible)
+    if (action === "hard_delete" || body.hard_delete === true) {
+      const { error: delErr } = await sb.auth.admin.deleteUser(userId);
+      if (delErr) return jsonResponse(req, { error: delErr.message }, 500);
+      try { await sb.from("profiles").delete().eq("id", userId); } catch { /* ignore */ }
+      try { await sb.from("user_plans").delete().eq("user_id", userId); } catch { /* ignore */ }
+      return jsonResponse(req, { ok: true, deleted: true });
+    }
 
     const profilePatch: Record<string, unknown> = {};
     if (body.name !== undefined) profilePatch.name = String(body.name).slice(0, 200);

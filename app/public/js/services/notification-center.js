@@ -24,7 +24,7 @@ export const NOTIF_TYPES = {
   BUDGET_ALERT: { key: 'budget_alert', label: 'Alert Budget', icon: '⚠️', color: '#f59e0b' },
   BUDGET_REMINDER: { key: 'budget_reminder', label: 'Reminder Budget', icon: '📅', color: '#3b82f6' },
   BUDGET_TIP: { key: 'budget_tip', label: 'Tips Budget', icon: '💡', color: '#eab308' },
-  AI_RECOMMENDATION: { key: 'ai_recommendation', label: 'Saran AI', icon: '🧠', color: '#a855f7' },
+  AI_RECOMMENDATION: { key: 'ai_recommendation', label: 'Saran AI', icon: '🧠', color: '#10B981' },
   SYNC_STATUS: { key: 'sync_status', label: 'Sinkronisasi', icon: '🔄', color: '#10b981' },
   PENDING: { key: 'pending', label: 'Menunggu', icon: '⏳', color: '#f59e0b' },
   ACHIEVEMENT: { key: 'achievement', label: 'Pencapaian', icon: '🎉', color: '#10b981' },

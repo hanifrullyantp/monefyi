@@ -357,7 +357,6 @@ async function loadBudgets(){
       showTrend: true,
       showCategory: true,
       showWeek: true,
-      saldoPosition: 'topbar',
 
       // AI
       geminiKey: '',
@@ -986,10 +985,8 @@ async function loadBudgets(){
       $('#menuSheetTitle') && ($('#menuSheetTitle').textContent = t('menu.title'));
       $('#menuSheetSubtitle') && ($('#menuSheetSubtitle').textContent = t('menu.subtitle'));
       const mt = $('#menuSheet .sheet-body .app-card .text-sm.font-semibold');
-      if (mt) mt.textContent = t('menu.tutorial');
-      const lis = $$('#menuSheet ol li');
-      const steps = [t('menu.tutorial.1'), t('menu.tutorial.2'), t('menu.tutorial.3'), t('menu.tutorial.4'), t('menu.tutorial.5')];
-      for (let i=0;i<Math.min(lis.length, steps.length);i++) lis[i].textContent = steps[i];
+      if (mt) mt.textContent = t('menu.tutorial') || 'Tutorial & Bantuan';
+      $('#btnOpenTutorialFull') && ($('#btnOpenTutorialFull').textContent = 'Buka Tutorial lengkap');
       $('#btnOpenQuick') && ($('#btnOpenQuick').textContent = t('menu.open_tx'));
       $('#btnOpenBudget') && ($('#btnOpenBudget').textContent = t('menu.open_budget'));
       $('#btnOpenAdvisor') && ($('#btnOpenAdvisor').textContent = t('menu.open_advisor'));
@@ -1252,22 +1249,26 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
         const { data } = await withTimeout(STATE.db.supa.auth.getSession(), 8000, 'session');
         STATE.db.session = data?.session || null;
         STATE.db.user = data?.session?.user || null;
+        if (typeof window !== 'undefined') window.currentUser = STATE.db.user;
       } catch (e) {
         console.warn('getSession', e);
         const cached = readSupabaseSessionFromStorage();
         if (cached?.user) {
           STATE.db.session = cached;
           STATE.db.user = cached.user;
+          if (typeof window !== 'undefined') window.currentUser = STATE.db.user;
           console.log('[offline] Restored session from localStorage');
         } else {
           STATE.db.session = null;
           STATE.db.user = null;
+          if (typeof window !== 'undefined') window.currentUser = null;
         }
       }
 
       STATE.db.supa.auth.onAuthStateChange(async (event, session) => {
         STATE.db.session = session;
         STATE.db.user = session?.user || null;
+        if (typeof window !== 'undefined') window.currentUser = STATE.db.user;
         if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') return;
         if (STATE.db.user) {
           bootstrapAuthed().catch((err) => console.warn('bootstrapAuthed', err));
@@ -1525,6 +1526,7 @@ function computeSubscriptionStatus(profile){
           p = cached.profile;
           if (cached.settings) {
             STATE.settings = { ...DEFAULT_SETTINGS, ...cached.settings };
+            delete STATE.settings.saldoPosition;
           }
         }
       }
@@ -1557,6 +1559,8 @@ function computeSubscriptionStatus(profile){
       if (!Array.isArray(merged.accounts)) merged.accounts = [...DEFAULT_SETTINGS.accounts];
       merged.accounts = [...new Set(merged.accounts.map(s => String(s||'').trim()).filter(Boolean))];
       if (!merged.accounts.length) merged.accounts = ['Cash'];
+      // Removed setting: desktop saldo card is sidebar-only (no topbar fallback)
+      delete merged.saldoPosition;
 
       // gemini key (stored separately)
       merged.geminiKey = p?.gemini_key || merged.geminiKey || '';
@@ -1599,6 +1603,7 @@ function computeSubscriptionStatus(profile){
       if (!STATE.db.enabled || !STATE.db.user) return;
       const settingsToSave = { ...STATE.settings };
       delete settingsToSave.geminiKey;
+      delete settingsToSave.saldoPosition;
       await saveProfile({ settings: settingsToSave, gemini_key: STATE.settings.geminiKey || '' });
     }
 
@@ -1617,10 +1622,18 @@ function computeSubscriptionStatus(profile){
       return keys;
     }
 
-    async function refreshTransactionsRange(){
+    /**
+     * Refresh transactions for the active period window.
+     * @param {{ soft?: boolean }} [opts] soft=true skips loading skeleton (background refresh)
+     */
+    async function refreshTransactionsRange(opts){
+      opts = opts || {};
+      const soft = !!opts.soft;
       if (!STATE.db.enabled || !STATE.db.user) return;
-      STATE.ui.txLoading = true;
-      rerender();
+      if (!soft) {
+        STATE.ui.txLoading = true;
+        rerender();
+      }
       const supa = STATE.db.supa;
 
       const anchor = toMonthKey(STATE.period.end);
@@ -1654,7 +1667,13 @@ function computeSubscriptionStatus(profile){
         STATE.ui.txLoading = false;
         STATE.ui.txVisibleCount = 50;
         ensureSelectOptions();
-        rerender();
+        if (soft) {
+          if (typeof renderTransactions === 'function') renderTransactions();
+          if (typeof renderTxList === 'function') renderTxList();
+          if (typeof renderDashboardStats === 'function') renderDashboardStats();
+        } else {
+          rerender();
+        }
         updateSaldoAsync();
       };
 
@@ -1898,7 +1917,12 @@ async function upsertTransaction_legacy_local(tx) {
     }
     window.ensureAppShellVisible = ensureAppShellVisible;
 
-    async function hydrateLocalTransactions() {
+    /**
+     * @param {{ soft?: boolean }} [opts] soft=true updates list/saldo without full page rebuild
+     */
+    async function hydrateLocalTransactions(opts) {
+      opts = opts || {};
+      const soft = !!opts.soft;
       if (!window.dataStore?.getTransactions || !STATE.db.user) return false;
       const anchor = toMonthKey(STATE.period.end);
       const months = lastNMonths(6, anchor);
@@ -1923,7 +1947,14 @@ async function upsertTransaction_legacy_local(tx) {
         STATE.ui.txLoading = false;
         STATE.ui.txVisibleCount = 50;
         ensureSelectOptions();
-        rerender();
+        if (soft) {
+          if (typeof renderTransactions === 'function') renderTransactions();
+          if (typeof renderTxList === 'function') renderTxList();
+          if (typeof renderDashboardStats === 'function') renderDashboardStats();
+          if (typeof updateSaldoAsync === 'function') updateSaldoAsync().catch(() => {});
+        } else {
+          rerender();
+        }
         console.log(`[offline] Hydrated ${local.length} transactions from IndexedDB`);
         return true;
       } catch (e) {
@@ -3682,7 +3713,7 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
      try { applyLanguageToUI(); } catch {}
 
 // aria-expanded untuk tombol periode (mobile) + kartu filter desktop
-['#btnPeriodToggle', '#btnFilterCardDesktop', '#btnFilterStripDesktop', '#btnPeriodToggleTopbar'].forEach((sel) => {
+['#btnPeriodToggle', '#btnFilterCardDesktop', '#btnFilterStripDesktop'].forEach((sel) => {
   const el = $(sel);
   if (!el) return;
   el.setAttribute('aria-expanded', String(
@@ -3714,10 +3745,8 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       const desktopAvatar = $('#userAvatarDesktop');
       if (desktopAvatar) desktopAvatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(STATE.user.name || 'User')}&background=0D8ABC&color=fff`;
       
-      // Full saldo bar only when sidebar collapsed (TX + Dashboard ≥1024).
-      const isTopbar = STATE.settings.saldoPosition === 'topbar';
+      // Desktop saldo card: sidebar only (topbar position setting removed).
       const sidebarWrap = $('#sidebarSaldoWrap');
-      const topbarWrap = $('#topbarSaldoWrap');
       const onDesktop = isDesktopViewport();
       const txDesktopEnhanced = isTxDesktopEnhanced();
       const sidebarCollapsed = isSidebarCollapsed();
@@ -3726,10 +3755,7 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       document.body.classList.toggle('desktop-saldo-bar', useDesktopSaldoBar);
       document.body.classList.toggle('sidebar-collapsed', sidebarCollapsed);
       if (sidebarWrap) {
-        sidebarWrap.style.display = (!isTopbar && onDesktop && !useDesktopSaldoBar) ? '' : 'none';
-      }
-      if (topbarWrap) {
-        topbarWrap.style.display = (isTopbar && onDesktop && !useDesktopSaldoBar) ? '' : 'none';
+        sidebarWrap.style.display = (onDesktop && !useDesktopSaldoBar) ? '' : 'none';
       }
       const saldoBarHost = $('#saldoBarDesktopHost');
       if (saldoBarHost) {
@@ -3928,9 +3954,6 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       $('#toggleCategory').checked = !!STATE.settings.showCategory;
       $('#toggleWeek').checked = !!STATE.settings.showWeek;
       
-      const saldoPosSelect = $('#saldoPositionSelect');
-      if (saldoPosSelect) saldoPosSelect.value = STATE.settings.saldoPosition || 'topbar';
-
       $('#geminiKey').value = STATE.settings.geminiKey || '';
       $('#toggleGemini').checked = !!STATE.settings.useGemini;
 
@@ -4003,7 +4026,7 @@ renderAccountsSettings();
   const masked = !!STATE.ui.saldoMasked;
 
   const saldoClassName = (sel, extra = '') => {
-    if (sel === '#kpiSaldo' || sel === '#kpiSaldoTopbar') {
+    if (sel === '#kpiSaldo') {
       return `hero-saldo-card__amount saldo-amount${extra}`;
     }
     if (sel === '#kpiSaldoDesktop') {
@@ -4015,8 +4038,8 @@ renderAccountsSettings();
     sel === '#kpiSaldoDesktop' ? `Rp ${formatCompactIDR(val)}` : formatIDR(val)
   );
 
-  // Update angka saldo (mobile + desktop + strip + topbar)
-  ['#kpiSaldo', '#kpiSaldoDesktop', '#kpiSaldoStrip', '#kpiSaldoTopbar'].forEach((sel) => {
+  // Update angka saldo (mobile + desktop sidebar + strip)
+  ['#kpiSaldo', '#kpiSaldoDesktop', '#kpiSaldoStrip'].forEach((sel) => {
     const el = $(sel);
     if (!el) return;
     el.classList.toggle('saldo-masked', masked);
@@ -4106,14 +4129,8 @@ renderAccountsSettings();
 
   renderHeroBudgetProgress(s, masked);
   
-  const elIncomeTopbar = $('#kpiIncomeTopbarVal');
-  if (elIncomeTopbar) elIncomeTopbar.textContent = masked ? '••••' : `+${formatCompactIDR(s.income)}`;
-  const elExpenseTopbar = $('#kpiExpenseTopbarVal');
-  if (elExpenseTopbar) elExpenseTopbar.textContent = masked ? '••••' : `−${formatCompactIDR(s.expense)}`;
-
   try { renderHeroSparkline('#heroSaldoSparklineDesktop'); } catch (_) {}
   try { renderHeroSparklineDesktop(); } catch (_) {}
-  try { renderHeroSparkline('#heroSaldoSparklineTopbar'); } catch (_) {}
 
   const savingRate = s.income > 0 ? Math.round(((s.income - s.expense) / s.income) * 100) : 0;
   const budgetRow = budgetForPeriod();
@@ -4694,7 +4711,7 @@ function generateSmartBudgetRecommendation() {
 
     function applySaldoMaskUI() {
       const masked = !!STATE.ui.saldoMasked;
-      ['#kpiSaldo', '#kpiSaldoDesktop', '#kpiSaldoStrip', '#kpiSaldoTopbar'].forEach((sel) => {
+      ['#kpiSaldo', '#kpiSaldoDesktop', '#kpiSaldoStrip'].forEach((sel) => {
         const el = $(sel);
         if (el) el.classList.toggle('saldo-masked', masked);
       });
@@ -5026,7 +5043,7 @@ function generateSmartBudgetRecommendation() {
       if (c.includes('makan') || c.includes('food')) return 'rgba(245,158,11,.22)';
       if (c.includes('transport') || c.includes('ojek')) return 'rgba(59,130,246,.22)';
       if (c.includes('belanja') || c.includes('shop')) return 'rgba(249,115,22,.22)';
-      if (c.includes('tagihan') || c.includes('util')) return 'rgba(168,85,247,.22)';
+      if (c.includes('tagihan') || c.includes('util')) return 'rgba(16,185,129,.22)';
       if (c.includes('gaji') || c.includes('income')) return 'rgba(0,229,160,.18)';
       return 'rgba(148,163,184,.18)';
     }
@@ -6101,7 +6118,7 @@ function generateSmartBudgetRecommendation() {
                 import('./components/global-filter-popup.js')
                   .then(({ showFilterPopup }) => showFilterPopup())
                   .catch(() => {
-                    ($('#btnPeriodToggleTopbar') || $('#btnFilterCardDesktop'))?.click?.();
+                    $('#btnFilterCardDesktop')?.click?.();
                   });
               } else if (e.target.closest('#btnBudgetBarDesktop')) {
                 e.stopPropagation();
@@ -6807,212 +6824,67 @@ function setSheetPosition(mode) {
     }
     window.openAffiliate = openAffiliate;
 
-    // === Tutorial sheet logic (versi accordion) ===
-const tutorialBackdrop = $('#tutorialBackdrop');
-const tutorialSheet = $('#tutorialSheet');
+    // === Tutorial / Help Center ===
+    const tutorialBackdrop = $('#tutorialBackdrop');
+    const tutorialSheet = $('#tutorialSheet');
 
-function openTutorial(){
-  renderTutorialContent();
-  openSheet(tutorialBackdrop, tutorialSheet);
-}
+    function parseTutorialRouteFromHash() {
+      const raw = String(location.hash || '').replace(/^#/, '');
+      if (!raw.startsWith('tutorial')) return null;
+      const parts = raw.split('/').filter(Boolean);
+      if (parts[0] !== 'tutorial') return null;
+      const categoryId = parts[1] || null;
+      const shortId = parts.slice(2).join('/') || null;
+      const articleId = categoryId && shortId ? `${categoryId}/${shortId}` : null;
+      return { categoryId, articleId };
+    }
 
-function closeTutorial(){
-  closeSheet(tutorialBackdrop, tutorialSheet);
-}
+    async function openTutorial(route) {
+      try { closeMenu?.(); } catch { /* ignore */ }
+      const container = $('#tutorial-content');
+      if (!container) return;
 
-// Klik area gelap dengan data-close-tutorial="true" akan menutup sheet
-tutorialBackdrop.addEventListener('click', (e)=>{
-  if (e.target?.dataset?.closeTutorial === 'true') closeTutorial();
-});
+      if (STATE.db?.user) window.currentUser = STATE.db.user;
+      if (STATE.db?.supa) window.__monefyiSupabase = STATE.db.supa;
 
-// ---------- Data tutorial ----------
-
-// Default topics jika belum ada di config database.
-// Nanti bisa digantikan dengan STATE.appConfig.tutorial.topics.
-const DEFAULT_TUTORIAL_TOPICS = [
-  {
-    id: 'pwa',
-    title: 'Pasang Monefyi di Layar Utama (Mobile App View)',
-    short: 'Cara menyimpan Monefyi seperti aplikasi di homescreen HP.',
-    videoUrl: '',
-    bodyHtml: `
-      <ol class="list-decimal pl-4 space-y-1 text-sm app-muted">
-        <li>Buka Monefyi dari browser di HP Anda (Chrome / Safari).</li>
-        <li>Pastikan Anda sudah login dan halaman utama terbuka.</li>
-        <li>Di Chrome (Android): tap ikon tiga titik › pilih <span class="font-semibold">"Tambahkan ke Layar Utama"</span>.</li>
-        <li>Di Safari (iOS): tap ikon <span class="font-semibold">Share</span> › pilih <span class="font-semibold">"Add to Home Screen"</span>.</li>
-        <li>Konfirmasi nama ikon (misalnya "Monefyi") lalu simpan. Kini Monefyi bisa dibuka seperti aplikasi biasa.</li>
-      </ol>
-    `
-  },
-  {
-    id: 'gemini',
-    title: 'Mengaktifkan AI dengan API Key Gemini',
-    short: 'Menghubungkan akun Gemini agar fitur AI Monefyi aktif.',
-    videoUrl: '',
-    bodyHtml: `
-      <ol class="list-decimal pl-4 space-y-1 text-sm app-muted">
-        <li>Buka menu <span class="font-semibold">Set</span> di navbar bawah.</li>
-        <li>Scroll ke bagian <span class="font-semibold">Pengaturan AI (Monefyi)</span>.</li>
-        <li>Buat API key Gemini di akun Google AI Studio Anda.</li>
-        <li>Salin API key (diawali huruf <code>AI...</code>) lalu tempel di kolom <span class="font-semibold">Gemini API Key</span>.</li>
-        <li>Aktifkan toggle <span class="font-semibold">Aktifkan AI</span>, klik <span class="font-semibold">Simpan</span>, lalu uji dengan <span class="font-semibold">Tes Koneksi</span>.</li>
-      </ol>
-    `
-  },
-  {
-    id: 'budgeting',
-    title: 'Menyusun Budget per Kategori',
-    short: 'Cara mengatur batas pengeluaran bulanan di Monefyi.',
-    videoUrl: '',
-    bodyHtml: `
-      <ol class="list-decimal pl-4 space-y-1 text-sm app-muted">
-        <li>Buka bagian <span class="font-semibold">Budgeting</span> (sidebar atau tombol Budget di navbar).</li>
-        <li>Isi <span class="font-semibold">Income (bulan ini)</span> sebagai dasar total budget.</li>
-        <li>Gunakan tombol <span class="font-semibold">Gunakan rekomendasi</span> untuk draft berdasarkan 3 bulan terakhir.</li>
-        <li>Tambahkan <span class="font-semibold">Budget per kategori</span> seperti Belanja Pasar, Transportasi, Tagihan &amp; Utilitas, dll.</li>
-        <li>Pastikan total budget tidak melebihi income, lalu klik <span class="font-semibold">Simpan Budget</span>.</li>
-      </ol>
-    `
-  },
-  {
-    id: 'input-transaksi',
-    title: 'Input Transaksi (Cepat AI, Manual, Foto Struk)',
-    short: 'Tiga cara mencatat transaksi di Monefyi.',
-    videoUrl: '',
-    bodyHtml: `
-      <ol class="list-decimal pl-4 space-y-1 text-sm app-muted">
-        <li><span class="font-semibold">Cepat (AI)</span>: tekan tombol <span class="font-semibold">+</span> › ikon pensil › tulis beberapa transaksi seperti chat, lalu klik <span class="font-semibold">Proses teks</span>.</li>
-        <li><span class="font-semibold">Manual</span>: buka form manual, isi tanggal, tipe, jumlah, kategori, akun, merchant, dan catatan, lalu klik <span class="font-semibold">Simpan</span>.</li>
-        <li><span class="font-semibold">Foto Struk (OCR)</span>: tekan tombol <span class="font-semibold">+</span> › ikon kamera › pilih foto struk dari kamera/galeri/file, cek hasil OCR lalu klik <span class="font-semibold">Simpan transaksi</span>.</li>
-        <li>Setiap transaksi yang disimpan akan otomatis masuk ke daftar "Semua Transaksi" dan memengaruhi saldo/budget.</li>
-      </ol>
-    `
-  },
-  {
-    id: 'dashboard',
-    title: 'Mengenal Tampilan Dashboard',
-    short: 'Ringkasan saldo, income/expense, dan tren pengeluaran.',
-    videoUrl: '',
-    bodyHtml: `
-      <ol class="list-decimal pl-4 space-y-1 text-sm app-muted">
-        <li>Kartu <span class="font-semibold">Saldo (estimasi)</span> menunjukkan estimasi saldo semua akun untuk periode terpilih.</li>
-        <li>Kartu <span class="font-semibold">Pemasukan</span>, <span class="font-semibold">Pengeluaran</span>, dan <span class="font-semibold">Surplus/Defisit</span> merangkum performa keuangan bulan berjalan.</li>
-        <li>Grafik <span class="font-semibold">Tren</span> dan <span class="font-semibold">Kategori</span> membantu melihat pola dan pos pengeluaran terbesar.</li>
-        <li>Gunakan tombol <span class="font-semibold">Periode</span> untuk mengubah rentang tanggal; semua komponen dashboard akan mengikuti filter tersebut.</li>
-      </ol>
-    `
-  }
-];
-
-// Ambil topics dari STATE.appConfig.tutorial.topics jika ada, selain itu pakai default
-function getTutorialTopics() {
-  var cfg = STATE.appConfig && STATE.appConfig.tutorial;
-  if (cfg && Array.isArray(cfg.topics) && cfg.topics.length > 0) {
-    return cfg.topics
-      .map(function (t) {
-        return {
-          id: t.id || t.slug || '',
-          title: t.title || '',
-          short: t.short || t.subtitle || '',
-          videoUrl: t.videoUrl || t.video_url || '',
-          bodyHtml: t.bodyHtml || t.body_html || ''
-        };
-      })
-      .filter(function (t) { return t.id && t.title; });
-  }
-  return DEFAULT_TUTORIAL_TOPICS;
-}
-
-var CURRENT_TUTORIAL_ID = null;
-
-// Render kartu tutorial (accordion)
-function renderTutorialContent() {
-  var container = $('#tutorialStepsContainer');
-  if (!container) return;
-
-  var topics = getTutorialTopics();
-  container.innerHTML = '';
-
-  if (!topics.length) {
-    container.innerHTML = '<div class="rounded-2xl app-card p-3 text-xs app-muted">Belum ada data tutorial. Silakan tambahkan dari Admin Panel.</div>';
-    return;
-  }
-
-  topics.forEach(function (tut) {
-    var card = document.createElement('div');
-    card.className = 'tutorial-card rounded-2xl app-card p-3 cursor-pointer transition border border-slate-800';
-    card.setAttribute('data-id', tut.id);
-
-    card.innerHTML =
-      '<div class="flex items-center justify-between gap-3">' +
-        '<div>' +
-          '<div class="text-sm font-semibold">' + tut.title + '</div>' +
-          '<div class="text-xs app-muted mt-0.5">' + (tut.short || '') + '</div>' +
-        '</div>' +
-        '<span class="text-xs app-muted">Tap untuk lihat</span>' +
-      '</div>' +
-      '<div class="tutorial-card-body mt-3 hidden"></div>';
-
-    card.addEventListener('click', function () {
-      openTutorialTopic(tut.id);
-    });
-
-    container.appendChild(card);
-  });
-
-  // Buka topik pertama
-  openTutorialTopic(topics[0].id);
-}
-
-// Buka satu topik: tampilkan detail & video, redupkan kartu lain
-function openTutorialTopic(id) {
-  var topics = getTutorialTopics();
-  var tut = topics.find(function (t) { return t.id === id; });
-  if (!tut) return;
-
-  CURRENT_TUTORIAL_ID = id;
-
-  var container = $('#tutorialStepsContainer');
-  if (!container) return;
-
-  var cards = container.querySelectorAll('.tutorial-card');
-  cards.forEach(function (card) {
-    var cardId = card.getAttribute('data-id');
-    var body = card.querySelector('.tutorial-card-body');
-
-    if (cardId === id) {
-      card.classList.remove('opacity-60');
-      card.classList.add('border-emerald-500/70');
-      if (body) {
-        body.classList.remove('hidden');
-        body.innerHTML = tut.bodyHtml || '';
+      const initial = route || parseTutorialRouteFromHash() || {};
+      if (!String(location.hash || '').startsWith('#tutorial')) {
+        history.replaceState(null, '', `${location.pathname}${location.search}#tutorial`);
       }
-    } else {
-      card.classList.add('opacity-60');
-      card.classList.remove('border-emerald-500/70');
-      if (body) {
-        body.classList.add('hidden');
-        body.innerHTML = '';
+
+      openSheet(tutorialBackdrop, tutorialSheet);
+
+      try {
+        const mod = await import('./pages/tutorial-page.js');
+        await mod.renderTutorialPage(container, {
+          categoryId: initial.categoryId || undefined,
+          articleId: initial.articleId || undefined,
+        });
+      } catch (e) {
+        console.error('[app] Tutorial failed:', e);
+        container.innerHTML = '<div class="tut-error"><p>Gagal memuat tutorial. Coba refresh halaman.</p></div>';
       }
     }
-  });
 
-  // Atur video di area atas
-  var frame = $('#tutorialVideoFrame');
-  var placeholder = $('#tutorialVideoPlaceholder');
-  if (!frame || !placeholder) return;
+    function closeTutorial() {
+      closeSheet(tutorialBackdrop, tutorialSheet);
+      if (String(location.hash || '').startsWith('#tutorial')) {
+        history.replaceState(null, '', location.pathname + location.search);
+      }
+    }
 
-  if (tut.videoUrl) {
-    frame.src = tut.videoUrl;
-    frame.classList.remove('hidden');
-    placeholder.classList.add('hidden');
-  } else {
-    frame.src = '';
-    frame.classList.add('hidden');
-    placeholder.classList.remove('hidden');
-  }
-}
+    tutorialBackdrop?.addEventListener('click', (e) => {
+      if (e.target?.dataset?.closeTutorial === 'true') closeTutorial();
+    });
+
+    window.openTutorial = openTutorial;
+    window.closeTutorial = closeTutorial;
+
+    window.addEventListener('hashchange', () => {
+      const route = parseTutorialRouteFromHash();
+      if (!route) return;
+      openTutorial(route);
+    });
 
     // Admin panel sheet
     const adminBackdrop = $('#adminBackdrop');
@@ -7040,6 +6912,7 @@ function openTutorialTopic(id) {
         plans: '#adminPlansPanel',
         revenue: '#adminRevenuePanel',
         config: '#adminConfigPanel',
+        tutorial: '#adminTutorialPanel',
       };
       Object.entries(panels).forEach(([k, sel]) => {
         $(sel)?.classList.toggle('hidden', k !== tab);
@@ -7049,6 +6922,7 @@ function openTutorialTopic(id) {
         plans: '#adminTabPlans',
         revenue: '#adminTabRevenue',
         config: '#adminTabConfig',
+        tutorial: '#adminTabTutorial',
       };
       Object.entries(tabBtns).forEach(([k, sel]) => {
         const btn = $(sel);
@@ -7059,12 +6933,146 @@ function openTutorialTopic(id) {
         btn.style.color = on ? 'rgba(186,230,253,.95)' : '';
       });
       if (tab === 'revenue') adminFetchRevenue();
+      if (tab === 'tutorial') adminLoadTutorialSteps();
     }
 
     $('#adminTabUsers')?.addEventListener('click', ()=>setAdminTab('users'));
     $('#adminTabPlans')?.addEventListener('click', ()=>setAdminTab('plans'));
     $('#adminTabRevenue')?.addEventListener('click', ()=>setAdminTab('revenue'));
     $('#adminTabConfig')?.addEventListener('click', ()=>setAdminTab('config'));
+    $('#adminTabTutorial')?.addEventListener('click', ()=>setAdminTab('tutorial'));
+
+    let _adminTutorialRows = [];
+
+    async function adminLoadTutorialSteps() {
+      const status = $('#adminTutorialStatus');
+      const list = $('#adminTutorialStepsList');
+      if (!list) return;
+      if (status) status.textContent = 'Memuat…';
+      try {
+        if (STATE.db?.user) window.currentUser = STATE.db.user;
+        if (STATE.db?.supa) window.__monefyiSupabase = STATE.db.supa;
+        const mod = await import('./services/tutorial-service.js');
+        _adminTutorialRows = await mod.listTutorialStepsForAdmin();
+        renderAdminTutorialSteps($('#adminTutorialFilter')?.value || '');
+        if (status) status.textContent = `${_adminTutorialRows.length} langkah`;
+      } catch (e) {
+        console.error('[admin] tutorial list failed:', e);
+        list.innerHTML = '<div class="text-xs app-muted">Gagal memuat. Pastikan migration tutorial sudah dijalankan, lalu Seed konten default.</div>';
+        if (status) status.textContent = 'Error';
+      }
+    }
+
+    function renderAdminTutorialSteps(filterQ) {
+      const list = $('#adminTutorialStepsList');
+      if (!list) return;
+      const q = String(filterQ || '').toLowerCase().trim();
+      const rows = !_adminTutorialRows.length
+        ? []
+        : q
+          ? _adminTutorialRows.filter((r) =>
+              `${r.categoryTitle} ${r.articleTitle} ${r.text}`.toLowerCase().includes(q))
+          : _adminTutorialRows;
+
+      if (!rows.length) {
+        list.innerHTML = '<div class="text-xs app-muted">Tidak ada langkah. Klik “Seed konten default”.</div>';
+        return;
+      }
+
+      list.innerHTML = rows.map((r) => {
+        const hasMedia = !!r.media_url;
+        const mediaPreview = hasMedia
+          ? (r.media_type === 'video'
+            ? `<span class="text-[10px] text-emerald-300">video ✓</span>`
+            : `<img class="admin-tut-thumb" src="${String(r.media_url).replace(/"/g, '&quot;')}" alt="" loading="lazy" onerror="this.style.display='none'" />`)
+          : '<span class="text-[10px] app-muted">tanpa media</span>';
+        return `
+          <div class="admin-tut-step" data-step-id="${String(r.id).replace(/"/g, '&quot;')}">
+            <div class="admin-tut-step-meta">${escapeHtmlLite(r.categoryTitle)} · ${escapeHtmlLite(r.articleTitle)} · #${r.stepIndex + 1}</div>
+            <div class="admin-tut-step-text">${escapeHtmlLite(r.text)}</div>
+            <div class="admin-tut-step-actions">
+              ${mediaPreview}
+              <label class="tap rounded-xl app-chip px-3 py-1.5 text-xs cursor-pointer">
+                Upload
+                <input type="file" accept="image/*,video/*,.gif" class="hidden admin-tut-file" data-step-id="${String(r.id).replace(/"/g, '&quot;')}" />
+              </label>
+              ${hasMedia ? `<button type="button" class="tap rounded-xl px-3 py-1.5 text-xs admin-tut-clear" data-step-id="${String(r.id).replace(/"/g, '&quot;')}" style="background:rgba(244,63,94,.15);color:#fecaca">Hapus media</button>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      list.querySelectorAll('.admin-tut-file').forEach((input) => {
+        input.addEventListener('change', async () => {
+          const file = input.files?.[0];
+          const stepId = input.dataset.stepId;
+          if (!file || !stepId) return;
+          const statusEl = $('#adminTutorialStatus');
+          if (statusEl) statusEl.textContent = 'Uploading…';
+          try {
+            const mod = await import('./services/tutorial-service.js');
+            const res = await mod.uploadTutorialMedia(file, stepId);
+            if (!res.success) throw new Error(res.error || 'upload failed');
+            if (statusEl) statusEl.textContent = 'Media tersimpan';
+            await adminLoadTutorialSteps();
+          } catch (err) {
+            console.error(err);
+            if (statusEl) statusEl.textContent = err.message || 'Upload gagal';
+          } finally {
+            input.value = '';
+          }
+        });
+      });
+
+      list.querySelectorAll('.admin-tut-clear').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const stepId = btn.dataset.stepId;
+          const statusEl = $('#adminTutorialStatus');
+          try {
+            const mod = await import('./services/tutorial-service.js');
+            const res = await mod.clearTutorialMedia(stepId);
+            if (!res.success) throw new Error(res.error || 'clear failed');
+            if (statusEl) statusEl.textContent = 'Media dihapus';
+            await adminLoadTutorialSteps();
+          } catch (err) {
+            if (statusEl) statusEl.textContent = err.message || 'Gagal hapus';
+          }
+        });
+      });
+    }
+
+    function escapeHtmlLite(s) {
+      return String(s ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    $('#adminTutorialFilter')?.addEventListener('input', (e) => {
+      renderAdminTutorialSteps(e.target.value);
+    });
+
+    $('#btnAdminSeedTutorial')?.addEventListener('click', async () => {
+      if (!isAdmin()) return;
+      const status = $('#adminTutorialStatus');
+      if (status) status.textContent = 'Seeding…';
+      try {
+        if (STATE.db?.supa) window.__monefyiSupabase = STATE.db.supa;
+        const mod = await import('./services/tutorial-service.js');
+        const res = await mod.seedTutorialDefaults();
+        if (!res.success) throw new Error(res.error || 'seed failed');
+        if (status) {
+          status.textContent = `Seed OK: ${res.counts.categories} kat, ${res.counts.articles} art, ${res.counts.steps} step`;
+        }
+        await adminLoadTutorialSteps();
+      } catch (e) {
+        console.error(e);
+        if (status) status.textContent = e.message || 'Seed gagal';
+      }
+    });
+
+    $('#btnAdminRefreshTutorial')?.addEventListener('click', () => adminLoadTutorialSteps());
 
     function loadAdminPlansForm(){
       const plans = STATE.appConfig?.platform_settings?.plans || {};
@@ -7607,8 +7615,8 @@ function openTutorialTopic(id) {
     function setTab(tab){
       $$('.tabBtn').forEach(b => {
         const active = b.dataset.tab === tab;
-        b.style.background = active ? 'rgba(99,102,241,.15)' : '';
-        b.style.borderColor = active ? 'rgba(99,102,241,.25)' : '';
+        b.style.background = active ? 'var(--mf-primary-soft)' : '';
+        b.style.borderColor = active ? 'var(--mf-primary-border)' : '';
         b.style.color = active ? 'rgba(199,210,254,.95)' : '';
       });
       $$('.tabPanel').forEach(p => p.classList.toggle('hidden', p.dataset.tabPanel !== tab));
@@ -8175,7 +8183,7 @@ async function dbDeleteTransaction(id) {
     STATE.transactions = STATE.transactions.filter(t => t.id !== id);
 
     // OTOMATIS REFRESH
-    refreshAllUI();
+    refreshAllUI({ syncRemote: 'ifChanged', soft: true });
   }
 }
 
@@ -8883,7 +8891,7 @@ if (btnApplyAI) {
                         <!-- Header -->
                         <div class="px-5 py-4 border-b border-slate-800 bg-slate-900">
                             <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400">✨</div>
+                                <div class="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400">✨</div>
                                 <div>
                                     <h3 class="font-bold text-white text-lg">Analisa Budget AI</h3>
                                     <p id="aiRecoSubtitle" class="text-xs text-slate-400">Preview Detail Budget</p>
@@ -8909,7 +8917,7 @@ if (btnApplyAI) {
                         <!-- Action Buttons -->
                         <div class="p-4 border-t border-slate-800 bg-slate-900 grid grid-cols-2 gap-3">
                             <button id="btnCloseAI" class="py-3 rounded-xl border border-slate-600 text-slate-300 font-medium hover:bg-slate-800 transition">Batal</button>
-                            <button id="btnConfirmAI" class="py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-500 shadow-lg shadow-indigo-500/20 transition">Setuju & Terapkan</button>
+                            <button id="btnConfirmAI" class="py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-500 shadow-lg shadow-emerald-500/20 transition">Setuju & Terapkan</button>
                         </div>
                     </div>
                 </div>
@@ -8976,7 +8984,7 @@ if (btnApplyAI) {
                             </div>
                             <div>
                                 <div class="text-xs font-bold text-white">${escapeHtml(r.name)}</div>
-                                <div class="text-[10px] text-indigo-400 flex items-center gap-1 mt-0.5">
+                                <div class="text-[10px] text-emerald-400 flex items-center gap-1 mt-0.5">
                                    <span>${r.items.length} Detail Item</span>
                                    <svg id="aiArrow-${idx}" class="w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                 </div>
@@ -9030,7 +9038,7 @@ if (btnApplyAI) {
 
                     // 3. Feedback
                     const stat = document.getElementById('bStatus');
-                    if(stat) stat.innerHTML = '<span class="text-indigo-400">✨ Budget AI Diterapkan.</span>';
+                    if(stat) stat.innerHTML = '<span style="color:var(--mf-primary)">Budget AI diterapkan.</span>';
                 }
                 
                 // Tutup Popup
@@ -9375,7 +9383,7 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
             if (tx && tx.amount > 0) await upsertTransaction(tx, { pending: true });
           }
           $('#quickText').value = '';
-          refreshAllUI();
+          refreshAllUI({ syncRemote: 'ifChanged', soft: true });
           closeAddSheet();
         }
       } catch (e) {
@@ -11196,7 +11204,7 @@ if (btnUpdate) {
       if(typeof updateBudgetSheetDerived === 'function') updateBudgetSheetDerived(); // Sisa Budget
       if(typeof renderDashboardStats === 'function') renderDashboardStats();   // Card Saldo Dashboard
          // REFRESH DISINI
-    refreshAllUI(); 
+    refreshAllUI({ syncRemote: 'ifChanged', soft: true });
       setTimeout(() => {
         if(typeof closeEditModal === 'function') closeEditModal();
         else if ($('#editBackdrop')) $('#editBackdrop').style.display = 'none'; // Fallback close
@@ -11424,7 +11432,7 @@ function toggleNav(view, triggerEl) {
     });
 
     // Periode / filter — unified top-slide popup on all pages
-    ['#btnPeriodToggle', '#btnFilterCardDesktop', '#btnFilterStripDesktop', '#btnPeriodToggleTopbar'].forEach((sel) => {
+    ['#btnPeriodToggle', '#btnFilterCardDesktop', '#btnFilterStripDesktop'].forEach((sel) => {
       const el = $(sel);
       if (!el) return;
 
@@ -11740,6 +11748,7 @@ function toggleNav(view, triggerEl) {
 
     // Menu shortcuts
     $('#btnOpenQuick').addEventListener('click', () => { closeMenu(); openAddSheet('quick'); });
+    $('#btnOpenTutorialFull')?.addEventListener('click', () => { closeMenu(); openTutorial(); });
     $('#btnOpenAdvisor').addEventListener('click', () => { closeMenu(); openAdvisor(); });
     $('#btnOpenBudget').addEventListener('click', () => { closeMenu(); openBudget(); });
 
@@ -11869,7 +11878,7 @@ function toggleNav(view, triggerEl) {
       setSaldoFilterMenu(false);
     });
 
-    ['#btnSaldoMask', '#btnSaldoMaskDesktop', '#btnSaldoMaskTopbar'].forEach((sel) => {
+    ['#btnSaldoMask', '#btnSaldoMaskDesktop'].forEach((sel) => {
       $(sel)?.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -11902,12 +11911,10 @@ function toggleNav(view, triggerEl) {
       STATE.settings.showTrend = $('#toggleTrend').checked;
       STATE.settings.showCategory = $('#toggleCategory').checked;
       STATE.settings.showWeek = $('#toggleWeek').checked;
-      if ($('#saldoPositionSelect')) {
-        STATE.settings.saldoPosition = $('#saldoPositionSelect').value;
-      }
+      delete STATE.settings.saldoPosition;
     }
 
-    ['toggleKPI','toggleBudget','toggleTrend','toggleCategory','toggleWeek', 'saldoPositionSelect'].forEach(id => {
+    ['toggleKPI','toggleBudget','toggleTrend','toggleCategory','toggleWeek'].forEach(id => {
       const el = $(`#${id}`);
       if (el) {
         el.addEventListener('change', async () => {
@@ -12089,6 +12096,11 @@ function toggleNav(view, triggerEl) {
         if ($('#mAccount')) $('#mAccount').value = getLastUsedAccount();
         applyAppBranding();
         rerender();
+
+        // Deep-link Help Center: #tutorial[/category[/article]]
+        if (parseTutorialRouteFromHash() && STATE.db?.user) {
+          setTimeout(() => openTutorial(parseTutorialRouteFromHash()), 0);
+        }
       } finally {
         splash?.dismiss?.();
         document.body.classList.add('app-ready');
@@ -12100,11 +12112,15 @@ function toggleNav(view, triggerEl) {
     // =========================
     // Refresh UI (satu pintu masuk)
     // =========================
-    async function refreshAllUI(opts) {
-      opts = opts || {};
-      var syncRemote = opts.syncRemote !== false;
-      if (syncRemote && typeof refreshTransactionsRange === 'function') {
-        try { await refreshTransactionsRange(); } catch (e) { console.warn('refreshTransactionsRange', e); }
+    /**
+     * Soft UI refresh from local STATE / IndexedDB — no skeleton, no full chart teardown.
+     */
+    async function softRefreshUI() {
+      try {
+        const hydrated = await hydrateLocalTransactions({ soft: true });
+        if (hydrated) return;
+      } catch (e) {
+        console.warn('softRefreshUI hydrate', e);
       }
       if (typeof renderTransactions === 'function') renderTransactions();
       if (typeof renderTxList === 'function') renderTxList();
@@ -12114,11 +12130,58 @@ function toggleNav(view, triggerEl) {
       if (typeof updateSaldoAsync === 'function') {
         try { await updateSaldoAsync(); } catch (e) { console.warn('updateSaldoAsync', e); }
       }
-      if (typeof rerender === 'function') rerender();
+    }
+
+    /**
+     * @param {{ syncRemote?: boolean|'ifChanged', soft?: boolean }} [opts]
+     * syncRemote:
+     *   true (default) — pull transactions from server
+     *   false — local UI only
+     *   'ifChanged' — probe max(updated_at) first; pull only when remote changed
+     */
+    async function refreshAllUI(opts) {
+      opts = opts || {};
+      const syncRemote = opts.syncRemote === undefined ? true : opts.syncRemote;
+      const soft = opts.soft === true || syncRemote === 'ifChanged';
+
+      if (syncRemote === 'ifChanged') {
+        try {
+          const probe = await window.monefyiSync?.probeRemoteChanges?.();
+          if (probe?.hasChanges) {
+            await refreshTransactionsRange({ soft: true });
+          }
+        } catch (e) {
+          console.warn('refreshAllUI ifChanged', e);
+        }
+      } else if (syncRemote) {
+        try {
+          await refreshTransactionsRange({ soft });
+        } catch (e) {
+          console.warn('refreshTransactionsRange', e);
+        }
+      }
+
+      if (typeof renderTransactions === 'function') renderTransactions();
+      if (typeof renderTxList === 'function') renderTxList();
+      if (typeof renderBudgetRows === 'function') renderBudgetRows();
+      if (typeof updateBudgetSheetDerived === 'function') updateBudgetSheetDerived();
+      if (typeof renderDashboardStats === 'function') renderDashboardStats();
+      if (typeof updateSaldoAsync === 'function') {
+        try { await updateSaldoAsync(); } catch (e) { console.warn('updateSaldoAsync', e); }
+      }
+      if (!soft && typeof rerender === 'function') rerender();
     }
     window.refreshAllUI = refreshAllUI;
-    window.refreshAppSchedules = function () { return refreshAllUI({ syncRemote: false }); };
-    window.forceRefreshUI = function () { return refreshAllUI({ syncRemote: false }); };
+    window.softRefreshUI = softRefreshUI;
+    window.refreshAppSchedules = function () { return refreshAllUI({ syncRemote: false, soft: true }); };
+    window.forceRefreshUI = function () { return refreshAllUI({ syncRemote: 'ifChanged', soft: true }); };
+
+    // After background sync pulls new rows, refresh UI without skeleton flicker
+    window.addEventListener('monefyi-sync-complete', (event) => {
+      const pulled = Number(event?.detail?.pulled || 0);
+      if (pulled <= 0) return;
+      softRefreshUI().catch((e) => console.warn('softRefreshUI after sync', e));
+    });
 
     (function setupBtnMenuTutorial() {
       function bind() {

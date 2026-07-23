@@ -164,12 +164,12 @@ export async function showNotificationPanel(anchorEl) {
     <div class="notif-modal" role="dialog" aria-modal="true" aria-label="Notifikasi">
       <header class="notif-header">
         <div class="notif-header-title">
-          <h3>🔔 Notifikasi</h3>
+          <h3>Notifikasi</h3>
           ${unreadCount > 0 ? `<span class="notif-header-count">${unreadCount} baru</span>` : ''}
         </div>
         <div class="notif-header-actions">
           ${unreadCount > 0 ? '<button type="button" class="btn-notif-action" data-action="mark-all">Tandai dibaca</button>' : ''}
-          <button type="button" class="close-btn" data-action="close" aria-label="Tutup">✕</button>
+          <button type="button" class="close-btn sheet-close-btn" data-action="close" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
         </div>
       </header>
       <div class="notif-filter-tabs">
@@ -206,7 +206,7 @@ function renderNotifList(notifications) {
   if (!notifications.length) {
     return `
       <div class="notif-empty">
-        <div class="notif-empty-icon">🔔</div>
+        <div class="notif-empty-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/></svg></div>
         <div class="notif-empty-title">Tidak ada notifikasi</div>
         <div class="notif-empty-desc">Kamu up-to-date!</div>
       </div>
@@ -253,7 +253,7 @@ function renderNotifItem(n) {
         ` : ''}
         <div class="notif-time">${time}</div>
       </div>
-      <button type="button" class="notif-dismiss" data-action="dismiss" data-id="${n.id}" title="Hapus">✕</button>
+      <button type="button" class="notif-dismiss" data-action="dismiss" data-id="${n.id}" title="Hapus"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
     </div>
   `;
 }

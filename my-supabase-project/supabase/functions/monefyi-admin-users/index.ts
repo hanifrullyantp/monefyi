@@ -94,8 +94,8 @@ serve(async (req) => {
     // 2) Parse filter dari body
     const body = await req.json().catch(() => ({}));
     const q = String(body?.q || "").trim().toLowerCase();
-    const planFilter = String(body?.plan || "all").toLowerCase();   // "all" | "none" | "monthly" | "lifetime"
-    const statusFilter = String(body?.status || "all").toLowerCase(); // "all" | "active" | "expired" | "none"
+    const planFilter = String(body?.plan || "all").toLowerCase();   // "all" | "none" | "trial" | "monthly" | "lifetime"
+    const statusFilter = String(body?.status || "all").toLowerCase(); // "all" | "active" | "expired" | "none" | "suspended" | "pending"
     const plannerFilter = String(body?.planner || "all").toLowerCase(); // "all" | "planner" | "non_planner"
 
     const page = Math.max(1, Number(body?.page || 1));
@@ -175,7 +175,9 @@ serve(async (req) => {
 
     const { data: profileRows, error: prof2Err } = await supa
       .from("profiles")
-      .select("id, name, role")
+      .select(
+        "id, name, phone, role, status, plan_type, plan_expires_at, email_notifications, push_notifications, admin_notes",
+      )
       .in("id", ids);
 
     if (prof2Err) {
@@ -221,8 +223,9 @@ serve(async (req) => {
     for (const u of users) {
       const planRow = planByUser.get(u.id) || null;
       const prof = profileByUser.get(u.id) || {};
-      const planType = String(planRow?.plan_type || "none").toLowerCase();
-      const expiresAt = planRow?.expires_at || null;
+      const planType = String(planRow?.plan_type || prof?.plan_type || "none").toLowerCase();
+      const expiresAt = planRow?.expires_at || prof?.plan_expires_at || null;
+      const accountStatus = String(prof?.status || "active").toLowerCase();
       const aiDailyLimit =
         typeof planRow?.ai_daily_limit === "number"
           ? planRow.ai_daily_limit
@@ -242,8 +245,14 @@ serve(async (req) => {
 
       // Filter oleh planFilter
       if (planFilter !== "all" && planType !== planFilter) continue;
-      // Filter oleh statusFilter
-      if (statusFilter !== "all" && planStatus !== statusFilter) continue;
+      // Filter status: account status (suspended/pending) OR plan status (active/expired/none)
+      if (statusFilter !== "all") {
+        if (["suspended", "pending"].includes(statusFilter)) {
+          if (accountStatus !== statusFilter) continue;
+        } else if (planStatus !== statusFilter) {
+          continue;
+        }
+      }
 
       const plannerInfo = plannerByUser.get(u.id) || null;
       const isPlannerUser = !!plannerInfo;
@@ -262,11 +271,16 @@ serve(async (req) => {
         created_at: u.created_at,
         last_sign_in_at: u.last_sign_in_at,
         name,
+        phone: prof?.phone || "",
         plan_type: planType,
         plan_status: planStatus,
         expires_at: expiresAt,
         ai_daily_limit: aiDailyLimit,
-        profile_role: prof?.role || null,
+        profile_role: prof?.role || "user",
+        status: accountStatus,
+        email_notifications: prof?.email_notifications !== false,
+        push_notifications: prof?.push_notifications !== false,
+        admin_notes: prof?.admin_notes || "",
         is_planner_user: isPlannerUser,
         planner_role: plannerInfo?.role || null,
         planner_org_name: plannerInfo?.org_name || null,

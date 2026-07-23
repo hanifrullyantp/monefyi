@@ -204,7 +204,7 @@ export function showBudgetFormModal(defaults = {}, options = {}) {
           <h2>${isEdit ? 'Detail Budgeting' : 'Tambah Budgeting'}</h2>
           <p class="modal-subtitle">${escapeHtml(month)}</p>
         </div>
-        <button type="button" class="close-btn" data-action="close" aria-label="Tutup">${Icon('x', { size: 18 })}</button>
+        <button type="button" class="close-btn sheet-close-btn" data-action="close" aria-label="Tutup">${Icon('x', { size: 18 })}</button>
       </header>
       ${renderStickyAllocation(income, totalBudgeted, row.amount || 0)}
       <div class="modal-body">
@@ -622,11 +622,9 @@ function showToast(msg) {
     window.showToast(msg, 'info');
     return;
   }
-  const t = document.createElement('div');
-  t.className = 'action-toast';
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 2500);
+  if (window.MonefyiUI?.showToast) window.MonefyiUI.showToast(msg, 'success');
+  else if (typeof window.showToast === 'function') window.showToast(msg, 'success');
+  else { const t = document.createElement('div'); t.className = 'action-toast success'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2000); }
 }
 
 if (typeof window !== 'undefined') {

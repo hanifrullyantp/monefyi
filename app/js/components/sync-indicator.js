@@ -25,6 +25,8 @@ export function renderSyncIndicator(opts = {}) {
   indicator.setAttribute('aria-label', 'Status sinkronisasi');
   indicator.title = 'Ketuk untuk sinkron manual';
 
+  let lastKey = '';
+
   function labelFor(status) {
     if (status.isSyncing) return 'Menyinkronkan...';
     if (status.isOnline) return 'Tersinkron';
@@ -33,6 +35,10 @@ export function renderSyncIndicator(opts = {}) {
 
   function update() {
     const status = getSyncStatus();
+    const key = `${status.isOnline ? 1 : 0}:${status.isSyncing ? 1 : 0}`;
+    if (key === lastKey) return;
+    lastKey = key;
+
     indicator.innerHTML = `
       <span class="sync-icon ${status.isSyncing ? 'syncing' : ''}" aria-hidden="true">
         ${status.isOnline ? ICON_ONLINE : ICON_OFFLINE}

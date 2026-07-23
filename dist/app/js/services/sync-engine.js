@@ -6,10 +6,12 @@
 import { getDb, isLocalId } from './offline-db.js';
 
 let _syncInProgress = false;
+let _syncEngineReady = false;
 /** @type {Set<(event: string, data?: object) => void>} */
 const _syncListeners = new Set();
 
 const PULL_TABLES = ['transactions', 'budgets'];
+const QUIET_SYNC_REASONS = new Set(['periodic', 'startup', 'background', 'bootstrap']);
 
 /**
  * @returns {string|null}
@@ -30,8 +32,12 @@ function isBrowserOnline() {
 
 /**
  * Initialize sync engine — online/offline listeners + periodic sync.
+ * Safe to call once; subsequent calls are ignored.
  */
 export function initSyncEngine() {
+  if (_syncEngineReady) return;
+  _syncEngineReady = true;
+
   window.addEventListener('online', () => {
     console.log('[sync] Online detected');
     notifyListeners('online');
@@ -53,6 +59,46 @@ export function initSyncEngine() {
     window.monefyiConnectivity?.verifyNetworkAccess?.().then((ok) => {
       if (ok) triggerSync('startup');
     });
+  }
+}
+
+/**
+ * Cheap probe: any pending local queue OR server rows newer than last_sync_at?
+ * @param {import('@supabase/supabase-js').SupabaseClient} [supabase]
+ * @returns {Promise<{ hasChanges: boolean, pendingLocal?: number, remote?: boolean }>}
+ */
+export async function probeRemoteChanges(supabase) {
+  const client = supabase || window.__monefyiSupabase;
+  const userId = getUserId();
+  if (!client || !userId) return { hasChanges: true };
+
+  try {
+    const db = await getDb();
+    const pendingLocal = await db.sync_queue.where('status').equals('pending').count();
+    if (pendingLocal > 0) return { hasChanges: true, pendingLocal, remote: false };
+
+    const lastSync = await db.app_state.get('last_sync_at');
+    const since = lastSync?.value || new Date(0).toISOString();
+
+    for (const table of PULL_TABLES) {
+      const { data, error } = await client
+        .from(table)
+        .select('updated_at')
+        .eq('user_id', userId)
+        .gt('updated_at', since)
+        .limit(1);
+
+      if (error) {
+        console.warn(`[sync] probe ${table} failed:`, error);
+        return { hasChanges: true, pendingLocal: 0, remote: true };
+      }
+      if (data?.length) return { hasChanges: true, pendingLocal: 0, remote: true };
+    }
+
+    return { hasChanges: false, pendingLocal: 0, remote: false };
+  } catch (e) {
+    console.warn('[sync] probe failed:', e);
+    return { hasChanges: true };
   }
 }
 
@@ -80,22 +126,32 @@ export async function queueSync(operation, table, recordId, payload) {
 
 /**
  * Full sync cycle: push pending queue, then pull server changes.
+ * Quiet reasons probe first and skip when nothing changed (avoids UI flicker).
  * @param {string} [reason]
  */
 export async function triggerSync(reason = 'manual') {
   if (_syncInProgress) {
     console.log('[sync] Already in progress, skipping');
-    return;
+    return { skipped: true, reason: 'in_progress' };
   }
   if (!isBrowserOnline()) {
     console.log('[sync] Offline, skipping');
-    return;
+    return { skipped: true, reason: 'offline' };
   }
 
   const supabase = window.__monefyiSupabase;
   if (!supabase) {
     console.log('[sync] No supabase client');
-    return;
+    return { skipped: true, reason: 'no_client' };
+  }
+
+  const quiet = QUIET_SYNC_REASONS.has(reason);
+  if (quiet) {
+    const probe = await probeRemoteChanges(supabase);
+    if (!probe.hasChanges) {
+      console.log('[sync] No remote/local changes, skipping', reason);
+      return { skipped: true, reason: 'no_changes', pushed: 0, pulled: 0 };
+    }
   }
 
   _syncInProgress = true;
@@ -129,7 +185,9 @@ export async function triggerSync(reason = 'manual') {
     });
 
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('monefyi-sync-complete', { detail: { pushed: pushedCount } }));
+      window.dispatchEvent(new CustomEvent('monefyi-sync-complete', {
+        detail: { pushed: pushedCount, pulled: pulledCount, reason },
+      }));
       window.dispatchEvent(new CustomEvent('monefyi-pending-change'));
       if (pushedCount > 0) {
         window.monefyiActivity?.logActivity?.({
@@ -139,9 +197,12 @@ export async function triggerSync(reason = 'manual') {
         });
       }
     }
+
+    return { skipped: false, pushed: pushedCount, pulled: pulledCount, errors: errorCount };
   } catch (e) {
     console.error('[sync] Failed:', e);
     notifyListeners('sync-error', { error: e?.message || String(e) });
+    return { skipped: false, error: e?.message || String(e) };
   } finally {
     _syncInProgress = false;
     if (typeof window !== 'undefined' && window.monefyiPending?.processPendingQueue) {
@@ -413,5 +474,11 @@ export function getSyncStatus() {
 }
 
 if (typeof window !== 'undefined') {
-  window.monefyiSync = { triggerSync, getSyncStatus, onSyncEvent, initialDataPull };
+  window.monefyiSync = {
+    triggerSync,
+    getSyncStatus,
+    onSyncEvent,
+    initialDataPull,
+    probeRemoteChanges,
+  };
 }
