@@ -1773,56 +1773,28 @@
                 </div>
               </div>
 
-              <!-- Pengaturan AI -->
+              <!-- Pengaturan AI → Settings page -->
               <div class="rounded-2xl app-card p-4 border">
                 <div id="advisorAiEmptyCta" class="hidden rounded-xl app-card-opaque p-3 mb-3">
                   <div class="text-sm font-semibold">Monevisor AI belum aktif</div>
-                  <div class="mt-1 text-xs app-muted">Hubungkan API key untuk analisa keuangan personal.</div>
-                  <button id="btnEnableAiFromAdvisor" class="tap mt-2 rounded-xl px-3 py-2 text-xs font-semibold text-white hover:opacity-95" style="background: var(--brand-green)">Aktifkan Monevisor</button>
+                  <div class="mt-1 text-xs app-muted">Hubungkan API key di Pengaturan untuk analisa keuangan personal.</div>
+                  <button id="btnEnableAiFromAdvisor" class="tap mt-2 rounded-xl px-3 py-2 text-xs font-semibold text-white hover:opacity-95" style="background: var(--brand-green)">Atur di Pengaturan</button>
                 </div>
-                
+
                 <div class="flex items-start gap-3">
                   <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: rgba(16,185,129,0.15); color: #10b981;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
                   </div>
-                  <div>
-                    <div class="text-sm font-bold text-white">Pengaturan AI (Monefyi)</div>
-                    <div class="text-[11px] app-muted mt-0.5">Hubungkan API Key Gemini kamu untuk fitur AI yang lebih cerdas.</div>
+                  <div class="min-w-0 flex-1">
+                    <div class="text-sm font-bold text-white">Pengaturan AI</div>
+                    <div class="text-[11px] app-muted mt-0.5">Gemini API key &amp; toggle AI dikelola di halaman Pengaturan.</div>
+                    <button type="button" id="btnOpenAiSettingsFromAdvisor" class="tap mt-3 rounded-xl px-3 py-2 text-xs font-semibold text-white hover:opacity-95" style="background: var(--brand-grad)">Atur di Pengaturan</button>
                   </div>
                 </div>
-                
-                <div class="mt-4 space-y-3">
-                  <div class="flex items-center gap-2 bg-slate-800/50 rounded-xl p-1 border border-slate-700">
-                    <div class="text-[11px] app-muted pl-3 w-24 shrink-0">Gemini API Key</div>
-                    <input id="geminiKey" type="password" class="tap flex-1 bg-transparent px-2 py-2 text-xs text-white placeholder-slate-600 outline-none" placeholder="••••••••••••••••••••" />
-                    <button class="p-2 app-muted hover:text-white" onclick="const i=document.getElementById('geminiKey'); i.type=i.type==='password'?'text':'password';">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                    </button>
-                  </div>
-                  
-                  <label class="flex items-center justify-between gap-3 bg-slate-800/50 rounded-xl p-3 border border-slate-700 cursor-pointer">
-                    <div>
-                      <div class="text-[11px] font-bold text-white">Aktifkan AI</div>
-                      <div class="text-[10px] app-muted mt-0.5">Izinkan AI memberikan insight dan rekomendasi</div>
-                    </div>
-                    <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-                      <input id="toggleGemini" type="checkbox" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer transition-transform duration-200 ease-in-out" style="border-color: #cbd5e1; top: 2px; left: 2px;"/>
-                      <label for="toggleGemini" class="toggle-label block overflow-hidden h-6 rounded-full bg-slate-600 cursor-pointer transition-colors duration-200 ease-in-out"></label>
-                    </div>
-                  </label>
-
-                  <div class="flex items-center gap-2 pt-1">
-                    <button id="btnSaveGemini" class="tap rounded-xl px-4 py-2.5 text-xs font-bold text-white hover:opacity-95 flex items-center gap-1.5" style="background: #10b981;">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                      Simpan
-                    </button>
-                    <button id="btnTestAI" class="tap rounded-xl border border-slate-600 bg-transparent px-4 py-2.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 flex items-center gap-1.5">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
-                      Tes Koneksi
-                    </button>
-                  </div>
-                  <div class="text-[10px] app-muted" id="geminiStatus"></div>
-                </div>
+                <!-- Hidden legacy fields for any remaining sync code -->
+                <input id="geminiKey" type="hidden" value="" />
+                <input id="toggleGemini" type="checkbox" class="hidden" tabindex="-1" aria-hidden="true" />
+                <div class="hidden text-[10px] app-muted" id="geminiStatus"></div>
               </div>
 
             </div>

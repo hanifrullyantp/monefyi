@@ -11899,6 +11899,10 @@ function toggleNav(view, triggerEl) {
     $('#btnEnableAiFromAdvisor')?.addEventListener('click', () => {
       openSettings('ai');
     });
+    $('#btnOpenAiSettingsFromAdvisor')?.addEventListener('click', () => {
+      try { closeAdvisor?.(); } catch { /* ignore */ }
+      openSettings('ai');
+    });
 
     // Budget button
     $('#btnEditBudget').addEventListener('click', openBudget);

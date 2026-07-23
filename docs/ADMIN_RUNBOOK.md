@@ -103,6 +103,13 @@ Enable Trial + Monthly + Lifetime sekaligus.
 - Anti-abuse: disposable email, domain rate limit, device hash, cooldown 90 hari
 - Drip: tabel `drip_schedule` + cron `email-drip` (`x-cron-secret`)
 
+## Settings (user)
+
+1. Entry: Sidebar **Pengaturan** / Profile, atau Menu → **Buka Pengaturan** (full page, bukan bottom sheet)
+2. Deep-link: `#settings`, `#settings/account`, `#settings/notifications`, `#settings/ai`, dll.
+3. Section: Akun, Tampilan, Dashboard, Akun keuangan, Notifikasi, Email Import, AI, Monevisor, Data
+4. Branding/logo **bukan** di menu user — kelola di Admin Console → **Config** (Logo URL)
+
 ## Tutorial / Help Center
 
 1. Jalankan migration `20260815000000_tutorial_system.sql` (tables + RLS + bucket `tutorial-media`)
