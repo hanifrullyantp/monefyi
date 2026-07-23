@@ -77,6 +77,9 @@ jobs:
             monefyi-admin-app-config \
             monefyi-admin-platform-stats \
             monefyi-admin-company-types \
+            monefyi-admin-dashboard \
+            monefyi-admin-feedback \
+            monefyi-admin-revenue \
             monefyi-user-account \
             monefyi-landing-config
           do
