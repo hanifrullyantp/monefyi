@@ -571,7 +571,8 @@ html, body {
       .tx-main-panel #dynamicContent.dynamic-content--dashboard,
       .tx-main-panel #dynamicContent.dynamic-content--tx,
       .tx-main-panel #dynamicContent.dynamic-content--budget,
-      .tx-main-panel #dynamicContent.dynamic-content--monevisor {
+      .tx-main-panel #dynamicContent.dynamic-content--monevisor,
+      .tx-main-panel #dynamicContent.dynamic-content--settings {
         overflow-y: auto;
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
@@ -588,8 +589,20 @@ html, body {
       #dashboardExpanded.hidden,
       #budgetPageRoot.hidden,
       #monevisorPageRoot.hidden,
+      #settingsPageRoot.hidden,
       #homePageRoot.hidden {
         display: none !important;
+      }
+      /* Settings owns the content area — no bleed-through to list/dashboard */
+      #dynamicContent.dynamic-content--settings > :not(#settingsPageRoot) {
+        display: none !important;
+        pointer-events: none !important;
+      }
+      #dynamicContent.dynamic-content--settings #settingsPageRoot:not(.hidden) {
+        display: flex !important;
+        flex: 1;
+        min-height: 0;
+        width: 100%;
       }
       .tx-main-panel #txListHost {
         flex: 1;
@@ -3472,14 +3485,19 @@ html, body {
     /* Prevent horizontal overflow (common cause of mobile zoom/layout issues) */
     canvas { max-width: 100% !important; }
 
-    /* Tutorial overlay animation */
+    /* Tutorial overlay — cutout spotlight (do NOT paint a full-screen dark bg on #tourOverlay) */
     @keyframes popIn { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     #tourOverlay {
       pointer-events: auto;
+      background: transparent !important;
+      overflow: hidden;
     }
     #tourSpotlight {
       pointer-events: none;
       z-index: 1;
+      background: transparent !important;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.28);
       transition: top 0.28s ease, left 0.28s ease, width 0.28s ease, height 0.28s ease;
     }
     #tourBubble {

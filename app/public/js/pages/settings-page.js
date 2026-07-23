@@ -116,10 +116,11 @@ function getUser() {
 function renderShell() {
   if (!_root) return;
   _root.className = 'settings-page-root settings-page';
+  // Desktop already shows title in #desktopHeader — avoid duplicate "Pengaturan"
   _root.innerHTML = `
     <header class="settings-page-header">
       <h1>Pengaturan</h1>
-      <p>Kelola akun, tampilan, notifikasi, dan data aplikasi</p>
+      <p>Kelola akun, tampilan, notifikasi, dan data</p>
     </header>
     <nav class="settings-section-nav" role="tablist" aria-label="Bagian pengaturan">
       ${SECTIONS.map((s) => `

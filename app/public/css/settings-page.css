@@ -5,6 +5,12 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  background: var(--mf-bg, #0B1118);
+  position: relative;
+  z-index: 2;
+}
+.settings-page-root.hidden {
+  display: none !important;
 }
 .settings-page {
   display: flex;
@@ -32,37 +38,45 @@
 }
 .settings-section-nav {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   overflow-x: auto;
-  padding: 12px 0;
+  padding: 12px 4px;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
+  scrollbar-width: thin;
   position: sticky;
   top: 0;
   z-index: 5;
-  background: var(--mf-bg, #0B1118);
+  background: var(--mf-sheet, rgba(19, 26, 36, 0.98));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
 }
-.settings-section-nav::-webkit-scrollbar { display: none; }
+.settings-section-nav::-webkit-scrollbar { height: 3px; }
 .settings-sec-btn {
   flex-shrink: 0;
-  padding: 8px 12px;
+  padding: 9px 14px;
   border-radius: 12px;
-  border: 1px solid var(--mf-border);
-  background: transparent;
-  color: var(--mf-muted);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #E2E8F0;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.settings-sec-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
 }
 .settings-sec-btn.is-active {
-  background: var(--mf-primary-soft, rgba(16,185,129,.15));
-  border-color: var(--mf-primary-border, rgba(52,211,153,.35));
-  color: var(--mf-primary, #34d399);
+  background: rgba(16, 185, 129, 0.22);
+  border-color: #34d399;
+  color: #A7F3D0;
+  box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.35);
 }
 .settings-section-body {
   flex: 1;
-  padding-bottom: 32px;
+  padding: 12px 4px 32px;
 }
 .settings-card {
   background: var(--mf-sheet, rgba(19,26,36,.95));
@@ -230,7 +244,19 @@
   margin-top: 12px;
 }
 
+/* Desktop: title lives in #desktopHeader — hide page header to avoid double "Pengaturan" */
 @media (min-width: 768px) {
-  .settings-page-header h1 { font-size: 22px; }
+  .settings-page-header { display: none !important; }
   .settings-section-body { max-width: 720px; }
+}
+
+/* Hide TX chrome in main panel while Settings is open (header is outside #dynamicContent) */
+.tx-main-panel:has(#dynamicContent.dynamic-content--settings) #desktopSearchInput,
+.tx-main-panel:has(#dynamicContent.dynamic-content--settings) #btnDesktopFilter,
+.tx-main-panel:has(#dynamicContent.dynamic-content--settings) #btnHeaderNewTxDesktop,
+.tx-main-panel:has(#dynamicContent.dynamic-content--settings) #desktopHeader .relative.hidden.lg\:block,
+.tx-main-panel:has(#dynamicContent.dynamic-content--settings) #unifiedAiBarWrap,
+.tx-main-panel:has(#dynamicContent.dynamic-content--settings) #saldoBarDesktopHost,
+.tx-main-panel:has(#dynamicContent.dynamic-content--settings) #txToolbarMobile {
+  display: none !important;
 }
