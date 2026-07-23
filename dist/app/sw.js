@@ -1,5 +1,5 @@
 // Offline-capable service worker — v7 budget killer feature.
-const CACHE_VERSION = 'v36-funnel-monetization';
+const CACHE_VERSION = 'v37-logo-brand';
 const STATIC_CACHE = `monefyi-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `monefyi-runtime-${CACHE_VERSION}`;
 const IMAGES_CACHE = `monefyi-images-${CACHE_VERSION}`;
@@ -105,6 +105,7 @@ const shellPaths = [
   './icons/icon-192.svg',
   './icons/icon-512.svg',
   './icons/monefyi-logo.png',
+  './icons/monefyi-logo-legacy.png',
   './icons/monefyi-mark.svg',
 ];
 

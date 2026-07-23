@@ -1361,6 +1361,8 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
   const logoUrl = STATE.appConfig?.logo_url ? String(STATE.appConfig.logo_url) : DEFAULT_LOGO;
 
   $$('.brand-logo-slot').forEach((slot) => {
+    // Top-left header + sidebar keep the legacy mark
+    if (slot.dataset.brandLock === 'legacy') return;
     const svg = slot.querySelector('.brand-logo-svg');
     const img = slot.querySelector('.brand-logo-custom');
     if (img) {
