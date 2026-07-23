@@ -1,5 +1,5 @@
 // Offline-capable service worker — v7 budget killer feature.
-const CACHE_VERSION = 'v38-logo-nobg';
+const CACHE_VERSION = 'v39-splash-netfirst';
 const STATIC_CACHE = `monefyi-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `monefyi-runtime-${CACHE_VERSION}`;
 const IMAGES_CACHE = `monefyi-images-${CACHE_VERSION}`;
@@ -181,38 +181,40 @@ self.addEventListener('fetch', (event) => {
 });
 
 /**
- * Navigation: stale-while-revalidate so splash HTML paints instantly from cache,
- * then refresh index in the background after deploy.
+ * @param {Response} response
+ * @returns {Promise<boolean>}
+ */
+async function responseHasSplash(response) {
+  try {
+    const text = await response.clone().text();
+    return text.includes('id="monefyi-splash"');
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Navigation: network-first so new splash HTML always wins after deploy.
+ * Stale cache without #monefyi-splash is ignored (was hiding splash for returning users).
  * @param {Request} request
  */
 async function handleNavigation(request) {
   const cache = await caches.open(RUNTIME_CACHE);
-  const cached =
-    (await cache.match(request)) ||
-    (await cache.match(INDEX_URL)) ||
-    (await caches.match(INDEX_URL));
 
-  const fetchPromise = fetch(request, { cache: 'no-store' })
-    .then(async (response) => {
-      if (response.ok) {
-        await cache.put(INDEX_URL, response.clone());
-        try {
-          await cache.put(request, response.clone());
-        } catch {
-          /* ignore put failures for opaque/navigate variants */
-        }
+  try {
+    const response = await fetch(request, { cache: 'no-store' });
+    if (response.ok) {
+      await cache.put(INDEX_URL, response.clone());
+      try {
+        await cache.put(request, response.clone());
+      } catch {
+        /* ignore put failures for opaque/navigate variants */
       }
       return response;
-    })
-    .catch(() => null);
-
-  if (cached) {
-    fetchPromise.catch(() => {});
-    return cached;
+    }
+  } catch {
+    /* offline fallback below */
   }
-
-  const fetched = await fetchPromise;
-  if (fetched) return fetched;
 
   try {
     const indexFresh = await fetch(INDEX_URL, { cache: 'no-store' });
@@ -222,6 +224,19 @@ async function handleNavigation(request) {
     }
   } catch {
     /* offline fallback below */
+  }
+
+  const candidates = [
+    await cache.match(request),
+    await cache.match(INDEX_URL),
+    await caches.match(INDEX_URL),
+  ];
+
+  for (const cached of candidates) {
+    if (cached && (await responseHasSplash(cached))) return cached;
+  }
+  for (const cached of candidates) {
+    if (cached) return cached;
   }
 
   const offline = await caches.match(OFFLINE_URL);

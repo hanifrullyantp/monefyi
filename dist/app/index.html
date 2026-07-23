@@ -153,13 +153,21 @@
     min-height: 16px;
   }
   #app-root.app-hidden {
-    visibility: hidden;
-    opacity: 0;
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
   }
   #app-root.app-visible {
+    display: block;
     visibility: visible;
     opacity: 1;
     transition: opacity 0.3s ease;
+  }
+  html.splash-active,
+  html.splash-active body {
+    background: #0a0e1a !important;
+    overflow: hidden !important;
   }
   @keyframes splashPulse {
     0%, 100% { transform: scale(1); }
@@ -181,10 +189,12 @@
   </style>
 
   <script>
+  document.documentElement.classList.add('splash-active');
+
   window.__splash = {
     el: null,
     startTime: Date.now(),
-    MIN_DISPLAY: 1500,
+    MIN_DISPLAY: 2000,
     MAX_DISPLAY: 8000,
     _dismissed: false,
 
@@ -199,6 +209,7 @@
       var splash = document.getElementById('monefyi-splash');
       var appRoot = document.getElementById('app-root');
       if (!splash) {
+        document.documentElement.classList.remove('splash-active');
         if (appRoot) {
           appRoot.classList.remove('app-hidden');
           appRoot.classList.add('app-visible');
@@ -209,6 +220,7 @@
       var remaining = Math.max(0, this.MIN_DISPLAY - elapsed);
       setTimeout(function() {
         splash.classList.add('fade-out');
+        document.documentElement.classList.remove('splash-active');
         if (appRoot) {
           appRoot.classList.remove('app-hidden');
           appRoot.classList.add('app-visible');
