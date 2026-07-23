@@ -1034,6 +1034,7 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
         dashboardOpen: true,
         budgetPageOpen: false,
         monevisorPageOpen: false,
+        settingsPageOpen: false,
         txDesktopFiltersOpen: false,
         saldoFilterOpen: false,
         monthPopoverOpen: false,
@@ -3556,6 +3557,7 @@ async function upsertTransaction_legacy_local(tx) {
 
     function renderAccountsSettings(){
       const wrap = $('#accountsList');
+      if (!wrap) return;
       wrap.innerHTML = '';
       for (const a of STATE.settings.accounts) {
         const btn = document.createElement('button');
@@ -3565,7 +3567,7 @@ async function upsertTransaction_legacy_local(tx) {
         btn.onclick = () => openAccountDetail(a);
         wrap.appendChild(btn);
       }
-      $('#accountsStatus').textContent = `Total akun: ${STATE.settings.accounts.length}`;
+      if ($('#accountsStatus')) $('#accountsStatus').textContent = `Total akun: ${STATE.settings.accounts.length}`;
     }
 
     function renderAccountsBalances(){
@@ -3697,8 +3699,8 @@ async function upsertTransaction_legacy_local(tx) {
           const nav = el.getAttribute('data-nav');
           if (nav === 'beranda' || nav === 'transaksi' || nav === 'budget' || nav === 'advisor') {
             el.classList.toggle('active',
-              (nav === 'beranda' && STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen)
-              || (nav === 'transaksi' && !STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen)
+              (nav === 'beranda' && STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen && !STATE.ui.settingsPageOpen)
+              || (nav === 'transaksi' && !STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen && !STATE.ui.settingsPageOpen)
               || (nav === 'budget' && STATE.ui.budgetPageOpen)
               || (nav === 'advisor' && STATE.ui.monevisorPageOpen)
             );
@@ -3868,7 +3870,7 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       }
       $('#rangeCard')?.classList.toggle('hidden', (STATE.period.preset || 'this_month') !== 'custom');
 
-      const specialPageOpen = !!(STATE.ui.budgetPageOpen || STATE.ui.monevisorPageOpen);
+      const specialPageOpen = !!(STATE.ui.budgetPageOpen || STATE.ui.monevisorPageOpen || STATE.ui.settingsPageOpen);
       applySpecialPageVisibility();
       const showDesktopDashboard = STATE.ui.dashboardOpen && isDesktopViewport() && !specialPageOpen;
       const showMobileHome = STATE.ui.dashboardOpen && !isDesktopViewport() && !specialPageOpen;
@@ -3886,6 +3888,10 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       if (monevisorRoot) {
         monevisorRoot.classList.toggle('hidden', !STATE.ui.monevisorPageOpen);
       }
+      const settingsRoot = $('#settingsPageRoot');
+      if (settingsRoot) {
+        settingsRoot.classList.toggle('hidden', !STATE.ui.settingsPageOpen);
+      }
       const mobileSaldoWrap = document.querySelector('.mobile-saldo-wrap');
       if (mobileSaldoWrap) {
         mobileSaldoWrap.classList.toggle('hidden', specialPageOpen);
@@ -3894,20 +3900,24 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       const pageTitleDesktop = $('#pageTitleTxDesktop');
       const pageSubtitleDesktop = $('#pageSubtitleTxDesktop');
       if (pageTitleDesktop) {
-        pageTitleDesktop.textContent = STATE.ui.monevisorPageOpen
-          ? 'Monevisor'
-          : (STATE.ui.budgetPageOpen
-            ? 'Budgeting'
-            : (STATE.ui.dashboardOpen ? 'Dashboard' : 'Transaksi'));
+        pageTitleDesktop.textContent = STATE.ui.settingsPageOpen
+          ? 'Pengaturan'
+          : (STATE.ui.monevisorPageOpen
+            ? 'Monevisor'
+            : (STATE.ui.budgetPageOpen
+              ? 'Budgeting'
+              : (STATE.ui.dashboardOpen ? 'Dashboard' : 'Transaksi')));
       }
       if (pageSubtitleDesktop) {
-        pageSubtitleDesktop.textContent = STATE.ui.monevisorPageOpen
-          ? 'Financial coach — diagnosa & action plan'
-          : (STATE.ui.budgetPageOpen
-            ? 'Rencana & realisasi budget bulanan'
-            : (STATE.ui.dashboardOpen
-              ? 'Ringkasan keuangan Anda'
-              : 'Kelola transaksi keuangan Anda'));
+        pageSubtitleDesktop.textContent = STATE.ui.settingsPageOpen
+          ? 'Akun, tampilan, notifikasi & data'
+          : (STATE.ui.monevisorPageOpen
+            ? 'Financial coach — diagnosa & action plan'
+            : (STATE.ui.budgetPageOpen
+              ? 'Rencana & realisasi budget bulanan'
+              : (STATE.ui.dashboardOpen
+                ? 'Ringkasan keuangan Anda'
+                : 'Kelola transaksi keuangan Anda')));
       }
       const dynamicContent = $('#dynamicContent');
       if (dynamicContent) {
@@ -3915,6 +3925,7 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
         dynamicContent.classList.toggle('dynamic-content--tx', !STATE.ui.dashboardOpen && !specialPageOpen);
         dynamicContent.classList.toggle('dynamic-content--budget', !!STATE.ui.budgetPageOpen);
         dynamicContent.classList.toggle('dynamic-content--monevisor', !!STATE.ui.monevisorPageOpen);
+        dynamicContent.classList.toggle('dynamic-content--settings', !!STATE.ui.settingsPageOpen);
       }
       const showTxUi = !STATE.ui.dashboardOpen && !specialPageOpen;
       const showTxFilters = showTxUi && !!STATE.ui.txDesktopFiltersOpen;
@@ -3957,15 +3968,15 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
         if (STATE.ui.txDesktopFiltersOpen) STATE.ui.txDesktopFiltersOpen = false;
       }
 
-      $('#toggleTheme').checked = (STATE.settings.theme === 'light');
-      $('#toggleKPI').checked = !!STATE.settings.showKPI;
-      $('#toggleBudget').checked = !!STATE.settings.showBudget;
-      $('#toggleTrend').checked = !!STATE.settings.showTrend;
-      $('#toggleCategory').checked = !!STATE.settings.showCategory;
-      $('#toggleWeek').checked = !!STATE.settings.showWeek;
+      if ($('#toggleTheme')) $('#toggleTheme').checked = (STATE.settings.theme === 'light');
+      if ($('#toggleKPI')) $('#toggleKPI').checked = !!STATE.settings.showKPI;
+      if ($('#toggleBudget')) $('#toggleBudget').checked = !!STATE.settings.showBudget;
+      if ($('#toggleTrend')) $('#toggleTrend').checked = !!STATE.settings.showTrend;
+      if ($('#toggleCategory')) $('#toggleCategory').checked = !!STATE.settings.showCategory;
+      if ($('#toggleWeek')) $('#toggleWeek').checked = !!STATE.settings.showWeek;
       
-      $('#geminiKey').value = STATE.settings.geminiKey || '';
-      $('#toggleGemini').checked = !!STATE.settings.useGemini;
+      if ($('#geminiKey')) $('#geminiKey').value = STATE.settings.geminiKey || '';
+      if ($('#toggleGemini')) $('#toggleGemini').checked = !!STATE.settings.useGemini;
 
       $('#kpiSection').classList.toggle('hidden', !(STATE.ui.dashboardOpen && STATE.settings.showKPI));
       $('#budgetSection').classList.toggle('hidden', !(STATE.ui.dashboardOpen && STATE.settings.showBudget));
@@ -6004,11 +6015,11 @@ function generateSmartBudgetRecommendation() {
   if (!STATE.ui.dashboardOpen) destroyCharts();
   else requestAnimationFrame(() => renderCharts());
 
-  // Skip TX list rebuild on Budget / Monevisor — avoids flash + wasted work
-  if (!STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen) {
+  // Skip TX list rebuild on Budget / Monevisor / Settings — avoids flash + wasted work
+  if (!STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen && !STATE.ui.settingsPageOpen) {
     renderTransactions();
   }
-  if (STATE.ui.dashboardOpen && !isDesktopViewport()) renderMobileHome();
+  if (STATE.ui.dashboardOpen && !isDesktopViewport() && !STATE.ui.settingsPageOpen) renderMobileHome();
   if (STATE.ui.budgetPageOpen) renderBudgetPageView();
   if (STATE.ui.monevisorPageOpen) renderMonevisorPageView();
   enhanceTransactionPageDesktop();
@@ -6019,14 +6030,16 @@ function generateSmartBudgetRecommendation() {
       return window.innerWidth >= 1024
         && !STATE.ui.dashboardOpen
         && !STATE.ui.budgetPageOpen
-        && !STATE.ui.monevisorPageOpen;
+        && !STATE.ui.monevisorPageOpen
+        && !STATE.ui.settingsPageOpen;
     }
 
     /** Full-width saldo bar context: TX or Dashboard at ≥1024 (not Budget/Monevisor) */
     function isDesktopSaldoBarPage() {
       return window.innerWidth >= 1024
         && !STATE.ui.budgetPageOpen
-        && !STATE.ui.monevisorPageOpen;
+        && !STATE.ui.monevisorPageOpen
+        && !STATE.ui.settingsPageOpen;
     }
 
     function isSidebarCollapsed() {
@@ -6459,7 +6472,7 @@ function setSheetPosition(mode) {
      * Must beat CSS rules like `.tx-main-panel #txSection { display:flex }`.
      */
     function applySpecialPageVisibility() {
-      const specialPageOpen = !!(STATE.ui.budgetPageOpen || STATE.ui.monevisorPageOpen);
+      const specialPageOpen = !!(STATE.ui.budgetPageOpen || STATE.ui.monevisorPageOpen || STATE.ui.settingsPageOpen);
       const showDesktopDashboard = STATE.ui.dashboardOpen && isDesktopViewport() && !specialPageOpen;
       const showTx = !STATE.ui.dashboardOpen && !specialPageOpen;
 
@@ -6467,6 +6480,7 @@ function setSheetPosition(mode) {
       $('#dashboardExpanded')?.classList.toggle('hidden', !showDesktopDashboard);
       $('#budgetPageRoot')?.classList.toggle('hidden', !STATE.ui.budgetPageOpen);
       $('#monevisorPageRoot')?.classList.toggle('hidden', !STATE.ui.monevisorPageOpen);
+      $('#settingsPageRoot')?.classList.toggle('hidden', !STATE.ui.settingsPageOpen);
 
       const dynamicContent = $('#dynamicContent');
       if (dynamicContent) {
@@ -6474,6 +6488,7 @@ function setSheetPosition(mode) {
         dynamicContent.classList.toggle('dynamic-content--tx', showTx);
         dynamicContent.classList.toggle('dynamic-content--budget', !!STATE.ui.budgetPageOpen);
         dynamicContent.classList.toggle('dynamic-content--monevisor', !!STATE.ui.monevisorPageOpen);
+        dynamicContent.classList.toggle('dynamic-content--settings', !!STATE.ui.settingsPageOpen);
       }
 
       document.querySelector('.mobile-saldo-wrap')?.classList.toggle('hidden', specialPageOpen);
@@ -6583,6 +6598,7 @@ function setSheetPosition(mode) {
       // Switch view flags FIRST so TX list never flashes during async draft prep
       STATE.ui.budgetPageOpen = true;
       STATE.ui.monevisorPageOpen = false;
+      STATE.ui.settingsPageOpen = false;
       STATE.ui.dashboardOpen = false;
       STATE.ui.budgetOpen = false;
 
@@ -6675,6 +6691,7 @@ function setSheetPosition(mode) {
       // Switch view flags FIRST — never flash TX list while page mounts
       STATE.ui.monevisorPageOpen = true;
       STATE.ui.budgetPageOpen = false;
+      STATE.ui.settingsPageOpen = false;
       STATE.ui.dashboardOpen = false;
       STATE.ui.advisorOpen = false;
       STATE.ui.budgetOpen = false;
@@ -6732,15 +6749,86 @@ function setSheetPosition(mode) {
     });
 
     // Sidebar secondary shortcuts (used by index.html onclick)
-    function openSettings(){
-      openMenu();
-      // Scroll to Settings block for convenience
-      setTimeout(() => {
-        const el = document.getElementById('menuSettingsCard');
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 80);
+    async function openSettings(sectionOrEvent){
+      let section = 'account';
+      if (typeof sectionOrEvent === 'string') section = sectionOrEvent;
+      else if (sectionOrEvent?.section) section = sectionOrEvent.section;
+      else {
+        try {
+          const mod = await import('./pages/settings-page.js');
+          section = mod.parseSettingsHash()?.section || 'account';
+        } catch { /* ignore */ }
+      }
+
+      closeMenu();
+      closeUser();
+      closeBudgetSheetOnly();
+      closeAdvisor();
+      closeAddSheet();
+
+      STATE.ui.settingsPageOpen = true;
+      STATE.ui.budgetPageOpen = false;
+      STATE.ui.monevisorPageOpen = false;
+      STATE.ui.dashboardOpen = false;
+
+      $$('.nav-item[data-nav]').forEach((el) => el.classList.remove('active'));
+      $$('.sidebar-item[data-nav]').forEach((el) => el.classList.remove('active'));
+
+      applySpecialPageVisibility();
+      const root = $('#settingsPageRoot');
+      root?.classList.remove('hidden');
+
+      history.replaceState(null, '', `#settings/${section}`);
+
+      try {
+        const mod = await import('./pages/settings-page.js');
+        await mod.renderSettingsPage(root, {
+          saveSettings,
+          saveProfile,
+          applyTheme,
+          applyLanguageAndReload,
+          renameAccountEverywhere,
+          exportExcel,
+          exportCSV,
+          importFile: importTransactionsFromFile,
+          updatePassword: async (password) => {
+            if (!STATE.db?.supa) throw new Error('Not authed');
+            const { error } = await STATE.db.supa.auth.updateUser({ password });
+            if (error) throw error;
+          },
+          signOut: async () => {
+            await STATE.db.supa.auth.signOut();
+            resetToHome({ keepPeriod: true });
+            location.reload();
+          },
+          openEmailImport: () => {
+            if (typeof window.showEmailImportSetup === 'function') window.showEmailImportSetup();
+          },
+          openAccounts: () => openAccounts(),
+          openAdmin: () => openAdminPanel(),
+          isAdmin,
+          ensureSelectOptions,
+          destroyCharts,
+          rerender,
+          toast: (msg, type) => {
+            try { window.MonefyiUI?.showToast?.(msg, type); } catch { /* ignore */ }
+          },
+        }, { section });
+      } catch (e) {
+        console.error('[settings] open failed', e);
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    function closeSettingsPage() {
+      STATE.ui.settingsPageOpen = false;
+      $('#settingsPageRoot')?.classList.add('hidden');
+      if (String(location.hash || '').startsWith('#settings')) {
+        history.replaceState(null, '', `${location.pathname}${location.search}`);
+      }
     }
     window.openSettings = openSettings;
+    window.closeSettingsPage = closeSettingsPage;
 
     /**
      * Deep-link from OS notification / SW postMessage.
@@ -6786,12 +6874,7 @@ function setSheetPosition(mode) {
     window.handleNotificationDeepLink = handleNotificationDeepLink;
 
     window.showNotificationSettings = async function showNotificationSettings() {
-      try {
-        const mod = await import('./components/notification-settings.js');
-        await mod.showNotificationSettings();
-      } catch (e) {
-        console.warn('showNotificationSettings', e);
-      }
+      openSettings('notifications');
     };
 
     window.showEmailImportSetup = async function showEmailImportSetup() {
@@ -6896,6 +6979,12 @@ function setSheetPosition(mode) {
     window.addEventListener('hashchange', () => {
       const route = parseTutorialRouteFromHash();
       if (route) openTutorial(route);
+      if (String(location.hash || '').startsWith('#settings') && STATE.db?.user) {
+        const root = document.getElementById('settingsPageRoot');
+        if (!STATE.ui.settingsPageOpen || root?.classList.contains('hidden')) {
+          openSettings();
+        }
+      }
     });
 
     // Admin console (full-page) — legacy #adminSheet kept as fallback shell only
@@ -7637,7 +7726,10 @@ function setSheetPosition(mode) {
     // User sheet
     const userBackdrop = $('#userBackdrop');
     const userSheet = $('#userSheet');
-    function openUser(){ openSheet(userBackdrop, userSheet); }
+    function openUser(){
+      // Profile merged into Settings page
+      openSettings('account');
+    }
     function closeUser(){ closeSheet(userBackdrop, userSheet); }
     userBackdrop.addEventListener('click', (e)=>{
       if (e.target?.dataset?.closeUser === 'true') closeUser();
@@ -10514,23 +10606,25 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
       }
     });
 
-    $('#toggleGemini').addEventListener('change', async () => {
-      STATE.settings.useGemini = !!$('#toggleGemini').checked;
+    $('#toggleGemini')?.addEventListener('change', async () => {
+      STATE.settings.useGemini = !!$('#toggleGemini')?.checked;
       await saveSettings();
     });
 
-    $('#btnAddAccount').addEventListener('click', async () => {
-      const name = ($('#newAccount').value || '').trim();
+    $('#btnAddAccount')?.addEventListener('click', async () => {
+      const name = ($('#newAccount')?.value || '').trim();
       if (!name) {
-        $('#accountsStatus').textContent = 'Nama akun tidak boleh kosong.';
+        if ($('#accountsStatus')) $('#accountsStatus').textContent = 'Nama akun tidak boleh kosong.';
         return;
       }
       ensureAccountRegistered(name);
-      $('#newAccount').value = '';
+      if ($('#newAccount')) $('#newAccount').value = '';
       ensureSelectOptions();
       renderAccountsSettings();
-      $('#accountsStatus').textContent = 'Akun ditambahkan.';
-      setTimeout(()=>{ $('#accountsStatus').textContent = `Total akun: ${STATE.settings.accounts.length}`; }, 1200);
+      if ($('#accountsStatus')) {
+        $('#accountsStatus').textContent = 'Akun ditambahkan.';
+        setTimeout(()=>{ $('#accountsStatus').textContent = `Total akun: ${STATE.settings.accounts.length}`; }, 1200);
+      }
     });
 
     // =========================
@@ -11154,49 +11248,50 @@ if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSav
       return window.confirm(msg);
     }
 
-    $('#btnExportExcel')?.addEventListener('click', () => { exportExcel().catch(console.warn); });
-    $('#btnExportCSV').addEventListener('click', exportCSV);
-    $('#fileImportCSV').addEventListener('change', async () => {
-      const f = $('#fileImportCSV').files?.[0];
+    async function importTransactionsFromFile(f) {
       if (!f) return;
       if (!STATE.db.enabled || !STATE.db.user) {
-        alert('Harus login untuk import Excel/CSV.');
-        $('#fileImportCSV').value = '';
-        return;
+        throw new Error('Harus login untuk import Excel/CSV.');
       }
-      try {
-        const lower = String(f.name || '').toLowerCase();
-        let rows = [];
-        if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
-          const binary = await f.arrayBuffer();
-          rows = parseExcelRows(binary);
-        } else {
-          const text = await f.text();
-          rows = parseCSV(text).map((r) => normalizeImportedRow(r));
-        }
-        const checked = validateImportRows(rows);
-        if (!checked.valid.length) {
-          alert('Tidak ada baris valid untuk diimport. Cek format data (date/type/amount/category/account).');
-          return;
-        }
-        const ok = confirmImportPreview(f.name || 'file', checked.valid.length, checked.invalid);
-        if (!ok) return;
-        await importRowsToDatabase(checked.valid);
+      const lower = String(f.name || '').toLowerCase();
+      let rows = [];
+      if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
+        const binary = await f.arrayBuffer();
+        rows = parseExcelRows(binary);
+      } else {
+        const text = await f.text();
+        rows = parseCSV(text).map((r) => normalizeImportedRow(r));
+      }
+      const checked = validateImportRows(rows);
+      if (!checked.valid.length) {
+        throw new Error('Tidak ada baris valid untuk diimport.');
+      }
+      const ok = confirmImportPreview(f.name || 'file', checked.valid.length, checked.invalid);
+      if (!ok) return;
+      await importRowsToDatabase(checked.valid);
+      await refreshTransactionsRange();
+      for (const t of STATE.transactions) ensureAccountRegistered(t.account);
+      rerender();
+      closeMenu();
+      if (checked.invalid.length) {
+        showToast(`Import selesai: ${checked.valid.length} valid, ${checked.invalid.length} invalid`, 'warn');
+      } else {
+        showToast(`Import data berhasil (${checked.valid.length} baris)`, 'success');
+      }
+    }
 
-        await refreshTransactionsRange();
-        for (const t of STATE.transactions) ensureAccountRegistered(t.account);
-        rerender();
-        closeMenu();
-        if (checked.invalid.length) {
-          showToast(`Import selesai: ${checked.valid.length} valid, ${checked.invalid.length} invalid`, 'warn');
-        } else {
-          showToast(`Import data berhasil (${checked.valid.length} baris)`, 'success');
-        }
+    $('#btnExportExcel')?.addEventListener('click', () => { exportExcel().catch(console.warn); });
+    $('#btnExportCSV')?.addEventListener('click', () => { exportCSV().catch(console.warn); });
+    $('#fileImportCSV')?.addEventListener('change', async () => {
+      const f = $('#fileImportCSV').files?.[0];
+      if (!f) return;
+      try {
+        await importTransactionsFromFile(f);
       } catch (e) {
         console.warn(e);
-        alert('Gagal import Excel/CSV. Pastikan header sesuai dan file tidak rusak.');
+        alert(e.message || 'Gagal import Excel/CSV. Pastikan header sesuai dan file tidak rusak.');
       } finally {
-        $('#fileImportCSV').value = '';
+        if ($('#fileImportCSV')) $('#fileImportCSV').value = '';
       }
     });
 
@@ -11333,7 +11428,8 @@ function toggleNav(view, triggerEl) {
       const leavingTxList = (view === 'dash' || view === 'budget' || view === 'advisor')
         && !STATE.ui.dashboardOpen
         && !STATE.ui.budgetPageOpen
-        && !STATE.ui.monevisorPageOpen;
+        && !STATE.ui.monevisorPageOpen
+        && !STATE.ui.settingsPageOpen;
       if (leavingTxList && window.monefyiTxEditSession?.getTxEditState?.()?.isDirty) {
         const n = window.monefyiTxEditSession.getTxEditState().draftCount;
         const ok = confirm(`Ada ${n} perubahan transaksi belum disimpan. Keluar tanpa menyimpan?`);
@@ -11351,6 +11447,7 @@ function toggleNav(view, triggerEl) {
       closeAccountDetail();
       closeEditModal();
       if (view !== 'budget') closeBudget();
+      if (view !== 'settings') closeSettingsPage?.();
 
       const btn = triggerEl || (typeof event !== 'undefined' ? event.currentTarget : null);
       if (btn && btn.classList) {
@@ -11366,15 +11463,21 @@ function toggleNav(view, triggerEl) {
         openAdvisorAuto();
         return;
       }
+      if (view === 'settings') {
+        openSettings();
+        return;
+      }
 
       if (view === 'list') {
         STATE.ui.dashboardOpen = false;
         STATE.ui.budgetPageOpen = false;
         STATE.ui.monevisorPageOpen = false;
+        STATE.ui.settingsPageOpen = false;
       } else if (view === 'dash') {
         STATE.ui.dashboardOpen = true;
         STATE.ui.budgetPageOpen = false;
         STATE.ui.monevisorPageOpen = false;
+        STATE.ui.settingsPageOpen = false;
       }
       const map = { dash: 'beranda', list: 'transaksi', budget: 'budget', advisor: 'advisor' };
       const active = map[view] || '';
@@ -11794,33 +11897,33 @@ function toggleNav(view, triggerEl) {
     $('#btnTxEmptyAdd')?.addEventListener('click', () => openAddSheet('quick'));
     $('#btnBudgetEmptySetup')?.addEventListener('click', () => openBudget());
     $('#btnEnableAiFromAdvisor')?.addEventListener('click', () => {
-      const keyInput = $('#geminiKey');
-      if (keyInput) keyInput.focus();
+      openSettings('ai');
     });
 
     // Budget button
     $('#btnEditBudget').addEventListener('click', openBudget);
 
-    // Settings interactions
-    $('#toggleTheme').addEventListener('change', async () => {
+    // Settings interactions (legacy menu controls — optional if migrated to settings page)
+    $('#toggleTheme')?.addEventListener('change', async () => {
       STATE.settings.theme = $('#toggleTheme').checked ? 'light' : 'dark';
       try { await saveSettings(); } catch {}
       applyTheme();
       rerender();
     });
 
+    $('#btnOpenSettingsFull')?.addEventListener('click', () => {
+      closeMenu();
+      openSettings();
+    });
+
     $('#btnNotifSettings')?.addEventListener('click', () => {
       try { closeMenu?.(); } catch { /* ignore */ }
-      if (typeof window.showNotificationSettings === 'function') {
-        window.showNotificationSettings();
-      }
+      openSettings('notifications');
     });
 
     $('#btnEmailImport')?.addEventListener('click', () => {
       try { closeMenu?.(); } catch { /* ignore */ }
-      if (typeof window.showEmailImportSetup === 'function') {
-        window.showEmailImportSetup();
-      }
+      openSettings('email-import');
     });
 
     window.addEventListener('monefyi-notif-navigate', (event) => {
@@ -11929,26 +12032,26 @@ function toggleNav(view, triggerEl) {
     } catch (_) {}
     applySaldoMaskUI();
 
-    // Language save (explicit)
-    $('#btnSaveLang').addEventListener('click', async () => {
-      const lang = ($('#langSelect').value || 'id');
+    // Language save (explicit) — legacy menu control
+    $('#btnSaveLang')?.addEventListener('click', async () => {
+      const lang = ($('#langSelect')?.value || 'id');
       STATE.settings.lang = (lang === 'en') ? 'en' : 'id';
-      $('#langStatus').textContent = 'Menyimpan…';
+      if ($('#langStatus')) $('#langStatus').textContent = 'Menyimpan…';
       try {
         await saveSettings();
-        $('#langStatus').textContent = 'Tersimpan.';
+        if ($('#langStatus')) $('#langStatus').textContent = 'Tersimpan.';
         applyLanguageAndReload();
       } catch {
-        $('#langStatus').textContent = 'Gagal.';
+        if ($('#langStatus')) $('#langStatus').textContent = 'Gagal.';
       }
     });
 
     function syncSettingsFromToggles(){
-      STATE.settings.showKPI = $('#toggleKPI').checked;
-      STATE.settings.showBudget = $('#toggleBudget').checked;
-      STATE.settings.showTrend = $('#toggleTrend').checked;
-      STATE.settings.showCategory = $('#toggleCategory').checked;
-      STATE.settings.showWeek = $('#toggleWeek').checked;
+      if ($('#toggleKPI')) STATE.settings.showKPI = $('#toggleKPI').checked;
+      if ($('#toggleBudget')) STATE.settings.showBudget = $('#toggleBudget').checked;
+      if ($('#toggleTrend')) STATE.settings.showTrend = $('#toggleTrend').checked;
+      if ($('#toggleCategory')) STATE.settings.showCategory = $('#toggleCategory').checked;
+      if ($('#toggleWeek')) STATE.settings.showWeek = $('#toggleWeek').checked;
       delete STATE.settings.saldoPosition;
     }
 
@@ -12142,6 +12245,10 @@ function toggleNav(view, triggerEl) {
         // Deep-link Admin Console: #admin[/tab]
         if (String(location.hash || '').startsWith('#admin') && STATE.db?.user && isAdmin()) {
           setTimeout(() => openAdminPanel(), 0);
+        }
+        // Deep-link Settings: #settings[/section]
+        if (String(location.hash || '').startsWith('#settings') && STATE.db?.user) {
+          setTimeout(() => openSettings(), 0);
         }
       } finally {
         splash?.dismiss?.();

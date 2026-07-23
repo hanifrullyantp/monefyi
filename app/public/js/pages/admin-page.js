@@ -705,11 +705,13 @@ async function renderConfig(body) {
         <label>Affiliate commission<input class="admin-input" type="number" id="cfgAff" value="${Number(ac.affiliate_commission || 100000)}" /></label>
         <label>Notif threshold %<input class="admin-input" type="number" id="cfgTh" value="${Number(ac.notif_threshold || 80)}" /></label>
         <label style="grid-column:1/-1">Tutorial video URL<input class="admin-input" id="cfgVid" value="${escapeHtml(ac.tutorial?.videoUrl || '')}" /></label>
+        <label style="grid-column:1/-1">Logo URL<input class="admin-input" id="cfgLogo" value="${escapeHtml(ac.logo_url || '')}" placeholder="https://.../logo.png" /></label>
       </div>
       <div class="admin-toolbar" style="margin-top:12px">
         <button type="button" class="admin-btn" id="cfgSave">Simpan</button>
         <span id="cfgSt" class="admin-muted">—</span>
       </div>
+      <p class="admin-muted" style="margin-top:8px">Upload logo file tetap tersedia lewat Edge Function monefyi-upload-logo (atau set URL di atas).</p>
     </div>
   `;
   body.querySelector('#cfgSave')?.addEventListener('click', async () => {
@@ -722,7 +724,7 @@ async function renderConfig(body) {
         affiliate_commission: Number(body.querySelector('#cfgAff')?.value) || 0,
         notif_threshold: Number(body.querySelector('#cfgTh')?.value) || 80,
         tutorial: { videoUrl: (body.querySelector('#cfgVid')?.value || '').trim(), steps: ac.tutorial?.steps || [] },
-        logo_url: ac.logo_url || null,
+        logo_url: (body.querySelector('#cfgLogo')?.value || '').trim() || null,
       });
       if (window.STATE) window.STATE.appConfig = data;
       st.textContent = 'Tersimpan.';

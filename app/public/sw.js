@@ -1,5 +1,5 @@
 // Offline-capable service worker — v7 budget killer feature.
-const CACHE_VERSION = 'v44-mobile-scroll';
+const CACHE_VERSION = 'v45-settings-page';
 const STATIC_CACHE = `monefyi-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `monefyi-runtime-${CACHE_VERSION}`;
 const IMAGES_CACHE = `monefyi-images-${CACHE_VERSION}`;
@@ -27,6 +27,7 @@ const shellPaths = [
   './css/onboarding.css',
   './css/tutorial-page.css',
   './css/admin-page.css',
+  './css/settings-page.css',
   './js/app.js',
   './js/config.js',
   './js/monefyi-ui.js',
@@ -106,6 +107,7 @@ const shellPaths = [
   './js/pages/home-page.js',
   './js/pages/tutorial-page.js',
   './js/pages/admin-page.js',
+  './js/pages/settings-page.js',
   './js/services/tutorial-service.js',
   './js/services/tutorial-content-default.js',
   './icons/icon-192.svg',

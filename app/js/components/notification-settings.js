@@ -1,5 +1,5 @@
 /**
- * Notification preferences sheet.
+ * Notification preferences sheet / embeddable panel.
  * @module components/notification-settings
  */
 
@@ -33,14 +33,9 @@ function renderToggle(key, label, description, defaults) {
   `;
 }
 
-/**
- * Open notification settings modal.
- */
-export async function showNotificationSettings() {
-  const status = getNotifStatus();
+function buildDefaults() {
   const prefs = getNotifPrefs();
-
-  const defaults = {
+  return {
     enabled: true,
     morningBriefing: true,
     billReminders: true,
@@ -58,17 +53,17 @@ export async function showNotificationSettings() {
     vibration: true,
     ...prefs,
   };
+}
 
-  document.querySelector('.notif-settings-overlay')?.remove();
-
-  const modal = document.createElement('div');
-  modal.className = 'notif-settings-overlay';
-  modal.innerHTML = `
-    <div class="notif-settings-modal" role="dialog" aria-modal="true" aria-label="Pengaturan Notifikasi">
-      <header class="ns-header">
-        <h2>${Icon('bell', { size: 18 })} Pengaturan Notifikasi</h2>
-        <button type="button" class="ns-close" data-action="close" aria-label="Tutup">${Icon('x', { size: 18 })}</button>
-      </header>
+function buildPanelHtml(defaults, status, { inline = false } = {}) {
+  return `
+    <div class="notif-settings-panel ${inline ? 'ns-inline' : ''}">
+      ${inline ? '' : `
+        <header class="ns-header">
+          <h2>${Icon('bell', { size: 18 })} Pengaturan Notifikasi</h2>
+          <button type="button" class="ns-close" data-action="close" aria-label="Tutup">${Icon('x', { size: 18 })}</button>
+        </header>
+      `}
 
       <div class="ns-body">
         <div class="ns-status ${status.permission === 'granted' ? 'granted' : status.permission === 'denied' ? 'denied' : 'default'}">
@@ -139,11 +134,86 @@ export async function showNotificationSettings() {
         </div>
       </div>
 
-      <footer class="ns-footer">
-        <button type="button" class="ns-save-btn" data-action="save">
-          ${Icon('check', { size: 14 })} Simpan Pengaturan
-        </button>
-      </footer>
+      ${inline ? `
+        <div class="settings-actions ns-save-inline">
+          <button type="button" class="settings-btn" data-action="save">${Icon('check', { size: 14 })} Simpan Pengaturan</button>
+        </div>
+      ` : `
+        <footer class="ns-footer">
+          <button type="button" class="ns-save-btn" data-action="save">
+            ${Icon('check', { size: 14 })} Simpan Pengaturan
+          </button>
+        </footer>
+      `}
+    </div>
+  `;
+}
+
+/**
+ * Collect prefs from a panel root and persist.
+ * @param {HTMLElement} root
+ * @returns {Record<string, unknown>}
+ */
+function collectAndSave(root) {
+  /** @type {Record<string, unknown>} */
+  const newPrefs = {};
+  root.querySelectorAll('[data-pref]').forEach((el) => {
+    const key = el.getAttribute('data-pref');
+    if (!key) return;
+    if (el instanceof HTMLInputElement && el.type === 'checkbox') {
+      newPrefs[key] = el.checked;
+    } else if (el instanceof HTMLSelectElement) {
+      newPrefs[key] = Number.isNaN(Number(el.value)) ? el.value : Number(el.value);
+    }
+  });
+  updateNotifPrefs(newPrefs);
+  return newPrefs;
+}
+
+/**
+ * Mount notification settings into a container (Settings page).
+ * @param {HTMLElement} container
+ * @param {{ inline?: boolean, onSaved?: () => void }} [opts]
+ */
+export async function renderNotificationSettingsPanel(container, opts = {}) {
+  if (!container) return;
+  const status = getNotifStatus();
+  const defaults = buildDefaults();
+  container.innerHTML = buildPanelHtml(defaults, status, { inline: !!opts.inline });
+
+  container.querySelector('[data-action="enable"]')?.addEventListener('click', async () => {
+    const result = await requestPermission();
+    if (result.granted) {
+      const statusEl = container.querySelector('.ns-status');
+      if (statusEl) {
+        statusEl.className = 'ns-status granted';
+        const text = statusEl.querySelector('.ns-status-text');
+        if (text) text.textContent = 'Notifikasi aktif';
+      }
+      container.querySelector('[data-action="enable"]')?.remove();
+    }
+  });
+
+  container.querySelector('[data-action="save"]')?.addEventListener('click', () => {
+    collectAndSave(container);
+    opts.onSaved?.();
+  });
+}
+
+/**
+ * Open notification settings modal.
+ */
+export async function showNotificationSettings() {
+  const status = getNotifStatus();
+  const defaults = buildDefaults();
+
+  document.querySelector('.notif-settings-overlay')?.remove();
+
+  const modal = document.createElement('div');
+  modal.className = 'notif-settings-overlay';
+  modal.innerHTML = `
+    <div class="notif-settings-modal" role="dialog" aria-modal="true" aria-label="Pengaturan Notifikasi">
+      ${buildPanelHtml(defaults, status, { inline: false })}
     </div>
   `;
 
@@ -172,19 +242,7 @@ export async function showNotificationSettings() {
   });
 
   modal.querySelector('[data-action="save"]').onclick = () => {
-    /** @type {Record<string, unknown>} */
-    const newPrefs = {};
-    modal.querySelectorAll('[data-pref]').forEach((el) => {
-      const key = el.getAttribute('data-pref');
-      if (!key) return;
-      if (el instanceof HTMLInputElement && el.type === 'checkbox') {
-        newPrefs[key] = el.checked;
-      } else if (el instanceof HTMLSelectElement) {
-        newPrefs[key] = Number.isNaN(Number(el.value)) ? el.value : Number(el.value);
-      }
-    });
-    updateNotifPrefs(newPrefs);
-
+    collectAndSave(modal);
     try {
       window.MonefyiUI?.showToast?.('Pengaturan notifikasi tersimpan', 'success');
     } catch { /* ignore */ }
@@ -249,5 +307,6 @@ if (typeof window !== 'undefined') {
     showNotificationSettings,
     showPermissionPrompt,
     initNotifPermissionPrompt,
+    renderNotificationSettingsPanel,
   };
 }
