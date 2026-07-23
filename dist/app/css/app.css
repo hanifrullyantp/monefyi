@@ -874,9 +874,11 @@ html, body {
         stroke: #fff !important;
       }
       .tx-card-row-table .tx-icon .tx-cat-emoji {
-        display: block;
-        font-size: 12px;
-        line-height: 1;
+        display: none; /* desktop table: prefer SVG icons for brand consistency */
+      }
+      .tx-card-row-table .tx-icon .tx-cat-icon,
+      .tx-card-row-table .tx-icon svg {
+        display: block !important;
       }
       .tx-card-row-table .text-sm,
       .tx-card-row-table .text-xs {
@@ -1606,12 +1608,11 @@ html, body {
     #appSidebar.sidebar--collapsed {
       width: 52px;
       overflow: visible;
-      padding-top: 36px;
+      padding-top: 0;
     }
+    /* Collapsed rail: no expand chevron above logo — tap logo/empty rail to expand */
     #appSidebar.sidebar--collapsed #btnSidebarCollapse {
-      right: 50%;
-      transform: translateX(50%);
-      top: 0;
+      display: none !important;
     }
     #appSidebar.sidebar--collapsed .sidebar-label,
     #appSidebar.sidebar--collapsed #sidebarUserBlock,
@@ -3319,7 +3320,9 @@ html, body {
         height: 100dvh;
         overflow: hidden;
       }
-      body.app-ready > .min-h-dvh {
+      /* #app-root wraps .min-h-dvh after splash — keep mobile scroll chain intact */
+      body.app-ready #app-root,
+      body.app-ready #app-root > .min-h-dvh {
         height: 100%;
         min-height: 0;
         display: flex;
@@ -3341,7 +3344,7 @@ html, body {
         touch-action: pan-y;
         padding-bottom: var(--mobile-nav-offset);
       }
-      body.app-ready > .min-h-dvh > .nav-bar {
+      body.app-ready #app-root > .min-h-dvh > .nav-bar {
         flex: 0 0 auto;
       }
       body.app-ready #appShell > .flex,

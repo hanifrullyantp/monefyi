@@ -18,7 +18,7 @@
 }
 
 .email-import-modal {
-  background: #1a2030;
+  background: var(--mf-sheet);
   border-radius: 24px 24px 0 0;
   width: 100%;
   max-width: 500px;
@@ -58,12 +58,12 @@
 }
 
 .ei-close {
-  width: 32px;
-  height: 32px;
-  background: rgba(255, 255, 255, 0.06);
-  border: none;
-  border-radius: 10px;
-  color: white;
+  width: 36px;
+  height: 36px;
+  background: rgba(127, 29, 29, 0.55);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: 12px;
+  color: #fecaca;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -526,7 +526,7 @@
 }
 
 .ei-wizard {
-  background: #1a2030;
+  background: var(--mf-sheet);
   border-radius: 20px;
   width: 100%;
   max-width: 480px;

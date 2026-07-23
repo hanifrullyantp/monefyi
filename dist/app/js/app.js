@@ -1382,6 +1382,9 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
       if (branding) branding.classList.toggle('hidden', !admin);
       const launcher = document.getElementById('adminPanelLauncher');
       if (launcher) launcher.classList.toggle('hidden', !admin);
+      document.querySelectorAll('#btnAdminIcon, #btnAdminIconDesktop').forEach((btn) => {
+        btn.classList.toggle('hidden', !admin);
+      });
     }
 
     function isAdmin(){
@@ -2226,7 +2229,12 @@ async function upsertTransaction_legacy_local(tx) {
         strip.style.display = 'none';
       }
       const btn = $('#btnSidebarCollapse');
-      if (btn) btn.textContent = collapsed ? '›' : '‹';
+      if (btn) {
+        btn.textContent = '‹';
+        btn.setAttribute('aria-label', 'Ciutkan sidebar');
+        btn.title = 'Ciutkan sidebar';
+        btn.classList.toggle('hidden', !!collapsed);
+      }
       try { enhanceTransactionPageDesktop(); } catch (_) {}
       try { renderHeader(); } catch (_) {}
       try { renderDashboardQuickAccess(); } catch (_) {}
@@ -2239,7 +2247,9 @@ async function upsertTransaction_legacy_local(tx) {
       aside.dataset.expandClickWired = '1';
       aside.addEventListener('click', (e) => {
         if (!aside.classList.contains('sidebar--collapsed')) return;
-        if (e.target.closest('.sidebar-item, #btnSidebarCollapse, button, a, input, select')) return;
+        // Expand via logo/brand or empty rail; keep nav item clicks for navigation
+        const expandHit = e.target.closest('.sidebar-brand, .brand-logo-slot, #sidebarLogoImg');
+        if (!expandHit && e.target.closest('.sidebar-item, button, a, input, select')) return;
         aside.classList.remove('sidebar--collapsed');
         localStorage.setItem('monefyi_sidebar_collapsed', '0');
         syncSidebarCollapsedUI();
@@ -3972,6 +3982,9 @@ $('#adminBrandingCard')?.classList.toggle('hidden', !isAdminUser);
 
 // Admin Panel launcher (nebeng logika yang sama)
 $('#adminPanelLauncher')?.classList.toggle('hidden', !isAdminUser);
+document.querySelectorAll('#btnAdminIcon, #btnAdminIconDesktop').forEach((btn) => {
+  btn.classList.toggle('hidden', !isAdminUser);
+});
 
 // Auto-isi logo URL untuk admin
 if (isAdminUser && $('#logoUrl')) {
@@ -6882,28 +6895,68 @@ function setSheetPosition(mode) {
 
     window.addEventListener('hashchange', () => {
       const route = parseTutorialRouteFromHash();
-      if (!route) return;
-      openTutorial(route);
+      if (route) openTutorial(route);
     });
 
-    // Admin panel sheet
+    // Admin console (full-page) — legacy #adminSheet kept as fallback shell only
     const adminBackdrop = $('#adminBackdrop');
     const adminSheet = $('#adminSheet');
-    function openAdminPanel(){
+    async function openAdminPanel(initialTab){
       if (!isAdmin()) return;
-      setAdminTab('users');
-      $('#cfgMonthlyUrl').value = String(STATE.appConfig?.checkout_monthly_url || MONTHLY_CHECKOUT_URL || '');
-      $('#cfgLifetimeUrl').value = String(STATE.appConfig?.checkout_lifetime_url || LIFETIME_CHECKOUT_URL);
-      $('#cfgAffiliateCommission').value = String(STATE.appConfig?.affiliate_commission || 100000);
-      loadAdminPlansForm();
-      $('#adminConfigStatus').textContent = '—';
-      $('#adminUsersStatus').textContent = '—';
-      $('#adminUsersList').innerHTML = '<div class="text-sm app-muted">Klik Refresh untuk memuat user (butuh Edge Function admin).</div>';
-      openSheet(adminBackdrop, adminSheet);
+      try { closeMenu?.(); } catch { /* ignore */ }
+      const root = document.getElementById('adminPageRoot');
+      if (!root) {
+        // Fallback to legacy sheet
+        setAdminTab(initialTab || 'users');
+        openSheet(adminBackdrop, adminSheet);
+        return;
+      }
+      // Already open — admin-page hash listener handles tab switches
+      if (root.classList.contains('is-open') && String(location.hash || '').startsWith('#admin')) {
+        return;
+      }
+      try {
+        const mod = await import('./pages/admin-page.js');
+        if (initialTab && typeof initialTab === 'string') {
+          history.replaceState(null, '', `#admin/${initialTab}`);
+        } else if (!String(location.hash || '').startsWith('#admin')) {
+          history.replaceState(null, '', '#admin/dashboard');
+        }
+        await mod.openAdminPage(root, {
+          getAccessToken: () => STATE.db?.session?.access_token || '',
+          upsertAppConfigAdmin,
+          onClose: () => {
+            root.setAttribute('aria-hidden', 'true');
+          },
+          toast: (msg) => {
+            try { window.MonefyiUI?.showToast?.(msg); } catch { /* ignore */ }
+          },
+        });
+        root.setAttribute('aria-hidden', 'false');
+      } catch (e) {
+        console.error('[admin] open failed', e);
+        setAdminTab('users');
+        openSheet(adminBackdrop, adminSheet);
+      }
     }
-    function closeAdminPanel(){ closeSheet(adminBackdrop, adminSheet); }
-    adminBackdrop.addEventListener('click', (e)=>{
+    function closeAdminPanel(){
+      import('./pages/admin-page.js').then((m) => m.closeAdminPage()).catch(() => {});
+      if (adminSheet && !adminSheet.classList.contains('hidden')) {
+        closeSheet(adminBackdrop, adminSheet);
+      }
+    }
+    adminBackdrop?.addEventListener('click', (e)=>{
       if (e.target?.dataset?.closeAdmin === 'true') closeAdminPanel();
+    });
+    document.getElementById('btnAdminIcon')?.addEventListener('click', () => openAdminPanel());
+    document.getElementById('btnAdminIconDesktop')?.addEventListener('click', () => openAdminPanel());
+    window.openAdminPanel = openAdminPanel;
+    window.addEventListener('hashchange', () => {
+      if (!String(location.hash || '').startsWith('#admin')) return;
+      if (!isAdmin()) return;
+      const root = document.getElementById('adminPageRoot');
+      if (root?.classList.contains('is-open')) return;
+      openAdminPanel();
     });
 
     function setAdminTab(tab){
@@ -8576,36 +8629,26 @@ function _openBudgetCategoryDetailLegacy(rowId) {
   // 1. Cek dulu, apakah HTML Popup sudah ada? Jika belum, kita buat sekarang!
   if (!document.getElementById('budgetDetailBackdrop')) {
     const modalHTML = `
-      <div id="budgetDetailBackdrop" class="fixed inset-0 z-[100]" style="display: none; background: rgba(0,0,0,0.8);">
+      <div id="budgetDetailBackdrop" class="fixed inset-0 z-[100]" style="display: none; background: var(--mf-backdrop);">
         <div class="fixed inset-0 flex items-center justify-center p-4 z-[110]">
-          <!-- Klik luar untuk tutup -->
           <div class="absolute inset-0" onclick="closeBudgetDetail()"></div>
-
-          <!-- Kotak Modal -->
-          <div id="budgetDetailSheet" class="relative w-full max-w-sm bg-slate-900 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden z-[120]">
-            
-            <!-- Header -->
-            <div class="px-4 py-3 border-b border-slate-700 bg-slate-800 flex justify-between items-center">
+          <div id="budgetDetailSheet" class="relative w-full max-w-sm rounded-3xl app-card-opaque shadow-2xl overflow-hidden z-[120]" style="border:1px solid var(--app-border)">
+            <div class="px-4 py-3 flex justify-between items-center" style="border-bottom:1px solid var(--app-border)">
               <div class="flex-1 mr-2" id="bdCatName"></div>
               <button type="button" onclick="closeBudgetDetail()" class="sheet-close-btn tap w-9 h-9 rounded-xl flex items-center justify-center shrink-0" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
             </div>
-
-            <!-- Body List -->
-            <div class="p-4 max-h-[50vh] overflow-y-auto bg-slate-900">
-              <div class="flex justify-between text-[10px] text-slate-500 uppercase tracking-wider mb-2 px-1">
+            <div class="p-4 max-h-[50vh] overflow-y-auto">
+              <div class="flex justify-between text-[10px] app-muted2 uppercase tracking-wider mb-2 px-1">
                 <span>Item</span>
                 <span class="mr-8">Harga</span>
               </div>
               <div id="bdRows" class="space-y-3"></div>
-              
-              <button id="btnAddDetailItem" class="mt-4 w-full py-3 border border-dashed border-slate-600 rounded-xl text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition">
+              <button id="btnAddDetailItem" class="mt-4 w-full py-3 rounded-xl text-xs app-chip tap">
                 + Tambah Item Belanja
               </button>
             </div>
-
-            <!-- Footer Button -->
-            <div class="p-4 border-t border-slate-700 bg-slate-800">
-              <button id="btnSaveDetailDB" class="w-full py-3 rounded-xl font-bold text-sm text-white shadow-lg transition hover:brightness-110" style="background: #10b981;">
+            <div class="p-4" style="border-top:1px solid var(--app-border)">
+              <button id="btnSaveDetailDB" class="tap w-full py-3 rounded-2xl font-bold text-sm text-white" style="background: var(--brand-grad); border:1px solid rgba(167,243,208,.35)">
                 Simpan Perubahan
               </button>
             </div>
@@ -8613,7 +8656,6 @@ function _openBudgetCategoryDetailLegacy(rowId) {
         </div>
       </div>
     `;
-    // Suntikkan HTML ke bagian paling bawah body
     document.body.insertAdjacentHTML('beforeend', modalHTML);
   }
 
@@ -8885,39 +8927,35 @@ if (btnApplyAI) {
         if (!document.getElementById('aiRecoBackdrop')) {
             console.log("Membuat HTML Popup...");
             const popupHTML = `
-            <div id="aiRecoBackdrop" class="fixed inset-0 z-[150]" style="display: none; background: rgba(0,0,0,0.85);">
+            <div id="aiRecoBackdrop" class="fixed inset-0 z-[150]" style="display: none; background: var(--mf-backdrop);">
                 <div class="fixed inset-0 flex items-center justify-center p-4">
-                    <div class="bg-slate-900 rounded-2xl shadow-2xl border border-slate-700 w-full max-w-md overflow-hidden flex flex-col max-h-[85vh]">
-                        <!-- Header -->
-                        <div class="px-5 py-4 border-b border-slate-800 bg-slate-900">
+                    <div class="rounded-3xl app-card-opaque shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[85vh]" style="border:1px solid var(--app-border)">
+                        <div class="px-5 py-4" style="border-bottom:1px solid var(--app-border)">
                             <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400">✨</div>
+                                <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:var(--mf-primary-soft);color:var(--mf-primary)">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
+                                </div>
                                 <div>
-                                    <h3 class="font-bold text-white text-lg">Analisa Budget AI</h3>
-                                    <p id="aiRecoSubtitle" class="text-xs text-slate-400">Preview Detail Budget</p>
+                                    <div class="text-xs app-muted">Budgeting</div>
+                                    <h3 class="font-semibold text-base" style="color:var(--mf-text)">Analisa Budget AI</h3>
+                                    <p id="aiRecoSubtitle" class="text-xs app-muted">Preview Detail Budget</p>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Body List -->
-                        <div class="p-4 overflow-y-auto flex-1 bg-slate-900/50">
+                        <div class="p-4 overflow-y-auto flex-1">
                             <div id="aiRecoPreviewList" class="space-y-2"></div>
-                            
-                            <!-- Summary Footer -->
-                            <div class="mt-4 pt-4 border-t border-dashed border-slate-700 flex justify-between items-center">
-                                <div class="text-xs text-slate-400">Total Rekomendasi</div>
-                                <div id="aiRecoTotal" class="text-sm font-bold text-emerald-400">Rp 0</div>
+                            <div class="mt-4 pt-4 flex justify-between items-center" style="border-top:1px dashed var(--app-border)">
+                                <div class="text-xs app-muted">Total Rekomendasi</div>
+                                <div id="aiRecoTotal" class="text-sm font-bold" style="color:var(--mf-primary)">Rp 0</div>
                             </div>
                             <div class="flex justify-between items-center mt-1">
-                                <div class="text-xs text-slate-400">Sisa dari Income</div>
-                                <div id="aiRecoSisa" class="text-xs text-slate-500">Rp 0</div>
+                                <div class="text-xs app-muted">Sisa dari Income</div>
+                                <div id="aiRecoSisa" class="text-xs app-muted2">Rp 0</div>
                             </div>
                         </div>
-
-                        <!-- Action Buttons -->
-                        <div class="p-4 border-t border-slate-800 bg-slate-900 grid grid-cols-2 gap-3">
-                            <button id="btnCloseAI" class="py-3 rounded-xl border border-slate-600 text-slate-300 font-medium hover:bg-slate-800 transition">Batal</button>
-                            <button id="btnConfirmAI" class="py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-500 shadow-lg shadow-emerald-500/20 transition">Setuju & Terapkan</button>
+                        <div class="p-4 grid grid-cols-2 gap-3" style="border-top:1px solid var(--app-border)">
+                            <button id="btnCloseAI" class="tap py-3 rounded-2xl app-chip text-sm font-semibold">Batal</button>
+                            <button id="btnConfirmAI" class="tap py-3 rounded-2xl text-sm font-bold text-white" style="background:var(--brand-grad);border:1px solid rgba(167,243,208,.35)">Setuju & Terapkan</button>
                         </div>
                     </div>
                 </div>
@@ -8996,7 +9034,7 @@ if (btnApplyAI) {
                     </div>
                     
                     <!-- Area Detail (Hidden by default) -->
-                    <div id="aiPreviewDetail-${idx}" class="hidden bg-slate-900/40 px-3 pb-2 pt-1 border-t border-slate-700/50">
+                    <div id="aiPreviewDetail-${idx}" class="hidden   px-3 pb-2 pt-1 border-t">
                         ${detailsHTML}
                     </div>
                 `;
@@ -12100,6 +12138,10 @@ function toggleNav(view, triggerEl) {
         // Deep-link Help Center: #tutorial[/category[/article]]
         if (parseTutorialRouteFromHash() && STATE.db?.user) {
           setTimeout(() => openTutorial(parseTutorialRouteFromHash()), 0);
+        }
+        // Deep-link Admin Console: #admin[/tab]
+        if (String(location.hash || '').startsWith('#admin') && STATE.db?.user && isAdmin()) {
+          setTimeout(() => openAdminPanel(), 0);
         }
       } finally {
         splash?.dismiss?.();

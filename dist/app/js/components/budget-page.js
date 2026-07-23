@@ -663,9 +663,7 @@ function showPageToast(msg) {
     window.showToast(msg, 'success');
     return;
   }
-  const t = document.createElement('div');
-  t.className = 'action-toast success';
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 2500);
+  if (window.MonefyiUI?.showToast) window.MonefyiUI.showToast(msg, 'success');
+  else if (typeof window.showToast === 'function') window.showToast(msg, 'success');
+  else { const t = document.createElement('div'); t.className = 'action-toast success'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2000); }
 }

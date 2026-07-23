@@ -31,10 +31,10 @@ export async function showIncomeManagerModal(onSaved = null, periodOverride = nu
     <div class="budget-modal income-modal" role="dialog" aria-modal="true">
       <header class="modal-header">
         <div>
-          <h2>💰 Kelola Income Bulan Ini</h2>
+          <h2>Kelola Income Bulan Ini</h2>
           <p class="modal-subtitle">${formatPeriod(period)}</p>
         </div>
-        <button type="button" class="close-btn" data-action="close" aria-label="Tutup">✕</button>
+        <button type="button" class="close-btn sheet-close-btn" data-action="close" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </header>
       <div class="modal-body">
         <div class="income-summary">
@@ -85,7 +85,7 @@ function renderSourceRow(source) {
 function renderEmptyState() {
   return `
     <div class="income-empty">
-      <div class="income-empty-icon">💰</div>
+      <div class="income-empty-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg></div>
       <div class="income-empty-title">Belum ada sumber income</div>
       <div class="income-empty-desc">Tambah gaji, freelance, investasi, dll</div>
     </div>
@@ -172,7 +172,7 @@ function showSourceFormModal(source = null, onSaved = null, period = null) {
     <div class="budget-modal source-form-modal" role="dialog" aria-modal="true">
       <header class="modal-header">
         <h2>${isEdit ? '✏️ Edit Sumber Income' : '➕ Tambah Sumber Income'}</h2>
-        <button type="button" class="close-btn" data-action="close">✕</button>
+        <button type="button" class="close-btn sheet-close-btn" data-action="close" aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </header>
       <div class="modal-body">
         <div class="form-section">

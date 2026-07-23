@@ -18,7 +18,7 @@
 }
 
 .notif-settings-modal {
-  background: #1a2030;
+  background: var(--mf-sheet);
   border-radius: 24px 24px 0 0;
   width: 100%;
   max-width: 500px;
@@ -52,12 +52,12 @@
 }
 
 .ns-close {
-  width: 32px;
-  height: 32px;
-  background: rgba(255, 255, 255, 0.06);
-  border: none;
-  border-radius: 10px;
-  color: white;
+  width: 36px;
+  height: 36px;
+  background: rgba(127, 29, 29, 0.55);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: 12px;
+  color: #fecaca;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -279,7 +279,7 @@
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  background: linear-gradient(135deg, #1a2030, #131826);
+  background: var(--mf-grad-brand);
   border: 1px solid rgba(16, 185, 129, 0.35);
   border-radius: 16px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);

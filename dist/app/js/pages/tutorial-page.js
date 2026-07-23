@@ -141,11 +141,20 @@ function renderContent(container, content, progress, stats) {
         ${content.map((cat) => renderCategoryCard(cat, progress)).join('')}
       </div>
 
+      ${renderFeedbackForm()}
+
       <div class="tut-article-view" id="tut-article-view" style="display:none"></div>
     </div>
   `;
 
   wireHandlers(container, content, progress);
+  wireFeedbackForm(container);
+  flushOfflineFeedbackQueue();
+}
+
+function setFeedbackVisible(container, visible) {
+  const fb = container?.querySelector('#tut-feedback-card');
+  if (fb) fb.style.display = visible ? '' : 'none';
 }
 
 function showCategories(container) {
@@ -155,6 +164,7 @@ function showCategories(container) {
   if (categoriesView) categoriesView.style.display = 'grid';
   if (articleView) articleView.style.display = 'none';
   if (searchResults) searchResults.style.display = 'none';
+  setFeedbackVisible(container, true);
   setTutorialHash();
 }
 
@@ -333,6 +343,139 @@ function renderArticleNav(category, currentArticle) {
   `;
 }
 
+const FEEDBACK_QUEUE_KEY = 'monefyi_feedback_queue_v1';
+
+function renderFeedbackForm() {
+  return `
+    <section class="tut-feedback-card" id="tut-feedback-card">
+      <div class="tut-feedback-head">
+        <div>
+          <h2>Kirim masukan</h2>
+          <p>Request fitur, lapor bug, atau keluhan — kami baca semua.</p>
+        </div>
+        ${Icon('mail', { size: 20 })}
+      </div>
+      <form id="tut-feedback-form" class="tut-feedback-form">
+        <label>
+          <span>Jenis</span>
+          <select name="type" required>
+            <option value="feature">Request fitur</option>
+            <option value="bug">Lapor bug</option>
+            <option value="complaint">Keluhan</option>
+            <option value="general">Umum</option>
+          </select>
+        </label>
+        <label>
+          <span>Judul</span>
+          <input name="title" type="text" maxlength="120" required placeholder="Ringkas saja…" />
+        </label>
+        <label>
+          <span>Detail</span>
+          <textarea name="body" rows="3" maxlength="2000" required placeholder="Ceritakan yang kamu butuhkan atau yang terjadi…"></textarea>
+        </label>
+        <div class="tut-feedback-actions">
+          <button type="submit" class="tut-feedback-submit">Kirim</button>
+          <span class="tut-feedback-status" id="tut-feedback-status" aria-live="polite"></span>
+        </div>
+      </form>
+    </section>
+  `;
+}
+
+function getSupabaseClient() {
+  return window.__monefyiSupabase || window.STATE?.db?.supa || null;
+}
+
+function getAuthUserId() {
+  return window.STATE?.db?.user?.id || window.currentUser?.id || null;
+}
+
+/**
+ * @param {HTMLElement} container
+ */
+function wireFeedbackForm(container) {
+  const form = container.querySelector('#tut-feedback-form');
+  if (!form) return;
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const status = container.querySelector('#tut-feedback-status');
+    const fd = new FormData(form);
+    const payload = {
+      type: String(fd.get('type') || 'general'),
+      title: String(fd.get('title') || '').trim(),
+      body: String(fd.get('body') || '').trim(),
+    };
+    if (!payload.title || !payload.body) {
+      if (status) status.textContent = 'Lengkapi judul & detail.';
+      return;
+    }
+    const btn = form.querySelector('button[type="submit"]');
+    if (btn) btn.disabled = true;
+    if (status) status.textContent = 'Mengirim…';
+    try {
+      await submitUserFeedback(payload);
+      form.reset();
+      if (status) status.textContent = 'Terima kasih! Masukan terkirim.';
+      if (window.MonefyiUI?.showToast) window.MonefyiUI.showToast('Masukan terkirim', 'success');
+    } catch (err) {
+      console.error('[tutorial] feedback', err);
+      queueOfflineFeedback(payload);
+      if (status) status.textContent = 'Disimpan offline — akan dikirim saat online.';
+      if (window.MonefyiUI?.showToast) window.MonefyiUI.showToast('Masukan diantrikan offline', 'info');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  });
+}
+
+/**
+ * @param {{ type: string, title: string, body: string }} payload
+ */
+async function submitUserFeedback(payload) {
+  const sb = getSupabaseClient();
+  const userId = getAuthUserId();
+  if (!sb || !userId) throw new Error('Not authenticated');
+  const { error } = await sb.from('user_feedback').insert({
+    user_id: userId,
+    type: payload.type,
+    title: payload.title.slice(0, 200),
+    body: payload.body.slice(0, 4000),
+    status: 'open',
+  });
+  if (error) throw error;
+}
+
+function queueOfflineFeedback(payload) {
+  try {
+    const raw = localStorage.getItem(FEEDBACK_QUEUE_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    arr.push({ ...payload, queued_at: Date.now() });
+    localStorage.setItem(FEEDBACK_QUEUE_KEY, JSON.stringify(arr.slice(-20)));
+  } catch { /* ignore */ }
+}
+
+async function flushOfflineFeedbackQueue() {
+  let arr = [];
+  try {
+    const raw = localStorage.getItem(FEEDBACK_QUEUE_KEY);
+    arr = raw ? JSON.parse(raw) : [];
+  } catch { return; }
+  if (!Array.isArray(arr) || !arr.length) return;
+  if (!navigator.onLine) return;
+  const remain = [];
+  for (const item of arr) {
+    try {
+      await submitUserFeedback(item);
+    } catch {
+      remain.push(item);
+    }
+  }
+  try {
+    if (remain.length) localStorage.setItem(FEEDBACK_QUEUE_KEY, JSON.stringify(remain));
+    else localStorage.removeItem(FEEDBACK_QUEUE_KEY);
+  } catch { /* ignore */ }
+}
+
 function renderMiniRing(percent) {
   const r = 14;
   const c = 2 * Math.PI * r;
@@ -375,6 +518,7 @@ function wireHandlers(container, content, progress) {
           if (searchResults) searchResults.style.display = 'none';
           if (categoriesView) categoriesView.style.display = 'grid';
           if (articleView) articleView.style.display = 'none';
+          setFeedbackVisible(container, true);
           return;
         }
 
@@ -382,6 +526,7 @@ function wireHandlers(container, content, progress) {
         if (categoriesView) categoriesView.style.display = 'none';
         if (articleView) articleView.style.display = 'none';
         if (searchResults) searchResults.style.display = 'block';
+        setFeedbackVisible(container, false);
 
         if (!searchResults) return;
 
@@ -426,6 +571,7 @@ function wireArticleHandlers(container, content, progress) {
     btn.onclick = () => {
       if (articleView) articleView.style.display = 'none';
       if (categoriesView) categoriesView.style.display = 'grid';
+      setFeedbackVisible(container, true);
       setTutorialHash();
       container.querySelector('#tut-search-input')?.focus?.();
       scrollTutorialTop(container);
@@ -497,6 +643,7 @@ function openCategory(container, content, progress, catId, updateHash) {
 
   if (categoriesView) categoriesView.style.display = 'none';
   if (searchResults) searchResults.style.display = 'none';
+  setFeedbackVisible(container, false);
   if (articleView) {
     articleView.style.display = 'block';
     articleView.innerHTML = renderArticleList(cat, progress);
@@ -521,6 +668,7 @@ function openArticle(container, content, progress, catId, artId, updateHash) {
 
   if (categoriesView) categoriesView.style.display = 'none';
   if (searchResults) searchResults.style.display = 'none';
+  setFeedbackVisible(container, false);
   if (articleView) {
     articleView.style.display = 'block';
     articleView.innerHTML = renderArticleDetail(cat, article, progress);
@@ -537,6 +685,8 @@ function scrollTutorialTop(container) {
 }
 
 function showToast(msg) {
+  if (window.MonefyiUI?.showToast) return window.MonefyiUI.showToast(msg, 'success');
+  if (typeof window.showToast === 'function') return window.showToast(msg, 'success');
   const existing = document.querySelector('.action-toast');
   if (existing) existing.remove();
   const t = document.createElement('div');

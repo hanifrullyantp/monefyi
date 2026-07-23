@@ -2229,7 +2229,12 @@ async function upsertTransaction_legacy_local(tx) {
         strip.style.display = 'none';
       }
       const btn = $('#btnSidebarCollapse');
-      if (btn) btn.textContent = collapsed ? '›' : '‹';
+      if (btn) {
+        btn.textContent = '‹';
+        btn.setAttribute('aria-label', 'Ciutkan sidebar');
+        btn.title = 'Ciutkan sidebar';
+        btn.classList.toggle('hidden', !!collapsed);
+      }
       try { enhanceTransactionPageDesktop(); } catch (_) {}
       try { renderHeader(); } catch (_) {}
       try { renderDashboardQuickAccess(); } catch (_) {}
@@ -2242,7 +2247,9 @@ async function upsertTransaction_legacy_local(tx) {
       aside.dataset.expandClickWired = '1';
       aside.addEventListener('click', (e) => {
         if (!aside.classList.contains('sidebar--collapsed')) return;
-        if (e.target.closest('.sidebar-item, #btnSidebarCollapse, button, a, input, select')) return;
+        // Expand via logo/brand or empty rail; keep nav item clicks for navigation
+        const expandHit = e.target.closest('.sidebar-brand, .brand-logo-slot, #sidebarLogoImg');
+        if (!expandHit && e.target.closest('.sidebar-item, button, a, input, select')) return;
         aside.classList.remove('sidebar--collapsed');
         localStorage.setItem('monefyi_sidebar_collapsed', '0');
         syncSidebarCollapsedUI();

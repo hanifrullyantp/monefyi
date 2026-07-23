@@ -172,10 +172,13 @@
     pointer-events: none !important;
   }
   #app-root.app-visible {
-    display: block;
+    display: flex;
+    flex-direction: column;
     visibility: visible;
     opacity: 1;
     transition: opacity 0.3s ease;
+    height: 100%;
+    min-height: 0;
   }
   html.splash-active,
   html.splash-active body {
