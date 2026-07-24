@@ -270,7 +270,7 @@ export function setupInstallBanner(options = {}) {
     banner.className = 'install-banner';
     banner.innerHTML = `
       <div class="install-banner-content">
-        <img src="/app/icons/monefyi-logo.png" alt="" class="install-icon" />
+        <img src="/app/icons/icon-192.png" alt="" class="install-icon" />
         <div class="install-text">
           <strong>Install Monefyi</strong>
           <p>${subtitle}</p>

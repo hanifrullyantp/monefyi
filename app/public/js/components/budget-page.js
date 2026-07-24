@@ -184,13 +184,35 @@ function renderAllocationStripHtml(income, rows) {
 }
 
 /**
+ * Remaining income that can still be allocated (plus current item so slider can hold its value).
+ * @param {number} income
+ * @param {object[]} rows
+ * @param {string} [budgetId]
+ * @param {string} [itemId]
+ * @returns {{ max: number, remaining: number, current: number }}
+ */
+function getItemAllocationLimit(income, rows, budgetId, itemId) {
+  const list = rows || [];
+  const total = list.reduce((s, r) => s + Math.abs(Number(r.amount || 0)), 0);
+  let current = 0;
+  const row = list.find((r) => r.id === budgetId);
+  const item = row?.items?.find((i) => i.id === itemId);
+  if (item) current = Math.round(Number(item.qty || 1) * Number(item.price || 0));
+  const remaining = Number(income || 0) - total;
+  const max = Math.max(current, current + Math.max(0, remaining), 0);
+  return { max, remaining, current };
+}
+
+/**
  * @param {object} item
  * @param {boolean} expanded
+ * @param {{ max?: number, remaining?: number }} [limits]
  */
-function renderDetailItem(item, expanded) {
+function renderDetailItem(item, expanded, limits = {}) {
   const isDone = item.status === 'done' || item.status === 'skipped';
   const amount = Math.round(Number(item.qty || 1) * Number(item.price || 0));
-  const sliderMax = Math.max(amount, 5_000_000, 1000);
+  const sliderMax = Math.max(Number(limits.max || 0), amount, 1000);
+  const remaining = Number(limits.remaining ?? 0);
   const label = item.name?.trim() || 'Item baru';
 
   return `
@@ -203,11 +225,15 @@ function renderDetailItem(item, expanded) {
       <div class="bli-item__detail ${expanded ? '' : 'hidden'}">
         <input type="text" class="bli-item-name form-input" placeholder="Nama detail item" value="${escapeHtml(item.name || '')}" aria-label="Nama item">
         <div class="bli-item-amount-row">
-          <input type="range" class="bli-item-slider" min="0" max="${sliderMax}" step="1000" value="${amount}" aria-label="Slider jumlah">
+          <input type="range" class="bli-item-slider" min="0" max="${sliderMax}" step="1000" value="${Math.min(amount, sliderMax)}" aria-label="Slider jumlah">
           <div class="bli-inline-amount">
             <span>Rp</span>
-            <input type="number" class="bli-item-price form-input" min="0" step="1000" value="${amount || ''}" inputmode="numeric" aria-label="Jumlah">
+            <input type="number" class="bli-item-price form-input" min="0" max="${sliderMax}" step="1000" value="${amount || ''}" inputmode="numeric" aria-label="Jumlah">
           </div>
+        </div>
+        <div class="bli-item-cap" data-role="item-cap">
+          Maks. Rp ${formatIDR(sliderMax)}
+          <span class="bli-item-cap__remain ${remaining < 0 ? 'over' : ''}">· Sisa alokasi Rp ${formatIDR(Math.max(0, remaining))}</span>
         </div>
       </div>
     </div>
@@ -218,8 +244,9 @@ function renderDetailItem(item, expanded) {
  * @param {object} budget
  * @param {object[]} transactions
  * @param {string} month
+ * @param {number} [income]
  */
-function renderBudgetListRow(budget, transactions, month) {
+function renderBudgetListRow(budget, transactions, month, income = 0) {
   const progress = budget._progress || calculateProgress(budget, transactions, month);
   const pl = PRIORITY_LEVELS[(budget.priority || 'penting').toUpperCase()] || PRIORITY_LEVELS.PENTING;
   const statusClass = progress.status === 'over' ? 'over' : progress.status === 'critical' ? 'critical' : progress.status === 'warning' ? 'warning' : '';
@@ -230,6 +257,7 @@ function renderBudgetListRow(budget, transactions, month) {
   const allDone = budget._allDone || isBudgetFullyDone(budget);
   const expanded = _expandedBudgetId === budget.id;
   const selected = _selectedBudgetId === budget.id;
+  const draftRows = getDraftRows().length ? getDraftRows() : [budget];
   const items = Array.isArray(budget.items) && budget.items.length
     ? budget.items
     : [createBudgetItem({ name: budget.name || 'Item', price: Number(budget.amount || 0), qty: 1 })];
@@ -256,7 +284,10 @@ function renderBudgetListRow(budget, transactions, month) {
         </div>
       </button>
       <div class="budget-list-items ${expanded ? '' : 'hidden'}" data-role="items">
-        ${items.map((item) => renderDetailItem(item, expanded && _expandedItemId === item.id)).join('')}
+        ${items.map((item) => {
+          const lim = getItemAllocationLimit(income, draftRows, budget.id, item.id);
+          return renderDetailItem(item, expanded && _expandedItemId === item.id, lim);
+        }).join('')}
         <button type="button" class="bli-add-item tap" data-action="add-item" data-budget-id="${escapeHtml(budget.id)}">
           ${Icon('plus', { size: 14 })} Tambah item
         </button>
@@ -269,8 +300,9 @@ function renderBudgetListRow(budget, transactions, month) {
  * @param {object[]} sorted
  * @param {object[]} transactions
  * @param {string} month
+ * @param {number} [income]
  */
-function renderGroupedByPriority(sorted, transactions, month) {
+function renderGroupedByPriority(sorted, transactions, month, income = 0) {
   const groups = {};
   for (const pl of Object.values(PRIORITY_LEVELS)) groups[pl.key] = [];
 
@@ -291,7 +323,7 @@ function renderGroupedByPriority(sorted, transactions, month) {
           <span class="budget-list-group__meta">${list.length} item</span>
           <span class="budget-list-group__summary">${formatCompact(totals.spent)} / ${formatCompact(totals.total)} (${totals.pct}%)</span>
         </div>
-        ${list.map((b) => renderBudgetListRow(b, transactions, month)).join('')}
+        ${list.map((b) => renderBudgetListRow(b, transactions, month, income)).join('')}
       </section>
     `;
   }).join('');
@@ -303,8 +335,9 @@ function renderGroupedByPriority(sorted, transactions, month) {
  * @param {object[]} transactions
  * @param {string} month
  * @param {string} sort
+ * @param {number} [income]
  */
-function renderBudgetListSection(section, rows, transactions, month, sort) {
+function renderBudgetListSection(section, rows, transactions, month, sort, income = 0) {
   const sorted = sortBudgets(rows, transactions, month, sort);
   if (!sorted.length) {
     section.innerHTML = `
@@ -318,11 +351,11 @@ function renderBudgetListSection(section, rows, transactions, month, sort) {
   }
 
   if (sort === 'priority') {
-    section.innerHTML = renderGroupedByPriority(sorted, transactions, month);
+    section.innerHTML = renderGroupedByPriority(sorted, transactions, month, income);
   } else {
     section.innerHTML = `
       <div class="budget-list-flat">
-        ${sorted.map((b) => renderBudgetListRow(b, transactions, month)).join('')}
+        ${sorted.map((b) => renderBudgetListRow(b, transactions, month, income)).join('')}
       </div>
     `;
   }
@@ -380,8 +413,9 @@ async function commitEditGesture(label = 'Edit item budget') {
  * @param {number} income
  */
 function syncLiveDashboard(container, income) {
+  const liveIncome = Number(window.STATE?.budgetDraft?.income || income || 0);
   const rows = getDraftRows();
-  const html = renderAllocationStripHtml(income, rows);
+  const html = renderAllocationStripHtml(liveIncome, rows);
   container.querySelectorAll('[data-role="alloc-host"], [data-role="alloc-host-mobile"]').forEach((host) => {
     host.innerHTML = html;
   });
@@ -393,7 +427,7 @@ function syncLiveDashboard(container, income) {
     if (amtEl) amtEl.textContent = formatCompact(row.amount);
   });
 
-  scheduleHeroRefresh(container, income, rows);
+  scheduleHeroRefresh(container, liveIncome, rows);
 }
 
 let _heroTimer = null;
@@ -511,12 +545,17 @@ function wireHandlers(container, ctx) {
     localStorage.setItem(SORT_KEY, sort);
     const section = container.querySelector('#budget-list-content');
     const liveRows = getDraftRows().length ? getDraftRows() : rows;
-    if (section) renderBudgetListSection(section, liveRows, transactions, month, sort);
+    if (section) renderBudgetListSection(section, liveRows, transactions, month, sort, income);
     wireListInteractions(container, ctx);
   });
 
+  container.querySelector('[data-action="toolbar-filter"]')?.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const { showFilterPopup } = await import('./global-filter-popup.js');
+    await showFilterPopup();
+  });
+
   wireToolbar(container, ctx);
-  wireTemplateCard(container, ctx);
   wireListInteractions(container, ctx);
   syncToolbarState(container);
 
@@ -629,129 +668,79 @@ function wireToolbar(container, ctx) {
     await refreshFromDraft(ctx);
   });
 
-  container.querySelector('[data-action="toolbar-template"]')?.addEventListener('click', () => {
-    const card = container.querySelector('.budget-template-card');
-    const select = container.querySelector('#budget-template-select');
-    card?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    select?.focus();
-    card?.classList.add('btc-highlight');
-    setTimeout(() => card?.classList.remove('btc-highlight'), 1200);
+  container.querySelector('[data-action="toolbar-template"]')?.addEventListener('click', async () => {
+    const { showBudgetTemplateModal } = await import('./budget-template-modal.js');
+    const liveRows = getDraftRows().length ? getDraftRows() : (ctx.rows || []);
+    await showBudgetTemplateModal({
+      month,
+      income: Number(ctx.income || window.STATE?.budgetDraft?.income || 0),
+      rows: liveRows,
+      onApplied: () => refreshFromDraft(ctx),
+    });
   });
+}
+
+/**
+ * Toggle accordion expand state in-place (no full page re-render).
+ * @param {HTMLElement} container
+ * @param {object} ctx
+ * @param {{ rebuildItems?: boolean }} [opts]
+ */
+function applyExpandDom(container, ctx, opts = {}) {
+  const rebuildItems = opts.rebuildItems !== false;
+  const income = Number(ctx?.income || window.STATE?.budgetDraft?.income || 0);
+  const rows = getDraftRows();
+
+  container.querySelectorAll('.budget-list-block').forEach((block) => {
+    const id = block.dataset.budgetId;
+    const expanded = _expandedBudgetId === id;
+    const selected = _selectedBudgetId === id;
+    block.classList.toggle('is-expanded', expanded);
+    block.classList.toggle('is-selected', selected);
+    const itemsEl = block.querySelector('[data-role="items"]');
+    itemsEl?.classList.toggle('hidden', !expanded);
+    const rowBtn = block.querySelector('[data-action="toggle-budget"]');
+    rowBtn?.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    block.querySelector('.budget-list-row__chev')?.classList.toggle('is-open', expanded);
+
+    if (!expanded || !itemsEl) return;
+
+    const row = rows.find((r) => r.id === id);
+    if (!row) return;
+    ensureRowItems(row);
+
+    if (rebuildItems) {
+      itemsEl.innerHTML = `${(row.items || []).map((item) => {
+        const lim = getItemAllocationLimit(income, rows, row.id, item.id);
+        return renderDetailItem(item, _expandedItemId === item.id, lim);
+      }).join('')}
+        <button type="button" class="bli-add-item tap" data-action="add-item" data-budget-id="${escapeHtml(id)}">
+          ${Icon('plus', { size: 14 })} Tambah item
+        </button>`;
+    } else {
+      itemsEl.querySelectorAll('.bli-item').forEach((itemEl) => {
+        const itemExpanded = _expandedItemId === itemEl.dataset.itemId;
+        itemEl.classList.toggle('is-expanded', itemExpanded);
+        itemEl.dataset.expanded = itemExpanded ? 'true' : 'false';
+        itemEl.querySelector('.bli-item__detail')?.classList.toggle('hidden', !itemExpanded);
+        itemEl.querySelector('[data-action="toggle-item"]')?.setAttribute('aria-expanded', itemExpanded ? 'true' : 'false');
+      });
+    }
+  });
+
+  wireAddItemButtons(container, ctx);
+  wireItemEditors(container, ctx);
+  syncToolbarState(container);
 }
 
 /**
  * @param {HTMLElement} container
  * @param {object} ctx
  */
-function wireTemplateCard(container, ctx) {
-  const { rows, month, income, onRefresh } = ctx;
-  const select = container.querySelector('#budget-template-select');
-  const syncActions = () => {
-    const id = select?.value || '';
-    const builtin = String(id).startsWith('builtin_');
-    const editBtn = container.querySelector('[data-action="template-edit"]');
-    const delBtn = container.querySelector('[data-action="template-delete"]');
-    if (editBtn) editBtn.disabled = !id || builtin;
-    if (delBtn) delBtn.disabled = !id || builtin;
-  };
-  select?.addEventListener('change', syncActions);
-  syncActions();
-
-  container.querySelector('[data-action="template-apply"]')?.addEventListener('click', async () => {
-    const id = select?.value;
-    if (!id) return;
-    if (!confirm('Terapkan template ini? Budget bulan ini akan diganti.')) return;
-    try {
-      const { applyTemplateById } = await import('../services/budget-template.js');
-      const applied = await applyTemplateById(id, month);
-      if (!applied?.rows?.length) {
-        showPageToast('Template kosong atau income belum diisi');
-        return;
-      }
-      if (window.STATE?.budgetDraft) {
-        window.STATE.budgetDraft.rows = applied.rows;
-        window.STATE.budgetDraft.income = applied.income || income || 0;
-        window.STATE.budgetDraft.initialFrom = 'template';
-        window.STATE.budgetDraft.month = month;
-      }
-      showPageToast(`Template "${applied.template_label}" diterapkan — simpan budget untuk persist`);
-      await refreshFromDraft(ctx);
-    } catch (e) {
-      showPageToast('Gagal terapkan: ' + e.message);
-    }
-  });
-
-  container.querySelector('[data-action="template-save"]')?.addEventListener('click', async () => {
-    const liveRows = getDraftRows().length ? getDraftRows() : rows;
-    if (!liveRows.length) {
-      showPageToast('Belum ada budget untuk disimpan');
-      return;
-    }
-    const label = prompt('Nama template', `Template ${formatMonthLabel(month)}`);
-    if (label === null) return;
-    try {
-      const { saveBudgetTemplate } = await import('../services/budget-template.js');
-      await saveBudgetTemplate(month, income, liveRows, { label: label.trim() || `Template ${month}` });
-      showPageToast('Template tersimpan');
-      await onRefresh?.({ fromSaved: false });
-    } catch (e) {
-      showPageToast('Gagal simpan: ' + e.message);
-    }
-  });
-
-  container.querySelector('[data-action="template-edit"]')?.addEventListener('click', async () => {
-    const id = select?.value;
-    if (!id || String(id).startsWith('builtin_')) return;
-    const label = prompt('Rename template');
-    if (!label?.trim()) return;
-    try {
-      const { updateBudgetTemplate } = await import('../services/budget-template.js');
-      await updateBudgetTemplate(id, { label: label.trim() });
-      showPageToast('Template diupdate');
-      await onRefresh?.({ fromSaved: false });
-    } catch (e) {
-      showPageToast(e.message);
-    }
-  });
-
-  container.querySelector('[data-action="template-delete"]')?.addEventListener('click', async () => {
-    const id = select?.value;
-    if (!id || String(id).startsWith('builtin_')) return;
-    if (!confirm('Hapus template ini?')) return;
-    try {
-      const { deleteBudgetTemplate } = await import('../services/budget-template.js');
-      await deleteBudgetTemplate(id);
-      showPageToast('Template dihapus');
-      await onRefresh?.({ fromSaved: false });
-    } catch (e) {
-      showPageToast(e.message);
-    }
-  });
-}
-
-/**
- * Accordion + inline item editing.
- * @param {HTMLElement} container
- * @param {object} ctx
- */
-function wireListInteractions(container, ctx) {
-  const { income } = ctx;
-
-  container.querySelectorAll('[data-action="toggle-budget"]').forEach((btn) => {
-    btn.onclick = (e) => {
-      e.preventDefault();
-      const id = btn.dataset.budgetId;
-      _selectedBudgetId = id;
-      _expandedBudgetId = _expandedBudgetId === id ? null : id;
-      if (_expandedBudgetId !== id) _expandedItemId = null;
-      // Ensure draft has items when first expanded
-      const row = getDraftRows().find((r) => r.id === id);
-      if (row) ensureRowItems(row);
-      refreshFromDraft(ctx);
-    };
-  });
-
+function wireAddItemButtons(container, ctx) {
   container.querySelectorAll('[data-action="add-item"]').forEach((btn) => {
+    if (btn.dataset.wired === '1') return;
+    btn.dataset.wired = '1';
     btn.onclick = async (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -759,6 +748,13 @@ function wireListInteractions(container, ctx) {
       const draft = window.STATE?.budgetDraft;
       const row = draft?.rows?.find((r) => r.id === budgetId);
       if (!row) return;
+      const income = Number(ctx?.income || draft?.income || 0);
+      const total = (draft.rows || []).reduce((s, r) => s + Math.abs(Number(r.amount || 0)), 0);
+      const room = income - total;
+      if (room <= 0) {
+        showPageToast('Sisa alokasi income habis — kurangi item lain dulu');
+        return;
+      }
       beginEditGesture();
       ensureRowItems(row);
       const item = createBudgetItem({ name: '', price: 0, qty: 1 });
@@ -768,11 +764,24 @@ function wireListInteractions(container, ctx) {
       _expandedItemId = item.id;
       _selectedBudgetId = budgetId;
       await commitEditGesture('Tambah item');
-      await refreshFromDraft(ctx);
+      applyExpandDom(container, ctx, { rebuildItems: true });
+      syncLiveDashboard(container, income);
     };
   });
+}
+
+/**
+ * Wire only item editors (slider/name/price) — safe to call after partial rebuild.
+ * @param {HTMLElement} container
+ * @param {object} ctx
+ */
+function wireItemEditors(container, ctx) {
+  const income = Number(ctx?.income || window.STATE?.budgetDraft?.income || 0);
 
   container.querySelectorAll('.bli-item').forEach((itemEl) => {
+    if (itemEl.dataset.wired === '1') return;
+    itemEl.dataset.wired = '1';
+
     const summary = itemEl.querySelector('[data-action="toggle-item"]');
     summary?.addEventListener('click', (e) => {
       e.preventDefault();
@@ -783,7 +792,7 @@ function wireListInteractions(container, ctx) {
       _selectedBudgetId = budgetId || _selectedBudgetId;
       _expandedBudgetId = budgetId || _expandedBudgetId;
       _expandedItemId = _expandedItemId === itemId ? null : itemId;
-      refreshFromDraft(ctx);
+      applyExpandDom(container, ctx, { rebuildItems: false });
     });
 
     const nameInput = itemEl.querySelector('.bli-item-name');
@@ -793,12 +802,26 @@ function wireListInteractions(container, ctx) {
     const budgetId = block?.dataset.budgetId;
     const itemId = itemEl.dataset.itemId;
 
-    const applyToDraft = (patch) => {
+    const applyToDraft = (patch, { allowZero = true } = {}) => {
       const row = getDraftRows().find((r) => r.id === budgetId);
       if (!row) return null;
       ensureRowItems(row);
       const item = row.items.find((i) => i.id === itemId);
       if (!item) return null;
+      if (patch.price !== undefined) {
+        let price = Number(patch.price);
+        if (!Number.isFinite(price)) return row;
+        if (!allowZero && price === 0 && String(patch.raw || '') === '') {
+          return row; // keep previous while typing
+        }
+        const lim = getItemAllocationLimit(income, getDraftRows(), budgetId, itemId);
+        // lim.max already includes current; clamp against room
+        const othersTotal = getDraftRows().reduce((s, r) => s + Math.abs(Number(r.amount || 0)), 0) - (Number(item.qty || 1) * Number(item.price || 0));
+        const hardMax = Math.max(0, Number(income || 0) - othersTotal);
+        price = Math.max(0, Math.min(price, hardMax));
+        patch = { ...patch, price, qty: 1 };
+        delete patch.raw;
+      }
       Object.assign(item, patch);
       recalcRowAmount(row);
       return row;
@@ -809,8 +832,21 @@ function wireListInteractions(container, ctx) {
       if (!item) return;
       const nameEl = itemEl.querySelector('.bli-item__name');
       const amtEl = itemEl.querySelector('.bli-item__amt');
+      const amt = Math.round(Number(item.qty || 1) * Number(item.price || 0));
       if (nameEl) nameEl.textContent = item.name?.trim() || 'Item baru';
-      if (amtEl) amtEl.textContent = `Rp ${formatIDR(Number(item.qty || 1) * Number(item.price || 0))}`;
+      if (amtEl) amtEl.textContent = `Rp ${formatIDR(amt)}`;
+      const lim = getItemAllocationLimit(income, getDraftRows(), budgetId, itemId);
+      if (slider) {
+        slider.max = String(Math.max(lim.max, amt, 1000));
+        slider.value = String(Math.min(amt, Number(slider.max)));
+      }
+      if (priceInput) {
+        priceInput.max = slider?.max || String(lim.max);
+      }
+      const cap = itemEl.querySelector('[data-role="item-cap"]');
+      if (cap) {
+        cap.innerHTML = `Maks. Rp ${formatIDR(Number(slider?.max || lim.max))} <span class="bli-item-cap__remain ${lim.remaining < 0 ? 'over' : ''}">· Sisa alokasi Rp ${formatIDR(Math.max(0, lim.remaining))}</span>`;
+      }
     };
 
     nameInput?.addEventListener('focus', beginEditGesture);
@@ -828,31 +864,73 @@ function wireListInteractions(container, ctx) {
 
     const syncFromPrice = () => {
       beginEditGesture();
-      const v = Math.max(0, Number(priceInput?.value || 0));
-      if (slider) {
-        if (v > Number(slider.max)) slider.max = String(v);
-        slider.value = String(v);
+      const raw = priceInput?.value;
+      if (raw === '' || raw === null || raw === undefined) {
+        // Don't wipe draft to 0 while user clears the field to type a new number
+        return;
       }
-      const row = applyToDraft({ price: v, qty: 1 });
+      const v = Math.max(0, Number(raw || 0));
+      const row = applyToDraft({ price: v, raw });
+      if (slider && row) {
+        const item = row.items.find((i) => i.id === itemId);
+        const amt = item ? Number(item.price || 0) : v;
+        if (amt > Number(slider.max)) slider.max = String(amt);
+        slider.value = String(amt);
+        if (priceInput) priceInput.value = String(amt);
+      }
       syncSummaryLabels(row);
       syncLiveDashboard(container, income);
+      syncToolbarState(container);
     };
     const syncFromSlider = () => {
       beginEditGesture();
       const v = Number(slider?.value || 0);
       if (priceInput) priceInput.value = String(v);
-      const row = applyToDraft({ price: v, qty: 1 });
+      const row = applyToDraft({ price: v });
       syncSummaryLabels(row);
       syncLiveDashboard(container, income);
+      syncToolbarState(container);
     };
 
     priceInput?.addEventListener('input', syncFromPrice);
-    priceInput?.addEventListener('change', () => commitEditGesture('Edit nominal item'));
-    priceInput?.addEventListener('blur', () => commitEditGesture('Edit nominal item'));
+    priceInput?.addEventListener('change', () => {
+      syncFromPrice();
+      commitEditGesture('Edit nominal item');
+    });
+    priceInput?.addEventListener('blur', () => {
+      if (priceInput.value === '') {
+        const row = getDraftRows().find((r) => r.id === budgetId);
+        const item = row?.items?.find((i) => i.id === itemId);
+        if (item) priceInput.value = String(Math.round(Number(item.price || 0)));
+      }
+      commitEditGesture('Edit nominal item');
+    });
     slider?.addEventListener('input', syncFromSlider);
     slider?.addEventListener('change', () => commitEditGesture('Edit nominal item'));
   });
+}
 
+/**
+ * Accordion + inline item editing.
+ * @param {HTMLElement} container
+ * @param {object} ctx
+ */
+function wireListInteractions(container, ctx) {
+  container.querySelectorAll('[data-action="toggle-budget"]').forEach((btn) => {
+    btn.onclick = (e) => {
+      e.preventDefault();
+      const id = btn.dataset.budgetId;
+      _selectedBudgetId = id;
+      _expandedBudgetId = _expandedBudgetId === id ? null : id;
+      if (_expandedBudgetId !== id) _expandedItemId = null;
+      const row = getDraftRows().find((r) => r.id === id);
+      if (row) ensureRowItems(row);
+      applyExpandDom(container, ctx, { rebuildItems: true });
+    };
+  });
+
+  wireAddItemButtons(container, ctx);
+  wireItemEditors(container, ctx);
   syncToolbarState(container);
 }
 
@@ -929,14 +1007,6 @@ export async function renderBudgetPage(container, ctx) {
 
   container.className = 'budget-page-container';
 
-  const {
-    listBudgetTemplates,
-    getActiveTemplateId,
-  } = await import('../services/budget-template.js');
-  const templates = await listBudgetTemplates();
-  const activeId = await getActiveTemplateId();
-  const selectedTemplateId = activeId || templates[0]?.id || '';
-
   const allocHtml = renderAllocationStripHtml(income, rows);
 
   container.innerHTML = `
@@ -983,11 +1053,14 @@ export async function renderBudgetPage(container, ctx) {
           <section class="budget-list-card budget-page-list">
             <div class="blc-header">
               <div class="blc-header-top">
-                <h3 class="blc-title">
-                  ${Icon('target', { size: 16 })}
-                  Daftar Budgeting
-                  <span class="blc-count">(${rows.length})</span>
-                </h3>
+                <div class="blc-title-row">
+                  <h3 class="blc-title">
+                    ${Icon('target', { size: 16 })}
+                    Daftar Budgeting
+                    <span class="blc-count">(${rows.length})</span>
+                  </h3>
+                  <button type="button" class="blc-tool tap" data-action="toolbar-filter" title="Filter" aria-label="Filter">${Icon('filter', { size: 15 })}</button>
+                </div>
                 <div class="blc-header-actions">
                   <div class="blc-toolbar" role="toolbar" aria-label="Aksi daftar budget">
                     <button type="button" class="blc-tool tap" data-action="toolbar-undo" title="Undo" aria-label="Undo">${Icon('undo', { size: 15 })}</button>
@@ -999,7 +1072,7 @@ export async function renderBudgetPage(container, ctx) {
                     <button type="button" class="blc-tool danger tap" data-action="toolbar-delete" title="Hapus" aria-label="Hapus">${Icon('trash', { size: 15 })}</button>
                     <button type="button" class="blc-tool tap" data-action="toolbar-add" title="Tambah" aria-label="Tambah">${Icon('plus', { size: 15 })}</button>
                     <button type="button" class="blc-tool tap" data-action="toolbar-auto" title="Auto Budget" aria-label="Auto Budget">${Icon('wand', { size: 15 })}</button>
-                    <button type="button" class="blc-tool tap" data-action="toolbar-template" title="Load template" aria-label="Load template">${Icon('save', { size: 15 })}</button>
+                    <button type="button" class="blc-tool tap" data-action="toolbar-template" title="Template" aria-label="Template">${Icon('template', { size: 15 })}</button>
                   </div>
                   <select class="blc-sort" id="budget-sort">
                     <option value="urgent" ${currentSort === 'urgent' ? 'selected' : ''}>Urgent</option>
@@ -1031,26 +1104,6 @@ export async function renderBudgetPage(container, ctx) {
           </section>
         </div>
       </div>
-
-      <section class="budget-template-card">
-        <div class="btc-header">
-          <span class="btc-title">${Icon('save', { size: 14 })} Template Budget</span>
-        </div>
-        <p class="btc-hint">Pilih template bawaan atau simpan setup bulan ini</p>
-        <select class="btc-select" id="budget-template-select" aria-label="Pilih template">
-          ${templates.map((t) => `
-            <option value="${escapeHtml(t.id)}" ${t.id === selectedTemplateId ? 'selected' : ''}>
-              ${escapeHtml(t.label)}${t.builtin ? ' (bawaan)' : ''}
-            </option>
-          `).join('')}
-        </select>
-        <div class="btc-actions">
-          <button type="button" class="btc-btn primary tap" data-action="template-apply">${Icon('check', { size: 14 })} Terapkan</button>
-          <button type="button" class="btc-btn tap" data-action="template-save" ${rows.length === 0 ? 'disabled' : ''}>${Icon('save', { size: 14 })} Simpan</button>
-          <button type="button" class="btc-btn tap" data-action="template-edit">${Icon('edit', { size: 14 })} Edit</button>
-          <button type="button" class="btc-btn danger tap" data-action="template-delete">${Icon('trash', { size: 14 })} Hapus</button>
-        </div>
-      </section>
     </div>
   `;
 
@@ -1070,7 +1123,7 @@ export async function renderBudgetPage(container, ctx) {
   });
 
   const listSection = container.querySelector('#budget-list-content');
-  renderBudgetListSection(listSection, rows, monthTransactions, displayMonth, currentSort);
+  renderBudgetListSection(listSection, rows, monthTransactions, displayMonth, currentSort, income);
 
   wireHandlers(container, {
     ...ctx,
@@ -1083,8 +1136,13 @@ export async function renderBudgetPage(container, ctx) {
 
   if (!container.dataset.filterWired) {
     container.dataset.filterWired = '1';
-    onFilterChange(() => {
-      if (window.STATE?.ui?.budgetPageOpen) onRefresh?.({ fromSaved: false });
+    let lastPeriod = getFilter().period;
+    onFilterChange((f) => {
+      if (!window.STATE?.ui?.budgetPageOpen) return;
+      const periodChanged = f?.period && f.period !== lastPeriod;
+      lastPeriod = f?.period || lastPeriod;
+      // Period change must reload draft from saved month; priority-only keeps draft
+      onRefresh?.({ fromSaved: !!periodChanged });
     });
   }
 }

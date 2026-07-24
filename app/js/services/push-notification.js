@@ -7,8 +7,8 @@
 
 const HARD_DAILY_MAX = 3;
 const DEDUP_MS = 4 * 60 * 60 * 1000;
-const ICON = '/app/icons/monefyi-logo.png';
-const BADGE = '/app/icons/icon-192.svg';
+const ICON = '/app/icons/icon-192.png';
+const BADGE = '/app/icons/icon-192.png';
 
 /** Module-level bypass for scheduler force-run (avoids threading force through generators). */
 let _forceBypass = false;

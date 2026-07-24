@@ -1186,38 +1186,49 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
       import('./services/global-filter.js')
         .then((m) => m.syncPeriodFromState?.(STATE.selectedMonth))
         .catch(() => {});
-      if (STATE.budgetDraft) STATE.budgetDraft.month = STATE.selectedMonth;
+      // Month change must rebuild draft from saved data (don't just retag draft.month)
+      if (STATE.budgetDraft && STATE.budgetDraft.month !== STATE.selectedMonth) {
+        STATE.budgetDraft = null;
+      }
       rerender();
       refreshTransactionsRange().catch(()=>{});
-      loadBudgets().then(b => { STATE.budgetsByMonth = b; rerender(); }).catch(()=>{});
+      loadBudgets().then(b => {
+        STATE.budgetsByMonth = b;
+        if (STATE.ui?.budgetPageOpen) {
+          prepareBudgetDraft().then(() => renderBudgetPageView()).catch(() => rerender());
+        } else {
+          rerender();
+        }
+      }).catch(()=>{});
       updateSaldoAsync().catch(()=>{});
     }
 
     if (typeof window !== 'undefined') {
       window.monefyiSetPeriodMonth = (mk) => {
+        const cur = toMonthKey(new Date());
+        const key = String(mk || '').slice(0, 7);
         setPeriod({
-          preset: 'this_month',
-          startISO: toISODate(startOfMonth(mk)),
-          endISO: toISODate(endOfMonth(mk)),
-          label: monthLabel(mk),
+          preset: key === cur ? 'this_month' : 'custom',
+          startISO: toISODate(startOfMonth(key)),
+          endISO: toISODate(endOfMonth(key)),
+          label: monthLabel(key),
         });
       };
     }
 
     function initDefaultPeriod(){
-      const restored = window.MonefyiUI?.restorePeriod?.();
-      if (restored?.start && restored?.end) {
-        setPeriod({
-          preset: restored.preset || 'custom',
-          startISO: restored.start,
-          endISO: restored.end,
-          label: restored.label || dateLabelRange(restored.start, restored.end),
-        });
-        return;
-      }
+      // Always default to the real current calendar month (ignore stale cached Oct/etc.)
       const mk = toMonthKey(new Date());
       STATE.selectedMonth = mk;
-      setPeriod({ preset:'this_month', startISO: toISODate(startOfMonth(mk)), endISO: toISODate(endOfMonth(mk)), label: monthLabel(mk) });
+      setPeriod({
+        preset: 'this_month',
+        startISO: toISODate(startOfMonth(mk)),
+        endISO: toISODate(endOfMonth(mk)),
+        label: monthLabel(mk),
+      });
+      try {
+        localStorage.removeItem('monefyi_last_period');
+      } catch { /* ignore */ }
     }
 
     // =========================

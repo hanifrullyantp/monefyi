@@ -12,9 +12,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
-  <!-- PWA Manifest (versioned to avoid stale cache) -->
-  <link rel="manifest" href="./manifest.webmanifest?v=2026-07-23-logo-nobg" />
-  <link rel="icon" href="/app/assets/monefyi-logo-bNIf1CQS.png?v=2026-07-23-logo-nobg" type="image/png" />
+  <!-- PWA Manifest (versioned icons — bump ?v= when logo changes so installed PWAs pick up new icon) -->
+  <link rel="manifest" href="./manifest.webmanifest?v=2026-07-24-pwa" />
+  <link rel="icon" href="./icons/icon-192.png?v=2026-07-24-pwa" type="image/png" sizes="192x192" />
+  <link rel="icon" href="./icons/icon-512.png?v=2026-07-24-pwa" type="image/png" sizes="512x512" />
 
   <!-- Android PWA -->
   <meta name="mobile-web-app-capable" content="yes" />
@@ -24,11 +25,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Monefyi" />
-  <link rel="apple-touch-icon" href="/app/assets/monefyi-logo-bNIf1CQS.png?v=2026-07-23-logo-nobg" />
-  <link rel="apple-touch-icon" sizes="152x152" href="/app/assets/monefyi-logo-bNIf1CQS.png?v=2026-07-23-logo-nobg" />
-  <link rel="apple-touch-icon" sizes="167x167" href="/app/assets/monefyi-logo-bNIf1CQS.png?v=2026-07-23-logo-nobg" />
-  <link rel="apple-touch-icon" sizes="180x180" href="/app/assets/monefyi-logo-bNIf1CQS.png?v=2026-07-23-logo-nobg" />
-  <link rel="apple-touch-icon" sizes="192x192" href="/app/assets/monefyi-logo-bNIf1CQS.png?v=2026-07-23-logo-nobg" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png?v=2026-07-24-pwa" />
+  <link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-192.png?v=2026-07-24-pwa" />
+  <link rel="apple-touch-icon" sizes="192x192" href="./icons/icon-192.png?v=2026-07-24-pwa" />
+  <link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png?v=2026-07-24-pwa" />
 
   <script src="js/config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.2.2" integrity="sha384-qKt1F1k7v69ebd7q6Na1d2FGVMI+43GgA5hpfz7i+zDfrz8rIjXYu7majL1fXSeS" crossorigin="anonymous"></script>
@@ -36,10 +36,24 @@
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" integrity="sha384-GJqSu7vueQ9qN0E9yLPb3Wtpd7OrgK8KmYzC8T1IysG1bcvxvIO4qtYR/D3A991F" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.48.1/dist/umd/supabase.js" integrity="sha384-Tgoms7a53eyQOCcKXlBrA1X967mm3BHK43f3979dACl74tZlLW+O85pmfCuhfUtx" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="css/app.css" />
+  <link rel="stylesheet" href="css/home-page.css" />
+  <link rel="stylesheet" href="css/native-pwa.css" />
+  <link rel="stylesheet" href="css/quick-preview.css" />
+  <link rel="stylesheet" href="css/budget-enhanced.css" />
+  <link rel="stylesheet" href="css/budget-final-refinements.css" />
+  <link rel="stylesheet" href="css/monevisor-page.css" />
+  <link rel="stylesheet" href="css/desktop-layout.css" />
+  <link rel="stylesheet" href="css/tx-edit-toolbar.css" />
+  <link rel="stylesheet" href="css/transaction-detail.css" />
+  <link rel="stylesheet" href="css/notification-settings.css" />
+  <link rel="stylesheet" href="css/email-import.css" />
+  <link rel="stylesheet" href="css/onboarding.css" />
+  <link rel="stylesheet" href="css/tutorial-page.css" />
+  <link rel="stylesheet" href="css/admin-page.css" />
+  <link rel="stylesheet" href="css/settings-page.css" />
 
  
-  <script type="module" crossorigin src="/app/assets/index-CpQ1FwBz.js"></script>
-  <link rel="stylesheet" crossorigin href="/app/assets/index-CVpAjhWv.css">
 </head>
 <body>
   <!-- ============================================
@@ -48,7 +62,7 @@
   <div id="monefyi-splash" class="splash-screen">
     <div class="splash-content">
       <div class="splash-logo-wrap">
-        <img class="splash-logo" src="/app/assets/monefyi-logo-bNIf1CQS.png?v=2026-07-23-logo-nobg" width="100" height="100" alt="" />
+        <img class="splash-logo" src="./icons/icon-192.png?v=2026-07-24-pwa" width="100" height="100" alt="" />
         <div class="splash-shimmer"></div>
       </div>
       <div class="splash-title">Monefyi</div>
@@ -244,16 +258,13 @@
   </script>
 
   <div id="app-root" class="app-hidden">
-  <!-- Logo Monefyi: primary = new mark; legacy = top-left chrome only -->
+  <!-- Logo Monefyi (current mark only) -->
   <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" focusable="false" style="position:absolute;width:0;height:0;overflow:hidden">
     <symbol id="monefyi-logo" viewBox="0 0 1024 1024">
-      <image width="1024" height="1024" href="/app/assets/monefyi-logo-bNIf1CQS.png"/>
+      <image width="1024" height="1024" href="./icons/monefyi-logo.png"/>
     </symbol>
     <symbol id="monefyi-mark" viewBox="0 0 1024 1024">
-      <image width="1024" height="1024" href="/app/assets/monefyi-logo-bNIf1CQS.png"/>
-    </symbol>
-    <symbol id="monefyi-logo-legacy" viewBox="0 0 800 807">
-      <image width="800" height="807" href="/app/assets/monefyi-logo-legacy-Dl0ceDfS.png"/>
+      <image width="1024" height="1024" href="./icons/monefyi-logo.png"/>
     </symbol>
   </svg>
 
@@ -398,8 +409,8 @@
         <div class="mobile-header-row top-bar">
           <button id="btnLogo" class="tap mobile-header-logo top-bar__logo" aria-label="Beranda">
             <div id="appLogo" class="brand-logo-slot overflow-hidden shrink-0" data-brand-lock="brand">
-              <svg class="brand-logo-svg" width="36" height="36" aria-hidden="true"><use href="#monefyi-logo-legacy"/></svg>
-              <img id="appLogoImg" class="brand-logo-custom w-full h-full object-cover" src="/app/assets/monefyi-logo-legacy-Dl0ceDfS.png" alt="Logo Monefyi" />
+              <svg class="brand-logo-svg" width="36" height="36" aria-hidden="true"><use href="#monefyi-logo"/></svg>
+              <img id="appLogoImg" class="brand-logo-custom w-full h-full object-cover" src="./icons/monefyi-logo.png" alt="Logo Monefyi" />
             </div>
           </button>
 
@@ -525,11 +536,11 @@
     <aside id="appSidebar" class="hidden md:flex flex-col gap-4 shrink-0 md:h-full md:min-h-0 relative">
       <button id="btnSidebarCollapse" type="button" class="tap absolute top-0 right-0 z-10 w-8 h-8 rounded-lg app-chip flex items-center justify-center text-xs" aria-label="Ciutkan sidebar" title="Sidebar">‹</button>
 
-      <!-- Brand (legacy mark — top-left chrome kept on old logo) -->
+      <!-- Brand -->
       <div class="sidebar-brand flex items-center gap-2.5 px-1 pr-8">
         <div class="w-10 h-10 rounded-2xl brand-logo-slot overflow-hidden shrink-0" data-brand-lock="brand">
-          <svg class="brand-logo-svg" width="40" height="40" aria-hidden="true"><use href="#monefyi-logo-legacy"/></svg>
-          <img id="sidebarLogoImg" class="brand-logo-custom w-full h-full object-cover" src="/app/assets/monefyi-logo-legacy-Dl0ceDfS.png" alt="Logo Monefyi" />
+          <svg class="brand-logo-svg" width="40" height="40" aria-hidden="true"><use href="#monefyi-logo"/></svg>
+          <img id="sidebarLogoImg" class="brand-logo-custom w-full h-full object-cover" src="./icons/monefyi-logo.png" alt="Logo Monefyi" />
         </div>
         <div class="sidebar-label min-w-0 brand-text-block">
           <h1 class="brand-title font-bold text-white">Monefyi</h1>
@@ -2285,6 +2296,10 @@
 
   <script src="js/i18n.js"></script>
   <script src="js/monefyi-ui.js"></script>
+  <script type="module" src="js/services/entitlements.js"></script>
+  <script type="module" src="js/services/acquisition.js"></script>
+  <script type="module" src="js/components/upgrade-sheet.js"></script>
+  <script type="module" src="js/components/onboarding-wizard.js"></script>
   <script src="js/app.js" defer></script>
 
 </body>

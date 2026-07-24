@@ -1603,6 +1603,13 @@ html, body {
     #appSidebar {
       width: 252px;
       transition: width 0.3s ease;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    #appSidebar::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+      display: none;
     }
     @media (min-width: 768px) {
       #appShell > .flex {
@@ -1615,7 +1622,13 @@ html, body {
         max-height: 100%;
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
-        scrollbar-gutter: stable;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE/Edge legacy */
+      }
+      #appSidebar:not(.sidebar--collapsed)::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+        display: none;
       }
     }
     #appSidebar.sidebar--collapsed {

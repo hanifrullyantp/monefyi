@@ -1,5 +1,5 @@
 // Offline-capable service worker — v7 budget killer feature.
-const CACHE_VERSION = 'v47-settings-ux';
+const CACHE_VERSION = 'v48-pwa-icons';
 const STATIC_CACHE = `monefyi-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `monefyi-runtime-${CACHE_VERSION}`;
 const IMAGES_CACHE = `monefyi-images-${CACHE_VERSION}`;
@@ -110,8 +110,9 @@ const shellPaths = [
   './js/pages/settings-page.js',
   './js/services/tutorial-service.js',
   './js/services/tutorial-content-default.js',
-  './icons/icon-192.svg',
-  './icons/icon-512.svg',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/icon-maskable-512.png',
   './icons/monefyi-logo.png',
   './icons/monefyi-mark.svg',
 ];
@@ -360,8 +361,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title || 'Monefyi', {
       body: data.body,
-      icon: new URL('./icons/monefyi-logo.png', self.location).href,
-      badge: new URL('./icons/icon-192.svg', self.location).href,
+      icon: new URL('./icons/icon-192.png', self.location).href,
+      badge: new URL('./icons/icon-192.png', self.location).href,
       tag: data.tag || 'default',
       data: data.data || {},
       actions: data.actions || [],

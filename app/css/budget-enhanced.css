@@ -1207,6 +1207,12 @@
   font-size: 13px;
   font-weight: 700;
 }
+.bli-item-cap {
+  font-size: 10px;
+  color: var(--app-muted);
+  line-height: 1.3;
+}
+.bli-item-cap__remain.over { color: #f87171; }
 .bli-add-item {
   display: inline-flex;
   align-items: center;
@@ -1228,6 +1234,15 @@
   justify-content: space-between;
   gap: 10px;
   flex-wrap: wrap;
+}
+.blc-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.blc-title-row .blc-title {
+  margin: 0;
 }
 .blc-header-actions {
   display: flex;
@@ -1290,6 +1305,101 @@
 .budget-template-card.btc-highlight {
   outline: 2px solid rgba(16, 185, 129, 0.55);
   outline-offset: 2px;
+}
+
+/* Template management modal */
+.btm-modal {
+  max-width: 520px;
+}
+.btm-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-bottom: 20px;
+}
+.btm-section-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--app-muted);
+}
+.btm-hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--app-muted);
+}
+.btm-save-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.btm-save-name {
+  flex: 1;
+  min-width: 0;
+}
+.btm-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.btm-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+.btm-item.is-active {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.08);
+}
+.btm-item-main {
+  flex: 1;
+  min-width: 0;
+}
+.btm-item-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--app-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.btm-item-meta {
+  font-size: 11px;
+  color: var(--app-muted);
+  margin-top: 2px;
+}
+.btm-item-actions {
+  display: inline-flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.btm-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--app-muted);
+}
+.btm-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--app-muted);
+  padding: 8px 0;
+}
+.btm-overlay.show {
+  opacity: 1;
 }
 
 .budget-list-empty {
