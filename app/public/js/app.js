@@ -1363,8 +1363,6 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
   const logoUrl = STATE.appConfig?.logo_url ? String(STATE.appConfig.logo_url) : DEFAULT_LOGO;
 
   $$('.brand-logo-slot').forEach((slot) => {
-    // Top-left header + sidebar keep the legacy mark
-    if (slot.dataset.brandLock === 'legacy') return;
     const svg = slot.querySelector('.brand-logo-svg');
     const img = slot.querySelector('.brand-logo-custom');
     if (img) {
@@ -6577,8 +6575,9 @@ function setSheetPosition(mode) {
           income: Number(d.income || 0),
           // Full in-memory list — page filters by display month (avoids empty if period range quirks)
           transactions: STATE.transactions || [],
-          onRefresh: async () => {
-            await prepareBudgetDraft();
+          onRefresh: async (opts = {}) => {
+            const fromSaved = opts === true || opts?.fromSaved === true;
+            if (fromSaved) await prepareBudgetDraft();
             await renderBudgetPageView();
             updateBudgetSheetDerived();
           },
@@ -9200,6 +9199,17 @@ async function handleSaveBudget() {
     const d = STATE.budgetDraft;
     if (!d) return;
 
+    const setBudgetStatus = (msg, kind = 'info') => {
+      const el = $('#bStatus');
+      if (el) {
+        el.textContent = msg;
+        el.style.color = kind === 'error' ? '#f43f5e' : kind === 'success' ? '#10b981' : '';
+      }
+      if (STATE.ui.budgetPageOpen && typeof showToast === 'function') {
+        showToast(msg, kind === 'error' ? 'error' : kind === 'success' ? 'success' : 'info');
+      }
+    };
+
     try {
       const { getTotalIncome } = await import('./services/income-source.js');
       const fromSources = await getTotalIncome(d.month);
@@ -9215,8 +9225,8 @@ async function handleSaveBudget() {
       d.income = parseNumberInput($('#bIncome')?.value) || d.income;
     }
 
-    if (Number(d.income) <= 0) { $('#bStatus').textContent = 'Income wajib diisi.'; return; }
-    if (!d.rows || d.rows.length === 0) { $('#bStatus').textContent = 'Tambah minimal 1 kategori.'; return; }
+    if (Number(d.income) <= 0) { setBudgetStatus('Income wajib diisi.', 'error'); return; }
+    if (!d.rows || d.rows.length === 0) { setBudgetStatus('Tambah minimal 1 kategori.', 'error'); return; }
 
     let cleanRows;
     try {
@@ -9229,7 +9239,7 @@ async function handleSaveBudget() {
     const normalized = { categories: { rows: cleanRows } };
     const total = cleanRows.reduce((a,b)=>a+Number(b.amount), 0);
     
-    if (total > d.income) { $('#bStatus').textContent = 'Total budget melebihi income.'; return; }
+    if (total > d.income) { setBudgetStatus('Total budget melebihi income.', 'error'); return; }
 
     try {
         const btn = $('#btnSaveBudget');
@@ -9250,8 +9260,7 @@ async function handleSaveBudget() {
           clearChanges();
         } catch { /* ignore */ }
         
-        $('#bStatus').innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> Budget tersimpan.';
-        $('#bStatus').style.color = '#10b981';
+        setBudgetStatus('Budget tersimpan.', 'success');
         
         if(typeof rerender === 'function') rerender();
         
@@ -9265,8 +9274,7 @@ async function handleSaveBudget() {
         }, 500);
     } catch (e) {
         console.error(e);
-        $('#bStatus').textContent = 'Gagal simpan. Coba lagi.';
-        $('#bStatus').style.color = '#f43f5e';
+        setBudgetStatus('Gagal simpan. Coba lagi.', 'error');
         const btn = $('#btnSaveBudget');
         if (btn) btn.innerText = 'Simpan Budget';
     }
@@ -9277,6 +9285,7 @@ if (btnSaveBudget) btnSaveBudget.addEventListener('click', handleSaveBudget);
 
 const btnSaveBudgetFooter = $('#btnSaveBudgetFooter');
 if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSaveBudget);
+window.handleSaveBudget = handleSaveBudget;
 
 // ============================================================
 // 4. TOMBOL TAMBAH TRANSAKSI (JANGAN DIHAPUS)

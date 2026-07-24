@@ -7,7 +7,8 @@
     <meta name="theme-color" content="#0F1117">
     <link id="site-favicon" rel="icon" href="">
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/monefyi-brand.css">
     <style>
         html, body { overflow-x: hidden; }
         body { font-family: var(--mf-font); background-color: var(--mf-bg); color: var(--mf-text); overflow-x: hidden; }
@@ -240,7 +241,6 @@ fbq('track', 'PageView');
 src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
 /></noscript>
 <!-- End Meta Pixel Code -->
-  <link rel="stylesheet" crossorigin href="/assets/main-DCIMbBdX.css">
 </head>
 <body class="antialiased selection:bg-green-500 selection:text-white">
 
@@ -277,10 +277,10 @@ src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
                     interval: 10000
                 },
                 branding: {
-                    // Optional: URLs to your brand assets (hosted anywhere or Supabase Storage public URL)
-                    logo_url: "",
-                    logo_mark_url: "",
-                    favicon_url: ""
+                    // Default: current Monefyi mark (CMS can override)
+                    logo_url: "/icons/monefyi-logo.png",
+                    logo_mark_url: "/icons/monefyi-logo.png",
+                    favicon_url: "/icons/monefyi-logo.png"
                 },
                 links: {
                     // Button/link destinations (admin can override)
@@ -453,9 +453,8 @@ src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
     <nav class="fixed top-0 w-full z-50 bg-[#020617]/80 backdrop-blur-md border-b border-white/10">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
             <div class="flex items-center gap-2">
-                <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center text-black font-bold text-xl overflow-hidden relative">
-                    <span id="nav-logo-fallback">M</span>
-                    <img id="nav-logo-mark-img" alt="Monefyi" class="absolute inset-0 w-full h-full object-cover hidden" />
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden relative bg-white/5">
+                    <img id="nav-logo-mark-img" alt="Monefyi" class="absolute inset-0 w-full h-full object-contain" src="/icons/monefyi-logo.png" />
                 </div>
                 <img id="nav-logo-full-img" alt="Monefyi" class="h-6 w-auto hidden" />
                 <span id="nav-brand-text" class="text-xl font-bold tracking-tight">Monefyi</span>
@@ -879,9 +878,8 @@ src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
     <footer class="py-12 border-t border-white/5 bg-slate-950 text-gray-500 text-sm">
         <div class="container mx-auto px-6 text-center space-y-4">
             <div class="flex items-center justify-center gap-2 mb-4">
-                <div class="w-6 h-6 bg-green-600 rounded flex items-center justify-center text-black font-bold text-xs overflow-hidden relative">
-                    <span id="footer-logo-fallback">M</span>
-                    <img id="footer-logo-mark-img" alt="Monefyi" class="absolute inset-0 w-full h-full object-cover hidden" />
+                <div class="w-6 h-6 rounded flex items-center justify-center overflow-hidden relative bg-white/5">
+                    <img id="footer-logo-mark-img" alt="Monefyi" class="absolute inset-0 w-full h-full object-contain" src="/icons/monefyi-logo.png" />
                 </div>
                 <img id="footer-logo-full-img" alt="Monefyi" class="h-5 w-auto hidden" />
                 <span id="footer-brand-text" class="text-white font-bold">Monefyi</span>
@@ -1634,6 +1632,7 @@ src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
         // --- Branding (Logo/Favicon) ---
         function applyBranding() {
             const branding = window.appData?.config?.branding || {};
+            const DEFAULT_LOGO = '/icons/monefyi-logo.png';
 
             // Helper: prevent broken blob: URLs (they only exist in the original tab session)
             // If admin accidentally published blob: URLs, the landing will show broken images.
@@ -1644,33 +1643,28 @@ src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
                 return u;
             };
 
-            // Favicon
+            // Favicon — current mark unless CMS set a favicon
             try {
                 const fav = document.getElementById('site-favicon');
-                const faviconUrl = safeUrl(branding.favicon_url);
+                const faviconUrl = safeUrl(branding.favicon_url) || DEFAULT_LOGO;
                 if (fav && faviconUrl) {
                     fav.setAttribute('href', faviconUrl);
                 }
             } catch (e) {}
 
-            // Navbar logo mark
+            // Navbar / footer mark — always current app logo (no letter-"M" fallback)
+            const logoMarkUrl = DEFAULT_LOGO;
             const navMarkImg = document.getElementById('nav-logo-mark-img');
-            const navMarkFallback = document.getElementById('nav-logo-fallback');
-            const logoMarkUrl = safeUrl(branding.logo_mark_url);
-            if (navMarkImg && logoMarkUrl) {
+            if (navMarkImg) {
                 navMarkImg.src = logoMarkUrl;
                 navMarkImg.classList.remove('hidden');
-                if (navMarkFallback) navMarkFallback.classList.add('hidden');
-            } else {
-                if (navMarkImg) navMarkImg.classList.add('hidden');
-                if (navMarkFallback) navMarkFallback.classList.remove('hidden');
             }
 
-            // Navbar full logo
+            // Navbar full logo (optional wordmark from CMS)
             const navFullImg = document.getElementById('nav-logo-full-img');
             const navBrandText = document.getElementById('nav-brand-text');
             const logoUrl = safeUrl(branding.logo_url);
-            if (navFullImg && logoUrl) {
+            if (navFullImg && logoUrl && !logoUrl.includes('monefyi-logo.png')) {
                 navFullImg.src = logoUrl;
                 navFullImg.classList.remove('hidden');
                 if (navBrandText) navBrandText.classList.add('hidden');
@@ -1681,20 +1675,15 @@ src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
 
             // Footer logo mark
             const footerMarkImg = document.getElementById('footer-logo-mark-img');
-            const footerMarkFallback = document.getElementById('footer-logo-fallback');
-            if (footerMarkImg && logoMarkUrl) {
+            if (footerMarkImg) {
                 footerMarkImg.src = logoMarkUrl;
                 footerMarkImg.classList.remove('hidden');
-                if (footerMarkFallback) footerMarkFallback.classList.add('hidden');
-            } else {
-                if (footerMarkImg) footerMarkImg.classList.add('hidden');
-                if (footerMarkFallback) footerMarkFallback.classList.remove('hidden');
             }
 
             // Footer full logo
             const footerFullImg = document.getElementById('footer-logo-full-img');
             const footerBrandText = document.getElementById('footer-brand-text');
-            if (footerFullImg && logoUrl) {
+            if (footerFullImg && logoUrl && !logoUrl.includes('monefyi-logo.png')) {
                 footerFullImg.src = logoUrl;
                 footerFullImg.classList.remove('hidden');
                 if (footerBrandText) footerBrandText.classList.add('hidden');

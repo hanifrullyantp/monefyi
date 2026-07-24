@@ -258,16 +258,13 @@
   </script>
 
   <div id="app-root" class="app-hidden">
-  <!-- Logo Monefyi: primary = new mark; legacy = top-left chrome only -->
+  <!-- Logo Monefyi (current mark only) -->
   <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" focusable="false" style="position:absolute;width:0;height:0;overflow:hidden">
     <symbol id="monefyi-logo" viewBox="0 0 1024 1024">
       <image width="1024" height="1024" href="./icons/monefyi-logo.png"/>
     </symbol>
     <symbol id="monefyi-mark" viewBox="0 0 1024 1024">
       <image width="1024" height="1024" href="./icons/monefyi-logo.png"/>
-    </symbol>
-    <symbol id="monefyi-logo-legacy" viewBox="0 0 800 807">
-      <image width="800" height="807" href="./icons/monefyi-logo-legacy.png"/>
     </symbol>
   </svg>
 
@@ -412,8 +409,8 @@
         <div class="mobile-header-row top-bar">
           <button id="btnLogo" class="tap mobile-header-logo top-bar__logo" aria-label="Beranda">
             <div id="appLogo" class="brand-logo-slot overflow-hidden shrink-0" data-brand-lock="brand">
-              <svg class="brand-logo-svg" width="36" height="36" aria-hidden="true"><use href="#monefyi-logo-legacy"/></svg>
-              <img id="appLogoImg" class="brand-logo-custom w-full h-full object-cover" src="./icons/monefyi-logo-legacy.png" alt="Logo Monefyi" />
+              <svg class="brand-logo-svg" width="36" height="36" aria-hidden="true"><use href="#monefyi-logo"/></svg>
+              <img id="appLogoImg" class="brand-logo-custom w-full h-full object-cover" src="./icons/monefyi-logo.png" alt="Logo Monefyi" />
             </div>
           </button>
 
@@ -539,11 +536,11 @@
     <aside id="appSidebar" class="hidden md:flex flex-col gap-4 shrink-0 md:h-full md:min-h-0 relative">
       <button id="btnSidebarCollapse" type="button" class="tap absolute top-0 right-0 z-10 w-8 h-8 rounded-lg app-chip flex items-center justify-center text-xs" aria-label="Ciutkan sidebar" title="Sidebar">‹</button>
 
-      <!-- Brand (legacy mark — top-left chrome kept on old logo) -->
+      <!-- Brand -->
       <div class="sidebar-brand flex items-center gap-2.5 px-1 pr-8">
         <div class="w-10 h-10 rounded-2xl brand-logo-slot overflow-hidden shrink-0" data-brand-lock="brand">
-          <svg class="brand-logo-svg" width="40" height="40" aria-hidden="true"><use href="#monefyi-logo-legacy"/></svg>
-          <img id="sidebarLogoImg" class="brand-logo-custom w-full h-full object-cover" src="./icons/monefyi-logo-legacy.png" alt="Logo Monefyi" />
+          <svg class="brand-logo-svg" width="40" height="40" aria-hidden="true"><use href="#monefyi-logo"/></svg>
+          <img id="sidebarLogoImg" class="brand-logo-custom w-full h-full object-cover" src="./icons/monefyi-logo.png" alt="Logo Monefyi" />
         </div>
         <div class="sidebar-label min-w-0 brand-text-block">
           <h1 class="brand-title font-bold text-white">Monefyi</h1>

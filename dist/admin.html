@@ -54,15 +54,15 @@
             <h1 class="text-2xl font-bold text-white mb-6 text-center">Monefyi Admin</h1>
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm text-gray-400 mb-1">Username</label>
-                    <input type="text" id="username" class="input-field" placeholder="Username">
+                    <label class="block text-sm text-gray-400 mb-1">Email</label>
+                    <input type="email" id="username" class="input-field" placeholder="email@domain.com" autocomplete="username">
                 </div>
                 <div>
                     <label class="block text-sm text-gray-400 mb-1">Password</label>
-                    <input type="password" id="password" class="input-field" placeholder="Password">
+                    <input type="password" id="password" class="input-field" placeholder="Password app" autocomplete="current-password">
                 </div>
-                <button onclick="attemptLogin()" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg transition">Login</button>
-                <p id="login-error" class="text-red-500 text-xs text-center hidden">Username atau Password salah!</p>
+                <button id="btn-admin-login" onclick="attemptLogin()" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg transition">Login</button>
+                <p id="login-error" class="text-red-500 text-xs text-center hidden">Email atau password salah / bukan admin.</p>
             </div>
         </div>
     </div>
@@ -73,7 +73,7 @@
         <header class="bg-slate-900 border-b border-slate-800 flex-shrink-0 z-40">
             <div class="px-6 h-14 flex items-center justify-between">
                 <div class="font-bold text-white flex items-center gap-3">
-                    <div class="w-6 h-6 bg-green-500 rounded flex items-center justify-center text-black text-xs">M</div>
+                    <img src="/icons/monefyi-logo.png" alt="" class="w-6 h-6 rounded object-contain bg-white/5" />
                     Admin Dashboard
                     <div id="sb-status" class="flex items-center gap-1 bg-slate-800 px-2 py-1 rounded text-[10px] text-slate-300 border border-white/10">
                         <div id="sb-dot" class="w-2 h-2 rounded-full bg-slate-500"></div>
@@ -344,8 +344,7 @@
         const LANDING_FN   = 'monefyi-landing-config';
         const SLUG         = 'default';
         const API_BASE     = `${SUPABASE_URL}/functions/v1/${LANDING_FN}`;
-        const ADMIN_USER   = 'hanif';
-        const ADMIN_PASS   = '12345678';
+        const ADMIN_EMAILS = ['hanif.rullyant@gmail.com', 'admin@asfin.app'];
 
         // --- Supabase Storage (for image upload) ---
         // IMPORTANT: Fill this with your Supabase Project Anon Key so uploads work.
@@ -363,10 +362,34 @@
             : null;
 
         // Version marker (helps debugging cache issues)
-        console.log('[Admin] admin.html loaded: v2026-01-03-1', { hasAnonKey: !!SUPABASE_ANON_KEY, hasSupabaseCdn: !!window.supabase, sbReady: !!sb });
+        console.log('[Admin] admin.html loaded: v2026-07-24-1', { hasAnonKey: !!SUPABASE_ANON_KEY, hasSupabaseCdn: !!window.supabase, sbReady: !!sb });
 
         function adminLog(...args) {
             console.log('[Admin]', ...args);
+        }
+
+        /**
+         * @returns {Promise<string|null>} access token for admin session
+         */
+        async function getAdminAccessToken() {
+            if (!sb) return null;
+            const { data, error } = await sb.auth.getSession();
+            if (error || !data?.session?.access_token) return null;
+            return data.session.access_token;
+        }
+
+        /**
+         * @param {string} email
+         * @returns {Promise<boolean>}
+         */
+        async function assertIsPlatformAdmin(email) {
+            if (!sb) return false;
+            const { data: { user } } = await sb.auth.getUser();
+            if (!user?.id) return false;
+            const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).maybeSingle();
+            if (String(profile?.role || '').toLowerCase() === 'admin') return true;
+            const normalized = String(email || user.email || '').toLowerCase();
+            return ADMIN_EMAILS.some((e) => e.toLowerCase() === normalized);
         }
 
         // --- Utils: deep merge so older published content won't miss new nested fields ---
@@ -402,13 +425,15 @@
 
         async function publishContent(content) {
             adminLog('Publishing content...', { slug: SLUG });
+            const token = await getAdminAccessToken();
+            if (!token) throw new Error('Publish failed: not signed in');
             const res = await fetch(API_BASE, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'X-Admin-User': ADMIN_USER,
-                    'X-Admin-Pass': ADMIN_PASS
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${token}`,
                 },
                 body: JSON.stringify({ slug: SLUG, content }),
             });
@@ -456,9 +481,9 @@
                 },
 
                 branding: {
-                    logo_url: "",
-                    logo_mark_url: "",
-                    favicon_url: ""
+                    logo_url: "/icons/monefyi-logo.png",
+                    logo_mark_url: "/icons/monefyi-logo.png",
+                    favicon_url: "/icons/monefyi-logo.png"
                 },
 
                 links: {
@@ -685,12 +710,30 @@
             }
         });
 
-        // --- AUTH (persisted via localStorage) ---
-        function applyAuthState() {
-            const authed = localStorage.getItem('monefyi_admin_authed') === '1';
+        // --- AUTH (Supabase session — same credentials as /app login) ---
+        async function applyAuthState() {
             const loginModal = document.getElementById('login-modal');
             const dashboard = document.getElementById('dashboard');
             if (!loginModal || !dashboard) return;
+
+            let authed = false;
+            try {
+                const token = await getAdminAccessToken();
+                if (token) {
+                    const { data: { user } } = await sb.auth.getUser();
+                    authed = await assertIsPlatformAdmin(user?.email);
+                    if (!authed) {
+                        await sb.auth.signOut();
+                        localStorage.removeItem('monefyi_admin_authed');
+                    }
+                }
+            } catch (e) {
+                adminLog('Auth check failed:', e);
+                authed = false;
+            }
+
+            // Clear legacy localStorage gate
+            if (!authed) localStorage.removeItem('monefyi_admin_authed');
 
             if (authed) {
                 loginModal.classList.add('hidden');
@@ -704,34 +747,86 @@
 
         // Run auth check reliably on refresh (even if DOM already ready)
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', applyAuthState);
+            document.addEventListener('DOMContentLoaded', () => { applyAuthState(); });
         } else {
             applyAuthState();
         }
 
-        function attemptLogin() {
-            const u = (document.getElementById('username')?.value || '').trim();
-            const p = (document.getElementById('password')?.value || '').trim();
+        async function attemptLogin() {
+            const email = (document.getElementById('username')?.value || '').trim();
+            const password = (document.getElementById('password')?.value || '').trim();
             const err = document.getElementById('login-error');
+            const btn = document.getElementById('btn-admin-login');
 
-            if (u === 'hanif' && p === '12345678') {
+            if (err) err.classList.add('hidden');
+            if (!sb) {
+                if (err) {
+                    err.textContent = 'Supabase client belum siap. Refresh halaman.';
+                    err.classList.remove('hidden');
+                }
+                return;
+            }
+            if (!email || !password) {
+                if (err) {
+                    err.textContent = 'Isi email dan password.';
+                    err.classList.remove('hidden');
+                }
+                return;
+            }
+
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Masuk…';
+            }
+
+            try {
+                const { data, error } = await sb.auth.signInWithPassword({ email, password });
+                if (error || !data?.session) {
+                    throw new Error(error?.message || 'Login gagal');
+                }
+                const ok = await assertIsPlatformAdmin(email);
+                if (!ok) {
+                    await sb.auth.signOut();
+                    throw new Error('Akun ini bukan platform admin');
+                }
                 localStorage.setItem('monefyi_admin_authed', '1');
                 if (err) err.classList.add('hidden');
-                applyAuthState();
-            } else {
-                if (err) err.classList.remove('hidden');
+                await applyAuthState();
+            } catch (e) {
+                adminLog('Login failed:', e);
+                if (err) {
+                    err.textContent = e?.message || 'Email atau password salah / bukan admin.';
+                    err.classList.remove('hidden');
+                }
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Login';
+                }
             }
         }
 
-        function logout() {
+        async function logout() {
+            try {
+                if (sb) await sb.auth.signOut();
+            } catch (e) {}
             localStorage.removeItem('monefyi_admin_authed');
-            // optional: clear inputs
             try {
                 document.getElementById('username').value = '';
                 document.getElementById('password').value = '';
             } catch (e) {}
-            applyAuthState();
+            await applyAuthState();
         }
+
+        // Submit login on Enter
+        ['username', 'password'].forEach((id) => {
+            document.getElementById(id)?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    attemptLogin();
+                }
+            });
+        });
 
         function clearDraftCache() {
             try {

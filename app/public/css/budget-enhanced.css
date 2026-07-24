@@ -1111,7 +1111,186 @@
   color: var(--app-text);
 }
 
-.budget-list-row__chev { color: var(--app-muted); opacity: 0.6; }
+.budget-list-row__chev { color: var(--app-muted); opacity: 0.6; transition: transform 0.2s ease; }
+.budget-list-row__chev.is-open { transform: rotate(180deg); opacity: 0.9; }
+
+/* Accordion list block */
+.budget-list-block {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.budget-list-block:last-child { border-bottom: none; }
+.budget-list-block.is-selected > .budget-list-row {
+  background: rgba(16, 185, 129, 0.06);
+}
+.budget-list-block .budget-list-row {
+  border-bottom: none;
+}
+.budget-list-items {
+  padding: 0 8px 10px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.budget-list-items.hidden { display: none; }
+
+.bli-item {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+}
+.bli-item.is-expanded {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.05);
+}
+.bli-item__summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.bli-item__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-text);
+}
+.bli-item__amt {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--app-muted);
+  white-space: nowrap;
+}
+.bli-item__chev {
+  color: var(--app-muted);
+  transition: transform 0.2s ease;
+}
+.bli-item.is-expanded .bli-item__chev { transform: rotate(180deg); }
+.bli-item__detail {
+  padding: 0 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bli-item__detail.hidden { display: none; }
+.bli-item-name {
+  width: 100%;
+  font-size: 13px;
+}
+.bli-item-amount-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.bli-item-slider {
+  flex: 1;
+  min-width: 0;
+  accent-color: #10b981;
+}
+.bli-inline-amount {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--app-muted);
+  flex-shrink: 0;
+}
+.bli-inline-amount .bli-item-price {
+  width: 96px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.bli-add-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  padding: 6px 8px;
+  border: none;
+  background: transparent;
+  color: var(--accent-primary, #10b981);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Header toolbar */
+.blc-header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.blc-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+.blc-toolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.blc-tool {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--app-muted);
+  cursor: pointer;
+}
+.blc-tool:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--app-text);
+}
+.blc-tool:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.blc-tool.danger:hover:not(:disabled) {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.12);
+}
+.blc-tool-sep {
+  width: 1px;
+  height: 16px;
+  margin: 0 2px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.budget-page-list-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Allocation: mobile in aside; desktop above list */
+.budget-alloc-list-top { display: none; }
+.budget-alloc-mobile-only { display: block; }
+
+.budget-template-card.btc-highlight {
+  outline: 2px solid rgba(16, 185, 129, 0.55);
+  outline-offset: 2px;
+}
 
 .budget-list-empty {
   font-size: 11px;
@@ -2229,6 +2408,9 @@
     position: sticky;
     top: 8px;
   }
+
+  .budget-alloc-mobile-only { display: none; }
+  .budget-alloc-list-top { display: block; }
 
   /* Page scrolls via #dynamicContent — avoid nested viewport lock */
   .budget-page-list {

@@ -1,5 +1,5 @@
 /**
- * Full-page budget UI — summary hero, filter/sort, compact list rows.
+ * Full-page budget UI — summary hero, accordion list with inline item edit, toolbar.
  * @module components/budget-page
  */
 
@@ -7,11 +7,22 @@ import {
   PRIORITY_LEVELS,
   calculateProgress,
   computeHistoricalBaselines,
+  createBudgetItem,
+  createBudgetRow,
 } from '../services/budget-model.js';
 import { Icon } from './icons.js';
 import { filterBudgets, getFilter, onFilterChange } from '../services/global-filter.js';
 
 const SORT_KEY = 'budget_sort';
+
+/** @type {string|null} */
+let _expandedBudgetId = null;
+/** @type {string|null} */
+let _expandedItemId = null;
+/** @type {string|null} */
+let _selectedBudgetId = null;
+/** @type {object[]|null} */
+let _editBeforeRows = null;
 
 /**
  * @param {unknown} str
@@ -150,6 +161,60 @@ function sortBudgets(budgets, transactions, month, filter) {
 }
 
 /**
+ * @param {number} income
+ * @param {object[]} rows
+ * @returns {string}
+ */
+function renderAllocationStripHtml(income, rows) {
+  const totalBudgeted = rows.reduce((s, b) => s + Math.abs(Number(b.amount || 0)), 0);
+  const allocationRemaining = income - totalBudgeted;
+  const allocationPct = income > 0 ? Math.min(100, Math.round((totalBudgeted / income) * 100)) : 0;
+  return `
+    <section class="budget-allocation-strip" aria-label="Ringkasan alokasi budgeting">
+      <div class="bas-row">
+        <span>Sudah dibudgetkan <strong>Rp ${formatCompact(totalBudgeted)}</strong></span>
+        <span>Sisa <strong class="${allocationRemaining < 0 ? 'over' : ''}">Rp ${formatCompact(allocationRemaining)}</strong></span>
+        <span>Income <strong>Rp ${formatCompact(income)}</strong></span>
+      </div>
+      <div class="bas-track" aria-hidden="true">
+        <div class="bas-fill ${allocationRemaining < 0 ? 'over' : ''}" style="width:${allocationPct}%"></div>
+      </div>
+    </section>
+  `;
+}
+
+/**
+ * @param {object} item
+ * @param {boolean} expanded
+ */
+function renderDetailItem(item, expanded) {
+  const isDone = item.status === 'done' || item.status === 'skipped';
+  const amount = Math.round(Number(item.qty || 1) * Number(item.price || 0));
+  const sliderMax = Math.max(amount, 5_000_000, 1000);
+  const label = item.name?.trim() || 'Item baru';
+
+  return `
+    <div class="bli-item ${expanded ? 'is-expanded' : ''} ${isDone ? 'item-done' : ''}" data-item-id="${escapeHtml(item.id)}" data-expanded="${expanded ? 'true' : 'false'}">
+      <button type="button" class="bli-item__summary tap" data-action="toggle-item" aria-expanded="${expanded ? 'true' : 'false'}">
+        <span class="bli-item__name">${escapeHtml(label)}</span>
+        <span class="bli-item__amt">Rp ${formatIDR(amount)}</span>
+        <span class="bli-item__chev">${Icon('chevronDown', { size: 14 })}</span>
+      </button>
+      <div class="bli-item__detail ${expanded ? '' : 'hidden'}">
+        <input type="text" class="bli-item-name form-input" placeholder="Nama detail item" value="${escapeHtml(item.name || '')}" aria-label="Nama item">
+        <div class="bli-item-amount-row">
+          <input type="range" class="bli-item-slider" min="0" max="${sliderMax}" step="1000" value="${amount}" aria-label="Slider jumlah">
+          <div class="bli-inline-amount">
+            <span>Rp</span>
+            <input type="number" class="bli-item-price form-input" min="0" step="1000" value="${amount || ''}" inputmode="numeric" aria-label="Jumlah">
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/**
  * @param {object} budget
  * @param {object[]} transactions
  * @param {string} month
@@ -163,27 +228,40 @@ function renderBudgetListRow(budget, transactions, month) {
     ? `Sisa: ${formatCompact(remaining)}`
     : `Over ${formatCompact(-remaining)}`;
   const allDone = budget._allDone || isBudgetFullyDone(budget);
+  const expanded = _expandedBudgetId === budget.id;
+  const selected = _selectedBudgetId === budget.id;
+  const items = Array.isArray(budget.items) && budget.items.length
+    ? budget.items
+    : [createBudgetItem({ name: budget.name || 'Item', price: Number(budget.amount || 0), qty: 1 })];
 
   return `
-    <button type="button" class="budget-list-row ${statusClass} ${allDone ? 'all-done' : ''}" data-budget-id="${budget.id}">
-      <div class="budget-list-row__strip" style="background:${pl.color}"></div>
-      <div class="budget-list-row__icon" aria-hidden="true">${Icon('target', { size: 18 })}</div>
-      <div class="budget-list-row__main">
-        <div class="budget-list-row__title">
-          ${escapeHtml(budget.name)}
-          ${allDone ? `<span class="done-badge">${Icon('check', { size: 10 })} Selesai</span>` : ''}
+    <div class="budget-list-block ${expanded ? 'is-expanded' : ''} ${selected ? 'is-selected' : ''}" data-budget-id="${escapeHtml(budget.id)}">
+      <button type="button" class="budget-list-row ${statusClass} ${allDone ? 'all-done' : ''}" data-action="toggle-budget" data-budget-id="${escapeHtml(budget.id)}" aria-expanded="${expanded ? 'true' : 'false'}">
+        <div class="budget-list-row__strip" style="background:${pl.color}"></div>
+        <div class="budget-list-row__icon" aria-hidden="true">${Icon('target', { size: 18 })}</div>
+        <div class="budget-list-row__main">
+          <div class="budget-list-row__title">
+            ${escapeHtml(budget.name)}
+            ${allDone ? `<span class="done-badge">${Icon('check', { size: 10 })} Selesai</span>` : ''}
+          </div>
+          <div class="budget-list-row__sub ${remaining < 0 ? 'over' : ''}">${remainingLabel}</div>
+          <div class="budget-list-row__track">
+            <div class="budget-list-row__fill ${statusClass}" style="width:${Math.min(progress.percentUsed, 100)}%"></div>
+          </div>
         </div>
-        <div class="budget-list-row__sub ${remaining < 0 ? 'over' : ''}">${remainingLabel}</div>
-        <div class="budget-list-row__track">
-          <div class="budget-list-row__fill ${statusClass}" style="width:${Math.min(progress.percentUsed, 100)}%"></div>
+        <div class="budget-list-row__right">
+          <div class="budget-list-row__pct">${progress.percentUsed}%</div>
+          <div class="budget-list-row__budget" data-role="row-amount">${formatCompact(budget.amount)}</div>
+          <span class="budget-list-row__chev ${expanded ? 'is-open' : ''}">${Icon('chevronDown', { size: 16 })}</span>
         </div>
+      </button>
+      <div class="budget-list-items ${expanded ? '' : 'hidden'}" data-role="items">
+        ${items.map((item) => renderDetailItem(item, expanded && _expandedItemId === item.id)).join('')}
+        <button type="button" class="bli-add-item tap" data-action="add-item" data-budget-id="${escapeHtml(budget.id)}">
+          ${Icon('plus', { size: 14 })} Tambah item
+        </button>
       </div>
-      <div class="budget-list-row__right">
-        <div class="budget-list-row__pct">${progress.percentUsed}%</div>
-        <div class="budget-list-row__budget">${formatCompact(budget.amount)}</div>
-        <span class="budget-list-row__chev">${Icon('chevronRight', { size: 16 })}</span>
-      </div>
-    </button>
+    </div>
   `;
 }
 
@@ -224,7 +302,7 @@ function renderGroupedByPriority(sorted, transactions, month) {
  * @param {object[]} rows
  * @param {object[]} transactions
  * @param {string} month
- * @param {string} filter
+ * @param {string} sort
  */
 function renderBudgetListSection(section, rows, transactions, month, sort) {
   const sorted = sortBudgets(rows, transactions, month, sort);
@@ -251,11 +329,155 @@ function renderBudgetListSection(section, rows, transactions, month, sort) {
 }
 
 /**
+ * @returns {object[]}
+ */
+function getDraftRows() {
+  return window.STATE?.budgetDraft?.rows || [];
+}
+
+/**
+ * Ensure draft row has items array mirrored from list display.
+ * @param {object} row
+ */
+function ensureRowItems(row) {
+  if (!row) return;
+  if (!Array.isArray(row.items) || !row.items.length) {
+    row.items = [createBudgetItem({ name: row.name || 'Item', price: Number(row.amount || 0), qty: 1 })];
+  }
+}
+
+/**
+ * Recalc category amount from items.
+ * @param {object} row
+ */
+function recalcRowAmount(row) {
+  if (!row?.items?.length) return;
+  row.amount = row.items.reduce((s, i) => s + Number(i.qty || 1) * Number(i.price || 0), 0);
+  row.items.forEach((i) => {
+    i.subtotal = Number(i.qty || 1) * Number(i.price || 0);
+  });
+}
+
+function beginEditGesture() {
+  if (!_editBeforeRows && window.STATE?.budgetDraft) {
+    _editBeforeRows = JSON.parse(JSON.stringify(window.STATE.budgetDraft.rows || []));
+  }
+}
+
+async function commitEditGesture(label = 'Edit item budget') {
+  if (!_editBeforeRows || !window.STATE?.budgetDraft) return;
+  try {
+    const { recordBudgetRowsChange } = await import('../services/budget-changes-tracker.js');
+    recordBudgetRowsChange(label, _editBeforeRows, window.STATE.budgetDraft.rows);
+  } catch { /* ignore */ }
+  _editBeforeRows = null;
+  syncToolbarState(document.getElementById('budgetPageRoot'));
+}
+
+/**
+ * Live-update allocation strip + row amounts without full re-render.
+ * @param {HTMLElement} container
+ * @param {number} income
+ */
+function syncLiveDashboard(container, income) {
+  const rows = getDraftRows();
+  const html = renderAllocationStripHtml(income, rows);
+  container.querySelectorAll('[data-role="alloc-host"], [data-role="alloc-host-mobile"]').forEach((host) => {
+    host.innerHTML = html;
+  });
+
+  rows.forEach((row) => {
+    const block = container.querySelector(`.budget-list-block[data-budget-id="${row.id}"]`);
+    if (!block) return;
+    const amtEl = block.querySelector('[data-role="row-amount"]');
+    if (amtEl) amtEl.textContent = formatCompact(row.amount);
+  });
+
+  scheduleHeroRefresh(container, income, rows);
+}
+
+let _heroTimer = null;
+/**
+ * @param {HTMLElement} container
+ * @param {number} income
+ * @param {object[]} rows
+ */
+function scheduleHeroRefresh(container, income, rows) {
+  if (_heroTimer) clearTimeout(_heroTimer);
+  _heroTimer = setTimeout(async () => {
+    const heroEl = container.querySelector('#budget-summary-hero');
+    if (!heroEl) return;
+    const month = window.STATE?.budgetDraft?.month
+      || window.STATE?.selectedMonth
+      || '';
+    const allTx = window.STATE?.transactions || [];
+    const monthTransactions = allTx.filter((t) => String(t.date || '').slice(0, 10).startsWith(month));
+    try {
+      const { renderBudgetSummaryHero } = await import('./budget-summary-hero.js');
+      const overBudgetCount = rows.filter((b) => calculateProgress(b, monthTransactions, month).status === 'over').length;
+      const criticalCount = rows.filter((b) => {
+        const s = calculateProgress(b, monthTransactions, month).status;
+        return s === 'critical' || s === 'warning';
+      }).length;
+      await renderBudgetSummaryHero(heroEl, {
+        rows,
+        transactions: monthTransactions,
+        month,
+        income,
+        overBudgetCount,
+        criticalCount,
+        onEvaluation: async () => {
+          const { showEvaluation } = await import('./budget-evaluation.js');
+          showEvaluation({ month, rows, transactions: monthTransactions });
+        },
+      });
+    } catch (e) {
+      console.warn('[budget] hero refresh', e);
+    }
+  }, 180);
+}
+
+/**
+ * @param {HTMLElement|null} container
+ */
+function syncToolbarState(container) {
+  if (!container) return;
+  const api = window.monefyiChanges;
+  const undoBtn = container.querySelector('[data-action="toolbar-undo"]');
+  const redoBtn = container.querySelector('[data-action="toolbar-redo"]');
+  const saveBtn = container.querySelector('[data-action="toolbar-save"]');
+  const cancelBtn = container.querySelector('[data-action="toolbar-cancel"]');
+  const canUndo = !!api?.canUndo?.();
+  const canRedo = !!api?.canRedo?.();
+  const dirty = !!api?.isDirty?.() || !!_editBeforeRows;
+  if (undoBtn) undoBtn.disabled = !canUndo;
+  if (redoBtn) redoBtn.disabled = !canRedo;
+  if (saveBtn) saveBtn.disabled = false;
+  if (cancelBtn) cancelBtn.disabled = !dirty && !canUndo;
+  const hasSelection = !!(_selectedBudgetId || _expandedBudgetId);
+  container.querySelectorAll('[data-action="toolbar-duplicate"], [data-action="toolbar-delete"]').forEach((btn) => {
+    btn.disabled = !hasSelection;
+  });
+}
+
+/**
+ * Refresh page from current draft (no DB reload).
+ * @param {object} ctx
+ */
+async function refreshFromDraft(ctx) {
+  if (typeof ctx?.onRefresh === 'function') {
+    await ctx.onRefresh({ fromSaved: false });
+  } else if (typeof window.renderBudgetPageView === 'function') {
+    await window.renderBudgetPageView();
+  }
+}
+
+/**
  * @param {HTMLElement} container
  * @param {object} ctx
  */
 function wireHandlers(container, ctx) {
-  const { rows, transactions, month, onRefresh, onSave } = ctx;
+  const { rows, transactions, month, income, onRefresh, onSave } = ctx;
   const currentSort = localStorage.getItem(SORT_KEY) || 'urgent';
 
   if (onSave) {
@@ -272,7 +494,7 @@ function wireHandlers(container, ctx) {
     if (e?.target?.closest?.('[data-action="open-filter"]')) return;
     e?.stopPropagation?.();
     const { showIncomeManagerModal } = await import('./income-manager.js');
-    showIncomeManagerModal(() => onRefresh?.(), month);
+    showIncomeManagerModal(() => onRefresh?.({ fromSaved: false }), month);
   };
   container.querySelectorAll('[data-action="manage-income"]').forEach((el) => {
     el.addEventListener('click', openIncomeManager);
@@ -288,24 +510,133 @@ function wireHandlers(container, ctx) {
     const sort = e.target.value;
     localStorage.setItem(SORT_KEY, sort);
     const section = container.querySelector('#budget-list-content');
-    if (section) renderBudgetListSection(section, rows, transactions, month, sort);
-    wireRowClicks(container, ctx);
+    const liveRows = getDraftRows().length ? getDraftRows() : rows;
+    if (section) renderBudgetListSection(section, liveRows, transactions, month, sort);
+    wireListInteractions(container, ctx);
   });
 
-  container.querySelector('[data-action="add-budget"]')?.addEventListener('click', async () => {
-    const { showBudgetFormModal } = await import('./budget-form-modal.js');
-    showBudgetFormModal({ priority: 'penting', month }, { onSaved: () => onRefresh?.(), showSummary: false });
-  });
-
-  container.querySelector('[data-action="generate-budget"]')?.addEventListener('click', async () => {
-    const { showBudgetGeneratorModal } = await import('./budget-generator-modal.js');
-    showBudgetGeneratorModal(() => onRefresh?.());
-  });
-
+  wireToolbar(container, ctx);
   wireTemplateCard(container, ctx);
-  wireRowClicks(container, ctx);
+  wireListInteractions(container, ctx);
+  syncToolbarState(container);
+
+  import('../services/budget-changes-tracker.js')
+    .then(({ onChange }) => {
+      onChange(() => syncToolbarState(container));
+    })
+    .catch(() => {});
 
   import('../services/notification-center.js').then((m) => m.refreshNotifications()).catch(() => {});
+}
+
+/**
+ * @param {HTMLElement} container
+ * @param {object} ctx
+ */
+function wireToolbar(container, ctx) {
+  const { month, onRefresh, onSave } = ctx;
+
+  const addBudget = async () => {
+    const { showBudgetFormModal } = await import('./budget-form-modal.js');
+    showBudgetFormModal({ priority: 'penting', month }, {
+      onSaved: () => onRefresh?.({ fromSaved: false }),
+      showSummary: false,
+    });
+  };
+
+  container.querySelectorAll('[data-action="add-budget"], [data-action="toolbar-add"]').forEach((btn) => {
+    btn.addEventListener('click', addBudget);
+  });
+
+  container.querySelectorAll('[data-action="generate-budget"], [data-action="toolbar-auto"]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const { showBudgetGeneratorModal } = await import('./budget-generator-modal.js');
+      showBudgetGeneratorModal(() => onRefresh?.({ fromSaved: false }));
+    });
+  });
+
+  container.querySelector('[data-action="toolbar-undo"]')?.addEventListener('click', async () => {
+    const { undo } = await import('../services/budget-changes-tracker.js');
+    await undo();
+    syncToolbarState(container);
+  });
+
+  container.querySelector('[data-action="toolbar-redo"]')?.addEventListener('click', async () => {
+    const { redo } = await import('../services/budget-changes-tracker.js');
+    await redo();
+    syncToolbarState(container);
+  });
+
+  container.querySelector('[data-action="toolbar-save"]')?.addEventListener('click', async () => {
+    await commitEditGesture('Edit item budget');
+    if (typeof onSave === 'function') await onSave();
+    else if (typeof window.handleSaveBudget === 'function') await window.handleSaveBudget();
+  });
+
+  container.querySelector('[data-action="toolbar-cancel"]')?.addEventListener('click', async () => {
+    if (!confirm('Batalkan semua perubahan yang belum disimpan?')) return;
+    _expandedBudgetId = null;
+    _expandedItemId = null;
+    _editBeforeRows = null;
+    await onRefresh?.({ fromSaved: true });
+  });
+
+  container.querySelector('[data-action="toolbar-duplicate"]')?.addEventListener('click', async () => {
+    const id = _selectedBudgetId || _expandedBudgetId;
+    const draft = window.STATE?.budgetDraft;
+    if (!id || !draft?.rows) {
+      showPageToast('Pilih kategori budget dulu');
+      return;
+    }
+    const src = draft.rows.find((r) => r.id === id);
+    if (!src) return;
+    const before = JSON.parse(JSON.stringify(draft.rows));
+    const clone = createBudgetRow({
+      ...src,
+      id: undefined,
+      name: `${src.name || 'Budget'} (salinan)`,
+      items: (src.items || []).map((it) => createBudgetItem({ ...it, id: undefined })),
+    });
+    draft.rows.push(clone);
+    _selectedBudgetId = clone.id;
+    _expandedBudgetId = clone.id;
+    try {
+      const { recordBudgetRowsChange } = await import('../services/budget-changes-tracker.js');
+      recordBudgetRowsChange('Duplikat budget', before, draft.rows);
+    } catch { /* ignore */ }
+    showPageToast('Kategori diduplikasi');
+    await refreshFromDraft(ctx);
+  });
+
+  container.querySelector('[data-action="toolbar-delete"]')?.addEventListener('click', async () => {
+    const id = _selectedBudgetId || _expandedBudgetId;
+    const draft = window.STATE?.budgetDraft;
+    if (!id || !draft?.rows) {
+      showPageToast('Pilih kategori budget dulu');
+      return;
+    }
+    if (!confirm('Hapus kategori budget ini?')) return;
+    const before = JSON.parse(JSON.stringify(draft.rows));
+    draft.rows = draft.rows.filter((r) => r.id !== id);
+    if (_expandedBudgetId === id) _expandedBudgetId = null;
+    if (_selectedBudgetId === id) _selectedBudgetId = null;
+    if (_expandedItemId) _expandedItemId = null;
+    try {
+      const { recordBudgetRowsChange } = await import('../services/budget-changes-tracker.js');
+      recordBudgetRowsChange('Hapus budget', before, draft.rows);
+    } catch { /* ignore */ }
+    showPageToast('Kategori dihapus');
+    await refreshFromDraft(ctx);
+  });
+
+  container.querySelector('[data-action="toolbar-template"]')?.addEventListener('click', () => {
+    const card = container.querySelector('.budget-template-card');
+    const select = container.querySelector('#budget-template-select');
+    card?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    select?.focus();
+    card?.classList.add('btc-highlight');
+    setTimeout(() => card?.classList.remove('btc-highlight'), 1200);
+  });
 }
 
 /**
@@ -344,19 +675,15 @@ function wireTemplateCard(container, ctx) {
         window.STATE.budgetDraft.month = month;
       }
       showPageToast(`Template "${applied.template_label}" diterapkan — simpan budget untuk persist`);
-      // Re-render from draft without reloading saved month (would wipe apply)
-      if (typeof window.renderBudgetPageView === 'function') {
-        await window.renderBudgetPageView();
-      } else {
-        onRefresh?.();
-      }
+      await refreshFromDraft(ctx);
     } catch (e) {
       showPageToast('Gagal terapkan: ' + e.message);
     }
   });
 
   container.querySelector('[data-action="template-save"]')?.addEventListener('click', async () => {
-    if (!rows.length) {
+    const liveRows = getDraftRows().length ? getDraftRows() : rows;
+    if (!liveRows.length) {
       showPageToast('Belum ada budget untuk disimpan');
       return;
     }
@@ -364,9 +691,9 @@ function wireTemplateCard(container, ctx) {
     if (label === null) return;
     try {
       const { saveBudgetTemplate } = await import('../services/budget-template.js');
-      await saveBudgetTemplate(month, income, rows, { label: label.trim() || `Template ${month}` });
+      await saveBudgetTemplate(month, income, liveRows, { label: label.trim() || `Template ${month}` });
       showPageToast('Template tersimpan');
-      onRefresh?.();
+      await onRefresh?.({ fromSaved: false });
     } catch (e) {
       showPageToast('Gagal simpan: ' + e.message);
     }
@@ -381,7 +708,7 @@ function wireTemplateCard(container, ctx) {
       const { updateBudgetTemplate } = await import('../services/budget-template.js');
       await updateBudgetTemplate(id, { label: label.trim() });
       showPageToast('Template diupdate');
-      onRefresh?.();
+      await onRefresh?.({ fromSaved: false });
     } catch (e) {
       showPageToast(e.message);
     }
@@ -395,7 +722,7 @@ function wireTemplateCard(container, ctx) {
       const { deleteBudgetTemplate } = await import('../services/budget-template.js');
       await deleteBudgetTemplate(id);
       showPageToast('Template dihapus');
-      onRefresh?.();
+      await onRefresh?.({ fromSaved: false });
     } catch (e) {
       showPageToast(e.message);
     }
@@ -403,24 +730,130 @@ function wireTemplateCard(container, ctx) {
 }
 
 /**
+ * Accordion + inline item editing.
  * @param {HTMLElement} container
  * @param {object} ctx
  */
-function wireRowClicks(container, ctx) {
-  const { rows, transactions, month, onRefresh } = ctx;
-  container.querySelectorAll('.budget-list-row').forEach((row) => {
-    row.onclick = async () => {
-      const budget = rows.find((b) => b.id === row.dataset.budgetId);
-      if (!budget) return;
-      const { showBudgetFormModal } = await import('./budget-form-modal.js');
-      showBudgetFormModal(budget, {
-        onSaved: () => onRefresh?.(),
-        showSummary: true,
-        transactions,
-        month,
-      });
+function wireListInteractions(container, ctx) {
+  const { income } = ctx;
+
+  container.querySelectorAll('[data-action="toggle-budget"]').forEach((btn) => {
+    btn.onclick = (e) => {
+      e.preventDefault();
+      const id = btn.dataset.budgetId;
+      _selectedBudgetId = id;
+      _expandedBudgetId = _expandedBudgetId === id ? null : id;
+      if (_expandedBudgetId !== id) _expandedItemId = null;
+      // Ensure draft has items when first expanded
+      const row = getDraftRows().find((r) => r.id === id);
+      if (row) ensureRowItems(row);
+      refreshFromDraft(ctx);
     };
   });
+
+  container.querySelectorAll('[data-action="add-item"]').forEach((btn) => {
+    btn.onclick = async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const budgetId = btn.dataset.budgetId;
+      const draft = window.STATE?.budgetDraft;
+      const row = draft?.rows?.find((r) => r.id === budgetId);
+      if (!row) return;
+      beginEditGesture();
+      ensureRowItems(row);
+      const item = createBudgetItem({ name: '', price: 0, qty: 1 });
+      row.items.push(item);
+      recalcRowAmount(row);
+      _expandedBudgetId = budgetId;
+      _expandedItemId = item.id;
+      _selectedBudgetId = budgetId;
+      await commitEditGesture('Tambah item');
+      await refreshFromDraft(ctx);
+    };
+  });
+
+  container.querySelectorAll('.bli-item').forEach((itemEl) => {
+    const summary = itemEl.querySelector('[data-action="toggle-item"]');
+    summary?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const itemId = itemEl.dataset.itemId;
+      const block = itemEl.closest('.budget-list-block');
+      const budgetId = block?.dataset.budgetId;
+      _selectedBudgetId = budgetId || _selectedBudgetId;
+      _expandedBudgetId = budgetId || _expandedBudgetId;
+      _expandedItemId = _expandedItemId === itemId ? null : itemId;
+      refreshFromDraft(ctx);
+    });
+
+    const nameInput = itemEl.querySelector('.bli-item-name');
+    const priceInput = itemEl.querySelector('.bli-item-price');
+    const slider = itemEl.querySelector('.bli-item-slider');
+    const block = itemEl.closest('.budget-list-block');
+    const budgetId = block?.dataset.budgetId;
+    const itemId = itemEl.dataset.itemId;
+
+    const applyToDraft = (patch) => {
+      const row = getDraftRows().find((r) => r.id === budgetId);
+      if (!row) return null;
+      ensureRowItems(row);
+      const item = row.items.find((i) => i.id === itemId);
+      if (!item) return null;
+      Object.assign(item, patch);
+      recalcRowAmount(row);
+      return row;
+    };
+
+    const syncSummaryLabels = (row) => {
+      const item = row?.items?.find((i) => i.id === itemId);
+      if (!item) return;
+      const nameEl = itemEl.querySelector('.bli-item__name');
+      const amtEl = itemEl.querySelector('.bli-item__amt');
+      if (nameEl) nameEl.textContent = item.name?.trim() || 'Item baru';
+      if (amtEl) amtEl.textContent = `Rp ${formatIDR(Number(item.qty || 1) * Number(item.price || 0))}`;
+    };
+
+    nameInput?.addEventListener('focus', beginEditGesture);
+    priceInput?.addEventListener('focus', beginEditGesture);
+    slider?.addEventListener('pointerdown', beginEditGesture);
+
+    nameInput?.addEventListener('input', () => {
+      beginEditGesture();
+      const row = applyToDraft({ name: nameInput.value });
+      syncSummaryLabels(row);
+      syncLiveDashboard(container, income);
+    });
+    nameInput?.addEventListener('change', () => commitEditGesture('Edit nama item'));
+    nameInput?.addEventListener('blur', () => commitEditGesture('Edit nama item'));
+
+    const syncFromPrice = () => {
+      beginEditGesture();
+      const v = Math.max(0, Number(priceInput?.value || 0));
+      if (slider) {
+        if (v > Number(slider.max)) slider.max = String(v);
+        slider.value = String(v);
+      }
+      const row = applyToDraft({ price: v, qty: 1 });
+      syncSummaryLabels(row);
+      syncLiveDashboard(container, income);
+    };
+    const syncFromSlider = () => {
+      beginEditGesture();
+      const v = Number(slider?.value || 0);
+      if (priceInput) priceInput.value = String(v);
+      const row = applyToDraft({ price: v, qty: 1 });
+      syncSummaryLabels(row);
+      syncLiveDashboard(container, income);
+    };
+
+    priceInput?.addEventListener('input', syncFromPrice);
+    priceInput?.addEventListener('change', () => commitEditGesture('Edit nominal item'));
+    priceInput?.addEventListener('blur', () => commitEditGesture('Edit nominal item'));
+    slider?.addEventListener('input', syncFromSlider);
+    slider?.addEventListener('change', () => commitEditGesture('Edit nominal item'));
+  });
+
+  syncToolbarState(container);
 }
 
 /**
@@ -441,7 +874,6 @@ export async function renderBudgetPage(container, ctx) {
   } = ctx;
 
   const filter = getFilter();
-  // Source of truth: main period chip (same as "Jun 2026" in header), not stale filter.period
   const periodMonth = window.STATE?.period?.end
     ? String(window.STATE.period.end).slice(0, 7)
     : null;
@@ -454,7 +886,6 @@ export async function renderBudgetPage(container, ctx) {
       return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`;
     })();
 
-  // Keep draft / selected month / global filter in sync with period chip
   if (window.STATE) {
     window.STATE.selectedMonth = displayMonth;
     if (window.STATE.budgetDraft) window.STATE.budgetDraft.month = displayMonth;
@@ -467,7 +898,6 @@ export async function renderBudgetPage(container, ctx) {
   const allTx = Array.isArray(window.STATE?.transactions) && window.STATE.transactions.length
     ? window.STATE.transactions
     : (ctxTransactions || []);
-  // Match by YYYY-MM prefix; also accept date objects / ISO timestamps
   const monthTransactions = allTx.filter((t) => {
     const d = String(t.date || '').slice(0, 10);
     return d.startsWith(displayMonth);
@@ -477,7 +907,6 @@ export async function renderBudgetPage(container, ctx) {
   rows = filterBudgets(rows);
 
   const { getTotalIncome, migrateLegacyIncome, getIncomeSources } = await import('../services/income-source.js');
-  // Only migrate real legacy income (never 5.5jt mock)
   const legacy = Number(ctxIncome || 0);
   if (legacy > 0 && legacy !== 5500000) {
     await migrateLegacyIncome(displayMonth, legacy);
@@ -508,9 +937,7 @@ export async function renderBudgetPage(container, ctx) {
   const activeId = await getActiveTemplateId();
   const selectedTemplateId = activeId || templates[0]?.id || '';
 
-  const totalBudgeted = rows.reduce((s, b) => s + Math.abs(Number(b.amount || 0)), 0);
-  const allocationRemaining = income - totalBudgeted;
-  const allocationPct = income > 0 ? Math.min(100, Math.round((totalBudgeted / income) * 100)) : 0;
+  const allocHtml = renderAllocationStripHtml(income, rows);
 
   container.innerHTML = `
     <div class="budget-page">
@@ -543,53 +970,66 @@ export async function renderBudgetPage(container, ctx) {
             <div class="isc-hint">${sourcesLen === 0 ? 'Belum ada sumber income — tap untuk menambah' : `${sourcesLen} sumber income`}</div>
           </section>
 
-          <section class="budget-allocation-strip" aria-label="Ringkasan alokasi budgeting">
-            <div class="bas-row">
-              <span>Sudah dibudgetkan <strong>Rp ${formatCompact(totalBudgeted)}</strong></span>
-              <span>Sisa <strong class="${allocationRemaining < 0 ? 'over' : ''}">Rp ${formatCompact(allocationRemaining)}</strong></span>
-              <span>Income <strong>Rp ${formatCompact(income)}</strong></span>
+          <div class="budget-alloc-mobile-only" data-role="alloc-host-mobile">
+            ${allocHtml}
+          </div>
+        </div>
+
+        <div class="budget-page-list-col">
+          <div class="budget-alloc-list-top" data-role="alloc-host">
+            ${allocHtml}
+          </div>
+
+          <section class="budget-list-card budget-page-list">
+            <div class="blc-header">
+              <div class="blc-header-top">
+                <h3 class="blc-title">
+                  ${Icon('target', { size: 16 })}
+                  Daftar Budgeting
+                  <span class="blc-count">(${rows.length})</span>
+                </h3>
+                <div class="blc-header-actions">
+                  <div class="blc-toolbar" role="toolbar" aria-label="Aksi daftar budget">
+                    <button type="button" class="blc-tool tap" data-action="toolbar-undo" title="Undo" aria-label="Undo">${Icon('undo', { size: 15 })}</button>
+                    <button type="button" class="blc-tool tap" data-action="toolbar-redo" title="Redo" aria-label="Redo">${Icon('redo', { size: 15 })}</button>
+                    <button type="button" class="blc-tool tap" data-action="toolbar-save" title="Simpan" aria-label="Simpan">${Icon('save', { size: 15 })}</button>
+                    <button type="button" class="blc-tool tap" data-action="toolbar-cancel" title="Batalkan" aria-label="Batalkan">${Icon('x', { size: 15 })}</button>
+                    <span class="blc-tool-sep" aria-hidden="true"></span>
+                    <button type="button" class="blc-tool tap" data-action="toolbar-duplicate" title="Duplikat" aria-label="Duplikat">${Icon('copy', { size: 15 })}</button>
+                    <button type="button" class="blc-tool danger tap" data-action="toolbar-delete" title="Hapus" aria-label="Hapus">${Icon('trash', { size: 15 })}</button>
+                    <button type="button" class="blc-tool tap" data-action="toolbar-add" title="Tambah" aria-label="Tambah">${Icon('plus', { size: 15 })}</button>
+                    <button type="button" class="blc-tool tap" data-action="toolbar-auto" title="Auto Budget" aria-label="Auto Budget">${Icon('wand', { size: 15 })}</button>
+                    <button type="button" class="blc-tool tap" data-action="toolbar-template" title="Load template" aria-label="Load template">${Icon('save', { size: 15 })}</button>
+                  </div>
+                  <select class="blc-sort" id="budget-sort">
+                    <option value="urgent" ${currentSort === 'urgent' ? 'selected' : ''}>Urgent</option>
+                    <option value="priority" ${currentSort === 'priority' ? 'selected' : ''}>Prioritas</option>
+                    <option value="progress" ${currentSort === 'progress' ? 'selected' : ''}>Progress</option>
+                    <option value="amount" ${currentSort === 'amount' ? 'selected' : ''}>Nominal</option>
+                    <option value="name" ${currentSort === 'name' ? 'selected' : ''}>Nama</option>
+                  </select>
+                </div>
+              </div>
+              ${filter.priority !== 'all' ? `
+                <div class="blc-filter-active">
+                  ${Icon('filter', { size: 12 })}
+                  <span>Filter: Prioritas ${PRIORITY_LEVELS[filter.priority.toUpperCase()]?.label || filter.priority}</span>
+                </div>
+              ` : ''}
             </div>
-            <div class="bas-track" aria-hidden="true">
-              <div class="bas-fill ${allocationRemaining < 0 ? 'over' : ''}" style="width:${allocationPct}%"></div>
+            <div class="blc-content" id="budget-list-content"></div>
+            <div class="blc-footer">
+              <button type="button" class="btn-add-budget-full tap" data-action="add-budget">
+                ${Icon('plus', { size: 16 })}
+                <span>Tambah Budgeting</span>
+              </button>
+              <button type="button" class="btn-generate-budget tap" data-action="generate-budget">
+                ${Icon('wand', { size: 16 })}
+                <span>Auto Budget</span>
+              </button>
             </div>
           </section>
         </div>
-
-        <section class="budget-list-card budget-page-list">
-          <div class="blc-header">
-            <div class="blc-header-top">
-              <h3 class="blc-title">
-                ${Icon('target', { size: 16 })}
-                Daftar Budgeting
-                <span class="blc-count">(${rows.length})</span>
-              </h3>
-              <select class="blc-sort" id="budget-sort">
-                <option value="urgent" ${currentSort === 'urgent' ? 'selected' : ''}>Urgent</option>
-                <option value="priority" ${currentSort === 'priority' ? 'selected' : ''}>Prioritas</option>
-                <option value="progress" ${currentSort === 'progress' ? 'selected' : ''}>Progress</option>
-                <option value="amount" ${currentSort === 'amount' ? 'selected' : ''}>Nominal</option>
-                <option value="name" ${currentSort === 'name' ? 'selected' : ''}>Nama</option>
-              </select>
-            </div>
-            ${filter.priority !== 'all' ? `
-              <div class="blc-filter-active">
-                ${Icon('filter', { size: 12 })}
-                <span>Filter: Prioritas ${PRIORITY_LEVELS[filter.priority.toUpperCase()]?.label || filter.priority}</span>
-              </div>
-            ` : ''}
-          </div>
-          <div class="blc-content" id="budget-list-content"></div>
-          <div class="blc-footer">
-            <button type="button" class="btn-add-budget-full tap" data-action="add-budget">
-              ${Icon('plus', { size: 16 })}
-              <span>Tambah Budgeting</span>
-            </button>
-            <button type="button" class="btn-generate-budget tap" data-action="generate-budget">
-              ${Icon('wand', { size: 16 })}
-              <span>Auto Budget</span>
-            </button>
-          </div>
-        </section>
       </div>
 
       <section class="budget-template-card">
@@ -644,7 +1084,7 @@ export async function renderBudgetPage(container, ctx) {
   if (!container.dataset.filterWired) {
     container.dataset.filterWired = '1';
     onFilterChange(() => {
-      if (window.STATE?.ui?.budgetPageOpen) onRefresh?.();
+      if (window.STATE?.ui?.budgetPageOpen) onRefresh?.({ fromSaved: false });
     });
   }
 }
@@ -664,6 +1104,11 @@ function showPageToast(msg) {
     return;
   }
   if (window.MonefyiUI?.showToast) window.MonefyiUI.showToast(msg, 'success');
-  else if (typeof window.showToast === 'function') window.showToast(msg, 'success');
-  else { const t = document.createElement('div'); t.className = 'action-toast success'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2000); }
+  else {
+    const t = document.createElement('div');
+    t.className = 'action-toast success';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2000);
+  }
 }

@@ -113,7 +113,6 @@ const shellPaths = [
   './icons/icon-192.svg',
   './icons/icon-512.svg',
   './icons/monefyi-logo.png',
-  './icons/monefyi-logo-legacy.png',
   './icons/monefyi-mark.svg',
 ];
 
