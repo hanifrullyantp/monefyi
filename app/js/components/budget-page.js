@@ -31,6 +31,10 @@ let _expandedItemId = null;
 let _selectedBudgetId = null;
 /** @type {object[]|null} */
 let _editBeforeRows = null;
+/** @type {object|null} */
+let _pageCtx = null;
+/** Stable tx/month for hero realisasi during draft edits (refreshed on full page load / save) */
+let _heroSnapshot = null;
 
 /**
  * @param {unknown} str
@@ -399,6 +403,59 @@ function recalcRowAmount(row) {
   });
 }
 
+/**
+ * @returns {string} YYYY-MM
+ */
+function resolveBudgetMonth() {
+  const state = window.STATE;
+  if (state?.budgetDraft?.month && /^\d{4}-\d{2}/.test(String(state.budgetDraft.month))) {
+    return String(state.budgetDraft.month).slice(0, 7);
+  }
+  if (state?.period?.end) return String(state.period.end).slice(0, 7);
+  if (state?.selectedMonth) return String(state.selectedMonth).slice(0, 7);
+  const filterPeriod = getFilter()?.period;
+  if (filterPeriod && /^\d{4}-\d{2}/.test(String(filterPeriod))) {
+    return String(filterPeriod).slice(0, 7);
+  }
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/**
+ * @param {string} [month] YYYY-MM
+ * @returns {object[]}
+ */
+function resolveMonthTransactions(month) {
+  const mk = month || resolveBudgetMonth();
+  const allTx = window.STATE?.transactions || [];
+  return allTx.filter((t) => String(t.date || '').slice(0, 10).startsWith(mk));
+}
+
+/**
+ * Draft rows with amounts synced from items for hero totals.
+ * @returns {object[]}
+ */
+function getHeroRowsFromDraft() {
+  const rows = getDraftRows();
+  for (const row of rows) {
+    ensureRowItems(row);
+    recalcRowAmount(row);
+  }
+  return rows;
+}
+
+/**
+ * @param {{ month?: string, transactions?: object[], income?: number }} snap
+ */
+function setHeroSnapshot(snap) {
+  if (!snap?.month) return;
+  _heroSnapshot = {
+    month: snap.month,
+    transactions: Array.isArray(snap.transactions) ? snap.transactions : resolveMonthTransactions(snap.month),
+    income: Number(snap.income || 0),
+  };
+}
+
 function beginEditGesture() {
   if (!_editBeforeRows && window.STATE?.budgetDraft) {
     _editBeforeRows = JSON.parse(JSON.stringify(window.STATE.budgetDraft.rows || []));
@@ -435,48 +492,51 @@ function syncLiveDashboard(container, income) {
     if (amtEl) amtEl.textContent = formatCompact(row.amount);
   });
 
-  scheduleHeroRefresh(container, liveIncome, rows);
+  scheduleHeroRefresh(container, liveIncome);
 }
 
 let _heroTimer = null;
 /**
+ * Debounced hero refresh — budgeting from live draft, realisasi from stable tx snapshot.
  * @param {HTMLElement} container
- * @param {number} income
- * @param {object[]} rows
+ * @param {number} [income]
  */
-function scheduleHeroRefresh(container, income, rows) {
+function scheduleHeroRefresh(container, income) {
   if (_heroTimer) clearTimeout(_heroTimer);
   _heroTimer = setTimeout(async () => {
-    const heroEl = container.querySelector('#budget-summary-hero');
+    const heroEl = container?.querySelector('#budget-summary-hero');
     if (!heroEl) return;
-    const month = window.STATE?.budgetDraft?.month
-      || window.STATE?.selectedMonth
-      || '';
-    const allTx = window.STATE?.transactions || [];
-    const monthTransactions = allTx.filter((t) => String(t.date || '').slice(0, 10).startsWith(month));
+
+    const rows = getHeroRowsFromDraft();
+    const month = _heroSnapshot?.month || _pageCtx?.month || resolveBudgetMonth();
+    const transactions = (_heroSnapshot?.transactions?.length)
+      ? _heroSnapshot.transactions
+      : (_pageCtx?.transactions?.length ? _pageCtx.transactions : resolveMonthTransactions(month));
+    const liveIncome = Number(window.STATE?.budgetDraft?.income || income || _heroSnapshot?.income || _pageCtx?.income || 0);
+
     try {
       const { renderBudgetSummaryHero } = await import('./budget-summary-hero.js');
-      const overBudgetCount = rows.filter((b) => calculateProgress(b, monthTransactions, month).status === 'over').length;
+      const overBudgetCount = rows.filter((b) => calculateProgress(b, transactions, month).status === 'over').length;
       const criticalCount = rows.filter((b) => {
-        const s = calculateProgress(b, monthTransactions, month).status;
+        const s = calculateProgress(b, transactions, month).status;
         return s === 'critical' || s === 'warning';
       }).length;
       await renderBudgetSummaryHero(heroEl, {
         rows,
-        transactions: monthTransactions,
+        transactions,
         month,
-        income,
+        income: liveIncome,
         overBudgetCount,
         criticalCount,
         onEvaluation: async () => {
           const { showEvaluation } = await import('./budget-evaluation.js');
-          showEvaluation({ month, rows, transactions: monthTransactions });
+          showEvaluation({ month, rows, transactions });
         },
       });
     } catch (e) {
       console.warn('[budget] hero refresh', e);
     }
-  }, 180);
+  }, 120);
 }
 
 /**
@@ -520,6 +580,8 @@ async function refreshFromDraft(ctx) {
  */
 function wireHandlers(container, ctx) {
   const { rows, transactions, month, income, onRefresh, onSave } = ctx;
+  _pageCtx = ctx;
+  setHeroSnapshot({ month, transactions, income });
   const currentSort = localStorage.getItem(SORT_KEY) || 'urgent';
 
   if (onSave) {
@@ -810,6 +872,55 @@ function wireAddItemButtons(container, ctx) {
 }
 
 /**
+ * Delegated clicks for accordion rows/items — survives list DOM rebuilds.
+ * @param {MouseEvent} e
+ */
+function handleBudgetListClick(e) {
+  const container = e.currentTarget;
+  const ctx = _pageCtx;
+  if (!container || !ctx) return;
+
+  const toggleBudget = e.target.closest?.('[data-action="toggle-budget"]');
+  if (toggleBudget) {
+    e.preventDefault();
+    e.stopPropagation();
+    const id = toggleBudget.dataset.budgetId;
+    if (!id) return;
+    _selectedBudgetId = id;
+    const opening = _expandedBudgetId !== id;
+    _expandedBudgetId = opening ? id : null;
+    if (!opening) {
+      _expandedItemId = null;
+    } else {
+      const row = getDraftRows().find((r) => r.id === id);
+      if (row) {
+        ensureRowItems(row);
+        if (!_expandedItemId && row.items?.length) {
+          _expandedItemId = row.items[0].id;
+        }
+      }
+    }
+    applyExpandDom(container, ctx, { rebuildItems: true });
+    return;
+  }
+
+  const toggleItem = e.target.closest?.('[data-action="toggle-item"]');
+  if (toggleItem) {
+    e.preventDefault();
+    e.stopPropagation();
+    const itemEl = toggleItem.closest('.bli-item');
+    const block = itemEl?.closest('.budget-list-block');
+    const itemId = itemEl?.dataset.itemId;
+    const budgetId = block?.dataset.budgetId;
+    if (!itemId || !budgetId) return;
+    _selectedBudgetId = budgetId;
+    _expandedBudgetId = budgetId;
+    _expandedItemId = _expandedItemId === itemId ? null : itemId;
+    applyExpandDom(container, ctx, { rebuildItems: false });
+  }
+}
+
+/**
  * Wire only item editors (slider/name/price) — safe to call after partial rebuild.
  * @param {HTMLElement} container
  * @param {object} ctx
@@ -820,19 +931,6 @@ function wireItemEditors(container, ctx) {
   container.querySelectorAll('.bli-item').forEach((itemEl) => {
     if (itemEl.dataset.wired === '1') return;
     itemEl.dataset.wired = '1';
-
-    const summary = itemEl.querySelector('[data-action="toggle-item"]');
-    summary?.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const itemId = itemEl.dataset.itemId;
-      const block = itemEl.closest('.budget-list-block');
-      const budgetId = block?.dataset.budgetId;
-      _selectedBudgetId = budgetId || _selectedBudgetId;
-      _expandedBudgetId = budgetId || _expandedBudgetId;
-      _expandedItemId = _expandedItemId === itemId ? null : itemId;
-      applyExpandDom(container, ctx, { rebuildItems: false });
-    });
 
     const nameInput = itemEl.querySelector('.bli-item-name');
     const priceInput = itemEl.querySelector('.bli-item-price');
@@ -955,18 +1053,11 @@ function wireItemEditors(container, ctx) {
  * @param {object} ctx
  */
 function wireListInteractions(container, ctx) {
-  container.querySelectorAll('[data-action="toggle-budget"]').forEach((btn) => {
-    btn.onclick = (e) => {
-      e.preventDefault();
-      const id = btn.dataset.budgetId;
-      _selectedBudgetId = id;
-      _expandedBudgetId = _expandedBudgetId === id ? null : id;
-      if (_expandedBudgetId !== id) _expandedItemId = null;
-      const row = getDraftRows().find((r) => r.id === id);
-      if (row) ensureRowItems(row);
-      applyExpandDom(container, ctx, { rebuildItems: true });
-    };
-  });
+  _pageCtx = ctx;
+  if (container.dataset.listDelegationWired !== '1') {
+    container.dataset.listDelegationWired = '1';
+    container.addEventListener('click', handleBudgetListClick);
+  }
 
   wireAddItemButtons(container, ctx);
   wireItemEditors(container, ctx);
@@ -1150,6 +1241,7 @@ export async function renderBudgetPage(container, ctx) {
   `;
 
   const heroEl = container.querySelector('#budget-summary-hero');
+  setHeroSnapshot({ month: displayMonth, transactions: monthTransactions, income });
   const { renderBudgetSummaryHero } = await import('./budget-summary-hero.js');
   await renderBudgetSummaryHero(heroEl, {
     rows,

@@ -369,11 +369,12 @@ html, body {
     .sidebar-saldo-metrics-row {
       margin-top: 10px !important;
       gap: 6px !important;
-      display: flex !important;
-      flex-wrap: wrap;
+      display: grid !important;
+      grid-template-columns: 1fr 1fr 1fr;
+      align-items: center;
     }
     .sidebar-saldo-metrics-row .hero-saldo-stat {
-      flex: 1 1 auto;
+      flex: none;
       min-width: 0;
     }
     .sidebar-saldo-card .hero-saldo-stat__icon {
@@ -1362,11 +1363,15 @@ html, body {
       position: relative;
       z-index: 1;
     }
+    .hero-saldo-card__metrics-row.income-expense-row {
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
     .hero-saldo-stat {
       display: flex;
       align-items: center;
       justify-content: flex-start;
-      gap: 10px;
+      gap: 8px;
       min-width: 0;
       padding: 0;
       background: none;
@@ -1901,6 +1906,12 @@ html, body {
       font-size: 16px;
       font-weight: 700;
       line-height: 1.2;
+    }
+    .tx-amount--income {
+      color: #34d399 !important;
+    }
+    .tx-amount--expense {
+      color: #f87171 !important;
     }
     .tx-card-mockup .tx-menu-btn,
     .tx-card-mockup .tx-card-actions {
@@ -2529,6 +2540,17 @@ html, body {
       font-variant-numeric: tabular-nums;
       color: rgba(255, 255, 255, 0.72);
     }
+    .hero-saldo-stat--count .hero-saldo-stat__icon {
+      width: 30px;
+      height: 30px;
+    }
+    .income-expense-row .hero-saldo-stat__icon {
+      width: 32px;
+      height: 32px;
+    }
+    .income-expense-row .hero-saldo-stat__value {
+      font-size: 13px;
+    }
     .hero-saldo-stat__icon--muted {
       background: rgba(255, 255, 255, 0.06) !important;
       color: rgba(255, 255, 255, 0.55) !important;
@@ -2558,6 +2580,20 @@ html, body {
       font-weight: 700;
       color: rgba(255, 255, 255, 0.78);
       letter-spacing: -0.01em;
+      min-width: 0;
+    }
+    .tx-group-header__meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .tx-group-header__expense {
+      font-size: 11px;
+      font-weight: 700;
+      color: #f87171;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
     }
     .tx-group-header__count {
       font-size: 10px;

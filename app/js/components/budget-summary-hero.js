@@ -7,6 +7,53 @@ import { calculateProgress, calculatePriorityTotals, getLinkedTransactions } fro
 import { Icon } from './icons.js';
 
 /**
+ * @param {string|undefined} month
+ * @returns {string}
+ */
+function resolveMonthKey(month) {
+  if (month && /^\d{4}-\d{2}/.test(String(month))) return String(month).slice(0, 7);
+  const state = typeof window !== 'undefined' ? window.STATE : null;
+  if (state?.budgetDraft?.month && /^\d{4}-\d{2}/.test(String(state.budgetDraft.month))) {
+    return String(state.budgetDraft.month).slice(0, 7);
+  }
+  if (state?.period?.end) return String(state.period.end).slice(0, 7);
+  if (state?.selectedMonth) return String(state.selectedMonth).slice(0, 7);
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/**
+ * Realisasi always from in-memory transactions (not DB) filtered by month.
+ * @param {object[]|undefined} transactions
+ * @param {string|undefined} month
+ * @returns {object[]}
+ */
+function getMonthExpenses(transactions, month) {
+  const monthKey = resolveMonthKey(month);
+  const txSource = Array.isArray(transactions) && transactions.length
+    ? transactions
+    : (typeof window !== 'undefined' ? (window.STATE?.transactions || []) : []);
+  return txSource.filter((t) => {
+    const typ = String(t.type || 'expense').toLowerCase();
+    if (typ !== 'expense') return false;
+    return String(t.date || '').slice(0, 10).startsWith(monthKey);
+  });
+}
+
+/**
+ * @param {object[]} rows
+ * @returns {number}
+ */
+function sumBudgetTotal(rows) {
+  return (rows || []).reduce((sum, b) => {
+    const items = b.items || [];
+    const fromItems = items.reduce((s, i) => s + Number(i.qty || 1) * Number(i.price || 0), 0);
+    const amount = items.length ? fromItems : Number(b.amount || 0);
+    return sum + Math.abs(amount);
+  }, 0);
+}
+
+/**
  * @param {HTMLElement} container
  * @param {object} ctx
  */
@@ -15,26 +62,18 @@ export async function renderBudgetSummaryHero(container, ctx) {
 
   const {
     rows = [],
-    transactions = [],
+    transactions,
     month,
     income = 0,
     onEvaluation,
     overBudgetCount = 0,
     criticalCount = 0,
   } = ctx;
-  const totalBudget = rows.reduce((sum, b) => sum + Math.abs(Number(b.amount || 0)), 0);
-  const linkedSpent = rows.reduce((sum, b) => sum + calculateProgress(b, transactions, month).spent, 0);
+  const monthKey = resolveMonthKey(month);
+  const monthExpenses = getMonthExpenses(transactions, monthKey);
+  const totalBudget = sumBudgetTotal(rows);
+  const linkedSpent = rows.reduce((sum, b) => sum + calculateProgress(b, monthExpenses, monthKey).spent, 0);
 
-  // Prefer explicit list; fall back to full STATE so realisasi never stuck at 0 from empty ctx
-  const txSource = (transactions && transactions.length)
-    ? transactions
-    : (typeof window !== 'undefined' ? (window.STATE?.transactions || []) : []);
-  const monthExpenses = txSource.filter((t) => {
-    const typ = String(t.type || 'expense').toLowerCase();
-    if (typ !== 'expense') return false;
-    if (!month) return true;
-    return String(t.date || '').slice(0, 10).startsWith(month);
-  });
   // Realisasi = total pengeluaran bulan ini / total budgeting (not only linked)
   const totalExpenseMonth = monthExpenses.reduce((s, t) => s + Math.abs(Number(t.amount || 0)), 0);
   const totalSpent = totalExpenseMonth;
@@ -43,13 +82,13 @@ export async function renderBudgetSummaryHero(container, ctx) {
   const unlinkedExpense = Math.max(0, totalExpenseMonth - linkedSpent);
   const linkedIds = new Set();
   for (const row of rows) {
-    for (const t of getLinkedTransactions(row, monthExpenses, month)) {
+    for (const t of getLinkedTransactions(row, monthExpenses, monthKey)) {
       if (t.id) linkedIds.add(t.id);
     }
   }
   const unlinkedCount = monthExpenses.filter((t) => t.id && !linkedIds.has(t.id)).length;
 
-  const time = getMonthTimeProgress(month);
+  const time = getMonthTimeProgress(monthKey);
   const { daysLeft, daysPassed, timeProgress, timeMarkerLabel } = time;
   const markerLeft = Math.min(96, Math.max(4, timeProgress));
 
@@ -67,7 +106,7 @@ export async function renderBudgetSummaryHero(container, ctx) {
           <span class="bsh-status-label">${status.label}</span>
           <span class="bsh-status-chev">${Icon('chevronRight', { size: 14 })}</span>
         </button>
-        <div class="bsh-period">${formatPeriod(month)}</div>
+        <div class="bsh-period">${formatPeriod(monthKey)}</div>
       </div>
       <div class="bsh-main">
         <div class="bsh-progress-section">

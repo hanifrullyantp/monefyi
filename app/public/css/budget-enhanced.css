@@ -1048,6 +1048,9 @@
   cursor: pointer;
   text-align: left;
   color: inherit;
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
 }
 
 .budget-list-row:last-of-type { border-bottom: none; }
@@ -1111,7 +1114,16 @@
   color: var(--app-text);
 }
 
-.budget-list-row__chev { color: var(--app-muted); opacity: 0.6; transition: transform 0.2s ease; }
+.budget-list-row__chev {
+  color: var(--app-muted);
+  opacity: 0.6;
+  transition: transform 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  pointer-events: none;
+}
 .budget-list-row__chev.is-open { transform: rotate(180deg); opacity: 0.9; }
 
 /* Accordion list block */
@@ -1154,6 +1166,9 @@
   color: inherit;
   cursor: pointer;
   text-align: left;
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
 }
 .bli-item__name {
   flex: 1;
@@ -1171,6 +1186,10 @@
 .bli-item__chev {
   color: var(--app-muted);
   transition: transform 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  pointer-events: none;
 }
 .bli-item.is-expanded .bli-item__chev { transform: rotate(180deg); }
 .bli-item__detail {

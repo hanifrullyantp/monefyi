@@ -352,8 +352,8 @@
   white-space: nowrap;
 }
 
-.home-tx-row__amount--income { color: var(--accent-primary); }
-.home-tx-row__amount--expense { color: var(--text-primary); }
+.home-tx-row__amount--income { color: #34d399; }
+.home-tx-row__amount--expense { color: #f87171; }
 
 /* Budget */
 .home-budget-card {

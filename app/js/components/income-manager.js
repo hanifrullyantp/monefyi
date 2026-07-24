@@ -151,6 +151,9 @@ function wireItemHandlers(modal, period) {
     btn.onclick = async () => {
       if (!confirm('Hapus sumber income ini?')) return;
       await deleteIncomeSource(btn.dataset.id);
+      if (typeof window !== 'undefined' && window.STATE?.incomeSourcesByMonth && period) {
+        delete window.STATE.incomeSourcesByMonth[period];
+      }
       await refreshList(modal, period);
     };
   });
@@ -248,6 +251,11 @@ function showSourceFormModal(source = null, onSaved = null, period = null) {
       is_recurring: modal.querySelector('#income-recurring')?.checked !== false,
     });
     await saveIncomeSource(updated);
+    if (typeof window !== 'undefined' && window.STATE) {
+      const p = updated.period || period || getCurrentPeriod();
+      window.STATE.incomeSourcesByMonth = window.STATE.incomeSourcesByMonth || {};
+      delete window.STATE.incomeSourcesByMonth[p];
+    }
     close();
     onSaved?.();
   });

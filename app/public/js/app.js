@@ -2131,6 +2131,14 @@ async function upsertTransaction_legacy_local(tx) {
           initEmailImportRealtime();
         } catch (e) { console.warn('initEmailImportRealtime', e); }
         try {
+          const { initGlobalModalKeyboard } = await import('./services/modal-keyboard.js');
+          initGlobalModalKeyboard();
+        } catch (e) { console.warn('initGlobalModalKeyboard', e); }
+        try {
+          const mk = STATE.selectedMonth || toMonthKey(STATE.period?.end || new Date());
+          await ensureIncomeSourcesCached(mk);
+        } catch (e) { console.warn('ensureIncomeSourcesCached', e); }
+        try {
           const { mountFilterIcon } = await import('./components/global-filter-popup.js');
           mountFilterIcon();
         } catch (e) { console.warn('mountFilterIcon', e); }
@@ -2170,6 +2178,7 @@ async function upsertTransaction_legacy_local(tx) {
         onUndo: () => window.monefyiUndo?.undo?.(),
         onRedo: () => window.monefyiUndo?.redo?.(),
         onEscape: () => {
+          if (window.monefyiModalKeyboard?.handleModalEscape?.({ key: 'Escape' })) return;
           document.querySelectorAll('[data-tx-dropdown]').forEach(el => el.classList.add('hidden'));
           if (STATE.ui.monthPopoverOpen) setMonthPopover(false);
         },
@@ -4067,9 +4076,7 @@ renderAccountsSettings();
     }
     return `saldo-amount mt-1${extra}`;
   };
-  const formatSaldoFor = (sel, val) => (
-    sel === '#kpiSaldoDesktop' ? `Rp ${formatCompactIDR(val)}` : formatIDR(val)
-  );
+  const formatSaldoFor = (_sel, val) => formatIDR(val);
 
   // Update angka saldo (mobile + desktop sidebar + strip)
   ['#kpiSaldo', '#kpiSaldoDesktop', '#kpiSaldoStrip'].forEach((sel) => {
@@ -5115,6 +5122,13 @@ function generateSmartBudgetRecommendation() {
       return key;
     }
 
+    function sumGroupExpense(items) {
+      return (items || []).reduce((sum, tx) => {
+        if (tx.type !== 'expense') return sum;
+        return sum + Math.abs(Number(tx.amount || 0));
+      }, 0);
+    }
+
     /**
      * @param {object[]} txs
      * @param {string} mode
@@ -5174,11 +5188,15 @@ function generateSmartBudgetRecommendation() {
 
       for (const group of groups) {
         if (groupMode !== 'none' && group.label) {
+          const groupExpense = sumGroupExpense(group.items);
           const header = document.createElement('div');
           header.className = 'tx-group-header';
           header.innerHTML = `
             <span class="tx-group-header__label">${escapeHtml(group.label)}</span>
-            <span class="tx-group-header__count">${group.items.length}</span>
+            <div class="tx-group-header__meta">
+              <span class="tx-group-header__expense">−${formatIDR(groupExpense)}</span>
+              <span class="tx-group-header__count">${group.items.length}</span>
+            </div>
           `;
           list.appendChild(header);
         }
@@ -5204,7 +5222,7 @@ function generateSmartBudgetRecommendation() {
 
           const isInc = tx.type==='income';
           const isExp = tx.type==='expense';
-          const amtColor = isInc ? 'var(--accent-primary)' : isExp ? 'var(--accent-danger)' : 'var(--app-text)';
+          const amountCls = isInc ? 'tx-amount--income' : isExp ? 'tx-amount--expense' : '';
           const sign = isInc ? '+' : isExp ? '−' : '';
           const title = tx.merchant || tx.category || 'Lainnya';
           const dateFormatted = formatShortDate(tx.date);
@@ -5251,7 +5269,7 @@ function generateSmartBudgetRecommendation() {
                 </div>
                 <div class="tx-card-mockup__amount">
                   <div class="text-[10px] app-muted">${escapeHtml(dateFormatted)}</div>
-                  <div class="font-bold" style="color:${amtColor}">${sign}${formatIDR(Math.abs(Number(tx.amount||0)))}</div>
+                  <div class="font-bold tx-amount ${amountCls}">${sign}${formatIDR(Math.abs(Number(tx.amount||0)))}</div>
                 </div>
                 <button type="button" class="tx-menu-btn tap rounded-lg app-chip w-7 h-7 flex items-center justify-center shrink-0" data-tx-menu="${escapeHtmlAttr(tx.id)}" data-tip="Menu" aria-label="Menu">⋮</button>
               </div>
@@ -5265,7 +5283,7 @@ function generateSmartBudgetRecommendation() {
                 <div class="text-xs app-muted truncate">${escapeHtml(tx.category || 'Lainnya')}</div>
                 <div class="text-xs app-muted truncate">${escapeHtml(tx.account || 'Cash')}</div>
                 <div class="text-xs app-muted truncate">${escapeHtml(dateFormatted)}</div>
-                <div class="text-sm font-bold text-right tabular-nums" style="color:${amtColor}">${sign}${formatIDR(Math.abs(Number(tx.amount||0)))}</div>
+                <div class="text-sm font-bold text-right tabular-nums tx-amount ${amountCls}">${sign}${formatIDR(Math.abs(Number(tx.amount||0)))}</div>
                 <div class="flex items-center justify-between">
                   ${budgetHtml}
                   <div class="tx-row-del opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
@@ -5438,9 +5456,7 @@ function generateSmartBudgetRecommendation() {
 
       let catOptions = '';
       const txMonth = toMonthKey(tx.date || STATE.selectedMonth || new Date());
-      const cats = (getBudgetCategoryNamesForMonth(txMonth).length
-        ? getBudgetCategoryNamesForMonth(txMonth)
-        : getLiveBudgetCategories()).slice();
+      const cats = collectTransactionCategoryNames(txMonth);
       const txCat = String(tx.category || '').trim();
       const txCatNorm = normalizeCategoryName(txCat);
       if (txCat && !cats.some((c) => normalizeCategoryName(c) === txCatNorm)) cats.push(txCat);
@@ -6241,12 +6257,16 @@ function openAddSheet(tab = 'quick') {
   const sheetEl = document.getElementById('sheet');
   sheetEl?.classList.toggle('sheet-form-panel', isDesktopViewport());
   setSheetPosition('bottom');
-  // Isi dropdown dari budgeting (semua bulan) + akun/metode
-  try {
-    populateManualTxSelects();
-  } catch (err) {
-    console.warn('[app] populate manual selects failed', err);
-  }
+  // Isi dropdown dari budgeting + sumber income
+  (async () => {
+    try {
+      const mk = STATE.selectedMonth || toMonthKey(STATE.period?.end || new Date());
+      await ensureIncomeSourcesCached(mk);
+      populateManualTxSelects();
+    } catch (err) {
+      console.warn('[app] populate manual selects failed', err);
+    }
+  })();
 
   // 2. Logic Pindah Tab (Tanpa showTab)
   document.querySelectorAll('.tabPanel').forEach(panel => {
@@ -6467,6 +6487,7 @@ function setSheetPosition(mode) {
   sheet.classList.remove('-translate-y-1/2');
 }
     function closeAddSheet(){ closeSheet(sheetBackdrop, sheet); }
+    window.closeAddSheet = closeAddSheet;
 
     sheetBackdrop.addEventListener('click', (e)=>{
       if (e.target?.dataset?.close === 'true') closeAddSheet();
@@ -7762,6 +7783,7 @@ function setSheetPosition(mode) {
       const host = $('#txInsightHost');
       if (host) host.innerHTML = '';
     }
+    window.closeEditModal = closeEditModal;
     editBackdrop.addEventListener('click', (e)=>{
       if (e.target?.dataset?.closeEdit === 'true') closeEditModal();
     });
@@ -7995,6 +8017,69 @@ function setSheetPosition(mode) {
     }
 
     /**
+     * Income source names cached per month (for TX category dropdown).
+     * @param {string} monthKey
+     * @returns {string[]}
+     */
+    function getIncomeSourceNamesSync(monthKey) {
+      const sources = STATE.incomeSourcesByMonth?.[monthKey];
+      if (!Array.isArray(sources)) return [];
+      return sources.map((s) => String(s?.name || '').trim()).filter(Boolean);
+    }
+
+    /**
+     * @param {string} [monthKey]
+     */
+    async function ensureIncomeSourcesCached(monthKey) {
+      const mk = monthKey
+        || STATE.selectedMonth
+        || toMonthKey(STATE.period?.end || new Date());
+      if (STATE.incomeSourcesByMonth?.[mk]) return;
+      try {
+        const { getIncomeSources } = await import('./services/income-source.js');
+        STATE.incomeSourcesByMonth = STATE.incomeSourcesByMonth || {};
+        STATE.incomeSourcesByMonth[mk] = await getIncomeSources(mk);
+      } catch {
+        STATE.incomeSourcesByMonth = STATE.incomeSourcesByMonth || {};
+        STATE.incomeSourcesByMonth[mk] = [];
+      }
+    }
+
+    /**
+     * TX categories = budget pengeluaran + nama sumber income.
+     * @param {string} [monthKey]
+     * @param {string[]} [extra]
+     * @returns {string[]}
+     */
+    function collectTransactionCategoryNames(monthKey, extra = []) {
+      const mk = monthKey
+        || STATE.selectedMonth
+        || toMonthKey(STATE.period?.end || new Date());
+      const seen = new Set();
+      const list = [];
+      const add = (raw) => {
+        const name = String(raw || '').trim();
+        if (!name) return;
+        const key = normalizeCategoryName(name);
+        if (seen.has(key)) return;
+        seen.add(key);
+        list.push(name);
+      };
+
+      const budgetNames = getBudgetCategoryNamesForMonth(mk);
+      if (budgetNames.length) {
+        for (const n of budgetNames) add(n);
+      } else {
+        for (const n of collectAllBudgetCategoryNames()) add(n);
+      }
+      for (const n of getIncomeSourceNamesSync(mk)) add(n);
+      for (const n of extra) add(n);
+
+      list.sort((a, b) => a.localeCompare(b, 'id'));
+      return list.length ? list : ['Lainnya'];
+    }
+
+    /**
      * Extract category display names from a budgetsByMonth.categories payload.
      * @param {object|null|undefined} categories
      * @returns {string[]}
@@ -8103,7 +8188,8 @@ function setSheetPosition(mode) {
     }
 
     function populateManualTxSelects(preferredCategory) {
-      const cats = collectAllBudgetCategoryNames();
+      const month = STATE.selectedMonth || toMonthKey(STATE.period?.end || new Date());
+      const cats = collectTransactionCategoryNames(month, preferredCategory ? [preferredCategory] : []);
       const preferredNorm = preferredCategory ? normalizeCategoryName(preferredCategory) : '';
       const currentCat = preferredNorm
         ? (cats.find((c) => normalizeCategoryName(c) === preferredNorm) || cats[0])
@@ -8150,11 +8236,9 @@ function setSheetPosition(mode) {
   $('#eType').value = tx.type;
   $('#eAmount').value = String(tx.amount||0);
 
-  // Kategori = Daftar Budgeting bulan transaksi (realisasi budget)
+  // Kategori = budget pengeluaran + sumber income bulan transaksi
   const txMonth = toMonthKey(tx.date || STATE.selectedMonth || new Date());
-  const cats = (getBudgetCategoryNamesForMonth(txMonth).length
-    ? getBudgetCategoryNamesForMonth(txMonth)
-    : getLiveBudgetCategories()).slice();
+  const cats = collectTransactionCategoryNames(txMonth).slice();
   const txCat = String(tx.category || '').trim();
   const txCatNorm = normalizeCategoryName(txCat);
   const inBudget = txCat && cats.some((c) => normalizeCategoryName(c) === txCatNorm);
@@ -8177,6 +8261,13 @@ function setSheetPosition(mode) {
   const insightHost = $('#txInsightHost');
   if (insightHost) insightHost.innerHTML = '';
   openEditModal();
+  (async () => {
+    try {
+      await ensureIncomeSourcesCached(txMonth);
+      const refreshed = collectTransactionCategoryNames(txMonth, txCat && !inBudget ? [txCat] : []);
+      setSelectOptions($('#eCategory'), refreshed, txCat || refreshed[0] || 'Lainnya');
+    } catch (_) { /* keep sync list */ }
+  })();
   (async () => {
     try {
       const { loadAndInjectInsights } = await import('./components/transaction-detail-modal.js');
@@ -8995,8 +9086,8 @@ function closeBudgetDetail() {
     });
 
 function getLiveBudgetCategories() {
-  // TX category dropdown source of truth = Daftar Budgeting (selected month)
-  return collectAllBudgetCategoryNames();
+  const month = STATE.selectedMonth || toMonthKey(STATE.period?.end || new Date());
+  return collectTransactionCategoryNames(month);
 }
 
     // ============================================================
@@ -12189,6 +12280,7 @@ function toggleNav(view, triggerEl) {
 
     window.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
+      if (window.monefyiModalKeyboard?.handleModalEscape?.(e)) return;
       const onboarding = $('#onboardingBackdrop');
       if (onboarding?.classList.contains('open')) {
         window.MonefyiUI?.hideOnboarding?.();
