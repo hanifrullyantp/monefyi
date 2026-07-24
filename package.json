@@ -10,6 +10,7 @@
     "tesseract.js": "^5.0.4"
   },
   "devDependencies": {
+    "sharp": "^0.35.3",
     "vite": "^7.1.0"
   },
   "scripts": {

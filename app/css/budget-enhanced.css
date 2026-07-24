@@ -1490,6 +1490,24 @@
   align-items: center;
 }
 
+/* Desktop: meta wrapper transparent to parent grid */
+.bli-line-meta,
+.bli-line-field {
+  display: contents;
+}
+
+.bli-line-field-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .bli-line-drag {
   display: inline-flex;
   align-items: center;
@@ -1537,6 +1555,103 @@
 .bli-line-del:hover {
   color: #f87171;
   background: rgba(248, 113, 113, 0.1);
+}
+
+/* Mobile: stacked line-item rows — name full width, readable */
+@media (max-width: 639px) {
+  .budget-list-items {
+    padding: 0 6px 10px 6px;
+  }
+
+  .bli-item__detail {
+    padding: 0 8px 10px;
+  }
+
+  .bli-breakdown__body {
+    padding: 0 4px 8px;
+  }
+
+  .bli-lines-head {
+    display: none;
+  }
+
+  .bli-line-row {
+    grid-template-columns: 28px 1fr 32px;
+    grid-template-rows: auto auto;
+    gap: 8px 6px;
+    padding: 10px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.18);
+    align-items: start;
+  }
+
+  .bli-line-drag {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+  }
+
+  .bli-line-name {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+    width: 100%;
+    font-size: 13px !important;
+    font-weight: 600;
+    min-height: 36px !important;
+    padding: 8px 10px !important;
+  }
+
+  .bli-line-del {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: center;
+  }
+
+  .bli-line-meta {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    grid-template-columns: 64px 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .bli-line-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .bli-line-field-label {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: nowrap;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--app-muted);
+  }
+
+  .bli-line-row .form-input {
+    min-height: 34px;
+    font-size: 12px;
+    padding: 6px 8px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .bli-line-field--qty,
+  .bli-line-field:first-child {
+    max-width: 64px;
+  }
 }
 
 .bli-add-line {

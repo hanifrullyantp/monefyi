@@ -480,9 +480,20 @@ function renderLineItemRow(line) {
     <div class="bli-line-row" data-line-id="${escapeHtml(line.id)}">
       <span class="bli-line-drag" draggable="true" data-drag-type="line" data-line-id="${escapeHtml(line.id)}" title="Geser baris" aria-label="Geser baris">${Icon('grip', { size: 12 })}</span>
       <input type="text" class="bli-line-name form-input" placeholder="Nama item" value="${escapeHtml(line.name || '')}" aria-label="Nama baris rincian">
-      <input type="number" class="bli-line-qty form-input" min="0" step="1" value="${Number(line.qty) || 1}" aria-label="Qty">
-      <select class="bli-line-unit form-input" aria-label="Satuan">${unitOptions}</select>
-      <input type="number" class="bli-line-amount form-input" min="0" step="1000" value="${Number(line.amount) || ''}" placeholder="0" inputmode="numeric" aria-label="Jumlah">
+      <div class="bli-line-meta">
+        <label class="bli-line-field">
+          <span class="bli-line-field-label">Qty</span>
+          <input type="number" class="bli-line-qty form-input" min="0" step="1" value="${Number(line.qty) || 1}" aria-label="Qty">
+        </label>
+        <label class="bli-line-field">
+          <span class="bli-line-field-label">Satuan</span>
+          <select class="bli-line-unit form-input" aria-label="Satuan">${unitOptions}</select>
+        </label>
+        <label class="bli-line-field">
+          <span class="bli-line-field-label">Jumlah</span>
+          <input type="number" class="bli-line-amount form-input" min="0" step="1000" value="${Number(line.amount) || ''}" placeholder="0" inputmode="numeric" aria-label="Jumlah">
+        </label>
+      </div>
       <button type="button" class="bli-line-del tap" data-action="delete-line-item" aria-label="Hapus baris">${Icon('x', { size: 12 })}</button>
     </div>
   `;
