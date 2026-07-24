@@ -87,10 +87,31 @@ export async function updateTransaction(id, updates) {
 export async function deleteTransaction(id) {
   const db = await getDb();
   await queueSync('delete', 'transactions', id, { id });
-  await db.transactions.update(id, {
-    _sync_status: 'pending_delete',
-    _local_modified_at: new Date().toISOString(),
-  });
+  const existing = await db.transactions.get(id);
+  if (existing) {
+    await db.transactions.update(id, {
+      _sync_status: 'pending_delete',
+      _local_modified_at: new Date().toISOString(),
+    });
+  }
+}
+
+/**
+ * IDs marked for local deletion (must not be restored from server pull).
+ * @param {string} userId
+ * @returns {Promise<Set<string>>}
+ */
+export async function getPendingDeleteTransactionIds(userId) {
+  if (!userId) return new Set();
+  const db = await getDb();
+  const rows = await db.transactions.where('user_id').equals(userId).toArray();
+  const ids = new Set();
+  for (const row of rows) {
+    if (row._sync_status !== 'pending_delete') continue;
+    if (row.id) ids.add(row.id);
+    if (row.server_id) ids.add(row.server_id);
+  }
+  return ids;
 }
 
 /**
@@ -142,6 +163,8 @@ export async function getTransactions(filters = {}) {
 export async function mirrorTransaction(tx) {
   if (!tx?.id) return;
   const db = await getDb();
+  const existing = await db.transactions.get(tx.id);
+  if (existing?._sync_status === 'pending_delete') return;
   const now = new Date().toISOString();
 
   await db.transactions.put({
@@ -162,9 +185,16 @@ export async function mirrorTransactionsBulk(transactions) {
   if (!Array.isArray(transactions) || !transactions.length) return;
   const db = await getDb();
   const now = new Date().toISOString();
+  const pendingDeletes = new Set(
+    (await db.transactions.toArray())
+      .filter((row) => row._sync_status === 'pending_delete')
+      .flatMap((row) => [row.id, row.server_id].filter(Boolean))
+  );
 
-  await db.transactions.bulkPut(
-    transactions.map((tx) => ({
+  const rows = [];
+  for (const tx of transactions) {
+    if (!tx?.id || pendingDeletes.has(tx.id)) continue;
+    rows.push({
       ...tx,
       user_id: tx.user_id || getUserId(),
       amount: Number(tx.amount || 0),
@@ -172,8 +202,9 @@ export async function mirrorTransactionsBulk(transactions) {
       server_id: tx.id,
       _sync_status: 'synced',
       _server_updated_at: tx.updated_at || now,
-    }))
-  );
+    });
+  }
+  if (rows.length) await db.transactions.bulkPut(rows);
 }
 
 /**

@@ -353,7 +353,10 @@ async function mergeTransactionFromServer(db, tx) {
   const existingById = existing || (await db.transactions.get(tx.id));
 
   if (existingById) {
-    if (existingById._sync_status === 'synced' || existingById._sync_status === 'pending_delete') {
+    if (existingById._sync_status === 'pending_delete') {
+      return 0;
+    }
+    if (existingById._sync_status === 'synced') {
       await db.transactions.update(existingById.id, {
         ...tx,
         id: existingById.id,

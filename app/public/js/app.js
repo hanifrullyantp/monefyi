@@ -1660,8 +1660,17 @@ function computeSubscriptionStatus(profile){
       const minISO = (new Date(startISO) < new Date(minTrendISO)) ? startISO : minTrendISO;
       const maxISO = endISO;
 
+      let tombstoneIds = new Set();
+      if (window.dataStore?.getPendingDeleteTransactionIds) {
+        try {
+          tombstoneIds = await window.dataStore.getPendingDeleteTransactionIds(STATE.db.user.id);
+        } catch (_) {}
+      }
+
       const applyLocalRows = (rows) => {
-        const remote = (rows || []).map(t => ({
+        const remote = (rows || [])
+          .filter((t) => !tombstoneIds.has(t.id))
+          .map(t => ({
           ...t,
           amount: Math.abs(Number(t.amount||0)),
           meta: (t.meta && typeof t.meta === 'object') ? t.meta : (t.meta ? JSON.parse(t.meta) : {})
@@ -1818,12 +1827,20 @@ function computeSubscriptionStatus(profile){
 async function dbDeleteTransaction(id) {
   if (!STATE.db.enabled || !STATE.db.user) return;
 
-  if (!navigator.onLine && window.dataStore?.deleteTransaction) {
-    await window.dataStore.deleteTransaction(id);
-    return;
+  if (window.dataStore?.deleteTransaction) {
+    try {
+      await window.dataStore.deleteTransaction(id);
+    } catch (e) {
+      console.warn('local delete tombstone failed', e);
+    }
   }
-  
-  const { error } = await STATE.db.supa
+
+  if (!navigator.onLine) return;
+
+  const supa = STATE.db.supa;
+  if (!supa) throw new Error('Database not ready');
+
+  const { error } = await supa
     .from('transactions')
     .delete()
     .eq('id', id);
@@ -1834,6 +1851,8 @@ async function dbDeleteTransaction(id) {
     const { getDb } = await loadAppModule('js/services/offline-db.js');
     const db = await getDb();
     await db.transactions.delete(id);
+    const queueItems = await db.sync_queue.where('record_id').equals(id).toArray();
+    await Promise.all(queueItems.map((q) => db.sync_queue.delete(q.queueId)));
   } catch (_) {}
 }
 
@@ -8417,43 +8436,6 @@ function showManualTab() {
 
 function getActiveBudgetCats() {
   return collectAllBudgetCategoryNames();
-}
-// --- HELPER DATABASE ---
-
-// 1. Fungsi Hapus ke Supabase
-async function dbDeleteTransaction(id) {
-  // ... (kode logic database Anda) ...
-  const { error } = await STATE.db.supa.from('transactions').delete().eq('id', id);
-
-  if (!error) {
-    // Hapus dari memori lokal
-    STATE.transactions = STATE.transactions.filter(t => t.id !== id);
-
-    // OTOMATIS REFRESH
-    refreshAllUI({ syncRemote: 'ifChanged', soft: true });
-  }
-}
-
-// 2. Fungsi Update/Simpan ke Supabase - versi duplikat (di-rename untuk menghindari deklarasi ganda)
-async function upsertTransaction_dbOnly(tx) {
-  const payload = {
-    id: tx.id,
-    user_id: STATE.db.user.id,
-    date: tx.date,
-    type: tx.type,
-    amount: tx.amount,
-    category: tx.category,
-    account: tx.account,
-    payment_method: tx.payment_method || 'Cash', 
-    merchant: tx.merchant,
-    notes: tx.notes,
-    updated_at: new Date().toISOString()
-  };
-  
-  const { error } = await STATE.db.supa
-    .from('transactions')
-    .upsert(payload);
-  if (error) throw error;
 }
     // =========================
     // Budget sheet logic

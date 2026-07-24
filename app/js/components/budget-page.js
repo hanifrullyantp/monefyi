@@ -5,10 +5,15 @@
 
 import {
   PRIORITY_LEVELS,
+  BUDGET_UNITS,
   calculateProgress,
   computeHistoricalBaselines,
   createBudgetItem,
+  createBudgetLineItem,
   createBudgetRow,
+  getItemTotalAmount,
+  hasActiveLineItems,
+  syncItemAmountFromLines,
 } from '../services/budget-model.js';
 import { Icon } from './icons.js';
 import { filterBudgets, getFilter, onFilterChange } from '../services/global-filter.js';
@@ -21,12 +26,15 @@ const SORT_LABELS = {
   progress: 'Progress',
   amount: 'Nominal',
   name: 'Nama',
+  manual: 'Urutan sendiri',
 };
 
 /** @type {string|null} */
 let _expandedBudgetId = null;
 /** @type {string|null} */
 let _expandedItemId = null;
+/** @type {string|null} */
+let _expandedBreakdownItemId = null;
 /** @type {string|null} */
 let _selectedBudgetId = null;
 /** @type {object[]|null} */
@@ -40,6 +48,12 @@ let _heroSnapshot = null;
 let _docListClickWired = false;
 /** @type {boolean} */
 let _toolbarWired = false;
+/** @type {boolean} */
+let _sortWired = false;
+/** @type {boolean} */
+let _dragWired = false;
+/** @type {{ type: string, budgetId?: string, itemId?: string, lineId?: string }|null} */
+let _dragState = null;
 /**
  * @param {unknown} str
  * @returns {string}
@@ -167,6 +181,9 @@ function sortBudgets(budgets, transactions, month, filter) {
     case 'name':
       sorted = enriched.sort((a, b) => activeFirst(a, b) || (a.name || '').localeCompare(b.name || '', 'id'));
       break;
+    case 'manual':
+      sorted = enriched;
+      break;
     case 'urgent':
     default:
       sorted = enriched.sort((a, b) => activeFirst(a, b) || b._urgency - a._urgency);
@@ -213,7 +230,7 @@ function getItemAllocationLimit(income, rows, budgetId, itemId) {
   let current = 0;
   const row = list.find((r) => r.id === budgetId);
   const item = row?.items?.find((i) => i.id === itemId);
-  if (item) current = Math.round(Number(item.qty || 1) * Number(item.price || 0));
+  if (item) current = Math.round(getItemTotalAmount(item));
   const remaining = Number(income || 0) - total;
   const max = Math.max(current, current + Math.max(0, remaining), 0);
   return { max, remaining, current };
@@ -225,15 +242,19 @@ function getItemAllocationLimit(income, rows, budgetId, itemId) {
  * @param {{ max?: number, remaining?: number }} [limits]
  */
 function renderDetailItem(item, expanded, limits = {}) {
+  syncItemAmountFromLines(item);
   const isDone = item.status === 'done' || item.status === 'skipped';
-  const amount = Math.round(Number(item.qty || 1) * Number(item.price || 0));
+  const amount = Math.round(getItemTotalAmount(item));
+  const lineMode = hasActiveLineItems(item);
   const sliderMax = Math.max(Number(limits.max || 0), amount, 1000);
   const remaining = Number(limits.remaining ?? 0);
   const label = item.name?.trim() || 'Item baru';
+  const breakdownExpanded = _expandedBreakdownItemId === item.id;
 
   return `
     <div class="bli-item ${expanded ? 'is-expanded' : ''} ${isDone ? 'item-done' : ''}" data-item-id="${escapeHtml(item.id)}" data-expanded="${expanded ? 'true' : 'false'}">
       <div class="bli-item__head">
+        <span class="bli-drag-handle" draggable="true" data-drag-type="item" data-item-id="${escapeHtml(item.id)}" title="Geser item" aria-label="Geser item">${Icon('grip', { size: 14 })}</span>
         <button type="button" class="bli-item__summary tap" data-action="toggle-item" aria-expanded="${expanded ? 'true' : 'false'}">
           <span class="bli-item__name">${escapeHtml(label)}</span>
           <span class="bli-item__amt">Rp ${formatIDR(amount)}</span>
@@ -245,17 +266,24 @@ function renderDetailItem(item, expanded, limits = {}) {
       </div>
       <div class="bli-item__detail ${expanded ? '' : 'hidden'}">
         <input type="text" class="bli-item-name form-input" placeholder="Nama detail item" value="${escapeHtml(item.name || '')}" aria-label="Nama item">
-        <div class="bli-item-amount-row">
-          <input type="range" class="bli-item-slider" min="0" max="${sliderMax}" step="1000" value="${Math.min(amount, sliderMax)}" aria-label="Slider jumlah">
+        <div class="bli-item-amount-row ${lineMode ? 'is-locked' : ''}" data-role="manual-amount">
+          <input type="range" class="bli-item-slider" min="0" max="${sliderMax}" step="1000" value="${Math.min(amount, sliderMax)}" aria-label="Slider jumlah" ${lineMode ? 'disabled' : ''}>
           <div class="bli-inline-amount">
             <span>Rp</span>
-            <input type="number" class="bli-item-price form-input" min="0" max="${sliderMax}" step="1000" value="${amount || ''}" inputmode="numeric" aria-label="Jumlah">
+            <input type="number" class="bli-item-price form-input" min="0" max="${sliderMax}" step="1000" value="${amount || ''}" inputmode="numeric" aria-label="Jumlah" ${lineMode ? 'readonly' : ''}>
           </div>
         </div>
-        <div class="bli-item-cap" data-role="item-cap">
-          Maks. Rp ${formatIDR(sliderMax)}
-          <span class="bli-item-cap__remain ${remaining < 0 ? 'over' : ''}">· Sisa alokasi Rp ${formatIDR(Math.max(0, remaining))}</span>
-        </div>
+        ${lineMode ? `
+          <div class="bli-item-derived" data-role="derived-total">
+            Total diambil dari rincian: <strong>Rp ${formatIDR(amount)}</strong>
+          </div>
+        ` : `
+          <div class="bli-item-cap" data-role="item-cap">
+            Maks. Rp ${formatIDR(sliderMax)}
+            <span class="bli-item-cap__remain ${remaining < 0 ? 'over' : ''}">· Sisa alokasi Rp ${formatIDR(Math.max(0, remaining))}</span>
+          </div>
+        `}
+        ${renderItemBreakdown(item, breakdownExpanded)}
       </div>
     </div>
   `;
@@ -285,7 +313,9 @@ function renderBudgetListRow(budget, transactions, month, income = 0) {
 
   return `
     <div class="budget-list-block ${expanded ? 'is-expanded' : ''} ${selected ? 'is-selected' : ''}" data-budget-id="${escapeHtml(budget.id)}">
-      <button type="button" class="budget-list-row ${statusClass} ${allDone ? 'all-done' : ''}" data-action="toggle-budget" data-budget-id="${escapeHtml(budget.id)}" aria-expanded="${expanded ? 'true' : 'false'}">
+      <div class="budget-list-block__head">
+        <span class="budget-drag-handle" draggable="true" data-drag-type="budget" data-budget-id="${escapeHtml(budget.id)}" title="Geser kategori" aria-label="Geser kategori">${Icon('grip', { size: 14 })}</span>
+        <button type="button" class="budget-list-row ${statusClass} ${allDone ? 'all-done' : ''}" data-action="toggle-budget" data-budget-id="${escapeHtml(budget.id)}" aria-expanded="${expanded ? 'true' : 'false'}">
         <div class="budget-list-row__strip" style="background:${pl.color}"></div>
         <div class="budget-list-row__icon" aria-hidden="true">${Icon('target', { size: 18 })}</div>
         <div class="budget-list-row__main">
@@ -304,6 +334,7 @@ function renderBudgetListRow(budget, transactions, month, income = 0) {
           <span class="budget-list-row__chev ${expanded ? 'is-open' : ''}">${Icon('chevronDown', { size: 16 })}</span>
         </div>
       </button>
+      </div>
       <div class="budget-list-items ${expanded ? '' : 'hidden'}" data-role="items">
         ${items.map((item) => {
           const lim = getItemAllocationLimit(income, draftRows, budget.id, item.id);
@@ -432,10 +463,66 @@ function ensureRowItems(row) {
  */
 function recalcRowAmount(row) {
   if (!row?.items?.length) return;
-  row.amount = row.items.reduce((s, i) => s + Number(i.qty || 1) * Number(i.price || 0), 0);
-  row.items.forEach((i) => {
-    i.subtotal = Number(i.qty || 1) * Number(i.price || 0);
-  });
+  row.amount = row.items.reduce((s, i) => s + getItemTotalAmount(i), 0);
+}
+
+/**
+ * @param {object} line
+ * @returns {string}
+ */
+function renderLineItemRow(line) {
+  const unitOptions = BUDGET_UNITS.map((u) => (
+    `<option value="${escapeHtml(u.value)}" ${line.unit === u.value ? 'selected' : ''}>${escapeHtml(u.label)}</option>`
+  )).join('');
+  return `
+    <div class="bli-line-row" data-line-id="${escapeHtml(line.id)}">
+      <span class="bli-line-drag" draggable="true" data-drag-type="line" data-line-id="${escapeHtml(line.id)}" title="Geser baris" aria-label="Geser baris">${Icon('grip', { size: 12 })}</span>
+      <input type="text" class="bli-line-name form-input" placeholder="Nama item" value="${escapeHtml(line.name || '')}" aria-label="Nama baris rincian">
+      <input type="number" class="bli-line-qty form-input" min="0" step="1" value="${Number(line.qty) || 1}" aria-label="Qty">
+      <select class="bli-line-unit form-input" aria-label="Satuan">${unitOptions}</select>
+      <input type="number" class="bli-line-amount form-input" min="0" step="1000" value="${Number(line.amount) || ''}" placeholder="0" inputmode="numeric" aria-label="Jumlah">
+      <button type="button" class="bli-line-del tap" data-action="delete-line-item" aria-label="Hapus baris">${Icon('x', { size: 12 })}</button>
+    </div>
+  `;
+}
+
+/**
+ * @param {object} item
+ * @param {boolean} breakdownExpanded
+ * @returns {string}
+ */
+function renderItemBreakdown(item, breakdownExpanded) {
+  const lines = item.line_items || [];
+  const lineMode = hasActiveLineItems(item);
+  const lineTotal = lines.reduce((s, l) => s + Math.abs(Number(l.amount || 0)), 0);
+  const displayLines = lines.length ? lines : [createBudgetLineItem()];
+
+  return `
+    <div class="bli-breakdown ${breakdownExpanded ? 'is-open' : ''}">
+      <button type="button" class="bli-breakdown__toggle tap" data-action="toggle-breakdown" aria-expanded="${breakdownExpanded ? 'true' : 'false'}">
+        <span class="bli-breakdown__label">Rincian pengeluaran</span>
+        <span class="bli-breakdown__hint">opsional</span>
+        ${lineMode ? `<span class="bli-breakdown__sum">Rp ${formatIDR(lineTotal)}</span>` : ''}
+        <span class="bli-breakdown__chev">${Icon('chevronDown', { size: 12 })}</span>
+      </button>
+      <div class="bli-breakdown__body ${breakdownExpanded ? '' : 'hidden'}">
+        <div class="bli-lines-table" role="table" aria-label="Rincian pengeluaran">
+          <div class="bli-lines-head" role="row">
+            <span role="columnheader" class="sr-only">Urut</span>
+            <span role="columnheader">Item</span>
+            <span role="columnheader">Qty</span>
+            <span role="columnheader">Satuan</span>
+            <span role="columnheader">Jumlah</span>
+            <span role="columnheader" class="sr-only">Aksi</span>
+          </div>
+          ${displayLines.map((line) => renderLineItemRow(line)).join('')}
+        </div>
+        <button type="button" class="bli-add-line tap" data-action="add-line-item">
+          ${Icon('plus', { size: 12 })} Tambah baris
+        </button>
+      </div>
+    </div>
+  `;
 }
 
 /**
@@ -730,52 +817,6 @@ function wireHandlers(container, ctx) {
     });
   });
 
-  const sortBtn = container.querySelector('[data-action="toolbar-sort"]');
-  const sortMenu = container.querySelector('#budget-sort-menu');
-  const applySort = (sort) => {
-    localStorage.setItem(SORT_KEY, sort);
-    if (sortBtn) sortBtn.title = `Urutkan: ${SORT_LABELS[sort] || sort}`;
-    sortMenu?.querySelectorAll('.blc-sort-option').forEach((opt) => {
-      opt.classList.toggle('is-active', opt.dataset.sort === sort);
-    });
-    const section = container.querySelector('#budget-list-content');
-    const liveRows = getDraftRows().length ? getDraftRows() : rows;
-    if (section) renderBudgetListSection(section, liveRows, transactions, month, sort, income);
-    wireListInteractions(container, ctx);
-  };
-  sortBtn?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const open = sortMenu?.hasAttribute('hidden');
-    if (open) {
-      sortMenu.removeAttribute('hidden');
-      sortBtn.setAttribute('aria-expanded', 'true');
-    } else {
-      sortMenu.setAttribute('hidden', '');
-      sortBtn.setAttribute('aria-expanded', 'false');
-    }
-  });
-  sortMenu?.querySelectorAll('[data-sort]').forEach((opt) => {
-    opt.addEventListener('click', (e) => {
-      e.stopPropagation();
-      applySort(opt.dataset.sort);
-      sortMenu.setAttribute('hidden', '');
-      sortBtn?.setAttribute('aria-expanded', 'false');
-    });
-  });
-  if (!container.dataset.sortOutsideWired) {
-    container.dataset.sortOutsideWired = '1';
-    document.addEventListener('click', (e) => {
-      if (!container.isConnected) return;
-      const wrap = container.querySelector('.blc-sort-wrap');
-      const menu = container.querySelector('#budget-sort-menu');
-      const btn = container.querySelector('[data-action="toolbar-sort"]');
-      if (!menu || menu.hasAttribute('hidden')) return;
-      if (wrap?.contains(e.target)) return;
-      menu.setAttribute('hidden', '');
-      btn?.setAttribute('aria-expanded', 'false');
-    });
-  }
-
   wireToolbar(container, ctx);
   wireListInteractions(container, ctx);
   syncToolbarState(container);
@@ -790,6 +831,288 @@ function wireHandlers(container, ctx) {
 }
 
 /**
+ * @returns {string}
+ */
+function getCurrentSort() {
+  return localStorage.getItem(SORT_KEY) || 'urgent';
+}
+
+/**
+ * @returns {boolean}
+ */
+function isManualSort() {
+  return getCurrentSort() === 'manual';
+}
+
+/**
+ * @param {string} sort
+ */
+function applySortFromUi(sort) {
+  localStorage.setItem(SORT_KEY, sort);
+  const root = document.getElementById('budgetPageRoot');
+  const ctx = _pageCtx;
+  if (!root || !ctx) return;
+
+  const sortBtn = root.querySelector('[data-action="toolbar-sort"]');
+  if (sortBtn) sortBtn.title = `Urutkan: ${SORT_LABELS[sort] || sort}`;
+
+  root.querySelectorAll('.blc-sort-option').forEach((opt) => {
+    opt.classList.toggle('is-active', opt.dataset.sort === sort);
+  });
+
+  const section = root.querySelector('#budget-list-content');
+  const liveRows = getDraftRows().length ? getDraftRows() : (ctx.rows || []);
+  const txs = ctx.transactions?.length ? ctx.transactions : resolveMonthTransactions(ctx.month);
+  if (section) renderBudgetListSection(section, liveRows, txs, ctx.month, sort, ctx.income);
+  wireListInteractions(root, ctx);
+}
+
+/**
+ * @param {HTMLElement} root
+ */
+function closeSortMenu(root) {
+  const menu = root.querySelector('#budget-sort-menu');
+  const btn = root.querySelector('[data-action="toolbar-sort"]');
+  menu?.setAttribute('hidden', '');
+  btn?.setAttribute('aria-expanded', 'false');
+}
+
+/**
+ * @param {HTMLElement} root
+ */
+function toggleSortMenu(root) {
+  const menu = root.querySelector('#budget-sort-menu');
+  const btn = root.querySelector('[data-action="toolbar-sort"]');
+  if (!menu || !btn) return;
+  const open = menu.hasAttribute('hidden');
+  if (open) {
+    menu.removeAttribute('hidden');
+    btn.setAttribute('aria-expanded', 'true');
+  } else {
+    closeSortMenu(root);
+  }
+}
+
+/**
+ * Document-level sort menu (survives re-render; runs before toolbar capture).
+ */
+function wireSortDelegation() {
+  if (_sortWired) return;
+  _sortWired = true;
+
+  document.addEventListener('click', (e) => {
+    const root = document.getElementById('budgetPageRoot');
+    if (!root || root.classList.contains('hidden')) return;
+
+    const sortOpt = e.target.closest?.('.blc-sort-option[data-sort]');
+    if (sortOpt && root.contains(sortOpt)) {
+      e.preventDefault();
+      e.stopPropagation();
+      applySortFromUi(sortOpt.dataset.sort);
+      closeSortMenu(root);
+      return;
+    }
+
+    const sortBtn = e.target.closest?.('[data-action="toolbar-sort"]');
+    if (sortBtn && root.contains(sortBtn)) {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleSortMenu(root);
+      return;
+    }
+
+    const menu = root.querySelector('#budget-sort-menu');
+    if (menu && !menu.hasAttribute('hidden')) {
+      const wrap = root.querySelector('.blc-sort-wrap');
+      if (!wrap?.contains(e.target)) closeSortMenu(root);
+    }
+  }, true);
+}
+
+/**
+ * @param {object[]} arr
+ * @param {string} fromId
+ * @param {string} toId
+ * @returns {boolean}
+ */
+function reorderById(arr, fromId, toId) {
+  if (!Array.isArray(arr)) return false;
+  const fromIdx = arr.findIndex((x) => x.id === fromId);
+  const toIdx = arr.findIndex((x) => x.id === toId);
+  if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return false;
+  const [moved] = arr.splice(fromIdx, 1);
+  arr.splice(toIdx, 0, moved);
+  return true;
+}
+
+/**
+ * @param {EventTarget|null} target
+ * @param {{ type: string, budgetId?: string, itemId?: string, lineId?: string }} state
+ * @returns {{ el: Element, id: string, budgetId?: string, itemId?: string }|null}
+ */
+function findDropZone(target, state) {
+  const el = /** @type {Element|null} */ (target instanceof Element ? target : null);
+  if (!el) return null;
+
+  if (state.type === 'budget') {
+    const block = el.closest('.budget-list-block');
+    if (block?.dataset.budgetId) return { el: block, id: block.dataset.budgetId };
+  }
+  if (state.type === 'item') {
+    const item = el.closest('.bli-item');
+    const block = item?.closest('.budget-list-block');
+    if (item?.dataset.itemId && block?.dataset.budgetId) {
+      return { el: item, id: item.dataset.itemId, budgetId: block.dataset.budgetId };
+    }
+  }
+  if (state.type === 'line') {
+    const line = el.closest('.bli-line-row');
+    const item = line?.closest('.bli-item');
+    const block = item?.closest('.budget-list-block');
+    if (line?.dataset.lineId && item?.dataset.itemId && block?.dataset.budgetId) {
+      return {
+        el: line,
+        id: line.dataset.lineId,
+        itemId: item.dataset.itemId,
+        budgetId: block.dataset.budgetId,
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * @param {{ type: string, budgetId?: string, itemId?: string, lineId?: string }} from
+ * @param {string} toId
+ * @param {object} ctx
+ * @param {HTMLElement} container
+ */
+async function applyDragReorder(from, toId, ctx, container) {
+  beginEditGesture();
+  mirrorDraftToState();
+  const rows = getDraftRows();
+
+  if (from.type === 'budget') {
+    reorderById(rows, from.budgetId, toId);
+  } else if (from.type === 'item') {
+    const row = rows.find((r) => r.id === from.budgetId);
+    if (row?.items) reorderById(row.items, from.itemId, toId);
+    recalcRowAmount(row);
+  } else if (from.type === 'line') {
+    const row = rows.find((r) => r.id === from.budgetId);
+    const item = row?.items?.find((i) => i.id === from.itemId);
+    if (item?.line_items) reorderById(item.line_items, from.lineId, toId);
+    syncItemAmountFromLines(item);
+    recalcRowAmount(row);
+  }
+
+  mirrorDraftToState();
+  await commitEditGesture('Ubah urutan');
+
+  const sort = getCurrentSort();
+  const section = container.querySelector('#budget-list-content');
+  const txs = ctx.transactions?.length ? ctx.transactions : resolveMonthTransactions(ctx.month);
+  if (section) renderBudgetListSection(section, getDraftRows(), txs, ctx.month, sort, ctx.income);
+  wireListInteractions(container, ctx);
+  syncLiveDashboard(container, Number(ctx?.income || window.STATE?.budgetDraft?.income || 0));
+}
+
+/**
+ * Document-level drag-and-drop reorder for budgets, items, and line items.
+ */
+function wireDragReorder() {
+  if (_dragWired) return;
+  _dragWired = true;
+
+  const getRoot = () => document.getElementById('budgetPageRoot');
+
+  document.addEventListener('dragstart', (e) => {
+    const root = getRoot();
+    if (!root || root.classList.contains('hidden')) return;
+    const handle = e.target.closest?.('[data-drag-type][draggable="true"]');
+    if (!handle || !root.contains(handle)) return;
+
+    const type = handle.dataset.dragType;
+    if (type === 'budget' && !isManualSort()) {
+      e.preventDefault();
+      showPageToast('Pilih "Urutan sendiri" di menu sort untuk menggeser kategori');
+      return;
+    }
+
+    const block = handle.closest('.budget-list-block');
+    const itemEl = handle.closest('.bli-item');
+    const lineEl = handle.closest('.bli-line-row');
+
+    _dragState = {
+      type,
+      budgetId: handle.dataset.budgetId || block?.dataset.budgetId,
+      itemId: handle.dataset.itemId || itemEl?.dataset.itemId,
+      lineId: handle.dataset.lineId || lineEl?.dataset.lineId,
+    };
+
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', JSON.stringify(_dragState));
+
+    const dragEl = type === 'budget' ? block : type === 'item' ? itemEl : lineEl;
+    dragEl?.classList.add('is-dragging');
+  });
+
+  document.addEventListener('dragover', (e) => {
+    if (!_dragState) return;
+    const root = getRoot();
+    if (!root || !root.contains(/** @type {Node} */ (e.target))) return;
+
+    const zone = findDropZone(e.target, _dragState);
+    if (!zone) return;
+
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+
+    root.querySelectorAll('.is-drop-target').forEach((el) => el.classList.remove('is-drop-target'));
+    zone.el.classList.add('is-drop-target');
+  });
+
+  document.addEventListener('drop', async (e) => {
+    if (!_dragState) return;
+    const root = getRoot();
+    if (!root || !root.contains(/** @type {Node} */ (e.target))) return;
+
+    const zone = findDropZone(e.target, _dragState);
+    if (!zone) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const from = { ..._dragState };
+    const toId = zone.id;
+
+    if (from.type === 'budget' && from.budgetId === toId) return;
+    if (from.type === 'item' && from.itemId === toId) return;
+    if (from.type === 'line' && from.lineId === toId) return;
+    if (from.type === 'item' && zone.budgetId && from.budgetId !== zone.budgetId) return;
+    if (from.type === 'line' && (from.itemId !== zone.itemId || from.budgetId !== zone.budgetId)) return;
+
+    const ctx = _pageCtx;
+    if (!ctx) return;
+
+    await applyDragReorder(from, toId, ctx, root);
+
+    root.querySelectorAll('.is-dragging, .is-drop-target').forEach((el) => {
+      el.classList.remove('is-dragging', 'is-drop-target');
+    });
+    _dragState = null;
+  });
+
+  document.addEventListener('dragend', () => {
+    const root = getRoot();
+    root?.querySelectorAll('.is-dragging, .is-drop-target').forEach((el) => {
+      el.classList.remove('is-dragging', 'is-drop-target');
+    });
+    _dragState = null;
+  });
+}
+
+/**
  * Document-level toolbar delegation (survives innerHTML re-render).
  */
 function wireToolbarDelegation() {
@@ -801,10 +1124,11 @@ function wireToolbarDelegation() {
     if (!root || root.classList.contains('hidden')) return;
     const btn = e.target.closest?.('[data-action^="toolbar-"]');
     if (!btn || !root.contains(btn)) return;
+    const action = btn.dataset.action;
+    if (action === 'toolbar-sort') return;
     const ctx = _pageCtx;
     if (!ctx) return;
     const { month, onRefresh, onSave } = ctx;
-    const action = btn.dataset.action;
     e.preventDefault();
     e.stopPropagation();
 
@@ -910,7 +1234,9 @@ function wireToolbarDelegation() {
  * @param {object} ctx
  */
 function wireToolbar(container, ctx) {
+  wireSortDelegation();
   wireToolbarDelegation();
+  wireDragReorder();
 
   const { month, onRefresh } = ctx;
 
@@ -1051,6 +1377,7 @@ async function deleteBudgetItem(container, ctx, budgetId, itemId) {
   if (_expandedItemId === itemId) {
     _expandedItemId = row.items[0]?.id || null;
   }
+  if (_expandedBreakdownItemId === itemId) _expandedBreakdownItemId = null;
 
   try {
     const { recordBudgetRowsChange } = await import('../services/budget-changes-tracker.js');
@@ -1073,6 +1400,64 @@ function handleBudgetListClick(e, containerOverride) {
   const container = containerOverride || document.getElementById('budgetPageRoot');
   const ctx = _pageCtx;
   if (!container || !ctx) return;
+
+  const lineAction = e.target.closest?.('[data-action="toggle-breakdown"], [data-action="add-line-item"], [data-action="delete-line-item"]');
+  if (lineAction) {
+    e.preventDefault();
+    e.stopPropagation();
+    const itemEl = lineAction.closest('.bli-item');
+    const block = itemEl?.closest('.budget-list-block');
+    const itemId = itemEl?.dataset.itemId;
+    const budgetId = block?.dataset.budgetId;
+    if (!itemId || !budgetId) return;
+
+    const row = getDraftRows().find((r) => r.id === budgetId);
+    const item = row?.items?.find((i) => i.id === itemId);
+    if (!row || !item) return;
+
+    if (lineAction.dataset.action === 'toggle-breakdown') {
+      const opening = _expandedBreakdownItemId !== itemId;
+      _expandedBreakdownItemId = opening ? itemId : null;
+      _expandedItemId = itemId;
+      _expandedBudgetId = budgetId;
+      _selectedBudgetId = budgetId;
+      if (opening && !(item.line_items || []).length) {
+        item.line_items = [createBudgetLineItem()];
+        mirrorDraftToState();
+      }
+      applyExpandDom(container, ctx, { rebuildItems: true });
+      return;
+    }
+
+    if (lineAction.dataset.action === 'add-line-item') {
+      beginEditGesture();
+      if (!Array.isArray(item.line_items)) item.line_items = [];
+      item.line_items.push(createBudgetLineItem());
+      _expandedBreakdownItemId = itemId;
+      _expandedItemId = itemId;
+      mirrorDraftToState();
+      applyExpandDom(container, ctx, { rebuildItems: true });
+      commitEditGesture('Tambah baris rincian');
+      return;
+    }
+
+    if (lineAction.dataset.action === 'delete-line-item') {
+      const lineEl = lineAction.closest('.bli-line-row');
+      const lineId = lineEl?.dataset.lineId;
+      if (!lineId) return;
+      beginEditGesture();
+      syncLinesFromDom(itemEl, budgetId, itemId);
+      item.line_items = (item.line_items || []).filter((line) => line.id !== lineId);
+      syncItemAmountFromLines(item);
+      recalcRowAmount(row);
+      mirrorDraftToState();
+      applyExpandDom(container, ctx, { rebuildItems: true });
+      syncLiveDashboard(container, Number(ctx?.income || window.STATE?.budgetDraft?.income || 0));
+      syncToolbarState(container);
+      commitEditGesture('Hapus baris rincian');
+      return;
+    }
+  }
 
   const deleteItemBtn = e.target.closest?.('[data-action="delete-item"]');
   if (deleteItemBtn) {
@@ -1098,6 +1483,7 @@ function handleBudgetListClick(e, containerOverride) {
     _expandedBudgetId = opening ? id : null;
     if (!opening) {
       _expandedItemId = null;
+      _expandedBreakdownItemId = null;
     } else {
       const row = getDraftRows().find((r) => r.id === id);
       if (row) {
@@ -1128,6 +1514,32 @@ function handleBudgetListClick(e, containerOverride) {
 }
 
 /**
+ * Read line-item table from DOM into draft item.
+ * @param {HTMLElement} itemEl
+ * @param {string} budgetId
+ * @param {string} itemId
+ */
+function syncLinesFromDom(itemEl, budgetId, itemId) {
+  const row = getDraftRows().find((r) => r.id === budgetId);
+  const item = row?.items?.find((i) => i.id === itemId);
+  if (!row || !item || !itemEl) return;
+  const nextLines = [];
+  itemEl.querySelectorAll('.bli-line-row').forEach((lineEl) => {
+    nextLines.push(createBudgetLineItem({
+      id: lineEl.dataset.lineId,
+      name: lineEl.querySelector('.bli-line-name')?.value || '',
+      qty: Number(lineEl.querySelector('.bli-line-qty')?.value || 1),
+      unit: lineEl.querySelector('.bli-line-unit')?.value || 'pcs',
+      amount: Number(lineEl.querySelector('.bli-line-amount')?.value || 0),
+    }));
+  });
+  item.line_items = nextLines;
+  syncItemAmountFromLines(item);
+  recalcRowAmount(row);
+  mirrorDraftToState();
+}
+
+/**
  * Wire only item editors (slider/name/price) — safe to call after partial rebuild.
  * @param {HTMLElement} container
  * @param {object} ctx
@@ -1152,6 +1564,7 @@ function wireItemEditors(container, ctx) {
       ensureRowItems(row);
       const item = row.items.find((i) => i.id === itemId);
       if (!item) return null;
+      if (hasActiveLineItems(item)) return row;
       if (patch.price !== undefined) {
         let price = Number(patch.price);
         if (!Number.isFinite(price)) return row;
@@ -1160,7 +1573,7 @@ function wireItemEditors(container, ctx) {
         }
         const lim = getItemAllocationLimit(income, getDraftRows(), budgetId, itemId);
         // lim.max already includes current; clamp against room
-        const othersTotal = getDraftRows().reduce((s, r) => s + Math.abs(Number(r.amount || 0)), 0) - (Number(item.qty || 1) * Number(item.price || 0));
+        const othersTotal = getDraftRows().reduce((s, r) => s + Math.abs(Number(r.amount || 0)), 0) - getItemTotalAmount(item);
         const hardMax = Math.max(0, Number(income || 0) - othersTotal);
         price = Math.max(0, Math.min(price, hardMax));
         patch = { ...patch, price, qty: 1 };
@@ -1177,21 +1590,48 @@ function wireItemEditors(container, ctx) {
       if (!item) return;
       const nameEl = itemEl.querySelector('.bli-item__name');
       const amtEl = itemEl.querySelector('.bli-item__amt');
-      const amt = Math.round(Number(item.qty || 1) * Number(item.price || 0));
+      const amt = Math.round(getItemTotalAmount(item));
+      const lineMode = hasActiveLineItems(item);
       if (nameEl) nameEl.textContent = item.name?.trim() || 'Item baru';
       if (amtEl) amtEl.textContent = `Rp ${formatIDR(amt)}`;
-      const lim = getItemAllocationLimit(income, getDraftRows(), budgetId, itemId);
+      const manualRow = itemEl.querySelector('[data-role="manual-amount"]');
+      manualRow?.classList.toggle('is-locked', lineMode);
       if (slider) {
-        slider.max = String(Math.max(lim.max, amt, 1000));
-        slider.value = String(Math.min(amt, Number(slider.max)));
+        slider.disabled = lineMode;
+        if (!lineMode) {
+          const lim = getItemAllocationLimit(income, getDraftRows(), budgetId, itemId);
+          slider.max = String(Math.max(lim.max, amt, 1000));
+          slider.value = String(Math.min(amt, Number(slider.max)));
+        }
       }
       if (priceInput) {
-        priceInput.max = slider?.max || String(lim.max);
+        priceInput.readOnly = lineMode;
+        priceInput.value = String(amt);
+        if (!lineMode) {
+          const lim = getItemAllocationLimit(income, getDraftRows(), budgetId, itemId);
+          priceInput.max = slider?.max || String(lim.max);
+        }
       }
+      const breakdownSum = itemEl.querySelector('.bli-breakdown__sum');
+      if (breakdownSum && lineMode) {
+        breakdownSum.textContent = `Rp ${formatIDR(amt)}`;
+      }
+      const derivedEl = itemEl.querySelector('[data-role="derived-total"] strong');
+      if (derivedEl) derivedEl.textContent = `Rp ${formatIDR(amt)}`;
       const cap = itemEl.querySelector('[data-role="item-cap"]');
-      if (cap) {
+      if (cap && !lineMode) {
+        const lim = getItemAllocationLimit(income, getDraftRows(), budgetId, itemId);
         cap.innerHTML = `Maks. Rp ${formatIDR(Number(slider?.max || lim.max))} <span class="bli-item-cap__remain ${lim.remaining < 0 ? 'over' : ''}">· Sisa alokasi Rp ${formatIDR(Math.max(0, lim.remaining))}</span>`;
       }
+    };
+
+    const syncLinesAndRefresh = () => {
+      beginEditGesture();
+      syncLinesFromDom(itemEl, budgetId, itemId);
+      const row = getDraftRows().find((r) => r.id === budgetId);
+      syncSummaryLabels(row);
+      syncLiveDashboard(container, income);
+      syncToolbarState(container);
     };
 
     nameInput?.addEventListener('focus', beginEditGesture);
@@ -1252,6 +1692,20 @@ function wireItemEditors(container, ctx) {
     });
     slider?.addEventListener('input', syncFromSlider);
     slider?.addEventListener('change', () => commitEditGesture('Edit nominal item'));
+
+    itemEl.querySelectorAll('.bli-line-name, .bli-line-qty, .bli-line-amount').forEach((input) => {
+      input.addEventListener('focus', beginEditGesture);
+      input.addEventListener('input', syncLinesAndRefresh);
+      input.addEventListener('change', () => commitEditGesture('Edit rincian item'));
+      input.addEventListener('blur', () => commitEditGesture('Edit rincian item'));
+    });
+    itemEl.querySelectorAll('.bli-line-unit').forEach((select) => {
+      select.addEventListener('focus', beginEditGesture);
+      select.addEventListener('change', () => {
+        syncLinesAndRefresh();
+        commitEditGesture('Edit rincian item');
+      });
+    });
   });
 }
 
@@ -1266,7 +1720,7 @@ function wireListInteractions(container, ctx) {
   const listEl = container.querySelector('#budget-list-content');
   if (listEl) {
     listEl.onclick = (e) => {
-      const action = e.target.closest?.('[data-action="toggle-budget"], [data-action="toggle-item"], [data-action="add-item"], [data-action="delete-item"]');
+      const action = e.target.closest?.('[data-action="toggle-budget"], [data-action="toggle-item"], [data-action="add-item"], [data-action="delete-item"], [data-action="toggle-breakdown"], [data-action="add-line-item"], [data-action="delete-line-item"]');
       if (!action) return;
       handleBudgetListClick(e, container);
     };
@@ -1278,7 +1732,7 @@ function wireListInteractions(container, ctx) {
       const root = document.getElementById('budgetPageRoot');
       const inBudget = !!(root && !root.classList.contains('hidden') && root.contains(e.target));
       if (!inBudget) return;
-      const action = e.target.closest?.('[data-action="toggle-budget"], [data-action="toggle-item"], [data-action="add-item"], [data-action="delete-item"]');
+      const action = e.target.closest?.('[data-action="toggle-budget"], [data-action="toggle-item"], [data-action="add-item"], [data-action="delete-item"], [data-action="toggle-breakdown"], [data-action="add-line-item"], [data-action="delete-line-item"]');
       if (!action) return;
       handleBudgetListClick(e, root);
     }, true);

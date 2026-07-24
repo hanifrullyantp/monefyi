@@ -3,7 +3,7 @@
  * @module components/budget-summary-hero
  */
 
-import { calculateProgress, calculatePriorityTotals, getLinkedTransactions } from '../services/budget-model.js';
+import { calculateProgress, calculatePriorityTotals, getItemTotalAmount, getLinkedTransactions } from '../services/budget-model.js';
 import { Icon } from './icons.js';
 
 /**
@@ -47,7 +47,7 @@ function getMonthExpenses(transactions, month) {
 function sumBudgetTotal(rows) {
   return (rows || []).reduce((sum, b) => {
     const items = b.items || [];
-    const fromItems = items.reduce((s, i) => s + Number(i.qty || 1) * Number(i.price || 0), 0);
+    const fromItems = items.reduce((s, i) => s + getItemTotalAmount(i), 0);
     const amount = items.length ? fromItems : Number(b.amount || 0);
     return sum + Math.abs(amount);
   }, 0);
