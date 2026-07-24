@@ -121,6 +121,13 @@ supabase/
 ### Documentation
 ```
 docs/
+├── README.md                        # Documentation index (start here)
+├── MONEFYI_MASTER.md                # Complete product reference
+├── MONEFYI_PRODUCT_PROMPT.md          # Product spec + AI dev prompt
+├── ARSITEKTUR_PARSING_MONEFYI.md    # Parsing architecture
+├── MONEVISOR.md                     # AI advisor
+├── DEPLOY_STRUCTURE.md              # Deploy & URLs
+├── ADMIN_RUNBOOK.md                 # Admin operations
 ├── phases/
 │   └── PHASE_1_FOUNDATION.md        # Current phase details
 ├── reference/

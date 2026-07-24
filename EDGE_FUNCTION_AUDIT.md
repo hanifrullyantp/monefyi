@@ -1,5 +1,7 @@
 # Edge Function Audit
 
+> 📚 **Indeks dokumentasi:** [`docs/README.md`](docs/README.md) · **Master:** [`docs/MONEFYI_MASTER.md`](docs/MONEFYI_MASTER.md)
+
 Semua fungsi tetap di Supabase. Frontend Vercel tetap memanggil endpoint `https://<project>.supabase.co/functions/v1/...`.
 
 ## Dipanggil frontend saat ini

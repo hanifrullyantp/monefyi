@@ -1,5 +1,7 @@
 # Admin Runbook — Monefyi Finance
 
+> 📚 **Indeks:** [`README.md`](README.md) · **Master:** [`MONEFYI_MASTER.md`](MONEFYI_MASTER.md) § Monetisasi
+
 ## Entry: Admin Console (full page)
 
 1. Login dengan akun yang `profiles.role = 'admin'` (email allowlist di `config.js` hanya soft-gate UI).

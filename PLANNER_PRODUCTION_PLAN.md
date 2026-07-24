@@ -1,5 +1,7 @@
 # Monefyi Planner — Production Plan
 
+> 📚 **Indeks dokumentasi:** [`docs/README.md`](docs/README.md) · **Master:** [`docs/MONEFYI_MASTER.md`](docs/MONEFYI_MASTER.md) § Ekosistem
+
 > **Subdomain:** `planner.monefyi.com`
 > **Tipe:** SaaS Multitenant Project Planner PWA
 > **Stack:** Vite + Vanilla JS → React (migration path) · Vercel · Supabase · Supabase Auth

@@ -1,5 +1,7 @@
 # Phase 1: Foundation - Implementation Guide
 
+> 📚 **Indeks:** [`../README.md`](../README.md) · **Master:** [`../MONEFYI_MASTER.md`](../MONEFYI_MASTER.md) § Parsing
+
 **Duration:** Week 1-2 (10 working days)  
 **Goal:** Balik urutan pipeline, AI jadi fallback  
 **Status:** 🔄 In Progress

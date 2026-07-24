@@ -1,5 +1,7 @@
 # Monefyi.com — Analisis, Rekomendasi & Master Prompt
 
+> 📚 **Indeks:** [`README.md`](README.md) · **Master lengkap:** [`MONEFYI_MASTER.md`](MONEFYI_MASTER.md)
+
 > **Scope:** Hanya aplikasi **monefyi.com** (PWA vanilla JS di root repo).  
 > **Diabaikan:** `monefyi_planner/`, `planner/`, planner.monefyi.com.
 

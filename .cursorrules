@@ -167,7 +167,9 @@ Refs: #issue-number
 
 ### Reference Docs
 Before implementing, check:
-- @.monefyi/PARSE_MIGRATION_CONTEXT.md - Overall architecture
+- @docs/MONEFYI_MASTER.md - Complete product & architecture reference
+- @docs/README.md - Documentation index
+- @.monefyi/PARSE_MIGRATION_CONTEXT.md - Parser migration architecture
 - @.monefyi/DECISION_LOG.md - Why decisions were made
 - @docs/phases/PHASE_1_FOUNDATION.md - Current phase details
 - @docs/reference/GRAMMAR_RULES.ts - Parser patterns

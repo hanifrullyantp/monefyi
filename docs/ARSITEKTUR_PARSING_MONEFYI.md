@@ -1,5 +1,7 @@
 # Arsitektur Parsing Monefyi.com
 
+> 📚 **Indeks:** [`README.md`](README.md) · **Master:** [`MONEFYI_MASTER.md`](MONEFYI_MASTER.md) § Parsing
+
 Dokumen ini menjelaskan arsitektur teknologi **parsing transaksi** untuk migrasi dari model **AI-first** ke model **deterministik-first** dengan **AI sebagai fallback**, plus sistem **pembelajaran berkelanjutan** dari koreksi user.
 
 > **Status codebase (Juni 2026)**  

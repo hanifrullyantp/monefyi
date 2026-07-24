@@ -13,13 +13,7 @@ const root = path.join(__dirname, '..');
 const ICON_VERSION = '2026-07-25-logo';
 const EMERALD = { r: 16, g: 185, b: 129, alpha: 1 };
 
-const legacySource = path.join(root, 'app', 'icons', 'monefyi-logo.png');
-const sourceCopy = path.join(root, 'app', 'icons', 'monefyi-logo-source.png');
-if (!fs.existsSync(sourceCopy) && fs.existsSync(legacySource)) {
-  fs.copyFileSync(legacySource, sourceCopy);
-}
-
-const sourcePath = fs.existsSync(sourceCopy) ? sourceCopy : legacySource;
+const sourcePath = path.join(root, 'app', 'icons', 'monefyi-logo-source.png');
 const outDirs = [
   path.join(root, 'app', 'icons'),
   path.join(root, 'app', 'public', 'icons'),
@@ -96,39 +90,6 @@ function buildGreenMask(data, width, height) {
 }
 
 /**
- * @param {Uint8Array} mask
- * @param {number} width
- * @param {number} height
- * @param {number} passes
- */
-function erodeMask(mask, width, height, passes) {
-  let current = mask;
-  for (let p = 0; p < passes; p += 1) {
-    const next = new Uint8Array(width * height);
-    for (let y = 0; y < height; y += 1) {
-      for (let x = 0; x < width; x += 1) {
-        const idx = y * width + x;
-        if (!current[idx]) continue;
-        let keep = true;
-        for (let dy = -1; dy <= 1 && keep; dy += 1) {
-          for (let dx = -1; dx <= 1; dx += 1) {
-            const nx = x + dx;
-            const ny = y + dy;
-            if (nx < 0 || ny < 0 || nx >= width || ny >= height || !current[ny * width + nx]) {
-              keep = false;
-              break;
-            }
-          }
-        }
-        if (keep) next[idx] = 1;
-      }
-    }
-    current = next;
-  }
-  return current;
-}
-
-/**
  * @param {Buffer} src
  * @param {number} srcWidth
  * @param {number} srcHeight
@@ -137,8 +98,8 @@ function erodeMask(mask, width, height, passes) {
 function buildMarkBuffer(src, srcWidth, srcHeight, bounds) {
   const { left, top, width, height } = bounds;
   const fullGreen = buildGreenMask(src, srcWidth, srcHeight);
-  const coreGreen = erodeMask(fullGreen, srcWidth, srcHeight, 6);
-  const keep = new Uint8Array(width * height);
+  const mask = new Uint8Array(width * height);
+  const touchesGreen = new Uint8Array(width * height);
 
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
@@ -146,20 +107,77 @@ function buildMarkBuffer(src, srcWidth, srcHeight, bounds) {
       const sy = top + y;
       const si = (sy * srcWidth + sx) * 4;
       if (!isBlack(src[si], src[si + 1], src[si + 2])) continue;
+      mask[y * width + x] = 1;
 
-      let nearCore = false;
-      for (let dy = -5; dy <= 5 && !nearCore; dy += 1) {
-        for (let dx = -5; dx <= 5; dx += 1) {
+      for (let dy = -1; dy <= 1; dy += 1) {
+        for (let dx = -1; dx <= 1; dx += 1) {
           const nx = sx + dx;
           const ny = sy + dy;
           if (nx < 0 || ny < 0 || nx >= srcWidth || ny >= srcHeight) continue;
-          if (coreGreen[ny * srcWidth + nx]) {
-            nearCore = true;
+          if (fullGreen[ny * srcWidth + nx]) {
+            touchesGreen[y * width + x] = 1;
             break;
           }
         }
       }
-      if (nearCore) keep[y * width + x] = 1;
+    }
+  }
+
+  const visited = new Uint8Array(width * height);
+  const keep = new Uint8Array(width * height);
+  const cornerMargin = 0.16;
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const start = y * width + x;
+      if (!mask[start] || !touchesGreen[start] || visited[start]) continue;
+
+      const stack = [start];
+      const component = [];
+      visited[start] = 1;
+
+      while (stack.length) {
+        const idx = stack.pop();
+        component.push(idx);
+        const cx = idx % width;
+        const cy = (idx - cx) / width;
+        const candidates = [
+          [cx - 1, cy],
+          [cx + 1, cy],
+          [cx, cy - 1],
+          [cx, cy + 1],
+        ];
+        for (const [nx, ny] of candidates) {
+          if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+          const ni = ny * width + nx;
+          if (!mask[ni] || visited[ni]) continue;
+          visited[ni] = 1;
+          stack.push(ni);
+        }
+      }
+
+      let sumX = 0;
+      let sumY = 0;
+      let interior = 0;
+      for (const idx of component) {
+        sumX += idx % width;
+        sumY += (idx - (idx % width)) / width;
+        if (!touchesGreen[idx]) interior += 1;
+      }
+
+      const centerX = sumX / component.length;
+      const centerY = sumY / component.length;
+      const nx = centerX / width;
+      const ny = centerY / height;
+      const inCorner =
+        (nx < cornerMargin && ny < cornerMargin) ||
+        (nx > 1 - cornerMargin && ny < cornerMargin) ||
+        (nx < cornerMargin && ny > 1 - cornerMargin) ||
+        (nx > 1 - cornerMargin && ny > 1 - cornerMargin);
+      const interiorRatio = interior / component.length;
+      if (inCorner || interiorRatio < 0.08) continue;
+
+      for (const idx of component) keep[idx] = 1;
     }
   }
 

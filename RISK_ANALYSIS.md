@@ -1,5 +1,7 @@
 # Risk Analysis - Vercel Frontend Migration
 
+> 📚 **Indeks dokumentasi:** [`docs/README.md`](docs/README.md) · **Master:** [`docs/MONEFYI_MASTER.md`](docs/MONEFYI_MASTER.md)
+
 ## High
 - SPA rewrite terlalu agresif dapat membuat `sw.js`/manifest/assets ter-serve sebagai `index.html`.
   - Mitigasi: rewrite hanya untuk path non-file extension (sudah disesuaikan di `vercel.json`).

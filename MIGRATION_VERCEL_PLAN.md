@@ -1,5 +1,7 @@
 # Monefyi -> Vercel Migration Plan (Root Domain)
 
+> 📚 **Indeks dokumentasi:** [`docs/README.md`](docs/README.md) · **Master:** [`docs/MONEFYI_MASTER.md`](docs/MONEFYI_MASTER.md) · **Deploy:** [`docs/DEPLOY_STRUCTURE.md`](docs/DEPLOY_STRUCTURE.md)
+
 Target: deploy frontend ke `https://app.monefyi.com` dengan perubahan minimal.
 
 ## Scope

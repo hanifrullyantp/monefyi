@@ -1,5 +1,7 @@
 # Dependency Map
 
+> 📚 **Indeks dokumentasi:** [`docs/README.md`](docs/README.md) · **Master:** [`docs/MONEFYI_MASTER.md`](docs/MONEFYI_MASTER.md)
+
 ## Build-time
 - `vite` (devDependency)
 - Node runtime `>=20.x`

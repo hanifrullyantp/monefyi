@@ -2,6 +2,13 @@
 
 Aplikasi keuangan pribadi (PWA) — HTML + CSS + JavaScript, backend Supabase.
 
+## Dokumentasi
+
+| Dokumen | Isi |
+|---------|-----|
+| **[`docs/MONEFYI_MASTER.md`](docs/MONEFYI_MASTER.md)** | Referensi lengkap produk, arsitektur, fitur, data, deploy |
+| **[`docs/README.md`](docs/README.md)** | Indeks navigasi semua dokumen |
+
 ## Cabang Git & produksi
 
 - **`main`** adalah **cabang default** repository (setelah Anda mengaturnya di GitHub). Push ke `main` memicu deploy **production** pada project Vercel yang mengaitkan branch production ke `main` (termasuk domain utama yang Anda pasang di Vercel).

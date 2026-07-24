@@ -1,5 +1,7 @@
 # 📦 SPLIT FILES - Panduan Penggunaan untuk Cursor
 
+> 📚 **Indeks dokumentasi:** [`docs/README.md`](docs/README.md) · **Master:** [`docs/MONEFYI_MASTER.md`](docs/MONEFYI_MASTER.md)
+
 **Proyek:** Monefyi Parse System Migration - Phase 1 Foundation  
 **Tujuan:** Menyediakan context split agar AI/Cursor lebih fokus, akurat, dan efisien.
 

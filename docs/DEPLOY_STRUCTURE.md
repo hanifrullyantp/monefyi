@@ -1,5 +1,7 @@
 # Struktur deploy Monefyi
 
+> 📚 **Indeks:** [`README.md`](README.md) · **Master:** [`MONEFYI_MASTER.md`](MONEFYI_MASTER.md) § Deploy
+
 | URL | Direktori | Keterangan |
 |-----|-----------|------------|
 | `monefyi.com/` | [`landing/`](../landing/) | Landing page marketing |
