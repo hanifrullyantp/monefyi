@@ -3202,3 +3202,92 @@
   }
 }
 
+/* Budget item detail modal (double-click item) */
+.budget-item-detail-modal .bid-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.bid-stat {
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface2);
+}
+.bid-stat-label {
+  display: block;
+  font-size: 10px;
+  color: var(--app-muted);
+  margin-bottom: 4px;
+}
+.bid-stat-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--app-text);
+  word-break: break-word;
+}
+.bid-section {
+  margin-bottom: 16px;
+}
+.bid-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--app-text);
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.bid-muted {
+  font-size: 11px;
+  color: var(--app-muted);
+  margin: 0;
+}
+.bid-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.bid-line-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 11px;
+}
+.bid-line-name { font-weight: 600; color: var(--app-text); }
+.bid-line-meta { color: var(--app-muted); white-space: nowrap; }
+.bid-line-amt { font-weight: 700; white-space: nowrap; }
+.bid-tx-list { display: flex; flex-direction: column; gap: 4px; }
+.bid-tx-row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  gap: 8px;
+  font-size: 11px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.bid-tx-date { color: var(--app-muted); }
+.bid-tx-merchant { color: var(--app-text); }
+.bid-tx-amt { font-weight: 700; text-align: right; }
+.bid-form-section { margin-top: 4px; }
+.bid-status-select { cursor: pointer; }
+.bid-notes { resize: vertical; min-height: 72px; }
+.bid-reminder-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--app-muted);
+}
+.bid-reminder-hint svg { flex-shrink: 0; margin-top: 1px; color: var(--accent-primary); }
+

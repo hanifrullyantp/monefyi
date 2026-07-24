@@ -205,6 +205,23 @@ function extractDayFromDate(iso) {
 }
 
 /**
+ * Sync item schedule fields from ISO date (or clear when empty).
+ * @param {object} item
+ * @param {string|null|undefined} isoDate YYYY-MM-DD
+ */
+export function syncItemTargetDate(item, isoDate) {
+  if (!item) return;
+  const iso = isoDate ? String(isoDate).slice(0, 10) : '';
+  if (!iso) {
+    item.target_date = null;
+    item.target_date_day = null;
+    return;
+  }
+  item.target_date = iso;
+  item.target_date_day = extractDayFromDate(iso);
+}
+
+/**
  * @param {object} data
  * @returns {object}
  */

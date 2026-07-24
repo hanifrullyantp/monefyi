@@ -47,6 +47,8 @@ let _heroSnapshot = null;
 /** @type {boolean} */
 let _docListClickWired = false;
 /** @type {boolean} */
+let _docItemDblClickWired = false;
+/** @type {boolean} */
 let _toolbarWired = false;
 /** @type {boolean} */
 let _sortWired = false;
@@ -255,7 +257,7 @@ function renderDetailItem(item, expanded, limits = {}) {
     <div class="bli-item ${expanded ? 'is-expanded' : ''} ${isDone ? 'item-done' : ''}" data-item-id="${escapeHtml(item.id)}" data-expanded="${expanded ? 'true' : 'false'}">
       <div class="bli-item__head">
         <span class="bli-drag-handle" draggable="true" data-drag-type="item" data-item-id="${escapeHtml(item.id)}" title="Geser item" aria-label="Geser item">${Icon('grip', { size: 14 })}</span>
-        <button type="button" class="bli-item__summary tap" data-action="toggle-item" aria-expanded="${expanded ? 'true' : 'false'}">
+        <button type="button" class="bli-item__summary tap" data-action="toggle-item" aria-expanded="${expanded ? 'true' : 'false'}" title="Klik expand · Double-click detail">
           <span class="bli-item__name">${escapeHtml(label)}</span>
           <span class="bli-item__amt">Rp ${formatIDR(amount)}</span>
           <span class="bli-item__chev">${Icon('chevronDown', { size: 14 })}</span>
@@ -1710,6 +1712,50 @@ function wireItemEditors(container, ctx) {
 }
 
 /**
+ * Open item detail modal (double-click on item row).
+ * @param {HTMLElement} container
+ * @param {object} ctx
+ * @param {string} budgetId
+ * @param {string} itemId
+ */
+async function openBudgetItemDetailModal(container, ctx, budgetId, itemId) {
+  const itemEl = container.querySelector(`.bli-item[data-item-id="${CSS.escape(itemId)}"]`);
+  if (itemEl) syncLinesFromDom(itemEl, budgetId, itemId);
+
+  const row = getDraftRows().find((r) => r.id === budgetId);
+  const item = row?.items?.find((i) => i.id === itemId);
+  if (!row || !item) return;
+
+  const month = ctx.month || resolveBudgetMonth();
+  const transactions = ctx.transactions?.length ? ctx.transactions : resolveMonthTransactions(month);
+  const income = Number(ctx.income || window.STATE?.budgetDraft?.income || 0);
+
+  const { showBudgetItemDetailModal } = await import('./budget-item-detail-modal.js');
+  showBudgetItemDetailModal({
+    budgetId,
+    itemId,
+    month,
+    budgetRow: row,
+    item,
+    transactions,
+    onSave: async (patch) => {
+      beginEditGesture();
+      const liveRow = getDraftRows().find((r) => r.id === budgetId);
+      const liveItem = liveRow?.items?.find((i) => i.id === itemId);
+      if (!liveItem) return;
+      Object.assign(liveItem, patch);
+      recalcRowAmount(liveRow);
+      mirrorDraftToState();
+      await commitEditGesture('Edit detail item');
+      applyExpandDom(container, ctx, { rebuildItems: true });
+      syncLiveDashboard(container, income);
+      syncToolbarState(container);
+      import('../services/notification-center.js').then((m) => m.refreshNotifications()).catch(() => {});
+    },
+  });
+}
+
+/**
  * Accordion + inline item editing.
  * @param {HTMLElement} container
  * @param {object} ctx
@@ -1735,6 +1781,30 @@ function wireListInteractions(container, ctx) {
       const action = e.target.closest?.('[data-action="toggle-budget"], [data-action="toggle-item"], [data-action="add-item"], [data-action="delete-item"], [data-action="toggle-breakdown"], [data-action="add-line-item"], [data-action="delete-line-item"]');
       if (!action) return;
       handleBudgetListClick(e, root);
+    }, true);
+  }
+
+  if (!_docItemDblClickWired) {
+    _docItemDblClickWired = true;
+    document.addEventListener('dblclick', (e) => {
+      const root = document.getElementById('budgetPageRoot');
+      if (!root || root.classList.contains('hidden') || !root.contains(e.target)) return;
+      if (e.target.closest?.('[data-drag-type], [data-action="delete-item"], .bli-line-row, .bli-item-name, .bli-item-price, .bli-item-slider')) return;
+
+      const summary = e.target.closest?.('.bli-item__summary, .bli-item__name, .bli-item__amt');
+      const itemEl = summary?.closest('.bli-item') || e.target.closest?.('.bli-item');
+      if (!itemEl) return;
+
+      const block = itemEl.closest('.budget-list-block');
+      const itemId = itemEl.dataset.itemId;
+      const budgetId = block?.dataset.budgetId;
+      if (!itemId || !budgetId) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      const ctx = _pageCtx;
+      if (!ctx) return;
+      openBudgetItemDetailModal(root, ctx, budgetId, itemId);
     }, true);
   }
 
