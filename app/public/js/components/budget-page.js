@@ -36,24 +36,6 @@ let _pageCtx = null;
 /** Stable tx/month for hero realisasi during draft edits (refreshed on full page load / save) */
 let _heroSnapshot = null;
 
-// #region agent log
-const _DBG = (location, message, data, hypothesisId) => {
-  const entry = { sessionId: '4f55da', location, message, data, hypothesisId, timestamp: Date.now() };
-  try {
-    const k = 'debug-4f55da';
-    const prev = JSON.parse(localStorage.getItem(k) || '[]');
-    prev.push(entry);
-    if (prev.length > 80) prev.splice(0, prev.length - 80);
-    localStorage.setItem(k, JSON.stringify(prev));
-  } catch { /* ignore */ }
-  fetch('http://127.0.0.1:7791/ingest/13f8c143-a21b-4f22-9274-9c4286830b77', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '4f55da' },
-    body: JSON.stringify(entry),
-  }).catch(() => {});
-};
-// #endregion
-
 /** @type {boolean} */
 let _docListClickWired = false;
 /** @type {boolean} */
@@ -251,11 +233,16 @@ function renderDetailItem(item, expanded, limits = {}) {
 
   return `
     <div class="bli-item ${expanded ? 'is-expanded' : ''} ${isDone ? 'item-done' : ''}" data-item-id="${escapeHtml(item.id)}" data-expanded="${expanded ? 'true' : 'false'}">
-      <button type="button" class="bli-item__summary tap" data-action="toggle-item" aria-expanded="${expanded ? 'true' : 'false'}">
-        <span class="bli-item__name">${escapeHtml(label)}</span>
-        <span class="bli-item__amt">Rp ${formatIDR(amount)}</span>
-        <span class="bli-item__chev">${Icon('chevronDown', { size: 14 })}</span>
-      </button>
+      <div class="bli-item__head">
+        <button type="button" class="bli-item__summary tap" data-action="toggle-item" aria-expanded="${expanded ? 'true' : 'false'}">
+          <span class="bli-item__name">${escapeHtml(label)}</span>
+          <span class="bli-item__amt">Rp ${formatIDR(amount)}</span>
+          <span class="bli-item__chev">${Icon('chevronDown', { size: 14 })}</span>
+        </button>
+        <button type="button" class="bli-item__delete tap" data-action="delete-item" aria-label="Hapus item" title="Hapus item">
+          ${Icon('trash', { size: 14 })}
+        </button>
+      </div>
       <div class="bli-item__detail ${expanded ? '' : 'hidden'}">
         <input type="text" class="bli-item-name form-input" placeholder="Nama detail item" value="${escapeHtml(item.name || '')}" aria-label="Nama item">
         <div class="bli-item-amount-row">
@@ -426,13 +413,6 @@ function mirrorDraftToState(rowsOverride, monthOverride, incomeOverride) {
     state.budgetDraft.month = month;
     if (Number.isFinite(income)) state.budgetDraft.income = income;
   }
-  // #region agent log
-  _DBG('budget-page.js:mirrorDraftToState', 'draft mirrored', {
-    rowCount: rows.length,
-    stateDraftLen: state.budgetDraft?.rows?.length ?? null,
-    budgetPageOpen: !!state.ui?.budgetPageOpen,
-  }, 'H15');
-  // #endregion
 }
 
 /**
@@ -550,9 +530,6 @@ function beginEditGesture() {
   mirrorDraftToState();
   if (!_editBeforeRows && window.STATE?.budgetDraft) {
     _editBeforeRows = JSON.parse(JSON.stringify(window.STATE.budgetDraft.rows || []));
-    // #region agent log
-    _DBG('budget-page.js:beginEditGesture', 'edit gesture started', { hasBeforeRows: !!_editBeforeRows, rowCount: _editBeforeRows?.length || 0 }, 'H10');
-    // #endregion
   }
   import('../services/budget-changes-tracker.js')
     .then(({ markSessionDirty }) => markSessionDirty(true))
@@ -560,9 +537,6 @@ function beginEditGesture() {
 }
 
 async function commitEditGesture(label = 'Edit item budget') {
-  // #region agent log
-  _DBG('budget-page.js:commitEditGesture', 'commit called', { label, hasBeforeRows: !!_editBeforeRows, hasDraft: !!window.STATE?.budgetDraft }, 'H10');
-  // #endregion
   if (!_editBeforeRows || !window.STATE?.budgetDraft) return;
   try {
     const { recordBudgetRowsChange } = await import('../services/budget-changes-tracker.js');
@@ -625,18 +599,6 @@ function scheduleHeroRefresh(container, income) {
     const totalSpent = transactions
       .filter((t) => String(t.type || 'expense').toLowerCase() === 'expense')
       .reduce((s, t) => s + Math.abs(Number(t.amount || 0)), 0);
-    // #region agent log
-    _DBG('budget-page.js:scheduleHeroRefresh', 'hero refresh', {
-      month,
-      rowCount: rows.length,
-      totalBudget,
-      totalSpent,
-      txCount: transactions.length,
-      snapTx: _heroSnapshot?.transactions?.length || 0,
-      ctxTx: _pageCtx?.transactions?.length || 0,
-      draftRows: getDraftRows().length,
-    }, 'H6');
-    // #endregion
     patchHeroAmounts(container, totalSpent, totalBudget);
     try {
       const { renderBudgetSummaryHero } = await import('./budget-summary-hero.js');
@@ -679,19 +641,6 @@ function syncToolbarState(container) {
   const draftTotal = getHeroRowsFromDraft().reduce((s, b) => s + Math.abs(Number(b.amount || 0)), 0);
   const toolbar = container.querySelector('.blc-toolbar');
   toolbar?.classList.toggle('blc-toolbar--dirty', dirty);
-  // #region agent log
-  _DBG('budget-page.js:syncToolbarState', 'toolbar state', {
-    canUndo,
-    canRedo,
-    dirty,
-    isDirty: !!api?.isDirty?.(),
-    hasEditBefore: !!_editBeforeRows,
-    draftTotal,
-    draftRowCount: getDraftRows().length,
-    ctxRowCount: _pageCtx?.rows?.length || 0,
-    stateDraftLen: window.STATE?.budgetDraft?.rows?.length ?? null,
-  }, 'H14');
-  // #endregion
   if (undoBtn) {
     undoBtn.disabled = !canUndo;
     undoBtn.classList.toggle('is-active', canUndo);
@@ -721,9 +670,15 @@ function syncToolbarState(container) {
     cancelBtn.disabled = !dirty && !canUndo;
     cancelBtn.classList.toggle('is-active', dirty || canUndo);
   }
-  const hasSelection = !!(_selectedBudgetId || _expandedBudgetId);
-  container.querySelectorAll('[data-action="toolbar-duplicate"], [data-action="toolbar-delete"]').forEach((btn) => {
-    btn.disabled = !hasSelection;
+  const hasCategorySelection = !!(_selectedBudgetId || _expandedBudgetId);
+  const canDeleteItem = !!(_expandedItemId && hasCategorySelection);
+  container.querySelectorAll('[data-action="toolbar-duplicate"]').forEach((btn) => {
+    btn.disabled = !hasCategorySelection;
+  });
+  container.querySelectorAll('[data-action="toolbar-delete"]').forEach((btn) => {
+    btn.disabled = !canDeleteItem;
+    btn.title = 'Hapus item terpilih';
+    btn.setAttribute('aria-label', 'Hapus item terpilih');
   });
 }
 
@@ -868,15 +823,6 @@ function wireToolbarDelegation() {
     }
     if (action === 'toolbar-save') {
       mirrorDraftToState();
-      // #region agent log
-      _DBG('budget-page.js:toolbar-save', 'save clicked', {
-        draftRowCount: getDraftRows().length,
-        totalBudget: getDraftRows().reduce((s, r) => s + Math.abs(Number(r.amount || 0)), 0),
-        hasOnSave: typeof onSave === 'function',
-        hasHandleSave: typeof window.handleSaveBudget === 'function',
-        hasEditBefore: !!_editBeforeRows,
-      }, 'H12');
-      // #endregion
       if (_editBeforeRows) await commitEditGesture('Edit item budget');
       try {
         if (typeof onSave === 'function') await onSave();
@@ -937,24 +883,13 @@ function wireToolbarDelegation() {
       return;
     }
     if (action === 'toolbar-delete') {
-      const id = _selectedBudgetId || _expandedBudgetId;
-      const draft = window.STATE?.budgetDraft;
-      if (!id || !draft?.rows) {
-        showPageToast('Pilih kategori budget dulu');
+      const budgetId = _expandedBudgetId || _selectedBudgetId;
+      const itemId = _expandedItemId;
+      if (!budgetId || !itemId) {
+        showPageToast('Pilih item budget dulu');
         return;
       }
-      if (!confirm('Hapus kategori budget ini?')) return;
-      const before = JSON.parse(JSON.stringify(draft.rows));
-      draft.rows = draft.rows.filter((r) => r.id !== id);
-      if (_expandedBudgetId === id) _expandedBudgetId = null;
-      if (_selectedBudgetId === id) _selectedBudgetId = null;
-      if (_expandedItemId) _expandedItemId = null;
-      try {
-        const { recordBudgetRowsChange } = await import('../services/budget-changes-tracker.js');
-        recordBudgetRowsChange('Hapus budget', before, draft.rows);
-      } catch { /* ignore */ }
-      showPageToast('Kategori dihapus');
-      await refreshFromDraft(ctx);
+      await deleteBudgetItem(root, ctx, budgetId, itemId);
       return;
     }
     if (action === 'toolbar-template') {
@@ -1025,17 +960,6 @@ function applyExpandDom(container, ctx, opts = {}) {
     if (!expanded || !itemsEl) return;
 
     const row = rows.find((r) => r.id === id);
-    // #region agent log
-    _DBG('budget-page.js:applyExpandDom', 'expand block', {
-      id,
-      expanded,
-      rebuildItems,
-      rowFound: !!row,
-      draftRowCount: rows.length,
-      itemCount: row?.items?.length || 0,
-      expandedItemId: _expandedItemId,
-    }, 'H3');
-    // #endregion
     if (!row) return;
     ensureRowItems(row);
 
@@ -1101,21 +1025,67 @@ function wireAddItemButtons(container, ctx) {
 }
 
 /**
+ * Remove one item from a budget category (min 1 item remains).
+ * @param {HTMLElement} container
+ * @param {object} ctx
+ * @param {string} budgetId
+ * @param {string} itemId
+ * @returns {Promise<boolean>}
+ */
+async function deleteBudgetItem(container, ctx, budgetId, itemId) {
+  mirrorDraftToState();
+  const row = getDraftRows().find((r) => r.id === budgetId);
+  if (!row || !itemId) return false;
+  ensureRowItems(row);
+  if ((row.items || []).length <= 1) {
+    showPageToast('Minimal 1 item per kategori');
+    return false;
+  }
+  if (!confirm('Hapus item budget ini?')) return false;
+
+  const before = JSON.parse(JSON.stringify(getDraftRows()));
+  row.items = row.items.filter((i) => i.id !== itemId);
+  recalcRowAmount(row);
+  mirrorDraftToState();
+
+  if (_expandedItemId === itemId) {
+    _expandedItemId = row.items[0]?.id || null;
+  }
+
+  try {
+    const { recordBudgetRowsChange } = await import('../services/budget-changes-tracker.js');
+    recordBudgetRowsChange('Hapus item budget', before, getDraftRows());
+  } catch { /* ignore */ }
+
+  const income = Number(ctx?.income || window.STATE?.budgetDraft?.income || 0);
+  applyExpandDom(container, ctx, { rebuildItems: true });
+  syncLiveDashboard(container, income);
+  syncToolbarState(container);
+  showPageToast('Item dihapus');
+  return true;
+}
+
+/**
  * Delegated clicks for accordion rows/items — survives list DOM rebuilds.
  * @param {MouseEvent} e
  */
 function handleBudgetListClick(e, containerOverride) {
   const container = containerOverride || document.getElementById('budgetPageRoot');
   const ctx = _pageCtx;
-  const targetAction = e.target?.closest?.('[data-action]')?.dataset?.action || null;
-  // #region agent log
-  _DBG('budget-page.js:handleBudgetListClick', 'list click', {
-    targetAction,
-    hasCtx: !!ctx,
-    hasContainer: !!container,
-  }, 'H1');
-  // #endregion
   if (!container || !ctx) return;
+
+  const deleteItemBtn = e.target.closest?.('[data-action="delete-item"]');
+  if (deleteItemBtn) {
+    e.preventDefault();
+    e.stopPropagation();
+    const itemEl = deleteItemBtn.closest('.bli-item');
+    const block = itemEl?.closest('.budget-list-block');
+    const targetItemId = itemEl?.dataset.itemId;
+    const targetBudgetId = block?.dataset.budgetId;
+    if (!targetItemId || !targetBudgetId) return;
+    deleteBudgetItem(container, ctx, targetBudgetId, targetItemId);
+    return;
+  }
 
   const toggleBudget = e.target.closest?.('[data-action="toggle-budget"]');
   if (toggleBudget) {
@@ -1262,15 +1232,6 @@ function wireItemEditors(container, ctx) {
       const v = Number(slider?.value || 0);
       if (priceInput) priceInput.value = String(v);
       const row = applyToDraft({ price: v });
-      // #region agent log
-      _DBG('budget-page.js:syncFromSlider', 'slider input', {
-        budgetId,
-        itemId,
-        value: v,
-        rowAmount: row?.amount,
-        draftTotal: getDraftRows().reduce((s, r) => s + Math.abs(Number(r.amount || 0)), 0),
-      }, 'H8');
-      // #endregion
       syncSummaryLabels(row);
       syncLiveDashboard(container, income);
       syncToolbarState(container);
@@ -1305,7 +1266,7 @@ function wireListInteractions(container, ctx) {
   const listEl = container.querySelector('#budget-list-content');
   if (listEl) {
     listEl.onclick = (e) => {
-      const action = e.target.closest?.('[data-action="toggle-budget"], [data-action="toggle-item"], [data-action="add-item"]');
+      const action = e.target.closest?.('[data-action="toggle-budget"], [data-action="toggle-item"], [data-action="add-item"], [data-action="delete-item"]');
       if (!action) return;
       handleBudgetListClick(e, container);
     };
@@ -1317,20 +1278,9 @@ function wireListInteractions(container, ctx) {
       const root = document.getElementById('budgetPageRoot');
       const inBudget = !!(root && !root.classList.contains('hidden') && root.contains(e.target));
       if (!inBudget) return;
-      const action = e.target.closest?.('[data-action="toggle-budget"], [data-action="toggle-item"], [data-action="add-item"]');
-      if (action) {
-        handleBudgetListClick(e, root);
-        return;
-      }
-      if (e.target.closest?.('#budget-list-content, .bli-item, .budget-list-row')) {
-        // #region agent log
-        _DBG('budget-page.js:docClick', 'list click missed action', {
-          budgetPageOpen: !!window.STATE?.ui?.budgetPageOpen,
-          targetTag: e.target?.tagName,
-          closestAction: e.target.closest?.('[data-action]')?.dataset?.action || null,
-        }, 'H1');
-        // #endregion
-      }
+      const action = e.target.closest?.('[data-action="toggle-budget"], [data-action="toggle-item"], [data-action="add-item"], [data-action="delete-item"]');
+      if (!action) return;
+      handleBudgetListClick(e, root);
     }, true);
   }
 
@@ -1469,7 +1419,7 @@ export async function renderBudgetPage(container, ctx) {
                     <button type="button" class="blc-tool tap" data-action="toolbar-cancel" title="Batalkan" aria-label="Batalkan">${Icon('x', { size: 15 })}</button>
                     <span class="blc-tool-sep" aria-hidden="true"></span>
                     <button type="button" class="blc-tool tap" data-action="toolbar-duplicate" title="Duplikat" aria-label="Duplikat">${Icon('copy', { size: 15 })}</button>
-                    <button type="button" class="blc-tool danger tap" data-action="toolbar-delete" title="Hapus" aria-label="Hapus">${Icon('trash', { size: 15 })}</button>
+                    <button type="button" class="blc-tool danger tap" data-action="toolbar-delete" title="Hapus item terpilih" aria-label="Hapus item terpilih">${Icon('trash', { size: 15 })}</button>
                     <button type="button" class="blc-tool tap" data-action="toolbar-add" title="Tambah" aria-label="Tambah">${Icon('plus', { size: 15 })}</button>
                     <button type="button" class="blc-tool tap" data-action="toolbar-auto" title="Auto Budget" aria-label="Auto Budget">${Icon('wand', { size: 15 })}</button>
                     <button type="button" class="blc-tool tap" data-action="toolbar-template" title="Template" aria-label="Template">${Icon('template', { size: 15 })}</button>

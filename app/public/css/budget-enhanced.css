@@ -1266,11 +1266,17 @@
   border-color: rgba(16, 185, 129, 0.35);
   background: rgba(16, 185, 129, 0.05);
 }
+.bli-item__head {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
 .bli-item__summary {
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: 8px 10px;
   border: none;
   background: transparent;
@@ -1303,6 +1309,24 @@
   pointer-events: none;
 }
 .bli-item.is-expanded .bli-item__chev { transform: rotate(180deg); }
+.bli-item__delete {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  padding: 0;
+  border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  background: transparent;
+  color: var(--app-muted);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.bli-item__delete:hover {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.08);
+}
 .bli-item__detail {
   padding: 0 10px 10px;
   display: flex;
