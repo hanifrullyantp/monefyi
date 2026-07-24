@@ -242,28 +242,95 @@ export async function deleteBudgetTemplate(id) {
 }
 
 /**
- * Expand template rows with optional income scaling.
+ * Sum absolute amounts for composition / scaling base.
+ * @param {object[]} rows
+ * @returns {number}
+ */
+export function sumTemplateAmounts(rows) {
+  return (rows || []).reduce((sum, r) => {
+    const items = r.items || [];
+    if (items.length) {
+      return sum + items.reduce((s, i) => s + Number(i.price || 0) * Number(i.qty || 1), 0);
+    }
+    return sum + Math.abs(Number(r.amount || 0));
+  }, 0);
+}
+
+/**
+ * Priority composition percentages for stacked bar.
+ * @param {object} template
+ * @returns {{ key: string, label: string, color: string, amount: number, percent: number }[]}
+ */
+export function getTemplateComposition(template) {
+  const rows = template?.rows || [];
+  const totals = { harus: 0, penting: 0, mau: 0, simpan: 0 };
+  for (const r of rows) {
+    const key = ['harus', 'penting', 'mau', 'simpan'].includes(r.priority)
+      ? r.priority
+      : 'penting';
+    const items = r.items || [];
+    const amt = items.length
+      ? items.reduce((s, i) => s + Number(i.price || 0) * Number(i.qty || 1), 0)
+      : Math.abs(Number(r.amount || 0));
+    // Prefer amount_pct share when no absolute amounts (builtin presets)
+    const pctAmt = r.amount_pct != null ? Number(r.amount_pct) : null;
+    if (amt > 0) totals[key] += amt;
+    else if (pctAmt != null) totals[key] += pctAmt;
+  }
+  const grand = Object.values(totals).reduce((a, b) => a + b, 0) || 1;
+  return Object.values(PRIORITY_LEVELS).map((level) => {
+    const amount = totals[level.key] || 0;
+    return {
+      key: level.key,
+      label: level.label,
+      color: level.color,
+      amount,
+      percent: Math.round((amount / grand) * 1000) / 10,
+    };
+  });
+}
+
+/**
+ * Expand template rows with income scaling.
+ * Rules: priority `harus` (wajib) keeps fixed nominal; others scale by template % × target income.
  * @param {object} template
  * @param {number} income
+ * @param {{ selectedIndexes?: number[]|null }} [options]
  * @returns {object[]}
  */
-export function materializeTemplateRows(template, income = 0) {
-  const baseIncome = Number(template.income || 0);
+export function materializeTemplateRows(template, income = 0, options = {}) {
+  const rawRows = template.rows || [];
+  const selected = options.selectedIndexes;
+  const rowsSource = Array.isArray(selected)
+    ? rawRows.filter((_, i) => selected.includes(i))
+    : rawRows;
+
+  const baseIncome = Number(template.income || 0) || sumTemplateAmounts(rawRows);
   const targetIncome = Number(income || baseIncome || 0);
-  const rows = (template.rows || []).map((raw) => {
+
+  const rows = rowsSource.map((raw) => {
+    const priority = raw.priority || 'penting';
+    const isFixed = priority === 'harus';
+
     let amount = Number(raw.amount || 0);
-    if (raw.amount_pct != null && targetIncome > 0) {
-      amount = Math.round((targetIncome * Number(raw.amount_pct)) / 100 / 1000) * 1000;
-    } else if (baseIncome > 0 && targetIncome > 0 && targetIncome !== baseIncome) {
-      amount = Math.round((amount * targetIncome) / baseIncome / 1000) * 1000;
+    if (!isFixed) {
+      if (raw.amount_pct != null && targetIncome > 0) {
+        amount = Math.round((targetIncome * Number(raw.amount_pct)) / 100 / 1000) * 1000;
+      } else if (baseIncome > 0 && targetIncome > 0) {
+        const pct = amount / baseIncome;
+        amount = Math.round((pct * targetIncome) / 1000) * 1000;
+      }
     }
 
     const items = (raw.items || []).map((item) => {
       let price = Number(item.price || 0);
-      if (item.price_pct != null && targetIncome > 0) {
-        price = Math.round((targetIncome * Number(item.price_pct)) / 100 / 1000) * 1000;
-      } else if (baseIncome > 0 && targetIncome > 0 && targetIncome !== baseIncome) {
-        price = Math.round((price * targetIncome) / baseIncome / 1000) * 1000;
+      if (!isFixed) {
+        if (item.price_pct != null && targetIncome > 0) {
+          price = Math.round((targetIncome * Number(item.price_pct)) / 100 / 1000) * 1000;
+        } else if (baseIncome > 0 && targetIncome > 0) {
+          const pct = price / baseIncome;
+          price = Math.round((pct * targetIncome) / 1000) * 1000;
+        }
       }
       return createBudgetItem({
         ...item,
@@ -275,10 +342,11 @@ export function materializeTemplateRows(template, income = 0) {
       });
     });
 
+    const fromItems = items.reduce((s, i) => s + Number(i.price || 0) * Number(i.qty || 1), 0);
     return createBudgetRow({
       ...raw,
       id: undefined,
-      amount: amount || items.reduce((s, i) => s + Number(i.price || 0) * Number(i.qty || 1), 0),
+      amount: fromItems > 0 ? fromItems : amount,
       items,
       last_month_actual: 0,
       three_month_avg: 0,
@@ -286,6 +354,42 @@ export function materializeTemplateRows(template, income = 0) {
   }).filter((r) => Number(r.amount) > 0 || (r.items || []).length > 0);
 
   return rows;
+}
+
+/**
+ * Build preview rows with editable amounts for load confirm UI.
+ * Indexes match template.rows so partial load stays consistent.
+ * @param {object} template
+ * @param {number} income
+ * @returns {object[]}
+ */
+export function previewTemplateLoad(template, income = 0) {
+  const rawRows = template.rows || [];
+  return rawRows.map((raw, index) => {
+    const materialized = materializeTemplateRows(
+      { ...template, rows: [raw] },
+      income,
+    )[0];
+    const amount = Number(
+      materialized?.amount
+      ?? raw.amount
+      ?? 0,
+    );
+    const items = (materialized?.items || raw.items || []).map((it) => ({
+      name: it.name,
+      qty: it.qty || 1,
+      price: Number(it.price || 0),
+    }));
+    return {
+      index,
+      name: raw.name || materialized?.name || `Kategori ${index + 1}`,
+      priority: raw.priority || materialized?.priority || 'penting',
+      amount,
+      selected: true,
+      fixed: (raw.priority || '') === 'harus',
+      items,
+    };
+  });
 }
 
 /**
@@ -318,14 +422,52 @@ export function cloneTemplateRows(rows, scale = 1) {
  * Apply template by id into current draft month.
  * @param {string} templateId
  * @param {string} month
+ * @param {{ selectedIndexes?: number[], amountOverrides?: Record<number, number> }} [options]
  * @returns {Promise<{ rows: object[], income: number, template_label: string }|null>}
  */
-export async function applyTemplateById(templateId, month) {
+export async function applyTemplateById(templateId, month, options = {}) {
   const template = await getTemplateById(templateId);
   if (!template) return null;
 
   const income = await resolveMonthIncome(month, template.income);
-  const rows = materializeTemplateRows(template, income);
+  let rows = materializeTemplateRows(template, income, {
+    selectedIndexes: options.selectedIndexes,
+  });
+
+  if (options.amountOverrides && typeof options.amountOverrides === 'object') {
+    // Overrides keyed by original template row index
+    const indexMap = Array.isArray(options.selectedIndexes)
+      ? options.selectedIndexes
+      : (template.rows || []).map((_, i) => i);
+    rows = rows.map((row, i) => {
+      const origIdx = indexMap[i];
+      const override = options.amountOverrides[origIdx];
+      if (override == null || !Number.isFinite(Number(override))) return row;
+      const amount = Math.max(0, Math.round(Number(override)));
+      if (row.items?.length === 1) {
+        return createBudgetRow({
+          ...row,
+          amount,
+          items: [createBudgetItem({ ...row.items[0], price: amount, qty: row.items[0].qty || 1 })],
+        });
+      }
+      if (row.items?.length > 1) {
+        const total = row.items.reduce((s, it) => s + Number(it.price || 0) * Number(it.qty || 1), 0) || 1;
+        const scaled = row.items.map((it) => {
+          const share = (Number(it.price || 0) * Number(it.qty || 1)) / total;
+          const price = Math.round((amount * share) / Math.max(1, Number(it.qty || 1)) / 1000) * 1000;
+          return createBudgetItem({ ...it, price });
+        });
+        return createBudgetRow({
+          ...row,
+          amount: scaled.reduce((s, it) => s + Number(it.price || 0) * Number(it.qty || 1), 0),
+          items: scaled,
+        });
+      }
+      return createBudgetRow({ ...row, amount });
+    });
+  }
+
   await setActiveTemplateId(template.id);
 
   return {
@@ -388,6 +530,9 @@ if (typeof window !== 'undefined') {
     applyTemplateForNewMonth,
     cloneTemplateRows,
     materializeTemplateRows,
+    previewTemplateLoad,
+    getTemplateComposition,
+    sumTemplateAmounts,
     getBuiltinTemplates,
   };
 }

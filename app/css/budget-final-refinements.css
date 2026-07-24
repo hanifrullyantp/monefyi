@@ -252,9 +252,9 @@
 .blc-header-top {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
 }
 
 .blc-title {
@@ -265,19 +265,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .blc-count { color: rgba(255,255,255,0.4); font-weight: 400; font-size: 12px; }
-
-.blc-sort {
-  padding: 6px 10px;
-  background: rgba(255,255,255,0.05);
-  color: white;
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 8px;
-  font-size: 12px;
-  cursor: pointer;
-}
 
 .blc-filter-active {
   display: inline-flex;

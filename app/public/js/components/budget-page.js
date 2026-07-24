@@ -15,6 +15,14 @@ import { filterBudgets, getFilter, onFilterChange } from '../services/global-fil
 
 const SORT_KEY = 'budget_sort';
 
+const SORT_LABELS = {
+  urgent: 'Urgent',
+  priority: 'Prioritas',
+  progress: 'Progress',
+  amount: 'Nominal',
+  name: 'Nama',
+};
+
 /** @type {string|null} */
 let _expandedBudgetId = null;
 /** @type {string|null} */
@@ -540,20 +548,51 @@ function wireHandlers(container, ctx) {
     });
   });
 
-  container.querySelector('#budget-sort')?.addEventListener('change', (e) => {
-    const sort = e.target.value;
+  const sortBtn = container.querySelector('[data-action="toolbar-sort"]');
+  const sortMenu = container.querySelector('#budget-sort-menu');
+  const applySort = (sort) => {
     localStorage.setItem(SORT_KEY, sort);
+    if (sortBtn) sortBtn.title = `Urutkan: ${SORT_LABELS[sort] || sort}`;
+    sortMenu?.querySelectorAll('.blc-sort-option').forEach((opt) => {
+      opt.classList.toggle('is-active', opt.dataset.sort === sort);
+    });
     const section = container.querySelector('#budget-list-content');
     const liveRows = getDraftRows().length ? getDraftRows() : rows;
     if (section) renderBudgetListSection(section, liveRows, transactions, month, sort, income);
     wireListInteractions(container, ctx);
-  });
-
-  container.querySelector('[data-action="toolbar-filter"]')?.addEventListener('click', async (e) => {
+  };
+  sortBtn?.addEventListener('click', (e) => {
     e.stopPropagation();
-    const { showFilterPopup } = await import('./global-filter-popup.js');
-    await showFilterPopup();
+    const open = sortMenu?.hasAttribute('hidden');
+    if (open) {
+      sortMenu.removeAttribute('hidden');
+      sortBtn.setAttribute('aria-expanded', 'true');
+    } else {
+      sortMenu.setAttribute('hidden', '');
+      sortBtn.setAttribute('aria-expanded', 'false');
+    }
   });
+  sortMenu?.querySelectorAll('[data-sort]').forEach((opt) => {
+    opt.addEventListener('click', (e) => {
+      e.stopPropagation();
+      applySort(opt.dataset.sort);
+      sortMenu.setAttribute('hidden', '');
+      sortBtn?.setAttribute('aria-expanded', 'false');
+    });
+  });
+  if (!container.dataset.sortOutsideWired) {
+    container.dataset.sortOutsideWired = '1';
+    document.addEventListener('click', (e) => {
+      if (!container.isConnected) return;
+      const wrap = container.querySelector('.blc-sort-wrap');
+      const menu = container.querySelector('#budget-sort-menu');
+      const btn = container.querySelector('[data-action="toolbar-sort"]');
+      if (!menu || menu.hasAttribute('hidden')) return;
+      if (wrap?.contains(e.target)) return;
+      menu.setAttribute('hidden', '');
+      btn?.setAttribute('aria-expanded', 'false');
+    });
+  }
 
   wireToolbar(container, ctx);
   wireListInteractions(container, ctx);
@@ -1053,14 +1092,11 @@ export async function renderBudgetPage(container, ctx) {
           <section class="budget-list-card budget-page-list">
             <div class="blc-header">
               <div class="blc-header-top">
-                <div class="blc-title-row">
-                  <h3 class="blc-title">
-                    ${Icon('target', { size: 16 })}
-                    Daftar Budgeting
-                    <span class="blc-count">(${rows.length})</span>
-                  </h3>
-                  <button type="button" class="blc-tool tap" data-action="toolbar-filter" title="Filter" aria-label="Filter">${Icon('filter', { size: 15 })}</button>
-                </div>
+                <h3 class="blc-title">
+                  ${Icon('target', { size: 16 })}
+                  Daftar Budgeting
+                  <span class="blc-count">(${rows.length})</span>
+                </h3>
                 <div class="blc-header-actions">
                   <div class="blc-toolbar" role="toolbar" aria-label="Aksi daftar budget">
                     <button type="button" class="blc-tool tap" data-action="toolbar-undo" title="Undo" aria-label="Undo">${Icon('undo', { size: 15 })}</button>
@@ -1073,14 +1109,20 @@ export async function renderBudgetPage(container, ctx) {
                     <button type="button" class="blc-tool tap" data-action="toolbar-add" title="Tambah" aria-label="Tambah">${Icon('plus', { size: 15 })}</button>
                     <button type="button" class="blc-tool tap" data-action="toolbar-auto" title="Auto Budget" aria-label="Auto Budget">${Icon('wand', { size: 15 })}</button>
                     <button type="button" class="blc-tool tap" data-action="toolbar-template" title="Template" aria-label="Template">${Icon('template', { size: 15 })}</button>
+                    <span class="blc-tool-sep" aria-hidden="true"></span>
+                    <div class="blc-sort-wrap">
+                      <button type="button" class="blc-tool tap" data-action="toolbar-sort" title="Urutkan: ${escapeHtml(SORT_LABELS[currentSort] || 'Urgent')}" aria-label="Urutkan" aria-haspopup="menu" aria-expanded="false">
+                        ${Icon('sort', { size: 15 })}
+                      </button>
+                      <div class="blc-sort-menu" id="budget-sort-menu" role="menu" hidden>
+                        ${Object.entries(SORT_LABELS).map(([value, label]) => `
+                          <button type="button" class="blc-sort-option ${currentSort === value ? 'is-active' : ''}" role="menuitem" data-sort="${value}">
+                            ${escapeHtml(label)}
+                          </button>
+                        `).join('')}
+                      </div>
+                    </div>
                   </div>
-                  <select class="blc-sort" id="budget-sort">
-                    <option value="urgent" ${currentSort === 'urgent' ? 'selected' : ''}>Urgent</option>
-                    <option value="priority" ${currentSort === 'priority' ? 'selected' : ''}>Prioritas</option>
-                    <option value="progress" ${currentSort === 'progress' ? 'selected' : ''}>Progress</option>
-                    <option value="amount" ${currentSort === 'amount' ? 'selected' : ''}>Nominal</option>
-                    <option value="name" ${currentSort === 'name' ? 'selected' : ''}>Nama</option>
-                  </select>
                 </div>
               </div>
               ${filter.priority !== 'all' ? `
