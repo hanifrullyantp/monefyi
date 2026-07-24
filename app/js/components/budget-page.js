@@ -399,7 +399,27 @@ function renderBudgetListSection(section, rows, transactions, month, sort, incom
  * @returns {object[]}
  */
 function getDraftRows() {
-  return window.STATE?.budgetDraft?.rows || [];
+  const draft = window.STATE?.budgetDraft?.rows;
+  if (Array.isArray(draft) && draft.length) return draft;
+  const ctxRows = _pageCtx?.rows;
+  if (Array.isArray(ctxRows) && ctxRows.length) return ctxRows;
+  return Array.isArray(draft) ? draft : [];
+}
+
+/**
+ * Keep budgetDraft.rows aligned with the rows used to render hero + list.
+ * @param {object[]} rows
+ * @param {string} month YYYY-MM
+ * @param {number} income
+ */
+function syncDraftRows(rows, month, income) {
+  if (!window.STATE) return;
+  if (!window.STATE.budgetDraft) {
+    window.STATE.budgetDraft = { month, income: Number(income || 0), rows: [], initialFrom: 'page' };
+  }
+  window.STATE.budgetDraft.rows = rows;
+  window.STATE.budgetDraft.month = month;
+  if (Number.isFinite(Number(income))) window.STATE.budgetDraft.income = Number(income);
 }
 
 /**
@@ -653,6 +673,9 @@ function syncToolbarState(container) {
     isDirty: !!api?.isDirty?.(),
     hasEditBefore: !!_editBeforeRows,
     draftTotal,
+    draftRowCount: getDraftRows().length,
+    ctxRowCount: _pageCtx?.rows?.length || 0,
+    stateDraftLen: window.STATE?.budgetDraft?.rows?.length ?? null,
   }, 'H14');
   // #endregion
   if (undoBtn) {
@@ -1263,16 +1286,36 @@ function wireItemEditors(container, ctx) {
  */
 function wireListInteractions(container, ctx) {
   _pageCtx = ctx;
+
+  const listEl = container.querySelector('#budget-list-content');
+  if (listEl) {
+    listEl.onclick = (e) => {
+      const action = e.target.closest?.('[data-action="toggle-budget"], [data-action="toggle-item"], [data-action="add-item"]');
+      if (!action) return;
+      handleBudgetListClick(e, container);
+    };
+  }
+
   if (!_docListClickWired) {
     _docListClickWired = true;
     document.addEventListener('click', (e) => {
-      if (!window.STATE?.ui?.budgetPageOpen) return;
       const root = document.getElementById('budgetPageRoot');
-      if (!root || root.classList.contains('hidden')) return;
-      if (!root.contains(e.target)) return;
+      const inBudget = !!(root && !root.classList.contains('hidden') && root.contains(e.target));
+      if (!inBudget) return;
       const action = e.target.closest?.('[data-action="toggle-budget"], [data-action="toggle-item"], [data-action="add-item"]');
-      if (!action) return;
-      handleBudgetListClick(e, root);
+      if (action) {
+        handleBudgetListClick(e, root);
+        return;
+      }
+      if (e.target.closest?.('#budget-list-content, .bli-item, .budget-list-row')) {
+        // #region agent log
+        _DBG('budget-page.js:docClick', 'list click missed action', {
+          budgetPageOpen: !!window.STATE?.ui?.budgetPageOpen,
+          targetTag: e.target?.tagName,
+          closestAction: e.target.closest?.('[data-action]')?.dataset?.action || null,
+        }, 'H1');
+        // #endregion
+      }
     }, true);
   }
 
@@ -1339,9 +1382,7 @@ export async function renderBudgetPage(container, ctx) {
   const sources = await getIncomeSources(displayMonth);
   const income = await getTotalIncome(displayMonth);
 
-  if (window.STATE?.budgetDraft) {
-    window.STATE.budgetDraft.income = income;
-  }
+  syncDraftRows(rows, displayMonth, income);
 
   const currentSort = localStorage.getItem(SORT_KEY) || 'urgent';
   const sourcesLen = sources.length;
