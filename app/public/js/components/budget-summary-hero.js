@@ -77,6 +77,20 @@ export async function renderBudgetSummaryHero(container, ctx) {
   // Realisasi = total pengeluaran bulan ini / total budgeting (not only linked)
   const totalExpenseMonth = monthExpenses.reduce((s, t) => s + Math.abs(Number(t.amount || 0)), 0);
   const totalSpent = totalExpenseMonth;
+  // #region agent log
+  fetch('http://127.0.0.1:7791/ingest/13f8c143-a21b-4f22-9274-9c4286830b77', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '4f55da' },
+    body: JSON.stringify({
+      sessionId: '4f55da',
+      location: 'budget-summary-hero.js:render',
+      message: 'hero computed',
+      data: { monthKey, totalBudget, totalSpent, rowCount: rows.length, monthExpenseCount: monthExpenses.length, txArgLen: Array.isArray(transactions) ? transactions.length : null },
+      hypothesisId: 'H7',
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
   const remaining = totalBudget - totalSpent;
   const percentUsed = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
   const unlinkedExpense = Math.max(0, totalExpenseMonth - linkedSpent);

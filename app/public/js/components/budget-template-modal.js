@@ -181,8 +181,8 @@ function showLoadConfirmModal({ template, income, preview }) {
           </ul>
         </div>
         <footer class="modal-footer btm-confirm-footer">
-          <button type="button" class="btc-btn ghost tap" data-action="close">Batal</button>
-          <button type="button" class="btc-btn primary tap" data-action="confirm">Load ke draft</button>
+          <button type="button" class="btn-secondary-budget tap" data-action="close">Batal</button>
+          <button type="button" class="btn-primary-budget tap" data-action="confirm">${Icon('check', { size: 14 })} Load ke draft</button>
         </footer>
       </div>
     `;
@@ -349,7 +349,7 @@ export async function showBudgetTemplateModal(options = {}) {
           <p class="btm-hint">${rows.length} kategori · Income Rp ${formatIDR(income)} · ${escapeHtml(month || '—')}</p>
           <div class="btm-save-row">
             <input type="text" class="form-input btm-save-name" id="btm-save-name" placeholder="Nama template" value="Template ${escapeHtml(month || '')}" ${rows.length === 0 ? 'disabled' : ''}>
-            <button type="button" class="btc-btn primary tap" data-action="save-current" ${rows.length === 0 ? 'disabled' : ''}>
+            <button type="button" class="btn-primary-budget tap" data-action="save-current" ${rows.length === 0 ? 'disabled' : ''}>
               ${Icon('save', { size: 14 })} Simpan
             </button>
           </div>

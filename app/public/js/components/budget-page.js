@@ -36,6 +36,28 @@ let _pageCtx = null;
 /** Stable tx/month for hero realisasi during draft edits (refreshed on full page load / save) */
 let _heroSnapshot = null;
 
+// #region agent log
+const _DBG = (location, message, data, hypothesisId) => {
+  const entry = { sessionId: '4f55da', location, message, data, hypothesisId, timestamp: Date.now() };
+  try {
+    const k = 'debug-4f55da';
+    const prev = JSON.parse(localStorage.getItem(k) || '[]');
+    prev.push(entry);
+    if (prev.length > 80) prev.splice(0, prev.length - 80);
+    localStorage.setItem(k, JSON.stringify(prev));
+  } catch { /* ignore */ }
+  fetch('http://127.0.0.1:7791/ingest/13f8c143-a21b-4f22-9274-9c4286830b77', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '4f55da' },
+    body: JSON.stringify(entry),
+  }).catch(() => {});
+};
+// #endregion
+
+/** @type {boolean} */
+let _docListClickWired = false;
+/** @type {boolean} */
+let _toolbarWired = false;
 /**
  * @param {unknown} str
  * @returns {string}
@@ -449,26 +471,73 @@ function getHeroRowsFromDraft() {
  */
 function setHeroSnapshot(snap) {
   if (!snap?.month) return;
+  const txs = Array.isArray(snap.transactions) && snap.transactions.length
+    ? snap.transactions
+    : resolveMonthTransactions(snap.month);
   _heroSnapshot = {
     month: snap.month,
-    transactions: Array.isArray(snap.transactions) ? snap.transactions : resolveMonthTransactions(snap.month),
+    transactions: txs,
     income: Number(snap.income || 0),
   };
+}
+
+/**
+ * Realisasi tx list — never use empty snapshot when STATE has data.
+ * @param {string} month
+ * @returns {object[]}
+ */
+function resolveHeroTransactions(month) {
+  const mk = month || resolveBudgetMonth();
+  if (_heroSnapshot?.transactions?.length) return _heroSnapshot.transactions;
+  if (_pageCtx?.transactions?.length) return _pageCtx.transactions;
+  return resolveMonthTransactions(mk);
+}
+
+/**
+ * Patch hero amounts immediately (no full re-render flash).
+ * @param {HTMLElement} container
+ * @param {number} totalSpent
+ * @param {number} totalBudget
+ */
+function patchHeroAmounts(container, totalSpent, totalBudget) {
+  const hero = container?.querySelector('#budget-summary-hero');
+  if (!hero) return;
+  const spentEl = hero.querySelector('.bsh-spent');
+  const totalEl = hero.querySelector('.bsh-total');
+  const pctEl = hero.querySelector('.bsh-percent');
+  const fillEl = hero.querySelector('.bsh-progress-fill');
+  if (spentEl && Number.isFinite(totalSpent)) spentEl.textContent = `Rp ${formatIDR(totalSpent)}`;
+  if (totalEl && Number.isFinite(totalBudget)) totalEl.textContent = `Rp ${formatIDR(totalBudget)}`;
+  const pct = totalBudget > 0 ? Math.min(100, Math.round((totalSpent / totalBudget) * 100)) : 0;
+  if (pctEl) pctEl.textContent = `${pct}% realisasi`;
+  if (fillEl) fillEl.style.width = `${pct}%`;
 }
 
 function beginEditGesture() {
   if (!_editBeforeRows && window.STATE?.budgetDraft) {
     _editBeforeRows = JSON.parse(JSON.stringify(window.STATE.budgetDraft.rows || []));
+    // #region agent log
+    _DBG('budget-page.js:beginEditGesture', 'edit gesture started', { hasBeforeRows: !!_editBeforeRows, rowCount: _editBeforeRows?.length || 0 }, 'H10');
+    // #endregion
   }
+  import('../services/budget-changes-tracker.js')
+    .then(({ markSessionDirty }) => markSessionDirty(true))
+    .catch(() => {});
 }
 
 async function commitEditGesture(label = 'Edit item budget') {
+  // #region agent log
+  _DBG('budget-page.js:commitEditGesture', 'commit called', { label, hasBeforeRows: !!_editBeforeRows, hasDraft: !!window.STATE?.budgetDraft }, 'H10');
+  // #endregion
   if (!_editBeforeRows || !window.STATE?.budgetDraft) return;
   try {
     const { recordBudgetRowsChange } = await import('../services/budget-changes-tracker.js');
     recordBudgetRowsChange(label, _editBeforeRows, window.STATE.budgetDraft.rows);
   } catch { /* ignore */ }
   _editBeforeRows = null;
+  import('../services/budget-changes-tracker.js')
+    .then(({ markSessionDirty }) => markSessionDirty(false))
+    .catch(() => {});
   syncToolbarState(document.getElementById('budgetPageRoot'));
 }
 
@@ -479,7 +548,7 @@ async function commitEditGesture(label = 'Edit item budget') {
  */
 function syncLiveDashboard(container, income) {
   const liveIncome = Number(window.STATE?.budgetDraft?.income || income || 0);
-  const rows = getDraftRows();
+  const rows = getHeroRowsFromDraft();
   const html = renderAllocationStripHtml(liveIncome, rows);
   container.querySelectorAll('[data-role="alloc-host"], [data-role="alloc-host-mobile"]').forEach((host) => {
     host.innerHTML = html;
@@ -492,6 +561,13 @@ function syncLiveDashboard(container, income) {
     if (amtEl) amtEl.textContent = formatCompact(row.amount);
   });
 
+  const month = _heroSnapshot?.month || _pageCtx?.month || resolveBudgetMonth();
+  const transactions = resolveHeroTransactions(month);
+  const totalBudget = rows.reduce((s, b) => s + Math.abs(Number(b.amount || 0)), 0);
+  const totalSpent = transactions
+    .filter((t) => String(t.type || 'expense').toLowerCase() === 'expense')
+    .reduce((s, t) => s + Math.abs(Number(t.amount || 0)), 0);
+  patchHeroAmounts(container, totalSpent, totalBudget);
   scheduleHeroRefresh(container, liveIncome);
 }
 
@@ -509,11 +585,25 @@ function scheduleHeroRefresh(container, income) {
 
     const rows = getHeroRowsFromDraft();
     const month = _heroSnapshot?.month || _pageCtx?.month || resolveBudgetMonth();
-    const transactions = (_heroSnapshot?.transactions?.length)
-      ? _heroSnapshot.transactions
-      : (_pageCtx?.transactions?.length ? _pageCtx.transactions : resolveMonthTransactions(month));
+    const transactions = resolveHeroTransactions(month);
     const liveIncome = Number(window.STATE?.budgetDraft?.income || income || _heroSnapshot?.income || _pageCtx?.income || 0);
-
+    const totalBudget = rows.reduce((s, b) => s + Math.abs(Number(b.amount || 0)), 0);
+    const totalSpent = transactions
+      .filter((t) => String(t.type || 'expense').toLowerCase() === 'expense')
+      .reduce((s, t) => s + Math.abs(Number(t.amount || 0)), 0);
+    // #region agent log
+    _DBG('budget-page.js:scheduleHeroRefresh', 'hero refresh', {
+      month,
+      rowCount: rows.length,
+      totalBudget,
+      totalSpent,
+      txCount: transactions.length,
+      snapTx: _heroSnapshot?.transactions?.length || 0,
+      ctxTx: _pageCtx?.transactions?.length || 0,
+      draftRows: getDraftRows().length,
+    }, 'H6');
+    // #endregion
+    patchHeroAmounts(container, totalSpent, totalBudget);
     try {
       const { renderBudgetSummaryHero } = await import('./budget-summary-hero.js');
       const overBudgetCount = rows.filter((b) => calculateProgress(b, transactions, month).status === 'over').length;
@@ -552,10 +642,48 @@ function syncToolbarState(container) {
   const canUndo = !!api?.canUndo?.();
   const canRedo = !!api?.canRedo?.();
   const dirty = !!api?.isDirty?.() || !!_editBeforeRows;
-  if (undoBtn) undoBtn.disabled = !canUndo;
-  if (redoBtn) redoBtn.disabled = !canRedo;
-  if (saveBtn) saveBtn.disabled = false;
-  if (cancelBtn) cancelBtn.disabled = !dirty && !canUndo;
+  const draftTotal = getHeroRowsFromDraft().reduce((s, b) => s + Math.abs(Number(b.amount || 0)), 0);
+  const toolbar = container.querySelector('.blc-toolbar');
+  toolbar?.classList.toggle('blc-toolbar--dirty', dirty);
+  // #region agent log
+  _DBG('budget-page.js:syncToolbarState', 'toolbar state', {
+    canUndo,
+    canRedo,
+    dirty,
+    isDirty: !!api?.isDirty?.(),
+    hasEditBefore: !!_editBeforeRows,
+    draftTotal,
+  }, 'H14');
+  // #endregion
+  if (undoBtn) {
+    undoBtn.disabled = !canUndo;
+    undoBtn.classList.toggle('is-active', canUndo);
+  }
+  if (redoBtn) {
+    redoBtn.disabled = !canRedo;
+    redoBtn.classList.toggle('is-active', canRedo);
+  }
+  if (saveBtn) {
+    saveBtn.disabled = !dirty;
+    saveBtn.classList.toggle('is-active', dirty);
+    let amtEl = saveBtn.querySelector('[data-role="toolbar-save-amt"]');
+    if (dirty) {
+      if (!amtEl) {
+        amtEl = document.createElement('span');
+        amtEl.className = 'blc-save-amt';
+        amtEl.dataset.role = 'toolbar-save-amt';
+        saveBtn.appendChild(amtEl);
+      }
+      amtEl.textContent = formatCompact(draftTotal);
+      amtEl.hidden = false;
+    } else if (amtEl) {
+      amtEl.hidden = true;
+    }
+  }
+  if (cancelBtn) {
+    cancelBtn.disabled = !dirty && !canUndo;
+    cancelBtn.classList.toggle('is-active', dirty || canUndo);
+  }
   const hasSelection = !!(_selectedBudgetId || _expandedBudgetId);
   container.querySelectorAll('[data-action="toolbar-duplicate"], [data-action="toolbar-delete"]').forEach((btn) => {
     btn.disabled = !hasSelection;
@@ -670,11 +798,149 @@ function wireHandlers(container, ctx) {
 }
 
 /**
+ * Document-level toolbar delegation (survives innerHTML re-render).
+ */
+function wireToolbarDelegation() {
+  if (_toolbarWired) return;
+  _toolbarWired = true;
+
+  document.addEventListener('click', async (e) => {
+    if (!window.STATE?.ui?.budgetPageOpen) return;
+    const root = document.getElementById('budgetPageRoot');
+    if (!root || root.classList.contains('hidden')) return;
+    const btn = e.target.closest?.('[data-action^="toolbar-"]');
+    if (!btn || !root.contains(btn)) return;
+    const ctx = _pageCtx;
+    if (!ctx) return;
+    const { month, onRefresh, onSave } = ctx;
+    const action = btn.dataset.action;
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (action === 'toolbar-undo') {
+      const { undo } = await import('../services/budget-changes-tracker.js');
+      await undo();
+      _editBeforeRows = null;
+      syncToolbarState(root);
+      return;
+    }
+    if (action === 'toolbar-redo') {
+      const { redo } = await import('../services/budget-changes-tracker.js');
+      await redo();
+      syncToolbarState(root);
+      return;
+    }
+    if (action === 'toolbar-save') {
+      // #region agent log
+      _DBG('budget-page.js:toolbar-save', 'save clicked', {
+        draftRowCount: getDraftRows().length,
+        totalBudget: getDraftRows().reduce((s, r) => s + Math.abs(Number(r.amount || 0)), 0),
+        hasOnSave: typeof onSave === 'function',
+        hasHandleSave: typeof window.handleSaveBudget === 'function',
+        hasEditBefore: !!_editBeforeRows,
+      }, 'H12');
+      // #endregion
+      if (_editBeforeRows) await commitEditGesture('Edit item budget');
+      try {
+        if (typeof onSave === 'function') await onSave();
+        else if (typeof window.handleSaveBudget === 'function') await window.handleSaveBudget();
+      } catch (err) {
+        console.error('[budget] save failed', err);
+        showPageToast('Gagal simpan budget');
+      }
+      return;
+    }
+    if (action === 'toolbar-cancel') {
+      if (!confirm('Batalkan semua perubahan yang belum disimpan?')) return;
+      _expandedBudgetId = null;
+      _expandedItemId = null;
+      _editBeforeRows = null;
+      import('../services/budget-changes-tracker.js').then(({ markSessionDirty }) => markSessionDirty(false)).catch(() => {});
+      await onRefresh?.({ fromSaved: true });
+      return;
+    }
+    if (action === 'toolbar-add') {
+      const { showBudgetFormModal } = await import('./budget-form-modal.js');
+      showBudgetFormModal({ priority: 'penting', month }, {
+        onSaved: () => onRefresh?.({ fromSaved: false }),
+        showSummary: false,
+      });
+      return;
+    }
+    if (action === 'toolbar-auto') {
+      const { showBudgetGeneratorModal } = await import('./budget-generator-modal.js');
+      showBudgetGeneratorModal(() => onRefresh?.({ fromSaved: false }));
+      return;
+    }
+    if (action === 'toolbar-duplicate') {
+      const id = _selectedBudgetId || _expandedBudgetId;
+      const draft = window.STATE?.budgetDraft;
+      if (!id || !draft?.rows) {
+        showPageToast('Pilih kategori budget dulu');
+        return;
+      }
+      const src = draft.rows.find((r) => r.id === id);
+      if (!src) return;
+      const before = JSON.parse(JSON.stringify(draft.rows));
+      const clone = createBudgetRow({
+        ...src,
+        id: undefined,
+        name: `${src.name || 'Budget'} (salinan)`,
+        items: (src.items || []).map((it) => createBudgetItem({ ...it, id: undefined })),
+      });
+      draft.rows.push(clone);
+      _selectedBudgetId = clone.id;
+      _expandedBudgetId = clone.id;
+      try {
+        const { recordBudgetRowsChange } = await import('../services/budget-changes-tracker.js');
+        recordBudgetRowsChange('Duplikat budget', before, draft.rows);
+      } catch { /* ignore */ }
+      showPageToast('Kategori diduplikasi');
+      await refreshFromDraft(ctx);
+      return;
+    }
+    if (action === 'toolbar-delete') {
+      const id = _selectedBudgetId || _expandedBudgetId;
+      const draft = window.STATE?.budgetDraft;
+      if (!id || !draft?.rows) {
+        showPageToast('Pilih kategori budget dulu');
+        return;
+      }
+      if (!confirm('Hapus kategori budget ini?')) return;
+      const before = JSON.parse(JSON.stringify(draft.rows));
+      draft.rows = draft.rows.filter((r) => r.id !== id);
+      if (_expandedBudgetId === id) _expandedBudgetId = null;
+      if (_selectedBudgetId === id) _selectedBudgetId = null;
+      if (_expandedItemId) _expandedItemId = null;
+      try {
+        const { recordBudgetRowsChange } = await import('../services/budget-changes-tracker.js');
+        recordBudgetRowsChange('Hapus budget', before, draft.rows);
+      } catch { /* ignore */ }
+      showPageToast('Kategori dihapus');
+      await refreshFromDraft(ctx);
+      return;
+    }
+    if (action === 'toolbar-template') {
+      const { showBudgetTemplateModal } = await import('./budget-template-modal.js');
+      const liveRows = getDraftRows().length ? getDraftRows() : (ctx.rows || []);
+      await showBudgetTemplateModal({
+        month,
+        income: Number(ctx.income || window.STATE?.budgetDraft?.income || 0),
+        rows: liveRows,
+        onApplied: () => refreshFromDraft(ctx),
+      });
+    }
+  }, true);
+}
+
+/**
  * @param {HTMLElement} container
  * @param {object} ctx
  */
 function wireToolbar(container, ctx) {
-  const { month, onRefresh, onSave } = ctx;
+  wireToolbarDelegation();
+
+  const { month, onRefresh } = ctx;
 
   const addBudget = async () => {
     const { showBudgetFormModal } = await import('./budget-form-modal.js');
@@ -692,91 +958,6 @@ function wireToolbar(container, ctx) {
     btn.addEventListener('click', async () => {
       const { showBudgetGeneratorModal } = await import('./budget-generator-modal.js');
       showBudgetGeneratorModal(() => onRefresh?.({ fromSaved: false }));
-    });
-  });
-
-  container.querySelector('[data-action="toolbar-undo"]')?.addEventListener('click', async () => {
-    const { undo } = await import('../services/budget-changes-tracker.js');
-    await undo();
-    syncToolbarState(container);
-  });
-
-  container.querySelector('[data-action="toolbar-redo"]')?.addEventListener('click', async () => {
-    const { redo } = await import('../services/budget-changes-tracker.js');
-    await redo();
-    syncToolbarState(container);
-  });
-
-  container.querySelector('[data-action="toolbar-save"]')?.addEventListener('click', async () => {
-    await commitEditGesture('Edit item budget');
-    if (typeof onSave === 'function') await onSave();
-    else if (typeof window.handleSaveBudget === 'function') await window.handleSaveBudget();
-  });
-
-  container.querySelector('[data-action="toolbar-cancel"]')?.addEventListener('click', async () => {
-    if (!confirm('Batalkan semua perubahan yang belum disimpan?')) return;
-    _expandedBudgetId = null;
-    _expandedItemId = null;
-    _editBeforeRows = null;
-    await onRefresh?.({ fromSaved: true });
-  });
-
-  container.querySelector('[data-action="toolbar-duplicate"]')?.addEventListener('click', async () => {
-    const id = _selectedBudgetId || _expandedBudgetId;
-    const draft = window.STATE?.budgetDraft;
-    if (!id || !draft?.rows) {
-      showPageToast('Pilih kategori budget dulu');
-      return;
-    }
-    const src = draft.rows.find((r) => r.id === id);
-    if (!src) return;
-    const before = JSON.parse(JSON.stringify(draft.rows));
-    const clone = createBudgetRow({
-      ...src,
-      id: undefined,
-      name: `${src.name || 'Budget'} (salinan)`,
-      items: (src.items || []).map((it) => createBudgetItem({ ...it, id: undefined })),
-    });
-    draft.rows.push(clone);
-    _selectedBudgetId = clone.id;
-    _expandedBudgetId = clone.id;
-    try {
-      const { recordBudgetRowsChange } = await import('../services/budget-changes-tracker.js');
-      recordBudgetRowsChange('Duplikat budget', before, draft.rows);
-    } catch { /* ignore */ }
-    showPageToast('Kategori diduplikasi');
-    await refreshFromDraft(ctx);
-  });
-
-  container.querySelector('[data-action="toolbar-delete"]')?.addEventListener('click', async () => {
-    const id = _selectedBudgetId || _expandedBudgetId;
-    const draft = window.STATE?.budgetDraft;
-    if (!id || !draft?.rows) {
-      showPageToast('Pilih kategori budget dulu');
-      return;
-    }
-    if (!confirm('Hapus kategori budget ini?')) return;
-    const before = JSON.parse(JSON.stringify(draft.rows));
-    draft.rows = draft.rows.filter((r) => r.id !== id);
-    if (_expandedBudgetId === id) _expandedBudgetId = null;
-    if (_selectedBudgetId === id) _selectedBudgetId = null;
-    if (_expandedItemId) _expandedItemId = null;
-    try {
-      const { recordBudgetRowsChange } = await import('../services/budget-changes-tracker.js');
-      recordBudgetRowsChange('Hapus budget', before, draft.rows);
-    } catch { /* ignore */ }
-    showPageToast('Kategori dihapus');
-    await refreshFromDraft(ctx);
-  });
-
-  container.querySelector('[data-action="toolbar-template"]')?.addEventListener('click', async () => {
-    const { showBudgetTemplateModal } = await import('./budget-template-modal.js');
-    const liveRows = getDraftRows().length ? getDraftRows() : (ctx.rows || []);
-    await showBudgetTemplateModal({
-      month,
-      income: Number(ctx.income || window.STATE?.budgetDraft?.income || 0),
-      rows: liveRows,
-      onApplied: () => refreshFromDraft(ctx),
     });
   });
 }
@@ -807,6 +988,17 @@ function applyExpandDom(container, ctx, opts = {}) {
     if (!expanded || !itemsEl) return;
 
     const row = rows.find((r) => r.id === id);
+    // #region agent log
+    _DBG('budget-page.js:applyExpandDom', 'expand block', {
+      id,
+      expanded,
+      rebuildItems,
+      rowFound: !!row,
+      draftRowCount: rows.length,
+      itemCount: row?.items?.length || 0,
+      expandedItemId: _expandedItemId,
+    }, 'H3');
+    // #endregion
     if (!row) return;
     ensureRowItems(row);
 
@@ -875,9 +1067,17 @@ function wireAddItemButtons(container, ctx) {
  * Delegated clicks for accordion rows/items — survives list DOM rebuilds.
  * @param {MouseEvent} e
  */
-function handleBudgetListClick(e) {
-  const container = e.currentTarget;
+function handleBudgetListClick(e, containerOverride) {
+  const container = containerOverride || document.getElementById('budgetPageRoot');
   const ctx = _pageCtx;
+  const targetAction = e.target?.closest?.('[data-action]')?.dataset?.action || null;
+  // #region agent log
+  _DBG('budget-page.js:handleBudgetListClick', 'list click', {
+    targetAction,
+    hasCtx: !!ctx,
+    hasContainer: !!container,
+  }, 'H1');
+  // #endregion
   if (!container || !ctx) return;
 
   const toggleBudget = e.target.closest?.('[data-action="toggle-budget"]');
@@ -1024,6 +1224,15 @@ function wireItemEditors(container, ctx) {
       const v = Number(slider?.value || 0);
       if (priceInput) priceInput.value = String(v);
       const row = applyToDraft({ price: v });
+      // #region agent log
+      _DBG('budget-page.js:syncFromSlider', 'slider input', {
+        budgetId,
+        itemId,
+        value: v,
+        rowAmount: row?.amount,
+        draftTotal: getDraftRows().reduce((s, r) => s + Math.abs(Number(r.amount || 0)), 0),
+      }, 'H8');
+      // #endregion
       syncSummaryLabels(row);
       syncLiveDashboard(container, income);
       syncToolbarState(container);
@@ -1054,9 +1263,17 @@ function wireItemEditors(container, ctx) {
  */
 function wireListInteractions(container, ctx) {
   _pageCtx = ctx;
-  if (container.dataset.listDelegationWired !== '1') {
-    container.dataset.listDelegationWired = '1';
-    container.addEventListener('click', handleBudgetListClick);
+  if (!_docListClickWired) {
+    _docListClickWired = true;
+    document.addEventListener('click', (e) => {
+      if (!window.STATE?.ui?.budgetPageOpen) return;
+      const root = document.getElementById('budgetPageRoot');
+      if (!root || root.classList.contains('hidden')) return;
+      if (!root.contains(e.target)) return;
+      const action = e.target.closest?.('[data-action="toggle-budget"], [data-action="toggle-item"], [data-action="add-item"]');
+      if (!action) return;
+      handleBudgetListClick(e, root);
+    }, true);
   }
 
   wireAddItemButtons(container, ctx);
@@ -1192,7 +1409,7 @@ export async function renderBudgetPage(container, ctx) {
                   <div class="blc-toolbar" role="toolbar" aria-label="Aksi daftar budget">
                     <button type="button" class="blc-tool tap" data-action="toolbar-undo" title="Undo" aria-label="Undo">${Icon('undo', { size: 15 })}</button>
                     <button type="button" class="blc-tool tap" data-action="toolbar-redo" title="Redo" aria-label="Redo">${Icon('redo', { size: 15 })}</button>
-                    <button type="button" class="blc-tool tap" data-action="toolbar-save" title="Simpan" aria-label="Simpan">${Icon('save', { size: 15 })}</button>
+                    <button type="button" class="blc-tool blc-tool-save tap" data-action="toolbar-save" title="Simpan" aria-label="Simpan">${Icon('save', { size: 15 })}</button>
                     <button type="button" class="blc-tool tap" data-action="toolbar-cancel" title="Batalkan" aria-label="Batalkan">${Icon('x', { size: 15 })}</button>
                     <span class="blc-tool-sep" aria-hidden="true"></span>
                     <button type="button" class="blc-tool tap" data-action="toolbar-duplicate" title="Duplikat" aria-label="Duplikat">${Icon('copy', { size: 15 })}</button>

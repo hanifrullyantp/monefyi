@@ -61,8 +61,8 @@ export async function showBudgetGeneratorModal(onGenerated = null) {
         <div class="generator-error" id="gen-error" style="display:none"></div>
       </div>
       <footer class="modal-footer" id="gen-footer" style="display:none">
-        <button type="button" class="btn-secondary" data-action="close">Batal</button>
-        <button type="button" class="btn-primary" data-action="apply">${Icon('check', { size: 14 })} Terapkan Auto Budget</button>
+        <button type="button" class="btn-secondary-budget tap" data-action="close">Batal</button>
+        <button type="button" class="btn-primary-budget tap" data-action="apply">${Icon('check', { size: 14 })} Terapkan Auto Budget</button>
       </footer>
     </div>
   `;

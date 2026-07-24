@@ -280,26 +280,60 @@
 }
 
 .btn-primary-budget {
-  padding: 12px 16px;
-  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 12px;
   border: 1px solid rgba(167, 243, 208, 0.35);
   font-size: 14px;
   font-weight: 700;
+  line-height: 1.2;
   color: #fff;
-  background: var(--brand-grad, var(--mf-grad-brand));
+  background: var(--brand-grad, linear-gradient(135deg, #10b981, #059669));
   cursor: pointer;
-  box-shadow: var(--mf-primary-shadow);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.22);
+  white-space: nowrap;
+}
+.btn-primary-budget svg {
+  flex-shrink: 0;
+  display: block;
 }
 
 .btn-secondary-budget {
-  padding: 11px 16px;
-  border-radius: 14px;
-  border: 1px solid var(--app-border);
-  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 14px;
   font-weight: 600;
+  line-height: 1.2;
   color: var(--app-text);
-  background: var(--app-surface2);
+  background: rgba(255, 255, 255, 0.06);
   cursor: pointer;
+  white-space: nowrap;
+}
+.btn-secondary-budget svg {
+  flex-shrink: 0;
+  display: block;
+}
+
+.btn-primary-budget:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+.btn-secondary-budget:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+}
+.btn-primary-budget:disabled,
+.btn-secondary-budget:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* Modals */
@@ -560,17 +594,94 @@
 
 .modal-footer,
 .budget-detail-footer,
-.budget-eval-footer {
+.budget-eval-footer,
+.btm-confirm-footer {
   display: flex;
-  gap: 8px;
-  padding: 14px 16px;
+  align-items: stretch;
+  gap: 10px;
+  padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--app-border);
+  background: color-mix(in srgb, var(--app-sheet, #131A24) 94%, black);
+}
+
+/* Unified footer buttons — all popup cancel/save actions */
+.modal-footer > button,
+.budget-detail-footer > button,
+.budget-eval-footer > button,
+.btm-confirm-footer > button,
+.modal-footer__actions > button,
+.modal-footer .btn-primary-budget,
+.modal-footer .btn-secondary-budget,
+.modal-footer .btn-primary,
+.modal-footer .btn-secondary,
+.modal-footer .btc-btn,
+.btm-confirm-footer .btc-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: center;
+  font-family: inherit;
+}
+.modal-footer > button svg,
+.budget-detail-footer > button svg,
+.budget-eval-footer > button svg,
+.btm-confirm-footer > button svg,
+.modal-footer__actions > button svg {
+  flex-shrink: 0;
+  display: block;
 }
 
 .modal-footer .btn-secondary-budget,
-.budget-detail-footer .btn-secondary-budget { flex: 0.8; }
+.modal-footer .btn-secondary,
+.btm-confirm-footer .btc-btn.ghost,
+.modal-footer .btc-btn.ghost {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--app-text);
+}
+
 .modal-footer .btn-primary-budget,
-.budget-detail-footer .btn-primary-budget { flex: 1.2; }
+.modal-footer .btn-primary,
+.btm-confirm-footer .btc-btn.primary,
+.modal-footer .btc-btn.primary {
+  border: 1px solid rgba(167, 243, 208, 0.35);
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.2);
+}
+
+.modal-footer .btn-primary-budget:hover:not(:disabled),
+.modal-footer .btn-primary:hover:not(:disabled),
+.btm-confirm-footer .btc-btn.primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+.modal-footer .btn-secondary-budget:hover:not(:disabled),
+.modal-footer .btn-secondary:hover:not(:disabled),
+.btm-confirm-footer .btc-btn.ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.modal-footer .btn-primary-budget:disabled,
+.modal-footer .btn-primary:disabled,
+.modal-footer .btn-secondary-budget:disabled,
+.modal-footer .btn-secondary:disabled,
+.modal-footer .btc-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 
 /* Detail modal */
 .budget-detail-priority { font-size: 11px; font-weight: 600; }
@@ -1335,6 +1446,31 @@
   opacity: 0.35;
   cursor: not-allowed;
 }
+.blc-toolbar--dirty .blc-tool:not(:disabled) {
+  opacity: 1;
+}
+.blc-tool.is-active:not(:disabled) {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.35);
+}
+.blc-tool-save.is-active:not(:disabled) {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  border-color: transparent;
+  gap: 4px;
+  padding: 0 8px;
+  width: auto;
+  min-width: 30px;
+  display: inline-flex;
+  align-items: center;
+}
+.blc-save-amt {
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+  margin-left: 2px;
+}
 .blc-tool.danger:hover:not(:disabled) {
   color: #f87171;
   background: rgba(248, 113, 113, 0.12);
@@ -1407,6 +1543,11 @@
 .btm-save-name {
   flex: 1;
   min-width: 0;
+}
+.btm-save-row .btn-primary-budget {
+  flex-shrink: 0;
+  min-height: 40px;
+  padding: 0 16px;
 }
 .btm-list {
   list-style: none;
@@ -1662,9 +1803,9 @@
 }
 .btm-confirm-footer {
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 12px 16px 16px;
+  align-items: stretch;
+  gap: 10px;
+  padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px));
 }
 .btm-confirm-overlay.show {
   opacity: 1;
@@ -2746,17 +2887,35 @@
 
 .dynamic-content--budget .mobile-saldo-wrap { display: none !important; }
 
+.modal-footer--single > button {
+  flex: 1 1 100%;
+  max-width: 100%;
+}
+
+.btm-confirm-footer {
+  /* inherits .modal-footer unified button rules */
+}
+
 .modal-footer--split {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
 }
 
 .modal-footer__actions {
   display: flex;
-  gap: 8px;
-  margin-left: auto;
+  align-items: stretch;
+  gap: 10px;
+  flex: 1;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.modal-footer__actions .btn-secondary-budget,
+.modal-footer__actions .btn-primary-budget {
+  flex: 1 1 0;
+  max-width: 180px;
 }
 
 /* ===== Desktop parity: wider Budget canvas + 2-col layout ===== */

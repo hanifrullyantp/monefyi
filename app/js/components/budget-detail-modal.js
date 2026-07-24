@@ -134,8 +134,8 @@ export function showBudgetDetailModal(budget, transactions, month, options = {})
       </div>
 
       <footer class="budget-detail-footer">
-        <button type="button" class="btn-secondary-budget" data-action="close">Tutup</button>
-        <button type="button" class="btn-primary-budget" data-action="edit">✏️ Edit Budget</button>
+        <button type="button" class="btn-secondary-budget tap" data-action="close">Tutup</button>
+        <button type="button" class="btn-primary-budget tap" data-action="edit">${Icon('edit', { size: 14 })} Edit Budget</button>
       </footer>
     </div>
   `;

@@ -9,6 +9,7 @@ import {
   calculateProgress,
   computeHistoricalBaselines,
 } from '../services/budget-model.js';
+import { Icon } from './icons.js';
 
 /**
  * @param {unknown} str
@@ -145,8 +146,8 @@ export async function showEvaluation(options = {}) {
       </div>
 
       <footer class="budget-eval-footer">
-        <button type="button" class="btn-secondary-budget" data-action="close">Tutup</button>
-        <button type="button" class="btn-primary-budget" data-action="advisor">Tanya Monevisor</button>
+        <button type="button" class="btn-secondary-budget tap" data-action="close">Tutup</button>
+        <button type="button" class="btn-primary-budget tap" data-action="advisor">${Icon('sparkles', { size: 14 })} Tanya Monevisor</button>
       </footer>
     </div>
   `;

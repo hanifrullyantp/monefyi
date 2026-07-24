@@ -12,6 +12,7 @@ import {
   getTotalIncome,
   getCurrentPeriod,
 } from '../services/income-source.js';
+import { Icon } from './icons.js';
 
 /**
  * @param {() => void|null} [onSaved]
@@ -47,7 +48,7 @@ export async function showIncomeManagerModal(onSaved = null, periodOverride = nu
         </div>
         <button type="button" class="btn-add-income tap" data-action="add-source">+ Tambah Sumber Income</button>
       </div>
-      <footer class="modal-footer">
+      <footer class="modal-footer modal-footer--single">
         <button type="button" class="btn-primary-budget tap" data-action="close">Selesai</button>
       </footer>
     </div>
@@ -218,7 +219,7 @@ function showSourceFormModal(source = null, onSaved = null, period = null) {
       </div>
       <footer class="modal-footer">
         <button type="button" class="btn-secondary-budget tap" data-action="close">Batal</button>
-        <button type="button" class="btn-primary-budget tap" data-action="save">💾 Simpan</button>
+        <button type="button" class="btn-primary-budget tap" data-action="save">${Icon('save', { size: 14 })} Simpan</button>
       </footer>
     </div>
   `;

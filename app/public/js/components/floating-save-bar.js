@@ -55,9 +55,12 @@ export function initFloatingSaveBar(onSave) {
 
     const text = _bar.querySelector('#fsb-text');
     if (text) {
+      const draftTotal = (window.STATE?.budgetDraft?.rows || [])
+        .reduce((s, r) => s + Math.abs(Number(r.amount || 0)), 0);
+      const fmt = (n) => new Intl.NumberFormat('id-ID').format(Math.round(n || 0));
       text.textContent = state.undoCount > 0
-        ? `${state.undoCount} perubahan belum disimpan`
-        : 'Ada perubahan belum disimpan';
+        ? `${state.undoCount} perubahan · Rp ${fmt(draftTotal)} siap disimpan`
+        : (state.isDirty ? `Rp ${fmt(draftTotal)} siap disimpan` : 'Ada perubahan belum disimpan');
     }
   };
 
@@ -69,7 +72,10 @@ export function initFloatingSaveBar(onSave) {
   _bar.querySelector('[data-action="save"]').onclick = async () => {
     if (!onSave) return;
     try {
-      await onSave();
+      const root = document.getElementById('budgetPageRoot');
+      const saveBtn = root?.querySelector('[data-action="toolbar-save"]');
+      if (saveBtn && !saveBtn.disabled) saveBtn.click();
+      else await onSave();
       clearChanges();
       showSaveToast();
     } catch (e) {
