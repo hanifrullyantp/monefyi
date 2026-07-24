@@ -1085,6 +1085,8 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
       }
     };
 
+    if (typeof window !== 'undefined') window.STATE = STATE;
+
     /** Header wajib untuk invoke Supabase Edge Functions dari browser (apikey + JWT). */
     function supabaseEdgeHeaders(extra = {}) {
       const headers = { apikey: SUPABASE_ANON_KEY, ...extra };
@@ -1385,7 +1387,6 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
 }
 
     function applyAdminUI() {
-      if (typeof window !== 'undefined') window.STATE = STATE;
       if (!STATE.db) return;
       const admin = isAdmin();
       const branding = document.getElementById('adminBrandingCard');

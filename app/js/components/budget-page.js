@@ -407,19 +407,32 @@ function getDraftRows() {
 }
 
 /**
- * Keep budgetDraft.rows aligned with the rows used to render hero + list.
- * @param {object[]} rows
- * @param {string} month YYYY-MM
- * @param {number} income
+ * Mirror live page rows onto window.STATE.budgetDraft for save/undo.
+ * @param {object[]} [rowsOverride]
+ * @param {string} [monthOverride]
+ * @param {number} [incomeOverride]
  */
-function syncDraftRows(rows, month, income) {
-  if (!window.STATE) return;
-  if (!window.STATE.budgetDraft) {
-    window.STATE.budgetDraft = { month, income: Number(income || 0), rows: [], initialFrom: 'page' };
+function mirrorDraftToState(rowsOverride, monthOverride, incomeOverride) {
+  const state = window.STATE;
+  if (!state) return;
+  const rows = rowsOverride || _pageCtx?.rows || getDraftRows();
+  if (!Array.isArray(rows)) return;
+  const month = monthOverride || _pageCtx?.month || resolveBudgetMonth();
+  const income = Number(incomeOverride ?? _pageCtx?.income ?? state.budgetDraft?.income ?? 0);
+  if (!state.budgetDraft) {
+    state.budgetDraft = { month, income, rows, initialFrom: 'page' };
+  } else {
+    state.budgetDraft.rows = rows;
+    state.budgetDraft.month = month;
+    if (Number.isFinite(income)) state.budgetDraft.income = income;
   }
-  window.STATE.budgetDraft.rows = rows;
-  window.STATE.budgetDraft.month = month;
-  if (Number.isFinite(Number(income))) window.STATE.budgetDraft.income = Number(income);
+  // #region agent log
+  _DBG('budget-page.js:mirrorDraftToState', 'draft mirrored', {
+    rowCount: rows.length,
+    stateDraftLen: state.budgetDraft?.rows?.length ?? null,
+    budgetPageOpen: !!state.ui?.budgetPageOpen,
+  }, 'H15');
+  // #endregion
 }
 
 /**
@@ -534,6 +547,7 @@ function patchHeroAmounts(container, totalSpent, totalBudget) {
 }
 
 function beginEditGesture() {
+  mirrorDraftToState();
   if (!_editBeforeRows && window.STATE?.budgetDraft) {
     _editBeforeRows = JSON.parse(JSON.stringify(window.STATE.budgetDraft.rows || []));
     // #region agent log
@@ -828,7 +842,6 @@ function wireToolbarDelegation() {
   _toolbarWired = true;
 
   document.addEventListener('click', async (e) => {
-    if (!window.STATE?.ui?.budgetPageOpen) return;
     const root = document.getElementById('budgetPageRoot');
     if (!root || root.classList.contains('hidden')) return;
     const btn = e.target.closest?.('[data-action^="toolbar-"]');
@@ -854,6 +867,7 @@ function wireToolbarDelegation() {
       return;
     }
     if (action === 'toolbar-save') {
+      mirrorDraftToState();
       // #region agent log
       _DBG('budget-page.js:toolbar-save', 'save clicked', {
         draftRowCount: getDraftRows().length,
@@ -1184,6 +1198,7 @@ function wireItemEditors(container, ctx) {
       }
       Object.assign(item, patch);
       recalcRowAmount(row);
+      mirrorDraftToState();
       return row;
     };
 
@@ -1382,7 +1397,7 @@ export async function renderBudgetPage(container, ctx) {
   const sources = await getIncomeSources(displayMonth);
   const income = await getTotalIncome(displayMonth);
 
-  syncDraftRows(rows, displayMonth, income);
+  mirrorDraftToState(rows, displayMonth, income);
 
   const currentSort = localStorage.getItem(SORT_KEY) || 'urgent';
   const sourcesLen = sources.length;
