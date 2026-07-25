@@ -272,7 +272,10 @@ export async function replaceJournalForTransaction(transactionId, entries) {
     created_at: new Date().toISOString(),
     _sync_status: 'pending',
   }));
-  if (rows.length) await db.table('journal_entries').bulkPut(rows);
+  if (rows.length) {
+    await db.table('journal_entries').bulkPut(rows);
+    pushRemoteBatch('journal_entries', rows).catch(() => {});
+  }
 }
 
 /**
@@ -284,7 +287,10 @@ export async function deleteJournalForTransaction(transactionId) {
   const db = await getDb();
   const all = await db.table('journal_entries').where('user_id').equals(uid).toArray();
   const ids = all.filter((e) => e.transaction_id === transactionId).map((e) => e.id);
-  if (ids.length) await db.table('journal_entries').bulkDelete(ids);
+  if (ids.length) {
+    await db.table('journal_entries').bulkDelete(ids);
+    ids.forEach((id) => deleteRemote('journal_entries', id).catch(() => {}));
+  }
 }
 
 /**
@@ -356,6 +362,112 @@ export async function saveSuspenseLog(log) {
   };
   await putLocal('suspense_log', row);
   return row;
+}
+
+const NERACA_SYNC_TABLES = [
+  'neraca_chart_accounts',
+  'neraca_assets',
+  'neraca_debts',
+  'neraca_receivables',
+  'neraca_equity_events',
+  'journal_entries',
+  'balance_snapshots',
+];
+
+/**
+ * Merge remote rows into IndexedDB (last-write-wins unless local is pending).
+ * @param {string} table
+ * @param {object[]} rows
+ */
+async function mergeRemoteRows(table, rows) {
+  const db = await getDb();
+  for (const remote of rows || []) {
+    if (!remote?.id) continue;
+    const local = await db.table(table).get(remote.id);
+    if (!local) {
+      await db.table(table).put({ ...remote, _sync_status: 'synced' });
+      continue;
+    }
+    if (local._sync_status === 'pending') continue;
+    const localTs = String(local.updated_at || local.created_at || '');
+    const remoteTs = String(remote.updated_at || remote.created_at || '');
+    if (remoteTs >= localTs) {
+      await db.table(table).put({ ...remote, _sync_status: 'synced' });
+    }
+  }
+}
+
+/**
+ * Pull Neraca entities from Supabase into IndexedDB (best-effort).
+ * @param {string} [userId]
+ */
+export async function pullNeracaFromSupabase(userId) {
+  const uid = userId || currentUserId();
+  const supa = window.STATE?.db?.supa;
+  if (!uid || !supa || !navigator.onLine) {
+    return { success: false, error: 'offline or not authenticated' };
+  }
+  try {
+    await Promise.all(NERACA_SYNC_TABLES.map(async (table) => {
+      const { data, error } = await supa.from(table).select('*').eq('user_id', uid);
+      if (error || !data?.length) return;
+      await mergeRemoteRows(table, data);
+    }));
+    await setNeracaMeta('neraca_last_pull_at', new Date().toISOString());
+    return { success: true };
+  } catch (error) {
+    console.error('[neraca] pull failed', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Push pending local Neraca rows to Supabase.
+ * @param {string} [userId]
+ */
+export async function pushPendingNeracaToSupabase(userId) {
+  const uid = userId || currentUserId();
+  const supa = window.STATE?.db?.supa;
+  if (!uid || !supa || !navigator.onLine) {
+    return { success: false, error: 'offline or not authenticated' };
+  }
+  const db = await getDb();
+  const tablesWithSync = NERACA_SYNC_TABLES.filter((t) => t !== 'neraca_chart_accounts');
+  try {
+    for (const table of tablesWithSync) {
+      const pending = await db.table(table)
+        .where('user_id')
+        .equals(uid)
+        .filter((r) => r._sync_status === 'pending')
+        .toArray()
+        .catch(() => []);
+      if (pending.length) {
+        await pushRemoteBatch(table, pending);
+        await Promise.all(pending.map((row) =>
+          db.table(table).put({ ...row, _sync_status: 'synced' })
+        ));
+      }
+    }
+    return { success: true };
+  } catch (error) {
+    console.error('[neraca] push pending failed', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * @param {string} table
+ * @param {object[]} rows
+ */
+async function pushRemoteBatch(table, rows) {
+  const supa = window.STATE?.db?.supa;
+  if (!supa || !navigator.onLine || !rows?.length) return;
+  const clean = rows.map(({ _sync_status, ...row }) => row);
+  try {
+    await supa.from(table).upsert(clean);
+  } catch {
+    /* table may not exist yet */
+  }
 }
 
 /**

@@ -6703,6 +6703,13 @@ function setSheetPosition(mode) {
       $('#neracaPageRoot')?.classList.remove('hidden');
       rerender();
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      try {
+        const { pullNeracaFromSupabase, pushPendingNeracaToSupabase } = await import('./services/neraca-store.js');
+        await pullNeracaFromSupabase();
+        await pushPendingNeracaToSupabase();
+      } catch {
+        /* non-blocking cloud sync */
+      }
       await renderNeracaPageView();
     }
     window.openNeraca = openNeraca;
@@ -8015,6 +8022,9 @@ function setSheetPosition(mode) {
       }
       if (STATE.ui.budgetPageOpen && typeof renderBudgetPageView === 'function') {
         renderBudgetPageView();
+      }
+      if (STATE.ui.neracaPageOpen && typeof renderNeracaPageView === 'function') {
+        renderNeracaPageView();
       }
     } catch (e) {
       console.error("DB Save failed:", e);
