@@ -46,6 +46,18 @@ export async function initOfflineDB() {
           notifications: 'id, timestamp, type, read, dismissed, dedupKey',
           income_sources: 'id, period, type, updated_at',
         });
+
+        this.version(5).stores({
+          neraca_chart_accounts: 'id, user_id, code, side, category',
+          neraca_assets: 'id, user_id, category, updated_at, _sync_status',
+          neraca_debts: 'id, user_id, category, updated_at, _sync_status',
+          neraca_receivables: 'id, user_id, status, updated_at, _sync_status',
+          neraca_equity_events: 'id, user_id, kind, event_date, updated_at, _sync_status',
+          journal_entries: 'id, user_id, transaction_id, entry_date, account_code, source, _sync_status',
+          balance_snapshots: 'id, user_id, month',
+          suspense_log: 'id, user_id, as_of, created_at',
+          neraca_meta: 'key',
+        });
       }
     }
 

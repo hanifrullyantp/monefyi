@@ -6,7 +6,8 @@ Aplikasi keuangan pribadi (PWA) — HTML + CSS + JavaScript, backend Supabase.
 
 | Dokumen | Isi |
 |---------|-----|
-| **[`docs/MONEFYI_MASTER.md`](docs/MONEFYI_MASTER.md)** | Referensi lengkap produk, arsitektur, fitur, data, deploy |
+| **[`docs/APA_ITU_MONEFYI.md`](docs/APA_ITU_MONEFYI.md)** | Penjelasan produk — untuk perkenalan & presentasi |
+| **[`docs/MONEFYI_MASTER.md`](docs/MONEFYI_MASTER.md)** | Referensi teknis lengkap (dev & arsitektur) |
 | **[`docs/README.md`](docs/README.md)** | Indeks navigasi semua dokumen |
 
 ## Cabang Git & produksi

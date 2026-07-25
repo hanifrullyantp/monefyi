@@ -585,11 +585,28 @@ Target coverage: 70% (`.cursorrules`).
 | Item detail modal + jadwal pengingat | ✅ |
 | Mobile layout rincian | ✅ |
 
+### Neraca (Juli 2026)
+
+| Fitur | Status |
+|-------|--------|
+| Halaman Aktiva/Pasiva + timbangan | ✅ MVP |
+| Kas dari akun existing + Laba dari PnL | ✅ |
+| CRUD aset/hutang/piutang/modal | ✅ |
+| Journal auto + Lacak Penyebab | ✅ |
+| HISTORY bulanan + setup wizard | ✅ |
+| Nav: sidebar + kartu Beranda (tanpa bottom tab) | ✅ |
+
 ---
 
 ## 16. Indeks dokumen terkait
 
-### Wajib baca
+### Penjelasan produk
+
+| Dokumen | Topik |
+|---------|-------|
+| [`APA_ITU_MONEFYI.md`](APA_ITU_MONEFYI.md) | **Apa itu Monefyi** — penjelasan lengkap untuk perkenalan |
+
+### Wajib baca (dev)
 
 | Dokumen | Topik |
 |---------|-------|

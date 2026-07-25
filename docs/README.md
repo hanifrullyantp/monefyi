@@ -9,7 +9,8 @@
 
 | Saya ingin… | Baca |
 |-------------|------|
-| Gambaran lengkap seluruh ekosistem Monefyi | [`MONEFYI_MASTER.md`](MONEFYI_MASTER.md) |
+| **Menjelaskan apa itu Monefyi** (presentasi, stakeholder) | [`APA_ITU_MONEFYI.md`](APA_ITU_MONEFYI.md) |
+| Gambaran lengkap seluruh ekosistem (dev & arsitektur) | [`MONEFYI_MASTER.md`](MONEFYI_MASTER.md) |
 | Memahami produk PWA & roadmap | [`MONEFYI_PRODUCT_PROMPT.md`](MONEFYI_PRODUCT_PROMPT.md) |
 | Arsitektur parsing transaksi (L0–L5) | [`ARSITEKTUR_PARSING_MONEFYI.md`](ARSITEKTUR_PARSING_MONEFYI.md) |
 | Fitur Monevisor / AI Advisor | [`MONEVISOR.md`](MONEVISOR.md) |
@@ -26,7 +27,8 @@
 ```
 docs/
 ├── README.md                      ← Indeks ini
-├── MONEFYI_MASTER.md              ← Dokumen master lengkap
+├── APA_ITU_MONEFYI.md             ← ★ Penjelasan produk (untuk perkenalan)
+├── MONEFYI_MASTER.md              ← Referensi teknis lengkap (dev)
 ├── MONEFYI_PRODUCT_PROMPT.md      ← Spec produk PWA + master prompt AI dev
 ├── ARSITEKTUR_PARSING_MONEFYI.md  ← Arsitektur parsing (target L0–L5)
 ├── MONEVISOR.md                   ← AI financial advisor

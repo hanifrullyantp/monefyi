@@ -1034,6 +1034,7 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
         dashboardOpen: true,
         budgetPageOpen: false,
         monevisorPageOpen: false,
+        neracaPageOpen: false,
         settingsPageOpen: false,
         txDesktopFiltersOpen: false,
         saldoFilterOpen: false,
@@ -1773,7 +1774,11 @@ function computeSubscriptionStatus(profile){
         const saved = existing
           ? await window.dataStore.updateTransaction(tx.id, tx)
           : await window.dataStore.createTransaction(tx);
-        return normalizeSaved(saved);
+        const normalizedOffline = normalizeSaved(saved);
+        import('./services/journal-engine.js')
+          .then((m) => m.syncFromTransaction(normalizedOffline))
+          .catch(() => {});
+        return normalizedOffline;
       }
 
       const supa = STATE.db.supa;
@@ -1820,6 +1825,9 @@ function computeSubscriptionStatus(profile){
 
       ensureAccountRegistered(normalized.account);
       window.dataStore?.mirrorTransaction?.(normalized).catch(() => {});
+      import('./services/journal-engine.js')
+        .then((m) => m.syncFromTransaction(normalized))
+        .catch(() => {});
       return normalized;
     }
 
@@ -1854,6 +1862,10 @@ async function dbDeleteTransaction(id) {
     const queueItems = await db.sync_queue.where('record_id').equals(id).toArray();
     await Promise.all(queueItems.map((q) => db.sync_queue.delete(q.queueId)));
   } catch (_) {}
+
+  import('./services/journal-engine.js')
+    .then((m) => m.removeTransactionJournal(id))
+    .catch(() => {});
 }
 
 // Fungsi Update (Upsert) - versi duplikat (dinonaktifkan untuk menghindari deklarasi ganda)
@@ -3724,6 +3736,8 @@ async function upsertTransaction_legacy_local(tx) {
         const nav = el.getAttribute('data-nav');
         if (STATE.ui.monevisorPageOpen) {
           if (nav === 'advisor') el.classList.add('active');
+        } else if (STATE.ui.neracaPageOpen) {
+          if (nav === 'neraca') el.classList.add('active');
         } else if (STATE.ui.budgetPageOpen) {
           if (nav === 'budget') el.classList.add('active');
         } else {
@@ -3737,8 +3751,8 @@ async function upsertTransaction_legacy_local(tx) {
           const nav = el.getAttribute('data-nav');
           if (nav === 'beranda' || nav === 'transaksi' || nav === 'budget' || nav === 'advisor') {
             el.classList.toggle('active',
-              (nav === 'beranda' && STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen && !STATE.ui.settingsPageOpen)
-              || (nav === 'transaksi' && !STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen && !STATE.ui.settingsPageOpen)
+              (nav === 'beranda' && STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen && !STATE.ui.neracaPageOpen && !STATE.ui.settingsPageOpen)
+              || (nav === 'transaksi' && !STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen && !STATE.ui.neracaPageOpen && !STATE.ui.settingsPageOpen)
               || (nav === 'budget' && STATE.ui.budgetPageOpen)
               || (nav === 'advisor' && STATE.ui.monevisorPageOpen)
             );
@@ -3908,7 +3922,7 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       }
       $('#rangeCard')?.classList.toggle('hidden', (STATE.period.preset || 'this_month') !== 'custom');
 
-      const specialPageOpen = !!(STATE.ui.budgetPageOpen || STATE.ui.monevisorPageOpen || STATE.ui.settingsPageOpen);
+      const specialPageOpen = !!(STATE.ui.budgetPageOpen || STATE.ui.monevisorPageOpen || STATE.ui.neracaPageOpen || STATE.ui.settingsPageOpen);
       applySpecialPageVisibility();
       const showDesktopDashboard = STATE.ui.dashboardOpen && isDesktopViewport() && !specialPageOpen;
       const showMobileHome = STATE.ui.dashboardOpen && !isDesktopViewport() && !specialPageOpen;
@@ -3921,6 +3935,10 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       const budgetRoot = $('#budgetPageRoot');
       if (budgetRoot) {
         budgetRoot.classList.toggle('hidden', !STATE.ui.budgetPageOpen);
+      }
+      const neracaRoot = $('#neracaPageRoot');
+      if (neracaRoot) {
+        neracaRoot.classList.toggle('hidden', !STATE.ui.neracaPageOpen);
       }
       const monevisorRoot = $('#monevisorPageRoot');
       if (monevisorRoot) {
@@ -3940,28 +3958,33 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       if (pageTitleDesktop) {
         pageTitleDesktop.textContent = STATE.ui.settingsPageOpen
           ? 'Pengaturan'
-          : (STATE.ui.monevisorPageOpen
-            ? 'Monevisor'
-            : (STATE.ui.budgetPageOpen
-              ? 'Budgeting'
-              : (STATE.ui.dashboardOpen ? 'Dashboard' : 'Transaksi')));
+          : (STATE.ui.neracaPageOpen
+            ? 'Neraca'
+            : (STATE.ui.monevisorPageOpen
+              ? 'Monevisor'
+              : (STATE.ui.budgetPageOpen
+                ? 'Budgeting'
+                : (STATE.ui.dashboardOpen ? 'Dashboard' : 'Transaksi'))));
       }
       if (pageSubtitleDesktop) {
         pageSubtitleDesktop.textContent = STATE.ui.settingsPageOpen
           ? 'Akun, tampilan, notifikasi & data'
-          : (STATE.ui.monevisorPageOpen
-            ? 'Financial coach — diagnosa & action plan'
-            : (STATE.ui.budgetPageOpen
-              ? 'Rencana & realisasi budget bulanan'
-              : (STATE.ui.dashboardOpen
-                ? 'Ringkasan keuangan Anda'
-                : 'Kelola transaksi keuangan Anda')));
+          : (STATE.ui.neracaPageOpen
+            ? 'Struktur Aktiva & Pasiva'
+            : (STATE.ui.monevisorPageOpen
+              ? 'Financial coach — diagnosa & action plan'
+              : (STATE.ui.budgetPageOpen
+                ? 'Rencana & realisasi budget bulanan'
+                : (STATE.ui.dashboardOpen
+                  ? 'Ringkasan keuangan Anda'
+                  : 'Kelola transaksi keuangan Anda'))));
       }
       const dynamicContent = $('#dynamicContent');
       if (dynamicContent) {
         dynamicContent.classList.toggle('dynamic-content--dashboard', STATE.ui.dashboardOpen && !specialPageOpen);
         dynamicContent.classList.toggle('dynamic-content--tx', !STATE.ui.dashboardOpen && !specialPageOpen);
         dynamicContent.classList.toggle('dynamic-content--budget', !!STATE.ui.budgetPageOpen);
+        dynamicContent.classList.toggle('dynamic-content--neraca', !!STATE.ui.neracaPageOpen);
         dynamicContent.classList.toggle('dynamic-content--monevisor', !!STATE.ui.monevisorPageOpen);
         dynamicContent.classList.toggle('dynamic-content--settings', !!STATE.ui.settingsPageOpen);
       }
@@ -6033,6 +6056,7 @@ function generateSmartBudgetRecommendation() {
         renderHomePage(root, getHomePageContext(), {
           onViewTransactions: () => toggleNav('list'),
           onViewBudget: () => openBudget(),
+          onViewNeraca: () => openNeraca(),
           onViewAdvisor: () => openAdvisorAuto(),
           onViewAccounts: () => openAccounts(),
           onAccountClick: (name) => openAccountDetail(name),
@@ -6060,12 +6084,13 @@ function generateSmartBudgetRecommendation() {
   if (!STATE.ui.dashboardOpen) destroyCharts();
   else requestAnimationFrame(() => renderCharts());
 
-  // Skip TX list rebuild on Budget / Monevisor / Settings — avoids flash + wasted work
-  if (!STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen && !STATE.ui.settingsPageOpen) {
+  // Skip TX list rebuild on Budget / Monevisor / Neraca / Settings — avoids flash + wasted work
+  if (!STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen && !STATE.ui.neracaPageOpen && !STATE.ui.settingsPageOpen) {
     renderTransactions();
   }
-  if (STATE.ui.dashboardOpen && !isDesktopViewport() && !STATE.ui.settingsPageOpen) renderMobileHome();
+  if (STATE.ui.dashboardOpen && !isDesktopViewport() && !STATE.ui.settingsPageOpen && !STATE.ui.neracaPageOpen) renderMobileHome();
   if (STATE.ui.budgetPageOpen) renderBudgetPageView();
+  if (STATE.ui.neracaPageOpen) renderNeracaPageView();
   if (STATE.ui.monevisorPageOpen) renderMonevisorPageView();
   enhanceTransactionPageDesktop();
 }
@@ -6076,14 +6101,16 @@ function generateSmartBudgetRecommendation() {
         && !STATE.ui.dashboardOpen
         && !STATE.ui.budgetPageOpen
         && !STATE.ui.monevisorPageOpen
+        && !STATE.ui.neracaPageOpen
         && !STATE.ui.settingsPageOpen;
     }
 
-    /** Full-width saldo bar context: TX or Dashboard at ≥1024 (not Budget/Monevisor) */
+    /** Full-width saldo bar context: TX or Dashboard at ≥1024 (not Budget/Monevisor/Neraca) */
     function isDesktopSaldoBarPage() {
       return window.innerWidth >= 1024
         && !STATE.ui.budgetPageOpen
         && !STATE.ui.monevisorPageOpen
+        && !STATE.ui.neracaPageOpen
         && !STATE.ui.settingsPageOpen;
     }
 
@@ -6522,13 +6549,14 @@ function setSheetPosition(mode) {
      * Must beat CSS rules like `.tx-main-panel #txSection { display:flex }`.
      */
     function applySpecialPageVisibility() {
-      const specialPageOpen = !!(STATE.ui.budgetPageOpen || STATE.ui.monevisorPageOpen || STATE.ui.settingsPageOpen);
+      const specialPageOpen = !!(STATE.ui.budgetPageOpen || STATE.ui.monevisorPageOpen || STATE.ui.neracaPageOpen || STATE.ui.settingsPageOpen);
       const showDesktopDashboard = STATE.ui.dashboardOpen && isDesktopViewport() && !specialPageOpen;
       const showTx = !STATE.ui.dashboardOpen && !specialPageOpen;
 
       $('#txSection')?.classList.toggle('hidden', !showTx);
       $('#dashboardExpanded')?.classList.toggle('hidden', !showDesktopDashboard);
       $('#budgetPageRoot')?.classList.toggle('hidden', !STATE.ui.budgetPageOpen);
+      $('#neracaPageRoot')?.classList.toggle('hidden', !STATE.ui.neracaPageOpen);
       $('#monevisorPageRoot')?.classList.toggle('hidden', !STATE.ui.monevisorPageOpen);
       $('#settingsPageRoot')?.classList.toggle('hidden', !STATE.ui.settingsPageOpen);
 
@@ -6537,6 +6565,7 @@ function setSheetPosition(mode) {
         dynamicContent.classList.toggle('dynamic-content--dashboard', STATE.ui.dashboardOpen && !specialPageOpen);
         dynamicContent.classList.toggle('dynamic-content--tx', showTx);
         dynamicContent.classList.toggle('dynamic-content--budget', !!STATE.ui.budgetPageOpen);
+        dynamicContent.classList.toggle('dynamic-content--neraca', !!STATE.ui.neracaPageOpen);
         dynamicContent.classList.toggle('dynamic-content--monevisor', !!STATE.ui.monevisorPageOpen);
         dynamicContent.classList.toggle('dynamic-content--settings', !!STATE.ui.settingsPageOpen);
       }
@@ -6641,14 +6670,62 @@ function setSheetPosition(mode) {
     }
     window.renderBudgetPageView = renderBudgetPageView;
 
+    async function renderNeracaPageView() {
+      const root = $('#neracaPageRoot');
+      if (!root || !STATE.ui.neracaPageOpen) return;
+      try {
+        const { renderNeracaPage } = await import('./pages/neraca-page.js');
+        await renderNeracaPage(root, { formatIDR, formatCompactIDR });
+      } catch (e) {
+        console.error('[neraca] page render failed', e);
+      }
+    }
+    window.renderNeracaPageView = renderNeracaPageView;
+
+    async function openNeraca() {
+      closeBudgetSheetOnly();
+      closeAdvisor();
+      closeAddSheet();
+      STATE.ui.neracaPageOpen = true;
+      STATE.ui.budgetPageOpen = false;
+      STATE.ui.monevisorPageOpen = false;
+      STATE.ui.settingsPageOpen = false;
+      STATE.ui.dashboardOpen = false;
+      STATE.ui.advisorOpen = false;
+      STATE.ui.budgetOpen = false;
+
+      $$('.nav-item[data-nav]').forEach((el) => el.classList.remove('active'));
+      $$('.sidebar-item[data-nav]').forEach((el) => {
+        el.classList.toggle('active', el.getAttribute('data-nav') === 'neraca');
+      });
+
+      applySpecialPageVisibility();
+      $('#neracaPageRoot')?.classList.remove('hidden');
+      rerender();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      await renderNeracaPageView();
+    }
+    window.openNeraca = openNeraca;
+
+    function closeNeraca() {
+      STATE.ui.neracaPageOpen = false;
+      const root = $('#neracaPageRoot');
+      if (root) {
+        root.classList.add('hidden');
+        root.replaceChildren();
+      }
+    }
+
     async function openBudget() {
       closeBudgetSheetOnly();
       closeAdvisor();
+      closeNeraca();
       closeAddSheet();
 
       // Switch view flags FIRST so TX list never flashes during async draft prep
       STATE.ui.budgetPageOpen = true;
       STATE.ui.monevisorPageOpen = false;
+      STATE.ui.neracaPageOpen = false;
       STATE.ui.settingsPageOpen = false;
       STATE.ui.dashboardOpen = false;
       STATE.ui.budgetOpen = false;
@@ -6663,6 +6740,7 @@ function setSheetPosition(mode) {
       // Immediate chrome swap (hide TX / dashboard before any await)
       applySpecialPageVisibility();
       $('#budgetPageRoot')?.classList.remove('hidden');
+      $('#neracaPageRoot')?.classList.add('hidden');
 
       try {
         await prepareBudgetDraft();
@@ -6742,6 +6820,7 @@ function setSheetPosition(mode) {
       // Switch view flags FIRST — never flash TX list while page mounts
       STATE.ui.monevisorPageOpen = true;
       STATE.ui.budgetPageOpen = false;
+      STATE.ui.neracaPageOpen = false;
       STATE.ui.settingsPageOpen = false;
       STATE.ui.dashboardOpen = false;
       STATE.ui.advisorOpen = false;
@@ -6815,11 +6894,13 @@ function setSheetPosition(mode) {
       closeUser();
       closeBudgetSheetOnly();
       closeAdvisor();
+      closeNeraca();
       closeAddSheet();
 
       STATE.ui.settingsPageOpen = true;
       STATE.ui.budgetPageOpen = false;
       STATE.ui.monevisorPageOpen = false;
+      STATE.ui.neracaPageOpen = false;
       STATE.ui.dashboardOpen = false;
 
       $$('.nav-item[data-nav]').forEach((el) => el.classList.remove('active'));
@@ -11553,6 +11634,10 @@ function toggleNav(view, triggerEl) {
         openBudget();
         return;
       }
+      if (view === 'neraca') {
+        openNeraca();
+        return;
+      }
       if (view === 'advisor') {
         openAdvisorAuto();
         return;
@@ -11566,14 +11651,16 @@ function toggleNav(view, triggerEl) {
         STATE.ui.dashboardOpen = false;
         STATE.ui.budgetPageOpen = false;
         STATE.ui.monevisorPageOpen = false;
+        STATE.ui.neracaPageOpen = false;
         STATE.ui.settingsPageOpen = false;
       } else if (view === 'dash') {
         STATE.ui.dashboardOpen = true;
         STATE.ui.budgetPageOpen = false;
         STATE.ui.monevisorPageOpen = false;
+        STATE.ui.neracaPageOpen = false;
         STATE.ui.settingsPageOpen = false;
       }
-      const map = { dash: 'beranda', list: 'transaksi', budget: 'budget', advisor: 'advisor' };
+      const map = { dash: 'beranda', list: 'transaksi', budget: 'budget', advisor: 'advisor', neraca: 'neraca' };
       const active = map[view] || '';
       $$('.nav-item[data-nav]').forEach((el) => {
         el.classList.toggle('active', el.getAttribute('data-nav') === active);
@@ -11590,14 +11677,14 @@ function toggleNav(view, triggerEl) {
     $$('.sidebar-item[data-nav]').forEach((el) => {
       el.addEventListener('click', () => {
         const view = el.getAttribute('data-nav');
-        if (view === 'dash' || view === 'list' || view === 'budget' || view === 'advisor') toggleNav(view, el);
+        if (view === 'dash' || view === 'list' || view === 'budget' || view === 'neraca' || view === 'advisor') toggleNav(view, el);
       });
     });
 
     $$('.nav-item[data-nav]').forEach((el) => {
       el.addEventListener('click', (e) => {
         const nav = el.getAttribute('data-nav');
-        const map = { beranda: 'dash', transaksi: 'list', budget: 'budget', advisor: 'advisor' };
+        const map = { beranda: 'dash', transaksi: 'list', budget: 'budget', advisor: 'advisor', neraca: 'neraca' };
         const view = map[nav];
         if (view) {
           e.preventDefault();
