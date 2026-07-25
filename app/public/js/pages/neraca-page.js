@@ -12,12 +12,14 @@ import {
 } from '../services/journal-engine.js';
 import { getNeracaMeta, saveBalanceSnapshot, setNeracaMeta, upsertEquityEvent } from '../services/neraca-store.js';
 import { buildFixSuggestions } from '../services/balance-checker.js';
+import { isCategoryEditable, mountInlineCategoryItems } from '../components/neraca-category-items.js';
 
-/** @type {{ mode: 'live'|'history', month: string, sheet: object|null }} */
+/** @type {{ mode: 'live'|'history', month: string, sheet: object|null, expanded: Set<string> }} */
 let _state = {
   mode: 'live',
   month: new Date().toISOString().slice(0, 7),
   sheet: null,
+  expanded: new Set(),
 };
 
 /**
@@ -79,23 +81,45 @@ function amountClass(row, side) {
 }
 
 /**
- * @param {object[]} rows
+ * @param {object} row
  * @param {'aktiva'|'pasiva'} side
  */
-function renderRows(rows, side) {
+function expandKey(row, side) {
+  return `${side}:${row.key}`;
+}
+
+/**
+ * @param {object[]} rows
+ * @param {'aktiva'|'pasiva'} side
+ * @param {object} options
+ */
+function renderRows(rows, side, options) {
   return rows.map((row) => {
     const amt = formatCompact(row.amount);
     const title = `Rp ${formatIDR(row.amount)}`;
+    const ek = expandKey(row, side);
+    const isOpen = _state.expanded.has(ek);
+    const editable = isCategoryEditable(row.key) && !row.isSuspense;
     return `
-      <button type="button" class="neraca-row ${row.isSuspense ? 'is-suspense' : ''} tap"
-        data-action="open-category" data-key="${escapeHtml(row.key)}" data-side="${side}"
-        title="${escapeHtml(title)}">
-        <span class="neraca-row-left">
-          <span class="neraca-row-icon">${Icon(row.icon || 'tag', { size: 16 })}</span>
-          <span class="neraca-row-label">${escapeHtml(row.label)}</span>
-        </span>
-        <span class="neraca-row-amount ${amountClass(row, side)}">${escapeHtml(amt)}</span>
-      </button>
+      <div class="neraca-cat-block ${isOpen ? 'is-open' : ''}" data-cat-block="${escapeHtml(ek)}">
+        <div class="neraca-row ${row.isSuspense ? 'is-suspense' : ''} ${isOpen ? 'is-expanded' : ''}"
+          data-action="toggle-category" data-key="${escapeHtml(row.key)}" data-side="${side}" role="button" tabindex="0"
+          title="${escapeHtml(title)}" aria-expanded="${isOpen ? 'true' : 'false'}">
+          <span class="neraca-row-left">
+            <span class="neraca-row-chevron ${isOpen ? 'is-open' : ''}" aria-hidden="true">${Icon('chevronDown', { size: 14 })}</span>
+            <span class="neraca-row-icon">${Icon(row.icon || 'tag', { size: 16 })}</span>
+            <span class="neraca-row-label">${escapeHtml(row.label)}</span>
+          </span>
+          <span class="neraca-row-right">
+            <span class="neraca-row-amount ${amountClass(row, side)}">${escapeHtml(amt)}</span>
+            ${editable ? `
+              <button type="button" class="neraca-row-add tap" data-action="add-category" data-key="${escapeHtml(row.key)}" data-side="${side}"
+                title="Tambah item" aria-label="Tambah item">${Icon('plus', { size: 14 })}</button>
+            ` : ''}
+          </span>
+        </div>
+        <div class="neraca-cat-detail ${isOpen ? '' : 'hidden'}" data-role="cat-detail" data-key="${escapeHtml(row.key)}" data-side="${side}"></div>
+      </div>
     `;
   }).join('');
 }
@@ -160,7 +184,7 @@ function paint(container, sheet, options) {
         <section class="neraca-panel neraca-panel--aktiva" aria-label="Aktiva">
           <div class="neraca-panel-head">AKTIVA (ASET)</div>
           <div class="neraca-panel-cols"><span>Kategori</span><span>Nilai (Rp)</span></div>
-          ${renderRows(sheet.aktiva, 'aktiva')}
+          ${renderRows(sheet.aktiva, 'aktiva', options)}
           <div class="neraca-panel-foot">
             <span>TOTAL AKTIVA</span>
             <span class="neraca-panel-foot-amt">Rp ${formatIDR(sheet.totalAktiva)}</span>
@@ -170,7 +194,7 @@ function paint(container, sheet, options) {
         <section class="neraca-panel neraca-panel--pasiva" aria-label="Pasiva">
           <div class="neraca-panel-head">PASIVA (KEWAJIBAN &amp; MODAL)</div>
           <div class="neraca-panel-cols"><span>Kategori</span><span>Nilai (Rp)</span></div>
-          ${renderRows(sheet.pasiva, 'pasiva')}
+          ${renderRows(sheet.pasiva, 'pasiva', options)}
           <div class="neraca-panel-foot">
             <span>TOTAL PASIVA</span>
             <span class="neraca-panel-foot-amt">Rp ${formatIDR(sheet.totalPasiva)}</span>
@@ -195,10 +219,58 @@ function paint(container, sheet, options) {
 }
 
 /**
+ * @param {HTMLElement} detailHost
+ * @param {string} key
+ * @param {string} side
+ * @param {object} options
+ */
+async function mountCategoryDetail(detailHost, key, side, options) {
+  await mountInlineCategoryItems(detailHost, {
+    key,
+    sheet: _state.sheet,
+    endISO: resolveEndISO(),
+    onChanged: () => refresh(options.__container, options),
+  });
+}
+
+/**
  * @param {HTMLElement} container
  * @param {object} options
  */
 function wire(container, options) {
+  options.__container = container;
+
+  const toggleCategory = async (key, side, forceOpen = null) => {
+    const ek = `${side}:${key}`;
+    const open = forceOpen === null ? !_state.expanded.has(ek) : forceOpen;
+    if (open) _state.expanded.add(ek);
+    else _state.expanded.delete(ek);
+
+    const block = container.querySelector(`[data-cat-block="${ek}"]`);
+    if (!block) return;
+
+    block.classList.toggle('is-open', open);
+    const row = block.querySelector('[data-action="toggle-category"]');
+    row?.classList.toggle('is-expanded', open);
+    row?.setAttribute('aria-expanded', open ? 'true' : 'false');
+    block.querySelector('.neraca-row-chevron')?.classList.toggle('is-open', open);
+
+    const detail = block.querySelector('[data-role="cat-detail"]');
+    if (!detail) return;
+
+    if (open) {
+      detail.classList.remove('hidden');
+      detail.innerHTML = `<div class="neraca-inline-loading">Memuat…</div>`;
+      await mountCategoryDetail(detail, key, side, options);
+      if (forceOpen === true) {
+        detail.querySelector('.is-new [data-f="name"]')?.focus();
+      }
+    } else {
+      detail.classList.add('hidden');
+      detail.innerHTML = '';
+    }
+  };
+
   container.querySelector('[data-action="mode-live"]')?.addEventListener('click', () => {
     _state.mode = 'live';
     refresh(container, options);
@@ -213,19 +285,34 @@ function wire(container, options) {
     refresh(container, options);
   });
 
-  container.querySelectorAll('[data-action="open-category"]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const key = btn.dataset.key;
-      const side = btn.dataset.side;
-      const { showNeracaCategoryModal } = await import('../components/neraca-category-modal.js');
-      showNeracaCategoryModal({
-        key,
-        side,
-        sheet: _state.sheet,
-        endISO: resolveEndISO(),
-        onChanged: () => refresh(container, options),
-      });
+  container.querySelectorAll('[data-action="toggle-category"]').forEach((row) => {
+    row.addEventListener('click', (e) => {
+      if (e.target.closest('[data-action="add-category"]')) return;
+      toggleCategory(row.dataset.key, row.dataset.side);
     });
+    row.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        if (e.target.closest('[data-action="add-category"]')) return;
+        toggleCategory(row.dataset.key, row.dataset.side);
+      }
+    });
+  });
+
+  container.querySelectorAll('[data-action="add-category"]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleCategory(btn.dataset.key, btn.dataset.side, true);
+    });
+  });
+
+  // Mount already-expanded sections after paint
+  _state.expanded.forEach((ek) => {
+    const [side, key] = ek.split(':');
+    const detail = container.querySelector(`[data-role="cat-detail"][data-key="${key}"][data-side="${side}"]`);
+    if (detail && !detail.innerHTML.trim()) {
+      mountCategoryDetail(detail, key, side, options);
+    }
   });
 
   container.querySelector('[data-action="trace"]')?.addEventListener('click', async () => {

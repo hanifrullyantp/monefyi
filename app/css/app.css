@@ -353,9 +353,9 @@ html, body {
       font-weight: 500;
     }
     .sidebar-saldo-card__amount {
-      font-size: clamp(0.95rem, 0.7rem + 0.55vw, 1.15rem);
+      font-size: clamp(1.2rem, 1rem + 0.55vw, 1.45rem);
       font-weight: 800;
-      line-height: 1.15;
+      line-height: 1.12;
       letter-spacing: -0.03em;
       max-width: 100%;
       white-space: nowrap;
@@ -498,7 +498,7 @@ html, body {
     }
     #kpiSaldoDesktop.saldo-amount,
     .sidebar-saldo-card__amount.saldo-amount {
-      font-size: clamp(0.95rem, 0.7rem + 0.55vw, 1.25rem);
+      font-size: clamp(1.2rem, 1rem + 0.55vw, 1.45rem);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;

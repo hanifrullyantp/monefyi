@@ -866,8 +866,9 @@
   margin-top: 0 !important;
 }
 #dynamicContent.dynamic-content--tx {
-  gap: 0.25rem !important;
+  gap: 0 !important;
   padding-top: 0 !important;
+  margin-top: 0 !important;
 }
 .budget-page-root {
   padding-top: 4px;

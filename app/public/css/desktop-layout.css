@@ -399,17 +399,18 @@
     color: #10b981;
   }
 
-  /* Sidebar saldo: never wrap, compact */
+  /* Sidebar saldo: never wrap, slightly larger amount */
   .sidebar-saldo-card__amount.saldo-amount,
   .sidebar-saldo-card .hero-saldo-card__amount.saldo-amount,
   #kpiSaldoDesktop.sidebar-saldo-card__amount {
-    font-size: 1.05rem !important;
-    line-height: 1.15 !important;
+    font-size: clamp(1.28rem, 1.1rem + 0.55vw, 1.55rem) !important;
+    line-height: 1.12 !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     max-width: 100% !important;
     word-break: keep-all !important;
+    letter-spacing: -0.03em !important;
   }
 
   .sidebar-saldo-card {
@@ -419,6 +420,47 @@
   /* Hide legacy strip/insights hosts */
   #txDesktopWidgets {
     display: none !important;
+  }
+
+  /* TX page: list flush under header (no dead gap from flex siblings / space-y) */
+  .tx-main-panel #dynamicContent.dynamic-content--tx {
+    justify-content: flex-start !important;
+    align-content: flex-start !important;
+    gap: 0 !important;
+    row-gap: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  .tx-main-panel #dynamicContent.dynamic-content--tx > :not(#txSection) {
+    display: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .tx-main-panel #dynamicContent.dynamic-content--tx.space-y-6 > * {
+    margin-top: 0 !important;
+  }
+
+  .tx-main-panel #dynamicContent.dynamic-content--tx #txSection {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    justify-content: flex-start !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  .tx-main-panel #dynamicContent.dynamic-content--tx #txGroupBar {
+    flex-shrink: 0;
+    margin-top: 0 !important;
+    margin-bottom: 6px !important;
+  }
+
+  .tx-main-panel #dynamicContent.dynamic-content--tx #txListHost {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
   }
 
   /* Table shell — TX list card */
