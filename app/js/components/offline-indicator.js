@@ -12,11 +12,20 @@ export function renderOfflineIndicator() {
   el.setAttribute('role', 'status');
   el.setAttribute('aria-live', 'polite');
 
+  let hideTimer = 0;
+
   function update() {
-    const online =
-      typeof window.monefyiConnectivity?.isOnline === 'function'
-        ? window.monefyiConnectivity.isOnline()
-        : navigator.onLine;
+    // Prefer hard browser offline; connectivity helper only for false-online cases
+    const offline =
+      (typeof navigator !== 'undefined' && !navigator.onLine)
+      || (typeof window.monefyiConnectivity?.isOnline === 'function'
+        && !window.monefyiConnectivity.isOnline());
+    const online = !offline;
+
+    if (hideTimer) {
+      clearTimeout(hideTimer);
+      hideTimer = 0;
+    }
 
     el.className = `offline-indicator ${online ? 'online' : 'offline'}`;
     el.innerHTML = `
@@ -27,11 +36,13 @@ export function renderOfflineIndicator() {
     if (online) {
       el.classList.add('flash');
       el.style.display = 'flex';
-      setTimeout(() => {
+      hideTimer = window.setTimeout(() => {
         el.style.display = 'none';
         el.classList.remove('flash');
+        hideTimer = 0;
       }, 3000);
     } else {
+      el.classList.remove('flash');
       el.style.display = 'flex';
     }
   }
@@ -41,12 +52,15 @@ export function renderOfflineIndicator() {
   window.addEventListener('online', () => {
     update();
     setTimeout(() => {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+      if (window.monefyiConnectivity?.isOnline && !window.monefyiConnectivity.isOnline()) return;
       window.monefyiSync?.triggerSync?.('back-online');
       window.monefyiPending?.processPendingQueue?.();
     }, 1500);
   });
 
   window.addEventListener('offline', update);
+  window.addEventListener('monefyi:connectivity', update);
 
   return el;
 }

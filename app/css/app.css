@@ -605,6 +605,10 @@ html, body {
         min-height: 0;
         width: 100%;
       }
+      /* Settings manages its own inner scroll (tabs stay visible) */
+      .tx-main-panel #dynamicContent.dynamic-content--settings {
+        overflow: hidden;
+      }
       .tx-main-panel #txListHost {
         flex: 1;
         min-height: 0;

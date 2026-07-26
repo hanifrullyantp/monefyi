@@ -25,17 +25,28 @@
       }
     }
 
-    /** @type {boolean|null} Verified reachability (PWA can lie about navigator.onLine). */
+    /** @type {boolean|null} Verified reachability (PWA can lie about navigator.onLine = true). */
     let _verifiedOnline = null;
 
+    function emitConnectivityChange() {
+      try { window.dispatchEvent(new Event('monefyi:connectivity')); } catch { /* ignore */ }
+    }
+
     /**
-     * Probe Supabase reachability — fixes false "offline" in installed PWA.
+     * Probe Supabase reachability — only used when browser claims online.
+     * Never override a hard browser offline signal (avoids false "Online" from SW/cache).
      * @returns {Promise<boolean>}
      */
     async function verifyNetworkAccess() {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        _verifiedOnline = false;
+        emitConnectivityChange();
+        return false;
+      }
       if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-        _verifiedOnline = !!navigator.onLine;
-        return _verifiedOnline;
+        _verifiedOnline = true;
+        emitConnectivityChange();
+        return true;
       }
       try {
         const ctrl = new AbortController();
@@ -50,20 +61,24 @@
           signal: ctrl.signal,
         });
         clearTimeout(timer);
-        // 401 = server reachable (auth required); treat as online for connectivity probe
-        _verifiedOnline = res.ok || res.status === 401 || (res.status > 0 && res.status < 500);
+        // Real HTTP response only — 401/403 still means the API is reachable
+        _verifiedOnline = res.ok || res.status === 401 || res.status === 403;
       } catch {
         _verifiedOnline = false;
       }
-      if (_verifiedOnline && !navigator.onLine) {
-        try { window.dispatchEvent(new Event('online')); } catch {}
+      // Re-check: user may have gone offline during the probe
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        _verifiedOnline = false;
       }
-      return _verifiedOnline;
+      emitConnectivityChange();
+      return !!_verifiedOnline;
     }
 
     function isOfflineMode() {
-      if (_verifiedOnline !== null) return !_verifiedOnline;
-      return !navigator.onLine;
+      // Hard offline from browser always wins
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return true;
+      if (_verifiedOnline === false) return true;
+      return false;
     }
 
     if (typeof window !== 'undefined') {
@@ -71,6 +86,13 @@
         verifyNetworkAccess,
         isOnline: () => !isOfflineMode(),
       };
+      window.addEventListener('offline', () => {
+        _verifiedOnline = false;
+        emitConnectivityChange();
+      });
+      window.addEventListener('online', () => {
+        verifyNetworkAccess().catch(() => null);
+      });
     }
 
     const ASSET_REPAIR_KEY = 'monefyi_asset_repair_v4';

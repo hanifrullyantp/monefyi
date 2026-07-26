@@ -35,31 +35,43 @@ export function renderSyncIndicator(opts = {}) {
 
   function update() {
     const status = getSyncStatus();
-    const key = `${status.isOnline ? 1 : 0}:${status.isSyncing ? 1 : 0}`;
+    // Hard offline always wins over stale verified-online state
+    const isOnline = typeof navigator !== 'undefined' && !navigator.onLine
+      ? false
+      : status.isOnline;
+    const key = `${isOnline ? 1 : 0}:${status.isSyncing ? 1 : 0}`;
     if (key === lastKey) return;
     lastKey = key;
 
+    const view = { ...status, isOnline };
     indicator.innerHTML = `
-      <span class="sync-icon ${status.isSyncing ? 'syncing' : ''}" aria-hidden="true">
-        ${status.isOnline ? ICON_ONLINE : ICON_OFFLINE}
+      <span class="sync-icon ${view.isSyncing ? 'syncing' : ''}" aria-hidden="true">
+        ${view.isOnline ? ICON_ONLINE : ICON_OFFLINE}
       </span>
-      <span class="sync-label">${labelFor(status)}</span>
+      <span class="sync-label">${labelFor(view)}</span>
     `;
-    indicator.dataset.online = String(status.isOnline);
-    indicator.dataset.syncing = String(status.isSyncing);
+    indicator.dataset.online = String(view.isOnline);
+    indicator.dataset.syncing = String(view.isSyncing);
   }
 
   update();
 
   onSyncEvent((event, data) => {
+    lastKey = '';
     update();
     if (event === 'sync-complete' && data?.pushed > 0) {
       showToast(`✓ ${data.pushed} perubahan tersinkron`, 'success');
     }
   });
 
+  window.addEventListener('offline', () => { lastKey = ''; update(); });
+  window.addEventListener('online', () => { lastKey = ''; update(); });
+  window.addEventListener('monefyi:connectivity', () => { lastKey = ''; update(); });
+
   indicator.addEventListener('click', () => {
-    if (navigator.onLine) triggerSync('manual');
+    if (navigator.onLine && window.monefyiConnectivity?.isOnline?.() !== false) {
+      triggerSync('manual');
+    }
   });
 
   return indicator;

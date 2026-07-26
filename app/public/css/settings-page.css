@@ -8,6 +8,7 @@
   background: var(--mf-bg, #0B1118);
   position: relative;
   z-index: 2;
+  overflow: hidden;
 }
 .settings-page-root.hidden {
   display: none !important;
@@ -16,50 +17,54 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  min-height: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
   color: var(--mf-text, #F1F5F9);
   font-family: var(--mf-font, Montserrat, system-ui, sans-serif);
 }
 .settings-page-header {
-  padding: 8px 4px 12px;
+  flex-shrink: 0;
+  padding: 4px 4px 8px;
   border-bottom: 1px solid var(--mf-border);
   margin-bottom: 0;
 }
 .settings-page-header h1 {
   margin: 0;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 800;
   letter-spacing: -0.02em;
 }
 .settings-page-header p {
-  margin: 4px 0 0;
-  font-size: 12px;
+  margin: 2px 0 0;
+  font-size: 11px;
   color: var(--mf-muted);
 }
+/* Tabs stay pinned; only section body scrolls — avoids content covering chips */
 .settings-section-nav {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   overflow-x: auto;
-  padding: 12px 4px;
+  flex-shrink: 0;
+  padding: 8px 2px 10px;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: var(--mf-sheet, rgba(19, 26, 36, 0.98));
+  position: relative;
+  z-index: 3;
+  background: var(--mf-bg, #0B1118);
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
 }
 .settings-section-nav::-webkit-scrollbar { height: 3px; }
 .settings-sec-btn {
   flex-shrink: 0;
-  padding: 9px 14px;
-  border-radius: 12px;
+  padding: 6px 11px;
+  border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: rgba(255, 255, 255, 0.08);
   color: #E2E8F0;
   font-size: 12px;
   font-weight: 700;
+  line-height: 1.2;
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
@@ -76,7 +81,14 @@
 }
 .settings-section-body {
   flex: 1;
-  padding: 12px 4px 32px;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding: 10px 4px 32px;
+  position: relative;
+  z-index: 1;
 }
 .settings-card {
   background: var(--mf-sheet, rgba(19,26,36,.95));

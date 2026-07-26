@@ -24,10 +24,11 @@ function getUserId() {
  * @returns {boolean}
  */
 function isBrowserOnline() {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
   if (typeof window !== 'undefined' && window.monefyiConnectivity?.isOnline) {
     return window.monefyiConnectivity.isOnline();
   }
-  return navigator.onLine;
+  return true;
 }
 
 /**
@@ -55,11 +56,8 @@ export function initSyncEngine() {
 
   if (isBrowserOnline()) {
     setTimeout(() => triggerSync('startup'), 2000);
-  } else {
-    window.monefyiConnectivity?.verifyNetworkAccess?.().then((ok) => {
-      if (ok) triggerSync('startup');
-    });
   }
+  // Do not probe-override hard offline — avoids false online + sync when navigator.onLine is false
 }
 
 /**
