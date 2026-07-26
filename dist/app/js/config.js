@@ -21,7 +21,7 @@
     fnStartTrial: "start-trial",
     checkoutMonthly: "https://lynk.id/asfin-ai/9zexz9z5wom1/checkout",
     checkoutLifetime: "https://lynk.id/asfin-ai/j3q0x5ke3g49/checkout",
-    adminEmails: ["admin@asfin.app"],
+    adminEmails: ["admin@asfin.app", "hanif.rullyant@gmail.com"],
     /** Deploy di subpath? Contoh: '/app' (tanpa slash akhir). Kosongkan jika di root domain. */
     basePath: "/app",
   };

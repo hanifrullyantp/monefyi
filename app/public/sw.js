@@ -1,9 +1,5 @@
 // Offline-capable service worker — v7 budget killer feature.
-<<<<<<< Updated upstream
-const CACHE_VERSION = 'v49-logo-clean';
-=======
-const CACHE_VERSION = 'v48-settings-offline';
->>>>>>> Stashed changes
+const CACHE_VERSION = 'v50-merge-fix';
 const STATIC_CACHE = `monefyi-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `monefyi-runtime-${CACHE_VERSION}`;
 const IMAGES_CACHE = `monefyi-images-${CACHE_VERSION}`;

@@ -259,7 +259,11 @@ async function checkBillReminders(budgetRows, today) {
     if (!budget.items?.length) continue;
     for (const item of budget.items) {
       if (item.status === 'done' || item.status === 'skipped') continue;
-      const targetDay = parseTargetDay(item.target_date_day);
+      let targetDay = parseTargetDay(item.target_date_day);
+      if (targetDay == null && item.target_date) {
+        const m = String(item.target_date).match(/^\d{4}-\d{2}-(\d{2})/);
+        if (m) targetDay = parseInt(m[1], 10);
+      }
       if (targetDay == null) continue;
       const dayDiff = targetDay - today;
       if (![3, 1, 0].includes(dayDiff)) continue;

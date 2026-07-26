@@ -8,6 +8,8 @@ const _undoStack = [];
 const _redoStack = [];
 const _listeners = new Set();
 let _isDirty = false;
+/** Uncommitted in-session edits (slider typing) before undo stack entry */
+let _sessionDirty = false;
 
 /**
  * @param {object} change
@@ -60,18 +62,25 @@ export function clearChanges() {
   _undoStack.length = 0;
   _redoStack.length = 0;
   _isDirty = false;
+  _sessionDirty = false;
+  _notify();
+}
+
+/** @param {boolean} [value] */
+export function markSessionDirty(value = true) {
+  _sessionDirty = !!value;
   _notify();
 }
 
 export function isDirty() {
-  return _isDirty;
+  return _isDirty || _sessionDirty;
 }
 
 export function getState() {
   return {
     canUndo: canUndo(),
     canRedo: canRedo(),
-    isDirty: _isDirty,
+    isDirty: isDirty(),
     undoCount: _undoStack.length,
     redoCount: _redoStack.length,
     lastChange: _undoStack[_undoStack.length - 1] || null,
@@ -127,6 +136,7 @@ if (typeof window !== 'undefined') {
     undo,
     redo,
     clearChanges,
+    markSessionDirty,
     isDirty,
     getState,
     onChange,

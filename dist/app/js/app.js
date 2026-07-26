@@ -263,8 +263,8 @@
       return Math.round(n);
     }
 
-    const DEFAULT_LOGO = './icons/monefyi-logo.png';
-    const DEFAULT_LOGO_MARK = './icons/monefyi-logo.png';
+    const DEFAULT_LOGO = './icons/monefyi-logo.png?v=2026-07-25-logo';
+    const DEFAULT_LOGO_MARK = './icons/monefyi-logo.png?v=2026-07-25-logo';
 
     function normalizeText(t){
       return (t||'').toLowerCase().replace(/\s+/g,' ').trim();
@@ -1056,6 +1056,7 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
         dashboardOpen: true,
         budgetPageOpen: false,
         monevisorPageOpen: false,
+        neracaPageOpen: false,
         settingsPageOpen: false,
         txDesktopFiltersOpen: false,
         saldoFilterOpen: false,
@@ -1106,6 +1107,8 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
         saldoLoading: false,
       }
     };
+
+    if (typeof window !== 'undefined') window.STATE = STATE;
 
     /** Header wajib untuk invoke Supabase Edge Functions dari browser (apikey + JWT). */
     function supabaseEdgeHeaders(extra = {}) {
@@ -1208,38 +1211,49 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
       import('./services/global-filter.js')
         .then((m) => m.syncPeriodFromState?.(STATE.selectedMonth))
         .catch(() => {});
-      if (STATE.budgetDraft) STATE.budgetDraft.month = STATE.selectedMonth;
+      // Month change must rebuild draft from saved data (don't just retag draft.month)
+      if (STATE.budgetDraft && STATE.budgetDraft.month !== STATE.selectedMonth) {
+        STATE.budgetDraft = null;
+      }
       rerender();
       refreshTransactionsRange().catch(()=>{});
-      loadBudgets().then(b => { STATE.budgetsByMonth = b; rerender(); }).catch(()=>{});
+      loadBudgets().then(b => {
+        STATE.budgetsByMonth = b;
+        if (STATE.ui?.budgetPageOpen) {
+          prepareBudgetDraft().then(() => renderBudgetPageView()).catch(() => rerender());
+        } else {
+          rerender();
+        }
+      }).catch(()=>{});
       updateSaldoAsync().catch(()=>{});
     }
 
     if (typeof window !== 'undefined') {
       window.monefyiSetPeriodMonth = (mk) => {
+        const cur = toMonthKey(new Date());
+        const key = String(mk || '').slice(0, 7);
         setPeriod({
-          preset: 'this_month',
-          startISO: toISODate(startOfMonth(mk)),
-          endISO: toISODate(endOfMonth(mk)),
-          label: monthLabel(mk),
+          preset: key === cur ? 'this_month' : 'custom',
+          startISO: toISODate(startOfMonth(key)),
+          endISO: toISODate(endOfMonth(key)),
+          label: monthLabel(key),
         });
       };
     }
 
     function initDefaultPeriod(){
-      const restored = window.MonefyiUI?.restorePeriod?.();
-      if (restored?.start && restored?.end) {
-        setPeriod({
-          preset: restored.preset || 'custom',
-          startISO: restored.start,
-          endISO: restored.end,
-          label: restored.label || dateLabelRange(restored.start, restored.end),
-        });
-        return;
-      }
+      // Always default to the real current calendar month (ignore stale cached Oct/etc.)
       const mk = toMonthKey(new Date());
       STATE.selectedMonth = mk;
-      setPeriod({ preset:'this_month', startISO: toISODate(startOfMonth(mk)), endISO: toISODate(endOfMonth(mk)), label: monthLabel(mk) });
+      setPeriod({
+        preset: 'this_month',
+        startISO: toISODate(startOfMonth(mk)),
+        endISO: toISODate(endOfMonth(mk)),
+        label: monthLabel(mk),
+      });
+      try {
+        localStorage.removeItem('monefyi_last_period');
+      } catch { /* ignore */ }
     }
 
     // =========================
@@ -1385,8 +1399,6 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
   const logoUrl = STATE.appConfig?.logo_url ? String(STATE.appConfig.logo_url) : DEFAULT_LOGO;
 
   $$('.brand-logo-slot').forEach((slot) => {
-    // Top-left header + sidebar keep the legacy mark
-    if (slot.dataset.brandLock === 'legacy') return;
     const svg = slot.querySelector('.brand-logo-svg');
     const img = slot.querySelector('.brand-logo-custom');
     if (img) {
@@ -1398,7 +1410,6 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
 }
 
     function applyAdminUI() {
-      if (typeof window !== 'undefined') window.STATE = STATE;
       if (!STATE.db) return;
       const admin = isAdmin();
       const branding = document.getElementById('adminBrandingCard');
@@ -1672,8 +1683,17 @@ function computeSubscriptionStatus(profile){
       const minISO = (new Date(startISO) < new Date(minTrendISO)) ? startISO : minTrendISO;
       const maxISO = endISO;
 
+      let tombstoneIds = new Set();
+      if (window.dataStore?.getPendingDeleteTransactionIds) {
+        try {
+          tombstoneIds = await window.dataStore.getPendingDeleteTransactionIds(STATE.db.user.id);
+        } catch (_) {}
+      }
+
       const applyLocalRows = (rows) => {
-        const remote = (rows || []).map(t => ({
+        const remote = (rows || [])
+          .filter((t) => !tombstoneIds.has(t.id))
+          .map(t => ({
           ...t,
           amount: Math.abs(Number(t.amount||0)),
           meta: (t.meta && typeof t.meta === 'object') ? t.meta : (t.meta ? JSON.parse(t.meta) : {})
@@ -1776,7 +1796,11 @@ function computeSubscriptionStatus(profile){
         const saved = existing
           ? await window.dataStore.updateTransaction(tx.id, tx)
           : await window.dataStore.createTransaction(tx);
-        return normalizeSaved(saved);
+        const normalizedOffline = normalizeSaved(saved);
+        import('./services/journal-engine.js')
+          .then((m) => m.syncFromTransaction(normalizedOffline))
+          .catch(() => {});
+        return normalizedOffline;
       }
 
       const supa = STATE.db.supa;
@@ -1823,6 +1847,9 @@ function computeSubscriptionStatus(profile){
 
       ensureAccountRegistered(normalized.account);
       window.dataStore?.mirrorTransaction?.(normalized).catch(() => {});
+      import('./services/journal-engine.js')
+        .then((m) => m.syncFromTransaction(normalized))
+        .catch(() => {});
       return normalized;
     }
 
@@ -1830,12 +1857,20 @@ function computeSubscriptionStatus(profile){
 async function dbDeleteTransaction(id) {
   if (!STATE.db.enabled || !STATE.db.user) return;
 
-  if (!navigator.onLine && window.dataStore?.deleteTransaction) {
-    await window.dataStore.deleteTransaction(id);
-    return;
+  if (window.dataStore?.deleteTransaction) {
+    try {
+      await window.dataStore.deleteTransaction(id);
+    } catch (e) {
+      console.warn('local delete tombstone failed', e);
+    }
   }
-  
-  const { error } = await STATE.db.supa
+
+  if (!navigator.onLine) return;
+
+  const supa = STATE.db.supa;
+  if (!supa) throw new Error('Database not ready');
+
+  const { error } = await supa
     .from('transactions')
     .delete()
     .eq('id', id);
@@ -1846,7 +1881,13 @@ async function dbDeleteTransaction(id) {
     const { getDb } = await loadAppModule('js/services/offline-db.js');
     const db = await getDb();
     await db.transactions.delete(id);
+    const queueItems = await db.sync_queue.where('record_id').equals(id).toArray();
+    await Promise.all(queueItems.map((q) => db.sync_queue.delete(q.queueId)));
   } catch (_) {}
+
+  import('./services/journal-engine.js')
+    .then((m) => m.removeTransactionJournal(id))
+    .catch(() => {});
 }
 
 // Fungsi Update (Upsert) - versi duplikat (dinonaktifkan untuk menghindari deklarasi ganda)
@@ -2144,6 +2185,14 @@ async function upsertTransaction_legacy_local(tx) {
           initEmailImportRealtime();
         } catch (e) { console.warn('initEmailImportRealtime', e); }
         try {
+          const { initGlobalModalKeyboard } = await import('./services/modal-keyboard.js');
+          initGlobalModalKeyboard();
+        } catch (e) { console.warn('initGlobalModalKeyboard', e); }
+        try {
+          const mk = STATE.selectedMonth || toMonthKey(STATE.period?.end || new Date());
+          await ensureIncomeSourcesCached(mk);
+        } catch (e) { console.warn('ensureIncomeSourcesCached', e); }
+        try {
           const { mountFilterIcon } = await import('./components/global-filter-popup.js');
           mountFilterIcon();
         } catch (e) { console.warn('mountFilterIcon', e); }
@@ -2183,6 +2232,7 @@ async function upsertTransaction_legacy_local(tx) {
         onUndo: () => window.monefyiUndo?.undo?.(),
         onRedo: () => window.monefyiUndo?.redo?.(),
         onEscape: () => {
+          if (window.monefyiModalKeyboard?.handleModalEscape?.({ key: 'Escape' })) return;
           document.querySelectorAll('[data-tx-dropdown]').forEach(el => el.classList.add('hidden'));
           if (STATE.ui.monthPopoverOpen) setMonthPopover(false);
         },
@@ -3708,6 +3758,8 @@ async function upsertTransaction_legacy_local(tx) {
         const nav = el.getAttribute('data-nav');
         if (STATE.ui.monevisorPageOpen) {
           if (nav === 'advisor') el.classList.add('active');
+        } else if (STATE.ui.neracaPageOpen) {
+          if (nav === 'neraca') el.classList.add('active');
         } else if (STATE.ui.budgetPageOpen) {
           if (nav === 'budget') el.classList.add('active');
         } else {
@@ -3721,8 +3773,8 @@ async function upsertTransaction_legacy_local(tx) {
           const nav = el.getAttribute('data-nav');
           if (nav === 'beranda' || nav === 'transaksi' || nav === 'budget' || nav === 'advisor') {
             el.classList.toggle('active',
-              (nav === 'beranda' && STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen && !STATE.ui.settingsPageOpen)
-              || (nav === 'transaksi' && !STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen && !STATE.ui.settingsPageOpen)
+              (nav === 'beranda' && STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen && !STATE.ui.neracaPageOpen && !STATE.ui.settingsPageOpen)
+              || (nav === 'transaksi' && !STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen && !STATE.ui.neracaPageOpen && !STATE.ui.settingsPageOpen)
               || (nav === 'budget' && STATE.ui.budgetPageOpen)
               || (nav === 'advisor' && STATE.ui.monevisorPageOpen)
             );
@@ -3892,7 +3944,7 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       }
       $('#rangeCard')?.classList.toggle('hidden', (STATE.period.preset || 'this_month') !== 'custom');
 
-      const specialPageOpen = !!(STATE.ui.budgetPageOpen || STATE.ui.monevisorPageOpen || STATE.ui.settingsPageOpen);
+      const specialPageOpen = !!(STATE.ui.budgetPageOpen || STATE.ui.monevisorPageOpen || STATE.ui.neracaPageOpen || STATE.ui.settingsPageOpen);
       applySpecialPageVisibility();
       const showDesktopDashboard = STATE.ui.dashboardOpen && isDesktopViewport() && !specialPageOpen;
       const showMobileHome = STATE.ui.dashboardOpen && !isDesktopViewport() && !specialPageOpen;
@@ -3905,6 +3957,10 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       const budgetRoot = $('#budgetPageRoot');
       if (budgetRoot) {
         budgetRoot.classList.toggle('hidden', !STATE.ui.budgetPageOpen);
+      }
+      const neracaRoot = $('#neracaPageRoot');
+      if (neracaRoot) {
+        neracaRoot.classList.toggle('hidden', !STATE.ui.neracaPageOpen);
       }
       const monevisorRoot = $('#monevisorPageRoot');
       if (monevisorRoot) {
@@ -3924,28 +3980,33 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       if (pageTitleDesktop) {
         pageTitleDesktop.textContent = STATE.ui.settingsPageOpen
           ? 'Pengaturan'
-          : (STATE.ui.monevisorPageOpen
-            ? 'Monevisor'
-            : (STATE.ui.budgetPageOpen
-              ? 'Budgeting'
-              : (STATE.ui.dashboardOpen ? 'Dashboard' : 'Transaksi')));
+          : (STATE.ui.neracaPageOpen
+            ? 'Neraca'
+            : (STATE.ui.monevisorPageOpen
+              ? 'Monevisor'
+              : (STATE.ui.budgetPageOpen
+                ? 'Budgeting'
+                : (STATE.ui.dashboardOpen ? 'Dashboard' : 'Transaksi'))));
       }
       if (pageSubtitleDesktop) {
         pageSubtitleDesktop.textContent = STATE.ui.settingsPageOpen
           ? 'Akun, tampilan, notifikasi & data'
-          : (STATE.ui.monevisorPageOpen
-            ? 'Financial coach — diagnosa & action plan'
-            : (STATE.ui.budgetPageOpen
-              ? 'Rencana & realisasi budget bulanan'
-              : (STATE.ui.dashboardOpen
-                ? 'Ringkasan keuangan Anda'
-                : 'Kelola transaksi keuangan Anda')));
+          : (STATE.ui.neracaPageOpen
+            ? 'Struktur Aktiva & Pasiva'
+            : (STATE.ui.monevisorPageOpen
+              ? 'Financial coach — diagnosa & action plan'
+              : (STATE.ui.budgetPageOpen
+                ? 'Rencana & realisasi budget bulanan'
+                : (STATE.ui.dashboardOpen
+                  ? 'Ringkasan keuangan Anda'
+                  : 'Kelola transaksi keuangan Anda'))));
       }
       const dynamicContent = $('#dynamicContent');
       if (dynamicContent) {
         dynamicContent.classList.toggle('dynamic-content--dashboard', STATE.ui.dashboardOpen && !specialPageOpen);
         dynamicContent.classList.toggle('dynamic-content--tx', !STATE.ui.dashboardOpen && !specialPageOpen);
         dynamicContent.classList.toggle('dynamic-content--budget', !!STATE.ui.budgetPageOpen);
+        dynamicContent.classList.toggle('dynamic-content--neraca', !!STATE.ui.neracaPageOpen);
         dynamicContent.classList.toggle('dynamic-content--monevisor', !!STATE.ui.monevisorPageOpen);
         dynamicContent.classList.toggle('dynamic-content--settings', !!STATE.ui.settingsPageOpen);
       }
@@ -4080,9 +4141,7 @@ renderAccountsSettings();
     }
     return `saldo-amount mt-1${extra}`;
   };
-  const formatSaldoFor = (sel, val) => (
-    sel === '#kpiSaldoDesktop' ? `Rp ${formatCompactIDR(val)}` : formatIDR(val)
-  );
+  const formatSaldoFor = (_sel, val) => formatIDR(val);
 
   // Update angka saldo (mobile + desktop sidebar + strip)
   ['#kpiSaldo', '#kpiSaldoDesktop', '#kpiSaldoStrip'].forEach((sel) => {
@@ -5128,6 +5187,13 @@ function generateSmartBudgetRecommendation() {
       return key;
     }
 
+    function sumGroupExpense(items) {
+      return (items || []).reduce((sum, tx) => {
+        if (tx.type !== 'expense') return sum;
+        return sum + Math.abs(Number(tx.amount || 0));
+      }, 0);
+    }
+
     /**
      * @param {object[]} txs
      * @param {string} mode
@@ -5187,11 +5253,15 @@ function generateSmartBudgetRecommendation() {
 
       for (const group of groups) {
         if (groupMode !== 'none' && group.label) {
+          const groupExpense = sumGroupExpense(group.items);
           const header = document.createElement('div');
           header.className = 'tx-group-header';
           header.innerHTML = `
             <span class="tx-group-header__label">${escapeHtml(group.label)}</span>
-            <span class="tx-group-header__count">${group.items.length}</span>
+            <div class="tx-group-header__meta">
+              <span class="tx-group-header__expense">−${formatIDR(groupExpense)}</span>
+              <span class="tx-group-header__count">${group.items.length}</span>
+            </div>
           `;
           list.appendChild(header);
         }
@@ -5217,7 +5287,7 @@ function generateSmartBudgetRecommendation() {
 
           const isInc = tx.type==='income';
           const isExp = tx.type==='expense';
-          const amtColor = isInc ? 'var(--accent-primary)' : isExp ? 'var(--accent-danger)' : 'var(--app-text)';
+          const amountCls = isInc ? 'tx-amount--income' : isExp ? 'tx-amount--expense' : '';
           const sign = isInc ? '+' : isExp ? '−' : '';
           const title = tx.merchant || tx.category || 'Lainnya';
           const dateFormatted = formatShortDate(tx.date);
@@ -5264,7 +5334,7 @@ function generateSmartBudgetRecommendation() {
                 </div>
                 <div class="tx-card-mockup__amount">
                   <div class="text-[10px] app-muted">${escapeHtml(dateFormatted)}</div>
-                  <div class="font-bold" style="color:${amtColor}">${sign}${formatIDR(Math.abs(Number(tx.amount||0)))}</div>
+                  <div class="font-bold tx-amount ${amountCls}">${sign}${formatIDR(Math.abs(Number(tx.amount||0)))}</div>
                 </div>
                 <button type="button" class="tx-menu-btn tap rounded-lg app-chip w-7 h-7 flex items-center justify-center shrink-0" data-tx-menu="${escapeHtmlAttr(tx.id)}" data-tip="Menu" aria-label="Menu">⋮</button>
               </div>
@@ -5278,7 +5348,7 @@ function generateSmartBudgetRecommendation() {
                 <div class="text-xs app-muted truncate">${escapeHtml(tx.category || 'Lainnya')}</div>
                 <div class="text-xs app-muted truncate">${escapeHtml(tx.account || 'Cash')}</div>
                 <div class="text-xs app-muted truncate">${escapeHtml(dateFormatted)}</div>
-                <div class="text-sm font-bold text-right tabular-nums" style="color:${amtColor}">${sign}${formatIDR(Math.abs(Number(tx.amount||0)))}</div>
+                <div class="text-sm font-bold text-right tabular-nums tx-amount ${amountCls}">${sign}${formatIDR(Math.abs(Number(tx.amount||0)))}</div>
                 <div class="flex items-center justify-between">
                   ${budgetHtml}
                   <div class="tx-row-del opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
@@ -5451,9 +5521,7 @@ function generateSmartBudgetRecommendation() {
 
       let catOptions = '';
       const txMonth = toMonthKey(tx.date || STATE.selectedMonth || new Date());
-      const cats = (getBudgetCategoryNamesForMonth(txMonth).length
-        ? getBudgetCategoryNamesForMonth(txMonth)
-        : getLiveBudgetCategories()).slice();
+      const cats = collectTransactionCategoryNames(txMonth);
       const txCat = String(tx.category || '').trim();
       const txCatNorm = normalizeCategoryName(txCat);
       if (txCat && !cats.some((c) => normalizeCategoryName(c) === txCatNorm)) cats.push(txCat);
@@ -6010,6 +6078,7 @@ function generateSmartBudgetRecommendation() {
         renderHomePage(root, getHomePageContext(), {
           onViewTransactions: () => toggleNav('list'),
           onViewBudget: () => openBudget(),
+          onViewNeraca: () => openNeraca(),
           onViewAdvisor: () => openAdvisorAuto(),
           onViewAccounts: () => openAccounts(),
           onAccountClick: (name) => openAccountDetail(name),
@@ -6037,12 +6106,13 @@ function generateSmartBudgetRecommendation() {
   if (!STATE.ui.dashboardOpen) destroyCharts();
   else requestAnimationFrame(() => renderCharts());
 
-  // Skip TX list rebuild on Budget / Monevisor / Settings — avoids flash + wasted work
-  if (!STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen && !STATE.ui.settingsPageOpen) {
+  // Skip TX list rebuild on Budget / Monevisor / Neraca / Settings — avoids flash + wasted work
+  if (!STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen && !STATE.ui.neracaPageOpen && !STATE.ui.settingsPageOpen) {
     renderTransactions();
   }
-  if (STATE.ui.dashboardOpen && !isDesktopViewport() && !STATE.ui.settingsPageOpen) renderMobileHome();
+  if (STATE.ui.dashboardOpen && !isDesktopViewport() && !STATE.ui.settingsPageOpen && !STATE.ui.neracaPageOpen) renderMobileHome();
   if (STATE.ui.budgetPageOpen) renderBudgetPageView();
+  if (STATE.ui.neracaPageOpen) renderNeracaPageView();
   if (STATE.ui.monevisorPageOpen) renderMonevisorPageView();
   enhanceTransactionPageDesktop();
 }
@@ -6053,14 +6123,16 @@ function generateSmartBudgetRecommendation() {
         && !STATE.ui.dashboardOpen
         && !STATE.ui.budgetPageOpen
         && !STATE.ui.monevisorPageOpen
+        && !STATE.ui.neracaPageOpen
         && !STATE.ui.settingsPageOpen;
     }
 
-    /** Full-width saldo bar context: TX or Dashboard at ≥1024 (not Budget/Monevisor) */
+    /** Full-width saldo bar context: TX or Dashboard at ≥1024 (not Budget/Monevisor/Neraca) */
     function isDesktopSaldoBarPage() {
       return window.innerWidth >= 1024
         && !STATE.ui.budgetPageOpen
         && !STATE.ui.monevisorPageOpen
+        && !STATE.ui.neracaPageOpen
         && !STATE.ui.settingsPageOpen;
     }
 
@@ -6254,12 +6326,16 @@ function openAddSheet(tab = 'quick') {
   const sheetEl = document.getElementById('sheet');
   sheetEl?.classList.toggle('sheet-form-panel', isDesktopViewport());
   setSheetPosition('bottom');
-  // Isi dropdown dari budgeting (semua bulan) + akun/metode
-  try {
-    populateManualTxSelects();
-  } catch (err) {
-    console.warn('[app] populate manual selects failed', err);
-  }
+  // Isi dropdown dari budgeting + sumber income
+  (async () => {
+    try {
+      const mk = STATE.selectedMonth || toMonthKey(STATE.period?.end || new Date());
+      await ensureIncomeSourcesCached(mk);
+      populateManualTxSelects();
+    } catch (err) {
+      console.warn('[app] populate manual selects failed', err);
+    }
+  })();
 
   // 2. Logic Pindah Tab (Tanpa showTab)
   document.querySelectorAll('.tabPanel').forEach(panel => {
@@ -6480,6 +6556,7 @@ function setSheetPosition(mode) {
   sheet.classList.remove('-translate-y-1/2');
 }
     function closeAddSheet(){ closeSheet(sheetBackdrop, sheet); }
+    window.closeAddSheet = closeAddSheet;
 
     sheetBackdrop.addEventListener('click', (e)=>{
       if (e.target?.dataset?.close === 'true') closeAddSheet();
@@ -6494,13 +6571,14 @@ function setSheetPosition(mode) {
      * Must beat CSS rules like `.tx-main-panel #txSection { display:flex }`.
      */
     function applySpecialPageVisibility() {
-      const specialPageOpen = !!(STATE.ui.budgetPageOpen || STATE.ui.monevisorPageOpen || STATE.ui.settingsPageOpen);
+      const specialPageOpen = !!(STATE.ui.budgetPageOpen || STATE.ui.monevisorPageOpen || STATE.ui.neracaPageOpen || STATE.ui.settingsPageOpen);
       const showDesktopDashboard = STATE.ui.dashboardOpen && isDesktopViewport() && !specialPageOpen;
       const showTx = !STATE.ui.dashboardOpen && !specialPageOpen;
 
       $('#txSection')?.classList.toggle('hidden', !showTx);
       $('#dashboardExpanded')?.classList.toggle('hidden', !showDesktopDashboard);
       $('#budgetPageRoot')?.classList.toggle('hidden', !STATE.ui.budgetPageOpen);
+      $('#neracaPageRoot')?.classList.toggle('hidden', !STATE.ui.neracaPageOpen);
       $('#monevisorPageRoot')?.classList.toggle('hidden', !STATE.ui.monevisorPageOpen);
       $('#settingsPageRoot')?.classList.toggle('hidden', !STATE.ui.settingsPageOpen);
 
@@ -6509,6 +6587,7 @@ function setSheetPosition(mode) {
         dynamicContent.classList.toggle('dynamic-content--dashboard', STATE.ui.dashboardOpen && !specialPageOpen);
         dynamicContent.classList.toggle('dynamic-content--tx', showTx);
         dynamicContent.classList.toggle('dynamic-content--budget', !!STATE.ui.budgetPageOpen);
+        dynamicContent.classList.toggle('dynamic-content--neraca', !!STATE.ui.neracaPageOpen);
         dynamicContent.classList.toggle('dynamic-content--monevisor', !!STATE.ui.monevisorPageOpen);
         dynamicContent.classList.toggle('dynamic-content--settings', !!STATE.ui.settingsPageOpen);
       }
@@ -6599,8 +6678,9 @@ function setSheetPosition(mode) {
           income: Number(d.income || 0),
           // Full in-memory list — page filters by display month (avoids empty if period range quirks)
           transactions: STATE.transactions || [],
-          onRefresh: async () => {
-            await prepareBudgetDraft();
+          onRefresh: async (opts = {}) => {
+            const fromSaved = opts === true || opts?.fromSaved === true;
+            if (fromSaved) await prepareBudgetDraft();
             await renderBudgetPageView();
             updateBudgetSheetDerived();
           },
@@ -6612,14 +6692,69 @@ function setSheetPosition(mode) {
     }
     window.renderBudgetPageView = renderBudgetPageView;
 
+    async function renderNeracaPageView() {
+      const root = $('#neracaPageRoot');
+      if (!root || !STATE.ui.neracaPageOpen) return;
+      try {
+        const { renderNeracaPage } = await import('./pages/neraca-page.js');
+        await renderNeracaPage(root, { formatIDR, formatCompactIDR });
+      } catch (e) {
+        console.error('[neraca] page render failed', e);
+      }
+    }
+    window.renderNeracaPageView = renderNeracaPageView;
+
+    async function openNeraca() {
+      closeBudgetSheetOnly();
+      closeAdvisor();
+      closeAddSheet();
+      STATE.ui.neracaPageOpen = true;
+      STATE.ui.budgetPageOpen = false;
+      STATE.ui.monevisorPageOpen = false;
+      STATE.ui.settingsPageOpen = false;
+      STATE.ui.dashboardOpen = false;
+      STATE.ui.advisorOpen = false;
+      STATE.ui.budgetOpen = false;
+
+      $$('.nav-item[data-nav]').forEach((el) => el.classList.remove('active'));
+      $$('.sidebar-item[data-nav]').forEach((el) => {
+        el.classList.toggle('active', el.getAttribute('data-nav') === 'neraca');
+      });
+
+      applySpecialPageVisibility();
+      $('#neracaPageRoot')?.classList.remove('hidden');
+      rerender();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      try {
+        const { pullNeracaFromSupabase, pushPendingNeracaToSupabase } = await import('./services/neraca-store.js');
+        await pullNeracaFromSupabase();
+        await pushPendingNeracaToSupabase();
+      } catch {
+        /* non-blocking cloud sync */
+      }
+      await renderNeracaPageView();
+    }
+    window.openNeraca = openNeraca;
+
+    function closeNeraca() {
+      STATE.ui.neracaPageOpen = false;
+      const root = $('#neracaPageRoot');
+      if (root) {
+        root.classList.add('hidden');
+        root.replaceChildren();
+      }
+    }
+
     async function openBudget() {
       closeBudgetSheetOnly();
       closeAdvisor();
+      closeNeraca();
       closeAddSheet();
 
       // Switch view flags FIRST so TX list never flashes during async draft prep
       STATE.ui.budgetPageOpen = true;
       STATE.ui.monevisorPageOpen = false;
+      STATE.ui.neracaPageOpen = false;
       STATE.ui.settingsPageOpen = false;
       STATE.ui.dashboardOpen = false;
       STATE.ui.budgetOpen = false;
@@ -6634,6 +6769,7 @@ function setSheetPosition(mode) {
       // Immediate chrome swap (hide TX / dashboard before any await)
       applySpecialPageVisibility();
       $('#budgetPageRoot')?.classList.remove('hidden');
+      $('#neracaPageRoot')?.classList.add('hidden');
 
       try {
         await prepareBudgetDraft();
@@ -6713,6 +6849,7 @@ function setSheetPosition(mode) {
       // Switch view flags FIRST — never flash TX list while page mounts
       STATE.ui.monevisorPageOpen = true;
       STATE.ui.budgetPageOpen = false;
+      STATE.ui.neracaPageOpen = false;
       STATE.ui.settingsPageOpen = false;
       STATE.ui.dashboardOpen = false;
       STATE.ui.advisorOpen = false;
@@ -6786,11 +6923,13 @@ function setSheetPosition(mode) {
       closeUser();
       closeBudgetSheetOnly();
       closeAdvisor();
+      closeNeraca();
       closeAddSheet();
 
       STATE.ui.settingsPageOpen = true;
       STATE.ui.budgetPageOpen = false;
       STATE.ui.monevisorPageOpen = false;
+      STATE.ui.neracaPageOpen = false;
       STATE.ui.dashboardOpen = false;
 
       $$('.nav-item[data-nav]').forEach((el) => el.classList.remove('active'));
@@ -7774,6 +7913,7 @@ function setSheetPosition(mode) {
       const host = $('#txInsightHost');
       if (host) host.innerHTML = '';
     }
+    window.closeEditModal = closeEditModal;
     editBackdrop.addEventListener('click', (e)=>{
       if (e.target?.dataset?.closeEdit === 'true') closeEditModal();
     });
@@ -7905,6 +8045,9 @@ function setSheetPosition(mode) {
       if (STATE.ui.budgetPageOpen && typeof renderBudgetPageView === 'function') {
         renderBudgetPageView();
       }
+      if (STATE.ui.neracaPageOpen && typeof renderNeracaPageView === 'function') {
+        renderNeracaPageView();
+      }
     } catch (e) {
       console.error("DB Save failed:", e);
       // Keep optimistic row; queue offline instead of removing from list
@@ -8004,6 +8147,69 @@ function setSheetPosition(mode) {
       const base = ['Cash','QRIS','Debit','Kartu Kredit','Transfer','GoPay','OVO','DANA','ShopeePay'];
       const fromTx = [...new Set(STATE.transactions.map(t => t.payment_method).filter(Boolean))];
       return [...new Set([...base, ...fromTx])].filter(Boolean);
+    }
+
+    /**
+     * Income source names cached per month (for TX category dropdown).
+     * @param {string} monthKey
+     * @returns {string[]}
+     */
+    function getIncomeSourceNamesSync(monthKey) {
+      const sources = STATE.incomeSourcesByMonth?.[monthKey];
+      if (!Array.isArray(sources)) return [];
+      return sources.map((s) => String(s?.name || '').trim()).filter(Boolean);
+    }
+
+    /**
+     * @param {string} [monthKey]
+     */
+    async function ensureIncomeSourcesCached(monthKey) {
+      const mk = monthKey
+        || STATE.selectedMonth
+        || toMonthKey(STATE.period?.end || new Date());
+      if (STATE.incomeSourcesByMonth?.[mk]) return;
+      try {
+        const { getIncomeSources } = await import('./services/income-source.js');
+        STATE.incomeSourcesByMonth = STATE.incomeSourcesByMonth || {};
+        STATE.incomeSourcesByMonth[mk] = await getIncomeSources(mk);
+      } catch {
+        STATE.incomeSourcesByMonth = STATE.incomeSourcesByMonth || {};
+        STATE.incomeSourcesByMonth[mk] = [];
+      }
+    }
+
+    /**
+     * TX categories = budget pengeluaran + nama sumber income.
+     * @param {string} [monthKey]
+     * @param {string[]} [extra]
+     * @returns {string[]}
+     */
+    function collectTransactionCategoryNames(monthKey, extra = []) {
+      const mk = monthKey
+        || STATE.selectedMonth
+        || toMonthKey(STATE.period?.end || new Date());
+      const seen = new Set();
+      const list = [];
+      const add = (raw) => {
+        const name = String(raw || '').trim();
+        if (!name) return;
+        const key = normalizeCategoryName(name);
+        if (seen.has(key)) return;
+        seen.add(key);
+        list.push(name);
+      };
+
+      const budgetNames = getBudgetCategoryNamesForMonth(mk);
+      if (budgetNames.length) {
+        for (const n of budgetNames) add(n);
+      } else {
+        for (const n of collectAllBudgetCategoryNames()) add(n);
+      }
+      for (const n of getIncomeSourceNamesSync(mk)) add(n);
+      for (const n of extra) add(n);
+
+      list.sort((a, b) => a.localeCompare(b, 'id'));
+      return list.length ? list : ['Lainnya'];
     }
 
     /**
@@ -8115,7 +8321,8 @@ function setSheetPosition(mode) {
     }
 
     function populateManualTxSelects(preferredCategory) {
-      const cats = collectAllBudgetCategoryNames();
+      const month = STATE.selectedMonth || toMonthKey(STATE.period?.end || new Date());
+      const cats = collectTransactionCategoryNames(month, preferredCategory ? [preferredCategory] : []);
       const preferredNorm = preferredCategory ? normalizeCategoryName(preferredCategory) : '';
       const currentCat = preferredNorm
         ? (cats.find((c) => normalizeCategoryName(c) === preferredNorm) || cats[0])
@@ -8162,11 +8369,9 @@ function setSheetPosition(mode) {
   $('#eType').value = tx.type;
   $('#eAmount').value = String(tx.amount||0);
 
-  // Kategori = Daftar Budgeting bulan transaksi (realisasi budget)
+  // Kategori = budget pengeluaran + sumber income bulan transaksi
   const txMonth = toMonthKey(tx.date || STATE.selectedMonth || new Date());
-  const cats = (getBudgetCategoryNamesForMonth(txMonth).length
-    ? getBudgetCategoryNamesForMonth(txMonth)
-    : getLiveBudgetCategories()).slice();
+  const cats = collectTransactionCategoryNames(txMonth).slice();
   const txCat = String(tx.category || '').trim();
   const txCatNorm = normalizeCategoryName(txCat);
   const inBudget = txCat && cats.some((c) => normalizeCategoryName(c) === txCatNorm);
@@ -8189,6 +8394,13 @@ function setSheetPosition(mode) {
   const insightHost = $('#txInsightHost');
   if (insightHost) insightHost.innerHTML = '';
   openEditModal();
+  (async () => {
+    try {
+      await ensureIncomeSourcesCached(txMonth);
+      const refreshed = collectTransactionCategoryNames(txMonth, txCat && !inBudget ? [txCat] : []);
+      setSelectOptions($('#eCategory'), refreshed, txCat || refreshed[0] || 'Lainnya');
+    } catch (_) { /* keep sync list */ }
+  })();
   (async () => {
     try {
       const { loadAndInjectInsights } = await import('./components/transaction-detail-modal.js');
@@ -8337,43 +8549,6 @@ function showManualTab() {
 
 function getActiveBudgetCats() {
   return collectAllBudgetCategoryNames();
-}
-// --- HELPER DATABASE ---
-
-// 1. Fungsi Hapus ke Supabase
-async function dbDeleteTransaction(id) {
-  // ... (kode logic database Anda) ...
-  const { error } = await STATE.db.supa.from('transactions').delete().eq('id', id);
-
-  if (!error) {
-    // Hapus dari memori lokal
-    STATE.transactions = STATE.transactions.filter(t => t.id !== id);
-
-    // OTOMATIS REFRESH
-    refreshAllUI({ syncRemote: 'ifChanged', soft: true });
-  }
-}
-
-// 2. Fungsi Update/Simpan ke Supabase - versi duplikat (di-rename untuk menghindari deklarasi ganda)
-async function upsertTransaction_dbOnly(tx) {
-  const payload = {
-    id: tx.id,
-    user_id: STATE.db.user.id,
-    date: tx.date,
-    type: tx.type,
-    amount: tx.amount,
-    category: tx.category,
-    account: tx.account,
-    payment_method: tx.payment_method || 'Cash', 
-    merchant: tx.merchant,
-    notes: tx.notes,
-    updated_at: new Date().toISOString()
-  };
-  
-  const { error } = await STATE.db.supa
-    .from('transactions')
-    .upsert(payload);
-  if (error) throw error;
 }
     // =========================
     // Budget sheet logic
@@ -9007,8 +9182,8 @@ function closeBudgetDetail() {
     });
 
 function getLiveBudgetCategories() {
-  // TX category dropdown source of truth = Daftar Budgeting (selected month)
-  return collectAllBudgetCategoryNames();
+  const month = STATE.selectedMonth || toMonthKey(STATE.period?.end || new Date());
+  return collectTransactionCategoryNames(month);
 }
 
     // ============================================================
@@ -9222,6 +9397,17 @@ async function handleSaveBudget() {
     const d = STATE.budgetDraft;
     if (!d) return;
 
+    const setBudgetStatus = (msg, kind = 'info') => {
+      const el = $('#bStatus');
+      if (el) {
+        el.textContent = msg;
+        el.style.color = kind === 'error' ? '#f43f5e' : kind === 'success' ? '#10b981' : '';
+      }
+      if (STATE.ui.budgetPageOpen && typeof showToast === 'function') {
+        showToast(msg, kind === 'error' ? 'error' : kind === 'success' ? 'success' : 'info');
+      }
+    };
+
     try {
       const { getTotalIncome } = await import('./services/income-source.js');
       const fromSources = await getTotalIncome(d.month);
@@ -9237,8 +9423,8 @@ async function handleSaveBudget() {
       d.income = parseNumberInput($('#bIncome')?.value) || d.income;
     }
 
-    if (Number(d.income) <= 0) { $('#bStatus').textContent = 'Income wajib diisi.'; return; }
-    if (!d.rows || d.rows.length === 0) { $('#bStatus').textContent = 'Tambah minimal 1 kategori.'; return; }
+    if (Number(d.income) <= 0) { setBudgetStatus('Income wajib diisi.', 'error'); return; }
+    if (!d.rows || d.rows.length === 0) { setBudgetStatus('Tambah minimal 1 kategori.', 'error'); return; }
 
     let cleanRows;
     try {
@@ -9251,7 +9437,7 @@ async function handleSaveBudget() {
     const normalized = { categories: { rows: cleanRows } };
     const total = cleanRows.reduce((a,b)=>a+Number(b.amount), 0);
     
-    if (total > d.income) { $('#bStatus').textContent = 'Total budget melebihi income.'; return; }
+    if (total > d.income) { setBudgetStatus('Total budget melebihi income.', 'error'); return; }
 
     try {
         const btn = $('#btnSaveBudget');
@@ -9272,8 +9458,7 @@ async function handleSaveBudget() {
           clearChanges();
         } catch { /* ignore */ }
         
-        $('#bStatus').innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> Budget tersimpan.';
-        $('#bStatus').style.color = '#10b981';
+        setBudgetStatus('Budget tersimpan.', 'success');
         
         if(typeof rerender === 'function') rerender();
         
@@ -9287,8 +9472,7 @@ async function handleSaveBudget() {
         }, 500);
     } catch (e) {
         console.error(e);
-        $('#bStatus').textContent = 'Gagal simpan. Coba lagi.';
-        $('#bStatus').style.color = '#f43f5e';
+        setBudgetStatus('Gagal simpan. Coba lagi.', 'error');
         const btn = $('#btnSaveBudget');
         if (btn) btn.innerText = 'Simpan Budget';
     }
@@ -9299,6 +9483,7 @@ if (btnSaveBudget) btnSaveBudget.addEventListener('click', handleSaveBudget);
 
 const btnSaveBudgetFooter = $('#btnSaveBudgetFooter');
 if (btnSaveBudgetFooter) btnSaveBudgetFooter.addEventListener('click', handleSaveBudget);
+window.handleSaveBudget = handleSaveBudget;
 
 // ============================================================
 // 4. TOMBOL TAMBAH TRANSAKSI (JANGAN DIHAPUS)
@@ -11481,6 +11666,10 @@ function toggleNav(view, triggerEl) {
         openBudget();
         return;
       }
+      if (view === 'neraca') {
+        openNeraca();
+        return;
+      }
       if (view === 'advisor') {
         openAdvisorAuto();
         return;
@@ -11494,14 +11683,16 @@ function toggleNav(view, triggerEl) {
         STATE.ui.dashboardOpen = false;
         STATE.ui.budgetPageOpen = false;
         STATE.ui.monevisorPageOpen = false;
+        STATE.ui.neracaPageOpen = false;
         STATE.ui.settingsPageOpen = false;
       } else if (view === 'dash') {
         STATE.ui.dashboardOpen = true;
         STATE.ui.budgetPageOpen = false;
         STATE.ui.monevisorPageOpen = false;
+        STATE.ui.neracaPageOpen = false;
         STATE.ui.settingsPageOpen = false;
       }
-      const map = { dash: 'beranda', list: 'transaksi', budget: 'budget', advisor: 'advisor' };
+      const map = { dash: 'beranda', list: 'transaksi', budget: 'budget', advisor: 'advisor', neraca: 'neraca' };
       const active = map[view] || '';
       $$('.nav-item[data-nav]').forEach((el) => {
         el.classList.toggle('active', el.getAttribute('data-nav') === active);
@@ -11518,14 +11709,14 @@ function toggleNav(view, triggerEl) {
     $$('.sidebar-item[data-nav]').forEach((el) => {
       el.addEventListener('click', () => {
         const view = el.getAttribute('data-nav');
-        if (view === 'dash' || view === 'list' || view === 'budget' || view === 'advisor') toggleNav(view, el);
+        if (view === 'dash' || view === 'list' || view === 'budget' || view === 'neraca' || view === 'advisor') toggleNav(view, el);
       });
     });
 
     $$('.nav-item[data-nav]').forEach((el) => {
       el.addEventListener('click', (e) => {
         const nav = el.getAttribute('data-nav');
-        const map = { beranda: 'dash', transaksi: 'list', budget: 'budget', advisor: 'advisor' };
+        const map = { beranda: 'dash', transaksi: 'list', budget: 'budget', advisor: 'advisor', neraca: 'neraca' };
         const view = map[nav];
         if (view) {
           e.preventDefault();
@@ -12191,6 +12382,7 @@ function toggleNav(view, triggerEl) {
 
     window.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
+      if (window.monefyiModalKeyboard?.handleModalEscape?.(e)) return;
       const onboarding = $('#onboardingBackdrop');
       if (onboarding?.classList.contains('open')) {
         window.MonefyiUI?.hideOnboarding?.();

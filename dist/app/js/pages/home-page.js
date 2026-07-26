@@ -10,6 +10,7 @@ import { renderRecentTransactionsList } from '../components/recent-transactions-
 import { renderBudgetSummaryCard } from '../components/budget-summary-card.js';
 import { renderMiniChart7Day } from '../components/mini-chart-7day.js';
 import { renderDailyTipCard } from '../components/daily-tip-card.js';
+import { Icon } from '../components/icons.js';
 
 /**
  * @param {HTMLElement} container
@@ -31,6 +32,21 @@ export function renderHomePage(container, ctx, callbacks = {}) {
     onAccountClick: callbacks.onAccountClick,
   }));
   container.appendChild(renderQuickAccess({ onActionClick: callbacks.onQuickAction }));
+
+  const neracaCard = document.createElement('button');
+  neracaCard.type = 'button';
+  neracaCard.className = 'neraca-home-card tap';
+  neracaCard.innerHTML = `
+    <span class="neraca-home-card-icon">${Icon('bank', { size: 20 })}</span>
+    <span>
+      <span class="neraca-home-card-title">Neraca Keuangan</span>
+      <span class="neraca-home-card-sub">Lihat struktur Aktiva &amp; Pasiva</span>
+    </span>
+    <span style="margin-left:auto;opacity:.6">${Icon('chevronRight', { size: 16 })}</span>
+  `;
+  neracaCard.addEventListener('click', () => callbacks.onViewNeraca?.());
+  container.appendChild(neracaCard);
+
   container.appendChild(renderRecentTransactionsList(data.recentTransactions, formatIDR, {
     onViewAll: callbacks.onViewTransactions,
     onTransactionClick: callbacks.onTransactionClick,

@@ -383,7 +383,7 @@ function wireModalHandlers(modal, originalRow, defaults, options) {
     }
     showToast('Budget dihapus');
     close();
-    options.onSaved?.();
+    options.onSaved?.({ fromSaved: false });
     if (typeof window.renderBudgetPageView === 'function' && window.STATE?.ui?.budgetPageOpen) {
       window.renderBudgetPageView();
     }
@@ -402,7 +402,7 @@ function wireModalHandlers(modal, originalRow, defaults, options) {
       } catch { /* ignore */ }
       showToast('Budget tersimpan');
       close();
-      options.onSaved?.();
+      options.onSaved?.({ fromSaved: false });
       if (typeof window.renderBudgetPageView === 'function' && window.STATE?.ui?.budgetPageOpen) {
         window.renderBudgetPageView();
       }

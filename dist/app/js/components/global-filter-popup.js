@@ -22,6 +22,9 @@ async function getAccounts() {
 
 function getDefaultPeriod() {
   const state = typeof window !== 'undefined' ? window.STATE : null;
+  if (state?.period?.end && /^\d{4}-\d{2}/.test(String(state.period.end))) {
+    return String(state.period.end).slice(0, 7);
+  }
   if (state?.selectedMonth) return state.selectedMonth;
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -151,14 +154,18 @@ export async function showFilterPopup() {
     close();
   };
   popup.querySelector('[data-action="apply"]').onclick = () => {
+    const prevPeriod = getFilter().period;
     updateFilter(localState);
-    if (localState.period && window.STATE) {
-      if (window.STATE.selectedMonth !== localState.period
-        && typeof window.monefyiSetPeriodMonth === 'function') {
-        window.monefyiSetPeriodMonth(localState.period);
-      }
+    // Always sync app period chip — previously skipped when selectedMonth already matched,
+    // which left STATE.period / budget draft stuck on a stale month (e.g. October).
+    if (localState.period && typeof window.monefyiSetPeriodMonth === 'function') {
+      window.monefyiSetPeriodMonth(localState.period);
     }
     if (typeof window.rerender === 'function') window.rerender();
+    // If only non-period filters changed, still refresh budget list
+    if (localState.period === prevPeriod && window.STATE?.ui?.budgetPageOpen) {
+      window.renderBudgetPageView?.();
+    }
     close();
   };
 

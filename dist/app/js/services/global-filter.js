@@ -9,6 +9,11 @@ const _listeners = new Set();
 /** @type {object} */
 let _state = loadState();
 
+function getCalendarMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
 function getDefaultPeriod() {
   const state = typeof window !== 'undefined' ? window.STATE : null;
   // Prefer main period chip (STATE.period) so budget matches transaksi list
@@ -16,8 +21,22 @@ function getDefaultPeriod() {
     return String(state.period.end).slice(0, 7);
   }
   if (state?.selectedMonth) return state.selectedMonth;
+  return getCalendarMonth();
+}
+
+/**
+ * @param {string} period YYYY-MM
+ * @returns {boolean}
+ */
+function isPeriodInWindow(period) {
+  if (!period || !/^\d{4}-\d{2}$/.test(period)) return false;
   const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  for (let i = -6; i <= 3; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    if (value === period) return true;
+  }
+  return false;
 }
 
 function getDefaults() {
@@ -32,7 +51,14 @@ function getDefaults() {
 function loadState() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return { ...getDefaults(), ...JSON.parse(saved) };
+    if (saved) {
+      const parsed = { ...getDefaults(), ...JSON.parse(saved) };
+      // Drop stale periods (e.g. old October) outside the selectable window
+      if (!isPeriodInWindow(parsed.period)) {
+        parsed.period = getCalendarMonth();
+      }
+      return parsed;
+    }
   } catch { /* ignore */ }
   return getDefaults();
 }
@@ -57,11 +83,20 @@ export function updateFilter(updates) {
 }
 
 export function resetFilter() {
-  _state = getDefaults();
+  const current = getCalendarMonth();
+  _state = {
+    period: current,
+    priority: 'all',
+    account: 'all',
+    type: 'all',
+  };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(_state));
   } catch { /* ignore */ }
   syncToAppState(_state);
+  if (typeof window !== 'undefined' && typeof window.monefyiSetPeriodMonth === 'function') {
+    window.monefyiSetPeriodMonth(current);
+  }
   _notify();
 }
 

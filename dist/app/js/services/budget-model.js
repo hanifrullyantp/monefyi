@@ -59,6 +59,23 @@ const HARUS_HINTS = ['listrik', 'air', 'kontrakan', 'sewa', 'cicilan', 'internet
 const SIMPAN_HINTS = ['tabungan', 'simpan', 'invest', 'emergency', 'dana darurat'];
 const MAU_HINTS = ['hiburan', 'nongkrong', 'jajan', 'hobi', 'game', 'netflix'];
 
+/** @type {{ value: string, label: string }[]} */
+export const BUDGET_UNITS = [
+  { value: 'pcs', label: 'Pcs' },
+  { value: 'kg', label: 'Kg' },
+  { value: 'gr', label: 'Gr' },
+  { value: 'liter', label: 'Liter' },
+  { value: 'ml', label: 'Ml' },
+  { value: 'pack', label: 'Pack' },
+  { value: 'botol', label: 'Botol' },
+  { value: 'porsi', label: 'Porsi' },
+  { value: 'kali', label: 'Kali' },
+  { value: 'bulan', label: 'Bulan' },
+  { value: 'minggu', label: 'Minggu' },
+  { value: 'orang', label: 'Orang' },
+  { value: 'unit', label: 'Unit' },
+];
+
 /**
  * @returns {string}
  */
@@ -105,6 +122,57 @@ function defaultKeywordsFromName(name) {
  * @param {object} data
  * @returns {object}
  */
+export function createBudgetLineItem(data = {}) {
+  return {
+    id: data.id || `bl_${crypto.randomUUID()}`,
+    name: data.name || '',
+    qty: Number(data.qty) || 1,
+    unit: data.unit || 'pcs',
+    amount: Number(data.amount ?? 0) || 0,
+  };
+}
+
+/**
+ * @param {object|null|undefined} item
+ * @returns {boolean}
+ */
+export function hasActiveLineItems(item) {
+  return (item?.line_items || []).some(
+    (line) => String(line.name || '').trim() || Number(line.amount) > 0,
+  );
+}
+
+/**
+ * @param {object|null|undefined} item
+ * @returns {number}
+ */
+export function getItemTotalAmount(item) {
+  if (!item) return 0;
+  if (hasActiveLineItems(item)) {
+    const total = (item.line_items || []).reduce((s, line) => s + Math.abs(Number(line.amount || 0)), 0);
+    item.qty = 1;
+    item.price = total;
+    item.subtotal = total;
+    return total;
+  }
+  const total = Number(item.qty || 1) * Number(item.price || 0);
+  item.subtotal = total;
+  return total;
+}
+
+/**
+ * Sync item.price from line_items when breakdown is active.
+ * @param {object|null|undefined} item
+ */
+export function syncItemAmountFromLines(item) {
+  if (!item || !hasActiveLineItems(item)) return;
+  getItemTotalAmount(item);
+}
+
+/**
+ * @param {object} data
+ * @returns {object}
+ */
 export function createBudgetItem(data = {}) {
   const qty = Number(data.qty) || 1;
   const price = Number(data.price ?? data.unit_price ?? 0) || 0;
@@ -120,6 +188,9 @@ export function createBudgetItem(data = {}) {
     status: data.status || 'planned',
     notes: data.notes || '',
     linked_transactions: Array.isArray(data.linked_transactions) ? [...data.linked_transactions] : [],
+    line_items: Array.isArray(data.line_items)
+      ? data.line_items.map((line) => createBudgetLineItem(line))
+      : [],
   };
 }
 
@@ -134,12 +205,29 @@ function extractDayFromDate(iso) {
 }
 
 /**
+ * Sync item schedule fields from ISO date (or clear when empty).
+ * @param {object} item
+ * @param {string|null|undefined} isoDate YYYY-MM-DD
+ */
+export function syncItemTargetDate(item, isoDate) {
+  if (!item) return;
+  const iso = isoDate ? String(isoDate).slice(0, 10) : '';
+  if (!iso) {
+    item.target_date = null;
+    item.target_date_day = null;
+    return;
+  }
+  item.target_date = iso;
+  item.target_date_day = extractDayFromDate(iso);
+}
+
+/**
  * @param {object} data
  * @returns {object}
  */
 export function createBudgetRow(data = {}) {
   const items = (data.items || []).map((item) => createBudgetItem(item));
-  const amountFromItems = items.reduce((sum, i) => sum + (i.qty * i.price), 0);
+  const amountFromItems = items.reduce((sum, i) => sum + getItemTotalAmount(i), 0);
   const name = data.name || data.category || '';
 
   return {
@@ -223,6 +311,13 @@ export function serializeBudgetRows(rows) {
         status: item.status,
         notes: item.notes,
         linked_transactions: item.linked_transactions || [],
+        line_items: (item.line_items || []).map((line) => ({
+          id: line.id,
+          name: line.name,
+          qty: line.qty,
+          unit: line.unit,
+          amount: line.amount,
+        })),
       })),
       priority: row.priority,
       target_start: row.target_start,
@@ -479,6 +574,11 @@ if (typeof window !== 'undefined') {
     TARGET_TYPES,
     createBudgetRow,
     createBudgetItem,
+    createBudgetLineItem,
+    BUDGET_UNITS,
+    hasActiveLineItems,
+    getItemTotalAmount,
+    syncItemAmountFromLines,
     normalizeBudgetRow,
     migrateBudgetCategories,
     serializeBudgetRows,
