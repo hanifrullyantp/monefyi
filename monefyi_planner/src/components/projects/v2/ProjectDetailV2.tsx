@@ -89,7 +89,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
           total_received: proj.total_received,
           settings: {
             type: proj.type,
-            ...(proj.contract_value ? { contract_value: proj.contract_value } : {}),
+            contract_value: proj.contract_value ?? proj.total_budget_planned ?? 0,
           },
         },
         rapItems: rap.map(r => ({

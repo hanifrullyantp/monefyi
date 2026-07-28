@@ -77,7 +77,7 @@ export default function TabV2Overview({
 
   const p = normalized.project;
   const totalRap = p.rap?.totalRAP || 0;
-  const nilaiProyek = normalized.totalAktiva;
+  const nilaiProyek = p.contractValue;
   const realisasiPct = Math.min(
     nilaiProyek > 0 ? (normalized.totalRealisasi / nilaiProyek) * 100 : 0,
     100,
