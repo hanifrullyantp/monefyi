@@ -1,0 +1,108 @@
+/**
+ * Design system CSS tokens untuk Tailwind v4 (@theme).
+ * Import di index.css saat Phase 1:
+ *   @import "./styles/frontdesk-theme.css";
+ */
+
+@theme {
+  /* Sage — occupied */
+  --color-sage-50: #f6f8f6;
+  --color-sage-100: #e8ede8;
+  --color-sage-200: #d1dbd1;
+  --color-sage-300: #adb9ad;
+  --color-sage-400: #849684;
+  --color-sage-500: #647664;
+  --color-sage-600: #4f5e4f;
+  --color-sage-700: #414d41;
+  --color-sage-800: #363f36;
+  --color-sage-900: #2e352e;
+
+  /* Dirty — housekeeping */
+  --color-dirty-50: #fffbeb;
+  --color-dirty-100: #fef3c7;
+  --color-dirty-200: #fde68a;
+  --color-dirty-300: #fcd34d;
+  --color-dirty-400: #fbbf24;
+  --color-dirty-500: #f59e0b;
+  --color-dirty-600: #d97706;
+  --color-dirty-700: #b45309;
+  --color-dirty-800: #92400e;
+  --color-dirty-900: #78350f;
+
+  /* Coral — unpaid urgent */
+  --color-coral-50: #fff5f3;
+  --color-coral-100: #ffe8e3;
+  --color-coral-200: #ffd4cc;
+  --color-coral-300: #ffb4a6;
+  --color-coral-400: #ff8a75;
+  --color-coral-500: #ff6347;
+  --color-coral-600: #ed4629;
+  --color-coral-700: #c7361f;
+  --color-coral-800: #a4301c;
+  --color-coral-900: #872d1d;
+
+  /* Indigo mist — maintenance */
+  --color-indigo-mist-50: #f0f2f8;
+  --color-indigo-mist-100: #e4e8f2;
+  --color-indigo-mist-200: #cdd5e8;
+  --color-indigo-mist-300: #aab6d6;
+  --color-indigo-mist-400: #8391c0;
+  --color-indigo-mist-500: #6470a8;
+  --color-indigo-mist-600: #505a91;
+  --color-indigo-mist-700: #434a76;
+  --color-indigo-mist-800: #3a405f;
+  --color-indigo-mist-900: #343851;
+
+  --animate-pulse-urgent: pulse-urgent 2s ease-in-out infinite;
+  --animate-ripple: ripple 0.6s ease-out forwards;
+  --animate-shimmer: shimmer 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse-urgent {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 99, 71, 0.45);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(255, 99, 71, 0);
+    transform: scale(1.01);
+  }
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Utility classes untuk skeleton shimmer */
+.frontdesk-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.6) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+/* Ripple feedback pada klik kartu */
+.frontdesk-ripple {
+  animation: ripple 0.6s ease-out forwards;
+}

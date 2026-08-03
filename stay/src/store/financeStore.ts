@@ -167,6 +167,12 @@ export const useFinanceStore = create<FinanceState>()(
         });
 
         void queueFinanceMutation('createJournal', { entry, lines: newLines });
+
+        import('../services/api/stayFinanceApi').then(({ syncJournalToApi, syncAccountBalances }) => {
+          void syncJournalToApi(entry, newLines);
+          void syncAccountBalances(updatedAccounts);
+        });
+
         return entry;
       },
 

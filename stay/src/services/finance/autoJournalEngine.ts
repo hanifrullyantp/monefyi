@@ -306,3 +306,90 @@ export function paymentMethodToJournal(method: PaymentMethod): 'cash' | 'transfe
   }
   return 'cash';
 }
+
+/** Transfer bank — bukti diupload, menunggu verifikasi */
+export function journalTransferPending(
+  ctx: AutoJournalContext,
+  paymentId: string,
+  bookingCode: string,
+  amount: number
+): CreateJournalInput {
+  return {
+    tenantId: ctx.tenantId,
+    description: `Transfer pending ${bookingCode}`,
+    source: 'payment',
+    referenceType: 'payment',
+    referenceId: paymentId + '-transfer-pending',
+    lines: [
+      line(acct(ctx, '1201'), amount, 0, 'Piutang Tamu (transfer pending)'),
+      line(acct(ctx, '1201'), 0, amount, 'Offset piutang'),
+    ],
+    createdBy: ctx.createdBy,
+  };
+}
+
+/** Transfer bank diverifikasi */
+export function journalTransferVerified(
+  ctx: AutoJournalContext,
+  paymentId: string,
+  bookingCode: string,
+  amount: number
+): CreateJournalInput {
+  return {
+    tenantId: ctx.tenantId,
+    description: `Transfer verified ${bookingCode}`,
+    source: 'payment',
+    referenceType: 'payment',
+    referenceId: paymentId,
+    lines: [
+      line(acct(ctx, '1102'), amount, 0, 'Kas Bank'),
+      line(acct(ctx, '1201'), 0, amount, 'Piutang Tamu'),
+    ],
+    createdBy: ctx.createdBy,
+  };
+}
+
+/** DP / uang muka diterima */
+export function journalDepositReceived(
+  ctx: AutoJournalContext,
+  paymentId: string,
+  bookingCode: string,
+  amount: number,
+  method: 'cash' | 'transfer' | 'xendit' = 'cash'
+): CreateJournalInput {
+  const debitCode = method === 'xendit' ? '1203' : method === 'transfer' ? '1102' : '1101';
+  return {
+    tenantId: ctx.tenantId,
+    description: `DP ${bookingCode}`,
+    source: 'payment',
+    referenceType: 'payment',
+    referenceId: paymentId + '-deposit',
+    lines: [
+      line(acct(ctx, debitCode), amount, 0),
+      line(acct(ctx, '2104'), 0, amount, 'Pendapatan Diterima Dimuka'),
+    ],
+    createdBy: ctx.createdBy,
+  };
+}
+
+/** Split payment — multiple debits */
+export function journalSplitPayment(
+  ctx: AutoJournalContext,
+  paymentId: string,
+  bookingCode: string,
+  splits: { code: string; amount: number; label: string }[]
+): CreateJournalInput {
+  const total = splits.reduce((s, x) => s + x.amount, 0);
+  return {
+    tenantId: ctx.tenantId,
+    description: `Split payment ${bookingCode}`,
+    source: 'payment',
+    referenceType: 'payment',
+    referenceId: paymentId,
+    lines: [
+      ...splits.map((s) => line(acct(ctx, s.code), s.amount, 0, s.label)),
+      line(acct(ctx, '1201'), 0, total, 'Piutang Tamu'),
+    ],
+    createdBy: ctx.createdBy,
+  };
+}

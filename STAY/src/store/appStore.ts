@@ -90,6 +90,16 @@ interface AppState {
     referenceNumber?: string,
     notes?: string
   ) => Payment | null;
+  recordSplitPayments: (
+    bookingId: string,
+    splits: { amount: number; method: PaymentMethod; referenceNumber?: string }[]
+  ) => Payment[];
+  processBookingRefund: (
+    bookingId: string,
+    amount: number,
+    viaXendit: boolean,
+    reason: string
+  ) => boolean;
   addHousekeepingTask: (task: Omit<HousekeepingTask, 'id' | 'createdAt'>) => HousekeepingTask;
   updateHousekeepingTask: (id: string, updates: Partial<HousekeepingTask>) => void;
   checkoutBooking: (bookingId: string, roomId: string, options?: CheckoutOptions) => void;
@@ -322,7 +332,62 @@ export const useAppStore = create<AppState>()(
           postPaymentJournal(booking.tenantId, payment, booking.bookingCode);
         });
 
+        import('../store/posStore').then(({ usePosStore }) => {
+          if (method === 'cash') usePosStore.getState().recordCashIn(amount);
+        });
+
         return payment;
+      },
+
+      recordSplitPayments: (bookingId, splits) => {
+        const results: Payment[] = [];
+        for (const split of splits) {
+          const p = get().recordBookingPayment(
+            bookingId,
+            split.amount,
+            split.method,
+            split.referenceNumber,
+            'Split payment'
+          );
+          if (p) results.push(p);
+        }
+        return results;
+      },
+
+      processBookingRefund: (bookingId, amount, viaXendit, reason) => {
+        const booking = get().bookings.find((b) => b.id === bookingId);
+        if (!booking || amount <= 0 || amount > booking.paidAmount) return false;
+
+        const newPaid = Math.max(0, booking.paidAmount - amount);
+        const paymentStatus = newPaid <= 0 ? 'refunded' : newPaid >= booking.totalAmount ? 'paid' : 'partial';
+
+        get().updateBooking(bookingId, { paidAmount: newPaid, paymentStatus });
+
+        get().addAccountingEntry({
+          tenantId: booking.tenantId,
+          date: new Date().toISOString().split('T')[0],
+          description: `Refund ${booking.bookingCode}: ${reason}`,
+          category: 'Refund',
+          type: 'expense',
+          amount,
+          reference: bookingId,
+        });
+
+        import('../services/finance/financeIntegration').then(({ postRefundJournal }) => {
+          postRefundJournal(booking.tenantId, booking, amount, viaXendit, reason);
+        });
+
+        import('../store/posStore').then(({ usePosStore }) => {
+          if (!viaXendit) usePosStore.getState().recordCashOut(amount);
+        });
+
+        get().addNotification({
+          type: 'payment',
+          title: 'Refund diproses',
+          message: `Refund ${booking.bookingCode} sebesar Rp ${amount.toLocaleString('id-ID')}`,
+        });
+
+        return true;
       },
 
       addHousekeepingTask: (task) => {

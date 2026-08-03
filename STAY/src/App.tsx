@@ -19,6 +19,8 @@ import EmployeeManagementPage from './pages/EmployeeManagementPage';
 import PricingPage from './pages/PricingPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
+import XenditDashboardPage from './pages/XenditDashboardPage';
+import PublicBookingPage from './pages/public/PublicBookingPage';
 import { useStayBootstrap } from './hooks/useStayBootstrap';
 
 function AppRoutes() {
@@ -32,6 +34,7 @@ function AppRoutes() {
         element={isAuthenticated ? <Navigate to={DEFAULT_AUTH_REDIRECT} replace /> : <LoginPage />}
       />
       <Route path="/survey/:bookingId" element={<GuestSurveyPage />} />
+      <Route path="/book/:tenantSlug" element={<PublicBookingPage />} />
 
       <Route
         path="/"
@@ -87,6 +90,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute requiredRoles={MANAGER_ROLES}>
               <ReportsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="xendit"
+          element={
+            <ProtectedRoute requiredRoles={MANAGER_ROLES}>
+              <XenditDashboardPage />
             </ProtectedRoute>
           }
         />

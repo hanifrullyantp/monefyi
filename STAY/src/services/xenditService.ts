@@ -72,6 +72,69 @@ export const xenditService = {
     await new Promise((r) => setTimeout(r, 500));
     return Math.random() > 0.6 ? 'PAID' : 'PENDING';
   },
+
+  async getBalance(): Promise<number> {
+    const fnUrl = getXenditFnUrl();
+    if (fnUrl) {
+      const res = await fetch(`${fnUrl}?action=balance`, { method: 'GET' });
+      if (res.ok) {
+        const data = await res.json();
+        return Number(data.balance) || 0;
+      }
+    }
+    return 0;
+  },
+
+  async createDisbursement(amount: number, bankAccountId: string): Promise<{ id: string }> {
+    const fnUrl = getXenditFnUrl();
+    if (fnUrl) {
+      const res = await fetch(fnUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'disbursement', amount, bankAccountId }),
+      });
+      if (!res.ok) throw new Error('Gagal withdraw');
+      return res.json();
+    }
+    return { id: `disb-mock-${Date.now()}` };
+  },
+
+  async createChannelPayment(
+    booking: Booking,
+    amount: number,
+    channel: 'qris' | 'virtual_account' | 'ewallet' | 'credit_card',
+    bankCode?: string
+  ): Promise<{ paymentUrl: string; externalId: string; amount: number }> {
+    const fnUrl = getXenditFnUrl();
+    if (fnUrl) {
+      const res = await fetch(fnUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: channel,
+          bookingId: booking.id,
+          bookingCode: booking.bookingCode,
+          amount,
+          guestName: booking.guest?.name,
+          payerEmail: booking.guest?.email,
+          bankCode,
+        }),
+      });
+      if (!res.ok) throw new Error(`Gagal membuat ${channel}`);
+      const data = await res.json();
+      return {
+        paymentUrl: data.payment_url || data.invoice_url,
+        externalId: data.external_id,
+        amount: data.amount ?? amount,
+      };
+    }
+    const externalId = `xnd-${channel}-${booking.id}-${Date.now()}`;
+    return {
+      paymentUrl: `https://checkout.xendit.co/web/${externalId}`,
+      externalId,
+      amount,
+    };
+  },
 };
 
 export async function createPaymentLink(booking: Booking, amount?: number): Promise<string> {

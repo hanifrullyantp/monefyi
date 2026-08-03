@@ -1,10 +1,14 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "jsr:@supabase/supabase-js@2";
 import {
   errorResponse,
   handleCorsPreflightRequest,
   jsonResponse,
 } from "../_shared/cors.ts";
+import {
+  getSupabaseAdmin,
+  postXenditPaidJournal,
+  verifyCallbackToken,
+} from "../_shared/stayJournal.ts";
 
 serve(async (req) => {
   const preflight = handleCorsPreflightRequest(req);
@@ -14,51 +18,112 @@ serve(async (req) => {
     return errorResponse(req, "Method not allowed", 405);
   }
 
-  const url = Deno.env.get("SUPABASE_URL")!;
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const supabase = createClient(url, serviceKey);
+  const callbackToken = Deno.env.get("XENDIT_CALLBACK_TOKEN") ?? "";
+  if (callbackToken && !verifyCallbackToken(req, callbackToken)) {
+    return errorResponse(req, "Invalid callback token", 401);
+  }
+
+  const supabase = getSupabaseAdmin();
 
   try {
     const body = await req.json();
-    const externalId = body.external_id as string | undefined;
-    const status = body.status as string | undefined;
+    const externalId = (body.external_id ?? body.data?.reference_id) as string | undefined;
+    const status = (body.status ?? body.data?.status) as string | undefined;
+    const eventType = (body.event ?? body.event_type ?? "invoice") as string;
+    const idempotencyKey = `${eventType}-${externalId}-${status}-${body.id ?? ""}`;
 
-    if (!externalId) {
-      return errorResponse(req, "external_id required", 400);
+    // Idempotency check
+    const { data: existing } = await supabase
+      .from("stay_xendit_webhooks_log")
+      .select("id")
+      .eq("idempotency_key", idempotencyKey)
+      .maybeSingle();
+
+    if (existing) {
+      return jsonResponse(req, { received: true, duplicate: true });
     }
 
-    const paymentStatus = status === "PAID" ? "paid" : "pending";
+    await supabase.from("stay_xendit_webhooks_log").insert({
+      event_type: eventType,
+      external_id: externalId,
+      raw_payload: body,
+      idempotency_key: idempotencyKey,
+      processed_at: new Date().toISOString(),
+    });
 
-    const { error } = await supabase
+    if (!externalId) {
+      return jsonResponse(req, { received: true });
+    }
+
+    const paymentStatus = status === "PAID" || status === "SUCCEEDED" || status === "COMPLETED" ? "paid" : "pending";
+
+    await supabase
       .from("stay_payments")
       .update({ status: paymentStatus })
       .eq("external_id", externalId);
 
-    if (error) throw error;
-
     const { data: payment } = await supabase
       .from("stay_payments")
-      .select("booking_id, amount")
+      .select("id, booking_id, amount, tenant_id")
       .eq("external_id", externalId)
       .single();
 
     if (payment && paymentStatus === "paid") {
+      const fee = Math.round(Number(payment.amount) * 0.007);
+      if (payment.tenant_id) {
+        await postXenditPaidJournal(supabase, payment.tenant_id as string, Number(payment.amount), fee, payment.id as string);
+      }
+
       const { data: booking } = await supabase
         .from("stay_bookings")
-        .select("total_amount, paid_amount")
+        .select("total_amount, paid_amount, status")
         .eq("id", payment.booking_id)
         .single();
 
       if (booking) {
         const newPaid = Number(booking.paid_amount) + Number(payment.amount);
-        const paymentStatusBooking =
-          newPaid >= Number(booking.total_amount) ? "paid" : "partial";
+        const paymentStatusBooking = newPaid >= Number(booking.total_amount) ? "paid" : "partial";
+        const bookingStatus = booking.status === "pending" ? "confirmed" : booking.status;
 
         await supabase
           .from("stay_bookings")
-          .update({ paid_amount: newPaid, payment_status: paymentStatusBooking })
+          .update({
+            paid_amount: newPaid,
+            payment_status: paymentStatusBooking,
+            status: bookingStatus,
+            updated_at: new Date().toISOString(),
+          })
           .eq("id", payment.booking_id);
+
+        if (payment.tenant_id) {
+          await supabase.from("stay_notifications").insert({
+            tenant_id: payment.tenant_id,
+            type: "payment",
+            title: "Pembayaran Xendit Diterima",
+            message: `Pembayaran Rp ${Number(payment.amount).toLocaleString("id-ID")} berhasil.`,
+          });
+        }
       }
+
+      await supabase.from("stay_xendit_balance_history").insert({
+        tenant_id: payment.tenant_id,
+        balance_type: "available",
+        amount: Number(payment.amount) - fee,
+        reference_type: "payment",
+        reference_id: payment.id,
+      });
+    }
+
+    if (eventType.includes("disbursement") && status === "COMPLETED" && payment?.tenant_id) {
+      await supabase.from("stay_xendit_disbursements")
+        .update({ status: "completed", completed_at: new Date().toISOString() })
+        .eq("external_id", externalId);
+    }
+
+    if (eventType.includes("refund") && status === "SUCCEEDED") {
+      await supabase.from("stay_refunds")
+        .update({ status: "processed" })
+        .eq("xendit_refund_id", externalId);
     }
 
     return jsonResponse(req, { received: true });

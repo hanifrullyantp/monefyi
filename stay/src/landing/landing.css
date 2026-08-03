@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+.landing-page {
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+}
+
+.landing-page html,
+.landing-page {
+  scroll-behavior: smooth;
+}
+
+@keyframes lp-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes lp-slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes lp-slideOutRight {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(110%); opacity: 0; }
+}
+
+@keyframes lp-fadeInUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes lp-pulse-green {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+}
+
+.landing-page .float-animation {
+  animation: lp-float 6s ease-in-out infinite;
+}
+
+.landing-page .toast-enter {
+  animation: lp-slideInRight 0.4s ease forwards;
+}
+
+.landing-page .toast-exit {
+  animation: lp-slideOutRight 0.3s ease forwards;
+}
+
+.landing-page .fade-in-up {
+  animation: lp-fadeInUp 0.6s ease forwards;
+}
+
+.landing-page .pulse-green {
+  animation: lp-pulse-green 2s infinite;
+}
+
+.landing-page .gradient-bg {
+  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 50%, #f0f9ff 100%);
+}
+
+.landing-page .hero-pattern {
+  background-image:
+    radial-gradient(circle at 25px 25px, rgba(16,185,129,0.08) 2px, transparent 0),
+    radial-gradient(circle at 75px 75px, rgba(16,185,129,0.05) 2px, transparent 0);
+  background-size: 100px 100px;
+}
+
+.landing-page .card-hover {
+  transition: all 0.3s ease;
+}
+
+.landing-page .card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+}
+
+.landing-page .glass-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.6);
+}
+
+.landing-page .dashboard-mockup {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 40px 100px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
+}
+
+.landing-page .accordion-content {
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+  overflow: hidden;
+}
+
+.landing-page .accordion-open {
+  max-height: 500px;
+  opacity: 1;
+}
+
+.landing-page .accordion-closed {
+  max-height: 0;
+  opacity: 0;
+}

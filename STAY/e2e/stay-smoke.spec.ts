@@ -28,6 +28,14 @@ test.describe('Navigation after login', () => {
     await expect(page.getByTestId('new-booking-btn')).toBeVisible();
   });
 
+  test('can open POS page and see payment grid', async ({ page }) => {
+    await page.getByTestId('nav-pos').click();
+    await expect(page).toHaveURL(/\/pos/);
+    await expect(page.getByText(/KASIR \/ POS/i)).toBeVisible();
+    await expect(page.getByText('TUNAI')).toBeVisible();
+    await expect(page.getByText('QRIS')).toBeVisible();
+  });
+
   test('AI assistant responds to quick prompt', async ({ page }) => {
     await page.getByTestId('ai-assistant-toggle').click();
     await expect(page.getByTestId('ai-assistant-panel')).toBeVisible();

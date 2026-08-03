@@ -116,6 +116,80 @@ export async function syncActionToApi(action: OfflineAction): Promise<boolean> {
         if (error) throw error;
         break;
       }
+      case 'createJournal': {
+        const { entry, lines } = payload as { entry: Record<string, unknown>; lines: Record<string, unknown>[] };
+        const { syncJournalToApi } = await import('./stayFinanceApi');
+        await syncJournalToApi(entry as never, lines as never);
+        break;
+      }
+      case 'syncRegisterSession': {
+        const { syncRegisterSession } = await import('./stayFinanceApi');
+        await syncRegisterSession(payload as Record<string, unknown>);
+        break;
+      }
+      case 'createPosTransaction': {
+        const tx = payload as Record<string, unknown>;
+        const { error } = await supabase.from('stay_pos_transactions').insert(mapPosTransactionToDbSync(tx));
+        if (error) throw error;
+        const items = (tx.items as Record<string, unknown>[]) ?? [];
+        const payments = (tx.payments as Record<string, unknown>[]) ?? [];
+        if (items.length) {
+          const { error: ie } = await supabase.from('stay_pos_transaction_items').insert(items.map(mapPosItemToDb));
+          if (ie) throw ie;
+        }
+        if (payments.length) {
+          const { error: pe } = await supabase.from('stay_pos_transaction_payments').insert(payments.map(mapPosPaymentToDb));
+          if (pe) throw pe;
+        }
+        break;
+      }
+      case 'openPosSession': {
+        const { error } = await supabase.from('stay_pos_sessions').insert(mapPosSessionToDbSync(payload));
+        if (error) throw error;
+        break;
+      }
+      case 'closePosSession': {
+        const { session } = payload as { session: Record<string, unknown> };
+        const { error } = await supabase.from('stay_pos_sessions').update(mapPosSessionToDbSync(session)).eq('id', session.id);
+        if (error) throw error;
+        break;
+      }
+      case 'addBookingCharge': {
+        const c = payload as Record<string, unknown>;
+        const { error } = await supabase.from('stay_booking_charges').insert({
+          id: c.id, tenant_id: c.tenantId, booking_id: c.bookingId,
+          description: c.description, amount: c.amount, category: c.category, posted_at: c.postedAt,
+        });
+        if (error) throw error;
+        break;
+      }
+      case 'createRefund': {
+        const r = payload as Record<string, unknown>;
+        const { error } = await supabase.from('stay_refunds').insert({
+          id: r.id, tenant_id: r.tenantId, original_transaction_id: r.originalTransactionId,
+          amount: r.amount, reason: r.reason, status: r.status, approved_by: r.approvedBy,
+        });
+        if (error) throw error;
+        break;
+      }
+      case 'createReceipt': {
+        const r = payload as Record<string, unknown>;
+        const { error } = await supabase.from('stay_receipts').insert({
+          id: r.id, tenant_id: r.tenantId, transaction_id: r.transactionId,
+          receipt_number: r.receiptNumber, format: r.format, content_json: r.contentJson,
+        });
+        if (error) throw error;
+        break;
+      }
+      case 'verifyTransfer': {
+        const { paymentId, transactionId, verifiedBy } = payload as Record<string, string>;
+        const { error } = await supabase.from('stay_pos_transaction_payments')
+          .update({ status: 'verified', verified_by: verifiedBy, verified_at: new Date().toISOString() })
+          .eq('id', paymentId);
+        if (error) throw error;
+        await supabase.from('stay_pos_transactions').update({ status: 'paid' }).eq('id', transactionId);
+        break;
+      }
       default:
         console.warn('Unknown sync action type:', type);
     }
@@ -427,5 +501,43 @@ function mapAccountingToDb(e: Record<string, unknown>) {
     entry_type: e.type,
     amount: e.amount,
     reference: e.reference,
+  };
+}
+
+function mapPosTransactionToDbSync(tx: Record<string, unknown>) {
+  return {
+    id: tx.id, tenant_id: tx.tenantId, session_id: tx.sessionId,
+    transaction_number: tx.transactionNumber, booking_id: tx.bookingId,
+    guest_id: tx.guestId, cashier_id: tx.cashierId, transaction_type: tx.transactionType,
+    subtotal: tx.subtotal, discount_amount: tx.discountAmount, discount_percent: tx.discountPercent,
+    tax_amount: tx.taxAmount, service_charge_amount: tx.serviceChargeAmount,
+    grand_total: tx.grandTotal, status: tx.status, notes: tx.notes,
+    created_at: tx.createdAt,
+  };
+}
+
+function mapPosItemToDb(item: Record<string, unknown>) {
+  return {
+    id: item.id, transaction_id: item.transactionId, item_type: item.itemType,
+    description: item.description, quantity: item.quantity, unit_price: item.unitPrice, subtotal: item.subtotal,
+  };
+}
+
+function mapPosPaymentToDb(pay: Record<string, unknown>) {
+  return {
+    id: pay.id, transaction_id: pay.transactionId, payment_method_id: pay.paymentMethodId,
+    amount: pay.amount, status: pay.status, cash_received: pay.cashReceived,
+    change_amount: pay.changeAmount, reference_number: pay.referenceNumber,
+    external_id: pay.externalId, payment_url: pay.paymentUrl, expiry_at: pay.expiryAt,
+  };
+}
+
+function mapPosSessionToDbSync(session: Record<string, unknown>) {
+  return {
+    id: session.id, tenant_id: session.tenantId, opened_by: session.openedBy,
+    opened_at: session.openedAt, opening_balance: session.openingBalance,
+    closed_by: session.closedBy, closed_at: session.closedAt,
+    expected_balance: session.expectedBalance, actual_balance: session.actualBalance,
+    variance: session.variance, notes: session.notes, status: session.status,
   };
 }

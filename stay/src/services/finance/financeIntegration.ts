@@ -12,6 +12,7 @@ import {
   journalExpense,
   journalPayrollAccrual,
   journalPayrollPaid,
+  journalRefund,
   expenseCodeForCategory,
   paymentMethodToJournal,
 } from './autoJournalEngine';
@@ -199,6 +200,33 @@ export function postExpenseJournal(
     ),
     referenceType: 'expense',
     referenceId: entry.id,
+  });
+  runBalanceCheckAfterJournal();
+}
+
+export function postRefundJournal(
+  tenantId: string,
+  booking: Booking,
+  amount: number,
+  viaXendit: boolean,
+  reason: string,
+  createdBy?: string
+): void {
+  const store = useFinanceStore.getState();
+  const refId = `refund-${booking.id}-${Date.now()}`;
+  if (store.hasJournalForReference('refund', refId)) return;
+
+  store.createJournal({
+    ...journalRefund(
+      { accounts: store.accounts, tenantId, createdBy },
+      booking.id,
+      booking.bookingCode,
+      amount,
+      viaXendit
+    ),
+    referenceType: 'refund',
+    referenceId: refId,
+    description: `Refund ${booking.bookingCode}: ${reason}`,
   });
   runBalanceCheckAfterJournal();
 }

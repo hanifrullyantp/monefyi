@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useAppStore } from '../store/appStore';
+import { usePosStore } from '../store/posStore';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -10,11 +11,12 @@ import {
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 
-type Tab = 'property' | 'staff' | 'billing' | 'notifications';
+type Tab = 'property' | 'staff' | 'billing' | 'payments' | 'notifications';
 
 export default function SettingsPage() {
   const { user, tenant, setTenant } = useAuthStore();
   const { users, updateTenant } = useAppStore();
+  const { bankAccounts, paymentMethods } = usePosStore();
   const [activeTab, setActiveTab] = useState<Tab>('property');
   const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({
@@ -49,6 +51,7 @@ export default function SettingsPage() {
     { value: 'property', label: 'Properti', icon: <Building2 className="h-4 w-4" /> },
     { value: 'staff', label: 'Staff', icon: <Users className="h-4 w-4" /> },
     { value: 'billing', label: 'Tagihan', icon: <CreditCard className="h-4 w-4" /> },
+    { value: 'payments', label: 'Pembayaran', icon: <CreditCard className="h-4 w-4" /> },
     { value: 'notifications', label: 'Notifikasi', icon: <Bell className="h-4 w-4" /> },
   ];
 
@@ -143,6 +146,45 @@ export default function SettingsPage() {
                 <ChevronRight className="h-4 w-4 text-slate-300" />
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'payments' && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border p-5 space-y-4">
+            <h3 className="font-bold text-slate-800">Rekening Bank</h3>
+            {bankAccounts.map((b) => (
+              <div key={b.id} className="p-3 bg-slate-50 rounded-xl flex justify-between items-center">
+                <div>
+                  <p className="font-medium">{b.bankName} {b.isPrimary && <Badge variant="success">Utama</Badge>}</p>
+                  <p className="text-sm font-mono">{b.accountNumber} · {b.accountHolder}</p>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => navigator.clipboard.writeText(b.accountNumber)}>Copy</Button>
+              </div>
+            ))}
+          </div>
+          <div className="bg-white rounded-2xl border p-5 space-y-3">
+            <h3 className="font-bold text-slate-800">Metode Pembayaran & Fee</h3>
+            {paymentMethods.filter((m) => m.isActive).map((m) => (
+              <div key={m.id} className="flex justify-between items-center p-3 border rounded-xl">
+                <span className="font-medium text-sm">{m.name}</span>
+                <span className="text-xs text-slate-500">
+                  {m.feeType === 'fixed' ? `Rp ${m.feeAmount}` : m.feeType === 'percent' ? `${(m.feePercent * 100).toFixed(2)}%` : 'Gratis'}
+                  {' · '}{m.feeBearer === 'hotel' ? 'Hotel' : m.feeBearer === 'guest' ? 'Tamu' : 'Bagi dua'}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="bg-white rounded-2xl border p-5 space-y-3">
+            <h3 className="font-bold text-slate-800">Xendit</h3>
+            <p className="text-sm text-slate-500">API Key dikonfigurasi di Supabase secrets (XENDIT_SECRET_KEY)</p>
+            <Input label="Callback Token" placeholder="Dari dashboard Xendit" />
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 text-sm"><input type="radio" name="mode" defaultChecked /> Sandbox</label>
+              <label className="flex items-center gap-2 text-sm"><input type="radio" name="mode" /> Production</label>
+            </div>
+            <Button variant="outline" size="sm">Test Koneksi</Button>
           </div>
         </div>
       )}

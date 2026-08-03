@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Scale } from 'lucide-react';
+import { Scale, Lock } from 'lucide-react';
 import { cn } from '../utils/cn';
 import FinanceDashboard from '../components/finance/FinanceDashboard';
 import BalanceSheetTab from '../components/finance/BalanceSheetTab';
@@ -10,6 +10,8 @@ import ChartOfAccountsTab from '../components/finance/ChartOfAccountsTab';
 import ReconciliationTab from '../components/finance/ReconciliationTab';
 import TaxTab from '../components/finance/TaxTab';
 import ReportsTab from '../components/finance/ReportsTab';
+import PeriodCloseWizard from '../components/finance/PeriodCloseWizard';
+import Button from '../components/ui/Button';
 import { useFinanceStore, runBalanceCheck } from '../store/financeStore';
 import { useAuthStore } from '../store/authStore';
 import { useAppStore } from '../store/appStore';
@@ -33,6 +35,7 @@ export default function KeuanganPage() {
   const { bookings, payments, accountingEntries } = useAppStore();
   const [activeTab, setActiveTab] = useState<FinanceTab>('neraca');
   const [seeded, setSeeded] = useState(false);
+  const [showCloseWizard, setShowCloseWizard] = useState(false);
 
   useEffect(() => {
     if (tenant?.id) {
@@ -55,15 +58,24 @@ export default function KeuanganPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-          <Scale className="h-6 w-6 text-emerald-600" />
-          Keuangan & Accounting
-        </h1>
-        <p className="text-sm text-slate-500 font-medium">
-          Pusat kendali finansial — double-entry bookkeeping dengan neraca realtime
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+            <Scale className="h-6 w-6 text-emerald-600" />
+            Keuangan & Accounting
+          </h1>
+          <p className="text-sm text-slate-500 font-medium">
+            Pusat kendali finansial — double-entry bookkeeping dengan neraca realtime
+          </p>
+        </div>
+        {(user?.role === 'owner' || user?.role === 'manager') && (
+          <Button variant="outline" size="sm" onClick={() => setShowCloseWizard(true)}>
+            <Lock className="h-3 w-3 mr-1" /> Tutup Buku Bulan
+          </Button>
+        )}
       </div>
+
+      <PeriodCloseWizard isOpen={showCloseWizard} onClose={() => setShowCloseWizard(false)} />
 
       <FinanceDashboard />
 

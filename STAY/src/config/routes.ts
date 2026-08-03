@@ -15,6 +15,7 @@ export const ROUTES: RouteConfig[] = [
   { path: '/front-desk', label: 'Front Desk', roles: ALL_STAFF_ROLES, showInSidebar: true, showInBottomNav: true },
   { path: '/pos', label: 'Kasir / POS', roles: ALL_STAFF_ROLES, showInSidebar: true, showInBottomNav: true },
   { path: '/payments', label: 'Pembayaran', roles: ALL_STAFF_ROLES, showInSidebar: true },
+  { path: '/xendit', label: 'Xendit', roles: MANAGER_ROLES, showInSidebar: true },
   { path: '/rooms', label: 'Kamar', roles: ALL_STAFF_ROLES, showInSidebar: true, showInBottomNav: true },
   { path: '/bookings', label: 'Booking', roles: ALL_STAFF_ROLES, showInSidebar: true, showInBottomNav: true },
   { path: '/guests', label: 'Tamu', roles: ALL_STAFF_ROLES, showInSidebar: true, showInBottomNav: true },
