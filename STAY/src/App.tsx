@@ -20,9 +20,11 @@ import PricingPage from './pages/PricingPage';
 import AccountingPage from './pages/AccountingPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
+import { useStayBootstrap } from './hooks/useStayBootstrap';
 
 function AppRoutes() {
   const { isAuthenticated } = useAuthStore();
+  useStayBootstrap();
 
   return (
     <Routes>

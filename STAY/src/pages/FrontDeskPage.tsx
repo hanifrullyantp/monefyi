@@ -15,6 +15,8 @@ import type { Booking, RoomStatus } from '../types';
 import { motion } from 'framer-motion';
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
+import TimelineView from '../components/front-office/TimelineView';
+import { startOfDay } from 'date-fns';
 
 export default function FrontDeskPage() {
   const { rooms, bookings, roomTypes, payments, updateRoomPosition, checkoutBooking } = useAppStore();
@@ -22,7 +24,7 @@ export default function FrontDeskPage() {
   const [showDashboard, setShowDashboard] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [search, setSearch] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'denah'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'denah' | 'timeline'>('grid');
   const [isBuilderMode, setIsBuilderMode] = useState(false);
   
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
@@ -149,6 +151,12 @@ export default function FrontDeskPage() {
             >
               Denah Kamar
             </button>
+            <button 
+              onClick={() => setViewMode('timeline')}
+              className={cn("px-3 py-1 rounded-md text-[10px] font-black uppercase transition-all", viewMode === 'timeline' ? "bg-white shadow-sm text-emerald-600" : "text-slate-400")}
+            >
+              Timeline
+            </button>
           </div>
 
           {viewMode === 'denah' && (
@@ -205,7 +213,21 @@ export default function FrontDeskPage() {
         )}
 
         <div className="flex-1 overflow-auto p-8 custom-scrollbar flex justify-center items-start relative" ref={canvasRef}>
-          {viewMode === 'grid' ? (
+          {viewMode === 'timeline' ? (
+            <div className="w-full max-w-6xl h-[calc(100vh-220px)]">
+              <TimelineView
+                startDate={startOfDay(new Date())}
+                daysCount={14}
+                onBookingClick={(booking) => {
+                  const b = bookings.find((x) => x.id === booking.id);
+                  if (b) {
+                    setSelectedRoomId(b.roomId);
+                    setShowDetail(true);
+                  }
+                }}
+              />
+            </div>
+          ) : viewMode === 'grid' ? (
             <div 
               className="grid gap-4 transition-all duration-300 w-full"
               style={{ 

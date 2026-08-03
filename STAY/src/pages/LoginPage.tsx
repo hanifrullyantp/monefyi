@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { DEFAULT_AUTH_REDIRECT } from '../config/routes';
 import { useAuthStore } from '../store/authStore';
+import { loginSchema, type LoginFormData } from '../schemas/validation';
 import { Home, Eye, EyeOff, ArrowRight, User } from 'lucide-react';
+import { useState } from 'react';
 
 const demoAccounts = [
   { role: 'Owner', email: 'owner@stay.com', desc: 'Akses penuh semua fitur' },
@@ -11,17 +14,24 @@ const demoAccounts = [
 ];
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('owner@stay.com');
-  const [password, setPassword] = useState('demo123');
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
   const { login, isLoading } = useAuthStore();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: 'owner@stay.com', password: 'StayDemo2026!' },
+  });
+
+  const onSubmit = async (data: LoginFormData) => {
     setError('');
-    const result = await login(email, password);
+    const result = await login(data.email, data.password);
     if (result.success) {
       navigate(DEFAULT_AUTH_REDIRECT);
     } else {
@@ -30,16 +40,17 @@ export default function LoginPage() {
   };
 
   const handleDemo = async (demoEmail: string) => {
-    setEmail(demoEmail);
+    setValue('email', demoEmail);
+    setValue('password', 'StayDemo2026!');
     setError('');
-    const result = await login(demoEmail, 'demo123');
+    const result = await login(demoEmail, 'StayDemo2026!');
     if (result.success) navigate(DEFAULT_AUTH_REDIRECT);
+    else setError(result.error || 'Login gagal');
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex w-16 h-16 rounded-2xl bg-emerald-600 items-center justify-center shadow-lg shadow-emerald-200 mb-4">
             <Home className="h-8 w-8 text-white" />
@@ -48,33 +59,31 @@ export default function LoginPage() {
           <p className="text-slate-500 text-sm mt-1">Platform Manajemen Penginapan Modern</p>
         </div>
 
-        {/* Card */}
         <div className="bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-100 p-7">
           <h2 className="text-lg font-bold text-slate-800 mb-1">Selamat Datang! 👋</h2>
           <p className="text-sm text-slate-500 mb-6">Masuk ke akun Anda untuk mulai mengelola penginapan</p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-slate-700">Email</label>
               <input
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                data-testid="login-email"
+                {...register('email')}
                 className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                 placeholder="email@contoh.com"
-                required
               />
+              {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
             </div>
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-slate-700">Password</label>
               <div className="relative">
                 <input
                   type={showPass ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  data-testid="login-password"
+                  {...register('password')}
                   className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent pr-12"
                   placeholder="••••••••"
-                  required
                 />
                 <button
                   type="button"
@@ -84,6 +93,7 @@ export default function LoginPage() {
                   {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
             </div>
 
             {error && (
@@ -94,6 +104,7 @@ export default function LoginPage() {
 
             <button
               type="submit"
+              data-testid="login-submit"
               disabled={isLoading}
               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 mt-2 disabled:opacity-60 shadow-lg shadow-emerald-200"
             >
@@ -108,13 +119,13 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Demo accounts */}
           <div className="mt-6">
             <p className="text-xs text-slate-400 text-center mb-3">— Akun Demo (klik untuk login langsung) —</p>
             <div className="space-y-2">
               {demoAccounts.map((acc) => (
                 <button
                   key={acc.email}
+                  type="button"
                   onClick={() => handleDemo(acc.email)}
                   disabled={isLoading}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-slate-100 hover:bg-emerald-50 hover:border-emerald-200 transition-all text-left group"

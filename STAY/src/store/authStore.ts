@@ -3,15 +3,22 @@ import { persist } from 'zustand/middleware';
 import type { UserProfile, Tenant } from '../types';
 import { mockUsers, mockTenant } from '../data/mockData';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
-import { fetchStayUserProfile, signInWithEmail } from '../services/api/stayApi';
+import {
+  fetchStayUserProfile,
+  hydrateAppStoreFromRemote,
+  signInWithEmail,
+} from '../services/api/stayApi';
+import { useAppStore } from './appStore';
 
 interface AuthState {
   user: UserProfile | null;
   tenant: Tenant | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  sessionInitialized: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
+  initializeSession: () => Promise<void>;
   setUser: (user: UserProfile) => void;
   setTenant: (tenant: Tenant) => void;
 }
@@ -51,13 +58,31 @@ function mapDbTenant(row: Record<string, unknown>): Tenant {
   };
 }
 
+async function applyProfileFromAuth(authUserId: string): Promise<{ success: boolean; error?: string }> {
+  const profile = await fetchStayUserProfile(authUserId);
+  if (!profile) {
+    return { success: false, error: 'Profil STAY tidak ditemukan' };
+  }
+
+  const user = mapDbUserToProfile(profile);
+  const tenantRow = profile.stay_tenants as Record<string, unknown>;
+  const tenant = mapDbTenant(tenantRow);
+
+  useAuthStore.setState({ user, tenant, isAuthenticated: true });
+  useAppStore.setState({ tenant });
+  await hydrateAppStoreFromRemote(tenant.id);
+
+  return { success: true };
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       tenant: null,
       isAuthenticated: false,
       isLoading: false,
+      sessionInitialized: false,
 
       login: async (email: string, password: string) => {
         set({ isLoading: true });
@@ -70,24 +95,18 @@ export const useAuthStore = create<AuthState>()(
               return { success: false, error: 'Email atau password salah' };
             }
 
-            const profile = await fetchStayUserProfile(authData.user.id);
-            if (!profile) {
-              set({ isLoading: false });
-              return { success: false, error: 'Profil STAY tidak ditemukan' };
-            }
-
-            const user = mapDbUserToProfile(profile);
-            const tenantRow = profile.stay_tenants as Record<string, unknown>;
-            const tenant = mapDbTenant(tenantRow);
-
-            set({ user, tenant, isAuthenticated: true, isLoading: false });
-            return { success: true };
+            const result = await applyProfileFromAuth(authData.user.id);
+            set({ isLoading: false });
+            return result.success
+              ? { success: true }
+              : { success: false, error: result.error };
           }
 
           await new Promise((r) => setTimeout(r, 600));
           const found = mockUsers.find((u) => u.email === email);
           if (found && password.length >= 1) {
             set({ user: found, tenant: mockTenant, isAuthenticated: true, isLoading: false });
+            useAppStore.setState({ tenant: mockTenant });
             return { success: true };
           }
           set({ isLoading: false });
@@ -103,6 +122,28 @@ export const useAuthStore = create<AuthState>()(
           await supabase.auth.signOut();
         }
         set({ user: null, tenant: null, isAuthenticated: false });
+      },
+
+      initializeSession: async () => {
+        if (get().sessionInitialized) return;
+        set({ sessionInitialized: true });
+
+        if (!isSupabaseConfigured || !supabase) return;
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await applyProfileFromAuth(session.user.id);
+        }
+
+        supabase.auth.onAuthStateChange(async (event, session) => {
+          if (event === 'SIGNED_OUT') {
+            set({ user: null, tenant: null, isAuthenticated: false });
+            return;
+          }
+          if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+            await applyProfileFromAuth(session.user.id);
+          }
+        });
       },
 
       setUser: (user) => set({ user }),

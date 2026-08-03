@@ -31,6 +31,7 @@ export default function BottomNav() {
             <NavLink
               key={item.path}
               to={item.path}
+              data-testid={`nav-${item.path.replace(/^\//, '')}`}
               className={({ isActive }) => cn(
                 'flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-150 min-w-0',
                 isActive ? 'text-emerald-600' : 'text-slate-400'

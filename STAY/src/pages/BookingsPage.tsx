@@ -1,18 +1,21 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAppStore } from '../store/appStore';
+import { useAuthStore } from '../store/authStore';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import Input, { Select } from '../components/ui/Input';
 import { formatCurrency, formatShortDate, generateBookingCode, generateId, calculateNights } from '../utils/format';
 import { openWhatsAppMessage, buildBookingConfirmationMessage } from '../utils/whatsapp';
+import { calculateBookingTotal, getRoomTypeBasePrice } from '../utils/pricing';
+import { resolveDiscountAmount } from '../utils/discountCodes';
 import type { BookingStatus, PaymentStatus, Booking } from '../types';
 import { cn } from '../utils/cn';
 import {
-  Plus, Search, CalendarDays, User, BedDouble,
-  XCircle, ChevronRight, LogIn, LogOut, Phone, Star, 
-  ArrowRight, ArrowLeft, MessageCircle
+  Plus, Search, CalendarDays, BedDouble,
+  XCircle, ChevronRight, LogIn, LogOut, Phone, Star,
+  ArrowRight, ArrowLeft, MessageCircle, ShieldAlert, Tag
 } from 'lucide-react';
 
 const statusConfig: Record<BookingStatus, { label: string; badge: 'warning' | 'info' | 'success' | 'gray' | 'danger' | 'purple' }> = {
@@ -52,11 +55,13 @@ interface NewBookingForm {
   notes: string;
   paymentMethod: string;
   discount: number;
+  discountCode: string;
 }
 
 export default function BookingsPage() {
   const location = useLocation();
-  const { bookings, rooms, roomTypes, guests, addBooking, updateBooking, addGuest, checkInBooking } = useAppStore();
+  const { tenant, user } = useAuthStore();
+  const { bookings, rooms, roomTypes, guests, pricingRules, addBooking, updateBooking, addGuest, checkInBooking } = useAppStore();
   const [tab, setTab] = useState<BookingStatus | 'all'>('all');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Booking | null>(null);
@@ -65,6 +70,8 @@ export default function BookingsPage() {
   const [loading, setLoading] = useState(false);
   const [memberFound, setMemberFound] = useState(false);
   const [isFirstStay, setIsFirstStay] = useState(false);
+  const [isBlacklisted, setIsBlacklisted] = useState(false);
+  const [discountError, setDiscountError] = useState('');
   const [step, setStep] = useState(1);
 
   useEffect(() => {
@@ -81,30 +88,56 @@ export default function BookingsPage() {
   const [form, setForm] = useState<NewBookingForm>({
     guestName: '', guestPhone: '', guestIdNumber: '', roomId: '',
     checkIn: '', checkOut: '', adults: '2', children: '0', notes: '', paymentMethod: 'cash',
-    discount: 0
+    discount: 0, discountCode: '',
   });
 
   const handlePhoneChange = (phone: string) => {
     setForm({ ...form, guestPhone: phone });
+    setIsBlacklisted(false);
+    setDiscountError('');
     const existing = guests.find(g => g.phone === phone);
     if (existing) {
       setForm(prev => ({
         ...prev,
         guestName: existing.name,
         guestIdNumber: existing.idNumber,
-        guestPhone: phone
+        guestPhone: phone,
+        discountCode: existing.discountCode || prev.discountCode,
       }));
       setMemberFound(true);
+      setIsBlacklisted(existing.isBlacklisted);
       setIsFirstStay(existing.totalStays === 0);
+      if (existing.isBlacklisted) return;
       if (existing.totalStays === 0) {
-        setForm(prev => ({ ...prev, discount: 50000 }));
+        setForm(prev => ({ ...prev, discount: 50000, discountCode: prev.discountCode || 'MEMBER50' }));
+      } else if (existing.discountCode) {
+        const resolved = resolveDiscountAmount(existing.discountCode, existing.discountCode, 0);
+        if (resolved) setForm(prev => ({ ...prev, discount: resolved.amount, discountCode: existing.discountCode! }));
       }
     } else {
       setMemberFound(false);
       setIsFirstStay(phone.length > 8);
       if (phone.length > 8) {
-        setForm(prev => ({ ...prev, discount: 25000 }));
+        setForm(prev => ({ ...prev, discount: 25000, discountCode: 'MEMBER25' }));
       }
+    }
+  };
+
+  const applyDiscountCode = () => {
+    setDiscountError('');
+    const room = rooms.find(r => r.id === form.roomId);
+    const basePrice = getRoomTypeBasePrice(room?.roomType, roomTypes, room?.roomTypeId);
+    const nights = calculateNights(form.checkIn, form.checkOut);
+    const subtotal = basePrice * Math.max(nights, 1);
+    const existing = guests.find(g => g.phone === form.guestPhone);
+    const resolved = resolveDiscountAmount(form.discountCode, existing?.discountCode, subtotal);
+    if (resolved) {
+      setForm(prev => ({ ...prev, discount: resolved.amount }));
+    } else if (form.discountCode.trim()) {
+      setDiscountError('Kode promo tidak valid');
+      setForm(prev => ({ ...prev, discount: 0 }));
+    } else {
+      setForm(prev => ({ ...prev, discount: 0 }));
     }
   };
 
@@ -119,18 +152,22 @@ export default function BookingsPage() {
   const availableRooms = rooms.filter(r => r.status === 'available');
 
   const calculateTotal = () => {
-    if (!form.roomId || !form.checkIn || !form.checkOut) return 0;
+    if (!form.roomId || !form.checkIn || !form.checkOut || !tenant) return 0;
     const room = rooms.find(r => r.id === form.roomId);
-    const rt = room?.roomType || roomTypes.find(t => t.id === room?.roomTypeId);
-    const nights = calculateNights(form.checkIn, form.checkOut);
-    if (!rt || nights <= 0) return 0;
-    const subtotal = rt.basePrice * nights;
-    const withTax = subtotal * 1.15;
-    return Math.max(0, withTax - form.discount);
+    const basePrice = getRoomTypeBasePrice(room?.roomType, roomTypes, room?.roomTypeId);
+    return calculateBookingTotal({
+      basePrice,
+      checkIn: form.checkIn,
+      checkOut: form.checkOut,
+      tenant,
+      pricingRules,
+      discountAmount: form.discount,
+    });
   };
 
   const handleCreateBooking = async () => {
-    if (!form.guestName || !form.roomId || !form.checkIn || !form.checkOut) return;
+    if (!form.guestName || !form.roomId || !form.checkIn || !form.checkOut || isBlacklisted) return;
+    if (!tenant || !user) return;
     setLoading(true);
     await new Promise(r => setTimeout(r, 800));
 
@@ -142,10 +179,11 @@ export default function BookingsPage() {
     } else {
       guestId = generateId();
       addGuest({
-        id: guestId, tenantId: 'tenant-1',
+        id: guestId, tenantId: tenant.id,
         name: form.guestName, phone: form.guestPhone,
         idType: 'ktp' as const, idNumber: form.guestIdNumber,
         nationality: 'Indonesia', isBlacklisted: false, totalStays: 0,
+        discountCode: form.discountCode || undefined,
         createdAt: new Date().toISOString(),
       });
     }
@@ -156,10 +194,10 @@ export default function BookingsPage() {
 
     const booking: Booking = {
       id: generateId(),
-      tenantId: 'tenant-1',
+      tenantId: tenant.id,
       bookingCode: generateBookingCode(),
       guestId,
-      guest: existing || { name: form.guestName, phone: form.guestPhone } as any,
+      guest: existing || { name: form.guestName, phone: form.guestPhone } as Booking['guest'],
       roomId: form.roomId,
       room: room || undefined,
       checkIn: form.checkIn,
@@ -171,9 +209,9 @@ export default function BookingsPage() {
       paymentStatus: 'unpaid',
       totalAmount: total,
       paidAmount: 0,
-      notes: form.notes,
+      notes: form.discountCode ? `${form.notes ? form.notes + ' | ' : ''}Promo: ${form.discountCode}` : form.notes,
       source: 'manual',
-      createdBy: 'user-3',
+      createdBy: user.id,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -181,7 +219,8 @@ export default function BookingsPage() {
     setShowNew(false);
     setStep(1);
     setLoading(false);
-    setForm({ guestName: '', guestPhone: '', guestIdNumber: '', roomId: '', checkIn: '', checkOut: '', adults: '2', children: '0', notes: '', paymentMethod: 'cash', discount: 0 });
+    setIsBlacklisted(false);
+    setForm({ guestName: '', guestPhone: '', guestIdNumber: '', roomId: '', checkIn: '', checkOut: '', adults: '2', children: '0', notes: '', paymentMethod: 'cash', discount: 0, discountCode: '' });
 
     if (form.guestPhone) {
       openWhatsAppMessage(
@@ -209,13 +248,13 @@ export default function BookingsPage() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" data-testid="bookings-page">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-slate-800">Manajemen Booking</h1>
           <p className="text-sm text-slate-500 mt-0.5">{bookings.length} total booking</p>
         </div>
-        <Button icon={<Plus className="h-4 w-4" />} onClick={() => setShowNew(true)}>
+        <Button icon={<Plus className="h-4 w-4" />} onClick={() => setShowNew(true)} data-testid="new-booking-btn">
           Booking Baru
         </Button>
       </div>
@@ -370,7 +409,7 @@ export default function BookingsPage() {
             {step < 3 ? (
               <Button 
                 onClick={() => setStep(step + 1)} 
-                disabled={step === 1 ? !form.guestPhone : !form.roomId}
+                disabled={step === 1 ? (!form.guestPhone || isBlacklisted) : !form.roomId}
                 className="flex-1 rounded-2xl h-12"
               >
                 Lanjut <ArrowRight className="h-4 w-4 ml-2" />
@@ -421,7 +460,17 @@ export default function BookingsPage() {
                 />
               </div>
 
-              {form.guestPhone.length > 8 && (
+              {form.guestPhone.length > 8 && isBlacklisted && (
+                <div className="bg-red-50 border border-red-200 p-5 rounded-3xl flex items-start gap-4">
+                  <ShieldAlert className="h-6 w-6 text-red-500 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-bold text-red-800">Tamu Diblokir</p>
+                    <p className="text-xs text-red-600 mt-1">Tamu ini masuk daftar hitam. Reservasi baru tidak dapat dibuat.</p>
+                  </div>
+                </div>
+              )}
+
+              {form.guestPhone.length > 8 && !isBlacklisted && (
                 <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
                   <div className="flex items-center justify-between">
                     <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Informasi Lengkap</h5>
@@ -569,6 +618,21 @@ export default function BookingsPage() {
                   onChange={e => setForm({ ...form, children: e.target.value })}
                 />
               </div>
+
+              <div className="flex gap-2 items-end">
+                <Input
+                  label="Kode Promo (opsional)"
+                  placeholder="MEMBER50, STAY10-..."
+                  value={form.discountCode}
+                  onChange={e => setForm({ ...form, discountCode: e.target.value })}
+                  leftIcon={<Tag className="h-4 w-4" />}
+                  className="flex-1"
+                />
+                <Button variant="outline" onClick={applyDiscountCode} className="h-[46px] rounded-xl">
+                  Terapkan
+                </Button>
+              </div>
+              {discountError && <p className="text-xs text-red-500">{discountError}</p>}
             </div>
           )}
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAppStore } from '../store/appStore';
 import { formatCurrency } from '../utils/format';
@@ -11,8 +11,10 @@ import { cn } from '../utils/cn';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import Badge from '../components/ui/Badge';
+import XenditPaymentPanel from '../components/payments/XenditPaymentPanel';
+import { useXenditPayment } from '../hooks/useXenditPayment';
 
-type PaymentChannel = 'cash' | 'debit' | 'credit' | 'qris';
+type PaymentChannel = 'cash' | 'debit' | 'credit' | 'qris' | 'online';
 
 export default function POSPage() {
   const { bookings, recordBookingPayment } = useAppStore();
@@ -37,7 +39,27 @@ export default function POSPage() {
   const [refNumber, setRefNumber] = useState('');
   const [bankName, setBankName] = useState('');
   const [showReceipt, setShowReceipt] = useState(false);
-  const [lastPayment, setLastPayment] = useState<any>(null);
+  const [lastPayment, setLastPayment] = useState<Record<string, unknown> | null>(null);
+
+  const xendit = useXenditPayment(selectedBookingId);
+
+  useEffect(() => {
+    if (channel !== 'online') xendit.reset();
+  }, [channel, selectedBookingId]);
+
+  useEffect(() => {
+    if (xendit.status === 'paid' && selected) {
+      setLastPayment({
+        bookingCode: selected.bookingCode,
+        guestName: selected.guest?.name,
+        amount: parseFloat(amount) || remaining,
+        channel: 'online',
+        date: new Date().toISOString(),
+      });
+      setShowReceipt(true);
+      xendit.reset();
+    }
+  }, [xendit.status]);
 
   const pendingPayments = bookings.filter(b => 
     b.paymentStatus !== 'paid' && b.status !== 'cancelled' &&
@@ -48,9 +70,10 @@ export default function POSPage() {
   const remaining = selected ? selected.totalAmount - selected.paidAmount : 0;
 
   const handleProcess = async () => {
-    if (!selected || !amount) return;
+    if (!selected || !amount || channel === 'online') return;
+
     const paid = parseFloat(amount);
-    const methodMap: Record<PaymentChannel, 'cash' | 'credit_card' | 'qris'> = {
+    const methodMap: Record<Exclude<PaymentChannel, 'online'>, 'cash' | 'credit_card' | 'qris'> = {
       cash: 'cash',
       debit: 'cash',
       credit: 'credit_card',
@@ -181,24 +204,37 @@ export default function POSPage() {
                     <ChannelButton active={channel === 'debit'} icon={<CreditCard className="h-5 w-5" />} label="Debit" onClick={() => setChannel('debit')} />
                     <ChannelButton active={channel === 'credit'} icon={<CreditCard className="h-5 w-5" />} label="Kredit" onClick={() => setChannel('credit')} />
                     <ChannelButton active={channel === 'qris'} icon={<Smartphone className="h-5 w-5" />} label="QRIS" onClick={() => setChannel('qris')} />
+                    <ChannelButton active={channel === 'online'} icon={<Wallet className="h-5 w-5" />} label="Xendit Link" onClick={() => setChannel('online')} className="col-span-2" />
                   </div>
                 </div>
 
-                <div className="space-y-4">
+                <div className="relative">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-2">Nominal Bayar</label>
                   <div className="relative">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-2">Nominal Bayar</label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-400 text-xl">Rp</span>
-                      <input 
-                        type="number" 
-                        value={amount}
-                        onChange={e => setAmount(e.target.value)}
-                        className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-4 pl-12 pr-4 text-2xl font-black focus:ring-4 focus:ring-sky-500/10 outline-none transition-all"
-                        placeholder="0"
-                      />
-                    </div>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-400 text-xl">Rp</span>
+                    <input
+                      type="number"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-4 pl-12 pr-4 text-2xl font-black focus:ring-4 focus:ring-sky-500/10 outline-none transition-all"
+                      placeholder="0"
+                    />
                   </div>
+                </div>
 
+                {channel === 'online' ? (
+                  <XenditPaymentPanel
+                    paymentUrl={xendit.paymentUrl}
+                    status={xendit.status}
+                    loading={xendit.loading}
+                    error={xendit.error}
+                    onCreate={() => {
+                      const paid = parseFloat(amount);
+                      if (paid > 0) void xendit.createInvoice(paid, 'virtual_account');
+                    }}
+                  />
+                ) : (
+                <div className="space-y-4">
                   {(channel === 'debit' || channel === 'credit') && (
                     <div className="grid grid-cols-1 gap-3 animate-in slide-in-from-top-2 duration-200">
                       <input 
@@ -228,8 +264,11 @@ export default function POSPage() {
                     />
                   )}
                 </div>
+                )}
+
               </div>
 
+              {channel !== 'online' && (
               <button 
                 className="w-full h-16 rounded-[1.5rem] bg-emerald-600 text-white text-lg font-black shadow-2xl shadow-emerald-200 mt-8 flex items-center justify-center gap-3 hover:bg-emerald-700 active:scale-[0.98] transition-all disabled:bg-slate-200 disabled:shadow-none"
                 onClick={handleProcess}
@@ -237,6 +276,7 @@ export default function POSPage() {
               >
                 KONFIRMASI BAYAR <ArrowRight className="h-6 w-6" />
               </button>
+              )}
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
@@ -300,12 +340,20 @@ export default function POSPage() {
   );
 }
 
-function ChannelButton({ active, icon, label, onClick }: any) {
+function ChannelButton({ active, icon, label, onClick, className }: {
+  active: boolean;
+  icon: ReactNode;
+  label: string;
+  onClick: () => void;
+  className?: string;
+}) {
   return (
     <button 
+      type="button"
       onClick={onClick}
       className={cn(
         "flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all active:scale-[0.95]",
+        className,
         active 
           ? "border-sky-500 bg-sky-50 text-sky-600 shadow-lg shadow-sky-100/50" 
           : "border-slate-50 bg-slate-50 text-slate-400 hover:border-slate-200 hover:bg-white"

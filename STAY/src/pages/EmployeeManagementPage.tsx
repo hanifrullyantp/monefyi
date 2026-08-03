@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Users, Key, Banknote, CalendarCheck, 
   Wallet, ListTodo, Plus, Mail, 
@@ -16,13 +16,33 @@ import Badge from '../components/ui/Badge';
 import Input from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
 import { useAppStore } from '../store/appStore';
+import { useAuthStore } from '../store/authStore';
+import { useHrStore } from '../store/hrStore';
 
 type TabType = 'access' | 'data' | 'payroll' | 'attendance' | 'loans' | 'tasks';
 
+function ComingSoonPanel({ label }: { label: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 bg-white rounded-[2rem] border border-dashed border-slate-200">
+      <Badge variant="info" className="mb-4">Segera Hadir</Badge>
+      <h3 className="text-lg font-black text-slate-800">{label}</h3>
+      <p className="text-sm text-slate-500 mt-2 max-w-md text-center">
+        Modul tugas operasional terhubung ke housekeeping. Fitur lanjutan menyusul.
+      </p>
+    </div>
+  );
+}
+
 export default function EmployeeManagementPage() {
-  const { users } = useAppStore();
+  const { users, housekeepingTasks } = useAppStore();
+  const { tenant } = useAuthStore();
+  const { loadHrData } = useHrStore();
   const [activeTab, setActiveTab] = useState<TabType>('data');
   const [showInviteModal, setShowInviteModal] = useState(false);
+
+  useEffect(() => {
+    if (tenant?.id) void loadHrData(tenant.id);
+  }, [tenant?.id, loadHrData]);
 
   const tabs = [
     { id: 'access', label: 'Akses', icon: Key, color: 'text-emerald-600', bg: 'bg-emerald-50' },
@@ -87,7 +107,7 @@ export default function EmployeeManagementPage() {
         {activeTab === 'payroll' && <PayrollTab />}
         {activeTab === 'attendance' && <AttendanceTab />}
         {activeTab === 'loans' && <LoansTab />}
-        {activeTab === 'tasks' && <TasksTab />}
+        {activeTab === 'tasks' && <TasksTab tasks={housekeepingTasks} />}
       </div>
 
       {/* Invite Modal Placeholder */}
@@ -258,18 +278,34 @@ function StaffInfoItem({ icon, value }: { icon: any; value: string }) {
 }
 
 function PayrollTab() {
+  const { users } = useAppStore();
+  const { payroll, markPayrollPaid } = useHrStore();
+  const periodLabel = payroll[0]?.periodMonth
+    ? new Date(payroll[0].periodMonth).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+    : 'Bulan ini';
+
+  const totalNet = payroll.reduce((s, p) => s + p.netPay, 0);
+  const paidCount = payroll.filter((p) => p.status === 'paid').length;
+  const unpaidTotal = payroll.filter((p) => p.status !== 'paid').reduce((s, p) => s + p.netPay, 0);
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <PayrollStat label="Total Gaji Bulan Ini" value={formatCurrency(12500000)} icon={<Banknote className="text-emerald-500" />} />
-        <PayrollStat label="Karyawan Dibayar" value="8 / 12" icon={<CheckCircle2 className="text-sky-500" />} />
-        <PayrollStat label="Sisa Belum Dibayar" value={formatCurrency(3400000)} icon={<AlertCircle className="text-orange-500" />} />
+        <PayrollStat label="Total Gaji Bulan Ini" value={formatCurrency(totalNet)} icon={<Banknote className="text-emerald-500" />} />
+        <PayrollStat label="Karyawan Dibayar" value={`${paidCount} / ${payroll.length}`} icon={<CheckCircle2 className="text-sky-500" />} />
+        <PayrollStat label="Sisa Belum Dibayar" value={formatCurrency(unpaidTotal)} icon={<AlertCircle className="text-orange-500" />} />
       </div>
 
       <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-slate-200/50 overflow-hidden">
         <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="text-sm font-black uppercase tracking-widest text-slate-800">Daftar Payroll Juni 2024</h3>
-          <button className="bg-emerald-600 text-white px-5 py-2 rounded-2xl text-xs font-black uppercase shadow-lg shadow-emerald-100">Proses Massal</button>
+          <h3 className="text-sm font-black uppercase tracking-widest text-slate-800">Daftar Payroll {periodLabel}</h3>
+          <button
+            type="button"
+            className="bg-emerald-600 text-white px-5 py-2 rounded-2xl text-xs font-black uppercase shadow-lg shadow-emerald-100"
+            onClick={() => payroll.filter((p) => p.status !== 'paid').forEach((p) => void markPayrollPaid(p.id))}
+          >
+            Proses Massal
+          </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -284,23 +320,29 @@ function PayrollTab() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {users.map(user => (
-                <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
+              {payroll.map((entry) => {
+                const user = users.find((u) => u.id === entry.userId);
+                return (
+                <tr key={entry.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-8 py-5">
-                    <p className="font-black text-slate-800 tracking-tight">{user.name}</p>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase">{user.role}</p>
+                    <p className="font-black text-slate-800 tracking-tight">{user?.name || 'Staff'}</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase">{user?.role || '—'}</p>
                   </td>
-                  <td className="px-8 py-5 font-bold text-slate-600">{formatCurrency(3500000)}</td>
-                  <td className="px-8 py-5 font-bold text-emerald-600">+{formatCurrency(450000)}</td>
-                  <td className="px-8 py-5 font-bold text-rose-500">-{formatCurrency(120000)}</td>
-                  <td className="px-8 py-5 font-black text-slate-900">{formatCurrency(3830000)}</td>
+                  <td className="px-8 py-5 font-bold text-slate-600">{formatCurrency(entry.baseSalary)}</td>
+                  <td className="px-8 py-5 font-bold text-emerald-600">+{formatCurrency(entry.allowances)}</td>
+                  <td className="px-8 py-5 font-bold text-rose-500">-{formatCurrency(entry.deductions)}</td>
+                  <td className="px-8 py-5 font-black text-slate-900">{formatCurrency(entry.netPay)}</td>
                   <td className="px-8 py-5 text-right">
-                    <Badge variant={user.id === 'user-1' ? 'success' : 'warning'} className="uppercase text-[9px] font-black rounded-lg">
-                      {user.id === 'user-1' ? 'Lunas' : 'Belum Bayar'}
-                    </Badge>
+                    {entry.status !== 'paid' ? (
+                      <button type="button" onClick={() => void markPayrollPaid(entry.id)} className="text-[9px] font-black uppercase text-emerald-600 hover:underline">
+                        Tandai Lunas
+                      </button>
+                    ) : (
+                      <Badge variant="success" className="uppercase text-[9px] font-black rounded-lg">Lunas</Badge>
+                    )}
                   </td>
                 </tr>
-              ))}
+              );})}
             </tbody>
           </table>
         </div>
@@ -324,6 +366,19 @@ function PayrollStat({ label, value, icon }: any) {
 }
 
 function AttendanceTab() {
+  const { users } = useAppStore();
+  const { tenant } = useAuthStore();
+  const { attendance, clockInStaff } = useHrStore();
+  const today = new Date().toISOString().split('T')[0];
+  const todayRecords = attendance.filter((a) => a.workDate === today);
+
+  const counts = {
+    present: todayRecords.filter((a) => a.status === 'present').length,
+    late: todayRecords.filter((a) => a.status === 'late').length,
+    leave: todayRecords.filter((a) => a.status === 'leave').length,
+    absent: users.length - todayRecords.length,
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-2xl shadow-slate-200/50">
@@ -338,21 +393,29 @@ function AttendanceTab() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-             <Button variant="outline" className="rounded-2xl h-11 px-6 border-slate-200 text-[10px] font-black uppercase tracking-widest">Digital Link</Button>
-             <Button className="rounded-2xl h-11 px-6 bg-orange-500 hover:bg-orange-600 shadow-lg shadow-orange-100 text-[10px] font-black uppercase tracking-widest">+ Input Manual</Button>
+             <Button
+               className="rounded-2xl h-11 px-6 bg-orange-500 hover:bg-orange-600 shadow-lg shadow-orange-100 text-[10px] font-black uppercase tracking-widest"
+               onClick={() => {
+                 const first = users[0];
+                 if (first && tenant) void clockInStaff(tenant.id, first.id);
+               }}
+             >
+               + Clock-in Demo
+             </Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-          <AttendanceSummaryCircle label="Hadir" count={9} color="bg-emerald-500" />
-          <AttendanceSummaryCircle label="Terlambat" count={2} color="bg-amber-500" />
-          <AttendanceSummaryCircle label="Izin" count={1} color="bg-sky-500" />
-          <AttendanceSummaryCircle label="Sakit" count={0} color="bg-rose-500" />
-          <AttendanceSummaryCircle label="Alpa" count={0} color="bg-slate-400" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <AttendanceSummaryCircle label="Hadir" count={counts.present} color="bg-emerald-500" />
+          <AttendanceSummaryCircle label="Terlambat" count={counts.late} color="bg-amber-500" />
+          <AttendanceSummaryCircle label="Izin" count={counts.leave} color="bg-sky-500" />
+          <AttendanceSummaryCircle label="Belum Absen" count={Math.max(0, counts.absent)} color="bg-slate-400" />
         </div>
 
         <div className="mt-10 space-y-3">
-          {users.map(staff => (
+          {users.map(staff => {
+            const record = todayRecords.find((a) => a.userId === staff.id);
+            return (
             <div key={staff.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-[1.5rem] border border-slate-100 hover:border-orange-200 transition-all">
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center font-black text-slate-400 text-xs shadow-sm">
@@ -360,22 +423,22 @@ function AttendanceTab() {
                 </div>
                 <div>
                   <p className="text-xs font-black text-slate-800 uppercase tracking-wide">{staff.name}</p>
-                  <p className="text-[10px] text-slate-400 font-bold">Resepsionis</p>
+                  <p className="text-[10px] text-slate-400 font-bold">{staff.role}</p>
                 </div>
               </div>
               <div className="flex items-center gap-8">
                 <div className="hidden sm:block text-right">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Masuk</p>
-                  <p className="text-xs font-bold text-slate-700">07:55 WIB</p>
+                  <p className="text-xs font-bold text-slate-700">
+                    {record?.clockIn ? new Date(record.clockIn).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                  </p>
                 </div>
-                <div className="hidden sm:block text-right">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Keluar</p>
-                  <p className="text-xs font-bold text-slate-300 italic">Belum Pulang</p>
-                </div>
-                <Badge variant="success" className="rounded-lg text-[9px] font-black px-3 py-1">HADIR</Badge>
+                <Badge variant={record ? (record.status === 'late' ? 'warning' : 'success') : 'gray'} className="rounded-lg text-[9px] font-black px-3 py-1">
+                  {record ? record.status.toUpperCase() : 'BELUM'}
+                </Badge>
               </div>
             </div>
-          ))}
+          );})}
         </div>
       </div>
     </div>
@@ -392,6 +455,10 @@ function AttendanceSummaryCircle({ label, count, color }: any) {
 }
 
 function LoansTab() {
+  const { users } = useAppStore();
+  const { loans } = useHrStore();
+  const activeTotal = loans.filter((l) => l.status === 'active').reduce((s, l) => s + l.remaining, 0);
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
@@ -400,8 +467,7 @@ function LoansTab() {
             <Wallet className="h-8 w-8 text-white" />
           </div>
           <p className="text-[10px] font-black text-rose-200 uppercase tracking-widest mb-2">Total Kasbon Aktif</p>
-          <p className="text-3xl font-black tracking-tight">{formatCurrency(4850000)}</p>
-          <button className="mt-8 w-full py-4 bg-white text-rose-600 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-rose-900/20 active:scale-95 transition-all">Ajukan Kasbon Baru</button>
+          <p className="text-3xl font-black tracking-tight">{formatCurrency(activeTotal)}</p>
         </div>
 
         <div className="lg:col-span-3 space-y-4">
@@ -414,25 +480,26 @@ function LoansTab() {
                     <th className="px-8 py-4 text-left">Staff</th>
                     <th className="px-8 py-4 text-left">Pinjaman</th>
                     <th className="px-8 py-4 text-left">Sisa</th>
-                    <th className="px-8 py-4 text-left">Cicilan/Bln</th>
+                    <th className="px-8 py-4 text-left">Alasan</th>
                     <th className="px-8 py-4 text-right">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  <tr className="hover:bg-slate-50/50">
-                    <td className="px-8 py-5"><p className="font-black text-slate-800 uppercase tracking-tight">Sari Dewi</p></td>
-                    <td className="px-8 py-5 font-bold text-slate-600">{formatCurrency(2000000)}</td>
-                    <td className="px-8 py-5 font-black text-rose-500">{formatCurrency(1200000)}</td>
-                    <td className="px-8 py-5 font-bold text-slate-600">{formatCurrency(400000)}</td>
-                    <td className="px-8 py-5 text-right"><Badge variant="info" className="uppercase font-black text-[9px]">4 Bulan Lagi</Badge></td>
+                  {loans.map((loan) => {
+                    const user = users.find((u) => u.id === loan.userId);
+                    return (
+                  <tr key={loan.id} className="hover:bg-slate-50/50">
+                    <td className="px-8 py-5"><p className="font-black text-slate-800 uppercase tracking-tight">{user?.name || 'Staff'}</p></td>
+                    <td className="px-8 py-5 font-bold text-slate-600">{formatCurrency(loan.amount)}</td>
+                    <td className="px-8 py-5 font-black text-rose-500">{formatCurrency(loan.remaining)}</td>
+                    <td className="px-8 py-5 text-xs text-slate-500">{loan.reason || '—'}</td>
+                    <td className="px-8 py-5 text-right">
+                      <Badge variant={loan.status === 'paid' ? 'success' : 'info'} className="uppercase font-black text-[9px]">
+                        {loan.status === 'paid' ? 'Lunas' : 'Aktif'}
+                      </Badge>
+                    </td>
                   </tr>
-                  <tr className="hover:bg-slate-50/50">
-                    <td className="px-8 py-5"><p className="font-black text-slate-800 uppercase tracking-tight">Ahmad Fauzi</p></td>
-                    <td className="px-8 py-5 font-bold text-slate-600">{formatCurrency(500000)}</td>
-                    <td className="px-8 py-5 font-black text-rose-500">{formatCurrency(0)}</td>
-                    <td className="px-8 py-5 font-bold text-slate-600">—</td>
-                    <td className="px-8 py-5 text-right"><Badge variant="success" className="uppercase font-black text-[9px]">Lunas</Badge></td>
-                  </tr>
+                  );})}
                 </tbody>
               </table>
             </div>
@@ -443,8 +510,16 @@ function LoansTab() {
   );
 }
 
-function TasksTab() {
+function TasksTab({ tasks }: { tasks: ReturnType<typeof useAppStore.getState>['housekeepingTasks'] }) {
   const [taskFilter, setTaskFilter] = useState('all');
+
+  const filtered = tasks.filter((t) => {
+    if (taskFilter === 'all') return true;
+    if (taskFilter === 'pending') return t.status === 'pending';
+    if (taskFilter === 'doing') return t.status === 'in_progress';
+    if (taskFilter === 'done') return t.status === 'done' || t.status === 'verified';
+    return true;
+  });
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -453,6 +528,7 @@ function TasksTab() {
           {['all', 'pending', 'doing', 'done'].map(f => (
             <button 
               key={f} 
+              type="button"
               onClick={() => setTaskFilter(f)}
               className={cn(
                 "px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
@@ -463,35 +539,26 @@ function TasksTab() {
             </button>
           ))}
         </div>
-        <Button className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100" icon={<Plus className="h-4 w-4" />}>Tambah Tugas</Button>
+        <p className="text-xs text-slate-400 font-medium">Tugas dari modul Housekeeping ({filtered.length})</p>
       </div>
 
+      {filtered.length === 0 ? (
+        <ComingSoonPanel label="Belum ada tugas housekeeping" />
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filtered.map((task) => (
         <TaskCard 
-          title="Bersihkan Kamar 301" 
-          desc="Tamu baru checkout tadi jam 11:00. Pastikan handuk diganti baru semua." 
-          staff="Rina Putri" 
-          priority="High" 
-          deadline="Hari ini, 14:00" 
-          category="Cleaning"
+          key={task.id}
+          title={`${task.type.replace(/_/g, ' ')} — Kamar ${task.room?.number || '?'}`}
+          desc={task.notes || 'Tugas operasional kamar'}
+          staff={task.assignedUser?.name || 'Belum ditugaskan'}
+          priority={task.status === 'pending' ? 'High' : 'Normal'}
+          deadline={new Date(task.scheduledAt).toLocaleString('id-ID')}
+          category={task.type}
         />
-        <TaskCard 
-          title="Perbaiki AC Kamar 105" 
-          desc="Kompresor berisik, tolong cek freon dan bersihkan filter." 
-          staff="Teknisi" 
-          priority="Urgent" 
-          deadline="Segera" 
-          category="Maintenance"
-        />
-        <TaskCard 
-          title="Restock Minibar Suite" 
-          desc="Pesan 2 box soda dan camilan untuk restock gudang lantai 2." 
-          staff="Ahmad Fauzi" 
-          priority="Normal" 
-          deadline="Besok, 10:00" 
-          category="Admin"
-        />
+        ))}
       </div>
+      )}
     </div>
   );
 }

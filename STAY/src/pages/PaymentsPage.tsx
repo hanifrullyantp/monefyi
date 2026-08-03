@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppStore } from '../store/appStore';
 import Badge from '../components/ui/Badge';
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
+import XenditPaymentPanel from '../components/payments/XenditPaymentPanel';
+import { useXenditPayment, isOnlinePaymentMethod } from '../hooks/useXenditPayment';
 import { formatCurrency, formatDateTime } from '../utils/format';
 import { CreditCard, Search, Receipt, CheckCircle } from 'lucide-react';
 import { cn } from '../utils/cn';
@@ -29,33 +31,52 @@ const methodColors: Record<PaymentMethod, string> = {
 export default function PaymentsPage() {
   const { bookings, payments, recordBookingPayment } = useAppStore();
   const [search, setSearch] = useState('');
-  const [selectedBooking, setSelectedBooking] = useState<typeof bookings[0] | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<(typeof bookings)[0] | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [payAmount, setPayAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
 
+  const xendit = useXenditPayment(selectedBooking?.id ?? null);
+
+  useEffect(() => {
+    if (!showModal) xendit.reset();
+  }, [showModal]);
+
+  useEffect(() => {
+    if (xendit.status === 'paid') {
+      setSuccessMsg('Pembayaran Xendit berhasil dicatat!');
+      setTimeout(() => {
+        setSuccessMsg('');
+        setShowModal(false);
+        xendit.reset();
+      }, 2000);
+    }
+  }, [xendit.status]);
+
   const today = new Date().toISOString().split('T')[0];
   const totalRevToday = payments
     .filter((p) => p.createdAt.startsWith(today) && p.status === 'paid')
     .reduce((sum, p) => sum + p.amount, 0);
 
-  const unpaidBookings = bookings.filter(b =>
-    (b.paymentStatus === 'unpaid' || b.paymentStatus === 'partial') &&
-    b.status !== 'cancelled'
+  const unpaidBookings = bookings.filter(
+    (b) =>
+      (b.paymentStatus === 'unpaid' || b.paymentStatus === 'partial') &&
+      b.status !== 'cancelled'
   );
 
-  const filtered = unpaidBookings.filter(b =>
-    !search ||
-    b.guest?.name.toLowerCase().includes(search.toLowerCase()) ||
-    b.bookingCode.toLowerCase().includes(search.toLowerCase())
+  const filtered = unpaidBookings.filter(
+    (b) =>
+      !search ||
+      b.guest?.name.toLowerCase().includes(search.toLowerCase()) ||
+      b.bookingCode.toLowerCase().includes(search.toLowerCase())
   );
 
   const handlePayment = async () => {
     if (!selectedBooking || !payAmount) return;
     setLoading(true);
-    await new Promise(r => setTimeout(r, 400));
+    await new Promise((r) => setTimeout(r, 400));
 
     const amount = parseInt(payAmount.replace(/\D/g, ''), 10);
     recordBookingPayment(selectedBooking.id, amount, paymentMethod);
@@ -67,6 +88,13 @@ export default function PaymentsPage() {
       setShowModal(false);
     }, 2000);
   };
+
+  const handleCreateXendit = () => {
+    const amount = parseInt(payAmount.replace(/\D/g, ''), 10);
+    if (amount > 0) void xendit.createInvoice(amount, paymentMethod);
+  };
+
+  const isOnline = isOnlinePaymentMethod(paymentMethod);
 
   return (
     <div className="space-y-5">
@@ -96,7 +124,7 @@ export default function PaymentsPage() {
           type="text"
           placeholder="Cari nama tamu atau kode booking..."
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
         />
       </div>
@@ -108,11 +136,16 @@ export default function PaymentsPage() {
             <p className="text-slate-500 text-sm">Semua tagihan sudah lunas</p>
           </div>
         ) : (
-          filtered.map(booking => (
-            <div key={booking.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center justify-between gap-3">
+          filtered.map((booking) => (
+            <div
+              key={booking.id}
+              className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center justify-between gap-3"
+            >
               <div>
                 <p className="font-semibold text-slate-800">{booking.guest?.name}</p>
-                <p className="text-xs text-slate-400">{booking.bookingCode} · Kamar {booking.room?.number}</p>
+                <p className="text-xs text-slate-400">
+                  {booking.bookingCode} · Kamar {booking.room?.number}
+                </p>
                 <p className="text-sm font-bold text-slate-700 mt-1">
                   Sisa: {formatCurrency(booking.totalAmount - booking.paidAmount)}
                 </p>
@@ -123,6 +156,7 @@ export default function PaymentsPage() {
                 onClick={() => {
                   setSelectedBooking(booking);
                   setPayAmount(String(booking.totalAmount - booking.paidAmount));
+                  setPaymentMethod('cash');
                   setShowModal(true);
                 }}
               >
@@ -137,9 +171,12 @@ export default function PaymentsPage() {
         <h2 className="text-sm font-bold text-slate-700 mb-3">Riwayat Pembayaran Terbaru</h2>
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           {payments.slice(0, 6).map((payment, idx) => {
-            const booking = bookings.find(b => b.id === payment.bookingId);
+            const booking = bookings.find((b) => b.id === payment.bookingId);
             return (
-              <div key={payment.id} className={cn('flex items-center gap-3 p-4', idx < payments.length - 1 && 'border-b border-slate-50')}>
+              <div
+                key={payment.id}
+                className={cn('flex items-center gap-3 p-4', idx < payments.length - 1 && 'border-b border-slate-50')}
+              >
                 <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
                   <CheckCircle className="h-5 w-5 text-emerald-600" />
                 </div>
@@ -170,16 +207,23 @@ export default function PaymentsPage() {
             ) : (
               <>
                 <p className="text-sm text-slate-600">
-                  {selectedBooking.guest?.name} · Sisa {formatCurrency(selectedBooking.totalAmount - selectedBooking.paidAmount)}
+                  {selectedBooking.guest?.name} · Sisa{' '}
+                  {formatCurrency(selectedBooking.totalAmount - selectedBooking.paidAmount)}
                 </p>
                 <div className="grid grid-cols-2 gap-2">
-                  {(Object.keys(methodLabel) as PaymentMethod[]).slice(0, 4).map(m => (
+                  {(Object.keys(methodLabel) as PaymentMethod[]).map((m) => (
                     <button
                       key={m}
-                      onClick={() => setPaymentMethod(m)}
+                      type="button"
+                      onClick={() => {
+                        setPaymentMethod(m);
+                        xendit.reset();
+                      }}
                       className={cn(
                         'p-2 rounded-xl text-xs font-medium border transition-all',
-                        paymentMethod === m ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200'
+                        paymentMethod === m
+                          ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                          : 'border-slate-200'
                       )}
                     >
                       {methodLabel[m]}
@@ -190,12 +234,23 @@ export default function PaymentsPage() {
                   type="text"
                   placeholder="0"
                   value={payAmount}
-                  onChange={e => setPayAmount(e.target.value.replace(/\D/g, ''))}
+                  onChange={(e) => setPayAmount(e.target.value.replace(/\D/g, ''))}
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 text-lg font-bold"
                 />
-                <Button loading={loading} className="w-full" onClick={handlePayment}>
-                  Konfirmasi Pembayaran
-                </Button>
+
+                {isOnline ? (
+                  <XenditPaymentPanel
+                    paymentUrl={xendit.paymentUrl}
+                    status={xendit.status}
+                    loading={xendit.loading}
+                    error={xendit.error}
+                    onCreate={handleCreateXendit}
+                  />
+                ) : (
+                  <Button loading={loading} className="w-full" onClick={handlePayment}>
+                    Konfirmasi Pembayaran
+                  </Button>
+                )}
               </>
             )}
           </div>

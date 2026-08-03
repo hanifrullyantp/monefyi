@@ -76,6 +76,13 @@ interface AppState {
   addGuest: (guest: Guest) => void;
   updateGuest: (id: string, updates: Partial<Guest>) => void;
   addPayment: (payment: Omit<Payment, 'id' | 'createdAt'>) => Payment;
+  updatePayment: (id: string, updates: Partial<Payment>) => void;
+  createXenditInvoice: (
+    bookingId: string,
+    amount: number,
+    method: PaymentMethod
+  ) => Promise<{ paymentUrl: string; externalId: string; paymentId: string }>;
+  settleXenditPayment: (paymentId: string) => Payment | null;
   recordBookingPayment: (
     bookingId: string,
     amount: number,
@@ -94,7 +101,7 @@ interface AppState {
   updatePricingRule: (id: string, updates: Partial<PricingRule>) => void;
   addPricingRule: (rule: Omit<PricingRule, 'id'>) => void;
   addAccountingEntry: (entry: Omit<AccountingEntry, 'id'>) => void;
-  hydrateFromRemote: (data: Partial<Pick<AppState, 'bookings' | 'rooms' | 'guests' | 'payments' | 'housekeepingTasks' | 'notifications'>>) => void;
+  hydrateFromRemote: (data: Partial<Pick<AppState, 'bookings' | 'rooms' | 'guests' | 'payments' | 'housekeepingTasks' | 'notifications' | 'roomTypes' | 'pricingRules' | 'accountingEntries'>>) => void;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
 }
@@ -208,6 +215,64 @@ export const useAppStore = create<AppState>()(
         set((state) => ({ payments: [newPayment, ...state.payments] }));
         void queueMutation('addPayment', newPayment);
         return newPayment;
+      },
+
+      updatePayment: (id, updates) => {
+        set((state) => ({
+          payments: state.payments.map((p) => (p.id === id ? { ...p, ...updates } : p)),
+        }));
+        void queueMutation('updatePayment', { id, updates });
+      },
+
+      createXenditInvoice: async (bookingId, amount, method) => {
+        const booking = get().bookings.find((b) => b.id === bookingId);
+        if (!booking || amount <= 0) {
+          throw new Error('Booking tidak valid');
+        }
+
+        const { xenditService } = await import('../services/xenditService');
+        const { paymentUrl, externalId } = await xenditService.createInvoice(booking, amount);
+
+        const payment = get().addPayment({
+          tenantId: booking.tenantId,
+          bookingId,
+          amount,
+          method,
+          status: 'unpaid',
+          externalId,
+          paymentUrl,
+          notes: 'Invoice Xendit — menunggu pembayaran',
+        });
+
+        return { paymentUrl, externalId, paymentId: payment.id };
+      },
+
+      settleXenditPayment: (paymentId) => {
+        const payment = get().payments.find((p) => p.id === paymentId);
+        if (!payment || payment.status === 'paid') return null;
+
+        get().updatePayment(paymentId, { status: 'paid' });
+
+        const booking = get().bookings.find((b) => b.id === payment.bookingId);
+        if (!booking) return payment;
+
+        const newPaid = booking.paidAmount + payment.amount;
+        const paymentStatus =
+          newPaid >= booking.totalAmount ? 'paid' : newPaid > 0 ? 'partial' : 'unpaid';
+
+        get().updateBooking(booking.id, { paidAmount: newPaid, paymentStatus });
+
+        get().addAccountingEntry({
+          tenantId: booking.tenantId,
+          date: new Date().toISOString().split('T')[0],
+          description: `Pembayaran Xendit ${booking.bookingCode}`,
+          category: 'Room Revenue',
+          type: 'income',
+          amount: payment.amount,
+          reference: payment.id,
+        });
+
+        return payment;
       },
 
       recordBookingPayment: (bookingId, amount, method, referenceNumber, notes) => {
@@ -363,6 +428,9 @@ export const useAppStore = create<AppState>()(
           payments: data.payments ?? state.payments,
           housekeepingTasks: data.housekeepingTasks ?? state.housekeepingTasks,
           notifications: data.notifications ?? state.notifications,
+          roomTypes: data.roomTypes ?? state.roomTypes,
+          pricingRules: data.pricingRules ?? state.pricingRules,
+          accountingEntries: data.accountingEntries ?? state.accountingEntries,
         }));
       },
 

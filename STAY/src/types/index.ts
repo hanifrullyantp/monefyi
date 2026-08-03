@@ -86,6 +86,7 @@ export interface Guest {
   isBlacklisted: boolean;
   notes?: string;
   totalStays: number;
+  discountCode?: string;
   createdAt: string;
 }
 

@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, X, Send, Sparkles, Command, Trash2 } from 'lucide-react';
+import { Bot, X, Send, Sparkles, Trash2 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useAppStore } from '../../store/appStore';
-import { computeDashboardStats } from '../../utils/analytics';
-import { formatCurrency } from '../../utils/format';
+import { buildStayAiContext } from '../../utils/aiContext';
+import { askStayAi } from '../../services/stayAiService';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -20,6 +20,11 @@ export default function AIAssistant() {
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const aiContext = useMemo(
+    () => buildStayAiContext(bookings, rooms, payments, housekeepingTasks),
+    [bookings, rooms, payments, housekeepingTasks]
+  );
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -38,33 +43,6 @@ export default function AIAssistant() {
     }
   }, [messages]);
 
-  const buildReply = (text: string): string => {
-    const lower = text.toLowerCase();
-    const stats = computeDashboardStats(bookings, rooms, payments);
-    const available = rooms.filter((r) => r.status === 'available').map((r) => r.number);
-    const pendingHk = housekeepingTasks.filter((t) => t.status === 'pending').length;
-    const today = new Date().toISOString().split('T')[0];
-    const checkoutsToday = bookings.filter((b) => b.checkOut === today && b.status === 'checked_in');
-
-    if (lower.includes('kamar') && (lower.includes('kosong') || lower.includes('available'))) {
-      return available.length
-        ? `Malam ini ada **${available.length} kamar kosong**: ${available.join(', ')}.`
-        : 'Saat ini tidak ada kamar kosong.';
-    }
-    if (lower.includes('pendapatan') || lower.includes('revenue')) {
-      return `Pendapatan hari ini **${formatCurrency(stats.revenueToday)}**, bulan ini **${formatCurrency(stats.revenueMonth)}**. Occupancy **${stats.occupancyRate}%**.`;
-    }
-    if (lower.includes('housekeeping') || lower.includes('tugas')) {
-      return `Ada **${pendingHk} tugas housekeeping** menunggu. ${stats.maintenanceRooms} kamar dalam maintenance.`;
-    }
-    if (lower.includes('checkout')) {
-      return checkoutsToday.length
-        ? `Hari ini **${checkoutsToday.length} tamu** checkout: ${checkoutsToday.map((b) => b.guest?.name).join(', ')}.`
-        : 'Tidak ada checkout terjadwal hari ini.';
-    }
-    return 'Saya bisa bantu cek kamar kosong, pendapatan, checkout hari ini, atau status housekeeping. Coba tanya lebih spesifik!';
-  };
-
   const handleSend = async (text: string) => {
     if (!text.trim()) return;
 
@@ -72,15 +50,21 @@ export default function AIAssistant() {
     setInput('');
     setIsLoading(true);
 
-    setTimeout(() => {
-      setMessages(prev => [...prev, { role: 'assistant', content: buildReply(text) }]);
+    try {
+      const reply = await askStayAi(text, aiContext);
+      setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
+    } catch {
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Terjadi kesalahan. Coba lagi.' }]);
+    } finally {
       setIsLoading(false);
-    }, 600);
+    }
   };
 
   return (
     <>
       <button
+        type="button"
+        data-testid="ai-assistant-toggle"
         onClick={() => setIsOpen(true)}
         className="fixed bottom-24 right-6 w-14 h-14 bg-emerald-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-emerald-700 active:scale-90 transition-all z-40 group"
         title="STAY AI (Beta)"
@@ -101,6 +85,7 @@ export default function AIAssistant() {
             />
 
             <motion.div
+              data-testid="ai-assistant-panel"
               initial={{ opacity: 0, y: 100, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 100, scale: 0.95 }}
@@ -113,10 +98,10 @@ export default function AIAssistant() {
                   </div>
                   <div>
                     <h3 className="font-black uppercase tracking-widest text-xs">Stay AI · Beta</h3>
-                    <span className="text-[10px] font-bold text-slate-400">Context-aware dari data live</span>
+                    <span className="text-[10px] font-bold text-slate-400">Gemini + fallback lokal</span>
                   </div>
                 </div>
-                <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/10 rounded-xl">
+                <button type="button" onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/10 rounded-xl">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -144,25 +129,26 @@ export default function AIAssistant() {
               </div>
 
               <div className="px-5 py-3 flex gap-2 overflow-x-auto bg-white border-t border-slate-100">
-                <button onClick={() => handleSend('Kamar mana yang kosong?')} className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-black uppercase text-slate-500 whitespace-nowrap">Kamar Kosong</button>
-                <button onClick={() => handleSend('Berapa pendapatan hari ini?')} className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-black uppercase text-slate-500 whitespace-nowrap">Pendapatan</button>
-                <button onClick={() => handleSend('Siapa checkout hari ini?')} className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-black uppercase text-slate-500 whitespace-nowrap">Checkout</button>
+                <button type="button" onClick={() => handleSend('Kamar mana yang kosong?')} className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-black uppercase text-slate-500 whitespace-nowrap">Kamar Kosong</button>
+                <button type="button" onClick={() => handleSend('Berapa pendapatan hari ini?')} className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-black uppercase text-slate-500 whitespace-nowrap">Pendapatan</button>
+                <button type="button" onClick={() => handleSend('Siapa checkout hari ini?')} className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-black uppercase text-slate-500 whitespace-nowrap">Checkout</button>
               </div>
 
               <div className="p-5 bg-white border-t border-slate-100">
                 <form onSubmit={(e) => { e.preventDefault(); handleSend(input); }} className="flex items-center gap-2">
                   <input
                     type="text"
+                    data-testid="ai-assistant-input"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder="Tanya apapun..."
                     className="flex-1 bg-slate-50 border-2 border-slate-100 rounded-2xl py-3 px-4 text-sm font-medium focus:border-emerald-500 outline-none"
                   />
-                  <button disabled={!input.trim() || isLoading} className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center disabled:bg-slate-200">
+                  <button type="submit" disabled={!input.trim() || isLoading} className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center disabled:bg-slate-200">
                     <Send className="h-5 w-5" />
                   </button>
                 </form>
-                <button onClick={() => setMessages([{ role: 'assistant', content: 'Chat dihapus. Ada yang bisa dibantu?' }])} className="mt-3 flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-400 hover:text-red-500">
+                <button type="button" onClick={() => setMessages([{ role: 'assistant', content: 'Chat dihapus. Ada yang bisa dibantu?' }])} className="mt-3 flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-400 hover:text-red-500">
                   <Trash2 className="h-3 w-3" /> Hapus Chat
                 </button>
               </div>
