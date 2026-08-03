@@ -43,7 +43,7 @@ export default function LoginPage() {
           <div className="inline-flex w-16 h-16 rounded-2xl bg-emerald-600 items-center justify-center shadow-lg shadow-emerald-200 mb-4">
             <Home className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-800">stay.monefyi.com</h1>
+          <h1 className="text-2xl font-bold text-slate-800">monefyi.com/stay</h1>
           <p className="text-slate-500 text-sm mt-1">Platform Manajemen Penginapan Modern</p>
         </div>
 
@@ -133,7 +133,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-slate-400 mt-6">
-          © 2024 stay.monefyi.com · Versi 1.0.0 MVP
+          © 2024 monefyi.com/stay · Versi 1.0.0 MVP
         </p>
       </div>
     </div>

@@ -67,8 +67,8 @@ export default function Sidebar() {
               <Home className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="font-bold text-slate-800 text-sm leading-tight">stay.</p>
-              <p className="text-xs text-slate-400 leading-tight">monefyi.com</p>
+              <p className="font-bold text-slate-800 text-sm leading-tight">STAY</p>
+              <p className="text-xs text-slate-400 leading-tight">monefyi.com/stay</p>
             </div>
           </div>
           <button

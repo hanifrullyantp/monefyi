@@ -10,10 +10,15 @@ const __dirname = path.dirname(__filename);
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: "/stay/",
   plugins: [react(), tailwindcss(), viteSingleFile()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
     },
+  },
+  build: {
+    outDir: path.resolve(__dirname, "../dist/stay"),
+    emptyOutDir: true,
   },
 });
