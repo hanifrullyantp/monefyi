@@ -69,6 +69,7 @@ jobs:
             monefyi-landing-config \
             stay-xendit \
             stay-xendit-webhook \
+            stay-xendit-refund \
             stay-ai
           do
             echo "Deploying $fn..."

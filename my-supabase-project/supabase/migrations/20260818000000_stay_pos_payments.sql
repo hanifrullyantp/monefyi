@@ -1,41 +1,5 @@
--- STAY POS, Payments, Double-Entry Accounting, Xendit audit tables
-
--- ==================== CHART OF ACCOUNTS & JOURNAL ====================
-
-CREATE TABLE IF NOT EXISTS stay_chart_of_accounts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES stay_tenants(id) ON DELETE CASCADE,
-  code TEXT NOT NULL,
-  name TEXT NOT NULL,
-  account_type TEXT NOT NULL CHECK (account_type IN ('asset', 'liability', 'equity', 'revenue', 'expense')),
-  parent_id UUID REFERENCES stay_chart_of_accounts(id),
-  is_system BOOLEAN DEFAULT false,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(tenant_id, code)
-);
-
-CREATE TABLE IF NOT EXISTS stay_journal_entries (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES stay_tenants(id) ON DELETE CASCADE,
-  entry_date DATE NOT NULL DEFAULT CURRENT_DATE,
-  description TEXT NOT NULL,
-  source_type TEXT NOT NULL CHECK (source_type IN ('pos', 'xendit', 'payroll', 'refund', 'manual', 'cash_register', 'migration')),
-  source_id UUID,
-  created_by UUID REFERENCES stay_users(id),
-  is_posted BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS stay_journal_lines (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  journal_id UUID NOT NULL REFERENCES stay_journal_entries(id) ON DELETE CASCADE,
-  account_id UUID NOT NULL REFERENCES stay_chart_of_accounts(id),
-  debit NUMERIC(14,2) DEFAULT 0,
-  credit NUMERIC(14,2) DEFAULT 0,
-  memo TEXT,
-  CONSTRAINT stay_journal_lines_debit_xor_credit CHECK (NOT (debit > 0 AND credit > 0))
-);
+-- STAY POS, Payments, Xendit audit tables
+-- Chart of accounts & journal use stay_finance_v2 schema (20260803100000)
 
 -- ==================== PAYMENT METHODS & POS ====================
 
@@ -145,11 +109,9 @@ CREATE TABLE IF NOT EXISTS stay_booking_charges (
   pos_transaction_id UUID REFERENCES stay_pos_transactions(id)
 );
 
--- Link stay_payments to pos_transactions (backward compat)
 ALTER TABLE stay_payments ADD COLUMN IF NOT EXISTS pos_transaction_id UUID REFERENCES stay_pos_transactions(id);
 ALTER TABLE stay_payments ADD COLUMN IF NOT EXISTS pos_payment_id UUID REFERENCES stay_pos_transaction_payments(id);
 
--- Tenant settings extensions
 ALTER TABLE stay_tenants ADD COLUMN IF NOT EXISTS min_deposit_percent NUMERIC(5,2) DEFAULT 50;
 ALTER TABLE stay_tenants ADD COLUMN IF NOT EXISTS cancel_refund_percent NUMERIC(5,2) DEFAULT 50;
 ALTER TABLE stay_room_types ADD COLUMN IF NOT EXISTS min_deposit_percent NUMERIC(5,2);
@@ -251,7 +213,6 @@ CREATE TABLE IF NOT EXISTS stay_cash_register_logs (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Transaction number sequence per tenant
 CREATE TABLE IF NOT EXISTS stay_transaction_counters (
   tenant_id UUID PRIMARY KEY REFERENCES stay_tenants(id) ON DELETE CASCADE,
   year INT NOT NULL,
@@ -261,9 +222,6 @@ CREATE TABLE IF NOT EXISTS stay_transaction_counters (
 
 -- ==================== INDEXES ====================
 
-CREATE INDEX IF NOT EXISTS idx_stay_coa_tenant ON stay_chart_of_accounts(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_stay_journal_entries_tenant ON stay_journal_entries(tenant_id, entry_date DESC);
-CREATE INDEX IF NOT EXISTS idx_stay_journal_lines_journal ON stay_journal_lines(journal_id);
 CREATE INDEX IF NOT EXISTS idx_stay_pos_sessions_tenant ON stay_pos_sessions(tenant_id, status);
 CREATE INDEX IF NOT EXISTS idx_stay_pos_tx_tenant ON stay_pos_transactions(tenant_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_stay_pos_tx_booking ON stay_pos_transactions(booking_id);
@@ -274,9 +232,6 @@ CREATE INDEX IF NOT EXISTS idx_stay_refunds_tx ON stay_refunds(original_transact
 
 -- ==================== RLS ====================
 
-ALTER TABLE stay_chart_of_accounts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE stay_journal_entries ENABLE ROW LEVEL SECURITY;
-ALTER TABLE stay_journal_lines ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stay_payment_methods ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stay_pos_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stay_pos_transactions ENABLE ROW LEVEL SECURITY;
@@ -293,32 +248,28 @@ ALTER TABLE stay_receipts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stay_cash_register_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stay_transaction_counters ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY stay_coa_tenant ON stay_chart_of_accounts FOR ALL USING (tenant_id = stay_current_tenant_id());
-CREATE POLICY stay_journal_entries_tenant ON stay_journal_entries FOR ALL USING (tenant_id = stay_current_tenant_id());
-CREATE POLICY stay_journal_lines_tenant ON stay_journal_lines FOR ALL USING (
-  journal_id IN (SELECT id FROM stay_journal_entries WHERE tenant_id = stay_current_tenant_id())
-);
-CREATE POLICY stay_payment_methods_tenant ON stay_payment_methods FOR ALL USING (tenant_id = stay_current_tenant_id());
-CREATE POLICY stay_pos_sessions_tenant ON stay_pos_sessions FOR ALL USING (tenant_id = stay_current_tenant_id());
-CREATE POLICY stay_pos_tx_tenant ON stay_pos_transactions FOR ALL USING (tenant_id = stay_current_tenant_id());
-CREATE POLICY stay_pos_tx_items_tenant ON stay_pos_transaction_items FOR ALL USING (
-  transaction_id IN (SELECT id FROM stay_pos_transactions WHERE tenant_id = stay_current_tenant_id())
-);
-CREATE POLICY stay_pos_tx_payments_tenant ON stay_pos_transaction_payments FOR ALL USING (
-  transaction_id IN (SELECT id FROM stay_pos_transactions WHERE tenant_id = stay_current_tenant_id())
-);
-CREATE POLICY stay_booking_charges_tenant ON stay_booking_charges FOR ALL USING (tenant_id = stay_current_tenant_id());
-CREATE POLICY stay_bank_accounts_tenant ON stay_tenant_bank_accounts FOR ALL USING (tenant_id = stay_current_tenant_id());
-CREATE POLICY stay_xendit_config_tenant ON stay_tenant_xendit_config FOR ALL USING (tenant_id = stay_current_tenant_id());
-CREATE POLICY stay_xendit_webhooks_tenant ON stay_xendit_webhooks_log FOR SELECT USING (tenant_id = stay_current_tenant_id());
-CREATE POLICY stay_xendit_balance_tenant ON stay_xendit_balance_history FOR ALL USING (tenant_id = stay_current_tenant_id());
-CREATE POLICY stay_xendit_disburse_tenant ON stay_xendit_disbursements FOR ALL USING (tenant_id = stay_current_tenant_id());
-CREATE POLICY stay_refunds_tenant ON stay_refunds FOR ALL USING (tenant_id = stay_current_tenant_id());
-CREATE POLICY stay_receipts_tenant ON stay_receipts FOR ALL USING (tenant_id = stay_current_tenant_id());
-CREATE POLICY stay_cash_register_tenant ON stay_cash_register_logs FOR ALL USING (tenant_id = stay_current_tenant_id());
-CREATE POLICY stay_tx_counters_tenant ON stay_transaction_counters FOR ALL USING (tenant_id = stay_current_tenant_id());
+DO $rls$
+BEGIN
+  CREATE POLICY stay_payment_methods_tenant ON stay_payment_methods FOR ALL USING (tenant_id = stay_current_tenant_id());
+EXCEPTION WHEN duplicate_object THEN NULL;
+END;
+$rls$;
 
--- Helper: next transaction number
+DO $rls$ BEGIN CREATE POLICY stay_pos_sessions_tenant ON stay_pos_sessions FOR ALL USING (tenant_id = stay_current_tenant_id()); EXCEPTION WHEN duplicate_object THEN NULL; END; $rls$;
+DO $rls$ BEGIN CREATE POLICY stay_pos_tx_tenant ON stay_pos_transactions FOR ALL USING (tenant_id = stay_current_tenant_id()); EXCEPTION WHEN duplicate_object THEN NULL; END; $rls$;
+DO $rls$ BEGIN CREATE POLICY stay_pos_tx_items_tenant ON stay_pos_transaction_items FOR ALL USING (transaction_id IN (SELECT id FROM stay_pos_transactions WHERE tenant_id = stay_current_tenant_id())); EXCEPTION WHEN duplicate_object THEN NULL; END; $rls$;
+DO $rls$ BEGIN CREATE POLICY stay_pos_tx_payments_tenant ON stay_pos_transaction_payments FOR ALL USING (transaction_id IN (SELECT id FROM stay_pos_transactions WHERE tenant_id = stay_current_tenant_id())); EXCEPTION WHEN duplicate_object THEN NULL; END; $rls$;
+DO $rls$ BEGIN CREATE POLICY stay_booking_charges_tenant ON stay_booking_charges FOR ALL USING (tenant_id = stay_current_tenant_id()); EXCEPTION WHEN duplicate_object THEN NULL; END; $rls$;
+DO $rls$ BEGIN CREATE POLICY stay_tenant_bank_accounts_tenant ON stay_tenant_bank_accounts FOR ALL USING (tenant_id = stay_current_tenant_id()); EXCEPTION WHEN duplicate_object THEN NULL; END; $rls$;
+DO $rls$ BEGIN CREATE POLICY stay_xendit_config_tenant ON stay_tenant_xendit_config FOR ALL USING (tenant_id = stay_current_tenant_id()); EXCEPTION WHEN duplicate_object THEN NULL; END; $rls$;
+DO $rls$ BEGIN CREATE POLICY stay_xendit_webhooks_tenant ON stay_xendit_webhooks_log FOR SELECT USING (tenant_id = stay_current_tenant_id()); EXCEPTION WHEN duplicate_object THEN NULL; END; $rls$;
+DO $rls$ BEGIN CREATE POLICY stay_xendit_balance_tenant ON stay_xendit_balance_history FOR ALL USING (tenant_id = stay_current_tenant_id()); EXCEPTION WHEN duplicate_object THEN NULL; END; $rls$;
+DO $rls$ BEGIN CREATE POLICY stay_xendit_disburse_tenant ON stay_xendit_disbursements FOR ALL USING (tenant_id = stay_current_tenant_id()); EXCEPTION WHEN duplicate_object THEN NULL; END; $rls$;
+DO $rls$ BEGIN CREATE POLICY stay_refunds_tenant ON stay_refunds FOR ALL USING (tenant_id = stay_current_tenant_id()); EXCEPTION WHEN duplicate_object THEN NULL; END; $rls$;
+DO $rls$ BEGIN CREATE POLICY stay_receipts_tenant ON stay_receipts FOR ALL USING (tenant_id = stay_current_tenant_id()); EXCEPTION WHEN duplicate_object THEN NULL; END; $rls$;
+DO $rls$ BEGIN CREATE POLICY stay_cash_register_tenant ON stay_cash_register_logs FOR ALL USING (tenant_id = stay_current_tenant_id()); EXCEPTION WHEN duplicate_object THEN NULL; END; $rls$;
+DO $rls$ BEGIN CREATE POLICY stay_tx_counters_tenant ON stay_transaction_counters FOR ALL USING (tenant_id = stay_current_tenant_id()); EXCEPTION WHEN duplicate_object THEN NULL; END; $rls$;
+
 CREATE OR REPLACE FUNCTION stay_next_transaction_number(p_tenant_id UUID)
 RETURNS TEXT AS $$
 DECLARE
