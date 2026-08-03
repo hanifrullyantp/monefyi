@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import { useAuthStore } from './store/authStore';
 import AppLayout from './components/layout/AppLayout';
 import ProtectedRoute from './routes/ProtectedRoute';
@@ -21,7 +22,12 @@ import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import XenditDashboardPage from './pages/XenditDashboardPage';
 import PublicBookingPage from './pages/public/PublicBookingPage';
+import LandingPage from './pages/LandingPage';
 import { useStayBootstrap } from './hooks/useStayBootstrap';
+
+const RoomCardDemo = import.meta.env.DEV
+  ? lazy(() => import('./pages/dev/RoomCardDemo'))
+  : null;
 
 function AppRoutes() {
   const { isAuthenticated } = useAuthStore();
@@ -29,6 +35,7 @@ function AppRoutes() {
 
   return (
     <Routes>
+      <Route path="/" element={<LandingPage />} />
       <Route
         path="/login"
         element={isAuthenticated ? <Navigate to={DEFAULT_AUTH_REDIRECT} replace /> : <LoginPage />}
@@ -36,15 +43,24 @@ function AppRoutes() {
       <Route path="/survey/:bookingId" element={<GuestSurveyPage />} />
       <Route path="/book/:tenantSlug" element={<PublicBookingPage />} />
 
+      {import.meta.env.DEV && RoomCardDemo && (
+        <Route
+          path="/dev/room-cards"
+          element={
+            <Suspense fallback={<div className="p-8 text-center">Memuat demo...</div>}>
+              <RoomCardDemo />
+            </Suspense>
+          }
+        />
+      )}
+
       <Route
-        path="/"
         element={
           <ProtectedRoute>
             <AppLayout />
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to={DEFAULT_AUTH_REDIRECT} replace />} />
         <Route path="front-desk" element={<FrontDeskPage />} />
         <Route
           path="dashboard"

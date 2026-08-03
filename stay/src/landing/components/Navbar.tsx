@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, X, Zap } from 'lucide-react';
+import { LoginLink } from '../LoginLink';
 
 const navLinks = [
   { label: 'Fitur', href: '#fitur' },
@@ -77,12 +78,12 @@ const Navbar: React.FC<NavbarProps> = ({ activeSection, isEditMode }) => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <button className="px-4 py-2 text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg hover:border-emerald-500 hover:text-emerald-600 transition-all duration-200">
+            <LoginLink className="px-4 py-2 text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg hover:border-emerald-500 hover:text-emerald-600 transition-all duration-200">
               Masuk
-            </button>
-            <button className="px-5 py-2 text-sm font-semibold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 transition-all duration-200 pulse-green shadow-sm">
+            </LoginLink>
+            <LoginLink className="px-5 py-2 text-sm font-semibold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 transition-all duration-200 pulse-green shadow-sm">
               Coba Gratis
-            </button>
+            </LoginLink>
           </div>
 
           {/* Mobile hamburger */}
@@ -109,12 +110,12 @@ const Navbar: React.FC<NavbarProps> = ({ activeSection, isEditMode }) => {
               </button>
             ))}
             <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
-              <button className="flex-1 py-2.5 text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg">
+              <LoginLink className="flex-1 py-2.5 text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg text-center">
                 Masuk
-              </button>
-              <button className="flex-1 py-2.5 text-sm font-semibold text-white bg-emerald-500 rounded-lg">
+              </LoginLink>
+              <LoginLink className="flex-1 py-2.5 text-sm font-semibold text-white bg-emerald-500 rounded-lg text-center">
                 Coba Gratis
-              </button>
+              </LoginLink>
             </div>
           </div>
         </div>

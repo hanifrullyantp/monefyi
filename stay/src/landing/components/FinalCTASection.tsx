@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MessageCircle, ArrowRight, Shield, Zap, CreditCard } from 'lucide-react';
 import { useInView } from '../hooks/useInView';
+import { LoginLink } from '../LoginLink';
 
 const trustBadges = [
   { icon: Shield, label: 'Data aman & terenkripsi' },
@@ -81,10 +82,10 @@ const FinalCTASection: React.FC<Props> = ({ isEditMode }) => {
 
         {/* CTA buttons */}
         <div className={`flex flex-col sm:flex-row gap-4 justify-center mb-10 transition-all duration-700 delay-300 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <button className="group flex items-center justify-center gap-2 px-8 py-4 bg-white hover:bg-gray-50 text-emerald-700 font-black rounded-xl text-lg transition-all duration-200 shadow-2xl">
+          <LoginLink className="group flex items-center justify-center gap-2 px-8 py-4 bg-white hover:bg-gray-50 text-emerald-700 font-black rounded-xl text-lg transition-all duration-200 shadow-2xl">
             Daftar Gratis Sekarang
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </button>
+          </LoginLink>
           <button className="flex items-center justify-center gap-2 px-8 py-4 border-2 border-white/40 hover:border-white hover:bg-white/10 text-white font-bold rounded-xl text-lg transition-all duration-200">
             <MessageCircle className="w-5 h-5" />
             Chat dengan Tim Kami

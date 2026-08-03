@@ -1,3 +1,4 @@
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/Avatar';
 import { cn } from '../../utils/cn';
 
 const AVATAR_PALETTE = [
@@ -41,8 +42,6 @@ const sizeMap = {
   lg: 'h-12 w-12 text-base',
 };
 
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/Avatar';
-
 /**
  * Avatar tamu dengan fallback inisial berwarna hash-based.
  */
@@ -61,11 +60,17 @@ export default function GuestAvatar({
       aria-label={`Avatar ${name}`}
     >
       {photoUrl ? (
-        <AvatarImage src={photoUrl} alt={name} />
-      ) : null}
-      <AvatarFallback className={cn('text-white', bgColor)}>
-        {initials}
-      </AvatarFallback>
+        <>
+          <AvatarImage src={photoUrl} alt={name} />
+          <AvatarFallback className={cn('text-white', bgColor)}>
+            {initials}
+          </AvatarFallback>
+        </>
+      ) : (
+        <AvatarFallback className={cn('text-white', bgColor)}>
+          {initials}
+        </AvatarFallback>
+      )}
     </Avatar>
   );
 }

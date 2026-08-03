@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, ArrowRight, Gift } from 'lucide-react';
+import { LOGIN_PATH } from '../LoginLink';
 
 const ExitIntentPopup: React.FC = () => {
+  const navigate = useNavigate();
   const [show, setShow] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [email, setEmail] = useState('');
@@ -47,9 +50,8 @@ const ExitIntentPopup: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
-    setSubmitted(true);
-    setTimeout(handleDismiss, 3000);
+    handleDismiss();
+    navigate(LOGIN_PATH);
   };
 
   if (!show) return null;

@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 import { Check, Star, Zap, Building2 } from 'lucide-react';
 import { useInView } from '../hooks/useInView';
+import { LoginLink } from '../LoginLink';
+
+function formatAnnualPrice(plan: (typeof plans)[number]): string {
+  if (plan.price === 'GRATIS') return plan.price;
+  if ('priceAnnualValue' in plan && plan.priceAnnualValue) {
+    return `Rp ${plan.priceAnnualValue}`;
+  }
+  return plan.price;
+}
 
 const plans = [
   {
@@ -27,14 +36,15 @@ const plans = [
   {
     name: 'Profesional',
     tagline: 'Paling banyak dipilih',
-    price: 'Rp 299.000',
+    price: 'Rp 499.000',
     priceNote: '/bulan',
-    priceAnnual: 'Rp 239.200/bulan (hemat 20%)',
+    priceAnnual: 'Rp 399.200/bulan (hemat 20%)',
+    priceAnnualValue: '399.200',
     icon: Star,
     color: 'emerald',
     popular: true,
     features: [
-      'Maksimal 20 kamar',
+      'Maksimal 12 kamar',
       'Semua fitur Starter',
       'Booking online publik',
       'Pembayaran QRIS, VA, E-Wallet',
@@ -51,9 +61,10 @@ const plans = [
   {
     name: 'Enterprise',
     tagline: 'Untuk skala lebih besar',
-    price: 'Rp 799.000',
+    price: 'Rp 1.499.000',
     priceNote: '/bulan',
-    priceAnnual: 'Rp 639.200/bulan (hemat 20%)',
+    priceAnnual: 'Rp 1.199.200/bulan (hemat 20%)',
+    priceAnnualValue: '1.199.200',
     icon: Building2,
     color: 'blue',
     popular: false,
@@ -71,7 +82,7 @@ const plans = [
       'Dedicated account manager',
       'API access',
     ],
-    cta: 'Hubungi Sales',
+    cta: 'Mulai Sekarang',
     ctaStyle: 'border-2 border-blue-300 text-blue-700 hover:border-blue-400 hover:bg-blue-50',
   },
 ];
@@ -160,7 +171,7 @@ const PricingSection: React.FC<Props> = ({ isEditMode }) => {
                       plan.color === 'blue' ? 'text-blue-600' : 'text-gray-900'
                     }`}>
                       {annual && plan.price !== 'GRATIS'
-                        ? plan.price.replace('299.000', '239.200').replace('799.000', '639.200')
+                        ? formatAnnualPrice(plan)
                         : plan.price}
                       <span className="text-lg font-medium text-gray-500 ml-1">{plan.priceNote}</span>
                     </div>
@@ -172,9 +183,9 @@ const PricingSection: React.FC<Props> = ({ isEditMode }) => {
                   </div>
 
                   {/* CTA button */}
-                  <button className={`w-full py-3 rounded-xl font-bold text-sm transition-all duration-200 mb-6 ${plan.ctaStyle}`}>
+                  <LoginLink className={`block w-full text-center py-3 rounded-xl font-bold text-sm transition-all duration-200 mb-6 ${plan.ctaStyle}`}>
                     {plan.cta}
-                  </button>
+                  </LoginLink>
 
                   {/* Divider */}
                   <div className="border-t border-gray-100 mb-5" />

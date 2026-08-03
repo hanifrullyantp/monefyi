@@ -10,7 +10,7 @@ const quickReplies = [
 
 const botResponses: Record<string, string> = {
   'Bagaimana cara daftar?': 'Mudah banget! Klik tombol "Coba Gratis 14 Hari" di halaman ini, isi email dan nomor HP, lalu ikuti panduan setup. Selesai dalam 2 menit! 🎉',
-  'Berapa harga per bulan?': 'Mulai dari GRATIS untuk 5 kamar pertama! Paket Profesional Rp 299.000/bulan, Enterprise Rp 799.000/bulan. Semua ada coba gratis 14 hari! 💚',
+  'Berapa harga per bulan?': 'Mulai dari GRATIS untuk 5 kamar pertama! Paket Profesional Rp 499.000/bulan (maks. 12 kamar), Enterprise Rp 1.499.000/bulan. Semua ada coba gratis 14 hari! 💚',
   'Apakah ada trial gratis?': 'Ada! Anda bisa coba STAY gratis selama 14 hari penuh tanpa kartu kredit. Setelah itu, paket Starter tetap gratis selamanya untuk 5 kamar. 🆓',
   'Fitur apa yang tersedia?': 'STAY punya: Front Desk Digital, Booking Online 24 jam, Pembayaran QRIS/VA/E-Wallet, Manajemen Staff, Laporan Otomatis, WhatsApp Otomatis, Mode Offline, dan AI Assistant! 🚀',
 };
