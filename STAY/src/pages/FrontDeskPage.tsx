@@ -38,11 +38,11 @@ export default function FrontDeskPage() {
   };
 
   const placedRooms = useMemo(() => {
-    return rooms.filter(r => typeof r.positionX === 'number' && typeof r.positionY === 'number');
+    return rooms.filter(r => r.positionX != null && r.positionY != null);
   }, [rooms]);
 
   const unplacedRooms = useMemo(() => {
-    return rooms.filter(r => typeof r.positionX !== 'number' || typeof r.positionY !== 'number');
+    return rooms.filter(r => r.positionX == null || r.positionY == null);
   }, [rooms]);
 
   const filteredRooms = useMemo(() => {

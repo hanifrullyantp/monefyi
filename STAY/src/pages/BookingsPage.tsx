@@ -169,6 +169,14 @@ export default function BookingsPage() {
     setStep(1);
     setLoading(false);
     setForm({ guestName: '', guestPhone: '', guestIdNumber: '', roomId: '', checkIn: '', checkOut: '', adults: '2', children: '0', notes: '', paymentMethod: 'cash', discount: 0 });
+    
+    // Simulate WhatsApp send
+    const surveyLink = `${window.location.origin}/survey/${booking.id}`;
+    const waLink = `https://wa.me/${form.guestPhone}?text=Halo%20${form.guestName}!%20Terima%20kasih%20sudah%20menginap.%20Kode%20booking:%20${booking.bookingCode}.%20Lengkapi%20data%20anda%20disini%20untuk%20dapat%20DISKON%2010%:%20${surveyLink}`;
+    console.log('--- WHATSAPP CRM SIMULATOR ---');
+    console.log('To:', form.guestPhone);
+    console.log('Message:', waLink);
+    console.log('-------------------------------');
   };
 
   const handleCheckIn = (booking: Booking) => {

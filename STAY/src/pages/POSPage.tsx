@@ -250,7 +250,7 @@ export default function POSPage() {
                 <CheckCircle className="h-8 w-8 text-emerald-600" />
               </div>
               <h2 className="text-xl font-black text-slate-800">Pembayaran Sukses!</h2>
-              <p className="text-xs text-slate-400 font-bold uppercase mt-1">Struk Digital monefyi.com/stay</p>
+              <p className="text-xs text-slate-400 font-bold uppercase mt-1">Struk Digital stay.monefyi.com</p>
             </div>
 
             <div className="border-t-2 border-dashed border-slate-200 pt-6 space-y-4">

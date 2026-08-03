@@ -14,6 +14,10 @@ import PaymentsPage from './pages/PaymentsPage';
 import HousekeepingPage from './pages/HousekeepingPage';
 import POSPage from './pages/POSPage';
 import FinancePage from './pages/FinancePage';
+import GuestSurveyPage from './pages/GuestSurveyPage';
+import EmployeeManagementPage from './pages/EmployeeManagementPage';
+import PricingPage from './pages/PricingPage';
+import AccountingPage from './pages/AccountingPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 
@@ -27,6 +31,7 @@ function AppRoutes() {
         path="/login"
         element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />}
       />
+      <Route path="/survey/:bookingId" element={<GuestSurveyPage />} />
 
       {/* Protected app routes */}
       <Route
@@ -51,6 +56,30 @@ function AppRoutes() {
           element={
             <ProtectedRoute requiredRoles={['owner', 'manager']}>
               <FinancePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="staff"
+          element={
+            <ProtectedRoute requiredRoles={['owner', 'manager']}>
+              <EmployeeManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="pricing"
+          element={
+            <ProtectedRoute requiredRoles={['owner', 'manager']}>
+              <PricingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="accounting"
+          element={
+            <ProtectedRoute requiredRoles={['owner', 'manager']}>
+              <AccountingPage />
             </ProtectedRoute>
           }
         />
@@ -80,7 +109,7 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter basename="/stay">
+    <BrowserRouter>
       <AppRoutes />
     </BrowserRouter>
   );

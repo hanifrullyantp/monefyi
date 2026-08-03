@@ -5,7 +5,7 @@ import { useAppStore } from '../../store/appStore';
 import {
   LayoutDashboard, BedDouble, CalendarDays, Users, CreditCard,
   BarChart3, Settings, LogOut, Home, ClipboardList, ChevronRight, X,
-  Building2
+  Building2, TrendingUp
 } from 'lucide-react';
 import type { UserRole } from '../../types';
 
@@ -20,7 +20,10 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Front Desk', to: '/front-desk', icon: <LayoutDashboard className="h-5 w-5" />, roles: ['owner', 'manager', 'receptionist'] },
   { label: 'Kasir / POS', to: '/pos', icon: <CreditCard className="h-5 w-5" />, roles: ['owner', 'manager', 'receptionist'] },
-  { label: 'Analytics', to: '/dashboard', icon: <BarChart3 className="h-5 w-5" />, roles: ['owner', 'manager'] },
+  { label: 'Manajemen Staff', to: '/staff', icon: <Users className="h-5 w-5" />, roles: ['owner', 'manager'] },
+  { label: 'Dynamic Pricing', to: '/pricing', icon: <TrendingUp className="h-5 w-5" />, roles: ['owner', 'manager'] },
+  { label: 'Accounting', to: '/accounting', icon: <BarChart3 className="h-5 w-5" />, roles: ['owner', 'manager'] },
+  { label: 'Analytics', to: '/dashboard', icon: <TrendingUp className="h-5 w-5" />, roles: ['owner', 'manager'] },
   { label: 'Keuangan', to: '/finance', icon: <BarChart3 className="h-5 w-5" />, roles: ['owner', 'manager'] },
   { label: 'Kamar', to: '/rooms', icon: <BedDouble className="h-5 w-5" />, roles: ['owner', 'manager', 'receptionist'] },
   { label: 'Booking', to: '/bookings', icon: <CalendarDays className="h-5 w-5" />, roles: ['owner', 'manager', 'receptionist'] },
@@ -64,8 +67,8 @@ export default function Sidebar() {
               <Home className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="font-bold text-slate-800 text-sm leading-tight">STAY</p>
-              <p className="text-xs text-slate-400 leading-tight">monefyi.com/stay</p>
+              <p className="font-bold text-slate-800 text-sm leading-tight">stay.</p>
+              <p className="text-xs text-slate-400 leading-tight">monefyi.com</p>
             </div>
           </div>
           <button

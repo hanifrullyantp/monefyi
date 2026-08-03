@@ -3,6 +3,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useAppStore } from '../../store/appStore';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ConnectionIndicator from '../shared/ConnectionIndicator';
 
 export default function Topbar() {
   const { user } = useAuthStore();
@@ -40,6 +41,10 @@ export default function Topbar() {
           <p className="text-xs text-slate-400 hidden sm:block">
             {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
+        </div>
+
+        <div className="hidden md:block">
+          <ConnectionIndicator />
         </div>
 
         {/* Search */}

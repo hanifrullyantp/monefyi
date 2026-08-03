@@ -1,5 +1,5 @@
 {
-  "name": "monefyi-stay",
+  "name": "react-vite-tailwind",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -12,6 +12,8 @@
     "@hookform/resolvers": "^5.7.1",
     "clsx": "2.1.1",
     "date-fns": "^4.4.0",
+    "dexie": "^4.4.4",
+    "dexie-react-hooks": "^4.4.0",
     "framer-motion": "^12.43.0",
     "lucide-react": "^1.28.0",
     "react": "19.2.6",
