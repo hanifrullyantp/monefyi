@@ -1,13 +1,17 @@
 import { useCallback, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { isToday, parseISO } from 'date-fns';
 import {
   DEFAULT_ROOM_FILTER,
   RoomStatus,
+  type FrontDeskStatKey,
   type RoomCardData,
   type RoomFilter,
 } from '../types/frontdesk.types';
 
 export type RoomFilterState = RoomFilter & {
   roomTypeNames: string[];
+  checkInToday?: boolean;
+  checkOutToday?: boolean;
 };
 
 export const DEFAULT_FILTER_STATE: RoomFilterState = {
@@ -37,11 +41,26 @@ export function matchesFilter(room: RoomCardData, filters: RoomFilterState): boo
     return false;
   }
 
+  if (filters.checkInToday) {
+    const checkIn =
+      room.upcomingBooking?.checkIn ?? room.activeBooking?.checkIn;
+    if (!checkIn || !isToday(parseISO(checkIn))) return false;
+  }
+
+  if (filters.checkOutToday) {
+    const checkOut = room.activeBooking?.checkOut;
+    if (!checkOut || !isToday(parseISO(checkOut))) return false;
+  }
+
   const query = filters.search.trim().toLowerCase();
   if (query) {
     const guestName =
       room.activeBooking?.guest?.name ?? room.upcomingBooking?.guest?.name ?? '';
-    const haystack = [room.number, room.roomTypeName, guestName].join(' ').toLowerCase();
+    const bookingCode =
+      room.activeBooking?.bookingCode ?? room.upcomingBooking?.bookingCode ?? '';
+    const haystack = [room.number, room.roomTypeName, guestName, bookingCode]
+      .join(' ')
+      .toLowerCase();
     if (!haystack.includes(query)) return false;
   }
 
@@ -60,7 +79,9 @@ export function isSearchMatch(room: RoomCardData, searchQuery: string): boolean 
   const query = searchQuery.trim().toLowerCase();
   const guestName =
     room.activeBooking?.guest?.name ?? room.upcomingBooking?.guest?.name ?? '';
-  return [room.number, room.roomTypeName, guestName]
+  const bookingCode =
+    room.activeBooking?.bookingCode ?? room.upcomingBooking?.bookingCode ?? '';
+  return [room.number, room.roomTypeName, guestName, bookingCode]
     .join(' ')
     .toLowerCase()
     .includes(query);
@@ -75,12 +96,15 @@ export interface UseRoomFiltersResult {
   toggleRoomType: (typeName: string) => void;
   toggleUrgentOnly: () => void;
   resetFilters: () => void;
+  applyStatFilter: (key: FrontDeskStatKey) => void;
   filteredRooms: RoomCardData[];
   activeFilterCount: number;
+  activeStatKey: FrontDeskStatKey | null;
 }
 
 export function useRoomFilters(rooms: RoomCardData[]): UseRoomFiltersResult {
   const [filters, setFilters] = useState<RoomFilterState>(DEFAULT_FILTER_STATE);
+  const [activeStatKey, setActiveStatKey] = useState<FrontDeskStatKey | null>(null);
 
   const filteredRooms = useMemo(
     () => applyRoomFilters(rooms, filters),
@@ -88,6 +112,7 @@ export function useRoomFilters(rooms: RoomCardData[]): UseRoomFiltersResult {
   );
 
   const setSearch = useCallback((search: string) => {
+    setActiveStatKey(null);
     setFilters((prev) => ({ ...prev, search }));
   }, []);
 
@@ -123,7 +148,38 @@ export function useRoomFilters(rooms: RoomCardData[]): UseRoomFiltersResult {
   }, []);
 
   const resetFilters = useCallback(() => {
+    setActiveStatKey(null);
     setFilters(DEFAULT_FILTER_STATE);
+  }, []);
+
+  const applyStatFilter = useCallback((key: FrontDeskStatKey) => {
+    setActiveStatKey(key);
+    const base = { ...DEFAULT_FILTER_STATE };
+    switch (key) {
+      case 'total':
+        setFilters(base);
+        break;
+      case 'occupied':
+        setFilters({
+          ...base,
+          statuses: [RoomStatus.OCCUPIED, RoomStatus.UNPAID],
+        });
+        break;
+      case 'available':
+        setFilters({ ...base, statuses: [RoomStatus.AVAILABLE] });
+        break;
+      case 'checkInToday':
+        setFilters({ ...base, checkInToday: true });
+        break;
+      case 'checkOutToday':
+        setFilters({ ...base, checkOutToday: true });
+        break;
+      case 'urgent':
+        setFilters({ ...base, urgentOnly: true });
+        break;
+      default:
+        setFilters(base);
+    }
   }, []);
 
   const activeFilterCount = useMemo(() => {
@@ -132,6 +188,8 @@ export function useRoomFilters(rooms: RoomCardData[]): UseRoomFiltersResult {
     if (filters.floors.length > 0) count += 1;
     if (filters.roomTypeNames.length > 0) count += 1;
     if (filters.urgentOnly) count += 1;
+    if (filters.checkInToday) count += 1;
+    if (filters.checkOutToday) count += 1;
     if (filters.search.trim()) count += 1;
     return count;
   }, [filters]);
@@ -145,7 +203,9 @@ export function useRoomFilters(rooms: RoomCardData[]): UseRoomFiltersResult {
     toggleRoomType,
     toggleUrgentOnly,
     resetFilters,
+    applyStatFilter,
     filteredRooms,
     activeFilterCount,
+    activeStatKey,
   };
 }

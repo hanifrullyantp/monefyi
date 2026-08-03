@@ -1,16 +1,13 @@
 import { useMemo, useState, useCallback, type ReactNode } from 'react';
-import {
-  Search,
-  SlidersHorizontal,
-  LayoutGrid,
-  Map,
-  Clock,
-  X,
-} from 'lucide-react';
+import { SlidersHorizontal, X } from 'lucide-react';
 
 import { useAppStore } from '../../store/appStore';
+import { useAuthStore } from '../../store/authStore';
 import { mapRoomsToCardData } from '../../utils/mapRoomsToCardData';
+import { computeFrontDeskStats } from '../../utils/urgentActions';
 import { useRoomFilters } from '../../hooks/useRoomFilters';
+import { useUrgentActions } from '../../hooks/useUrgentActions';
+import { useFrontDeskToast } from '../../hooks/useFrontDeskToast';
 import { RoomStatus, type RoomCardData, type ViewMode } from '../../types/frontdesk.types';
 import { cn } from '../../utils/cn';
 import RoomGridView from '../../components/frontdesk/RoomGridView';
@@ -19,6 +16,11 @@ import RoomCardSize, {
   readRoomCardSize,
   type RoomCardSizeValue,
 } from '../../components/frontdesk/RoomCardSize';
+import FrontDeskHeader from '../../components/frontdesk/FrontDeskHeader';
+import UrgentActionBar from '../../components/frontdesk/UrgentActionBar';
+import ViewModeToggle from '../../components/frontdesk/ViewModeToggle';
+import QuickSearchInput from '../../components/frontdesk/QuickSearchInput';
+import FrontDeskToast from '../../components/frontdesk/FrontDeskToast';
 import { getAllStatusDefinitions } from '../../constants/roomStatus';
 
 export interface ReceptionistDashboardProps {
@@ -31,19 +33,8 @@ export interface ReceptionistDashboardProps {
   enableLegacyViews?: boolean;
 }
 
-const VIEW_OPTIONS: {
-  mode: ViewMode;
-  label: string;
-  icon: typeof LayoutGrid;
-  legacy?: boolean;
-}[] = [
-  { mode: 'grid', label: 'Grid', icon: LayoutGrid },
-  { mode: 'floorplan', label: 'Denah', icon: Map, legacy: true },
-  { mode: 'timeline', label: 'Timeline', icon: Clock, legacy: true },
-];
-
 /**
- * Dashboard resepsionis — grid kamar per lantai dengan filter & search.
+ * Dashboard resepsionis — header personal, urgent bar, grid kamar per lantai.
  */
 export default function ReceptionistDashboard({
   onRoomClick,
@@ -54,12 +45,27 @@ export default function ReceptionistDashboard({
   enableLegacyViews = false,
 }: ReceptionistDashboardProps) {
   const { rooms, bookings } = useAppStore();
+  const { user } = useAuthStore();
   const [cardSize, setCardSize] = useState<RoomCardSizeValue>(readRoomCardSize);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const { toasts, showToast, dismiss } = useFrontDeskToast();
 
   const roomCards = useMemo(
     () => mapRoomsToCardData(rooms, bookings),
     [rooms, bookings]
+  );
+
+  const {
+    actions: urgentActions,
+    showBar: showUrgentBar,
+    dismissBar,
+    runAction,
+    loadingId: urgentLoadingId,
+  } = useUrgentActions();
+
+  const stats = useMemo(
+    () => computeFrontDeskStats(roomCards, bookings, urgentActions.length),
+    [roomCards, bookings, urgentActions.length]
   );
 
   const {
@@ -70,7 +76,9 @@ export default function ReceptionistDashboard({
     toggleRoomType,
     toggleUrgentOnly,
     resetFilters,
+    applyStatFilter,
     activeFilterCount,
+    activeStatKey,
   } = useRoomFilters(roomCards);
 
   const availableFloors = useMemo(
@@ -90,27 +98,57 @@ export default function ReceptionistDashboard({
 
   const handleRoomClick = useCallback(
     (room: RoomCardData) => {
-      console.log('[Front Desk] Kamar diklik:', room);
       onRoomClick?.(room);
     },
     [onRoomClick]
   );
 
+  const handleUrgentAction = useCallback(
+    async (action: Parameters<typeof runAction>[0]) => {
+      const result = await runAction(action);
+      if (result.success) {
+        showToast(result.message, 'success');
+      } else {
+        showToast('Gagal memproses aksi', 'error');
+      }
+      return result;
+    },
+    [runAction, showToast]
+  );
+
+  const handleViewAllUrgent = useCallback(() => {
+    applyStatFilter('urgent');
+    setShowFilterPanel(true);
+  }, [applyStatFilter]);
+
+  const userName = user?.name?.split(' ')[0] ?? 'Resepsionis';
+
   return (
     <div className="flex flex-col gap-4" data-testid="receptionist-dashboard">
+      <FrontDeskHeader
+        userName={userName}
+        stats={stats}
+        activeStatKey={activeStatKey}
+        onStatClick={applyStatFilter}
+      />
+
+      {showUrgentBar && (
+        <UrgentActionBar
+          actions={urgentActions}
+          loadingId={urgentLoadingId}
+          onAction={handleUrgentAction}
+          onDismiss={dismissBar}
+          onViewAll={handleViewAllUrgent}
+        />
+      )}
+
       <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="relative max-w-md flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              type="search"
-              value={filters.search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari nomor kamar, tamu, tipe..."
-              className="min-h-[44px] w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-10 pr-4 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
-              data-testid="room-grid-search"
-            />
-          </div>
+          <QuickSearchInput
+            value={filters.search}
+            onChange={setSearch}
+            className="max-w-none lg:max-w-md lg:flex-1"
+          />
 
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -134,32 +172,14 @@ export default function ReceptionistDashboard({
             </button>
 
             <RoomCardSize value={cardSize} onChange={handleCardSizeChange} />
-
-            <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-900">
-              {VIEW_OPTIONS.map(({ mode, label, icon: Icon, legacy }) => {
-                const disabled = legacy && !enableLegacyViews;
-                return (
-                <button
-                  key={mode}
-                  type="button"
-                  disabled={disabled}
-                  title={disabled ? 'Segera hadir (Phase 3)' : label}
-                  onClick={() => !disabled && onViewModeChange?.(mode)}
-                  className={cn(
-                    'flex min-h-[44px] items-center gap-1.5 rounded-lg px-3 text-[10px] font-black uppercase',
-                    viewMode === mode && !disabled
-                      ? 'bg-emerald-600 text-white'
-                      : 'text-slate-400',
-                    disabled && 'cursor-not-allowed opacity-40'
-                  )}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  {label}
-                </button>
-              );})}
-            </div>
           </div>
         </div>
+
+        <ViewModeToggle
+          value={viewMode}
+          onChange={(mode) => onViewModeChange?.(mode)}
+          enableLegacyViews={enableLegacyViews}
+        />
 
         {showFilterPanel && (
           <div className="space-y-4 border-t border-slate-100 pt-4 dark:border-slate-800">
@@ -277,6 +297,8 @@ export default function ReceptionistDashboard({
           </div>
         )
       )}
+
+      <FrontDeskToast toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }
