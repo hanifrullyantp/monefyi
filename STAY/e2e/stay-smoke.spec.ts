@@ -1,5 +1,19 @@
 import { test, expect } from '@playwright/test';
 
+test.describe('Landing page', () => {
+  test('shows STAY landing at /stay/', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByText(/Kelola Penginapan Anda/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText('Profesional').first()).toBeVisible();
+  });
+
+  test('CTA navigates to login', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('link', { name: /Masuk/i }).first().click();
+    await expect(page).toHaveURL(/\/login/);
+  });
+});
+
 test.describe('Login flow', () => {
   test('mock demo login redirects to front desk', async ({ page }) => {
     await page.goto('/login');

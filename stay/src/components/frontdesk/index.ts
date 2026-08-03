@@ -1,5 +1,6 @@
 export { default as RoomCard } from './RoomCard';
 export type { RoomCardProps } from './RoomCard';
+export { default as MemoRoomCard } from './MemoRoomCard';
 export { default as RoomCardBadge, resolvePaymentBadgeVariant } from './RoomCardBadge';
 export type { RoomCardBadgeProps, RoomCardBadgeVariant } from './RoomCardBadge';
 export { default as RoomCardProgress } from './RoomCardProgress';
@@ -8,3 +9,9 @@ export { default as RoomCardSkeleton } from './RoomCardSkeleton';
 export type { RoomCardSkeletonProps } from './RoomCardSkeleton';
 export { default as GuestAvatar, getInitials, hashNameToColor } from './GuestAvatar';
 export type { GuestAvatarProps } from './GuestAvatar';
+export { default as RoomCardSize, readRoomCardSize, persistRoomCardSize } from './RoomCardSize';
+export type { RoomCardSizeProps, RoomCardSizeValue } from './RoomCardSize';
+export { default as FloorGroup } from './FloorGroup';
+export type { FloorGroupProps } from './FloorGroup';
+export { default as RoomGridView } from './RoomGridView';
+export type { RoomGridViewProps } from './RoomGridView';

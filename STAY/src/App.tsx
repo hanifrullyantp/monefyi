@@ -3,7 +3,7 @@ import { lazy, Suspense } from 'react';
 import { useAuthStore } from './store/authStore';
 import AppLayout from './components/layout/AppLayout';
 import ProtectedRoute from './routes/ProtectedRoute';
-import { DEFAULT_AUTH_REDIRECT, MANAGER_ROLES, ALL_STAFF_ROLES } from './config/routes';
+import { DEFAULT_AUTH_REDIRECT, MANAGER_ROLES } from './config/routes';
 
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';

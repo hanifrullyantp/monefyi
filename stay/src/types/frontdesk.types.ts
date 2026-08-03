@@ -89,7 +89,7 @@ export interface UrgentAction {
   id: string;
   roomId: string;
   roomNumber: string;
-  type: 'unpaid' | 'checkout_soon' | 'dirty_backlog' | 'maintenance_overdue';
+  type: 'unpaid' | 'checkout_soon' | 'dirty_backlog' | 'maintenance_overdue' | 'check_in_overdue' | 'payment_expired';
   title: string;
   description: string;
   urgencyLevel: 2 | 3;
@@ -132,4 +132,16 @@ export interface FrontDeskStatSummary {
   unpaid: number;
   occupancyRate: number;
   revenueToday: number;
+  checkInsToday: number;
+  checkOutsToday: number;
+  urgentCount: number;
 }
+
+/** Jenis stat quick bar yang bisa diklik */
+export type FrontDeskStatKey =
+  | 'total'
+  | 'occupied'
+  | 'available'
+  | 'checkInToday'
+  | 'checkOutToday'
+  | 'urgent';

@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useEffect, useCallback, type ReactNode } from 'react';
+import { useState, useRef, useMemo, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore, getRoomTypeById } from '../store/appStore';
 import { computeDashboardStats } from '../utils/analytics';
@@ -7,7 +7,7 @@ import { generateDefaultLayout, getStaggeredPlacement } from '../utils/roomLayou
 import { 
   Plus, ZoomIn, ZoomOut, ChevronDown, ChevronUp, 
   Wallet, CreditCard, User, AlertCircle, 
-  CheckCircle, Brush, Wrench, Settings, Move, Map, BedDouble, X,
+  CheckCircle, Brush, Wrench, Settings, Move, Map, BedDouble, Search, X,
   LogOut, ShieldAlert, Receipt, Wind, Droplets, Tv, Wifi, Thermometer, LayoutGrid
 } from 'lucide-react';
 import Badge from '../components/ui/Badge';
@@ -17,8 +17,6 @@ import { motion, useMotionValue } from 'framer-motion';
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
 import TimelineView from '../components/front-office/TimelineView';
-import ReceptionistDashboard from './dashboard/ReceptionistDashboard';
-import type { ViewMode } from '../types/frontdesk.types';
 import { startOfDay } from 'date-fns';
 
 export default function FrontDeskPage() {
@@ -26,6 +24,7 @@ export default function FrontDeskPage() {
   const navigate = useNavigate();
   const [showDashboard, setShowDashboard] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'denah' | 'timeline'>('grid');
   const [isBuilderMode, setIsBuilderMode] = useState(false);
   
@@ -49,19 +48,9 @@ export default function FrontDeskPage() {
     return rooms.filter(r => r.positionX == null || r.positionY == null);
   }, [rooms]);
 
-  const frontDeskViewMode: ViewMode =
-    viewMode === 'denah' ? 'floorplan' : viewMode === 'timeline' ? 'timeline' : 'grid';
-
-  const handleViewModeChange = useCallback((mode: ViewMode) => {
-    if (mode === 'floorplan') setViewMode('denah');
-    else if (mode === 'timeline') setViewMode('timeline');
-    else setViewMode('grid');
-  }, []);
-
-  const handleRoomCardClick = useCallback((card: { id: string }) => {
-    setSelectedRoomId(card.id);
-    setShowDetail(true);
-  }, []);
+  const filteredRooms = useMemo(() => {
+    return rooms.filter(r => !search || r.number.includes(search));
+  }, [rooms, search]);
 
   const selectedRoom = useMemo(() => {
     return rooms.find(r => r.id === selectedRoomId);
@@ -138,8 +127,7 @@ export default function FrontDeskPage() {
         </div>
       </div>
 
-      {/* 2. CONTROL BAR — legacy denah/timeline; grid pakai ReceptionistDashboard */}
-      {viewMode !== 'grid' && (
+      {/* 2. CONTROL BAR */}
       <div className="bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-between gap-4 z-40 shadow-sm">
         <div className="flex items-center gap-3">
           <button 
@@ -148,11 +136,22 @@ export default function FrontDeskPage() {
           >
             DASHBOARD {showDashboard ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
           </button>
+
+          <div className="relative w-48 hidden sm:block">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
+            <input 
+              type="text" 
+              placeholder="Cari nomor..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg py-1.5 pl-7 text-xs focus:ring-1 focus:ring-emerald-500"
+            />
+          </div>
           
           <div className="flex bg-slate-100 rounded-lg p-1">
             <button 
               onClick={() => setViewMode('grid')}
-              className="px-3 py-1 rounded-md text-[10px] font-black uppercase transition-all text-slate-400 hover:text-emerald-600"
+              className={cn("px-3 py-1 rounded-md text-[10px] font-black uppercase transition-all", viewMode === 'grid' ? "bg-white shadow-sm text-emerald-600" : "text-slate-400")}
             >
               Grid View
             </button>
@@ -193,36 +192,8 @@ export default function FrontDeskPage() {
           </div>
         </div>
       </div>
-      )}
 
-      {/* 3. GRID (redesign) / DENAH / TIMELINE */}
-      {viewMode === 'grid' ? (
-        <div className="flex-1 overflow-auto bg-slate-100 p-4 sm:p-5">
-          <div className="mb-4 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowDashboard(!showDashboard)}
-              className="flex min-h-[44px] items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-xs font-bold text-white"
-            >
-              DASHBOARD {showDashboard ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-            </button>
-          </div>
-          {showDashboard && (
-            <div className="mb-4 grid grid-cols-2 gap-4 rounded-2xl bg-slate-900 p-4 text-white md:grid-cols-4">
-              <StatItem label="Kamar Terisi" value={stats.occupiedRooms} color="text-emerald-400" />
-              <StatItem label="Kamar Kosong" value={stats.availableRooms} color="text-slate-300" />
-              <StatItem label="Pendapatan Hari Ini" value={formatCurrency(stats.revenueToday)} color="text-emerald-400" />
-              <StatItem label="Occupancy" value={`${stats.occupancyRate}%`} color="text-violet-400" />
-            </div>
-          )}
-          <ReceptionistDashboard
-            viewMode={frontDeskViewMode}
-            onViewModeChange={handleViewModeChange}
-            enableLegacyViews
-            onRoomClick={handleRoomCardClick}
-          />
-        </div>
-      ) : (
+      {/* 3. VISUAL ROOM GRID / DENAH */}
       <div className="flex-1 flex overflow-hidden bg-slate-100">
         {/* Unplaced Rooms Sidebar (only in Builder Mode) */}
         {viewMode === 'denah' && isBuilderMode && (
@@ -266,6 +237,24 @@ export default function FrontDeskPage() {
                   }
                 }}
               />
+            </div>
+          ) : viewMode === 'grid' ? (
+            <div 
+              className="grid gap-4 transition-all duration-300 w-full"
+              style={{ 
+                gridTemplateColumns: `repeat(auto-fill, minmax(${140 * zoom}px, 1fr))`,
+              }}
+            >
+              {filteredRooms.map(room => (
+                <RoomCard 
+                  key={room.id} 
+                  room={room} 
+                  booking={getActiveBooking(room.id)}
+                  config={getStatusConfig(room.status, getActiveBooking(room.id))}
+                  onClick={() => { setSelectedRoomId(room.id); setShowDetail(true); }}
+                  zoom={zoom}
+                />
+              ))}
             </div>
           ) : (
             <div className="relative">
@@ -330,7 +319,6 @@ export default function FrontDeskPage() {
           )}
         </div>
       </div>
-      )}
 
       {/* 4. DETAIL POPUP (MODAL) */}
       <Modal 
