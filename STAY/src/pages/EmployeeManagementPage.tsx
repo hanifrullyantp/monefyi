@@ -15,11 +15,12 @@ import Card, { CardHeader } from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Input from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
-import { mockUsers } from '../data/mockData';
+import { useAppStore } from '../store/appStore';
 
 type TabType = 'access' | 'data' | 'payroll' | 'attendance' | 'loans' | 'tasks';
 
 export default function EmployeeManagementPage() {
+  const { users } = useAppStore();
   const [activeTab, setActiveTab] = useState<TabType>('data');
   const [showInviteModal, setShowInviteModal] = useState(false);
 
@@ -42,7 +43,7 @@ export default function EmployeeManagementPage() {
         <div className="flex items-center gap-2">
           <div className="bg-emerald-50 px-4 py-2 rounded-2xl border border-emerald-100 flex items-center gap-3 shadow-sm">
             <div className="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center text-white font-black text-sm">
-              {mockUsers.length}
+              {users.length}
             </div>
             <div>
               <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest leading-none mb-1">Staff Aktif</p>
@@ -128,7 +129,7 @@ function AccessTab() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {mockUsers.map(user => (
+                  {users.map(user => (
                     <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4">
                         <p className="font-bold text-slate-700">{user.name}</p>
@@ -217,7 +218,7 @@ function EmployeeDataTab() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {mockUsers.map(staff => (
+        {users.map(staff => (
           <div key={staff.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 group hover:shadow-2xl hover:scale-[1.02] transition-all cursor-pointer">
             <div className="flex justify-between items-start mb-6">
               <div className="w-16 h-16 rounded-[1.5rem] bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-slate-400 shadow-inner overflow-hidden border-4 border-white">
@@ -283,7 +284,7 @@ function PayrollTab() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {mockUsers.map(user => (
+              {users.map(user => (
                 <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-8 py-5">
                     <p className="font-black text-slate-800 tracking-tight">{user.name}</p>
@@ -351,7 +352,7 @@ function AttendanceTab() {
         </div>
 
         <div className="mt-10 space-y-3">
-          {mockUsers.map(staff => (
+          {users.map(staff => (
             <div key={staff.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-[1.5rem] border border-slate-100 hover:border-orange-200 transition-all">
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center font-black text-slate-400 text-xs shadow-sm">

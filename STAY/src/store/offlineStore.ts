@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import Dexie, { type Table } from 'dexie';
+import { syncActionToApi } from '../services/api/stayApi';
 
 // --- DB SCHEMA ---
 export interface OfflineAction {
@@ -64,11 +65,8 @@ export const useOfflineStore = create<OfflineState>((set, get) => ({
       const pending = await db.actions.where('status').equals('pending').toArray();
       
       for (const action of pending) {
-        // Simulate API call
-        await new Promise(r => setTimeout(r, 800));
         await db.actions.update(action.id!, { status: 'syncing' });
-        
-        // Finalize sync
+        await syncActionToApi(action);
         await db.actions.delete(action.id!);
       }
       

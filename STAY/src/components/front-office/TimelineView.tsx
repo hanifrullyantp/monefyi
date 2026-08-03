@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useAppStore } from '../../store/appStore';
-import { mockRoomTypes } from '../../data/mockData';
+import { getRoomTypeById } from '../../store/appStore';
 import { cn } from '../../utils/cn';
 import { addDays, format, isWithinInterval, startOfDay, eachDayOfInterval } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -63,7 +63,7 @@ export default function TimelineView({ startDate, daysCount, onBookingClick }: T
             <div className="w-32 flex-shrink-0 p-3 border-r border-slate-100 bg-white group-hover:bg-slate-50 transition-colors">
               <p className="font-bold text-slate-800">{room.number}</p>
               <p className="text-[9px] text-slate-400 uppercase font-bold truncate">
-                {mockRoomTypes.find(t => t.id === room.roomTypeId)?.name}
+                {getRoomTypeById(room.roomTypeId)?.name}
               </p>
             </div>
             <div className="flex flex-1 overflow-x-auto no-scrollbar relative h-14">

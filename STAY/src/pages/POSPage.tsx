@@ -15,7 +15,7 @@ import Badge from '../components/ui/Badge';
 type PaymentChannel = 'cash' | 'debit' | 'credit' | 'qris';
 
 export default function POSPage() {
-  const { bookings, updateBooking } = useAppStore();
+  const { bookings, recordBookingPayment } = useAppStore();
   const location = useLocation();
   const [search, setSearch] = useState('');
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
@@ -50,7 +50,21 @@ export default function POSPage() {
   const handleProcess = async () => {
     if (!selected || !amount) return;
     const paid = parseFloat(amount);
-    
+    const methodMap: Record<PaymentChannel, 'cash' | 'credit_card' | 'qris'> = {
+      cash: 'cash',
+      debit: 'cash',
+      credit: 'credit_card',
+      qris: 'qris',
+    };
+
+    recordBookingPayment(
+      selected.id,
+      paid,
+      methodMap[channel],
+      refNumber || undefined,
+      bankName ? `Bank: ${bankName}` : undefined
+    );
+
     const paymentData = {
       bookingCode: selected.bookingCode,
       guestName: selected.guest?.name,
@@ -61,18 +75,15 @@ export default function POSPage() {
       date: new Date().toISOString(),
     };
 
-    updateBooking(selected.id, {
-      paidAmount: selected.paidAmount + paid,
-      paymentStatus: (selected.paidAmount + paid) >= selected.totalAmount ? 'paid' : 'partial'
-    });
-
     setLastPayment(paymentData);
     setShowReceipt(true);
-    
-    // Reset form
     setAmount('');
     setRefNumber('');
     setBankName('');
+  };
+
+  const handlePrintReceipt = () => {
+    window.print();
   };
 
   return (
@@ -280,7 +291,7 @@ export default function POSPage() {
 
             <div className="mt-8 flex gap-3">
               <Button className="flex-1 rounded-2xl h-12" variant="outline" onClick={() => setShowReceipt(false)}>Tutup</Button>
-              <Button className="flex-1 rounded-2xl h-12" icon={<Printer className="h-4 w-4" />}>Cetak Struk</Button>
+              <Button className="flex-1 rounded-2xl h-12" icon={<Printer className="h-4 w-4" />} onClick={handlePrintReceipt}>Cetak Struk</Button>
             </div>
           </div>
         )}

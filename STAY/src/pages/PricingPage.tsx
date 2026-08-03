@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { 
-  TrendingUp, Calendar, Zap, AlertTriangle, 
-  Plus, Check, X, Info, Settings, ArrowRight,
+import { useAppStore } from '../store/appStore';
+import {
+  TrendingUp, Calendar, Zap, Info,
+  Plus, Settings,
   DollarSign
 } from 'lucide-react';
+import Modal from '../components/ui/Modal';
+import Input from '../components/ui/Input';
 import { cn } from '../utils/cn';
 import { formatCurrency } from '../utils/format';
 import Button from '../components/ui/Button';
@@ -20,14 +23,36 @@ interface Rule {
 }
 
 export default function PricingPage() {
-  const [rules, setRules] = useState<Rule[]>([
-    { id: '1', name: 'Weekend Premium', condition: 'Hari Jumat & Sabtu', adjustment: '+25%', isActive: true, priority: 'medium' },
-    { id: '2', name: 'High Occupancy Boost', condition: 'Occupancy > 85%', adjustment: '+15%', isActive: true, priority: 'high' },
-    { id: '3', name: 'Last Minute Rescue', condition: 'Sisa < 24 jam & Kosong', adjustment: '-15%', isActive: false, priority: 'medium' },
-    { id: '4', name: 'Holiday Season', condition: 'Libur Nasional', adjustment: '+50%', isActive: true, priority: 'urgent' },
-  ]);
+  const { pricingRules, updatePricingRule, addPricingRule } = useAppStore();
+  const [showAdd, setShowAdd] = useState(false);
+  const [newRuleName, setNewRuleName] = useState('');
 
-  const [selectedMonth, setSelectedMonth] = useState('Juni 2024');
+  const rules: Rule[] = pricingRules.map((r) => ({
+    id: r.id,
+    name: r.name,
+    condition: r.type.replace('_', ' '),
+    adjustment: `${r.adjustment > 0 ? '+' : ''}${r.adjustment}%`,
+    isActive: r.isActive,
+    priority: r.adjustment >= 20 ? 'urgent' : r.adjustment >= 10 ? 'high' : 'medium',
+  }));
+
+  const toggleRule = (id: string) => {
+    const rule = pricingRules.find((r) => r.id === id);
+    if (rule) updatePricingRule(id, { isActive: !rule.isActive });
+  };
+
+  const handleAddRule = () => {
+    if (!newRuleName.trim()) return;
+    addPricingRule({
+      tenantId: 'tenant-1',
+      name: newRuleName,
+      type: 'seasonal',
+      adjustment: 10,
+      isActive: true,
+    });
+    setNewRuleName('');
+    setShowAdd(false);
+  };
 
   return (
     <div className="space-y-6">
@@ -39,7 +64,7 @@ export default function PricingPage() {
           </h1>
           <p className="text-sm text-slate-500 font-medium text-center sm:text-left">Optimalkan pendapatan dengan penyesuaian harga otomatis</p>
         </div>
-        <Button className="rounded-2xl h-12 px-6 bg-slate-900 shadow-xl shadow-slate-200">
+        <Button className="rounded-2xl h-12 px-6 bg-slate-900 shadow-xl shadow-slate-200" onClick={() => setShowAdd(true)}>
           <Plus className="h-4 w-4 mr-2" /> Aturan Baru
         </Button>
       </div>
@@ -83,7 +108,7 @@ export default function PricingPage() {
                   )}>{rule.adjustment}</span>
                   
                   <div 
-                    onClick={() => setRules(rules.map(r => r.id === rule.id ? { ...r, isActive: !r.isActive } : r))}
+                    onClick={() => toggleRule(rule.id)}
                     className={cn(
                       "w-10 h-5 rounded-full relative transition-all cursor-pointer",
                       rule.isActive ? "bg-emerald-500" : "bg-slate-200"
@@ -199,6 +224,13 @@ export default function PricingPage() {
           </div>
         </div>
       </div>
+
+      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="Aturan Pricing Baru" size="sm">
+        <div className="space-y-4">
+          <Input label="Nama aturan" value={newRuleName} onChange={(e) => setNewRuleName(e.target.value)} placeholder="Weekend Premium" />
+          <Button className="w-full" onClick={handleAddRule}>Simpan Aturan</Button>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -2,8 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import AppLayout from './components/layout/AppLayout';
 import ProtectedRoute from './routes/ProtectedRoute';
+import { DEFAULT_AUTH_REDIRECT, MANAGER_ROLES, ALL_STAFF_ROLES } from './config/routes';
 
-// Pages
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import FrontDeskPage from './pages/FrontDeskPage';
@@ -26,14 +26,12 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* Public routes */}
       <Route
         path="/login"
-        element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />}
+        element={isAuthenticated ? <Navigate to={DEFAULT_AUTH_REDIRECT} replace /> : <LoginPage />}
       />
       <Route path="/survey/:bookingId" element={<GuestSurveyPage />} />
 
-      {/* Protected app routes */}
       <Route
         path="/"
         element={
@@ -42,9 +40,16 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/front-desk" replace />} />
+        <Route index element={<Navigate to={DEFAULT_AUTH_REDIRECT} replace />} />
         <Route path="front-desk" element={<FrontDeskPage />} />
-        <Route path="dashboard" element={<DashboardPage />} />
+        <Route
+          path="dashboard"
+          element={
+            <ProtectedRoute requiredRoles={MANAGER_ROLES}>
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="rooms" element={<RoomsPage />} />
         <Route path="bookings" element={<BookingsPage />} />
         <Route path="guests" element={<GuestsPage />} />
@@ -54,7 +59,7 @@ function AppRoutes() {
         <Route
           path="finance"
           element={
-            <ProtectedRoute requiredRoles={['owner', 'manager']}>
+            <ProtectedRoute requiredRoles={MANAGER_ROLES}>
               <FinancePage />
             </ProtectedRoute>
           }
@@ -62,7 +67,7 @@ function AppRoutes() {
         <Route
           path="staff"
           element={
-            <ProtectedRoute requiredRoles={['owner', 'manager']}>
+            <ProtectedRoute requiredRoles={MANAGER_ROLES}>
               <EmployeeManagementPage />
             </ProtectedRoute>
           }
@@ -70,7 +75,7 @@ function AppRoutes() {
         <Route
           path="pricing"
           element={
-            <ProtectedRoute requiredRoles={['owner', 'manager']}>
+            <ProtectedRoute requiredRoles={MANAGER_ROLES}>
               <PricingPage />
             </ProtectedRoute>
           }
@@ -78,7 +83,7 @@ function AppRoutes() {
         <Route
           path="accounting"
           element={
-            <ProtectedRoute requiredRoles={['owner', 'manager']}>
+            <ProtectedRoute requiredRoles={MANAGER_ROLES}>
               <AccountingPage />
             </ProtectedRoute>
           }
@@ -86,7 +91,7 @@ function AppRoutes() {
         <Route
           path="reports"
           element={
-            <ProtectedRoute requiredRoles={['owner', 'manager']}>
+            <ProtectedRoute requiredRoles={MANAGER_ROLES}>
               <ReportsPage />
             </ProtectedRoute>
           }
@@ -94,14 +99,13 @@ function AppRoutes() {
         <Route
           path="settings"
           element={
-            <ProtectedRoute requiredRoles={['owner', 'manager']}>
+            <ProtectedRoute requiredRoles={MANAGER_ROLES}>
               <SettingsPage />
             </ProtectedRoute>
           }
         />
       </Route>
 
-      {/* Catch all */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

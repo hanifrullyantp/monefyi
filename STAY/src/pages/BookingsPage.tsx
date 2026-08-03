@@ -1,11 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAppStore } from '../store/appStore';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import Input, { Select } from '../components/ui/Input';
 import { formatCurrency, formatShortDate, generateBookingCode, generateId, calculateNights } from '../utils/format';
-import { mockRoomTypes } from '../data/mockData';
+import { openWhatsAppMessage, buildBookingConfirmationMessage } from '../utils/whatsapp';
 import type { BookingStatus, PaymentStatus, Booking } from '../types';
 import { cn } from '../utils/cn';
 import {
@@ -54,7 +55,8 @@ interface NewBookingForm {
 }
 
 export default function BookingsPage() {
-  const { bookings, rooms, guests, addBooking, updateBooking, addGuest } = useAppStore();
+  const location = useLocation();
+  const { bookings, rooms, roomTypes, guests, addBooking, updateBooking, addGuest, checkInBooking } = useAppStore();
   const [tab, setTab] = useState<BookingStatus | 'all'>('all');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Booking | null>(null);
@@ -64,6 +66,17 @@ export default function BookingsPage() {
   const [memberFound, setMemberFound] = useState(false);
   const [isFirstStay, setIsFirstStay] = useState(false);
   const [step, setStep] = useState(1);
+
+  useEffect(() => {
+    const state = location.state as { openNew?: boolean; roomId?: string } | null;
+    if (state?.openNew) {
+      setShowNew(true);
+      if (state.roomId) {
+        setForm((prev) => ({ ...prev, roomId: state.roomId }));
+        setStep(2);
+      }
+    }
+  }, [location.state]);
 
   const [form, setForm] = useState<NewBookingForm>({
     guestName: '', guestPhone: '', guestIdNumber: '', roomId: '',
@@ -108,7 +121,7 @@ export default function BookingsPage() {
   const calculateTotal = () => {
     if (!form.roomId || !form.checkIn || !form.checkOut) return 0;
     const room = rooms.find(r => r.id === form.roomId);
-    const rt = room ? mockRoomTypes.find(t => t.id === room.roomTypeId) : null;
+    const rt = room?.roomType || roomTypes.find(t => t.id === room?.roomTypeId);
     const nights = calculateNights(form.checkIn, form.checkOut);
     if (!rt || nights <= 0) return 0;
     const subtotal = rt.basePrice * nights;
@@ -169,28 +182,29 @@ export default function BookingsPage() {
     setStep(1);
     setLoading(false);
     setForm({ guestName: '', guestPhone: '', guestIdNumber: '', roomId: '', checkIn: '', checkOut: '', adults: '2', children: '0', notes: '', paymentMethod: 'cash', discount: 0 });
-    
-    // Simulate WhatsApp send
-    const surveyLink = `${window.location.origin}/survey/${booking.id}`;
-    const waLink = `https://wa.me/${form.guestPhone}?text=Halo%20${form.guestName}!%20Terima%20kasih%20sudah%20menginap.%20Kode%20booking:%20${booking.bookingCode}.%20Lengkapi%20data%20anda%20disini%20untuk%20dapat%20DISKON%2010%:%20${surveyLink}`;
-    console.log('--- WHATSAPP CRM SIMULATOR ---');
-    console.log('To:', form.guestPhone);
-    console.log('Message:', waLink);
-    console.log('-------------------------------');
+
+    if (form.guestPhone) {
+      openWhatsAppMessage(
+        form.guestPhone,
+        buildBookingConfirmationMessage(form.guestName, booking.bookingCode, form.checkIn, room?.number || '')
+      );
+    }
   };
 
   const handleCheckIn = (booking: Booking) => {
-    updateBooking(booking.id, { status: 'checked_in', updatedAt: new Date().toISOString() });
-    if (selected?.id === booking.id) setSelected({ ...booking, status: 'checked_in' });
+    checkInBooking(booking.id, booking.roomId);
+    if (selected?.id === booking.id) {
+      setSelected({ ...booking, status: 'checked_in' });
+    }
   };
 
   const handleCheckOut = (booking: Booking) => {
-    updateBooking(booking.id, { status: 'checked_out', updatedAt: new Date().toISOString() });
+    updateBooking(booking.id, { status: 'checked_out' });
     if (selected?.id === booking.id) setSelected({ ...booking, status: 'checked_out' });
   };
 
   const handleCancel = (booking: Booking) => {
-    updateBooking(booking.id, { status: 'cancelled', updatedAt: new Date().toISOString() });
+    updateBooking(booking.id, { status: 'cancelled' });
     setShowDetail(false);
   };
 
@@ -313,6 +327,28 @@ export default function BookingsPage() {
                 <p className="text-xs text-slate-400">Tamu</p>
                 <p className="font-semibold text-slate-700 mt-0.5">{selected.adults} dewasa, {selected.children} anak</p>
               </div>
+              <div className="bg-slate-50 rounded-xl p-3">
+                <p className="text-xs text-slate-400">Check-in / Check-out</p>
+                <p className="font-semibold text-slate-700 mt-0.5">{formatShortDate(selected.checkIn)} → {formatShortDate(selected.checkOut)}</p>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-3">
+                <p className="text-xs text-slate-400">Total</p>
+                <p className="font-semibold text-emerald-700 mt-0.5">{formatCurrency(selected.totalAmount)}</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 pt-2">
+              {['confirmed', 'pending'].includes(selected.status) && (
+                <Button size="sm" icon={<LogIn className="h-4 w-4" />} onClick={() => handleCheckIn(selected)}>Check-in</Button>
+              )}
+              {selected.status === 'checked_in' && (
+                <Button size="sm" variant="outline" icon={<LogOut className="h-4 w-4" />} onClick={() => handleCheckOut(selected)}>Check-out</Button>
+              )}
+              {!['cancelled', 'checked_out'].includes(selected.status) && (
+                <Button size="sm" variant="outline" icon={<XCircle className="h-4 w-4" />} onClick={() => handleCancel(selected)}>Batalkan</Button>
+              )}
+              {selected.guest?.phone && (
+                <Button size="sm" variant="outline" icon={<MessageCircle className="h-4 w-4" />} onClick={() => openWhatsAppMessage(selected.guest!.phone, `Halo ${selected.guest?.name}, terkait booking ${selected.bookingCode}.`)}>WhatsApp</Button>
+              )}
             </div>
           </div>
         )}
@@ -493,7 +529,7 @@ export default function BookingsPage() {
 
                 {form.roomId && (() => {
                   const room = rooms.find(r => r.id === form.roomId);
-                  const rt = room ? mockRoomTypes.find(t => t.id === room.roomTypeId) : null;
+                  const rt = room?.roomType || roomTypes.find(t => t.id === room?.roomTypeId);
                   return rt ? (
                     <div className="bg-slate-900 text-white p-6 rounded-[2rem] shadow-xl relative overflow-hidden animate-in zoom-in-95 duration-300">
                       <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full -mr-10 -mt-10" />

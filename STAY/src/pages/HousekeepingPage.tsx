@@ -1,14 +1,14 @@
 import { useState } from 'react';
-import { mockHousekeepingTasks } from '../data/mockData';
+import { useAppStore } from '../store/appStore';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
+import Input from '../components/ui/Input';
 import { formatDateTime } from '../utils/format';
 import { ClipboardList, Plus, CheckCircle, Clock, Brush } from 'lucide-react';
-import type { HousekeepingStatus } from '../types';
+import type { HousekeepingStatus, HousekeepingTask } from '../types';
 import { cn } from '../utils/cn';
-
-type Task = typeof mockHousekeepingTasks[0];
+import { useAuthStore } from '../store/authStore';
 
 const statusConfig: Record<HousekeepingStatus, { label: string; badge: 'warning' | 'info' | 'success' | 'gray'; icon: React.ReactNode; color: string }> = {
   pending: { label: 'Menunggu', badge: 'warning', icon: <Clock className="h-4 w-4" />, color: 'border-l-amber-400' },
@@ -17,7 +17,7 @@ const statusConfig: Record<HousekeepingStatus, { label: string; badge: 'warning'
   verified: { label: 'Terverifikasi', badge: 'gray', icon: <CheckCircle className="h-4 w-4" />, color: 'border-l-slate-400' },
 };
 
-const typeLabel: Record<Task['type'], string> = {
+const typeLabel: Record<HousekeepingTask['type'], string> = {
   checkout_cleaning: '🧹 Bersih Setelah Checkout',
   daily_cleaning: '🌅 Kebersihan Harian',
   maintenance: '🔧 Perawatan/Perbaikan',
@@ -25,26 +25,48 @@ const typeLabel: Record<Task['type'], string> = {
 };
 
 export default function HousekeepingPage() {
-  const [tasks, setTasks] = useState(mockHousekeepingTasks);
+  const { housekeepingTasks, rooms, users, updateHousekeepingTask, addHousekeepingTask } = useAppStore();
+  const { tenant, user } = useAuthStore();
   const [filter, setFilter] = useState<HousekeepingStatus | 'all'>('all');
-  const [selected, setSelected] = useState<Task | null>(null);
+  const [selected, setSelected] = useState<HousekeepingTask | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newTask, setNewTask] = useState({
+    roomId: rooms[0]?.id || '',
+    type: 'daily_cleaning' as HousekeepingTask['type'],
+    notes: '',
+    assignedTo: user?.id || '',
+  });
 
-  const filtered = filter === 'all' ? tasks : tasks.filter(t => t.status === filter);
+  const filtered = filter === 'all' ? housekeepingTasks : housekeepingTasks.filter(t => t.status === filter);
 
   const updateStatus = (taskId: string, status: HousekeepingStatus) => {
-    setTasks(prev => prev.map(t =>
-      t.id === taskId
-        ? { ...t, status, completedAt: status === 'done' ? new Date().toISOString() : t.completedAt }
-        : t
-    ));
+    updateHousekeepingTask(taskId, {
+      status,
+      completedAt: status === 'done' ? new Date().toISOString() : undefined,
+    });
     if (selected?.id === taskId) setSelected(prev => prev ? { ...prev, status } : null);
   };
 
+  const handleAddTask = () => {
+    if (!newTask.roomId || !tenant) return;
+    addHousekeepingTask({
+      tenantId: tenant.id,
+      roomId: newTask.roomId,
+      assignedTo: newTask.assignedTo || undefined,
+      status: 'pending',
+      type: newTask.type,
+      notes: newTask.notes,
+      scheduledAt: new Date().toISOString(),
+    });
+    setShowAddModal(false);
+    setNewTask({ roomId: rooms[0]?.id || '', type: 'daily_cleaning', notes: '', assignedTo: user?.id || '' });
+  };
+
   const stats = [
-    { label: 'Menunggu', count: tasks.filter(t => t.status === 'pending').length, color: 'text-amber-500', bg: 'bg-amber-50' },
-    { label: 'Dikerjakan', count: tasks.filter(t => t.status === 'in_progress').length, color: 'text-sky-500', bg: 'bg-sky-50' },
-    { label: 'Selesai', count: tasks.filter(t => t.status === 'done').length, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+    { label: 'Menunggu', count: housekeepingTasks.filter(t => t.status === 'pending').length, color: 'text-amber-500', bg: 'bg-amber-50' },
+    { label: 'Dikerjakan', count: housekeepingTasks.filter(t => t.status === 'in_progress').length, color: 'text-sky-500', bg: 'bg-sky-50' },
+    { label: 'Selesai', count: housekeepingTasks.filter(t => t.status === 'done').length, color: 'text-emerald-500', bg: 'bg-emerald-50' },
   ];
 
   return (
@@ -54,12 +76,11 @@ export default function HousekeepingPage() {
           <h1 className="text-xl font-bold text-slate-800">Housekeeping</h1>
           <p className="text-sm text-slate-500 mt-0.5">Manajemen kebersihan dan perawatan</p>
         </div>
-        <Button icon={<Plus className="h-4 w-4" />}>
+        <Button icon={<Plus className="h-4 w-4" />} onClick={() => setShowAddModal(true)}>
           Tambah Tugas
         </Button>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         {stats.map(s => (
           <div key={s.label} className={cn('rounded-2xl border border-slate-100 shadow-sm p-4 text-center', s.bg)}>
@@ -69,7 +90,6 @@ export default function HousekeepingPage() {
         ))}
       </div>
 
-      {/* Filter tabs */}
       <div className="flex gap-2 overflow-x-auto pb-1">
         {(['all', 'pending', 'in_progress', 'done', 'verified'] as const).map(status => (
           <button
@@ -78,7 +98,7 @@ export default function HousekeepingPage() {
             className={cn(
               'px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all flex-shrink-0',
               filter === status
-                ? 'bg-sky-500 text-white'
+                ? 'bg-emerald-600 text-white'
                 : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
             )}
           >
@@ -87,153 +107,98 @@ export default function HousekeepingPage() {
         ))}
       </div>
 
-      {/* Task cards */}
       <div className="space-y-2.5">
-        {filtered.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-2xl border border-slate-100">
-            <ClipboardList className="h-12 w-12 mx-auto text-slate-200 mb-3" />
-            <p className="text-slate-500 font-medium">Tidak ada tugas ditemukan</p>
-          </div>
-        ) : (
-          filtered.map(task => {
-            const cfg = statusConfig[task.status];
-            return (
-              <button
-                key={task.id}
-                onClick={() => { setSelected(task); setShowModal(true); }}
-                className={cn(
-                  'w-full bg-white rounded-2xl border-l-4 border border-slate-100 shadow-sm p-4 text-left hover:shadow-md transition-all active:scale-[0.99]',
-                  cfg.color
-                )}
-              >
-                <div className="flex items-start gap-3">
-                  <div className={cn(
-                    'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0',
-                    {
-                      'bg-amber-100 text-amber-600': task.status === 'pending',
-                      'bg-sky-100 text-sky-600': task.status === 'in_progress',
-                      'bg-emerald-100 text-emerald-600': task.status === 'done',
-                      'bg-slate-100 text-slate-500': task.status === 'verified',
-                    }
-                  )}>
-                    {cfg.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <p className="font-semibold text-slate-800">Kamar {task.roomId.replace('room-', '')}</p>
-                      <Badge variant={cfg.badge}>{cfg.label}</Badge>
-                    </div>
-                    <p className="text-xs text-slate-500">{typeLabel[task.type]}</p>
-                    {task.assignedUser && (
-                      <p className="text-xs text-slate-400 mt-1">
-                        👤 {task.assignedUser.name}
-                      </p>
-                    )}
-                    {task.notes && (
-                      <p className="text-xs text-slate-400 mt-1 line-clamp-1">📝 {task.notes}</p>
-                    )}
-                    <p className="text-xs text-slate-300 mt-1">
-                      ⏰ {formatDateTime(task.scheduledAt)}
-                    </p>
-                  </div>
+        {filtered.map(task => {
+          const room = rooms.find(r => r.id === task.roomId);
+          const cfg = statusConfig[task.status];
+          return (
+            <button
+              key={task.id}
+              onClick={() => { setSelected(task); setShowModal(true); }}
+              className={cn('w-full bg-white rounded-2xl border border-slate-100 shadow-sm p-4 text-left border-l-4', cfg.color)}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="font-semibold text-slate-800">Kamar {room?.number || task.roomId}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{typeLabel[task.type]}</p>
                 </div>
-              </button>
-            );
-          })
-        )}
+                <Badge variant={cfg.badge}>{cfg.label}</Badge>
+              </div>
+              {task.notes && <p className="text-xs text-slate-500 mt-2">{task.notes}</p>}
+              <p className="text-[10px] text-slate-400 mt-2">{formatDateTime(task.scheduledAt)}</p>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Task detail modal */}
-      <Modal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        title="Detail Tugas"
-        size="md"
-        footer={selected && selected.status !== 'verified' && (
-          <div className="flex gap-2">
-            {selected.status === 'pending' && (
-              <Button
-                className="flex-1"
-                icon={<Brush className="h-4 w-4" />}
-                onClick={() => updateStatus(selected.id, 'in_progress')}
-              >
-                Mulai Kerjakan
-              </Button>
-            )}
-            {selected.status === 'in_progress' && (
-              <Button
-                className="flex-1"
-                icon={<CheckCircle className="h-4 w-4" />}
-                onClick={() => updateStatus(selected.id, 'done')}
-              >
-                Tandai Selesai
-              </Button>
-            )}
-            {selected.status === 'done' && (
-              <Button
-                variant="secondary"
-                className="flex-1"
-                icon={<CheckCircle className="h-4 w-4" />}
-                onClick={() => updateStatus(selected.id, 'verified')}
-              >
-                Verifikasi
-              </Button>
-            )}
-          </div>
-        )}
-      >
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Detail Tugas" size="sm">
         {selected && (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl">
-              <div className={cn(
-                'w-12 h-12 rounded-xl flex items-center justify-center',
-                {
-                  'bg-amber-100 text-amber-600': selected.status === 'pending',
-                  'bg-sky-100 text-sky-600': selected.status === 'in_progress',
-                  'bg-emerald-100 text-emerald-600': selected.status === 'done',
-                  'bg-slate-100 text-slate-500': selected.status === 'verified',
-                }
-              )}>
-                {statusConfig[selected.status].icon}
-              </div>
-              <div>
-                <p className="font-bold text-slate-800">Kamar {selected.roomId.replace('room-', '')}</p>
-                <Badge variant={statusConfig[selected.status].badge}>{statusConfig[selected.status].label}</Badge>
-              </div>
+            <p className="text-sm text-slate-600">{typeLabel[selected.type]}</p>
+            <div className="grid grid-cols-2 gap-2">
+              {(Object.entries(statusConfig) as [HousekeepingStatus, typeof statusConfig[HousekeepingStatus]][]).map(([st, c]) => (
+                <button
+                  key={st}
+                  onClick={() => updateStatus(selected.id, st)}
+                  className={cn(
+                    'flex items-center gap-2 px-3 py-2 rounded-xl border text-sm',
+                    selected.status === st ? 'bg-emerald-600 text-white border-emerald-600' : 'border-slate-200'
+                  )}
+                >
+                  {c.icon} {c.label}
+                </button>
+              ))}
             </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-slate-50 rounded-xl p-3">
-                <p className="text-xs text-slate-400">Jenis Tugas</p>
-                <p className="text-sm font-medium text-slate-700 mt-0.5">{typeLabel[selected.type]}</p>
-              </div>
-              <div className="bg-slate-50 rounded-xl p-3">
-                <p className="text-xs text-slate-400">Dijadwalkan</p>
-                <p className="text-sm font-medium text-slate-700 mt-0.5">{formatDateTime(selected.scheduledAt)}</p>
-              </div>
-              {selected.assignedUser && (
-                <div className="bg-slate-50 rounded-xl p-3 col-span-2">
-                  <p className="text-xs text-slate-400">Ditugaskan ke</p>
-                  <p className="text-sm font-medium text-slate-700 mt-0.5">{selected.assignedUser.name}</p>
-                </div>
-              )}
-            </div>
-
-            {selected.notes && (
-              <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
-                <p className="text-xs font-semibold text-amber-700 mb-1">Catatan</p>
-                <p className="text-sm text-amber-600">{selected.notes}</p>
-              </div>
-            )}
-
-            {selected.completedAt && (
-              <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3">
-                <p className="text-xs font-semibold text-emerald-700 mb-1">✅ Selesai pada</p>
-                <p className="text-sm text-emerald-600">{formatDateTime(selected.completedAt)}</p>
-              </div>
-            )}
           </div>
         )}
+      </Modal>
+
+      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Tambah Tugas Housekeeping" size="sm">
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium text-slate-700 mb-1 block">Kamar</label>
+            <select
+              value={newTask.roomId}
+              onChange={(e) => setNewTask({ ...newTask, roomId: e.target.value })}
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
+            >
+              {rooms.map((r) => (
+                <option key={r.id} value={r.id}>Kamar {r.number}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-slate-700 mb-1 block">Tipe Tugas</label>
+            <select
+              value={newTask.type}
+              onChange={(e) => setNewTask({ ...newTask, type: e.target.value as HousekeepingTask['type'] })}
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
+            >
+              {Object.entries(typeLabel).map(([k, v]) => (
+                <option key={k} value={k}>{v}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-slate-700 mb-1 block">Staff</label>
+            <select
+              value={newTask.assignedTo}
+              onChange={(e) => setNewTask({ ...newTask, assignedTo: e.target.value })}
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
+            >
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>{u.name}</option>
+              ))}
+            </select>
+          </div>
+          <Input
+            label="Catatan"
+            value={newTask.notes}
+            onChange={(e) => setNewTask({ ...newTask, notes: e.target.value })}
+            placeholder="Instruksi khusus..."
+          />
+          <Button className="w-full" onClick={handleAddTask}>Buat Tugas</Button>
+        </div>
       </Modal>
     </div>
   );

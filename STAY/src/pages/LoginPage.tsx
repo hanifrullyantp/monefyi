@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { DEFAULT_AUTH_REDIRECT } from '../config/routes';
 import { useAuthStore } from '../store/authStore';
 import { Home, Eye, EyeOff, ArrowRight, User } from 'lucide-react';
 
@@ -22,7 +23,7 @@ export default function LoginPage() {
     setError('');
     const result = await login(email, password);
     if (result.success) {
-      navigate('/dashboard');
+      navigate(DEFAULT_AUTH_REDIRECT);
     } else {
       setError(result.error || 'Login gagal');
     }
@@ -32,7 +33,7 @@ export default function LoginPage() {
     setEmail(demoEmail);
     setError('');
     const result = await login(demoEmail, 'demo123');
-    if (result.success) navigate('/dashboard');
+    if (result.success) navigate(DEFAULT_AUTH_REDIRECT);
   };
 
   return (

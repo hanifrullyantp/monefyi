@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useAppStore } from '../store/appStore';
-import { mockPayments } from '../data/mockData';
 import Badge from '../components/ui/Badge';
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
@@ -28,7 +27,7 @@ const methodColors: Record<PaymentMethod, string> = {
 };
 
 export default function PaymentsPage() {
-  const { bookings, updateBooking } = useAppStore();
+  const { bookings, payments, recordBookingPayment } = useAppStore();
   const [search, setSearch] = useState('');
   const [selectedBooking, setSelectedBooking] = useState<typeof bookings[0] | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -36,6 +35,11 @@ export default function PaymentsPage() {
   const [payAmount, setPayAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+
+  const today = new Date().toISOString().split('T')[0];
+  const totalRevToday = payments
+    .filter((p) => p.createdAt.startsWith(today) && p.status === 'paid')
+    .reduce((sum, p) => sum + p.amount, 0);
 
   const unpaidBookings = bookings.filter(b =>
     (b.paymentStatus === 'unpaid' || b.paymentStatus === 'partial') &&
@@ -48,21 +52,13 @@ export default function PaymentsPage() {
     b.bookingCode.toLowerCase().includes(search.toLowerCase())
   );
 
-  const totalRevToday = mockPayments.reduce((sum, p) => sum + p.amount, 0);
-
   const handlePayment = async () => {
     if (!selectedBooking || !payAmount) return;
     setLoading(true);
-    await new Promise(r => setTimeout(r, 700));
+    await new Promise(r => setTimeout(r, 400));
 
-    const amount = parseInt(payAmount.replace(/\D/g, ''));
-    const newPaid = selectedBooking.paidAmount + amount;
-    const isPaid = newPaid >= selectedBooking.totalAmount;
-
-    updateBooking(selectedBooking.id, {
-      paidAmount: newPaid,
-      paymentStatus: isPaid ? 'paid' : 'partial',
-    });
+    const amount = parseInt(payAmount.replace(/\D/g, ''), 10);
+    recordBookingPayment(selectedBooking.id, amount, paymentMethod);
 
     setSuccessMsg(`Pembayaran ${formatCurrency(amount)} berhasil dicatat!`);
     setLoading(false);
@@ -79,23 +75,21 @@ export default function PaymentsPage() {
         <p className="text-sm text-slate-500 mt-0.5">Kelola tagihan dan pembayaran tamu</p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 text-center">
-          <div className="text-2xl font-bold text-red-500">{unpaidBookings.filter(b => b.paymentStatus === 'unpaid').length}</div>
-          <div className="text-xs text-slate-500 mt-0.5">Belum Bayar</div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+          <p className="text-xs text-slate-400 font-medium">Diterima Hari Ini</p>
+          <p className="text-xl font-black text-emerald-600 mt-1">{formatCurrency(totalRevToday)}</p>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 text-center">
-          <div className="text-2xl font-bold text-amber-500">{unpaidBookings.filter(b => b.paymentStatus === 'partial').length}</div>
-          <div className="text-xs text-slate-500 mt-0.5">Sebagian</div>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+          <p className="text-xs text-slate-400 font-medium">Tagihan Belum Lunas</p>
+          <p className="text-xl font-black text-amber-600 mt-1">{unpaidBookings.length}</p>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 text-center">
-          <div className="text-lg font-bold text-emerald-500">{formatCurrency(totalRevToday)}</div>
-          <div className="text-xs text-slate-500 mt-0.5">Diterima Hari Ini</div>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 col-span-2 sm:col-span-1">
+          <p className="text-xs text-slate-400 font-medium">Total Transaksi</p>
+          <p className="text-xl font-black text-slate-800 mt-1">{payments.length}</p>
         </div>
       </div>
 
-      {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
         <input
@@ -103,110 +97,61 @@ export default function PaymentsPage() {
           placeholder="Cari nama tamu atau kode booking..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
         />
       </div>
 
-      {/* Unpaid bookings */}
-      <div>
-        <h3 className="text-sm font-semibold text-slate-600 mb-3">Tagihan Belum Lunas</h3>
-        <div className="space-y-2.5">
-          {filtered.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-2xl border border-slate-100">
-              <CheckCircle className="h-12 w-12 mx-auto text-emerald-300 mb-3" />
-              <p className="text-slate-500 font-medium">Semua tagihan sudah lunas! 🎉</p>
+      <div className="space-y-2.5">
+        {filtered.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-2xl border border-slate-100">
+            <Receipt className="h-10 w-10 mx-auto text-slate-200 mb-2" />
+            <p className="text-slate-500 text-sm">Semua tagihan sudah lunas</p>
+          </div>
+        ) : (
+          filtered.map(booking => (
+            <div key={booking.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="font-semibold text-slate-800">{booking.guest?.name}</p>
+                <p className="text-xs text-slate-400">{booking.bookingCode} · Kamar {booking.room?.number}</p>
+                <p className="text-sm font-bold text-slate-700 mt-1">
+                  Sisa: {formatCurrency(booking.totalAmount - booking.paidAmount)}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                icon={<CreditCard className="h-4 w-4" />}
+                onClick={() => {
+                  setSelectedBooking(booking);
+                  setPayAmount(String(booking.totalAmount - booking.paidAmount));
+                  setShowModal(true);
+                }}
+              >
+                Bayar
+              </Button>
             </div>
-          ) : (
-            filtered.map(booking => {
-              const remaining = booking.totalAmount - booking.paidAmount;
-              return (
-                <div key={booking.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-400 to-sky-600 flex items-center justify-center flex-shrink-0">
-                        <span className="text-white font-bold">{booking.guest?.name.charAt(0)}</span>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-slate-800">{booking.guest?.name}</p>
-                        <p className="text-xs text-slate-400">{booking.bookingCode} · Kamar {booking.room?.number}</p>
-                      </div>
-                    </div>
-                    <Badge variant={booking.paymentStatus === 'unpaid' ? 'danger' : 'warning'}>
-                      {booking.paymentStatus === 'unpaid' ? 'Belum Bayar' : 'Sebagian'}
-                    </Badge>
-                  </div>
-
-                  <div className="bg-slate-50 rounded-xl p-3 mb-3">
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-slate-500">Total Tagihan</span>
-                      <span className="font-semibold text-slate-700">{formatCurrency(booking.totalAmount)}</span>
-                    </div>
-                    {booking.paidAmount > 0 && (
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-slate-500">Sudah Dibayar</span>
-                        <span className="text-emerald-600">{formatCurrency(booking.paidAmount)}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between text-sm font-bold border-t border-slate-200 pt-1.5 mt-1.5">
-                      <span className="text-red-600">Sisa Tagihan</span>
-                      <span className="text-red-600">{formatCurrency(remaining)}</span>
-                    </div>
-                  </div>
-
-                  {/* Progress bar */}
-                  <div className="mb-3">
-                    <div className="w-full bg-slate-100 rounded-full h-2">
-                      <div
-                        className="bg-emerald-400 h-2 rounded-full transition-all"
-                        style={{ width: `${(booking.paidAmount / booking.totalAmount) * 100}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-slate-400 mt-1">{Math.round((booking.paidAmount / booking.totalAmount) * 100)}% terbayar</p>
-                  </div>
-
-                  <Button
-                    className="w-full"
-                    icon={<CreditCard className="h-4 w-4" />}
-                    onClick={() => {
-                      setSelectedBooking(booking);
-                      setPayAmount(remaining.toString());
-                      setShowModal(true);
-                    }}
-                  >
-                    Catat Pembayaran
-                  </Button>
-                </div>
-              );
-            })
-          )}
-        </div>
+          ))
+        )}
       </div>
 
-      {/* Recent payments */}
       <div>
-        <h3 className="text-sm font-semibold text-slate-600 mb-3">Pembayaran Terbaru</h3>
+        <h2 className="text-sm font-bold text-slate-700 mb-3">Riwayat Pembayaran Terbaru</h2>
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          {mockPayments.slice(0, 6).map((payment, idx) => {
+          {payments.slice(0, 6).map((payment, idx) => {
             const booking = bookings.find(b => b.id === payment.bookingId);
             return (
-              <div key={payment.id} className={cn('flex items-center gap-3 p-4', idx < mockPayments.length - 1 && 'border-b border-slate-50')}>
-                <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
-                  <CheckCircle className="h-5 w-5 text-emerald-500" />
+              <div key={payment.id} className={cn('flex items-center gap-3 p-4', idx < payments.length - 1 && 'border-b border-slate-50')}>
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                  <CheckCircle className="h-5 w-5 text-emerald-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-700">{booking?.guest?.name || '—'}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', methodColors[payment.method])}>
-                      {methodLabel[payment.method]}
-                    </span>
-                    {payment.referenceNumber && (
-                      <span className="text-xs text-slate-400">{payment.referenceNumber}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-sm font-bold text-emerald-600">{formatCurrency(payment.amount)}</p>
+                  <p className="font-medium text-slate-800 truncate">{booking?.guest?.name || 'Tamu'}</p>
                   <p className="text-xs text-slate-400">{formatDateTime(payment.createdAt)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-slate-800">{formatCurrency(payment.amount)}</p>
+                  <span className={cn('text-xs px-2 py-0.5 rounded-full', methodColors[payment.method])}>
+                    {methodLabel[payment.method]}
+                  </span>
                 </div>
               </div>
             );
@@ -214,80 +159,45 @@ export default function PaymentsPage() {
         </div>
       </div>
 
-      {/* Payment Modal */}
-      <Modal
-        isOpen={showModal}
-        onClose={() => { setShowModal(false); setSuccessMsg(''); }}
-        title="Catat Pembayaran"
-        size="md"
-        footer={
-          !successMsg ? (
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setShowModal(false)} className="flex-1">Batal</Button>
-              <Button
-                onClick={handlePayment}
-                loading={loading}
-                disabled={!payAmount}
-                className="flex-1"
-                icon={<Receipt className="h-4 w-4" />}
-              >
-                Konfirmasi
-              </Button>
-            </div>
-          ) : undefined
-        }
-      >
-        {successMsg ? (
-          <div className="text-center py-6">
-            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="h-8 w-8 text-emerald-500" />
-            </div>
-            <p className="font-bold text-slate-800 text-lg">Berhasil!</p>
-            <p className="text-slate-500 mt-1">{successMsg}</p>
-          </div>
-        ) : selectedBooking && (
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Catat Pembayaran" size="sm">
+        {selectedBooking && (
           <div className="space-y-4">
-            <div className="bg-slate-50 rounded-2xl p-4">
-              <p className="text-sm font-semibold text-slate-700">{selectedBooking.guest?.name}</p>
-              <p className="text-xs text-slate-400 mt-0.5">{selectedBooking.bookingCode} · Kamar {selectedBooking.room?.number}</p>
-              <div className="mt-3 flex justify-between">
-                <span className="text-sm text-slate-500">Sisa Tagihan</span>
-                <span className="text-lg font-bold text-red-500">
-                  {formatCurrency(selectedBooking.totalAmount - selectedBooking.paidAmount)}
-                </span>
+            {successMsg ? (
+              <div className="text-center py-6">
+                <CheckCircle className="h-12 w-12 text-emerald-500 mx-auto mb-2" />
+                <p className="font-semibold text-emerald-700">{successMsg}</p>
               </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-700">Jumlah Pembayaran</label>
-              <input
-                type="number"
-                value={payAmount}
-                onChange={e => setPayAmount(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"
-                placeholder="0"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-700">Metode Pembayaran</label>
-              <div className="grid grid-cols-2 gap-2">
-                {(Object.entries(methodLabel) as [PaymentMethod, string][]).map(([m, label]) => (
-                  <button
-                    key={m}
-                    onClick={() => setPaymentMethod(m)}
-                    className={cn(
-                      'px-3 py-2.5 rounded-xl border text-sm font-medium transition-all text-left',
-                      paymentMethod === m
-                        ? 'bg-sky-500 text-white border-sky-500'
-                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                    )}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            ) : (
+              <>
+                <p className="text-sm text-slate-600">
+                  {selectedBooking.guest?.name} · Sisa {formatCurrency(selectedBooking.totalAmount - selectedBooking.paidAmount)}
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {(Object.keys(methodLabel) as PaymentMethod[]).slice(0, 4).map(m => (
+                    <button
+                      key={m}
+                      onClick={() => setPaymentMethod(m)}
+                      className={cn(
+                        'p-2 rounded-xl text-xs font-medium border transition-all',
+                        paymentMethod === m ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200'
+                      )}
+                    >
+                      {methodLabel[m]}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  placeholder="0"
+                  value={payAmount}
+                  onChange={e => setPayAmount(e.target.value.replace(/\D/g, ''))}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-lg font-bold"
+                />
+                <Button loading={loading} className="w-full" onClick={handlePayment}>
+                  Konfirmasi Pembayaran
+                </Button>
+              </>
+            )}
           </div>
         )}
       </Modal>

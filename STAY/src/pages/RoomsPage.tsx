@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useAppStore } from '../store/appStore';
-import { mockRoomTypes } from '../data/mockData';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
+import Input from '../components/ui/Input';
 import { BedDouble, Plus, Filter, Wrench, Brush, Check, Ban, Eye } from 'lucide-react';
 import { formatCurrency } from '../utils/format';
 import type { RoomStatus } from '../types';
 import { cn } from '../utils/cn';
+import { useAuthStore } from '../store/authStore';
 
 const statusConfig: Record<RoomStatus, { label: string; badge: 'success' | 'info' | 'warning' | 'purple' | 'danger' | 'gray'; icon: React.ReactNode; color: string }> = {
   available: { label: 'Tersedia', badge: 'success', icon: <Check className="h-3.5 w-3.5" />, color: 'border-l-emerald-400' },
@@ -27,10 +28,13 @@ const filterOptions: { value: RoomStatus | 'all'; label: string }[] = [
 ];
 
 export default function RoomsPage() {
-  const { rooms, updateRoomStatus } = useAppStore();
+  const { rooms, roomTypes, updateRoomStatus, addRoom } = useAppStore();
+  const { tenant } = useAuthStore();
   const [filter, setFilter] = useState<RoomStatus | 'all'>('all');
   const [selected, setSelected] = useState<typeof rooms[0] | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newRoom, setNewRoom] = useState({ number: '', floor: '1', roomTypeId: roomTypes[0]?.id || '' });
 
   const filtered = filter === 'all' ? rooms : rooms.filter(r => r.status === filter);
 
@@ -44,6 +48,20 @@ export default function RoomsPage() {
     if (!selected) return;
     updateRoomStatus(selected.id, status);
     setSelected({ ...selected, status });
+  };
+
+  const handleAddRoom = () => {
+    if (!newRoom.number || !newRoom.roomTypeId || !tenant) return;
+    addRoom({
+      tenantId: tenant.id,
+      roomTypeId: newRoom.roomTypeId,
+      number: newRoom.number,
+      floor: parseInt(newRoom.floor, 10) || 1,
+      status: 'available',
+      isActive: true,
+    });
+    setShowAddModal(false);
+    setNewRoom({ number: '', floor: '1', roomTypeId: roomTypes[0]?.id || '' });
   };
 
   const stats = [
@@ -60,7 +78,7 @@ export default function RoomsPage() {
           <h1 className="text-xl font-bold text-slate-800">Manajemen Kamar</h1>
           <p className="text-sm text-slate-500 mt-0.5">{rooms.length} kamar terdaftar</p>
         </div>
-        <Button icon={<Plus className="h-4 w-4" />} size="md">
+        <Button icon={<Plus className="h-4 w-4" />} size="md" onClick={() => setShowAddModal(true)}>
           Tambah Kamar
         </Button>
       </div>
@@ -106,7 +124,7 @@ export default function RoomsPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {floorRooms.map(room => {
               const cfg = statusConfig[room.status];
-              const rt = mockRoomTypes.find(t => t.id === room.roomTypeId);
+              const rt = roomTypes.find(t => t.id === room.roomTypeId);
               return (
                 <button
                   key={room.id}
@@ -142,7 +160,7 @@ export default function RoomsPage() {
         size="md"
       >
         {selected && (() => {
-          const rt = mockRoomTypes.find(t => t.id === selected.roomTypeId);
+          const rt = roomTypes.find(t => t.id === selected.roomTypeId);
           const cfg = statusConfig[selected.status];
           return (
             <div className="space-y-5">
@@ -225,6 +243,36 @@ export default function RoomsPage() {
             </div>
           );
         })()}
+      </Modal>
+
+      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Tambah Kamar Baru" size="sm">
+        <div className="space-y-4">
+          <Input
+            label="Nomor Kamar"
+            value={newRoom.number}
+            onChange={(e) => setNewRoom({ ...newRoom, number: e.target.value })}
+            placeholder="misal: 106"
+          />
+          <Input
+            label="Lantai"
+            value={newRoom.floor}
+            onChange={(e) => setNewRoom({ ...newRoom, floor: e.target.value })}
+            placeholder="1"
+          />
+          <div>
+            <label className="text-sm font-medium text-slate-700 mb-1 block">Tipe Kamar</label>
+            <select
+              value={newRoom.roomTypeId}
+              onChange={(e) => setNewRoom({ ...newRoom, roomTypeId: e.target.value })}
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
+            >
+              {roomTypes.map((rt) => (
+                <option key={rt.id} value={rt.id}>{rt.name} — {formatCurrency(rt.basePrice)}</option>
+              ))}
+            </select>
+          </div>
+          <Button className="w-full" onClick={handleAddRoom}>Simpan Kamar</Button>
+        </div>
       </Modal>
     </div>
   );

@@ -21,4 +21,8 @@ export default defineConfig({
     outDir: path.resolve(__dirname, "../dist/stay"),
     emptyOutDir: true,
   },
+  test: {
+    environment: 'node',
+    include: ['src/**/*.test.ts'],
+  },
 });

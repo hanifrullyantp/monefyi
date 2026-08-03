@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppStore } from '../store/appStore';
-import { mockRoomTypes, mockDashboardStats } from '../data/mockData';
+import { useAppStore, getRoomTypeById } from '../store/appStore';
+import { computeDashboardStats } from '../utils/analytics';
 import { formatCurrency, formatShortDate } from '../utils/format';
 import { 
   Plus, ZoomIn, ZoomOut, ChevronDown, ChevronUp, 
@@ -17,7 +17,7 @@ import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
 
 export default function FrontDeskPage() {
-  const { rooms, bookings, updateRoomPosition, updateBooking, updateRoomStatus } = useAppStore();
+  const { rooms, bookings, roomTypes, payments, updateRoomPosition, checkoutBooking } = useAppStore();
   const navigate = useNavigate();
   const [showDashboard, setShowDashboard] = useState(false);
   const [zoom, setZoom] = useState(1);
@@ -30,7 +30,7 @@ export default function FrontDeskPage() {
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const stats = mockDashboardStats;
+  const stats = computeDashboardStats(bookings, rooms, payments);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const getActiveBooking = (roomId: string): Booking | undefined => {
@@ -57,16 +57,17 @@ export default function FrontDeskPage() {
 
   const handleFinalCheckout = async () => {
     if (!selectedRoom || !activeBooking) return;
-    
+
     setIsProcessing(true);
-    await new Promise(r => setTimeout(r, 1000));
-    
-    // 1. Update Booking Status
-    updateBooking(activeBooking.id, { status: 'checked_out' });
-    
-    // 2. Set Room to Cleaning
-    updateRoomStatus(selectedRoom.id, 'cleaning');
-    
+    await new Promise(r => setTimeout(r, 600));
+
+    checkoutBooking(activeBooking.id, selectedRoom.id, {
+      sendSurvey: true,
+      guestPhone: activeBooking.guest?.phone,
+      guestName: activeBooking.guest?.name,
+      bookingCode: activeBooking.bookingCode,
+    });
+
     setIsProcessing(false);
     setShowCheckoutModal(false);
     setShowDetail(false);
@@ -293,7 +294,7 @@ export default function FrontDeskPage() {
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Nomor Kamar</p>
                 <h3 className="text-4xl font-black">{selectedRoom.number}</h3>
-                <Badge className="mt-2 bg-white/20 text-white border-none">{mockRoomTypes.find(t => t.id === selectedRoom.roomTypeId)?.name}</Badge>
+                <Badge className="mt-2 bg-white/20 text-white border-none">{roomTypes.find(t => t.id === selectedRoom.roomTypeId)?.name}</Badge>
               </div>
               <div className="p-4 bg-white/20 rounded-2xl">
                 {getStatusConfig(selectedRoom.status, activeBooking).icon}
@@ -351,7 +352,7 @@ export default function FrontDeskPage() {
                   <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Kamar Tersedia</p>
                   <p className="text-xs text-slate-400 px-10">Kamar ini siap untuk dipesan atau digunakan untuk tamu walk-in.</p>
                 </div>
-                <Button variant="primary" icon={<Plus className="h-4 w-4" />} className="rounded-2xl">Buat Reservasi</Button>
+                <Button variant="primary" icon={<Plus className="h-4 w-4" />} className="rounded-2xl" onClick={() => navigate('/bookings', { state: { openNew: true, roomId: selectedRoom?.id } })}>Buat Reservasi</Button>
               </div>
             )}
           </div>
@@ -472,7 +473,7 @@ function StatItem({ label, value, color }: { label: string; value: any; color: s
 }
 
 function RoomCard({ room, booking, config, onClick, zoom = 1, className, isDenah = false }: any) {
-  const roomType = mockRoomTypes.find(t => t.id === room.roomTypeId);
+  const roomType = getRoomTypeById(room.roomTypeId);
 
   const facilityIcons: Record<string, any> = {
     'AC': <Wind className="h-2.5 w-2.5" />,

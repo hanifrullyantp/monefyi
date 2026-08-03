@@ -4,7 +4,7 @@ import StatCard from '../components/ui/StatCard';
 import Card, { CardHeader } from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import { formatCurrency, formatShortDate } from '../utils/format';
-import { mockDashboardStats, mockRevenueData, mockOccupancyData } from '../data/mockData';
+import { computeDashboardStats, computeRevenueData, computeOccupancyData } from '../utils/analytics';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell
@@ -34,18 +34,40 @@ const statusBadge: Record<BookingStatus, 'warning' | 'info' | 'success' | 'gray'
   no_show: 'purple',
 };
 
-const roomStatusColors = [
-  { name: 'Tersedia', value: 5, color: '#10b981' },
-  { name: 'Terisi', value: 5, color: '#0ea5e9' },
-  { name: 'Perawatan', value: 1, color: '#f59e0b' },
-  { name: 'Kebersihan', value: 1, color: '#8b5cf6' },
-];
+const roomStatusLabels: Record<string, string> = {
+  available: 'Tersedia',
+  occupied: 'Terisi',
+  maintenance: 'Perawatan',
+  cleaning: 'Kebersihan',
+  blocked: 'Diblokir',
+};
+
+const roomStatusColorsMap: Record<string, string> = {
+  available: '#10b981',
+  occupied: '#0ea5e9',
+  maintenance: '#f59e0b',
+  cleaning: '#8b5cf6',
+  blocked: '#ef4444',
+};
 
 export default function DashboardPage() {
   const { user, tenant } = useAuthStore();
-  const { bookings } = useAppStore();
+  const { bookings, rooms, payments } = useAppStore();
   const navigate = useNavigate();
-  const stats = mockDashboardStats;
+  const stats = computeDashboardStats(bookings, rooms, payments);
+  const revenueData = computeRevenueData(payments, 7);
+  const occupancyData = computeOccupancyData(bookings, 6);
+
+  const roomStatusColors = Object.entries(
+    rooms.reduce<Record<string, number>>((acc, r) => {
+      acc[r.status] = (acc[r.status] || 0) + 1;
+      return acc;
+    }, {})
+  ).map(([status, value]) => ({
+    name: roomStatusLabels[status] || status,
+    value,
+    color: roomStatusColorsMap[status] || '#94a3b8',
+  }));
 
   const todayBookings = bookings.filter(b =>
     b.status === 'checked_in' || b.status === 'confirmed'
@@ -140,7 +162,7 @@ export default function DashboardPage() {
           />
           <div className="px-5 pb-5">
             <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={mockRevenueData}>
+              <AreaChart data={revenueData}>
                 <defs>
                   <linearGradient id="rev" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.2} />
@@ -202,7 +224,7 @@ export default function DashboardPage() {
             />
             <div className="px-5 pb-5">
               <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={mockOccupancyData}>
+                <BarChart data={occupancyData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                   <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false}
