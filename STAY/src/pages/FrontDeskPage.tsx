@@ -18,15 +18,24 @@ import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
 import TimelineView from '../components/front-office/TimelineView';
 import ReceptionistDashboard from './dashboard/ReceptionistDashboard';
+import { readViewModePreference } from '../components/frontdesk/ViewModeToggle';
 import type { ViewMode } from '../types/frontdesk.types';
 import { startOfDay } from 'date-fns';
+
+function mapStoredViewMode(stored: ViewMode): 'grid' | 'denah' | 'timeline' {
+  if (stored === 'floorplan') return 'denah';
+  if (stored === 'timeline') return 'timeline';
+  return 'grid';
+}
 
 export default function FrontDeskPage() {
   const { rooms, bookings, roomTypes, payments, updateRoomPosition, checkoutBooking } = useAppStore();
   const navigate = useNavigate();
   const [showDashboard, setShowDashboard] = useState(false);
   const [zoom, setZoom] = useState(1);
-  const [viewMode, setViewMode] = useState<'grid' | 'denah' | 'timeline'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'denah' | 'timeline'>(() =>
+    mapStoredViewMode(readViewModePreference())
+  );
   const [isBuilderMode, setIsBuilderMode] = useState(false);
   
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
