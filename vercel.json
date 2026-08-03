@@ -9,6 +9,11 @@
       "permanent": true
     },
     {
+      "source": "/stay",
+      "destination": "/stay/",
+      "permanent": true
+    },
+    {
       "source": "/admin",
       "destination": "/admin/",
       "permanent": true
@@ -22,6 +27,10 @@
     {
       "source": "/app/((?!.*\\.(?:js|css|svg|png|jpg|jpeg|webp|gif|ico|json|webmanifest|txt|map|xml)$).*)",
       "destination": "/app/index.html"
+    },
+    {
+      "source": "/stay/((?!.*\\.(?:js|css|svg|png|jpg|jpeg|webp|gif|ico|json|webmanifest|txt|map|xml)$).*)",
+      "destination": "/stay/index.html"
     }
   ],
   "headers": [
@@ -54,6 +63,24 @@
     },
     {
       "source": "/app/index.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/stay/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/stay/index.html",
       "headers": [
         {
           "key": "Cache-Control",

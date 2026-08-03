@@ -29,6 +29,7 @@ Aplikasi keuangan pribadi (PWA) — HTML + CSS + JavaScript, backend Supabase.
 |-----|--------|-----|
 | `monefyi.com/` | [`landing/`](landing/) | Landing page marketing |
 | `monefyi.com/app/` | [`app/`](app/) | Aplikasi PWA utama |
+| `monefyi.com/stay/` | [`STAY/`](STAY/) | STAY — manajemen penginapan |
 
 Detail build & Vercel: [`docs/DEPLOY_STRUCTURE.md`](docs/DEPLOY_STRUCTURE.md).
 
@@ -50,10 +51,11 @@ Buka lewat **HTTP** (bukan `file://`), agar service worker / fetch normal:
 npm install
 npm run dev          # aplikasi → http://localhost:5173/app/
 npm run dev:landing  # landing → http://localhost:5174/
-npm run build        # dist/ (landing + app)
+npm run dev:stay     # STAY → http://localhost:5173/stay/
+npm run build        # dist/ (landing + app + stay)
 ```
 
-Lalu buka `http://localhost:5173/app/` untuk aplikasi, atau `http://localhost:5174/` untuk landing.
+Lalu buka `http://localhost:5173/app/` untuk aplikasi, `http://localhost:5174/` untuk landing, atau `http://localhost:5173/stay/` untuk STAY.
 
 Alternatif tanpa Vite:
 

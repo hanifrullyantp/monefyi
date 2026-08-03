@@ -6,13 +6,15 @@
 |-----|-----------|------------|
 | `monefyi.com/` | [`landing/`](../landing/) | Landing page marketing |
 | `monefyi.com/app/` | [`app/`](../app/) | Aplikasi PWA Monefyi |
+| `monefyi.com/stay/` | [`STAY/`](../STAY/) | STAY — manajemen penginapan |
 
 ## Build
 
 ```bash
-npm run build          # landing + app → dist/
+npm run build          # landing + app + stay → dist/
 npm run dev            # dev server app di http://localhost:5173/app/
 npm run dev:landing    # dev server landing di http://localhost:5174/
+npm run dev:stay       # dev server STAY di http://localhost:5173/stay/
 npm run preview        # preview dist/ setelah build
 ```
 
@@ -30,13 +32,15 @@ dist/
     sw.js
     manifest.webmanifest
     icons/
+  stay/
+    index.html        ← STAY (monefyi.com/stay)
 ```
 
 ## Vercel
 
 - Root project: repo ini
 - `outputDirectory`: `dist`
-- Rewrite SPA: `/app/*` → `/app/index.html` (lihat [`vercel.json`](../vercel.json))
+- Rewrite SPA: `/app/*` → `/app/index.html`, `/stay/*` → `/stay/index.html` (lihat [`vercel.json`](../vercel.json))
 
 ## Supabase Auth
 
