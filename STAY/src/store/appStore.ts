@@ -71,7 +71,7 @@ interface AppState {
   addBooking: (booking: Booking) => void;
   updateBooking: (id: string, updates: Partial<Booking>) => void;
   updateRoomStatus: (id: string, status: Room['status']) => void;
-  updateRoomPosition: (id: string, x: number, y: number) => void;
+  updateRoomPosition: (id: string, x: number | null, y: number | null) => void;
   addRoom: (room: Omit<Room, 'id'>) => void;
   addGuest: (guest: Guest) => void;
   updateGuest: (id: string, updates: Partial<Guest>) => void;
@@ -156,6 +156,9 @@ export const useAppStore = create<AppState>()(
       addBooking: (booking) => {
         set((state) => ({ bookings: [booking, ...state.bookings] }));
         void queueMutation('addBooking', booking);
+        import('../services/finance/financeIntegration').then(({ postBookingJournal }) => {
+          postBookingJournal(booking.tenantId, booking);
+        });
       },
 
       updateBooking: (id, updates) => {
@@ -177,7 +180,13 @@ export const useAppStore = create<AppState>()(
       updateRoomPosition: (id, x, y) => {
         set((state) => ({
           rooms: state.rooms.map((r) =>
-            r.id === id ? { ...r, positionX: x, positionY: y } : r
+            r.id === id
+              ? {
+                  ...r,
+                  positionX: x ?? undefined,
+                  positionY: y ?? undefined,
+                }
+              : r
           ),
         }));
         void queueMutation('updateRoomPosition', { id, x, y });
@@ -272,6 +281,10 @@ export const useAppStore = create<AppState>()(
           reference: payment.id,
         });
 
+        import('../services/finance/financeIntegration').then(({ postXenditSettledJournal }) => {
+          postXenditSettledJournal(booking.tenantId, paymentId, booking.bookingCode, payment.amount);
+        });
+
         return payment;
       },
 
@@ -303,6 +316,10 @@ export const useAppStore = create<AppState>()(
           type: 'income',
           amount,
           reference: payment.id,
+        });
+
+        import('../services/finance/financeIntegration').then(({ postPaymentJournal }) => {
+          postPaymentJournal(booking.tenantId, payment, booking.bookingCode);
         });
 
         return payment;
@@ -363,6 +380,7 @@ export const useAppStore = create<AppState>()(
       },
 
       checkInBooking: (bookingId, roomId) => {
+        const booking = get().bookings.find((b) => b.id === bookingId);
         get().updateBooking(bookingId, { status: 'checked_in' });
         get().updateRoomStatus(roomId, 'occupied');
         get().addNotification({
@@ -370,6 +388,11 @@ export const useAppStore = create<AppState>()(
           title: 'Check-in berhasil',
           message: `Tamu check-in kamar ${get().rooms.find((r) => r.id === roomId)?.number}`,
         });
+        if (booking) {
+          import('../services/finance/financeIntegration').then(({ postCheckInJournal }) => {
+            postCheckInJournal(booking.tenantId, booking);
+          });
+        }
       },
 
       markNotificationRead: (id) =>
@@ -418,6 +441,11 @@ export const useAppStore = create<AppState>()(
         const newEntry = { ...entry, id: generateId('acc') };
         set((state) => ({ accountingEntries: [newEntry, ...state.accountingEntries] }));
         void queueMutation('addAccountingEntry', newEntry);
+        if (entry.type === 'expense') {
+          import('../services/finance/financeIntegration').then(({ postExpenseJournal }) => {
+            postExpenseJournal(entry.tenantId, newEntry);
+          });
+        }
       },
 
       hydrateFromRemote: (data) => {

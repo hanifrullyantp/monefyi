@@ -62,7 +62,7 @@ export async function syncActionToApi(action: OfflineAction): Promise<boolean> {
         break;
       }
       case 'updateRoomPosition': {
-        const { id, x, y } = payload as { id: string; x: number; y: number };
+        const { id, x, y } = payload as { id: string; x: number | null; y: number | null };
         const { error } = await supabase
           .from('stay_rooms')
           .update({ position_x: x, position_y: y })

@@ -13,11 +13,10 @@ import GuestsPage from './pages/GuestsPage';
 import PaymentsPage from './pages/PaymentsPage';
 import HousekeepingPage from './pages/HousekeepingPage';
 import POSPage from './pages/POSPage';
-import FinancePage from './pages/FinancePage';
+import KeuanganPage from './pages/KeuanganPage';
 import GuestSurveyPage from './pages/GuestSurveyPage';
 import EmployeeManagementPage from './pages/EmployeeManagementPage';
 import PricingPage from './pages/PricingPage';
-import AccountingPage from './pages/AccountingPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import { useStayBootstrap } from './hooks/useStayBootstrap';
@@ -62,10 +61,11 @@ function AppRoutes() {
           path="finance"
           element={
             <ProtectedRoute requiredRoles={MANAGER_ROLES}>
-              <FinancePage />
+              <KeuanganPage />
             </ProtectedRoute>
           }
         />
+        <Route path="accounting" element={<Navigate to="/finance" replace />} />
         <Route
           path="staff"
           element={
@@ -79,14 +79,6 @@ function AppRoutes() {
           element={
             <ProtectedRoute requiredRoles={MANAGER_ROLES}>
               <PricingPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="accounting"
-          element={
-            <ProtectedRoute requiredRoles={MANAGER_ROLES}>
-              <AccountingPage />
             </ProtectedRoute>
           }
         />

@@ -1,18 +1,19 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore, getRoomTypeById } from '../store/appStore';
 import { computeDashboardStats } from '../utils/analytics';
 import { formatCurrency, formatShortDate } from '../utils/format';
+import { generateDefaultLayout, getStaggeredPlacement } from '../utils/roomLayout';
 import { 
   Plus, ZoomIn, ZoomOut, ChevronDown, ChevronUp, 
   Wallet, CreditCard, User, AlertCircle, 
   CheckCircle, Brush, Wrench, Settings, Move, Map, BedDouble, Search, X,
-  LogOut, ShieldAlert, Receipt, Wind, Droplets, Tv, Wifi, Thermometer
+  LogOut, ShieldAlert, Receipt, Wind, Droplets, Tv, Wifi, Thermometer, LayoutGrid
 } from 'lucide-react';
 import Badge from '../components/ui/Badge';
 import { cn } from '../utils/cn';
-import type { Booking, RoomStatus } from '../types';
-import { motion } from 'framer-motion';
+import type { Booking, Room, RoomStatus } from '../types';
+import { motion, useMotionValue } from 'framer-motion';
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
 import TimelineView from '../components/front-office/TimelineView';
@@ -56,6 +57,15 @@ export default function FrontDeskPage() {
   }, [rooms, selectedRoomId]);
 
   const activeBooking = selectedRoom ? getActiveBooking(selectedRoom.id) : undefined;
+
+  const showDenahEmpty = viewMode === 'denah' && placedRooms.length === 0 && rooms.length > 0;
+
+  const handleAutoLayout = () => {
+    const positions = generateDefaultLayout(rooms);
+    for (const pos of positions) {
+      updateRoomPosition(pos.id, pos.x, pos.y);
+    }
+  };
 
   const handleFinalCheckout = async () => {
     if (!selectedRoom || !activeBooking) return;
@@ -147,6 +157,7 @@ export default function FrontDeskPage() {
             </button>
             <button 
               onClick={() => setViewMode('denah')}
+              data-testid="denah-view-btn"
               className={cn("px-3 py-1 rounded-md text-[10px] font-black uppercase transition-all", viewMode === 'denah' ? "bg-white shadow-sm text-emerald-600" : "text-slate-400")}
             >
               Denah Kamar
@@ -192,12 +203,12 @@ export default function FrontDeskPage() {
               <p className="text-[10px] text-slate-400 mt-1">Klik untuk taruh di denah</p>
             </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
-              {unplacedRooms.map(room => (
+              {unplacedRooms.map((room, index) => (
                 <div 
                   key={room.id}
                   onClick={() => {
-                    // Place at center-ish of view or fixed point
-                    updateRoomPosition(room.id, 200, 200);
+                    const { x, y } = getStaggeredPlacement(room, index);
+                    updateRoomPosition(room.id, x, y);
                   }}
                   className="bg-slate-50 border border-slate-200 p-3 rounded-xl cursor-pointer hover:bg-emerald-50 hover:border-emerald-200 transition-all flex items-center justify-between group"
                 >
@@ -246,58 +257,64 @@ export default function FrontDeskPage() {
               ))}
             </div>
           ) : (
-            <div 
-              className="relative bg-white border border-slate-200 rounded-3xl shadow-inner min-w-[3000px] min-h-[3000px]"
-              style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}
-            >
-              {/* Floor Plan Background (Grid helper) */}
-              <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 0)', backgroundSize: '40px 40px' }} />
-              
-              {placedRooms.map(room => (
-                <motion.div
-                  key={room.id}
-                  drag={isBuilderMode}
-                  dragMomentum={false}
-                  dragElastic={0}
-                  initial={false}
-                  animate={{ x: room.positionX || 0, y: room.positionY || 0 }}
-                  onDragEnd={(_e, info) => {
-                    // We calculate new position relative to start
-                    const newX = (room.positionX || 0) + info.offset.x;
-                    const newY = (room.positionY || 0) + info.offset.y;
-                    updateRoomPosition(room.id, newX, newY);
-                  }}
-                  className="absolute left-0 top-0"
-                  style={{ zIndex: isBuilderMode ? 50 : 10 }}
+            <div className="relative">
+              {showDenahEmpty && (
+                <div
+                  data-testid="denah-empty-state"
+                  className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
                 >
-                  <div className="relative group">
-                    <RoomCard 
-                      room={room} 
-                      booking={getActiveBooking(room.id)}
-                      config={getStatusConfig(room.status, getActiveBooking(room.id))}
-                      onClick={() => { 
-                        if (!isBuilderMode) {
-                          setSelectedRoomId(room.id); 
-                          setShowDetail(true);
-                        }
-                      }}
-                      className={cn(isBuilderMode ? "cursor-move" : "cursor-pointer")}
-                      isDenah
-                    />
-                    {isBuilderMode && (
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          updateRoomPosition(room.id, undefined as any, undefined as any);
-                        }}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                  <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-3xl shadow-xl p-8 max-w-md text-center pointer-events-auto">
+                    <LayoutGrid className="h-12 w-12 mx-auto text-slate-300 mb-4" />
+                    <h3 className="text-lg font-black text-slate-800 mb-2">Belum Ada Kamar di Denah</h3>
+                    <p className="text-sm text-slate-500 mb-6">
+                      {rooms.length} kamar terdaftar belum ditempatkan. Atur tata letak otomatis atau manual.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                      <Button
+                        data-testid="denah-auto-layout-btn"
+                        variant="primary"
+                        icon={<LayoutGrid className="h-4 w-4" />}
+                        className="rounded-2xl"
+                        onClick={handleAutoLayout}
                       >
-                        <X className="h-2 w-2" />
-                      </button>
-                    )}
+                        Atur Denah Otomatis
+                      </Button>
+                      <Button
+                        data-testid="denah-manual-layout-btn"
+                        variant="secondary"
+                        icon={<Settings className="h-4 w-4" />}
+                        className="rounded-2xl"
+                        onClick={() => setIsBuilderMode(true)}
+                      >
+                        Edit Denah Manual
+                      </Button>
+                    </div>
                   </div>
-                </motion.div>
-              ))}
+                </div>
+              )}
+              <div 
+                className="relative bg-white border border-slate-200 rounded-3xl shadow-inner min-w-[3000px] min-h-[3000px]"
+                style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}
+                data-testid="denah-canvas"
+              >
+                <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 0)', backgroundSize: '40px 40px' }} />
+                
+                {placedRooms.map(room => (
+                  <DraggableRoomCard
+                    key={room.id}
+                    room={room}
+                    booking={getActiveBooking(room.id)}
+                    config={getStatusConfig(room.status, getActiveBooking(room.id))}
+                    isBuilderMode={isBuilderMode}
+                    onSelect={() => {
+                      setSelectedRoomId(room.id);
+                      setShowDetail(true);
+                    }}
+                    onPositionChange={updateRoomPosition}
+                    onRemove={() => updateRoomPosition(room.id, null, null)}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -494,6 +511,78 @@ function StatItem({ label, value, color }: { label: string; value: any; color: s
   );
 }
 
+interface StatusConfig {
+  bg: string;
+  text: string;
+  icon: ReactNode;
+  statusLabel: string;
+  dotColor: string;
+}
+
+function DraggableRoomCard({
+  room,
+  booking,
+  config,
+  isBuilderMode,
+  onSelect,
+  onPositionChange,
+  onRemove,
+}: {
+  room: Room;
+  booking?: Booking;
+  config: StatusConfig;
+  isBuilderMode: boolean;
+  onSelect: () => void;
+  onPositionChange: (id: string, x: number, y: number) => void;
+  onRemove: () => void;
+}) {
+  const x = useMotionValue(room.positionX ?? 0);
+  const y = useMotionValue(room.positionY ?? 0);
+
+  useEffect(() => {
+    x.set(room.positionX ?? 0);
+    y.set(room.positionY ?? 0);
+  }, [room.positionX, room.positionY, x, y]);
+
+  return (
+    <motion.div
+      drag={isBuilderMode}
+      dragMomentum={false}
+      dragElastic={0}
+      style={{ x, y, zIndex: isBuilderMode ? 50 : 10 }}
+      className="absolute left-0 top-0"
+      onDragEnd={() => {
+        onPositionChange(room.id, x.get(), y.get());
+      }}
+    >
+      <div className="relative group">
+        <RoomCard
+          room={room}
+          booking={booking}
+          config={config}
+          onClick={() => {
+            if (!isBuilderMode) onSelect();
+          }}
+          className={cn(isBuilderMode ? 'cursor-move' : 'cursor-pointer')}
+          isDenah
+        />
+        {isBuilderMode && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove();
+            }}
+            className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <X className="h-2 w-2" />
+          </button>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
 function RoomCard({ room, booking, config, onClick, zoom = 1, className, isDenah = false }: any) {
   const roomType = getRoomTypeById(room.roomTypeId);
 
@@ -508,6 +597,7 @@ function RoomCard({ room, booking, config, onClick, zoom = 1, className, isDenah
   return (
     <div 
       onClick={onClick}
+      data-testid={isDenah ? `denah-room-${room.number}` : undefined}
       style={{ transform: !isDenah ? `scale(${zoom})` : undefined }}
       className={cn(
         "rounded-3xl p-4 flex flex-col items-center justify-center transition-all shadow-md group relative overflow-hidden select-none",

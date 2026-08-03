@@ -56,12 +56,18 @@ export const useHrStore = create<HrState>((set, get) => ({
   },
 
   markPayrollPaid: async (id) => {
+    const entry = get().payroll.find((p) => p.id === id);
     set((s) => ({
       payroll: s.payroll.map((p) =>
         p.id === id ? { ...p, status: 'paid' as const, paidAt: new Date().toISOString() } : p
       ),
     }));
     await updatePayrollStatus(id, 'paid');
+    if (entry) {
+      import('../services/finance/financeIntegration').then(({ postPayrollJournal }) => {
+        postPayrollJournal(entry.tenantId, entry);
+      });
+    }
   },
 
   clockInStaff: async (tenantId, userId) => {

@@ -21,10 +21,9 @@ export const ROUTES: RouteConfig[] = [
   { path: '/housekeeping', label: 'Housekeeping', roles: ALL_STAFF_ROLES, showInSidebar: true },
   { path: '/dashboard', label: 'Analytics', roles: MANAGER_ROLES, showInSidebar: true },
   { path: '/reports', label: 'Laporan', roles: MANAGER_ROLES, showInSidebar: true },
-  { path: '/finance', label: 'Keuangan', roles: MANAGER_ROLES, showInSidebar: true },
+  { path: '/finance', label: 'Keuangan & Accounting', roles: MANAGER_ROLES, showInSidebar: true },
   { path: '/staff', label: 'Manajemen Staff', roles: MANAGER_ROLES, showInSidebar: true },
   { path: '/pricing', label: 'Dynamic Pricing', roles: MANAGER_ROLES, showInSidebar: true },
-  { path: '/accounting', label: 'Accounting', roles: MANAGER_ROLES, showInSidebar: true },
   { path: '/settings', label: 'Pengaturan', roles: MANAGER_ROLES, showInSidebar: true },
 ];
 

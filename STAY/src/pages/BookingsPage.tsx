@@ -5,7 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
-import Input, { Select } from '../components/ui/Input';
+import Input, { CustomSelect } from '../components/ui/Input';
 import { formatCurrency, formatShortDate, generateBookingCode, generateId, calculateNights } from '../utils/format';
 import { openWhatsAppMessage, buildBookingConfirmationMessage } from '../utils/whatsapp';
 import { calculateBookingTotal, getRoomTypeBasePrice } from '../utils/pricing';
@@ -400,19 +400,26 @@ export default function BookingsPage() {
         title="Reservasi Baru"
         size="lg"
         footer={
-          <div className="flex gap-3">
+          <div className="flex gap-3 w-full">
             {step > 1 && (
-              <Button variant="outline" onClick={() => setStep(step - 1)} className="flex-1 rounded-2xl h-12">
-                <ArrowLeft className="h-4 w-4 mr-2" /> Kembali
+              <Button
+                variant="outline"
+                icon={<ArrowLeft className="h-4 w-4" />}
+                onClick={() => setStep(step - 1)}
+                className="flex-1 rounded-2xl h-12"
+              >
+                Kembali
               </Button>
             )}
             {step < 3 ? (
-              <Button 
-                onClick={() => setStep(step + 1)} 
+              <Button
+                icon={<ArrowRight className="h-4 w-4" />}
+                iconPosition="right"
+                onClick={() => setStep(step + 1)}
                 disabled={step === 1 ? (!form.guestPhone || isBlacklisted) : !form.roomId}
                 className="flex-1 rounded-2xl h-12"
               >
-                Lanjut <ArrowRight className="h-4 w-4 ml-2" />
+                Lanjut
               </Button>
             ) : (
               <Button
@@ -536,7 +543,7 @@ export default function BookingsPage() {
           )}
 
           {step === 2 && (
-            <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+            <div className="space-y-6 animate-in slide-in-from-right-4 duration-300 pb-4">
               <div className="space-y-2">
                 <h4 className="text-lg font-black text-slate-800">Pilih Kamar & Durasi</h4>
                 <p className="text-xs text-slate-400 font-medium">Tentukan kamar dan tanggal menginap</p>
@@ -561,11 +568,29 @@ export default function BookingsPage() {
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Jumlah Dewasa"
+                  type="number"
+                  min="1"
+                  value={form.adults}
+                  onChange={e => setForm({ ...form, adults: e.target.value })}
+                />
+                <Input
+                  label="Jumlah Anak"
+                  type="number"
+                  min="0"
+                  value={form.children}
+                  onChange={e => setForm({ ...form, children: e.target.value })}
+                />
+              </div>
+
               <div className="space-y-4">
-                <Select
+                <CustomSelect
                   label="Pilih Kamar yang Tersedia"
                   value={form.roomId}
-                  onChange={e => setForm({ ...form, roomId: e.target.value })}
+                  onChange={(roomId) => setForm({ ...form, roomId })}
+                  placeholder="-- Pilih Kamar --"
                   options={[
                     { value: '', label: '-- Pilih Kamar --' },
                     ...availableRooms.map(r => ({
@@ -600,23 +625,6 @@ export default function BookingsPage() {
                     </div>
                   ) : null;
                 })()}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  label="Jumlah Dewasa"
-                  type="number"
-                  min="1"
-                  value={form.adults}
-                  onChange={e => setForm({ ...form, adults: e.target.value })}
-                />
-                <Input
-                  label="Jumlah Anak"
-                  type="number"
-                  min="0"
-                  value={form.children}
-                  onChange={e => setForm({ ...form, children: e.target.value })}
-                />
               </div>
 
               <div className="flex gap-2 items-end">

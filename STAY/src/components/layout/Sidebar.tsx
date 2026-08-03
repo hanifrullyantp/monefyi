@@ -22,7 +22,6 @@ const ICONS: Record<string, React.ReactNode> = {
   '/finance': <BarChart3 className="h-5 w-5" />,
   '/staff': <Users className="h-5 w-5" />,
   '/pricing': <TrendingUp className="h-5 w-5" />,
-  '/accounting': <BarChart3 className="h-5 w-5" />,
   '/settings': <Settings className="h-5 w-5" />,
 };
 

@@ -9,6 +9,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize;
   loading?: boolean;
   icon?: React.ReactNode;
+  iconPosition?: 'left' | 'right';
   children?: React.ReactNode;
 }
 
@@ -31,6 +32,7 @@ export default function Button({
   size = 'md',
   loading = false,
   icon,
+  iconPosition = 'left',
   children,
   className,
   disabled,
@@ -40,7 +42,7 @@ export default function Button({
     <button
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center rounded-xl font-medium transition-all duration-150 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed',
+        'inline-flex flex-row items-center justify-center rounded-xl font-medium transition-all duration-150 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed',
         variants[variant],
         sizes[size],
         className
@@ -49,10 +51,13 @@ export default function Button({
     >
       {loading ? (
         <Loader2 className="h-4 w-4 animate-spin" />
-      ) : icon ? (
-        <span className="flex-shrink-0">{icon}</span>
-      ) : null}
-      {children && <span>{children}</span>}
+      ) : (
+        <>
+          {icon && iconPosition === 'left' && <span className="flex-shrink-0">{icon}</span>}
+          {children && <span className="whitespace-nowrap">{children}</span>}
+          {icon && iconPosition === 'right' && <span className="flex-shrink-0">{icon}</span>}
+        </>
+      )}
     </button>
   );
 }

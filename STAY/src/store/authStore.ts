@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { UserProfile, Tenant } from '../types';
-import { mockUsers, mockTenant } from '../data/mockData';
+import { mockUsers, mockTenant, mockRooms } from '../data/mockData';
+import { backfillPositionsFromMock } from '../utils/roomLayout';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import {
   fetchStayUserProfile,
@@ -58,6 +59,18 @@ function mapDbTenant(row: Record<string, unknown>): Tenant {
   };
 }
 
+function backfillMockRoomPositions(): void {
+  const { rooms } = useAppStore.getState();
+  const updated = backfillPositionsFromMock(rooms, mockRooms);
+  const changed = updated.some(
+    (room, i) =>
+      room.positionX !== rooms[i]?.positionX || room.positionY !== rooms[i]?.positionY
+  );
+  if (changed) {
+    useAppStore.setState({ rooms: updated });
+  }
+}
+
 async function applyProfileFromAuth(authUserId: string): Promise<{ success: boolean; error?: string }> {
   const profile = await fetchStayUserProfile(authUserId);
   if (!profile) {
@@ -107,6 +120,7 @@ export const useAuthStore = create<AuthState>()(
           if (found && password.length >= 1) {
             set({ user: found, tenant: mockTenant, isAuthenticated: true, isLoading: false });
             useAppStore.setState({ tenant: mockTenant });
+            backfillMockRoomPositions();
             return { success: true };
           }
           set({ isLoading: false });
@@ -128,7 +142,12 @@ export const useAuthStore = create<AuthState>()(
         if (get().sessionInitialized) return;
         set({ sessionInitialized: true });
 
-        if (!isSupabaseConfigured || !supabase) return;
+        if (!isSupabaseConfigured || !supabase) {
+          if (get().isAuthenticated && get().tenant?.id === mockTenant.id) {
+            backfillMockRoomPositions();
+          }
+          return;
+        }
 
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
