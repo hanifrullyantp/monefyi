@@ -60,6 +60,53 @@ function computeFloorSummary(rooms: RoomCardData[]): FloorSummary {
   };
 }
 
+/** Deskripsi masalah lantai untuk badge / banner filter */
+export function formatFloorIssueDescription(summary: FloorSummary): string {
+  const parts: string[] = [];
+  if (summary.dirty > 0) {
+    parts.push(`${summary.dirty} perlu dibersihkan`);
+  }
+  if (summary.maintenance > 0) {
+    parts.push(`${summary.maintenance} maintenance`);
+  }
+  if (summary.unpaid > 0) {
+    parts.push(`${summary.unpaid} belum lunas`);
+  }
+  return parts.join(' · ');
+}
+
+/** Status kamar yang dianggap bermasalah pada lantai */
+export function getIssueStatusesFromSummary(summary: FloorSummary): RoomStatus[] {
+  const statuses: RoomStatus[] = [];
+  if (summary.dirty > 0) statuses.push(RoomStatus.DIRTY);
+  if (summary.maintenance > 0) statuses.push(RoomStatus.MAINTENANCE);
+  if (summary.unpaid > 0) statuses.push(RoomStatus.UNPAID);
+  return statuses;
+}
+
+export function isFloorIssueRoom(room: RoomCardData): boolean {
+  return (
+    room.status === RoomStatus.DIRTY ||
+    room.status === RoomStatus.MAINTENANCE ||
+    room.status === RoomStatus.UNPAID
+  );
+}
+
+export function getRoomIssueLabel(room: RoomCardData): string {
+  switch (room.status) {
+    case RoomStatus.DIRTY:
+      return 'Perlu dibersihkan';
+    case RoomStatus.MAINTENANCE:
+      return room.maintenanceNote?.trim() || 'Sedang maintenance';
+    case RoomStatus.UNPAID:
+      return room.activeBooking?.balanceDue
+        ? `Belum lunas · sisa Rp ${room.activeBooking.balanceDue.toLocaleString('id-ID')}`
+        : 'Belum lunas';
+    default:
+      return '';
+  }
+}
+
 /**
  * Group kamar per lantai dengan natural sort (Dasar, 1, 2, …, 10).
  */

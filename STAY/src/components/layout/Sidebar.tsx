@@ -29,13 +29,15 @@ const ICONS: Record<string, React.ReactNode> = {
 
 /** Urutan flat sidebar — tanpa grup Operasional/Manajemen */
 const TOUR_TARGETS: Record<string, string> = {
+  '/dashboard': 'nav-dashboard',
   '/front-desk': 'nav-front-desk',
   '/bookings': 'nav-bookings',
   '/reports': 'nav-reports',
   '/rooms': 'nav-rooms',
 };
 
-const SIDEBAR_ORDER = [
+const SIDEBAR_ORDER_MANAGER = [
+  '/dashboard',
   '/front-desk',
   '/pos',
   '/payments',
@@ -44,12 +46,21 @@ const SIDEBAR_ORDER = [
   '/bookings',
   '/guests',
   '/housekeeping',
-  '/dashboard',
   '/reports',
   '/finance',
   '/staff',
   '/pricing',
   '/settings',
+];
+
+const SIDEBAR_ORDER_STAFF = [
+  '/front-desk',
+  '/pos',
+  '/payments',
+  '/rooms',
+  '/bookings',
+  '/guests',
+  '/housekeeping',
 ];
 
 export default function Sidebar() {
@@ -60,7 +71,12 @@ export default function Sidebar() {
     (item) => item.showInSidebar && user && item.roles.includes(user.role)
   );
   const pathSet = new Set(filtered.map((r) => r.path));
-  const menuItems = SIDEBAR_ORDER.map((path) => filtered.find((r) => r.path === path))
+  const order =
+    user?.role === 'owner' || user?.role === 'manager'
+      ? SIDEBAR_ORDER_MANAGER
+      : SIDEBAR_ORDER_STAFF;
+  const menuItems = order
+    .map((path) => filtered.find((r) => r.path === path))
     .filter((r): r is (typeof filtered)[number] => !!r && pathSet.has(r.path));
 
   const closeMobile = () => setSidebarOpen(false);

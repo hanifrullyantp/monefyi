@@ -5,11 +5,12 @@ import { useAuthStore } from '../../store/authStore';
 import { ROUTES } from '../../config/routes';
 import { getBottomNavPrimary, getBottomNavOverflow } from '../../config/routeGroups';
 import {
-  LayoutDashboard, BedDouble, CalendarDays, CreditCard, Menu,
+  LayoutDashboard, BedDouble, CalendarDays, CreditCard, Menu, TrendingUp,
 } from 'lucide-react';
 import NavMenuSheet from './NavMenuSheet';
 
 const BOTTOM_ICONS: Record<string, typeof LayoutDashboard> = {
+  '/dashboard': TrendingUp,
   '/front-desk': LayoutDashboard,
   '/pos': CreditCard,
   '/rooms': BedDouble,
@@ -27,6 +28,7 @@ const BOTTOM_ICONS: Record<string, typeof LayoutDashboard> = {
 };
 
 const BOTTOM_TOUR_TARGETS: Record<string, string> = {
+  '/dashboard': 'nav-dashboard',
   '/front-desk': 'nav-front-desk',
   '/bookings': 'nav-bookings',
   '/rooms': 'nav-rooms',
@@ -44,8 +46,8 @@ export default function BottomNav() {
   const allItems = ROUTES.filter(
     (r) => (r.showInBottomNav || r.showInSidebar) && user && r.roles.includes(user.role)
   );
-  const primaryItems = getBottomNavPrimary(allItems);
-  const overflowItems = getBottomNavOverflow(allItems);
+  const primaryItems = getBottomNavPrimary(allItems, user?.role);
+  const overflowItems = getBottomNavOverflow(allItems, user?.role);
   const overflowActive = overflowItems.some((r) => location.pathname.startsWith(r.path));
 
   return (
@@ -55,7 +57,11 @@ export default function BottomNav() {
           {primaryItems.map((item) => {
             const Icon = BOTTOM_ICONS[item.path] || LayoutDashboard;
             const shortLabel =
-              item.path === '/front-desk' ? 'Front' : item.label.split(/[\s/]/)[0];
+              item.path === '/front-desk'
+                ? 'Front'
+                : item.path === '/dashboard'
+                  ? 'Home'
+                  : item.label.split(/[\s/]/)[0];
 
             return (
               <NavLink

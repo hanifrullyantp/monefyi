@@ -49,14 +49,22 @@ export function groupSidebarRoutes(routes: RouteConfig[]): {
 /** Ikon untuk item menu overflow mobile */
 export const MOBILE_MORE_GROUP_LABEL = 'Menu';
 
-export function getBottomNavPrimary(routes: RouteConfig[]): RouteConfig[] {
-  const primaryPaths = ['/front-desk', '/pos', '/rooms', '/bookings'];
+export function getBottomNavPrimary(routes: RouteConfig[], role?: string): RouteConfig[] {
+  const isManager = role === 'owner' || role === 'manager';
+  const primaryPaths = isManager
+    ? ['/dashboard', '/front-desk', '/bookings', '/rooms']
+    : ['/front-desk', '/pos', '/rooms', '/bookings'];
   return primaryPaths
     .map((path) => routes.find((r) => r.path === path))
     .filter((r): r is RouteConfig => !!r);
 }
 
-export function getBottomNavOverflow(routes: RouteConfig[]): RouteConfig[] {
-  const shown = new Set(['/front-desk', '/pos', '/rooms', '/bookings']);
+export function getBottomNavOverflow(routes: RouteConfig[], role?: string): RouteConfig[] {
+  const isManager = role === 'owner' || role === 'manager';
+  const shown = new Set(
+    isManager
+      ? ['/dashboard', '/front-desk', '/bookings', '/rooms']
+      : ['/front-desk', '/pos', '/rooms', '/bookings']
+  );
   return routes.filter((r) => !shown.has(r.path));
 }

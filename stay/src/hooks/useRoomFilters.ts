@@ -7,12 +7,25 @@ import {
   type RoomCardData,
   type RoomFilter,
 } from '../types/frontdesk.types';
+import type { FloorSummary } from './useRoomsGrouped';
+import {
+  formatFloorIssueDescription,
+  getIssueStatusesFromSummary,
+} from './useRoomsGrouped';
 
 export type RoomFilterState = RoomFilter & {
   roomTypeNames: string[];
   checkInToday?: boolean;
   checkOutToday?: boolean;
 };
+
+/** Konteks filter klik badge "Ada Masalah" di kartu lantai */
+export interface FloorIssueFilterContext {
+  floor: number;
+  floorName: string;
+  summary: FloorSummary;
+  description: string;
+}
 
 export const DEFAULT_FILTER_STATE: RoomFilterState = {
   ...DEFAULT_ROOM_FILTER,
@@ -97,6 +110,12 @@ export interface UseRoomFiltersResult {
   toggleUrgentOnly: () => void;
   resetFilters: () => void;
   applyStatFilter: (key: FrontDeskStatKey) => void;
+  applyFloorIssueFilter: (
+    floor: number,
+    floorName: string,
+    summary: FloorSummary
+  ) => void;
+  activeFloorIssue: FloorIssueFilterContext | null;
   filteredRooms: RoomCardData[];
   activeFilterCount: number;
   activeStatKey: FrontDeskStatKey | null;
@@ -105,6 +124,9 @@ export interface UseRoomFiltersResult {
 export function useRoomFilters(rooms: RoomCardData[]): UseRoomFiltersResult {
   const [filters, setFilters] = useState<RoomFilterState>(DEFAULT_FILTER_STATE);
   const [activeStatKey, setActiveStatKey] = useState<FrontDeskStatKey | null>(null);
+  const [activeFloorIssue, setActiveFloorIssue] = useState<FloorIssueFilterContext | null>(
+    null
+  );
 
   const filteredRooms = useMemo(
     () => applyRoomFilters(rooms, filters),
@@ -113,6 +135,7 @@ export function useRoomFilters(rooms: RoomCardData[]): UseRoomFiltersResult {
 
   const setSearch = useCallback((search: string) => {
     setActiveStatKey(null);
+    setActiveFloorIssue(null);
     setFilters((prev) => ({ ...prev, search }));
   }, []);
 
@@ -149,10 +172,12 @@ export function useRoomFilters(rooms: RoomCardData[]): UseRoomFiltersResult {
 
   const resetFilters = useCallback(() => {
     setActiveStatKey(null);
+    setActiveFloorIssue(null);
     setFilters(DEFAULT_FILTER_STATE);
   }, []);
 
   const applyStatFilter = useCallback((key: FrontDeskStatKey) => {
+    setActiveFloorIssue(null);
     setActiveStatKey(key);
     const base = { ...DEFAULT_FILTER_STATE };
     switch (key) {

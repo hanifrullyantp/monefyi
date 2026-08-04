@@ -40,11 +40,16 @@ function resolveStayAiFnUrl(env: Record<string, string>, supabaseUrl: string) {
   return "";
 }
 
+function resolveVapidPublicKey(env: Record<string, string>) {
+  return env.VITE_STAY_VAPID_PUBLIC_KEY || env.STAY_VAPID_PUBLIC_KEY || "";
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const { url, anonKey } = resolveSupabaseFromProcess(env);
   const xenditFnUrl = resolveXenditFnUrl(env, url);
   const stayAiFnUrl = resolveStayAiFnUrl(env, url);
+  const vapidPublicKey = resolveVapidPublicKey(env);
 
   return {
     base: "/stay/",
@@ -60,6 +65,9 @@ export default defineConfig(({ mode }) => {
         : {}),
       ...(stayAiFnUrl
         ? { "import.meta.env.VITE_STAY_AI_FN_URL": JSON.stringify(stayAiFnUrl) }
+        : {}),
+      ...(vapidPublicKey
+        ? { "import.meta.env.VITE_STAY_VAPID_PUBLIC_KEY": JSON.stringify(vapidPublicKey) }
         : {}),
     },
     resolve: {

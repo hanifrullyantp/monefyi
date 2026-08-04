@@ -20,7 +20,7 @@ export const ROUTES: RouteConfig[] = [
   { path: '/bookings', label: 'Booking', roles: ALL_STAFF_ROLES, showInSidebar: true, showInBottomNav: true },
   { path: '/guests', label: 'Tamu', roles: ALL_STAFF_ROLES, showInSidebar: true, showInBottomNav: true },
   { path: '/housekeeping', label: 'Housekeeping', roles: ALL_STAFF_ROLES, showInSidebar: true },
-  { path: '/dashboard', label: 'Analytics', roles: MANAGER_ROLES, showInSidebar: true },
+  { path: '/dashboard', label: 'Dashboard', roles: MANAGER_ROLES, showInSidebar: true },
   { path: '/reports', label: 'Laporan', roles: MANAGER_ROLES, showInSidebar: true },
   { path: '/finance', label: 'Keuangan & Accounting', roles: MANAGER_ROLES, showInSidebar: true },
   { path: '/staff', label: 'Manajemen Staff', roles: MANAGER_ROLES, showInSidebar: true },
@@ -40,10 +40,11 @@ export function canAccessRoute(path: string, role: UserRole): boolean {
 }
 
 export const DEFAULT_AUTH_REDIRECT = '/front-desk';
+export const MANAGER_DEFAULT_REDIRECT = '/dashboard';
 export const ROLE_DENIED_REDIRECT = '/front-desk';
 
-/** Halaman pertama setelah login — resepsionis langsung ke Front Desk operasional */
+/** Halaman pertama setelah login */
 export function getPostLoginRedirect(role: UserRole): string {
-  if (role === 'receptionist') return '/front-desk';
-  return DEFAULT_AUTH_REDIRECT;
+  if (role === 'owner' || role === 'manager') return MANAGER_DEFAULT_REDIRECT;
+  return '/front-desk';
 }

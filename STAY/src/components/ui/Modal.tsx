@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
@@ -29,59 +30,70 @@ export default function Modal({
   'data-testid': testId,
 }: ModalProps) {
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
+    if (!isOpen) return;
+
+    document.body.style.overflow = 'hidden';
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKeyDown);
+
+    return () => {
       document.body.style.overflow = '';
-    }
-    return () => { document.body.style.overflow = ''; };
-  }, [isOpen]);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      className="fixed inset-0 z-[200] flex items-end justify-center sm:items-center sm:p-4"
       data-testid={testId}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={title ? 'modal-title' : undefined}
     >
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
+        aria-hidden
       />
-      {/* Panel */}
       <div
         className={cn(
-          'relative w-full bg-white shadow-2xl z-10',
+          'relative z-10 flex w-full max-h-[min(90dvh,640px)] flex-col overflow-hidden bg-white shadow-2xl',
           'rounded-t-3xl sm:rounded-2xl',
-          'max-h-[90vh] overflow-hidden flex flex-col',
+          'mx-auto sm:mx-0',
           sizes[size]
         )}
       >
-        {/* Header */}
         {title && (
-          <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100 flex-shrink-0">
-            <h2 className="text-lg font-semibold text-slate-800">{title}</h2>
+          <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
+            <h2 id="modal-title" className="text-lg font-semibold text-slate-800">
+              {title}
+            </h2>
             <button
+              type="button"
               onClick={onClose}
-              className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+              className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+              aria-label="Tutup"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
         )}
-        {/* Body */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-6 pb-8">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 sm:px-6 sm:py-5">
           {children}
         </div>
-        {/* Footer */}
         {footer && (
-          <div className="flex-shrink-0 px-6 py-4 border-t border-slate-100 bg-white">
+          <div className="shrink-0 border-t border-slate-100 bg-white px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6">
             {footer}
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -98,35 +110,45 @@ interface ConfirmModalProps {
 }
 
 export function ConfirmModal({
-  isOpen, onClose, onConfirm, title, message,
-  confirmLabel = 'Ya, Lanjutkan', cancelLabel = 'Batal',
-  variant = 'primary', loading = false,
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  confirmLabel = 'Ya, Lanjutkan',
+  cancelLabel = 'Batal',
+  variant = 'primary',
+  loading = false,
 }: ConfirmModalProps) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="sm">
-      <div className="text-center space-y-4">
-        <div className={cn(
-          'w-16 h-16 rounded-full flex items-center justify-center mx-auto text-3xl',
-          variant === 'danger' ? 'bg-red-100' : 'bg-emerald-100'
-        )}>
+      <div className="space-y-4 text-center">
+        <div
+          className={cn(
+            'mx-auto flex h-16 w-16 items-center justify-center rounded-full text-3xl',
+            variant === 'danger' ? 'bg-red-100' : 'bg-emerald-100'
+          )}
+        >
           {variant === 'danger' ? '⚠️' : '❓'}
         </div>
         <div>
           <h3 className="text-lg font-semibold text-slate-800">{title}</h3>
-          <p className="text-sm text-slate-500 mt-1">{message}</p>
+          <p className="mt-1 text-sm text-slate-500">{message}</p>
         </div>
         <div className="flex gap-3 pt-2">
           <button
+            type="button"
             onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50 transition-colors"
+            className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 font-medium text-slate-600 transition-colors hover:bg-slate-50"
           >
             {cancelLabel}
           </button>
           <button
+            type="button"
             onClick={onConfirm}
             disabled={loading}
             className={cn(
-              'flex-1 px-4 py-2.5 rounded-xl text-white font-medium transition-colors',
+              'flex-1 rounded-xl px-4 py-2.5 font-medium text-white transition-colors',
               variant === 'danger' ? 'bg-red-500 hover:bg-red-600' : 'bg-emerald-600 hover:bg-emerald-700'
             )}
           >

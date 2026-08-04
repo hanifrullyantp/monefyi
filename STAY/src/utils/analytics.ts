@@ -59,9 +59,55 @@ export function computeDashboardStats(
   };
 }
 
+export function computeRevenueDayTrend(payments: Payment[]): number | null {
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  const yesterdayDate = new Date(now);
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterday = yesterdayDate.toISOString().split('T')[0];
+
+  const sumForDay = (day: string) =>
+    payments
+      .filter((p) => p.createdAt.startsWith(day) && p.status === 'paid')
+      .reduce((sum, p) => sum + p.amount, 0);
+
+  const todayRev = sumForDay(today);
+  const yesterdayRev = sumForDay(yesterday);
+  if (yesterdayRev === 0) return todayRev > 0 ? 100 : null;
+  return Math.round(((todayRev - yesterdayRev) / yesterdayRev) * 100);
+}
+
+export function computeOccupancyWeekTrend(
+  bookings: Booking[],
+  rooms: Room[]
+): number | null {
+  const activeRooms = rooms.filter((r) => r.isActive).length;
+  if (activeRooms === 0) return null;
+
+  const now = new Date();
+  const weekAgo = new Date(now);
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const weekStart = weekAgo.toISOString().split('T')[0];
+  const today = now.toISOString().split('T')[0];
+
+  const occupiedNights = bookings
+    .filter(
+      (b) =>
+        !['cancelled', 'no_show'].includes(b.status) &&
+        b.checkIn <= today &&
+        b.checkOut > weekStart
+    )
+    .reduce((sum, b) => sum + b.nights, 0);
+
+  const rate = Math.round((occupiedNights / (activeRooms * 7)) * 100);
+  const currentOccupied = rooms.filter((r) => r.status === 'occupied').length;
+  const currentRate = Math.round((currentOccupied / activeRooms) * 100);
+  return currentRate - rate;
+}
+
 export function computeRevenueData(
   payments: Payment[],
-  days = 7
+  days = 14
 ): RevenueData[] {
   const result: RevenueData[] = [];
   const now = new Date();

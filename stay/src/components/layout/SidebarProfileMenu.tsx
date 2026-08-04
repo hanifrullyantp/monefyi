@@ -143,10 +143,10 @@ export default function SidebarProfileMenu({ compact = false }: SidebarProfileMe
         size="sm"
         data-testid="logout-confirm-modal"
         footer={
-          <div className="flex gap-2">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row">
             <Button
               variant="outline"
-              className="flex-1"
+              className="flex-1 min-h-[44px]"
               onClick={() => setConfirmLogout(false)}
               disabled={loggingOut}
             >
@@ -154,7 +154,7 @@ export default function SidebarProfileMenu({ compact = false }: SidebarProfileMe
             </Button>
             <Button
               variant="danger"
-              className="flex-1"
+              className="flex-1 min-h-[44px]"
               onClick={() => void handleLogout()}
               disabled={loggingOut}
             >
@@ -163,10 +163,40 @@ export default function SidebarProfileMenu({ compact = false }: SidebarProfileMe
           </div>
         }
       >
-        <p className="text-sm text-slate-600 dark:text-slate-300">
-          Anda akan keluar dari <strong>{tenant?.name ?? 'STAY'}</strong> sebagai{' '}
-          <strong>{user.name}</strong>. Lanjutkan?
-        </p>
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 rounded-xl bg-red-50 px-4 py-3 dark:bg-red-950/30">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/50">
+              <LogOut className="h-5 w-5 text-red-600" />
+            </div>
+            <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-200">
+              Anda akan keluar dari akun ini.
+            </p>
+          </div>
+          <div className="space-y-2 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-800/50">
+            {tenant && (
+              <p className="flex items-start gap-2 text-slate-600 dark:text-slate-300">
+                <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                <span>
+                  <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                    Penginapan
+                  </span>
+                  <span className="font-semibold text-slate-800 dark:text-white">{tenant.name}</span>
+                </span>
+              </p>
+            )}
+            <p className="flex items-start gap-2 text-slate-600 dark:text-slate-300">
+              <User className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+              <span>
+                <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                  Akun
+                </span>
+                <span className="font-semibold text-slate-800 dark:text-white">{user.name}</span>
+                <span className="mt-0.5 block text-xs text-slate-500">{user.email}</span>
+              </span>
+            </p>
+          </div>
+          <p className="text-center text-xs text-slate-500">Lanjutkan keluar?</p>
+        </div>
       </Modal>
     </div>
   );
