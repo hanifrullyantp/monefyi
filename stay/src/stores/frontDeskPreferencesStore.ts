@@ -12,6 +12,8 @@ export interface FrontDeskPreferences {
   darkMode: boolean;
   /** Volume 0–1 */
   soundVolume: number;
+  /** OS push notifications (client-triggered via SW) */
+  osNotificationsEnabled: boolean;
 }
 
 const DEFAULT_PREFERENCES: FrontDeskPreferences = {
@@ -20,6 +22,7 @@ const DEFAULT_PREFERENCES: FrontDeskPreferences = {
   keyboardShortcutsEnabled: true,
   darkMode: false,
   soundVolume: 0.6,
+  osNotificationsEnabled: false,
 };
 
 interface FrontDeskPreferencesState extends FrontDeskPreferences {

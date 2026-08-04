@@ -2,6 +2,12 @@ import { StrictMode, Component, type ErrorInfo, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
+import { registerStayServiceWorker } from "./services/pwa/pushNotification";
+
+/** Register PWA service worker in production and after first load in dev. */
+if (import.meta.env.PROD || import.meta.env.VITE_ENABLE_SW === "true") {
+  void registerStayServiceWorker();
+}
 
 class BootErrorBoundary extends Component<
   { children: ReactNode },

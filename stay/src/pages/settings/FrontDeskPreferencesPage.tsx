@@ -1,10 +1,18 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Moon, RotateCcw, Volume2, Zap, Keyboard, Palette } from 'lucide-react';
+import { ArrowLeft, Moon, RotateCcw, Volume2, Zap, Keyboard, Palette, Bell } from 'lucide-react';
 import {
   useFrontDeskPreferencesStore,
   type FrontDeskPreferences,
 } from '../../stores/frontDeskPreferencesStore';
 import { getFrontDeskAnalyticsSummary } from '../../utils/frontDeskAnalytics';
+import {
+  getNotificationPermission,
+  getNotificationStatus,
+  isNotificationSupported,
+  requestNotificationPermission,
+  sendTestNotification,
+} from '../../services/pwa/pushNotification';
 import { cn } from '../../utils/cn';
 import Button from '../../components/ui/Button';
 
@@ -58,6 +66,28 @@ export default function FrontDeskPreferencesPage() {
   const navigate = useNavigate();
   const prefs = useFrontDeskPreferencesStore();
   const analytics = getFrontDeskAnalyticsSummary();
+  const notifStatus = getNotificationStatus();
+  const permission = getNotificationPermission();
+  const [testResult, setTestResult] = useState<string | null>(null);
+
+  const permissionLabel =
+    permission === 'granted'
+      ? 'Diizinkan'
+      : permission === 'denied'
+        ? 'Ditolak browser'
+        : permission === 'unsupported'
+          ? 'Tidak didukung'
+          : 'Belum diminta';
+
+  const handleOsNotificationsToggle = async (next: boolean) => {
+    if (next) {
+      const result = await requestNotificationPermission();
+      if (!result.granted) {
+        return;
+      }
+    }
+    prefs.setPreference('osNotificationsEnabled', next);
+  };
 
   const set = <K extends keyof FrontDeskPreferences>(key: K, value: FrontDeskPreferences[K]) => {
     prefs.setPreference(key, value);
@@ -115,7 +145,49 @@ export default function FrontDeskPreferencesPage() {
           onChange={(v) => set('darkMode', v)}
           testId="pref-dark-mode"
         />
+        <ToggleRow
+          icon={<Bell className="h-5 w-5" />}
+          label="Notifikasi Push"
+          description="Popup sistem saat ada booking, pembayaran, atau tugas urgent"
+          checked={prefs.osNotificationsEnabled}
+          onChange={(v) => void handleOsNotificationsToggle(v)}
+          testId="pref-os-notifications"
+        />
       </div>
+
+      {isNotificationSupported() && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm dark:border-slate-700 dark:bg-slate-900">
+          <p className="font-bold text-slate-800 dark:text-white">Status Izin Notifikasi</p>
+          <p className="mt-1 text-slate-500 dark:text-slate-400">
+            {permissionLabel}
+            {notifStatus.swRegistered ? ' · Service worker aktif' : ' · Service worker belum aktif'}
+          </p>
+          {permission === 'denied' && (
+            <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+              Buka pengaturan browser → Site settings → Notifications → izinkan untuk situs ini.
+            </p>
+          )}
+          {permission === 'granted' && prefs.osNotificationsEnabled && (
+            <Button
+              variant="outline"
+              className="mt-3 w-full min-h-[44px] rounded-xl"
+              onClick={async () => {
+                const r = await sendTestNotification();
+                setTestResult(
+                  r.sent
+                    ? 'Notifikasi test terkirim.'
+                    : `Gagal: ${r.skipped || r.error || 'unknown'}`
+                );
+              }}
+            >
+              Kirim Notifikasi Test
+            </Button>
+          )}
+          {testResult && (
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{testResult}</p>
+          )}
+        </div>
+      )}
 
       {prefs.soundsEnabled && (
         <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">

@@ -27,6 +27,8 @@ import XenditDashboardPage from './pages/XenditDashboardPage';
 import PublicBookingPage from './pages/public/PublicBookingPage';
 import LandingPage from './pages/LandingPage';
 import { useStayBootstrap } from './hooks/useStayBootstrap';
+import { useOsNotifications } from './hooks/useOsNotifications';
+import PwaInstallBanner from './components/pwa/PwaInstallBanner';
 
 const RoomCardDemo = import.meta.env.DEV
   ? lazy(() => import('./pages/dev/RoomCardDemo'))
@@ -41,11 +43,13 @@ const queryClient = new QueryClient({
 function AppRoutes() {
   const { isAuthenticated, user } = useAuthStore();
   useStayBootstrap();
+  useOsNotifications();
 
   const postLoginPath = user ? getPostLoginRedirect(user.role) : DEFAULT_AUTH_REDIRECT;
 
   return (
-    <Routes>
+    <>
+      <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route
         path="/login"
@@ -145,6 +149,8 @@ function AppRoutes() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    <PwaInstallBanner />
+    </>
   );
 }
 

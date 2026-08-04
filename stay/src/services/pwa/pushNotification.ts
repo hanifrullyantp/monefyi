@@ -120,7 +120,7 @@ export async function showOsNotification(
     tag: notifTag,
     data: {
       ...data,
-      url: (data.url as string) || '/stay/front-desk',
+      url: (data.url as string) || '/front-desk',
       timestamp: Date.now(),
     },
     silent: silent ?? false,
@@ -183,4 +183,17 @@ export function getNotificationStatus(): {
     permission: getNotificationPermission(),
     swRegistered: Boolean(navigator.serviceWorker?.controller),
   };
+}
+
+/** Send a test OS notification (user gesture required). */
+export async function sendTestNotification(): Promise<ShowOsNotificationResult> {
+  return showOsNotification(
+    {
+      title: 'STAY — Notifikasi Aktif',
+      body: 'Popup sistem berhasil. Anda akan menerima alert booking, pembayaran, dan tugas urgent.',
+      tag: 'stay-test-notification',
+      data: { url: '/front-desk' },
+    },
+    { skipDedup: true, enabled: true }
+  );
 }
