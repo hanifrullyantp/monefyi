@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - 'STAY/**'
+      - 'stay/**'
 
 defaults:
   run:
-    working-directory: STAY
+    working-directory: stay
 
 jobs:
   e2e:
@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-          cache-dependency-path: STAY/package-lock.json
+          cache-dependency-path: stay/package-lock.json
 
       - name: Install dependencies
         run: npm ci

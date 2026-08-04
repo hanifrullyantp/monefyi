@@ -22,7 +22,7 @@
     "build:stay": "node scripts/build-stay.cjs",
     "dev": "vite --config vite.app.config.js",
     "dev:landing": "vite --config vite.landing.config.js",
-    "dev:stay": "npm --prefix STAY run dev -- --base /stay/",
+    "dev:stay": "npm --prefix stay run dev -- --base /stay/",
     "preview": "vite preview --outDir dist",
     "refactor": "node scripts/refactor.cjs",
     "smoke": "node scripts/smoke.cjs",

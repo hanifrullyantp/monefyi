@@ -5,10 +5,11 @@
 const { existsSync } = require('fs');
 const { execSync } = require('child_process');
 
-const dir = existsSync('STAY/package.json')
-  ? 'STAY'
-  : existsSync('stay/package.json')
-    ? 'stay'
+// Prefer lowercase `stay/` — git must track one casing (Linux/Vercel is case-sensitive).
+const dir = existsSync('stay/package.json')
+  ? 'stay'
+  : existsSync('STAY/package.json')
+    ? 'STAY'
     : null;
 
 if (!dir) {
