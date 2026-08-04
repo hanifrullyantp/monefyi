@@ -9,6 +9,7 @@ import {
   postXenditPaidJournal,
   verifyCallbackToken,
 } from "../_shared/stayJournal.ts";
+import { notifyStayTenantPush } from "../_shared/stayWebPush.ts";
 
 serve(async (req) => {
   const preflight = handleCorsPreflightRequest(req);
@@ -96,11 +97,22 @@ serve(async (req) => {
           .eq("id", payment.booking_id);
 
         if (payment.tenant_id) {
+          const pushTitle = "Pembayaran Xendit Diterima";
+          const pushBody = `Pembayaran Rp ${Number(payment.amount).toLocaleString("id-ID")} berhasil.`;
+
           await supabase.from("stay_notifications").insert({
             tenant_id: payment.tenant_id,
             type: "payment",
-            title: "Pembayaran Xendit Diterima",
-            message: `Pembayaran Rp ${Number(payment.amount).toLocaleString("id-ID")} berhasil.`,
+            title: pushTitle,
+            message: pushBody,
+          });
+
+          await notifyStayTenantPush(supabase, payment.tenant_id as string, {
+            title: pushTitle,
+            body: pushBody,
+            tag: `payment-${payment.id}`,
+            url: "/stay/front-desk",
+            type: "payment",
           });
         }
       }

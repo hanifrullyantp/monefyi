@@ -2,7 +2,7 @@
  * STAY PWA service worker — install, OS notifications, notification click routing.
  * Phase 2: push event handler for Web Push (VAPID) when backend is ready.
  */
-const SW_VERSION = 'stay-v1.1';
+const SW_VERSION = 'stay-v2-push';
 
 function resolveAppUrl(path) {
   const p = path || '/stay/front-desk';
@@ -48,16 +48,33 @@ self.addEventListener('message', (event) => {
   }
 });
 
-/** Stub for future Web Push (phase 2). */
+/** Web Push from server (VAPID) — works when app is closed. */
 self.addEventListener('push', (event) => {
-  const data = event.data?.json?.() || {};
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    try {
+      const text = event.data?.text?.();
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = {};
+    }
+  }
+
+  const title = data.title || 'STAY';
+  const body = data.body || '';
+  const tag = data.tag || 'stay-push';
+  const notifData = data.data || { url: data.url || '/stay/front-desk' };
+
   event.waitUntil(
-    self.registration.showNotification(data.title || 'STAY', {
-      body: data.body,
+    self.registration.showNotification(title, {
+      body,
       icon: new URL('./icons/icon-192.png', self.location).href,
       badge: new URL('./icons/icon-192.png', self.location).href,
-      tag: data.tag || 'stay-push',
-      data: data.data || {},
+      tag,
+      data: notifData,
+      renotify: true,
     })
   );
 });

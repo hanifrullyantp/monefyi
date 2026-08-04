@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Moon, RotateCcw, Volume2, Zap, Keyboard, Palette, Bell } from 'lucide-react';
 import {
@@ -13,6 +13,13 @@ import {
   requestNotificationPermission,
   sendTestNotification,
 } from '../../services/pwa/pushNotification';
+import {
+  hasActivePushSubscription,
+  isWebPushSupported,
+  sendServerPushTest,
+  subscribeWebPush,
+  unsubscribeWebPush,
+} from '../../services/pwa/webPushSubscribe';
 import { cn } from '../../utils/cn';
 import Button from '../../components/ui/Button';
 
@@ -69,6 +76,11 @@ export default function FrontDeskPreferencesPage() {
   const notifStatus = getNotificationStatus();
   const permission = getNotificationPermission();
   const [testResult, setTestResult] = useState<string | null>(null);
+  const [pushSubscribed, setPushSubscribed] = useState(false);
+
+  useEffect(() => {
+    void hasActivePushSubscription().then(setPushSubscribed);
+  }, [prefs.osNotificationsEnabled]);
 
   const permissionLabel =
     permission === 'granted'
@@ -85,6 +97,17 @@ export default function FrontDeskPreferencesPage() {
       if (!result.granted) {
         return;
       }
+      if (isWebPushSupported()) {
+        const sub = await subscribeWebPush();
+        if (!sub.success) {
+          setTestResult(sub.error ?? 'Gagal subscribe Web Push');
+          return;
+        }
+        setPushSubscribed(true);
+      }
+    } else if (isWebPushSupported()) {
+      await unsubscribeWebPush();
+      setPushSubscribed(false);
     }
     prefs.setPreference('osNotificationsEnabled', next);
   };
@@ -161,6 +184,7 @@ export default function FrontDeskPreferencesPage() {
           <p className="mt-1 text-slate-500 dark:text-slate-400">
             {permissionLabel}
             {notifStatus.swRegistered ? ' · Service worker aktif' : ' · Service worker belum aktif'}
+            {isWebPushSupported() && pushSubscribed ? ' · Web Push terdaftar' : ''}
           </p>
           {permission === 'denied' && (
             <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
@@ -168,20 +192,34 @@ export default function FrontDeskPreferencesPage() {
             </p>
           )}
           {permission === 'granted' && prefs.osNotificationsEnabled && (
-            <Button
-              variant="outline"
-              className="mt-3 w-full min-h-[44px] rounded-xl"
-              onClick={async () => {
-                const r = await sendTestNotification();
-                setTestResult(
-                  r.sent
-                    ? 'Notifikasi test terkirim.'
-                    : `Gagal: ${r.skipped || r.error || 'unknown'}`
-                );
-              }}
-            >
-              Kirim Notifikasi Test
-            </Button>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+              <Button
+                variant="outline"
+                className="min-h-[44px] flex-1 rounded-xl"
+                onClick={async () => {
+                  const r = await sendTestNotification();
+                  setTestResult(
+                    r.sent
+                      ? 'Notifikasi lokal terkirim.'
+                      : `Gagal lokal: ${r.skipped || r.error || 'unknown'}`
+                  );
+                }}
+              >
+                Test Lokal
+              </Button>
+              {isWebPushSupported() && (
+                <Button
+                  variant="outline"
+                  className="min-h-[44px] flex-1 rounded-xl"
+                  onClick={async () => {
+                    const r = await sendServerPushTest();
+                    setTestResult(r.detail ?? r.error ?? (r.success ? 'OK' : 'Gagal'));
+                  }}
+                >
+                  Test Push Server
+                </Button>
+              )}
+            </div>
           )}
           {testResult && (
             <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{testResult}</p>

@@ -1,5 +1,5 @@
 /**
- * Local OS notification manager for STAY (no VAPID / Web Push in v1).
+ * OS + Web Push notification manager for STAY.
  */
 
 const DEDUP_MS = 5 * 60 * 1000;
