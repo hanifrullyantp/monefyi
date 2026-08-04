@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch';
 import type { RoomCardData } from '../../../types/frontdesk.types';
 import {
@@ -24,7 +24,9 @@ export interface FloorCanvasProps {
   floor: number;
   template?: FloorPlanTemplate;
   selectedRoomId?: string | null;
+  editMode?: boolean;
   onRoomClick?: (room: RoomCardData) => void;
+  onRoomPositionChange?: (roomId: string, x: number, y: number) => void;
 }
 
 function FixedElement({ element }: { element: FloorPlanElement }) {
@@ -78,9 +80,13 @@ function FloorCanvasComponent({
   floor,
   template = FLOOR_PLAN_TEMPLATES[DEFAULT_FLOOR_PLAN_TEMPLATE_ID],
   selectedRoomId,
+  editMode = false,
   onRoomClick,
+  onRoomPositionChange,
 }: FloorCanvasProps) {
+  const svgRef = useRef<SVGSVGElement>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [isDraggingRoom, setIsDraggingRoom] = useState(false);
   const [tooltip, setTooltip] = useState<{ room: RoomCardData; x: number; y: number } | null>(
     null
   );
@@ -100,9 +106,10 @@ function FloorCanvasComponent({
   );
 
   const handleHover = useCallback((room: RoomCardData, position: { x: number; y: number }) => {
+    if (editMode) return;
     setHoveredId(room.id);
     setTooltip({ room, x: position.x, y: position.y });
-  }, []);
+  }, [editMode]);
 
   const handleLeave = useCallback(() => {
     setHoveredId(null);
@@ -119,9 +126,14 @@ function FloorCanvasComponent({
         wheel={{ step: 0.08 }}
         pinch={{ step: 5 }}
         doubleClick={{ mode: 'reset' }}
+        panning={{
+          disabled: isDraggingRoom,
+          excluded: ['floor-room-draggable'],
+        }}
       >
         <TransformComponent wrapperClass="!w-full !h-full" contentClass="!w-full !h-full">
           <svg
+            ref={svgRef}
             width={template.canvasWidth}
             height={template.canvasHeight}
             viewBox={`0 0 ${template.canvasWidth} ${template.canvasHeight}`}
@@ -154,15 +166,22 @@ function FloorCanvasComponent({
                 key={room.id}
                 room={room}
                 position={position}
+                svgRef={svgRef}
+                canvasWidth={template.canvasWidth}
+                canvasHeight={template.canvasHeight}
+                editMode={editMode}
                 isHovered={hoveredId === room.id}
                 isSelected={selectedRoomId === room.id}
                 onClick={onRoomClick}
+                onPositionChange={onRoomPositionChange}
                 onMouseEnter={() => handleHover(room, position)}
                 onMouseLeave={handleLeave}
+                onDragStart={() => setIsDraggingRoom(true)}
+                onDragEnd={() => setIsDraggingRoom(false)}
               />
             ))}
 
-            {tooltip && (
+            {tooltip && !editMode && (
               <foreignObject
                 x={Math.min(tooltip.x, template.canvasWidth - 180)}
                 y={Math.max(tooltip.y - 70, 8)}

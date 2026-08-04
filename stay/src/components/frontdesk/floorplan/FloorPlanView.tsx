@@ -3,7 +3,9 @@ import {
   LayoutTemplate,
   Loader2,
   Maximize2,
+  Move,
   RotateCcw,
+  Settings,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
@@ -14,6 +16,7 @@ import type { RoomCardData } from '../../../types/frontdesk.types';
 import { cn } from '../../../utils/cn';
 import { getAllStatusDefinitions } from '../../../constants/roomStatus';
 import FloorCanvas from './FloorCanvas';
+import UnplacedRoomsPanel from './UnplacedRoomsPanel';
 import {
   DEFAULT_FLOOR_PLAN_TEMPLATE_ID,
   FLOOR_PLAN_TEMPLATES,
@@ -27,7 +30,7 @@ export interface FloorPlanViewProps {
 }
 
 /**
- * Container denah lantai — tab lantai, zoom, legend.
+ * Container denah lantai — tab lantai, zoom, drag-drop edit mode.
  */
 export default function FloorPlanView({
   rooms,
@@ -36,6 +39,7 @@ export default function FloorPlanView({
   onRoomClick,
 }: FloorPlanViewProps) {
   const { rooms: storeRooms, updateRoomPosition } = useAppStore();
+  const [editMode, setEditMode] = useState(false);
   const [activeFloor, setActiveFloor] = useState<number>(() => {
     const floors = [...new Set(rooms.map((r) => r.floor))].sort((a, b) => a - b);
     return floors[0] ?? 1;
@@ -57,6 +61,13 @@ export default function FloorPlanView({
       updateRoomPosition(pos.id, pos.x, pos.y);
     }
   }, [storeRooms, updateRoomPosition]);
+
+  const handlePositionChange = useCallback(
+    (roomId: string, x: number, y: number) => {
+      updateRoomPosition(roomId, x, y);
+    },
+    [updateRoomPosition]
+  );
 
   const template = FLOOR_PLAN_TEMPLATES[DEFAULT_FLOOR_PLAN_TEMPLATE_ID];
 
@@ -88,7 +99,6 @@ export default function FloorPlanView({
       className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
       data-testid="floor-plan-view"
     >
-      {/* Floor tabs + controls hint */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
           {floors.map((floor) => (
@@ -109,14 +119,40 @@ export default function FloorPlanView({
           ))}
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-gray-500">
-          <ZoomOut className="h-3.5 w-3.5" />
-          <span>Scroll/pinch zoom · drag pan · double-click reset</span>
-          <ZoomIn className="h-3.5 w-3.5" />
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setEditMode((v) => !v)}
+            className={cn(
+              'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold transition-colors',
+              editMode
+                ? 'border-amber-500 bg-amber-500 text-white shadow-inner'
+                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+            )}
+            data-testid="floorplan-edit-toggle"
+          >
+            {editMode ? <Move className="h-3.5 w-3.5" /> : <Settings className="h-3.5 w-3.5" />}
+            {editMode ? 'Selesai Edit' : 'Edit Denah'}
+          </button>
+
+          <div className="hidden items-center gap-2 text-xs text-gray-500 sm:flex">
+            <ZoomOut className="h-3.5 w-3.5" />
+            <span>
+              {editMode ? 'Drag kamar · scroll zoom' : 'Scroll/pinch zoom · drag pan'}
+            </span>
+            <ZoomIn className="h-3.5 w-3.5" />
+          </div>
         </div>
       </div>
 
-      {!hasPositions && (
+      {editMode && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
+          <strong>Mode edit aktif:</strong> drag kamar untuk pindahkan posisi. Klik kamar di panel
+          kiri untuk menaruh kamar yang belum diatur.
+        </div>
+      )}
+
+      {!hasPositions && !editMode && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
           <p className="text-sm font-medium text-amber-900">
             Denah belum diatur — kamar akan ditata otomatis atau gunakan Auto Layout.
@@ -133,33 +169,44 @@ export default function FloorPlanView({
         </div>
       )}
 
-      <div className="relative min-h-[420px]">
-        <FloorCanvas
-          rooms={rooms}
-          floor={activeFloor}
-          template={template}
-          selectedRoomId={selectedRoomId}
-          onRoomClick={onRoomClick}
-        />
+      <div className="flex min-h-[420px] flex-col overflow-hidden rounded-xl border border-gray-200 sm:flex-row">
+        {editMode && (
+          <UnplacedRoomsPanel
+            rooms={rooms}
+            activeFloor={activeFloor}
+            onPlace={handlePositionChange}
+          />
+        )}
 
-        {/* Legend */}
-        <div className="absolute bottom-3 right-3 rounded-xl border border-gray-200 bg-white/95 p-3 shadow-md">
-          <p className="mb-2 text-[10px] font-bold uppercase text-gray-400">Legenda</p>
-          <div className="flex flex-wrap gap-2">
-            {getAllStatusDefinitions().slice(0, 6).map((def) => (
-              <div key={def.key} className="flex items-center gap-1.5">
-                <span
-                  className={cn('h-3 w-3 rounded border', def.colors.bgClass, def.colors.borderClass)}
-                />
-                <span className="text-[10px] font-medium text-gray-600">{def.label}</span>
-              </div>
-            ))}
+        <div className="relative min-h-[420px] flex-1">
+          <FloorCanvas
+            rooms={rooms}
+            floor={activeFloor}
+            template={template}
+            selectedRoomId={selectedRoomId}
+            editMode={editMode}
+            onRoomClick={editMode ? undefined : onRoomClick}
+            onRoomPositionChange={handlePositionChange}
+          />
+
+          <div className="pointer-events-none absolute bottom-3 right-3 rounded-xl border border-gray-200 bg-white/95 p-3 shadow-md">
+            <p className="mb-2 text-[10px] font-bold uppercase text-gray-400">Legenda</p>
+            <div className="flex flex-wrap gap-2">
+              {getAllStatusDefinitions().slice(0, 6).map((def) => (
+                <div key={def.key} className="flex items-center gap-1.5">
+                  <span
+                    className={cn('h-3 w-3 rounded border', def.colors.bgClass, def.colors.borderClass)}
+                  />
+                  <span className="text-[10px] font-medium text-gray-600">{def.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div className="absolute left-3 top-3 rounded-lg border border-gray-200 bg-white/90 px-2 py-1 text-[10px] font-bold text-gray-500">
-          <Maximize2 className="mr-1 inline h-3 w-3" />
-          {formatFloorName(activeFloor)}
+          <div className="pointer-events-none absolute left-3 top-3 rounded-lg border border-gray-200 bg-white/90 px-2 py-1 text-[10px] font-bold text-gray-500">
+            <Maximize2 className="mr-1 inline h-3 w-3" />
+            {formatFloorName(activeFloor)}
+          </div>
         </div>
       </div>
     </div>
