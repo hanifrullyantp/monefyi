@@ -36,7 +36,7 @@ function scrollToFirstError(errors: FieldErrors<RegisterFormData>) {
 export default function RegisterPage() {
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [error, setError] = useState('');
+  const [submitError, setSubmitError] = useState('');
   const [validationSummary, setValidationSummary] = useState('');
   const [draftWarning, setDraftWarning] = useState('');
   const [step, setStep] = useState<1 | 2>(1);
@@ -52,7 +52,7 @@ export default function RegisterPage() {
     watch,
     reset,
     getValues,
-    setError,
+    setError: setFieldError,
     clearErrors,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormData>({
@@ -110,10 +110,10 @@ export default function RegisterPage() {
         clearErrors(field);
       }
       for (const [field, message] of Object.entries(fieldErrors)) {
-        setError(field as keyof RegisterFormData, { type: 'manual', message });
+        setFieldError(field as keyof RegisterFormData, { type: 'manual', message });
       }
     },
-    [clearErrors, setError]
+    [clearErrors, setFieldError]
   );
 
   useEffect(() => {
@@ -131,7 +131,7 @@ export default function RegisterPage() {
 
   const goStep2 = () => {
     setValidationSummary('');
-    setError('');
+    setSubmitError('');
     const fieldErrors = validateRegisterStep1(getValues());
     if (Object.keys(fieldErrors).length > 0) {
       applyFieldErrors(fieldErrors);
@@ -167,7 +167,7 @@ export default function RegisterPage() {
   );
 
   const onSubmit = async (data: RegisterFormData) => {
-    setError('');
+    setSubmitError('');
     setValidationSummary('');
 
     const step1Errors = validateRegisterStep1(data);
@@ -183,7 +183,7 @@ export default function RegisterPage() {
       localStorage.removeItem(REGISTER_DRAFT_KEY);
       navigate('/dashboard?onboarding=true');
     } else {
-      setError(result.error ?? 'Registrasi gagal');
+      setSubmitError(result.error ?? 'Registrasi gagal');
     }
   };
 
@@ -216,7 +216,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl shadow-slate-100 border border-slate-100 p-6 sm:p-7">
-          {(validationSummary || error || draftWarning) && (
+          {(validationSummary || submitError || draftWarning) && (
             <div className="mb-4 space-y-2">
               {validationSummary && (
                 <div
@@ -232,9 +232,9 @@ export default function RegisterPage() {
                   {draftWarning}
                 </div>
               )}
-              {error && (
+              {submitError && (
                 <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600" role="alert">
-                  ⚠️ {error}
+                  ⚠️ {submitError}
                 </div>
               )}
             </div>
