@@ -17,6 +17,31 @@ export interface RegisterResult {
 }
 
 const LEADS_STORAGE_KEY = 'stay-leads-local';
+const REGISTER_TIMEOUT_MS = 15_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      reject(new Error('Permintaan registrasi timeout. Periksa koneksi dan coba lagi.'));
+    }, ms);
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
+
+function parseRegisterResponse(data: unknown): { success?: boolean; error?: string; email?: string } {
+  if (data && typeof data === 'object') {
+    return data as { success?: boolean; error?: string; email?: string };
+  }
+  return {};
+}
 
 function saveLocalLead(payload: RegisterPayload, tenantId: string, userId: string): void {
   try {
@@ -52,39 +77,52 @@ function saveLocalLead(payload: RegisterPayload, tenantId: string, userId: strin
  * Registrasi akun STAY baru — edge function atau mock lokal.
  */
 export async function registerStayAccount(payload: RegisterPayload): Promise<RegisterResult> {
-  if (isSupabaseConfigured && supabase) {
-    const { data, error } = await supabase.functions.invoke('stay-register', {
-      body: {
-        ...payload,
-        leadSource: payload.leadSource ?? 'direct_register',
-        acceptTerms: payload.acceptTerms,
-      },
-    });
+  try {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await withTimeout(
+        supabase.functions.invoke('stay-register', {
+          body: {
+            ...payload,
+            leadSource: payload.leadSource ?? 'direct_register',
+            acceptTerms: payload.acceptTerms,
+          },
+        }),
+        REGISTER_TIMEOUT_MS
+      );
 
-    if (error) {
-      return { success: false, error: error.message };
+      if (error) {
+        const msg = error.message?.includes('Failed to fetch')
+          ? 'Gagal hubungi server. Periksa koneksi internet dan coba lagi.'
+          : error.message;
+        return { success: false, error: msg };
+      }
+
+      const result = parseRegisterResponse(data);
+      if (!result.success) {
+        return { success: false, error: result.error ?? 'Registrasi gagal. Silakan coba lagi.' };
+      }
+
+      return { success: true, email: result.email ?? payload.email };
     }
 
-    const result = data as { success?: boolean; error?: string; email?: string };
-    if (!result?.success) {
-      return { success: false, error: result?.error ?? 'Registrasi gagal' };
+    await new Promise((r) => setTimeout(r, 800));
+
+    const existing = mockUsers.find((u) => u.email === payload.email);
+    if (existing) {
+      return { success: false, error: 'Email sudah terdaftar' };
     }
 
-    return { success: true, email: result.email ?? payload.email };
+    const tenantId = generateId('tenant');
+    const userId = generateId('user');
+    saveLocalLead(payload, tenantId, userId);
+
+    return { success: true, email: payload.email };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Registrasi gagal. Silakan coba lagi.',
+    };
   }
-
-  await new Promise((r) => setTimeout(r, 800));
-
-  const existing = mockUsers.find((u) => u.email === payload.email);
-  if (existing) {
-    return { success: false, error: 'Email sudah terdaftar' };
-  }
-
-  const tenantId = generateId('tenant');
-  const userId = generateId('user');
-  saveLocalLead(payload, tenantId, userId);
-
-  return { success: true, email: payload.email };
 }
 
 /** Export leads dari localStorage (mock / dev) */

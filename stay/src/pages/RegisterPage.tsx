@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useCallback, useEffect, useState } from 'react';
+import { useForm, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Home, Eye, EyeOff, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Home, Eye, EyeOff, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
 import {
   registerSchema,
   REGISTER_DRAFT_KEY,
+  REGISTER_STEP1_FIELDS,
+  type RegisterDraftData,
   type RegisterFormData,
 } from '../schemas/validation';
 import { useAuthStore } from '../store/authStore';
@@ -16,14 +18,26 @@ import {
   REFERRAL_SOURCES,
 } from '../constants/indonesianCities';
 import type { LeadSource } from '../services/registerService';
+import { cn } from '../utils/cn';
 
 const inputClass =
   'w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#00A86B] focus:border-transparent';
+
+const inputErrorClass = 'border-red-300 focus:ring-red-400';
+
+function scrollToFirstError(errors: FieldErrors<RegisterFormData>) {
+  const firstKey = Object.keys(errors)[0];
+  if (!firstKey) return;
+  const el = document.querySelector(`[data-field="${firstKey}"]`);
+  el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
 
 export default function RegisterPage() {
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
+  const [validationSummary, setValidationSummary] = useState('');
+  const [draftWarning, setDraftWarning] = useState('');
   const [step, setStep] = useState<1 | 2>(1);
   const { signUp, isLoading } = useAuthStore();
   const navigate = useNavigate();
@@ -37,56 +51,125 @@ export default function RegisterPage() {
     watch,
     reset,
     trigger,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
+    shouldUnregister: false,
     defaultValues: {
+      fullName: '',
+      email: '',
+      phone: '',
+      password: '',
+      confirmPassword: '',
+      propertyName: '',
+      propertyType: '',
+      city: '',
+      address: '',
       roomCount: 5,
+      operatingStatus: '',
+      referralSource: '',
       marketingOptIn: false,
-      acceptTerms: undefined,
+      acceptTerms: false,
       leadSource,
     },
   });
 
   useEffect(() => {
     try {
-      const draft = localStorage.getItem(REGISTER_DRAFT_KEY);
-      if (draft) {
-        const parsed = JSON.parse(draft) as Partial<RegisterFormData>;
-        reset({ ...parsed, leadSource, acceptTerms: undefined });
+      const raw = localStorage.getItem(REGISTER_DRAFT_KEY);
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw) as RegisterDraftData;
+      const { step: savedStep, ...fields } = parsed;
+
+      reset({
+        ...fields,
+        password: '',
+        confirmPassword: '',
+        acceptTerms: false,
+        marketingOptIn: fields.marketingOptIn ?? false,
+        roomCount: fields.roomCount ?? 5,
+        leadSource,
+      });
+
+      setDraftWarning('Draft dimuat. Silakan isi ulang password sebelum mendaftar.');
+
+      if (savedStep === 2) {
+        void trigger([...REGISTER_STEP1_FIELDS]).then((step1Ok) => {
+          if (step1Ok) {
+            setStep(2);
+            setDraftWarning('');
+          } else {
+            setStep(1);
+          }
+        });
       }
     } catch {
       /* ignore */
     }
-  }, [reset, leadSource]);
+  }, [reset, leadSource, trigger]);
 
   useEffect(() => {
     const sub = watch((values) => {
       try {
         const { password, confirmPassword, ...safe } = values;
-        localStorage.setItem(REGISTER_DRAFT_KEY, JSON.stringify(safe));
+        const draft: RegisterDraftData = { ...safe, step };
+        localStorage.setItem(REGISTER_DRAFT_KEY, JSON.stringify(draft));
       } catch {
         /* ignore */
       }
     });
     return () => sub.unsubscribe();
-  }, [watch]);
+  }, [watch, step]);
 
   const goStep2 = async () => {
-    const ok = await trigger(['fullName', 'email', 'phone', 'password', 'confirmPassword']);
-    if (ok) setStep(2);
+    setValidationSummary('');
+    setError('');
+    const ok = await trigger([...REGISTER_STEP1_FIELDS]);
+    if (!ok) {
+      setValidationSummary('Periksa data pribadi yang ditandai merah.');
+      window.setTimeout(() => {
+        for (const f of REGISTER_STEP1_FIELDS) {
+          const el = document.querySelector(`[data-field="${f}"]`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            break;
+          }
+        }
+      }, 50);
+      return;
+    }
+    setStep(2);
+    setDraftWarning('');
   };
+
+  const onInvalid = useCallback((invalidErrors: FieldErrors<RegisterFormData>) => {
+    const hasStep1Error = REGISTER_STEP1_FIELDS.some((f) => f in invalidErrors);
+    if (hasStep1Error) {
+      setStep(1);
+      setValidationSummary('Data pribadi perlu diperbaiki. Silakan cek Langkah 1.');
+    } else {
+      setValidationSummary('Periksa field yang ditandai merah.');
+    }
+    window.setTimeout(() => scrollToFirstError(invalidErrors), 50);
+  }, []);
 
   const onSubmit = async (data: RegisterFormData) => {
     setError('');
+    setValidationSummary('');
     const result = await signUp({ ...data, leadSource });
     if (result.success) {
       localStorage.removeItem(REGISTER_DRAFT_KEY);
-      navigate('/front-desk?onboarding=true');
+      navigate('/dashboard?onboarding=true');
     } else {
       setError(result.error ?? 'Registrasi gagal');
     }
   };
+
+  const busy = isLoading || isSubmitting;
+
+  const fieldClass = (name: keyof RegisterFormData) =>
+    cn(inputClass, errors[name] && inputErrorClass);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-slate-50 flex items-center justify-center p-4 py-10">
@@ -112,48 +195,82 @@ export default function RegisterPage() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl shadow-slate-100 border border-slate-100 p-6 sm:p-7">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {step === 1 && (
-              <>
-                <h2 className="text-lg font-bold text-slate-800">Data Pribadi 👋</h2>
-                <div className="space-y-1.5">
+          {(validationSummary || error || draftWarning) && (
+            <div className="mb-4 space-y-2">
+              {validationSummary && (
+                <div
+                  className="flex items-start gap-2 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800"
+                  role="alert"
+                >
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>{validationSummary}</span>
+                </div>
+              )}
+              {draftWarning && step === 1 && (
+                <div className="rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-800">
+                  {draftWarning}
+                </div>
+              )}
+              {error && (
+                <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600" role="alert">
+                  ⚠️ {error}
+                </div>
+              )}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-4">
+            {/* Langkah 1 — tetap di DOM saat step 2 agar RHF tidak kehilangan nilai */}
+            <div className={cn(step === 2 && 'hidden')} aria-hidden={step === 2}>
+              <h2 className="text-lg font-bold text-slate-800 mb-4">Data Pribadi 👋</h2>
+              <div className="space-y-4">
+                <div className="space-y-1.5" data-field="fullName">
                   <label className="text-sm font-medium text-slate-700">Nama Lengkap</label>
-                  <input {...register('fullName')} className={inputClass} placeholder="Budi Santoso" />
+                  <input
+                    {...register('fullName')}
+                    className={fieldClass('fullName')}
+                    placeholder="Budi Santoso"
+                    aria-invalid={Boolean(errors.fullName)}
+                  />
                   {errors.fullName && (
                     <p className="text-xs text-red-500">{errors.fullName.message}</p>
                   )}
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5" data-field="email">
                   <label className="text-sm font-medium text-slate-700">Email</label>
                   <input
                     type="email"
                     {...register('email')}
-                    className={inputClass}
+                    className={fieldClass('email')}
                     placeholder="email@penginapan.com"
+                    aria-invalid={Boolean(errors.email)}
                   />
                   {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5" data-field="phone">
                   <label className="text-sm font-medium text-slate-700">No. HP / WhatsApp</label>
                   <input
                     {...register('phone')}
-                    className={inputClass}
+                    className={fieldClass('phone')}
                     placeholder="+62812xxxxxxx"
+                    aria-invalid={Boolean(errors.phone)}
                   />
                   {errors.phone && <p className="text-xs text-red-500">{errors.phone.message}</p>}
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5" data-field="password">
                   <label className="text-sm font-medium text-slate-700">Password</label>
                   <div className="relative">
                     <input
                       type={showPass ? 'text' : 'password'}
                       {...register('password')}
-                      className={`${inputClass} pr-12`}
+                      className={cn(fieldClass('password'), 'pr-12')}
+                      aria-invalid={Boolean(errors.password)}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPass(!showPass)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                      tabIndex={-1}
                     >
                       {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -162,18 +279,20 @@ export default function RegisterPage() {
                     <p className="text-xs text-red-500">{errors.password.message}</p>
                   )}
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5" data-field="confirmPassword">
                   <label className="text-sm font-medium text-slate-700">Konfirmasi Password</label>
                   <div className="relative">
                     <input
                       type={showConfirm ? 'text' : 'password'}
                       {...register('confirmPassword')}
-                      className={`${inputClass} pr-12`}
+                      className={cn(fieldClass('confirmPassword'), 'pr-12')}
+                      aria-invalid={Boolean(errors.confirmPassword)}
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirm(!showConfirm)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                      tabIndex={-1}
                     >
                       {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -182,30 +301,40 @@ export default function RegisterPage() {
                     <p className="text-xs text-red-500">{errors.confirmPassword.message}</p>
                   )}
                 </div>
+              </div>
+              {step === 1 && (
                 <button
                   type="button"
                   onClick={goStep2}
-                  className="w-full bg-[#00A86B] hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-200"
+                  className="mt-4 w-full bg-[#00A86B] hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-200"
                 >
                   Lanjut ke Data Penginapan <ArrowRight className="h-4 w-4" />
                 </button>
-              </>
-            )}
+              )}
+            </div>
 
             {step === 2 && (
               <>
                 <h2 className="text-lg font-bold text-slate-800">Data Penginapan 🏨</h2>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5" data-field="propertyName">
                   <label className="text-sm font-medium text-slate-700">Nama Penginapan</label>
-                  <input {...register('propertyName')} className={inputClass} />
+                  <input
+                    {...register('propertyName')}
+                    className={fieldClass('propertyName')}
+                    aria-invalid={Boolean(errors.propertyName)}
+                  />
                   {errors.propertyName && (
                     <p className="text-xs text-red-500">{errors.propertyName.message}</p>
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5" data-field="propertyType">
                     <label className="text-sm font-medium text-slate-700">Jenis</label>
-                    <select {...register('propertyType')} className={inputClass}>
+                    <select
+                      {...register('propertyType')}
+                      className={fieldClass('propertyType')}
+                      aria-invalid={Boolean(errors.propertyType)}
+                    >
                       <option value="">Pilih...</option>
                       {PROPERTY_TYPES.map((t) => (
                         <option key={t.value} value={t.value}>
@@ -217,14 +346,28 @@ export default function RegisterPage() {
                       <p className="text-xs text-red-500">{errors.propertyType.message}</p>
                     )}
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5" data-field="roomCount">
                     <label className="text-sm font-medium text-slate-700">Jumlah Kamar</label>
-                    <input type="number" {...register('roomCount')} className={inputClass} min={1} />
+                    <input
+                      type="number"
+                      {...register('roomCount')}
+                      className={fieldClass('roomCount')}
+                      min={1}
+                      aria-invalid={Boolean(errors.roomCount)}
+                    />
+                    {errors.roomCount && (
+                      <p className="text-xs text-red-500">{errors.roomCount.message}</p>
+                    )}
                   </div>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5" data-field="city">
                   <label className="text-sm font-medium text-slate-700">Kota</label>
-                  <input {...register('city')} list="city-list" className={inputClass} />
+                  <input
+                    {...register('city')}
+                    list="city-list"
+                    className={fieldClass('city')}
+                    aria-invalid={Boolean(errors.city)}
+                  />
                   <datalist id="city-list">
                     {INDONESIAN_CITIES.map((c) => (
                       <option key={c} value={c} />
@@ -232,13 +375,21 @@ export default function RegisterPage() {
                   </datalist>
                   {errors.city && <p className="text-xs text-red-500">{errors.city.message}</p>}
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5" data-field="address">
                   <label className="text-sm font-medium text-slate-700">Alamat Lengkap</label>
-                  <textarea {...register('address')} rows={2} className={inputClass} />
+                  <textarea
+                    {...register('address')}
+                    rows={2}
+                    className={fieldClass('address')}
+                  />
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5" data-field="operatingStatus">
                   <label className="text-sm font-medium text-slate-700">Sudah Beroperasi?</label>
-                  <select {...register('operatingStatus')} className={inputClass}>
+                  <select
+                    {...register('operatingStatus')}
+                    className={fieldClass('operatingStatus')}
+                    aria-invalid={Boolean(errors.operatingStatus)}
+                  >
                     <option value="">Pilih...</option>
                     {OPERATING_STATUS_OPTIONS.map((o) => (
                       <option key={o.value} value={o.value}>
@@ -264,16 +415,21 @@ export default function RegisterPage() {
                   </select>
                 </div>
 
-                <div className="space-y-2 pt-2 border-t border-slate-100">
+                <div className="space-y-2 pt-2 border-t border-slate-100" data-field="acceptTerms">
                   <label className="flex items-start gap-2 text-sm text-slate-600">
-                    <input type="checkbox" {...register('acceptTerms')} className="mt-1" />
+                    <input
+                      type="checkbox"
+                      {...register('acceptTerms', { value: true })}
+                      className="mt-1"
+                      aria-invalid={Boolean(errors.acceptTerms)}
+                    />
                     <span>
                       Saya setuju dengan{' '}
-                      <a href="#" className="text-[#00A86B] font-semibold">
+                      <a href="#" className="text-[#00A86B] font-semibold" onClick={(e) => e.preventDefault()}>
                         Syarat & Ketentuan
                       </a>{' '}
                       dan{' '}
-                      <a href="#" className="text-[#00A86B] font-semibold">
+                      <a href="#" className="text-[#00A86B] font-semibold" onClick={(e) => e.preventDefault()}>
                         Kebijakan Privasi
                       </a>
                     </span>
@@ -282,31 +438,38 @@ export default function RegisterPage() {
                     <p className="text-xs text-red-500">{errors.acceptTerms.message}</p>
                   )}
                   <label className="flex items-start gap-2 text-sm text-slate-600">
-                    <input type="checkbox" {...register('marketingOptIn')} className="mt-1" />
+                    <input
+                      type="checkbox"
+                      {...register('marketingOptIn', { value: true })}
+                      className="mt-1"
+                    />
                     <span>Kirimkan saya tips & update via email</span>
                   </label>
                 </div>
 
-                {error && (
-                  <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl">⚠️ {error}</div>
-                )}
-
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => setStep(1)}
+                    onClick={() => {
+                      setStep(1);
+                      setValidationSummary('');
+                    }}
                     className="flex-1 border border-slate-200 py-3 rounded-xl text-sm font-semibold text-slate-600"
+                    disabled={busy}
                   >
                     Kembali
                   </button>
                   <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={busy}
                     data-testid="register-submit"
                     className="flex-[2] bg-[#00A86B] hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-60 shadow-lg shadow-emerald-200"
                   >
-                    {isLoading ? (
-                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    {busy ? (
+                      <>
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Memproses...
+                      </>
                     ) : (
                       <>
                         <CheckCircle2 className="h-4 w-4" />
