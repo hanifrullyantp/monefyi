@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Check, Star, Zap, Building2 } from 'lucide-react';
 import { useInView } from '../hooks/useInView';
-import { LoginLink } from '../LoginLink';
+import { RegisterLink } from '../LoginLink';
 
 function formatAnnualPrice(plan: (typeof plans)[number]): string {
   if (plan.price === 'GRATIS') return plan.price;
@@ -183,9 +183,9 @@ const PricingSection: React.FC<Props> = ({ isEditMode }) => {
                   </div>
 
                   {/* CTA button */}
-                  <LoginLink className={`block w-full text-center py-3 rounded-xl font-bold text-sm transition-all duration-200 mb-6 ${plan.ctaStyle}`}>
+                  <RegisterLink className={`block w-full text-center py-3 rounded-xl font-bold text-sm transition-all duration-200 mb-6 ${plan.ctaStyle}`}>
                     {plan.cta}
-                  </LoginLink>
+                  </RegisterLink>
 
                   {/* Divider */}
                   <div className="border-t border-gray-100 mb-5" />

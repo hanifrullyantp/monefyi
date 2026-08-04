@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowRight, BarChart2, Calendar, LayoutGrid } from 'lucide-react';
 import { useInView } from '../hooks/useInView';
-import { LoginLink } from '../LoginLink';
+import { RegisterLink } from '../LoginLink';
 
 type Tab = 'frontdesk' | 'booking' | 'laporan';
 
@@ -225,10 +225,10 @@ const DemoSection: React.FC<Props> = ({ isEditMode }) => {
           {/* CTA below demo */}
           <div className="mt-10 text-center">
             <p className="text-gray-600 mb-4 text-lg">Suka yang Anda lihat?</p>
-            <LoginLink className="inline-flex items-center gap-2 px-8 py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-lg transition-all duration-200 shadow-lg shadow-emerald-200">
+            <RegisterLink className="inline-flex items-center gap-2 px-8 py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-lg transition-all duration-200 shadow-lg shadow-emerald-200">
               Coba Gratis Sekarang
               <ArrowRight className="w-5 h-5" />
-            </LoginLink>
+            </RegisterLink>
             <p className="mt-2 text-sm text-gray-500">Tidak perlu kartu kredit · Setup 10 menit</p>
           </div>
         </div>

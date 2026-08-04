@@ -1,8 +1,9 @@
-import { Moon, Settings, Sun } from 'lucide-react';
+import { Moon, Settings, Sun, HelpCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../../utils/cn';
 import NotificationCenter from '../frontdesk/NotificationCenter';
 import { useFrontDeskPreferencesStore } from '../../stores/frontDeskPreferencesStore';
+import { useOnboardingStore } from '../../store/onboardingStore';
 
 /** Tombol ikon konsisten untuk topbar — light mode first, dark via class .dark */
 export const topbarIconButtonClass =
@@ -19,9 +20,20 @@ export default function TopbarActions({ className }: TopbarActionsProps) {
   const navigate = useNavigate();
   const darkMode = useFrontDeskPreferencesStore((s) => s.darkMode);
   const setPreference = useFrontDeskPreferencesStore((s) => s.setPreference);
+  const startTour = useOnboardingStore((s) => s.startTour);
 
   return (
     <div className={cn('flex items-center gap-1.5', className)}>
+      <button
+        type="button"
+        onClick={() => startTour()}
+        className={topbarIconButtonClass}
+        aria-label="Bantuan & tutorial"
+        title="Mulai ulang tutorial"
+        data-testid="help-tour-btn"
+      >
+        <HelpCircle className="h-5 w-5" />
+      </button>
       <button
         type="button"
         onClick={() => setPreference('darkMode', !darkMode)}

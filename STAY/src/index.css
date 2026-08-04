@@ -88,3 +88,47 @@ body {
 .active\:scale-\[0\.99\]:active {
   transform: scale(0.99);
 }
+
+/* Onboarding spotlight tour (driver.js) */
+.driver-overlay {
+  backdrop-filter: blur(4px);
+}
+
+.stay-onboarding-popover.driver-popover {
+  border-radius: 12px;
+  border: 1px solid rgba(0, 168, 107, 0.2);
+  box-shadow: 0 20px 40px rgba(0, 168, 107, 0.15);
+  max-width: min(360px, calc(100vw - 32px));
+}
+
+.stay-onboarding-popover .driver-popover-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.stay-onboarding-popover .driver-popover-description {
+  color: #475569;
+  line-height: 1.5;
+}
+
+.stay-onboarding-popover .driver-popover-next-btn,
+.stay-onboarding-popover .driver-popover-done-btn {
+  background: #00A86B;
+  border: none;
+  text-shadow: none;
+}
+
+.stay-onboarding-popover .driver-popover-prev-btn {
+  color: #64748b;
+  border-color: #e2e8f0;
+}
+
+.stay-onboarding-popover .driver-popover-close-btn {
+  color: #94a3b8;
+}
+
+.stay-onboarding-popover .driver-popover-progress-text {
+  color: #00A86B;
+  font-weight: 600;
+}

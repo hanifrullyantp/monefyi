@@ -26,6 +26,12 @@ const BOTTOM_ICONS: Record<string, typeof LayoutDashboard> = {
   '/xendit': CreditCard,
 };
 
+const BOTTOM_TOUR_TARGETS: Record<string, string> = {
+  '/front-desk': 'nav-front-desk',
+  '/bookings': 'nav-bookings',
+  '/rooms': 'nav-rooms',
+};
+
 const ICON_NODES: Record<string, React.ReactNode> = Object.fromEntries(
   Object.entries(BOTTOM_ICONS).map(([path, Icon]) => [path, <Icon key={path} className="h-4 w-4" />])
 );
@@ -56,6 +62,7 @@ export default function BottomNav() {
                 key={item.path}
                 to={item.path}
                 data-testid={`nav-${item.path.replace(/^\//, '')}`}
+                data-tour={BOTTOM_TOUR_TARGETS[item.path]}
                 className={({ isActive }) =>
                   cn(
                     'flex flex-1 flex-col items-center justify-center gap-0.5 py-1 min-w-0 max-w-[72px]',

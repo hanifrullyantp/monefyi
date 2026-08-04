@@ -1,25 +1,38 @@
 import { Link } from 'react-router-dom';
 
-/** All landing CTAs point to the STAY login page */
 export const LOGIN_PATH = '/login';
+export const REGISTER_PATH = '/register';
+export const REGISTER_LANDING_PATH = `${REGISTER_PATH}?source=landing_page_cta`;
 
-interface LoginLinkProps {
+interface AuthLinkProps {
   children: React.ReactNode;
   className?: string;
   variant?: 'button' | 'link';
+  to?: string;
 }
 
-export function LoginLink({ children, className = '', variant = 'button' }: LoginLinkProps) {
+/** CTA landing → login atau register */
+export function LoginLink({
+  children,
+  className = '',
+  variant = 'button',
+  to = LOGIN_PATH,
+}: AuthLinkProps) {
   if (variant === 'link') {
     return (
-      <Link to={LOGIN_PATH} className={className}>
+      <Link to={to} className={className}>
         {children}
       </Link>
     );
   }
   return (
-    <Link to={LOGIN_PATH} className={className}>
+    <Link to={to} className={className}>
       {children}
     </Link>
   );
+}
+
+/** Shortcut untuk CTA trial / daftar */
+export function RegisterLink(props: Omit<AuthLinkProps, 'to'>) {
+  return <LoginLink {...props} to={REGISTER_LANDING_PATH} />;
 }

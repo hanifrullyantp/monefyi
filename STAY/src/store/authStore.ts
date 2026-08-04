@@ -10,6 +10,12 @@ import {
   signInWithEmail,
 } from '../services/api/stayApi';
 import { useAppStore } from './appStore';
+import {
+  registerStayAccount,
+  createMockRegisteredUser,
+  type RegisterPayload,
+} from '../services/registerService';
+import type { OnboardingStatus } from '../types';
 
 interface AuthState {
   user: UserProfile | null;
@@ -18,6 +24,7 @@ interface AuthState {
   isLoading: boolean;
   sessionInitialized: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signUp: (payload: RegisterPayload) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   initializeSession: () => Promise<void>;
   setUser: (user: UserProfile) => void;
@@ -35,6 +42,9 @@ function mapDbUserToProfile(row: Record<string, unknown>): UserProfile {
     avatar: row.avatar as string | undefined,
     isActive: row.is_active as boolean,
     createdAt: row.created_at as string,
+    onboardingCompleted: Boolean(row.onboarding_completed),
+    onboardingStatus: (row.onboarding_status as OnboardingStatus) ?? 'pending',
+    marketingOptIn: Boolean(row.marketing_opt_in),
   };
 }
 
@@ -55,6 +65,7 @@ function mapDbTenant(row: Record<string, unknown>): Tenant {
     currency: (row.currency as string) || 'IDR',
     subscriptionPlan: (row.subscription_plan as Tenant['subscriptionPlan']) || 'free',
     subscriptionExpiry: row.subscription_expiry as string,
+    setupCompleted: Boolean(row.setup_completed),
     createdAt: row.created_at as string,
   };
 }
@@ -128,6 +139,38 @@ export const useAuthStore = create<AuthState>()(
         } catch (err) {
           set({ isLoading: false });
           return { success: false, error: err instanceof Error ? err.message : 'Login gagal' };
+        }
+      },
+
+      signUp: async (payload: RegisterPayload) => {
+        set({ isLoading: true });
+        try {
+          const reg = await registerStayAccount(payload);
+          if (!reg.success) {
+            set({ isLoading: false });
+            return { success: false, error: reg.error };
+          }
+
+          if (isSupabaseConfigured && supabase) {
+            const loginResult = await get().login(payload.email, payload.password);
+            set({ isLoading: false });
+            return loginResult;
+          }
+
+          const { user, tenant } = createMockRegisteredUser(payload);
+          useAppStore.setState({
+            tenant,
+            rooms: [],
+            roomTypes: [],
+            bookings: [],
+            guests: [],
+            payments: [],
+          });
+          set({ user, tenant, isAuthenticated: true, isLoading: false });
+          return { success: true };
+        } catch (err) {
+          set({ isLoading: false });
+          return { success: false, error: err instanceof Error ? err.message : 'Registrasi gagal' };
         }
       },
 

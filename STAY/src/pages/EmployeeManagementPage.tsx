@@ -132,6 +132,8 @@ export default function EmployeeManagementPage() {
 // --- SUB-TABS COMPONENTS ---
 
 function AccessTab() {
+  const { users } = useAppStore();
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -224,6 +226,8 @@ function RolePermissionItem({ label, desc }: { label: string; desc: string }) {
 }
 
 function EmployeeDataTab() {
+  const { users } = useAppStore();
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex items-center justify-between gap-4">

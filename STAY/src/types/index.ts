@@ -2,6 +2,8 @@
 
 export type UserRole = 'owner' | 'manager' | 'receptionist';
 
+export type OnboardingStatus = 'pending' | 'started' | 'completed' | 'skipped';
+
 export type RoomStatus = 'available' | 'occupied' | 'maintenance' | 'cleaning' | 'blocked';
 
 export type BookingStatus = 'pending' | 'confirmed' | 'checked_in' | 'checked_out' | 'cancelled' | 'no_show';
@@ -30,6 +32,7 @@ export interface Tenant {
   currency: string;
   subscriptionPlan: 'free' | 'starter' | 'pro' | 'enterprise';
   subscriptionExpiry: string;
+  setupCompleted?: boolean;
   createdAt: string;
 }
 
@@ -43,6 +46,9 @@ export interface UserProfile {
   avatar?: string;
   isActive: boolean;
   createdAt: string;
+  onboardingCompleted?: boolean;
+  onboardingStatus?: OnboardingStatus;
+  marketingOptIn?: boolean;
 }
 
 export interface RoomType {

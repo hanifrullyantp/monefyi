@@ -1,13 +1,14 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { cn } from '../../utils/cn';
 import { useAuthStore } from '../../store/authStore';
 import { useAppStore } from '../../store/appStore';
 import {
   LayoutDashboard, BedDouble, CalendarDays, Users, CreditCard,
-  BarChart3, Settings, LogOut, Home, ClipboardList, ChevronRight, X,
+  BarChart3, Settings, Home, ClipboardList, X,
   Building2, TrendingUp, FileText, Wallet, PanelLeftClose, PanelLeft,
 } from 'lucide-react';
 import { ROUTES } from '../../config/routes';
+import SidebarProfileMenu from './SidebarProfileMenu';
 
 const ICONS: Record<string, React.ReactNode> = {
   '/front-desk': <LayoutDashboard className="h-5 w-5" />,
@@ -27,6 +28,13 @@ const ICONS: Record<string, React.ReactNode> = {
 };
 
 /** Urutan flat sidebar — tanpa grup Operasional/Manajemen */
+const TOUR_TARGETS: Record<string, string> = {
+  '/front-desk': 'nav-front-desk',
+  '/bookings': 'nav-bookings',
+  '/reports': 'nav-reports',
+  '/rooms': 'nav-rooms',
+};
+
 const SIDEBAR_ORDER = [
   '/front-desk',
   '/pos',
@@ -45,9 +53,8 @@ const SIDEBAR_ORDER = [
 ];
 
 export default function Sidebar() {
-  const { user, tenant, logout } = useAuthStore();
+  const { user, tenant } = useAuthStore();
   const { sidebarOpen, setSidebarOpen, sidebarCompact, toggleSidebarCompact } = useAppStore();
-  const navigate = useNavigate();
 
   const filtered = ROUTES.filter(
     (item) => item.showInSidebar && user && item.roles.includes(user.role)
@@ -55,11 +62,6 @@ export default function Sidebar() {
   const pathSet = new Set(filtered.map((r) => r.path));
   const menuItems = SIDEBAR_ORDER.map((path) => filtered.find((r) => r.path === path))
     .filter((r): r is (typeof filtered)[number] => !!r && pathSet.has(r.path));
-
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
-  };
 
   const closeMobile = () => setSidebarOpen(false);
 
@@ -73,6 +75,7 @@ export default function Sidebar() {
       )}
 
       <aside
+        data-tour="sidebar"
         className={cn(
           'fixed inset-y-0 left-0 z-40 bg-white border-r border-slate-100 flex flex-col transition-all duration-300',
           'lg:translate-x-0 lg:static lg:z-auto',
@@ -121,6 +124,7 @@ export default function Sidebar() {
               to={item.path}
               onClick={closeMobile}
               title={item.label}
+              data-tour={TOUR_TARGETS[item.path]}
               className={({ isActive }) =>
                 cn(
                   'flex items-center gap-3 rounded-xl text-sm font-medium transition-all',
@@ -157,32 +161,7 @@ export default function Sidebar() {
             )}
           </button>
 
-          {!sidebarCompact && (
-            <div className="flex items-center gap-2 px-2 py-2 rounded-xl hover:bg-slate-50">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center shrink-0">
-                <span className="text-white font-bold text-xs">
-                  {user?.name.charAt(0).toUpperCase()}
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-slate-800 truncate">{user?.name}</p>
-                <p className="text-[10px] text-slate-400 capitalize">{user?.role}</p>
-              </div>
-              <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
-            </div>
-          )}
-
-          <button
-            onClick={handleLogout}
-            title="Keluar"
-            className={cn(
-              'w-full flex items-center gap-2 rounded-xl text-sm text-red-500 hover:bg-red-50 transition-colors',
-              sidebarCompact ? 'justify-center px-2 py-2' : 'px-3 py-2'
-            )}
-          >
-            <LogOut className="h-4 w-4" />
-            {!sidebarCompact && 'Keluar'}
-          </button>
+          <SidebarProfileMenu compact={sidebarCompact} />
         </div>
       </aside>
     </>

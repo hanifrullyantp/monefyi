@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, X, Zap } from 'lucide-react';
-import { LoginLink } from '../LoginLink';
+import { LoginLink, RegisterLink } from '../LoginLink';
 
 const navLinks = [
   { label: 'Fitur', href: '#fitur' },
@@ -81,9 +81,9 @@ const Navbar: React.FC<NavbarProps> = ({ activeSection, isEditMode }) => {
             <LoginLink className="px-4 py-2 text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg hover:border-emerald-500 hover:text-emerald-600 transition-all duration-200">
               Masuk
             </LoginLink>
-            <LoginLink className="px-5 py-2 text-sm font-semibold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 transition-all duration-200 pulse-green shadow-sm">
+            <RegisterLink className="px-5 py-2 text-sm font-semibold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 transition-all duration-200 pulse-green shadow-sm">
               Coba Gratis
-            </LoginLink>
+            </RegisterLink>
           </div>
 
           {/* Mobile hamburger */}
@@ -113,9 +113,9 @@ const Navbar: React.FC<NavbarProps> = ({ activeSection, isEditMode }) => {
               <LoginLink className="flex-1 py-2.5 text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg text-center">
                 Masuk
               </LoginLink>
-              <LoginLink className="flex-1 py-2.5 text-sm font-semibold text-white bg-emerald-500 rounded-lg text-center">
+              <RegisterLink className="flex-1 py-2.5 text-sm font-semibold text-white bg-emerald-500 rounded-lg text-center">
                 Coba Gratis
-              </LoginLink>
+              </RegisterLink>
             </div>
           </div>
         </div>

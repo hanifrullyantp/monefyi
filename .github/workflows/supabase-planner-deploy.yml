@@ -70,7 +70,8 @@ jobs:
             stay-xendit \
             stay-xendit-webhook \
             stay-xendit-refund \
-            stay-ai
+            stay-ai \
+            stay-register
           do
             echo "Deploying $fn..."
             extra=""

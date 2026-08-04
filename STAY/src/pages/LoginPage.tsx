@@ -1,6 +1,6 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { DEFAULT_AUTH_REDIRECT, getPostLoginRedirect } from '../config/routes';
 import { useAuthStore } from '../store/authStore';
 import { loginSchema, type LoginFormData } from '../schemas/validation';
@@ -122,6 +122,13 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+
+          <p className="text-center text-sm text-slate-500 mt-5 pt-5 border-t border-slate-100">
+            Belum punya akun?{' '}
+            <Link to="/register" className="font-semibold text-[#00A86B] hover:underline">
+              Daftar & coba gratis 14 hari →
+            </Link>
+          </p>
 
           <div className="mt-6">
             <p className="text-xs text-slate-400 text-center mb-3">— Akun Demo (klik untuk login langsung) —</p>

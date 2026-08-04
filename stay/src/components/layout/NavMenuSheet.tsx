@@ -64,6 +64,7 @@ export default function NavMenuSheet({ open, onClose, routes, icons }: NavMenuSh
                       key={item.path}
                       to={item.path}
                       onClick={onClose}
+                      data-tour={item.path === '/reports' ? 'nav-reports' : undefined}
                       className={({ isActive }) =>
                         cn(
                           'flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors',

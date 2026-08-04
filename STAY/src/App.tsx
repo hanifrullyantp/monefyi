@@ -7,6 +7,7 @@ import ProtectedRoute from './routes/ProtectedRoute';
 import { DEFAULT_AUTH_REDIRECT, getPostLoginRedirect, MANAGER_ROLES } from './config/routes';
 
 import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import FrontDeskPage from './pages/FrontDeskPage';
 import RoomsPage from './pages/RoomsPage';
@@ -49,6 +50,10 @@ function AppRoutes() {
       <Route
         path="/login"
         element={isAuthenticated ? <Navigate to={postLoginPath} replace /> : <LoginPage />}
+      />
+      <Route
+        path="/register"
+        element={isAuthenticated ? <Navigate to={postLoginPath} replace /> : <RegisterPage />}
       />
       <Route path="/survey/:bookingId" element={<GuestSurveyPage />} />
       <Route path="/book/:tenantSlug" element={<PublicBookingPage />} />
