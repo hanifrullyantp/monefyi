@@ -1,0 +1,75 @@
+/**
+ * Print styles — denah kamar & status front desk.
+ */
+
+@media print {
+  /* Hide app chrome */
+  nav,
+  aside,
+  header:not(.print-header),
+  [data-testid="view-mode-toggle"],
+  [data-testid="notification-bell"],
+  [data-testid="room-grid-filter-toggle"],
+  [data-testid="quick-search-input"],
+  [data-testid="urgent-action-bar"],
+  .no-print,
+  button:not(.print-include) {
+    display: none !important;
+  }
+
+  /* Full width content */
+  main,
+  [data-testid="receptionist-dashboard"],
+  [data-testid="floor-plan-view"],
+  [data-testid="room-grid-view"] {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Floor plan print */
+  [data-testid="floor-canvas"] {
+    transform: none !important;
+    page-break-inside: avoid;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+  }
+
+  [data-testid^="floor-room-"] {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Grid cards compact for print */
+  [data-testid^="room-card-"] {
+    break-inside: avoid;
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+    page-break-inside: avoid;
+  }
+
+  /* Print header block */
+  .print-header {
+    display: block !important;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #10b981;
+  }
+
+  .print-header h1 {
+    font-size: 18pt;
+    font-weight: bold;
+  }
+
+  .print-header p {
+    font-size: 10pt;
+    color: #666;
+  }
+
+  @page {
+    margin: 1.5cm;
+    size: A4 landscape;
+  }
+}

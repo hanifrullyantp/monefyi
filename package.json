@@ -19,7 +19,7 @@
     "build": "npm run build:landing && npm run build:app && npm run build:stay",
     "build:landing": "vite build --config vite.landing.config.js",
     "build:app": "vite build --config vite.app.config.js",
-    "build:stay": "npm --prefix STAY ci && npm --prefix STAY run build",
+    "build:stay": "node scripts/build-stay.cjs",
     "dev": "vite --config vite.app.config.js",
     "dev:landing": "vite --config vite.landing.config.js",
     "dev:stay": "npm --prefix STAY run dev -- --base /stay/",

@@ -78,6 +78,8 @@ export interface RoomCardData {
   ribbon?: 'VIP' | 'BARU' | 'URGENT';
   /** Catatan singkat maintenance */
   maintenanceNote?: string;
+  /** Catatan operasional kamar dari database */
+  notes?: string;
   /** Waktu checkout terakhir (untuk status DIRTY) */
   lastCheckoutAt?: string;
   /** Indikator layanan / kebutuhan tamu */

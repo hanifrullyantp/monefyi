@@ -1,5 +1,7 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 @import "./styles/frontdesk-theme.css";
+@import "./styles/phase6-polish.css";
 
 * {
   -webkit-tap-highlight-color: transparent;

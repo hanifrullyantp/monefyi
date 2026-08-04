@@ -17,12 +17,10 @@ export interface LiveClockState {
 }
 
 function formatTime(date: Date): string {
-  return date.toLocaleTimeString('id-ID', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
+  const h = String(date.getHours()).padStart(2, '0');
+  const m = String(date.getMinutes()).padStart(2, '0');
+  const s = String(date.getSeconds()).padStart(2, '0');
+  return `${h}:${m}:${s}`;
 }
 
 function buildClockState(now: Date, userName: string): LiveClockState {

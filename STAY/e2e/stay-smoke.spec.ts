@@ -58,7 +58,7 @@ test.describe('Navigation after login', () => {
   });
 });
 
-test.describe('Denah Kamar floor plan', () => {
+test.describe('Front Desk views', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/login');
     await page.getByTestId('login-email').fill('owner@stay.com');
@@ -67,20 +67,54 @@ test.describe('Denah Kamar floor plan', () => {
     await expect(page).toHaveURL(/\/front-desk/);
   });
 
-  test('shows rooms on denah canvas or allows auto-layout', async ({ page }) => {
-    await page.getByTestId('denah-view-btn').click();
-    await expect(page.getByTestId('denah-canvas')).toBeVisible();
+  test('switches between grid, floor plan, and timeline', async ({ page }) => {
+    await expect(page.getByTestId('receptionist-dashboard')).toBeVisible();
+    await expect(page.getByTestId('room-grid-view')).toBeVisible();
 
-    const placedRoom = page.locator('[data-testid^="denah-room-"]').first();
-    const emptyState = page.getByTestId('denah-empty-state');
+    await page.getByTestId('view-mode-floorplan').click();
+    await expect(page.getByTestId('floor-plan-view')).toBeVisible();
 
-    if (await placedRoom.isVisible({ timeout: 2_000 }).catch(() => false)) {
-      await expect(placedRoom).toBeVisible();
+    await page.getByTestId('view-mode-timeline').click();
+    await expect(page.getByTestId('frontdesk-timeline-view')).toBeVisible();
+
+    await page.getByTestId('view-mode-grid').click();
+    await expect(page.getByTestId('room-grid-view')).toBeVisible();
+  });
+
+  test('floor plan shows canvas or auto-layout', async ({ page }) => {
+    await page.getByTestId('view-mode-floorplan').click();
+    await expect(page.getByTestId('floor-plan-view')).toBeVisible();
+
+    const roomShape = page.locator('[data-testid^="floor-room-"]').first();
+    const autoLayout = page.getByTestId('floorplan-auto-layout');
+
+    if (await roomShape.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await expect(roomShape).toBeVisible();
       return;
     }
 
-    await expect(emptyState).toBeVisible();
-    await page.getByTestId('denah-auto-layout-btn').click();
-    await expect(page.locator('[data-testid^="denah-room-"]').first()).toBeVisible({ timeout: 5_000 });
+    if (await autoLayout.isVisible({ timeout: 1_000 }).catch(() => false)) {
+      await autoLayout.click();
+      await expect(page.locator('[data-testid^="floor-room-"]').first()).toBeVisible({
+        timeout: 5_000,
+      });
+    } else {
+      await expect(page.getByTestId('floor-canvas')).toBeVisible();
+    }
+  });
+
+  test('occupied room opens detail panel and records payment', async ({ page }) => {
+    await expect(page.getByTestId('room-grid-view')).toBeVisible();
+
+    await page.getByTestId('room-card-201').click();
+    await expect(page.getByTestId('room-detail-panel')).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText('201').first()).toBeVisible();
+
+    await page.getByRole('button', { name: 'Terima Pembayaran' }).first().click();
+    await expect(page.getByTestId('room-payment-modal')).toBeVisible();
+
+    await page.getByTestId('room-payment-submit').click();
+    await expect(page.getByTestId('frontdesk-toast-success')).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByTestId('frontdesk-toast-success')).toContainText(/Pembayaran/i);
   });
 });

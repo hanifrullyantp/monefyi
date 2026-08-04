@@ -10,6 +10,7 @@ export interface UrgentActionBarProps {
   onAction: UrgentActionHandler;
   onDismiss: () => void;
   onViewAll?: () => void;
+  compact?: boolean;
 }
 
 const MAX_VISIBLE = 3;
@@ -23,6 +24,7 @@ export default function UrgentActionBar({
   onAction,
   onDismiss,
   onViewAll,
+  compact = false,
 }: UrgentActionBarProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -37,6 +39,33 @@ export default function UrgentActionBar({
 
   const visible = expanded ? actions : actions.slice(0, MAX_VISIBLE);
   const hasMore = actions.length > MAX_VISIBLE;
+
+  if (compact && !expanded) {
+    return (
+      <div
+        className="flex items-center gap-2 rounded-xl border border-coral-200 bg-coral-50 px-3 py-2 dark:border-coral-800 dark:bg-coral-950/40"
+        data-testid="urgent-action-bar"
+        role="alert"
+      >
+        <AlertTriangle className="h-4 w-4 shrink-0 text-coral-600 animate-pulse-urgent" />
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="min-w-0 flex-1 truncate text-left text-xs font-bold text-coral-900 dark:text-coral-200"
+        >
+          {actions.length} perlu aksi segera — ketuk untuk detail
+        </button>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="shrink-0 rounded p-1 text-coral-500 hover:bg-coral-100"
+          aria-label="Tutup"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div

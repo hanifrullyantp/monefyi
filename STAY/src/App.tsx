@@ -1,9 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './store/authStore';
 import AppLayout from './components/layout/AppLayout';
 import ProtectedRoute from './routes/ProtectedRoute';
-import { DEFAULT_AUTH_REDIRECT, MANAGER_ROLES } from './config/routes';
+import { DEFAULT_AUTH_REDIRECT, getPostLoginRedirect, MANAGER_ROLES } from './config/routes';
 
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
@@ -20,6 +21,7 @@ import EmployeeManagementPage from './pages/EmployeeManagementPage';
 import PricingPage from './pages/PricingPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
+import FrontDeskPreferencesPage from './pages/settings/FrontDeskPreferencesPage';
 import XenditDashboardPage from './pages/XenditDashboardPage';
 import PublicBookingPage from './pages/public/PublicBookingPage';
 import LandingPage from './pages/LandingPage';
@@ -29,16 +31,24 @@ const RoomCardDemo = import.meta.env.DEV
   ? lazy(() => import('./pages/dev/RoomCardDemo'))
   : null;
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: 1, refetchOnWindowFocus: false },
+  },
+});
+
 function AppRoutes() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   useStayBootstrap();
+
+  const postLoginPath = user ? getPostLoginRedirect(user.role) : DEFAULT_AUTH_REDIRECT;
 
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route
         path="/login"
-        element={isAuthenticated ? <Navigate to={DEFAULT_AUTH_REDIRECT} replace /> : <LoginPage />}
+        element={isAuthenticated ? <Navigate to={postLoginPath} replace /> : <LoginPage />}
       />
       <Route path="/survey/:bookingId" element={<GuestSurveyPage />} />
       <Route path="/book/:tenantSlug" element={<PublicBookingPage />} />
@@ -62,6 +72,7 @@ function AppRoutes() {
         }
       >
         <Route path="front-desk" element={<FrontDeskPage />} />
+        <Route path="settings/frontdesk-preferences" element={<FrontDeskPreferencesPage />} />
         <Route
           path="dashboard"
           element={
@@ -134,8 +145,10 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter basename="/stay">
-      <AppRoutes />
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter basename="/stay">
+        <AppRoutes />
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }

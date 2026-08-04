@@ -1,36 +1,56 @@
-import { useMemo, useState, useCallback, type ReactNode } from 'react';
-import { SlidersHorizontal, X } from 'lucide-react';
+import { useMemo, useRef, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import { X } from 'lucide-react';
 
 import { useAppStore } from '../../store/appStore';
 import { useAuthStore } from '../../store/authStore';
-import { mapRoomsToCardData } from '../../utils/mapRoomsToCardData';
 import { computeFrontDeskStats } from '../../utils/urgentActions';
-import { useRoomFilters } from '../../hooks/useRoomFilters';
+import { applyRoomFilters, useRoomFilters } from '../../hooks/useRoomFilters';
 import { useUrgentActions } from '../../hooks/useUrgentActions';
 import { useFrontDeskToast } from '../../hooks/useFrontDeskToast';
+import { useFrontDeskRoomCards } from '../../hooks/useFrontDeskData';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { RoomStatus, type RoomCardData, type ViewMode } from '../../types/frontdesk.types';
 import { cn } from '../../utils/cn';
+import { trackFrontDeskEvent } from '../../utils/frontDeskAnalytics';
+import { useAnimationsEnabled } from '../../stores/frontDeskPreferencesStore';
 import RoomGridView from '../../components/frontdesk/RoomGridView';
-import RoomCardSize, {
+import FloorPlanView from '../../components/frontdesk/floorplan/FloorPlanView';
+import FrontDeskTimelineView from '../../components/frontdesk/timeline/TimelineView';
+import {
   persistRoomCardSize,
   readRoomCardSize,
   type RoomCardSizeValue,
 } from '../../components/frontdesk/RoomCardSize';
-import FrontDeskHeader from '../../components/frontdesk/FrontDeskHeader';
+import FrontDeskHeader, {
+  readDashboardHeaderMode,
+  persistDashboardHeaderMode,
+  type DashboardHeaderMode,
+} from '../../components/frontdesk/FrontDeskHeader';
 import UrgentActionBar from '../../components/frontdesk/UrgentActionBar';
-import ViewModeToggle from '../../components/frontdesk/ViewModeToggle';
-import QuickSearchInput from '../../components/frontdesk/QuickSearchInput';
+import {
+  persistViewMode,
+  readViewModePreference,
+} from '../../components/frontdesk/ViewModeToggle';
+import type { QuickSearchInputHandle } from '../../components/frontdesk/QuickSearchInput';
+import FrontDeskToolbar from '../../components/frontdesk/FrontDeskToolbar';
 import FrontDeskToast from '../../components/frontdesk/FrontDeskToast';
 import { getAllStatusDefinitions } from '../../constants/roomStatus';
+import { useFrontDeskStore } from '../../stores/frontDeskStore';
+import RoomDetailPanel from '../../components/frontdesk/RoomDetailPanel';
+import ErrorBoundary from '../../components/common/ErrorBoundary';
+import KeyboardShortcutsDialog from '../../components/common/KeyboardShortcutsDialog';
+import CommandPalette from '../../components/common/CommandPalette';
+import EmptyState from '../../components/common/EmptyStates';
 
 export interface ReceptionistDashboardProps {
   onRoomClick?: (room: RoomCardData) => void;
+  onBookingClick?: (bookingId: string, roomId: string) => void;
+  onCreateBooking?: (roomId: string, date: Date) => void;
   viewMode?: ViewMode;
   onViewModeChange?: (mode: ViewMode) => void;
-  renderLegacyView?: () => ReactNode;
   loading?: boolean;
-  /** Aktifkan tombol Denah & Timeline */
-  enableLegacyViews?: boolean;
 }
 
 /**
@@ -38,22 +58,32 @@ export interface ReceptionistDashboardProps {
  */
 export default function ReceptionistDashboard({
   onRoomClick,
-  viewMode = 'grid',
+  onBookingClick,
+  onCreateBooking,
+  viewMode: controlledViewMode,
   onViewModeChange,
-  renderLegacyView,
   loading = false,
-  enableLegacyViews = false,
 }: ReceptionistDashboardProps) {
-  const { rooms, bookings } = useAppStore();
+  const navigate = useNavigate();
   const { user } = useAuthStore();
+  const { bookings } = useAppStore();
+  const { data: roomCards = [], isLoading: cardsLoading } = useFrontDeskRoomCards();
+  const [internalViewMode, setInternalViewMode] = useState<ViewMode>(readViewModePreference);
+  const viewMode = controlledViewMode ?? internalViewMode;
   const [cardSize, setCardSize] = useState<RoomCardSizeValue>(readRoomCardSize);
+  const [headerMode, setHeaderMode] = useState<DashboardHeaderMode>(readDashboardHeaderMode);
+  const [showLegend, setShowLegend] = useState(false);
+  const selectRoom = useFrontDeskStore((s) => s.selectRoom);
+  const closeDetailPanel = useFrontDeskStore((s) => s.closeDetailPanel);
+  const isDetailPanelOpen = useFrontDeskStore((s) => s.isDetailPanelOpen);
+  const setActiveViewStore = useFrontDeskStore((s) => s.setActiveView);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
+  const searchRef = useRef<QuickSearchInputHandle>(null);
   const { toasts, showToast, dismiss } = useFrontDeskToast();
-
-  const roomCards = useMemo(
-    () => mapRoomsToCardData(rooms, bookings),
-    [rooms, bookings]
-  );
+  const animationsEnabled = useAnimationsEnabled();
+  const isLoading = loading || cardsLoading;
 
   const {
     actions: urgentActions,
@@ -96,11 +126,17 @@ export default function ReceptionistDashboard({
     persistRoomCardSize(size);
   }, []);
 
+  const handleHeaderModeChange = useCallback((mode: DashboardHeaderMode) => {
+    setHeaderMode(mode);
+    persistDashboardHeaderMode(mode);
+  }, []);
+
   const handleRoomClick = useCallback(
     (room: RoomCardData) => {
+      selectRoom(room);
       onRoomClick?.(room);
     },
-    [onRoomClick]
+    [onRoomClick, selectRoom]
   );
 
   const handleUrgentAction = useCallback(
@@ -123,182 +159,292 @@ export default function ReceptionistDashboard({
 
   const userName = user?.name?.split(' ')[0] ?? 'Resepsionis';
 
-  return (
-    <div className="flex flex-col gap-4" data-testid="receptionist-dashboard">
-      <FrontDeskHeader
-        userName={userName}
-        stats={stats}
-        activeStatKey={activeStatKey}
-        onStatClick={applyStatFilter}
-      />
+  const filteredRooms = useMemo(
+    () => applyRoomFilters(roomCards, filters),
+    [roomCards, filters]
+  );
 
-      {showUrgentBar && (
-        <UrgentActionBar
-          actions={urgentActions}
-          loadingId={urgentLoadingId}
-          onAction={handleUrgentAction}
-          onDismiss={dismissBar}
-          onViewAll={handleViewAllUrgent}
-        />
-      )}
+  const handleViewModeChange = useCallback(
+    (mode: ViewMode) => {
+      persistViewMode(mode);
+      setInternalViewMode(mode);
+      setActiveViewStore(mode);
+      trackFrontDeskEvent('view_mode_change', { mode });
+      onViewModeChange?.(mode);
+    },
+    [onViewModeChange, setActiveViewStore]
+  );
 
-      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <QuickSearchInput
-            value={filters.search}
-            onChange={setSearch}
-            className="max-w-none lg:max-w-md lg:flex-1"
-          />
+  const handleCreateBooking = useCallback(
+    (roomId?: string) => {
+      if (roomId && onCreateBooking) {
+        onCreateBooking(roomId, new Date());
+        return;
+      }
+      navigate('/bookings', {
+        state: { openNew: true, roomId },
+      });
+    },
+    [navigate, onCreateBooking]
+  );
 
-          <div className="flex flex-wrap items-center gap-2">
+  const handleBookingClick = useCallback(
+    (bookingId: string, roomId: string) => {
+      const card = roomCards.find((r) => r.id === roomId);
+      if (card) selectRoom(card);
+      onBookingClick?.(bookingId, roomId);
+    },
+    [roomCards, selectRoom, onBookingClick]
+  );
+
+  const handleCloseOverlays = useCallback(() => {
+    if (commandOpen) setCommandOpen(false);
+    else if (showShortcuts) setShowShortcuts(false);
+    else if (isDetailPanelOpen) closeDetailPanel();
+  }, [commandOpen, showShortcuts, isDetailPanelOpen, closeDetailPanel]);
+
+  useKeyboardShortcuts(
+    {
+      onNewBooking: () => handleCreateBooking(),
+      onFocusSearch: () => searchRef.current?.focus(),
+      onToggleFilter: () => setShowFilterPanel((v) => !v),
+      onViewGrid: () => handleViewModeChange('grid'),
+      onViewFloorplan: () => handleViewModeChange('floorplan'),
+      onViewTimeline: () => handleViewModeChange('timeline'),
+      onCloseOverlay: handleCloseOverlays,
+      onShowShortcuts: () => setShowShortcuts(true),
+      onOpenCommandPalette: () => setCommandOpen(true),
+    },
+    true
+  );
+
+  const renderActiveView = () => {
+    const content = (() => {
+      switch (viewMode) {
+        case 'floorplan':
+          return (
+            <FloorPlanView
+              rooms={filteredRooms}
+              loading={isLoading}
+              onRoomClick={handleRoomClick}
+            />
+          );
+        case 'timeline':
+          return (
+            <FrontDeskTimelineView
+              rooms={filteredRooms}
+              loading={isLoading}
+              onBookingClick={handleBookingClick}
+              onCreateBooking={(roomId, date) => {
+                if (onCreateBooking) onCreateBooking(roomId, date);
+                else navigate('/bookings', { state: { openNew: true, roomId } });
+              }}
+            />
+          );
+        default:
+          return (
+            <RoomGridView
+              rooms={roomCards}
+              onRoomClick={handleRoomClick}
+              onRoomSaved={(msg) => showToast(msg, 'success')}
+              filterState={filters}
+              cardSize={cardSize}
+              loading={isLoading}
+            />
+          );
+      }
+    })();
+
+    if (!animationsEnabled) return content;
+
+    return (
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={viewMode}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.25 }}
+        >
+          {content}
+        </motion.div>
+      </AnimatePresence>
+    );
+  };
+
+  const allOccupied =
+    roomCards.length > 0 &&
+    roomCards.every(
+      (r) =>
+        r.status === RoomStatus.OCCUPIED ||
+        r.status === RoomStatus.UNPAID ||
+        r.status === RoomStatus.RESERVED
+    );
+
+  const filterPanelContent = (
+    <div className="space-y-3">
+      <div>
+        <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Status</p>
+        <div className="flex flex-wrap gap-1.5">
+          {getAllStatusDefinitions().map((def) => (
             <button
+              key={def.key}
               type="button"
-              onClick={() => setShowFilterPanel((v) => !v)}
+              onClick={() => toggleStatus(def.key as RoomStatus)}
               className={cn(
-                'inline-flex min-h-[44px] items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold uppercase tracking-wide',
-                showFilterPanel || activeFilterCount > 0
-                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                  : 'border-slate-200 bg-white text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                'min-h-[36px] rounded-lg border px-2.5 py-1.5 text-xs font-bold',
+                filters.statuses.includes(def.key as RoomStatus)
+                  ? cn(def.colors.borderClass, def.colors.bgClass, def.colors.textClass)
+                  : 'border-slate-200 text-slate-500 dark:border-slate-600 dark:text-slate-400'
               )}
-              data-testid="room-grid-filter-toggle"
             >
-              <SlidersHorizontal className="h-4 w-4" />
-              Filter
-              {activeFilterCount > 0 && (
-                <span className="rounded-full bg-emerald-600 px-1.5 py-0.5 text-[10px] text-white">
-                  {activeFilterCount}
-                </span>
-              )}
+              {def.label}
             </button>
-
-            <RoomCardSize value={cardSize} onChange={handleCardSizeChange} />
-          </div>
+          ))}
         </div>
+      </div>
 
-        <ViewModeToggle
-          value={viewMode}
-          onChange={(mode) => onViewModeChange?.(mode)}
-          enableLegacyViews={enableLegacyViews}
-        />
-
-        {showFilterPanel && (
-          <div className="space-y-4 border-t border-slate-100 pt-4 dark:border-slate-800">
-            <div>
-              <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                Status
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {getAllStatusDefinitions().map((def) => (
-                  <button
-                    key={def.key}
-                    type="button"
-                    onClick={() => toggleStatus(def.key as RoomStatus)}
-                    className={cn(
-                      'min-h-[44px] rounded-xl border px-3 py-2 text-xs font-bold',
-                      filters.statuses.includes(def.key as RoomStatus)
-                        ? cn(def.colors.borderClass, def.colors.bgClass, def.colors.textClass)
-                        : 'border-slate-200 text-slate-500 dark:border-slate-600 dark:text-slate-400'
-                    )}
-                  >
-                    {def.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {availableFloors.length > 0 && (
-              <div>
-                <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Lantai
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {availableFloors.map((floor) => (
-                    <button
-                      key={floor}
-                      type="button"
-                      onClick={() => toggleFloor(floor)}
-                      className={cn(
-                        'min-h-[44px] rounded-xl border px-3 py-2 text-xs font-bold',
-                        filters.floors.includes(floor)
-                          ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
-                          : 'border-slate-200 text-slate-500'
-                      )}
-                    >
-                      {floor <= 0 ? 'Dasar' : `Lantai ${floor}`}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {availableTypes.length > 0 && (
-              <div>
-                <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Tipe Kamar
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {availableTypes.map((typeName) => (
-                    <button
-                      key={typeName}
-                      type="button"
-                      onClick={() => toggleRoomType(typeName)}
-                      className={cn(
-                        'min-h-[44px] rounded-xl border px-3 py-2 text-xs font-bold',
-                        filters.roomTypeNames.includes(typeName)
-                          ? 'border-blue-300 bg-blue-50 text-blue-800'
-                          : 'border-slate-200 text-slate-500'
-                      )}
-                    >
-                      {typeName}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="flex flex-wrap gap-2">
+      {availableFloors.length > 0 && (
+        <div>
+          <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Lantai</p>
+          <div className="flex flex-wrap gap-1.5">
+            {availableFloors.map((floor) => (
               <button
+                key={floor}
                 type="button"
-                onClick={toggleUrgentOnly}
+                onClick={() => toggleFloor(floor)}
                 className={cn(
-                  'min-h-[44px] rounded-xl border px-4 py-2 text-xs font-bold',
-                  filters.urgentOnly
-                    ? 'border-coral-400 bg-coral-50 text-coral-900'
+                  'min-h-[36px] rounded-lg border px-2.5 py-1.5 text-xs font-bold',
+                  filters.floors.includes(floor)
+                    ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
                     : 'border-slate-200 text-slate-500'
                 )}
               >
-                Hanya Urgent
+                {floor <= 0 ? 'Dasar' : `Lantai ${floor}`}
               </button>
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="inline-flex min-h-[44px] items-center gap-1 rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-500"
-              >
-                <X className="h-3.5 w-3.5" />
-                Reset Filter
-              </button>
-            </div>
+            ))}
           </div>
-        )}
-      </div>
-
-      {viewMode === 'grid' ? (
-        <RoomGridView
-          rooms={roomCards}
-          onRoomClick={handleRoomClick}
-          filterState={filters}
-          cardSize={cardSize}
-          loading={loading}
-        />
-      ) : (
-        renderLegacyView?.() ?? (
-          <div className="rounded-2xl border border-dashed border-slate-300 p-12 text-center text-slate-400">
-            Mode {viewMode} akan tersedia di phase berikutnya.
-          </div>
-        )
+        </div>
       )}
 
+      {availableTypes.length > 0 && (
+        <div>
+          <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Tipe Kamar</p>
+          <div className="flex flex-wrap gap-1.5">
+            {availableTypes.map((typeName) => (
+              <button
+                key={typeName}
+                type="button"
+                onClick={() => toggleRoomType(typeName)}
+                className={cn(
+                  'min-h-[36px] rounded-lg border px-2.5 py-1.5 text-xs font-bold',
+                  filters.roomTypeNames.includes(typeName)
+                    ? 'border-blue-300 bg-blue-50 text-blue-800'
+                    : 'border-slate-200 text-slate-500'
+                )}
+              >
+                {typeName}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={toggleUrgentOnly}
+          className={cn(
+            'min-h-[36px] rounded-lg border px-3 py-1.5 text-xs font-bold',
+            filters.urgentOnly
+              ? 'border-coral-400 bg-coral-50 text-coral-900'
+              : 'border-slate-200 text-slate-500'
+          )}
+        >
+          Hanya Urgent
+        </button>
+        <button
+          type="button"
+          onClick={resetFilters}
+          className="inline-flex min-h-[36px] items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500"
+        >
+          <X className="h-3.5 w-3.5" />
+          Reset
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div
+      className="flex min-h-0 flex-col gap-2 lg:gap-3 lg:h-full"
+      data-testid="receptionist-dashboard"
+    >
+      <div className="sticky top-0 z-10 shrink-0 space-y-2 bg-slate-50/95 pb-1 backdrop-blur-sm dark:bg-slate-950/95 lg:static lg:bg-transparent lg:backdrop-blur-none">
+        <FrontDeskHeader
+          userName={userName}
+          stats={stats}
+          activeStatKey={activeStatKey}
+          onStatClick={applyStatFilter}
+          mode={headerMode}
+          onModeChange={handleHeaderModeChange}
+        />
+
+        {showUrgentBar && (
+          <UrgentActionBar
+            actions={urgentActions}
+            loadingId={urgentLoadingId}
+            onAction={handleUrgentAction}
+            onDismiss={dismissBar}
+            onViewAll={handleViewAllUrgent}
+            compact={headerMode === 'compact'}
+          />
+        )}
+
+        <FrontDeskToolbar
+          searchRef={searchRef}
+          search={filters.search}
+          onSearchChange={(q) => {
+            setSearch(q);
+            trackFrontDeskEvent('search_query', { length: q.length });
+          }}
+          showFilterPanel={showFilterPanel}
+          onToggleFilter={() => setShowFilterPanel((v) => !v)}
+          activeFilterCount={activeFilterCount}
+          cardSize={cardSize}
+          onCardSizeChange={handleCardSizeChange}
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
+          showLegend={showLegend}
+          onToggleLegend={() => setShowLegend((v) => !v)}
+          showFilterContent={showFilterPanel}
+          filterContent={filterPanelContent}
+        />
+      </div>
+
+      <div className="min-h-0 flex-1 lg:overflow-auto">
+        {allOccupied && viewMode === 'grid' && (
+          <EmptyState variant="all-occupied" className="mb-2 py-4" />
+        )}
+
+        <ErrorBoundary area="Front Desk View">{renderActiveView()}</ErrorBoundary>
+      </div>
+
+      <ErrorBoundary area="Detail Panel">
+        <RoomDetailPanel onToast={showToast} />
+      </ErrorBoundary>
+
       <FrontDeskToast toasts={toasts} onDismiss={dismiss} />
+
+      <KeyboardShortcutsDialog open={showShortcuts} onClose={() => setShowShortcuts(false)} />
+
+      <CommandPalette
+        open={commandOpen}
+        onOpenChange={setCommandOpen}
+        onNewBooking={() => handleCreateBooking()}
+        onToggleFilter={() => setShowFilterPanel((v) => !v)}
+        onViewChange={handleViewModeChange}
+      />
     </div>
   );
 }

@@ -10,8 +10,8 @@ export default function AppLayout() {
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         <Topbar />
-        <main className="flex-1 overflow-y-auto pb-20 lg:pb-4">
-          <div className="max-w-7xl mx-auto px-4 py-5">
+        <main className="flex-1 overflow-y-auto pb-[3.5rem] lg:pb-3">
+          <div className="mx-auto max-w-7xl px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-4">
             <Outlet />
           </div>
         </main>

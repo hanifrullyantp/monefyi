@@ -28,7 +28,8 @@ export function readRoomCardSize(): RoomCardSizeValue {
   } catch {
     /* ignore */
   }
-  return 'md';
+  if (typeof window !== 'undefined' && window.innerWidth < 640) return 'sm';
+  return 'sm';
 }
 
 export function persistRoomCardSize(size: RoomCardSizeValue): void {
@@ -59,7 +60,7 @@ export default function RoomCardSize({ value, onChange, className }: RoomCardSiz
           title={label}
           onClick={() => onChange(sizeValue)}
           className={cn(
-            'flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-bold transition-all',
+            'flex min-h-[36px] min-w-[36px] items-center justify-center gap-1 rounded-lg px-2 text-xs font-bold transition-all sm:min-h-[40px] sm:min-w-[40px] sm:px-2.5',
             value === sizeValue
               ? 'bg-emerald-600 text-white shadow-sm'
               : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'

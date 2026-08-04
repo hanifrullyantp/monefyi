@@ -66,11 +66,13 @@ interface AppState {
   pricingRules: PricingRule[];
   accountingEntries: AccountingEntry[];
   sidebarOpen: boolean;
+  sidebarCompact: boolean;
 
   setBookings: (bookings: Booking[]) => void;
   addBooking: (booking: Booking) => void;
   updateBooking: (id: string, updates: Partial<Booking>) => void;
   updateRoomStatus: (id: string, status: Room['status']) => void;
+  updateRoom: (id: string, updates: Partial<Pick<Room, 'number' | 'floor' | 'status' | 'notes' | 'roomTypeId' | 'isActive'>>) => void;
   updateRoomPosition: (id: string, x: number | null, y: number | null) => void;
   addRoom: (room: Omit<Room, 'id'>) => void;
   addGuest: (guest: Guest) => void;
@@ -114,6 +116,8 @@ interface AppState {
   hydrateFromRemote: (data: Partial<Pick<AppState, 'bookings' | 'rooms' | 'guests' | 'payments' | 'housekeepingTasks' | 'notifications' | 'roomTypes' | 'pricingRules' | 'accountingEntries'>>) => void;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
+  toggleSidebarCompact: () => void;
+  setSidebarCompact: (compact: boolean) => void;
 }
 
 const roomsWithTypes = mockRooms.map((room) => ({
@@ -160,6 +164,7 @@ export const useAppStore = create<AppState>()(
       pricingRules: defaultPricingRules,
       accountingEntries: defaultAccounting,
       sidebarOpen: false,
+      sidebarCompact: true,
 
       setBookings: (bookings) => set({ bookings }),
 
@@ -185,6 +190,13 @@ export const useAppStore = create<AppState>()(
           rooms: state.rooms.map((r) => (r.id === id ? { ...r, status } : r)),
         }));
         void queueMutation('updateRoomStatus', { id, status });
+      },
+
+      updateRoom: (id, updates) => {
+        set((state) => ({
+          rooms: state.rooms.map((r) => (r.id === id ? { ...r, ...updates } : r)),
+        }));
+        void queueMutation('updateRoom', { id, updates });
       },
 
       updateRoomPosition: (id, x, y) => {
@@ -529,6 +541,8 @@ export const useAppStore = create<AppState>()(
 
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
+      toggleSidebarCompact: () => set((state) => ({ sidebarCompact: !state.sidebarCompact })),
+      setSidebarCompact: (compact) => set({ sidebarCompact: compact }),
     }),
     {
       name: 'stay-app',

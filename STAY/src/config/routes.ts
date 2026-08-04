@@ -41,3 +41,9 @@ export function canAccessRoute(path: string, role: UserRole): boolean {
 
 export const DEFAULT_AUTH_REDIRECT = '/front-desk';
 export const ROLE_DENIED_REDIRECT = '/front-desk';
+
+/** Halaman pertama setelah login — resepsionis langsung ke Front Desk operasional */
+export function getPostLoginRedirect(role: UserRole): string {
+  if (role === 'receptionist') return '/front-desk';
+  return DEFAULT_AUTH_REDIRECT;
+}

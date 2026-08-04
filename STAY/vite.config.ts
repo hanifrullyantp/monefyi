@@ -71,6 +71,17 @@ export default defineConfig(({ mode }) => {
       outDir: path.resolve(__dirname, "../dist/stay"),
       emptyOutDir: true,
     },
+    server: {
+      host: "localhost",
+      port: 5173,
+      strictPort: false,
+      open: "/stay/",
+    },
+    preview: {
+      host: "localhost",
+      port: 5173,
+      open: "/stay/",
+    },
     test: {
       environment: "node",
       include: ["src/**/*.test.ts"],

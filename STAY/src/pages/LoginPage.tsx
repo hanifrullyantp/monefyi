@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
-import { DEFAULT_AUTH_REDIRECT } from '../config/routes';
+import { DEFAULT_AUTH_REDIRECT, getPostLoginRedirect } from '../config/routes';
 import { useAuthStore } from '../store/authStore';
 import { loginSchema, type LoginFormData } from '../schemas/validation';
 import { Home, Eye, EyeOff, ArrowRight, User } from 'lucide-react';
@@ -33,7 +33,8 @@ export default function LoginPage() {
     setError('');
     const result = await login(data.email, data.password);
     if (result.success) {
-      navigate(DEFAULT_AUTH_REDIRECT);
+      const role = useAuthStore.getState().user?.role;
+      navigate(role ? getPostLoginRedirect(role) : DEFAULT_AUTH_REDIRECT);
     } else {
       setError(result.error || 'Login gagal');
     }
@@ -44,7 +45,10 @@ export default function LoginPage() {
     setValue('password', 'StayDemo2026!');
     setError('');
     const result = await login(demoEmail, 'StayDemo2026!');
-    if (result.success) navigate(DEFAULT_AUTH_REDIRECT);
+    if (result.success) {
+      const role = useAuthStore.getState().user?.role;
+      navigate(role ? getPostLoginRedirect(role) : DEFAULT_AUTH_REDIRECT);
+    }
     else setError(result.error || 'Login gagal');
   };
 

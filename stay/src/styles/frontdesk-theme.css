@@ -56,6 +56,8 @@
   --animate-pulse-urgent: pulse-urgent 2s ease-in-out infinite;
   --animate-ripple: ripple 0.6s ease-out forwards;
   --animate-shimmer: shimmer 1.8s ease-in-out infinite;
+
+  --font-clock: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 @keyframes pulse-urgent {

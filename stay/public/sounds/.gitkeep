@@ -1,0 +1,2 @@
+# Optional MP3 files: ting.mp3, success.mp3, error.mp3, click.mp3
+# Web Audio fallback digunakan jika file tidak ada.

@@ -1,6 +1,8 @@
 import {
+  forwardRef,
   useCallback,
   useEffect,
+  useImperativeHandle,
   useRef,
   useState,
   type KeyboardEvent,
@@ -37,17 +39,26 @@ export interface QuickSearchInputProps {
   className?: string;
 }
 
+export interface QuickSearchInputHandle {
+  focus: () => void;
+}
+
 /**
  * Search input dengan debounce, shortcut keyboard, dan recent searches.
  */
-export default function QuickSearchInput({
+const QuickSearchInput = forwardRef<QuickSearchInputHandle, QuickSearchInputProps>(
+function QuickSearchInput({
   value,
   onChange,
   className,
-}: QuickSearchInputProps) {
+}, ref) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [localValue, setLocalValue] = useState(value);
   const [focused, setFocused] = useState(false);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => inputRef.current?.focus(),
+  }));
   const [recent, setRecent] = useState<string[]>(readRecentSearches);
   const debounceRef = useRef<number | null>(null);
 
@@ -188,4 +199,6 @@ export default function QuickSearchInput({
       )}
     </div>
   );
-}
+});
+
+export default QuickSearchInput;

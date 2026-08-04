@@ -49,6 +49,7 @@ function mapRoomToCardData(room: Room, bookings: Booking[]): RoomCardData {
     urgencyLevel: 0,
     shouldPulse: false,
     facilities: room.roomType?.facilities ?? [],
+    notes: room.notes,
     maintenanceNote: room.status === 'maintenance' ? room.notes : undefined,
     indicators: buildIndicators(status, activeSummary),
     ribbon: buildRibbon(status, upcomingSummary),

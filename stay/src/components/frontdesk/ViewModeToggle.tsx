@@ -83,7 +83,7 @@ export default function ViewModeToggle({
             title={disabled ? 'Segera hadir' : label}
             onClick={() => !disabled && handleChange(mode)}
             className={cn(
-              'flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition-all duration-200 sm:flex-initial sm:px-4',
+              'flex min-h-[36px] flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-[10px] font-bold transition-all duration-200 sm:min-h-[40px] sm:flex-initial sm:gap-2 sm:px-3 sm:text-xs',
               isActive
                 ? 'bg-emerald-600 text-white shadow-sm'
                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200',

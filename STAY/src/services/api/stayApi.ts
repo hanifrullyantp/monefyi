@@ -61,6 +61,19 @@ export async function syncActionToApi(action: OfflineAction): Promise<boolean> {
         if (error) throw error;
         break;
       }
+      case 'updateRoom': {
+        const { id, updates } = payload as { id: string; updates: Record<string, unknown> };
+        const dbUpdates: Record<string, unknown> = {};
+        if ('number' in updates) dbUpdates.number = updates.number;
+        if ('floor' in updates) dbUpdates.floor = updates.floor;
+        if ('status' in updates) dbUpdates.status = updates.status;
+        if ('notes' in updates) dbUpdates.notes = updates.notes ?? null;
+        if ('roomTypeId' in updates) dbUpdates.room_type_id = updates.roomTypeId;
+        if ('isActive' in updates) dbUpdates.is_active = updates.isActive;
+        const { error } = await supabase.from('stay_rooms').update(dbUpdates).eq('id', id);
+        if (error) throw error;
+        break;
+      }
       case 'updateRoomPosition': {
         const { id, x, y } = payload as { id: string; x: number | null; y: number | null };
         const { error } = await supabase

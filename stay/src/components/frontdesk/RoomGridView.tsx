@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BedDouble, Plus, SearchX } from 'lucide-react';
 
 import { useRoomsGrouped } from '../../hooks/useRoomsGrouped';
 import {
@@ -8,14 +7,15 @@ import {
   type RoomFilterState,
 } from '../../hooks/useRoomFilters';
 import type { RoomCardData, RoomFilter } from '../../types/frontdesk.types';
-import Button from '../ui/Button';
 import FloorGroup from './FloorGroup';
 import RoomCardSkeleton from './RoomCardSkeleton';
+import EmptyState from '../common/EmptyStates';
 import type { RoomCardSizeValue } from './RoomCardSize';
 
 export interface RoomGridViewProps {
   rooms: RoomCardData[];
   onRoomClick: (room: RoomCardData) => void;
+  onRoomSaved?: (message: string) => void;
   filters?: RoomFilter;
   searchQuery?: string;
   cardSize?: RoomCardSizeValue;
@@ -51,6 +51,7 @@ function toFilterState(
 export default function RoomGridView({
   rooms,
   onRoomClick,
+  onRoomSaved,
   filters,
   searchQuery,
   cardSize = 'md',
@@ -81,42 +82,22 @@ export default function RoomGridView({
 
   if (rooms.length === 0) {
     return (
-      <div
-        className="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-200 bg-white px-6 py-16 text-center dark:border-slate-700 dark:bg-slate-900"
+      <EmptyState
+        variant="no-rooms"
+        actionLabel="Tambah Kamar Pertama"
+        onAction={() => navigate('/rooms')}
         data-testid="room-grid-empty-all"
-      >
-        <BedDouble className="mb-4 h-14 w-14 text-slate-300" />
-        <h3 className="text-lg font-black text-slate-800 dark:text-white">
-          Belum Ada Kamar Terdaftar
-        </h3>
-        <p className="mt-2 max-w-sm text-sm text-slate-500 dark:text-slate-400">
-          Mulai dengan menambahkan kamar pertama agar front desk siap menerima tamu.
-        </p>
-        <Button
-          className="mt-6 min-h-[44px] rounded-2xl"
-          icon={<Plus className="h-4 w-4" />}
-          onClick={() => navigate('/rooms')}
-        >
-          Tambah Kamar Pertama
-        </Button>
-      </div>
+      />
     );
   }
 
   if (visibleRooms.length === 0) {
     return (
-      <div
-        className="flex flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white px-6 py-14 text-center dark:border-slate-700 dark:bg-slate-900"
+      <EmptyState
+        variant="no-search-results"
+        className="border-solid"
         data-testid="room-grid-empty-filter"
-      >
-        <SearchX className="mb-4 h-12 w-12 text-slate-300" />
-        <h3 className="text-lg font-black text-slate-800 dark:text-white">
-          Tidak Ada Kamar Cocok
-        </h3>
-        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-          Coba ubah filter atau kata kunci pencarian Anda.
-        </p>
-      </div>
+      />
     );
   }
 
@@ -129,6 +110,7 @@ export default function RoomGridView({
           rooms={floor.rooms}
           summary={floor.summary}
           onRoomClick={onRoomClick}
+          onRoomSaved={onRoomSaved}
           cardSize={cardSize}
           searchQuery={highlightQuery}
           staggerIndex={index}

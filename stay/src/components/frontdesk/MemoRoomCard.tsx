@@ -7,8 +7,11 @@ import RoomCard, { type RoomCardProps } from './RoomCard';
 const MemoRoomCard = memo(RoomCard, (prev, next) => {
   return (
     prev.size === next.size &&
+    prev.editable === next.editable &&
     prev.room.id === next.room.id &&
     prev.room.status === next.room.status &&
+    prev.room.rawStatus === next.room.rawStatus &&
+    prev.room.notes === next.room.notes &&
     prev.room.urgencyLevel === next.room.urgencyLevel &&
     prev.room.shouldPulse === next.room.shouldPulse &&
     prev.room.checkoutLabel === next.room.checkoutLabel &&

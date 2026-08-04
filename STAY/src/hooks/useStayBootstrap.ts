@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
+import { useFrontDeskPreferencesStore } from '../stores/frontDeskPreferencesStore';
+import { preloadAllSounds } from '../utils/sounds';
 import { hydrateAppStoreFromRemote } from '../services/api/stayApi';
 import { hydrateFinanceFromRemote, fetchRegisterSessions } from '../services/api/stayFinanceApi';
 
@@ -13,6 +15,9 @@ export function useStayBootstrap() {
 
   useEffect(() => {
     void initializeSession();
+    const prefs = useFrontDeskPreferencesStore.getState();
+    document.documentElement.classList.toggle('dark', prefs.darkMode);
+    preloadAllSounds();
   }, [initializeSession]);
 
   useEffect(() => {
