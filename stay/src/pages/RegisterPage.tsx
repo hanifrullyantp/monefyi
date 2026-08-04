@@ -7,6 +7,7 @@ import {
   registerSchema,
   REGISTER_DRAFT_KEY,
   REGISTER_STEP1_FIELDS,
+  validateRegisterStep1,
   type RegisterDraftData,
   type RegisterFormData,
 } from '../schemas/validation';
@@ -50,11 +51,15 @@ export default function RegisterPage() {
     handleSubmit,
     watch,
     reset,
-    trigger,
+    getValues,
+    setError,
+    clearErrors,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     shouldUnregister: false,
+    mode: 'onSubmit',
+    reValidateMode: 'onChange',
     defaultValues: {
       fullName: '',
       email: '',
@@ -80,7 +85,7 @@ export default function RegisterPage() {
       if (!raw) return;
 
       const parsed = JSON.parse(raw) as RegisterDraftData;
-      const { step: savedStep, ...fields } = parsed;
+      const { step: _savedStep, ...fields } = parsed;
 
       reset({
         ...fields,
@@ -93,21 +98,23 @@ export default function RegisterPage() {
       });
 
       setDraftWarning('Draft dimuat. Silakan isi ulang password sebelum mendaftar.');
-
-      if (savedStep === 2) {
-        void trigger([...REGISTER_STEP1_FIELDS]).then((step1Ok) => {
-          if (step1Ok) {
-            setStep(2);
-            setDraftWarning('');
-          } else {
-            setStep(1);
-          }
-        });
-      }
+      setStep(1);
     } catch {
       /* ignore */
     }
-  }, [reset, leadSource, trigger]);
+  }, [reset, leadSource]);
+
+  const applyFieldErrors = useCallback(
+    (fieldErrors: Record<string, string>) => {
+      for (const field of REGISTER_STEP1_FIELDS) {
+        clearErrors(field);
+      }
+      for (const [field, message] of Object.entries(fieldErrors)) {
+        setError(field as keyof RegisterFormData, { type: 'manual', message });
+      }
+    },
+    [clearErrors, setError]
+  );
 
   useEffect(() => {
     const sub = watch((values) => {
@@ -122,20 +129,19 @@ export default function RegisterPage() {
     return () => sub.unsubscribe();
   }, [watch, step]);
 
-  const goStep2 = async () => {
+  const goStep2 = () => {
     setValidationSummary('');
     setError('');
-    const ok = await trigger([...REGISTER_STEP1_FIELDS]);
-    if (!ok) {
+    const fieldErrors = validateRegisterStep1(getValues());
+    if (Object.keys(fieldErrors).length > 0) {
+      applyFieldErrors(fieldErrors);
       setValidationSummary('Periksa data pribadi yang ditandai merah.');
+      const firstField = Object.keys(fieldErrors)[0];
       window.setTimeout(() => {
-        for (const f of REGISTER_STEP1_FIELDS) {
-          const el = document.querySelector(`[data-field="${f}"]`);
-          if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            break;
-          }
-        }
+        document.querySelector(`[data-field="${firstField}"]`)?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
       }, 50);
       return;
     }
@@ -143,20 +149,35 @@ export default function RegisterPage() {
     setDraftWarning('');
   };
 
-  const onInvalid = useCallback((invalidErrors: FieldErrors<RegisterFormData>) => {
-    const hasStep1Error = REGISTER_STEP1_FIELDS.some((f) => f in invalidErrors);
-    if (hasStep1Error) {
-      setStep(1);
-      setValidationSummary('Data pribadi perlu diperbaiki. Silakan cek Langkah 1.');
-    } else {
-      setValidationSummary('Periksa field yang ditandai merah.');
-    }
-    window.setTimeout(() => scrollToFirstError(invalidErrors), 50);
-  }, []);
+  const onInvalid = useCallback(
+    (invalidErrors: FieldErrors<RegisterFormData>) => {
+      const hasStep1Error = REGISTER_STEP1_FIELDS.some((f) => f in invalidErrors);
+      if (hasStep1Error) {
+        setStep(1);
+        setValidationSummary('Data pribadi perlu diperbaiki. Silakan cek Langkah 1.');
+      } else {
+        const firstMsg = Object.values(invalidErrors).find((e) => e?.message)?.message;
+        setValidationSummary(
+          firstMsg ? String(firstMsg) : 'Periksa field yang ditandai merah.'
+        );
+      }
+      window.setTimeout(() => scrollToFirstError(invalidErrors), 50);
+    },
+    []
+  );
 
   const onSubmit = async (data: RegisterFormData) => {
     setError('');
     setValidationSummary('');
+
+    const step1Errors = validateRegisterStep1(data);
+    if (Object.keys(step1Errors).length > 0) {
+      applyFieldErrors(step1Errors);
+      setStep(1);
+      setValidationSummary('Data pribadi perlu diperbaiki. Silakan cek Langkah 1.');
+      return;
+    }
+
     const result = await signUp({ ...data, leadSource });
     if (result.success) {
       localStorage.removeItem(REGISTER_DRAFT_KEY);
@@ -419,7 +440,7 @@ export default function RegisterPage() {
                   <label className="flex items-start gap-2 text-sm text-slate-600">
                     <input
                       type="checkbox"
-                      {...register('acceptTerms', { value: true })}
+                      {...register('acceptTerms')}
                       className="mt-1"
                       aria-invalid={Boolean(errors.acceptTerms)}
                     />
@@ -438,11 +459,7 @@ export default function RegisterPage() {
                     <p className="text-xs text-red-500">{errors.acceptTerms.message}</p>
                   )}
                   <label className="flex items-start gap-2 text-sm text-slate-600">
-                    <input
-                      type="checkbox"
-                      {...register('marketingOptIn', { value: true })}
-                      className="mt-1"
-                    />
+                    <input type="checkbox" {...register('marketingOptIn')} className="mt-1" />
                     <span>Kirimkan saya tips & update via email</span>
                   </label>
                 </div>

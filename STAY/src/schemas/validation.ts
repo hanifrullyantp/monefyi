@@ -23,7 +23,7 @@ const registerStep1Base = z.object({
   email: z.string().email('Email tidak valid'),
   phone: phoneField,
   password: passwordField,
-  confirmPassword: z.string(),
+  confirmPassword: z.string().min(1, 'Konfirmasi password wajib diisi'),
 });
 
 export const registerStep1Schema = registerStep1Base.refine(
@@ -74,6 +74,27 @@ export const REGISTER_DRAFT_KEY = 'stay-register-draft';
 
 export interface RegisterDraftData extends Partial<Omit<RegisterFormData, 'password' | 'confirmPassword'>> {
   step?: 1 | 2;
+}
+
+/** Validasi Langkah 1 — termasuk cocok/tidaknya password (refine tidak jalan via trigger RHF) */
+export function validateRegisterStep1(data: {
+  fullName?: string;
+  email?: string;
+  phone?: string;
+  password?: string;
+  confirmPassword?: string;
+}): Record<string, string> {
+  const result = registerStep1Schema.safeParse(data);
+  if (result.success) return {};
+
+  const fieldErrors: Record<string, string> = {};
+  for (const issue of result.error.issues) {
+    const key = issue.path[0];
+    if (typeof key === 'string' && !fieldErrors[key]) {
+      fieldErrors[key] = issue.message;
+    }
+  }
+  return fieldErrors;
 }
 
 export const bookingGuestSchema = z.object({

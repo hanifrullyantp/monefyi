@@ -91,10 +91,13 @@ export async function registerStayAccount(payload: RegisterPayload): Promise<Reg
       );
 
       if (error) {
-        const msg = error.message?.includes('Failed to fetch')
-          ? 'Gagal hubungi server. Periksa koneksi internet dan coba lagi.'
-          : error.message;
-        return { success: false, error: msg };
+        const body = parseRegisterResponse(data);
+        const msg =
+          body.error ||
+          (error.message?.includes('Failed to fetch')
+            ? 'Gagal hubungi server. Periksa koneksi internet dan coba lagi.'
+            : error.message);
+        return { success: false, error: msg || 'Registrasi gagal. Silakan coba lagi.' };
       }
 
       const result = parseRegisterResponse(data);
