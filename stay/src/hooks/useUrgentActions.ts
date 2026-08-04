@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '../store/appStore';
+import { useFrontDeskStore } from '../stores/frontDeskStore';
 import { mapRoomsToCardData } from '../utils/mapRoomsToCardData';
 import {
   detectUrgentActions,
@@ -11,7 +12,7 @@ export type UrgentActionHandler = (
   action: UrgentAction
 ) => Promise<{ success: boolean; message: string }>;
 
-const DISMISS_KEY = 'stay-urgent-bar-dismissed';
+const DISMISS_KEY = 'stay-urgent-action-dismissed';
 
 function readDismissedIds(): Set<string> {
   try {
@@ -33,13 +34,16 @@ function writeDismissedIds(ids: Set<string>): void {
 
 /**
  * Deteksi & kelola urgent actions dengan refresh 30 detik.
+ * Tutup banner = collapse saja; item tetap ada di notifikasi & chip expand.
  */
 export function useUrgentActions() {
   const { rooms, bookings, payments } = useAppStore();
   const [tick, setTick] = useState(0);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(readDismissedIds);
-  const [barDismissed, setBarDismissed] = useState(false);
+  const barCollapsed = useFrontDeskStore((s) => s.urgentBarCollapsed);
+  const collapseUrgentBar = useFrontDeskStore((s) => s.collapseUrgentBar);
+  const expandUrgentBar = useFrontDeskStore((s) => s.expandUrgentBar);
   const prevSignatureRef = useRef('');
 
   useEffect(() => {
@@ -62,25 +66,26 @@ export function useUrgentActions() {
     [allActions]
   );
 
-  // Muncul lagi jika ada urgent baru setelah dismiss
   useEffect(() => {
     if (signature !== prevSignatureRef.current && signature) {
-      setBarDismissed(false);
+      expandUrgentBar();
     }
     prevSignatureRef.current = signature;
-  }, [signature]);
+  }, [signature, expandUrgentBar]);
 
   const visibleActions = useMemo(
     () => allActions.filter((a) => !dismissedIds.has(a.id)),
     [allActions, dismissedIds]
   );
 
+  /** Collapse banner — item tetap bisa dibuka lagi */
   const dismissBar = useCallback(() => {
-    setBarDismissed(true);
-    const next = new Set([...dismissedIds, ...allActions.map((a) => a.id)]);
-    setDismissedIds(next);
-    writeDismissedIds(next);
-  }, [allActions, dismissedIds]);
+    collapseUrgentBar();
+  }, [collapseUrgentBar]);
+
+  const expandBar = useCallback(() => {
+    expandUrgentBar();
+  }, [expandUrgentBar]);
 
   const dismissAction = useCallback((actionId: string) => {
     setDismissedIds((prev) => {
@@ -123,11 +128,13 @@ export function useUrgentActions() {
 
   return {
     actions: visibleActions,
-    allActions,
-    barDismissed,
+    allActions: visibleActions,
+    barCollapsed,
     dismissBar,
+    expandBar,
     runAction,
     loadingId,
-    showBar: visibleActions.length > 0 && !barDismissed,
+    showBar: visibleActions.length > 0 && !barCollapsed,
+    showCollapsedChip: visibleActions.length > 0 && barCollapsed,
   };
 }

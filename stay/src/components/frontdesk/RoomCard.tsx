@@ -33,18 +33,18 @@ export interface RoomCardProps {
 
 const SIZE_CONFIG = {
   sm: {
-    card: 'p-2.5 min-h-[128px] sm:min-h-[148px]',
-    number: 'text-3xl sm:text-4xl',
-    guest: 'text-xs sm:text-sm',
+    card: 'p-2.5 min-h-[120px] sm:min-h-[132px]',
+    number: 'text-2xl sm:text-3xl',
+    guest: 'text-xs',
   },
   md: {
-    card: 'p-3 min-h-[160px] sm:min-h-[200px]',
-    number: 'text-4xl sm:text-5xl',
-    guest: 'text-sm sm:text-base',
+    card: 'p-3 min-h-[132px] lg:min-h-[156px] lg:p-4',
+    number: 'text-3xl lg:text-4xl',
+    guest: 'text-sm',
   },
   lg: {
-    card: 'p-4 min-h-[200px] sm:min-h-[240px]',
-    number: 'text-5xl sm:text-6xl',
+    card: 'p-4 min-h-[168px] lg:min-h-[192px]',
+    number: 'text-4xl lg:text-5xl',
     guest: 'text-base',
   },
 };
@@ -273,7 +273,7 @@ export default function RoomCard({
           <Badge
             variant="gray"
             className={cn(
-              'mt-2 w-fit text-[10px] dark:bg-slate-800 dark:text-slate-300',
+              'mt-1.5 w-fit text-[10px] lg:mt-1 dark:bg-slate-800 dark:text-slate-300',
               statusConfig.colors.bgClass
             )}
           >
@@ -283,7 +283,7 @@ export default function RoomCard({
           {showGuest && guest && (
             <p
               className={cn(
-                'mt-2 truncate font-medium text-slate-800 dark:text-slate-100',
+                'mt-1.5 truncate font-semibold text-slate-800 dark:text-slate-100 lg:mt-1',
                 sizeStyles.guest
               )}
             >
@@ -293,11 +293,11 @@ export default function RoomCard({
 
           <p
             className={cn(
-              'mt-1 line-clamp-2 font-semibold',
+              'mt-0.5 line-clamp-1 font-medium',
               room.status === RoomStatus.UNPAID
-                ? 'text-lg text-coral-600 dark:text-coral-400 sm:text-xl'
-                : 'text-xs text-slate-600 dark:text-slate-400 sm:text-sm',
-              room.status === RoomStatus.AVAILABLE && 'text-sm text-slate-700 dark:text-slate-300 sm:text-base'
+                ? 'text-base text-coral-600 dark:text-coral-400 lg:text-lg'
+                : 'text-[11px] text-slate-600 dark:text-slate-400 lg:text-xs',
+              room.status === RoomStatus.AVAILABLE && 'text-xs text-slate-700 dark:text-slate-300'
             )}
           >
             {contextual}
@@ -305,24 +305,28 @@ export default function RoomCard({
         </div>
 
         {showActions && !isEditing && (
-          <div className="mt-auto space-y-2 pt-2 sm:space-y-3 sm:pt-3">
-            {(room.status === RoomStatus.OCCUPIED || room.status === RoomStatus.UNPAID) &&
-              room.activeBooking && (
-                <>
-                  <RoomCardProgress
-                    checkIn={room.activeBooking.checkIn}
-                    checkOut={room.activeBooking.checkOut}
-                    showLabel={size !== 'sm'}
-                  />
-                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          <div className="mt-auto space-y-1.5 pt-2 lg:space-y-2 lg:pt-3">
+            {room.activeBooking &&
+              (room.status === RoomStatus.OCCUPIED ||
+                room.status === RoomStatus.UNPAID ||
+                room.status === RoomStatus.RESERVED) && (
+                <RoomCardProgress
+                  checkIn={room.activeBooking.checkIn}
+                  checkOut={room.activeBooking.checkOut}
+                  showLabel={size === 'lg'}
+                />
+              )}
+
+            {room.activeBooking &&
+              (room.status === RoomStatus.OCCUPIED || room.status === RoomStatus.UNPAID) && (
+                  <div className="hidden items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 lg:flex">
                     <span>{formatShortDate(room.activeBooking.checkIn)}</span>
                     <span className="text-slate-300 dark:text-slate-600">↔</span>
                     <span>{formatShortDate(room.activeBooking.checkOut)}</span>
                   </div>
-                </>
-              )}
+                )}
 
-            {room.status === RoomStatus.RESERVED && room.upcomingBooking && (
+            {room.status === RoomStatus.RESERVED && room.upcomingBooking && !room.activeBooking && (
               <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 <span>{formatShortDate(room.upcomingBooking.checkIn)}</span>
                 <span className="text-slate-300 dark:text-slate-600">↔</span>

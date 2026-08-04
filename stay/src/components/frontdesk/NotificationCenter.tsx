@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, CheckCheck, CreditCard, Sparkles, Wrench } from 'lucide-react';
+import { Bell, CheckCheck, CreditCard, Sparkles, Wrench, AlertTriangle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { cn } from '../../utils/cn';
@@ -10,8 +10,9 @@ import { useFrontDeskStore } from '../../stores/frontDeskStore';
 import { mapRoomsToCardData } from '../../utils/mapRoomsToCardData';
 import { trackFrontDeskEvent } from '../../utils/frontDeskAnalytics';
 import { playSound } from '../../utils/sounds';
+import { useUrgentActions } from '../../hooks/useUrgentActions';
 
-export type NotificationCategory = 'booking' | 'payment' | 'housekeeping' | 'system';
+export type NotificationCategory = 'booking' | 'payment' | 'housekeeping' | 'system' | 'urgent';
 
 export interface FrontDeskNotification {
   id: string;
@@ -30,6 +31,7 @@ const CATEGORY_ICONS: Record<NotificationCategory, typeof Bell> = {
   payment: CreditCard,
   housekeeping: Wrench,
   system: Bell,
+  urgent: AlertTriangle,
 };
 
 const CATEGORY_STYLES: Record<NotificationCategory, string> = {
@@ -37,6 +39,7 @@ const CATEGORY_STYLES: Record<NotificationCategory, string> = {
   payment: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
   housekeeping: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
   system: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+  urgent: 'bg-coral-100 text-coral-800 dark:bg-coral-950 dark:text-coral-300',
 };
 
 export default function NotificationCenter({
@@ -49,6 +52,7 @@ export default function NotificationCenter({
   const navigate = useNavigate();
   const { bookings, rooms, notifications, housekeepingTasks } = useAppStore();
   const selectRoom = useFrontDeskStore((s) => s.selectRoom);
+  const { allActions: urgentActions } = useUrgentActions();
   const [open, setOpen] = useState(false);
   const [readIds, setReadIds] = useState<Set<string>>(() => new Set());
   const panelRef = useRef<HTMLDivElement>(null);
@@ -93,10 +97,22 @@ export default function NotificationCenter({
       });
     }
 
+    for (const action of urgentActions) {
+      items.push({
+        id: `urgent-${action.id}`,
+        category: 'urgent',
+        title: action.title,
+        message: `${action.description} · Kamar ${action.roomNumber}`,
+        createdAt: action.createdAt,
+        isRead: false,
+        roomId: action.roomId,
+      });
+    }
+
     return items.sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
-  }, [notifications, bookings, housekeepingTasks, rooms]);
+  }, [notifications, bookings, housekeepingTasks, rooms, urgentActions]);
 
   const unreadCount = notificationsList.filter((n) => !readIds.has(n.id) && !n.isRead).length;
 

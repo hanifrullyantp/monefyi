@@ -28,7 +28,7 @@ import FrontDeskHeader, {
   persistDashboardHeaderMode,
   type DashboardHeaderMode,
 } from '../../components/frontdesk/FrontDeskHeader';
-import UrgentActionBar from '../../components/frontdesk/UrgentActionBar';
+import UrgentActionBar, { UrgentCollapsedChip } from '../../components/frontdesk/UrgentActionBar';
 import {
   persistViewMode,
   readViewModePreference,
@@ -88,7 +88,9 @@ export default function ReceptionistDashboard({
   const {
     actions: urgentActions,
     showBar: showUrgentBar,
+    showCollapsedChip: showUrgentChip,
     dismissBar,
+    expandBar,
     runAction,
     loadingId: urgentLoadingId,
   } = useUrgentActions();
@@ -399,6 +401,10 @@ export default function ReceptionistDashboard({
             onViewAll={handleViewAllUrgent}
             compact={headerMode === 'compact'}
           />
+        )}
+
+        {showUrgentChip && (
+          <UrgentCollapsedChip count={urgentActions.length} onExpand={expandBar} />
         )}
 
         <FrontDeskToolbar

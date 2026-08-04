@@ -8,8 +8,6 @@ import {
   Building2, TrendingUp, FileText, Wallet, PanelLeftClose, PanelLeft,
 } from 'lucide-react';
 import { ROUTES } from '../../config/routes';
-import { groupSidebarRoutes } from '../../config/routeGroups';
-import SidebarNavGroup from './SidebarNavGroup';
 
 const ICONS: Record<string, React.ReactNode> = {
   '/front-desk': <LayoutDashboard className="h-5 w-5" />,
@@ -28,6 +26,24 @@ const ICONS: Record<string, React.ReactNode> = {
   '/settings': <Settings className="h-5 w-5" />,
 };
 
+/** Urutan flat sidebar — tanpa grup Operasional/Manajemen */
+const SIDEBAR_ORDER = [
+  '/front-desk',
+  '/pos',
+  '/payments',
+  '/xendit',
+  '/rooms',
+  '/bookings',
+  '/guests',
+  '/housekeeping',
+  '/dashboard',
+  '/reports',
+  '/finance',
+  '/staff',
+  '/pricing',
+  '/settings',
+];
+
 export default function Sidebar() {
   const { user, tenant, logout } = useAuthStore();
   const { sidebarOpen, setSidebarOpen, sidebarCompact, toggleSidebarCompact } = useAppStore();
@@ -36,7 +52,9 @@ export default function Sidebar() {
   const filtered = ROUTES.filter(
     (item) => item.showInSidebar && user && item.roles.includes(user.role)
   );
-  const { primary, groups } = groupSidebarRoutes(filtered);
+  const pathSet = new Set(filtered.map((r) => r.path));
+  const menuItems = SIDEBAR_ORDER.map((path) => filtered.find((r) => r.path === path))
+    .filter((r): r is (typeof filtered)[number] => !!r && pathSet.has(r.path));
 
   const handleLogout = async () => {
     await logout();
@@ -96,12 +114,13 @@ export default function Sidebar() {
           </div>
         )}
 
-        <nav className="flex-1 px-2 mt-3 space-y-1 overflow-y-auto">
-          {primary && (
+        <nav className="flex-1 px-2 mt-3 space-y-0.5 overflow-y-auto">
+          {menuItems.map((item) => (
             <NavLink
-              to={primary.path}
+              key={item.path}
+              to={item.path}
               onClick={closeMobile}
-              title={primary.label}
+              title={item.label}
               className={({ isActive }) =>
                 cn(
                   'flex items-center gap-3 rounded-xl text-sm font-medium transition-all',
@@ -112,21 +131,9 @@ export default function Sidebar() {
                 )
               }
             >
-              {ICONS[primary.path]}
-              {!sidebarCompact && <span className="flex-1">{primary.label}</span>}
+              {ICONS[item.path]}
+              {!sidebarCompact && <span className="flex-1 truncate">{item.label}</span>}
             </NavLink>
-          )}
-
-          {groups.map(({ group, items }) => (
-            <SidebarNavGroup
-              key={group.id}
-              label={group.label}
-              icon={group.icon}
-              items={items}
-              itemIcons={ICONS}
-              onNavigate={closeMobile}
-              compact={sidebarCompact}
-            />
           ))}
         </nav>
 

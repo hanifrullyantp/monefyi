@@ -24,12 +24,15 @@ interface FrontDeskState {
   activeView: ViewMode;
   filters: RoomFilter;
   searchQuery: string;
+  urgentBarCollapsed: boolean;
   selectRoom: (room: RoomCardData) => void;
   closeDetailPanel: () => void;
   setEditingRoomId: (roomId: string | null) => void;
   setActiveView: (view: ViewMode) => void;
   setFilters: (filters: RoomFilter) => void;
   setSearchQuery: (query: string) => void;
+  collapseUrgentBar: () => void;
+  expandUrgentBar: () => void;
 }
 
 export const useFrontDeskStore = create<FrontDeskState>((set) => ({
@@ -39,6 +42,7 @@ export const useFrontDeskStore = create<FrontDeskState>((set) => ({
   activeView: readInitialViewMode(),
   filters: DEFAULT_ROOM_FILTER,
   searchQuery: '',
+  urgentBarCollapsed: false,
 
   selectRoom: (room) => {
     trackFrontDeskEvent('room_panel_open', { roomId: room.id, number: room.number });
@@ -65,4 +69,7 @@ export const useFrontDeskStore = create<FrontDeskState>((set) => ({
       searchQuery: query,
       filters: { ...state.filters, search: query },
     })),
+
+  collapseUrgentBar: () => set({ urgentBarCollapsed: true }),
+  expandUrgentBar: () => set({ urgentBarCollapsed: false }),
 }));

@@ -29,6 +29,7 @@ export function readRoomCardSize(): RoomCardSizeValue {
     /* ignore */
   }
   if (typeof window !== 'undefined' && window.innerWidth < 640) return 'sm';
+  if (typeof window !== 'undefined' && window.innerWidth >= 1024) return 'md';
   return 'sm';
 }
 

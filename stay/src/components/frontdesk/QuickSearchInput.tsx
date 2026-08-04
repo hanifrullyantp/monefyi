@@ -37,6 +37,7 @@ export interface QuickSearchInputProps {
   value: string;
   onChange: (value: string) => void;
   className?: string;
+  compact?: boolean;
 }
 
 export interface QuickSearchInputHandle {
@@ -51,6 +52,7 @@ function QuickSearchInput({
   value,
   onChange,
   className,
+  compact = false,
 }, ref) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [localValue, setLocalValue] = useState(value);
@@ -136,7 +138,7 @@ function QuickSearchInput({
   return (
     <div className={cn('relative w-full', className)}>
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <Search className={cn('pointer-events-none absolute top-1/2 -translate-y-1/2 text-slate-400', compact ? 'left-2 h-3.5 w-3.5' : 'left-3 h-4 w-4')} />
         <input
           ref={inputRef}
           type="search"
@@ -145,26 +147,33 @@ function QuickSearchInput({
           onFocus={() => setFocused(true)}
           onBlur={() => window.setTimeout(() => setFocused(false), 150)}
           onKeyDown={handleKeyDown}
-          placeholder="Cari kamar, tamu, atau kode booking..."
-          className="min-h-[44px] w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-10 pr-24 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+          placeholder={compact ? 'Cari kamar…' : 'Cari kamar, tamu, atau kode booking...'}
+          className={cn(
+            'w-full rounded-lg border border-slate-200 bg-slate-50 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white',
+            compact
+              ? 'min-h-[32px] py-1 pl-8 pr-8 text-xs sm:min-h-[34px]'
+              : 'min-h-[44px] py-2 pl-10 pr-24'
+          )}
           data-testid="quick-search-input"
           aria-label="Cari kamar, tamu, atau kode booking"
         />
-        <div className="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-2">
+        <div className={cn('pointer-events-none absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-2', !compact && 'right-3')}>
           {localValue && (
             <button
               type="button"
               onClick={handleClear}
-              className="pointer-events-auto rounded-md p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-600 dark:hover:bg-slate-700"
+              className="pointer-events-auto rounded-md p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 dark:hover:bg-slate-700"
               aria-label="Hapus pencarian"
               tabIndex={-1}
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-3 w-3" />
             </button>
           )}
+          {!compact && (
           <kbd className="hidden rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-400 sm:inline dark:border-slate-600 dark:bg-slate-900">
             {isMac ? '⌘K' : '/'}
           </kbd>
+          )}
         </div>
       </div>
 

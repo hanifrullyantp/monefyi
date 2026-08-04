@@ -105,7 +105,7 @@ function FloorGroupComponent({
             transition={{ duration: 0.25 }}
             className="overflow-hidden"
           >
-            <div className="grid grid-cols-2 gap-2 px-3 pb-3 sm:gap-3 sm:px-4 sm:pb-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+            <div className="grid grid-cols-2 gap-2 px-3 pb-3 sm:gap-3 sm:px-4 sm:pb-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {rooms.map((room, index) => {
                 const highlighted = isSearchMatch(room, searchQuery);
                 return (
