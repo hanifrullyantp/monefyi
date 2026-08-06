@@ -4,6 +4,7 @@
  */
 
 import { Icon } from './icons.js';
+import { LABELS, t } from '../constants/language.js';
 import { saveSuspenseLog, setNeracaMeta, upsertEquityEvent, upsertDebt, upsertAsset } from '../services/neraca-store.js';
 
 /**
@@ -36,8 +37,8 @@ export function showNeracaTraceModal(opts) {
   const amount = Math.abs(Number(sheet?.diff || sheet?.suspense?.amount || 0));
   const message = sheet?.suspense?.message
     || (sheet?.diff > 0
-      ? `Aktiva lebih besar Rp ${formatIDR(amount)} dari Pasiva`
-      : `Pasiva lebih besar Rp ${formatIDR(amount)} dari Aktiva`);
+      ? t(LABELS.NERACA.OWNS_MORE, { amount: formatIDR(amount) })
+      : t(LABELS.NERACA.OWES_MORE, { amount: formatIDR(amount) }));
 
   const backdrop = document.createElement('div');
   backdrop.id = 'neracaTraceBackdrop';
@@ -87,7 +88,7 @@ export function showNeracaTraceModal(opts) {
           <div class="neraca-form-grid">
             <select class="form-input" data-role="assign-target">
               ${sheet?.diff > 0 ? `
-                <option value="modal">Modal</option>
+                <option value="modal">${LABELS.NERACA.EQUITY}</option>
                 <option value="hutang_lainnya">Hutang Lainnya</option>
                 <option value="simpanan">Simpanan</option>
               ` : `

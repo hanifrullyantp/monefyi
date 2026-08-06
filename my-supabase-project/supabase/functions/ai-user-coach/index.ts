@@ -149,8 +149,12 @@ Data Ringkasan (${summary.periodLabel}):
 
 Tugasmu:
 1. Jawab pertanyaan user secara spesifik berdasarkan data.
-2. Jika relevan, beri 1-3 langkah konkret.
-3. Hindari basa-basi panjang. Maksimal 12 kalimat. Jujur dan tajam.
+2. Selalu akhiri analisis dengan format singkat:
+   KONDISI: [satu label — Aman/Waspada/Bahaya]
+   RISIKO: [satu kalimat dengan angka nyata dari data]
+   LANGKAH: [satu aksi spesifik yang bisa dilakukan sekarang]
+   DAMPAK: [satu kalimat jika langkah dilakukan]
+3. Hindari narasi panjang. Prioritaskan kejelasan dan aksi. Maksimal 12 kalimat sebelum blok KONDISI.
 ${jsonTail}`;
 }
 

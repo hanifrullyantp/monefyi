@@ -399,7 +399,7 @@ async function loadBudgets(){
         'common.update': 'Update',
         'common.delete': 'Hapus',
         'common.reset': 'Reset',
-        'common.net': 'Net',
+        'common.net': 'Selisih Masuk - Keluar',
         'common.period_prefix': 'Periode:',
         'common.currency_idr': 'IDR',
 
@@ -420,7 +420,7 @@ async function loadBudgets(){
         'auth.contact_admin': 'Jika email belum terdaftar atau belum menerima akses, silakan hubungi admin.',
 
         // Header saldo
-        'saldo.title': 'Saldo (estimasi)',
+        'saldo.title': 'Perkiraan Uang Tersisa',
         'dashboard.compact': 'ringkas',
         'dashboard.full': 'lengkap',
         'saldo.tap_open': 'Tap untuk membuka ringkasan lengkap.',
@@ -466,16 +466,16 @@ async function loadBudgets(){
         'accounts.sheet_title': 'Saldo per akun',
         'accounts.view_all': 'Lihat semua ›',
         'accounts.hint': 'Tap akun untuk lihat detail.',
-        'accounts.hint_balances': 'Saldo estimasi per akun.',
+        'accounts.hint_balances': 'Perkiraan uang tersisa per akun.',
         'accounts.none': 'Belum ada akun.',
-        'accounts.balance_upto': 'Saldo estimasi sampai {{date}}',
+        'accounts.balance_upto': 'Perkiraan uang tersisa sampai {{date}}',
         'quick_access.title': 'Akses Cepat',
 
         // KPI
         'kpi.income': 'Pemasukan (periode)',
         'kpi.expense': 'Pengeluaran (periode)',
-        'kpi.net': 'Surplus / Defisit',
-        'kpi.saving': 'Saving rate',
+        'kpi.net': 'Selisih Masuk - Keluar',
+        'kpi.saving': '% yang berhasil disisihkan',
         'kpi.need_income': 'Butuh data pemasukan',
         'kpi.net_sub': 'Net: {{net}} (Income − Expense)',
         'kpi.period_sub': 'Periode: {{label}}',
@@ -485,7 +485,7 @@ async function loadBudgets(){
         'budget.desc': 'Atur budget per kategori. Ada rekomendasi berdasarkan pola bulan-bulan sebelumnya.',
         'budget.button': 'Atur Budget',
         'budget.planned': 'Budget',
-        'budget.actual': 'Realisasi',
+        'budget.actual': 'Yang sudah dipakai',
         'budget.diff': 'Selisih',
         'budget.progress': 'Progress',
         'budget.not_set': 'Belum di-set',
@@ -577,7 +577,7 @@ async function loadBudgets(){
         'print.filters': 'Filter',
         'print.section.kpi': 'KPI Keuangan',
         'print.section.accounts': 'Akun',
-        'print.section.budget': 'Rencana vs Realisasi',
+        'print.section.budget': 'Rencana vs yang sudah dipakai',
         'print.section.charts': 'Grafik',
         'print.section.txs': 'Transaksi',
 
@@ -1617,6 +1617,13 @@ function computeSubscriptionStatus(profile){
       STATE.subscription.readOnly = sub.readOnly;
       STATE.subscription.accessMode = sub.accessMode;
       applySubscriptionUI();
+
+      // Prefetch onboarding v2 data (non-blocking)
+      try {
+        loadAppModule('js/services/onboarding-prefs.js').then((m) => m.loadUserPreferences?.());
+        loadAppModule('js/services/financial-targets.js').then((m) => m.loadFinancialTargets?.());
+        loadAppModule('js/services/first-week-plan.js').then((m) => m.loadFirstWeekPlan?.());
+      } catch (_) { /* ignore */ }
 
       // First-login wizard (after profile known)
       try {
@@ -3981,7 +3988,7 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
         pageTitleDesktop.textContent = STATE.ui.settingsPageOpen
           ? 'Pengaturan'
           : (STATE.ui.neracaPageOpen
-            ? 'Neraca'
+            ? 'Posisi Keuangan Saya'
             : (STATE.ui.monevisorPageOpen
               ? 'Monevisor'
               : (STATE.ui.budgetPageOpen
@@ -3992,7 +3999,7 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
         pageSubtitleDesktop.textContent = STATE.ui.settingsPageOpen
           ? 'Akun, tampilan, notifikasi & data'
           : (STATE.ui.neracaPageOpen
-            ? 'Struktur Aktiva & Pasiva'
+            ? 'Posisi keuangan lengkap'
             : (STATE.ui.monevisorPageOpen
               ? 'Financial coach — diagnosa & action plan'
               : (STATE.ui.budgetPageOpen
@@ -5986,6 +5993,7 @@ function generateSmartBudgetRecommendation() {
 
     function getHomePageContext() {
       return {
+        state: STATE,
         transactions: STATE.transactions,
         period: STATE.period,
         settings: STATE.settings,
@@ -6007,6 +6015,12 @@ function generateSmartBudgetRecommendation() {
 
     function handleHomeQuickAction(actionId) {
       switch (actionId) {
+        case 'add-transaction':
+          openAddSheet('quick');
+          break;
+        case 'target':
+          openAdvisorAuto();
+          break;
         case 'transactions':
         case 'search':
           toggleNav('list');
@@ -6070,14 +6084,53 @@ function generateSmartBudgetRecommendation() {
       }
     }
 
+    async function runFirstWeekPlanEval(ctx = {}) {
+      try {
+        const mod = await loadAppModule('js/services/first-week-plan.js');
+        await mod.evaluateAutoComplete(ctx);
+        if (STATE.ui.dashboardOpen && !isDesktopViewport()) {
+          await renderMobileHome();
+        }
+      } catch (_) { /* ignore */ }
+    }
+    window.runFirstWeekPlanEval = runFirstWeekPlanEval;
+
+    function handlePlanTaskAction(target) {
+      switch (target) {
+        case 'budget':
+          openBudget();
+          runFirstWeekPlanEval({ openedBudget: true });
+          break;
+        case 'advisor':
+          openAdvisorAuto();
+          runFirstWeekPlanEval({ openedAdvisor: true });
+          break;
+        case 'transactions':
+          toggleNav('list');
+          runFirstWeekPlanEval({ openedTransactions: true });
+          break;
+        case 'add_tx':
+          openAddSheet('quick');
+          break;
+        default:
+          break;
+      }
+    }
+
     async function renderMobileHome() {
       const root = $('#homePageRoot');
       if (!root || isDesktopViewport() || !STATE.ui.dashboardOpen) return;
       try {
         const { renderHomePage } = await loadAppModule('js/pages/home-page.js');
-        renderHomePage(root, getHomePageContext(), {
+        await renderHomePage(root, getHomePageContext(), {
           onViewTransactions: () => toggleNav('list'),
           onViewBudget: () => openBudget(),
+          onViewTarget: async () => {
+            const { showTargetManagerModal } = await import('./components/target-manager-modal.js');
+            showTargetManagerModal({
+              onSaved: () => { if (typeof renderMobileHome === 'function') renderMobileHome(); },
+            });
+          },
           onViewNeraca: () => openNeraca(),
           onViewAdvisor: () => openAdvisorAuto(),
           onViewAccounts: () => openAccounts(),
@@ -6085,11 +6138,23 @@ function generateSmartBudgetRecommendation() {
           onTransactionClick: (tx) => openEdit(tx.id),
           onQuickAction: handleHomeQuickAction,
           onTipAction: handleHomeTipAction,
+          onPlanTaskAction: (target) => handlePlanTaskAction(target),
+          onCompleteData: () => {
+            if (window.STATE?.db?.profile?.onboarding_version === '2') {
+              import('./components/onboarding-wizard-v2.js').then((m) => m.openOnboardingWizardV2?.());
+            } else {
+              openSettings?.('account');
+            }
+          },
         });
+        import('./services/financial-condition.js')
+          .then((m) => m.syncFinancialCondition(STATE))
+          .catch(() => {});
       } catch (err) {
         console.error('[home] render failed:', err);
       }
     }
+    window.rerenderHomePage = renderMobileHome;
 
   function rerender(){
   // keep static UI labels synced with selected language
@@ -6779,6 +6844,7 @@ function setSheetPosition(mode) {
 
       rerender();
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      runFirstWeekPlanEval({ openedBudget: true });
     }
     window.openBudget = openBudget;
     window.openAddSheet = openAddSheet;
@@ -6871,6 +6937,7 @@ function setSheetPosition(mode) {
       rerender();
       window.scrollTo({ top: 0, behavior: 'smooth' });
       await renderMonevisorPageView(_monevisorOpenOptions);
+      runFirstWeekPlanEval({ openedAdvisor: true });
     }
     function closeAdvisor(){
       STATE.ui.advisorOpen = false;
@@ -6967,6 +7034,7 @@ function setSheetPosition(mode) {
           },
           openAccounts: () => openAccounts(),
           openAdmin: () => openAdminPanel(),
+          openAffiliate: () => openAffiliate(),
           isAdmin,
           ensureSelectOptions,
           destroyCharts,
@@ -7990,6 +8058,11 @@ function setSheetPosition(mode) {
     }
   }
 
+  const txsBefore = isCreate
+    ? STATE.transactions.map((t) => ({ ...t }))
+    : STATE.transactions.map((t) => (t.id === tx.id && before ? { ...before } : { ...t }));
+  const stateBeforeSnapshot = { ...STATE, transactions: txsBefore };
+
   if (tx.type === 'expense' || !tx.type) {
     try {
       const { applyBudgetLinkOnSave } = await import('./services/budget-linker.js');
@@ -8085,7 +8158,37 @@ function setSheetPosition(mode) {
     window.dispatchEvent(new CustomEvent('monefyi-pending-change'));
   }
 
-  if (!opts.silent) showToast(t('toast.saved') || 'Transaksi tersimpan', 'success');
+  let impactShown = false;
+  if (!opts.silent && !opts.skipImpact) {
+    try {
+      const targetMod = await import('./services/financial-targets.js');
+      await targetMod.applySavingsContribution(tx);
+      const impactMod = await import('./services/transaction-impact.js');
+      const sheetMod = await import('./components/transaction-impact-sheet.js');
+      const impact = impactMod.computeTransactionImpact(tx, stateBeforeSnapshot, STATE);
+      if (impact?.show) {
+        sheetMod.showTransactionImpactSheet(impact);
+        impactShown = true;
+        impactMod.logTransactionImpact(tx.id, impact).catch(() => {});
+      }
+    } catch (impactErr) {
+      console.warn('[tx-impact]', impactErr);
+    }
+  }
+
+  if (!opts.silent && !impactShown) {
+    showToast(t('toast.saved') || 'Transaksi tersimpan', 'success');
+  }
+
+  runFirstWeekPlanEval({});
+
+  import('./services/engagement.js').then((m) => m.runEngagementEval({
+    lastTransaction: tx,
+    checkStreakMilestone: true,
+  })).catch((e) => console.warn('[engagement]', e));
+
+  import('./services/financial-condition.js').then((m) => m.syncFinancialCondition(STATE, { force: true }))
+    .catch((e) => console.warn('[financial-condition]', e));
 
   if (!opts.silent && tx.type === 'expense') {
     try {
@@ -10254,7 +10357,7 @@ window.handleSaveBudget = handleSaveBudget;
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
           </div>
           <div>
-            <div class="text-[10px] app-muted">Net</div>
+            <div class="text-[10px] app-muted">${t('common.net')}</div>
             <div class="font-bold text-white text-sm mt-0.5">${formatVal(m.net||0)}</div>
           </div>
         </div>
@@ -10263,7 +10366,7 @@ window.handleSaveBudget = handleSaveBudget;
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
           </div>
           <div>
-            <div class="text-[10px] app-muted">Saving Rate</div>
+            <div class="text-[10px] app-muted">${t('kpi.saving')}</div>
             <div class="font-bold text-white text-sm mt-0.5">${m.income>0?Math.round((m.net/m.income)*100):0}%</div>
           </div>
         </div>
@@ -11685,6 +11788,7 @@ function toggleNav(view, triggerEl) {
         STATE.ui.monevisorPageOpen = false;
         STATE.ui.neracaPageOpen = false;
         STATE.ui.settingsPageOpen = false;
+        runFirstWeekPlanEval({ openedTransactions: true });
       } else if (view === 'dash') {
         STATE.ui.dashboardOpen = true;
         STATE.ui.budgetPageOpen = false;

@@ -8,6 +8,7 @@ import {
   getLinkedTransactions,
   PRIORITY_LEVELS,
 } from '../services/budget-model.js';
+import { LABELS } from '../constants/language.js';
 import { Icon } from './icons.js';
 
 /**
@@ -69,7 +70,7 @@ export function showBudgetDetailModal(budget, transactions, month, options = {})
             <span class="stat-value">${progress.percentUsed}%</span>
           </div>
           <div class="stat">
-            <span class="stat-label">Realisasi</span>
+            <span class="stat-label">${LABELS.BUDGET.USED}</span>
             <span class="stat-value">Rp ${formatIDR(progress.spent)}</span>
           </div>
           <div class="stat">

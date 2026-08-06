@@ -91,6 +91,12 @@ function main() {
     `${root}/app/js/app.js`,
     "mode: 'batch'",
   );
+  assertContains(`${root}/app/sw.js`, "v51-upgrade-complete");
+  assertContains(`${root}/app/sw.js`, "./js/services/engagement.js");
+  assertContains(
+    `${supabaseDir}/supabase/functions/ai-user-coach/index.ts`,
+    "KONDISI:",
+  );
 
   console.log("[smoke] Static guards OK.");
 

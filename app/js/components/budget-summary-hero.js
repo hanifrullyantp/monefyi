@@ -4,6 +4,7 @@
  */
 
 import { calculateProgress, calculatePriorityTotals, getItemTotalAmount, getLinkedTransactions } from '../services/budget-model.js';
+import { LABELS } from '../constants/language.js';
 import { Icon } from './icons.js';
 
 /**
@@ -110,7 +111,7 @@ export async function renderBudgetSummaryHero(container, ctx) {
       </div>
       <div class="bsh-main">
         <div class="bsh-progress-section">
-          <div class="bsh-progress-label">Realisasi Budgeting</div>
+          <div class="bsh-progress-label">${LABELS.BUDGET.USED_PROGRESS}</div>
           <div class="bsh-progress-amount">
             <span class="bsh-spent">Rp ${fmt(totalSpent)}</span>
             <span class="bsh-separator">/</span>
@@ -125,7 +126,7 @@ export async function renderBudgetSummaryHero(container, ctx) {
               <div class="bsh-progress-fill ${fillClass}" style="width:${Math.min(percentUsed, 100)}%"></div>
             </div>
             <div class="bsh-progress-meta">
-              <span class="bsh-percent">${percentUsed}% realisasi</span>
+              <span class="bsh-percent">${percentUsed}% ${LABELS.BUDGET.USED.toLowerCase()}</span>
               <span class="bsh-time-percent">Hari ${daysPassed}/${time.daysInMonth}</span>
             </div>
           </div>

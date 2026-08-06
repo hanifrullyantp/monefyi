@@ -5,6 +5,7 @@
 
 import { Icon } from './icons.js';
 import { shouldShowInstallShortcut } from '../services/install-prompt.js';
+import { COMPACT_QUICK_ACTIONS } from '../services/home-layout.js';
 
 const QUICK_ACTIONS = [
   { id: 'transactions', label: 'Transaksi', icon: 'list', color: '#3b82f6', bg: 'rgba(59,130,246,0.14)' },
@@ -65,15 +66,27 @@ function wireQuickButtons(root, callbacks) {
 
 /**
  * @param {object} [callbacks]
- * @param {'default'|'all-row'} [callbacks.variant]
+ * @param {'default'|'all-row'|'compact'} [callbacks.variant]
  * @returns {HTMLElement}
  */
 export function renderQuickAccess(callbacks = {}) {
   const el = document.createElement('section');
-  const variant = callbacks.variant === 'all-row' ? 'all-row' : 'default';
+  const variant = callbacks.variant === 'all-row' ? 'all-row'
+    : callbacks.variant === 'compact' ? 'compact' : 'default';
   el.className = variant === 'all-row'
     ? 'home-quick-access home-quick-access--all-row'
-    : 'home-quick-access';
+    : variant === 'compact'
+      ? 'home-quick-access home-quick-access--compact'
+      : 'home-quick-access';
+
+  if (variant === 'compact') {
+    const items = COMPACT_QUICK_ACTIONS.map(renderQuickBtn).join('');
+    el.innerHTML = `
+      <div class="home-quick-row home-quick-row--compact">${items}</div>
+    `;
+    wireQuickButtons(el, callbacks);
+    return el;
+  }
 
   const actions = visibleActions();
   const allItems = actions.map(renderQuickBtn).join('');

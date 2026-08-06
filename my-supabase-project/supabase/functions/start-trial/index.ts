@@ -172,6 +172,7 @@ serve(async (req) => {
       plan_expires_at: expires.toISOString(),
       status: "active",
       onboarding_completed: false,
+      onboarding_version: "2",
       updated_at: new Date().toISOString(),
     }, { onConflict: "id" });
 

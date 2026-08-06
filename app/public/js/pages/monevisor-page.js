@@ -7,7 +7,8 @@
 import { Icon } from '../components/icons.js';
 import { buildFinancialReport } from '../services/financial-report.js';
 import { diagnoseFinancials } from '../services/financial-diagnosis.js';
-import { sendMessage, initMonevisor, loadMessageHistory } from '../services/monevisor-client.js';
+import { buildIntervention, generateStarterQuestions } from '../services/monevisor-intervention.js';
+import { sendMessage, initMonevisor, loadMessageHistory, applyAction } from '../services/monevisor-client.js';
 
 let _root = null;
 let _formatIDR = (n) => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
@@ -100,6 +101,8 @@ function renderDiagnosis(container, report, dx) {
   const net = Number(m.net ?? (income - expense));
   const savingRate = Number(m.saving_rate ?? m.savingRate ?? 0);
   const cats = report.categories || report.categoryBreakdown || [];
+  const intervention = buildIntervention(report, dx, window.STATE || {});
+  const starters = generateStarterQuestions(report, dx, window.STATE || {});
   const comparison = report.comparison
     ? {
       current: { expense: report.comparison.current?.expense ?? expense },
@@ -127,22 +130,38 @@ function renderDiagnosis(container, report, dx) {
         </button>
       </header>
 
-      <section class="mv-coach-card">
-        <div class="mv-coach-text">${escapeHtml(dx.summary.greeting)}</div>
+      <section class="mv-intervention-card">
+        <div class="mv-intervention-block">
+          <div class="mv-intervention-label">KONDISI</div>
+          <div class="mv-intervention-headline">${escapeHtml(intervention.condition.label)}</div>
+          <p class="mv-intervention-text">${escapeHtml(intervention.condition.text)}</p>
+        </div>
+        <div class="mv-intervention-block">
+          <div class="mv-intervention-label">RISIKO</div>
+          <p class="mv-intervention-text">${escapeHtml(intervention.risk.text)}</p>
+        </div>
+        <div class="mv-intervention-block mv-intervention-step">
+          <div class="mv-intervention-label">LANGKAH SEKARANG</div>
+          <p class="mv-intervention-text">${escapeHtml(intervention.step.text)}</p>
+          ${intervention.step.action ? `
+            <button type="button" class="mv-intervention-action" data-intervention-action="1">
+              ${escapeHtml(intervention.step.action.label || 'Jalankan')}
+            </button>
+          ` : ''}
+        </div>
+        <div class="mv-intervention-block">
+          <div class="mv-intervention-label">KALAU DILAKUKAN</div>
+          <p class="mv-intervention-text">${escapeHtml(intervention.impact.text)}</p>
+        </div>
+      </section>
+
+      <section class="mv-coach-card mv-coach-card--compact">
         <div class="mv-health-row">
-          <div class="mv-health-ring-wrap">${renderHealthRing(h.score, h.color)}</div>
           <div class="mv-health-detail">
             <div class="mv-health-label" style="color:${h.color}">
-              Kondisi Keuangan: ${escapeHtml(h.label)} (${h.score}/100)
+              ${escapeHtml(intervention.condition.label.replace(/^[^\s]+\s/, '') || h.label)}
             </div>
-            <div class="mv-health-msg">${escapeHtml(h.message)}</div>
-            ${h.factors?.length ? `
-              <div class="mv-health-factors">
-                ${h.factors.map((f) => `
-                  <span class="mv-factor ${escapeHtml(f.status)}">${escapeHtml(f.name)}: ${escapeHtml(f.score)}</span>
-                `).join('')}
-              </div>
-            ` : ''}
+            <div class="mv-health-msg">${escapeHtml(dx.summary?.greeting || h.message)}</div>
           </div>
         </div>
       </section>
@@ -176,17 +195,20 @@ function renderDiagnosis(container, report, dx) {
       </section>
 
       ${dx.diagnoses.filter(Boolean).length ? `
+        <details class="mv-legacy-collapse">
+          <summary class="mv-section-title mv-legacy-summary">${Icon('stethoscope', { size: 14 })} Detail Diagnosa</summary>
         <section class="mv-section">
-          <h3 class="mv-section-title">${Icon('stethoscope', { size: 14 })} Diagnosa Keuangan</h3>
           <div class="mv-diagnoses">
             ${dx.diagnoses.filter(Boolean).map((d) => renderDiagnosisCard(d)).join('')}
           </div>
         </section>
+        </details>
       ` : ''}
 
       ${(dx.rule503020?.length || dx.benchmarks?.length) ? `
+        <details class="mv-legacy-collapse">
+          <summary class="mv-section-title mv-legacy-summary">${Icon('chartBar', { size: 14 })} Benchmark (opsional)</summary>
         <section class="mv-section">
-          <h3 class="mv-section-title">${Icon('chartBar', { size: 14 })} Benchmark: Posisi Kamu vs Standar</h3>
           ${dx.rule503020?.length ? `
             <div class="mv-bench-subtitle">Aturan 50/30/20</div>
             <div class="mv-benchmarks mv-benchmarks--503020">
@@ -197,20 +219,24 @@ function renderDiagnosis(container, report, dx) {
             ${(dx.benchmarks || []).map((b) => renderBenchmarkBar(b)).join('')}
           </div>
         </section>
+        </details>
       ` : ''}
 
       ${dx.actionPlan.length ? `
+        <details class="mv-legacy-collapse">
+          <summary class="mv-section-title mv-legacy-summary">${Icon('target', { size: 14 })} Action Plan Lengkap</summary>
         <section class="mv-section">
-          <h3 class="mv-section-title">${Icon('target', { size: 14 })} Action Plan</h3>
           <div class="mv-actions">
             ${dx.actionPlan.map((a) => renderActionStep(a)).join('')}
           </div>
         </section>
+        </details>
       ` : ''}
 
       ${dx.projection?.message ? `
+        <details class="mv-legacy-collapse">
+          <summary class="mv-section-title mv-legacy-summary">${Icon('trendingUp', { size: 14 })} Proyeksi</summary>
         <section class="mv-section">
-          <h3 class="mv-section-title">${Icon('trendingUp', { size: 14 })} Proyeksi: Jika Konsisten</h3>
           <div class="mv-projection ${escapeHtml(dx.projection.type || 'neutral')}">
             ${dx.projection.title ? `<div class="mv-proj-title">${escapeHtml(dx.projection.title)}</div>` : ''}
             <div class="mv-proj-msg">${escapeHtml(dx.projection.message)}</div>
@@ -223,6 +249,7 @@ function renderDiagnosis(container, report, dx) {
             ` : ''}
           </div>
         </section>
+        </details>
       ` : ''}
 
       ${cats.length ? `
@@ -278,9 +305,9 @@ function renderDiagnosis(container, report, dx) {
           <div class="mv-chat-body">
             <div class="mv-chat-msgs" id="mv-msgs"></div>
             <div class="mv-chat-starters" id="mv-starters">
-              <button type="button" class="mv-starter" data-q="Kenapa saving rate saya rendah?">Kenapa saving rate rendah?</button>
-              <button type="button" class="mv-starter" data-q="Kategori mana yang perlu dikurangi?">Kategori mana dikurangi?</button>
-              <button type="button" class="mv-starter" data-q="Buatkan rencana keuangan bulan depan">Rencana bulan depan</button>
+              ${starters.map((q) => `
+                <button type="button" class="mv-starter" data-q="${escapeHtml(q)}">${escapeHtml(q)}</button>
+              `).join('')}
             </div>
             <div class="mv-chat-input">
               <input type="text" id="mv-input" placeholder="Tanya apapun..." autocomplete="off" />
@@ -294,7 +321,7 @@ function renderDiagnosis(container, report, dx) {
     </div>
   `;
 
-  wireHandlers(container);
+  wireHandlers(container, intervention);
 }
 
 function renderHealthRing(score, color) {
@@ -452,13 +479,31 @@ function renderActionStep(a) {
   `;
 }
 
-function wireHandlers(container) {
+function wireHandlers(container, intervention = null) {
   container.querySelector('[data-action="refresh"]')?.addEventListener('click', async () => {
     await renderMonevisorPage(container, _pendingOptions);
   });
 
   container.querySelectorAll('[data-target]').forEach((btn) => {
     btn.addEventListener('click', () => handleNavigation(btn.dataset.target));
+  });
+
+  container.querySelector('[data-intervention-action]')?.addEventListener('click', async (e) => {
+    const btn = /** @type {HTMLButtonElement} */ (e.currentTarget);
+    const action = intervention?.step?.action;
+    if (!action) return;
+    btn.disabled = true;
+    const prev = btn.textContent;
+    btn.textContent = 'Memproses…';
+    try {
+      await executeInterventionAction(action);
+      btn.textContent = '✓ Selesai';
+      setTimeout(() => refreshMonevisorPage(), 600);
+    } catch (err) {
+      console.error('[monevisor] intervention action', err);
+      btn.disabled = false;
+      btn.textContent = prev || 'Coba lagi';
+    }
   });
 
   const input = container.querySelector('#mv-input');
@@ -513,6 +558,7 @@ function handleNavigation(target) {
       else if (typeof window.toggleNav === 'function') window.toggleNav('budget');
       break;
     case 'transactions':
+    case 'list':
       if (typeof window.toggleNav === 'function') window.toggleNav('list');
       break;
     case 'income':
@@ -527,6 +573,39 @@ function handleNavigation(target) {
     default:
       console.error('[monevisor] Unknown nav target:', target);
   }
+}
+
+/**
+ * Execute one-tap intervention action.
+ * @param {object} action
+ */
+async function executeInterventionAction(action) {
+  if (!action?.type) throw new Error('Aksi tidak valid');
+
+  if (action.type === 'navigate') {
+    handleNavigation(action.payload?.target || action.target);
+    return { success: true };
+  }
+
+  if (action.type === 'view_category') {
+    const category = String(action.payload?.category || '');
+    handleNavigation('list');
+    if (category) {
+      setTimeout(() => {
+        const input = document.getElementById('txSearchInput');
+        const wrap = document.getElementById('txSearchWrap');
+        if (wrap) wrap.classList.remove('tx-search--collapsed');
+        if (input) {
+          input.value = category;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.focus();
+        }
+      }, 300);
+    }
+    return { success: true, deferred: true };
+  }
+
+  return applyAction(action, { source: 'intervention' });
 }
 
 function escapeHtml(s) {

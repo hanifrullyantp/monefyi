@@ -181,22 +181,22 @@ function paint(container, sheet, options) {
       </header>
 
       <div class="neraca-columns">
-        <section class="neraca-panel neraca-panel--aktiva" aria-label="Aktiva">
-          <div class="neraca-panel-head">AKTIVA (ASET)</div>
+        <section class="neraca-panel neraca-panel--aktiva" aria-label="Yang Saya Miliki">
+          <div class="neraca-panel-head">YANG SAYA MILIKI</div>
           <div class="neraca-panel-cols"><span>Kategori</span><span>Nilai (Rp)</span></div>
           ${renderRows(sheet.aktiva, 'aktiva', options)}
           <div class="neraca-panel-foot">
-            <span>TOTAL AKTIVA</span>
+            <span>TOTAL MILIK</span>
             <span class="neraca-panel-foot-amt">Rp ${formatIDR(sheet.totalAktiva)}</span>
           </div>
         </section>
 
-        <section class="neraca-panel neraca-panel--pasiva" aria-label="Pasiva">
-          <div class="neraca-panel-head">PASIVA (KEWAJIBAN &amp; MODAL)</div>
+        <section class="neraca-panel neraca-panel--pasiva" aria-label="Yang Saya Hutangi dan Modal">
+          <div class="neraca-panel-head">YANG SAYA HUTANGI &amp; MODAL</div>
           <div class="neraca-panel-cols"><span>Kategori</span><span>Nilai (Rp)</span></div>
           ${renderRows(sheet.pasiva, 'pasiva', options)}
           <div class="neraca-panel-foot">
-            <span>TOTAL PASIVA</span>
+            <span>TOTAL HUTANG &amp; MODAL</span>
             <span class="neraca-panel-foot-amt">Rp ${formatIDR(sheet.totalPasiva)}</span>
           </div>
         </section>
@@ -205,9 +205,9 @@ function paint(container, sheet, options) {
       <section class="neraca-balance" aria-live="polite">
         ${renderScale(sheet)}
         ${sheet.balanced ? `
-          <div class="neraca-badge is-ok">${Icon('check', { size: 14 })} NERACA SEIMBANG</div>
+          <div class="neraca-badge is-ok">${Icon('check', { size: 14 })} POSISI SEIMBANG</div>
         ` : `
-          <div class="neraca-badge is-warn">${Icon('alertTriangle', { size: 14 })} NERACA TIDAK SEIMBANG</div>
+          <div class="neraca-badge is-warn">${Icon('alertTriangle', { size: 14 })} POSISI BELUM SEIMBANG</div>
           <div class="neraca-diff">SELISIH: RP ${formatIDR(Math.abs(sheet.diff))}</div>
           <button type="button" class="neraca-trace-link tap" data-action="trace">LACAK PENYEBAB →</button>
         `}
@@ -394,12 +394,12 @@ function renderEmpty(container, options) {
       </header>
       <div class="neraca-empty">
         <div class="neraca-row-icon" style="margin:0 auto;width:48px;height:48px">${Icon('bank', { size: 24 })}</div>
-        <div class="neraca-empty-title">Mulai Setup Neraca</div>
+        <div class="neraca-empty-title">Mulai Setup Posisi Keuangan</div>
         <div class="neraca-empty-desc">
-          Catat modal awal agar struktur keuanganmu seimbang.
-          Akun Kas akan mengikuti saldo dari transaksi &amp; daftar akun Monefyi.
+          Catat nilai bersih awal supaya posisi keuanganmu seimbang.
+          Akun Kas mengikuti saldo dari transaksi &amp; daftar akun Monefyi.
         </div>
-        <label class="form-label" for="neraca-setup-modal" style="display:block;text-align:left;max-width:280px;margin:0 auto 6px">Modal awal (Rp)</label>
+        <label class="form-label" for="neraca-setup-modal" style="display:block;text-align:left;max-width:280px;margin:0 auto 6px">Nilai bersih awal (Rp)</label>
         <input id="neraca-setup-modal" class="form-input" type="number" min="0" step="1000" placeholder="0" style="max-width:280px;margin:0 auto 12px;display:block">
         <button type="button" class="neraca-btn neraca-btn-primary" data-action="setup">Simpan &amp; Buka Neraca</button>
         <button type="button" class="neraca-btn" data-action="skip-setup" style="margin-top:8px">Lewati dulu</button>
@@ -411,7 +411,7 @@ function renderEmpty(container, options) {
     if (raw > 0) {
       await upsertEquityEvent({
         kind: 'modal',
-        name: 'Modal awal',
+        name: 'Nilai bersih awal',
         amount: raw,
         event_date: todayISO(),
         notes: 'Setup neraca',

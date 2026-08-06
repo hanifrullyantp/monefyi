@@ -36,6 +36,17 @@ export async function showBudgetGeneratorModal(onGenerated = null) {
     await window.renderBudgetPageView();
   }
 
+  const { pickFocusModeThen } = await import('./budget-focus-picker.js');
+  await pickFocusModeThen(async () => {
+    await runBudgetGeneratorFlow(onGenerated);
+  });
+}
+
+async function runBudgetGeneratorFlow(onGenerated = null) {
+  const { getBudgetFocusMode, FOCUS_MODES } = await import('../services/budget-focus-mode.js');
+  const focusMode = getBudgetFocusMode();
+  const focusLabel = FOCUS_MODES[focusMode]?.label || focusMode;
+
   const strategy = await detectStrategy();
   const info = STRATEGY_INFO[strategy] || STRATEGY_INFO.no_history;
 
@@ -47,7 +58,7 @@ export async function showBudgetGeneratorModal(onGenerated = null) {
         <div class="generator-header-icon">${Icon(info.icon, { size: 32 })}</div>
         <div>
           <h2>${info.title}</h2>
-          <p class="modal-subtitle">${info.subtitle}</p>
+          <p class="modal-subtitle">${info.subtitle} · Mode: ${escapeHtml(focusLabel)}</p>
         </div>
         <button type="button" class="close-btn" data-action="close">${Icon('x', { size: 18 })}</button>
       </header>
@@ -77,7 +88,7 @@ export async function showBudgetGeneratorModal(onGenerated = null) {
   let generatedResult = null;
 
   try {
-    generatedResult = await generateBudget({ strategy });
+    generatedResult = await generateBudget({ strategy, focusMode });
     modal.querySelector('#gen-loading').style.display = 'none';
     modal.querySelector('#gen-preview').style.display = 'block';
     modal.querySelector('#gen-footer').style.display = 'flex';

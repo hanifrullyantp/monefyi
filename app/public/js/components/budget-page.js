@@ -1909,6 +1909,7 @@ export async function renderBudgetPage(container, ctx) {
       <div class="budget-page-main">
         <div class="budget-page-aside">
           <div id="budget-summary-hero"></div>
+          <div id="budget-focus-panel"></div>
 
           <section class="income-sources-card" data-action="manage-income" role="button" tabindex="0" aria-label="Kelola budget income">
             <div class="isc-header">
@@ -2012,6 +2013,21 @@ export async function renderBudgetPage(container, ctx) {
       const { showEvaluation } = await import('./budget-evaluation.js');
       showEvaluation({ month: displayMonth, rows, transactions: monthTransactions });
     },
+  });
+
+  try {
+    const { loadUserPreferences } = await import('../services/onboarding-prefs.js');
+    await loadUserPreferences();
+  } catch { /* ignore */ }
+
+  const focusEl = container.querySelector('#budget-focus-panel');
+  const { renderBudgetFocusPanel } = await import('./budget-focus-panel.js');
+  renderBudgetFocusPanel(focusEl, {
+    rows,
+    transactions: monthTransactions,
+    month: displayMonth,
+    income,
+    onModeChange: () => onRefresh?.({ fromSaved: false }),
   });
 
   const listSection = container.querySelector('#budget-list-content');

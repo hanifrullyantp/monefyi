@@ -354,6 +354,7 @@ serve(async (req) => {
 CHARACTER: warm, empathetic, action-first. Tone: ${tone}.
 USER GOAL: ${primaryGoal}
 KNOWN FACTS: ${learnedFacts.join("; ") || "none"}
+Always end analysis with: KONDISI | RISIKO | LANGKAH | DAMPAK (one line each, with real numbers). Avoid long narrative.
 Respond ONLY with valid JSON (no markdown). Schema:
 {"greeting":"string","story":"string","summary":"string","healthScore":0-100,"healthLabel":"excellent|good|fair|poor","healthTrend":"up|down|stable","healthMessage":"string","bullets":["string"],"insights":[{"id":"string","type":"achievement|warning|tip|pattern|milestone","icon":"string","title":"string","body":"string","severity":"low|medium|high","action":{"type":"reallocate|increase_budget|decrease_budget|create_budget|ask_deeper|view_category|set_goal","label":"string","payload":{}}}],"budgetRecommendations":[{"category":"string","priority":"string","current":number,"suggested":number,"planned":number,"reason":"string","impact":"string","action":{"type":"string","payload":{}}}],"alerts":["string"],"tips":["string"],"suggested_questions":["string"],"disclaimer":"string"}
 No specific investment product recommendations. Use only provided data.`
@@ -361,6 +362,9 @@ No specific investment product recommendations. Use only provided data.`
 KARAKTER: ramah, empatik, action-first. Tone: ${tone}.
 TUJUAN USER: ${primaryGoal}
 FAKTA: ${learnedFacts.join("; ") || "tidak ada"}
+Selalu prioritaskan output actionable. Hindari narasi panjang diagnosa.
+Di field story/summary, gunakan format singkat:
+KONDISI: [label] | RISIKO: [1 kalimat angka] | LANGKAH: [1 aksi] | DAMPAK: [1 kalimat]
 Balas HANYA JSON valid (tanpa markdown). Schema:
 {"greeting":"string","story":"string","summary":"string","healthScore":0-100,"healthLabel":"excellent|good|fair|poor","healthTrend":"up|down|stable","healthMessage":"string","bullets":["string"],"insights":[{"id":"string","type":"achievement|warning|tip|pattern|milestone","icon":"string","title":"string","body":"string","severity":"low|medium|high","action":{"type":"reallocate|increase_budget|decrease_budget|create_budget|ask_deeper|view_category|set_goal","label":"string","payload":{}}}],"budgetRecommendations":[{"category":"string","priority":"string","current":number,"suggested":number,"planned":number,"reason":"string","impact":"string","action":{"type":"string","payload":{}}}],"alerts":["string"],"tips":["string"],"suggested_questions":["string"],"disclaimer":"string"}
 Jangan rekomendasi produk investasi spesifik. Hanya berdasarkan data yang dikirim.`;
