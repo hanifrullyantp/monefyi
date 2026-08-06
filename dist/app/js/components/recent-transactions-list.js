@@ -24,13 +24,21 @@ function formatTxDate(iso) {
  * @param {Array<object>} transactions
  * @param {Function} formatIDR
  * @param {object} [callbacks]
+ * @param {{ mode?: 'recent'|'today', title?: string }} [opts]
  * @returns {HTMLElement}
  */
-export function renderRecentTransactionsList(transactions, formatIDR, callbacks = {}) {
+export function renderRecentTransactionsList(transactions, formatIDR, callbacks = {}, opts = {}) {
+  const mode = opts.mode || 'recent';
+  const title = opts.title || (mode === 'today' ? 'Transaksi Hari Ini' : 'Transaksi Terbaru');
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const list = mode === 'today'
+    ? (transactions || []).filter((t) => t.date === todayIso)
+    : (transactions || []);
+
   const el = document.createElement('section');
   el.className = 'home-section home-recent-tx';
 
-  const rows = (transactions || []).map((tx) => {
+  const rows = list.map((tx) => {
     const isIncome = tx.type === 'income';
     const isExpense = tx.type === 'expense';
     const sign = isIncome ? '+' : isExpense ? '−' : '';
@@ -52,19 +60,19 @@ export function renderRecentTransactionsList(transactions, formatIDR, callbacks 
 
   el.innerHTML = `
     <div class="home-section-header">
-      <h2 class="home-section-title">${Icon('tag', { size: 18 })} Transaksi Terbaru</h2>
+      <h2 class="home-section-title">${Icon('tag', { size: 18 })} ${title}</h2>
       <button type="button" class="home-section-action tap" data-action="view-all">
         Lihat semua ${Icon('chevronRight', { size: 14 })}
       </button>
     </div>
-    <div class="home-tx-list">${rows || '<p class="home-empty">Belum ada transaksi</p>'}</div>
+    <div class="home-tx-list">${rows || `<p class="home-empty">${mode === 'today' ? 'Belum ada transaksi hari ini' : 'Belum ada transaksi'}</p>`}</div>
   `;
 
   el.querySelector('[data-action="view-all"]')?.addEventListener('click', () => callbacks.onViewAll?.());
   el.querySelectorAll('.home-tx-row').forEach((btn) => {
     btn.addEventListener('click', () => {
       const id = btn.getAttribute('data-tx-id');
-      const tx = transactions.find((t) => t.id === id);
+      const tx = list.find((t) => t.id === id);
       if (tx) callbacks.onTransactionClick?.(tx);
     });
   });

@@ -356,8 +356,8 @@ function diagnoseSavingRate(m) {
       area: 'Tabungan',
       icon: 'target',
       status: 'neutral',
-      title: 'Saving Rate Tidak Terukur',
-      explanation: 'Income belum tercatat, saving rate tidak bisa dihitung.',
+      title: 'Persentase Tabungan Belum Terukur',
+      explanation: 'Pemasukan belum tercatat, jadi persentase tabungan belum bisa dihitung.',
       benchmark: 'Standar: Saving rate ideal 20-30% dari income.',
       impact: 'medium',
     };
@@ -577,7 +577,7 @@ function generateBenchmarks(m, report) {
   const savingRate = Math.round((m.savingRate || 0) * 100);
 
   benchmarks.push({
-    name: 'Saving Rate',
+    name: '% yang berhasil disisihkan',
     yours: savingRate,
     ideal: 20,
     unit: '%',
