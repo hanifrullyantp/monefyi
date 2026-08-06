@@ -34,25 +34,7 @@ function renderToggle(key, label, description, defaults) {
 }
 
 function buildDefaults() {
-  const prefs = getNotifPrefs();
-  return {
-    enabled: true,
-    morningBriefing: true,
-    billReminders: true,
-    budgetMilestones: true,
-    weeklyRecap: true,
-    monthlyReport: true,
-    achievements: true,
-    smartTips: true,
-    spendingAlerts: true,
-    syncStatus: false,
-    dailyLimit: 3,
-    quietStart: 22,
-    quietEnd: 7,
-    sound: true,
-    vibration: true,
-    ...prefs,
-  };
+  return { ...getNotifPrefs() };
 }
 
 function buildPanelHtml(defaults, status, { inline = false } = {}) {

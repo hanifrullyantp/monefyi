@@ -13,6 +13,7 @@ import {
   normalizeCategoryName,
 } from '../services/budget-model.js';
 import { Icon } from './icons.js';
+import { LABELS, t } from '../constants/language.js';
 
 /**
  * @param {unknown} str
@@ -96,7 +97,7 @@ function renderItemCard(item, maxAmount, matchedTxs, expanded = false) {
           </button>
         </div>
         <div class="bfm-item-matches">
-          <div class="bfm-matches-title">Realisasi cocok</div>
+          <div class="bfm-matches-title">${LABELS.BUDGET.MATCHED_TX}</div>
           ${matchedTxs.length ? matchedTxs.map((t) => `
             <div class="bfm-tx-row">
               <div class="bfm-tx-main">
@@ -216,7 +217,12 @@ export function showBudgetFormModal(defaults = {}, options = {}) {
               </span>
               <div class="bfm-info-title">${escapeHtml(row.name || 'Budgeting baru')}</div>
               <div class="bfm-info-stats">
-                Realisasi Rp ${fmt(progress.spent)} · Budgeting Rp ${fmt(row.amount)} · Sisa Rp ${fmt(progress.remaining)}
+                ${t(LABELS.BUDGET.USED_STATS, {
+                  used: LABELS.BUDGET.USED,
+                  spent: fmt(progress.spent),
+                  planned: fmt(row.amount),
+                  remaining: fmt(progress.remaining),
+                })}
               </div>
             </div>
             <span class="bfm-info-chev">${Icon('chevronDown', { size: 16 })}</span>

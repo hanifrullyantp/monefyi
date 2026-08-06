@@ -16,9 +16,9 @@ export const CHART_DEFAULTS = [
   { code: 'hutang_dagang', name: 'Hutang Dagang', side: 'pasiva', category: 'hutang_dagang', sort_order: 10 },
   { code: 'hutang_pajak', name: 'Hutang Pajak', side: 'pasiva', category: 'hutang_pajak', sort_order: 20 },
   { code: 'hutang_lainnya', name: 'Hutang Lainnya', side: 'pasiva', category: 'hutang_lainnya', sort_order: 30 },
-  { code: 'modal', name: 'Modal', side: 'pasiva', category: 'modal', sort_order: 40 },
+  { code: 'modal', name: 'Nilai Bersih Saya', side: 'pasiva', category: 'modal', sort_order: 40 },
   { code: 'simpanan', name: 'Simpanan', side: 'pasiva', category: 'simpanan', sort_order: 50 },
-  { code: 'laba_ditahan', name: 'Laba Ditahan', side: 'pasiva', category: 'laba_ditahan', sort_order: 60 },
+  { code: 'laba_ditahan', name: 'Sisa Surplus yang Belum Dialokasikan', side: 'pasiva', category: 'laba_ditahan', sort_order: 60 },
   { code: 'kewajiban_lainnya', name: 'Kewajiban Lainnya', side: 'pasiva', category: 'kewajiban_lainnya', sort_order: 70 },
   { code: 'suspense', name: 'Selisih / Suspense', side: 'pasiva', category: 'suspense', sort_order: 99 },
 ];

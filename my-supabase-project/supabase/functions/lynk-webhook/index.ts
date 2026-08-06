@@ -463,6 +463,7 @@ serve(async (req) => {
     };
     if (isNewUser) {
       profileRow.onboarding_completed = false;
+      profileRow.onboarding_version = "2";
       if (customerName) profileRow.name = customerName;
     }
     await supa.from("profiles").upsert(profileRow, { onConflict: "id" });

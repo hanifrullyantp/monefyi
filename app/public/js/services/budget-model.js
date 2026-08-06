@@ -3,10 +3,12 @@
  * @module services/budget-model
  */
 
+import { LABELS } from '../constants/language.js';
+
 export const PRIORITY_LEVELS = {
   HARUS: {
     key: 'harus',
-    label: 'Wajib',
+    label: LABELS.PRIORITY.harus,
     description: 'Tidak bisa ditunda (listrik, kontrakan, cicilan)',
     color: '#ef4444',
     icon: 'target',
@@ -16,7 +18,7 @@ export const PRIORITY_LEVELS = {
   },
   PENTING: {
     key: 'penting',
-    label: 'Kebutuhan',
+    label: LABELS.PRIORITY.penting,
     description: 'Kebutuhan pokok (makan, transport, kesehatan)',
     color: '#f59e0b',
     icon: 'shoppingBag',
@@ -26,7 +28,7 @@ export const PRIORITY_LEVELS = {
   },
   MAU: {
     key: 'mau',
-    label: 'Keinginan',
+    label: LABELS.PRIORITY.mau,
     description: 'Ingin tapi bisa ditunda (hiburan, jajan, hobi)',
     color: '#eab308',
     icon: 'sparkles',
@@ -36,7 +38,7 @@ export const PRIORITY_LEVELS = {
   },
   SIMPAN: {
     key: 'simpan',
-    label: 'Simpan',
+    label: LABELS.PRIORITY.simpan,
     description: 'Tabungan & investasi masa depan',
     color: '#10b981',
     icon: 'wallet',

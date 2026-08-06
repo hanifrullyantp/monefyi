@@ -4,6 +4,8 @@
  */
 
 import { showNotification, processQueue, isCategoryEnabled } from './push-notification.js';
+import { buildMorningBriefing, buildBillReminder, buildBudgetMilestoneMessage } from './contextual-notifications.js';
+import { syncFinancialCondition } from './financial-condition.js';
 
 const CHECK_INTERVAL = 15 * 60 * 1000;
 let _intervalId = null;
@@ -136,6 +138,10 @@ export async function runScheduledChecks(opts = {}) {
   const expenses = monthExpenses(transactions, month);
   const totalExpense = expenses.reduce((s, t) => s + (Number(t.amount) || 0), 0);
 
+  try {
+    await syncFinancialCondition(window.STATE || {});
+  } catch { /* ignore */ }
+
   if (ignoreSchedule || (hour >= 7 && hour <= 8 && !checkedToday('morning_briefing'))) {
     if (ignoreSchedule || isCategoryEnabled('morningBriefing')) {
       await sendMorningBriefing(budgetRows, expenses, totalExpense, income, now);
@@ -205,51 +211,17 @@ export async function forceRunAllChecks() {
   console.log('[scheduler] Force run complete');
 }
 
-async function sendMorningBriefing(budgetRows, expenses, totalExpense, income, now) {
-  const totalBudget = budgetRows.reduce((s, b) => s + (Number(b.amount) || 0), 0);
-  const percentUsed = totalBudget > 0 ? Math.round((totalExpense / totalBudget) * 100) : 0;
-  const remaining = totalBudget - totalExpense;
-  const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate();
-  const dailyBudget = daysLeft > 0 ? Math.round(remaining / daysLeft) : 0;
-  const savingRate = income > 0 ? Math.round(((income - totalExpense) / income) * 100) : 0;
-
-  let title;
-  let body;
-  let tag;
-
-  if (now.getDate() === 25) {
-    title = 'Hari Gajian!';
-    body = 'Jangan lupa alokasikan ke budget. Harus → Penting → Simpan → Mau.';
-    tag = 'morning_payday';
-  } else if (percentUsed >= 100 && totalBudget > 0) {
-    title = 'Budget Sudah Over';
-    body = `Over Rp ${fmt(Math.abs(remaining))}. Review pengeluaran yang bisa dikurangi.`;
-    tag = 'morning_over';
-  } else if (percentUsed >= 90 && totalBudget > 0) {
-    title = `Budget Hampir Habis (${percentUsed}%)`;
-    body = `Sisa Rp ${fmt(remaining)} untuk ${daysLeft} hari. Max Rp ${fmt(dailyBudget)}/hari.`;
-    tag = 'morning_warning';
-  } else if (savingRate >= 20) {
-    title = `Good Morning! Saving Rate ${savingRate}%`;
-    body = `Budget ${percentUsed}% terpakai. Sisa ${daysLeft} hari. Tetap on-track!`;
-    tag = 'morning_good';
-  } else if (totalBudget > 0) {
-    title = `Selamat pagi! Sisa budget hari ini: Rp ${fmt(Math.max(0, dailyBudget))}`;
-    body = `Budget ${percentUsed}% terpakai. ${daysLeft} hari tersisa. Yuk jaga pengeluaran!`;
-    tag = 'morning_normal';
-  } else {
-    title = 'Selamat pagi!';
-    body = 'Belum ada budget bulan ini. Buat budgeting supaya insight lebih akurat.';
-    tag = 'morning_no_budget';
-  }
+async function sendMorningBriefing(_budgetRows, _expenses, _totalExpense, _income, _now) {
+  const briefing = buildMorningBriefing(window.STATE || {}, _now);
+  if (!briefing) return;
 
   await showNotification({
-    title,
-    body,
-    tag,
+    title: briefing.title,
+    body: briefing.body,
+    tag: briefing.tag,
     categoryKey: 'morningBriefing',
     type: 'budget_tip',
-    iconEmoji: '🌅',
+    iconEmoji: briefing.iconEmoji || '🌅',
     data: { url: '/app/#home' },
   });
 }
@@ -270,18 +242,7 @@ async function checkBillReminders(budgetRows, today) {
 
       const amount = Number(item.subtotal ?? (Number(item.qty || 1) * Number(item.price || 0)));
       const tag = `bill_${item.id}_${dayDiff}`;
-      let title;
-      let body;
-      if (dayDiff === 3) {
-        title = `${item.name || 'Tagihan'} dalam 3 hari`;
-        body = `Estimasi: Rp ${fmt(amount)}. Kategori: ${budget.name || 'Budget'}.`;
-      } else if (dayDiff === 1) {
-        title = `Besok: ${item.name || 'Tagihan'}`;
-        body = `Rp ${fmt(amount)}. Pastikan sudah siap.`;
-      } else {
-        title = `Hari ini: ${item.name || 'Tagihan'}`;
-        body = `Rp ${fmt(amount)}. Jangan sampai terlambat!`;
-      }
+      const { title, body } = buildBillReminder(item, budget, dayDiff, window.STATE || {});
 
       await showNotification({
         title,
@@ -318,27 +279,16 @@ async function checkBudgetMilestones(budgetRows, expenses) {
       if (percent >= milestone + 15 && milestone < 100) continue;
 
       const tag = `milestone_${budget.id}_${milestone}`;
-      let title;
-      let body;
-      if (milestone >= 100) {
-        title = `${budget.name || 'Budget'} OVER BUDGET`;
-        body = `Terpakai ${percent}% (Rp ${fmt(spent)} / ${fmt(planned)}). Perlu review.`;
-      } else if (milestone >= 90) {
-        title = `${budget.name || 'Budget'} hampir habis`;
-        body = `${percent}% terpakai. Sisa Rp ${fmt(planned - spent)}.`;
-      } else {
-        title = `${budget.name || 'Budget'} ${percent}%`;
-        body = `Sisa Rp ${fmt(planned - spent)}. Waspada overspending.`;
-      }
+      const msg = buildBudgetMilestoneMessage(budget, percent, spent, planned);
 
       await showNotification({
-        title,
-        body,
+        title: msg.title,
+        body: msg.body,
         tag,
         categoryKey: 'budgetMilestones',
         type: 'budget_alert',
-        iconEmoji: milestone >= 100 ? '🚨' : '⚠️',
-        severity: milestone >= 90 ? 'high' : 'medium',
+        iconEmoji: milestone >= 100 ? '🚨' : milestone >= 90 ? '⚠️' : '📊',
+        severity: msg.severity === 'high' ? 'high' : 'medium',
         requireInteraction: milestone >= 100,
         urgent: milestone >= 100,
         data: { url: '/app/#budget', budgetId: budget.id },

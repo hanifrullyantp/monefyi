@@ -9,6 +9,7 @@ import {
   calculateProgress,
   computeHistoricalBaselines,
 } from '../services/budget-model.js';
+import { LABELS } from '../constants/language.js';
 import { Icon } from './icons.js';
 
 /**
@@ -84,8 +85,8 @@ export async function showEvaluation(options = {}) {
         <div class="eval-summary-grid">
           <div class="eval-stat"><span>Income</span><strong>Rp ${formatIDR(income)}</strong></div>
           <div class="eval-stat"><span>Planned</span><strong>Rp ${formatIDR(totalPlanned)}</strong></div>
-          <div class="eval-stat"><span>Realisasi</span><strong>Rp ${formatIDR(totalSpent)}</strong></div>
-          <div class="eval-stat"><span>Savings Rate</span><strong>${savingsRate}%</strong></div>
+          <div class="eval-stat"><span>${LABELS.BUDGET.USED}</span><strong>Rp ${formatIDR(totalSpent)}</strong></div>
+          <div class="eval-stat"><span>${LABELS.GENERAL.SAVING_RATE}</span><strong>${savingsRate}%</strong></div>
         </div>
 
         <section class="eval-section">

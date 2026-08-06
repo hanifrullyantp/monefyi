@@ -298,6 +298,16 @@ export async function maybeShowOnboardingWizard() {
   if (profile.onboarding_completed !== false) return false;
   const plan = profile.plan_type || 'none';
   if (plan === 'none') return false;
+
+  if (profile.onboarding_version === '2') {
+    try {
+      const mod = await import('./onboarding-wizard-v2.js');
+      if (mod.maybeShowOnboardingWizardV2?.()) return true;
+    } catch (e) {
+      console.warn('[onboarding] v2 load failed, fallback v1', e);
+    }
+  }
+
   openOnboardingWizard();
   return true;
 }

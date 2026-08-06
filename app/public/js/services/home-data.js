@@ -3,6 +3,8 @@
  * @module services/home-data
  */
 
+import { NEAR_TERM_GOALS } from './onboarding-plan-generator.js';
+
 /**
  * @param {number} current
  * @param {number} previous
@@ -258,6 +260,45 @@ export function buildHomePageData(ctx) {
 
   const dailyTip = generateDailyTip({ summary, budgetSummary, chartData, formatCompactIDR });
 
+  const state = ctx.state || (typeof window !== 'undefined' ? window.STATE : {});
+  const month = state?.selectedMonth || toMonthKey(new Date());
+  const rows = state?.budgetsByMonth?.[month]?.categories?.rows || [];
+  const nearLimitCategories = [];
+
+  for (const row of rows) {
+    const plannedAmt = Number(row.amount || 0);
+    if (plannedAmt <= 0) continue;
+    const name = row.name || '';
+    const spent = periodTxs
+      .filter((t) => {
+        if (t.type !== 'expense') return false;
+        const cat = String(t.category || '').toLowerCase();
+        return cat === name.toLowerCase() || cat.includes(name.toLowerCase());
+      })
+      .reduce((s, t) => s + Number(t.amount || 0), 0);
+    const pct = (spent / plannedAmt) * 100;
+    if (pct >= 70) {
+      nearLimitCategories.push({ name, pct, remaining: plannedAmt - spent });
+    }
+  }
+
+  nearLimitCategories.sort((a, b) => b.pct - a.pct);
+
+  const goalPrefs = state?.db?.userPreferences;
+  const loadedPrimary = state?.db?.primaryTargetDisplay;
+  let primaryTarget = loadedPrimary || null;
+
+  if (!primaryTarget && goalPrefs?.near_term_goal) {
+    const goalMeta = NEAR_TERM_GOALS.find((g) => g.id === goalPrefs.near_term_goal);
+    primaryTarget = {
+      id: goalPrefs.near_term_goal,
+      name: goalPrefs.near_term_goal === 'custom'
+        ? (goalPrefs.near_term_goal_custom || 'Target pribadi')
+        : (goalMeta?.label || String(goalPrefs.near_term_goal).replace(/_/g, ' ')),
+      stats: { pct: 0, current: 0, targetAmount: 0 },
+    };
+  }
+
   return {
     totalBalance,
     summary,
@@ -266,6 +307,8 @@ export function buildHomePageData(ctx) {
     budgetSummary,
     chartData,
     dailyTip,
+    nearLimitCategories,
+    primaryTarget,
     periodLabel: period.label || '',
     userName: user?.name || 'User',
     saldoMasked: !!ctx.ui?.saldoMasked,
