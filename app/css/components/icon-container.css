@@ -63,12 +63,6 @@ body:not(.theme-light) .tx-card-compact .tx-icon {
   background: var(--color-neutral-800, var(--bg-tertiary)) !important;
 }
 
-.home-account-card__icon,
-.budget-list-row__icon {
-  background: color-mix(in srgb, var(--acc-color, var(--interactive-primary)) 15%, var(--card-bg)) !important;
-  box-shadow: none;
-}
-
 .neraca-row__icon,
 .neraca-cat-icon {
   background: var(--color-neutral-100, var(--bg-tertiary)) !important;

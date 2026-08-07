@@ -852,7 +852,7 @@
 
           <!-- KPI cards -->
           <section id="kpiSection" class="mt-4 grid grid-cols-2 gap-3">
-            <div class="rounded-2xl app-card p-4 flex flex-col justify-between">
+            <div class="dashboard-kpi-card rounded-2xl app-card p-4 flex flex-col justify-between">
               <div class="flex items-center gap-2 mb-3">
                 <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: rgba(16,185,129,0.15); color: #10b981;">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/><path d="m5 17 7-7 7 7"/></svg>
@@ -860,14 +860,14 @@
                 <div class="text-[11px] app-muted leading-tight">Pemasukan (periode)</div>
               </div>
               <div>
-                <div id="kpiIncome" class="text-lg font-bold">—</div>
+                <div id="kpiIncome" class="kpi-card__amount text-lg font-bold">—</div>
                 <div id="kpiIncomeSub" class="mt-1 text-[10px] app-muted flex items-center gap-1">
                   <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
                   <span id="kpiIncomeSubText">—</span>
                 </div>
               </div>
             </div>
-            <div class="rounded-2xl app-card p-4 flex flex-col justify-between">
+            <div class="dashboard-kpi-card rounded-2xl app-card p-4 flex flex-col justify-between">
               <div class="flex items-center gap-2 mb-3">
                 <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: rgba(244,63,94,0.15); color: #f43f5e;">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/><path d="m19 7-7 7-7-7"/></svg>
@@ -875,14 +875,14 @@
                 <div class="text-[11px] app-muted leading-tight">Pengeluaran (periode)</div>
               </div>
               <div>
-                <div id="kpiExpense" class="text-lg font-bold">—</div>
+                <div id="kpiExpense" class="kpi-card__amount text-lg font-bold">—</div>
                 <div id="kpiExpenseSub" class="mt-1 text-[10px] app-muted flex items-center gap-1">
                   <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
                   <span id="kpiExpenseSubText">—</span>
                 </div>
               </div>
             </div>
-            <div class="rounded-2xl app-card p-4 flex flex-col justify-between">
+            <div class="dashboard-kpi-card rounded-2xl app-card p-4 flex flex-col justify-between">
               <div class="flex items-center gap-2 mb-3">
                 <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: rgba(16,185,129,0.15); color: #10b981;">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
@@ -890,14 +890,14 @@
                 <div class="text-[11px] app-muted leading-tight">Surplus / Defisit</div>
               </div>
               <div>
-                <div id="kpiNet" class="text-lg font-bold" style="color: var(--mf-primary);">—</div>
+                <div id="kpiNet" class="kpi-card__amount text-lg font-bold">—</div>
                 <div id="kpiNetSub" class="mt-1 text-[10px] app-muted flex items-center gap-1">
                   <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
                   <span id="kpiNetSubText">—</span>
                 </div>
               </div>
             </div>
-            <div class="rounded-2xl app-card p-4 flex flex-col justify-between">
+            <div class="dashboard-kpi-card rounded-2xl app-card p-4 flex flex-col justify-between">
               <div class="flex items-center gap-2 mb-3">
                 <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background: rgba(14,165,233,0.15); color: #0ea5e9;">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
@@ -905,7 +905,7 @@
                 <div class="text-[11px] app-muted leading-tight">Saving rate</div>
               </div>
               <div>
-                <div id="kpiSaving" class="text-lg font-bold">—</div>
+                <div id="kpiSaving" class="kpi-card__amount text-lg font-bold">—</div>
                 <div id="kpiSavingSub" class="mt-1 text-[10px] app-muted">—</div>
               </div>
             </div>

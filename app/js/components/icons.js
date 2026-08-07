@@ -137,6 +137,6 @@ export function getAccountColor(accountName) {
   if (lower.includes('ovo')) return '#4c2a86';
   if (lower.includes('dana')) return '#118eea';
   if (lower.includes('shopee')) return '#ee4d2d';
-  if (/(cash|tunai)/.test(lower)) return '#6b7280';
+  if (/(cash|tunai)/.test(lower)) return '#10b981';
   return '#10b981';
 }

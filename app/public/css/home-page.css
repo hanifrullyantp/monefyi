@@ -96,101 +96,6 @@
   position: relative;
   flex: 0 0 min(72vw, 260px);
   scroll-snap-align: start;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 10px;
-  min-height: 108px;
-  padding: 14px 14px 12px;
-  border-radius: var(--radius-lg);
-  text-align: left;
-  overflow: hidden;
-  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.home-account-card:active {
-  transform: scale(0.985);
-  border-color: color-mix(in srgb, var(--acc-color, var(--interactive-primary)) 35%, transparent);
-}
-
-.home-account-card__accent {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 3px;
-  background: var(--acc-color, var(--interactive-primary));
-  opacity: 0.85;
-}
-
-.home-account-card__head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.home-account-card__icon {
-  width: 38px;
-  height: 38px;
-  flex-shrink: 0;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: color-mix(in srgb, var(--acc-color, var(--interactive-primary-hover)) 88%, #000);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
-}
-
-.home-account-card__name {
-  flex: 1;
-  min-width: 0;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.home-account-card__balance {
-  font-size: 18px;
-  font-weight: 800;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  padding-left: 2px;
-}
-
-.home-account-card__footer {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: auto;
-}
-
-.home-account-card__pct {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--acc-color, var(--interactive-primary));
-  flex-shrink: 0;
-  min-width: 28px;
-  text-align: right;
-}
-
-.home-account-card__bar {
-  flex: 1;
-  height: 5px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-}
-
-.home-account-card__bar-fill {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  box-shadow: none;
 }
 
 /* Quick access — satu baris default, expand 4×3 */
@@ -481,24 +386,9 @@
 /* Allow home account cards on desktop dashboard (outside .home-page) */
 #dashboardExpanded .home-account-card,
 #accountsBalancesRow .home-account-card {
-  position: relative;
   flex: 0 0 240px;
   scroll-snap-align: start;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 10px;
   min-height: 112px;
-  padding: 14px 14px 12px;
-  border-radius: var(--radius-lg, 16px);
-  border: 1px solid var(--card-border);
-  background: var(--card-bg);
-  text-align: left;
-  color: var(--text-primary);
-  box-shadow: var(--card-shadow);
-  overflow: hidden;
-  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-  cursor: pointer;
 }
 
 @media (min-width: 1024px) {

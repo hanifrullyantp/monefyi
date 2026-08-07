@@ -3746,13 +3746,13 @@ async function upsertTransaction_legacy_local(tx) {
           card.innerHTML = `
             <div class="home-account-card__accent" aria-hidden="true"></div>
             <div class="home-account-card__head">
-              <div class="home-account-card__icon">${Icon(iconName, { size: 18, color: '#fff' })}</div>
+              <div class="home-account-card__icon">${Icon(iconName, { size: 18, color })}</div>
               <div class="home-account-card__name">${escapeHtml(name)}</div>
             </div>
             <div class="home-account-card__balance">${escapeHtml(balance)}</div>
             <div class="home-account-card__footer">
               <div class="home-account-card__bar" aria-hidden="true">
-                <span class="home-account-card__bar-fill" style="width:${pct}%;background:${color}"></span>
+                <span class="home-account-card__bar-fill" style="width:${pct}%"></span>
               </div>
               <span class="home-account-card__pct">${pct}%</span>
             </div>

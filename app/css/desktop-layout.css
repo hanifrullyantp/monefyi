@@ -294,14 +294,14 @@
   #accountsBalancesTitle {
     font-size: 15px;
     font-weight: 700;
-    color: #fff;
+    color: var(--text-primary);
     letter-spacing: -0.01em;
   }
 
   #accountsBalancesHint {
     display: block;
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--text-tertiary);
     margin-top: 6px;
   }
 
@@ -337,12 +337,12 @@
   }
 
   #dashboardQuickAccess .home-quick-access {
-    --text-secondary: rgba(255, 255, 255, 0.72);
+    --text-secondary: var(--text-secondary);
   }
 
   #dashboardQuickAccess .home-section-title {
     font-size: 13px;
-    color: #fff;
+    color: var(--text-primary);
   }
 
   #dashboardQuickAccess .home-section-header {
@@ -371,7 +371,7 @@
     height: 42px;
     margin-left: auto;
     margin-right: auto;
-    border-radius: 14px 10px 16px 9px;
+    border-radius: 50%;
   }
 
   #dashboardQuickAccess .home-quick-btn__label {

@@ -1,38 +1,141 @@
 /**
- * Account wallet cards — theme-aware
+ * Account wallet cards — light/dark (matches dashboard mockup)
  */
 .home-account-card {
-  background: var(--card-bg);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  min-height: 112px;
+  padding: 14px 14px 12px;
+  border-radius: var(--radius-lg, 16px);
   border: 1px solid var(--card-border);
+  background: var(--card-bg);
   color: var(--text-primary);
   box-shadow: var(--card-shadow);
+  text-align: left;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .home-account-card:hover {
   box-shadow: var(--card-hover-shadow);
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--acc-color, var(--interactive-primary)) 35%, var(--card-border));
 }
 
-.home-account-card__name {
-  color: var(--text-secondary);
+.home-account-card:active {
+  transform: scale(0.985);
 }
 
-.home-account-card__balance {
-  color: var(--text-primary);
+/* Brand stripe — top edge (mockup) */
+.home-account-card__accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  width: 100%;
+  background: var(--acc-color, var(--interactive-primary));
+  opacity: 1;
 }
 
-.home-account-card__pct {
-  color: var(--text-tertiary);
-}
-
-.home-account-card__bar {
-  background: var(--bg-tertiary);
+.home-account-card__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding-top: 2px;
 }
 
 .home-account-card__icon {
-  background: color-mix(in srgb, var(--acc-color, var(--interactive-primary)) 15%, var(--card-bg));
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--acc-color, var(--interactive-primary)) 14%, var(--card-bg));
+  border: 1px solid color-mix(in srgb, var(--acc-color, var(--interactive-primary)) 22%, transparent);
+  color: var(--acc-color, var(--interactive-primary));
+  box-shadow: none;
 }
 
-#accountsBalancesRow .home-account-card {
+.home-account-card__icon .icon,
+.home-account-card__icon svg {
+  display: block;
+}
+
+.home-account-card__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-account-card__balance {
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-left: 2px;
+}
+
+.home-account-card__footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.home-account-card__pct {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--acc-color, var(--interactive-primary));
+  flex-shrink: 0;
+  min-width: 28px;
+  text-align: right;
+}
+
+.home-account-card__bar {
+  flex: 1;
+  height: 4px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--bg-tertiary);
+  overflow: hidden;
+}
+
+.home-account-card__bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--acc-color, var(--interactive-primary));
+  transition: width 0.35s ease;
+}
+
+#accountsBalancesRow .home-account-card,
+#dashboardExpanded .home-account-card {
+  flex: 1 1 0;
+  min-width: 0;
   background: var(--card-bg);
   border-color: var(--card-border);
+}
+
+[data-theme="light"] #accountsBalancesRow .home-account-card,
+body.theme-light #accountsBalancesRow .home-account-card,
+[data-theme="light"] #dashboardExpanded .home-account-card,
+body.theme-light #dashboardExpanded .home-account-card {
+  background: var(--color-neutral-0);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
 }

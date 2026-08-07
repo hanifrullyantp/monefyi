@@ -114,3 +114,30 @@
 .saldo-bar-period {
   color: var(--text-tertiary);
 }
+
+/* Dashboard KPI grid — white cards, tinted icon only (mockup) */
+#kpiSection > .app-card,
+.dashboard-kpi-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
+  color: var(--text-primary);
+}
+
+[data-theme="light"] #kpiSection > .app-card,
+body.theme-light #kpiSection > .app-card,
+[data-theme="light"] .dashboard-kpi-card,
+body.theme-light .dashboard-kpi-card {
+  background: var(--color-neutral-0);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+#kpiSection .kpi-card__amount {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+#kpiSection #kpiNet {
+  color: var(--finance-income);
+}

@@ -123,8 +123,6 @@ body:not(.theme-light) .home-streak-badge {
   color: var(--text-primary);
   box-shadow: var(--card-shadow);
 }
-
-.neraca-recon-banner {
   background: var(--status-warning-bg);
   border: 1px solid var(--status-warning-border);
   color: var(--text-primary);
@@ -141,13 +139,4 @@ body:not(.theme-light) .home-streak-badge {
 .neraca-net-worth {
   border-color: var(--border-subtle);
   background: var(--finance-income-bg);
-}
-
-.home-account-card__icon {
-  background: color-mix(in srgb, var(--acc-color, var(--interactive-primary)) 15%, var(--card-bg));
-  box-shadow: none;
-}
-
-.home-account-card__bar {
-  background: var(--bg-tertiary);
 }
