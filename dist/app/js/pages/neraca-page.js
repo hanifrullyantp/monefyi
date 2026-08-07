@@ -9,6 +9,8 @@ import {
   ensureNeracaInitialized,
   getAllJournals,
   findSuspectTransactions,
+  rebuildJournalsFromTransactions,
+  reconcileNeracaWithTransactions,
 } from '../services/journal-engine.js';
 import { getNeracaMeta, saveBalanceSnapshot, setNeracaMeta, upsertEquityEvent } from '../services/neraca-store.js';
 import { buildFixSuggestions } from '../services/balance-checker.js';
@@ -78,6 +80,63 @@ function amountClass(row, side) {
   if (side === 'pasiva' && ['modal', 'simpanan', 'laba_ditahan'].includes(row.key)) return 'is-equity';
   if (side === 'pasiva' && row.key.startsWith('hutang')) return 'is-liability';
   return '';
+}
+
+/**
+ * @param {object[]} rows
+ */
+function filterVisibleRows(rows) {
+  return (rows || []).filter((r) => r.isSuspense || Math.abs(Number(r.amount || 0)) >= 1);
+}
+
+/**
+ * @param {object[]} pasiva
+ */
+function splitPasivaSections(pasiva) {
+  const liabilityKeys = new Set(['hutang_dagang', 'hutang_pajak', 'hutang_lainnya', 'kewajiban_lainnya']);
+  const liabilities = filterVisibleRows(pasiva.filter((r) => liabilityKeys.has(r.key) || String(r.key).startsWith('hutang')));
+  const equity = filterVisibleRows(pasiva.filter((r) => !liabilityKeys.has(r.key) && !String(r.key).startsWith('hutang') && !r.isSuspense));
+  const suspense = pasiva.filter((r) => r.isSuspense);
+  return { liabilities, equity, suspense };
+}
+
+/**
+ * @param {object} sheet
+ * @param {object|null} reconciliation
+ */
+function renderReconciliationBanner(sheet, reconciliation) {
+  const suspenseAmt = Number(sheet.suspense?.amount || 0);
+  const showSuspense = suspenseAmt >= 1000;
+  const showRecon = reconciliation && !reconciliation.balanced;
+  if (!showSuspense && !showRecon) return '';
+
+  const lines = [];
+  if (showSuspense) {
+    lines.push(`Ada Rp ${formatIDR(suspenseAmt)} yang belum tercatat sumbernya.`);
+  }
+  if (showRecon) {
+    lines.push(`Selisih kas journal vs transaksi: Rp ${formatIDR(Math.abs(reconciliation.diff))}.`);
+  }
+
+  return `
+    <div class="neraca-recon-banner" role="status">
+      <span>${Icon('alertTriangle', { size: 16 })} ${escapeHtml(lines.join(' '))}</span>
+      <button type="button" class="neraca-btn neraca-btn-ghost tap" data-action="rebuild">Rebuild dari Transaksi</button>
+    </div>
+  `;
+}
+
+/**
+ * @param {object} sheet
+ */
+function renderNetWorthFooter(sheet) {
+  const net = Number(sheet.totalAktiva || 0) - Number(sheet.totalPasiva || 0);
+  return `
+    <footer class="neraca-net-worth">
+      <span class="neraca-net-worth__label">NILAI BERSIH</span>
+      <strong class="neraca-net-worth__value">Rp ${formatIDR(net)}</strong>
+    </footer>
+  `;
 }
 
 /**
@@ -158,6 +217,9 @@ function renderScale(sheet) {
  */
 function paint(container, sheet, options) {
   const showMonth = _state.mode === 'history';
+  const aktivaRows = filterVisibleRows(sheet.aktiva);
+  const pasivaSplit = splitPasivaSections(sheet.pasiva);
+  const pasivaRows = [...pasivaSplit.liabilities, ...pasivaSplit.equity, ...pasivaSplit.suspense];
   container.innerHTML = `
     <div class="neraca-page">
       <header class="neraca-header">
@@ -174,33 +236,44 @@ function paint(container, sheet, options) {
           ${showMonth ? `
             <input type="month" class="neraca-month-input" data-role="month" value="${escapeHtml(_state.month)}" aria-label="Pilih periode">
           ` : ''}
+          <button type="button" class="neraca-btn neraca-btn-ghost tap" data-action="rebuild" title="Rebuild dari transaksi">Rebuild</button>
           <button type="button" class="neraca-icon-btn tap" data-action="refresh" title="Refresh" aria-label="Refresh">
             ${Icon('refresh', { size: 16 })}
           </button>
+          <button type="button" class="neraca-icon-btn tap" data-action="close-books" title="Tutup buku bulan ini" aria-label="Tutup buku">
+            ${Icon('calendar', { size: 16 })}
+          </button>
         </div>
       </header>
+
+      ${renderReconciliationBanner(sheet, options.reconciliation)}
 
       <div class="neraca-columns">
         <section class="neraca-panel neraca-panel--aktiva" aria-label="Yang Saya Miliki">
           <div class="neraca-panel-head">YANG SAYA MILIKI</div>
           <div class="neraca-panel-cols"><span>Kategori</span><span>Nilai (Rp)</span></div>
-          ${renderRows(sheet.aktiva, 'aktiva', options)}
+          ${renderRows(aktivaRows, 'aktiva', options)}
           <div class="neraca-panel-foot">
             <span>TOTAL MILIK</span>
             <span class="neraca-panel-foot-amt">Rp ${formatIDR(sheet.totalAktiva)}</span>
           </div>
         </section>
 
-        <section class="neraca-panel neraca-panel--pasiva" aria-label="Yang Saya Hutangi dan Modal">
-          <div class="neraca-panel-head">YANG SAYA HUTANGI &amp; MODAL</div>
+        <section class="neraca-panel neraca-panel--pasiva" aria-label="Kewajiban dan Modal">
+          <div class="neraca-panel-head">KEWAJIBAN</div>
           <div class="neraca-panel-cols"><span>Kategori</span><span>Nilai (Rp)</span></div>
-          ${renderRows(sheet.pasiva, 'pasiva', options)}
+          ${pasivaSplit.liabilities.length ? renderRows(pasivaSplit.liabilities, 'pasiva', options) : '<div class="neraca-empty-row muted">Tidak ada kewajiban tercatat</div>'}
+          <div class="neraca-panel-subhead">MODAL &amp; LABA</div>
+          ${pasivaSplit.equity.length ? renderRows(pasivaSplit.equity, 'pasiva', options) : '<div class="neraca-empty-row muted">Belum ada entri modal</div>'}
+          ${pasivaSplit.suspense.length ? renderRows(pasivaSplit.suspense, 'pasiva', options) : ''}
           <div class="neraca-panel-foot">
-            <span>TOTAL HUTANG &amp; MODAL</span>
+            <span>TOTAL PASIVA</span>
             <span class="neraca-panel-foot-amt">Rp ${formatIDR(sheet.totalPasiva)}</span>
           </div>
         </section>
       </div>
+
+      ${renderNetWorthFooter(sheet)}
 
       <section class="neraca-balance" aria-live="polite">
         ${renderScale(sheet)}
@@ -280,6 +353,40 @@ function wire(container, options) {
     refresh(container, options);
   });
   container.querySelector('[data-action="refresh"]')?.addEventListener('click', () => refresh(container, options));
+  container.querySelectorAll('[data-action="rebuild"]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try {
+        await rebuildJournalsFromTransactions(window.STATE?.transactions || []);
+        const recon = await reconcileNeracaWithTransactions({ endISO: resolveEndISO() });
+        if (window.showToast) {
+          window.showToast(
+            recon.balanced ? 'Neraca selaras dengan transaksi' : `Masih ada selisih Rp ${formatIDR(Math.abs(recon.diff))}`,
+            recon.balanced ? 'success' : 'warn',
+          );
+        }
+        await refresh(container, options);
+      } catch (e) {
+        console.error('[neraca] rebuild', e);
+        if (window.showToast) window.showToast('Gagal rebuild neraca', 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+  container.querySelector('[data-action="close-books"]')?.addEventListener('click', async () => {
+    try {
+      const { showMonthlyClosingModal } = await import('../components/monthly-closing-modal.js');
+      const { toPeriodKey } = await import('../services/monthly-period.js');
+      await showMonthlyClosingModal({
+        period: toPeriodKey(window.STATE?.period?.end),
+        upsertTransaction: window.dbUpsertTransaction,
+        onComplete: () => refresh(container, options),
+      });
+    } catch (e) {
+      console.error('[neraca] close books', e);
+    }
+  });
   container.querySelector('[data-role="month"]')?.addEventListener('change', (e) => {
     _state.month = e.target.value || _state.month;
     refresh(container, options);
@@ -343,12 +450,19 @@ async function refresh(container, options) {
   try {
     await ensureNeracaInitialized(window.STATE?.transactions || []);
     const endISO = resolveEndISO();
+    const periodStart = _state.mode === 'live' ? `${endISO.slice(0, 7)}-01` : null;
     const sheet = await computeNeracaReport({
       endISO,
       transactions: window.STATE?.transactions || [],
       accounts: window.STATE?.settings?.accounts || [],
+      periodStart,
     });
     _state.sheet = sheet;
+
+    let reconciliation = null;
+    try {
+      reconciliation = await reconcileNeracaWithTransactions({ endISO });
+    } catch { /* non-blocking */ }
 
     if (_state.mode === 'history') {
       saveBalanceSnapshot(_state.month, {
@@ -366,7 +480,7 @@ async function refresh(container, options) {
       return;
     }
 
-    paint(container, sheet, options);
+    paint(container, sheet, { ...options, reconciliation });
   } catch (err) {
     console.error('[neraca] refresh failed', err);
     container.innerHTML = `

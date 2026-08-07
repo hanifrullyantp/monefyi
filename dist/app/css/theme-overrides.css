@@ -1,0 +1,881 @@
+/**
+ * Phase 3–4 theme overrides — loaded after page-specific CSS.
+ * Maps hardcoded page styles to design tokens (light + dark).
+ */
+
+/* ========== ONBOARDING ========== */
+#onboardingWizardHost,
+#onboardingWizardV2Host,
+.upgrade-sheet-backdrop {
+  background: var(--bg-overlay) !important;
+}
+
+.onboarding-wizard,
+.onboarding-wizard--v2 {
+  background: var(--bg-elevated);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.onboarding-wizard__sub,
+.onboarding-field label {
+  color: var(--text-secondary);
+}
+
+.onboarding-wizard__dot {
+  background: var(--bg-tertiary);
+}
+
+.onboarding-goal,
+.onboarding-chip,
+.onboarding-field input,
+.onboarding-field select,
+.onboarding-bill-row input {
+  background: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--input-text);
+}
+
+.onboarding-goal.is-selected,
+.onboarding-chip.is-selected {
+  border-color: var(--border-focus);
+  background: var(--status-success-bg);
+  color: var(--status-success-text);
+}
+
+.onboarding-budget-preview {
+  border-color: var(--status-success-border);
+  background: var(--finance-income-bg);
+}
+
+.onboarding-budget-preview li,
+.onboarding-field--inline {
+  color: var(--text-secondary);
+}
+
+.onboarding-btn--primary {
+  background: var(--interactive-primary);
+  color: var(--interactive-primary-text);
+}
+
+.onboarding-btn--ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border-color: var(--border-default);
+}
+
+/* ========== SETTINGS ========== */
+.settings-page-root,
+.settings-section-nav {
+  background: var(--bg-primary);
+  border-color: var(--border-subtle);
+}
+
+.settings-section-nav {
+  border-bottom-color: var(--border-subtle);
+}
+
+.settings-sec-btn {
+  background: var(--interactive-secondary);
+  border-color: var(--border-default);
+  color: var(--text-secondary);
+}
+
+.settings-sec-btn:hover {
+  background: var(--interactive-secondary-hover);
+  color: var(--text-primary);
+}
+
+.settings-sec-btn.is-active {
+  background: var(--status-success-bg);
+  border-color: var(--status-success-border);
+  color: var(--status-success-text);
+  box-shadow: var(--shadow-focus);
+}
+
+.settings-card {
+  background: var(--card-bg);
+  border-color: var(--card-border);
+}
+
+.settings-input,
+.settings-select {
+  background: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--input-text);
+}
+
+.settings-btn {
+  background: var(--interactive-primary);
+  border-color: var(--status-success-border);
+  color: var(--interactive-primary-text);
+}
+
+.settings-btn.ghost {
+  background: transparent;
+  color: var(--text-brand);
+}
+
+.settings-btn.danger {
+  background: var(--status-danger-bg);
+  border-color: var(--status-danger-border);
+  color: var(--status-danger-text);
+}
+
+/* ========== PREVIEW / QUICK PREVIEW ========== */
+.preview-card,
+.qp-card {
+  background: var(--card-bg);
+  border-color: var(--card-border);
+  color: var(--text-primary);
+  box-shadow: var(--card-shadow);
+}
+
+.preview-badge--purple,
+.preview-badge--sky,
+.qp-badge-purple {
+  background: var(--status-info-bg);
+  color: var(--status-info-text);
+  border-color: var(--status-info-border);
+}
+
+.preview-badge--blue,
+.qp-badge-blue {
+  background: var(--color-blue-50);
+  color: var(--color-blue-700);
+  border-color: var(--color-blue-200);
+}
+
+[data-theme="dark"] .preview-badge--blue,
+body:not(.theme-light) .preview-badge--blue {
+  background: var(--status-info-bg);
+  color: var(--status-info-text);
+  border-color: var(--status-info-border);
+}
+
+.preview-badge--green,
+.qp-badge-green {
+  background: var(--status-success-bg);
+  color: var(--status-success-text);
+  border-color: var(--status-success-border);
+}
+
+.preview-badge--gray,
+.qp-badge-gray {
+  background: var(--interactive-secondary);
+  color: var(--text-secondary);
+  border-color: var(--border-subtle);
+}
+
+.preview-field__input,
+.preview-field__select,
+.preview-field__textarea,
+.qp-field input,
+.qp-field select,
+.qp-field textarea {
+  background: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--input-text);
+}
+
+.preview-explanation {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-color: var(--border-subtle);
+}
+
+.preview-btn--secondary,
+.qp-btn--secondary {
+  background: var(--interactive-secondary);
+  color: var(--text-primary);
+  border-color: var(--border-default);
+}
+
+/* ========== TRANSACTION DETAIL ========== */
+.tx-detail-panel,
+.tx-detail-sheet {
+  background: var(--bg-elevated);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.tx-detail-label {
+  color: var(--text-tertiary);
+}
+
+.tx-detail-value {
+  color: var(--text-primary);
+}
+
+.tx-detail-amount--income {
+  color: var(--finance-income);
+}
+
+.tx-detail-amount--expense {
+  color: var(--finance-expense);
+}
+
+/* ========== NOTIFICATION / EMAIL IMPORT ========== */
+.notif-settings-card,
+.email-import-card {
+  background: var(--card-bg);
+  border-color: var(--card-border);
+  color: var(--text-primary);
+}
+
+.notif-settings-row,
+.email-import-row {
+  border-color: var(--border-subtle);
+}
+
+/* ========== RECEIPT SCANNER ========== */
+.receipt-scanner-panel {
+  background: var(--bg-elevated);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+/* ========== TX EDIT TOOLBAR ========== */
+.tx-edit-toolbar {
+  background: var(--bg-elevated);
+  border-color: var(--border-subtle);
+}
+
+.tx-edit-toolbar__btn {
+  color: var(--text-secondary);
+  background: var(--interactive-secondary);
+  border-color: var(--border-subtle);
+}
+
+.tx-edit-toolbar__btn:hover,
+.tx-edit-toolbar__btn.is-active {
+  color: var(--interactive-primary);
+  background: var(--status-success-bg);
+}
+
+/* ========== TUTORIAL ========== */
+#tourSpotlight {
+  box-shadow: 0 0 0 9999px var(--bg-overlay);
+  border-color: var(--border-default);
+}
+
+#tourBubble {
+  background: var(--bg-elevated);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+/* ========== NATIVE PWA / SPLASH ========== */
+.splash-screen {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* ========== PHASE 4 — TOAST ========== */
+.toast,
+.toast--success,
+.toast--error,
+.toast--warn {
+  color: var(--text-primary);
+  box-shadow: var(--shadow-lg);
+}
+
+.toast--success,
+.toast.success {
+  background: var(--status-success-bg);
+  border: 1px solid var(--status-success-border);
+  color: var(--status-success-text);
+}
+
+.toast--error,
+.toast.error {
+  background: var(--status-danger-bg);
+  border: 1px solid var(--status-danger-border);
+  color: var(--status-danger-text);
+}
+
+.toast--warn,
+.toast.warn {
+  background: var(--status-warning-bg);
+  border: 1px solid var(--status-warning-border);
+  color: var(--status-warning-text);
+}
+
+.toast__undo,
+.toast__close {
+  color: var(--text-brand);
+}
+
+/* ========== LOADING / SKELETON / EMPTY ========== */
+#loadingOverlay {
+  background: var(--bg-overlay);
+}
+
+.loading-text {
+  color: var(--text-secondary);
+}
+
+.skeleton,
+.skeleton-green,
+.skeleton-line,
+.skeleton-circle {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--text-primary) 8%, transparent) 25%,
+    color-mix(in srgb, var(--text-primary) 14%, transparent) 37%,
+    color-mix(in srgb, var(--text-primary) 8%, transparent) 63%
+  ) !important;
+  background-size: 200% 100%;
+}
+
+.home-empty,
+.empty-state,
+.settings-empty,
+.neraca-empty-row {
+  color: var(--text-tertiary);
+}
+
+.empty-state__title {
+  color: var(--text-secondary);
+}
+
+.empty-state__icon {
+  color: var(--text-disabled);
+}
+
+.error-banner,
+.inline-error {
+  background: var(--status-danger-bg);
+  border: 1px solid var(--status-danger-border);
+  color: var(--status-danger-text);
+}
+
+.info-banner {
+  background: var(--status-info-bg);
+  border: 1px solid var(--status-info-border);
+  color: var(--status-info-text);
+}
+
+/* ========== PHASE 5 — BUDGET ========== */
+.budget-enhanced,
+.allocation-overview,
+.budget-group,
+.recommendations-section,
+.rec-item {
+  background: var(--card-bg);
+  border-color: var(--card-border);
+  color: var(--text-primary);
+}
+
+.priority-bar-track {
+  background: var(--bg-tertiary);
+}
+
+.priority-bar-amount .percent.over {
+  color: var(--finance-expense);
+}
+
+.priority-bar-amount .percent.under {
+  color: var(--finance-income);
+}
+
+.rec-item.severity-high {
+  border-color: var(--status-danger-border);
+  background: var(--status-danger-bg);
+}
+
+.rec-item.severity-medium {
+  border-color: var(--status-warning-border);
+  background: var(--status-warning-bg);
+}
+
+.rec-item.severity-low {
+  border-color: var(--status-success-border);
+  background: var(--status-success-bg);
+}
+
+.rec-action-btn,
+.btn-see-all-rec {
+  background: var(--interactive-secondary);
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
+.budget-item-card,
+.budget-card-enhanced {
+  background: var(--card-bg);
+  border-color: var(--card-border);
+}
+
+.budget-item-card.is-over {
+  border-color: var(--status-danger-border);
+}
+
+.budget-item-card.is-warning {
+  border-color: var(--status-warning-border);
+}
+
+/* ========== MONEVISOR ========== */
+.monevisor-page,
+.monevisor-panel-root {
+  color: var(--text-primary);
+}
+
+.mv-loading,
+.mv-error {
+  color: var(--text-tertiary);
+}
+
+.mv-error button {
+  background: var(--status-success-bg);
+  border-color: var(--status-success-border);
+  color: var(--status-success-text);
+}
+
+.mv-spinner {
+  border-color: var(--status-success-bg);
+  border-top-color: var(--interactive-primary);
+}
+
+.mv-title,
+.mv-logo,
+.mv-refresh {
+  color: var(--text-primary);
+}
+
+.mv-period {
+  color: var(--text-tertiary);
+}
+
+.mv-refresh {
+  background: var(--interactive-secondary);
+  border-color: var(--border-subtle);
+}
+
+.mv-refresh:hover {
+  background: var(--interactive-secondary-hover);
+}
+
+.mv-intervention-card,
+.mv-coach-card,
+.mv-section,
+.mv-metric-card {
+  background: var(--card-bg);
+  border-color: var(--card-border);
+  color: var(--text-primary);
+}
+
+.mv-intervention-block {
+  border-color: var(--border-subtle);
+}
+
+.mv-intervention-label {
+  color: var(--text-tertiary);
+}
+
+.mv-intervention-headline {
+  color: var(--text-primary);
+}
+
+.mv-intervention-text,
+.mv-coach-text {
+  color: var(--text-secondary);
+}
+
+.mv-intervention-action {
+  background: var(--interactive-primary);
+  color: var(--interactive-primary-text);
+  border-color: var(--status-success-border);
+}
+
+.mv-health-pill--good {
+  background: var(--status-success-bg);
+  color: var(--status-success-text);
+}
+
+.mv-health-pill--warn {
+  background: var(--status-warning-bg);
+  color: var(--status-warning-text);
+}
+
+.mv-health-pill--bad {
+  background: var(--status-danger-bg);
+  color: var(--status-danger-text);
+}
+
+/* ========== NERACA ========== */
+.neraca-page,
+.neraca-page-root {
+  color: var(--text-primary);
+}
+
+.neraca-panel {
+  background: var(--card-bg);
+  border-color: var(--card-border);
+}
+
+.neraca-panel-head,
+.neraca-panel-foot {
+  background: var(--bg-secondary);
+  border-color: var(--border-subtle);
+}
+
+.neraca-seg {
+  background: var(--interactive-secondary);
+  border-color: var(--border-subtle);
+}
+
+.neraca-seg-btn.is-active {
+  background: var(--card-bg);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.neraca-seg-btn.is-active .neraca-live-dot {
+  background: var(--interactive-primary);
+  box-shadow: var(--shadow-focus);
+}
+
+.neraca-row {
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.neraca-row:hover {
+  background: var(--bg-secondary);
+}
+
+.neraca-banner,
+.neraca-promo-card {
+  background: var(--color-orange-50);
+  border-color: color-mix(in srgb, var(--color-orange-500) 25%, transparent);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .neraca-banner,
+[data-theme="dark"] .neraca-promo-card,
+body:not(.theme-light) .neraca-banner,
+body:not(.theme-light) .neraca-promo-card {
+  background: color-mix(in srgb, var(--color-orange-500) 10%, transparent);
+  border-color: color-mix(in srgb, var(--color-orange-500) 25%, transparent);
+}
+
+.neraca-net-worth {
+  background: var(--finance-income-bg);
+  border-color: var(--status-success-border);
+}
+
+/* ========== ADMIN ========== */
+.admin-page-overlay {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.admin-page-top,
+.admin-page-nav {
+  background: var(--bg-elevated);
+  border-color: var(--border-subtle);
+}
+
+.admin-nav-btn.is-active {
+  background: var(--status-success-bg);
+  border-color: var(--status-success-border);
+  color: var(--status-success-text);
+}
+
+.admin-kpi {
+  background: var(--card-bg);
+  border-color: var(--card-border);
+}
+
+.admin-kpi-label {
+  color: var(--text-secondary);
+}
+
+.admin-kpi-value {
+  color: var(--text-primary);
+}
+
+/* ========== NATIVE PWA INSTALL ========== */
+.pwa-install-banner,
+.pwa-install-sheet {
+  background: var(--bg-elevated);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.pwa-install-banner__dismiss {
+  color: var(--text-tertiary);
+}
+
+/* ========== APP.CSS LEGACY TX LIST ========== */
+.hero-saldo-stat--income .hero-saldo-stat__value,
+.tx-amount--income,
+.tx-income {
+  color: var(--finance-income) !important;
+}
+
+.hero-saldo-stat--expense .hero-saldo-stat__value,
+.tx-amount--expense,
+.tx-expense {
+  color: var(--finance-expense) !important;
+}
+
+.tx-card-v2 {
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.tx-card-v2:hover {
+  background: var(--bg-secondary);
+}
+
+#txListDesktopHeader {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+
+/* ========== LIGHT MODE COMPLETION (screenshot audit) ========== */
+#dashboardExpanded .app-card,
+#kpiSection > div,
+#budgetSection .app-card,
+#chartsSection .app-card,
+#accountsBalancesRow .home-account-card,
+#dashboardExpanded .home-account-card {
+  background: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+  color: var(--text-primary) !important;
+  box-shadow: var(--card-shadow) !important;
+}
+
+#kpiIncome,
+#kpiExpense,
+#kpiNet,
+#kpiBudget {
+  color: var(--text-primary) !important;
+}
+
+.tx-card-v2 .tx-card-inner,
+.tx-card-compact .tx-card-inner,
+.tx-card-mockup.tx-card-inner {
+  background: var(--card-bg) !important;
+  border: 1px solid var(--card-border) !important;
+  color: var(--text-primary) !important;
+}
+
+.tx-card-v2 .tx-card-inner:hover,
+.tx-card-compact:hover .tx-card-inner {
+  background: var(--bg-secondary) !important;
+  border-color: var(--border-focus) !important;
+}
+
+#txListHost,
+#txList {
+  background: transparent;
+}
+
+.tx-card-row-table {
+  color: var(--text-primary) !important;
+}
+
+.tx-group-header {
+  background: color-mix(in srgb, var(--bg-primary) 92%, transparent) !important;
+}
+
+.tx-group-header__label {
+  color: var(--text-secondary) !important;
+}
+
+.tx-group-header__count {
+  color: var(--text-tertiary) !important;
+}
+
+.budget-list-card {
+  background: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+}
+
+.blc-title {
+  color: var(--text-primary) !important;
+}
+
+.blc-count,
+.blc-empty-desc {
+  color: var(--text-secondary) !important;
+}
+
+.mv-intervention-card {
+  background: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+}
+
+.mv-intervention-headline {
+  color: var(--text-primary) !important;
+}
+
+.mv-intervention-text {
+  color: var(--text-secondary) !important;
+}
+
+.neraca-recon-banner {
+  background: var(--status-warning-bg) !important;
+  border: 1px solid var(--status-warning-border) !important;
+  border-left: 4px solid var(--status-warning) !important;
+  color: var(--text-primary) !important;
+}
+
+.settings-sec-btn {
+  color: var(--text-secondary) !important;
+}
+
+.settings-sec-btn:hover {
+  color: var(--text-primary) !important;
+}
+
+.settings-sec-btn.is-active {
+  color: var(--status-success-text) !important;
+  border-bottom-color: var(--interactive-primary);
+}
+
+.settings-status:empty {
+  display: none;
+}
+
+#appSidebar .sidebar-item.active {
+  color: var(--sidebar-item-active-text);
+  font-weight: 600;
+}
+
+#txEmpty.empty-state {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-secondary);
+}
+
+#txEmpty .empty-state__title,
+#txEmpty .text-base.font-semibold {
+  color: var(--text-primary);
+}
+
+#pageTitleTxDesktop {
+  color: var(--text-primary) !important;
+}
+
+.desktop-header__search,
+#desktopSearchInput {
+  color: var(--input-text) !important;
+}
+
+#userNameDesktop {
+  color: var(--text-primary) !important;
+}
+
+/* ========== DESKTOP LAYOUT + SHEETS (phase 2) ========== */
+body.tx-desktop-enhanced #txListHost {
+  background: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+}
+
+body.sidebar-collapsed #dashboardExpanded .app-card,
+body.sidebar-collapsed #kpiSection > div,
+body.sidebar-collapsed #chartsSection .app-card,
+body.sidebar-collapsed #accountsBalancesRow .home-account-card {
+  background: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+}
+
+#chartsSection .app-card,
+#cardTrend,
+#cardCategory,
+#cardWeek {
+  background: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+}
+
+.app-card {
+  background: var(--card-bg) !important;
+  border: 1px solid var(--card-border) !important;
+  color: var(--text-primary);
+  box-shadow: var(--card-shadow);
+}
+
+.filter-popup {
+  background: var(--bg-elevated) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary);
+}
+
+.filter-popup-header h3,
+.filter-field .filter-select {
+  color: var(--text-primary);
+}
+
+.install-banner-content {
+  background: var(--card-bg) !important;
+  border-color: var(--status-success-border) !important;
+}
+
+.install-text strong {
+  color: var(--text-primary) !important;
+}
+
+#kpiSaving,
+#budgetPlanned,
+#budgetActual,
+#budgetDonutText,
+#budgetTipsText,
+#budgetSection h2.text-white,
+#budgetSection .flex.items-center.justify-between.text-white {
+  color: var(--text-primary) !important;
+}
+
+#addSheetTitle,
+#addSheetSubtitle,
+.sheet-panel .text-white:not(button):not(a):not([class*="btn"]) {
+  color: var(--text-primary) !important;
+}
+
+/* Dashboard mockup polish */
+[data-theme="light"] #accountsBalancesRow .home-account-card,
+body.theme-light #accountsBalancesRow .home-account-card {
+  background: var(--color-neutral-0) !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+
+[data-theme="light"] #kpiSection > .app-card,
+body.theme-light #kpiSection > .dashboard-kpi-card {
+  background: var(--color-neutral-0) !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+
+#accountsBalancesTitle {
+  color: var(--text-primary) !important;
+}
+
+#accountsBalancesHint {
+  color: var(--text-tertiary) !important;
+}
+
+/* Tailwind text-white on light surfaces — sidebar, dashboard headings */
+[data-theme="light"] #appSidebar .text-white,
+body.theme-light #appSidebar .text-white,
+[data-theme="light"] #appSidebar .brand-title,
+body.theme-light #appSidebar .brand-title,
+[data-theme="light"] #appSidebar .sidebar-item__label,
+body.theme-light #appSidebar .sidebar-item__label,
+[data-theme="light"] #appSidebar .sidebar-item,
+body.theme-light #appSidebar .sidebar-item {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] #appSidebar .sidebar-item--secondary .sidebar-item__label,
+body.theme-light #appSidebar .sidebar-item--secondary .sidebar-item__label {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="light"] #accountsBalancesSection .text-white,
+body.theme-light #accountsBalancesSection .text-white,
+[data-theme="light"] #dashboardExpanded .text-white:not(button):not(a),
+body.theme-light #dashboardExpanded .text-white:not(button):not(a) {
+  color: var(--text-primary) !important;
+}

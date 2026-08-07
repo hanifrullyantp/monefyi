@@ -3,6 +3,8 @@
  * @module services/daily-situation
  */
 
+import { dedupeTransactions, isExpenseTransaction } from '../utils/transaction-utils.js';
+
 /** @typedef {'aman'|'waspada'|'bahaya'|'incomplete'} SituationStatus */
 
 /**
@@ -73,13 +75,14 @@ export function computeFlexibleBudget(state) {
 
   const periodStart = state?.period?.start || `${period}-01`;
   const periodEnd = state?.period?.end || periodStart;
-  const txs = (state?.transactions || []).filter((t) => t.date >= periodStart && t.date <= periodEnd);
+  const txs = dedupeTransactions(state?.transactions || []).filter(
+    (t) => t.date >= periodStart && t.date <= periodEnd,
+  );
 
   let flexibleSpent = 0;
   let totalExpense = 0;
   for (const tx of txs) {
-    const type = String(tx.type || 'expense').toLowerCase();
-    if (type !== 'expense' && type !== 'pengeluaran' && type !== 'out') continue;
+    if (!isExpenseTransaction(tx)) continue;
     const amt = Number(tx.amount || 0);
     totalExpense += amt;
     const cat = String(tx.category || tx.merchant || '').toLowerCase();
@@ -132,16 +135,13 @@ export function getAvgDailySpend7d(transactions = []) {
   const today = new Date();
   let total = 0;
   let daysWithData = 0;
+  const deduped = dedupeTransactions(transactions);
   for (let i = 0; i < 7; i += 1) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
     const iso = d.toISOString().slice(0, 10);
-    const dayTotal = transactions
-      .filter((t) => {
-        if (t.date !== iso) return false;
-        const type = String(t.type || 'expense').toLowerCase();
-        return type === 'expense' || type === 'pengeluaran' || type === 'out';
-      })
+    const dayTotal = deduped
+      .filter((t) => t.date === iso && isExpenseTransaction(t))
       .reduce((s, t) => s + Number(t.amount || 0), 0);
     if (dayTotal > 0) daysWithData += 1;
     total += dayTotal;
@@ -163,7 +163,9 @@ function findNearLimitCategory(state) {
 
   const periodStart = state?.period?.start;
   const periodEnd = state?.period?.end;
-  const txs = (state?.transactions || []).filter((t) => t.date >= periodStart && t.date <= periodEnd);
+  const txs = dedupeTransactions(state?.transactions || []).filter(
+    (t) => t.date >= periodStart && t.date <= periodEnd,
+  );
 
   let best = null;
   for (const row of rows) {
@@ -199,6 +201,17 @@ export function computeDailySituation(state = typeof window !== 'undefined' ? wi
 
   const flex = computeFlexibleBudget(state);
   const avgDaily = getAvgDailySpend7d(state?.transactions || []);
+  const daysLeftInMonth = (() => {
+    const period = state?.selectedMonth
+      || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    const [y, m] = period.split('-').map(Number);
+    const daysInMonth = new Date(y, m, 0).getDate();
+    const now = new Date();
+    if (now.getFullYear() === y && now.getMonth() === m - 1) {
+      return Math.max(0, daysInMonth - now.getDate());
+    }
+    return daysInMonth;
+  })();
 
   if (flex.income <= 0) {
     return {
@@ -217,7 +230,7 @@ export function computeDailySituation(state = typeof window !== 'undefined' ? wi
   if (isNegativePool) safeToSpend = 0;
 
   const runwayDays = avgDaily > 0 ? flexibleRemaining / avgDaily : daysToPayday;
-  const projectedSpend = avgDaily * daysToPayday;
+  const projectedSpend = avgDaily * Math.min(daysToPayday, daysLeftInMonth || daysToPayday);
   const predictedEndBalance = flexibleRemaining - projectedSpend;
 
   let status = /** @type {SituationStatus} */ ('aman');
@@ -243,6 +256,7 @@ export function computeDailySituation(state = typeof window !== 'undefined' ? wi
     daysToPayday,
     paydayLabel: payday.label,
     predictedEndBalance,
+    daysLeftInMonth,
     projectedSurplus: predictedEndBalance >= 0,
     nearCategory: nearCat,
     runoutDate: runoutDay ? runoutDay.toISOString().slice(0, 10) : null,

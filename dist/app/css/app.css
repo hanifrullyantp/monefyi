@@ -1,5 +1,17 @@
 @import './brand-tokens.css';
-    :root { color-scheme: light; }
+@import './components/sidebar.css';
+@import './components/balance-card.css';
+@import './components/account-card.css';
+@import './components/header.css';
+@import './components/buttons.css';
+@import './components/kpi-card.css';
+@import './components/quick-access.css';
+@import './components/forms.css';
+@import './components/icon-container.css';
+@import './components/home-dashboard.css';
+@import './components/modals.css';
+    :root { color-scheme: dark; }
+    body.theme-light { color-scheme: light; }
     .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
     /* Exact status-bar inset only — no extra rem gap under the clock */
     .safe-top { padding-top: env(safe-area-inset-top, 0px); }
@@ -18,48 +30,25 @@
 
     /* App theme — aliases from shared/brand-tokens.css */
     body {
-      --app-card-elevated: rgba(20, 28, 40, 0.88);
-      --app-card-mid: rgba(15, 22, 32, 0.52);
-      --app-card-fade: rgba(11, 17, 24, 0);
+      --app-card-elevated: color-mix(in srgb, var(--card-bg) 88%, transparent);
+      --app-card-mid: color-mix(in srgb, var(--card-bg) 52%, transparent);
+      --app-card-fade: color-mix(in srgb, var(--card-bg) 0%, transparent);
       --grad-card-surface: linear-gradient(180deg, var(--app-card-elevated) 0%, var(--app-card-mid) 58%, var(--app-card-fade) 100%);
-      --grad-card-surface-soft: linear-gradient(180deg, rgba(18, 26, 38, 0.75) 0%, rgba(11, 17, 24, 0) 100%);
-      --grad-hero-surface: linear-gradient(165deg, rgba(21, 34, 56, 0.92) 0%, rgba(14, 22, 34, 0.58) 42%, rgba(11, 17, 24, 0) 100%);
+      --grad-card-surface-soft: linear-gradient(180deg, color-mix(in srgb, var(--card-bg) 75%, transparent) 0%, transparent 100%);
+      --grad-hero-surface: linear-gradient(165deg, color-mix(in srgb, var(--finance-income-bg) 95%, transparent) 0%, color-mix(in srgb, var(--bg-secondary) 50%, transparent) 42%, transparent 100%);
       --radius-card: var(--mf-radius-card);
       --radius-btn: var(--mf-radius-btn);
       --radius-pill: var(--mf-radius-pill);
 
       background-color: var(--app-bg);
       background-image:
-        linear-gradient(180deg, var(--mf-bg) 0%, #0D1520 38%, var(--mf-bg) 100%),
-        radial-gradient(800px circle at 15% -5%, rgba(16,185,129,.06), transparent 50%),
-        radial-gradient(600px circle at 95% 5%, rgba(14,165,233,.05), transparent 45%);
+        linear-gradient(180deg, var(--bg-primary) 0%, color-mix(in srgb, var(--bg-primary) 92%, var(--interactive-primary)) 38%, var(--bg-primary) 100%),
+        radial-gradient(800px circle at 15% -5%, color-mix(in srgb, var(--interactive-primary) 6%, transparent), transparent 50%),
+        radial-gradient(600px circle at 95% 5%, color-mix(in srgb, var(--status-info) 5%, transparent), transparent 45%);
       background-attachment: fixed;
       color: var(--app-text);
       font-family: var(--font-sans);
       letter-spacing: -0.01em;
-    }
-    body.theme-light {
-      --app-bg: #FFFFFF;
-      --app-card: #FFFFFF;
-      --app-surface: #F8FAFC;
-      --app-surface2: rgba(15,23,42,.04);
-      --app-text: #0F172A;
-      --app-muted: #64748B;
-      --app-muted2: #94A3B8;
-      --app-border: rgba(15,23,42,.10);
-      --app-divider: rgba(15,23,42,.08);
-      --app-backdrop: rgba(248,250,252,.92);
-      --app-sheet: #FFFFFF;
-      --app-card-elevated: rgba(255, 255, 255, 0.95);
-      --app-card-mid: rgba(248, 250, 252, 0.7);
-      --app-card-fade: rgba(255, 255, 255, 0);
-      --grad-card-surface: linear-gradient(180deg, var(--app-card-elevated) 0%, var(--app-card-mid) 60%, var(--app-card-fade) 100%);
-      --grad-card-surface-soft: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(248,250,252,0) 100%);
-      --grad-hero-surface: linear-gradient(165deg, rgba(240,253,250,0.95) 0%, rgba(248,250,252,0.5) 50%, rgba(255,255,255,0) 100%);
-      --accent-danger: #EF4444;
-      --brand-green-soft: rgba(16,185,129,.12);
-      --brand-border: rgba(16,185,129,.25);
-      --brand-shadow: 0 8px 24px rgba(16,185,129,.10);
     }
 html, body {
     max-width: 100%;
@@ -239,11 +228,11 @@ html, body {
       stroke-width: 2.25;
     }
     .app-card {
-      background: var(--grad-card-surface);
-      border: none;
-      border-top: 1px solid rgba(255,255,255,.05);
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
       border-radius: var(--radius-card);
-      box-shadow: none;
+      box-shadow: var(--card-shadow);
+      color: var(--text-primary);
     }
     @keyframes bounce-soft {
       0% { transform: scale(1); }
@@ -322,17 +311,8 @@ html, body {
     .sidebar-saldo-card {
       padding: 14px 14px 12px;
       border-radius: 16px;
-      background:
-        linear-gradient(145deg, rgba(16, 185, 129, 0.18) 0%, var(--mf-bg-elevated, #131A24) 48%, var(--mf-bg, #0B1118) 100%);
-      border: 1px solid var(--mf-primary-border, rgba(16, 185, 129, 0.28));
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
       overflow: hidden;
       position: relative;
-    }
-    .sidebar-saldo-card.sidebar-glass,
-    .sidebar-saldo-card.saldo-card-glow {
-      background:
-        linear-gradient(145deg, rgba(16, 185, 129, 0.18) 0%, var(--mf-bg-elevated, #131A24) 48%, var(--mf-bg, #0B1118) 100%) !important;
     }
     .sidebar-saldo-card::before {
       content: '';
@@ -490,7 +470,7 @@ html, body {
     .hero-saldo-card__amount.saldo-amount {
       font-size: clamp(36px, 9vw, 42px);
       font-weight: 800;
-      color: #ffffff;
+      color: var(--text-primary);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -805,12 +785,13 @@ html, body {
       .tx-card-v2 .tx-card-inner,
       .tx-card-compact .tx-card-inner,
       .tx-card-mockup.tx-card-inner {
-        background: #131826 !important;
-        border: 1px solid rgba(255, 255, 255, 0.06) !important;
+        background: var(--card-bg) !important;
+        border: 1px solid var(--card-border) !important;
         border-radius: 10px !important;
         padding: 2px 8px !important;
         box-shadow: none;
         min-height: 0;
+        color: var(--text-primary);
       }
       .tx-card-v2 .tx-card-inner::after,
       .tx-card-compact .tx-card-inner::after,
@@ -819,18 +800,19 @@ html, body {
       }
       .tx-card-mockup .tx-card-inner:hover,
       .tx-card-compact:hover .tx-card-inner {
-        background: #171e2e !important;
-        border-color: rgba(16, 185, 129, 0.22) !important;
+        background: var(--bg-secondary) !important;
+        border-color: var(--border-focus) !important;
       }
       #txListDesktopHeader {
-        background: transparent;
+        background: var(--bg-secondary);
         border: none;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        border-bottom: 1px solid var(--border-subtle);
         border-radius: 0;
         margin-bottom: 4px !important;
         padding: 4px 8px !important;
         gap: 8px !important;
         align-items: center;
+        color: var(--text-secondary);
         display: grid !important;
         grid-template-columns: 20px 28px 28px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 1.2fr) !important;
       }
@@ -846,7 +828,7 @@ html, body {
         grid-template-columns: 20px 28px 28px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 1.2fr) !important;
         grid-template-rows: auto !important;
         width: 100%;
-        color: var(--app-text, #f1f5f9);
+        color: var(--text-primary);
         overflow: visible !important;
       }
       .tx-card-row-table > * {
@@ -949,21 +931,20 @@ html, body {
         white-space: nowrap !important;
       }
 
-      /* Dashboard — mobile home card language */
-      #dashboardExpanded {
-        --text-primary: #ffffff;
-        --text-secondary: rgba(255, 255, 255, 0.78);
-        --radius-lg: 16px;
-        --accent-primary-dim: var(--mf-primary-hover, #059669);
-      }
+      /* Dashboard cards — token-based (light + dark) */
       #dashboardExpanded .app-card,
       #kpiSection > div,
       #budgetSection .app-card,
       #chartsSection .app-card {
-        background: linear-gradient(155deg, rgba(24, 28, 36, 0.98) 0%, rgba(14, 17, 22, 0.98) 100%) !important;
-        border: 1px solid rgba(255, 255, 255, 0.07) !important;
-        border-radius: 16px !important;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+        background: var(--card-bg) !important;
+        border: 1px solid var(--card-border) !important;
+        border-radius: var(--radius-lg, 16px) !important;
+        box-shadow: var(--card-shadow) !important;
+        color: var(--text-primary);
+      }
+      #kpiSection .text-white,
+      #kpiSection [class*="text-white"] {
+        color: var(--text-primary) !important;
       }
       #accountsBalancesRow {
         display: flex;
@@ -2573,7 +2554,7 @@ html, body {
       position: sticky;
       top: 0;
       z-index: 2;
-      background: color-mix(in srgb, var(--app-bg, #0B1118) 92%, transparent);
+      background: color-mix(in srgb, var(--bg-primary) 92%, transparent);
       backdrop-filter: blur(6px);
     }
     .tx-group-header:first-child {
@@ -2582,7 +2563,7 @@ html, body {
     .tx-group-header__label {
       font-size: 12px;
       font-weight: 700;
-      color: rgba(255, 255, 255, 0.78);
+      color: var(--text-secondary);
       letter-spacing: -0.01em;
       min-width: 0;
     }
@@ -2602,7 +2583,7 @@ html, body {
     .tx-group-header__count {
       font-size: 10px;
       font-weight: 600;
-      color: rgba(255, 255, 255, 0.4);
+      color: var(--text-tertiary);
       padding: 2px 7px;
       border-radius: 999px;
       background: rgba(255, 255, 255, 0.06);
@@ -2777,7 +2758,9 @@ html, body {
       .tx-list-host--table .tx-card-compact .tx-card-inner,
       #txList .tx-card-compact .tx-card-inner {
         padding: 2px 8px !important;
-        background: #131826 !important;
+        background: var(--card-bg) !important;
+        border: 1px solid var(--card-border) !important;
+        color: var(--text-primary);
       }
     }
     @media (max-width: 767px) {
@@ -3323,11 +3306,12 @@ html, body {
         display: none !important;
       }
       .tx-card-v2 .tx-card-inner {
-        background: #131826;
-        border: 1px solid rgba(255, 255, 255, 0.06);
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
         border-radius: 16px;
         padding: 14px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+        box-shadow: var(--card-shadow);
+        color: var(--text-primary);
       }
       .tx-card-v2 .tx-card-inner::after {
         display: none;

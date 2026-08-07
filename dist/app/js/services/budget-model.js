@@ -223,6 +223,27 @@ export function syncItemTargetDate(item, isoDate) {
   item.target_date_day = extractDayFromDate(iso);
 }
 
+export const CATEGORY_TYPES = {
+  FIXED_BILL: 'fixed_bill',
+  FLEXIBLE: 'flexible',
+};
+
+/**
+ * @param {object} row
+ * @param {object} [prefs]
+ * @returns {'fixed_bill'|'flexible'}
+ */
+export function inferCategoryType(row, prefs = {}) {
+  if (row?.category_type === CATEGORY_TYPES.FIXED_BILL || row?.category_type === CATEGORY_TYPES.FLEXIBLE) {
+    return row.category_type;
+  }
+  const name = String(row?.name || '').toLowerCase();
+  const bills = Array.isArray(prefs?.fixed_bills) ? prefs.fixed_bills : [];
+  if (bills.some((b) => String(b.name || '').toLowerCase() === name)) return CATEGORY_TYPES.FIXED_BILL;
+  if (row?.priority === 'harus') return CATEGORY_TYPES.FIXED_BILL;
+  return CATEGORY_TYPES.FLEXIBLE;
+}
+
 /**
  * @param {object} data
  * @returns {object}
@@ -231,6 +252,7 @@ export function createBudgetRow(data = {}) {
   const items = (data.items || []).map((item) => createBudgetItem(item));
   const amountFromItems = items.reduce((sum, i) => sum + getItemTotalAmount(i), 0);
   const name = data.name || data.category || '';
+  const prefs = typeof window !== 'undefined' ? (window.STATE?.db?.userPreferences || {}) : {};
 
   return {
     id: data.id || crypto.randomUUID(),
@@ -238,6 +260,7 @@ export function createBudgetRow(data = {}) {
     amount: Number(data.amount) || amountFromItems || 0,
     items,
     priority: data.priority || inferPriorityFromName(name),
+    category_type: data.category_type || inferCategoryType({ ...data, name }, prefs),
     target_start: data.target_start || null,
     target_end: data.target_end || null,
     target_type: data.target_type || 'monthly',
@@ -322,6 +345,7 @@ export function serializeBudgetRows(rows) {
         })),
       })),
       priority: row.priority,
+      category_type: row.category_type || inferCategoryType(row),
       target_start: row.target_start,
       target_end: row.target_end,
       target_type: row.target_type,
@@ -412,9 +436,19 @@ export function calculateProgress(row, transactions, month) {
   const dailyBudget = daysLeft > 0 ? remaining / daysLeft : 0;
 
   let status = 'healthy';
-  if (percentUsed >= 100) status = 'over';
-  else if (percentUsed >= 90) status = 'critical';
-  else if (percentUsed >= 75) status = 'warning';
+  const categoryType = inferCategoryType(row);
+
+  if (categoryType === CATEGORY_TYPES.FIXED_BILL) {
+    if (percentUsed >= 100) status = 'paid';
+    else if (percentUsed >= 75) status = 'pending';
+    else status = 'pending';
+  } else if (percentUsed > 100) {
+    status = 'over';
+  } else if (percentUsed >= 90) {
+    status = 'critical';
+  } else if (percentUsed >= 75) {
+    status = 'warning';
+  }
 
   const daysPassed = now.getDate();
   const dailyAvg = daysPassed > 0 ? spent / daysPassed : 0;

@@ -31,14 +31,12 @@
     justify-content: space-between;
     padding: 14px 18px;
     min-height: 72px;
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.03) 100%);
-    border: 1px solid rgba(16, 185, 129, 0.18);
-    border-radius: 14px;
     gap: 12px;
     margin: 0 auto;
     flex-shrink: 0;
     width: 100%;
     max-width: none;
+    border-radius: 14px;
   }
 
   body.desktop-saldo-bar .saldo-bar-desktop {
@@ -109,7 +107,7 @@
 
   .saldo-bar-label {
     font-size: 10px;
-    color: rgba(255, 255, 255, 0.48);
+    color: var(--text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
@@ -117,7 +115,7 @@
   .saldo-bar-amount {
     font-size: clamp(1.25rem, 1.8vw, 1.55rem);
     font-weight: 800;
-    color: #fff;
+    color: var(--text-primary);
     letter-spacing: -0.02em;
     line-height: 1.15;
     white-space: nowrap;
@@ -296,14 +294,14 @@
   #accountsBalancesTitle {
     font-size: 15px;
     font-weight: 700;
-    color: #fff;
+    color: var(--text-primary);
     letter-spacing: -0.01em;
   }
 
   #accountsBalancesHint {
     display: block;
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--text-tertiary);
     margin-top: 6px;
   }
 
@@ -339,12 +337,12 @@
   }
 
   #dashboardQuickAccess .home-quick-access {
-    --text-secondary: rgba(255, 255, 255, 0.72);
+    --text-secondary: var(--text-secondary);
   }
 
   #dashboardQuickAccess .home-section-title {
     font-size: 13px;
-    color: #fff;
+    color: var(--text-primary);
   }
 
   #dashboardQuickAccess .home-section-header {
@@ -373,7 +371,7 @@
     height: 42px;
     margin-left: auto;
     margin-right: auto;
-    border-radius: 14px 10px 16px 9px;
+    border-radius: 50%;
   }
 
   #dashboardQuickAccess .home-quick-btn__label {
@@ -465,38 +463,40 @@
 
   /* Table shell — TX list card */
   body.tx-desktop-enhanced #txListHost {
-    background: #131826;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
     border-radius: 14px;
     padding: 6px 8px 8px;
+    box-shadow: var(--card-shadow);
   }
 
   body.tx-desktop-enhanced #txListDesktopHeader {
-    background: rgba(255, 255, 255, 0.02);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-subtle);
     border-radius: 8px 8px 0 0;
     margin-bottom: 4px !important;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     font-size: 10px !important;
+    color: var(--text-secondary);
   }
 
   body.tx-desktop-enhanced .tx-budget-none {
     font-size: 11px;
-    color: rgba(255, 255, 255, 0.3);
+    color: var(--text-tertiary);
   }
 
   /* TX list icons — circular + visible stroke */
   body.tx-desktop-enhanced .tx-card-row-table .tx-icon {
     border-radius: 50% !important;
-    color: #fff !important;
+    color: var(--text-primary) !important;
   }
   body.tx-desktop-enhanced .tx-card-row-table .tx-icon svg {
     display: block !important;
     width: 14px !important;
     height: 14px !important;
-    stroke: #fff !important;
-    color: #fff !important;
+    stroke: currentColor !important;
+    color: inherit !important;
   }
   #dashboardExpanded .home-quick-btn__icon {
     border-radius: 12px 9px 14px 8px !important;
@@ -517,10 +517,11 @@
   body.sidebar-collapsed #budgetSection .app-card,
   body.sidebar-collapsed #chartsSection .app-card,
   body.sidebar-collapsed #accountsBalancesRow .home-account-card {
-    background: #131826 !important;
-    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    background: var(--card-bg) !important;
+    border: 1px solid var(--card-border) !important;
     border-radius: 14px !important;
-    box-shadow: none !important;
+    box-shadow: var(--card-shadow) !important;
+    color: var(--text-primary);
   }
 
   body.sidebar-collapsed #accountsBalancesRow .home-account-card {
@@ -532,18 +533,19 @@
   #cardTrend,
   #cardCategory,
   #cardWeek {
-    background: linear-gradient(160deg, rgba(22, 29, 40, 0.98) 0%, rgba(14, 18, 26, 0.98) 100%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    background: var(--card-bg) !important;
+    border: 1px solid var(--card-border) !important;
     border-radius: 16px !important;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18) !important;
+    box-shadow: var(--card-shadow) !important;
+    color: var(--text-primary);
   }
 
   body.sidebar-collapsed #chartsSection .app-card,
   body.sidebar-collapsed #cardTrend,
   body.sidebar-collapsed #cardCategory,
   body.sidebar-collapsed #cardWeek {
-    background: #131826 !important;
-    box-shadow: none !important;
+    background: var(--card-bg) !important;
+    box-shadow: var(--card-shadow) !important;
   }
 
   #chartsSection h2 {

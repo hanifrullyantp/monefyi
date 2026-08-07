@@ -6,6 +6,7 @@
 import { calculateProgress, calculatePriorityTotals, getItemTotalAmount, getLinkedTransactions } from '../services/budget-model.js';
 import { LABELS } from '../constants/language.js';
 import { Icon } from './icons.js';
+import { filterMonthExpenses } from '../utils/transaction-utils.js';
 
 /**
  * @param {string|undefined} month
@@ -34,11 +35,7 @@ function getMonthExpenses(transactions, month) {
   const txSource = Array.isArray(transactions) && transactions.length
     ? transactions
     : (typeof window !== 'undefined' ? (window.STATE?.transactions || []) : []);
-  return txSource.filter((t) => {
-    const typ = String(t.type || 'expense').toLowerCase();
-    if (typ !== 'expense') return false;
-    return String(t.date || '').slice(0, 10).startsWith(monthKey);
-  });
+  return filterMonthExpenses(txSource, monthKey);
 }
 
 /**
@@ -75,7 +72,7 @@ export async function renderBudgetSummaryHero(container, ctx) {
   const totalBudget = sumBudgetTotal(rows);
   const linkedSpent = rows.reduce((sum, b) => sum + calculateProgress(b, monthExpenses, monthKey).spent, 0);
 
-  // Realisasi = total pengeluaran bulan ini / total budgeting (not only linked)
+  // Realisasi = total pengeluaran bulan ini / total budgeting (deduped, not category sum)
   const totalExpenseMonth = monthExpenses.reduce((s, t) => s + Math.abs(Number(t.amount || 0)), 0);
   const totalSpent = totalExpenseMonth;
   const remaining = totalBudget - totalSpent;
@@ -329,30 +326,31 @@ function escapeHtml(str) {
  * @param {number} timeProgress
  */
 function getHealthStatus(percentUsed, timeProgress) {
-  const diff = percentUsed - timeProgress;
+  const timeRounded = Math.round(timeProgress);
+  const diff = percentUsed - timeRounded;
 
   if (percentUsed > 100) {
     return {
       className: 'over',
       iconHtml: Icon('alertTriangle', { size: 16 }),
       label: 'Over Budget',
-      recommendation: 'Pengeluaran melebihi budget. Review kategori yang boros.',
+      recommendation: `Terpakai ${percentUsed}% budget (${Math.round(percentUsed)}% dari rencana). Cek kategori yang melebihi batas.`,
     };
   }
   if (diff > 20) {
     return {
       className: 'critical',
       iconHtml: Icon('alertTriangle', { size: 16 }),
-      label: 'Terlalu Cepat',
-      recommendation: `Kamu sudah pakai ${percentUsed}% budget tapi baru ${timeProgress}% bulan berlalu. Rem sedikit!`,
+      label: 'Perlu Direm',
+      recommendation: `Pengeluaran melaju cepat: ${percentUsed}% budget terpakai di ${timeRounded}% waktu bulan. Jaga rata-rata harian lebih rendah sampai gajian.`,
     };
   }
   if (diff > 10) {
     return {
       className: 'warning',
       iconHtml: Icon('exclamation', { size: 16 }),
-      label: 'Perhatian',
-      recommendation: 'Pengeluaran lebih cepat dari waktu. Perhatikan sisa budget.',
+      label: 'Waspada',
+      recommendation: `Pengeluaran ${percentUsed}% vs ${timeRounded}% waktu bulan. Perhatikan sisa budget.`,
     };
   }
   if (diff < -10) {
