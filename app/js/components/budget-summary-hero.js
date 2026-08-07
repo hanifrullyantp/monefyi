@@ -6,6 +6,7 @@
 import { calculateProgress, calculatePriorityTotals, getItemTotalAmount, getLinkedTransactions } from '../services/budget-model.js';
 import { LABELS } from '../constants/language.js';
 import { Icon } from './icons.js';
+import { filterMonthExpenses } from '../utils/transaction-utils.js';
 
 /**
  * @param {string|undefined} month
@@ -34,11 +35,7 @@ function getMonthExpenses(transactions, month) {
   const txSource = Array.isArray(transactions) && transactions.length
     ? transactions
     : (typeof window !== 'undefined' ? (window.STATE?.transactions || []) : []);
-  return txSource.filter((t) => {
-    const typ = String(t.type || 'expense').toLowerCase();
-    if (typ !== 'expense') return false;
-    return String(t.date || '').slice(0, 10).startsWith(monthKey);
-  });
+  return filterMonthExpenses(txSource, monthKey);
 }
 
 /**
@@ -75,7 +72,7 @@ export async function renderBudgetSummaryHero(container, ctx) {
   const totalBudget = sumBudgetTotal(rows);
   const linkedSpent = rows.reduce((sum, b) => sum + calculateProgress(b, monthExpenses, monthKey).spent, 0);
 
-  // Realisasi = total pengeluaran bulan ini / total budgeting (not only linked)
+  // Realisasi = total pengeluaran bulan ini / total budgeting (deduped, not category sum)
   const totalExpenseMonth = monthExpenses.reduce((s, t) => s + Math.abs(Number(t.amount || 0)), 0);
   const totalSpent = totalExpenseMonth;
   const remaining = totalBudget - totalSpent;

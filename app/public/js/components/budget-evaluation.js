@@ -11,6 +11,7 @@ import {
 } from '../services/budget-model.js';
 import { LABELS } from '../constants/language.js';
 import { Icon } from './icons.js';
+import { sumMonthExpenses } from '../utils/transaction-utils.js';
 
 /**
  * @param {unknown} str

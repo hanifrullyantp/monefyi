@@ -1698,22 +1698,24 @@ function computeSubscriptionStatus(profile){
       }
 
       const applyLocalRows = (rows) => {
-        const remote = (rows || [])
+        const remote = dedupeTransactionsById((rows || [])
           .filter((t) => !tombstoneIds.has(t.id))
           .map(t => ({
           ...t,
           amount: Math.abs(Number(t.amount||0)),
           meta: (t.meta && typeof t.meta === 'object') ? t.meta : (t.meta ? JSON.parse(t.meta) : {})
-        }));
+        })));
         // Keep optimistic/local txs that remote pull has not returned yet
-        const remoteIds = new Set(remote.map((t) => t.id));
-        const retained = (STATE.transactions || []).filter((t) => {
-          if (!t?.id || remoteIds.has(t.id)) return false;
+        const remoteIds = new Set(remote.map((t) => t.server_id || t.id));
+        const retained = dedupeTransactionsById(STATE.transactions || []).filter((t) => {
+          const key = t?.server_id || t?.id;
+          if (!key || remoteIds.has(key) || remoteIds.has(t.id)) return false;
           if (t.meta?.pending) return true;
           const updated = Date.parse(t.updated_at || t.created_at || 0);
           return Number.isFinite(updated) && (Date.now() - updated) < 120_000;
         });
-        STATE.transactions = retained.length ? [...retained, ...remote] : remote;
+        STATE.transactions = dedupeTransactionsById(retained.length ? [...retained, ...remote] : remote);
+        delete STATE.db.saldoCache[STATE.period.end];
         STATE.transactions.sort((a, b) =>
           String(b.date || '').localeCompare(String(a.date || ''))
           || String(b.created_at || '').localeCompare(String(a.created_at || '')));
@@ -2013,11 +2015,12 @@ async function upsertTransaction_legacy_local(tx) {
           endDate: maxISO,
         });
         if (!local?.length) return false;
-        STATE.transactions = local.map((t) => ({
+        STATE.transactions = dedupeTransactionsById(local.map((t) => ({
           ...t,
           amount: Number(t.amount || 0),
           meta: (t.meta && typeof t.meta === 'object') ? t.meta : {},
-        }));
+        })));
+        delete STATE.db.saldoCache[STATE.period.end];
         STATE.ui.txLoading = false;
         STATE.ui.txVisibleCount = 50;
         ensureSelectOptions();
@@ -3152,6 +3155,24 @@ async function upsertTransaction_legacy_local(tx) {
     // =========================
     // Aggregations
     // =========================
+    function dedupeTransactionsById(txs) {
+      if (!Array.isArray(txs) || !txs.length) return [];
+      const byKey = new Map();
+      for (const tx of txs) {
+        const key = tx?.server_id || tx?.meta?.server_id || tx?.id || '';
+        if (!key) continue;
+        const prev = byKey.get(key);
+        if (!prev) {
+          byKey.set(key, tx);
+          continue;
+        }
+        const prevTs = Date.parse(prev.updated_at || prev.created_at || 0) || 0;
+        const nextTs = Date.parse(tx.updated_at || tx.created_at || 0) || 0;
+        if (nextTs >= prevTs) byKey.set(key, tx);
+      }
+      return [...byKey.values()];
+    }
+
     function getActiveRange(){
       const start = parseLocalISODate(STATE.period.start); start.setHours(0,0,0,0);
       const end = parseLocalISODate(STATE.period.end); end.setHours(23,59,59,999);
@@ -3197,7 +3218,7 @@ async function upsertTransaction_legacy_local(tx) {
 
     function getTransactionsInPeriod(){
       const { start, end } = getActiveRange();
-      return STATE.transactions.filter(tx => {
+      return dedupeTransactionsById(STATE.transactions).filter(tx => {
         const d = parseLocalISODate(tx.date);
         d.setHours(12, 0, 0, 0);
         return d >= start && d <= end;
@@ -3206,7 +3227,7 @@ async function upsertTransaction_legacy_local(tx) {
 
     function sumByType(txs){
       let income=0, expense=0, transfer=0;
-      for (const tx of txs) {
+      for (const tx of dedupeTransactionsById(txs)) {
         const amt = Number(tx.amount||0);
         if (tx.type==='income') income += amt;
         else if (tx.type==='expense') expense += amt;
@@ -3268,7 +3289,7 @@ async function upsertTransaction_legacy_local(tx) {
       const key = STATE.period.end;
       if (STATE.db.enabled && STATE.db.saldoCache.hasOwnProperty(key)) return STATE.db.saldoCache[key];
       const end = new Date(STATE.period.end); end.setHours(23,59,59,999);
-      const txs = STATE.transactions.filter(tx => new Date(tx.date) <= end);
+      const txs = dedupeTransactionsById(STATE.transactions).filter(tx => new Date(tx.date) <= end);
       const s = sumByType(txs);
       return s.net;
     }
@@ -4116,14 +4137,15 @@ renderAccountsSettings();
         }
         return;
       }
-      const pct = Math.min(100, (actual / planned) * 100);
-      const pctRounded = Math.round(pct);
-      const color = heroBudgetBarColor(pct);
-      bar.style.width = `${pct}%`;
+      const pctRaw = planned > 0 ? (actual / planned) * 100 : 0;
+      const pctRounded = Math.round(pctRaw);
+      const color = heroBudgetBarColor(Math.min(100, pctRaw));
+      bar.style.width = `${Math.min(100, pctRaw)}%`;
       bar.style.background = color;
+      bar.classList.toggle('is-over-budget', pctRaw > 100);
       if (pctEl) {
         pctEl.textContent = `${pctRounded}%`;
-        pctEl.style.color = color;
+        pctEl.style.color = pctRaw > 100 ? '#ef4444' : color;
       }
     }
 

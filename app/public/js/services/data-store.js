@@ -5,6 +5,7 @@
 
 import { getDb, generateLocalId, isLocalId } from './offline-db.js';
 import { queueSync } from './sync-engine.js';
+import { dedupeTransactions } from '../utils/transaction-utils.js';
 
 /**
  * @returns {string|null}
@@ -153,7 +154,7 @@ export async function getTransactions(filters = {}) {
   });
 
   if (filters.limit) results = results.slice(0, filters.limit);
-  return results;
+  return dedupeTransactions(results);
 }
 
 /**
@@ -194,8 +195,13 @@ export async function mirrorTransactionsBulk(transactions) {
   const rows = [];
   for (const tx of transactions) {
     if (!tx?.id || pendingDeletes.has(tx.id)) continue;
+    const existingByServer = tx.id
+      ? (await db.transactions.where('server_id').equals(tx.id).first())
+      : null;
+    const rowId = existingByServer?.id || tx.id;
     rows.push({
       ...tx,
+      id: rowId,
       user_id: tx.user_id || getUserId(),
       amount: Number(tx.amount || 0),
       meta: normalizeMeta(tx.meta),
