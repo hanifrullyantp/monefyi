@@ -26,6 +26,7 @@
     "preview": "vite preview --outDir dist",
     "refactor": "node scripts/refactor.cjs",
     "smoke": "node scripts/smoke.cjs",
+    "audit:theme": "node scripts/theme-audit.cjs",
     "benchmark:parser": "node scripts/batch-parser-benchmark.cjs",
     "test:upgrade": "node --test tests/daily-situation.test.js tests/transaction-impact.test.js tests/monevisor-intervention.test.js tests/engagement.test.js tests/onboarding-plan-generator.test.js tests/budget-focus-mode.test.js tests/financial-targets.test.js tests/language-contextual.test.js",
     "seed:demo-august": "node scripts/seed-demo-august-2026.cjs"

@@ -76,12 +76,19 @@ Setting app (`STATE.settings.theme`) tetap disinkronkan lewat `applyTheme()` di 
 ✅ `color: var(--text-primary)`  
 ✅ Token semantic yang sudah switch di `[data-theme="light"]`
 
-## Checklist sebelum commit
+## Automated audit
 
-- [ ] Zero hardcoded colors di file baru
-- [ ] Test light mode (Settings → Mode terang)
-- [ ] Test dark mode
-- [ ] Run `MonefyiThemeAudit.run()` di console (opsional)
+```bash
+npm run audit:theme          # static CSS scan
+```
+
+Browser (di `/app/`):
+
+```js
+MonefyiThemeAudit.run()
+await MonefyiThemeAudit.testBothThemes()
+```
+
 
 ## Menambah warna baru
 

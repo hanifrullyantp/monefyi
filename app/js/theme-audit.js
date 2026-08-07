@@ -8,12 +8,10 @@
   const RGB_RE = /rgba?\(\s*\d+/g;
   const SKIP_FILES = ['tokens.css', 'brand-tokens.css'];
 
-  /**
-   * Scan inline styles and computed hardcoded colors in stylesheets.
-   * @returns {{ violations: Array<{ source: string, match: string }> }}
-   */
   function scanHardcodedColors() {
     const violations = [];
+    const byFile = {};
+
     for (const sheet of [...document.styleSheets]) {
       let href = '';
       try {
@@ -35,26 +33,29 @@
         if (!rule.cssText) continue;
         const hex = rule.cssText.match(HEX_RE) || [];
         const rgb = rule.cssText.match(RGB_RE) || [];
-        for (const m of [...hex, ...rgb]) {
-          violations.push({ source: href, match: m });
+        const hits = [...hex, ...rgb];
+        if (!hits.length) continue;
+        const key = href.split('/').pop() || href;
+        byFile[key] = (byFile[key] || 0) + hits.length;
+        for (const m of hits) {
+          violations.push({ source: key, match: m });
         }
       }
     }
 
     for (const el of document.querySelectorAll('[style*="color"], [style*="background"]')) {
       const style = el.getAttribute('style') || '';
+      HEX_RE.lastIndex = 0;
+      RGB_RE.lastIndex = 0;
       if (HEX_RE.test(style) || RGB_RE.test(style)) {
-        violations.push({ source: el.tagName.toLowerCase(), match: style.slice(0, 80) });
+        violations.push({ source: 'inline', match: style.slice(0, 80) });
+        byFile.inline = (byFile.inline || 0) + 1;
       }
     }
 
-    return { violations, count: violations.length };
+    return { violations, byFile, count: violations.length };
   }
 
-  /**
-   * Rough contrast check for visible text nodes.
-   * @returns {{ failures: Array<{ el: string, ratio: number }> }}
-   */
   function checkContrast() {
     const failures = [];
     const parse = (c) => {
@@ -78,9 +79,10 @@
       return (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
     };
 
-    for (const el of document.querySelectorAll('p, span, h1, h2, h3, label, button, a')) {
+    for (const el of document.querySelectorAll('p, span, h1, h2, h3, label, button, a, td, th')) {
       if (!el.offsetParent && el !== document.body) continue;
       const cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden') continue;
       const fg = parse(cs.color);
       let bgEl = el;
       let bg = [11, 17, 24];
@@ -93,24 +95,60 @@
         bgEl = bgEl.parentElement;
       }
       const r = ratio(fg, bg);
-      if (r < 4.5 && cs.fontSize && parseFloat(cs.fontSize) < 24) {
-        failures.push({ el: `${el.tagName}.${el.className}`.slice(0, 60), ratio: Math.round(r * 100) / 100 });
+      const fs = parseFloat(cs.fontSize) || 14;
+      const minRatio = fs >= 18 || cs.fontWeight >= 700 ? 3 : 4.5;
+      if (r < minRatio) {
+        failures.push({
+          el: `${el.tagName}.${String(el.className).slice(0, 40)}`,
+          ratio: Math.round(r * 100) / 100,
+          fontSize: fs,
+        });
       }
     }
     return { failures, count: failures.length };
+  }
+
+  /**
+   * Toggle light/dark and collect contrast stats for both themes.
+   * @returns {Promise<{ light: object, dark: object }>}
+   */
+  async function testBothThemes() {
+    const tm = global.MonefyiTheme;
+    const prev = tm?.getCurrentTheme?.() || (document.body.classList.contains('theme-light') ? 'light' : 'dark');
+    const out = {};
+
+    for (const theme of ['light', 'dark']) {
+      if (tm) tm.setTheme(theme, { persist: false });
+      else {
+        document.body.classList.toggle('theme-light', theme === 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      }
+      await new Promise((r) => setTimeout(r, 120));
+      out[theme] = checkContrast();
+    }
+
+    if (tm) tm.setTheme(prev, { persist: false });
+    else {
+      document.body.classList.toggle('theme-light', prev === 'light');
+      document.documentElement.setAttribute('data-theme', prev);
+    }
+
+    return out;
   }
 
   function run() {
     const colors = scanHardcodedColors();
     const contrast = checkContrast();
     console.group('Monefyi Theme Audit');
+    console.log('Theme:', document.documentElement.getAttribute('data-theme') || 'dark');
     console.log('Hardcoded color hits:', colors.count);
-    console.table(colors.violations.slice(0, 50));
-    console.log('Low contrast (<4.5:1):', contrast.count);
-    console.table(contrast.failures.slice(0, 30));
+    console.table(Object.entries(colors.byFile).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([file, n]) => ({ file, hits: n })));
+    console.log('Low contrast:', contrast.count);
+    console.table(contrast.failures.slice(0, 25));
+    console.log('Tip: await MonefyiThemeAudit.testBothThemes() for light+dark pass');
     console.groupEnd();
     return { colors, contrast };
   }
 
-  global.MonefyiThemeAudit = { scanHardcodedColors, checkContrast, run };
+  global.MonefyiThemeAudit = { scanHardcodedColors, checkContrast, testBothThemes, run };
 })(window);
