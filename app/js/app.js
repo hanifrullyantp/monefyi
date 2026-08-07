@@ -5466,7 +5466,7 @@ function generateSmartBudgetRecommendation() {
               const barColor = pct > 90 ? 'var(--accent-danger)' : pct > 75 ? 'var(--accent-warning)' : 'var(--accent-primary)';
               budgetHtml = `
                 <div class="tx-budget-cell flex flex-col justify-center w-full max-w-[110px]">
-                  <div class="h-[3px] w-full bg-slate-800 rounded-full overflow-hidden">
+                  <div class="h-[3px] w-full rounded-full overflow-hidden" style="background: var(--bg-tertiary)">
                     <div class="h-full rounded-full" style="width: ${pct}%; background-color: ${barColor}"></div>
                   </div>
                   <div class="text-[9px] app-muted text-right leading-none mt-0.5">${formatCompactIDR(spent)} / ${formatCompactIDR(planned)}</div>

@@ -634,3 +634,204 @@ body:not(.theme-light) .neraca-promo-card {
   background: var(--bg-secondary);
   color: var(--text-secondary);
 }
+
+/* ========== LIGHT MODE COMPLETION (screenshot audit) ========== */
+#dashboardExpanded .app-card,
+#kpiSection > div,
+#budgetSection .app-card,
+#chartsSection .app-card,
+#accountsBalancesRow .home-account-card,
+#dashboardExpanded .home-account-card {
+  background: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+  color: var(--text-primary) !important;
+  box-shadow: var(--card-shadow) !important;
+}
+
+#kpiIncome,
+#kpiExpense,
+#kpiNet,
+#kpiBudget {
+  color: var(--text-primary) !important;
+}
+
+.tx-card-v2 .tx-card-inner,
+.tx-card-compact .tx-card-inner,
+.tx-card-mockup.tx-card-inner {
+  background: var(--card-bg) !important;
+  border: 1px solid var(--card-border) !important;
+  color: var(--text-primary) !important;
+}
+
+.tx-card-v2 .tx-card-inner:hover,
+.tx-card-compact:hover .tx-card-inner {
+  background: var(--bg-secondary) !important;
+  border-color: var(--border-focus) !important;
+}
+
+#txListHost,
+#txList {
+  background: transparent;
+}
+
+.tx-card-row-table {
+  color: var(--text-primary) !important;
+}
+
+.tx-group-header {
+  background: color-mix(in srgb, var(--bg-primary) 92%, transparent) !important;
+}
+
+.tx-group-header__label {
+  color: var(--text-secondary) !important;
+}
+
+.tx-group-header__count {
+  color: var(--text-tertiary) !important;
+}
+
+.budget-list-card {
+  background: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+}
+
+.blc-title {
+  color: var(--text-primary) !important;
+}
+
+.blc-count,
+.blc-empty-desc {
+  color: var(--text-secondary) !important;
+}
+
+.mv-intervention-card {
+  background: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+}
+
+.mv-intervention-headline {
+  color: var(--text-primary) !important;
+}
+
+.mv-intervention-text {
+  color: var(--text-secondary) !important;
+}
+
+.neraca-recon-banner {
+  background: var(--status-warning-bg) !important;
+  border: 1px solid var(--status-warning-border) !important;
+  border-left: 4px solid var(--status-warning) !important;
+  color: var(--text-primary) !important;
+}
+
+.settings-sec-btn {
+  color: var(--text-secondary) !important;
+}
+
+.settings-sec-btn:hover {
+  color: var(--text-primary) !important;
+}
+
+.settings-sec-btn.is-active {
+  color: var(--status-success-text) !important;
+  border-bottom-color: var(--interactive-primary);
+}
+
+.settings-status:empty {
+  display: none;
+}
+
+#appSidebar .sidebar-item.active {
+  color: var(--sidebar-item-active-text);
+  font-weight: 600;
+}
+
+#txEmpty.empty-state {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-secondary);
+}
+
+#txEmpty .empty-state__title,
+#txEmpty .text-base.font-semibold {
+  color: var(--text-primary);
+}
+
+#pageTitleTxDesktop {
+  color: var(--text-primary) !important;
+}
+
+.desktop-header__search,
+#desktopSearchInput {
+  color: var(--input-text) !important;
+}
+
+#userNameDesktop {
+  color: var(--text-primary) !important;
+}
+
+/* ========== DESKTOP LAYOUT + SHEETS (phase 2) ========== */
+body.tx-desktop-enhanced #txListHost {
+  background: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+}
+
+body.sidebar-collapsed #dashboardExpanded .app-card,
+body.sidebar-collapsed #kpiSection > div,
+body.sidebar-collapsed #chartsSection .app-card,
+body.sidebar-collapsed #accountsBalancesRow .home-account-card {
+  background: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+}
+
+#chartsSection .app-card,
+#cardTrend,
+#cardCategory,
+#cardWeek {
+  background: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+}
+
+.app-card {
+  background: var(--card-bg) !important;
+  border: 1px solid var(--card-border) !important;
+  color: var(--text-primary);
+  box-shadow: var(--card-shadow);
+}
+
+.filter-popup {
+  background: var(--bg-elevated) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary);
+}
+
+.filter-popup-header h3,
+.filter-field .filter-select {
+  color: var(--text-primary);
+}
+
+.install-banner-content {
+  background: var(--card-bg) !important;
+  border-color: var(--status-success-border) !important;
+}
+
+.install-text strong {
+  color: var(--text-primary) !important;
+}
+
+#kpiSaving,
+#budgetPlanned,
+#budgetActual,
+#budgetDonutText,
+#budgetTipsText,
+#budgetSection h2.text-white,
+#budgetSection .flex.items-center.justify-between.text-white {
+  color: var(--text-primary) !important;
+}
+
+#addSheetTitle,
+#addSheetSubtitle,
+.sheet-panel .text-white:not(button):not(a):not([class*="btn"]) {
+  color: var(--text-primary) !important;
+}
+

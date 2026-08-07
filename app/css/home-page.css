@@ -490,14 +490,14 @@
   gap: 10px;
   min-height: 112px;
   padding: 14px 14px 12px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: linear-gradient(155deg, rgba(24, 28, 36, 0.98) 0%, rgba(14, 17, 22, 0.98) 100%);
+  border-radius: var(--radius-lg, 16px);
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
   text-align: left;
-  color: #fff;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+  box-shadow: var(--card-shadow);
   overflow: hidden;
-  transition: border-color 0.2s ease, transform 0.2s ease;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
   cursor: pointer;
 }
 

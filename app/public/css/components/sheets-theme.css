@@ -1,0 +1,92 @@
+/**
+ * Sheets, modals, advisor panel — theme tokens (light + dark)
+ */
+.sheet-panel,
+#sheet .sheet-panel,
+#budgetSheet .sheet-panel,
+#advisorSheet .sheet-panel,
+#menuSheet .sheet-panel,
+#userSheet .sheet-panel,
+#accountsSheet .sheet-panel,
+#accountDetailSheet .sheet-panel,
+#adminSheet .sheet-panel {
+  background: var(--bg-elevated);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.sheet-panel h2,
+.sheet-panel .text-lg.font-bold,
+#addSheetTitle,
+#budgetSheet h2,
+#advisorSheet h2 {
+  color: var(--text-primary) !important;
+}
+
+.sheet-panel .app-muted,
+.sheet-panel .text-xs.app-muted,
+.sheet-panel p.text-xs {
+  color: var(--text-secondary);
+}
+
+.add-input-composer {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-primary);
+}
+
+.advisor-period-bar,
+.coach-prompt-row {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.advisor-period-bar .font-medium,
+#advisorPeriodLabel {
+  color: var(--text-primary);
+}
+
+.coach-prompt {
+  background: var(--interactive-secondary);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.coach-prompt:hover {
+  background: var(--interactive-secondary-hover);
+  color: var(--text-primary);
+}
+
+#coachInput {
+  background: var(--input-bg) !important;
+  border-color: var(--input-border) !important;
+  color: var(--input-text) !important;
+}
+
+#coachInput::placeholder {
+  color: var(--input-placeholder);
+}
+
+#coachInput:focus {
+  border-color: var(--input-border-focus) !important;
+}
+
+.filter-popup-overlay {
+  background: var(--bg-overlay);
+}
+
+.floating-save-bar,
+.fsb-bar {
+  background: var(--bg-elevated);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.fsb-text {
+  color: var(--text-secondary);
+}
+
+.generator-description p {
+  color: var(--text-secondary);
+}

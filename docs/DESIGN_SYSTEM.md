@@ -67,7 +67,57 @@ Referensi untuk developer & AI saat menambah UI di Monefyi App.
 
 Setting app (`STATE.settings.theme`) tetap disinkronkan lewat `applyTheme()` di `app.js`.
 
-## Anti-patterns
+## Anti-patterns (light mode audit)
+
+### ❌ SALAH: Card dengan dark bg hardcoded
+```css
+.my-card { background: #1a1a2e; }
+#kpiSection > div { background: linear-gradient(155deg, rgba(24,28,36,.98), ...); }
+```
+
+### ✅ BENAR: Pakai token
+```css
+.my-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+}
+```
+
+### ❌ SALAH: Icon container dark di light mode
+```css
+.icon-wrap { background: #333; }
+.tx-icon { background: #131826 !important; }
+```
+
+### ✅ BENAR: Utility `.icon-container`
+```css
+.icon-wrap {
+  background: var(--color-neutral-100);
+  color: var(--text-secondary);
+}
+[data-theme="dark"] .icon-wrap {
+  background: var(--color-neutral-800);
+}
+```
+
+### ❌ SALAH: Rely on inheritance / `text-white` di HTML
+```html
+<h2 class="text-white">Transaksi</h2>
+```
+
+### ✅ BENAR: Explicit semantic color
+```css
+.desktop-header__title { color: var(--text-primary); }
+```
+
+### Rule wajib sebelum commit
+
+1. Setiap surface card/panel punya `background` explicit (token)
+2. Icon container pakai `.icon-container` + variant
+3. Test **light + dark** — `themeDebug.highlightHardcoded()` di console
+4. Kalau butuh warna baru → tambah di `shared/tokens.css`, jangan hardcode
+
+## Anti-patterns (legacy)
 
 ❌ `color: #fff` di komponen  
 ❌ `.dark .card { background: #1a1a2e }` terpisah  
@@ -79,7 +129,8 @@ Setting app (`STATE.settings.theme`) tetap disinkronkan lewat `applyTheme()` di 
 ## Automated audit
 
 ```bash
-npm run audit:theme          # static CSS scan
+npm run audit:theme          # static CSS scan (all hardcoded colors)
+npm run audit:components     # component-level dark color report → docs/AUDIT_COMPONENTS.md
 ```
 
 Browser (di `/app/`):
@@ -87,6 +138,8 @@ Browser (di `/app/`):
 ```js
 MonefyiThemeAudit.run()
 await MonefyiThemeAudit.testBothThemes()
+themeDebug.highlightHardcoded()  // red outline = dark bg in light mode
+themeDebug.reset()
 ```
 
 

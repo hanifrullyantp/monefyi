@@ -46,3 +46,44 @@
   box-shadow: var(--shadow-focus);
   outline: none;
 }
+
+/* Desktop page header (replaces hardcoded text-white in HTML) */
+.desktop-header__title,
+#desktopHeader h2,
+#desktopHeader .desktop-header__title {
+  color: var(--text-primary);
+}
+
+.desktop-header__subtitle,
+#pageSubtitleTxDesktop {
+  color: var(--text-secondary);
+}
+
+.desktop-header__search,
+#desktopSearchInput {
+  background: var(--input-bg) !important;
+  border: 1px solid var(--input-border) !important;
+  color: var(--input-text) !important;
+}
+
+.desktop-header__search::placeholder,
+#desktopSearchInput::placeholder {
+  color: var(--input-placeholder);
+}
+
+#userNameDesktop {
+  color: var(--text-primary);
+}
+
+#userRoleDesktop {
+  color: var(--text-tertiary);
+}
+
+.desktop-header__icon-btn {
+  color: var(--text-secondary);
+}
+
+.desktop-header__icon-btn:hover {
+  color: var(--text-primary);
+  background: var(--interactive-secondary-hover);
+}

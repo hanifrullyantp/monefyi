@@ -57,9 +57,10 @@ textarea {
   align-items: center;
   gap: 12px;
   padding: 12px;
-  background: linear-gradient(135deg, #1a2030, #131826);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: var(--card-bg);
+  border: 1px solid var(--status-success-border);
   border-radius: 16px;
+  box-shadow: var(--card-shadow);
 }
 
 .install-icon {
@@ -75,14 +76,14 @@ textarea {
 }
 
 .install-text strong {
-  color: white;
+  color: var(--text-primary);
   font-size: 14px;
   font-weight: 600;
   display: block;
 }
 
 .install-text p {
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-secondary);
   font-size: 12px;
   margin: 2px 0 0;
   line-height: 1.4;

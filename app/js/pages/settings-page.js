@@ -210,7 +210,7 @@ function renderAccount(body) {
       </div>
       <div class="settings-actions">
         <button type="button" class="settings-btn" id="spSaveProfile">Simpan profil</button>
-        <span class="settings-status" id="spProfileStatus">—</span>
+        <span class="settings-status" id="spProfileStatus"></span>
       </div>
     </div>
     <div class="settings-card">
@@ -226,7 +226,7 @@ function renderAccount(body) {
       </div>
       <div class="settings-actions">
         <button type="button" class="settings-btn ghost" id="spUpdatePass">Update password</button>
-        <span class="settings-status" id="spPassStatus">—</span>
+        <span class="settings-status" id="spPassStatus"></span>
       </div>
     </div>
     <div class="settings-card">

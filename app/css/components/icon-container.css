@@ -1,0 +1,83 @@
+/**
+ * Universal icon container — light + dark theme
+ */
+.icon-container {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md, 8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-neutral-100, var(--bg-tertiary));
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.icon-container--success {
+  background: var(--status-success-bg);
+  color: var(--status-success);
+}
+
+.icon-container--warning {
+  background: var(--status-warning-bg);
+  color: var(--status-warning);
+}
+
+.icon-container--danger {
+  background: var(--status-danger-bg);
+  color: var(--status-danger);
+}
+
+.icon-container--info {
+  background: var(--status-info-bg);
+  color: var(--status-info);
+}
+
+.icon-container--brand {
+  background: var(--color-brand-50, var(--status-success-bg));
+  color: var(--color-brand-600, var(--status-success-text));
+}
+
+.icon-container--sm { width: 24px; height: 24px; }
+.icon-container--md { width: 32px; height: 32px; }
+.icon-container--lg { width: 40px; height: 40px; }
+.icon-container--xl { width: 48px; height: 48px; }
+
+[data-theme="dark"] .icon-container,
+body:not(.theme-light) .icon-container {
+  background: var(--color-neutral-800, var(--bg-tertiary));
+  color: var(--text-secondary);
+}
+
+/* Map legacy tx/category icon circles */
+.tx-card-v2 .tx-icon,
+.tx-card-compact .tx-icon {
+  background: var(--color-neutral-100, var(--bg-tertiary)) !important;
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .tx-card-v2 .tx-icon,
+[data-theme="dark"] .tx-card-compact .tx-icon,
+body:not(.theme-light) .tx-card-v2 .tx-icon,
+body:not(.theme-light) .tx-card-compact .tx-icon {
+  background: var(--color-neutral-800, var(--bg-tertiary)) !important;
+}
+
+.home-account-card__icon,
+.budget-list-row__icon {
+  background: color-mix(in srgb, var(--acc-color, var(--interactive-primary)) 15%, var(--card-bg)) !important;
+  box-shadow: none;
+}
+
+.neraca-row__icon,
+.neraca-cat-icon {
+  background: var(--color-neutral-100, var(--bg-tertiary)) !important;
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .neraca-row__icon,
+[data-theme="dark"] .neraca-cat-icon,
+body:not(.theme-light) .neraca-row__icon,
+body:not(.theme-light) .neraca-cat-icon {
+  background: var(--color-neutral-800, var(--bg-tertiary)) !important;
+}
