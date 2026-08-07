@@ -145,7 +145,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--qa-bg, rgba(255, 255, 255, 0.04));
+  background: var(--qa-bg, var(--interactive-secondary));
   border: 1px solid color-mix(in srgb, var(--qa-color, #10b981) 22%, transparent);
   transition: transform 0.2s ease, background 0.2s ease;
 }
@@ -189,7 +189,7 @@
 }
 
 .home-tx-row:active {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--interactive-secondary-hover);
 }
 
 .home-tx-row__icon {
@@ -250,7 +250,7 @@
 .home-budget-progress__track {
   height: 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--bg-tertiary);
   overflow: hidden;
 }
 
@@ -298,7 +298,7 @@
 }
 
 .home-chart-label {
-  fill: rgba(255, 255, 255, 0.45);
+  fill: var(--text-tertiary);
   font-size: 9px;
 }
 
@@ -314,9 +314,13 @@
   gap: var(--space-3);
   padding: var(--space-3);
   border-radius: var(--radius-md);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--tip-color) 12%, #152019) 0%, rgba(10, 15, 13, 0.95) 100%);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--tip-color) 12%, var(--card-bg)) 0%,
+    var(--card-bg) 100%
+  );
   border: 1px solid color-mix(in srgb, var(--tip-color) 28%, transparent);
-  box-shadow: 0 0 24px color-mix(in srgb, var(--tip-color) 10%, transparent);
+  box-shadow: var(--card-shadow);
 }
 
 .home-daily-tip__title {

@@ -1034,9 +1034,9 @@ html, body {
       border-radius: 12px;
       font-size: 12px;
       font-weight: 600;
-      background: rgba(19, 24, 38, 0.95);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: var(--app-text);
+      background: var(--interactive-secondary);
+      border: 1px solid var(--border-default);
+      color: var(--text-primary);
     }
     .mobile-header-period #saldoMonth {
       flex: 1;
@@ -1281,15 +1281,19 @@ html, body {
       border: 1px solid rgba(125, 211, 252, 0.35);
     }
 
-    /* Hero saldo card — brand emerald surface (mobile + shared) */
+    /* Hero saldo card — theme-aware (mobile + shared) */
     .hero-saldo-card {
       position: relative;
       padding: 20px 18px 18px;
       border-radius: var(--mf-radius-card, 16px);
-      background:
-        linear-gradient(145deg, rgba(16, 185, 129, 0.16) 0%, var(--mf-bg-elevated, #131A24) 48%, var(--mf-bg, #0B1118) 100%);
-      border: 1px solid var(--mf-primary-border, rgba(16, 185, 129, 0.24));
-      box-shadow: none;
+      background: linear-gradient(
+        135deg,
+        var(--finance-income-bg) 0%,
+        var(--card-bg) 100%
+      );
+      border: 1px solid var(--status-success-border);
+      box-shadow: var(--card-shadow);
+      color: var(--text-primary);
       overflow: hidden;
       margin-bottom: 0;
     }
@@ -1330,9 +1334,9 @@ html, body {
       border-radius: var(--radius-pill);
       font-size: 12px;
       font-weight: 600;
-      background: rgba(255,255,255,.08);
-      border: 1px solid rgba(255,255,255,.12);
-      color: var(--app-text);
+      background: var(--interactive-secondary);
+      border: 1px solid var(--border-default);
+      color: var(--text-primary);
       backdrop-filter: blur(8px);
     }
     .hero-saldo-card__amount {
@@ -3123,10 +3127,10 @@ html, body {
     @media (max-width: 767px) {
       body {
         --mobile-nav-offset: calc(7rem + max(1rem, env(safe-area-inset-bottom)));
-        background-color: #0a1219;
+        background-color: var(--bg-primary);
         background-image:
-          radial-gradient(ellipse 100% 40% at 50% -5%, rgba(16, 185, 129, 0.08), transparent 55%),
-          linear-gradient(180deg, #0c1218 0%, #0a1219 45%, #0a1219 100%);
+          radial-gradient(ellipse 100% 40% at 50% -5%, color-mix(in srgb, var(--interactive-primary) 8%, transparent), transparent 55%),
+          linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 45%, var(--bg-primary) 100%);
       }
       .app-header {
         background: transparent;
@@ -3157,7 +3161,7 @@ html, body {
         position: sticky;
         top: 0;
         z-index: 20;
-        background: var(--bg-primary, #0a1219);
+        background: var(--bg-primary);
         transition:
           padding 0.25s var(--ease-ios),
           box-shadow 0.25s var(--ease-ios);
@@ -3281,7 +3285,7 @@ html, body {
         margin: 0;
         font-size: 17px;
         font-weight: 700;
-        color: #fff;
+        color: var(--text-primary);
       }
       .home-tx-section-header__link {
         display: inline-flex;
@@ -3359,8 +3363,8 @@ html, body {
 
       /* Bottom nav — Beranda redesign */
       .nav-bar-inner {
-        border-top: none;
-        background: rgba(10, 14, 26, 0.96);
+        border-top: 1px solid var(--border-subtle);
+        background: color-mix(in srgb, var(--nav-surface) 96%, transparent);
         backdrop-filter: blur(12px);
       }
       .nav-item.active::after {
