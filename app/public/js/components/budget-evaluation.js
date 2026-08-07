@@ -59,7 +59,7 @@ export async function showEvaluation(options = {}) {
   const rows = computeHistoricalBaselines(rawRows, transactions, month);
   const priorityTotals = calculatePriorityTotals(rows, income);
   const totalPlanned = rows.reduce((s, r) => s + Number(r.amount || 0), 0);
-  const totalSpent = rows.reduce((s, r) => s + calculateProgress(r, transactions, month).spent, 0);
+  const totalSpent = sumMonthExpenses(transactions, month);
   const savingsRate = income > 0 ? Math.round(((income - totalSpent) / income) * 100) : 0;
 
   let recommendations = [];

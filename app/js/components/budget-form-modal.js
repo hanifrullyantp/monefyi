@@ -241,6 +241,19 @@ export function showBudgetFormModal(defaults = {}, options = {}) {
               </div>
             </div>
             <div class="form-section">
+              <label class="form-label">Tipe kategori</label>
+              <div class="priority-selector-compact">
+                <label class="priority-option-compact ${(row.category_type || 'flexible') === 'fixed_bill' ? 'selected' : ''}">
+                  <input type="radio" name="category_type" value="fixed_bill" ${row.category_type === 'fixed_bill' ? 'checked' : ''}>
+                  <span class="po-label">Tagihan tetap</span>
+                </label>
+                <label class="priority-option-compact ${(row.category_type || 'flexible') === 'flexible' ? 'selected' : ''}">
+                  <input type="radio" name="category_type" value="flexible" ${(row.category_type || 'flexible') === 'flexible' ? 'checked' : ''}>
+                  <span class="po-label">Fleksibel</span>
+                </label>
+              </div>
+            </div>
+            <div class="form-section">
               <label class="form-label" for="budget-category">Nama Kategori</label>
               <input type="text" id="budget-category" class="form-input"
                 placeholder="Contoh: Belanja Pasar, Listrik..."
@@ -332,6 +345,13 @@ function wireModalHandlers(modal, originalRow, defaults, options) {
     radio.onchange = () => {
       modal.querySelectorAll('.priority-option-compact').forEach((o) => o.classList.remove('selected'));
       radio.closest('.priority-option-compact')?.classList.add('selected');
+    };
+  });
+  modal.querySelectorAll('input[name="category_type"]').forEach((radio) => {
+    radio.onchange = () => {
+      modal.querySelectorAll('input[name="category_type"]').forEach((r) => {
+        r.closest('.priority-option-compact')?.classList.toggle('selected', r.checked);
+      });
     };
   });
 
@@ -571,6 +591,7 @@ function collectFormData(modal, originalRow) {
     id: originalRow.id,
     name: nameFromInput || nameFromTitle || '',
     priority: modal.querySelector('input[name="priority"]:checked')?.value || originalRow.priority || 'penting',
+    category_type: modal.querySelector('input[name="category_type"]:checked')?.value || originalRow.category_type || 'flexible',
     items,
     auto_link_keywords: keywords,
     amount: items.reduce((sum, i) => sum + i.qty * i.price, 0),

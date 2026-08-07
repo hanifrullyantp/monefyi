@@ -14,12 +14,39 @@ import {
   getItemTotalAmount,
   hasActiveLineItems,
   syncItemAmountFromLines,
+  CATEGORY_TYPES,
+  inferCategoryType,
 } from '../services/budget-model.js';
 import { Icon } from './icons.js';
 import { filterBudgets, getFilter, onFilterChange } from '../services/global-filter.js';
 import { dedupeTransactions, filterMonthExpenses, sumMonthExpenses } from '../utils/transaction-utils.js';
 
 const SORT_KEY = 'budget_sort';
+
+/**
+ * @param {object[]} rows
+ * @param {object[]} transactions
+ * @param {string} month
+ */
+function countOverBudgetRows(rows, transactions, month) {
+  return rows.filter((b) => {
+    if (inferCategoryType(b) === CATEGORY_TYPES.FIXED_BILL) return false;
+    return calculateProgress(b, transactions, month).status === 'over';
+  }).length;
+}
+
+/**
+ * @param {object[]} rows
+ * @param {object[]} transactions
+ * @param {string} month
+ */
+function countAttentionRows(rows, transactions, month) {
+  return rows.filter((b) => {
+    if (inferCategoryType(b) === CATEGORY_TYPES.FIXED_BILL) return false;
+    const s = calculateProgress(b, transactions, month).status;
+    return s === 'critical' || s === 'warning';
+  }).length;
+}
 
 const SORT_LABELS = {
   urgent: 'Urgent',
@@ -707,11 +734,8 @@ function scheduleHeroRefresh(container, income) {
     patchHeroAmounts(container, totalSpent, totalBudget);
     try {
       const { renderBudgetSummaryHero } = await import('./budget-summary-hero.js');
-      const overBudgetCount = rows.filter((b) => calculateProgress(b, transactions, month).status === 'over').length;
-      const criticalCount = rows.filter((b) => {
-        const s = calculateProgress(b, transactions, month).status;
-        return s === 'critical' || s === 'warning';
-      }).length;
+      const overBudgetCount = countOverBudgetRows(rows, transactions, month);
+      const criticalCount = countAttentionRows(rows, transactions, month);
       await renderBudgetSummaryHero(heroEl, {
         rows,
         transactions,
@@ -1889,11 +1913,8 @@ export async function renderBudgetPage(container, ctx) {
   const currentSort = localStorage.getItem(SORT_KEY) || 'urgent';
   const sourcesLen = sources.length;
 
-  const overBudgetCount = rows.filter((b) => calculateProgress(b, monthTransactions, displayMonth).status === 'over').length;
-  const criticalCount = rows.filter((b) => {
-    const s = calculateProgress(b, monthTransactions, displayMonth).status;
-    return s === 'critical' || s === 'warning';
-  }).length;
+  const overBudgetCount = countOverBudgetRows(rows, monthTransactions, displayMonth);
+  const criticalCount = countAttentionRows(rows, monthTransactions, displayMonth);
 
   container.className = 'budget-page-container';
 

@@ -17,7 +17,8 @@ import {
 import { createFirstWeekPlan } from '../services/first-week-plan.js';
 
 const INCOME_SOURCES = ['Gaji', 'Freelance', 'Usaha', 'Campuran'];
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 8;
+const DEFAULT_OPENING_ACCOUNTS = ['Cash', 'BCA', 'GoPay', 'OVO', 'Tabungan'];
 
 /** @type {HTMLElement|null} */
 let _host = null;
@@ -36,6 +37,7 @@ let _state = {
   near_term_goal_custom: '',
   monthly_income: '',
   income_source: 'Gaji',
+  opening_accounts: DEFAULT_OPENING_ACCOUNTS.map((name) => ({ name, amount: '' })),
   previewTasks: [],
   onClose: null,
 };
@@ -233,6 +235,28 @@ function renderStep() {
         </div>
       </div>`;
   } else if (_state.step === 7) {
+    const rows = (_state.opening_accounts?.length ? _state.opening_accounts : DEFAULT_OPENING_ACCOUNTS.map((n) => ({ name: n, amount: '' })));
+    host.innerHTML = `
+      <div class="onboarding-wizard onboarding-wizard--v2">
+        <div class="onboarding-wizard__progress">${progressDots(7)}</div>
+        <p class="onboarding-wizard__step-label">Langkah 7 dari ${TOTAL_STEPS}</p>
+        <h2 class="onboarding-wizard__title">Setup saldo awal (opsional)</h2>
+        <p class="onboarding-wizard__sub">Untuk akurasi neraca, input saldo saat ini di setiap akun. Cek app bank/e-wallet kamu.</p>
+        <div class="onboarding-opening-grid">
+          ${rows.map((acc, i) => `
+            <div class="onboarding-field onboarding-opening-row">
+              <label>${escapeHtml(acc.name)}</label>
+              <input type="number" inputmode="numeric" class="obv2-opening-amt" data-idx="${i}" value="${escapeAttr(acc.amount)}" placeholder="0" />
+            </div>
+          `).join('')}
+        </div>
+        <div class="onboarding-actions">
+          <button type="button" class="onboarding-btn onboarding-btn--ghost" data-obv2-back>Kembali</button>
+          <button type="button" class="onboarding-btn onboarding-btn--ghost" data-obv2-skip-opening>Lewati</button>
+          <button type="button" class="onboarding-btn onboarding-btn--primary" data-obv2-next>Lanjut</button>
+        </div>
+      </div>`;
+  } else if (_state.step === 8) {
     const tasks = _state.previewTasks.length
       ? _state.previewTasks
       : generateFirstWeekPlan(getPrefsSnapshot());
@@ -255,6 +279,16 @@ function renderStep() {
   }
 
   bindEvents(host);
+}
+
+function collectOpeningFromDom(host) {
+  const inputs = host.querySelectorAll('.obv2-opening-amt');
+  const rows = (_state.opening_accounts?.length ? _state.opening_accounts : DEFAULT_OPENING_ACCOUNTS.map((n) => ({ name: n, amount: '' })));
+  inputs.forEach((inp) => {
+    const idx = Number(inp.getAttribute('data-idx'));
+    if (rows[idx]) rows[idx].amount = inp.value || '';
+  });
+  _state.opening_accounts = rows.filter((r) => Number(r.amount) > 0 || DEFAULT_OPENING_ACCOUNTS.includes(r.name));
 }
 
 function collectBillsFromDom(host) {
@@ -334,6 +368,13 @@ function bindEvents(host) {
     renderStep();
   });
 
+  host.querySelector('[data-obv2-skip-opening]')?.addEventListener('click', () => {
+    _state.opening_accounts = [];
+    _state.step = 8;
+    _state.previewTasks = generateFirstWeekPlan(getPrefsSnapshot());
+    renderStep();
+  });
+
   host.querySelector('[data-obv2-next]')?.addEventListener('click', async () => {
     if (_state.step === 1 && !_state.financial_problems.length) return;
 
@@ -377,10 +418,16 @@ function bindEvents(host) {
         host.querySelector('#obv2Income')?.focus();
         return;
       }
-      _state.previewTasks = generateFirstWeekPlan(getPrefsSnapshot());
     }
 
-    if (_state.step < 7) {
+    if (_state.step === 7) {
+      collectOpeningFromDom(host);
+    }
+
+    if (_state.step < 8) {
+      if (_state.step === 7) {
+        _state.previewTasks = generateFirstWeekPlan(getPrefsSnapshot());
+      }
       _state.step += 1;
       renderStep();
     }
@@ -444,6 +491,13 @@ async function finishOnboarding() {
     await seedFixedBillsToBudget(prefs);
     await syncMonevisorFromOnboarding(prefs);
     await createFirstWeekPlan(prefs);
+    const openingRows = (_state.opening_accounts || [])
+      .filter((a) => Number(a.amount) > 0)
+      .map((a) => ({ account_name: a.name, amount: Number(a.amount), source: 'onboarding' }));
+    if (openingRows.length) {
+      const { saveOpeningBalances } = await import('../services/account-opening-balance.js');
+      await saveOpeningBalances(window.STATE?.db?.user?.id, openingRows);
+    }
     await markCompletedV2();
     burstConfetti();
     closeOnboardingWizardV2({ completed: true, go: 'dashboard' });

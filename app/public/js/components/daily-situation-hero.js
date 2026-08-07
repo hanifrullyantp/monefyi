@@ -4,6 +4,8 @@
  */
 
 import { computeDailySituation, saveDailySnapshot } from '../services/daily-situation.js';
+import { getFinancialStatus } from '../services/financial-status.js';
+import { Icon } from './icons.js';
 
 /**
  * @param {object} situation
@@ -31,7 +33,7 @@ function buildBodyHtml(situation, formatIDR, formatCompactIDR) {
     : 'Pengeluaranmu melebihi rencana fleksibel bulan ini.'}
       </p>
       <div class="daily-hero__meta">
-        <span>📅 Gajian lagi ${situation.daysToPayday} hari</span>
+        <span>${Icon('calendar', { size: 14 })} Gajian lagi ${situation.daysToPayday} hari</span>
         <span class="daily-hero__deficit">🔴 Prediksi defisit: ${formatCompactIDR(Math.abs(situation.predictedEndBalance))}</span>
       </div>
       <p class="daily-hero__foot">→ Lihat apa yang bisa direm</p>
@@ -47,7 +49,7 @@ function buildBodyHtml(situation, formatIDR, formatCompactIDR) {
       <p class="daily-hero__label">Hari ini aman pakai</p>
       <p class="daily-hero__amount">${formatIDR(situation.safeToSpend)}</p>
       <div class="daily-hero__meta">
-        <span>📅 Gajian lagi ${situation.daysToPayday} hari</span>
+        <span>${Icon('calendar', { size: 14 })} Gajian lagi ${situation.daysToPayday} hari</span>
         <span>⚠️ ${escapeHtml(catLine)}</span>
       </div>
       <p class="daily-hero__foot">→ Tahan ${holdDays} hari bisa aman</p>
@@ -62,7 +64,7 @@ function buildBodyHtml(situation, formatIDR, formatCompactIDR) {
     <p class="daily-hero__label">Hari ini aman pakai</p>
     <p class="daily-hero__amount">${formatIDR(situation.safeToSpend)}</p>
     <div class="daily-hero__meta">
-      <span>📅 Gajian lagi ${situation.daysToPayday} hari</span>
+      <span>${Icon('calendar', { size: 14 })} Gajian lagi ${situation.daysToPayday} hari</span>
       ${predLabel ? `<span>${predLabel}</span>` : ''}
     </div>
     <p class="daily-hero__foot">✅ Kamu on track bulan ini</p>
@@ -82,7 +84,9 @@ function escapeHtml(s) {
  */
 export async function renderDailySituationHero(ctx, callbacks = {}) {
   const { formatIDR, formatCompactIDR } = ctx.helpers || {};
-  const situation = computeDailySituation(ctx.state || window.STATE);
+  const state = ctx.state || window.STATE;
+  const situation = computeDailySituation(state);
+  const finStatus = getFinancialStatus(state);
 
   saveDailySnapshot(situation).catch(() => {});
 
@@ -94,6 +98,7 @@ export async function renderDailySituationHero(ctx, callbacks = {}) {
   }
 
   el.innerHTML = `
+    <div class="daily-hero__status-badge daily-hero__status-badge--${finStatus.color}">${escapeHtml(finStatus.badge)}</div>
     <div class="daily-hero__inner">
       ${buildBodyHtml(situation, formatIDR, formatCompactIDR)}
     </div>

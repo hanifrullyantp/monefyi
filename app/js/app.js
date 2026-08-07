@@ -1075,6 +1075,8 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
         txToolbarReady: false,
         saldoMasked: false,
         lastSaldoAnimated: 0,
+        saldoViewMode: 'monthly',
+        reportsPageOpen: false,
         inlineEditId: null,
         txDragId: null,
       },
@@ -1730,6 +1732,9 @@ function computeSubscriptionStatus(profile){
           rerender();
         }
         updateSaldoAsync();
+        import('./services/monthly-period.js')
+          .then((m) => m.backfillPeriodsFromTransactions(STATE.db.user.id, STATE.transactions))
+          .catch(() => {});
       };
 
       if (!navigator.onLine && window.dataStore?.getTransactions) {
@@ -1793,18 +1798,21 @@ function computeSubscriptionStatus(profile){
     }
 
     async function dbUpsertTransaction(tx){
+      const { stampTransactionPeriod } = await import('./services/monthly-period.js');
+      const stamped = stampTransactionPeriod(tx);
       const normalizeSaved = (saved) => ({
         ...saved,
         amount: Math.abs(Number(saved.amount || 0)),
         meta: saved.meta || {},
+        period: saved.period || stampTransactionPeriod(saved).period,
       });
 
       if (isOfflineMode()) {
         if (!window.dataStore) throw new Error('Offline storage not ready');
-        const existing = await window.dataStore.getTransaction?.(tx.id);
+        const existing = await window.dataStore.getTransaction?.(stamped.id);
         const saved = existing
-          ? await window.dataStore.updateTransaction(tx.id, tx)
-          : await window.dataStore.createTransaction(tx);
+          ? await window.dataStore.updateTransaction(stamped.id, stamped)
+          : await window.dataStore.createTransaction(stamped);
         const normalizedOffline = normalizeSaved(saved);
         import('./services/journal-engine.js')
           .then((m) => m.syncFromTransaction(normalizedOffline))
@@ -1814,21 +1822,22 @@ function computeSubscriptionStatus(profile){
 
       const supa = STATE.db.supa;
       const row = {
-        id: tx.id,
+        id: stamped.id,
         user_id: STATE.db.user.id,
-        date: tx.date,
-        type: tx.type,
-        amount: Number(tx.amount||0),
-        currency: tx.currency || 'IDR',
-        category: tx.category || 'Lainnya',
-        subcategory: tx.subcategory || '',
-        account: tx.account || 'Cash',
-        merchant: tx.merchant || '',
-        payment_method: tx.payment_method || tx.account || 'Cash',
-        notes: tx.notes || '',
-        created_at: tx.created_at || new Date().toISOString(),
+        date: stamped.date,
+        period: stamped.period,
+        type: stamped.type,
+        amount: Number(stamped.amount||0),
+        currency: stamped.currency || 'IDR',
+        category: stamped.category || 'Lainnya',
+        subcategory: stamped.subcategory || '',
+        account: stamped.account || 'Cash',
+        merchant: stamped.merchant || '',
+        payment_method: stamped.payment_method || stamped.account || 'Cash',
+        notes: stamped.notes || '',
+        created_at: stamped.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        meta: tx.meta || {},
+        meta: stamped.meta || {},
       };
 
       const { data, error } = await supa.from('transactions').upsert(row).select('*').single();
@@ -1861,6 +1870,7 @@ function computeSubscriptionStatus(profile){
         .catch(() => {});
       return normalized;
     }
+    window.dbUpsertTransaction = dbUpsertTransaction;
 
     // Fungsi untuk menghapus data real di Supabase
 async function dbDeleteTransaction(id) {
@@ -2174,6 +2184,23 @@ async function upsertTransaction_legacy_local(tx) {
         try { STATE.budgetsByMonth = await withTimeout(loadBudgets(), 10000, 'budgets'); } catch (e) { console.warn('loadBudgets', e); }
         window.dataStore?.mirrorBudgetsFromState?.(STATE.budgetsByMonth).catch(() => {});
         try { await withTimeout(refreshTransactionsRange(), 15000, 'transactions'); } catch (e) { console.warn('refreshTransactionsRange', e); }
+        try {
+          const { pullPeriodsFromSupabase } = await import('./services/monthly-period.js');
+          if (STATE.db.user?.id) await pullPeriodsFromSupabase(STATE.db.user.id);
+        } catch (e) { console.warn('pullPeriodsFromSupabase', e); }
+        try {
+          const { shouldPromptMonthlyClosing } = await import('./services/monthly-closing.js');
+          const { showMonthlyClosingModal } = await import('./components/monthly-closing-modal.js');
+          const prompt = shouldPromptMonthlyClosing();
+          const dismissKey = `closing_dismiss_${prompt.period}`;
+          if (prompt.show && !sessionStorage.getItem(dismissKey)) {
+            showMonthlyClosingModal({
+              period: prompt.period,
+              upsertTransaction: dbUpsertTransaction,
+              onComplete: () => rerender(),
+            });
+          }
+        } catch (e) { console.warn('monthlyClosingPrompt', e); }
         try { initCoachChat({ reset: true }); } catch (e) { console.warn('initCoachChat', e); }
         if (!STATE.ui.enhancementsReady) {
           STATE.ui.enhancementsReady = true;
@@ -4125,6 +4152,8 @@ renderAccountsSettings();
     function renderHeroBudgetProgress(s, masked) {
       const bar = $('#heroBudgetBar');
       const pctEl = $('#heroBudgetPct');
+      const labelEl = document.querySelector('.hero-budget-progress__label');
+      if (labelEl) labelEl.textContent = 'Progress Pengeluaran vs Budget';
       if (!bar) return;
       const { planned } = budgetForPeriod();
       const actual = s.expense;
@@ -4151,15 +4180,33 @@ renderAccountsSettings();
 
    function renderSaldo() {
   const key = STATE.period.end;
-  const saldo = estimateSaldoUpToPeriodEnd();
+  const txs = getTransactionsInPeriod();
+  const s = sumByType(txs);
+  const viewMode = STATE.ui?.saldoViewMode || 'monthly';
+  const cumulativeSaldo = estimateSaldoUpToPeriodEnd();
+  let saldo = viewMode === 'cumulative' ? cumulativeSaldo : s.net;
 
   const isCalculating =
     STATE.db.enabled &&
     STATE.db.saldoLoading &&
-    !Object.prototype.hasOwnProperty.call(STATE.db.saldoCache, key);
+    !Object.prototype.hasOwnProperty.call(STATE.db.saldoCache, key) &&
+    viewMode === 'cumulative';
 
-  const saldoText = isCalculating ? t('saldo.calculating') : formatIDR(saldo);
-  const masked = !!STATE.ui.saldoMasked;
+  if (viewMode === 'wealth') {
+    const maskedWealth = !!STATE.ui.saldoMasked;
+    import('./components/cash-flow-card.js')
+      .then(({ buildCashFlowCardData }) => buildCashFlowCardData(STATE, 'wealth'))
+      .then((data) => {
+        paintSaldoAmounts(data.primaryAmount, isCalculating, viewMode, s, txs, maskedWealth);
+      })
+      .catch(() => paintSaldoAmounts(saldo, isCalculating, viewMode, s, txs, maskedWealth));
+    return;
+  }
+
+  paintSaldoAmounts(saldo, isCalculating, viewMode, s, txs, !!STATE.ui.saldoMasked);
+}
+
+  function paintSaldoAmounts(saldo, isCalculating, viewMode, s, txs, masked) {
 
   const saldoClassName = (sel, extra = '') => {
     if (sel === '#kpiSaldo') {
@@ -4224,8 +4271,6 @@ renderAccountsSettings();
   });
 
   // Hitung net periode (income - expense) untuk subtext
-  const txs = getTransactionsInPeriod();
-  const s = sumByType(txs);
   const netStr = formatCompactIDR(s.net);
 
   const incomeText = masked ? '••••' : `+${formatCompactIDR(s.income)}`;
@@ -4262,7 +4307,10 @@ renderAccountsSettings();
   }
 
   renderHeroBudgetProgress(s, masked);
-  
+  updateSaldoCardLabels(viewMode);
+  renderIncomeGapBanner(s);
+  refreshSaldoWealthFooter().catch(() => {});
+
   try { renderHeroSparkline('#heroSaldoSparklineDesktop'); } catch (_) {}
   try { renderHeroSparklineDesktop(); } catch (_) {}
 
@@ -4293,6 +4341,82 @@ renderAccountsSettings();
     }
   }
 }
+
+  function cycleSaldoViewMode() {
+    const modes = ['monthly', 'cumulative', 'wealth'];
+    const cur = STATE.ui.saldoViewMode || 'monthly';
+    STATE.ui.saldoViewMode = modes[(modes.indexOf(cur) + 1) % modes.length];
+    rerender();
+  }
+  window.cycleSaldoViewMode = cycleSaldoViewMode;
+
+  function updateSaldoCardLabels(viewMode) {
+    const periodLabel = STATE.period?.label || STATE.period?.end?.slice(0, 7) || '';
+    const label = viewMode === 'cumulative'
+      ? 'Saldo Kumulatif'
+      : viewMode === 'wealth'
+        ? 'Total Kekayaan'
+        : `Cash Flow ${periodLabel}`;
+    document.querySelectorAll('.hero-saldo-card__label-row > span:first-child').forEach((el) => {
+      if (!el.closest('.hero-saldo-card')) return;
+      el.textContent = label;
+      el.classList.add('saldo-view-toggle', 'tap');
+      el.title = 'Ketuk untuk ganti tampilan: Bulan ini · Kumulatif · Kekayaan';
+      el.onclick = (e) => {
+        e.stopPropagation();
+        cycleSaldoViewMode();
+      };
+    });
+  }
+
+  async function refreshSaldoWealthFooter() {
+    let footer = document.getElementById('saldoWealthFooter');
+    if (!footer) {
+      const host = document.querySelector('.sidebar-saldo-card__footer') || document.querySelector('.saldo-details-inner');
+      if (!host) return;
+      footer = document.createElement('div');
+      footer.id = 'saldoWealthFooter';
+      footer.className = 'saldo-wealth-footer';
+      host.appendChild(footer);
+    }
+    try {
+      const { buildCashFlowCardData } = await import('./components/cash-flow-card.js');
+      const data = await buildCashFlowCardData(STATE, STATE.ui?.saldoViewMode || 'monthly');
+      footer.innerHTML = `
+        <div class="swf-row"><span>💰 Total Kas</span><strong>Rp ${formatIDR(data.totalKas).replace('Rp', '').trim()}</strong></div>
+        <button type="button" class="swf-link tap" data-action="open-neraca">🏦 Total Kekayaan →</button>
+      `;
+      footer.querySelector('[data-action="open-neraca"]')?.addEventListener('click', () => openNeraca());
+    } catch { footer.innerHTML = ''; }
+  }
+
+  function renderIncomeGapBanner(s) {
+    const period = String(STATE.period?.end || '').slice(0, 7);
+    const budgetIncome = Number(STATE.budgetsByMonth?.[period]?.income || STATE.db?.userPreferences?.monthly_income || 0);
+    if (!(budgetIncome > 0 && s.income === 0)) return;
+    let banner = document.getElementById('incomeGapBanner');
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'incomeGapBanner';
+      banner.className = 'income-gap-banner';
+      const host = document.getElementById('mobileSaldoShell') || document.getElementById('sidebarSaldoWrap');
+      host?.appendChild(banner);
+    }
+    banner.innerHTML = `
+      <span>⚠ Budget income Rp ${formatIDR(budgetIncome).replace('Rp', '').trim()} belum tercatat.</span>
+      <button type="button" class="tap" data-action="record-income">Catat pemasukan</button>
+    `;
+    banner.querySelector('[data-action="record-income"]')?.addEventListener('click', () => {
+      if (typeof openAddSheet === 'function') {
+        openAddSheet();
+        setTimeout(() => {
+          const typeSel = document.querySelector('#addType, [name="type"]');
+          if (typeSel) typeSel.value = 'income';
+        }, 300);
+      }
+    });
+  }
+
     function renderKPIs(){
       const txs = getTransactionsInPeriod();
       const s = sumByType(txs);
@@ -6658,7 +6782,7 @@ function setSheetPosition(mode) {
      * Must beat CSS rules like `.tx-main-panel #txSection { display:flex }`.
      */
     function applySpecialPageVisibility() {
-      const specialPageOpen = !!(STATE.ui.budgetPageOpen || STATE.ui.monevisorPageOpen || STATE.ui.neracaPageOpen || STATE.ui.settingsPageOpen);
+      const specialPageOpen = !!(STATE.ui.budgetPageOpen || STATE.ui.monevisorPageOpen || STATE.ui.neracaPageOpen || STATE.ui.settingsPageOpen || STATE.ui.reportsPageOpen);
       const showDesktopDashboard = STATE.ui.dashboardOpen && isDesktopViewport() && !specialPageOpen;
       const showTx = !STATE.ui.dashboardOpen && !specialPageOpen;
 
@@ -6668,6 +6792,7 @@ function setSheetPosition(mode) {
       $('#neracaPageRoot')?.classList.toggle('hidden', !STATE.ui.neracaPageOpen);
       $('#monevisorPageRoot')?.classList.toggle('hidden', !STATE.ui.monevisorPageOpen);
       $('#settingsPageRoot')?.classList.toggle('hidden', !STATE.ui.settingsPageOpen);
+      $('#monthlyReportsPageRoot')?.classList.toggle('hidden', !STATE.ui.reportsPageOpen);
 
       const dynamicContent = $('#dynamicContent');
       if (dynamicContent) {
@@ -6677,6 +6802,7 @@ function setSheetPosition(mode) {
         dynamicContent.classList.toggle('dynamic-content--neraca', !!STATE.ui.neracaPageOpen);
         dynamicContent.classList.toggle('dynamic-content--monevisor', !!STATE.ui.monevisorPageOpen);
         dynamicContent.classList.toggle('dynamic-content--settings', !!STATE.ui.settingsPageOpen);
+        dynamicContent.classList.toggle('dynamic-content--reports', !!STATE.ui.reportsPageOpen);
       }
 
       document.querySelector('.mobile-saldo-wrap')?.classList.toggle('hidden', specialPageOpen);
@@ -6795,6 +6921,7 @@ function setSheetPosition(mode) {
       closeBudgetSheetOnly();
       closeAdvisor();
       closeAddSheet();
+      closeReports();
       STATE.ui.neracaPageOpen = true;
       STATE.ui.budgetPageOpen = false;
       STATE.ui.monevisorPageOpen = false;
@@ -6823,6 +6950,52 @@ function setSheetPosition(mode) {
     }
     window.openNeraca = openNeraca;
 
+    async function renderMonthlyReportsPageView() {
+      const root = $('#monthlyReportsPageRoot');
+      if (!root || !STATE.ui.reportsPageOpen) return;
+      try {
+        const { renderMonthlyReportsPage } = await import('./pages/monthly-reports-page.js');
+        await renderMonthlyReportsPage(root);
+      } catch (e) {
+        console.error('[reports] page render failed', e);
+      }
+    }
+    window.renderMonthlyReportsPageView = renderMonthlyReportsPageView;
+
+    async function openReports() {
+      closeBudgetSheetOnly();
+      closeAdvisor();
+      closeAddSheet();
+      closeNeraca();
+      STATE.ui.reportsPageOpen = true;
+      STATE.ui.budgetPageOpen = false;
+      STATE.ui.monevisorPageOpen = false;
+      STATE.ui.neracaPageOpen = false;
+      STATE.ui.settingsPageOpen = false;
+      STATE.ui.dashboardOpen = false;
+
+      $$('.nav-item[data-nav]').forEach((el) => el.classList.remove('active'));
+      $$('.sidebar-item[data-nav]').forEach((el) => {
+        el.classList.toggle('active', el.getAttribute('data-nav') === 'reports');
+      });
+
+      applySpecialPageVisibility();
+      $('#monthlyReportsPageRoot')?.classList.remove('hidden');
+      rerender();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      await renderMonthlyReportsPageView();
+    }
+    window.openReports = openReports;
+
+    function closeReports() {
+      STATE.ui.reportsPageOpen = false;
+      const root = $('#monthlyReportsPageRoot');
+      if (root) {
+        root.classList.add('hidden');
+        root.replaceChildren();
+      }
+    }
+
     function closeNeraca() {
       STATE.ui.neracaPageOpen = false;
       const root = $('#neracaPageRoot');
@@ -6836,6 +7009,7 @@ function setSheetPosition(mode) {
       closeBudgetSheetOnly();
       closeAdvisor();
       closeNeraca();
+      closeReports();
       closeAddSheet();
 
       // Switch view flags FIRST so TX list never flashes during async draft prep
@@ -7118,6 +7292,24 @@ function setSheetPosition(mode) {
       if (hash.includes('advisor') || url.includes('#advisor')) {
         if (typeof openAdvisorAuto === 'function') openAdvisorAuto();
         else if (typeof toggleNav === 'function') toggleNav('advisor');
+        return;
+      }
+      if (hash.includes('reports') || hash.includes('closing') || url.includes('#reports')) {
+        if (typeof openReports === 'function') openReports();
+        else if (typeof toggleNav === 'function') toggleNav('reports');
+        if (data.action === 'monthly_closing' && data.period) {
+          import('./components/monthly-closing-modal.js').then(({ showMonthlyClosingModal }) => {
+            showMonthlyClosingModal({
+              period: data.period,
+              upsertTransaction: window.dbUpsertTransaction,
+              onComplete: () => rerender?.(),
+            });
+          }).catch(() => {});
+        }
+        return;
+      }
+      if (hash.includes('neraca') || url.includes('#neraca')) {
+        if (typeof openNeraca === 'function') openNeraca();
         return;
       }
       if (typeof toggleNav === 'function') toggleNav('dash');
@@ -11795,6 +11987,10 @@ function toggleNav(view, triggerEl) {
         openNeraca();
         return;
       }
+      if (view === 'reports') {
+        openReports();
+        return;
+      }
       if (view === 'advisor') {
         openAdvisorAuto();
         return;
@@ -11809,6 +12005,7 @@ function toggleNav(view, triggerEl) {
         STATE.ui.budgetPageOpen = false;
         STATE.ui.monevisorPageOpen = false;
         STATE.ui.neracaPageOpen = false;
+        STATE.ui.reportsPageOpen = false;
         STATE.ui.settingsPageOpen = false;
         runFirstWeekPlanEval({ openedTransactions: true });
       } else if (view === 'dash') {
@@ -11816,9 +12013,11 @@ function toggleNav(view, triggerEl) {
         STATE.ui.budgetPageOpen = false;
         STATE.ui.monevisorPageOpen = false;
         STATE.ui.neracaPageOpen = false;
+        STATE.ui.reportsPageOpen = false;
         STATE.ui.settingsPageOpen = false;
       }
-      const map = { dash: 'beranda', list: 'transaksi', budget: 'budget', advisor: 'advisor', neraca: 'neraca' };
+      closeReports();
+      const map = { dash: 'beranda', list: 'transaksi', budget: 'budget', advisor: 'advisor', neraca: 'neraca', reports: 'reports' };
       const active = map[view] || '';
       $$('.nav-item[data-nav]').forEach((el) => {
         el.classList.toggle('active', el.getAttribute('data-nav') === active);
@@ -11835,14 +12034,14 @@ function toggleNav(view, triggerEl) {
     $$('.sidebar-item[data-nav]').forEach((el) => {
       el.addEventListener('click', () => {
         const view = el.getAttribute('data-nav');
-        if (view === 'dash' || view === 'list' || view === 'budget' || view === 'neraca' || view === 'advisor') toggleNav(view, el);
+        if (view === 'dash' || view === 'list' || view === 'budget' || view === 'neraca' || view === 'advisor' || view === 'reports') toggleNav(view, el);
       });
     });
 
     $$('.nav-item[data-nav]').forEach((el) => {
       el.addEventListener('click', (e) => {
         const nav = el.getAttribute('data-nav');
-        const map = { beranda: 'dash', transaksi: 'list', budget: 'budget', advisor: 'advisor', neraca: 'neraca' };
+        const map = { beranda: 'dash', transaksi: 'list', budget: 'budget', advisor: 'advisor', neraca: 'neraca', reports: 'reports' };
         const view = map[nav];
         if (view) {
           e.preventDefault();

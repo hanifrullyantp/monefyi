@@ -326,30 +326,31 @@ function escapeHtml(str) {
  * @param {number} timeProgress
  */
 function getHealthStatus(percentUsed, timeProgress) {
-  const diff = percentUsed - timeProgress;
+  const timeRounded = Math.round(timeProgress);
+  const diff = percentUsed - timeRounded;
 
   if (percentUsed > 100) {
     return {
       className: 'over',
       iconHtml: Icon('alertTriangle', { size: 16 }),
       label: 'Over Budget',
-      recommendation: 'Pengeluaran melebihi budget. Review kategori yang boros.',
+      recommendation: `Terpakai ${percentUsed}% budget (${Math.round(percentUsed)}% dari rencana). Cek kategori yang melebihi batas.`,
     };
   }
   if (diff > 20) {
     return {
       className: 'critical',
       iconHtml: Icon('alertTriangle', { size: 16 }),
-      label: 'Terlalu Cepat',
-      recommendation: `Kamu sudah pakai ${percentUsed}% budget tapi baru ${timeProgress}% bulan berlalu. Rem sedikit!`,
+      label: 'Perlu Direm',
+      recommendation: `Pengeluaran melaju cepat: ${percentUsed}% budget terpakai di ${timeRounded}% waktu bulan. Jaga rata-rata harian lebih rendah sampai gajian.`,
     };
   }
   if (diff > 10) {
     return {
       className: 'warning',
       iconHtml: Icon('exclamation', { size: 16 }),
-      label: 'Perhatian',
-      recommendation: 'Pengeluaran lebih cepat dari waktu. Perhatikan sisa budget.',
+      label: 'Waspada',
+      recommendation: `Pengeluaran ${percentUsed}% vs ${timeRounded}% waktu bulan. Perhatikan sisa budget.`,
     };
   }
   if (diff < -10) {
