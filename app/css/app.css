@@ -4,6 +4,11 @@
 @import './components/account-card.css';
 @import './components/header.css';
 @import './components/buttons.css';
+@import './components/kpi-card.css';
+@import './components/quick-access.css';
+@import './components/forms.css';
+@import './components/home-dashboard.css';
+@import './components/modals.css';
     :root { color-scheme: dark; }
     body.theme-light { color-scheme: light; }
     .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }

@@ -1,0 +1,116 @@
+/**
+ * KPI cards & saldo metrics — Phase 2 theme tokens
+ */
+.kpi-metric {
+  padding: var(--space-3) var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-xs);
+}
+
+.kpi-metric--income {
+  color: var(--finance-income);
+  border-color: var(--status-success-border);
+  background: var(--finance-income-bg);
+}
+
+.kpi-metric--expense {
+  color: var(--finance-expense);
+  border-color: var(--status-danger-border);
+  background: var(--finance-expense-bg);
+}
+
+.kpi-metric__value {
+  color: var(--text-tertiary);
+}
+
+.hero-saldo-kpi--income {
+  color: var(--finance-income);
+  background: var(--finance-income-bg);
+  border: 1px solid var(--status-success-border);
+}
+
+.hero-saldo-kpi--expense {
+  color: var(--finance-expense);
+  background: var(--finance-expense-bg);
+  border: 1px solid var(--status-danger-border);
+}
+
+.hero-saldo-stat--income .hero-saldo-stat__value {
+  color: var(--finance-income);
+}
+
+.hero-saldo-stat--expense .hero-saldo-stat__value {
+  color: var(--finance-expense);
+}
+
+.hero-budget-progress__pct,
+.budget-percent {
+  color: var(--status-warning);
+}
+
+.hero-budget-progress__track,
+.progress-bar {
+  background: var(--bg-tertiary);
+}
+
+.hero-budget-progress__fill {
+  background: var(--interactive-primary);
+}
+
+/* Desktop saldo bar metrics */
+.saldo-bar-eye {
+  background: var(--interactive-secondary);
+  color: var(--text-tertiary);
+}
+
+.saldo-bar-eye:hover {
+  color: var(--text-primary);
+  background: var(--interactive-secondary-hover);
+}
+
+.saldo-bar-metric {
+  background: var(--interactive-secondary);
+  color: var(--text-primary);
+}
+
+.saldo-bar-metric--soft {
+  background: color-mix(in srgb, var(--interactive-secondary) 70%, transparent);
+}
+
+.saldo-bar-metric--action:hover {
+  background: var(--finance-income-bg);
+  border-color: var(--status-success-border);
+}
+
+.saldo-bar-metric-label {
+  color: var(--text-tertiary);
+}
+
+.saldo-bar-metric-value {
+  color: var(--text-primary);
+}
+
+.saldo-bar-metric-hint {
+  color: var(--text-tertiary);
+}
+
+.saldo-bar-metric-value.income {
+  color: var(--finance-income);
+}
+
+.saldo-bar-metric-value.expense {
+  color: var(--finance-expense);
+}
+
+.saldo-bar-metric-value.net.negative {
+  color: var(--finance-expense);
+}
+
+.saldo-bar-period {
+  color: var(--text-tertiary);
+}

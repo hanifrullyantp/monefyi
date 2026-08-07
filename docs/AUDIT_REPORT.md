@@ -9,6 +9,8 @@ Generated as part of MONEFYI_THEME_SYSTEM execution (Aug 2026).
 | CSS files with hardcoded hex/rgba (excl. tokens) | 22 |
 | Critical broken areas (pre-fix) | 5 |
 | Phase 1 fixes applied | ✅ |
+| Phase 2 fixes applied | ✅ |
+| Phase 3 (modals/badges/tables base) | ✅ partial |
 
 ## Critical issues fixed (Phase 1)
 
@@ -69,7 +71,8 @@ Prioritas migrasi bertahap:
 
 ## Migration checklist (remaining)
 
-- [ ] Phase 2: KPI cards, quick access, buttons global di `app.css`
-- [ ] Phase 3: Modals, tables, badges
+- [x] Phase 2: KPI cards, quick access, buttons global di `app.css`
+- [x] Phase 3 (base): Modal/sheet backdrop, chips/badges, table hover, skeleton
+- [ ] Phase 3 (pages): onboarding, settings, preview-card, transaction-detail CSS files
 - [ ] Phase 4: Toast, empty/loading states
 - [ ] Phase 5: Run audit + manual pass semua halaman
