@@ -4,6 +4,7 @@
  */
 
 import { Icon } from './icons.js';
+import { LABELS } from '../constants/language.js';
 
 /**
  * @param {{
@@ -56,7 +57,7 @@ function buildSaldoBarHtml(data) {
   return `
     <div class="saldo-bar-main">
       <div class="min-w-0">
-        <div class="saldo-bar-label">Saldo (estimasi)</div>
+        <div class="saldo-bar-label">${LABELS.GENERAL.ESTIMATED_BALANCE}</div>
         <div class="saldo-bar-amount${masked ? ' saldo-masked' : ''}" id="kpiSaldoBarDesktop">${masked ? '••••••••' : `Rp ${fmt(saldo)}`}</div>
       </div>
       <button type="button" class="saldo-bar-eye tap" id="btnSaldoMaskBarDesktop" title="Sembunyikan saldo" aria-label="Sembunyikan saldo">
@@ -65,15 +66,15 @@ function buildSaldoBarHtml(data) {
     </div>
     <div class="saldo-bar-metrics">
       <button type="button" class="saldo-bar-metric saldo-bar-metric--action" id="btnIncomeBarDesktop" title="Buka Dashboard">
-        <div class="saldo-bar-metric-label">Income</div>
+        <div class="saldo-bar-metric-label">${LABELS.GENERAL.INCOME}</div>
         <div class="saldo-bar-metric-value income" id="kpiIncomeBarDesktop">${masked ? '••••' : `+${fmtShort(income)}`}</div>
       </button>
       <button type="button" class="saldo-bar-metric saldo-bar-metric--action" id="btnExpenseBarDesktop" title="Buka Dashboard">
-        <div class="saldo-bar-metric-label">Expense</div>
+        <div class="saldo-bar-metric-label">${LABELS.GENERAL.EXPENSE}</div>
         <div class="saldo-bar-metric-value expense" id="kpiExpenseBarDesktop">${masked ? '••••' : `−${fmtShort(expense)}`}</div>
       </button>
       <button type="button" class="saldo-bar-metric saldo-bar-metric--action" id="btnNetBarDesktop" title="Buka Dashboard">
-        <div class="saldo-bar-metric-label">Net</div>
+        <div class="saldo-bar-metric-label">${LABELS.GENERAL.NET}</div>
         <div class="saldo-bar-metric-value net${net < 0 ? ' negative' : ''}" id="kpiNetBarDesktop">${masked ? '••••' : `${net >= 0 ? '+' : '−'}${fmtShort(Math.abs(net))}`}</div>
       </button>
       <div class="saldo-bar-metric saldo-bar-metric--soft">

@@ -230,6 +230,21 @@ function renderAccount(body) {
       </div>
     </div>
     <div class="settings-card">
+      <h2>Affiliate</h2>
+      <p class="settings-desc">Program referral Monefyi — bagikan dan dapatkan komisi.</p>
+      <div class="settings-actions">
+        <button type="button" class="settings-btn ghost" id="spAffiliate">Buka Program Affiliate</button>
+      </div>
+    </div>
+    <div class="settings-card">
+      <h2>Onboarding</h2>
+      <p class="settings-desc">Ulangi wizard kenalan jika kondisi keuanganmu berubah.</p>
+      <div class="settings-actions">
+        <button type="button" class="settings-btn ghost" id="spResetOnboarding">Ulangi onboarding</button>
+        <span class="settings-status" id="spResetObStatus">—</span>
+      </div>
+    </div>
+    <div class="settings-card">
       <h2>Sesi</h2>
       <div class="settings-actions">
         <button type="button" class="settings-btn danger" id="spSignOut">Log Out</button>
@@ -274,6 +289,36 @@ function renderAccount(body) {
       body.querySelector('#spPass1').value = '';
       body.querySelector('#spPass2').value = '';
       toast('Password diubah', 'success');
+    } catch (e) {
+      status.textContent = e.message || 'Gagal';
+    }
+  });
+
+  body.querySelector('#spAffiliate')?.addEventListener('click', () => {
+    _ctx.openAffiliate?.();
+  });
+
+  body.querySelector('#spResetOnboarding')?.addEventListener('click', async () => {
+    const status = body.querySelector('#spResetObStatus');
+    const ok = confirm('Ulangi onboarding? Progress plan 7 hari akan direset.');
+    if (!ok) return;
+    status.textContent = 'Menyimpan…';
+    try {
+      await _ctx.saveProfile?.({
+        onboarding_completed: false,
+        onboarding_version: '2',
+      });
+      if (window.STATE?.db?.profile) {
+        window.STATE.db.profile.onboarding_completed = false;
+        window.STATE.db.profile.onboarding_version = '2';
+      }
+      status.textContent = 'Membuka wizard…';
+      const mod = await import('../components/onboarding-wizard-v2.js');
+      mod.openOnboardingWizardV2?.({
+        onClose: () => {
+          _ctx.rerender?.();
+        },
+      });
     } catch (e) {
       status.textContent = e.message || 'Gagal';
     }

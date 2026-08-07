@@ -14,7 +14,7 @@
     "vite": "^7.1.0"
   },
   "scripts": {
-    "prebuild": "npm run sync:brand && mkdir -p app/public/locales app/public/js app/public/icons app/public/js/services app/public/js/parsers app/public/js/components app/public/js/utils app/public/js/pages app/public/js/vendor app/public/css && cp app/locales/*.json app/public/locales/ && cp app/js/i18n.js app/js/monefyi-ui.js app/js/app.js app/js/config.js app/public/js/ && cp -r app/js/services app/js/parsers app/js/components app/js/utils app/js/pages app/js/vendor app/public/js/ && cp app/css/*.css app/public/css/ && cp app/sw.js app/public/sw.js",
+    "prebuild": "npm run sync:brand && mkdir -p app/public/locales app/public/js app/public/icons app/public/js/services app/public/js/parsers app/public/js/components app/public/js/utils app/public/js/pages app/public/js/vendor app/public/js/constants app/public/css && cp app/locales/*.json app/public/locales/ && cp app/js/i18n.js app/js/monefyi-ui.js app/js/app.js app/js/config.js app/public/js/ && cp -r app/js/constants app/js/services app/js/parsers app/js/components app/js/utils app/js/pages app/js/vendor app/public/js/ && cp app/css/*.css app/public/css/ && cp app/sw.js app/public/sw.js",
     "sync:brand": "cp shared/brand-tokens.css app/css/brand-tokens.css && cp shared/brand-tokens.css \"landing page/css/brand-tokens.css\"",
     "build": "npm run build:landing && npm run build:app && npm run build:stay",
     "build:landing": "vite build --config vite.landing.config.js",
@@ -26,6 +26,7 @@
     "preview": "vite preview --outDir dist",
     "refactor": "node scripts/refactor.cjs",
     "smoke": "node scripts/smoke.cjs",
-    "benchmark:parser": "node scripts/batch-parser-benchmark.cjs"
+    "benchmark:parser": "node scripts/batch-parser-benchmark.cjs",
+    "test:upgrade": "node --test tests/daily-situation.test.js tests/transaction-impact.test.js tests/monevisor-intervention.test.js tests/engagement.test.js tests/onboarding-plan-generator.test.js tests/budget-focus-mode.test.js tests/financial-targets.test.js tests/language-contextual.test.js"
   }
 }

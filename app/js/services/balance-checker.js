@@ -3,6 +3,8 @@
  * @module services/balance-checker
  */
 
+import { LABELS, t } from '../constants/language.js';
+
 /** @typedef {{ key: string, label: string, amount: number, icon: string }} NeracaRow */
 
 export const AKTIVA_ROWS = [
@@ -19,9 +21,9 @@ export const PASIVA_ROWS = [
   { key: 'hutang_dagang', label: 'Hutang Dagang', icon: 'shoppingBag' },
   { key: 'hutang_pajak', label: 'Hutang Pajak', icon: 'bills' },
   { key: 'hutang_lainnya', label: 'Hutang Lainnya', icon: 'creditCard' },
-  { key: 'modal', label: 'Modal', icon: 'bank' },
+  { key: 'modal', label: LABELS.NERACA.EQUITY, icon: 'bank' },
   { key: 'simpanan', label: 'Simpanan', icon: 'wallet' },
-  { key: 'laba_ditahan', label: 'Laba Ditahan', icon: 'trendingUp' },
+  { key: 'laba_ditahan', label: LABELS.NERACA.RETAINED_EARNINGS, icon: 'trendingUp' },
   { key: 'kewajiban_lainnya', label: 'Kewajiban Lainnya', icon: 'tag' },
 ];
 
@@ -104,8 +106,8 @@ export function applySuspense(sheet) {
       side,
       amount,
       message: diff > 0
-        ? `Aktiva lebih besar Rp ${formatId(amount)} dari Pasiva`
-        : `Pasiva lebih besar Rp ${formatId(amount)} dari Aktiva`,
+        ? t(LABELS.NERACA.OWNS_MORE, { amount: formatId(amount) })
+        : t(LABELS.NERACA.OWES_MORE, { amount: formatId(amount) }),
     },
   };
 }
@@ -125,10 +127,10 @@ function formatId(n) {
 export function buildFixSuggestions(sheet, suspects) {
   const tips = [];
   if (sheet.suspense?.side === 'pasiva') {
-    tips.push('Apakah selisih ini merupakan Modal, Hutang, atau Simpanan yang belum dicatat?');
-    tips.push('Tambahkan entri di sisi Pasiva, atau periksa aset yang terhitung dobel.');
+    tips.push(LABELS.NERACA.TIP_OWES_SIDE);
+    tips.push('Tambahkan entri di sisi hutang & modal, atau periksa aset yang terhitung dobel.');
   } else if (sheet.suspense?.side === 'aktiva') {
-    tips.push('Apakah selisih ini merupakan Kas/Properti/Investasi yang belum dicatat?');
+    tips.push(LABELS.NERACA.TIP_OWNS_SIDE);
     tips.push('Atau hutang yang terlalu besar dibanding aset — periksa daftar hutang.');
   }
 

@@ -4,33 +4,27 @@
  */
 
 import { buildHomePageData } from '../services/home-data.js';
+import { useHomeLayoutV2 } from '../services/home-layout.js';
+import { isSimpleHomeMode, saveHomeViewMode } from '../services/home-view-mode.js';
+import { runHomeEngagementHooks } from '../services/engagement.js';
 import { renderAccountCards } from '../components/account-cards.js';
 import { renderQuickAccess } from '../components/quick-access.js';
 import { renderRecentTransactionsList } from '../components/recent-transactions-list.js';
-import { renderBudgetSummaryCard } from '../components/budget-summary-card.js';
+import { renderBudgetSummaryCard, renderBudgetAlertsCard } from '../components/budget-summary-card.js';
 import { renderMiniChart7Day } from '../components/mini-chart-7day.js';
 import { renderDailyTipCard } from '../components/daily-tip-card.js';
+import { renderTargetSummaryCard } from '../components/target-summary-card.js';
 import { Icon } from '../components/icons.js';
 
 /**
- * @param {HTMLElement} container
- * @param {object} ctx - STATE + helpers from app.js
- * @param {object} [callbacks]
+ * Legacy beranda layout (pre TASK 1.3).
  */
-export function renderHomePage(container, ctx, callbacks = {}) {
-  if (!container) return;
-
-  const { formatIDR, formatCompactIDR } = ctx.helpers;
-  const data = buildHomePageData(ctx);
-  const masked = data.saldoMasked;
-
-  container.innerHTML = '';
-  container.className = 'home-page';
-
+function renderLegacyHome(container, data, ctx, callbacks, formatIDR, formatCompactIDR, masked) {
   container.appendChild(renderAccountCards(data.accounts, formatIDR, masked, {
     onViewAll: callbacks.onViewAccounts,
     onAccountClick: callbacks.onAccountClick,
   }));
+
   container.appendChild(renderQuickAccess({ onActionClick: callbacks.onQuickAction }));
 
   const neracaCard = document.createElement('button');
@@ -40,7 +34,7 @@ export function renderHomePage(container, ctx, callbacks = {}) {
     <span class="neraca-home-card-icon">${Icon('bank', { size: 20 })}</span>
     <span>
       <span class="neraca-home-card-title">Neraca Keuangan</span>
-      <span class="neraca-home-card-sub">Lihat struktur Aktiva &amp; Pasiva</span>
+      <span class="neraca-home-card-sub">Lihat posisi keuangan lengkap</span>
     </span>
     <span style="margin-left:auto;opacity:.6">${Icon('chevronRight', { size: 16 })}</span>
   `;
@@ -60,6 +54,159 @@ export function renderHomePage(container, ctx, callbacks = {}) {
   container.appendChild(renderDailyTipCard(data.dailyTip, {
     onActionClick: callbacks.onTipAction,
   }));
+}
+
+/**
+ * Command-center layout (TASK 1.3).
+ */
+async function renderV2Home(container, data, ctx, callbacks, formatIDR, formatCompactIDR, masked) {
+  try {
+    const { renderStreakBadge } = await import('../components/streak-badge.js');
+    const streakEl = renderStreakBadge(ctx.transactions || ctx.state?.transactions || []);
+    if (streakEl) container.appendChild(streakEl);
+  } catch (e) {
+    console.warn('[home] streak badge', e);
+  }
+
+  try {
+    const { renderHomeModeToggle } = await import('../components/simple-home-view.js');
+    const toolbar = document.createElement('div');
+    toolbar.className = 'home-page-toolbar';
+    toolbar.appendChild(renderHomeModeToggle({
+      onSwitchSimple: async () => {
+        await saveHomeViewMode('simple');
+        if (typeof window.rerenderHomePage === 'function') window.rerenderHomePage();
+      },
+    }));
+    container.appendChild(toolbar);
+  } catch { /* ignore */ }
+
+  try {
+    const { buildDailySituationHero } = await import('../components/daily-situation-hero.js');
+    const hero = await buildDailySituationHero(
+      { ...ctx, state: ctx.state || window.STATE },
+      {
+        onCompleteData: callbacks.onCompleteData,
+        onViewAdvisor: callbacks.onViewAdvisor,
+        onViewBudget: callbacks.onViewBudget,
+      },
+    );
+    if (hero) container.appendChild(hero);
+  } catch (e) {
+    console.warn('[home] daily situation hero', e);
+  }
+
+  try {
+    const { buildFirstWeekPlanCard } = await import('../components/first-week-plan-card.js');
+    const planCard = await buildFirstWeekPlanCard({
+      onTaskAction: callbacks.onPlanTaskAction,
+    });
+    if (planCard) container.appendChild(planCard);
+  } catch (e) {
+    console.warn('[home] first-week plan card', e);
+  }
+
+  const targetCard = renderTargetSummaryCard(data.primaryTarget, {
+    onClick: callbacks.onViewTarget,
+  });
+  if (targetCard) container.appendChild(targetCard);
+
+  container.appendChild(renderQuickAccess({
+    variant: 'compact',
+    onActionClick: callbacks.onQuickAction,
+  }));
+
+  container.appendChild(renderRecentTransactionsList(
+    ctx.transactions || data.recentTransactions,
+    formatIDR,
+    {
+      onViewAll: callbacks.onViewTransactions,
+      onTransactionClick: callbacks.onTransactionClick,
+    },
+    { mode: 'today', title: 'Transaksi Hari Ini' },
+  ));
+
+  const budgetAlerts = renderBudgetAlertsCard(data, formatIDR, {
+    onClick: callbacks.onViewBudget,
+  });
+  if (budgetAlerts) {
+    container.appendChild(budgetAlerts);
+  } else {
+    container.appendChild(renderBudgetSummaryCard(data.budgetSummary, formatIDR, {
+      onClick: callbacks.onViewBudget,
+    }));
+  }
+
+  container.appendChild(renderAccountCards(data.accounts, formatIDR, masked, {
+    onViewAll: callbacks.onViewAccounts,
+    onAccountClick: callbacks.onAccountClick,
+  }));
+}
+
+/**
+ * @param {HTMLElement} container
+ * @param {object} ctx - STATE + helpers from app.js
+ * @param {object} [callbacks]
+ */
+export async function renderHomePage(container, ctx, callbacks = {}) {
+  if (!container) return;
+
+  const { formatIDR, formatCompactIDR } = ctx.helpers;
+
+  try {
+    const { loadFinancialTargets } = await import('../services/financial-targets.js');
+    await loadFinancialTargets();
+  } catch (e) {
+    console.warn('[home] load targets', e);
+  }
+
+  const data = buildHomePageData(ctx);
+  const masked = data.saldoMasked;
+  const layoutV2 = useHomeLayoutV2(ctx.settings);
+  const state = ctx.state || window.STATE || {};
+
+  runHomeEngagementHooks().catch((e) => console.warn('[home] engagement', e));
+
+  container.innerHTML = '';
+  container.className = layoutV2 ? 'home-page home-page--v2' : 'home-page';
+
+  if (layoutV2 && isSimpleHomeMode(state)) {
+    container.className = 'home-page home-page--simple';
+    const { renderSimpleHomeView } = await import('../components/simple-home-view.js');
+    container.appendChild(renderSimpleHomeView(ctx, {
+      onAddTransaction: () => callbacks.onQuickAction?.('add-transaction'),
+      onCompleteData: () => callbacks.onCompleteData?.(),
+      onExpand: async () => {
+        await saveHomeViewMode('full');
+        if (typeof window.rerenderHomePage === 'function') window.rerenderHomePage();
+      },
+      onSwitchFull: async () => {
+        await saveHomeViewMode('full');
+        if (typeof window.rerenderHomePage === 'function') window.rerenderHomePage();
+      },
+    }));
+    return;
+  }
+
+  if (layoutV2) {
+    await renderV2Home(container, data, ctx, callbacks, formatIDR, formatCompactIDR, masked);
+  } else {
+    try {
+      const { buildDailySituationHero } = await import('../components/daily-situation-hero.js');
+      const hero = await buildDailySituationHero(
+        { ...ctx, state: ctx.state || window.STATE },
+        {
+          onCompleteData: callbacks.onCompleteData,
+          onViewAdvisor: callbacks.onViewAdvisor,
+          onViewBudget: callbacks.onViewBudget,
+        },
+      );
+      if (hero) container.appendChild(hero);
+    } catch (e) {
+      console.warn('[home] daily situation hero', e);
+    }
+    renderLegacyHome(container, data, ctx, callbacks, formatIDR, formatCompactIDR, masked);
+  }
 }
 
 /**

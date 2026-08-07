@@ -108,14 +108,14 @@ export const TUTORIAL_STRUCTURE = [
     id: 'budgeting',
     title: 'Budgeting',
     icon: 'target',
-    description: '5 pilar budgeting: Planning, Priority, Realisasi, Evaluasi, Rekomendasi',
+    description: 'Rencana, prioritas, pantau pemakaian, evaluasi, dan saran',
     articles: [
       {
         id: 'budgeting/budget-overview',
         title: 'Mengenal Budget Monefyi',
         steps: [
-          { text: '5 pilar: Planning, Priority, Realisasi, Evaluasi, Rekomendasi' },
-          { text: '4 level prioritas: Harus, Penting, Mau, Simpan' },
+          { text: 'Alur: rencana → prioritas → pantau pemakaian → evaluasi → saran' },
+          { text: '4 level: Tagihan & Kewajiban, Kebutuhan Hidup, Pengeluaran Pribadi, Tabungan & Masa Depan' },
           { text: 'Budget otomatis terhubung dengan transaksi' },
           { text: 'Real-time tracking: sisa budget per hari' },
         ],
@@ -125,7 +125,7 @@ export const TUTORIAL_STRUCTURE = [
         title: 'Buat Budget Baru',
         steps: [
           { text: 'Tab Budget → Klik "Tambah Budget"' },
-          { text: 'Pilih prioritas (Harus/Penting/Mau/Simpan)' },
+          { text: 'Pilih prioritas (Tagihan / Kebutuhan / Pribadi / Tabungan)' },
           { text: 'Isi nama kategori' },
           { text: 'Tambah item detail: nama, qty, harga, tanggal target' },
           { text: 'Atur auto-link keywords agar transaksi otomatis masuk' },
@@ -146,21 +146,21 @@ export const TUTORIAL_STRUCTURE = [
       },
       {
         id: 'budgeting/priority-system',
-        title: 'Sistem Prioritas (Harus/Penting/Mau/Simpan)',
+        title: 'Sistem Prioritas Budget',
         steps: [
-          { text: 'HARUS: tidak bisa ditunda (listrik, cicilan)' },
-          { text: 'PENTING: kebutuhan pokok (makan, transport)' },
-          { text: 'MAU: bisa ditunda (hiburan, jajan)' },
-          { text: 'SIMPAN: tabungan & investasi' },
-          { text: 'Ideal: Harus+Penting 60-75%, Mau 10-20%, Simpan 15-30%' },
+          { text: 'Tagihan & Kewajiban: tidak bisa ditunda (listrik, cicilan)' },
+          { text: 'Kebutuhan Hidup: kebutuhan pokok (makan, transport)' },
+          { text: 'Pengeluaran Pribadi: bisa ditunda (hiburan, jajan)' },
+          { text: 'Tabungan & Masa Depan: tabungan & investasi' },
+          { text: 'Ideal: tagihan+kebutuhan 60-75%, pribadi 10-20%, tabungan 15-30%' },
         ],
       },
       {
         id: 'budgeting/budget-tracking',
-        title: 'Tracking Realisasi Budget',
+        title: 'Pantau Pemakaian Budget',
         steps: [
           { text: 'Setiap transaksi otomatis masuk ke budget via auto-link' },
-          { text: 'Progress bar menunjukkan % terpakai real-time' },
+          { text: 'Progress bar menunjukkan berapa % rencana yang sudah dipakai' },
           { text: 'Sisa budget per hari dihitung otomatis' },
           { text: 'Warning saat mendekati limit (75%, 90%, 100%)' },
           { text: 'Notifikasi push jika over budget' },
@@ -171,7 +171,7 @@ export const TUTORIAL_STRUCTURE = [
         title: 'Evaluasi Bulanan',
         steps: [
           { text: 'Klik "Evaluasi Bulan" di halaman Budget' },
-          { text: 'Health score: 0-100 berdasarkan realisasi vs plan' },
+          { text: 'Health score: 0-100 berdasarkan pemakaian vs rencana' },
           { text: 'Breakdown per prioritas' },
           { text: 'Perbandingan vs bulan lalu' },
           { text: 'Action plan dari Monevisor' },
@@ -189,9 +189,9 @@ export const TUTORIAL_STRUCTURE = [
         id: 'monevisor/monevisor-overview',
         title: 'Apa itu Monevisor?',
         steps: [
-          { text: 'Monevisor = financial coach pribadi berbasis AI' },
+          { text: 'Monevisor = teman keuangan yang kasih saran konkret' },
           { text: 'Menganalisis data transaksi & budget kamu' },
-          { text: 'Memberikan diagnosa, benchmark, action plan' },
+          { text: 'Kasih kondisi, risiko, langkah, dan dampak — bukan laporan panjang' },
           { text: 'Bisa ditanya lewat chat' },
         ],
       },
@@ -200,7 +200,7 @@ export const TUTORIAL_STRUCTURE = [
         title: 'Laporan Keuangan',
         steps: [
           { text: 'Tab Advisor → lihat laporan otomatis' },
-          { text: 'Metrics: Income, Expense, Net, Saving Rate' },
+          { text: 'Ringkasan: pemasukan, pengeluaran, selisih, % tabungan' },
           { text: 'Diagnosa: Cash Flow, Tabungan, Budget, Kategori' },
           { text: 'Benchmark: posisi kamu vs standar keuangan' },
           { text: 'Proyeksi: jika pola berlanjut, ini yang terjadi' },

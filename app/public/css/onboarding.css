@@ -143,6 +143,192 @@
   to { transform: translateY(110vh) rotate(360deg); opacity: 0.2; }
 }
 
+/* Onboarding v2 */
+#onboardingWizardV2Host {
+  position: fixed;
+  inset: 0;
+  z-index: 121;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+}
+#onboardingWizardV2Host.is-open { display: flex; }
+
+.onboarding-wizard--v2 { padding-bottom: 32px; }
+
+.onboarding-wizard__step-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mf-primary);
+  margin: 0 0 8px;
+  font-weight: 700;
+}
+
+.onboarding-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.onboarding-chip {
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #0f1620;
+  color: #e2e8f0;
+  font-size: 13px;
+  cursor: pointer;
+  line-height: 1.35;
+}
+.onboarding-chip.is-selected {
+  border-color: rgba(16, 185, 129, 0.55);
+  background: rgba(16, 185, 129, 0.12);
+  color: #a7f3d0;
+}
+
+.onboarding-field--inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #cbd5e1;
+}
+.onboarding-field--inline input { width: auto; }
+.onboarding-field.is-disabled { opacity: 0.45; pointer-events: none; }
+
+.onboarding-bill-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.onboarding-bill-row {
+  display: grid;
+  grid-template-columns: 1fr 100px 32px;
+  gap: 6px;
+  align-items: center;
+}
+.onboarding-bill-row input {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #0f1620;
+  color: #fff;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+.onboarding-bill-remove {
+  border: none;
+  background: rgba(244, 63, 94, 0.15);
+  color: #fca5a5;
+  border-radius: 8px;
+  height: 32px;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+}
+.onboarding-btn--block { width: 100%; flex: none; margin-bottom: 8px; }
+
+.onboarding-radio-row { display: flex; gap: 16px; margin-bottom: 14px; }
+.onboarding-radio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #e2e8f0;
+  cursor: pointer;
+}
+.onboarding-debt-fields.hidden { display: none; }
+
+.onboarding-plan-preview {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  max-height: 340px;
+  overflow: auto;
+}
+.onboarding-plan-preview li {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 13px;
+  color: #cbd5e1;
+}
+.onboarding-plan-preview__day {
+  font-weight: 800;
+  color: var(--mf-primary);
+  font-size: 12px;
+}
+.onboarding-plan-preview__title { line-height: 1.4; }
+
+/* First week plan card (beranda) */
+.first-week-plan-card {
+  margin: 12px 0;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  background: rgba(16, 185, 129, 0.06);
+}
+.first-week-plan-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.first-week-plan-card__title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #ecfdf5;
+  margin: 0;
+}
+.first-week-plan-card__progress {
+  font-size: 11px;
+  color: #6ee7b7;
+  font-weight: 700;
+}
+.first-week-plan-card__task {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+.first-week-plan-card__task.is-done { opacity: 0.65; }
+.first-week-plan-card__check {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 2px solid rgba(16, 185, 129, 0.5);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #10b981;
+}
+.first-week-plan-card__task.is-done .first-week-plan-card__check {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: #10b981;
+}
+.first-week-plan-card__task-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin: 0 0 2px;
+}
+.first-week-plan-card__task-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  margin: 0;
+}
+
 /* Upgrade sheet */
 #upgradeSheetHost {
   position: fixed;
@@ -258,4 +444,78 @@
   font-size: 10px;
   color: #fbbf24;
   margin-left: 4px;
+}
+
+/* Transaction impact sheet (TASK 2.1) */
+#txImpactSheetHost {
+  position: fixed;
+  inset: 0;
+  z-index: 118;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+#txImpactSheetHost.is-visible {
+  pointer-events: auto;
+  opacity: 1;
+}
+.tx-impact-sheet {
+  width: min(420px, calc(100% - 24px));
+  margin-bottom: max(72px, calc(env(safe-area-inset-bottom) + 64px));
+  background: var(--mf-sheet, #131a24);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 14px 16px 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  position: relative;
+  transform: translateY(12px);
+  transition: transform 0.25s ease;
+}
+#txImpactSheetHost.is-visible .tx-impact-sheet {
+  transform: translateY(0);
+}
+.tx-impact-sheet-host--income .tx-impact-sheet {
+  border-color: rgba(16, 185, 129, 0.35);
+}
+.tx-impact-sheet-host--warn .tx-impact-sheet {
+  border-color: rgba(245, 158, 11, 0.4);
+}
+.tx-impact-sheet__dismiss {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.tx-impact-sheet__title {
+  font-size: 14px;
+  font-weight: 800;
+  margin: 0 0 10px;
+  padding-right: 24px;
+  color: #f1f5f9;
+}
+.tx-impact-sheet__line {
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 0 0 6px;
+  color: #cbd5e1;
+}
+.tx-impact-sheet__line--sub {
+  font-size: 12px;
+  color: #94a3b8;
+}
+.tx-impact-sheet__line--muted {
+  color: #94a3b8;
+}
+.tx-impact-sheet__line--warn {
+  color: #fbbf24;
+  font-weight: 600;
 }
