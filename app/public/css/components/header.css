@@ -1,0 +1,48 @@
+/**
+ * Header / topbar — theme-aware
+ */
+#appTopbar,
+.desktop-topbar,
+.page-header-bar {
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--header-border);
+  color: var(--header-text);
+}
+
+#appTopbar h1,
+#appTopbar h2,
+.page-header-bar__title,
+.desktop-topbar__title {
+  color: var(--text-primary);
+}
+
+#appTopbar .text-muted,
+.page-header-bar__subtitle {
+  color: var(--text-secondary);
+}
+
+#globalSearchInput,
+.header__search,
+.topbar-search input {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--input-text);
+}
+
+#globalSearchInput::placeholder,
+.header__search::placeholder,
+.topbar-search input::placeholder {
+  color: var(--input-placeholder);
+}
+
+#globalSearchInput:hover,
+.header__search:hover {
+  border-color: var(--input-border-hover);
+}
+
+#globalSearchInput:focus,
+.header__search:focus {
+  border-color: var(--input-border-focus);
+  box-shadow: var(--shadow-focus);
+  outline: none;
+}

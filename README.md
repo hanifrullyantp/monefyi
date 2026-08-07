@@ -41,7 +41,21 @@ Detail build & Vercel: [`docs/DEPLOY_STRUCTURE.md`](docs/DEPLOY_STRUCTURE.md).
 | `app/js/config.js` | **Sesuaikan di sini:** URL Supabase, anon key, checkout, admin, `basePath` |
 | `app/js/app.js` | Logika aplikasi |
 | `app/css/app.css` | Gaya antarmuka |
-| `scripts/` | Utilitas one-off (`refactor.cjs`, template print) — tidak wajib di production |
+| `shared/tokens.css` | Design tokens (warna, spacing, radius) — SSOT |
+| `app/js/theme-manager.js` | Theme switcher (`MonefyiTheme`) |
+
+## Design System
+
+Monefyi memakai **design token system** untuk konsistensi UI light/dark.
+
+- Token: [`shared/tokens.css`](shared/tokens.css) → disalin ke `app/css/` via `npm run sync:brand`
+- Panduan: [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md)
+- Audit: [`docs/AUDIT_REPORT.md`](docs/AUDIT_REPORT.md)
+
+**Aturan:** zero hardcoded colors di komponen baru — pakai `var(--text-primary)`, `var(--card-bg)`, dll.
+
+Toggle theme: Settings → Mode terang, atau `MonefyiTheme.setTheme('light'|'dark'|'auto')` di console.
+
 
 ## Menjalankan lokal
 

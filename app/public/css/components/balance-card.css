@@ -1,0 +1,76 @@
+/**
+ * Balance / saldo cards — theme-aware
+ */
+.sidebar-saldo-card,
+.hero-saldo-card,
+.saldo-bar-desktop {
+  background: linear-gradient(
+    135deg,
+    var(--finance-income-bg) 0%,
+    var(--card-bg) 100%
+  );
+  border: 1px solid var(--status-success-border);
+  box-shadow: var(--card-shadow);
+  color: var(--text-primary);
+}
+
+.sidebar-saldo-card.sidebar-glass,
+.sidebar-saldo-card.saldo-card-glow,
+.hero-saldo-card.sidebar-glass {
+  background: linear-gradient(
+    135deg,
+    var(--finance-income-bg) 0%,
+    var(--card-bg) 100%
+  ) !important;
+}
+
+.sidebar-saldo-card__label-row,
+.hero-saldo-card__label,
+.saldo-bar-label {
+  color: var(--text-secondary);
+}
+
+.sidebar-saldo-card__amount,
+.sidebar-saldo-card__amount.saldo-amount,
+.hero-saldo-card__amount.saldo-amount,
+#kpiSaldoDesktop.saldo-amount,
+.saldo-bar-amount {
+  color: var(--text-primary);
+}
+
+.sidebar-saldo-filter {
+  background: var(--interactive-secondary);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+}
+
+.sidebar-saldo-filter:hover {
+  border-color: var(--border-focus);
+  color: var(--text-brand);
+}
+
+.saldo-bar-eye {
+  background: var(--interactive-secondary);
+  color: var(--text-tertiary);
+}
+
+.saldo-bar-eye:hover {
+  background: var(--interactive-secondary-hover);
+  color: var(--text-primary);
+}
+
+.hero-saldo-stat__value {
+  color: var(--text-primary);
+}
+
+.hero-saldo-stat__label {
+  color: var(--text-tertiary);
+}
+
+.hero-saldo-stat--income .hero-saldo-stat__value {
+  color: var(--finance-income);
+}
+
+.hero-saldo-stat--expense .hero-saldo-stat__value {
+  color: var(--finance-expense);
+}

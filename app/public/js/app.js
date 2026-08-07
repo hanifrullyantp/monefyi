@@ -1138,9 +1138,15 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
     }
 
     function applyTheme(){
-      document.body.classList.toggle('theme-light', STATE.settings.theme === 'light');
-      const meta = document.getElementById('metaThemeColor');
-      if (meta) meta.content = STATE.settings.theme === 'light' ? '#FFFFFF' : '#0F1117';
+      const theme = STATE.settings.theme === 'light' ? 'light' : 'dark';
+      if (window.MonefyiTheme) {
+        MonefyiTheme.setTheme(theme);
+      } else {
+        document.body.classList.toggle('theme-light', STATE.settings.theme === 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+        const meta = document.getElementById('metaThemeColor');
+        if (meta) meta.content = STATE.settings.theme === 'light' ? '#FFFFFF' : '#0F1117';
+      }
       destroyCharts();
     }
 
@@ -3631,11 +3637,14 @@ async function upsertTransaction_legacy_local(tx) {
     }
 
     function themeChartColors(){
+      if (window.MonefyiTheme) return MonefyiTheme.getChartColors();
       const light = document.body.classList.contains('theme-light');
       return {
         tick: light ? '#475569' : '#94a3b8',
         legend: light ? '#0f172a' : '#cbd5e1',
-        grid: light ? 'rgba(15,23,42,.10)' : 'rgba(255,255,255,.06)'
+        grid: light ? 'rgba(15,23,42,.10)' : 'rgba(255,255,255,.06)',
+        income: light ? '#059669' : '#34D399',
+        expense: light ? '#DC2626' : '#F87171',
       };
     }
 

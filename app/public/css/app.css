@@ -1,5 +1,11 @@
 @import './brand-tokens.css';
-    :root { color-scheme: light; }
+@import './components/sidebar.css';
+@import './components/balance-card.css';
+@import './components/account-card.css';
+@import './components/header.css';
+@import './components/buttons.css';
+    :root { color-scheme: dark; }
+    body.theme-light { color-scheme: light; }
     .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
     /* Exact status-bar inset only — no extra rem gap under the clock */
     .safe-top { padding-top: env(safe-area-inset-top, 0px); }
@@ -18,48 +24,25 @@
 
     /* App theme — aliases from shared/brand-tokens.css */
     body {
-      --app-card-elevated: rgba(20, 28, 40, 0.88);
-      --app-card-mid: rgba(15, 22, 32, 0.52);
-      --app-card-fade: rgba(11, 17, 24, 0);
+      --app-card-elevated: color-mix(in srgb, var(--card-bg) 88%, transparent);
+      --app-card-mid: color-mix(in srgb, var(--card-bg) 52%, transparent);
+      --app-card-fade: color-mix(in srgb, var(--card-bg) 0%, transparent);
       --grad-card-surface: linear-gradient(180deg, var(--app-card-elevated) 0%, var(--app-card-mid) 58%, var(--app-card-fade) 100%);
-      --grad-card-surface-soft: linear-gradient(180deg, rgba(18, 26, 38, 0.75) 0%, rgba(11, 17, 24, 0) 100%);
-      --grad-hero-surface: linear-gradient(165deg, rgba(21, 34, 56, 0.92) 0%, rgba(14, 22, 34, 0.58) 42%, rgba(11, 17, 24, 0) 100%);
+      --grad-card-surface-soft: linear-gradient(180deg, color-mix(in srgb, var(--card-bg) 75%, transparent) 0%, transparent 100%);
+      --grad-hero-surface: linear-gradient(165deg, color-mix(in srgb, var(--finance-income-bg) 95%, transparent) 0%, color-mix(in srgb, var(--bg-secondary) 50%, transparent) 42%, transparent 100%);
       --radius-card: var(--mf-radius-card);
       --radius-btn: var(--mf-radius-btn);
       --radius-pill: var(--mf-radius-pill);
 
       background-color: var(--app-bg);
       background-image:
-        linear-gradient(180deg, var(--mf-bg) 0%, #0D1520 38%, var(--mf-bg) 100%),
-        radial-gradient(800px circle at 15% -5%, rgba(16,185,129,.06), transparent 50%),
-        radial-gradient(600px circle at 95% 5%, rgba(14,165,233,.05), transparent 45%);
+        linear-gradient(180deg, var(--bg-primary) 0%, color-mix(in srgb, var(--bg-primary) 92%, var(--interactive-primary)) 38%, var(--bg-primary) 100%),
+        radial-gradient(800px circle at 15% -5%, color-mix(in srgb, var(--interactive-primary) 6%, transparent), transparent 50%),
+        radial-gradient(600px circle at 95% 5%, color-mix(in srgb, var(--status-info) 5%, transparent), transparent 45%);
       background-attachment: fixed;
       color: var(--app-text);
       font-family: var(--font-sans);
       letter-spacing: -0.01em;
-    }
-    body.theme-light {
-      --app-bg: #FFFFFF;
-      --app-card: #FFFFFF;
-      --app-surface: #F8FAFC;
-      --app-surface2: rgba(15,23,42,.04);
-      --app-text: #0F172A;
-      --app-muted: #64748B;
-      --app-muted2: #94A3B8;
-      --app-border: rgba(15,23,42,.10);
-      --app-divider: rgba(15,23,42,.08);
-      --app-backdrop: rgba(248,250,252,.92);
-      --app-sheet: #FFFFFF;
-      --app-card-elevated: rgba(255, 255, 255, 0.95);
-      --app-card-mid: rgba(248, 250, 252, 0.7);
-      --app-card-fade: rgba(255, 255, 255, 0);
-      --grad-card-surface: linear-gradient(180deg, var(--app-card-elevated) 0%, var(--app-card-mid) 60%, var(--app-card-fade) 100%);
-      --grad-card-surface-soft: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(248,250,252,0) 100%);
-      --grad-hero-surface: linear-gradient(165deg, rgba(240,253,250,0.95) 0%, rgba(248,250,252,0.5) 50%, rgba(255,255,255,0) 100%);
-      --accent-danger: #EF4444;
-      --brand-green-soft: rgba(16,185,129,.12);
-      --brand-border: rgba(16,185,129,.25);
-      --brand-shadow: 0 8px 24px rgba(16,185,129,.10);
     }
 html, body {
     max-width: 100%;
@@ -322,17 +305,8 @@ html, body {
     .sidebar-saldo-card {
       padding: 14px 14px 12px;
       border-radius: 16px;
-      background:
-        linear-gradient(145deg, rgba(16, 185, 129, 0.18) 0%, var(--mf-bg-elevated, #131A24) 48%, var(--mf-bg, #0B1118) 100%);
-      border: 1px solid var(--mf-primary-border, rgba(16, 185, 129, 0.28));
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
       overflow: hidden;
       position: relative;
-    }
-    .sidebar-saldo-card.sidebar-glass,
-    .sidebar-saldo-card.saldo-card-glow {
-      background:
-        linear-gradient(145deg, rgba(16, 185, 129, 0.18) 0%, var(--mf-bg-elevated, #131A24) 48%, var(--mf-bg, #0B1118) 100%) !important;
     }
     .sidebar-saldo-card::before {
       content: '';
@@ -490,7 +464,7 @@ html, body {
     .hero-saldo-card__amount.saldo-amount {
       font-size: clamp(36px, 9vw, 42px);
       font-weight: 800;
-      color: #ffffff;
+      color: var(--text-primary);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
