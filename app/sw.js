@@ -1,5 +1,5 @@
 // Offline-capable service worker — v7 budget killer feature.
-const CACHE_VERSION = 'v51-upgrade-complete';
+const CACHE_VERSION = 'v52-light-mode-fix';
 const STATIC_CACHE = `monefyi-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `monefyi-runtime-${CACHE_VERSION}`;
 const IMAGES_CACHE = `monefyi-images-${CACHE_VERSION}`;
@@ -29,8 +29,14 @@ const shellPaths = [
   './css/admin-page.css',
   './css/settings-page.css',
   './css/neraca.css',
+  './css/monthly-financial.css',
+  './css/theme-overrides.css',
+  './css/components/sheets-theme.css',
   './js/app.js',
   './js/config.js',
+  './js/theme-manager.js',
+  './js/theme-audit.js',
+  './js/theme-debug.js',
   './js/monefyi-ui.js',
   './js/i18n.js',
   './js/utils/module-loader.js',

@@ -856,3 +856,26 @@ body.theme-light #kpiSection > .dashboard-kpi-card {
   color: var(--text-tertiary) !important;
 }
 
+/* Tailwind text-white on light surfaces — sidebar, dashboard headings */
+[data-theme="light"] #appSidebar .text-white,
+body.theme-light #appSidebar .text-white,
+[data-theme="light"] #appSidebar .brand-title,
+body.theme-light #appSidebar .brand-title,
+[data-theme="light"] #appSidebar .sidebar-item__label,
+body.theme-light #appSidebar .sidebar-item__label,
+[data-theme="light"] #appSidebar .sidebar-item,
+body.theme-light #appSidebar .sidebar-item {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] #appSidebar .sidebar-item--secondary .sidebar-item__label,
+body.theme-light #appSidebar .sidebar-item--secondary .sidebar-item__label {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="light"] #accountsBalancesSection .text-white,
+body.theme-light #accountsBalancesSection .text-white,
+[data-theme="light"] #dashboardExpanded .text-white:not(button):not(a),
+body.theme-light #dashboardExpanded .text-white:not(button):not(a) {
+  color: var(--text-primary) !important;
+}
