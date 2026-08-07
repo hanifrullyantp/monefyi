@@ -169,6 +169,13 @@ export async function runScheduledChecks(opts = {}) {
     if (!ignoreSchedule) markChecked('weekly_recap');
   }
 
+  if (ignoreSchedule || (dayOfMonth >= 28 && hour === 18 && !checkedToday('monthly_closing'))) {
+    if (ignoreSchedule || isCategoryEnabled('monthlyReport')) {
+      await sendMonthlyClosingReminder(transactions, now);
+    }
+    if (!ignoreSchedule) markChecked('monthly_closing');
+  }
+
   if (ignoreSchedule || (dayOfMonth === 1 && hour === 9 && !checkedToday('monthly_report'))) {
     if (ignoreSchedule || isCategoryEnabled('monthlyReport')) {
       await sendMonthlyReport(transactions, income, now);
@@ -334,6 +341,25 @@ async function sendWeeklyRecap(transactions, now) {
   });
 }
 
+async function sendMonthlyClosingReminder(transactions, now) {
+  const period = currentMonthKey(now);
+  const monthName = now.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+  const monthTx = transactions.filter((t) => String(t.date || '').startsWith(period));
+  const income = monthTx.filter((t) => t.type === 'income').reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  const expense = monthTx.filter((t) => t.type === 'expense').reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  const net = income - expense;
+
+  await showNotification({
+    title: `Siap tutup buku ${monthName}?`,
+    body: `Net bulan ini ${net >= 0 ? '+' : ''}${fmtShort(net)}. Alokasikan surplus/defisit sebelum bulan baru.`,
+    tag: 'monthly_closing_reminder',
+    categoryKey: 'monthlyReport',
+    type: 'budget_tip',
+    iconEmoji: '📒',
+    data: { url: '/app/#reports', action: 'monthly_closing', period },
+  });
+}
+
 async function sendMonthlyReport(transactions, _income, now) {
   const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const prevPeriod = currentMonthKey(prevMonth);
@@ -345,14 +371,14 @@ async function sendMonthlyReport(transactions, _income, now) {
   const monthName = prevMonth.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
 
   await showNotification({
-    title: `Laporan ${monthName}`,
-    body: `Income ${fmtShort(prevIncome)}, Expense ${fmtShort(prevExpense)}, Tabungan ${prevSaving >= 0 ? '+' : ''}${fmtShort(prevSaving)} (${prevRate}%)`,
+    title: `Tutup buku ${monthName}`,
+    body: `Income ${fmtShort(prevIncome)}, Expense ${fmtShort(prevExpense)}, Net ${prevSaving >= 0 ? '+' : ''}${fmtShort(prevSaving)} (${prevRate}%). Tap untuk alokasi surplus/defisit.`,
     tag: 'monthly_report',
     categoryKey: 'monthlyReport',
     type: 'ai_recommendation',
     iconEmoji: '📈',
     requireInteraction: true,
-    data: { url: '/app/#advisor' },
+    data: { url: '/app/#reports', action: 'monthly_closing', period: prevPeriod },
   });
 }
 

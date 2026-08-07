@@ -4,6 +4,7 @@
  */
 
 import { Icon } from './icons.js';
+import { LABELS } from '../constants/language.js';
 import {
   deleteAsset,
   deleteDebt,
@@ -77,7 +78,7 @@ export async function loadCategoryItems(key, sheet, endISO) {
     return [
       { id: 'inc', name: 'Total Pendapatan', amount: pnl.income || 0, readonly: true, kind: 'pnl' },
       { id: 'exp', name: 'Total Beban', amount: -(pnl.expense || 0), readonly: true, kind: 'pnl' },
-      { id: 'net', name: 'Laba Ditahan (neto)', amount: pnl.net || 0, readonly: true, kind: 'pnl' },
+      { id: 'net', name: LABELS.NERACA.RETAINED_EARNINGS, amount: pnl.net || 0, readonly: true, kind: 'pnl' },
     ];
   }
 

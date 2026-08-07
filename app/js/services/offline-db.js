@@ -58,6 +58,13 @@ export async function initOfflineDB() {
           suspense_log: 'id, user_id, as_of, created_at',
           neraca_meta: 'key',
         });
+
+        this.version(6).stores({
+          transactions:
+            'id, server_id, user_id, date, type, category, account, period, _sync_status, _local_modified_at',
+          monthly_periods: 'id, server_id, user_id, period, [user_id+period], status, updated_at, _sync_status',
+          account_opening_balances: 'id, server_id, user_id, account_name, as_of_date, updated_at, _sync_status',
+        });
       }
     }
 

@@ -14,11 +14,39 @@ import {
   getItemTotalAmount,
   hasActiveLineItems,
   syncItemAmountFromLines,
+  CATEGORY_TYPES,
+  inferCategoryType,
 } from '../services/budget-model.js';
 import { Icon } from './icons.js';
 import { filterBudgets, getFilter, onFilterChange } from '../services/global-filter.js';
+import { dedupeTransactions, filterMonthExpenses, sumMonthExpenses } from '../utils/transaction-utils.js';
 
 const SORT_KEY = 'budget_sort';
+
+/**
+ * @param {object[]} rows
+ * @param {object[]} transactions
+ * @param {string} month
+ */
+function countOverBudgetRows(rows, transactions, month) {
+  return rows.filter((b) => {
+    if (inferCategoryType(b) === CATEGORY_TYPES.FIXED_BILL) return false;
+    return calculateProgress(b, transactions, month).status === 'over';
+  }).length;
+}
+
+/**
+ * @param {object[]} rows
+ * @param {object[]} transactions
+ * @param {string} month
+ */
+function countAttentionRows(rows, transactions, month) {
+  return rows.filter((b) => {
+    if (inferCategoryType(b) === CATEGORY_TYPES.FIXED_BILL) return false;
+    const s = calculateProgress(b, transactions, month).status;
+    return s === 'critical' || s === 'warning';
+  }).length;
+}
 
 const SORT_LABELS = {
   urgent: 'Urgent',
@@ -563,7 +591,7 @@ function resolveBudgetMonth() {
 function resolveMonthTransactions(month) {
   const mk = month || resolveBudgetMonth();
   const allTx = window.STATE?.transactions || [];
-  return allTx.filter((t) => String(t.date || '').slice(0, 10).startsWith(mk));
+  return filterMonthExpenses(allTx, mk);
 }
 
 /**
@@ -601,8 +629,12 @@ function setHeroSnapshot(snap) {
  */
 function resolveHeroTransactions(month) {
   const mk = month || resolveBudgetMonth();
-  if (_heroSnapshot?.transactions?.length) return _heroSnapshot.transactions;
-  if (_pageCtx?.transactions?.length) return _pageCtx.transactions;
+  if (_heroSnapshot?.month === mk && _heroSnapshot?.transactions?.length) {
+    return dedupeTransactions(_heroSnapshot.transactions);
+  }
+  if (_pageCtx?.month === mk && _pageCtx?.transactions?.length) {
+    return dedupeTransactions(_pageCtx.transactions);
+  }
   return resolveMonthTransactions(mk);
 }
 
@@ -621,9 +653,13 @@ function patchHeroAmounts(container, totalSpent, totalBudget) {
   const fillEl = hero.querySelector('.bsh-progress-fill');
   if (spentEl && Number.isFinite(totalSpent)) spentEl.textContent = `Rp ${formatIDR(totalSpent)}`;
   if (totalEl && Number.isFinite(totalBudget)) totalEl.textContent = `Rp ${formatIDR(totalBudget)}`;
-  const pct = totalBudget > 0 ? Math.min(100, Math.round((totalSpent / totalBudget) * 100)) : 0;
-  if (pctEl) pctEl.textContent = `${pct}% realisasi`;
-  if (fillEl) fillEl.style.width = `${pct}%`;
+  const pctRaw = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
+  const pctDisplay = Math.round(pctRaw);
+  if (pctEl) pctEl.textContent = `${pctDisplay}% realisasi`;
+  if (fillEl) {
+    fillEl.style.width = `${Math.min(100, pctRaw)}%`;
+    fillEl.classList.toggle('fill-over', pctRaw > 100);
+  }
 }
 
 function beginEditGesture() {
@@ -672,9 +708,7 @@ function syncLiveDashboard(container, income) {
   const month = _heroSnapshot?.month || _pageCtx?.month || resolveBudgetMonth();
   const transactions = resolveHeroTransactions(month);
   const totalBudget = rows.reduce((s, b) => s + Math.abs(Number(b.amount || 0)), 0);
-  const totalSpent = transactions
-    .filter((t) => String(t.type || 'expense').toLowerCase() === 'expense')
-    .reduce((s, t) => s + Math.abs(Number(t.amount || 0)), 0);
+  const totalSpent = sumMonthExpenses(transactions, month);
   patchHeroAmounts(container, totalSpent, totalBudget);
   scheduleHeroRefresh(container, liveIncome);
 }
@@ -696,17 +730,12 @@ function scheduleHeroRefresh(container, income) {
     const transactions = resolveHeroTransactions(month);
     const liveIncome = Number(window.STATE?.budgetDraft?.income || income || _heroSnapshot?.income || _pageCtx?.income || 0);
     const totalBudget = rows.reduce((s, b) => s + Math.abs(Number(b.amount || 0)), 0);
-    const totalSpent = transactions
-      .filter((t) => String(t.type || 'expense').toLowerCase() === 'expense')
-      .reduce((s, t) => s + Math.abs(Number(t.amount || 0)), 0);
+    const totalSpent = sumMonthExpenses(transactions, month);
     patchHeroAmounts(container, totalSpent, totalBudget);
     try {
       const { renderBudgetSummaryHero } = await import('./budget-summary-hero.js');
-      const overBudgetCount = rows.filter((b) => calculateProgress(b, transactions, month).status === 'over').length;
-      const criticalCount = rows.filter((b) => {
-        const s = calculateProgress(b, transactions, month).status;
-        return s === 'critical' || s === 'warning';
-      }).length;
+      const overBudgetCount = countOverBudgetRows(rows, transactions, month);
+      const criticalCount = countAttentionRows(rows, transactions, month);
       await renderBudgetSummaryHero(heroEl, {
         rows,
         transactions,
@@ -1866,10 +1895,7 @@ export async function renderBudgetPage(container, ctx) {
   const allTx = Array.isArray(window.STATE?.transactions) && window.STATE.transactions.length
     ? window.STATE.transactions
     : (ctxTransactions || []);
-  const monthTransactions = allTx.filter((t) => {
-    const d = String(t.date || '').slice(0, 10);
-    return d.startsWith(displayMonth);
-  });
+  const monthTransactions = filterMonthExpenses(allTx, displayMonth);
 
   let rows = computeHistoricalBaselines(rawRows || [], monthTransactions, displayMonth);
   rows = filterBudgets(rows);
@@ -1887,11 +1913,8 @@ export async function renderBudgetPage(container, ctx) {
   const currentSort = localStorage.getItem(SORT_KEY) || 'urgent';
   const sourcesLen = sources.length;
 
-  const overBudgetCount = rows.filter((b) => calculateProgress(b, monthTransactions, displayMonth).status === 'over').length;
-  const criticalCount = rows.filter((b) => {
-    const s = calculateProgress(b, monthTransactions, displayMonth).status;
-    return s === 'critical' || s === 'warning';
-  }).length;
+  const overBudgetCount = countOverBudgetRows(rows, monthTransactions, displayMonth);
+  const criticalCount = countAttentionRows(rows, monthTransactions, displayMonth);
 
   container.className = 'budget-page-container';
 

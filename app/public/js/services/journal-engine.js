@@ -14,6 +14,37 @@ import {
   setNeracaMeta,
 } from './neraca-store.js';
 import { applySuspense, buildBalanceSheet } from './balance-checker.js';
+import { dedupeTransactions } from '../utils/transaction-utils.js';
+
+/**
+ * @param {object} tx
+ * @returns {object}
+ */
+function getTxMeta(tx) {
+  return (tx?.meta && typeof tx.meta === 'object') ? tx.meta : {};
+}
+
+/**
+ * @param {object} tx
+ * @returns {boolean}
+ */
+export function isLoanPaymentTransaction(tx) {
+  const meta = getTxMeta(tx);
+  if (meta.expense_treatment === 'loan_payment') return true;
+  if (meta.linked_debt_id) return true;
+  const cat = String(tx.category || tx.merchant || '').toLowerCase();
+  return /cicilan|utang|kredit|hp/i.test(cat) && String(tx.type || '').toLowerCase() === 'expense';
+}
+
+/**
+ * @param {object} tx
+ * @returns {boolean}
+ */
+export function isAssetPurchaseTransaction(tx) {
+  const meta = getTxMeta(tx);
+  if (meta.is_asset_purchase || meta.expense_treatment === 'asset') return true;
+  return false;
+}
 
 /**
  * @param {object} tx
@@ -27,6 +58,7 @@ export function buildJournalLinesForTransaction(tx) {
   const account = tx.account || 'Cash';
   const type = String(tx.type || 'expense').toLowerCase();
   const memo = tx.merchant || tx.category || tx.notes || type;
+  const meta = getTxMeta(tx);
 
   if (type === 'income') {
     return [
@@ -35,6 +67,20 @@ export function buildJournalLinesForTransaction(tx) {
     ];
   }
   if (type === 'expense') {
+    if (isAssetPurchaseTransaction(tx)) {
+      const assetCode = meta.asset_account_code || 'aset_lainnya';
+      return [
+        { entry_date: date, account_code: assetCode, sub_account: memo, debit: amt, credit: 0, memo, source: 'auto' },
+        { entry_date: date, account_code: 'kas', sub_account: account, debit: 0, credit: amt, memo, source: 'auto' },
+      ];
+    }
+    if (isLoanPaymentTransaction(tx)) {
+      const debtLabel = meta.linked_debt_name || tx.category || 'Cicilan';
+      return [
+        { entry_date: date, account_code: 'hutang_lainnya', sub_account: debtLabel, debit: amt, credit: 0, memo, source: 'auto' },
+        { entry_date: date, account_code: 'kas', sub_account: account, debit: 0, credit: amt, memo, source: 'auto' },
+      ];
+    }
     return [
       { entry_date: date, account_code: 'laba_ditahan', sub_account: '', debit: amt, credit: 0, memo, source: 'auto' },
       { entry_date: date, account_code: 'kas', sub_account: account, debit: 0, credit: amt, memo, source: 'auto' },
@@ -126,16 +172,21 @@ export async function ensureNeracaInitialized(transactions) {
 /**
  * @param {string} endISO YYYY-MM-DD
  * @param {object[]} transactions
+ * @param {{ startISO?: string }} [opts]
  * @returns {{ income: number, expense: number, net: number }}
  */
-export function computePnLUpto(endISO, transactions) {
+export function computePnLUpto(endISO, transactions, opts = {}) {
   const end = new Date(endISO);
   end.setHours(23, 59, 59, 999);
+  const start = opts.startISO ? new Date(opts.startISO) : null;
+  if (start) start.setHours(0, 0, 0, 0);
+
   let income = 0;
   let expense = 0;
-  for (const tx of transactions || []) {
+  for (const tx of dedupeTransactions(transactions)) {
     const d = new Date(tx.date);
     if (d > end) continue;
+    if (start && d < start) continue;
     const amt = Math.abs(Number(tx.amount || 0));
     if (tx.type === 'income') income += amt;
     else if (tx.type === 'expense') expense += amt;
@@ -144,23 +195,31 @@ export function computePnLUpto(endISO, transactions) {
 }
 
 /**
- * Account balances up to date (same logic as app.js).
+ * Account balances up to date with optional opening balances per account.
  * @param {string} endISO
  * @param {object[]} transactions
  * @param {string[]} accounts
+ * @param {Map<string, number>|Record<string, number>} [openingMap]
  */
-export function computeCashBalancesUpto(endISO, transactions, accounts) {
+export function computeCashBalancesUpto(endISO, transactions, accounts, openingMap) {
   const end = new Date(endISO);
   end.setHours(23, 59, 59, 999);
   const balances = new Map();
-  for (const a of accounts || []) balances.set(a, 0);
 
-  for (const tx of transactions || []) {
+  const seedOpening = (name) => {
+    if (!openingMap) return 0;
+    if (openingMap instanceof Map) return Number(openingMap.get(name) || 0);
+    return Number(openingMap[name] || 0);
+  };
+
+  for (const a of accounts || []) balances.set(a, seedOpening(a));
+
+  for (const tx of dedupeTransactions(transactions)) {
     const d = new Date(tx.date);
     if (d > end) continue;
     const amt = Math.abs(Number(tx.amount || 0));
     const fromAcc = tx.account || 'Cash';
-    balances.set(fromAcc, balances.get(fromAcc) ?? 0);
+    balances.set(fromAcc, balances.get(fromAcc) ?? seedOpening(fromAcc));
 
     if (tx.type === 'income') {
       balances.set(fromAcc, (balances.get(fromAcc) || 0) + amt);
@@ -170,7 +229,7 @@ export function computeCashBalancesUpto(endISO, transactions, accounts) {
       balances.set(fromAcc, (balances.get(fromAcc) || 0) - amt);
       const toAcc = tx.meta?.transfer_to;
       if (toAcc) {
-        balances.set(toAcc, (balances.get(toAcc) ?? 0) + amt);
+        balances.set(toAcc, (balances.get(toAcc) ?? seedOpening(toAcc)) + amt);
       }
     }
   }
@@ -178,6 +237,50 @@ export function computeCashBalancesUpto(endISO, transactions, accounts) {
   return [...balances.entries()]
     .map(([account, balance]) => ({ account, balance: Number(balance || 0) }))
     .sort((a, b) => b.balance - a.balance);
+}
+
+/**
+ * Compare kas from transactions vs journal-derived totals.
+ * @param {object} opts
+ * @returns {Promise<object>}
+ */
+export async function reconcileNeracaWithTransactions(opts = {}) {
+  const endISO = opts.endISO || new Date().toISOString().slice(0, 10);
+  const transactions = opts.transactions || window.STATE?.transactions || [];
+  const accounts = opts.accounts || window.STATE?.settings?.accounts || [];
+  let openingMap = opts.openingMap;
+  if (!openingMap) {
+    try {
+      const { getOpeningBalanceMap } = await import('./account-opening-balance.js');
+      openingMap = await getOpeningBalanceMap(window.STATE?.db?.user?.id);
+    } catch {
+      openingMap = new Map();
+    }
+  }
+
+  const cashList = computeCashBalancesUpto(endISO, transactions, accounts, openingMap);
+  const kasFromTx = cashList.reduce((s, r) => s + r.balance, 0);
+  const legacyOpening = Number(await getNeracaMeta('opening_kas') || 0);
+  const kasTotal = kasFromTx + (openingMap instanceof Map && openingMap.size ? 0 : legacyOpening);
+
+  const journals = await listJournalEntries();
+  let kasFromJournal = 0;
+  for (const je of journals) {
+    if (je.account_code !== 'kas') continue;
+    const d = String(je.entry_date || '').slice(0, 10);
+    if (d > endISO) continue;
+    kasFromJournal += Number(je.debit || 0) - Number(je.credit || 0);
+  }
+
+  const diff = kasTotal - kasFromJournal;
+  return {
+    kasFromTx: kasTotal,
+    kasFromJournal,
+    diff,
+    balanced: Math.abs(diff) < 1000,
+    cashAccounts: cashList,
+    suspects: findSuspectTransactions(transactions, journals),
+  };
 }
 
 /**
@@ -189,12 +292,26 @@ export async function computeNeracaReport(opts = {}) {
   const transactions = opts.transactions || window.STATE?.transactions || [];
   const accounts = opts.accounts || window.STATE?.settings?.accounts || [];
   const applySuspenseNet = opts.applySuspenseNet !== false;
+  const periodStart = opts.periodStart || null;
+
+  let openingMap = opts.openingMap;
+  if (!openingMap) {
+    try {
+      const { getOpeningBalanceMap } = await import('./account-opening-balance.js');
+      openingMap = await getOpeningBalanceMap(window.STATE?.db?.user?.id);
+    } catch {
+      openingMap = new Map();
+    }
+  }
 
   const entities = await loadNeracaEntities();
-  const cashList = computeCashBalancesUpto(endISO, transactions, accounts);
-  const openingKas = Number(await getNeracaMeta('opening_kas') || 0) || 0;
-  const kasTotal = cashList.reduce((s, r) => s + r.balance, 0) + openingKas;
-  const pnl = computePnLUpto(endISO, transactions);
+  const cashList = computeCashBalancesUpto(endISO, transactions, accounts, openingMap);
+  const legacyOpening = Number(await getNeracaMeta('opening_kas') || 0) || 0;
+  const usePerAccountOpening = openingMap instanceof Map ? openingMap.size > 0 : Object.keys(openingMap || {}).length > 0;
+  const kasTotal = cashList.reduce((s, r) => s + r.balance, 0) + (usePerAccountOpening ? 0 : legacyOpening);
+  const pnl = periodStart
+    ? computePnLUpto(endISO, transactions, { startISO: periodStart })
+    : computePnLUpto(endISO, transactions);
 
   const sumByCat = (list, catKey, cat) =>
     (list || [])

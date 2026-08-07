@@ -1,86 +1,103 @@
 /**
- * Monefyi Brand Tokens v1 — single source of truth (landing + app).
- * Import in app/css/app.css and landing page/css/monefyi-brand.css
+ * Monefyi Brand Tokens — maps legacy --mf-* / --app-* to semantic design tokens.
  */
+@import './tokens.css';
 
-:root {
-  /* Surfaces */
-  --mf-bg: #0B1118;
-  --mf-bg-elevated: #131A24;
-  --mf-surface: #161D28;
-  --mf-surface-2: rgba(255, 255, 255, 0.05);
-  --mf-nav: #0E1520;
-  --mf-backdrop: rgba(11, 17, 24, 0.92);
-  --mf-sheet: #131A24;
+:root,
+[data-theme="dark"] {
+  --mf-bg: var(--bg-primary);
+  --mf-bg-elevated: var(--bg-secondary);
+  --mf-surface: var(--bg-tertiary);
+  --mf-surface-2: color-mix(in srgb, var(--text-primary) 5%, transparent);
+  --mf-nav: var(--sidebar-bg);
+  --mf-backdrop: var(--bg-overlay);
+  --mf-sheet: var(--bg-elevated);
 
-  /* Text */
-  --mf-text: #F1F5F9;
-  --mf-muted: #8B9CB3;
-  --mf-muted-2: #64748B;
+  --mf-text: var(--text-primary);
+  --mf-muted: var(--text-secondary);
+  --mf-muted-2: var(--text-tertiary);
 
-  /* Borders */
-  --mf-border: rgba(255, 255, 255, 0.08);
-  --mf-divider: rgba(255, 255, 255, 0.08);
+  --mf-border: color-mix(in srgb, var(--text-primary) 8%, transparent);
+  --mf-divider: var(--border-subtle);
 
-  /* Brand primary (emerald) */
-  --mf-primary: #10B981;
-  --mf-primary-hover: #059669;
-  --mf-primary-light: #34D399;
-  --mf-primary-soft: rgba(16, 185, 129, 0.12);
-  --mf-primary-border: rgba(16, 185, 129, 0.24);
-  --mf-primary-glow: rgba(16, 185, 129, 0.35);
-  --mf-primary-shadow: 0 8px 32px rgba(16, 185, 129, 0.1);
+  --mf-primary: var(--interactive-primary);
+  --mf-primary-hover: var(--interactive-primary-hover);
+  --mf-primary-light: var(--color-brand-400);
+  --mf-primary-soft: var(--status-success-bg);
+  --mf-primary-border: var(--status-success-border);
+  --mf-primary-glow: color-mix(in srgb, var(--interactive-primary) 35%, transparent);
+  --mf-primary-shadow: var(--shadow-md);
 
-  /* Secondary (navy) + info (sky) */
-  --mf-secondary: #1E3A5F;
-  --mf-secondary-soft: rgba(30, 58, 95, 0.22);
-  --mf-info: #0EA5E9;
-  --mf-info-soft: rgba(14, 165, 233, 0.1);
-  --mf-info-muted: rgba(14, 165, 233, 0.2);
+  --mf-secondary: var(--color-neutral-800);
+  --mf-secondary-soft: color-mix(in srgb, var(--color-blue-500) 22%, transparent);
+  --mf-info: var(--status-info);
+  --mf-info-soft: var(--status-info-bg);
+  --mf-info-muted: var(--status-info-border);
 
-  /* Semantic */
-  --mf-danger: #F43F5E;
-  --mf-warning: #F59E0B;
+  --mf-danger: var(--status-danger);
+  --mf-warning: var(--status-warning);
 
-  /* Gradients */
-  --mf-grad-brand: linear-gradient(135deg, #0EA5E9 0%, #10B981 100%);
-  --mf-grad-text: linear-gradient(to right, #10B981, #0EA5E9);
-  --mf-grad-cta: linear-gradient(135deg, #10B981, #059669);
-  --mf-grad-cta-hover: linear-gradient(135deg, #34D399, #10B981);
+  --mf-grad-brand: linear-gradient(135deg, var(--color-blue-500) 0%, var(--interactive-primary) 100%);
+  --mf-grad-text: linear-gradient(to right, var(--interactive-primary), var(--color-blue-500));
+  --mf-grad-cta: linear-gradient(135deg, var(--interactive-primary), var(--interactive-primary-hover));
+  --mf-grad-cta-hover: linear-gradient(135deg, var(--color-brand-400), var(--interactive-primary));
 
-  /* Meta & typography */
-  --mf-theme-color: #0F1117;
-  --mf-font: 'Montserrat', system-ui, -apple-system, sans-serif;
-  --mf-radius-card: 16px;
-  --mf-radius-btn: 12px;
-  --mf-radius-pill: 50px;
-  --mf-focus-ring: 0 0 0 2px var(--mf-primary);
+  --mf-theme-color: var(--bg-primary);
+  --mf-font: var(--font-family-primary);
+  --mf-radius-card: var(--radius-xl);
+  --mf-radius-btn: var(--radius-lg);
+  --mf-radius-pill: var(--radius-full);
+  --mf-focus-ring: var(--shadow-focus);
 
-  /* App aliases (backward compatibility) */
-  --app-bg: var(--mf-bg);
-  --app-card: var(--mf-bg-elevated);
-  --app-surface: var(--mf-surface);
-  --app-surface2: var(--mf-surface-2);
-  --app-text: var(--mf-text);
-  --app-muted: var(--mf-muted);
-  --app-muted2: var(--mf-muted-2);
-  --app-border: var(--mf-border);
-  --app-divider: var(--mf-divider);
-  --app-backdrop: var(--mf-backdrop);
-  --app-sheet: var(--mf-sheet);
-  --accent-primary: var(--mf-primary);
-  --accent-primary-hover: var(--mf-primary-hover);
-  --accent-danger: var(--mf-danger);
-  --accent-warning: var(--mf-warning);
-  --accent-info: var(--mf-secondary);
-  --brand-blue: var(--mf-secondary);
-  --brand-green: var(--mf-primary);
+  --app-bg: var(--bg-primary);
+  --app-card: var(--card-bg);
+  --app-surface: var(--bg-secondary);
+  --app-surface2: color-mix(in srgb, var(--text-primary) 4%, transparent);
+  --app-text: var(--text-primary);
+  --app-muted: var(--text-secondary);
+  --app-muted2: var(--text-tertiary);
+  --app-border: var(--border-subtle);
+  --app-divider: var(--border-subtle);
+  --app-backdrop: var(--bg-overlay);
+  --app-sheet: var(--bg-elevated);
+  --accent-primary: var(--interactive-primary);
+  --accent-primary-hover: var(--interactive-primary-hover);
+  --accent-danger: var(--status-danger);
+  --accent-warning: var(--status-warning);
+  --accent-info: var(--status-info);
+  --brand-blue: var(--color-blue-600);
+  --brand-green: var(--interactive-primary);
   --brand-grad: var(--mf-grad-brand);
   --brand-blue-soft: var(--mf-secondary-soft);
-  --brand-green-soft: var(--mf-primary-soft);
-  --brand-border: var(--mf-primary-border);
-  --brand-shadow: var(--mf-primary-shadow);
-  --nav-surface: var(--mf-nav);
-  --focus-ring: var(--mf-focus-ring);
-  --font-sans: var(--mf-font);
+  --brand-green-soft: var(--status-success-bg);
+  --brand-border: var(--status-success-border);
+  --brand-shadow: var(--card-shadow);
+  --nav-surface: var(--sidebar-bg);
+  --focus-ring: var(--shadow-focus);
+  --font-sans: var(--font-family-primary);
+}
+
+[data-theme="light"],
+body.theme-light {
+  --mf-bg: var(--bg-primary);
+  --mf-bg-elevated: var(--bg-elevated);
+  --mf-surface: var(--bg-secondary);
+  --mf-surface-2: color-mix(in srgb, var(--text-primary) 4%, transparent);
+  --mf-nav: var(--sidebar-bg);
+  --mf-border: var(--border-subtle);
+  --mf-secondary: var(--color-blue-100);
+  --mf-secondary-soft: var(--color-blue-50);
+  --mf-theme-color: var(--color-neutral-0);
+
+  --app-bg: var(--bg-primary);
+  --app-card: var(--card-bg);
+  --app-surface: var(--bg-secondary);
+  --app-surface2: color-mix(in srgb, var(--text-primary) 4%, transparent);
+  --app-text: var(--text-primary);
+  --app-muted: var(--text-secondary);
+  --app-muted2: var(--text-tertiary);
+  --app-border: var(--border-subtle);
+  --app-divider: var(--border-subtle);
+  --app-backdrop: color-mix(in srgb, var(--bg-secondary) 92%, transparent);
+  --app-sheet: var(--bg-elevated);
 }

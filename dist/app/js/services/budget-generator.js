@@ -10,6 +10,11 @@ import {
   getLinkedTransactions,
 } from './budget-model.js';
 import { getSuggestedAllocation } from './budget-recommender.js';
+import {
+  adjustBudgetsForFocusMode,
+  getBudgetFocusMode,
+  resolveFocusIncome,
+} from './budget-focus-mode.js';
 
 const DEFAULT_TEMPLATES = {
   harus: [
@@ -115,7 +120,10 @@ async function resolveBudgetIncome(period) {
 export async function generateBudget(options = {}) {
   const strategy = options.strategy || await detectStrategy();
   const period = getCurrentPeriod();
-  const income = Number(options.income) || await resolveBudgetIncome(period);
+  const focusMode = options.focusMode || getBudgetFocusMode();
+  const prefs = typeof window !== 'undefined' ? (window.STATE?.db?.userPreferences || {}) : {};
+  let income = Number(options.income) || await resolveBudgetIncome(period);
+  income = resolveFocusIncome(income, focusMode, typeof window !== 'undefined' ? (window.STATE?.transactions || []) : []);
 
   if (!income || income <= 0) {
     throw new Error('Income belum diisi. Isi Budget Income atau sumber income dulu.');
@@ -155,6 +163,15 @@ export async function generateBudget(options = {}) {
   if (!result?.budgets?.length) {
     throw new Error('Tidak ada kategori budget yang bisa dibuat. Cek income dan coba lagi.');
   }
+
+  result.budgets = adjustBudgetsForFocusMode(result.budgets, focusMode, income, prefs);
+  result.focus_mode = focusMode;
+  result.summary = {
+    ...result.summary,
+    total: result.budgets.reduce((s, b) => s + Number(b.amount || 0), 0),
+    count: result.budgets.length,
+    by_priority: countByPriority(result.budgets),
+  };
 
   return result;
 }

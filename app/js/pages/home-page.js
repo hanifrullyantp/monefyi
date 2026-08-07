@@ -61,6 +61,25 @@ function renderLegacyHome(container, data, ctx, callbacks, formatIDR, formatComp
  */
 async function renderV2Home(container, data, ctx, callbacks, formatIDR, formatCompactIDR, masked) {
   try {
+    const { hasOpeningBalances } = await import('../services/account-opening-balance.js');
+    const userId = ctx.state?.db?.user?.id || window.STATE?.db?.user?.id;
+    if (userId && !(await hasOpeningBalances(userId))) {
+      const banner = document.createElement('div');
+      banner.className = 'opening-balance-banner home-section';
+      banner.innerHTML = `
+        <span>Saldo awal per akun belum diisi — neraca bisa tidak seimbang.</span>
+        <button type="button" class="tap opening-balance-banner__cta" data-action="setup-opening">Setup saldo awal</button>
+      `;
+      banner.querySelector('[data-action="setup-opening"]')?.addEventListener('click', () => {
+        callbacks.onCompleteData?.();
+      });
+      container.appendChild(banner);
+    }
+  } catch (e) {
+    console.warn('[home] opening balance banner', e);
+  }
+
+  try {
     const { renderStreakBadge } = await import('../components/streak-badge.js');
     const streakEl = renderStreakBadge(ctx.transactions || ctx.state?.transactions || []);
     if (streakEl) container.appendChild(streakEl);

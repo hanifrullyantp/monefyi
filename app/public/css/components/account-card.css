@@ -1,0 +1,38 @@
+/**
+ * Account wallet cards — theme-aware
+ */
+.home-account-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-primary);
+  box-shadow: var(--card-shadow);
+}
+
+.home-account-card:hover {
+  box-shadow: var(--card-hover-shadow);
+}
+
+.home-account-card__name {
+  color: var(--text-secondary);
+}
+
+.home-account-card__balance {
+  color: var(--text-primary);
+}
+
+.home-account-card__pct {
+  color: var(--text-tertiary);
+}
+
+.home-account-card__bar {
+  background: var(--bg-tertiary);
+}
+
+.home-account-card__icon {
+  background: color-mix(in srgb, var(--acc-color, var(--interactive-primary)) 15%, var(--card-bg));
+}
+
+#accountsBalancesRow .home-account-card {
+  background: var(--card-bg);
+  border-color: var(--card-border);
+}
