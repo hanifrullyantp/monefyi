@@ -1,0 +1,357 @@
+/**
+ * Phase 3–4 theme overrides — loaded after page-specific CSS.
+ * Maps hardcoded page styles to design tokens (light + dark).
+ */
+
+/* ========== ONBOARDING ========== */
+#onboardingWizardHost,
+#onboardingWizardV2Host,
+.upgrade-sheet-backdrop {
+  background: var(--bg-overlay) !important;
+}
+
+.onboarding-wizard,
+.onboarding-wizard--v2 {
+  background: var(--bg-elevated);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.onboarding-wizard__sub,
+.onboarding-field label {
+  color: var(--text-secondary);
+}
+
+.onboarding-wizard__dot {
+  background: var(--bg-tertiary);
+}
+
+.onboarding-goal,
+.onboarding-chip,
+.onboarding-field input,
+.onboarding-field select,
+.onboarding-bill-row input {
+  background: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--input-text);
+}
+
+.onboarding-goal.is-selected,
+.onboarding-chip.is-selected {
+  border-color: var(--border-focus);
+  background: var(--status-success-bg);
+  color: var(--status-success-text);
+}
+
+.onboarding-budget-preview {
+  border-color: var(--status-success-border);
+  background: var(--finance-income-bg);
+}
+
+.onboarding-budget-preview li,
+.onboarding-field--inline {
+  color: var(--text-secondary);
+}
+
+.onboarding-btn--primary {
+  background: var(--interactive-primary);
+  color: var(--interactive-primary-text);
+}
+
+.onboarding-btn--ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border-color: var(--border-default);
+}
+
+/* ========== SETTINGS ========== */
+.settings-page-root,
+.settings-section-nav {
+  background: var(--bg-primary);
+  border-color: var(--border-subtle);
+}
+
+.settings-section-nav {
+  border-bottom-color: var(--border-subtle);
+}
+
+.settings-sec-btn {
+  background: var(--interactive-secondary);
+  border-color: var(--border-default);
+  color: var(--text-secondary);
+}
+
+.settings-sec-btn:hover {
+  background: var(--interactive-secondary-hover);
+  color: var(--text-primary);
+}
+
+.settings-sec-btn.is-active {
+  background: var(--status-success-bg);
+  border-color: var(--status-success-border);
+  color: var(--status-success-text);
+  box-shadow: var(--shadow-focus);
+}
+
+.settings-card {
+  background: var(--card-bg);
+  border-color: var(--card-border);
+}
+
+.settings-input,
+.settings-select {
+  background: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--input-text);
+}
+
+.settings-btn {
+  background: var(--interactive-primary);
+  border-color: var(--status-success-border);
+  color: var(--interactive-primary-text);
+}
+
+.settings-btn.ghost {
+  background: transparent;
+  color: var(--text-brand);
+}
+
+.settings-btn.danger {
+  background: var(--status-danger-bg);
+  border-color: var(--status-danger-border);
+  color: var(--status-danger-text);
+}
+
+/* ========== PREVIEW / QUICK PREVIEW ========== */
+.preview-card,
+.qp-card {
+  background: var(--card-bg);
+  border-color: var(--card-border);
+  color: var(--text-primary);
+  box-shadow: var(--card-shadow);
+}
+
+.preview-badge--purple,
+.preview-badge--sky,
+.qp-badge-purple {
+  background: var(--status-info-bg);
+  color: var(--status-info-text);
+  border-color: var(--status-info-border);
+}
+
+.preview-badge--blue,
+.qp-badge-blue {
+  background: var(--color-blue-50);
+  color: var(--color-blue-700);
+  border-color: var(--color-blue-200);
+}
+
+[data-theme="dark"] .preview-badge--blue,
+body:not(.theme-light) .preview-badge--blue {
+  background: var(--status-info-bg);
+  color: var(--status-info-text);
+  border-color: var(--status-info-border);
+}
+
+.preview-badge--green,
+.qp-badge-green {
+  background: var(--status-success-bg);
+  color: var(--status-success-text);
+  border-color: var(--status-success-border);
+}
+
+.preview-badge--gray,
+.qp-badge-gray {
+  background: var(--interactive-secondary);
+  color: var(--text-secondary);
+  border-color: var(--border-subtle);
+}
+
+.preview-field__input,
+.preview-field__select,
+.preview-field__textarea,
+.qp-field input,
+.qp-field select,
+.qp-field textarea {
+  background: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--input-text);
+}
+
+.preview-explanation {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-color: var(--border-subtle);
+}
+
+.preview-btn--secondary,
+.qp-btn--secondary {
+  background: var(--interactive-secondary);
+  color: var(--text-primary);
+  border-color: var(--border-default);
+}
+
+/* ========== TRANSACTION DETAIL ========== */
+.tx-detail-panel,
+.tx-detail-sheet {
+  background: var(--bg-elevated);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.tx-detail-label {
+  color: var(--text-tertiary);
+}
+
+.tx-detail-value {
+  color: var(--text-primary);
+}
+
+.tx-detail-amount--income {
+  color: var(--finance-income);
+}
+
+.tx-detail-amount--expense {
+  color: var(--finance-expense);
+}
+
+/* ========== NOTIFICATION / EMAIL IMPORT ========== */
+.notif-settings-card,
+.email-import-card {
+  background: var(--card-bg);
+  border-color: var(--card-border);
+  color: var(--text-primary);
+}
+
+.notif-settings-row,
+.email-import-row {
+  border-color: var(--border-subtle);
+}
+
+/* ========== RECEIPT SCANNER ========== */
+.receipt-scanner-panel {
+  background: var(--bg-elevated);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+/* ========== TX EDIT TOOLBAR ========== */
+.tx-edit-toolbar {
+  background: var(--bg-elevated);
+  border-color: var(--border-subtle);
+}
+
+.tx-edit-toolbar__btn {
+  color: var(--text-secondary);
+  background: var(--interactive-secondary);
+  border-color: var(--border-subtle);
+}
+
+.tx-edit-toolbar__btn:hover,
+.tx-edit-toolbar__btn.is-active {
+  color: var(--interactive-primary);
+  background: var(--status-success-bg);
+}
+
+/* ========== TUTORIAL ========== */
+#tourSpotlight {
+  box-shadow: 0 0 0 9999px var(--bg-overlay);
+  border-color: var(--border-default);
+}
+
+#tourBubble {
+  background: var(--bg-elevated);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+/* ========== NATIVE PWA / SPLASH ========== */
+.splash-screen {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* ========== PHASE 4 — TOAST ========== */
+.toast,
+.toast--success,
+.toast--error,
+.toast--warn {
+  color: var(--text-primary);
+  box-shadow: var(--shadow-lg);
+}
+
+.toast--success,
+.toast.success {
+  background: var(--status-success-bg);
+  border: 1px solid var(--status-success-border);
+  color: var(--status-success-text);
+}
+
+.toast--error,
+.toast.error {
+  background: var(--status-danger-bg);
+  border: 1px solid var(--status-danger-border);
+  color: var(--status-danger-text);
+}
+
+.toast--warn,
+.toast.warn {
+  background: var(--status-warning-bg);
+  border: 1px solid var(--status-warning-border);
+  color: var(--status-warning-text);
+}
+
+.toast__undo,
+.toast__close {
+  color: var(--text-brand);
+}
+
+/* ========== LOADING / SKELETON / EMPTY ========== */
+#loadingOverlay {
+  background: var(--bg-overlay);
+}
+
+.loading-text {
+  color: var(--text-secondary);
+}
+
+.skeleton,
+.skeleton-green,
+.skeleton-line,
+.skeleton-circle {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--text-primary) 8%, transparent) 25%,
+    color-mix(in srgb, var(--text-primary) 14%, transparent) 37%,
+    color-mix(in srgb, var(--text-primary) 8%, transparent) 63%
+  ) !important;
+  background-size: 200% 100%;
+}
+
+.home-empty,
+.empty-state,
+.settings-empty,
+.neraca-empty-row {
+  color: var(--text-tertiary);
+}
+
+.empty-state__title {
+  color: var(--text-secondary);
+}
+
+.empty-state__icon {
+  color: var(--text-disabled);
+}
+
+.error-banner,
+.inline-error {
+  background: var(--status-danger-bg);
+  border: 1px solid var(--status-danger-border);
+  color: var(--status-danger-text);
+}
+
+.info-banner {
+  background: var(--status-info-bg);
+  border: 1px solid var(--status-info-border);
+  color: var(--status-info-text);
+}
