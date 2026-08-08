@@ -1596,6 +1596,7 @@ html, body {
     /* Sidebar collapse (252px ↔ 48px icon rail) */
     #appSidebar {
       width: 252px;
+      position: relative;
       transition: width 0.3s ease;
       scrollbar-width: none;
       -ms-overflow-style: none;
@@ -1634,6 +1635,32 @@ html, body {
     #appSidebar.sidebar--collapsed #btnSidebarCollapse {
       display: none !important;
     }
+
+    .sidebar-resize-handle {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 6px;
+      height: 100%;
+      cursor: col-resize;
+      z-index: 30;
+      touch-action: none;
+    }
+
+    .sidebar-resize-handle:hover,
+    body.sidebar-resizing .sidebar-resize-handle {
+      background: color-mix(in srgb, var(--interactive-primary) 35%, transparent);
+    }
+
+    #appSidebar.sidebar--collapsed .sidebar-resize-handle {
+      display: none;
+    }
+
+    body.sidebar-resizing {
+      cursor: col-resize;
+      user-select: none;
+    }
+
     #appSidebar.sidebar--collapsed .sidebar-label,
     #appSidebar.sidebar--collapsed #sidebarUserBlock,
     #appSidebar.sidebar--collapsed .sidebar-footer-text {
@@ -3158,25 +3185,23 @@ html, body {
       }
 
       .mobile-saldo-wrap {
-        position: sticky;
-        top: 0;
-        z-index: 20;
+        position: relative;
+        top: auto;
+        z-index: 1;
         background: var(--bg-primary);
-        transition:
-          padding 0.25s var(--ease-ios),
-          box-shadow 0.25s var(--ease-ios);
+        transition: none;
         min-height: 0;
       }
 
       .mobile-saldo-wrap.saldo-pinned {
-        position: fixed;
-        left: 0;
-        right: 0;
-        top: var(--saldo-pin-top, 0);
-        z-index: 25;
-        padding-left: 12px;
-        padding-right: 12px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        position: relative;
+        left: auto;
+        right: auto;
+        top: auto;
+        z-index: 1;
+        padding-left: 0;
+        padding-right: 0;
+        box-shadow: none;
       }
 
       .mobile-saldo-wrap.saldo-pinned .hero-saldo-card {
@@ -3410,6 +3435,28 @@ html, body {
         overflow: visible;
         min-height: 0;
         height: auto;
+      }
+
+      #dynamicContent.dynamic-content--tx {
+        gap: 0 !important;
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+      }
+
+      #dynamicContent.dynamic-content--tx > .hidden {
+        display: none !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+      }
+
+      #mobileSaldoShell {
+        margin-bottom: 0;
+      }
+
+      #mobileSaldoShell.saldo-shell-pinned {
+        min-height: 0 !important;
       }
       body.app-ready #txListHost {
         overflow: visible;

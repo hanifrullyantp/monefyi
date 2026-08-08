@@ -904,17 +904,15 @@ body.theme-light #dashboardExpanded .text-white:not(button):not(a) {
 
   [data-theme="light"] .hero-saldo-card,
   body.theme-light .hero-saldo-card {
-    background: linear-gradient(135deg, var(--finance-income-bg) 0%, var(--card-bg) 100%) !important;
-    border-color: var(--status-success-border) !important;
-    color: var(--text-primary) !important;
-    box-shadow: var(--card-shadow) !important;
+    /* gradient defined in balance-card.css */
+    color: #ffffff !important;
   }
 
   [data-theme="light"] .hero-saldo-card__amount,
   [data-theme="light"] #kpiSaldo,
   body.theme-light .hero-saldo-card__amount,
   body.theme-light #kpiSaldo {
-    color: var(--text-primary) !important;
+    color: #ffffff !important;
   }
 
   [data-theme="light"] .nav-bar-inner,
@@ -942,4 +940,78 @@ body.theme-light #dashboardExpanded .text-white:not(button):not(a) {
     background: var(--color-neutral-0) !important;
     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
   }
+}
+
+/* Light mode — tx list icon contrast (saldo card stats: balance-card.css) */
+[data-theme="light"] .hero-saldo-card .hero-saldo-stat--income .hero-saldo-stat__icon,
+[data-theme="light"] .hero-saldo-card .hero-saldo-stat--expense .hero-saldo-stat__icon,
+body.theme-light .hero-saldo-card .hero-saldo-stat--income .hero-saldo-stat__icon,
+body.theme-light .hero-saldo-card .hero-saldo-stat--expense .hero-saldo-stat__icon {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+}
+
+[data-theme="light"] .tx-card-v2 .tx-icon,
+[data-theme="light"] .tx-card-compact .tx-icon,
+[data-theme="light"] .tx-card-row-mobile .tx-icon,
+body.theme-light .tx-card-v2 .tx-icon,
+body.theme-light .tx-card-compact .tx-icon,
+body.theme-light .tx-card-row-mobile .tx-icon {
+  background: var(--interactive-secondary) !important;
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="light"] .tx-card-v2 .tx-icon svg,
+[data-theme="light"] .tx-card-compact .tx-icon svg,
+[data-theme="light"] .tx-card-row-mobile .tx-icon svg,
+body.theme-light .tx-card-v2 .tx-icon svg,
+body.theme-light .tx-card-compact .tx-icon svg,
+body.theme-light .tx-card-row-mobile .tx-icon svg {
+  color: var(--text-secondary) !important;
+  stroke: var(--text-secondary) !important;
+}
+
+[data-theme="light"] .home-quick-btn__icon,
+body.theme-light .home-quick-btn__icon {
+  background: var(--interactive-secondary) !important;
+  border-color: var(--border-default) !important;
+}
+
+[data-theme="light"] .home-section,
+body.theme-light .home-section {
+  background: var(--color-neutral-0) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .daily-hero--waspada,
+body.theme-light .daily-hero--waspada {
+  background: linear-gradient(145deg, var(--status-warning-bg) 0%, var(--card-bg) 100%) !important;
+  border-color: var(--status-warning-border) !important;
+}
+
+[data-theme="light"] .daily-hero--bahaya,
+body.theme-light .daily-hero--bahaya {
+  background: linear-gradient(145deg, var(--status-danger-bg) 0%, var(--card-bg) 100%) !important;
+  border-color: var(--status-danger-border) !important;
+}
+
+[data-theme="light"] .daily-hero__alert-title,
+body.theme-light .daily-hero__alert-title {
+  color: var(--status-danger-text) !important;
+}
+
+[data-theme="light"] .income-gap-banner,
+body.theme-light .income-gap-banner {
+  background: var(--status-warning-bg) !important;
+  border-color: var(--status-warning-border) !important;
+  color: var(--status-warning-text) !important;
+}
+
+[data-theme="light"] .opening-balance-banner,
+body.theme-light .opening-balance-banner {
+  background: var(--status-info-bg) !important;
+  border-color: var(--status-info-border) !important;
+  color: var(--status-info-text) !important;
 }

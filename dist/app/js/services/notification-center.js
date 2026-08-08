@@ -266,7 +266,8 @@ async function checkBudgetDueDates(rows) {
 
 async function checkPendingQueue() {
   try {
-    const pending = window.monefyiPending?.getPendingCount?.();
+    const raw = window.monefyiPending?.getPendingCount?.();
+    const pending = typeof raw?.then === 'function' ? await raw : Number(raw || 0);
     if (!pending || pending <= 0) return;
 
     const db = await getDb();
