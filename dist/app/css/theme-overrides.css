@@ -879,3 +879,67 @@ body.theme-light #accountsBalancesSection .text-white,
 body.theme-light #dashboardExpanded .text-white:not(button):not(a) {
   color: var(--text-primary) !important;
 }
+
+/* ===== Mobile light mode (Beranda, bottom nav, saldo card) ===== */
+@media (max-width: 767px) {
+  [data-theme="light"] body,
+  body.theme-light {
+    background-color: var(--bg-primary) !important;
+    background-image:
+      radial-gradient(ellipse 100% 40% at 50% -5%, color-mix(in srgb, var(--interactive-primary) 8%, transparent), transparent 55%),
+      linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%) !important;
+  }
+
+  [data-theme="light"] .mobile-saldo-wrap,
+  body.theme-light .mobile-saldo-wrap {
+    background: var(--bg-primary) !important;
+  }
+
+  [data-theme="light"] .mobile-header-period,
+  body.theme-light .mobile-header-period {
+    background: var(--interactive-secondary) !important;
+    border-color: var(--border-default) !important;
+    color: var(--text-primary) !important;
+  }
+
+  [data-theme="light"] .hero-saldo-card,
+  body.theme-light .hero-saldo-card {
+    background: linear-gradient(135deg, var(--finance-income-bg) 0%, var(--card-bg) 100%) !important;
+    border-color: var(--status-success-border) !important;
+    color: var(--text-primary) !important;
+    box-shadow: var(--card-shadow) !important;
+  }
+
+  [data-theme="light"] .hero-saldo-card__amount,
+  [data-theme="light"] #kpiSaldo,
+  body.theme-light .hero-saldo-card__amount,
+  body.theme-light #kpiSaldo {
+    color: var(--text-primary) !important;
+  }
+
+  [data-theme="light"] .nav-bar-inner,
+  body.theme-light .nav-bar-inner {
+    background: color-mix(in srgb, var(--nav-surface) 96%, transparent) !important;
+    border-top-color: var(--border-subtle) !important;
+  }
+
+  [data-theme="light"] .home-tx-section-header__title,
+  body.theme-light .home-tx-section-header__title,
+  [data-theme="light"] #homePageRoot .home-section-title,
+  body.theme-light #homePageRoot .home-section-title {
+    color: var(--text-primary) !important;
+  }
+
+  [data-theme="light"] #homePageRoot .home-section,
+  body.theme-light #homePageRoot .home-section {
+    background: var(--color-neutral-0) !important;
+    border-color: var(--border-subtle) !important;
+    box-shadow: var(--shadow-sm) !important;
+  }
+
+  [data-theme="light"] #homePageRoot .home-account-card,
+  body.theme-light #homePageRoot .home-account-card {
+    background: var(--color-neutral-0) !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+  }
+}
