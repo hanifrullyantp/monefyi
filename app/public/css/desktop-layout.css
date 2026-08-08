@@ -380,7 +380,10 @@
 
   /* === Sidebar wider with labels === */
   #appSidebar:not(.sidebar--collapsed) {
-    width: 200px;
+    width: var(--sidebar-width, 200px);
+    min-width: 180px;
+    max-width: 320px;
+    position: relative;
   }
 
   #appSidebar:not(.sidebar--collapsed) .sidebar-label {

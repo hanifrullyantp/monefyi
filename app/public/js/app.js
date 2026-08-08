@@ -313,7 +313,10 @@
         const api = _txIconApi || window.__monefyiIcons;
         if (api?.Icon && api?.getCategoryIcon) {
           const name = api.getCategoryIcon(cat);
-          const html = api.Icon(name, { size: 14, color: '#ffffff', className: 'tx-cat-icon' });
+          const isLight = document.body.classList.contains('theme-light')
+            || document.documentElement.getAttribute('data-theme') === 'light';
+          const iconColor = isLight ? 'currentColor' : '#ffffff';
+          const html = api.Icon(name, { size: 14, color: iconColor, className: 'tx-cat-icon' });
           if (html) return html;
         }
       } catch (e) {
@@ -2264,6 +2267,7 @@ async function upsertTransaction_legacy_local(tx) {
     function initMonefyiEnhancements(){
       if (window.MonefyiI18n?.mergeIntoI18N) window.MonefyiI18n.mergeIntoI18N(I18N);
       window.MonefyiUI?.initSidebarCollapse?.();
+      window.MonefyiUI?.initSidebarResize?.();
       window.MonefyiUI?.initKeyboardShortcuts?.({
         onSearch: () => {
           const wrap = $('#txSearchWrap');
@@ -4402,8 +4406,18 @@ renderAccountsSettings();
   function renderIncomeGapBanner(s) {
     const period = String(STATE.period?.end || '').slice(0, 7);
     const budgetIncome = Number(STATE.budgetsByMonth?.[period]?.income || STATE.db?.userPreferences?.monthly_income || 0);
-    if (!(budgetIncome > 0 && s.income === 0)) return;
-    let banner = document.getElementById('incomeGapBanner');
+    const txs = getTransactionsInPeriod();
+    const hasIncomeTx = txs.some((tx) => tx.type === 'income' && Number(tx.amount || 0) > 0);
+    const recordedIncome = Number(s?.income || 0);
+    const shouldShow = budgetIncome > 0 && recordedIncome <= 0 && !hasIncomeTx;
+
+    const existing = document.getElementById('incomeGapBanner');
+    if (!shouldShow) {
+      existing?.remove();
+      return;
+    }
+
+    let banner = existing;
     if (!banner) {
       banner = document.createElement('div');
       banner.id = 'incomeGapBanner';
@@ -11957,6 +11971,7 @@ function toggleNav_legacy(mode) {
 
 
 function toggleNav(view, triggerEl) {
+      window.clearSaldoPinState?.();
       // Leaving TX list with unsaved drafts → warn once
       const leavingTxList = (view === 'dash' || view === 'budget' || view === 'advisor')
         && !STATE.ui.dashboardOpen
@@ -12950,112 +12965,28 @@ function toggleNav(view, triggerEl) {
       });
     }
 
-    // ── Saldo card scroll-collapse (mobile) ─────────────────────────────────
-    // Collapses the saldo card into a compact bar as the user scrolls down,
-    // giving more visual space for the transaction list.
-    (function setupSaldoCollapseOnScroll() {
-      const COLLAPSE_AT = 55;
-      const EXPAND_AT   = 18;
-      let collapsed = false;
-      let pinned = false;
-      let ticking   = false;
-
-      function getHeaderOffset() {
-        const header = document.querySelector('.app-header');
-        return header ? header.getBoundingClientRect().height : 0;
-      }
-
-      function syncPin(wrap, shouldPin) {
-        const shell = document.getElementById('mobileSaldoShell');
-        if (!wrap || !shell) return;
-
-        if (shouldPin) {
-          const headerTop = getHeaderOffset();
-          wrap.style.setProperty('--saldo-pin-top', `${headerTop}px`);
-          wrap.classList.add('saldo-pinned');
-          shell.classList.add('saldo-shell-pinned');
-          shell.style.minHeight = `${wrap.offsetHeight}px`;
-          pinned = true;
-          return;
-        }
-
-        wrap.classList.remove('saldo-pinned');
+    // ── Saldo card: scroll naturally with page (no auto-shrink / pin) ───────
+    function clearSaldoPinState() {
+      const wrap = document.querySelector('.mobile-saldo-wrap');
+      const shell = document.getElementById('mobileSaldoShell');
+      if (wrap) {
+        wrap.classList.remove('saldo-collapsed', 'saldo-pinned');
+        wrap.removeAttribute('aria-expanded');
         wrap.style.removeProperty('--saldo-pin-top');
+      }
+      if (shell) {
         shell.classList.remove('saldo-shell-pinned');
         shell.style.minHeight = '';
-        pinned = false;
       }
+    }
+    window.clearSaldoPinState = clearSaldoPinState;
 
-      function applyCollapse(scrollTop) {
-        const wrap = document.querySelector('.mobile-saldo-wrap');
-        if (!wrap) return;
-
-        if (!collapsed && scrollTop > COLLAPSE_AT) {
-          collapsed = true;
-          wrap.classList.add('saldo-collapsed');
-          wrap.setAttribute('aria-expanded', 'false');
-          const details = wrap.querySelector('.saldo-details-wrap');
-          if (details) details.setAttribute('aria-hidden', 'true');
-          requestAnimationFrame(() => syncPin(wrap, true));
-        } else if (collapsed && scrollTop < EXPAND_AT) {
-          collapsed = false;
-          wrap.classList.remove('saldo-collapsed');
-          wrap.setAttribute('aria-expanded', 'true');
-          const details = wrap.querySelector('.saldo-details-wrap');
-          if (details) details.setAttribute('aria-hidden', 'false');
-          syncPin(wrap, false);
-        } else if (collapsed && !pinned && scrollTop > COLLAPSE_AT) {
-          syncPin(wrap, true);
-        }
-
-        ticking = false;
-      }
-
-      function onScroll() {
-        if (ticking) return;
-        ticking = true;
-        const shell = document.getElementById('appShell');
-        const scrollTop = shell ? shell.scrollTop : 0;
-        requestAnimationFrame(function () { applyCollapse(scrollTop); });
-      }
-
-      function bind() {
-        const shell = document.getElementById('appShell');
-        if (!shell) return;
-        const wrap = document.querySelector('.mobile-saldo-wrap');
-        if (wrap) wrap.setAttribute('aria-expanded', 'true');
-        // Only active on mobile widths
-        if (window.matchMedia('(max-width: 767px)').matches) {
-          shell.addEventListener('scroll', onScroll, { passive: true });
-        }
-        window.addEventListener('resize', () => {
-          const liveWrap = document.querySelector('.mobile-saldo-wrap');
-          if (liveWrap?.classList.contains('saldo-pinned')) {
-            liveWrap.style.setProperty('--saldo-pin-top', `${getHeaderOffset()}px`);
-            const shellEl = document.getElementById('mobileSaldoShell');
-            if (shellEl) shellEl.style.minHeight = `${liveWrap.offsetHeight}px`;
-          }
-        }, { passive: true });
-        window.matchMedia('(max-width: 767px)').addEventListener('change', function (mq) {
-          if (mq.matches) {
-            shell.addEventListener('scroll', onScroll, { passive: true });
-          } else {
-            shell.removeEventListener('scroll', onScroll);
-            const wrap = document.querySelector('.mobile-saldo-wrap');
-            if (wrap) {
-              wrap.classList.remove('saldo-collapsed', 'saldo-pinned');
-              wrap.style.removeProperty('--saldo-pin-top');
-            }
-            syncPin(wrap, false);
-            collapsed = false;
-          }
-        });
-      }
-
+    (function setupSaldoCollapseOnScroll() {
+      /* Disabled: saldo card follows normal document scroll (user request). */
       if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', bind);
+        document.addEventListener('DOMContentLoaded', clearSaldoPinState);
       } else {
-        bind();
+        clearSaldoPinState();
       }
     })();
 

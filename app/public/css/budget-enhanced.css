@@ -3101,6 +3101,7 @@
   justify-content: space-between;
   padding: 14px 16px;
   border-bottom: 1px solid var(--app-border);
+  flex-shrink: 0;
 }
 
 .notif-header-title h3 { font-size: 16px; font-weight: 800; margin: 0; color: var(--app-text); }
@@ -3123,6 +3124,24 @@
   padding: 8px 12px;
   overflow-x: auto;
   border-bottom: 1px solid var(--app-border);
+  flex-shrink: 0;
+  background: var(--app-card);
+  position: relative;
+  z-index: 2;
+}
+
+@media (max-width: 767px) {
+  .notif-modal {
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    max-height: min(72vh, calc(100vh - var(--notif-panel-top, 56px) - 96px - env(safe-area-inset-bottom, 0px)));
+  }
+
+  .notif-permission-prompt {
+    bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    z-index: 100;
+  }
 }
 
 .notif-tab {

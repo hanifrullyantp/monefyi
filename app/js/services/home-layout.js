@@ -3,8 +3,8 @@
  * @module services/home-layout
  */
 
-/** Enable command-center home layout (Phase 1). */
-export const HOME_LAYOUT_V2 = true;
+/** Enable command-center home layout (Phase 1). Off = legacy Beranda with full quick-access menu. */
+export const HOME_LAYOUT_V2 = false;
 
 /** Compact quick access: Catat, Budget, Target, Advisor */
 export const COMPACT_QUICK_ACTIONS = [

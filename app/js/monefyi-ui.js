@@ -114,6 +114,65 @@
     if (typeof window.syncSidebarCollapsedUI === 'function') window.syncSidebarCollapsedUI();
   }
 
+  /** Drag right edge to resize desktop sidebar (180–320px). */
+  function initSidebarResize() {
+    const aside = $('#appSidebar');
+    if (!aside || window.matchMedia('(max-width: 767px)').matches) return;
+
+    let handle = aside.querySelector('.sidebar-resize-handle');
+    if (!handle) {
+      handle = document.createElement('div');
+      handle.className = 'sidebar-resize-handle';
+      handle.setAttribute('aria-hidden', 'true');
+      handle.title = 'Geser untuk ubah lebar sidebar';
+      aside.appendChild(handle);
+    }
+
+    const MIN_W = 180;
+    const MAX_W = 320;
+    const stored = Number(localStorage.getItem('monefyi_sidebar_width') || 0);
+    if (stored >= MIN_W && stored <= MAX_W && !aside.classList.contains('sidebar--collapsed')) {
+      aside.style.width = `${stored}px`;
+    }
+
+    let dragging = false;
+
+    const onMove = (e) => {
+      if (!dragging || aside.classList.contains('sidebar--collapsed')) return;
+      const clientX = e.touches?.[0]?.clientX ?? e.clientX;
+      const next = Math.min(MAX_W, Math.max(MIN_W, clientX));
+      aside.style.width = `${next}px`;
+    };
+
+    const onEnd = () => {
+      if (!dragging) return;
+      dragging = false;
+      document.body.classList.remove('sidebar-resizing');
+      if (!aside.classList.contains('sidebar--collapsed')) {
+        const w = aside.getBoundingClientRect().width;
+        localStorage.setItem('monefyi_sidebar_width', String(Math.round(w)));
+      }
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onEnd);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onEnd);
+    };
+
+    const onStart = (e) => {
+      if (aside.classList.contains('sidebar--collapsed')) return;
+      dragging = true;
+      document.body.classList.add('sidebar-resizing');
+      e.preventDefault();
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onEnd);
+      window.addEventListener('touchmove', onMove, { passive: false });
+      window.addEventListener('touchend', onEnd);
+    };
+
+    handle.addEventListener('mousedown', onStart);
+    handle.addEventListener('touchstart', onStart, { passive: false });
+  }
+
   function renderTxPreviewCard(tx, container, onSave, onEdit) {
     if (!container || !tx) return;
     const conf = tx.meta?.confidence != null ? Math.round(Number(tx.meta.confidence) * 100) : null;
@@ -380,6 +439,7 @@
     showToast,
     initKeyboardShortcuts,
     initSidebarCollapse,
+    initSidebarResize,
     renderTxPreviewCard,
     initVoiceInput,
     showOnboardingIfNeeded,

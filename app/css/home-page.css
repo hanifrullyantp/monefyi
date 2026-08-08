@@ -424,8 +424,8 @@
   border-color: rgba(245, 158, 11, 0.35);
 }
 .daily-hero--bahaya {
-  background: linear-gradient(145deg, rgba(239, 68, 68, 0.18) 0%, rgba(239, 68, 68, 0.05) 100%);
-  border-color: rgba(239, 68, 68, 0.4);
+  background: linear-gradient(145deg, var(--status-danger-bg) 0%, var(--card-bg) 100%);
+  border-color: var(--status-danger-border);
   cursor: pointer;
 }
 .daily-hero--incomplete {
@@ -464,7 +464,7 @@
   font-size: 1.1rem;
   font-weight: 800;
   margin: 0 0 6px;
-  color: #fecaca;
+  color: var(--status-danger-text, #b91c1c);
 }
 .daily-hero__alert-msg {
   font-size: 13px;
@@ -473,7 +473,7 @@
   color: var(--text-secondary);
 }
 .daily-hero__deficit {
-  color: #fca5a5;
+  color: var(--status-danger-text, #b91c1c);
   font-weight: 600;
 }
 .daily-hero__incomplete {

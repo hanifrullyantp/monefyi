@@ -265,12 +265,12 @@
 
 .notif-permission-prompt {
   position: fixed;
-  bottom: 90px;
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
   left: 12px;
   right: 12px;
   max-width: 500px;
   margin: 0 auto;
-  z-index: 999;
+  z-index: 100;
   animation: npp-slide-up 0.3s ease-out;
 }
 
