@@ -904,17 +904,15 @@ body.theme-light #dashboardExpanded .text-white:not(button):not(a) {
 
   [data-theme="light"] .hero-saldo-card,
   body.theme-light .hero-saldo-card {
-    background: linear-gradient(135deg, var(--finance-income-bg) 0%, var(--card-bg) 100%) !important;
-    border-color: var(--status-success-border) !important;
-    color: var(--text-primary) !important;
-    box-shadow: var(--card-shadow) !important;
+    /* gradient defined in balance-card.css */
+    color: #ffffff !important;
   }
 
   [data-theme="light"] .hero-saldo-card__amount,
   [data-theme="light"] #kpiSaldo,
   body.theme-light .hero-saldo-card__amount,
   body.theme-light #kpiSaldo {
-    color: var(--text-primary) !important;
+    color: #ffffff !important;
   }
 
   [data-theme="light"] .nav-bar-inner,
@@ -944,19 +942,14 @@ body.theme-light #dashboardExpanded .text-white:not(button):not(a) {
   }
 }
 
-/* Light mode — icon & stat contrast */
-[data-theme="light"] .hero-saldo-stat--income .hero-saldo-stat__icon,
-body.theme-light .hero-saldo-stat--income .hero-saldo-stat__icon {
-  background: var(--status-success-bg) !important;
-  color: var(--status-success-text) !important;
-  box-shadow: none !important;
-}
-
-[data-theme="light"] .hero-saldo-stat--expense .hero-saldo-stat__icon,
-body.theme-light .hero-saldo-stat--expense .hero-saldo-stat__icon {
-  background: var(--status-danger-bg) !important;
-  color: var(--status-danger-text) !important;
-  box-shadow: none !important;
+/* Light mode — tx list icon contrast (saldo card stats: balance-card.css) */
+[data-theme="light"] .hero-saldo-card .hero-saldo-stat--income .hero-saldo-stat__icon,
+[data-theme="light"] .hero-saldo-card .hero-saldo-stat--expense .hero-saldo-stat__icon,
+body.theme-light .hero-saldo-card .hero-saldo-stat--income .hero-saldo-stat__icon,
+body.theme-light .hero-saldo-card .hero-saldo-stat--expense .hero-saldo-stat__icon {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
 }
 
 [data-theme="light"] .tx-card-v2 .tx-icon,

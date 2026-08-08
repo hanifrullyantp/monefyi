@@ -74,3 +74,101 @@
 .hero-saldo-stat--expense .hero-saldo-stat__value {
   color: var(--finance-expense);
 }
+
+/* Light mode — bold blue→green saldo hero (mobile + sidebar) */
+[data-theme="light"] .hero-saldo-card,
+[data-theme="light"] .sidebar-saldo-card.hero-saldo-card,
+body.theme-light .hero-saldo-card,
+body.theme-light .sidebar-saldo-card.hero-saldo-card {
+  background: linear-gradient(
+    135deg,
+    #0284c7 0%,
+    #0ea5e9 28%,
+    #14b8a6 58%,
+    #10b981 82%,
+    #059669 100%
+  ) !important;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  box-shadow:
+    0 10px 28px rgba(14, 165, 233, 0.28),
+    0 4px 14px rgba(16, 185, 129, 0.22) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .hero-saldo-card::before,
+body.theme-light .hero-saldo-card::before {
+  background:
+    radial-gradient(ellipse 75% 65% at 92% 8%, rgba(255, 255, 255, 0.22), transparent 58%),
+    radial-gradient(ellipse 55% 45% at 8% 92%, rgba(255, 255, 255, 0.1), transparent 52%) !important;
+}
+
+[data-theme="light"] .hero-saldo-card__label-row,
+[data-theme="light"] .hero-saldo-card .balance-header span,
+[data-theme="light"] .sidebar-saldo-card__label-row,
+body.theme-light .hero-saldo-card__label-row,
+body.theme-light .hero-saldo-card .balance-header span,
+body.theme-light .sidebar-saldo-card__label-row {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+[data-theme="light"] .hero-saldo-card__amount,
+[data-theme="light"] .hero-saldo-card__amount.saldo-amount,
+[data-theme="light"] #kpiSaldo,
+[data-theme="light"] #kpiSaldoDesktop,
+body.theme-light .hero-saldo-card__amount,
+body.theme-light .hero-saldo-card__amount.saldo-amount,
+body.theme-light #kpiSaldo,
+body.theme-light #kpiSaldoDesktop {
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .hero-saldo-card .hero-saldo-stat--income .hero-saldo-stat__value,
+body.theme-light .hero-saldo-card .hero-saldo-stat--income .hero-saldo-stat__value {
+  color: #ecfdf5 !important;
+}
+
+[data-theme="light"] .hero-saldo-card .hero-saldo-stat--expense .hero-saldo-stat__value,
+body.theme-light .hero-saldo-card .hero-saldo-stat--expense .hero-saldo-stat__value {
+  color: #ffe4e6 !important;
+}
+
+[data-theme="light"] .hero-saldo-card .hero-saldo-stat--count .hero-saldo-stat__value,
+body.theme-light .hero-saldo-card .hero-saldo-stat--count .hero-saldo-stat__value {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="light"] .hero-saldo-card .hero-saldo-stat__icon,
+body.theme-light .hero-saldo-card .hero-saldo-stat__icon {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+}
+
+[data-theme="light"] .hero-saldo-card .hero-budget-progress__label,
+body.theme-light .hero-saldo-card .hero-budget-progress__label {
+  color: rgba(255, 255, 255, 0.88) !important;
+}
+
+[data-theme="light"] .hero-saldo-card .hero-budget-progress__pct,
+[data-theme="light"] .hero-saldo-card .budget-percent,
+body.theme-light .hero-saldo-card .hero-budget-progress__pct,
+body.theme-light .hero-saldo-card .budget-percent {
+  color: #fde68a !important;
+}
+
+[data-theme="light"] .hero-saldo-card .hero-budget-progress__track,
+body.theme-light .hero-saldo-card .hero-budget-progress__track {
+  background: rgba(255, 255, 255, 0.28) !important;
+}
+
+[data-theme="light"] .hero-saldo-card .hero-budget-progress__fill,
+body.theme-light .hero-saldo-card .hero-budget-progress__fill {
+  background: linear-gradient(90deg, #fde68a, #fbbf24) !important;
+}
+
+[data-theme="light"] .hero-saldo-card #btnSaldoMask,
+[data-theme="light"] .hero-saldo-card #btnSaldoMaskDesktop,
+body.theme-light .hero-saldo-card #btnSaldoMask,
+body.theme-light .hero-saldo-card #btnSaldoMaskDesktop {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
