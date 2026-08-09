@@ -2372,6 +2372,9 @@ async function upsertTransaction_legacy_local(tx) {
         if (!expandHit && e.target.closest('.sidebar-item, button, a, input, select')) return;
         aside.classList.remove('sidebar--collapsed');
         localStorage.setItem('monefyi_sidebar_collapsed', '0');
+        const w = Number(localStorage.getItem('monefyi_sidebar_width') || 0);
+        if (w >= 180 && w <= 320) aside.style.width = `${w}px`;
+        else aside.style.removeProperty('width');
         syncSidebarCollapsedUI();
       });
     }
