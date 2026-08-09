@@ -7,6 +7,7 @@ import { showNotification, processQueue, isCategoryEnabled } from './push-notifi
 import { buildMorningBriefing, buildBillReminder, buildBudgetMilestoneMessage } from './contextual-notifications.js';
 import { syncFinancialCondition } from './financial-condition.js';
 import { inferCategoryType, CATEGORY_TYPES } from './budget-model.js';
+import { generateDueRecurring } from './recurring-transactions.js';
 
 const CHECK_INTERVAL = 15 * 60 * 1000;
 let _intervalId = null;
@@ -153,6 +154,7 @@ export async function runScheduledChecks(opts = {}) {
   if (ignoreSchedule || (hour >= 8 && hour <= 20 && !checkedToday('bill_reminder'))) {
     if (ignoreSchedule || isCategoryEnabled('billReminders')) {
       await checkBillReminders(budgetRows, dayOfMonth);
+      await checkRecurringDue();
     }
     if (!ignoreSchedule) markChecked('bill_reminder');
   }
@@ -232,6 +234,28 @@ async function sendMorningBriefing(_budgetRows, _expenses, _totalExpense, _incom
     iconEmoji: briefing.iconEmoji || '🌅',
     data: { url: '/app/#home' },
   });
+}
+
+async function checkRecurringDue() {
+  try {
+    const pending = generateDueRecurring();
+    for (const item of pending.slice(0, 3)) {
+      const tag = `recurring_${item.schedule_id}_${item.month}`;
+      await showNotification({
+        title: `Tagihan rutin: ${item.name}`,
+        body: `Rp ${new Intl.NumberFormat('id-ID').format(Math.round(item.amount || 0))} jatuh tempo. Konfirmasi dari Beranda.`,
+        tag,
+        categoryKey: 'billReminders',
+        type: 'recurring_due',
+        iconEmoji: '🔁',
+        severity: 'medium',
+        data: { url: '/app/#home', pendingId: item.id },
+        inboxActions: [{ label: 'Konfirmasi', action: 'confirm_recurring', pendingId: item.id }],
+      });
+    }
+  } catch (e) {
+    console.warn('[scheduler] recurring due check failed', e);
+  }
 }
 
 async function checkBillReminders(budgetRows, today) {

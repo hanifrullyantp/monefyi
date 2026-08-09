@@ -177,6 +177,7 @@ export function renderQuickPreview(parsed, callbacks = {}) {
       <div class="qp-field">
         <label for="qp-category">Kategori</label>
         <input type="text" id="qp-category" name="category" value="${escapeHtml(parsed.category || '')}" list="qp-categories" />
+        <div class="qp-auto-cat hidden" id="qp-auto-cat"></div>
         <datalist id="qp-categories">
           <option value="Food &amp; Drink"><option value="Transport"><option value="Shopping">
           <option value="Bills &amp; Utilities"><option value="Health"><option value="Entertainment">
@@ -247,7 +248,39 @@ export function renderQuickPreview(parsed, callbacks = {}) {
     onCancel?.();
   });
 
+  applyAutoCategorySuggestion(container, parsed).catch((e) => {
+    console.warn('[quick-preview] auto category', e);
+  });
+
   return container;
+}
+
+/**
+ * Suggests category from merchant/notes when field is empty.
+ * @param {HTMLElement} container
+ * @param {QuickPreviewModel} parsed
+ */
+async function applyAutoCategorySuggestion(container, parsed) {
+  const input = container.querySelector('#qp-category');
+  if (!input || input.value.trim()) return;
+
+  const { suggestCategory, formatConfidenceBadge } = await import('../services/auto-categorizer.js');
+  const suggestion = await suggestCategory({
+    merchant: parsed.merchant,
+    notes: parsed.notes,
+    amount: parsed.amount,
+  });
+  if (!suggestion.category) return;
+
+  input.value = suggestion.category;
+  const badgeEl = container.querySelector('#qp-auto-cat');
+  if (!badgeEl) return;
+  const badge = formatConfidenceBadge(suggestion.confidence);
+  badgeEl.classList.remove('hidden');
+  badgeEl.innerHTML = `
+    <span class="qp-auto-cat__label">Saran: ${escapeHtml(suggestion.category)}</span>
+    ${badge ? `<span class="qp-auto-cat__badge qp-auto-cat__badge--${badge.toLowerCase()}">${badge}</span>` : ''}
+  `;
 }
 
 /**

@@ -5869,6 +5869,7 @@ function generateSmartBudgetRecommendation() {
       const delBtn = $('#btnTxBulkDelete');
       const copyBtn = $('#btnTxBulkCopy');
       const dupBtn = $('#btnTxBulkDuplicate');
+      const catBtn = $('#btnTxBulkCategory');
       const undoBtn = $('#btnTxUndo');
       const redoBtn = $('#btnTxRedo');
 
@@ -5884,6 +5885,7 @@ function generateSmartBudgetRecommendation() {
       if (delBtn) delBtn.disabled = !hasSel;
       if (copyBtn) copyBtn.disabled = !hasSel;
       if (dupBtn) dupBtn.disabled = !hasSel;
+      if (catBtn) catBtn.disabled = !hasSel;
 
       try {
         const canU = await window.monefyiUndo?.canUndo?.();
@@ -5974,6 +5976,36 @@ function generateSmartBudgetRecommendation() {
       }
       window.monefyiTxEditSession?.clearTxSelection?.();
       updateTxEditToolbar();
+      if (typeof refreshAllUI === 'function') refreshAllUI({ syncRemote: false });
+      else rerender();
+    }
+
+    async function bulkChangeCategorySelectedTx() {
+      const ids = window.monefyiTxEditSession?.getTxEditState?.()?.selectedIds || [];
+      if (!ids.length) return;
+
+      const month = STATE.selectedMonth || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+      const budgetRows = STATE.budgetsByMonth?.[month]?.categories?.rows
+        || STATE.budgetsByMonth?.[month]?.rows
+        || STATE.budgetDraft?.rows
+        || [];
+      const fromBudget = budgetRows.map((r) => r.name).filter(Boolean);
+      const fromTx = [...new Set(STATE.transactions.map((t) => t.category).filter(Boolean))];
+      const options = [...new Set([...fromBudget, ...fromTx])].slice(0, 12);
+      const hint = options.length ? `\nContoh: ${options.slice(0, 5).join(', ')}` : '';
+      const category = prompt(`Kategori baru untuk ${ids.length} transaksi:${hint}`);
+      if (!category || !category.trim()) return;
+
+      const next = category.trim();
+      for (const id of ids) {
+        const tx = STATE.transactions.find((t) => t.id === id);
+        if (!tx) continue;
+        await upsertTransaction({ ...tx, category: next, updated_at: new Date().toISOString() });
+        window.monefyiTxEditSession?.clearTxDraft?.(id);
+      }
+      window.monefyiTxEditSession?.clearTxSelection?.();
+      updateTxEditToolbar();
+      if (typeof showToast === 'function') showToast(`${ids.length} transaksi → ${next}`, 'success');
       if (typeof refreshAllUI === 'function') refreshAllUI({ syncRemote: false });
       else rerender();
     }
@@ -6079,6 +6111,7 @@ function generateSmartBudgetRecommendation() {
       $('#btnTxBulkDelete')?.addEventListener('click', () => bulkDeleteSelectedTx());
       $('#btnTxBulkCopy')?.addEventListener('click', () => bulkCopySelectedTx());
       $('#btnTxBulkDuplicate')?.addEventListener('click', () => bulkDuplicateSelectedTx());
+      $('#btnTxBulkCategory')?.addEventListener('click', () => bulkChangeCategorySelectedTx());
 
       $('#txSelectAll')?.addEventListener('change', (e) => {
         const on = !!e.target.checked;

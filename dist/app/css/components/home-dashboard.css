@@ -203,6 +203,83 @@ body:not(.theme-light) .home-streak-badge {
   margin-bottom: 12px;
 }
 
+/* Recurring pending bar (Fase 3.1) */
+.recurring-pending-bar {
+  margin-bottom: 12px;
+}
+
+.recurring-pending-bar__inner {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--interactive-primary) 8%, var(--card-bg));
+  border: 1px solid color-mix(in srgb, var(--interactive-primary) 25%, var(--card-border));
+}
+
+.recurring-pending-bar__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.recurring-pending-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recurring-pending-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+}
+
+.recurring-pending-item__name {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.recurring-pending-item__meta {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.recurring-pending-item__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.recurring-confirm-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 0;
+  background: var(--interactive-primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.recurring-dismiss-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1;
+}
+
 .what-if-preview {
   display: flex;
   flex-direction: column;

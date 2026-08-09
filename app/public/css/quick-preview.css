@@ -278,6 +278,44 @@ body.theme-light .qp-field textarea {
   }
 }
 
+.qp-auto-cat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 11px;
+}
+
+.qp-auto-cat.hidden {
+  display: none;
+}
+
+.qp-auto-cat__label {
+  color: var(--text-secondary, #94a3b8);
+}
+
+.qp-auto-cat__badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 10px;
+}
+
+.qp-auto-cat__badge--tinggi {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.qp-auto-cat__badge--sedang {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.qp-auto-cat__badge--rendah {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+}
+
 @media (max-width: 374px) {
   .quick-preview-card { padding: 12px; }
   .qp-header { flex-direction: column; align-items: flex-start; }

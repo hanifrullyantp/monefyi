@@ -116,6 +116,16 @@ async function renderV2Home(container, data, ctx, callbacks, formatIDR, formatCo
   }
 
   try {
+    const { renderRecurringPendingBar } = await import('../components/recurring-pending-bar.js');
+    const recurringBar = await renderRecurringPendingBar({
+      onConfirmed: () => callbacks.onViewTransactions?.(),
+    });
+    if (recurringBar) container.appendChild(recurringBar);
+  } catch (e) {
+    console.warn('[home] recurring pending bar', e);
+  }
+
+  try {
     const { buildFirstWeekPlanCard } = await import('../components/first-week-plan-card.js');
     const planCard = await buildFirstWeekPlanCard({
       onTaskAction: callbacks.onPlanTaskAction,
@@ -261,6 +271,13 @@ export async function renderHomePage(container, ctx, callbacks = {}) {
       if (hero) container.appendChild(hero);
     } catch (e) {
       console.warn('[home] daily situation hero', e);
+    }
+    try {
+      const { renderRecurringPendingBar } = await import('../components/recurring-pending-bar.js');
+      const recurringBar = await renderRecurringPendingBar();
+      if (recurringBar) container.appendChild(recurringBar);
+    } catch (e) {
+      console.warn('[home] recurring pending bar', e);
     }
     renderLegacyHome(container, data, ctx, callbacks, formatIDR, formatCompactIDR, masked);
   }
