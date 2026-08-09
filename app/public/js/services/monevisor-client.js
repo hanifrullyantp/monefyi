@@ -245,14 +245,19 @@ export async function sendMessage(message, options = {}) {
     _notify();
     return assistantMsg;
   } catch (e) {
+    const { generateOfflineCoachReply } = await import('./monevisor-coach-actions.js');
+    const offlineReply = generateOfflineCoachReply(message, window.STATE || {});
+
     const errorMsg = {
       id: `msg_${crypto.randomUUID()}`,
       role: 'assistant',
-      content: e.message === 'offline'
-        ? 'Kamu sedang offline. Chat butuh internet, tapi kamu tetap bisa lihat insight terakhir.'
-        : `Gagal: ${e.message}`,
+      content: offlineReply
+        || (e.message === 'offline'
+          ? 'Kamu sedang offline. Chat AI butuh internet — coba pertanyaan tentang budget, utang, atau investasi nanti.'
+          : `Gagal: ${e.message}`),
       timestamp: new Date().toISOString(),
-      isError: true,
+      isError: !offlineReply && e.message !== 'offline',
+      source: offlineReply ? 'local_coach' : 'error',
     };
     _state.messages.push(errorMsg);
     _notify();

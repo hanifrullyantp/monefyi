@@ -11,6 +11,7 @@ import { buildIntervention, generateStarterQuestions } from '../services/monevis
 import { sendMessage, initMonevisor, loadMessageHistory, applyAction } from '../services/monevisor-client.js';
 import { getFinancialStatus } from '../services/financial-status.js';
 import { getGreeting, getStatusDisplay } from '../services/monevisor-messages.js';
+import { generateCoachActions } from '../services/monevisor-coach-actions.js';
 
 let _root = null;
 let _formatIDR = (n) => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
@@ -137,6 +138,8 @@ function renderDiagnosis(container, report, dx) {
       },
     }
     : null;
+
+  const coachActions = generateCoachActions(window.STATE || {});
 
   container.innerHTML = `
     <div class="mv-page">
@@ -326,6 +329,27 @@ function renderDiagnosis(container, report, dx) {
           `}
         </section>
       ` : ''}
+
+      <section class="mv-section mv-pro-tools">
+        <h3 class="mv-section-title">${Icon('sparkles', { size: 14 })} Pro+ Tools</h3>
+        <div class="mv-pro-grid">
+          <button type="button" class="mv-pro-btn tap" data-pro="investment">
+            <span>📈</span>
+            <span>Investment Tracker</span>
+          </button>
+          <button type="button" class="mv-pro-btn tap" data-pro="debt">
+            <span>💳</span>
+            <span>Debt Payoff Planner</span>
+          </button>
+        </div>
+        <div class="mv-coach-actions" id="mv-coach-actions">
+          ${coachActions.map((a) => `
+            <button type="button" class="mv-coach-chip tap" data-coach-prompt="${escapeHtml(a.prompt)}">
+              ${a.icon} ${escapeHtml(a.label)}
+            </button>
+          `).join('')}
+        </div>
+      </section>
 
       <section class="mv-section mv-chat-section">
         <details class="mv-chat-collapse">
@@ -580,6 +604,29 @@ function wireHandlers(container, intervention = null) {
   }
   container.querySelectorAll('.mv-starter').forEach((btn) => {
     btn.onclick = () => doSend(btn.dataset.q);
+  });
+
+  container.querySelectorAll('[data-pro]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const kind = btn.getAttribute('data-pro');
+      if (kind === 'investment') {
+        const { showInvestmentPanel } = await import('../components/investment-panel.js');
+        await showInvestmentPanel();
+      } else if (kind === 'debt') {
+        const { showDebtPayoffPanel } = await import('../components/debt-payoff-panel.js');
+        await showDebtPayoffPanel();
+      }
+    });
+  });
+
+  container.querySelectorAll('[data-coach-prompt]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const prompt = btn.getAttribute('data-coach-prompt');
+      const details = container.querySelector('.mv-chat-collapse');
+      if (details) details.open = true;
+      if (input) input.value = prompt;
+      doSend(prompt);
+    });
   });
 }
 
