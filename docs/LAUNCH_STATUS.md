@@ -18,11 +18,11 @@ Ringkasan otomatis vs manual sebelum public launch.
 
 ## 🔧 Satu kali manual (ops)
 
-1. **Secrets Supabase** — `RESEND_API_KEY`, `CRON_SECRET`, `APP_URL` (Edge Functions → Secrets)
-2. **Cron** — `./scripts/apply-compliance-crons.sh` (butuh `CRON_SECRET`) atau Dashboard schedule
+1. ~~**Secrets Supabase**~~ — `RESEND_API_KEY`, `CRON_SECRET`, `APP_URL` ✅ (Aug 2026 deploy)
+2. ~~**Cron**~~ — pg_cron `monefyi-account-purge-daily` + `monefyi-weekly-digest-sunday` ✅
 3. **Beta testers** — invite 10–20 user, monitor Sentry
 4. **Parity CMS** — Admin → Landing → Sync dari parity audit (score ≥ 90%)
-5. **Feature flags** — pastikan critical flags `active` 100% di Admin
+5. **Feature flags** — `beta_feedback` masih `testing` (optional untuk beta banner)
 
 ## 📋 Perintah verifikasi
 
@@ -30,7 +30,8 @@ Ringkasan otomatis vs manual sebelum public launch.
 npm run test:all          # 139 tests
 npm run launch:gate         # tests + parity simulation
 npm run launch:full       # all + build
-./scripts/deploy-all.sh   # migrations + edge functions
+./scripts/deploy-all.sh   # migrations + all edge functions
+./scripts/deploy-supabase-full.sh  # migrations + functions + secrets + crons
 ```
 
 ## Refund flow (operasional)
