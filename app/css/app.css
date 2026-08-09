@@ -2592,6 +2592,13 @@ html, body {
     .tx-group-bar {
       margin-top: 4px;
     }
+    @media (max-width: 767px) {
+      #txGroupBar.tx-group-bar {
+        margin-top: 2px;
+        padding-left: 0;
+        padding-right: 0;
+      }
+    }
     .tx-group-header {
       display: flex;
       align-items: center;
