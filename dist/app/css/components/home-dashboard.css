@@ -538,3 +538,164 @@ body:not(.theme-light) .home-streak-badge {
 .achievement-badge__icon { font-size: 24px; display: block; margin-bottom: 4px; }
 .achievement-badge__title { font-size: 11px; font-weight: 700; display: block; }
 .achievement-badge__xp { font-size: 10px; color: var(--text-secondary, #94a3b8); }
+
+/* Innovation features (Fase 8) */
+.innovation-host {
+  position: fixed;
+  inset: 0;
+  z-index: 10070;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.innovation-host.is-visible { display: flex; }
+
+.innovation-sheet {
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--app-card, #131A24);
+  border-radius: 20px 20px 0 0;
+  padding: 20px;
+  color: var(--app-text, #F1F5F9);
+}
+
+.innovation-sheet__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.innovation-sheet__kicker {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--interactive-primary, #38bdf8);
+  text-transform: uppercase;
+}
+
+.innovation-sheet__title { font-size: 17px; font-weight: 700; margin: 0 0 12px; }
+.innovation-sheet__hint { font-size: 13px; color: var(--text-secondary, #94a3b8); margin-bottom: 16px; }
+
+.innovation-sheet__close {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.innovation-options { display: flex; flex-direction: column; gap: 8px; }
+
+.innovation-option {
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(148, 163, 184, 0.06);
+  color: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.innovation-option:hover { border-color: var(--interactive-primary, #38bdf8); }
+
+.innovation-label {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.innovation-label textarea {
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(0, 0, 0, 0.2);
+  color: inherit;
+  resize: vertical;
+}
+
+.innovation-label input[type="range"] { width: 100%; margin-top: 6px; }
+
+.innovation-btn {
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--interactive-primary, #38bdf8);
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.innovation-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.innovation-btn--ghost { background: transparent; border: 1px solid rgba(148, 163, 184, 0.35); color: inherit; }
+
+.impulse-impact { font-size: 14px; margin-bottom: 12px; }
+.impulse-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.impulse-stats div {
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(148, 163, 184, 0.08);
+  font-size: 11px;
+}
+.impulse-stats strong { display: block; font-size: 14px; margin-top: 4px; }
+.impulse-stats .negative { color: #f87171; }
+.impulse-alts { font-size: 12px; padding-left: 18px; margin-bottom: 12px; color: var(--text-secondary, #94a3b8); }
+.impulse-cooldown { font-size: 12px; text-align: center; margin-bottom: 12px; color: var(--text-secondary, #94a3b8); }
+
+.emergency-mode-banner__inner {
+  padding: 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, #ef4444 14%, var(--app-card, #131A24));
+  border: 1px solid color-mix(in srgb, #ef4444 35%, transparent);
+}
+
+.emergency-mode-banner__head { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px; }
+.emergency-mode-banner__sub { font-size: 12px; color: var(--text-secondary, #94a3b8); }
+.emergency-mode-banner__stats { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; margin-bottom: 10px; }
+.emergency-mode-banner__actions { font-size: 12px; padding-left: 18px; margin-bottom: 12px; color: var(--text-secondary, #94a3b8); }
+.emergency-mode-banner__btns { display: flex; gap: 8px; }
+.emergency-mode-banner__cta,
+.emergency-mode-banner__off {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.emergency-mode-banner__cta { border: 0; background: #ef4444; color: #fff; }
+.emergency-mode-banner__off { border: 1px solid rgba(148, 163, 184, 0.35); background: transparent; color: inherit; }
+
+.wellness-prompt-card__inner {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, #8b5cf6 10%, var(--app-card, #131A24));
+  border: 1px solid color-mix(in srgb, #8b5cf6 25%, transparent);
+}
+
+.wellness-prompt-card__sub { font-size: 12px; color: var(--text-secondary, #94a3b8); margin-top: 2px; }
+
+.wellness-score-display { text-align: center; margin: 16px 0; }
+.wellness-score-num { font-size: 48px; font-weight: 800; line-height: 1; }
+.wellness-score-label { font-size: 14px; color: var(--text-secondary, #94a3b8); margin-top: 4px; }
+
+.wellness-bar {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}

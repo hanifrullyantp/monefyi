@@ -46,10 +46,10 @@ export function renderWeeklyDigestCard(state = window.STATE, callbacks = {}) {
   `;
 
   el.querySelector('.weekly-digest-card__open')?.addEventListener('click', async () => {
-    const { showWeeklyCheckinSheet } = await import('./weekly-checkin-sheet.js');
-    showWeeklyCheckinSheet(digest, {
+    const { showWeeklyDigestPage } = await import('../pages/weekly-digest-page.js');
+    showWeeklyDigestPage({
+      digest: state._weeklyDigest || digest,
       onAdvisor: () => callbacks.onViewAdvisor?.(),
-      onDismiss: () => {},
     });
   });
   el.addEventListener('click', (e) => {

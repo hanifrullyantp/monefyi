@@ -1,6 +1,6 @@
 /**
  * Admin Console — full-page responsive overlay.
- * Deep-links: #admin | #admin/dashboard | #admin/users | #admin/plans | #admin/landing | #admin/feedback | #admin/config | #admin/tutorial
+ * Deep-links: #admin | ... | #admin/marketing | #admin/notifications
  */
 
 import { Icon } from '../components/icons.js';
@@ -10,6 +10,8 @@ const TABS = [
   { id: 'users', label: 'Users' },
   { id: 'plans', label: 'Plans & Pricing' },
   { id: 'landing', label: 'Landing' },
+  { id: 'marketing', label: 'Marketing' },
+  { id: 'notifications', label: 'Notifications' },
   { id: 'feedback', label: 'Feedback' },
   { id: 'config', label: 'Config' },
   { id: 'tutorial', label: 'Tutorial' },
@@ -176,6 +178,14 @@ async function loadTab(tab) {
     else if (tab === 'users') await renderUsers(body);
     else if (tab === 'plans') await renderPlans(body);
     else if (tab === 'landing') await renderLanding(body);
+    else if (tab === 'marketing') {
+      const { renderAdminMarketing } = await import('./admin-marketing.js');
+      await renderAdminMarketing(body, { toast, escapeHtml, fmtNum });
+    }
+    else if (tab === 'notifications') {
+      const { renderAdminNotifications } = await import('./admin-notifications.js');
+      await renderAdminNotifications(body, { toast, escapeHtml, fmtNum });
+    }
     else if (tab === 'feedback') await renderFeedback(body);
     else if (tab === 'config') await renderConfig(body);
     else if (tab === 'tutorial') await renderTutorial(body);

@@ -95,23 +95,39 @@ function bindEvents(rerender, opts, getExtra, setExtra) {
     rerender();
   });
 
-  _host.querySelector('#debtForm')?.addEventListener('submit', (e) => {
+  _host.querySelector('#debtForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
-    upsertDebt({
-      name: fd.get('name'),
-      balance: fd.get('balance'),
-      min_payment: fd.get('min_payment'),
-      interest_rate: fd.get('interest_rate') || 12,
-    });
+    try {
+      const { upsertDebtRemote } = await import('../services/debt-store.js');
+      await upsertDebtRemote({
+        name: fd.get('name'),
+        balance: fd.get('balance'),
+        min_payment: fd.get('min_payment'),
+        interest_rate: fd.get('interest_rate') || 12,
+      });
+    } catch {
+      upsertDebt({
+        name: fd.get('name'),
+        balance: fd.get('balance'),
+        min_payment: fd.get('min_payment'),
+        interest_rate: fd.get('interest_rate') || 12,
+      });
+    }
     e.target.reset();
     rerender();
     opts.onChange?.();
   });
 
   _host.querySelectorAll('[data-delete]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      deleteDebt(btn.getAttribute('data-delete'));
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-delete');
+      try {
+        const { deleteDebtRemote } = await import('../services/debt-store.js');
+        await deleteDebtRemote(id);
+      } catch {
+        deleteDebt(id);
+      }
       rerender();
     });
   });

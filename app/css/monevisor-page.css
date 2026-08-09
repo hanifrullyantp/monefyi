@@ -1295,3 +1295,116 @@
   margin-bottom: 12px;
   line-height: 1.5;
 }
+
+/* Sprint 3 — goals & weekly digest panels */
+.goals-panel__list { margin-bottom: 12px; }
+.goals-panel__item {
+  display: flex;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+.goals-panel__icon { font-size: 22px; }
+.goals-panel__meta { font-size: 11px; color: var(--text-secondary); }
+.goals-panel__bar {
+  height: 4px;
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 999px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+.goals-panel__bar span {
+  display: block;
+  height: 100%;
+  background: var(--interactive-primary, #10b981);
+}
+.goals-panel__templates-title { font-size: 12px; font-weight: 700; margin-bottom: 8px; }
+.goals-panel__template-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.goals-panel__template {
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: transparent;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  color: inherit;
+}
+
+.goals-list-card__items { display: flex; flex-direction: column; gap: 8px; }
+.goals-list-card__item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+}
+.goals-list-card__name { font-weight: 600; font-size: 13px; }
+.goals-list-card__meta { font-size: 11px; color: var(--text-secondary); }
+
+.weekly-digest-page { max-height: 85vh; overflow-y: auto; }
+.weekly-digest-page__period { font-size: 12px; color: var(--text-secondary); }
+.weekly-digest-page__section { margin-bottom: 14px; }
+.weekly-digest-page__section h3 { font-size: 13px; margin: 0 0 8px; }
+.weekly-digest-page__section ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.45; }
+.weekly-digest-page__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.weekly-digest-page__stats div {
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(148, 163, 184, 0.1);
+  font-size: 11px;
+}
+.weekly-digest-page__stats strong { display: block; font-size: 14px; margin-top: 4px; }
+.weekly-digest-page__actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.weekly-digest-page__actions .ghost { background: transparent; border: 1px solid rgba(148,163,184,0.3); color: inherit; }
+
+.mrp-subtitle { font-size: 14px; margin: 16px 0 8px; }
+.mrp-toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.mrp-score { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(16,185,129,0.15); color: #10b981; }
+.mrp-card--auto { border-left: 3px solid #8b5cf6; }
+
+/* Sprint 4 — marketing analytics admin */
+.mk-funnel {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.mk-funnel__step {
+  flex: 1;
+  min-width: 100px;
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(148, 163, 184, 0.1);
+  text-align: center;
+  font-size: 12px;
+}
+.mk-funnel__step strong { display: block; font-size: 18px; margin-top: 4px; }
+
+.mk-hour-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 80px;
+  padding-top: 8px;
+}
+.mk-hour-chart__bar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: flex-end;
+  font-size: 9px;
+  color: var(--text-muted, #888);
+}
+.mk-hour-chart__bar span {
+  display: block;
+  width: 100%;
+  max-height: 100%;
+  background: var(--interactive-primary, #3b82f6);
+  border-radius: 3px 3px 0 0;
+  min-height: 2px;
+}
+.mk-variant-row { margin-bottom: 8px; }

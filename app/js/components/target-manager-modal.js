@@ -75,6 +75,7 @@ export async function showTargetManagerModal(options = {}) {
       </div>
       <footer class="modal-footer">
         <button type="button" class="btn-secondary-budget tap" data-action="close">Tutup</button>
+        ${targets.length >= 1 ? `<button type="button" class="btn-secondary-budget tap" data-action="add-goal">+ Target baru</button>` : ''}
         <button type="button" class="btn-primary-budget tap" data-action="save">${Icon('check', { size: 14 })} Simpan</button>
       </footer>
     </div>
@@ -114,6 +115,20 @@ export async function showTargetManagerModal(options = {}) {
     } catch (e) {
       if (typeof window.showToast === 'function') window.showToast(e.message || 'Gagal simpan', 'error');
     }
+  });
+
+  overlay.querySelector('[data-action="add-goal"]')?.addEventListener('click', async () => {
+    const { attemptCreateAdditionalGoal, canCreateAdditionalGoal } = await import('../services/financial-goals.js');
+    const allowed = await attemptCreateAdditionalGoal();
+    if (!allowed) {
+      if (typeof window.showToast === 'function') {
+        window.showToast('Upgrade Pro+ untuk multiple targets', 'warn');
+      }
+      return;
+    }
+    if (!canCreateAdditionalGoal()) return;
+    close();
+    showTargetManagerModal({ ...options, createNew: true });
   });
 
   overlay.querySelectorAll('[data-set-primary]').forEach((btn) => {

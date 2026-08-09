@@ -91,12 +91,54 @@ export async function loadFinancialGoals() {
 }
 
 /**
+ * @returns {number} -1 = unlimited
+ */
+export function getMaxGoalsForPlan(planType) {
+  const plan = String(planType || 'none');
+  if (plan === 'monthly' || plan === 'lifetime') return -1;
+  return 1;
+}
+
+/**
+ * @returns {boolean}
+ */
+export function canCreateAdditionalGoal() {
+  const plan = window.STATE?.db?.profile?.plan_type || 'none';
+  const max = getMaxGoalsForPlan(plan);
+  if (max < 0) return true;
+  const goals = window.STATE?.db?.financialGoals || [];
+  const active = goals.filter((g) => g.status === 'active' || !g.status);
+  return active.length < max;
+}
+
+/**
+ * Gate second goal creation — fires marketing if blocked.
+ * @returns {Promise<boolean>} true if allowed to proceed
+ */
+export async function attemptCreateAdditionalGoal() {
+  if (canCreateAdditionalGoal()) return true;
+  try {
+    const { fireMarketingEvent } = await import('./marketing-engine.js');
+    fireMarketingEvent('goal_creation_attempted');
+  } catch { /* ignore */ }
+  return false;
+}
+
+/**
  * @param {object} input
  * @returns {Promise<object|null>}
  */
 export async function saveFinancialGoal(input) {
   const uid = getUserId();
   if (!uid) return null;
+
+  const goals = window.STATE?.db?.financialGoals || [];
+  const isNew = !input.id;
+  const activeCount = goals.filter((g) => g.status === 'active' && g.id !== input.id).length;
+  if (isNew && activeCount >= 1 && !canCreateAdditionalGoal()) {
+    await attemptCreateAdditionalGoal();
+    throw new Error('Plan Basic hanya 1 target. Upgrade Pro+ untuk multiple goals.');
+  }
 
   const row = {
     user_id: uid,
@@ -189,5 +231,8 @@ if (typeof window !== 'undefined') {
     syncGoalFromTransactions,
     getPrimaryGoal,
     enrichGoal,
+    canCreateAdditionalGoal,
+    attemptCreateAdditionalGoal,
+    getMaxGoalsForPlan,
   };
 }

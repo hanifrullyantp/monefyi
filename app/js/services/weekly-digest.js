@@ -5,6 +5,7 @@
 
 import { generateWeeklyCheckinHeuristic, getWeekRange } from './weekly-checkin.js';
 import { generateSmartSuggestions } from './smart-suggestions.js';
+import { computeRecordingStreak } from './daily-streak.js';
 
 /**
  * @param {object} [state]
@@ -41,6 +42,18 @@ export function generateWeeklyDigest(state = typeof window !== 'undefined' ? win
     ...suggestions.map((s) => s.text || s.title).filter(Boolean),
   ].filter(Boolean).slice(0, 3);
 
+  let streak = null;
+  try {
+    streak = computeRecordingStreak(state.transactions || []).streak;
+  } catch { /* ignore */ }
+
+  const goals = (state.db?.financialGoals || [])
+    .filter((g) => g.status === 'active')
+    .map((g) => ({
+      name: g.name,
+      pct: g.target_amount > 0 ? Math.round((Number(g.current_amount) / Number(g.target_amount)) * 100) : 0,
+    }));
+
   return {
     ...checkin,
     week_total: weekTotal,
@@ -51,6 +64,8 @@ export function generateWeeklyDigest(state = typeof window !== 'undefined' ? win
     improvements,
     recommendations,
     suggestions,
+    streak,
+    goals,
     has_data: checkin.has_data || weekTotal > 0,
   };
 }

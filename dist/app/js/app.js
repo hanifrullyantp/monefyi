@@ -2256,6 +2256,25 @@ async function upsertTransaction_legacy_local(tx) {
           const { syncPeriodFromState } = await import('./services/global-filter.js');
           syncPeriodFromState();
         } catch { /* ignore */ }
+        try {
+          const { syncHouseholdFromRemote } = await import('./services/household-store.js');
+          await syncHouseholdFromRemote();
+        } catch (e) { console.warn('syncHouseholdFromRemote', e); }
+        try {
+          const { syncDebtsFromRemote } = await import('./services/debt-store.js');
+          await syncDebtsFromRemote();
+        } catch (e) { console.warn('syncDebtsFromRemote', e); }
+        try {
+          const { getOrGenerateWeeklyDigest } = await import('./services/weekly-digest-store.js');
+          getOrGenerateWeeklyDigest(STATE).catch(() => {});
+        } catch (e) { console.warn('weeklyDigestBoot', e); }
+        try {
+          const { autoGeneratePreviousMonthReport } = await import('./services/monthly-report-generator.js');
+          autoGeneratePreviousMonthReport(STATE).catch(() => {});
+        } catch (e) { console.warn('monthlyReportBoot', e); }
+        import('./services/marketing-engine.js')
+          .then(({ initMarketingEngine }) => initMarketingEngine({ state: STATE }))
+          .catch((e) => console.warn('initMarketingEngine', e));
         rerender();
         ensureAppShellVisible();
       } catch (e) {
@@ -6324,10 +6343,20 @@ function generateSmartBudgetRecommendation() {
           onViewTransactions: () => toggleNav('list'),
           onViewBudget: () => openBudget(),
           onViewTarget: async () => {
+            const goals = window.STATE?.db?.financialGoals || [];
+            if (goals.filter((g) => g.status === 'active').length > 1) {
+              const { showGoalsPanel } = await import('./components/goals-panel.js');
+              showGoalsPanel({ onSaved: () => { if (typeof renderMobileHome === 'function') renderMobileHome(); } });
+              return;
+            }
             const { showTargetManagerModal } = await import('./components/target-manager-modal.js');
             showTargetManagerModal({
               onSaved: () => { if (typeof renderMobileHome === 'function') renderMobileHome(); },
             });
+          },
+          onViewGoals: async () => {
+            const { showGoalsPanel } = await import('./components/goals-panel.js');
+            showGoalsPanel({ onSaved: () => { if (typeof renderMobileHome === 'function') renderMobileHome(); } });
           },
           onViewNeraca: () => openNeraca(),
           onViewAdvisor: () => openAdvisorAuto(),

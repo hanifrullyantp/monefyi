@@ -50,6 +50,55 @@ export function createHousehold(name) {
 }
 
 /**
+ * Create household — Supabase when online, local fallback.
+ * @param {string} name
+ * @returns {Promise<object>}
+ */
+export async function createHouseholdAsync(name) {
+  try {
+    const { createHouseholdRemote, cacheHouseholdLocally } = await import('./household-store.js');
+    const remote = await createHouseholdRemote(name);
+    if (remote) {
+      cacheHouseholdLocally(remote);
+      return remote;
+    }
+  } catch (e) {
+    console.warn('[household] remote create failed, using local', e);
+  }
+  return createHousehold(name);
+}
+
+/**
+ * Join household by invite code (Supabase).
+ * @param {string} code
+ * @returns {Promise<object>}
+ */
+export async function joinHouseholdByCode(code) {
+  const trimmed = String(code || '').trim();
+  if (!trimmed) throw new Error('Kode undangan wajib diisi');
+
+  const { joinHouseholdRemote, cacheHouseholdLocally } = await import('./household-store.js');
+  const remote = await joinHouseholdRemote(trimmed);
+  if (!remote) throw new Error('Gagal bergabung — perlu login & koneksi');
+  cacheHouseholdLocally(remote);
+  return remote;
+}
+
+/**
+ * Regenerate invite code for remote household owner.
+ * @returns {Promise<object|null>}
+ */
+export async function refreshInviteCode() {
+  const hh = loadHousehold();
+  if (!hh?.id) return null;
+  const { createInviteRemote, fetchMyHousehold, cacheHouseholdLocally } = await import('./household-store.js');
+  await createInviteRemote(hh.id);
+  const updated = await fetchMyHousehold();
+  if (updated) cacheHouseholdLocally(updated);
+  return updated || hh;
+}
+
+/**
  * @param {string} memberName
  * @returns {object|null}
  */
@@ -104,6 +153,14 @@ export function getHouseholdSummary(state = typeof window !== 'undefined' ? wind
 
 if (typeof window !== 'undefined') {
   window.monefyiHousehold = {
-    loadHousehold, createHousehold, addHouseholdMember, removeHouseholdMember, leaveHousehold, getHouseholdSummary,
+    loadHousehold,
+    createHousehold,
+    createHouseholdAsync,
+    joinHouseholdByCode,
+    refreshInviteCode,
+    addHouseholdMember,
+    removeHouseholdMember,
+    leaveHousehold,
+    getHouseholdSummary,
   };
 }

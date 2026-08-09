@@ -215,6 +215,22 @@ export function renderQuickPreview(parsed, callbacks = {}) {
       return;
     }
 
+    try {
+      const { shouldInterceptPurchase } = await import('../services/impulse-guard.js');
+      const { isCategoryLockedInEmergency } = await import('../services/emergency-mode.js');
+      if (isCategoryLockedInEmergency(edited.category)) {
+        alert('Mode darurat aktif — kategori ini dikunci sementara.');
+        return;
+      }
+      if (shouldInterceptPurchase(edited)) {
+        const { showImpulseGuardSheet } = await import('./impulse-guard-sheet.js');
+        const ok = await showImpulseGuardSheet(edited);
+        if (!ok) return;
+      }
+    } catch (e) {
+      console.warn('[quick-preview] impulse guard', e);
+    }
+
     // ── Learning loop: capture user corrections (fire-and-forget) ──────────
     try {
       const { loadModule } = await import('../utils/module-loader.js');
