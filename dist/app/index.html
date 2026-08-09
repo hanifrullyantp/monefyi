@@ -41,8 +41,8 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
  
-  <script type="module" crossorigin src="/app/assets/index-C3WnVX_u.js"></script>
-  <link rel="stylesheet" crossorigin href="/app/assets/index-BN1ZFn1A.css">
+  <script type="module" crossorigin src="/app/assets/index-CNwxjy-R.js"></script>
+  <link rel="stylesheet" crossorigin href="/app/assets/index-DbEWXf6F.css">
 </head>
 <body>
   <!-- ============================================
@@ -603,6 +603,13 @@
           <span class="sidebar-item__label sidebar-label" data-i18n="nav.transactions">Semua Transaksi</span>
         </button>
 
+        <button type="button" data-nav="household" data-nav-household class="sidebar-item sidebar-item--primary tap group hidden" hidden>
+          <span class="sidebar-item__icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22v-6h6v6"/></svg>
+          </span>
+          <span class="sidebar-item__label sidebar-label">Bersama</span>
+        </button>
+
         <button type="button" data-nav="budget" class="sidebar-item sidebar-item--primary tap group">
           <span class="sidebar-item__icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>
@@ -802,6 +809,9 @@
 
         <!-- Monthly reports -->
         <div id="monthlyReportsPageRoot" class="monthly-reports-page-root hidden" aria-label="Laporan Bulanan"></div>
+
+        <!-- Household Bersama -->
+        <div id="householdPageRoot" class="household-page-root hidden" aria-label="Household Bersama"></div>
 
         <!-- Monevisor full page (report + collapsible chat) -->
         <div id="monevisorPageRoot" class="monevisor-page-root hidden" aria-label="Monevisor"></div>
@@ -1227,6 +1237,13 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
         </span>
         <span class="text-[11px] font-medium">Transaksi</span>
+      </button>
+
+      <button type="button" data-nav="bersama" data-nav-household class="nav-item bottom-nav__item flex flex-col items-center gap-1 tap hidden" hidden>
+        <span class="nav-item__icon text-xl">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22v-6h6v6"/></svg>
+        </span>
+        <span class="text-[11px] font-medium">Bersama</span>
       </button>
       
       <div class="nav-fab-slot bottom-nav__fab-slot">

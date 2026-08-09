@@ -47,7 +47,8 @@ for f in \
   sprint8_monthly_review \
   sprint13_18_community \
   growth_advanced \
-  household_shared_visibility
+  household_shared_visibility \
+  household_shared_tx_rls
 do
   src=$(ls "$ROOT/supabase/migrations/"*"_${f}.sql" 2>/dev/null | head -1 || true)
   if [[ -n "$src" && -f "$src" ]]; then

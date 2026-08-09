@@ -1080,6 +1080,7 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
         lastSaldoAnimated: 0,
         saldoViewMode: 'monthly',
         reportsPageOpen: false,
+        householdPageOpen: false,
         inlineEditId: null,
         txDragId: null,
       },
@@ -1847,6 +1848,8 @@ function computeSubscriptionStatus(profile){
         created_at: stamped.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
         meta: stamped.meta || {},
+        visibility: stamped.visibility || stamped.meta?.visibility || 'personal',
+        household_id: stamped.household_id || null,
       };
 
       const { data, error } = await supa.from('transactions').upsert(row).select('*').single();
@@ -2262,7 +2265,16 @@ async function upsertTransaction_legacy_local(tx) {
         } catch (e) { console.warn('syncFeatureFlagsFromRemote', e); }
         try {
           const { syncHouseholdFromRemote } = await import('./services/household-store.js');
-          await syncHouseholdFromRemote();
+          const hh = await syncHouseholdFromRemote();
+          if (hh) {
+            const { pullSharedTransactionsFromRemote, updateHouseholdNavVisibility } = await import('./services/household-shared-sync.js');
+            updateHouseholdNavVisibility();
+            pullSharedTransactionsFromRemote().catch(() => {});
+          } else {
+            import('./services/household-shared-sync.js')
+              .then(({ updateHouseholdNavVisibility }) => updateHouseholdNavVisibility())
+              .catch(() => {});
+          }
         } catch (e) { console.warn('syncHouseholdFromRemote', e); }
         try {
           const { isFeatureEnabled } = await import('./services/feature-flag-store.js');
@@ -3919,6 +3931,8 @@ async function upsertTransaction_legacy_local(tx) {
           if (nav === 'neraca') el.classList.add('active');
         } else if (STATE.ui.budgetPageOpen) {
           if (nav === 'budget') el.classList.add('active');
+        } else if (STATE.ui.householdPageOpen) {
+          if (nav === 'household') el.classList.add('active');
         } else {
           if (nav === 'dash' && STATE.ui.dashboardOpen) el.classList.add('active');
           if (nav === 'list' && !STATE.ui.dashboardOpen) el.classList.add('active');
@@ -3928,12 +3942,13 @@ async function upsertTransaction_legacy_local(tx) {
       if (!STATE.ui.budgetOpen && !STATE.ui.advisorOpen) {
         $$('.nav-item[data-nav]').forEach((el) => {
           const nav = el.getAttribute('data-nav');
-          if (nav === 'beranda' || nav === 'transaksi' || nav === 'budget' || nav === 'advisor') {
+          if (nav === 'beranda' || nav === 'transaksi' || nav === 'budget' || nav === 'advisor' || nav === 'bersama') {
             el.classList.toggle('active',
-              (nav === 'beranda' && STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen && !STATE.ui.neracaPageOpen && !STATE.ui.settingsPageOpen)
-              || (nav === 'transaksi' && !STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen && !STATE.ui.neracaPageOpen && !STATE.ui.settingsPageOpen)
+              (nav === 'beranda' && STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen && !STATE.ui.neracaPageOpen && !STATE.ui.settingsPageOpen && !STATE.ui.householdPageOpen)
+              || (nav === 'transaksi' && !STATE.ui.dashboardOpen && !STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen && !STATE.ui.neracaPageOpen && !STATE.ui.settingsPageOpen && !STATE.ui.householdPageOpen)
               || (nav === 'budget' && STATE.ui.budgetPageOpen)
               || (nav === 'advisor' && STATE.ui.monevisorPageOpen)
+              || (nav === 'bersama' && STATE.ui.householdPageOpen)
             );
           }
         });
@@ -4101,7 +4116,7 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       }
       $('#rangeCard')?.classList.toggle('hidden', (STATE.period.preset || 'this_month') !== 'custom');
 
-      const specialPageOpen = !!(STATE.ui.budgetPageOpen || STATE.ui.monevisorPageOpen || STATE.ui.neracaPageOpen || STATE.ui.settingsPageOpen || STATE.ui.reportsPageOpen);
+      const specialPageOpen = !!(STATE.ui.budgetPageOpen || STATE.ui.monevisorPageOpen || STATE.ui.neracaPageOpen || STATE.ui.settingsPageOpen || STATE.ui.reportsPageOpen || STATE.ui.householdPageOpen);
       applySpecialPageVisibility();
       const showDesktopDashboard = STATE.ui.dashboardOpen && isDesktopViewport() && !specialPageOpen;
       const showMobileHome = STATE.ui.dashboardOpen && !isDesktopViewport() && !specialPageOpen;
@@ -4141,9 +4156,11 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
             ? 'Posisi Keuangan Saya'
             : (STATE.ui.monevisorPageOpen
               ? 'Monevisor'
-              : (STATE.ui.budgetPageOpen
+              : (STATE.ui.householdPageOpen
+                ? 'Bersama'
+                : (STATE.ui.budgetPageOpen
                 ? 'Budgeting'
-                : (STATE.ui.dashboardOpen ? 'Dashboard' : 'Transaksi'))));
+                : (STATE.ui.dashboardOpen ? 'Dashboard' : 'Transaksi')))));
       }
       if (pageSubtitleDesktop) {
         pageSubtitleDesktop.textContent = STATE.ui.settingsPageOpen
@@ -4152,11 +4169,13 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
             ? 'Posisi keuangan lengkap'
             : (STATE.ui.monevisorPageOpen
               ? 'Financial coach — diagnosa & action plan'
-              : (STATE.ui.budgetPageOpen
+              : (STATE.ui.householdPageOpen
+                ? 'Transaksi & ringkasan household'
+                : (STATE.ui.budgetPageOpen
                 ? 'Rencana & realisasi budget bulanan'
                 : (STATE.ui.dashboardOpen
                   ? 'Ringkasan keuangan Anda'
-                  : 'Kelola transaksi keuangan Anda'))));
+                  : 'Kelola transaksi keuangan Anda')))));
       }
       const dynamicContent = $('#dynamicContent');
       if (dynamicContent) {
@@ -6488,13 +6507,14 @@ function generateSmartBudgetRecommendation() {
   else requestAnimationFrame(() => renderCharts());
 
   // Skip TX list rebuild on Budget / Monevisor / Neraca / Settings — avoids flash + wasted work
-  if (!STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen && !STATE.ui.neracaPageOpen && !STATE.ui.settingsPageOpen) {
+  if (!STATE.ui.budgetPageOpen && !STATE.ui.monevisorPageOpen && !STATE.ui.neracaPageOpen && !STATE.ui.settingsPageOpen && !STATE.ui.householdPageOpen) {
     renderTransactions();
   }
-  if (STATE.ui.dashboardOpen && !isDesktopViewport() && !STATE.ui.settingsPageOpen && !STATE.ui.neracaPageOpen) renderMobileHome();
+  if (STATE.ui.dashboardOpen && !isDesktopViewport() && !STATE.ui.settingsPageOpen && !STATE.ui.neracaPageOpen && !STATE.ui.householdPageOpen) renderMobileHome();
   if (STATE.ui.budgetPageOpen) renderBudgetPageView();
   if (STATE.ui.neracaPageOpen) renderNeracaPageView();
   if (STATE.ui.monevisorPageOpen) renderMonevisorPageView();
+  if (STATE.ui.householdPageOpen) renderHouseholdPageView();
   enhanceTransactionPageDesktop();
 }
 
@@ -6505,7 +6525,8 @@ function generateSmartBudgetRecommendation() {
         && !STATE.ui.budgetPageOpen
         && !STATE.ui.monevisorPageOpen
         && !STATE.ui.neracaPageOpen
-        && !STATE.ui.settingsPageOpen;
+        && !STATE.ui.settingsPageOpen
+        && !STATE.ui.householdPageOpen;
     }
 
     /** Full-width saldo bar context: TX or Dashboard at ≥1024 (not Budget/Monevisor/Neraca) */
@@ -6514,7 +6535,8 @@ function generateSmartBudgetRecommendation() {
         && !STATE.ui.budgetPageOpen
         && !STATE.ui.monevisorPageOpen
         && !STATE.ui.neracaPageOpen
-        && !STATE.ui.settingsPageOpen;
+        && !STATE.ui.settingsPageOpen
+        && !STATE.ui.householdPageOpen;
     }
 
     function isSidebarCollapsed() {
@@ -6952,7 +6974,7 @@ function setSheetPosition(mode) {
      * Must beat CSS rules like `.tx-main-panel #txSection { display:flex }`.
      */
     function applySpecialPageVisibility() {
-      const specialPageOpen = !!(STATE.ui.budgetPageOpen || STATE.ui.monevisorPageOpen || STATE.ui.neracaPageOpen || STATE.ui.settingsPageOpen || STATE.ui.reportsPageOpen);
+      const specialPageOpen = !!(STATE.ui.budgetPageOpen || STATE.ui.monevisorPageOpen || STATE.ui.neracaPageOpen || STATE.ui.settingsPageOpen || STATE.ui.reportsPageOpen || STATE.ui.householdPageOpen);
       const showDesktopDashboard = STATE.ui.dashboardOpen && isDesktopViewport() && !specialPageOpen;
       const showMobileHome = STATE.ui.dashboardOpen && !isDesktopViewport() && !specialPageOpen;
       const showTx = !STATE.ui.dashboardOpen && !specialPageOpen;
@@ -6969,6 +6991,7 @@ function setSheetPosition(mode) {
       $('#monevisorPageRoot')?.classList.toggle('hidden', !STATE.ui.monevisorPageOpen);
       $('#settingsPageRoot')?.classList.toggle('hidden', !STATE.ui.settingsPageOpen);
       $('#monthlyReportsPageRoot')?.classList.toggle('hidden', !STATE.ui.reportsPageOpen);
+      $('#householdPageRoot')?.classList.toggle('hidden', !STATE.ui.householdPageOpen);
 
       const dynamicContent = $('#dynamicContent');
       if (dynamicContent) {
@@ -6979,6 +7002,7 @@ function setSheetPosition(mode) {
         dynamicContent.classList.toggle('dynamic-content--monevisor', !!STATE.ui.monevisorPageOpen);
         dynamicContent.classList.toggle('dynamic-content--settings', !!STATE.ui.settingsPageOpen);
         dynamicContent.classList.toggle('dynamic-content--reports', !!STATE.ui.reportsPageOpen);
+        dynamicContent.classList.toggle('dynamic-content--household', !!STATE.ui.householdPageOpen);
       }
 
       document.querySelector('.mobile-saldo-wrap')?.classList.toggle('hidden', specialPageOpen);
@@ -7098,10 +7122,12 @@ function setSheetPosition(mode) {
       closeAdvisor();
       closeAddSheet();
       closeReports();
+      closeHousehold();
       STATE.ui.neracaPageOpen = true;
       STATE.ui.budgetPageOpen = false;
       STATE.ui.monevisorPageOpen = false;
       STATE.ui.settingsPageOpen = false;
+      STATE.ui.householdPageOpen = false;
       STATE.ui.dashboardOpen = false;
       STATE.ui.advisorOpen = false;
       STATE.ui.budgetOpen = false;
@@ -7143,11 +7169,13 @@ function setSheetPosition(mode) {
       closeAdvisor();
       closeAddSheet();
       closeNeraca();
+      closeHousehold();
       STATE.ui.reportsPageOpen = true;
       STATE.ui.budgetPageOpen = false;
       STATE.ui.monevisorPageOpen = false;
       STATE.ui.neracaPageOpen = false;
       STATE.ui.settingsPageOpen = false;
+      STATE.ui.householdPageOpen = false;
       STATE.ui.dashboardOpen = false;
 
       $$('.nav-item[data-nav]').forEach((el) => el.classList.remove('active'));
@@ -7172,6 +7200,64 @@ function setSheetPosition(mode) {
       }
     }
 
+    async function renderHouseholdPageView() {
+      const root = $('#householdPageRoot');
+      if (!root || !STATE.ui.householdPageOpen) return;
+      try {
+        const { renderHouseholdPage } = await import('./pages/household-page.js');
+        await renderHouseholdPage(root, { state: STATE, helpers: { formatIDR, formatCompactIDR } });
+      } catch (e) {
+        console.error('[household] page render failed', e);
+      }
+    }
+    window.renderHouseholdPageView = renderHouseholdPageView;
+
+    async function openHousehold() {
+      closeBudgetSheetOnly();
+      closeAdvisor();
+      closeNeraca();
+      closeReports();
+      closeAddSheet();
+      closeBudgetPage?.();
+
+      STATE.ui.householdPageOpen = true;
+      STATE.ui.budgetPageOpen = false;
+      STATE.ui.monevisorPageOpen = false;
+      STATE.ui.neracaPageOpen = false;
+      STATE.ui.settingsPageOpen = false;
+      STATE.ui.reportsPageOpen = false;
+      STATE.ui.dashboardOpen = false;
+
+      $$('.nav-item[data-nav]').forEach((el) => {
+        el.classList.toggle('active', el.getAttribute('data-nav') === 'bersama');
+      });
+      $$('.sidebar-item[data-nav]').forEach((el) => {
+        el.classList.toggle('active', el.getAttribute('data-nav') === 'household');
+      });
+
+      history.replaceState(null, '', '#household');
+      applySpecialPageVisibility();
+      $('#householdPageRoot')?.classList.remove('hidden');
+      rerender();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      try {
+        const { pullSharedTransactionsFromRemote } = await import('./services/household-shared-sync.js');
+        await pullSharedTransactionsFromRemote();
+      } catch { /* non-blocking */ }
+      await renderHouseholdPageView();
+    }
+    window.openHousehold = openHousehold;
+
+    function closeHousehold() {
+      STATE.ui.householdPageOpen = false;
+      const root = $('#householdPageRoot');
+      if (root) {
+        root.classList.add('hidden');
+        root.replaceChildren();
+      }
+    }
+
     function closeNeraca() {
       STATE.ui.neracaPageOpen = false;
       const root = $('#neracaPageRoot');
@@ -7186,6 +7272,7 @@ function setSheetPosition(mode) {
       closeAdvisor();
       closeNeraca();
       closeReports();
+      closeHousehold();
       closeAddSheet();
 
       // Switch view flags FIRST so TX list never flashes during async draft prep
@@ -7193,6 +7280,7 @@ function setSheetPosition(mode) {
       STATE.ui.monevisorPageOpen = false;
       STATE.ui.neracaPageOpen = false;
       STATE.ui.settingsPageOpen = false;
+      STATE.ui.householdPageOpen = false;
       STATE.ui.dashboardOpen = false;
       STATE.ui.budgetOpen = false;
 
@@ -7290,6 +7378,8 @@ function setSheetPosition(mode) {
       STATE.ui.budgetPageOpen = false;
       STATE.ui.neracaPageOpen = false;
       STATE.ui.settingsPageOpen = false;
+      STATE.ui.householdPageOpen = false;
+      STATE.ui.reportsPageOpen = false;
       STATE.ui.dashboardOpen = false;
       STATE.ui.advisorOpen = false;
       STATE.ui.budgetOpen = false;
@@ -7367,11 +7457,14 @@ function setSheetPosition(mode) {
       closeAdvisor();
       closeNeraca();
       closeAddSheet();
+      closeHousehold?.();
 
       STATE.ui.settingsPageOpen = true;
       STATE.ui.budgetPageOpen = false;
       STATE.ui.monevisorPageOpen = false;
       STATE.ui.neracaPageOpen = false;
+      STATE.ui.householdPageOpen = false;
+      STATE.ui.reportsPageOpen = false;
       STATE.ui.dashboardOpen = false;
 
       $$('.nav-item[data-nav]').forEach((el) => el.classList.remove('active'));
@@ -7488,6 +7581,10 @@ function setSheetPosition(mode) {
             });
           }).catch(() => {});
         }
+        return;
+      }
+      if (hash.includes('household') || hash.includes('bersama') || url.includes('#household')) {
+        if (typeof openHousehold === 'function') openHousehold();
         return;
       }
       if (hash.includes('neraca') || url.includes('#neraca')) {
@@ -12232,6 +12329,10 @@ function toggleNav(view, triggerEl) {
         openReports();
         return;
       }
+      if (view === 'household') {
+        openHousehold();
+        return;
+      }
       if (view === 'advisor') {
         openAdvisorAuto();
         return;
@@ -12247,6 +12348,7 @@ function toggleNav(view, triggerEl) {
         STATE.ui.monevisorPageOpen = false;
         STATE.ui.neracaPageOpen = false;
         STATE.ui.reportsPageOpen = false;
+        STATE.ui.householdPageOpen = false;
         STATE.ui.settingsPageOpen = false;
         runFirstWeekPlanEval({ openedTransactions: true });
       } else if (view === 'dash') {
@@ -12255,10 +12357,12 @@ function toggleNav(view, triggerEl) {
         STATE.ui.monevisorPageOpen = false;
         STATE.ui.neracaPageOpen = false;
         STATE.ui.reportsPageOpen = false;
+        STATE.ui.householdPageOpen = false;
         STATE.ui.settingsPageOpen = false;
       }
       closeReports();
-      const map = { dash: 'beranda', list: 'transaksi', budget: 'budget', advisor: 'advisor', neraca: 'neraca', reports: 'reports' };
+      closeHousehold();
+      const map = { dash: 'beranda', list: 'transaksi', budget: 'budget', advisor: 'advisor', neraca: 'neraca', reports: 'reports', household: 'bersama' };
       const active = map[view] || '';
       $$('.nav-item[data-nav]').forEach((el) => {
         el.classList.toggle('active', el.getAttribute('data-nav') === active);
@@ -12275,14 +12379,14 @@ function toggleNav(view, triggerEl) {
     $$('.sidebar-item[data-nav]').forEach((el) => {
       el.addEventListener('click', () => {
         const view = el.getAttribute('data-nav');
-        if (view === 'dash' || view === 'list' || view === 'budget' || view === 'neraca' || view === 'advisor' || view === 'reports') toggleNav(view, el);
+        if (view === 'dash' || view === 'list' || view === 'budget' || view === 'neraca' || view === 'advisor' || view === 'reports' || view === 'household') toggleNav(view, el);
       });
     });
 
     $$('.nav-item[data-nav]').forEach((el) => {
       el.addEventListener('click', (e) => {
         const nav = el.getAttribute('data-nav');
-        const map = { beranda: 'dash', transaksi: 'list', budget: 'budget', advisor: 'advisor', neraca: 'neraca', reports: 'reports' };
+        const map = { beranda: 'dash', transaksi: 'list', budget: 'budget', advisor: 'advisor', neraca: 'neraca', reports: 'reports', bersama: 'household' };
         const view = map[nav];
         if (view) {
           e.preventDefault();
@@ -13074,6 +13178,9 @@ function toggleNav(view, triggerEl) {
         // Deep-link Settings: #settings[/section]
         if (String(location.hash || '').startsWith('#settings') && STATE.db?.user) {
           setTimeout(() => openSettings(), 0);
+        }
+        if (String(location.hash || '').startsWith('#household') && STATE.db?.user) {
+          setTimeout(() => openHousehold?.(), 0);
         }
       } finally {
         splash?.dismiss?.();

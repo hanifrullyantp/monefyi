@@ -21,6 +21,9 @@ Checklist Sprint 6+ sebelum public launch Monefyi PWA.
 6. `20260809190000_sprint6_beta_launch.sql`
 7. `20260809240000_product_marketing_compliance.sql` — account deletion + refund requests
 8. `20260809250000_household_shared_visibility.sql` — transaction visibility personal/shared
+9. `20260809260000_household_shared_tx_rls.sql` — RLS read shared txs across household members
+
+**Cron setup reference:** `./scripts/setup-compliance-crons.sh`
 
 Re-deploy product-marketing: `./scripts/deploy-monefyi-product-marketing.sh`
 

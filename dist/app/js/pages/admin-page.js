@@ -1023,14 +1023,24 @@ async function renderRefunds(body) {
           if (!id || !act) return;
           const notes = prompt('Catatan admin (opsional):') || '';
           try {
-            const { processRefundRequest } = await import('../services/refund-request.js');
-            await processRefundRequest(id, act === 'approve' ? 'approved' : 'rejected', notes);
-            const { notifyCompliance } = await import('../services/compliance-client.js');
-            await notifyCompliance('refund_processed', {
-              user_id: userId || undefined,
-              status: act === 'approve' ? 'approved' : 'rejected',
+            const { invokeComplianceFunction } = await import('../services/compliance-client.js');
+            const fnRefund = window.MONEFYI_CONFIG?.fnRefundLynk || 'monefyi-refund-lynk';
+            const remote = await invokeComplianceFunction(fnRefund, {
+              request_id: id,
               admin_notes: notes,
+              reject: act === 'reject',
             });
+
+            if (!remote.success) {
+              const { processRefundRequest } = await import('../services/refund-request.js');
+              await processRefundRequest(id, act === 'approve' ? 'approved' : 'rejected', notes);
+              const { notifyCompliance } = await import('../services/compliance-client.js');
+              await notifyCompliance('refund_processed', {
+                user_id: userId || undefined,
+                status: act === 'approve' ? 'approved' : 'rejected',
+                admin_notes: notes,
+              });
+            }
             toast(`Refund ${act === 'approve' ? 'disetujui' : 'ditolak'}`, 'success');
             await load();
           } catch (e) {

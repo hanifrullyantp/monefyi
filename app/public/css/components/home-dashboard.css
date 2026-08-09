@@ -232,6 +232,71 @@ body:not(.theme-light) .home-streak-badge {
   cursor: pointer;
 }
 
+.household-combined-card__cta.ghost {
+  margin-top: 6px;
+  background: transparent;
+  border: 1px solid var(--border-subtle, rgba(255,255,255,.12));
+}
+
+.household-page-root {
+  padding: 12px 16px 96px;
+  max-width: 720px;
+}
+
+.household-page__header h1 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.household-page__txs-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.household-page__txs-head h2 {
+  font-size: 15px;
+  margin: 0;
+}
+
+.household-page__sync {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+.household-page__tx-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.household-page__tx-item {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,.08));
+  cursor: pointer;
+}
+
+.household-page__tx-amt.is-income {
+  color: var(--status-success, #10b981);
+}
+
+.household-page__tx-amt.is-expense {
+  color: var(--status-danger, #f43f5e);
+}
+
+.household-page__empty,
+.household-page--empty .muted {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
 #dashboardExpanded .home-account-card,
 #accountsBalancesRow .home-account-card {
   background: var(--card-bg);

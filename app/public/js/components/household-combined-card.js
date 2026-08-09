@@ -56,12 +56,17 @@ export function renderHouseholdCombinedCard(dashboard, callbacks = {}) {
           `).join('')}
         </div>
       ` : ''}
-      <button type="button" class="household-combined-card__cta tap">Kelola household</button>
+      <button type="button" class="household-combined-card__cta tap" data-action="open-page">Buka halaman Bersama</button>
+      <button type="button" class="household-combined-card__cta tap ghost" data-action="manage">Kelola household</button>
     </div>
   `;
 
-  el.querySelector('.household-combined-card__cta')?.addEventListener('click', () => {
+  el.querySelector('[data-action="manage"]')?.addEventListener('click', () => {
     callbacks.onManage?.();
+  });
+  el.querySelector('[data-action="open-page"]')?.addEventListener('click', () => {
+    if (typeof window.openHousehold === 'function') window.openHousehold();
+    else callbacks.onOpenPage?.();
   });
 
   return el;
