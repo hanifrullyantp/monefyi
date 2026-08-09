@@ -109,7 +109,7 @@ Re-deploy growth: `./scripts/deploy-growth-migrations.sh`
 ## 7. Beta Test (real users)
 
 - [ ] Invite 10–20 beta testers (lifetime early_access atau flag override)
-- [ ] Beta banner tampil di beranda
+- [x] Beta banner + admin Grant Beta (flag per user / global)
 - [ ] Feedback masuk ke Admin → Feedback
 - [ ] Monitor error rate Sentry < 2%
 - [ ] Fix P0/P1 issues sebelum launch
@@ -119,7 +119,7 @@ Re-deploy growth: `./scripts/deploy-growth-migrations.sh`
 - [x] Privacy policy & terms link di landing footer
 - [x] Refund policy selaras dengan checkout copy (manual gate, email dulu)
 - [x] Account deletion flow documented in privacy policy
-- [ ] Cookie/tracking consent — N/A (landing tanpa analytics tracker pihak ketiga saat ini)
+- [x] Cookie/tracking consent — banner di landing (`landing-cookie.js`)
 
 ## 9. Performance
 
