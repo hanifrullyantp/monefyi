@@ -31,10 +31,10 @@ export function renderFinancialHealthCard(scoreResult, callbacks = {}) {
         <div class="financial-health-bar">
           <div class="financial-health-bar__label">
             <span>${escapeHtml(c.label)}</span>
-            <span>${c.score}</span>
+            <span>${c.max ? `${c.score}/${c.max}` : c.score}</span>
           </div>
           <div class="financial-health-bar__track">
-            <div class="financial-health-bar__fill" style="width:${c.score}%"></div>
+            <div class="financial-health-bar__fill" style="width:${c.max ? Math.round((c.score / c.max) * 100) : c.score}%"></div>
           </div>
         </div>
       `).join('')}

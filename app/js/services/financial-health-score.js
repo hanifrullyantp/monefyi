@@ -4,6 +4,7 @@
  */
 
 import { calculateProgress, countFlexibleOverBudget } from './budget-model.js';
+import { computeRecordingStreak } from './daily-streak.js';
 
 const LS_HISTORY = 'monefyi_health_score_history';
 
@@ -77,65 +78,93 @@ export function computeFinancialHealthScore(state = typeof window !== 'undefined
   else if (categories.size >= 3) diversificationScore += 15;
   diversificationScore = Math.min(100, diversificationScore);
 
+  let habitScore = 40;
+  try {
+    const streak = computeRecordingStreak(state.transactions || []).streak;
+    if (streak >= 30) habitScore = 100;
+    else if (streak >= 14) habitScore = 80;
+    else if (streak >= 7) habitScore = 55;
+    else if (streak >= 3) habitScore = 35;
+  } catch { /* ignore */ }
+
   const components = {
     budgetDiscipline: {
       label: 'Disiplin Budget',
-      score: Math.max(0, Math.min(100, disciplineScore)),
+      score: Math.max(0, Math.min(100, Math.round(disciplineScore * 20 / 100))),
+      raw: Math.max(0, Math.min(100, disciplineScore)),
+      max: 20,
       tip: overCount > 0 ? `${overCount} kategori flexible over — review alokasi` : 'Budget terjaga dengan baik',
     },
     savingRate: {
       label: 'Saving Rate',
-      score: savingScore,
+      score: Math.round(savingScore * 20 / 100),
+      raw: savingScore,
+      max: 20,
       tip: savingRate >= 0.2 ? 'Tabungan sehat' : 'Coba alokasikan minimal 20% dari income',
     },
     emergencyFund: {
       label: 'Dana Darurat',
-      score: emergencyScore,
+      score: Math.round(emergencyScore * 20 / 100),
+      raw: emergencyScore,
+      max: 20,
       tip: emergencyScore >= 80 ? 'Dana darurat memadai' : 'Bangun tabungan darurat 3-6x pengeluaran',
     },
     debtRatio: {
       label: 'Rasio Utang',
-      score: debtScore,
+      score: Math.round(debtScore * 15 / 100),
+      raw: debtScore,
+      max: 15,
       tip: debtAmount > 0 ? 'Prioritaskan cicilan di atas 30% income' : 'Tidak ada utang tercatat',
     },
     diversification: {
       label: 'Diversifikasi',
-      score: diversificationScore,
+      score: Math.round(diversificationScore * 10 / 100),
+      raw: diversificationScore,
+      max: 10,
       tip: 'Sebar pengeluaran dan akun untuk risiko lebih rendah',
+    },
+    financialHabit: {
+      label: 'Kebiasaan Catat',
+      score: Math.round(habitScore * 15 / 100),
+      raw: habitScore,
+      max: 15,
+      tip: habitScore >= 80 ? 'Streak catat transaksi kuat' : 'Target streak 14+ hari berturut-turut',
     },
   };
 
-  const weights = { budgetDiscipline: 0.25, savingRate: 0.25, emergencyFund: 0.2, debtRatio: 0.15, diversification: 0.15 };
-  const overall = Math.round(
-    Object.entries(weights).reduce((s, [k, w]) => s + (components[k].score * w), 0),
-  );
+  const overall = Math.min(100, Object.values(components).reduce((s, c) => s + c.score, 0));
 
   const history = loadScoreHistory();
   const prev = history[history.length - 1]?.overall;
   const trend = prev == null ? 'stable' : overall > prev + 3 ? 'up' : overall < prev - 3 ? 'down' : 'stable';
 
   const recommendations = Object.values(components)
-    .filter((c) => c.score < 65)
-    .sort((a, b) => a.score - b.score)
+    .filter((c) => (c.raw ?? c.score) < 65)
+    .sort((a, b) => (a.raw ?? a.score) - (b.raw ?? b.score))
     .slice(0, 3)
     .map((c) => c.tip);
 
-  return {
+  const result = {
     overall,
     grade: getHealthGrade(overall),
     trend,
     components,
     recommendations,
+    history: loadScoreHistory(),
     computed_at: new Date().toISOString(),
     month,
   };
+
+  saveScoreSnapshot(result);
+  return result;
 }
 
 /**
  * @returns {object[]}
  */
-function loadScoreHistory() {
+export function loadScoreHistory() {
   try {
+    if (typeof localStorage === 'undefined') return [];
     return JSON.parse(localStorage.getItem(LS_HISTORY) || '[]');
   } catch {
     return [];
@@ -147,6 +176,7 @@ function loadScoreHistory() {
  * @param {object} scoreResult
  */
 export function saveScoreSnapshot(scoreResult) {
+  if (typeof localStorage === 'undefined') return;
   const history = loadScoreHistory().filter((h) => h.month !== scoreResult.month);
   history.push({
     month: scoreResult.month,
@@ -157,5 +187,7 @@ export function saveScoreSnapshot(scoreResult) {
 }
 
 if (typeof window !== 'undefined') {
-  window.monefyiHealthScore = { computeFinancialHealthScore, saveScoreSnapshot, getHealthGrade };
+  window.monefyiHealthScore = {
+    computeFinancialHealthScore, saveScoreSnapshot, loadScoreHistory, getHealthGrade,
+  };
 }

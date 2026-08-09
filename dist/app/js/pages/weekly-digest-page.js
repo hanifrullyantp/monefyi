@@ -35,6 +35,7 @@ export async function showWeeklyDigestPage(opts = {}) {
 
       <section class="weekly-digest-page__section">
         <h3>Ringkasan</h3>
+        ${digest.coaching_greeting ? `<p class="weekly-digest-page__coaching">${escapeHtml(digest.coaching_greeting)} · level ${escapeHtml(digest.coaching_level || 'beginner')}</p>` : ''}
         <div class="weekly-digest-page__stats">
           <div><span>Pengeluaran</span><strong>Rp ${fmt(digest.week_total)}</strong></div>
           <div><span>vs minggu lalu</span><strong>${escapeHtml(digest.change_label || '—')}</strong></div>

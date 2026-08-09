@@ -150,6 +150,18 @@ async function renderV2Home(container, data, ctx, callbacks, formatIDR, formatCo
   }
 
   try {
+    const { shouldPromptMonthlyReview } = await import('../services/monthly-review-prompt.js');
+    const { renderMonthlyReviewPromptCard } = await import('../components/monthly-review-prompt-card.js');
+    if (shouldPromptMonthlyReview()) {
+      container.appendChild(renderMonthlyReviewPromptCard({
+        onClosing: callbacks.onMonthlyClosing,
+      }));
+    }
+  } catch (e) {
+    console.warn('[home] monthly review prompt', e);
+  }
+
+  try {
     const { getActiveChallenges } = await import('../services/community-features.js');
     const challenges = getActiveChallenges();
     if (challenges.length) {
@@ -293,6 +305,18 @@ async function renderV2Home(container, data, ctx, callbacks, formatIDR, formatCo
     if (insightCard) container.appendChild(insightCard);
   } catch (e) {
     console.warn('[home] smart insights', e);
+  }
+
+  try {
+    const { computeFinancialHealthScore } = await import('../services/financial-health-score.js');
+    const { renderFinancialHealthCard } = await import('../components/financial-health-card.js');
+    const health = computeFinancialHealthScore(state);
+    const healthCard = renderFinancialHealthCard(health, {
+      onViewDetail: () => callbacks.onViewAdvisor?.(),
+    });
+    container.appendChild(healthCard);
+  } catch (e) {
+    console.warn('[home] financial health card', e);
   }
 
   try {

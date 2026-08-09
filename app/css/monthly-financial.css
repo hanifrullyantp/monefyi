@@ -288,6 +288,20 @@
 
 .mrs-btn--ghost { background: transparent; }
 
+.mrs-hint { font-size: 12px; color: var(--text-secondary, #94a3b8); margin-top: 8px; }
+.mrs-pattern-list { font-size: 13px; padding-left: 18px; margin: 12px 0; }
+.mrs-radio { display: block; font-size: 13px; margin: 8px 0; cursor: pointer; }
+.mrs-journal-preview { font-size: 12px; background: rgba(148,163,184,0.08); padding: 12px; border-radius: 10px; }
+.mrs-journal-preview p { margin: 6px 0; }
+
+.weekly-digest-card__coaching,
+.weekly-digest-page__coaching {
+  font-size: 12px;
+  color: var(--text-secondary, #94a3b8);
+  margin-bottom: 8px;
+  font-style: italic;
+}
+
 .mrp-list {
   list-style: none;
   padding: 0;

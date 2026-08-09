@@ -30,6 +30,9 @@ export function renderWeeklyDigestCard(state = window.STATE, callbacks = {}) {
           ${Icon('chevronRight', { size: 18 })}
         </button>
       </div>
+      ${digest.coaching_greeting ? `
+        <div class="weekly-digest-card__coaching">${escapeHtml(digest.coaching_greeting)}</div>
+      ` : ''}
       <div class="weekly-digest-card__stat">
         Pengeluaran <strong>Rp ${fmt(digest.week_total)}</strong>
         <span class="weekly-digest-card__change">${escapeHtml(digest.change_label || '')}</span>

@@ -6,6 +6,7 @@
 import { generateWeeklyCheckinHeuristic, getWeekRange } from './weekly-checkin.js';
 import { generateSmartSuggestions } from './smart-suggestions.js';
 import { computeRecordingStreak } from './daily-streak.js';
+import { applyCoachingTone } from './weekly-digest-coaching.js';
 
 /**
  * @param {object} [state]
@@ -54,7 +55,7 @@ export function generateWeeklyDigest(state = typeof window !== 'undefined' ? win
       pct: g.target_amount > 0 ? Math.round((Number(g.current_amount) / Number(g.target_amount)) * 100) : 0,
     }));
 
-  return {
+  return applyCoachingTone({
     ...checkin,
     week_total: weekTotal,
     prev_week_total: prevTotal,
@@ -67,7 +68,7 @@ export function generateWeeklyDigest(state = typeof window !== 'undefined' ? win
     streak,
     goals,
     has_data: checkin.has_data || weekTotal > 0,
-  };
+  }, state);
 }
 
 /**
