@@ -12,6 +12,11 @@ import { Icon } from '../components/icons.js';
  */
 export async function renderMonthlyReportsPage(container) {
   if (!container) return;
+  const { isGatedFeatureEnabled } = await import('../services/feature-gates.js');
+  if (!(await isGatedFeatureEnabled('monthly_auto_report'))) {
+    container.innerHTML = '<p class="muted">Laporan otomatis belum tersedia untuk akun Anda.</p>';
+    return;
+  }
   const userId = window.STATE?.db?.user?.id;
   if (!userId) {
     container.innerHTML = '<p class="muted">Login dulu untuk melihat laporan.</p>';

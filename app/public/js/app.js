@@ -2257,24 +2257,40 @@ async function upsertTransaction_legacy_local(tx) {
           syncPeriodFromState();
         } catch { /* ignore */ }
         try {
+          const { syncFeatureFlagsFromRemote } = await import('./services/feature-flag-store.js');
+          await syncFeatureFlagsFromRemote();
+        } catch (e) { console.warn('syncFeatureFlagsFromRemote', e); }
+        try {
           const { syncHouseholdFromRemote } = await import('./services/household-store.js');
           await syncHouseholdFromRemote();
         } catch (e) { console.warn('syncHouseholdFromRemote', e); }
         try {
-          const { syncDebtsFromRemote } = await import('./services/debt-store.js');
-          await syncDebtsFromRemote();
+          const { isFeatureEnabled } = await import('./services/feature-flag-store.js');
+          if (isFeatureEnabled('debt_payoff_planner')) {
+            const { syncDebtsFromRemote } = await import('./services/debt-store.js');
+            await syncDebtsFromRemote();
+          }
         } catch (e) { console.warn('syncDebtsFromRemote', e); }
         try {
-          const { getOrGenerateWeeklyDigest } = await import('./services/weekly-digest-store.js');
-          getOrGenerateWeeklyDigest(STATE).catch(() => {});
+          const { isFeatureEnabled } = await import('./services/feature-flag-store.js');
+          if (isFeatureEnabled('weekly_ai_digest')) {
+            const { getOrGenerateWeeklyDigest } = await import('./services/weekly-digest-store.js');
+            getOrGenerateWeeklyDigest(STATE).catch(() => {});
+          }
         } catch (e) { console.warn('weeklyDigestBoot', e); }
         try {
-          const { autoGeneratePreviousMonthReport } = await import('./services/monthly-report-generator.js');
-          autoGeneratePreviousMonthReport(STATE).catch(() => {});
+          const { isFeatureEnabled } = await import('./services/feature-flag-store.js');
+          if (isFeatureEnabled('monthly_auto_report')) {
+            const { autoGeneratePreviousMonthReport } = await import('./services/monthly-report-generator.js');
+            autoGeneratePreviousMonthReport(STATE).catch(() => {});
+          }
         } catch (e) { console.warn('monthlyReportBoot', e); }
         import('./services/marketing-engine.js')
           .then(({ initMarketingEngine }) => initMarketingEngine({ state: STATE }))
           .catch((e) => console.warn('initMarketingEngine', e));
+        import('./services/insights-store.js')
+          .then(({ syncAndGenerateInsights }) => syncAndGenerateInsights(STATE).catch(() => {}))
+          .catch((e) => console.warn('syncInsights', e));
         rerender();
         ensureAppShellVisible();
       } catch (e) {
@@ -2316,6 +2332,23 @@ async function upsertTransaction_legacy_local(tx) {
       }).catch(() => {
         window.MonefyiUI?.initVoiceInput?.($('#quickText'), $('#btnQuickVoice'));
       });
+      window.addEventListener('monefyi:voice-quick-add', (e) => {
+        const detail = e.detail || {};
+        const input = $('#quickText');
+        if (input && detail.notes) {
+          input.value = `${detail.notes} ${detail.amount ? detail.amount : ''}`.trim();
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      });
+      import('./services/voice-assistant.js').then(({ parseVoiceCommand }) => {
+        const unified = $('#unifiedAiInput');
+        unified?.addEventListener('change', () => {
+          const parsed = parseVoiceCommand(unified.value);
+          if (parsed?.intent !== 'fallback' && parsed?.intent !== 'unknown' && parsed?.reply) {
+            window.showToast?.(parsed.reply, 'info');
+          }
+        });
+      }).catch(() => {});
       $('#btnUnifiedParse')?.addEventListener('click', () => handleUnifiedAiParse());
       $('#unifiedAiInput')?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); handleUnifiedAiParse(); }

@@ -7,6 +7,10 @@ const LS_RULES = 'monefyi_marketing_rules';
 const LS_INTERACTIONS = 'monefyi_marketing_interactions';
 const LS_PREFS = 'monefyi_marketing_prefs';
 const LS_FIRST_LOGIN = 'monefyi_first_login_day';
+const OFFERS_CACHE_TTL_MS = 5 * 60 * 1000;
+
+/** @type {{ at: number, data: object[] }|null} */
+let _offersCache = null;
 
 /** @type {Record<string, string|number|boolean>} */
 export const DEFAULT_GLOBAL_RULES = {
@@ -188,6 +192,10 @@ function passesOfferTypePrefs(offer, prefs) {
  * @returns {Promise<object[]>}
  */
 async function loadActiveOffers() {
+  if (_offersCache && Date.now() - _offersCache.at < OFFERS_CACHE_TTL_MS) {
+    return _offersCache.data;
+  }
+
   const client = supa();
   if (client) {
     try {
@@ -197,13 +205,66 @@ async function loadActiveOffers() {
         .eq('active', true)
         .order('priority', { ascending: false });
       if (!error && data?.length) {
-        return data.filter((o) => o.marketing_campaigns?.status === 'active' || !o.campaign_id);
+        const filtered = data.filter((o) => o.marketing_campaigns?.status === 'active' || !o.campaign_id);
+        _offersCache = { at: Date.now(), data: filtered };
+        return filtered;
       }
     } catch (e) {
       console.warn('[marketing] loadActiveOffers', e);
     }
   }
-  return getFallbackOffers();
+  const fallback = getFallbackOffers();
+  _offersCache = { at: Date.now(), data: fallback };
+  return fallback;
+}
+
+/**
+ * @returns {Promise<object|null>}
+ */
+async function consumeTestOffer() {
+  const uid = userId();
+  const client = supa();
+  if (!uid || !client) return null;
+
+  try {
+    const { data, error } = await client
+      .from('marketing_test_offers')
+      .select('id, offer_id, marketing_offers(*)')
+      .eq('user_id', uid)
+      .is('consumed_at', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error || !data?.marketing_offers) return null;
+
+    await client.from('marketing_test_offers').update({
+      consumed_at: new Date().toISOString(),
+    }).eq('id', data.id);
+
+    return finalizeOffer(data.marketing_offers);
+  } catch (e) {
+    console.warn('[marketing] consumeTestOffer', e);
+    return null;
+  }
+}
+
+/**
+ * Queue test offer for a user (admin).
+ * @param {string} targetUserId
+ * @param {string} offerId
+ * @returns {Promise<void>}
+ */
+export async function queueTestOffer(targetUserId, offerId) {
+  const client = supa();
+  const adminId = userId();
+  if (!client || !targetUserId || !offerId) throw new Error('Invalid params');
+
+  const { error } = await client.from('marketing_test_offers').insert({
+    user_id: targetUserId,
+    offer_id: offerId,
+    created_by: adminId,
+  });
+  if (error) throw error;
 }
 
 /**
@@ -520,6 +581,21 @@ export function markFirstLoginOfferShown() {
  * @returns {Promise<object|null>}
  */
 export async function handleAppStartup(opts = {}) {
+  try {
+    const { isFeatureEnabled } = await import('./feature-flag-store.js');
+    if (!isFeatureEnabled('in_app_marketing', userId())) return null;
+  } catch { /* ignore */ }
+
+  const testOffer = await consumeTestOffer();
+  if (testOffer) {
+    const { showMarketingOffer } = await import('../components/marketing-offer-ui.js');
+    await showMarketingOffer(testOffer, {
+      onAction: (action) => recordOfferInteraction(testOffer.id, action, { test: true }),
+    });
+    await recordOfferInteraction(testOffer.id, 'viewed', { test: true });
+    return testOffer;
+  }
+
   const rules = await loadGlobalRules();
   const delayMs = Number(rules.startup_delay_seconds || 3) * 1000;
 
@@ -588,6 +664,10 @@ export async function saveGlobalRules(patch) {
 export async function initMarketingEngine(opts = {}) {
   if (opts.skip || !userId()) return;
   try {
+    const { isFeatureEnabled } = await import('./feature-flag-store.js');
+    if (!isFeatureEnabled('in_app_marketing', userId())) return;
+  } catch { /* ignore */ }
+  try {
     await handleAppStartup(opts);
     if (typeof document !== 'undefined') {
       const home = document.querySelector('#homePageRoot .home-page, #homePageRoot');
@@ -622,5 +702,6 @@ if (typeof window !== 'undefined') {
     initMarketingEngine,
     buildUserContext,
     saveGlobalRules,
+    queueTestOffer,
   };
 }

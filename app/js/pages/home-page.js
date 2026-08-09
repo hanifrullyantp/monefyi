@@ -126,6 +126,39 @@ async function renderV2Home(container, data, ctx, callbacks, formatIDR, formatCo
   }
 
   try {
+    const { renderGrowthAlertsBar } = await import('../components/growth-alerts-bar.js');
+    const growthBar = await renderGrowthAlertsBar(state, callbacks);
+    if (growthBar) container.appendChild(growthBar);
+  } catch (e) {
+    console.warn('[home] growth alerts', e);
+  }
+
+  try {
+    const { getActivePlanWithProgress } = await import('../services/coaching-plans.js');
+    const coaching = getActivePlanWithProgress();
+    if (coaching) {
+      const coachingCard = document.createElement('section');
+      coachingCard.className = 'home-section wellness-prompt-card';
+      coachingCard.innerHTML = `
+        <div class="wellness-prompt-card__inner tap">
+          <span>${coaching.plan.icon}</span>
+          <div>
+            <strong>${coaching.plan.title}</strong>
+            <div class="wellness-prompt-card__sub">Hari ${coaching.day} · ${coaching.progress}% · ${coaching.currentFocus?.focus || ''}</div>
+          </div>
+        </div>
+      `;
+      coachingCard.querySelector('.wellness-prompt-card__inner')?.addEventListener('click', async () => {
+        const { showCoachingPlansSheet } = await import('../components/coaching-plans-sheet.js');
+        await showCoachingPlansSheet();
+      });
+      container.appendChild(coachingCard);
+    }
+  } catch (e) {
+    console.warn('[home] coaching plan card', e);
+  }
+
+  try {
     const { shouldPromptWeeklyWellness } = await import('../services/financial-wellness.js');
     const { loadPersonalityResult } = await import('../services/money-personality.js');
     if (shouldPromptWeeklyWellness()) {
@@ -172,15 +205,18 @@ async function renderV2Home(container, data, ctx, callbacks, formatIDR, formatCo
   }
 
   try {
-    const { getOrGenerateWeeklyDigest } = await import('../services/weekly-digest-store.js');
-    const digest = await getOrGenerateWeeklyDigest(state);
-    if (digest.has_data && [0, 1].includes(new Date().getDay())) {
-      state._weeklyDigest = digest;
-      const { renderWeeklyDigestCard } = await import('../components/weekly-digest-card.js');
-      const digestCard = renderWeeklyDigestCard(state, {
-        onViewAdvisor: callbacks.onViewAdvisor,
-      });
-      if (digestCard) container.appendChild(digestCard);
+    const { isGatedFeatureEnabled } = await import('../services/feature-gates.js');
+    if (await isGatedFeatureEnabled('weekly_ai_digest')) {
+      const { getOrGenerateWeeklyDigest } = await import('../services/weekly-digest-store.js');
+      const digest = await getOrGenerateWeeklyDigest(state);
+      if (digest.has_data && [0, 1].includes(new Date().getDay())) {
+        state._weeklyDigest = digest;
+        const { renderWeeklyDigestCard } = await import('../components/weekly-digest-card.js');
+        const digestCard = renderWeeklyDigestCard(state, {
+          onViewAdvisor: callbacks.onViewAdvisor,
+        });
+        if (digestCard) container.appendChild(digestCard);
+      }
     }
   } catch (e) {
     console.warn('[home] weekly digest', e);
@@ -198,10 +234,14 @@ async function renderV2Home(container, data, ctx, callbacks, formatIDR, formatCo
 
   try {
     const { renderSmartInsightCard } = await import('../components/smart-insight-card.js');
-    const insightCard = renderSmartInsightCard(state, {
+    const insightCard = await renderSmartInsightCard(state, {
       onViewAdvisor: callbacks.onViewAdvisor,
       onViewBudget: callbacks.onViewBudget,
       onViewTransactions: callbacks.onViewTransactions,
+      onDebtPlanner: async () => {
+        const { showDebtPayoffPanel } = await import('../components/debt-payoff-panel.js');
+        await showDebtPayoffPanel();
+      },
       onWhatIf: async () => {
         const { showWhatIfSimulator } = await import('../components/what-if-simulator.js');
         await showWhatIfSimulator({
@@ -238,10 +278,13 @@ async function renderV2Home(container, data, ctx, callbacks, formatIDR, formatCo
   if (targetCard) container.appendChild(targetCard);
 
   try {
-    const goals = window.STATE?.db?.financialGoals || [];
-    const { renderGoalsListCard } = await import('../components/goals-list-card.js');
-    const goalsCard = renderGoalsListCard(goals, { onViewAll: callbacks.onViewGoals || callbacks.onViewTarget });
-    if (goalsCard) container.appendChild(goalsCard);
+    const { isGatedFeatureEnabled } = await import('../services/feature-gates.js');
+    if (await isGatedFeatureEnabled('multiple_goals')) {
+      const goals = window.STATE?.db?.financialGoals || [];
+      const { renderGoalsListCard } = await import('../components/goals-list-card.js');
+      const goalsCard = renderGoalsListCard(goals, { onViewAll: callbacks.onViewGoals || callbacks.onViewTarget });
+      if (goalsCard) container.appendChild(goalsCard);
+    }
   } catch (e) {
     console.warn('[home] goals list card', e);
   }
@@ -340,6 +383,13 @@ export async function renderHomePage(container, ctx, callbacks = {}) {
     await mountHomeMarketingBanner(container);
   } catch (e) {
     console.warn('[home] marketing banner', e);
+  }
+
+  try {
+    const { mountBetaLaunchBanner } = await import('../components/beta-launch-banner.js');
+    await mountBetaLaunchBanner(container);
+  } catch (e) {
+    console.warn('[home] beta banner', e);
   }
 
   if (layoutV2 && isSimpleHomeMode(state)) {

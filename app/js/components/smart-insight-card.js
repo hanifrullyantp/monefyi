@@ -4,28 +4,36 @@
  */
 
 import { Icon } from './icons.js';
-import { generateSmartSuggestions } from '../services/smart-suggestions.js';
 
 /**
  * @param {object} [state]
  * @param {object} [callbacks]
- * @returns {HTMLElement|null}
+ * @returns {Promise<HTMLElement|null>}
  */
-export function renderSmartInsightCard(state, callbacks = {}) {
-  const suggestions = generateSmartSuggestions(state);
+export async function renderSmartInsightCard(state, callbacks = {}) {
+  let suggestions = [];
+  try {
+    const { syncAndGenerateInsights } = await import('../services/insights-store.js');
+    suggestions = await syncAndGenerateInsights(state);
+  } catch {
+    const { generateSmartSuggestions } = await import('../services/smart-suggestions.js');
+    suggestions = generateSmartSuggestions(state);
+  }
+
   if (!suggestions.length) return null;
 
   const el = document.createElement('section');
   el.className = 'home-section home-smart-insights';
 
   const cards = suggestions.map((s) => `
-    <article class="smart-insight-card smart-insight-card--${s.severity || 'low'}" data-id="${s.id}">
+    <article class="smart-insight-card smart-insight-card--${s.severity || 'low'}" data-id="${escapeHtml(s.id)}">
+      <button type="button" class="smart-insight-card__dismiss tap" data-dismiss="${escapeHtml(s.id)}" aria-label="Tutup">✕</button>
       <div class="smart-insight-card__icon" aria-hidden="true">${s.icon || '💡'}</div>
       <div class="smart-insight-card__body">
         <h3 class="smart-insight-card__title">${escapeHtml(s.title)}</h3>
         <p class="smart-insight-card__text">${escapeHtml(s.body)}</p>
         ${s.action ? `
-          <button type="button" class="smart-insight-card__action tap" data-target="${s.action.target || ''}">
+          <button type="button" class="smart-insight-card__action tap" data-target="${s.action.target || ''}" data-id="${escapeHtml(s.id)}">
             ${escapeHtml(s.action.label)} ${Icon('chevronRight', { size: 12 })}
           </button>
         ` : ''}
@@ -40,14 +48,34 @@ export function renderSmartInsightCard(state, callbacks = {}) {
     <div class="smart-insight-list">${cards}</div>
   `;
 
+  const { recordInsightAction } = await import('../services/insights-store.js');
+
+  el.querySelectorAll('.smart-insight-card').forEach((card) => {
+    const id = card.getAttribute('data-id');
+    if (id) recordInsightAction(id, 'shown').catch(() => {});
+  });
+
   el.querySelectorAll('.smart-insight-card__action').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
+      const id = btn.getAttribute('data-id');
+      recordInsightAction(id, 'clicked').catch(() => {});
       const target = btn.dataset.target;
       if (target === 'what_if') callbacks.onWhatIf?.();
+      else if (target === 'debt_planner') callbacks.onDebtPlanner?.();
       else if (target === 'budget') callbacks.onViewBudget?.();
       else if (target === 'transactions') callbacks.onViewTransactions?.();
       else callbacks.onViewAdvisor?.();
+    });
+  });
+
+  el.querySelectorAll('[data-dismiss]').forEach((btn) => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = btn.getAttribute('data-dismiss');
+      await recordInsightAction(id, 'dismissed').catch(() => {});
+      btn.closest('.smart-insight-card')?.remove();
+      if (!el.querySelector('.smart-insight-card')) el.remove();
     });
   });
 

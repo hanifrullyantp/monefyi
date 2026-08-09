@@ -24,6 +24,9 @@ export const GOAL_TEMPLATES = [
  * @param {object} [opts]
  */
 export async function showGoalsPanel(opts = {}) {
+  const { requireFeature } = await import('../services/feature-gates.js');
+  if (!(await requireFeature('multiple_goals'))) return;
+
   await loadFinancialGoals();
   const host = document.createElement('div');
   host.className = 'pro-panel-host goals-panel-host is-visible';

@@ -937,6 +937,29 @@ async function renderInnovation(body) {
         <button type="button" class="settings-btn" id="spWellnessCheckin">Check-in minggu ini</button>
       </div>
     </div>
+    <div class="settings-card">
+      <h2>Coaching Plans</h2>
+      <p class="settings-desc">Program personalized 21–180 hari sesuai kondisi finansial.</p>
+      <div class="settings-actions">
+        <button type="button" class="settings-btn" id="spCoachingPlans">Buka coaching plans</button>
+      </div>
+    </div>
+    <div class="settings-card">
+      <h2>Life Event Planner</h2>
+      <p class="settings-desc">Nikah, rumah, bayi, karir — hitung target & cicilan bulanan.</p>
+      <div class="settings-actions">
+        <button type="button" class="settings-btn" id="spLifeEventPlanner">Rencanakan milestone</button>
+      </div>
+    </div>
+    <div class="settings-card">
+      <h2>Referral & Buddy</h2>
+      <p class="settings-desc">Invite teman dapat kredit · buddy accountability untuk goal serupa.</p>
+      <div id="spReferralInfo" class="settings-desc" style="margin-bottom:8px">—</div>
+      <div class="settings-actions">
+        <button type="button" class="settings-btn ghost" id="spCopyReferral">Salin link referral</button>
+        <button type="button" class="settings-btn" id="spFindBuddy">Cari buddy</button>
+      </div>
+    </div>
   `;
 
   body.querySelector('#spPersonalityQuiz')?.addEventListener('click', async () => {
@@ -967,6 +990,37 @@ async function renderInnovation(body) {
   body.querySelector('#spWellnessCheckin')?.addEventListener('click', async () => {
     const { showWellnessCheckinSheet } = await import('../components/wellness-checkin-sheet.js');
     showWellnessCheckinSheet({ force: true });
+  });
+
+  try {
+    const { loadReferralProfile, getReferralCredits, matchBuddy } = await import('../services/referral-buddy.js');
+    const ref = loadReferralProfile();
+    const credits = getReferralCredits();
+    body.querySelector('#spReferralInfo').textContent = `Kode ${ref.code} · Kredit Rp ${new Intl.NumberFormat('id-ID').format(credits)} · ${ref.link}`;
+    body.querySelector('#spCopyReferral')?.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(ref.link);
+        toast('Link referral disalin', 'success');
+      } catch {
+        toast(ref.link, 'info');
+      }
+    });
+    body.querySelector('#spFindBuddy')?.addEventListener('click', () => {
+      const buddy = matchBuddy();
+      toast(`Buddy matched: ${buddy.label} (${buddy.on_track}% on-track)`, 'success');
+    });
+  } catch (e) {
+    console.warn('[settings] referral', e);
+  }
+
+  body.querySelector('#spCoachingPlans')?.addEventListener('click', async () => {
+    const { showCoachingPlansSheet } = await import('../components/coaching-plans-sheet.js');
+    await showCoachingPlansSheet();
+  });
+
+  body.querySelector('#spLifeEventPlanner')?.addEventListener('click', async () => {
+    const { showLifeEventPlannerSheet } = await import('../components/life-event-planner-sheet.js');
+    showLifeEventPlannerSheet();
   });
 }
 

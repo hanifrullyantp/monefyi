@@ -2,19 +2,11 @@
  * @file js/services/feature-flags.js
  * @description Feature flags service for Monefyi.
  *
- * Reads feature flags from localStorage (default) with support for per-user
- * overrides. Designed for gradual rollout:
- *   localStorage.setItem('feature_new_parser_pipeline', 'true')
- *
- * Storage key format:
- *   Global:   'feature_<flagName>'          = 'true' | 'false'
- *   Per-user: 'feature_<flagName>_<userId>' = 'true' | 'false'
- *
- * Per-user keys take precedence over the global key.
- *
- * The `_setStorage` export allows injecting a mock adapter for Deno tests
- * and SSR environments where localStorage is unavailable.
+ * Reads from Supabase cache (feature-flag-store) when available,
+ * otherwise localStorage overrides for legacy flags.
  */
+
+import { isFeatureEnabled as storeIsEnabled } from './feature-flag-store.js';
 
 /** Default flag values when no localStorage override exists. */
 const DEFAULT_FLAGS = {
@@ -46,6 +38,16 @@ export function _setStorage(adapter) {
  * isEnabled('new_parser_pipeline', 'user-1') // per-user override
  */
 export function isEnabled(flagName, userId = null) {
+  const uid = userId || (typeof window !== 'undefined' ? window.STATE?.db?.user?.id : null);
+  const hasRemote = typeof window !== 'undefined' && (
+    window.STATE?.featureFlags?.[flagName] != null
+    || localStorage.getItem('monefyi_feature_flags_v2')
+  );
+  if (hasRemote) {
+    try {
+      return storeIsEnabled(flagName, uid);
+    } catch { /* fall through */ }
+  }
   if (!_storage) return DEFAULT_FLAGS[flagName] ?? false;
   try {
     if (userId) {

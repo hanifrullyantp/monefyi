@@ -11,6 +11,9 @@ import { generateWeeklyDigest } from '../services/weekly-digest.js';
  * @param {object} [opts]
  */
 export async function showWeeklyDigestPage(opts = {}) {
+  const { requireFeature } = await import('../services/feature-gates.js');
+  if (!(await requireFeature('weekly_ai_digest'))) return;
+
   const host = document.createElement('div');
   host.className = 'pro-panel-host weekly-digest-page-host is-visible';
   document.body.appendChild(host);

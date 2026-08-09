@@ -200,6 +200,7 @@ export function renderQuickPreview(parsed, callbacks = {}) {
         <label for="qp-notes">Notes</label>
         <textarea id="qp-notes" name="notes" rows="2">${escapeHtml(parsed.notes || '')}</textarea>
       </div>
+      <div class="qp-micro-insight hidden" id="qp-micro-insight"></div>
     </div>
     <div class="qp-actions">
       <button type="button" class="qp-btn qp-btn-cancel tap">Batal</button>
@@ -268,7 +269,33 @@ export function renderQuickPreview(parsed, callbacks = {}) {
     console.warn('[quick-preview] auto category', e);
   });
 
+  refreshMicroInsight(container);
+  ['qp-amount', 'qp-category', 'qp-merchant'].forEach((id) => {
+    container.querySelector(`#${id}`)?.addEventListener('input', () => refreshMicroInsight(container));
+  });
+
   return container;
+}
+
+/**
+ * @param {HTMLElement} container
+ */
+async function refreshMicroInsight(container) {
+  const el = container.querySelector('#qp-micro-insight');
+  if (!el) return;
+  try {
+    const edited = getFormData(container);
+    const { getTransactionInputInsight } = await import('../services/contextual-micro-insights.js');
+    const insight = getTransactionInputInsight(edited);
+    if (!insight) {
+      el.classList.add('hidden');
+      return;
+    }
+    el.classList.remove('hidden');
+    el.innerHTML = `<span>${insight.icon}</span> ${escapeHtml(insight.body)}`;
+  } catch {
+    el.classList.add('hidden');
+  }
 }
 
 /**

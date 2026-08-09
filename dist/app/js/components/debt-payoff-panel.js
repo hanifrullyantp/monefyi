@@ -18,6 +18,9 @@ let _host = null;
  * @param {object} [opts]
  */
 export async function showDebtPayoffPanel(opts = {}) {
+  const { requireFeature } = await import('../services/feature-gates.js');
+  if (!(await requireFeature('debt_payoff_planner'))) return;
+
   if (!_host) {
     _host = document.createElement('div');
     _host.id = 'debtPanelHost';

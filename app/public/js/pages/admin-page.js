@@ -1,6 +1,6 @@
 /**
  * Admin Console — full-page responsive overlay.
- * Deep-links: #admin | ... | #admin/marketing | #admin/notifications
+ * Deep-links: #admin | ... | #admin/marketing | #admin/notifications | #admin/feature-flags
  */
 
 import { Icon } from '../components/icons.js';
@@ -12,6 +12,7 @@ const TABS = [
   { id: 'landing', label: 'Landing' },
   { id: 'marketing', label: 'Marketing' },
   { id: 'notifications', label: 'Notifications' },
+  { id: 'feature-flags', label: 'Feature Flags' },
   { id: 'feedback', label: 'Feedback' },
   { id: 'config', label: 'Config' },
   { id: 'tutorial', label: 'Tutorial' },
@@ -186,6 +187,10 @@ async function loadTab(tab) {
       const { renderAdminNotifications } = await import('./admin-notifications.js');
       await renderAdminNotifications(body, { toast, escapeHtml, fmtNum });
     }
+    else if (tab === 'feature-flags') {
+      const { renderAdminFeatureFlags } = await import('./admin-feature-flags.js');
+      await renderAdminFeatureFlags(body, { toast, escapeHtml, fmtNum });
+    }
     else if (tab === 'feedback') await renderFeedback(body);
     else if (tab === 'config') await renderConfig(body);
     else if (tab === 'tutorial') await renderTutorial(body);
@@ -359,6 +364,7 @@ function renderUserCard(u) {
       <div class="admin-user-actions">
         <button type="button" class="admin-btn" data-act="save">Simpan</button>
         <button type="button" class="admin-btn ghost" data-act="trial">Grant Trial</button>
+        <button type="button" class="admin-btn ghost" data-act="marketing">Marketing</button>
         <button type="button" class="admin-btn ghost" data-act="pw">Set Password</button>
         ${st === 'suspended'
           ? '<button type="button" class="admin-btn ghost" data-act="activate">Activate</button>'
@@ -395,6 +401,11 @@ function wireUserCards(list) {
           } else if (act === 'trial') {
             await edgePost(fn, { user_id: uid, grant_trial: true, trial_days: 7 });
             toast('Trial 7 hari di-grant', 'success');
+          } else if (act === 'marketing') {
+            const u = _usersCache.find((x) => x.id === uid);
+            const { showUserMarketingPanel } = await import('./admin-user-marketing.js');
+            await showUserMarketingPanel(uid, u?.email || '', { toast, escapeHtml });
+            return;
           } else if (act === 'pw') {
             const pw = val('new_password')?.value || '';
             if (pw.length < 8) throw new Error('Password min 8 karakter');
@@ -587,7 +598,11 @@ async function renderLanding(body) {
       <div class="admin-toolbar" style="margin-top:12px">
         <a class="admin-btn" href="${escapeHtml(cmsUrl)}" target="_blank" rel="noopener">Buka Landing CMS</a>
         <button type="button" class="admin-btn ghost" data-go="plans">Edit Plans & Checkout</button>
+        <button type="button" class="admin-btn ghost" id="admParityRefresh">Refresh Parity Audit</button>
       </div>
+    </div>
+    <div class="admin-card" id="admParityCard">
+      <p class="admin-muted">Memuat parity audit…</p>
     </div>
     <div class="admin-card">
       <h2>Snapshot app_config</h2>
@@ -598,12 +613,53 @@ async function renderLanding(body) {
       </div>
     </div>
   `;
+
+  const paintParity = async () => {
+    const card = body.querySelector('#admParityCard');
+    if (!card) return;
+    card.innerHTML = '<p class="admin-muted">Memuat parity audit…</p>';
+    try {
+      const { runLandingParityAudit } = await import('../services/landing-parity.js');
+      const audit = await runLandingParityAudit();
+      const scoreClass = audit.ready ? 'parity-score--ready' : 'parity-score--not-ready';
+      card.innerHTML = `
+        <div class="admin-toolbar" style="align-items:flex-end;margin-bottom:12px">
+          <div>
+            <h2 style="margin:0">Landing ↔ App Parity</h2>
+            <p class="admin-muted" style="margin:4px 0 0">${audit.ready ? '✅ Siap launch' : '⚠️ Ada janji yang belum terpenuhi'}</p>
+          </div>
+          <div class="parity-score ${scoreClass}">${audit.score}%</div>
+        </div>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead><tr><th>Janji</th><th>Landing</th><th>Flag</th><th>Status</th></tr></thead>
+            <tbody>
+              ${audit.items.map((i) => `
+                <tr>
+                  <td><strong>${escapeHtml(i.label)}</strong><div class="admin-muted" style="font-size:11px">${escapeHtml(i.message)}</div></td>
+                  <td class="admin-muted" style="font-size:11px">${escapeHtml(i.landingSection)}</td>
+                  <td class="admin-muted">${escapeHtml(i.featureFlag || '—')}</td>
+                  <td><span class="parity-badge parity-badge--${i.status}">${i.status}</span></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        <p class="admin-muted" style="margin-top:8px;font-size:11px">Critical fails: ${audit.criticalFails}. Lihat <code>docs/LAUNCH_CHECKLIST_PRODUCT_MARKETING.md</code></p>
+      `;
+    } catch (e) {
+      card.innerHTML = `<p class="admin-muted">Gagal audit: ${escapeHtml(e.message)}</p>`;
+    }
+  };
+
+  body.querySelector('#admParityRefresh')?.addEventListener('click', paintParity);
   body.querySelector('[data-go]')?.addEventListener('click', () => {
     _tab = 'plans';
     setAdminHash('plans');
     renderShell();
     loadTab('plans');
   });
+  await paintParity();
 }
 
 /* ─── Feedback ─── */
