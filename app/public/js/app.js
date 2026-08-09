@@ -2349,6 +2349,22 @@ async function upsertTransaction_legacy_local(tx) {
           }
         });
       }).catch(() => {});
+      try {
+        const quickWrap = $('#quickText')?.closest('.relative') || $('#quickText')?.parentElement;
+        const quickInput = $('#quickText');
+        if (quickWrap && quickInput) {
+          import('./components/input-templates-bar.js').then(({ mountInputTemplatesBar }) => {
+            mountInputTemplatesBar(quickWrap, quickInput, STATE);
+          });
+        }
+        const unifiedWrap = $('#unifiedAiInput')?.parentElement;
+        const unifiedInput = $('#unifiedAiInput');
+        if (unifiedWrap && unifiedInput) {
+          import('./components/input-templates-bar.js').then(({ mountInputTemplatesBar }) => {
+            mountInputTemplatesBar(unifiedWrap, unifiedInput, STATE);
+          });
+        }
+      } catch (e) { console.warn('[app] input templates', e); }
       $('#btnUnifiedParse')?.addEventListener('click', () => handleUnifiedAiParse());
       $('#unifiedAiInput')?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); handleUnifiedAiParse(); }

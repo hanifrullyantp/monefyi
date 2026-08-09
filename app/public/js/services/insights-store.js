@@ -66,6 +66,11 @@ export async function syncAndGenerateInsights(state = window.STATE) {
   const dismissed = getDismissedLocal();
   const client = supa();
 
+  try {
+    const { syncUserHabits } = await import('./user-habits.js');
+    syncUserHabits(state).catch(() => {});
+  } catch { /* ignore */ }
+
   if (client && uid && navigator.onLine !== false) {
     try {
       const { data: remote } = await client

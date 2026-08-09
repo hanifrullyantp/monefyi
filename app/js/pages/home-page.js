@@ -134,6 +134,46 @@ async function renderV2Home(container, data, ctx, callbacks, formatIDR, formatCo
   }
 
   try {
+    const { renderBehavioralNudgeBanner } = await import('../components/behavioral-nudge-banner.js');
+    const nudgeBar = await renderBehavioralNudgeBanner(state, callbacks);
+    if (nudgeBar) container.appendChild(nudgeBar);
+  } catch (e) {
+    console.warn('[home] behavioral nudges', e);
+  }
+
+  try {
+    const { renderMicroLearningTipCard } = await import('../components/micro-learning-tip-card.js');
+    const tipCard = await renderMicroLearningTipCard();
+    if (tipCard) container.appendChild(tipCard);
+  } catch (e) {
+    console.warn('[home] micro-learning tip', e);
+  }
+
+  try {
+    const { getActiveChallenges } = await import('../services/community-features.js');
+    const challenges = getActiveChallenges();
+    if (challenges.length) {
+      const chCard = document.createElement('section');
+      chCard.className = 'home-section wellness-prompt-card';
+      const inner = document.createElement('div');
+      inner.className = 'wellness-prompt-card__inner tap';
+      inner.innerHTML = '<span>🎯</span><div><strong>Community challenge aktif</strong></div>';
+      const sub = document.createElement('div');
+      sub.className = 'wellness-prompt-card__sub';
+      sub.textContent = `${challenges[0].title} · streak ${challenges[0].streak_days || 0} hari`;
+      inner.querySelector('div')?.appendChild(sub);
+      inner.addEventListener('click', async () => {
+        const { showCommunityPanel } = await import('../components/community-panel.js');
+        showCommunityPanel();
+      });
+      chCard.appendChild(inner);
+      container.appendChild(chCard);
+    }
+  } catch (e) {
+    console.warn('[home] community challenge card', e);
+  }
+
+  try {
     const { getActivePlanWithProgress } = await import('../services/coaching-plans.js');
     const coaching = getActivePlanWithProgress();
     if (coaching) {

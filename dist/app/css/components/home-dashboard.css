@@ -827,3 +827,61 @@ body:not(.theme-light) .home-streak-badge {
   background: rgba(0, 0, 0, 0.2);
   color: inherit;
 }
+
+.micro-learning-tip__inner {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: color-mix(in srgb, #f59e0b 10%, var(--app-card, #131A24));
+  border: 1px solid color-mix(in srgb, #f59e0b 25%, transparent);
+}
+
+.micro-learning-tip__kicker { font-size: 11px; font-weight: 700; color: #f59e0b; margin-bottom: 6px; }
+.micro-learning-tip__meta { font-size: 11px; color: var(--text-secondary, #94a3b8); margin: 6px 0 10px; }
+.micro-learning-tip__actions { display: flex; gap: 8px; align-items: center; }
+.micro-learning-tip__dismiss { border: 0; background: transparent; font-size: 12px; opacity: 0.7; cursor: pointer; }
+
+.behavioral-nudge-banner__inner {
+  display: flex;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, #10b981 10%, var(--app-card, #131A24));
+  border: 1px solid color-mix(in srgb, #10b981 28%, transparent);
+  position: relative;
+}
+
+.behavioral-nudge-banner__icon { font-size: 22px; flex-shrink: 0; }
+.behavioral-nudge-banner__body { flex: 1; font-size: 12px; }
+.behavioral-nudge-banner__body strong { display: block; font-size: 13px; margin-bottom: 4px; }
+.behavioral-nudge-banner__body p { margin: 0 0 8px; color: var(--text-secondary, #94a3b8); }
+
+.community-stories { display: flex; flex-direction: column; gap: 10px; max-height: 200px; overflow-y: auto; }
+.community-story { padding: 10px; border-radius: 10px; background: rgba(148, 163, 184, 0.08); font-size: 12px; }
+.community-story p { margin: 4px 0; color: var(--text-secondary, #94a3b8); }
+.community-story__meta { font-size: 10px; opacity: 0.75; }
+.community-challenge { padding: 12px; border-radius: 12px; border: 1px solid rgba(148, 163, 184, 0.2); margin-bottom: 8px; font-size: 12px; }
+.community-challenge--active { background: color-mix(in srgb, #8b5cf6 8%, transparent); }
+
+.input-templates-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.input-template-chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(148, 163, 184, 0.08);
+  font-size: 11px;
+  color: inherit;
+  cursor: pointer;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.micro-lesson-body { font-size: 13px; color: var(--text-secondary, #94a3b8); margin-bottom: 16px; }
+.micro-lesson-body ul { padding-left: 18px; margin: 8px 0; }

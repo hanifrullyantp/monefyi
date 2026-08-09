@@ -960,6 +960,14 @@ async function renderInnovation(body) {
         <button type="button" class="settings-btn" id="spFindBuddy">Cari buddy</button>
       </div>
     </div>
+    <div class="settings-card">
+      <h2>Komunitas</h2>
+      <p class="settings-desc">Success stories anonim & monthly challenges.</p>
+      <div class="settings-actions">
+        <button type="button" class="settings-btn" id="spCommunity">Buka komunitas</button>
+        <button type="button" class="settings-btn ghost" id="spMicroLearning">Learning path</button>
+      </div>
+    </div>
   `;
 
   body.querySelector('#spPersonalityQuiz')?.addEventListener('click', async () => {
@@ -1021,6 +1029,16 @@ async function renderInnovation(body) {
   body.querySelector('#spLifeEventPlanner')?.addEventListener('click', async () => {
     const { showLifeEventPlannerSheet } = await import('../components/life-event-planner-sheet.js');
     showLifeEventPlannerSheet();
+  });
+
+  body.querySelector('#spCommunity')?.addEventListener('click', async () => {
+    const { showCommunityPanel } = await import('../components/community-panel.js');
+    showCommunityPanel();
+  });
+
+  body.querySelector('#spMicroLearning')?.addEventListener('click', async () => {
+    const { showMicroLearningSheet } = await import('../components/micro-learning-sheet.js');
+    showMicroLearningSheet();
   });
 }
 
