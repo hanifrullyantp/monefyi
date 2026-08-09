@@ -39,8 +39,8 @@ if (readiness.blockers.length) {
   }
 }
 
-console.log('\n=== Running test:growth ===');
-const test = spawnSync('npm', ['run', 'test:growth'], {
+console.log('\n=== Running test:all ===');
+const test = spawnSync('npm', ['run', 'test:all'], {
   cwd: root,
   stdio: 'inherit',
   shell: true,

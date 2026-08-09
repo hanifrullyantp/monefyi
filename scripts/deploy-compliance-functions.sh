@@ -50,7 +50,6 @@ echo "==> Deploy monefyi-weekly-digest-cron"
 npx --yes supabase@latest functions deploy monefyi-weekly-digest-cron --no-verify-jwt
 
 echo ""
-echo "Done. Set secrets: RESEND_API_KEY, CRON_SECRET, APP_URL, LYNK_API_KEY (optional)"
-echo "Cron schedules (UTC):"
-echo "  - monefyi-account-purge: daily 0 3 * * *"
-echo "  - monefyi-weekly-digest-cron: 0 12 * * 0 (19:00 WIB Sunday)"
+echo "Done. Set secrets: RESEND_API_KEY, CRON_SECRET, APP_URL"
+echo "Apply crons: ./scripts/apply-compliance-crons.sh"
+echo "Refund Lynk auto: disabled (manual flow only)"

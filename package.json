@@ -34,6 +34,7 @@
     "test:roadmap": "node --test tests/roadmap-phase1-2.test.js tests/roadmap-phase3.test.js tests/roadmap-phase4.test.js tests/roadmap-phase5.test.js tests/roadmap-phase6.test.js tests/roadmap-phase7.test.js tests/roadmap-phase8.test.js",
     "test:growth": "node --test tests/growth-phases.test.js tests/growth-phase1-insights.test.js tests/growth-phase1-sprint56.test.js tests/growth-phase2-coaching.test.js tests/growth-phase2-recurring.test.js tests/growth-phase3-sprint7-10.test.js tests/growth-phase3-what-if.test.js tests/growth-phase4-sprint13-18.test.js tests/growth-phase4-sprint19-20.test.js tests/growth-phase5-sprint21-22.test.js tests/growth-phase5-sprint23-24.test.js tests/growth-phase5-polish.test.js tests/growth-phase6-advanced.test.js tests/sprint5-feature-flags.test.js tests/sprint6-launch-prep.test.js tests/launch-prep-wiring.test.js tests/launch-gate.test.js tests/marketing-engine.test.js tests/product-marketing-compliance.test.js tests/perfection-batch.test.js tests/household-shared-digest.test.js tests/household-combined.test.js tests/household-shared-sync.test.js",
     "launch:gate": "node scripts/launch-gate-check.js",
+    "launch:full": "npm run test:all && npm run launch:gate && npm run build:app",
     "test:all": "npm run test:roadmap && npm run test:growth",
     "seed:demo-august": "node scripts/seed-demo-august-2026.cjs"
   }

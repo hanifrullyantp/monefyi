@@ -20,10 +20,11 @@ Checklist Sprint 6+ sebelum public launch Monefyi PWA.
 5. `20260809180000_sprint5_feature_flags.sql`
 6. `20260809190000_sprint6_beta_launch.sql`
 7. `20260809240000_product_marketing_compliance.sql` — account deletion + refund requests
-8. `20260809250000_household_shared_visibility.sql` — transaction visibility personal/shared
-9. `20260809260000_household_shared_tx_rls.sql` — RLS read shared txs across household members
+8. `20260809270000_refund_manual_gated.sql` — refund manual gate (super admin enables user button)
+9. `20260809250000_household_shared_visibility.sql` — transaction visibility personal/shared
+10. `20260809260000_household_shared_tx_rls.sql` — RLS read shared txs across household members
 
-**Cron setup reference:** `./scripts/setup-compliance-crons.sh`
+**Cron setup:** `./scripts/apply-compliance-crons.sh` (needs `CRON_SECRET`) or `./scripts/setup-compliance-crons.sh` for reference
 
 Re-deploy product-marketing: `./scripts/deploy-monefyi-product-marketing.sh`
 
@@ -58,7 +59,13 @@ Set secrets: `RESEND_API_KEY`, `CRON_SECRET`, `APP_URL`, `LYNK_API_KEY` (optiona
 
 Re-deploy growth: `./scripts/deploy-growth-migrations.sh`
 
-**Launch gate (local):** `npm run launch:gate` — tests + parity/flag checks
+**Launch gate (local):** `npm run launch:gate` — full test suite + parity/flag checks
+
+**Launch full:** `npm run launch:full` — tests + gate + production build
+
+**Status doc:** [LAUNCH_STATUS.md](./LAUNCH_STATUS.md)
+
+**Apply crons (once):** `CRON_SECRET=... ./scripts/apply-compliance-crons.sh`
 
 ## 3. Feature Flags (Admin → Feature Flags)
 
@@ -84,10 +91,10 @@ Re-deploy growth: `./scripts/deploy-growth-migrations.sh`
 
 ## 5. Compliance (Features 6 & 7)
 
-- [ ] Settings → Akun → Hapus akun — konfirmasi frase + soft delete 30 hari
-- [ ] Settings → Bantuan — tombol refund **tidak** tampil sampai super admin aktifkan setelah email support
-- [ ] Super admin → Refunds / Users — aktifkan tombol refund user
-- [ ] Admin → Refunds — approve/reject **manual** (Lynk otomatis off)
+- [x] Settings → Akun → Hapus akun — konfirmasi frase + soft delete 30 hari
+- [x] Settings → Bantuan — tombol refund **tidak** tampil sampai super admin aktifkan setelah email support
+- [x] Super admin → Refunds / Users — aktifkan tombol refund user
+- [x] Admin → Refunds — approve/reject **manual** (Lynk otomatis off)
 
 ## 6. Admin Panel
 
@@ -110,15 +117,15 @@ Re-deploy growth: `./scripts/deploy-growth-migrations.sh`
 ## 8. Legal & Compliance
 
 - [x] Privacy policy & terms link di landing footer
-- [ ] Cookie/tracking consent jika analytics aktif
-- [ ] Refund policy selaras dengan checkout copy
-- [ ] Account deletion flow documented in privacy policy
+- [x] Refund policy selaras dengan checkout copy (manual gate, email dulu)
+- [x] Account deletion flow documented in privacy policy
+- [ ] Cookie/tracking consent — N/A (landing tanpa analytics tracker pihak ketiga saat ini)
 
 ## 9. Performance
 
-- [ ] Service worker cache bump & verify offline shell
-- [ ] Marketing offers cache TTL 5 menit
-- [ ] Feature flags sync < 500ms on boot
+- [x] Service worker cache bump (`v86+`) & verify offline shell
+- [x] Marketing offers cache TTL 5 menit
+- [x] Feature flags sync timeout fallback on boot (< 500ms target)
 
 ## 10. Success Metrics (30 hari post-launch)
 
