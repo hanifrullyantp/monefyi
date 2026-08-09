@@ -3,6 +3,8 @@
  * @module components/monevisor-panel
  */
 import { Icon } from './icons.js';
+import { getGreeting } from '../services/monevisor-messages.js';
+import { getFinancialStatus } from '../services/financial-status.js';
 import {
   initMonevisor,
   getState,
@@ -244,6 +246,8 @@ function renderLoading() {
 }
 
 function renderStorySection(insights) {
+  const finStatus = getFinancialStatus(typeof window !== 'undefined' ? window.STATE : {});
+  const greeting = getGreeting(finStatus.level);
   const color = HEALTH_COLORS[insights.healthLabel] || '#3b82f6';
   const trendIcon = insights.healthTrend === 'up' ? '↗' : insights.healthTrend === 'down' ? '↘' : '→';
   const circumference = 2 * Math.PI * 25;
@@ -251,7 +255,7 @@ function renderStorySection(insights) {
 
   return `
     <div class="mv-story-card" style="border-color: ${color}33">
-      <div class="mv-greeting">${escapeHtml(insights.greeting || 'Halo!')}</div>
+      <div class="mv-greeting">${escapeHtml(greeting || insights.greeting || 'Halo!')}</div>
       <div class="mv-story-text">${escapeHtml(insights.story || insights.summary || '')}</div>
       <div class="mv-health-strip" style="background: linear-gradient(135deg, ${color}22, ${color}08)">
         <div class="mv-health-visual">

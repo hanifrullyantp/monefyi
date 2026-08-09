@@ -4,7 +4,7 @@
  */
 
 import { getFilter, filterTransactions } from './global-filter.js';
-import { rowsToBudgetList, calculateProgress } from './budget-model.js';
+import { rowsToBudgetList, calculateProgress, inferCategoryType, CATEGORY_TYPES } from './budget-model.js';
 
 /**
  * Normalize transaction/period dates to YYYY-MM-DD for inclusive compares.
@@ -228,6 +228,7 @@ export async function budgetVsActual(month, periodTx) {
       id: b.id,
       category: b.name || b.category,
       priority: b.priority || 'penting',
+      category_type: inferCategoryType(b),
       amount: Number(b.amount || 0),
       spent: p.spent,
       remaining: p.remaining,

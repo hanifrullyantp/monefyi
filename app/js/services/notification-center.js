@@ -70,6 +70,7 @@ export async function addNotification(notif) {
  */
 export async function getNotifications(options = {}) {
   try {
+    await cleanupNotifications();
     const db = await getDb();
     if (!db.notifications) return [];
 
@@ -166,10 +167,64 @@ async function getBudgetContext() {
 }
 
 /**
+ * Drop stale notifications and dedupe same tag+body on same day.
+ */
+export async function cleanupNotifications() {
+  try {
+    const db = await getDb();
+    if (!db.notifications) return;
+
+    const now = Date.now();
+    const THIRTY_DAYS = 30 * 86400000;
+    const SEVEN_DAYS = 7 * 86400000;
+    const all = await db.notifications.toArray();
+    const toDelete = [];
+    const seenToday = new Map();
+
+    for (const n of all) {
+      const age = now - new Date(n.timestamp).getTime();
+      if (age > THIRTY_DAYS) {
+        toDelete.push(n.id);
+        continue;
+      }
+      if (n.read && (n.severity === 'info' || n.severity === 'low') && age > SEVEN_DAYS) {
+        toDelete.push(n.id);
+        continue;
+      }
+      const day = String(n.timestamp || '').split('T')[0];
+      const key = `${n.dedupKey || n.type || ''}_${n.message || n.title || ''}_${day}`;
+      if (seenToday.has(key)) {
+        toDelete.push(n.id);
+        continue;
+      }
+      seenToday.set(key, n.id);
+    }
+
+    if (toDelete.length) {
+      await db.notifications.bulkDelete(toDelete);
+      _notify();
+    }
+  } catch (e) {
+    console.warn('[notif] Cleanup failed:', e);
+  }
+}
+
+/**
+ * @param {number} count
+ * @returns {string|null}
+ */
+export function formatBadge(count) {
+  if (!count || count <= 0) return null;
+  if (count > 99) return '99+';
+  return String(count);
+}
+
+/**
  * Refresh notifications from budget rules and due dates.
  */
 export async function refreshNotifications() {
   try {
+    await cleanupNotifications();
     const ctx = await getBudgetContext();
     const { generateRecommendations } = await import('./budget-recommender.js');
     const recs = await generateRecommendations(ctx);
@@ -301,7 +356,7 @@ async function checkPendingQueue() {
  */
 async function checkMonevisorTips(ctx) {
   try {
-    const { calculateProgress } = await import('./budget-model.js');
+    const { calculateProgress, inferCategoryType, isFlexibleOverBudget } = await import('./budget-model.js');
     const db = await getDb();
     if (!db.notifications || !ctx.rows?.length) return;
 
@@ -328,7 +383,7 @@ async function checkMonevisorTips(ctx) {
     }
 
     const overRows = ctx.rows.filter(
-      (b) => calculateProgress(b, ctx.transactions, ctx.month).status === 'over'
+      (b) => isFlexibleOverBudget(b, ctx.transactions, ctx.month),
     );
     if (overRows.length >= 2) {
       tips.push({
@@ -458,6 +513,8 @@ if (typeof window !== 'undefined') {
     dismissNotification,
     clearAll,
     refreshNotifications,
+    cleanupNotifications,
+    formatBadge,
     onNotificationChange,
   };
 

@@ -6,6 +6,9 @@
  * @module services/financial-diagnosis
  */
 
+import { getGreeting, getActionPrefix } from './monevisor-messages.js';
+import { getFinancialStatus } from './financial-status.js';
+
 /** @type {Readonly<object>} */
 export const STANDARDS = {
   SAVING_RATE: { excellent: 30, good: 20, fair: 10, poor: 0 },
@@ -207,7 +210,7 @@ function calculateHealth(m, report) {
 
   const budgets = report.budgetComparison || [];
   if (budgets.length > 0) {
-    const overCount = budgets.filter((b) => b.status === 'over').length;
+    const overCount = budgets.filter((b) => b.status === 'over' && b.category_type !== 'fixed_bill').length;
     const adherenceScore = Math.round((1 - overCount / budgets.length) * 15);
     score += adherenceScore;
     factors.push({
@@ -416,7 +419,7 @@ function diagnoseBudgetAdherence(budgetComparison) {
   const total = budgetComparison.length;
   if (total === 0) return null;
 
-  const over = budgetComparison.filter((b) => b.status === 'over');
+  const over = budgetComparison.filter((b) => b.status === 'over' && b.category_type !== 'fixed_bill');
   const warning = budgetComparison.filter((b) => b.status === 'warning' || b.status === 'critical');
   const healthy = budgetComparison.filter((b) => b.status === 'healthy');
   const adherenceRate = Math.round((healthy.length / total) * 100);
@@ -614,7 +617,7 @@ function generateBenchmarks(m, report) {
       status: adherence >= 80 ? 'good' : adherence >= 60 ? 'warning' : 'bad',
       description: adherence >= 80
         ? 'Disiplin bagus'
-        : `${budgets.filter((b) => b.status === 'over').length} kategori over`,
+        : `${budgets.filter((b) => b.status === 'over' && b.category_type !== 'fixed_bill').length} kategori over`,
     });
   }
 
@@ -774,35 +777,22 @@ function generateHighlights(diagnoses) {
 }
 
 function generateCoachSummary(health, diagnoses) {
-  const hour = new Date().getHours();
-  const greeting = hour < 11
-    ? 'Selamat pagi'
-    : hour < 15
-      ? 'Selamat siang'
-      : hour < 18
-        ? 'Selamat sore'
-        : 'Selamat malam';
+  const state = typeof window !== 'undefined' ? window.STATE : {};
+  const finStatus = getFinancialStatus(state);
+  const greeting = getGreeting(finStatus.level);
+  const actionPrefix = getActionPrefix(finStatus.level);
 
   const criticals = diagnoses.filter((d) => d?.status === 'critical');
   const goods = diagnoses.filter((d) => d?.status === 'good' || d?.status === 'excellent');
 
-  let tone;
-  if (criticals.length >= 2) {
-    tone = `${greeting}. Ada beberapa hal penting yang perlu segera ditangani.`;
-  } else if (criticals.length === 1) {
-    tone = `${greeting}. Secara umum cukup, tapi ada 1 hal yang perlu perhatian segera.`;
-  } else if (goods.length >= 3) {
-    tone = `${greeting}! Keuanganmu dalam kondisi bagus. Beberapa catatan kecil:`;
-  } else {
-    tone = `${greeting}. Yuk kita review kondisi keuanganmu bulan ini.`;
-  }
-
   return {
-    greeting: tone,
-    hasUrgent: criticals.length > 0,
+    greeting,
+    actionPrefix,
+    hasUrgent: criticals.length > 0 || finStatus.level === 'DANGER',
     urgentCount: criticals.length,
     positiveCount: goods.length,
-    healthMessage: health.message,
+    healthMessage: finStatus.level === 'DANGER' ? finStatus.message : health.message,
+    statusLevel: finStatus.level,
   };
 }
 

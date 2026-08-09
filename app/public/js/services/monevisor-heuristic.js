@@ -4,6 +4,9 @@
  * @module services/monevisor-heuristic
  */
 
+import { getGreeting } from './monevisor-messages.js';
+import { getFinancialStatus } from './financial-status.js';
+
 /**
  * @param {object} context
  * @returns {Promise<object>}
@@ -29,7 +32,9 @@ export async function generateInsights(context = {}) {
   else if (savingRate > 0.10) score += 15;
   else if (savingRate < 0) score -= 20;
 
-  const overBudgets = budgets.filter((b) => Number(b.percent_used || 0) > 100);
+  const overBudgets = budgets.filter(
+    (b) => b.category_type === 'flexible' && Number(b.percent_used || 0) > 100,
+  );
   score -= overBudgets.length * 5;
   score = Math.max(0, Math.min(100, score));
 
@@ -43,7 +48,7 @@ export async function generateInsights(context = {}) {
   if (savingRate > prevSavingRate + 0.05) trend = 'up';
   else if (savingRate < prevSavingRate - 0.05) trend = 'down';
 
-  const story = generateStory({ savingRate, trend, overBudgets, lang });
+  const story = generateStory({ savingRate, trend, overBudgets, lang, statusLevel: getFinancialStatus(typeof window !== 'undefined' ? window.STATE : {}).level });
   const insights = [];
 
   if (savingRate > 0.20) {
@@ -60,7 +65,6 @@ export async function generateInsights(context = {}) {
   }
 
   for (const b of overBudgets.slice(0, 3)) {
-    const suggested = Math.ceil((Number(b.spent || 0) * 1.1) / 10000) * 10000;
     insights.push({
       id: `over-${b.id || b.category}`,
       type: 'warning',
@@ -71,12 +75,12 @@ export async function generateInsights(context = {}) {
         : `Sudah terpakai ${b.percent_used}% (Rp ${fmt(b.spent - b.amount)} lebih dari plan).`,
       severity: 'high',
       action: {
-        type: 'increase_budget',
-        label: lang === 'en' ? `Raise to Rp ${fmt(suggested)}` : `Naikkan ke Rp ${fmt(suggested)}`,
+        type: 'decrease_budget',
+        label: lang === 'en' ? `Freeze ${b.category}` : `Bekukan ${b.category}`,
         payload: {
           budget_id: b.id,
           category: b.category,
-          new_amount: suggested,
+          new_amount: Number(b.amount || 0),
           month: context.periodStart?.slice?.(0, 7),
         },
       },
@@ -84,7 +88,9 @@ export async function generateInsights(context = {}) {
   }
 
   const mauBudgets = budgets.filter((b) => b.priority === 'mau' && Number(b.percent_used || 0) < 60);
-  const overHarus = budgets.find((b) => b.priority === 'harus' && Number(b.percent_used || 0) > 100);
+  const overHarus = budgets.find(
+    (b) => b.category_type === 'flexible' && Number(b.percent_used || 0) > 100,
+  );
 
   if (mauBudgets.length > 0 && overHarus) {
     const source = mauBudgets[0];
@@ -170,7 +176,8 @@ export async function generateInsights(context = {}) {
   }
 
   const budgetRecommendations = generateBudgetRecs(budgets, context.periodStart?.slice?.(0, 7), lang);
-  const greeting = generateGreeting(trend, savingRate, lang);
+  const finStatus = getFinancialStatus(typeof window !== 'undefined' ? window.STATE : {});
+  const greeting = getGreeting(finStatus.level);
   const summary = lang === 'en'
     ? `Income ${fmt(totalIncome)}, expense ${fmt(totalExpense)}, net ${fmt(net)}.`
     : `Pemasukan Rp ${fmt(totalIncome)}, pengeluaran Rp ${fmt(totalExpense)}, net Rp ${fmt(net)}.`;
@@ -204,9 +211,10 @@ export async function generateInsights(context = {}) {
   };
 }
 
-function generateStory({ savingRate, trend, overBudgets, lang }) {
+function generateStory({ savingRate, trend, overBudgets, lang, statusLevel = 'WARNING' }) {
   const parts = [];
-  if (savingRate > 0.15) {
+  const isDanger = statusLevel === 'DANGER';
+  if (!isDanger && savingRate > 0.15) {
     parts.push(lang === 'en' ? 'Your finances look healthy this month' : 'Kamu punya keuangan yang sehat bulan ini');
   } else if (savingRate > 0) {
     parts.push(lang === 'en' ? 'You managed to save, with room to optimize' : 'Kamu berhasil menabung, meski masih bisa dioptimalkan');
@@ -271,11 +279,15 @@ function generateHealthMessage(score, trend, lang) {
 
 function generateBudgetRecs(budgets, month, lang) {
   return budgets
-    .filter((b) => Number(b.percent_used || 0) > 100 || Number(b.percent_used || 0) < 30)
+    .filter((b) => {
+      if (b.category_type === 'fixed_bill' || b.category_type === 'saving') return false;
+      return Number(b.percent_used || 0) > 100 || Number(b.percent_used || 0) < 30;
+    })
     .slice(0, 3)
     .map((b) => {
-      const suggested = Number(b.percent_used || 0) > 100
-        ? Math.ceil((Number(b.spent || 0) * 1.1) / 10000) * 10000
+      const isOver = Number(b.percent_used || 0) > 100;
+      const suggested = isOver
+        ? Number(b.amount || 0)
         : Math.ceil((Number(b.spent || 0) * 1.2) / 10000) * 10000;
 
       return {
@@ -284,14 +296,14 @@ function generateBudgetRecs(budgets, month, lang) {
         current: Number(b.amount || 0),
         suggested,
         planned: suggested,
-        reason: Number(b.percent_used || 0) > 100
-          ? (lang === 'en' ? `Over ${b.percent_used}% — raise suggested` : `Over budget ${b.percent_used}%, disarankan naikkan`)
+        reason: isOver
+          ? (lang === 'en' ? `Over ${b.percent_used}% — freeze suggested` : `Over budget ${b.percent_used}%, disarankan bekukan`)
           : (lang === 'en' ? `Under-utilized (${b.percent_used}%)` : `Under-utilized (${b.percent_used}%), bisa diturunkan`),
-        impact: Number(b.percent_used || 0) > 100
-          ? (lang === 'en' ? `Avoid over Rp ${fmt(b.spent - b.amount)}` : `Hindari over Rp ${fmt(b.spent - b.amount)} lagi`)
+        impact: isOver
+          ? (lang === 'en' ? `Stop overspend in ${b.category}` : `Hentikan overspend di ${b.category}`)
           : (lang === 'en' ? `Free Rp ${fmt(b.amount - suggested)}` : `Hemat Rp ${fmt(b.amount - suggested)}`),
         action: {
-          type: Number(b.percent_used || 0) > 100 ? 'increase_budget' : 'decrease_budget',
+          type: isOver ? 'decrease_budget' : 'decrease_budget',
           payload: { budget_id: b.id, category: b.category, new_amount: suggested, month },
         },
       };

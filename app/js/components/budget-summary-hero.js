@@ -4,6 +4,7 @@
  */
 
 import { calculateProgress, calculatePriorityTotals, getItemTotalAmount, getLinkedTransactions } from '../services/budget-model.js';
+import { getDaysUntilPayday } from '../services/daily-situation.js';
 import { LABELS } from '../constants/language.js';
 import { Icon } from './icons.js';
 import { filterMonthExpenses } from '../utils/transaction-utils.js';
@@ -87,10 +88,14 @@ export async function renderBudgetSummaryHero(container, ctx) {
   const unlinkedCount = monthExpenses.filter((t) => t.id && !linkedIds.has(t.id)).length;
 
   const time = getMonthTimeProgress(monthKey);
-  const { daysLeft, daysPassed, timeProgress, timeMarkerLabel } = time;
+  const { daysPassed, timeProgress, timeMarkerLabel } = time;
   const markerLeft = Math.min(96, Math.max(4, timeProgress));
 
-  const dailyRemaining = daysLeft > 0 ? remaining / daysLeft : 0;
+  const prefs = typeof window !== 'undefined' ? (window.STATE?.db?.userPreferences || {}) : {};
+  const paydayInfo = getDaysUntilPayday(prefs.payday_day, !!prefs.payday_irregular);
+  const daysToPayday = paydayInfo.days;
+
+  const dailyRemaining = daysToPayday > 0 ? remaining / daysToPayday : 0;
   const dailyAvg = daysPassed > 0 ? totalSpent / daysPassed : 0;
   const status = getHealthStatus(percentUsed, timeProgress);
   const fillClass = getProgressFillClass(percentUsed);
@@ -142,8 +147,8 @@ export async function renderBudgetSummaryHero(container, ctx) {
             </div>
           </div>
           <div class="bsh-stat">
-            <div class="bsh-stat-label">${Icon('calendar', { size: 12 })} Sisa Hari</div>
-            <div class="bsh-stat-value">${daysLeft} hari</div>
+            <div class="bsh-stat-label">${Icon('calendar', { size: 12 })} Sampai Gajian</div>
+            <div class="bsh-stat-value">${daysToPayday} hari</div>
           </div>
           <div class="bsh-stat">
             <div class="bsh-stat-label">${Icon('lightBulb', { size: 12 })} Per Hari</div>

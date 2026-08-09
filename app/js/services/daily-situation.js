@@ -41,6 +41,9 @@ export function getDaysUntilPayday(paydayDay, irregular = false) {
   return { days, label: `${days} hari`, paydayDate: target };
 }
 
+/** Alias for shared payday helper used across budget hero and home. */
+export const getDaysToPayday = getDaysUntilPayday;
+
 /**
  * @param {object} state
  * @returns {{ income: number, fixedPlanned: number, savePlanned: number, flexibleSpent: number, flexibleRemaining: number }}
@@ -128,10 +131,141 @@ function inferPriorityFromCategory(cat) {
 }
 
 /**
+ * Flexible-only average daily spend over last N days in period.
+ * @param {object[]} transactions
+ * @param {object} state
+ * @param {number} [lookbackDays]
+ * @returns {number}
+ */
+export function getFlexibleAvgDailySpend(transactions = [], state = {}, lookbackDays = 7) {
+  const flex = computeFlexibleBudget(state);
+  const period = state?.selectedMonth
+    || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  const periodStart = state?.period?.start || `${period}-01`;
+  const periodEnd = state?.period?.end || periodStart;
+
+  const monthData = state?.budgetsByMonth?.[period];
+  const rowList = monthData?.categories?.rows || [];
+  const categoryPriority = new Map();
+  for (const row of rowList) {
+    categoryPriority.set(String(row.name || '').toLowerCase(), row.priority || 'penting');
+  }
+
+  const today = new Date();
+  let total = 0;
+  let daysWithData = 0;
+  const deduped = dedupeTransactions(transactions).filter(
+    (t) => t.date >= periodStart && t.date <= periodEnd,
+  );
+
+  for (let i = 0; i < lookbackDays; i += 1) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const iso = d.toISOString().slice(0, 10);
+    const dayTotal = deduped
+      .filter((t) => {
+        if (t.date !== iso || !isExpenseTransaction(t)) return false;
+        const cat = String(t.category || t.merchant || '').toLowerCase();
+        const pri = categoryPriority.get(cat) || inferPriorityFromCategory(cat);
+        return pri !== 'harus' && pri !== 'simpan';
+      })
+      .reduce((s, t) => s + Math.abs(Number(t.amount || 0)), 0);
+    if (dayTotal > 0) daysWithData += 1;
+    total += dayTotal;
+  }
+
+  const daysPassed = Math.max(1, today.getDate());
+  if (flex.flexibleSpent > 0 && daysPassed >= lookbackDays) {
+    return flex.flexibleSpent / daysPassed;
+  }
+  const divisor = Math.max(1, daysWithData || lookbackDays);
+  return total / divisor;
+}
+
+/**
+ * @param {object[]} transactions
+ * @param {object[]} [budgetRows]
+ * @returns {object[]}
+ */
+export function detectOutliers(transactions = [], budgetRows = []) {
+  const categoryPriority = new Map();
+  for (const row of budgetRows || []) {
+    categoryPriority.set(String(row.name || '').toLowerCase(), row.priority || 'penting');
+  }
+  const flexibleTxs = dedupeTransactions(transactions).filter((t) => {
+    if (!isExpenseTransaction(t)) return false;
+    const cat = String(t.category || t.merchant || '').toLowerCase();
+    const pri = categoryPriority.get(cat) || inferPriorityFromCategory(cat);
+    return pri !== 'harus' && pri !== 'simpan';
+  });
+  const amounts = flexibleTxs.map((t) => Math.abs(Number(t.amount || 0))).filter((a) => a > 0);
+  if (amounts.length < 3) return [];
+  const sorted = [...amounts].sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)];
+  const threshold = median * 3;
+  return flexibleTxs.filter((t) => Math.abs(Number(t.amount || 0)) > threshold);
+}
+
+/**
+ * Predict end-of-period flexible surplus/deficit.
+ * @param {object} data
+ * @returns {object}
+ */
+export function predictEndOfPeriod(data) {
+  const {
+    income_actual = 0,
+    fixed_bills_paid = 0,
+    fixed_bills_pending = 0,
+    saving_target = 0,
+    flexible_expense_so_far = 0,
+    days_passed = 1,
+    days_remaining = 1,
+  } = data;
+
+  if (days_passed < 7) {
+    return {
+      prediction: null,
+      status: 'incomplete',
+      amount: 0,
+      confidence: 'low',
+      message: 'Butuh min 7 hari data untuk prediksi',
+    };
+  }
+
+  const flexibleAvailable = income_actual - fixed_bills_paid - fixed_bills_pending - saving_target;
+  const flexibleRemaining = flexibleAvailable - flexible_expense_so_far;
+  const avgFlexibleDaily = flexible_expense_so_far / Math.max(1, days_passed);
+  const projectedFlexible = avgFlexibleDaily * days_remaining;
+  const prediction = flexibleRemaining - projectedFlexible;
+
+  if (Math.abs(prediction) > income_actual && income_actual > 0) {
+    return {
+      prediction: null,
+      status: 'unreliable',
+      amount: Math.abs(prediction),
+      confidence: 'low',
+      message: 'Data belum cukup untuk prediksi akurat',
+    };
+  }
+
+  const confidence = days_passed < 7 ? 'low' : days_passed < 14 ? 'medium' : 'high';
+  return {
+    prediction,
+    status: prediction >= 0 ? 'surplus' : 'deficit',
+    amount: Math.abs(prediction),
+    confidence,
+    avgFlexibleDaily,
+    flexibleRemaining,
+    projectedFlexible,
+  };
+}
+
+/**
  * @param {object[]} transactions
  * @returns {number}
  */
-export function getAvgDailySpend7d(transactions = []) {
+export function getAvgDailySpend7d(transactions = [], state = null) {
+  if (state) return getFlexibleAvgDailySpend(transactions, state, 7);
   const today = new Date();
   let total = 0;
   let daysWithData = 0;
@@ -169,6 +303,7 @@ function findNearLimitCategory(state) {
 
   let best = null;
   for (const row of rows) {
+    if (row.priority === 'harus' || row.priority === 'simpan') continue;
     const planned = Number(row.amount || 0);
     if (planned <= 0) continue;
     const name = row.name || '';
@@ -200,7 +335,8 @@ export function computeDailySituation(state = typeof window !== 'undefined' ? wi
   const payday = getDaysUntilPayday(paydayDay, paydayIrregular);
 
   const flex = computeFlexibleBudget(state);
-  const avgDaily = getAvgDailySpend7d(state?.transactions || []);
+  const avgDaily = getFlexibleAvgDailySpend(state?.transactions || [], state);
+  const daysPassed = new Date().getDate();
   const daysLeftInMonth = (() => {
     const period = state?.selectedMonth
       || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
@@ -225,16 +361,28 @@ export function computeDailySituation(state = typeof window !== 'undefined' ? wi
   const daysToPayday = payday.days;
   const flexibleRemaining = flex.flexibleRemaining;
 
+  const predictionResult = predictEndOfPeriod({
+    income_actual: flex.income,
+    fixed_bills_paid: flex.fixedPlanned,
+    fixed_bills_pending: 0,
+    saving_target: flex.savePlanned,
+    flexible_expense_so_far: flex.flexibleSpent,
+    days_passed: daysPassed,
+    days_remaining: daysToPayday,
+  });
+
   let safeToSpend = Math.floor(flexibleRemaining / daysToPayday);
   const isNegativePool = flexibleRemaining < 0;
   if (isNegativePool) safeToSpend = 0;
 
-  const runwayDays = avgDaily > 0 ? flexibleRemaining / avgDaily : daysToPayday;
-  const projectedSpend = avgDaily * Math.min(daysToPayday, daysLeftInMonth || daysToPayday);
-  const predictedEndBalance = flexibleRemaining - projectedSpend;
+  const avgFlexibleDaily = predictionResult.avgFlexibleDaily ?? avgDaily;
+  const runwayDays = avgFlexibleDaily > 0 ? flexibleRemaining / avgFlexibleDaily : daysToPayday;
+  const predictedEndBalance = predictionResult.prediction ?? (flexibleRemaining - avgFlexibleDaily * daysToPayday);
 
   let status = /** @type {SituationStatus} */ ('aman');
-  if (predictedEndBalance < 0 || runwayDays < daysToPayday * 0.85) {
+  if (predictionResult.status === 'incomplete') {
+    status = flex.income <= 0 ? 'incomplete' : 'waspada';
+  } else if (predictedEndBalance < 0 || runwayDays < daysToPayday * 0.85) {
     status = 'bahaya';
   } else if (runwayDays < daysToPayday * 1.1 || predictedEndBalance < flex.income * 0.03) {
     status = 'waspada';
@@ -242,7 +390,7 @@ export function computeDailySituation(state = typeof window !== 'undefined' ? wi
 
   const nearCat = findNearLimitCategory(state);
   const now = new Date();
-  const runoutDay = avgDaily > 0 && flexibleRemaining > 0
+  const runoutDay = avgFlexibleDaily > 0 && flexibleRemaining > 0
     ? new Date(now.getTime() + runwayDays * 86400000)
     : null;
 
@@ -251,11 +399,14 @@ export function computeDailySituation(state = typeof window !== 'undefined' ? wi
     safeToSpend,
     isNegativePool,
     flexibleRemaining,
-    avgDailySpend: avgDaily,
+    avgDailySpend: avgFlexibleDaily,
     runwayDays: Math.round(runwayDays * 10) / 10,
     daysToPayday,
     paydayLabel: payday.label,
     predictedEndBalance,
+    predictionConfidence: predictionResult.confidence,
+    predictionMessage: predictionResult.message || null,
+    predictionStatus: predictionResult.status,
     daysLeftInMonth,
     projectedSurplus: predictedEndBalance >= 0,
     nearCategory: nearCat,
@@ -308,8 +459,12 @@ if (typeof window !== 'undefined') {
   window.__monefyiDailySituation = {
     computeDailySituation,
     getDaysUntilPayday,
+    getDaysToPayday,
     computeFlexibleBudget,
     getAvgDailySpend7d,
+    getFlexibleAvgDailySpend,
+    predictEndOfPeriod,
+    detectOutliers,
     saveDailySnapshot,
   };
 }

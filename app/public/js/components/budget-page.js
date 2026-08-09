@@ -14,8 +14,10 @@ import {
   getItemTotalAmount,
   hasActiveLineItems,
   syncItemAmountFromLines,
-  CATEGORY_TYPES,
-  inferCategoryType,
+  countFlexibleOverBudget,
+  countFlexibleAttentionRows,
+  getBudgetStatusLabel,
+  getBudgetStatusClass,
 } from '../services/budget-model.js';
 import { Icon } from './icons.js';
 import { filterBudgets, getFilter, onFilterChange } from '../services/global-filter.js';
@@ -23,29 +25,14 @@ import { dedupeTransactions, filterMonthExpenses, sumMonthExpenses } from '../ut
 
 const SORT_KEY = 'budget_sort';
 
-/**
- * @param {object[]} rows
- * @param {object[]} transactions
- * @param {string} month
- */
+/** @deprecated use countFlexibleOverBudget from budget-model */
 function countOverBudgetRows(rows, transactions, month) {
-  return rows.filter((b) => {
-    if (inferCategoryType(b) === CATEGORY_TYPES.FIXED_BILL) return false;
-    return calculateProgress(b, transactions, month).status === 'over';
-  }).length;
+  return countFlexibleOverBudget(rows, transactions, month);
 }
 
-/**
- * @param {object[]} rows
- * @param {object[]} transactions
- * @param {string} month
- */
+/** @deprecated use countFlexibleAttentionRows from budget-model */
 function countAttentionRows(rows, transactions, month) {
-  return rows.filter((b) => {
-    if (inferCategoryType(b) === CATEGORY_TYPES.FIXED_BILL) return false;
-    const s = calculateProgress(b, transactions, month).status;
-    return s === 'critical' || s === 'warning';
-  }).length;
+  return countFlexibleAttentionRows(rows, transactions, month);
 }
 
 const SORT_LABELS = {
@@ -328,11 +315,16 @@ function renderDetailItem(item, expanded, limits = {}) {
 function renderBudgetListRow(budget, transactions, month, income = 0) {
   const progress = budget._progress || calculateProgress(budget, transactions, month);
   const pl = PRIORITY_LEVELS[(budget.priority || 'penting').toUpperCase()] || PRIORITY_LEVELS.PENTING;
-  const statusClass = progress.status === 'over' ? 'over' : progress.status === 'critical' ? 'critical' : progress.status === 'warning' ? 'warning' : '';
+  const statusClass = getBudgetStatusClass(progress.status);
+  const statusLabel = getBudgetStatusLabel(progress.status);
   const remaining = progress.remaining;
-  const remainingLabel = remaining >= 0
-    ? `Sisa: ${formatCompact(remaining)}`
-    : `Over ${formatCompact(-remaining)}`;
+  const remainingLabel = progress.status === 'paid'
+    ? 'Lunas'
+    : progress.status === 'pending'
+      ? `Belum lunas · ${formatCompact(Math.max(0, remaining))} tersisa`
+      : remaining >= 0
+        ? `Sisa: ${formatCompact(remaining)}`
+        : `Over ${formatCompact(-remaining)}`;
   const allDone = budget._allDone || isBudgetFullyDone(budget);
   const expanded = _expandedBudgetId === budget.id;
   const selected = _selectedBudgetId === budget.id;
@@ -351,9 +343,10 @@ function renderBudgetListRow(budget, transactions, month, income = 0) {
         <div class="budget-list-row__main">
           <div class="budget-list-row__title">
             ${escapeHtml(budget.name)}
+            <span class="budget-status-badge budget-status-badge--${progress.status}">${escapeHtml(statusLabel)}</span>
             ${allDone ? `<span class="done-badge">${Icon('check', { size: 10 })} Selesai</span>` : ''}
           </div>
-          <div class="budget-list-row__sub ${remaining < 0 ? 'over' : ''}">${remainingLabel}</div>
+          <div class="budget-list-row__sub ${remaining < 0 && progress.status === 'over' ? 'over' : ''}">${remainingLabel}</div>
           <div class="budget-list-row__track">
             <div class="budget-list-row__fill ${statusClass}" style="width:${Math.min(progress.percentUsed, 100)}%"></div>
           </div>

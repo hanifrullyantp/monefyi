@@ -8,6 +8,7 @@ import {
   getDaysUntilPayday,
   getAvgDailySpend7d,
   computeFlexibleBudget,
+  predictEndOfPeriod,
 } from '../app/js/services/daily-situation.js';
 
 describe('getDaysUntilPayday', () => {
@@ -99,5 +100,62 @@ describe('computeFlexibleBudget', () => {
       },
     });
     assert.equal(f.flexibleBudgetTotal, 6000000);
+  });
+});
+
+describe('predictEndOfPeriod', () => {
+  it('returns incomplete when days_passed < 7', () => {
+    const r = predictEndOfPeriod({
+      income_actual: 5000000,
+      fixed_bills_paid: 1000000,
+      fixed_bills_pending: 0,
+      saving_target: 500000,
+      flexible_expense_so_far: 200000,
+      days_passed: 5,
+      days_remaining: 20,
+    });
+    assert.equal(r.status, 'incomplete');
+    assert.equal(r.prediction, null);
+  });
+
+  it('uses flexible-only average not total expenses', () => {
+    const r = predictEndOfPeriod({
+      income_actual: 5000000,
+      fixed_bills_paid: 1500000,
+      fixed_bills_pending: 500000,
+      saving_target: 750000,
+      flexible_expense_so_far: 789000,
+      days_passed: 9,
+      days_remaining: 16,
+    });
+    assert.equal(r.status, 'surplus');
+    assert.ok(r.avgFlexibleDaily > 80000 && r.avgFlexibleDaily < 90000);
+  });
+});
+
+describe('getFlexibleAvgDailySpend', () => {
+  it('ignores harus/simpan categories in average', async () => {
+    const { getFlexibleAvgDailySpend } = await import('../app/js/services/daily-situation.js');
+    const month = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    const today = new Date().toISOString().slice(0, 10);
+    const avg = getFlexibleAvgDailySpend([
+      { date: today, type: 'expense', amount: 2000000, category: 'Kontrakan' },
+      { date: today, type: 'expense', amount: 100000, category: 'Makan' },
+    ], {
+      selectedMonth: month,
+      period: { start: `${month}-01`, end: `${month}-28` },
+      budgetsByMonth: {
+        [month]: {
+          income: 8000000,
+          categories: {
+            rows: [
+              { name: 'Kontrakan', amount: 2000000, priority: 'harus' },
+              { name: 'Makan', amount: 800000, priority: 'penting' },
+            ],
+          },
+        },
+      },
+    });
+    assert.ok(avg < 500000, 'flexible avg should exclude fixed bill spend');
   });
 });

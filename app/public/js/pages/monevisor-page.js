@@ -9,6 +9,8 @@ import { buildFinancialReport } from '../services/financial-report.js';
 import { diagnoseFinancials } from '../services/financial-diagnosis.js';
 import { buildIntervention, generateStarterQuestions } from '../services/monevisor-intervention.js';
 import { sendMessage, initMonevisor, loadMessageHistory, applyAction } from '../services/monevisor-client.js';
+import { getFinancialStatus } from '../services/financial-status.js';
+import { getGreeting, getStatusDisplay } from '../services/monevisor-messages.js';
 
 let _root = null;
 let _formatIDR = (n) => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
@@ -103,6 +105,9 @@ function renderDiagnosis(container, report, dx) {
   const cats = report.categories || report.categoryBreakdown || [];
   const intervention = buildIntervention(report, dx, window.STATE || {});
   const starters = generateStarterQuestions(report, dx, window.STATE || {});
+  const finStatus = getFinancialStatus(window.STATE || {});
+  const statusDisplay = getStatusDisplay(finStatus.level);
+  const coachGreeting = dx.summary?.greeting || getGreeting(finStatus.level);
   const comparison = report.comparison
     ? {
       current: { expense: report.comparison.current?.expense ?? expense },
@@ -133,7 +138,7 @@ function renderDiagnosis(container, report, dx) {
       <section class="mv-intervention-card">
         <div class="mv-intervention-block">
           <div class="mv-intervention-label">KONDISI</div>
-          <div class="mv-intervention-headline">${escapeHtml(intervention.condition.label)}</div>
+          <div class="mv-intervention-headline">${escapeHtml(statusDisplay.icon)} ${escapeHtml(statusDisplay.label)}</div>
           <p class="mv-intervention-text">${escapeHtml(intervention.condition.text)}</p>
         </div>
         <div class="mv-intervention-block">
@@ -159,9 +164,9 @@ function renderDiagnosis(container, report, dx) {
         <div class="mv-health-row">
           <div class="mv-health-detail">
             <div class="mv-health-label" style="color:${h.color}">
-              ${escapeHtml(intervention.condition.label.replace(/^[^\s]+\s/, '') || h.label)}
+              ${escapeHtml(statusDisplay.label)}
             </div>
-            <div class="mv-health-msg">${escapeHtml(dx.summary?.greeting || h.message)}</div>
+            <div class="mv-health-msg">${escapeHtml(coachGreeting)}</div>
           </div>
         </div>
       </section>

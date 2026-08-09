@@ -6,6 +6,7 @@
 import { showNotification, processQueue, isCategoryEnabled } from './push-notification.js';
 import { buildMorningBriefing, buildBillReminder, buildBudgetMilestoneMessage } from './contextual-notifications.js';
 import { syncFinancialCondition } from './financial-condition.js';
+import { inferCategoryType, CATEGORY_TYPES } from './budget-model.js';
 
 const CHECK_INTERVAL = 15 * 60 * 1000;
 let _intervalId = null;
@@ -274,10 +275,13 @@ async function checkBudgetMilestones(budgetRows, expenses) {
     if (planned <= 0) continue;
     const spent = spentForCategory(expenses, budget.name);
     const percent = Math.round((spent / planned) * 100);
+    const categoryType = inferCategoryType(budget);
+
+    if (categoryType === CATEGORY_TYPES.FIXED_BILL && percent >= 100) continue;
 
     const thresholds = Array.isArray(budget.notification_thresholds)
       && budget.notification_thresholds.length
-      ? budget.notification_thresholds.map(Number)
+      ? budget.notification_thresholds.map(Number).filter((t) => t >= 75)
       : [75, 90, 100];
     const milestones = [...new Set([...thresholds, 90, 100])].sort((a, b) => b - a);
 

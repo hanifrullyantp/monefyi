@@ -50,8 +50,23 @@ function sumExpenseDays(transactions, daysBack, offset = 0) {
  */
 function getWeekSpendShift(report) {
   const txs = report?.transactions || [];
-  const thisWeek = sumExpenseDays(txs, 7, 0);
-  const lastWeek = sumExpenseDays(txs, 7, 7);
+  const flexNames = new Set(
+    (report?.budgetComparison || report?.budgets || [])
+      .filter((b) => b.category_type === 'flexible' || (!b.category_type && b.priority === 'penting'))
+      .map((b) => String(b.category || b.name || '').toLowerCase()),
+  );
+
+  const isFlexibleExpense = (t) => {
+    const type = String(t.type || 'expense').toLowerCase();
+    if (type !== 'expense' && type !== 'pengeluaran' && type !== 'out') return false;
+    if (!flexNames.size) return true;
+    const cat = String(t.category || 'Lainnya').toLowerCase();
+    return [...flexNames].some((n) => cat.includes(n) || n.includes(cat));
+  };
+
+  const flexTxs = txs.filter(isFlexibleExpense);
+  const thisWeek = sumExpenseDays(flexTxs, 7, 0);
+  const lastWeek = sumExpenseDays(flexTxs, 7, 7);
   const pct = lastWeek > 0 ? ((thisWeek - lastWeek) / lastWeek) * 100 : null;
 
   const catMap = new Map();
@@ -60,10 +75,8 @@ function getWeekSpendShift(report) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
     const iso = d.toISOString().slice(0, 10);
-    for (const t of txs) {
+    for (const t of flexTxs) {
       if (t.date !== iso) continue;
-      const type = String(t.type || 'expense').toLowerCase();
-      if (type !== 'expense' && type !== 'pengeluaran' && type !== 'out') continue;
       const cat = String(t.category || 'Lainnya');
       catMap.set(cat, (catMap.get(cat) || 0) + Number(t.amount || 0));
     }
@@ -84,8 +97,10 @@ function findWorstBudget(report) {
   const rows = report?.budgetComparison || report?.budgets || [];
   let worst = null;
   for (const b of rows) {
+    if (b.category_type === 'fixed_bill' || b.category_type === 'saving') continue;
+    if (b.status === 'paid' || b.status === 'pending') continue;
     const pct = Number(b.percent_used ?? b.percentUsed ?? 0);
-    if (pct < 80) continue;
+    if (pct <= 100) continue;
     if (!worst || pct > Number(worst.percent_used || 0)) {
       worst = {
         ...b,
@@ -97,6 +112,23 @@ function findWorstBudget(report) {
     }
   }
   return worst;
+}
+
+/**
+ * @param {object} report
+ * @returns {object|null}
+ */
+function findNearFlexibleBudget(report) {
+  const rows = report?.budgetComparison || report?.budgets || [];
+  let near = null;
+  for (const b of rows) {
+    if (b.category_type !== 'flexible' && b.category_type !== undefined) continue;
+    const pct = Number(b.percent_used ?? 0);
+    if (pct >= 70 && pct < 100 && (!near || pct > near.percent_used)) {
+      near = { ...b, category: b.category || b.name, percent_used: pct };
+    }
+  }
+  return near;
 }
 
 /**
@@ -143,7 +175,7 @@ export function buildIntervention(report, diagnosis, state = typeof window !== '
       label: 'Catat Income',
       payload: { target: 'income' },
     };
-  } else if (worstBudget && Number(worstBudget.percent_used) >= 100) {
+  } else if (worstBudget && Number(worstBudget.percent_used) > 100) {
     const over = Math.max(0, worstBudget.spent - worstBudget.amount);
     conditionText = `Kategori ${worstBudget.category} sudah over budget (${Math.round(worstBudget.percent_used)}%).`;
     if (week.pct !== null && week.pct > 10) {
@@ -206,7 +238,26 @@ export function buildIntervention(report, diagnosis, state = typeof window !== '
       label: `Lihat transaksi ${worstBudget.category}`,
       payload: { category: worstBudget.category, target: 'transactions' },
     };
-  } else if (savingRate < 0.1 && income > 0) {
+  } else {
+    const nearFlex = findNearFlexibleBudget(report);
+    if (nearFlex) {
+      conditionText = `Semua tagihan tetap sudah dibayar. ${nearFlex.category} sudah ${Math.round(nearFlex.percent_used)}% — perhatikan pengeluaran fleksibel.`;
+    } else {
+      conditionText = 'Semua tagihan tetap sudah dibayar. Fokus jaga pengeluaran fleksibel: Makan, Hiburan, dll.';
+    }
+    riskText = situation.predictedEndBalance >= 0
+      ? `Proyeksi akhir periode surplus ±${fmt(situation.predictedEndBalance)} jika pola konsisten.`
+      : `Waspada: proyeksi akhir periode ${fmt(situation.predictedEndBalance)}.`;
+    stepText = 'Pertahankan catat transaksi harian dan cek budget sekali seminggu.';
+    impactText = 'Konsistensi catat → prediksi dan rekomendasi Monevisor makin akurat.';
+    action = {
+      type: 'navigate',
+      label: 'Buka Budget',
+      payload: { target: 'budget' },
+    };
+  }
+
+  if (!conditionText && savingRate < 0.1 && income > 0) {
     conditionText = `Saving rate bulan ini ${Math.round(savingRate * 100)}% — di bawah target 20%.`;
     riskText = `Tanpa sisihkan tabungan, buffer darurat sulit tumbuh (net saat ini ${fmt(net)}).`;
     stepText = 'Alokasikan minimal 10% income ke kategori simpan di budget.';
@@ -214,20 +265,6 @@ export function buildIntervention(report, diagnosis, state = typeof window !== '
     action = {
       type: 'navigate',
       label: 'Atur Budget',
-      payload: { target: 'budget' },
-    };
-  } else {
-    conditionText = week.pct !== null && Math.abs(week.pct) >= 10
-      ? `Pengeluaran minggu ini ${Math.round(Math.abs(week.pct))}% ${week.pct > 0 ? 'lebih tinggi' : 'lebih rendah'} dari minggu lalu.`
-      : (health.message || 'Pola pengeluaran relatif stabil minggu ini.');
-    riskText = situation.predictedEndBalance >= 0
-      ? `Proyeksi akhir bulan surplus ±${fmt(situation.predictedEndBalance)} jika pola konsisten.`
-      : `Waspada: proyeksi akhir bulan ${fmt(situation.predictedEndBalance)}.`;
-    stepText = 'Pertahankan catat transaksi harian dan cek budget sekali seminggu.';
-    impactText = 'Konsistensi catat → prediksi dan rekomendasi Monevisor makin akurat.';
-    action = {
-      type: 'navigate',
-      label: 'Buka Budget',
       payload: { target: 'budget' },
     };
   }
@@ -251,13 +288,15 @@ export function generateStarterQuestions(report, diagnosis, state = typeof windo
   const questions = [];
   const situation = computeDailySituation(state);
   const worstBudget = findWorstBudget(report);
+  const nearFlex = findNearFlexibleBudget(report);
+  const focusBudget = worstBudget || (nearFlex && Number(nearFlex.percent_used) >= 80 ? nearFlex : null);
   const m = report?.metrics || {};
   const savingRate = Number(m.saving_rate ?? m.savingRate ?? 0);
   const prefs = state?.db?.userPreferences || {};
   const hasDebt = !!prefs.has_debt || Number(prefs.monthly_debt_payment || 0) > 0;
 
-  if (worstBudget && Number(worstBudget.percent_used) >= 80) {
-    questions.push(`Kenapa kategori ${worstBudget.category} saya bisa setinggi ini?`);
+  if (focusBudget && Number(focusBudget.percent_used) >= 80) {
+    questions.push(`Kenapa kategori ${focusBudget.category} saya bisa setinggi ini?`);
   }
 
   if (situation.status === 'bahaya' || (situation.runwayDays && situation.runwayDays < 7)) {

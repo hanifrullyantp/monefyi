@@ -28,16 +28,17 @@ export async function renderNotificationBell() {
   async function update() {
     const nm = await getNotif();
     const count = await nm.getUnreadCount();
+    const badge = nm.formatBadge ? nm.formatBadge(count) : (count > 99 ? '99+' : String(count));
     bell.innerHTML = `
       ${Icon('bell', { size: 20 })}
-      ${count > 0 ? `<span class="notif-badge">${count > 99 ? '99+' : count}</span>` : ''}
+      ${badge ? `<span class="notif-badge">${badge}</span>` : ''}
     `;
     bell.classList.toggle('has-unread', count > 0);
 
     const desktopBadge = document.getElementById('notifBadgeDesktop');
     if (desktopBadge) {
       desktopBadge.classList.toggle('hidden', count <= 0);
-      desktopBadge.textContent = count > 9 ? '9+' : String(count);
+      desktopBadge.textContent = badge || '';
       desktopBadge.classList.toggle('notif-badge--count', count > 0);
     }
   }
@@ -88,12 +89,13 @@ export async function wireDesktopNotificationBell() {
   async function updateDesktop() {
     const nm = await getNotif();
     const count = await nm.getUnreadCount();
-    const badge = document.getElementById('notifBadgeDesktop');
-    if (badge) {
-      badge.classList.toggle('hidden', count <= 0);
+    const badge = nm.formatBadge ? nm.formatBadge(count) : (count > 99 ? '99+' : String(count));
+    const badgeEl = document.getElementById('notifBadgeDesktop');
+    if (badgeEl) {
+      badgeEl.classList.toggle('hidden', count <= 0);
       if (count > 0) {
-        badge.textContent = count > 9 ? '9+' : String(count);
-        badge.classList.add('notif-badge--count');
+        badgeEl.textContent = badge || '';
+        badgeEl.classList.add('notif-badge--count');
       }
     }
   }
