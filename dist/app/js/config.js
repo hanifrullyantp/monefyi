@@ -21,6 +21,8 @@
     fnComplianceNotify: "monefyi-compliance-notify",
     fnAccountPurge: "monefyi-account-purge",
     fnRefundLynk: "monefyi-refund-lynk",
+    /** Refund otomatis Lynk — false = manual super-admin flow only */
+    refundAutoLynkEnabled: false,
     fnWeeklyDigestCron: "monefyi-weekly-digest-cron",
     fnLandingConfig: "monefyi-landing-config",
     fnStartTrial: "start-trial",

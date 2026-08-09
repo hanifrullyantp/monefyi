@@ -413,6 +413,10 @@ function renderUserCard(u) {
         <button type="button" class="admin-btn" data-act="save">Simpan</button>
         <button type="button" class="admin-btn ghost" data-act="trial">Grant Trial</button>
         <button type="button" class="admin-btn ghost" data-act="marketing">Marketing</button>
+        ${String(window.STATE?.db?.profile?.role || '').toLowerCase() === 'super_admin'
+          ? `<button type="button" class="admin-btn ghost" data-act="refund-enable">Aktifkan refund</button>
+             <button type="button" class="admin-btn ghost danger" data-act="refund-disable">Matikan refund</button>`
+          : ''}
         <button type="button" class="admin-btn ghost" data-act="pw">Set Password</button>
         ${st === 'suspended'
           ? '<button type="button" class="admin-btn ghost" data-act="activate">Activate</button>'
@@ -454,6 +458,11 @@ function wireUserCards(list) {
             const { showUserMarketingPanel } = await import('./admin-user-marketing.js');
             await showUserMarketingPanel(uid, u?.email || '', { toast, escapeHtml });
             return;
+          } else if (act === 'refund-enable' || act === 'refund-disable') {
+            const { grantRefundRequestAccess } = await import('../services/refund-request.js');
+            const res = await grantRefundRequestAccess(uid, act === 'refund-enable');
+            if (!res.success) throw new Error(res.error || 'Gagal');
+            toast(act === 'refund-enable' ? 'Tombol refund diaktifkan' : 'Tombol refund dinonaktifkan', 'success');
           } else if (act === 'pw') {
             const pw = val('new_password')?.value || '';
             if (pw.length < 8) throw new Error('Password min 8 karakter');
@@ -1064,5 +1073,23 @@ async function renderRefunds(body) {
 
   body.querySelector('#rfRefresh')?.addEventListener('click', load);
   body.querySelector('#rfStatus')?.addEventListener('change', load);
+
+  const grantStatus = body.querySelector('#rfGrantStatus');
+  const runGrant = async (enabled) => {
+    const uid = body.querySelector('#rfGrantUserId')?.value?.trim();
+    if (!uid) {
+      if (grantStatus) grantStatus.textContent = 'Masukkan user ID.';
+      return;
+    }
+    const { grantRefundRequestAccess } = await import('../services/refund-request.js');
+    const res = await grantRefundRequestAccess(uid, enabled);
+    if (grantStatus) grantStatus.textContent = res.success
+      ? (enabled ? 'Tombol refund diaktifkan untuk user.' : 'Tombol refund dinonaktifkan.')
+      : (res.error || 'Gagal');
+    if (res.success) toast(grantStatus.textContent, 'success');
+  };
+  body.querySelector('#rfGrantEnable')?.addEventListener('click', () => runGrant(true));
+  body.querySelector('#rfGrantDisable')?.addEventListener('click', () => runGrant(false));
+
   await load();
 }

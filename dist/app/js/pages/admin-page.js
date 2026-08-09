@@ -413,6 +413,10 @@ function renderUserCard(u) {
         <button type="button" class="admin-btn" data-act="save">Simpan</button>
         <button type="button" class="admin-btn ghost" data-act="trial">Grant Trial</button>
         <button type="button" class="admin-btn ghost" data-act="marketing">Marketing</button>
+        ${String(window.STATE?.db?.profile?.role || '').toLowerCase() === 'super_admin'
+          ? `<button type="button" class="admin-btn ghost" data-act="refund-enable">Aktifkan refund</button>
+             <button type="button" class="admin-btn ghost danger" data-act="refund-disable">Matikan refund</button>`
+          : ''}
         <button type="button" class="admin-btn ghost" data-act="pw">Set Password</button>
         ${st === 'suspended'
           ? '<button type="button" class="admin-btn ghost" data-act="activate">Activate</button>'
@@ -454,6 +458,11 @@ function wireUserCards(list) {
             const { showUserMarketingPanel } = await import('./admin-user-marketing.js');
             await showUserMarketingPanel(uid, u?.email || '', { toast, escapeHtml });
             return;
+          } else if (act === 'refund-enable' || act === 'refund-disable') {
+            const { grantRefundRequestAccess } = await import('../services/refund-request.js');
+            const res = await grantRefundRequestAccess(uid, act === 'refund-enable');
+            if (!res.success) throw new Error(res.error || 'Gagal');
+            toast(act === 'refund-enable' ? 'Tombol refund diaktifkan' : 'Tombol refund dinonaktifkan', 'success');
           } else if (act === 'pw') {
             const pw = val('new_password')?.value || '';
             if (pw.length < 8) throw new Error('Password min 8 karakter');
@@ -965,8 +974,26 @@ async function renderTutorial(body) {
 }
 
 /* ─── Refunds ─── */
+function isSuperAdminRole() {
+  return String(window.STATE?.db?.profile?.role || '').toLowerCase() === 'super_admin';
+}
+
 async function renderRefunds(body) {
   body.innerHTML = `
+    <div class="admin-card" style="margin-bottom:12px">
+      <h3 style="margin:0 0 8px">Refund manual</h3>
+      <p class="admin-muted" style="margin:0 0 12px;font-size:13px">
+        Refund otomatis Lynk <strong>dinonaktifkan</strong>. Alur: user email support → super admin aktifkan tombol refund → user submit → admin approve/reject manual di Lynk dashboard.
+      </p>
+      ${isSuperAdminRole() ? `
+        <div class="admin-toolbar" style="flex-wrap:wrap;gap:8px">
+          <input id="rfGrantUserId" class="admin-input" placeholder="User ID (uuid)" style="min-width:280px" />
+          <button type="button" class="admin-btn" id="rfGrantEnable">Aktifkan tombol refund</button>
+          <button type="button" class="admin-btn ghost danger" id="rfGrantDisable">Nonaktifkan</button>
+        </div>
+        <p class="admin-muted" id="rfGrantStatus" style="margin-top:8px;font-size:12px"></p>
+      ` : '<p class="admin-muted">Hanya super admin yang bisa mengaktifkan tombol refund user.</p>'}
+    </div>
     <div class="admin-toolbar">
       <h2 style="margin:0">Refund Requests</h2>
       <select id="rfStatus" class="admin-input">
@@ -1022,26 +1049,17 @@ async function renderRefunds(body) {
           const act = btn.getAttribute('data-rf-act');
           if (!id || !act) return;
           const notes = prompt('Catatan admin (opsional):') || '';
+          const manualNote = notes || 'Diproses manual — refund otomatis dinonaktifkan.';
           try {
-            const { invokeComplianceFunction } = await import('../services/compliance-client.js');
-            const fnRefund = window.MONEFYI_CONFIG?.fnRefundLynk || 'monefyi-refund-lynk';
-            const remote = await invokeComplianceFunction(fnRefund, {
-              request_id: id,
-              admin_notes: notes,
-              reject: act === 'reject',
+            const { processRefundRequest } = await import('../services/refund-request.js');
+            await processRefundRequest(id, act === 'approve' ? 'approved' : 'rejected', manualNote);
+            const { notifyCompliance } = await import('../services/compliance-client.js');
+            await notifyCompliance('refund_processed', {
+              user_id: userId || undefined,
+              status: act === 'approve' ? 'approved' : 'rejected',
+              admin_notes: manualNote,
             });
-
-            if (!remote.success) {
-              const { processRefundRequest } = await import('../services/refund-request.js');
-              await processRefundRequest(id, act === 'approve' ? 'approved' : 'rejected', notes);
-              const { notifyCompliance } = await import('../services/compliance-client.js');
-              await notifyCompliance('refund_processed', {
-                user_id: userId || undefined,
-                status: act === 'approve' ? 'approved' : 'rejected',
-                admin_notes: notes,
-              });
-            }
-            toast(`Refund ${act === 'approve' ? 'disetujui' : 'ditolak'}`, 'success');
+            toast(`Refund ${act === 'approve' ? 'disetujui' : 'ditolak'} (manual)`, 'success');
             await load();
           } catch (e) {
             toast(e.message || 'Gagal', 'error');
@@ -1055,5 +1073,23 @@ async function renderRefunds(body) {
 
   body.querySelector('#rfRefresh')?.addEventListener('click', load);
   body.querySelector('#rfStatus')?.addEventListener('change', load);
+
+  const grantStatus = body.querySelector('#rfGrantStatus');
+  const runGrant = async (enabled) => {
+    const uid = body.querySelector('#rfGrantUserId')?.value?.trim();
+    if (!uid) {
+      if (grantStatus) grantStatus.textContent = 'Masukkan user ID.';
+      return;
+    }
+    const { grantRefundRequestAccess } = await import('../services/refund-request.js');
+    const res = await grantRefundRequestAccess(uid, enabled);
+    if (grantStatus) grantStatus.textContent = res.success
+      ? (enabled ? 'Tombol refund diaktifkan untuk user.' : 'Tombol refund dinonaktifkan.')
+      : (res.error || 'Gagal');
+    if (res.success) toast(grantStatus.textContent, 'success');
+  };
+  body.querySelector('#rfGrantEnable')?.addEventListener('click', () => runGrant(true));
+  body.querySelector('#rfGrantDisable')?.addEventListener('click', () => runGrant(false));
+
   await load();
 }

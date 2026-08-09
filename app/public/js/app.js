@@ -1435,7 +1435,7 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
 
     function isAdmin(){
       const role = String(STATE?.db?.profile?.role || '').toLowerCase();
-      if (role === 'admin') return true;
+      if (role === 'admin' || role === 'super_admin') return true;
 
       const email = (STATE?.db?.user?.email || '').toLowerCase();
       if (!email || !Array.isArray(ADMIN_EMAILS)) return false;
@@ -1599,6 +1599,11 @@ function computeSubscriptionStatus(profile){
       }
 
       STATE.db.profile = p;
+      import('./services/refund-request.js')
+        .then(({ cacheRefundRequestEnabledLocally }) => {
+          cacheRefundRequestEnabledLocally(!!p?.refund_request_enabled);
+        })
+        .catch(() => {});
 
       const email = STATE.db.user?.email || '';
       STATE.user.email = email;

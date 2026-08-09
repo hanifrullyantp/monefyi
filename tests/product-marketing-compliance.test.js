@@ -19,7 +19,6 @@ import {
   getPurchaseInfo,
   submitRefundRequest,
   recordPurchaseLocally,
-  REFUND_AUTO_LYNK_ENABLED,
 } from '../app/js/services/refund-request.js';
 import { buildUserContext } from '../app/js/services/marketing-engine.js';
 import { LANDING_PROMISES } from '../app/js/services/landing-parity.js';
