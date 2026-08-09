@@ -24,7 +24,7 @@ export async function buildCashFlowCardData(state, viewMode = SALDO_VIEW_MODES.M
   const { start, end } = periodDateRange(period);
 
   let primaryAmount = totals.net;
-  let primaryLabel = `Cash Flow ${formatMonthLabel(period)}`;
+  let primaryLabel = `Uang Tersisa ${formatMonthLabel(period)}`;
   let primarySub = `${totals.income > 0 ? '+' : ''}${formatCompact(totals.income)} income · −${formatCompact(totals.expense)} pengeluaran`;
 
   if (viewMode === SALDO_VIEW_MODES.CUMULATIVE) {

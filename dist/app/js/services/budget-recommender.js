@@ -8,6 +8,9 @@ import {
   calculateProgress,
   calculatePriorityTotals,
   rowsToBudgetList,
+  inferCategoryType,
+  CATEGORY_TYPES,
+  isFlexibleOverBudget,
 } from './budget-model.js';
 
 /**
@@ -16,6 +19,34 @@ import {
  */
 function formatIDR(num) {
   return new Intl.NumberFormat('id-ID').format(Math.round(num || 0));
+}
+
+/**
+ * @param {object[]} transactions
+ * @param {object[]} rows
+ * @returns {object[]}
+ */
+export function detectAnomalies(transactions, rows) {
+  const flexibleRows = (rows || []).filter((r) => inferCategoryType(r) === CATEGORY_TYPES.FLEXIBLE);
+  const flexibleNames = new Set(flexibleRows.map((r) => String(r.name || '').toLowerCase()));
+  const flexibleTxs = (transactions || []).filter((t) => {
+    if (t.type !== 'expense') return false;
+    const cat = String(t.category || t.merchant || '').toLowerCase();
+    return [...flexibleNames].some((n) => cat.includes(n) || n.includes(cat));
+  });
+  const amounts = flexibleTxs.map((t) => Math.abs(Number(t.amount || 0))).filter((a) => a > 0);
+  if (amounts.length < 3) return [];
+  const sorted = [...amounts].sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)];
+  const threshold = median * 3;
+  return flexibleTxs
+    .filter((t) => Math.abs(Number(t.amount || 0)) > threshold)
+    .slice(0, 3)
+    .map((t) => ({
+      name: t.merchant || t.category || 'Transaksi',
+      amount: Number(t.amount || 0),
+      date: t.date,
+    }));
 }
 
 /**
@@ -30,34 +61,105 @@ export async function generateRecommendations(options = {}) {
   const income = Number(
     options.income
     ?? state?.budgetsByMonth?.[month]?.income
-    ?? 0
+    ?? 0,
   ) || estimateIncome(transactions, month);
 
+  /** @type {object[]} */
   const recommendations = [];
+  const now = new Date();
+  const daysPassed = now.getDate();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
 
+  // Priority 1: Flexible over 100%
   for (const row of rows) {
+    if (!isFlexibleOverBudget(row, transactions, month)) continue;
     const progress = calculateProgress(row, transactions, month);
-    if (progress.percentUsed >= 100) {
+    recommendations.push({
+      priority: 1,
+      type: 'reduce_category',
+      severity: 'high',
+      icon: '⚠️',
+      title: `${row.name} over budget`,
+      message: `Kategori ${row.name} sudah ${progress.percentUsed}%. Coba tahan sampai akhir bulan.`,
+      category: row.name,
+      actions: [
+        { label: `Freeze ${row.name}`, action: 'decrease_budget', budgetId: row.id },
+      ],
+    });
+  }
+
+  // Priority 2: Flexible 70–99%
+  for (const row of rows) {
+    if (inferCategoryType(row) !== CATEGORY_TYPES.FLEXIBLE) continue;
+    const progress = calculateProgress(row, transactions, month);
+    if (progress.percentUsed >= 70 && progress.percentUsed < 100) {
       recommendations.push({
-        type: 'over_budget',
-        severity: 'high',
-        icon: '⚠️',
-        title: `${row.name} over budget`,
-        message: `Terpakai ${progress.percentUsed}% (Rp ${formatIDR(progress.spent - row.amount)} lebih)`,
-        actions: [
-          { label: 'Naikkan budget', action: 'increase_budget', budgetId: row.id },
-          { label: 'Realokasi', action: 'reallocate' },
-        ],
+        priority: 2,
+        type: 'watch_category',
+        severity: 'medium',
+        icon: '👀',
+        title: `${row.name} mendekati batas`,
+        message: `${row.name} sudah ${progress.percentUsed}% — perhatikan pengeluaran ini.`,
+        category: row.name,
+        actions: [],
+      });
+    }
+  }
+
+  // Priority 3: Anomalies
+  for (const a of detectAnomalies(transactions, rows)) {
+    recommendations.push({
+      priority: 3,
+      type: 'anomaly',
+      severity: 'medium',
+      icon: '🔍',
+      title: 'Transaksi tidak biasa',
+      message: `Transaksi "${a.name}" Rp ${formatIDR(a.amount)} lebih besar dari biasanya.`,
+      actions: [],
+    });
+  }
+
+  // Priority 4: Saving behind pace
+  for (const row of rows) {
+    if (inferCategoryType(row) !== CATEGORY_TYPES.SAVING) continue;
+    const progress = calculateProgress(row, transactions, month);
+    if (daysPassed > daysInMonth / 2 && progress.percentUsed < 50) {
+      recommendations.push({
+        priority: 4,
+        type: 'saving',
+        severity: 'low',
+        icon: '💰',
+        title: 'Progress tabungan lambat',
+        message: `Progress tabungan ${row.name} baru ${progress.percentUsed}%. Yuk sisihkan lagi.`,
+        actions: [{ label: 'Lihat tabungan', action: 'view_category', budgetId: row.id }],
+      });
+    }
+  }
+
+  const flexibleOver = recommendations.filter((r) => r.type === 'reduce_category');
+  if (!flexibleOver.length) {
+    const fixedPaid = rows.filter((r) => {
+      const p = calculateProgress(r, transactions, month);
+      return inferCategoryType(r) === CATEGORY_TYPES.FIXED_BILL && p.status === 'paid';
+    });
+    if (fixedPaid.length > 0) {
+      recommendations.push({
+        priority: 5,
+        type: 'fixed_bills_ok',
+        severity: 'low',
+        icon: '✅',
+        title: 'Tagihan tetap lunas',
+        message: 'Semua tagihan tetap sudah dibayar. Fokus jaga pengeluaran fleksibel: Makan, Hiburan, dll.',
+        actions: [],
       });
     }
   }
 
   const priorityTotals = calculatePriorityTotals(rows, income);
   const harusPercent = priorityTotals.harus?.percentOfIncome || 0;
-  const simpanPercent = priorityTotals.simpan?.percentOfIncome || 0;
-
   if (harusPercent > 50) {
     recommendations.push({
+      priority: 6,
       type: 'priority_imbalance',
       severity: 'medium',
       icon: '📊',
@@ -67,68 +169,7 @@ export async function generateRecommendations(options = {}) {
     });
   }
 
-  if (income > 0 && simpanPercent < 10) {
-    recommendations.push({
-      type: 'low_savings',
-      severity: 'medium',
-      icon: '💰',
-      title: 'Tabungan terlalu kecil',
-      message: `Cuma ${simpanPercent}% untuk simpanan. Ideal minimal 15-20%.`,
-      actions: [{ label: 'Tingkatkan tabungan', action: 'increase_savings' }],
-    });
-  }
-
-  for (const row of rows) {
-    if (!row.three_month_avg) continue;
-    const progress = calculateProgress(row, transactions, month);
-    const predictedVsAvg = ((progress.predictedTotal - row.three_month_avg) / row.three_month_avg) * 100;
-    if (Math.abs(predictedVsAvg) > 20) {
-      recommendations.push({
-        type: 'trend_alert',
-        severity: 'medium',
-        icon: predictedVsAvg > 0 ? '📈' : '📉',
-        title: `${row.name} trend ${predictedVsAvg > 0 ? 'naik' : 'turun'} ${Math.abs(Math.round(predictedVsAvg))}%`,
-        message: `vs rata-rata 3 bulan (Rp ${formatIDR(row.three_month_avg)})`,
-        actions: [],
-      });
-    }
-  }
-
-  const totalBudget = rows.reduce((sum, b) => sum + Number(b.amount || 0), 0);
-  const unallocated = income - totalBudget;
-  if (income > 0 && unallocated > income * 0.1) {
-    recommendations.push({
-      type: 'unallocated',
-      severity: 'low',
-      icon: '💡',
-      title: 'Sisa income belum dialokasikan',
-      message: `Rp ${formatIDR(unallocated)} bisa masuk tabungan atau kategori lain`,
-      actions: [{ label: 'Alokasikan ke tabungan', action: 'add_to_savings' }],
-    });
-  }
-
-  const now = new Date();
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const daysLeft = Math.ceil((monthEnd - now) / 86400000);
-
-  for (const row of rows) {
-    if (row.priority !== 'penting' && row.priority !== 'mau') continue;
-    const progress = calculateProgress(row, transactions, month);
-    if (progress.dailyBudget < 10000 && progress.percentUsed < 90 && progress.remaining > 0) {
-      recommendations.push({
-        type: 'tight_daily',
-        severity: 'medium',
-        icon: '⏰',
-        title: `${row.name}: hanya Rp ${formatIDR(progress.dailyBudget)}/hari`,
-        message: `Sisa ${daysLeft} hari, sisa Rp ${formatIDR(progress.remaining)}`,
-        actions: [],
-      });
-    }
-  }
-
-  const severityOrder = { high: 0, medium: 1, low: 2 };
-  recommendations.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
-
+  recommendations.sort((a, b) => (a.priority || 99) - (b.priority || 99));
   return recommendations;
 }
 
@@ -207,6 +248,7 @@ export function buildAdvisorBudgetContext(recommendations, priorityTotals) {
 if (typeof window !== 'undefined') {
   window.monefyiBudgetRecommender = {
     generateRecommendations,
+    detectAnomalies,
     getSuggestedAllocation,
     buildAdvisorBudgetContext,
   };

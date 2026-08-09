@@ -226,22 +226,95 @@ export function syncItemTargetDate(item, isoDate) {
 export const CATEGORY_TYPES = {
   FIXED_BILL: 'fixed_bill',
   FLEXIBLE: 'flexible',
+  SAVING: 'saving',
 };
 
 /**
  * @param {object} row
  * @param {object} [prefs]
- * @returns {'fixed_bill'|'flexible'}
+ * @returns {'fixed_bill'|'flexible'|'saving'}
  */
 export function inferCategoryType(row, prefs = {}) {
-  if (row?.category_type === CATEGORY_TYPES.FIXED_BILL || row?.category_type === CATEGORY_TYPES.FLEXIBLE) {
+  if (row?.category_type === CATEGORY_TYPES.FIXED_BILL
+    || row?.category_type === CATEGORY_TYPES.FLEXIBLE
+    || row?.category_type === CATEGORY_TYPES.SAVING) {
     return row.category_type;
   }
+  if (row?.priority === 'simpan') return CATEGORY_TYPES.SAVING;
   const name = String(row?.name || '').toLowerCase();
   const bills = Array.isArray(prefs?.fixed_bills) ? prefs.fixed_bills : [];
   if (bills.some((b) => String(b.name || '').toLowerCase() === name)) return CATEGORY_TYPES.FIXED_BILL;
   if (row?.priority === 'harus') return CATEGORY_TYPES.FIXED_BILL;
   return CATEGORY_TYPES.FLEXIBLE;
+}
+
+/** UI labels per internal status */
+export const BUDGET_STATUS_LABELS = {
+  paid: 'Lunas',
+  pending: 'Belum lunas',
+  overpaid: 'Lebih bayar',
+  healthy: 'Aman',
+  warning: 'Waspada',
+  critical: 'Kritis',
+  over: 'Over',
+  achieved: 'Tercapai',
+  in_progress: 'Dalam progres',
+  exceeded: 'Melebihi target',
+};
+
+/**
+ * @param {string} status
+ * @returns {string}
+ */
+export function getBudgetStatusLabel(status) {
+  return BUDGET_STATUS_LABELS[status] || status;
+}
+
+/**
+ * @param {string} status
+ * @returns {string}
+ */
+export function getBudgetStatusClass(status) {
+  if (status === 'paid' || status === 'achieved' || status === 'exceeded' || status === 'healthy') return 'status-ok';
+  if (status === 'pending' || status === 'in_progress' || status === 'warning') return 'status-warn';
+  if (status === 'critical') return 'status-critical';
+  if (status === 'over' || status === 'overpaid') return 'over';
+  return '';
+}
+
+/**
+ * @param {object} row
+ * @param {object[]} transactions
+ * @param {string} [month]
+ * @returns {boolean}
+ */
+export function isFlexibleOverBudget(row, transactions, month) {
+  if (inferCategoryType(row) !== CATEGORY_TYPES.FLEXIBLE) return false;
+  return calculateProgress(row, transactions, month).status === 'over';
+}
+
+/**
+ * @param {object[]} rows
+ * @param {object[]} transactions
+ * @param {string} [month]
+ * @returns {number}
+ */
+export function countFlexibleOverBudget(rows, transactions, month) {
+  return (rows || []).filter((b) => isFlexibleOverBudget(b, transactions, month)).length;
+}
+
+/**
+ * @param {object[]} rows
+ * @param {object[]} transactions
+ * @param {string} [month]
+ * @returns {number}
+ */
+export function countFlexibleAttentionRows(rows, transactions, month) {
+  return (rows || []).filter((b) => {
+    if (inferCategoryType(b) !== CATEGORY_TYPES.FLEXIBLE) return false;
+    const s = calculateProgress(b, transactions, month).status;
+    return s === 'critical' || s === 'warning';
+  }).length;
 }
 
 /**
@@ -439,15 +512,20 @@ export function calculateProgress(row, transactions, month) {
   const categoryType = inferCategoryType(row);
 
   if (categoryType === CATEGORY_TYPES.FIXED_BILL) {
-    if (percentUsed >= 100) status = 'paid';
-    else if (percentUsed >= 75) status = 'pending';
+    if (percentUsed > 100) status = 'overpaid';
+    else if (percentUsed >= 100) status = 'paid';
     else status = 'pending';
+  } else if (categoryType === CATEGORY_TYPES.SAVING) {
+    if (percentUsed >= 100) status = percentUsed > 100 ? 'exceeded' : 'achieved';
+    else status = 'in_progress';
   } else if (percentUsed > 100) {
     status = 'over';
-  } else if (percentUsed >= 90) {
+  } else if (percentUsed > 90) {
     status = 'critical';
-  } else if (percentUsed >= 75) {
+  } else if (percentUsed >= 70) {
     status = 'warning';
+  } else {
+    status = 'healthy';
   }
 
   const daysPassed = now.getDate();
@@ -464,6 +542,7 @@ export function calculateProgress(row, transactions, month) {
     dailyAvg: Math.round(dailyAvg),
     predictedTotal: Math.round(predictedTotal),
     status,
+    categoryType,
     transactionCount: linked.length,
     linkedTransactions: linked,
   };
@@ -618,6 +697,13 @@ if (typeof window !== 'undefined') {
     normalizeBudgetRow,
     migrateBudgetCategories,
     serializeBudgetRows,
+    CATEGORY_TYPES,
+    inferCategoryType,
+    getBudgetStatusLabel,
+    getBudgetStatusClass,
+    isFlexibleOverBudget,
+    countFlexibleOverBudget,
+    countFlexibleAttentionRows,
     calculateProgress,
     matchesAutoLink,
     suggestBudget,

@@ -4008,7 +4008,7 @@ $('#saldoMonth') && ($('#saldoMonth').textContent = periodLabel);
       }
       $('#rangeCard')?.classList.toggle('hidden', (STATE.period.preset || 'this_month') !== 'custom');
 
-      const specialPageOpen = !!(STATE.ui.budgetPageOpen || STATE.ui.monevisorPageOpen || STATE.ui.neracaPageOpen || STATE.ui.settingsPageOpen);
+      const specialPageOpen = !!(STATE.ui.budgetPageOpen || STATE.ui.monevisorPageOpen || STATE.ui.neracaPageOpen || STATE.ui.settingsPageOpen || STATE.ui.reportsPageOpen);
       applySpecialPageVisibility();
       const showDesktopDashboard = STATE.ui.dashboardOpen && isDesktopViewport() && !specialPageOpen;
       const showMobileHome = STATE.ui.dashboardOpen && !isDesktopViewport() && !specialPageOpen;
@@ -6192,7 +6192,7 @@ function generateSmartBudgetRecommendation() {
           break;
         case 'budgeting':
         case 'budget':
-          openBudget();
+          toggleNav('budget');
           break;
         case 'analisa':
         case 'analytics':
@@ -6803,10 +6803,16 @@ function setSheetPosition(mode) {
     function applySpecialPageVisibility() {
       const specialPageOpen = !!(STATE.ui.budgetPageOpen || STATE.ui.monevisorPageOpen || STATE.ui.neracaPageOpen || STATE.ui.settingsPageOpen || STATE.ui.reportsPageOpen);
       const showDesktopDashboard = STATE.ui.dashboardOpen && isDesktopViewport() && !specialPageOpen;
+      const showMobileHome = STATE.ui.dashboardOpen && !isDesktopViewport() && !specialPageOpen;
       const showTx = !STATE.ui.dashboardOpen && !specialPageOpen;
 
       $('#txSection')?.classList.toggle('hidden', !showTx);
       $('#dashboardExpanded')?.classList.toggle('hidden', !showDesktopDashboard);
+      const homeRoot = $('#homePageRoot');
+      if (homeRoot) {
+        homeRoot.classList.toggle('hidden', !showMobileHome);
+        if (!showMobileHome) homeRoot.replaceChildren();
+      }
       $('#budgetPageRoot')?.classList.toggle('hidden', !STATE.ui.budgetPageOpen);
       $('#neracaPageRoot')?.classList.toggle('hidden', !STATE.ui.neracaPageOpen);
       $('#monevisorPageRoot')?.classList.toggle('hidden', !STATE.ui.monevisorPageOpen);
@@ -7046,17 +7052,8 @@ function setSheetPosition(mode) {
         el.classList.toggle('active', el.getAttribute('data-nav') === 'budget');
       });
 
-      // Immediate chrome swap (hide TX / dashboard before any await)
+      // Immediate chrome swap (hide TX / dashboard / Beranda before any await)
       applySpecialPageVisibility();
-      $('#budgetPageRoot')?.classList.remove('hidden');
-      $('#neracaPageRoot')?.classList.add('hidden');
-
-      try {
-        await prepareBudgetDraft();
-      } catch (e) {
-        console.warn('[budget] prepare draft failed', e);
-      }
-
       rerender();
       window.scrollTo({ top: 0, behavior: 'smooth' });
       runFirstWeekPlanEval({ openedBudget: true });
@@ -7076,6 +7073,15 @@ function setSheetPosition(mode) {
         }
       }
     }
+
+    function closeBudgetPage() {
+      STATE.ui.budgetPageOpen = false;
+      const root = $('#budgetPageRoot');
+      if (root) root.classList.add('hidden');
+      closeBudgetSheetOnly();
+      applySpecialPageVisibility();
+    }
+    window.closeBudgetPage = closeBudgetPage;
 
     function closeBudget() {
       closeBudgetSheetOnly();
@@ -12001,7 +12007,7 @@ function toggleNav(view, triggerEl) {
       closeAccounts();
       closeAccountDetail();
       closeEditModal();
-      if (view !== 'budget') closeBudget();
+      if (view !== 'budget') closeBudgetPage();
       if (view !== 'settings') closeSettingsPage?.();
 
       const btn = triggerEl || (typeof event !== 'undefined' ? event.currentTarget : null);
@@ -12694,7 +12700,7 @@ function toggleNav(view, triggerEl) {
       closeAccounts();
       closeAccountDetail();
       closeEditModal();
-      closeBudget();
+      closeBudgetPage();
 
       STATE.ui.monthPopoverOpen = false;
       STATE.ui.dashboardOpen = false;

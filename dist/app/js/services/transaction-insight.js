@@ -4,6 +4,8 @@
  * @module services/transaction-insight
  */
 
+import { inferCategoryType, CATEGORY_TYPES } from './budget-model.js';
+
 /**
  * @param {object} transaction
  * @param {object[]} [allTransactions]
@@ -264,10 +266,22 @@ function computeBudgetProgress(category, allTransactions, budgetRows, transactio
   const remaining = budgetAmount - spent;
   const percentUsed = budgetAmount > 0 ? Math.round((spent / budgetAmount) * 100) : 0;
 
+  const categoryType = inferCategoryType(budget);
   let status = 'healthy';
-  if (percentUsed >= 100) status = 'over';
-  else if (percentUsed >= 90) status = 'critical';
-  else if (percentUsed >= 75) status = 'warning';
+  if (categoryType === CATEGORY_TYPES.FIXED_BILL) {
+    if (percentUsed > 100) status = 'overpaid';
+    else if (percentUsed >= 100) status = 'paid';
+    else status = 'pending';
+  } else if (categoryType === CATEGORY_TYPES.SAVING) {
+    if (percentUsed >= 100) status = percentUsed > 100 ? 'exceeded' : 'achieved';
+    else status = 'in_progress';
+  } else if (percentUsed > 100) {
+    status = 'over';
+  } else if (percentUsed >= 90) {
+    status = 'critical';
+  } else if (percentUsed >= 75) {
+    status = 'warning';
+  }
 
   let warning = '';
   if (status === 'over') {

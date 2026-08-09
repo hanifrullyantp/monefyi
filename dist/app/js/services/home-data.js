@@ -4,6 +4,7 @@
  */
 
 import { NEAR_TERM_GOALS } from './onboarding-plan-generator.js';
+import { getDaysUntilPayday } from './daily-situation.js';
 
 /**
  * @param {number} current
@@ -34,12 +35,12 @@ function dateOffset(days) {
 }
 
 /**
+ * @param {object} [state]
  * @returns {number}
  */
-function daysLeftInMonth() {
-  const now = new Date();
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  return Math.max(0, lastDay - now.getDate());
+function daysLeftToPayday(state) {
+  const prefs = state?.db?.userPreferences || {};
+  return getDaysUntilPayday(prefs.payday_day, !!prefs.payday_irregular).days;
 }
 
 /**
@@ -246,7 +247,7 @@ export function buildHomePageData(ctx) {
     percentage,
     overCount,
     okCount,
-    daysLeft: daysLeftInMonth(),
+    daysLeft: daysLeftToPayday(ctx.state || (typeof window !== 'undefined' ? window.STATE : {})),
     status: getBudgetStatus(percentage),
   };
 

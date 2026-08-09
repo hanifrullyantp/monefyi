@@ -14,6 +14,8 @@ import { Icon } from './icons.js';
  * @returns {string}
  */
 function buildBodyHtml(situation, formatIDR, formatCompactIDR) {
+  const predLine = buildPredictionLine(situation, formatCompactIDR);
+
   if (situation.status === 'incomplete') {
     return `
       <p class="daily-hero__incomplete">${escapeHtml(situation.message)}</p>
@@ -34,7 +36,7 @@ function buildBodyHtml(situation, formatIDR, formatCompactIDR) {
       </p>
       <div class="daily-hero__meta">
         <span>${Icon('calendar', { size: 14 })} Gajian lagi ${situation.daysToPayday} hari</span>
-        <span class="daily-hero__deficit">🔴 Prediksi defisit: ${formatCompactIDR(Math.abs(situation.predictedEndBalance))}</span>
+        <span class="daily-hero__deficit">${predLine || `🔴 Prediksi defisit: ${formatCompactIDR(Math.abs(situation.predictedEndBalance))}`}</span>
       </div>
       <p class="daily-hero__foot">→ Lihat apa yang bisa direm</p>
     `;
@@ -57,9 +59,9 @@ function buildBodyHtml(situation, formatIDR, formatCompactIDR) {
   }
 
   // AMAN
-  const predLabel = situation.predictedEndBalance >= 0
+  const predLabel = predLine || (situation.predictedEndBalance >= 0
     ? `📈 Prediksi akhir periode: +${formatCompactIDR(situation.predictedEndBalance)}`
-    : '';
+    : '');
   return `
     <p class="daily-hero__label">Hari ini aman pakai</p>
     <p class="daily-hero__amount">${formatIDR(situation.safeToSpend)}</p>
@@ -75,6 +77,27 @@ function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   }[c]));
+}
+
+/**
+ * @param {object} situation
+ * @param {function} formatCompactIDR
+ * @returns {string}
+ */
+function buildPredictionLine(situation, formatCompactIDR) {
+  if (situation.predictionMessage) {
+    return escapeHtml(situation.predictionMessage);
+  }
+  if (situation.predictionStatus === 'incomplete' || situation.predictionStatus === 'unreliable') {
+    return '';
+  }
+  const amt = Math.abs(Number(situation.predictedEndBalance || 0));
+  if (!amt) return '';
+  const conf = situation.predictionConfidence ? ` (${situation.predictionConfidence})` : '';
+  if (situation.predictedEndBalance >= 0) {
+    return `📈 Surplus kecil ${formatCompactIDR(amt)}${conf}`;
+  }
+  return `🔴 Prediksi defisit: ${formatCompactIDR(amt)}${conf}`;
 }
 
 /**

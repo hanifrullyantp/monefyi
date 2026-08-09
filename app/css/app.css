@@ -585,6 +585,36 @@ html, body {
         min-height: 0;
         width: 100%;
       }
+      /* Mobile: one active page at a time — prevent Beranda/Budget/Tx bleed-through */
+      #dynamicContent.dynamic-content--budget > :not(#budgetPageRoot) {
+        display: none !important;
+        pointer-events: none !important;
+      }
+      #dynamicContent.dynamic-content--budget #budgetPageRoot:not(.hidden) {
+        display: block !important;
+        flex: 1;
+        min-height: 0;
+        width: 100%;
+      }
+      #dynamicContent.dynamic-content--tx > :not(#txSection) {
+        display: none !important;
+        pointer-events: none !important;
+      }
+      #dynamicContent.dynamic-content--tx #txSection:not(.hidden) {
+        display: flex !important;
+        flex: 1;
+        min-height: 0;
+        width: 100%;
+        flex-direction: column;
+      }
+      #dynamicContent.dynamic-content--dashboard > :not(#homePageRoot):not(#dashboardExpanded) {
+        display: none !important;
+        pointer-events: none !important;
+      }
+      #dynamicContent.dynamic-content--dashboard #homePageRoot:not(.hidden) {
+        display: block !important;
+        width: 100%;
+      }
       /* Settings manages its own inner scroll (tabs stay visible) */
       .tx-main-panel #dynamicContent.dynamic-content--settings {
         overflow: hidden;

@@ -241,6 +241,13 @@ body:not(.theme-light) .preview-badge--blue {
   border-color: var(--border-subtle);
 }
 
+@media (max-width: 767px) {
+  #txGroupBar.tx-edit-toolbar {
+    background: transparent !important;
+    border: none !important;
+  }
+}
+
 .tx-edit-toolbar__btn {
   color: var(--text-secondary);
   background: var(--interactive-secondary);
