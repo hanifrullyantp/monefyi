@@ -6,6 +6,16 @@ import assert from 'node:assert/strict';
 import { PRIORITY_LEVELS, formatBudgetRowLabels } from '../app/js/services/budget-model.js';
 import { generateSmartSuggestions } from '../app/js/services/smart-suggestions.js';
 import { getGreeting } from '../app/js/services/monevisor-messages.js';
+import { LABELS } from '../app/js/constants/language.js';
+
+describe('Fase 1.1 — daily budget labels', () => {
+  it('uses clearer daily budget copy', () => {
+    assert.equal(LABELS.DAILY.AMAN_PER_DAY, 'Aman per Hari');
+    assert.equal(LABELS.DAILY.REALISASI_HARIAN, 'Realisasi harian');
+    assert.equal(LABELS.DAILY.DAYS_TO_PAYDAY, 'hari ke gajian');
+    assert.equal(LABELS.DAILY.CATEGORY_REMAINING, 'Sisa kategori bulan ini');
+  });
+});
 
 describe('Fase 1.2 — priority colors', () => {
   it('harus uses blue not red', () => {
@@ -22,6 +32,19 @@ describe('Fase 1.3 — redundant paid labels', () => {
   it('strips Lunas from title when bill is paid', () => {
     const row = formatBudgetRowLabels('Kost Lunas', 'paid');
     assert.equal(row.title, 'Kost');
+    assert.equal(row.subtitle, '✅ Lunas');
+    assert.equal(row.hideStatusBadge, true);
+  });
+
+  it('strips inline Lunas from title', () => {
+    const row = formatBudgetRowLabels('Tagihan - Lunas', 'paid');
+    assert.equal(row.title, 'Tagihan');
+    assert.equal(row.subtitle, '✅ Lunas');
+  });
+
+  it('shows Lunas subtitle for paid items without lunas in name', () => {
+    const row = formatBudgetRowLabels('Listrik', 'paid');
+    assert.equal(row.title, 'Listrik');
     assert.equal(row.subtitle, '✅ Lunas');
     assert.equal(row.hideStatusBadge, true);
   });

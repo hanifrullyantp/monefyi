@@ -4,6 +4,7 @@
  */
 
 import { Icon } from './icons.js';
+import { LABELS } from '../constants/language.js';
 
 /**
  * @param {object} chartData
@@ -45,7 +46,7 @@ export function renderMiniChart7Day(chartData, formatCompactIDR, callbacks = {})
     <div class="home-chart-wrap">
       <svg viewBox="0 0 ${width} ${height}" width="100%" height="${height}" aria-hidden="true">${bars}</svg>
     </div>
-    <p class="home-chart-caption">Rata-rata harian Rp ${formatCompactIDR(chartData?.avg || 0)}</p>
+    <p class="home-chart-caption">${LABELS.DAILY.REALISASI_HARIAN} Rp ${formatCompactIDR(chartData?.avg || 0)}</p>
   `;
 
   el.querySelector('[data-action="advisor"]')?.addEventListener('click', () => callbacks.onViewFullChart?.());

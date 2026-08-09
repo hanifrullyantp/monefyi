@@ -279,8 +279,11 @@ export function getBudgetStatusLabel(status) {
 export function formatBudgetRowLabels(name, status) {
   const raw = String(name || '').trim();
   if (status === 'paid' && /\blunas\b/i.test(raw)) {
-    const title = raw.replace(/\s*[-–]?\s*lunas\s*$/i, '').trim() || raw;
+    const title = raw.replace(/\s*[-–]?\s*lunas\s*/gi, ' ').replace(/\s+/g, ' ').trim() || raw;
     return { title, subtitle: '✅ Lunas', hideStatusBadge: true };
+  }
+  if (status === 'paid') {
+    return { title: raw, subtitle: '✅ Lunas', hideStatusBadge: true };
   }
   return { title: raw, subtitle: null, hideStatusBadge: false };
 }

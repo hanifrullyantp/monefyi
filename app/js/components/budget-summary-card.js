@@ -37,7 +37,7 @@ export function renderBudgetSummaryCard(budget, formatIDR, callbacks = {}) {
       </div>
       <div class="home-budget-progress__meta">
         <span>${pct}% terpakai</span>
-        <span>${budget?.daysLeft ?? 0} hari tersisa</span>
+        <span>${budget?.daysLeft ?? 0} ${LABELS.DAILY.DAYS_TO_PAYDAY}</span>
       </div>
     </div>
     <div class="home-budget-grid">

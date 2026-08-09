@@ -58,6 +58,17 @@ export const LABELS = {
     MORNING_BAHAYA: '⚠️ Pagi! Keuangan bulan ini butuh perhatian.',
     NEW_USER: '☀️ Hari ke-{{day}} bersama Monefyi!',
   },
+  DAILY: {
+    AMAN_PER_DAY: 'Aman per Hari',
+    REALISASI_PER_DAY: 'Realisasi per Hari',
+    REALISASI_HARIAN: 'Realisasi harian',
+    DAYS_TO_PAYDAY: 'hari ke gajian',
+    AMAN_TODAY: 'Hari ini aman pakai',
+    CATEGORY_REMAINING: 'Sisa kategori bulan ini',
+  },
+  COMPARE: {
+    NO_PREV_MONTH: 'Belum ada data bulan lalu untuk perbandingan',
+  },
 };
 
 /**
