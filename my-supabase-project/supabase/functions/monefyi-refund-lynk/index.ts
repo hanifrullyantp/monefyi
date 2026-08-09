@@ -57,6 +57,14 @@ Deno.serve(async (req) => {
   if (corsResponse) return corsResponse;
   if (req.method !== "POST") return errorResponse(req, "Method not allowed", 405);
 
+  const autoEnabled = Deno.env.get("REFUND_AUTO_LYNK_ENABLED")?.trim() === "true";
+  if (!autoEnabled) {
+    return jsonResponse(req, {
+      error: "Automatic Lynk refund is disabled. Process refunds manually in Lynk dashboard.",
+      code: "refund_auto_disabled",
+    }, 503);
+  }
+
   try {
     const url = Deno.env.get("SUPABASE_URL")!;
     const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

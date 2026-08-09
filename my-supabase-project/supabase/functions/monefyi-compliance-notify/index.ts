@@ -49,7 +49,7 @@ function refundProcessedHtml(status: string, notes: string) {
       <h2>Update permintaan refund</h2>
       <p>Status: <strong>${approved ? "Disetujui" : "Ditolak"}</strong></p>
       ${notes ? `<p>Catatan: ${notes}</p>` : ""}
-      ${approved ? "<p>Refund akan diproses ke metode pembayaran asal.</p>" : "<p>Hubungi support jika ada pertanyaan.</p>"}
+      ${approved ? "<p>Tim akan memproses refund manual ke metode pembayaran asal (bukan otomatis).</p>" : "<p>Hubungi support jika ada pertanyaan.</p>"}
     </div>`;
 }
 

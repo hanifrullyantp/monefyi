@@ -15,9 +15,11 @@ import {
 } from '../app/js/services/account-deletion.js';
 import {
   REFUND_WINDOW_DAYS,
+  REFUND_AUTO_LYNK_ENABLED,
   getPurchaseInfo,
   submitRefundRequest,
   recordPurchaseLocally,
+  REFUND_AUTO_LYNK_ENABLED,
 } from '../app/js/services/refund-request.js';
 import { buildUserContext } from '../app/js/services/marketing-engine.js';
 import { LANDING_PROMISES } from '../app/js/services/landing-parity.js';
@@ -111,7 +113,7 @@ describe('refund-request', () => {
     assert.equal(info.eligible, false);
   });
 
-  it('getPurchaseInfo - recent purchase eligible', () => {
+  it('getPurchaseInfo - recent purchase eligible but gated without admin grant', () => {
     recordPurchaseLocally({
       plan_type: 'lifetime',
       purchased_at: new Date().toISOString(),
@@ -119,20 +121,35 @@ describe('refund-request', () => {
     });
     const info = getPurchaseInfo(window.STATE);
     assert.equal(info.eligible, true);
+    assert.equal(info.requestEnabled, false);
+    assert.equal(info.canSubmit, false);
     assert.equal(info.reference, 'ORD-123');
   });
 
-  it('submitRefundRequest - short reason rejected', async () => {
+  it('getPurchaseInfo - canSubmit when super admin enabled refund', () => {
     recordPurchaseLocally({ plan_type: 'lifetime', purchased_at: new Date().toISOString() });
-    const res = await submitRefundRequest('pendek');
-    assert.equal(res.success, false);
+    window.STATE.db.profile.refund_request_enabled = true;
+    const info = getPurchaseInfo(window.STATE);
+    assert.equal(info.canSubmit, true);
   });
 
-  it('submitRefundRequest - valid reason stored locally', async () => {
+  it('submitRefundRequest - blocked without admin grant', async () => {
     recordPurchaseLocally({ plan_type: 'lifetime', purchased_at: new Date().toISOString() });
+    const res = await submitRefundRequest('Fitur tidak sesuai ekspektasi saya.');
+    assert.equal(res.success, false);
+    assert.match(res.error || '', /belum diaktifkan|support/i);
+  });
+
+  it('submitRefundRequest - valid reason stored locally when enabled', async () => {
+    recordPurchaseLocally({ plan_type: 'lifetime', purchased_at: new Date().toISOString() });
+    window.STATE.db.profile.refund_request_enabled = true;
     const res = await submitRefundRequest('Fitur tidak sesuai ekspektasi saya.');
     assert.equal(res.success, true);
     assert.equal(res.data?.status, 'pending');
+  });
+
+  it('REFUND_AUTO_LYNK_ENABLED is false', () => {
+    assert.equal(REFUND_AUTO_LYNK_ENABLED, false);
   });
 
   it('REFUND_WINDOW_DAYS is 7', () => {

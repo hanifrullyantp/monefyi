@@ -475,6 +475,7 @@ async function renderHelp(body) {
   const info = getPurchaseInfo(window.STATE);
   const myRequests = await listMyRefundRequests();
   const pending = myRequests.find((r) => r.status === 'pending');
+  const showRefundForm = info.requestEnabled;
 
   body.innerHTML = `
     <div class="settings-card">
@@ -483,19 +484,21 @@ async function renderHelp(body) {
       <div class="settings-row">
         <div class="settings-row-info">
           <div class="settings-row-label">Kebijakan refund</div>
-          <div class="settings-row-hint">Permintaan dalam ${REFUND_WINDOW_DAYS} hari setelah pembelian</div>
+          <div class="settings-row-hint">Permintaan dalam ${REFUND_WINDOW_DAYS} hari setelah pembelian — hanya setelah konfirmasi email dengan tim support</div>
         </div>
       </div>
+      <p class="settings-desc">Refund diproses manual (bukan otomatis). Hubungi <a href="mailto:support@monefyi.com">support@monefyi.com</a> terlebih dahulu; super admin akan mengaktifkan tombol permintaan refund di akun kamu setelah komunikasi email.</p>
       <div class="settings-actions">
         <a class="settings-btn ghost" href="mailto:support@monefyi.com">Email support</a>
       </div>
     </div>
+    ${showRefundForm ? `
     <div class="settings-card">
       <h2>Minta refund</h2>
       <p class="settings-desc">Plan: <strong>${escapeHtml(info.planType)}</strong>${info.purchaseDate ? ` · beli ${escapeHtml(String(info.purchaseDate).slice(0, 10))}` : ''}</p>
       ${pending ? `
         <p class="settings-desc">Permintaan refund kamu sedang direview (status: pending).</p>
-      ` : info.eligible ? `
+      ` : info.canSubmit ? `
         <div class="settings-field">
           <label>Alasan refund</label>
           <textarea class="settings-input" id="spRefundReason" rows="3" minlength="10" maxlength="1000" placeholder="Jelaskan alasan refund…"></textarea>
@@ -505,7 +508,7 @@ async function renderHelp(body) {
           <span class="settings-status" id="spRefundStatus">—</span>
         </div>
       ` : `
-        <p class="settings-desc">${escapeHtml(info.reason || 'Tidak eligible refund saat ini.')}</p>
+        <p class="settings-desc">${escapeHtml(info.reason || 'Tidak bisa mengirim permintaan refund saat ini.')}</p>
       `}
       ${myRequests.length ? `
         <h3 style="margin-top:16px;font-size:14px">Riwayat</h3>
@@ -516,6 +519,7 @@ async function renderHelp(body) {
         </ul>
       ` : ''}
     </div>
+    ` : ''}
   `;
 
   body.querySelector('#spSubmitRefund')?.addEventListener('click', async () => {

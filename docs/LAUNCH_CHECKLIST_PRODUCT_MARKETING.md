@@ -44,7 +44,9 @@ Set secrets: `RESEND_API_KEY`, `CRON_SECRET`, `APP_URL`, `LYNK_API_KEY` (optiona
 | `monefyi-account-purge` | `0 3 * * *` | Daily soft-delete purge; header `x-cron-secret` |
 | `monefyi-weekly-digest-cron` | `0 12 * * 0` | Sunday 19:00 WIB; header `x-cron-secret` |
 
-**Edge functions in compliance deploy:** `monefyi-compliance-notify`, `monefyi-account-purge`, `monefyi-refund-lynk`, `monefyi-weekly-digest-cron`
+**Edge functions in compliance deploy:** `monefyi-compliance-notify`, `monefyi-account-purge`, `monefyi-weekly-digest-cron`
+
+`monefyi-refund-lynk` deployed but **disabled by default** (`REFUND_AUTO_LYNK_ENABLED` unset/false). Refund flow is manual: email → super admin enables user button → user submits → admin processes in Lynk dashboard.
 
 **Growth Phase (Sprint 7–18 + advanced + household):**
 
@@ -83,8 +85,9 @@ Re-deploy growth: `./scripts/deploy-growth-migrations.sh`
 ## 5. Compliance (Features 6 & 7)
 
 - [ ] Settings → Akun → Hapus akun — konfirmasi frase + soft delete 30 hari
-- [ ] Settings → Bantuan → Minta refund — validasi 7 hari
-- [ ] Admin → Refunds — approve/reject workflow
+- [ ] Settings → Bantuan — tombol refund **tidak** tampil sampai super admin aktifkan setelah email support
+- [ ] Super admin → Refunds / Users — aktifkan tombol refund user
+- [ ] Admin → Refunds — approve/reject **manual** (Lynk otomatis off)
 
 ## 6. Admin Panel
 
@@ -106,7 +109,7 @@ Re-deploy growth: `./scripts/deploy-growth-migrations.sh`
 
 ## 8. Legal & Compliance
 
-- [ ] Privacy policy & terms link di landing footer
+- [x] Privacy policy & terms link di landing footer
 - [ ] Cookie/tracking consent jika analytics aktif
 - [ ] Refund policy selaras dengan checkout copy
 - [ ] Account deletion flow documented in privacy policy

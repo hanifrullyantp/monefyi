@@ -965,8 +965,26 @@ async function renderTutorial(body) {
 }
 
 /* ─── Refunds ─── */
+function isSuperAdminRole() {
+  return String(window.STATE?.db?.profile?.role || '').toLowerCase() === 'super_admin';
+}
+
 async function renderRefunds(body) {
   body.innerHTML = `
+    <div class="admin-card" style="margin-bottom:12px">
+      <h3 style="margin:0 0 8px">Refund manual</h3>
+      <p class="admin-muted" style="margin:0 0 12px;font-size:13px">
+        Refund otomatis Lynk <strong>dinonaktifkan</strong>. Alur: user email support → super admin aktifkan tombol refund → user submit → admin approve/reject manual di Lynk dashboard.
+      </p>
+      ${isSuperAdminRole() ? `
+        <div class="admin-toolbar" style="flex-wrap:wrap;gap:8px">
+          <input id="rfGrantUserId" class="admin-input" placeholder="User ID (uuid)" style="min-width:280px" />
+          <button type="button" class="admin-btn" id="rfGrantEnable">Aktifkan tombol refund</button>
+          <button type="button" class="admin-btn ghost danger" id="rfGrantDisable">Nonaktifkan</button>
+        </div>
+        <p class="admin-muted" id="rfGrantStatus" style="margin-top:8px;font-size:12px"></p>
+      ` : '<p class="admin-muted">Hanya super admin yang bisa mengaktifkan tombol refund user.</p>'}
+    </div>
     <div class="admin-toolbar">
       <h2 style="margin:0">Refund Requests</h2>
       <select id="rfStatus" class="admin-input">
@@ -1022,26 +1040,17 @@ async function renderRefunds(body) {
           const act = btn.getAttribute('data-rf-act');
           if (!id || !act) return;
           const notes = prompt('Catatan admin (opsional):') || '';
+          const manualNote = notes || 'Diproses manual — refund otomatis dinonaktifkan.';
           try {
-            const { invokeComplianceFunction } = await import('../services/compliance-client.js');
-            const fnRefund = window.MONEFYI_CONFIG?.fnRefundLynk || 'monefyi-refund-lynk';
-            const remote = await invokeComplianceFunction(fnRefund, {
-              request_id: id,
-              admin_notes: notes,
-              reject: act === 'reject',
+            const { processRefundRequest } = await import('../services/refund-request.js');
+            await processRefundRequest(id, act === 'approve' ? 'approved' : 'rejected', manualNote);
+            const { notifyCompliance } = await import('../services/compliance-client.js');
+            await notifyCompliance('refund_processed', {
+              user_id: userId || undefined,
+              status: act === 'approve' ? 'approved' : 'rejected',
+              admin_notes: manualNote,
             });
-
-            if (!remote.success) {
-              const { processRefundRequest } = await import('../services/refund-request.js');
-              await processRefundRequest(id, act === 'approve' ? 'approved' : 'rejected', notes);
-              const { notifyCompliance } = await import('../services/compliance-client.js');
-              await notifyCompliance('refund_processed', {
-                user_id: userId || undefined,
-                status: act === 'approve' ? 'approved' : 'rejected',
-                admin_notes: notes,
-              });
-            }
-            toast(`Refund ${act === 'approve' ? 'disetujui' : 'ditolak'}`, 'success');
+            toast(`Refund ${act === 'approve' ? 'disetujui' : 'ditolak'} (manual)`, 'success');
             await load();
           } catch (e) {
             toast(e.message || 'Gagal', 'error');

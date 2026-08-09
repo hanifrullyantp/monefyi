@@ -12,6 +12,8 @@ module.exports = {
       input: {
         main: path.join(__dirname, "landing page", "index.html"),
         admin: path.join(__dirname, "landing page", "admin.html"),
+        privacy: path.join(__dirname, "landing page", "privacy.html"),
+        terms: path.join(__dirname, "landing page", "terms.html"),
       },
     },
   },

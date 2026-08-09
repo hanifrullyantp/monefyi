@@ -5,6 +5,12 @@
 
 import { notifyCompliance } from './compliance-client.js';
 
+/** Refund otomatis Lynk — dinonaktifkan; proses manual super admin saja. */
+export const REFUND_AUTO_LYNK_ENABLED = false;
+
+/** @deprecated use REFUND_AUTO_LYNK_ENABLED */
+export const REFUND_AUTO_ENABLED = REFUND_AUTO_LYNK_ENABLED;
+
 const LS_PURCHASE = 'monefyi_purchase_record';
 export const REFUND_WINDOW_DAYS = 7;
 
@@ -24,7 +30,29 @@ function userId() {
 
 /**
  * @param {object} [state]
- * @returns {{ planType: string, purchaseDate: string|null, reference: string|null, eligible: boolean, daysSincePurchase: number|null, reason?: string }}
+ * @returns {boolean}
+ */
+export function isRefundRequestEnabled(state = window.STATE || {}) {
+  const profile = state.db?.profile || {};
+  if (profile.refund_request_enabled === true) return true;
+  try {
+    return localStorage.getItem('monefyi_refund_request_enabled') === '1';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * @param {object} [state]
+ * @returns {boolean}
+ */
+export function isSuperAdmin(state = window.STATE || {}) {
+  return String(state.db?.profile?.role || '').toLowerCase() === 'super_admin';
+}
+
+/**
+ * @param {object} [state]
+ * @returns {{ planType: string, purchaseDate: string|null, reference: string|null, eligible: boolean, requestEnabled: boolean, canSubmit: boolean, daysSincePurchase: number|null, reason?: string }}
  */
 export function getPurchaseInfo(state = window.STATE || {}) {
   const profile = state.db?.profile || {};
@@ -48,12 +76,16 @@ export function getPurchaseInfo(state = window.STATE || {}) {
     purchaseDate = profile.updated_at || profile.created_at || null;
   }
 
+  const requestEnabled = isRefundRequestEnabled(state);
+
   if (planType === 'none' || planType === 'trial') {
     return {
       planType,
       purchaseDate,
       reference,
       eligible: false,
+      requestEnabled,
+      canSubmit: false,
       daysSincePurchase: null,
       reason: 'Tidak ada pembelian berbayar yang terdeteksi.',
     };
@@ -65,6 +97,8 @@ export function getPurchaseInfo(state = window.STATE || {}) {
       purchaseDate: null,
       reference,
       eligible: false,
+      requestEnabled,
+      canSubmit: false,
       daysSincePurchase: null,
       reason: 'Tanggal pembelian tidak ditemukan — hubungi support.',
     };
@@ -74,16 +108,24 @@ export function getPurchaseInfo(state = window.STATE || {}) {
     (Date.now() - new Date(purchaseDate).getTime()) / 86400000,
   );
   const eligible = daysSince <= REFUND_WINDOW_DAYS;
+  const canSubmit = eligible && requestEnabled;
+
+  let reason;
+  if (!requestEnabled) {
+    reason = 'Hubungi support@monefyi.com via email. Setelah konfirmasi, super admin akan mengaktifkan tombol refund di akun kamu.';
+  } else if (!eligible) {
+    reason = `Refund hanya tersedia dalam ${REFUND_WINDOW_DAYS} hari setelah pembelian (${daysSince} hari lalu).`;
+  }
 
   return {
     planType,
     purchaseDate,
     reference,
     eligible,
+    requestEnabled,
+    canSubmit,
     daysSincePurchase: daysSince,
-    reason: eligible
-      ? undefined
-      : `Refund hanya tersedia dalam ${REFUND_WINDOW_DAYS} hari setelah pembelian (${daysSince} hari lalu).`,
+    reason,
   };
 }
 
@@ -99,7 +141,13 @@ export async function submitRefundRequest(reason, state = window.STATE || {}) {
   }
 
   const info = getPurchaseInfo(state);
-  if (!info.eligible) {
+  if (!info.requestEnabled) {
+    return {
+      success: false,
+      error: 'Tombol refund belum diaktifkan. Hubungi support@monefyi.com terlebih dahulu.',
+    };
+  }
+  if (!info.canSubmit) {
     return { success: false, error: info.reason || 'Tidak eligible refund.' };
   }
 
@@ -242,5 +290,43 @@ export function recordPurchaseLocally(record = {}) {
       purchased_at: record.purchased_at || new Date().toISOString(),
       reference: record.reference || record.order_id || null,
     }));
+  } catch { /* ignore */ }
+}
+
+/**
+ * Super admin: enable/disable refund button for user after email confirmation.
+ * @param {string} targetUserId
+ * @param {boolean} [enabled=true]
+ * @returns {Promise<{ success: boolean, error?: string }>}
+ */
+export async function grantRefundRequestAccess(targetUserId, enabled = true) {
+  if (!isSuperAdmin()) {
+    return { success: false, error: 'Hanya super admin.' };
+  }
+  const client = supa();
+  if (!client || !targetUserId) {
+    return { success: false, error: 'Invalid params' };
+  }
+  try {
+    const { error } = await client.rpc('grant_refund_request_access', {
+      p_user_id: targetUserId,
+      p_enabled: !!enabled,
+    });
+    if (error) throw error;
+    return { success: true };
+  } catch (e) {
+    console.error('[refund-request] grantRefundRequestAccess', e);
+    return { success: false, error: e.message || 'Gagal mengubah akses refund.' };
+  }
+}
+
+/**
+ * Cache refund flag locally when profile syncs (offline UI).
+ * @param {boolean} enabled
+ */
+export function cacheRefundRequestEnabledLocally(enabled) {
+  try {
+    if (enabled) localStorage.setItem('monefyi_refund_request_enabled', '1');
+    else localStorage.removeItem('monefyi_refund_request_enabled');
   } catch { /* ignore */ }
 }

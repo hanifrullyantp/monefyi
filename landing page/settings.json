@@ -36,6 +36,6 @@
   "pixels": [],
   "loginUrl": "/app/",
   "heroCtaUrl": "#daftar",
-  "privacyUrl": "#",
-  "termsUrl": "#"
+  "privacyUrl": "/privacy.html",
+  "termsUrl": "/terms.html"
 }
