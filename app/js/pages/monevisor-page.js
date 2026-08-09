@@ -281,6 +281,12 @@ function renderDiagnosis(container, report, dx) {
       ${comparison ? `
         <section class="mv-section">
           <h3 class="mv-section-title">${Icon('calendar', { size: 14 })} vs Bulan Lalu</h3>
+          ${Number(comparison.previous.expense || 0) <= 0 ? `
+            <div class="mv-compare-empty">
+              <span aria-hidden="true">📊</span>
+              <p>Belum ada data bulan lalu untuk perbandingan</p>
+            </div>
+          ` : `
           <div class="mv-compare-grid">
             <div class="mv-compare-col">
               <div class="mv-compare-period">Bulan Ini</div>
@@ -297,6 +303,7 @@ function renderDiagnosis(container, report, dx) {
               </div>
             ` : ''}
           </div>
+          `}
         </section>
       ` : ''}
 

@@ -319,7 +319,7 @@ function renderBudgetListRow(budget, transactions, month, income = 0) {
   const statusLabel = getBudgetStatusLabel(progress.status);
   const remaining = progress.remaining;
   const remainingLabel = progress.status === 'paid'
-    ? 'Lunas'
+    ? `Rp ${formatCompact(progress.spent || budget.amount || 0)} terbayar`
     : progress.status === 'pending'
       ? `Belum lunas · ${formatCompact(Math.max(0, remaining))} tersisa`
       : remaining >= 0

@@ -197,12 +197,12 @@
 }
 
 .tx-budget-priority.priority-harus {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
+  background: rgba(30, 64, 175, 0.15);
+  color: #60a5fa;
 }
 .tx-budget-priority.priority-penting {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
 }
 .tx-budget-priority.priority-mau {
   background: rgba(234, 179, 8, 0.15);

@@ -10,14 +10,18 @@ import {
   saveFinancialTarget,
   setPrimaryTarget,
 } from '../services/financial-targets.js';
+import { loadFinancialGoals, saveFinancialGoal } from '../services/financial-goals.js';
 
 /**
  * @param {object} [options]
  */
 export async function showTargetManagerModal(options = {}) {
   await loadFinancialTargets();
+  await loadFinancialGoals().catch(() => {});
   const primary = getPrimaryTarget();
-  const targets = window.STATE?.db?.financialTargets || [];
+  const targets = window.STATE?.db?.financialGoals?.length
+    ? window.STATE.db.financialGoals
+    : (window.STATE?.db?.financialTargets || []);
 
   const overlay = document.createElement('div');
   overlay.className = 'budget-modal-overlay target-manager-overlay';
@@ -44,8 +48,18 @@ export async function showTargetManagerModal(options = {}) {
           <label class="tgt-label">Sisihkan per bulan (Rp)</label>
           <input type="number" name="monthly_contribution" min="0" value="${Number(primary?.monthly_contribution || 0) || ''}" />
 
+          <label class="tgt-label">Status</label>
+          <select name="status">
+            <option value="active" ${(primary?.status || 'active') === 'active' ? 'selected' : ''}>Aktif</option>
+            <option value="paused" ${primary?.status === 'paused' ? 'selected' : ''}>Dijeda</option>
+            <option value="achieved" ${primary?.status === 'achieved' ? 'selected' : ''}>Tercapai</option>
+          </select>
+
           <label class="tgt-label">Tanggal target (opsional)</label>
           <input type="date" name="target_date" value="${primary?.target_date || ''}" />
+
+          <label class="tgt-label">Link kategori (opsional)</label>
+          <input type="text" name="linked_category_id" value="${escapeAttr(primary?.linked_category_id || primary?.category_link || '')}" placeholder="Tabungan" />
         </form>
 
         ${targets.length > 1 ? `
@@ -75,15 +89,25 @@ export async function showTargetManagerModal(options = {}) {
     const form = overlay.querySelector('#tgt-form');
     const fd = new FormData(form);
     try {
-      await saveFinancialTarget({
+      const payload = {
         id: primary?.id,
         name: fd.get('name'),
         target_amount: fd.get('target_amount'),
         current_amount: fd.get('current_amount'),
         monthly_contribution: fd.get('monthly_contribution') || null,
         target_date: fd.get('target_date') || null,
+        linked_category_id: fd.get('linked_category_id') || null,
+        status: fd.get('status') || 'active',
         is_primary: true,
-      });
+      };
+      try {
+        await saveFinancialGoal(payload);
+      } catch {
+        await saveFinancialTarget({
+          ...payload,
+          category_link: payload.linked_category_id,
+        });
+      }
       if (typeof window.showToast === 'function') window.showToast('Target disimpan');
       options.onSaved?.();
       close();

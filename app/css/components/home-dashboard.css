@@ -136,3 +136,98 @@ body:not(.theme-light) .home-streak-badge {
   border-color: var(--border-subtle);
   background: var(--finance-income-bg);
 }
+
+/* Smart insights (Fase 2.1) */
+.smart-insight-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.smart-insight-card {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
+}
+
+.smart-insight-card--medium {
+  border-color: color-mix(in srgb, var(--status-warning) 35%, var(--card-border));
+}
+
+.smart-insight-card__icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.smart-insight-card__title {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.smart-insight-card__text {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.smart-insight-card__action {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--interactive-primary);
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* What-if simulator (Fase 2.2) */
+.what-if-modal input[type="range"] {
+  width: 100%;
+  margin: 8px 0;
+}
+
+.what-if-slider-val {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.what-if-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--bg-secondary);
+}
+
+.what-if-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.what-if-row--highlight {
+  color: var(--finance-income);
+  font-weight: 600;
+}
+
+.home-target-whatif {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--interactive-primary);
+  font-weight: 600;
+}

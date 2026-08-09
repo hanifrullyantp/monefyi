@@ -275,7 +275,7 @@ export function computeFocusInsights(mode, ctx = {}) {
         ? 'Lengkapi income & tagihan wajib dulu'
         : `Aman pakai hari ini: ${fmt(situation.safeToSpend || 0)}`;
       base.detail = situation.paydayLabel
-        ? `Gajian tgl ${prefs.payday_day || '?'} (${situation.daysToPayday} hari) · Sisa bulan ${situation.daysLeftInMonth ?? '—'} hari · Proyeksi sisa fleksibel: ${fmt(situation.predictedEndBalance)}`
+        ? `Gajian tgl ${prefs.payday_day || '?'} (${situation.daysToPayday} hari) · Proyeksi sisa fleksibel: ${fmt(situation.predictedEndBalance)}`
         : 'Fokus: tagihan wajib dulu, sisanya untuk kebutuhan harian.';
       base.metricLabel = 'Uang bisa dikelola';
       base.metricValue = fmt(fixed.manageable);

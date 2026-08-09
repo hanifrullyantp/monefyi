@@ -151,11 +151,11 @@ export async function renderBudgetSummaryHero(container, ctx) {
             <div class="bsh-stat-value">${daysToPayday} hari</div>
           </div>
           <div class="bsh-stat">
-            <div class="bsh-stat-label">${Icon('lightBulb', { size: 12 })} Per Hari</div>
+            <div class="bsh-stat-label">${Icon('lightBulb', { size: 12 })} Aman per Hari</div>
             <div class="bsh-stat-value">Rp ${fmt(Math.max(0, dailyRemaining))}</div>
           </div>
           <div class="bsh-stat">
-            <div class="bsh-stat-label">${Icon('chartBar', { size: 12 })} Rata-rata</div>
+            <div class="bsh-stat-label">${Icon('chartBar', { size: 12 })} Realisasi per Hari</div>
             <div class="bsh-stat-value">Rp ${fmt(dailyAvg)}</div>
           </div>
         </div>

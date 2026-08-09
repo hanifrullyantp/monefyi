@@ -35,11 +35,23 @@ export function renderTargetSummaryCard(target, callbacks = {}) {
     ${stats.etaLabel ? `
       <p class="home-target-eta">Estimasi tercapai: ${escapeHtml(stats.etaLabel)}</p>
     ` : ''}
+    <button type="button" class="home-target-whatif tap" data-action="what-if">Simulasi what-if →</button>
     ${stats.boostMonthly && stats.etaBoostedLabel && stats.monthsLeft ? `
       <p class="home-target-boost">+Rp ${fmt(stats.boostMonthly)}/bln → maju ke ${escapeHtml(stats.etaBoostedLabel)}</p>
     ` : ''}
   `;
-  el.addEventListener('click', () => callbacks.onClick?.());
+  el.addEventListener('click', (e) => {
+    if (e.target.closest('[data-action="what-if"]')) {
+      e.stopPropagation();
+      callbacks.onWhatIf?.();
+      return;
+    }
+    callbacks.onClick?.();
+  });
+  el.querySelector('[data-action="what-if"]')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    callbacks.onWhatIf?.();
+  });
   return el;
 }
 

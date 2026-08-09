@@ -4,7 +4,8 @@
  * @module services/notification-center
  */
 
-const MAX_NOTIFICATIONS = 100;
+const MAX_NOTIFICATIONS = 10;
+const MAX_UNREAD_DISPLAY = 10;
 const _listeners = new Set();
 
 /** @type {import('dexie').Dexie|null} */
@@ -75,6 +76,7 @@ export async function getNotifications(options = {}) {
     if (!db.notifications) return [];
 
     let items = await db.notifications.orderBy('timestamp').reverse().limit(50).toArray();
+    items = await enforceNotificationCap(items, db);
 
     if (options.unreadOnly) items = items.filter((n) => !n.read);
     if (options.notDismissed !== false) items = items.filter((n) => !n.dismissed);
@@ -95,10 +97,24 @@ export async function getUnreadCount() {
     const db = await getDb();
     if (!db.notifications) return 0;
     const items = await db.notifications.filter((n) => !n.read && !n.dismissed).toArray();
-    return items.length;
+    return Math.min(items.length, MAX_UNREAD_DISPLAY);
   } catch {
     return 0;
   }
+}
+
+/**
+ * Keep only the newest notifications up to MAX_NOTIFICATIONS.
+ * @param {object[]} items
+ * @param {import('dexie').Dexie} db
+ */
+async function enforceNotificationCap(items, db) {
+  const all = items.length ? items : await db.notifications.orderBy('timestamp').reverse().toArray();
+  if (all.length <= MAX_NOTIFICATIONS) return all.slice(0, MAX_NOTIFICATIONS);
+  const keep = all.slice(0, MAX_NOTIFICATIONS);
+  const drop = all.slice(MAX_NOTIFICATIONS);
+  if (drop.length) await db.notifications.bulkDelete(drop.map((n) => n.id));
+  return keep;
 }
 
 /**
@@ -177,27 +193,41 @@ export async function cleanupNotifications() {
     const now = Date.now();
     const THIRTY_DAYS = 30 * 86400000;
     const SEVEN_DAYS = 7 * 86400000;
+    const FOURTEEN_DAYS = 14 * 86400000;
     const all = await db.notifications.toArray();
     const toDelete = [];
     const seenToday = new Map();
+    const groupedKeep = new Map();
 
-    for (const n of all) {
+    for (const n of all.sort((a, b) => String(b.timestamp).localeCompare(String(a.timestamp)))) {
       const age = now - new Date(n.timestamp).getTime();
       if (age > THIRTY_DAYS) {
         toDelete.push(n.id);
         continue;
       }
-      if (n.read && (n.severity === 'info' || n.severity === 'low') && age > SEVEN_DAYS) {
+      if (n.read && age > SEVEN_DAYS) {
+        toDelete.push(n.id);
+        continue;
+      }
+      if (!n.read && (n.severity === 'info' || n.severity === 'low') && age > FOURTEEN_DAYS) {
         toDelete.push(n.id);
         continue;
       }
       const day = String(n.timestamp || '').split('T')[0];
-      const key = `${n.dedupKey || n.type || ''}_${n.message || n.title || ''}_${day}`;
-      if (seenToday.has(key)) {
+      const groupKey = `${n.type || 'general'}_${day}`;
+      const kept = groupedKeep.get(groupKey) || 0;
+      if (kept >= 2 && (n.severity === 'info' || n.severity === 'low')) {
         toDelete.push(n.id);
         continue;
       }
-      seenToday.set(key, n.id);
+      groupedKeep.set(groupKey, kept + 1);
+
+      const dedupeKey = `${n.dedupKey || n.type || ''}_${n.message || n.title || ''}_${day}`;
+      if (seenToday.has(dedupeKey)) {
+        toDelete.push(n.id);
+        continue;
+      }
+      seenToday.set(dedupeKey, n.id);
     }
 
     if (toDelete.length) {

@@ -1,0 +1,51 @@
+/**
+ * Roadmap Fase 1-2 smoke tests.
+ */
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { PRIORITY_LEVELS } from '../app/js/services/budget-model.js';
+import { generateSmartSuggestions } from '../app/js/services/smart-suggestions.js';
+import { getGreeting } from '../app/js/services/monevisor-messages.js';
+
+describe('Fase 1.2 — priority colors', () => {
+  it('harus uses blue not red', () => {
+    assert.ok(PRIORITY_LEVELS.HARUS.color.includes('1e40af') || PRIORITY_LEVELS.HARUS.color.includes('blue'));
+    assert.notEqual(PRIORITY_LEVELS.HARUS.color, '#ef4444');
+  });
+
+  it('penting uses light blue', () => {
+    assert.equal(PRIORITY_LEVELS.PENTING.color, '#3b82f6');
+  });
+});
+
+describe('Fase 2.1 — smart suggestions', () => {
+  it('detects coffee habit from transactions', () => {
+    const month = '2026-08';
+    const suggestions = generateSmartSuggestions({
+      selectedMonth: month,
+      period: { start: `${month}-01`, end: `${month}-31` },
+      transactions: [
+        { date: '2026-08-01', type: 'expense', amount: 45000, merchant: 'Starbucks' },
+        { date: '2026-08-03', type: 'expense', amount: 35000, merchant: 'Kopi Kenangan' },
+        { date: '2026-08-05', type: 'expense', amount: 40000, merchant: 'Fore Coffee' },
+        { date: '2026-08-07', type: 'expense', amount: 38000, merchant: 'Janji Jiwa' },
+      ],
+    });
+    assert.ok(suggestions.some((s) => s.id === 'coffee-habit'));
+  });
+});
+
+describe('Fase 2.1 — debt suggestion', () => {
+  it('suggests debt payoff boost when prefs set', () => {
+    const suggestions = generateSmartSuggestions({
+      transactions: [],
+      db: {
+        userPreferences: {
+          debt_amount: 12000000,
+          monthly_debt_payment: 1000000,
+        },
+      },
+    });
+    assert.ok(suggestions.some((s) => s.id === 'debt-boost'));
+  });
+});

@@ -125,9 +125,45 @@ async function renderV2Home(container, data, ctx, callbacks, formatIDR, formatCo
     console.warn('[home] first-week plan card', e);
   }
 
-  const targetCard = renderTargetSummaryCard(data.primaryTarget, {
-    onClick: callbacks.onViewTarget,
-  });
+  try {
+    const { renderSmartInsightCard } = await import('../components/smart-insight-card.js');
+    const insightCard = renderSmartInsightCard(state, {
+      onViewAdvisor: callbacks.onViewAdvisor,
+      onViewBudget: callbacks.onViewBudget,
+      onViewTransactions: callbacks.onViewTransactions,
+      onWhatIf: async () => {
+        const { showWhatIfSimulator } = await import('../components/what-if-simulator.js');
+        await showWhatIfSimulator({
+          onNeedTarget: callbacks.onViewTarget,
+          onSaved: () => { if (typeof window.rerenderHomePage === 'function') window.rerenderHomePage(); },
+        });
+      },
+    });
+    if (insightCard) container.appendChild(insightCard);
+  } catch (e) {
+    console.warn('[home] smart insights', e);
+  }
+
+  try {
+    const { loadFinancialGoals } = await import('../services/financial-goals.js');
+    await loadFinancialGoals();
+  } catch (e) {
+    console.warn('[home] load goals', e);
+  }
+
+  const targetCard = renderTargetSummaryCard(
+    data.primaryTarget || window.STATE?.db?.primaryGoalDisplay,
+    {
+      onClick: callbacks.onViewTarget,
+      onWhatIf: async () => {
+        const { showWhatIfSimulator } = await import('../components/what-if-simulator.js');
+        await showWhatIfSimulator({
+          onNeedTarget: callbacks.onViewTarget,
+          onSaved: () => { if (typeof window.rerenderHomePage === 'function') window.rerenderHomePage(); },
+        });
+      },
+    },
+  );
   if (targetCard) container.appendChild(targetCard);
 
   container.appendChild(renderQuickAccess({
@@ -174,7 +210,9 @@ export async function renderHomePage(container, ctx, callbacks = {}) {
 
   try {
     const { loadFinancialTargets } = await import('../services/financial-targets.js');
+    const { loadFinancialGoals } = await import('../services/financial-goals.js');
     await loadFinancialTargets();
+    await loadFinancialGoals();
   } catch (e) {
     console.warn('[home] load targets', e);
   }
