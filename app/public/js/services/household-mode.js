@@ -142,12 +142,16 @@ export function getHouseholdSummary(state = typeof window !== 'undefined' ? wind
     || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
   const txs = (state.transactions || []).filter((t) => String(t.date || '').startsWith(month));
   const expense = txs.filter((t) => t.type === 'expense').reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  const sharedTxs = txs.filter((t) => t.visibility === 'shared' || t.meta?.visibility === 'shared');
+  const sharedExpense = sharedTxs.filter((t) => t.type === 'expense').reduce((s, t) => s + (Number(t.amount) || 0), 0);
 
   return {
     ...hh,
     member_count: hh.members?.length || 1,
     month_expense: expense,
     month_tx_count: txs.length,
+    shared_expense: sharedExpense,
+    shared_tx_count: sharedTxs.length,
   };
 }
 

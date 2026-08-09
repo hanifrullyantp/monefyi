@@ -1139,6 +1139,13 @@ async function renderInnovation(body) {
       </div>
     </div>
     <div class="settings-card">
+      <h2>Voice Assistant</h2>
+      <p class="settings-desc">Perintah suara: saldo, catat transaksi, simulasi, life event.</p>
+      <div class="settings-actions">
+        <button type="button" class="settings-btn" id="spVoiceAssistant">Buka voice assistant</button>
+      </div>
+    </div>
+    <div class="settings-card">
       <h2>Life Event Planner</h2>
       <p class="settings-desc">Nikah, rumah, bayi, karir — hitung target & cicilan bulanan.</p>
       <div class="settings-actions">
@@ -1230,6 +1237,11 @@ async function renderInnovation(body) {
   body.querySelector('#spCoachingPlans')?.addEventListener('click', async () => {
     const { showCoachingPlansSheet } = await import('../components/coaching-plans-sheet.js');
     await showCoachingPlansSheet();
+  });
+
+  body.querySelector('#spVoiceAssistant')?.addEventListener('click', async () => {
+    const { showVoiceAssistantSheet } = await import('../components/voice-assistant-sheet.js');
+    showVoiceAssistantSheet();
   });
 
   body.querySelector('#spLifeEventPlanner')?.addEventListener('click', async () => {

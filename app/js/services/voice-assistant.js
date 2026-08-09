@@ -84,41 +84,135 @@ export function parseVoiceCommand(transcript) {
     };
   }
 
+  if (/life event|rencana (nikah|rumah|bayi|pendidikan)|milestone/.test(text)) {
+    return {
+      type: 'command',
+      intent: 'life_event',
+      params: {},
+      reply: 'Membuka Life Event Planner.',
+      action: { target: 'life_event' },
+    };
+  }
+
+  if (/simulasi|what.?if|kalau beli/.test(text)) {
+    return {
+      type: 'command',
+      intent: 'what_if',
+      params: {},
+      reply: 'Membuka simulasi what-if.',
+      action: { target: 'what_if' },
+    };
+  }
+
+  if (/wishlist|daftar keinginan/.test(text)) {
+    return {
+      type: 'command',
+      intent: 'wishlist',
+      params: {},
+      reply: 'Membuka wishlist impulse.',
+      action: { target: 'wishlist' },
+    };
+  }
+
+  if (/rencana darurat|emergency plan|assessment darurat/.test(text)) {
+    return {
+      type: 'command',
+      intent: 'emergency_plan',
+      params: {},
+      reply: 'Membuka assessment mode darurat.',
+      action: { target: 'emergency_plan' },
+    };
+  }
+
+  if (/utang|debt planner|cicilan utang/.test(text)) {
+    return {
+      type: 'query',
+      intent: 'debt_planner',
+      params: {},
+      reply: 'Membuka debt payoff planner.',
+      action: { target: 'debt_planner' },
+    };
+  }
+
+  if (/transaksi terakhir|cek transaksi/.test(text)) {
+    const txs = window.STATE?.transactions || [];
+    const last = txs[txs.length - 1];
+    const reply = last
+      ? `Transaksi terakhir: ${last.merchant || last.category || '—'} Rp ${fmt(Math.abs(Number(last.amount || 0)))} (${String(last.date || '').slice(0, 10)})`
+      : 'Belum ada transaksi tercatat.';
+    return { type: 'query', intent: 'last_transaction', params: {}, reply };
+  }
+
   return {
     type: 'unknown',
     intent: 'fallback',
     params: { text },
-    reply: 'Coba: "berapa saldo saya", "catat kopi 30rb", atau "insight bulan ini".',
+    reply: 'Coba: "berapa saldo", "catat kopi 30rb", "rencana nikah", atau "simulasi beli".',
   };
+}
+
+/**
+ * Execute parsed voice command side effects (Sprint 24).
+ * @param {object} parsed
+ * @param {object} [callbacks]
+ */
+export async function executeVoiceCommand(parsed, callbacks = {}) {
+  if (!parsed?.action?.target) return parsed;
+
+  const target = parsed.action.target;
+
+  if (target === 'emergency_mode') {
+    const { setEmergencyMode } = await import('./emergency-mode.js');
+    setEmergencyMode(!!parsed.params.active, 'voice_assistant');
+  } else if (target === 'wellness') {
+    const { showWellnessCheckinSheet } = await import('../components/wellness-checkin-sheet.js');
+    showWellnessCheckinSheet({ force: true });
+  } else if (target === 'quick_add' && parsed.action.payload) {
+    window.dispatchEvent(new CustomEvent('monefyi:voice-quick-add', {
+      detail: parsed.action.payload,
+    }));
+  } else if (target === 'life_event') {
+    const { showLifeEventPlannerSheet } = await import('../components/life-event-planner-sheet.js');
+    showLifeEventPlannerSheet();
+  } else if (target === 'what_if') {
+    const { showWhatIfSimulator } = await import('../components/what-if-simulator.js');
+    await showWhatIfSimulator({ tab: 'purchase' });
+  } else if (target === 'wishlist') {
+    const { showImpulseWishlistSheet } = await import('../components/impulse-wishlist-sheet.js');
+    showImpulseWishlistSheet();
+  } else if (target === 'emergency_plan') {
+    const { showEmergencyPlanSheet } = await import('../components/emergency-plan-sheet.js');
+    showEmergencyPlanSheet();
+  } else if (target === 'debt_planner') {
+    callbacks.onDebtPlanner?.();
+  } else if (target === 'budget') {
+    callbacks.onViewBudget?.();
+  }
+
+  return parsed;
 }
 
 /**
  * @param {string} transcript
  * @returns {Promise<object|null>}
  */
-export async function handleVoiceAssistant(transcript) {
+export async function handleVoiceAssistant(transcript, callbacks = {}) {
   const parsed = parseVoiceCommand(transcript);
   if (!parsed) return null;
 
-  if (parsed.action?.target === 'emergency_mode') {
-    const { setEmergencyMode } = await import('./emergency-mode.js');
-    setEmergencyMode(!!parsed.params.active, 'voice_assistant');
-  }
+  await executeVoiceCommand(parsed, callbacks);
 
-  if (parsed.action?.target === 'wellness') {
-    const { showWellnessCheckinSheet } = await import('../components/wellness-checkin-sheet.js');
-    showWellnessCheckinSheet({ force: true });
-  }
-
-  if (parsed.action?.target === 'quick_add' && parsed.action.payload) {
-    window.dispatchEvent(new CustomEvent('monefyi:voice-quick-add', {
-      detail: parsed.action.payload,
-    }));
+  if (parsed.reply && typeof window !== 'undefined') {
+    window.showToast?.(parsed.reply, parsed.type === 'command' ? 'success' : 'info');
   }
 
   return parsed;
 }
 
 if (typeof window !== 'undefined') {
-  window.monefyiVoiceAssistant = { parseVoiceCommand, handleVoiceAssistant };
+  window.monefyiVoiceAssistant = {
+    parseVoiceCommand,
+    handleVoiceAssistant,
+    executeVoiceCommand,
+  };
 }

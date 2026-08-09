@@ -134,6 +134,14 @@ async function renderV2Home(container, data, ctx, callbacks, formatIDR, formatCo
   }
 
   try {
+    const { renderLifeEventHomeCard } = await import('../components/life-event-home-card.js');
+    const lifeCard = renderLifeEventHomeCard(callbacks);
+    if (lifeCard) container.appendChild(lifeCard);
+  } catch (e) {
+    console.warn('[home] life event card', e);
+  }
+
+  try {
     const { renderGrowthAlertsBar } = await import('../components/growth-alerts-bar.js');
     const growthBar = await renderGrowthAlertsBar(state, callbacks);
     if (growthBar) container.appendChild(growthBar);
@@ -515,6 +523,16 @@ export async function renderHomePage(container, ctx, callbacks = {}) {
     console.warn('[home] load targets', e);
   }
 
+  try {
+    const { hasActiveHousehold, getDashboardViewMode, filterTransactionsForView } = await import('../services/household-shared.js');
+    if (hasActiveHousehold()) {
+      const mode = getDashboardViewMode();
+      const src = ctx.transactions || ctx.state?.transactions || [];
+      ctx.transactions = filterTransactionsForView(src, mode);
+      ctx.householdViewMode = mode;
+    }
+  } catch { /* ignore */ }
+
   const data = buildHomePageData(ctx);
   const masked = data.saldoMasked;
   const layoutV2 = useHomeLayoutV2(ctx.settings);
@@ -537,6 +555,14 @@ export async function renderHomePage(container, ctx, callbacks = {}) {
     await mountBetaLaunchBanner(container);
   } catch (e) {
     console.warn('[home] beta banner', e);
+  }
+
+  try {
+    const { renderHouseholdViewToggle } = await import('../services/household-shared.js');
+    const toggle = renderHouseholdViewToggle();
+    if (toggle) container.appendChild(toggle);
+  } catch (e) {
+    console.warn('[home] household toggle', e);
   }
 
   if (layoutV2 && isSimpleHomeMode(state)) {

@@ -43,6 +43,14 @@ export async function showWeeklyDigestPage(opts = {}) {
         </div>
       </section>
 
+      ${digest.ai_insights?.length ? `
+        <section class="weekly-digest-page__section weekly-digest-page__section--ai">
+          <h3>Insight AI ${digest.source?.includes('ai') ? '<span class="weekly-digest-ai-badge">Gemini</span>' : ''}</h3>
+          ${digest.ai_greeting ? `<p class="weekly-digest-page__coaching">${escapeHtml(digest.ai_greeting)}</p>` : ''}
+          <ul>${digest.ai_insights.map((i) => `<li><strong>${escapeHtml(i.title)}</strong> — ${escapeHtml(i.body || '')}</li>`).join('')}</ul>
+        </section>
+      ` : ''}
+
       ${digest.highlights?.length ? `
         <section class="weekly-digest-page__section">
           <h3>Highlights</h3>
@@ -100,9 +108,8 @@ export async function showWeeklyDigestPage(opts = {}) {
   });
 
   host.querySelector('[data-action="regen"]')?.addEventListener('click', async () => {
-    const { saveWeeklyDigest } = await import('../services/weekly-digest-store.js');
-    const fresh = generateWeeklyDigest(window.STATE);
-    await saveWeeklyDigest(fresh);
+    const { regenerateWeeklyDigest } = await import('../services/weekly-digest-store.js');
+    const fresh = await regenerateWeeklyDigest(window.STATE);
     close();
     showWeeklyDigestPage({ ...opts, digest: fresh });
   });

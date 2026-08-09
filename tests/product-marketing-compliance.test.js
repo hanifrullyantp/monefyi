@@ -165,5 +165,7 @@ describe('landing-parity growth promises', () => {
     const ids = LANDING_PROMISES.map((p) => p.id);
     assert.ok(ids.includes('what_if_simulator'));
     assert.ok(ids.includes('financial_health_score'));
+    assert.ok(ids.includes('life_event_planner'));
+    assert.ok(ids.includes('voice_assistant'));
   });
 });

@@ -2329,11 +2329,25 @@ async function upsertTransaction_legacy_local(tx) {
         },
       });
       window.MonefyiUI?.initVoiceInput?.($('#unifiedAiInput'), $('#btnUnifiedVoice'));
-      // Mic on Tambah Transaksi popup — leftmost toolbar icon
+      const voiceAssistantHandler = async (text) => {
+        if (!text?.trim()) return;
+        try {
+          const { handleVoiceAssistant } = await import('./services/voice-assistant.js');
+          await handleVoiceAssistant(text.trim());
+        } catch (e) {
+          console.warn('[voice-assistant]', e);
+        }
+      };
       loadAppModule('js/services/voice-input.js').then((mod) => {
-        mod.initVoiceInput?.($('#quickText'), $('#btnQuickVoice'));
+        mod.initVoiceInput?.($('#quickText'), $('#btnQuickVoice'), {
+          autoParse: true,
+          onParse: voiceAssistantHandler,
+        });
+        mod.initVoiceInput?.($('#unifiedAiInput'), $('#btnUnifiedVoice'), {
+          autoParse: true,
+          onParse: voiceAssistantHandler,
+        });
         $('#quickText')?.addEventListener('input', () => {
-          // Typing resets channel unless voice just wrote
           if (!$('#btnQuickVoice')?.classList.contains('voice-active')) {
             mod.setLastInputChannel?.('text');
           }
@@ -2349,12 +2363,14 @@ async function upsertTransaction_legacy_local(tx) {
           input.dispatchEvent(new Event('input', { bubbles: true }));
         }
       });
-      import('./services/voice-assistant.js').then(({ parseVoiceCommand }) => {
+      import('./services/voice-assistant.js').then(({ parseVoiceCommand, handleVoiceAssistant }) => {
         const unified = $('#unifiedAiInput');
-        unified?.addEventListener('change', () => {
-          const parsed = parseVoiceCommand(unified.value);
-          if (parsed?.intent !== 'fallback' && parsed?.intent !== 'unknown' && parsed?.reply) {
-            window.showToast?.(parsed.reply, 'info');
+        unified?.addEventListener('change', async () => {
+          const val = unified.value?.trim();
+          if (!val) return;
+          const parsed = parseVoiceCommand(val);
+          if (parsed?.intent !== 'fallback' && parsed?.intent !== 'unknown') {
+            await handleVoiceAssistant(val);
           }
         });
       }).catch(() => {});
@@ -8877,6 +8893,19 @@ function setSheetPosition(mode) {
   $('#eNotes').value = tx.notes||'';
   $('#editStatus').textContent = '—';
 
+  const visRow = $('#eVisibilityRow');
+  const btnSplit = $('#btnSplitTx');
+  (async () => {
+    try {
+      const { hasActiveHousehold, getTransactionVisibility } = await import('./services/household-shared.js');
+      const showHh = hasActiveHousehold() && tx.type === 'expense';
+      if (visRow) visRow.style.display = showHh ? '' : 'none';
+      if (btnSplit) btnSplit.style.display = tx.type === 'expense' ? '' : 'none';
+      const visEl = $('#eVisibility');
+      if (showHh && visEl) visEl.value = getTransactionVisibility(tx);
+    } catch { /* ignore */ }
+  })();
+
   // Local financial insights above edit form (no AI)
   const editCardEl = $('#editCard');
   const insightHost = $('#txInsightHost');
@@ -12015,6 +12044,14 @@ if (btnUpdate) {
     tx.merchant = $('#eMerchant').value || '';
     tx.notes = $('#eNotes').value || '';
 
+    try {
+      const { hasActiveHousehold, applyTransactionVisibility } = await import('./services/household-shared.js');
+      if (hasActiveHousehold()) {
+        const vis = $('#eVisibility')?.value || 'personal';
+        Object.assign(tx, applyTransactionVisibility(tx, vis));
+      }
+    } catch { /* ignore */ }
+
     // UI Loading
     const status = $('#editStatus');
     status.textContent = 'Menyimpan...';
@@ -12089,6 +12126,38 @@ if (btnDelete) {
       console.error(err);
       status.textContent = 'Gagal hapus data.';
       btnDelete.disabled = false;
+    }
+  });
+}
+
+const btnSplitTx = document.getElementById('btnSplitTx');
+if (btnSplitTx) {
+  btnSplitTx.addEventListener('click', async () => {
+    if (!STATE.editId) return;
+    const original = STATE.transactions.find((t) => t.id === STATE.editId);
+    if (!original) return;
+    try {
+      const { showTransactionSplitSheet } = await import('./components/transaction-split-sheet.js');
+      const parts = await showTransactionSplitSheet(original);
+      if (!parts?.length) return;
+      const status = $('#editStatus');
+      status.textContent = 'Menyimpan split…';
+      btnSplitTx.disabled = true;
+      await dbDeleteTransaction(original.id);
+      STATE.transactions = STATE.transactions.filter((t) => t.id !== original.id);
+      for (const part of parts) {
+        await upsertTransaction(part);
+        STATE.transactions.push(part);
+      }
+      refreshAllUI({ syncRemote: 'ifChanged', soft: true });
+      if (typeof closeEditModal === 'function') closeEditModal();
+      showToast('Transaksi di-split', 'success');
+      btnSplitTx.disabled = false;
+      status.textContent = '';
+    } catch (e) {
+      console.error(e);
+      showToast(e.message || 'Gagal split', 'error');
+      btnSplitTx.disabled = false;
     }
   });
 }

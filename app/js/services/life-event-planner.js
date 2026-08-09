@@ -86,6 +86,7 @@ export function createLifeEventPlan(templateId, inputs = {}) {
     months,
     monthly_needed: monthlyNeeded,
     checklist: tpl.checklist.map((c) => ({ label: c, done: false })),
+    meta: inputs.meta || {},
     created_at: new Date().toISOString(),
   };
 
@@ -114,6 +115,68 @@ export function updateLifeEventPlan(planId, patch) {
 }
 
 /**
+ * @param {number} baseCost
+ * @param {number} years
+ * @param {number} [inflationRate]
+ * @returns {number}
+ */
+export function projectInflatedCost(baseCost, years, inflationRate = 0.06) {
+  const base = Math.abs(Number(baseCost) || 0);
+  const y = Math.max(0, Number(years) || 0);
+  const rate = Number(inflationRate) || 0.06;
+  return Math.round(base * ((1 + rate) ** y));
+}
+
+/**
+ * Education plan with inflation projection (Sprint 23).
+ * @param {object} inputs
+ * @returns {object}
+ */
+export function projectEducationPlan(inputs = {}) {
+  const childAge = Number(inputs.child_age || 2);
+  const yearsToCollege = Math.max(1, 18 - childAge);
+  const baseMid = Number(inputs.base_cost || 200_000_000);
+  const inflated = projectInflatedCost(baseMid, yearsToCollege);
+  return createLifeEventPlan('education', {
+    title: inputs.title || 'Dana Pendidikan Anak',
+    target_cost: inflated,
+    saved: Number(inputs.saved || 0),
+    months: yearsToCollege * 12,
+    meta: {
+      child_age: childAge,
+      years_to_college: yearsToCollege,
+      base_cost: baseMid,
+      inflation_rate: 0.06,
+    },
+  });
+}
+
+/**
+ * @param {string} planId
+ * @param {number} checklistIndex
+ */
+export function toggleLifeEventChecklist(planId, checklistIndex) {
+  const plans = loadLifeEventPlans();
+  const idx = plans.findIndex((p) => p.id === planId);
+  if (idx < 0) return null;
+  const list = [...(plans[idx].checklist || [])];
+  if (!list[checklistIndex]) return plans[idx];
+  list[checklistIndex] = { ...list[checklistIndex], done: !list[checklistIndex].done };
+  plans[idx].checklist = list;
+  localStorage.setItem(LS_PLANS, JSON.stringify(plans));
+  return plans[idx];
+}
+
+/**
+ * @returns {object|null}
+ */
+export function getPrimaryLifeEventPlan() {
+  const plans = loadLifeEventPlans();
+  if (!plans.length) return null;
+  return summarizeLifeEventPlan(plans[0]);
+}
+
+/**
  * @param {object} plan
  * @returns {object}
  */
@@ -121,10 +184,20 @@ export function summarizeLifeEventPlan(plan) {
   const progress = plan.target_cost > 0
     ? Math.min(100, Math.round((Number(plan.saved) / Number(plan.target_cost)) * 100))
     : 0;
+  const elapsedMonths = plan.created_at
+    ? Math.max(0, Math.floor((Date.now() - new Date(plan.created_at).getTime()) / (30 * 86400000)))
+    : 0;
+  const expectedProgress = plan.months > 0
+    ? Math.min(100, Math.round((elapsedMonths / plan.months) * 100))
+    : 0;
+
   return {
     ...plan,
     progress,
-    on_track: progress >= Math.min(100, Math.round((plan.months > 0 ? 1 : 0) * 10)),
+    expected_progress: expectedProgress,
+    on_track: progress >= Math.max(0, expectedProgress - 15),
+    checklist_done: (plan.checklist || []).filter((c) => c.done).length,
+    checklist_total: (plan.checklist || []).length,
   };
 }
 
@@ -135,5 +208,9 @@ if (typeof window !== 'undefined') {
     createLifeEventPlan,
     updateLifeEventPlan,
     summarizeLifeEventPlan,
+    projectInflatedCost,
+    projectEducationPlan,
+    toggleLifeEventChecklist,
+    getPrimaryLifeEventPlan,
   };
 }

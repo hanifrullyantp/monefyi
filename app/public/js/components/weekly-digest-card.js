@@ -23,7 +23,7 @@ export function renderWeeklyDigestCard(state = window.STATE, callbacks = {}) {
       <div class="weekly-digest-card__head">
         <span class="weekly-digest-card__icon">📊</span>
         <div>
-          <div class="weekly-digest-card__title">Rekap Minggu Ini</div>
+          <div class="weekly-digest-card__title">Rekap Minggu Ini${digest.source?.includes('ai') ? ' <span class="weekly-digest-ai-badge">AI</span>' : ''}</div>
           <div class="weekly-digest-card__period">${escapeHtml(digest.period_label || '')}</div>
         </div>
         <button type="button" class="weekly-digest-card__open tap" aria-label="Buka detail">

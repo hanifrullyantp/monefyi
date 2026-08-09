@@ -24,6 +24,7 @@ export function renderHouseholdCard(summary, callbacks = {}) {
       </div>
       <div class="household-card__stat">
         Pengeluaran rumah tangga bulan ini: <strong>Rp ${fmt(summary.month_expense)}</strong>
+        ${summary.shared_tx_count > 0 ? `<div class="household-card__meta">Bersama: Rp ${fmt(summary.shared_expense)} · ${summary.shared_tx_count} tx</div>` : ''}
       </div>
       <button type="button" class="household-card__cta tap">Kelola household</button>
     </div>

@@ -119,12 +119,26 @@ export async function markDigestViewed(digestId) {
  * @returns {Promise<object>}
  */
 export async function getOrGenerateWeeklyDigest(state = window.STATE) {
-  const { generateWeeklyDigest } = await import('./weekly-digest.js');
+  const { generateWeeklyDigestWithAi } = await import('./weekly-digest-ai.js');
   const { week, year } = getISOWeekInfo();
   const history = await loadWeeklyDigestHistory(4);
   const existing = history.find((r) => r.year === year && r.week_number === week);
 
-  const digest = generateWeeklyDigest(state);
+  let digest;
+  try {
+    const { isFeatureEnabled } = await import('./feature-flag-store.js');
+    const uid = state.db?.user?.id;
+    if (isFeatureEnabled('weekly_ai_digest', uid)) {
+      digest = await generateWeeklyDigestWithAi(state);
+    } else {
+      const { generateWeeklyDigest } = await import('./weekly-digest.js');
+      digest = generateWeeklyDigest(state);
+    }
+  } catch {
+    const { generateWeeklyDigest } = await import('./weekly-digest.js');
+    digest = generateWeeklyDigest(state);
+  }
+
   if (!existing?.content_json?.has_data && digest.has_data) {
     await saveWeeklyDigest(digest);
   }
@@ -138,5 +152,6 @@ if (typeof window !== 'undefined') {
     saveWeeklyDigest,
     markDigestViewed,
     getOrGenerateWeeklyDigest,
+    regenerateWeeklyDigest,
   };
 }

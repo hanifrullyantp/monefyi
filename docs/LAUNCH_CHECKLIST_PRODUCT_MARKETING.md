@@ -20,8 +20,11 @@ Checklist Sprint 6+ sebelum public launch Monefyi PWA.
 5. `20260809180000_sprint5_feature_flags.sql`
 6. `20260809190000_sprint6_beta_launch.sql`
 7. `20260809240000_product_marketing_compliance.sql` — account deletion + refund requests
+8. `20260809250000_household_shared_visibility.sql` — transaction visibility personal/shared
 
 Re-deploy product-marketing: `./scripts/deploy-monefyi-product-marketing.sh`
+
+**Deploy everything:** `./scripts/deploy-all.sh`
 
 **Compliance edge functions** (emails + purge cron):
 

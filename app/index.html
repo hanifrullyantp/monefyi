@@ -2269,10 +2269,18 @@
               <label class="text-xs app-muted">Catatan</label>
               <input id="eNotes" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-sm" />
             </div>
+            <div class="col-span-2" id="eVisibilityRow" style="display:none">
+              <label class="text-xs app-muted">Visibilitas (household)</label>
+              <select id="eVisibility" class="tap mt-1 w-full rounded-xl app-input px-3 py-2 text-sm">
+                <option value="personal">Personal</option>
+                <option value="shared">Bersama</option>
+              </select>
+            </div>
           </div>
 
-          <div class="mt-3 flex items-center gap-2">
+          <div class="mt-3 flex items-center gap-2 flex-wrap">
             <button id="btnUpdateTx" class="tap rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:opacity-95" style="background: rgba(16,185,129,.92)">Update</button>
+            <button id="btnSplitTx" class="tap rounded-2xl px-4 py-2 text-sm hover:opacity-90" style="background: rgba(59,130,246,.15); color: rgba(191,219,254,.95); border: 1px solid rgba(59,130,246,.25); display:none">Split</button>
             <button id="btnDeleteTx" class="tap rounded-2xl px-4 py-2 text-sm hover:opacity-90" style="background: rgba(244,63,94,.12); color: rgba(254,202,202,.95); border: 1px solid rgba(244,63,94,.25)">Hapus</button>
             <div id="editStatus" class="ml-auto text-xs app-muted">—</div>
           </div>
