@@ -49,6 +49,17 @@ export function moderateForumQuestion(payload) {
   return { ok: true };
 }
 
+/**
+ * @param {object} payload
+ * @returns {Promise<void>}
+ */
+export async function reportForumContent(payload) {
+  if (typeof window !== 'undefined') {
+    const { reportForumContent: syncReport } = await import('./community-store.js');
+    await syncReport(payload);
+  }
+}
+
 if (typeof window !== 'undefined') {
-  window.monefyiForumModeration = { moderateForumText, moderateForumQuestion };
+  window.monefyiForumModeration = { moderateForumText, moderateForumQuestion, reportForumContent };
 }

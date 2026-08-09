@@ -354,9 +354,9 @@ async function renderV2Home(container, data, ctx, callbacks, formatIDR, formatCo
   }
 
   try {
-    const { isBenchmarkOptIn, computeAnonymousBenchmark } = await import('../services/anonymous-benchmark.js');
+    const { isBenchmarkOptIn, computeAnonymousBenchmarkAsync } = await import('../services/anonymous-benchmark.js');
     if (isBenchmarkOptIn(state)) {
-      const benchmark = computeAnonymousBenchmark(state);
+      const benchmark = await computeAnonymousBenchmarkAsync(state);
       if (benchmark) {
         const { renderBenchmarkCard } = await import('../components/benchmark-card.js');
         container.appendChild(renderBenchmarkCard(benchmark, {

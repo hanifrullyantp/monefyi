@@ -119,6 +119,79 @@ export async function syncBuddyMessage(pairId, message) {
 }
 
 /**
+ * Load buddy chat thread from Supabase (sent + received).
+ * @param {string} pairId
+ * @returns {Promise<object[]>}
+ */
+export async function loadBuddyThreadMessages(pairId) {
+  const uid = userId();
+  const client = supa();
+  if (!uid || !client || !pairId || navigator.onLine === false) return [];
+
+  try {
+    const { data: mine } = await client
+      .from('buddy_messages')
+      .select('id, body, sender_user_id, sent_at, pair_id')
+      .eq('pair_id', pairId)
+      .order('sent_at', { ascending: true })
+      .limit(40);
+
+    const { data: inboundPairs } = await client
+      .from('buddy_pairs')
+      .select('id')
+      .eq('buddy_user_id', uid);
+
+    const inboundIds = (inboundPairs || []).map((p) => p.id).filter((id) => id !== pairId);
+    let inbound = [];
+    if (inboundIds.length) {
+      const { data } = await client
+        .from('buddy_messages')
+        .select('id, body, sender_user_id, sent_at, pair_id')
+        .in('pair_id', inboundIds)
+        .order('sent_at', { ascending: true })
+        .limit(40);
+      inbound = data || [];
+    }
+
+    const merged = [...(mine || []), ...inbound]
+      .sort((a, b) => new Date(a.sent_at) - new Date(b.sent_at))
+      .slice(-40);
+
+    return merged.map((row) => ({
+      id: row.id,
+      body: row.body,
+      from: row.sender_user_id === uid ? 'me' : 'buddy',
+      sent_at: row.sent_at,
+      remote: true,
+    }));
+  } catch (e) {
+    console.warn('[community-store] load messages', e);
+    return [];
+  }
+}
+
+/**
+ * @param {object} payload
+ * @returns {Promise<void>}
+ */
+export async function reportForumContent(payload) {
+  const uid = userId();
+  const client = supa();
+  if (!uid || !client || navigator.onLine === false) return;
+
+  try {
+    await client.from('community_content_reports').insert({
+      reporter_user_id: uid,
+      content_type: payload.content_type,
+      content_id: String(payload.content_id),
+      reason: String(payload.reason || 'spam').slice(0, 300),
+    });
+  } catch (e) {
+    console.warn('[community-store] report', e);
+  }
+}
+
+/**
  * Pull remote challenge participation into local cache.
  * @returns {Promise<object[]>}
  */
@@ -156,6 +229,13 @@ export async function pullRemoteChallenges() {
 
 if (typeof window !== 'undefined') {
   window.monefyiCommunityStore = {
-    syncChallengeJoin, syncChallengeCheckin, syncReferralProfile, syncBuddyPair, syncBuddyMessage, pullRemoteChallenges,
+    syncChallengeJoin,
+    syncChallengeCheckin,
+    syncReferralProfile,
+    syncBuddyPair,
+    syncBuddyMessage,
+    loadBuddyThreadMessages,
+    reportForumContent,
+    pullRemoteChallenges,
   };
 }

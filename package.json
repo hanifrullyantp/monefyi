@@ -32,7 +32,7 @@
     "test:upgrade": "node --test tests/daily-situation.test.js tests/transaction-impact.test.js tests/monevisor-intervention.test.js tests/engagement.test.js tests/onboarding-plan-generator.test.js tests/budget-focus-mode.test.js tests/financial-targets.test.js tests/language-contextual.test.js",
     "test:audit": "node --test tests/data-logic-audit.test.js tests/daily-situation.test.js",
     "test:roadmap": "node --test tests/roadmap-phase1-2.test.js tests/roadmap-phase3.test.js tests/roadmap-phase4.test.js tests/roadmap-phase5.test.js tests/roadmap-phase6.test.js tests/roadmap-phase7.test.js tests/roadmap-phase8.test.js",
-    "test:growth": "node --test tests/growth-phases.test.js tests/growth-phase1-insights.test.js tests/growth-phase2-coaching.test.js tests/growth-phase2-recurring.test.js tests/growth-phase3-sprint7-10.test.js tests/growth-phase4-sprint13-18.test.js tests/growth-phase5-polish.test.js tests/sprint5-feature-flags.test.js tests/sprint6-launch-prep.test.js",
+    "test:growth": "node --test tests/growth-phases.test.js tests/growth-phase1-insights.test.js tests/growth-phase2-coaching.test.js tests/growth-phase2-recurring.test.js tests/growth-phase3-sprint7-10.test.js tests/growth-phase3-what-if.test.js tests/growth-phase4-sprint13-18.test.js tests/growth-phase5-polish.test.js tests/growth-phase6-advanced.test.js tests/sprint5-feature-flags.test.js tests/sprint6-launch-prep.test.js",
     "test:all": "npm run test:roadmap && npm run test:growth",
     "seed:demo-august": "node scripts/seed-demo-august-2026.cjs"
   }

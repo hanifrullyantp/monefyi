@@ -215,6 +215,56 @@ export function loadBuddyMessages() {
 }
 
 /**
+ * @returns {Promise<object[]>}
+ */
+export async function loadBuddyMessagesAsync() {
+  const local = loadBuddyMessages();
+  const pairId = typeof localStorage !== 'undefined' ? localStorage.getItem(LS_BUDDY_PAIR) : null;
+  if (!pairId || typeof window === 'undefined') return local;
+
+  try {
+    const { loadBuddyThreadMessages } = await import('./community-store.js');
+    const remote = await loadBuddyThreadMessages(pairId);
+    if (remote.length) {
+      localStorage.setItem(LS_BUDDY_MSG, JSON.stringify(remote));
+      return remote;
+    }
+  } catch (e) {
+    console.warn('[referral-buddy] load messages', e);
+  }
+  return local;
+}
+
+/**
+ * @param {string} message
+ * @returns {Promise<object>}
+ */
+export async function sendBuddyMessageAsync(message) {
+  const text = String(message || 'Semangat! 💪').trim().slice(0, 240);
+  const buddy = matchBuddy();
+  const entry = {
+    id: `msg_${Date.now()}`,
+    body: text,
+    from: 'me',
+    sent_at: new Date().toISOString(),
+  };
+
+  const pairId = localStorage.getItem(LS_BUDDY_PAIR);
+  if (pairId && typeof window !== 'undefined') {
+    const { syncBuddyMessage } = await import('./community-store.js');
+    const saved = await syncBuddyMessage(pairId, text);
+    if (saved?.id) entry.id = saved.id;
+    if (buddy.remote) {
+      const thread = [...loadBuddyMessages(), entry].slice(-40);
+      localStorage.setItem(LS_BUDDY_MSG, JSON.stringify(thread));
+      return entry;
+    }
+  }
+
+  return sendBuddyMessage(message);
+}
+
+/**
  * @param {string} message
  * @returns {object}
  */
@@ -271,7 +321,9 @@ if (typeof window !== 'undefined') {
     findRemoteBuddy,
     sendBuddyEncouragement,
     loadBuddyMessages,
+    loadBuddyMessagesAsync,
     sendBuddyMessage,
+    sendBuddyMessageAsync,
     getBuddyWeeklyStatus,
   };
 }

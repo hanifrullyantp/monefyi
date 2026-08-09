@@ -4,9 +4,9 @@
  */
 
 import {
-  matchBuddy,
-  loadBuddyMessages,
-  sendBuddyMessage,
+  matchBuddyAsync,
+  loadBuddyMessagesAsync,
+  sendBuddyMessageAsync,
   getBuddyWeeklyStatus,
 } from '../services/referral-buddy.js';
 
@@ -16,7 +16,7 @@ let _host = null;
 /**
  * @param {object} [opts]
  */
-export function showBuddyChatSheet(opts = {}) {
+export async function showBuddyChatSheet(opts = {}) {
   if (!_host) {
     _host = document.createElement('div');
     _host.id = 'buddyChatHost';
@@ -24,19 +24,20 @@ export function showBuddyChatSheet(opts = {}) {
     document.body.appendChild(_host);
   }
 
-  render(opts);
+  await matchBuddyAsync();
+  await render(opts);
 }
 
-function render(opts) {
+async function render(opts) {
   const status = getBuddyWeeklyStatus();
   const buddy = status.buddy;
-  const messages = loadBuddyMessages();
+  const messages = await loadBuddyMessagesAsync();
 
   _host.innerHTML = `
     <div class="innovation-sheet innovation-sheet--buddy" role="dialog" aria-modal="true">
       <div class="innovation-sheet__head">
         <div>
-          <div class="innovation-sheet__kicker">Buddy Accountability</div>
+          <div class="innovation-sheet__kicker">Buddy Accountability${buddy.remote ? ' · Live' : ''}</div>
           <div class="innovation-sheet__title">${escapeHtml(buddy.label)}</div>
         </div>
         <button type="button" class="innovation-sheet__close" data-action="close">×</button>
@@ -67,19 +68,19 @@ function render(opts) {
   _host.classList.add('is-visible');
 
   _host.querySelector('[data-action="close"]')?.addEventListener('click', close);
-  _host.querySelector('[data-form]')?.addEventListener('submit', (e) => {
+  _host.querySelector('[data-form]')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const input = _host.querySelector('.buddy-chat-form input');
     if (!input?.value.trim()) return;
-    sendBuddyMessage(input.value.trim());
+    await sendBuddyMessageAsync(input.value.trim());
     input.value = '';
-    render(opts);
+    await render(opts);
     opts.onMessage?.();
   });
   _host.querySelectorAll('[data-quick]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      sendBuddyMessage(btn.getAttribute('data-quick'));
-      render(opts);
+    btn.addEventListener('click', async () => {
+      await sendBuddyMessageAsync(btn.getAttribute('data-quick'));
+      await render(opts);
     });
   });
 }

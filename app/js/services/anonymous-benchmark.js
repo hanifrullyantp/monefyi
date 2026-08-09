@@ -6,7 +6,7 @@
 const LS_OPT_IN = 'monefyi_benchmark_opt_in';
 
 /** @type {Record<string, { saving_rate: number, food_pct: number, transport_pct: number, label: string }>} */
-const COHORT_BENCHMARKS = {
+export const COHORT_BENCHMARKS = {
   under_5jt: { label: '< Rp 5 jt/bulan', saving_rate: 12, food_pct: 28, transport_pct: 12 },
   '5_15jt': { label: 'Rp 5–15 jt/bulan', saving_rate: 18, food_pct: 22, transport_pct: 15 },
   '15_30jt': { label: 'Rp 15–30 jt/bulan', saving_rate: 22, food_pct: 18, transport_pct: 14 },
@@ -128,6 +128,29 @@ export function computeAnonymousBenchmark(state = typeof window !== 'undefined' 
   };
 }
 
+/**
+ * Benchmark with live Supabase cohort medians when available.
+ * @param {object} [state]
+ * @returns {Promise<object|null>}
+ */
+export async function computeAnonymousBenchmarkAsync(state = typeof window !== 'undefined' ? window.STATE : {}) {
+  const base = computeAnonymousBenchmark(state);
+  if (!base) return null;
+
+  const month = state.selectedMonth
+    || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+
+  try {
+    const { fetchCohortMedians, applyLiveCohort } = await import('./benchmark-store.js');
+    const medians = await fetchCohortMedians(base.bracket, month);
+    return applyLiveCohort(base, medians);
+  } catch {
+    return base;
+  }
+}
+
 if (typeof window !== 'undefined') {
-  window.monefyiBenchmark = { computeAnonymousBenchmark, isBenchmarkOptIn, setBenchmarkOptInLocal };
+  window.monefyiBenchmark = {
+    computeAnonymousBenchmark, computeAnonymousBenchmarkAsync, isBenchmarkOptIn, setBenchmarkOptInLocal,
+  };
 }

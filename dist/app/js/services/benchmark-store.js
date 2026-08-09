@@ -3,7 +3,7 @@
  * @module services/benchmark-store
  */
 
-import { computeAnonymousBenchmark, getIncomeBracket, isBenchmarkOptIn } from './anonymous-benchmark.js';
+import { computeAnonymousBenchmark, getIncomeBracket, isBenchmarkOptIn, COHORT_BENCHMARKS } from './anonymous-benchmark.js';
 
 function supa() {
   return window.STATE?.db?.supa || null;
@@ -81,6 +81,92 @@ export async function syncBenchmarkSnapshot(state = typeof window !== 'undefined
   return row;
 }
 
+const LS_COHORT_CACHE = 'monefyi_cohort_cache';
+
+/**
+ * @param {string} bracket
+ * @param {string} month
+ * @returns {Promise<object|null>}
+ */
+export async function fetchCohortMedians(bracket, month) {
+  const cacheKey = `${bracket}_${month}`;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const cached = JSON.parse(localStorage.getItem(LS_COHORT_CACHE) || '{}')[cacheKey];
+      if (cached && Date.now() - cached.at < 86400000) return cached.data;
+    }
+  } catch { /* ignore */ }
+
+  const client = supa();
+  if (!client || navigator.onLine === false) return null;
+
+  try {
+    const { data, error } = await client.rpc('get_benchmark_cohort_stats', {
+      p_income_bracket: bracket,
+      p_month: month,
+    });
+    if (error || !data || Number(data.sample_size) < 3) return null;
+
+    const payload = {
+      saving_rate: Number(data.saving_rate) || COHORT_BENCHMARKS[bracket]?.saving_rate,
+      food_pct: Number(data.food_pct) || COHORT_BENCHMARKS[bracket]?.food_pct,
+      transport_pct: Number(data.transport_pct) || COHORT_BENCHMARKS[bracket]?.transport_pct,
+      sample_size: Number(data.sample_size),
+      live: true,
+    };
+
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const all = JSON.parse(localStorage.getItem(LS_COHORT_CACHE) || '{}');
+        all[cacheKey] = { at: Date.now(), data: payload };
+        localStorage.setItem(LS_COHORT_CACHE, JSON.stringify(all));
+      }
+    } catch { /* ignore */ }
+
+    return payload;
+  } catch (e) {
+    console.warn('[benchmark-store] cohort', e);
+    return null;
+  }
+}
+
+/**
+ * Merge live cohort medians into benchmark result.
+ * @param {object} benchmark
+ * @param {object|null} medians
+ * @returns {object}
+ */
+export function applyLiveCohort(benchmark, medians) {
+  if (!benchmark || !medians?.live) return benchmark;
+
+  const peerMap = {
+    saving_rate: medians.saving_rate,
+    food_pct: medians.food_pct,
+    transport_pct: medians.transport_pct,
+  };
+
+  const metrics = (benchmark.metrics || []).map((m) => {
+    const peers = peerMap[m.id] ?? m.peers;
+    return {
+      ...m,
+      peers,
+      delta: m.yours - peers,
+      status: m.betterWhenHigher
+        ? (m.yours >= peers ? 'above' : 'below')
+        : (m.yours <= peers ? 'above' : 'below'),
+    };
+  });
+
+  return {
+    ...benchmark,
+    metrics,
+    sample_note: `Live cohort: ${medians.sample_size} peer anonim bracket ${benchmark.cohort_label}.`,
+    cohort_live: true,
+  };
+}
+
 if (typeof window !== 'undefined') {
-  window.monefyiBenchmarkStore = { syncBenchmarkSnapshot, buildBenchmarkSnapshot };
+  window.monefyiBenchmarkStore = {
+    syncBenchmarkSnapshot, buildBenchmarkSnapshot, fetchCohortMedians, applyLiveCohort,
+  };
 }

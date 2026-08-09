@@ -17,7 +17,7 @@ export function renderBenchmarkCard(benchmark, callbacks = {}) {
       <div class="benchmark-card__head">
         <span>📊</span>
         <div>
-          <div class="benchmark-card__title">Bandingkan Anonim</div>
+          <div class="benchmark-card__title">Bandingkan Anonim${benchmark.cohort_live ? ' · Live' : ''}</div>
           <div class="benchmark-card__cohort">${escapeHtml(benchmark.cohort_label)}</div>
         </div>
       </div>
