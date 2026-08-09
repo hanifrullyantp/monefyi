@@ -2291,6 +2291,9 @@ async function upsertTransaction_legacy_local(tx) {
         import('./services/insights-store.js')
           .then(({ syncAndGenerateInsights }) => syncAndGenerateInsights(STATE).catch(() => {}))
           .catch((e) => console.warn('syncInsights', e));
+        import('./components/recurring-detect-sheet.js')
+          .then(({ maybePromptRecurringDetection }) => maybePromptRecurringDetection(STATE))
+          .catch((e) => console.warn('recurringDetect', e));
         rerender();
         ensureAppShellVisible();
       } catch (e) {

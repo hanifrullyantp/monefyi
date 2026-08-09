@@ -91,6 +91,11 @@ export function joinChallenge(challengeId) {
   };
   joined.unshift(entry);
   localStorage.setItem(LS_CHALLENGES, JSON.stringify(joined.slice(0, 5)));
+
+  import('./community-store.js').then(({ syncChallengeJoin }) => {
+    syncChallengeJoin(entry).catch(() => {});
+  }).catch(() => {});
+
   return entry;
 }
 
@@ -104,6 +109,11 @@ export function recordChallengeDay(challengeId) {
   list[idx].streak_days = (list[idx].streak_days || 0) + 1;
   list[idx].last_checkin = new Date().toISOString();
   localStorage.setItem(LS_CHALLENGES, JSON.stringify(list));
+
+  import('./community-store.js').then(({ syncChallengeCheckin }) => {
+    syncChallengeCheckin(list[idx]).catch(() => {});
+  }).catch(() => {});
+
   return list[idx];
 }
 

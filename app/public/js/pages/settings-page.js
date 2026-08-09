@@ -1013,9 +1013,10 @@ async function renderInnovation(body) {
         toast(ref.link, 'info');
       }
     });
-    body.querySelector('#spFindBuddy')?.addEventListener('click', () => {
-      const buddy = matchBuddy();
-      toast(`Buddy matched: ${buddy.label} (${buddy.on_track}% on-track)`, 'success');
+    body.querySelector('#spFindBuddy')?.addEventListener('click', async () => {
+      matchBuddy();
+      const { showBuddyChatSheet } = await import('../components/buddy-chat-sheet.js');
+      showBuddyChatSheet();
     });
   } catch (e) {
     console.warn('[settings] referral', e);
@@ -1033,7 +1034,7 @@ async function renderInnovation(body) {
 
   body.querySelector('#spCommunity')?.addEventListener('click', async () => {
     const { showCommunityPanel } = await import('../components/community-panel.js');
-    showCommunityPanel();
+    await showCommunityPanel({ tab: 'stories' });
   });
 
   body.querySelector('#spMicroLearning')?.addEventListener('click', async () => {

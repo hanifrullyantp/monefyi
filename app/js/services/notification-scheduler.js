@@ -7,7 +7,6 @@ import { showNotification, processQueue, isCategoryEnabled } from './push-notifi
 import { buildMorningBriefing, buildBillReminder, buildBudgetMilestoneMessage } from './contextual-notifications.js';
 import { syncFinancialCondition } from './financial-condition.js';
 import { inferCategoryType, CATEGORY_TYPES } from './budget-model.js';
-import { generateDueRecurring } from './recurring-transactions.js';
 import { generateWeeklyDigest, formatWeeklyDigestNotification } from './weekly-digest.js';
 
 const CHECK_INTERVAL = 15 * 60 * 1000;
@@ -239,9 +238,37 @@ async function sendMorningBriefing(_budgetRows, _expenses, _totalExpense, _incom
 
 async function checkRecurringDue() {
   try {
+    const {
+      generateDueRecurring,
+      getRecurringReminderEvents,
+      buildRecurringReminderCopy,
+      processAutoCreateRecurring,
+    } = await import('./recurring-transactions.js');
+
+    await processAutoCreateRecurring();
+
+    for (const ev of getRecurringReminderEvents()) {
+      const { title, body } = buildRecurringReminderCopy(ev);
+      await showNotification({
+        title,
+        body,
+        tag: ev.tag,
+        categoryKey: 'billReminders',
+        type: ev.daysUntil === 0 ? 'recurring_due' : 'recurring_reminder',
+        iconEmoji: ev.daysUntil === 0 ? '🔁' : '📅',
+        severity: ev.daysUntil === 0 ? 'high' : 'medium',
+        requireInteraction: ev.daysUntil === 0,
+        urgent: ev.daysUntil === 0,
+        data: { url: '/app/#home', scheduleId: ev.schedule.id },
+        inboxActions: ev.daysUntil === 0
+          ? [{ label: 'Konfirmasi', action: 'open_home' }]
+          : [{ label: 'Lihat Beranda', action: 'open_home' }],
+      });
+    }
+
     const pending = generateDueRecurring();
-    for (const item of pending.slice(0, 3)) {
-      const tag = `recurring_${item.schedule_id}_${item.month}`;
+    for (const item of pending.slice(0, 2)) {
+      const tag = `recurring_overdue_${item.schedule_id}_${item.month}`;
       await showNotification({
         title: `Tagihan rutin: ${item.name}`,
         body: `Rp ${new Intl.NumberFormat('id-ID').format(Math.round(item.amount || 0))} jatuh tempo. Konfirmasi dari Beranda.`,

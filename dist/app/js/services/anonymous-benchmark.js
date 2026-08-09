@@ -46,6 +46,11 @@ export function setBenchmarkOptInLocal(enabled) {
   try {
     localStorage.setItem(LS_OPT_IN, enabled ? '1' : '0');
   } catch { /* ignore */ }
+  if (enabled && typeof window !== 'undefined') {
+    import('./benchmark-store.js').then(({ syncBenchmarkSnapshot }) => {
+      syncBenchmarkSnapshot(window.STATE).catch(() => {});
+    }).catch(() => {});
+  }
 }
 
 /**

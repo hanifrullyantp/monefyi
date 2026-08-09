@@ -6,6 +6,8 @@
 const LS_REFERRAL = 'monefyi_referral_profile';
 const LS_BUDDY = 'monefyi_buddy_match';
 const LS_CREDITS = 'monefyi_referral_credits';
+const LS_BUDDY_MSG = 'monefyi_buddy_messages';
+const LS_BUDDY_PAIR = 'monefyi_buddy_pair_id';
 
 /**
  * @returns {object}
@@ -29,6 +31,13 @@ export function loadReferralProfile() {
     created_at: new Date().toISOString(),
   };
   localStorage.setItem(LS_REFERRAL, JSON.stringify(profile));
+
+  if (typeof window !== 'undefined') {
+    import('./community-store.js').then(({ syncReferralProfile }) => {
+      syncReferralProfile(profile).catch(() => {});
+    }).catch(() => {});
+  }
+
   return profile;
 }
 
@@ -103,6 +112,14 @@ export function matchBuddy(state = typeof window !== 'undefined' ? window.STATE 
     weekly_message: 'Semangat! Progress kita on-track minggu ini 💪',
   };
   localStorage.setItem(LS_BUDDY, JSON.stringify(buddy));
+
+  if (typeof window !== 'undefined') {
+    import('./community-store.js').then(async ({ syncBuddyPair }) => {
+      const pairId = await syncBuddyPair(buddy);
+      if (pairId) localStorage.setItem(LS_BUDDY_PAIR, pairId);
+    }).catch(() => {});
+  }
+
   return buddy;
 }
 
@@ -115,7 +132,64 @@ export function sendBuddyEncouragement(message) {
   buddy.last_message = String(message || 'Keep going!').slice(0, 120);
   buddy.sent_at = new Date().toISOString();
   localStorage.setItem(LS_BUDDY, JSON.stringify(buddy));
-  return buddy;
+  return sendBuddyMessage(message);
+}
+
+/**
+ * @returns {object[]}
+ */
+export function loadBuddyMessages() {
+  try {
+    return JSON.parse(localStorage.getItem(LS_BUDDY_MSG) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * @param {string} message
+ * @returns {object}
+ */
+export function sendBuddyMessage(message) {
+  const text = String(message || 'Semangat! 💪').trim().slice(0, 240);
+  const entry = {
+    id: `msg_${Date.now()}`,
+    body: text,
+    from: 'me',
+    sent_at: new Date().toISOString(),
+  };
+  const buddyReply = {
+    id: `msg_${Date.now() + 1}`,
+    body: 'Mantap! Aku juga on-track minggu ini 🔥',
+    from: 'buddy',
+    sent_at: new Date(Date.now() + 500).toISOString(),
+  };
+  const thread = [...loadBuddyMessages(), entry, buddyReply].slice(-40);
+  localStorage.setItem(LS_BUDDY_MSG, JSON.stringify(thread));
+
+  const pairId = localStorage.getItem(LS_BUDDY_PAIR);
+  if (pairId && typeof window !== 'undefined') {
+    import('./community-store.js').then(({ syncBuddyMessage }) => {
+      syncBuddyMessage(pairId, text).catch(() => {});
+    }).catch(() => {});
+  }
+
+  return entry;
+}
+
+/**
+ * @returns {object}
+ */
+export function getBuddyWeeklyStatus() {
+  const buddy = matchBuddy();
+  const day = new Date().getDate();
+  const myTrack = 65 + (day % 25);
+  return {
+    buddy,
+    my_on_track: myTrack,
+    buddy_on_track: buddy.on_track || 80,
+    both_strong: myTrack >= 70 && (buddy.on_track || 0) >= 70,
+  };
 }
 
 if (typeof window !== 'undefined') {
@@ -126,5 +200,8 @@ if (typeof window !== 'undefined') {
     loadReferralHistory,
     matchBuddy,
     sendBuddyEncouragement,
+    loadBuddyMessages,
+    sendBuddyMessage,
+    getBuddyWeeklyStatus,
   };
 }
