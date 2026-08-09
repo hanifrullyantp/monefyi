@@ -126,6 +126,21 @@ async function renderV2Home(container, data, ctx, callbacks, formatIDR, formatCo
   }
 
   try {
+    const { generateWeeklyDigest } = await import('../services/weekly-digest.js');
+    const digest = generateWeeklyDigest(state);
+    if (digest.has_data && [0, 1].includes(new Date().getDay())) {
+      state._weeklyDigest = digest;
+      const { renderWeeklyDigestCard } = await import('../components/weekly-digest-card.js');
+      const digestCard = renderWeeklyDigestCard(state, {
+        onViewAdvisor: callbacks.onViewAdvisor,
+      });
+      if (digestCard) container.appendChild(digestCard);
+    }
+  } catch (e) {
+    console.warn('[home] weekly digest', e);
+  }
+
+  try {
     const { buildFirstWeekPlanCard } = await import('../components/first-week-plan-card.js');
     const planCard = await buildFirstWeekPlanCard({
       onTaskAction: callbacks.onPlanTaskAction,

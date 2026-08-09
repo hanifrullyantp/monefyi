@@ -8,6 +8,7 @@ import { buildMorningBriefing, buildBillReminder, buildBudgetMilestoneMessage } 
 import { syncFinancialCondition } from './financial-condition.js';
 import { inferCategoryType, CATEGORY_TYPES } from './budget-model.js';
 import { generateDueRecurring } from './recurring-transactions.js';
+import { generateWeeklyDigest, formatWeeklyDigestNotification } from './weekly-digest.js';
 
 const CHECK_INTERVAL = 15 * 60 * 1000;
 let _intervalId = null;
@@ -334,38 +335,18 @@ async function checkBudgetMilestones(budgetRows, expenses) {
 }
 
 async function sendWeeklyRecap(transactions, now) {
-  const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString().split('T')[0];
-  const weekTx = transactions.filter((t) => t.type === 'expense' && t.date >= weekAgo);
-  const weekTotal = weekTx.reduce((s, t) => s + (Number(t.amount) || 0), 0);
-
-  const twoWeeksAgo = new Date(now.getTime() - 14 * 86400000).toISOString().split('T')[0];
-  const prevWeekTx = transactions.filter(
-    (t) => t.type === 'expense' && t.date >= twoWeeksAgo && t.date < weekAgo,
-  );
-  const prevWeekTotal = prevWeekTx.reduce((s, t) => s + (Number(t.amount) || 0), 0);
-  const change = prevWeekTotal > 0
-    ? Math.round(((weekTotal - prevWeekTotal) / prevWeekTotal) * 100)
-    : 0;
-  const changeText = change > 0 ? `↑${change}%` : change < 0 ? `↓${Math.abs(change)}%` : 'stabil';
-
-  const catMap = {};
-  for (const t of weekTx) {
-    const cat = t.category || 'Other';
-    catMap[cat] = (catMap[cat] || 0) + (Number(t.amount) || 0);
-  }
-  const topCat = Object.entries(catMap).sort((a, b) => b[1] - a[1])[0];
-  const topText = topCat && weekTotal > 0
-    ? `Top: ${topCat[0]} ${Math.round((topCat[1] / weekTotal) * 100)}%`
-    : '';
+  const digest = generateWeeklyDigest({ ...(window.STATE || {}), transactions });
+  if (!digest.has_data) return;
+  const { title, body } = formatWeeklyDigestNotification(digest);
 
   await showNotification({
-    title: 'Rekap Minggu Ini',
-    body: `Pengeluaran Rp ${fmt(weekTotal)} (${changeText} vs minggu lalu). ${topText}`.trim(),
+    title,
+    body,
     tag: 'weekly_recap',
     categoryKey: 'weeklyRecap',
     type: 'ai_recommendation',
     iconEmoji: '📊',
-    data: { url: '/app/#advisor' },
+    data: { url: '/app/#home', action: 'weekly_digest' },
   });
 }
 

@@ -165,6 +165,129 @@
 
 .mrp-header h1 { font-size: 1.25rem; font-weight: 700; margin: 0; }
 
+.mrp-review-btn {
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--mf-border, rgba(148, 163, 184, 0.2));
+  background: var(--app-card-bg, rgba(255, 255, 255, 0.03));
+  color: var(--app-text, inherit);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Monthly review sheet (Fase 4.2) */
+.monthly-review-host {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.monthly-review-host.is-visible { display: flex; }
+
+.monthly-review-sheet {
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--app-card, #131A24);
+  border-radius: 20px 20px 0 0;
+  padding: 20px;
+  color: var(--app-text, #F1F5F9);
+}
+
+.mrs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.mrs-kicker {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mrs-close {
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.mrs-steps {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.mrs-step-dot {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.25);
+}
+
+.mrs-step-dot.is-active { background: var(--interactive-primary, #3b82f6); }
+
+.mrs-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.mrs-summary-grid span {
+  display: block;
+  font-size: 11px;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.mrs-body textarea {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(0, 0, 0, 0.15);
+  color: inherit;
+  resize: vertical;
+}
+
+.mrs-footer {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.mrs-footer--stack { flex-direction: column; }
+
+.mrs-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: transparent;
+  color: inherit;
+  font-weight: 600;
+}
+
+.mrs-btn--primary {
+  background: var(--interactive-primary, #3b82f6);
+  border-color: transparent;
+  color: #fff;
+}
+
+.mrs-btn--ghost { background: transparent; }
+
 .mrp-list {
   list-style: none;
   padding: 0;

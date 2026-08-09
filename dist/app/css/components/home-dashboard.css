@@ -308,3 +308,65 @@ body:not(.theme-light) .home-streak-badge {
   color: var(--interactive-primary);
   font-weight: 600;
 }
+
+/* Weekly digest card (Fase 4.1) */
+.weekly-digest-card__inner {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
+}
+
+.weekly-digest-card__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.weekly-digest-card__icon { font-size: 22px; }
+
+.weekly-digest-card__title {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.weekly-digest-card__period {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.weekly-digest-card__open {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.weekly-digest-card__stat {
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.weekly-digest-card__change {
+  margin-left: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.weekly-digest-card__list {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.weekly-digest-card__list li { margin-bottom: 4px; }
+
+.weekly-digest-card__rec {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--interactive-primary);
+}

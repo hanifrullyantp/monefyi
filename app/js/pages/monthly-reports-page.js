@@ -25,6 +25,9 @@ export async function renderMonthlyReportsPage(container) {
       <header class="mrp-header">
         <h1>Laporan Bulanan</h1>
         <p class="muted">Bulan yang sudah ditutup buku</p>
+        <button type="button" class="mrp-review-btn tap" data-action="monthly-review">
+          ${Icon('bookOpen', { size: 16 })} Review Bulan Ini
+        </button>
       </header>
       ${closed.length ? `
         <ul class="mrp-list">
@@ -38,6 +41,24 @@ export async function renderMonthlyReportsPage(container) {
     btn.addEventListener('click', () => {
       const period = btn.getAttribute('data-period');
       printReport(period, closed.find((p) => p.period === period), txs);
+    });
+  });
+
+  container.querySelector('[data-action="monthly-review"]')?.addEventListener('click', async () => {
+    const period = window.STATE?.selectedMonth
+      || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    const { showMonthlyReviewSheet } = await import('../components/monthly-review-sheet.js');
+    await showMonthlyReviewSheet({
+      period,
+      transactions: txs,
+      onClosing: async () => {
+        const { showMonthlyClosingModal } = await import('../components/monthly-closing-modal.js');
+        await showMonthlyClosingModal({
+          period,
+          transactions: txs,
+          upsertTransaction: window.upsertTransaction,
+        });
+      },
     });
   });
 }

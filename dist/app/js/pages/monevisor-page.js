@@ -41,6 +41,24 @@ export async function renderMonevisorPage(container, options = {}) {
     const diagnosis = diagnoseFinancials(report);
     renderDiagnosis(container, report, diagnosis);
 
+    try {
+      const { computeFinancialHealthScore, saveScoreSnapshot } = await import('../services/financial-health-score.js');
+      const { renderFinancialHealthCard } = await import('../components/financial-health-card.js');
+      const score = computeFinancialHealthScore(window.STATE || {});
+      saveScoreSnapshot(score);
+      const host = container.querySelector('#mvHealthScoreHost');
+      if (host) {
+        host.appendChild(renderFinancialHealthCard(score, {
+          onViewDetail: () => {
+            const details = container.querySelector('.mv-legacy-collapse');
+            if (details) details.open = true;
+          },
+        }));
+      }
+    } catch (e) {
+      console.warn('[monevisor] health score', e);
+    }
+
     if (options.prefillMessage || options.expandChat || options.focus) {
       setTimeout(() => {
         const details = container.querySelector('.mv-chat-collapse');
@@ -198,6 +216,8 @@ function renderDiagnosis(container, report, dx) {
           savingRate >= 0.2 ? 'Target tercapai' : 'Target: 20%',
         )}
       </section>
+
+      <div id="mvHealthScoreHost" class="mv-health-score-host"></div>
 
       ${dx.diagnoses.filter(Boolean).length ? `
         <details class="mv-legacy-collapse">
