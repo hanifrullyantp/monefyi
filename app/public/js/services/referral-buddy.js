@@ -92,6 +92,86 @@ const BUDDY_POOL = [
   { id: 'buddy_8834', label: 'User#8834', goal: 'mindful_spending', on_track: 76 },
 ];
 
+function resolveBuddyGoal(state = typeof window !== 'undefined' ? window.STATE : {}) {
+  try {
+    const enrollment = JSON.parse(localStorage.getItem('monefyi_coaching_enrollment') || 'null');
+    if (enrollment?.plan_id) return enrollment.plan_id;
+  } catch { /* ignore */ }
+  return 'emergency_fund';
+}
+
+function pickLocalBuddy(goal) {
+  return BUDDY_POOL.find((b) => b.goal === goal) || BUDDY_POOL[0];
+}
+
+function persistBuddy(buddy) {
+  localStorage.setItem(LS_BUDDY, JSON.stringify(buddy));
+  if (typeof window !== 'undefined') {
+    import('./community-store.js').then(async ({ syncBuddyPair }) => {
+      const pairId = await syncBuddyPair(buddy);
+      if (pairId) localStorage.setItem(LS_BUDDY_PAIR, pairId);
+    }).catch(() => {});
+  }
+  return buddy;
+}
+
+/**
+ * Try matching another active user with similar goal via Supabase.
+ * @param {string} goal
+ * @returns {Promise<object|null>}
+ */
+export async function findRemoteBuddy(goal) {
+  const uid = typeof window !== 'undefined' ? window.STATE?.db?.user?.id : null;
+  const client = typeof window !== 'undefined' ? window.STATE?.db?.supa : null;
+  if (!uid || !client || navigator.onLine === false) return null;
+
+  try {
+    const { data } = await client
+      .from('buddy_pairs')
+      .select('user_id, goal, on_track_pct')
+      .eq('goal', goal)
+      .eq('active', true)
+      .neq('user_id', uid)
+      .limit(8);
+    if (!Array.isArray(data) || !data.length) return null;
+
+    const pick = data[Math.floor(Math.random() * data.length)];
+    return {
+      id: `buddy_${String(pick.user_id).slice(0, 8)}`,
+      buddy_user_id: pick.user_id,
+      label: `User#${String(pick.user_id).slice(0, 4).toUpperCase()}`,
+      goal: pick.goal,
+      on_track: pick.on_track_pct || 75,
+      matched_at: new Date().toISOString(),
+      remote: true,
+      weekly_message: 'Semangat! Progress kita on-track minggu ini 💪',
+    };
+  } catch (e) {
+    console.warn('[referral-buddy] remote match', e);
+    return null;
+  }
+}
+
+/**
+ * @param {object} [state]
+ * @returns {Promise<object>}
+ */
+export async function matchBuddyAsync(state = typeof window !== 'undefined' ? window.STATE : {}) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LS_BUDDY) || 'null');
+    if (saved?.id) return saved;
+  } catch { /* ignore */ }
+
+  const goal = resolveBuddyGoal(state);
+  const remote = await findRemoteBuddy(goal);
+  const match = remote || {
+    ...pickLocalBuddy(goal),
+    matched_at: new Date().toISOString(),
+    weekly_message: 'Semangat! Progress kita on-track minggu ini 💪',
+  };
+  return persistBuddy(match);
+}
+
 /**
  * @param {object} [state]
  * @returns {object}
@@ -102,25 +182,13 @@ export function matchBuddy(state = typeof window !== 'undefined' ? window.STATE 
     if (saved?.id) return saved;
   } catch { /* ignore */ }
 
-  const enrollment = JSON.parse(localStorage.getItem('monefyi_coaching_enrollment') || 'null');
-  const goal = enrollment?.plan_id || 'emergency_fund';
-  const match = BUDDY_POOL.find((b) => b.goal === goal) || BUDDY_POOL[0];
-
-  const buddy = {
-    ...match,
+  const goal = resolveBuddyGoal(state);
+  const match = {
+    ...pickLocalBuddy(goal),
     matched_at: new Date().toISOString(),
     weekly_message: 'Semangat! Progress kita on-track minggu ini 💪',
   };
-  localStorage.setItem(LS_BUDDY, JSON.stringify(buddy));
-
-  if (typeof window !== 'undefined') {
-    import('./community-store.js').then(async ({ syncBuddyPair }) => {
-      const pairId = await syncBuddyPair(buddy);
-      if (pairId) localStorage.setItem(LS_BUDDY_PAIR, pairId);
-    }).catch(() => {});
-  }
-
-  return buddy;
+  return persistBuddy(match);
 }
 
 /**
@@ -199,6 +267,8 @@ if (typeof window !== 'undefined') {
     addReferralCredit,
     loadReferralHistory,
     matchBuddy,
+    matchBuddyAsync,
+    findRemoteBuddy,
     sendBuddyEncouragement,
     loadBuddyMessages,
     sendBuddyMessage,

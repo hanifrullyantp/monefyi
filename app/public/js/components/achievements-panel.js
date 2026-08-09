@@ -12,6 +12,8 @@ let _host = null;
 export async function showAchievementsPanel(opts = {}) {
   const { loadAchievements } = await import('../services/mini-win-engine.js');
   const { computeAchievementProgress } = await import('../services/achievement-catalog.js');
+  const { syncCatalogAchievements } = await import('../services/achievement-store.js');
+  await syncCatalogAchievements(window.STATE || {});
   const earned = await loadAchievements();
   const progress = computeAchievementProgress(window.STATE || {}, earned);
 

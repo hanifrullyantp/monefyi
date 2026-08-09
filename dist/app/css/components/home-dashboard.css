@@ -212,6 +212,65 @@ body:not(.theme-light) .home-streak-badge {
   padding: 4px;
 }
 
+.what-if-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 16px 12px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.what-if-tab {
+  flex: 1;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.what-if-tab.is-active {
+  background: color-mix(in srgb, var(--interactive-primary) 12%, transparent);
+  color: var(--interactive-primary);
+}
+
+.what-if-tab:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.what-if-verdict {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.what-if-verdict--ok { background: rgba(16, 185, 129, 0.12); color: #10b981; }
+.what-if-verdict--warn { background: rgba(245, 158, 11, 0.12); color: #f59e0b; }
+.what-if-verdict--danger { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
+
+.what-if-scenarios {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.what-if-scenario {
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  font-size: 13px;
+}
+
+.what-if-scenario--alt {
+  border-color: color-mix(in srgb, var(--interactive-primary) 30%, var(--card-border));
+}
+
 /* What-if simulator (Fase 2.2) */
 .what-if-modal input[type="range"] {
   width: 100%;

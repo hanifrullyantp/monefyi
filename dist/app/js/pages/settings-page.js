@@ -1014,7 +1014,8 @@ async function renderInnovation(body) {
       }
     });
     body.querySelector('#spFindBuddy')?.addEventListener('click', async () => {
-      matchBuddy();
+      const { matchBuddyAsync } = await import('../services/referral-buddy.js');
+      await matchBuddyAsync();
       const { showBuddyChatSheet } = await import('../components/buddy-chat-sheet.js');
       showBuddyChatSheet();
     });

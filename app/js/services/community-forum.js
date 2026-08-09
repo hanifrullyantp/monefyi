@@ -168,9 +168,12 @@ function getSeedAnswers(seedId) {
  * @returns {Promise<object>}
  */
 export async function postForumQuestion(payload) {
+  const { moderateForumQuestion } = await import('./community-forum-moderation.js');
+  const mod = moderateForumQuestion(payload);
+  if (!mod.ok) throw new Error(mod.reason || 'Konten ditolak');
+
   const title = String(payload.title || '').trim().slice(0, 200);
   const body = String(payload.body || '').trim().slice(0, 1000);
-  if (!title) throw new Error('Judul pertanyaan wajib diisi');
 
   const row = {
     id: `local_q_${Date.now()}`,
@@ -213,8 +216,11 @@ export async function postForumQuestion(payload) {
  * @returns {Promise<object>}
  */
 export async function postForumAnswer(questionId, body) {
+  const { moderateForumText } = await import('./community-forum-moderation.js');
+  const mod = moderateForumText(body);
+  if (!mod.ok) throw new Error(mod.reason || 'Jawaban ditolak');
+
   const text = String(body || '').trim().slice(0, 800);
-  if (!text) throw new Error('Jawaban tidak boleh kosong');
 
   const row = {
     id: `local_a_${Date.now()}`,

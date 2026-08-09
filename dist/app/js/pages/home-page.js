@@ -362,10 +362,31 @@ async function renderV2Home(container, data, ctx, callbacks, formatIDR, formatCo
         container.appendChild(renderBenchmarkCard(benchmark, {
           onSettings: () => { window.location.hash = '#settings/social'; },
         }));
+        import('../services/benchmark-store.js').then(({ syncBenchmarkSnapshot }) => {
+          syncBenchmarkSnapshot(state).catch(() => {});
+        }).catch(() => {});
       }
     }
   } catch (e) {
     console.warn('[home] benchmark card', e);
+  }
+
+  try {
+    const { getNextAchievementHint, syncCatalogAchievements } = await import('../services/achievement-store.js');
+    await syncCatalogAchievements(state);
+    const hint = getNextAchievementHint(state);
+    if (hint && hint.unlockedCount < hint.total) {
+      const { renderAchievementTeaserCard } = await import('../components/achievement-teaser-card.js');
+      const teaser = renderAchievementTeaserCard(hint, {
+        onOpen: async () => {
+          const { showAchievementsPanel } = await import('../components/achievements-panel.js');
+          await showAchievementsPanel();
+        },
+      });
+      if (teaser) container.appendChild(teaser);
+    }
+  } catch (e) {
+    console.warn('[home] achievement teaser', e);
   }
 
   try {

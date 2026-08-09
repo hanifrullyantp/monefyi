@@ -252,6 +252,14 @@ export function renderQuickPreview(parsed, callbacks = {}) {
       // Learning MUST NOT block save
       console.error('[quick-preview] learning failed (non-fatal):', learnErr);
     }
+
+    try {
+      const { recordMerchantCategory } = await import('../services/auto-categorizer.js');
+      const merchant = edited.merchant || container.dataset.autoCatMerchant || '';
+      if (merchant && edited.category) {
+        recordMerchantCategory(merchant, edited.category);
+      }
+    } catch { /* non-fatal */ }
     // ────────────────────────────────────────────────────────────────────────
 
     onSave?.(edited, parsed);
@@ -314,6 +322,9 @@ async function applyAutoCategorySuggestion(container, parsed) {
     amount: parsed.amount,
   });
   if (!suggestion.category) return;
+
+  container.dataset.autoCatSuggestion = suggestion.category;
+  container.dataset.autoCatMerchant = parsed.merchant || parsed.notes || '';
 
   input.value = suggestion.category;
   const badgeEl = container.querySelector('#qp-auto-cat');

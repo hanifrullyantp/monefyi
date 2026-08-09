@@ -2294,6 +2294,12 @@ async function upsertTransaction_legacy_local(tx) {
         import('./components/recurring-detect-sheet.js')
           .then(({ maybePromptRecurringDetection }) => maybePromptRecurringDetection(STATE))
           .catch((e) => console.warn('recurringDetect', e));
+        import('./services/community-store.js')
+          .then(({ pullRemoteChallenges }) => pullRemoteChallenges().catch(() => {}))
+          .catch((e) => console.warn('communityPull', e));
+        import('./services/achievement-store.js')
+          .then(({ syncCatalogAchievements }) => syncCatalogAchievements(STATE).catch(() => {}))
+          .catch((e) => console.warn('achievementSync', e));
         rerender();
         ensureAppShellVisible();
       } catch (e) {
