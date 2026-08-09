@@ -5937,6 +5937,17 @@ function generateSmartBudgetRecommendation() {
       if (typeof openInlineEdit._commit === 'function') openInlineEdit._commit();
     }
 
+    function maybeShowBulkActionsHint() {
+      const key = 'monefyi_bulk_hint_shown';
+      try {
+        if (localStorage.getItem(key)) return;
+        localStorage.setItem(key, '1');
+      } catch { return; }
+      const msg = 'Tip: centang beberapa transaksi untuk salin, duplikat, atau ubah kategori sekaligus.';
+      if (typeof showToast === 'function') showToast(msg, 'info');
+      else if (typeof window.showToast === 'function') window.showToast(msg, 'info');
+    }
+
     async function updateTxEditToolbar() {
       const st = window.monefyiTxEditSession?.getTxEditState?.() || {
         draftCount: 0, selectedCount: 0, isDirty: false,
@@ -5963,6 +5974,10 @@ function generateSmartBudgetRecommendation() {
       if (copyBtn) copyBtn.disabled = !hasSel;
       if (dupBtn) dupBtn.disabled = !hasSel;
       if (catBtn) catBtn.disabled = !hasSel;
+
+      if (hasSel && st.selectedCount === 1) {
+        maybeShowBulkActionsHint();
+      }
 
       try {
         const canU = await window.monefyiUndo?.canUndo?.();

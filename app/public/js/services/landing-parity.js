@@ -109,6 +109,33 @@ export const LANDING_PROMISES = [
     entitlement: null,
     critical: false,
   },
+  {
+    id: 'what_if_simulator',
+    label: 'What-If Financial Simulator',
+    landingSection: 'Growth — Pro+',
+    minPlan: 'monthly',
+    featureFlag: null,
+    entitlement: null,
+    critical: false,
+  },
+  {
+    id: 'community_forum',
+    label: 'Community Q&A & Buddy',
+    landingSection: 'Growth — Community',
+    minPlan: 'trial',
+    featureFlag: null,
+    entitlement: null,
+    critical: false,
+  },
+  {
+    id: 'financial_health_score',
+    label: 'Financial Health Score (6 komponen)',
+    landingSection: 'Growth — Monthly Review',
+    minPlan: 'trial',
+    featureFlag: null,
+    entitlement: null,
+    critical: false,
+  },
 ];
 
 /**
@@ -164,6 +191,23 @@ export function auditLandingParity(flagsMap = {}) {
 }
 
 /**
+ * User-facing parity summary for settings.
+ * @returns {Promise<{ score: number, ready: boolean, criticalFails: number, topIssues: object[] }>}
+ */
+export async function getUserParitySummary() {
+  const audit = await runLandingParityAudit();
+  const topIssues = audit.items
+    .filter((i) => i.status !== 'ok')
+    .slice(0, 4);
+  return {
+    score: audit.score,
+    ready: audit.ready,
+    criticalFails: audit.criticalFails,
+    topIssues,
+  };
+}
+
+/**
  * Load flags from STATE/local cache and run audit.
  * @returns {Promise<{ items: object[], score: number, criticalFails: number, ready: boolean }>}
  */
@@ -186,5 +230,5 @@ export async function runLandingParityAudit() {
 }
 
 if (typeof window !== 'undefined') {
-  window.monefyiLandingParity = { LANDING_PROMISES, auditLandingParity, runLandingParityAudit };
+  window.monefyiLandingParity = { LANDING_PROMISES, auditLandingParity, runLandingParityAudit, getUserParitySummary };
 }

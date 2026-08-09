@@ -107,9 +107,10 @@ export function getDailyDashboardInsight(state = typeof window !== 'undefined' ?
 /**
  * @param {string} category
  * @param {object} [state]
+ * @param {{ dailyBudgetTarget?: number }} [opts]
  * @returns {object|null}
  */
-export function getCategoryDetailInsight(category, state = typeof window !== 'undefined' ? window.STATE : {}) {
+export function getCategoryDetailInsight(category, state = typeof window !== 'undefined' ? window.STATE : {}, opts = {}) {
   const txs = dedupeTransactions(state.transactions || []);
   const cat = String(category || 'Lainnya');
   const now = new Date();
@@ -136,12 +137,20 @@ export function getCategoryDetailInsight(category, state = typeof window !== 'un
 
   const pct = lastTotal > 0 ? Math.round(((thisTotal - lastTotal) / lastTotal) * 100) : 0;
   const daily = thisWeek.length ? Math.round(thisTotal / Math.max(now.getDay() || 1, 1)) : 0;
+  const dailyTarget = Number(opts.dailyBudgetTarget || 0);
+
+  let body = `Minggu ini: Rp ${fmt(thisTotal)} (${pct >= 0 ? '+' : ''}${pct}% vs minggu lalu). Rata-rata harian ~Rp ${fmt(daily)}.`;
+  if (dailyTarget > 0 && daily > 0) {
+    const vsTarget = Math.round(((dailyTarget - daily) / dailyTarget) * 100);
+    if (vsTarget >= 5) body += ` Kamu ${vsTarget}% di bawah target harian ✅`;
+    else if (vsTarget <= -10) body += ` ${Math.abs(vsTarget)}% di atas target harian ⚠️`;
+  }
 
   return {
     id: 'category-trend',
     icon: '📈',
     title: `Trend ${cat}`,
-    body: `Minggu ini: Rp ${fmt(thisTotal)} (${pct >= 0 ? '+' : ''}${pct}% vs minggu lalu). Rata-rata harian ~Rp ${fmt(daily)}.`,
+    body,
     severity: pct > 15 ? 'warn' : 'info',
   };
 }

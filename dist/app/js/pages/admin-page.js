@@ -14,6 +14,7 @@ const TABS = [
   { id: 'notifications', label: 'Notifications' },
   { id: 'feature-flags', label: 'Feature Flags' },
   { id: 'feedback', label: 'Feedback' },
+  { id: 'refunds', label: 'Refunds' },
   { id: 'config', label: 'Config' },
   { id: 'tutorial', label: 'Tutorial' },
 ];
@@ -192,6 +193,7 @@ async function loadTab(tab) {
       await renderAdminFeatureFlags(body, { toast, escapeHtml, fmtNum });
     }
     else if (tab === 'feedback') await renderFeedback(body);
+    else if (tab === 'refunds') await renderRefunds(body);
     else if (tab === 'config') await renderConfig(body);
     else if (tab === 'tutorial') await renderTutorial(body);
   } catch (e) {
@@ -896,5 +898,82 @@ async function renderTutorial(body) {
       st.textContent = e.message || 'Seed gagal';
     }
   });
+  await load();
+}
+
+/* ─── Refunds ─── */
+async function renderRefunds(body) {
+  body.innerHTML = `
+    <div class="admin-toolbar">
+      <h2 style="margin:0">Refund Requests</h2>
+      <select id="rfStatus" class="admin-input">
+        <option value="pending">pending</option>
+        <option value="all">all</option>
+        <option value="approved">approved</option>
+        <option value="rejected">rejected</option>
+      </select>
+      <button type="button" class="admin-btn ghost" id="rfRefresh">Refresh</button>
+    </div>
+    <div class="admin-card" id="rfList"><p class="admin-muted">Memuat…</p></div>
+  `;
+
+  const load = async () => {
+    const list = body.querySelector('#rfList');
+    const status = body.querySelector('#rfStatus')?.value || 'pending';
+    list.innerHTML = '<p class="admin-muted">Memuat…</p>';
+    try {
+      const { listRefundRequestsAdmin } = await import('../services/refund-request.js');
+      const rows = await listRefundRequestsAdmin({ status, limit: 50 });
+      if (!rows.length) {
+        list.innerHTML = '<p class="admin-muted">Tidak ada permintaan refund.</p>';
+        return;
+      }
+      list.innerHTML = `
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead><tr><th>Tanggal</th><th>Plan</th><th>Alasan</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody>
+              ${rows.map((r) => `
+                <tr data-id="${escapeHtml(r.id)}">
+                  <td class="admin-muted" style="font-size:11px">${escapeHtml(String(r.created_at || '').slice(0, 16))}</td>
+                  <td>${escapeHtml(r.plan_type || '—')}</td>
+                  <td style="max-width:240px">${escapeHtml(String(r.reason || '').slice(0, 120))}</td>
+                  <td><span class="admin-badge">${escapeHtml(r.status)}</span></td>
+                  <td>
+                    ${r.status === 'pending' ? `
+                      <button type="button" class="admin-btn ghost" data-rf-act="approve">Approve</button>
+                      <button type="button" class="admin-btn ghost danger" data-rf-act="reject">Reject</button>
+                    ` : escapeHtml(r.admin_notes || '—')}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+      list.querySelectorAll('[data-rf-act]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const row = btn.closest('tr');
+          const id = row?.getAttribute('data-id');
+          const act = btn.getAttribute('data-rf-act');
+          if (!id || !act) return;
+          const notes = prompt('Catatan admin (opsional):') || '';
+          try {
+            const { processRefundRequest } = await import('../services/refund-request.js');
+            await processRefundRequest(id, act === 'approve' ? 'approved' : 'rejected', notes);
+            toast(`Refund ${act === 'approve' ? 'disetujui' : 'ditolak'}`, 'success');
+            await load();
+          } catch (e) {
+            toast(e.message || 'Gagal', 'error');
+          }
+        });
+      });
+    } catch (e) {
+      list.innerHTML = `<p class="admin-muted">Gagal: ${escapeHtml(e.message)}</p>`;
+    }
+  };
+
+  body.querySelector('#rfRefresh')?.addEventListener('click', load);
+  body.querySelector('#rfStatus')?.addEventListener('change', load);
   await load();
 }

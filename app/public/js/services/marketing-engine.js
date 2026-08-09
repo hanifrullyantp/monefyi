@@ -289,6 +289,23 @@ function getFallbackOffers() {
       target_audience_json: { plans: ['trial'], min_days_since_registration: 3 },
       display_rules_json: { trigger: 'app_startup' },
     },
+    {
+      id: 'local-couple-banner',
+      offer_type: 'couple_not_activated',
+      priority: 9,
+      max_shows_per_user: 3,
+      cooldown_days: 10,
+      content_json: {
+        headline: 'Pasangan belum diundang',
+        body: 'Kamu sudah beli Couple Pack — undang pasangan sekarang agar bisa kelola keuangan bersama.',
+        cta_text: 'Undang Pasangan',
+        cta_action: 'open_settings_household',
+        display_format: 'banner',
+        dismiss_label: 'Nanti',
+      },
+      target_audience_json: { household_status: 'couple_inactive' },
+      display_rules_json: { trigger: 'app_startup' },
+    },
   ];
 }
 
@@ -437,7 +454,10 @@ function passesGlobalRules(rules, interactions) {
  */
 export async function getEligibleOffers(opts = {}) {
   const prefs = await loadUserPreferences();
-  if (prefs.frequency === 'off' || prefs.marketing_enabled === false) return null;
+  const skipMarketingPrefs = opts.skipMarketingPrefs === true;
+  if (!skipMarketingPrefs && (prefs.frequency === 'off' || prefs.marketing_enabled === false)) {
+    return null;
+  }
 
   const rules = await loadGlobalRules();
   const ctx = buildUserContext(opts.state || window.STATE);
@@ -454,7 +474,10 @@ export async function getEligibleOffers(opts = {}) {
   const eligible = offers
     .filter((o) => !formatFilter || (o.content_json?.display_format || 'modal') === formatFilter)
     .filter((o) => matchesAudience(o, ctx))
-    .filter((o) => passesOfferTypePrefs(o, prefs))
+    .filter((o) => {
+      if (!skipMarketingPrefs) return passesOfferTypePrefs(o, prefs);
+      return o.offer_type === 'couple_not_activated';
+    })
     .filter((o) => passesCooldown(o, interactions, rules))
     .filter((o) => {
       const t = o.display_rules_json?.trigger || 'app_startup';
@@ -500,6 +523,7 @@ export async function getDashboardBannerOffer(opts = {}) {
     trigger: opts.trigger || 'app_startup',
     formatFilter: 'banner',
     skipGlobalRules: true,
+    skipMarketingPrefs: true,
   });
   return offer;
 }

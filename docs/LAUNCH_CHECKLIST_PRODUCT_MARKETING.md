@@ -1,16 +1,17 @@
 # Launch Checklist — Product-Marketing Sync
 
-Checklist Sprint 6 sebelum public launch Monefyi PWA.
+Checklist Sprint 6+ sebelum public launch Monefyi PWA.
 
 ## 1. Landing ↔ App Parity
 
 - [ ] Buka Admin → Landing → **Parity Audit** — score ≥ 90%, zero critical fails
+- [ ] Settings → Akun → **Janji produk** card menampilkan score & issues
 - [ ] Setiap janji di pricing page bisa diakses user dengan plan yang benar
 - [ ] Fitur "coming soon" di landing sudah dihapus atau diberi timeline
 
 ## 2. Database Migrations (urutan)
 
-**Status: ✅ Applied to remote Supabase (2026-08-09)**
+**Product-Marketing (Sprint 1–6):**
 
 1. `20260809140000_product_marketing_sync.sql`
 2. `20260809150000_marketing_contextual_offers.sql`
@@ -18,8 +19,18 @@ Checklist Sprint 6 sebelum public launch Monefyi PWA.
 4. `20260809170000_sprint4_marketing_advanced.sql`
 5. `20260809180000_sprint5_feature_flags.sql`
 6. `20260809190000_sprint6_beta_launch.sql`
+7. `20260809240000_product_marketing_compliance.sql` — account deletion + refund requests
 
-Re-deploy: `./scripts/deploy-monefyi-product-marketing.sh`
+Re-deploy product-marketing: `./scripts/deploy-monefyi-product-marketing.sh`
+
+**Growth Phase (Sprint 7–18 + advanced):**
+
+8. `20260809200000_growth_phase1_insights.sql`
+9. `20260809210000_sprint8_monthly_review.sql`
+10. `20260809220000_sprint13_18_community.sql`
+11. `20260809230000_growth_advanced.sql`
+
+Re-deploy growth: `./scripts/deploy-growth-migrations.sh`
 
 ## 3. Feature Flags (Admin → Feature Flags)
 
@@ -36,13 +47,20 @@ Re-deploy: `./scripts/deploy-monefyi-product-marketing.sh`
 ## 4. Marketing Engine QA
 
 - [ ] Startup offer muncul setelah 3 detik (first login hari ini)
+- [ ] Couple Pack banner tampil saat `household_status = couple_inactive` (meski marketing prefs off)
 - [ ] Dismiss → tidak muncul lagi hari itu
 - [ ] Cooldown 7 hari setelah dismiss
 - [ ] 3× dismiss → blacklist 30 hari
 - [ ] Offer tidak muncul saat `financial_status = danger`
 - [ ] Contextual trigger `goal_creation_attempted` untuk Basic user
 
-## 5. Admin Panel
+## 5. Compliance (Features 6 & 7)
+
+- [ ] Settings → Akun → Hapus akun — konfirmasi frase + soft delete 30 hari
+- [ ] Settings → Bantuan → Minta refund — validasi 7 hari
+- [ ] Admin → Refunds — approve/reject workflow
+
+## 6. Admin Panel
 
 - [ ] Campaign create/edit/activate
 - [ ] Global rules editable
@@ -50,8 +68,9 @@ Re-deploy: `./scripts/deploy-monefyi-product-marketing.sh`
 - [ ] Analytics funnel tampil
 - [ ] User card → Marketing → test offer queue
 - [ ] Feature flags toggle tanpa deploy
+- [ ] Refund requests panel
 
-## 6. Beta Test (real users)
+## 7. Beta Test (real users)
 
 - [ ] Invite 10–20 beta testers (lifetime early_access atau flag override)
 - [ ] Beta banner tampil di beranda
@@ -59,19 +78,20 @@ Re-deploy: `./scripts/deploy-monefyi-product-marketing.sh`
 - [ ] Monitor error rate Sentry < 2%
 - [ ] Fix P0/P1 issues sebelum launch
 
-## 7. Legal & Compliance
+## 8. Legal & Compliance
 
 - [ ] Privacy policy & terms link di landing footer
 - [ ] Cookie/tracking consent jika analytics aktif
 - [ ] Refund policy selaras dengan checkout copy
+- [ ] Account deletion flow documented in privacy policy
 
-## 8. Performance
+## 9. Performance
 
 - [ ] Service worker cache bump & verify offline shell
 - [ ] Marketing offers cache TTL 5 menit
 - [ ] Feature flags sync < 500ms on boot
 
-## 9. Success Metrics (30 hari post-launch)
+## 10. Success Metrics (30 hari post-launch)
 
 | Metric | Target |
 |--------|--------|

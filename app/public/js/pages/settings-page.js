@@ -14,6 +14,7 @@ const SECTIONS = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'accounts', label: 'Akun keuangan' },
   { id: 'notifications', label: 'Notifikasi' },
+  { id: 'help', label: 'Bantuan' },
   { id: 'email-import', label: 'Email Import' },
   { id: 'ai', label: 'AI' },
   { id: 'monevisor', label: 'Monevisor' },
@@ -151,11 +152,12 @@ async function renderActiveSection() {
   if (!body) return;
   body.innerHTML = '<p class="settings-status">Memuat…</p>';
   try {
-    if (_section === 'account') renderAccount(body);
+    if (_section === 'account') await renderAccount(body);
     else if (_section === 'appearance') renderAppearance(body);
     else if (_section === 'dashboard') renderDashboard(body);
     else if (_section === 'accounts') renderAccounts(body);
     else if (_section === 'notifications') await renderNotifications(body);
+    else if (_section === 'help') await renderHelp(body);
     else if (_section === 'email-import') await renderEmailImport(body);
     else if (_section === 'ai') renderAi(body);
     else if (_section === 'monevisor') await renderMonevisor(body);
@@ -184,7 +186,7 @@ function switchRow(id, label, hint, checked) {
 }
 
 /* ─── Account & security ─── */
-function renderAccount(body) {
+async function renderAccount(body) {
   const profile = getProfile();
   const user = getUser();
   const name = profile.name || window.STATE?.user?.name || '';
@@ -247,6 +249,14 @@ function renderAccount(body) {
         <button type="button" class="settings-btn ghost" id="spResetOnboarding">Ulangi onboarding</button>
         <span class="settings-status" id="spResetObStatus">—</span>
       </div>
+    </div>
+    <div class="settings-card" id="spParityHost">
+      <h2>Janji produk</h2>
+      <p class="settings-desc">Memuat status sinkronisasi landing ↔ aplikasi…</p>
+    </div>
+    <div class="settings-card" id="spDeletionHost">
+      <h2>Hapus akun</h2>
+      <p class="settings-desc">Memuat…</p>
     </div>
     <div class="settings-card">
       <h2>Sesi</h2>
@@ -340,6 +350,186 @@ function renderAccount(body) {
 
   body.querySelector('#spOpenAdmin')?.addEventListener('click', () => {
     _ctx.openAdmin?.();
+  });
+
+  await mountAccountComplianceSections(body);
+}
+
+async function mountAccountComplianceSections(body) {
+  try {
+    const { getUserParitySummary } = await import('../services/landing-parity.js');
+    const summary = await getUserParitySummary();
+    const parityHost = body.querySelector('#spParityHost');
+    if (parityHost) {
+      const badge = summary.ready ? '✅ Sinkron' : '⚠️ Perlu perhatian';
+      parityHost.innerHTML = `
+        <h2>Janji produk</h2>
+        <p class="settings-desc">Transparansi fitur yang dijanjikan di landing page vs yang tersedia di app.</p>
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <div class="settings-row-label">Parity score</div>
+            <div class="settings-row-hint">${badge} · ${summary.score}% · critical fails: ${summary.criticalFails}</div>
+          </div>
+          <span class="settings-badge">${summary.score}%</span>
+        </div>
+        ${summary.topIssues.length ? `
+          <ul class="settings-list" style="margin-top:8px;font-size:13px">
+            ${summary.topIssues.map((i) => `<li>${escapeHtml(i.label)} — ${escapeHtml(i.message)}</li>`).join('')}
+          </ul>
+        ` : '<p class="settings-desc" style="margin-top:8px">Semua janji utama terpenuhi.</p>'}
+      `;
+    }
+  } catch (e) {
+    const parityHost = body.querySelector('#spParityHost');
+    if (parityHost) parityHost.innerHTML = `<h2>Janji produk</h2><p class="settings-desc">${escapeHtml(e.message || 'Gagal memuat')}</p>`;
+  }
+
+  try {
+    const {
+      getDeletionStatus,
+      requestAccountDeletion,
+      cancelAccountDeletion,
+      getDeletionChecklist,
+      daysUntilHardDelete,
+      DELETION_CONFIRM_PHRASE,
+    } = await import('../services/account-deletion.js');
+
+    const host = body.querySelector('#spDeletionHost');
+    if (!host) return;
+
+    const status = await getDeletionStatus();
+    const checklist = getDeletionChecklist();
+
+    if (status?.status === 'pending') {
+      const daysLeft = daysUntilHardDelete(status.scheduled_hard_delete_at);
+      host.innerHTML = `
+        <h2>Hapus akun</h2>
+        <p class="settings-desc">Permintaan hapus akun aktif. Akun akan dihapus permanen dalam <strong>${daysLeft} hari</strong>.</p>
+        <div class="settings-actions">
+          <button type="button" class="settings-btn ghost" id="spCancelDeletion">Batalkan hapus akun</button>
+          <span class="settings-status" id="spDeletionStatus">—</span>
+        </div>
+      `;
+      host.querySelector('#spCancelDeletion')?.addEventListener('click', async () => {
+        const st = host.querySelector('#spDeletionStatus');
+        st.textContent = 'Membatalkan…';
+        const res = await cancelAccountDeletion();
+        st.textContent = res.success ? 'Dibatalkan.' : (res.error || 'Gagal');
+        if (res.success) {
+          toast('Permintaan hapus akun dibatalkan', 'success');
+          await mountAccountComplianceSections(body);
+        }
+      });
+      return;
+    }
+
+    host.innerHTML = `
+      <h2>Hapus akun</h2>
+      <p class="settings-desc">Soft delete 30 hari — masih bisa dipulihkan sebelum hard delete.</p>
+      <ul class="settings-list" style="font-size:13px;margin-bottom:12px">
+        ${checklist.map((c) => `<li>${escapeHtml(c)}</li>`).join('')}
+      </ul>
+      <div class="settings-field">
+        <label>Alasan (opsional)</label>
+        <textarea class="settings-input" id="spDeletionReason" rows="2" maxlength="500"></textarea>
+      </div>
+      <div class="settings-field">
+        <label>Ketik "${DELETION_CONFIRM_PHRASE}" untuk konfirmasi</label>
+        <input class="settings-input" id="spDeletionConfirm" autocomplete="off" />
+      </div>
+      <div class="settings-actions">
+        <button type="button" class="settings-btn danger" id="spRequestDeletion">Hapus akun saya</button>
+        <span class="settings-status" id="spDeletionStatus">—</span>
+      </div>
+    `;
+
+    host.querySelector('#spRequestDeletion')?.addEventListener('click', async () => {
+      const st = host.querySelector('#spDeletionStatus');
+      const phrase = host.querySelector('#spDeletionConfirm')?.value || '';
+      const reason = host.querySelector('#spDeletionReason')?.value || '';
+      if (!confirm('Yakin hapus akun? Kamu punya 30 hari untuk membatalkan.')) return;
+      st.textContent = 'Memproses…';
+      const res = await requestAccountDeletion(phrase, reason);
+      if (res.success) {
+        st.textContent = 'Permintaan tercatat.';
+        toast('Permintaan hapus akun aktif — 30 hari untuk batalkan', 'success');
+        await mountAccountComplianceSections(body);
+      } else {
+        st.textContent = res.error || 'Gagal';
+      }
+    });
+  } catch (e) {
+    const host = body.querySelector('#spDeletionHost');
+    if (host) host.innerHTML = `<h2>Hapus akun</h2><p class="settings-desc">${escapeHtml(e.message || 'Gagal memuat')}</p>`;
+  }
+}
+
+async function renderHelp(body) {
+  const {
+    getPurchaseInfo,
+    submitRefundRequest,
+    listMyRefundRequests,
+    REFUND_WINDOW_DAYS,
+  } = await import('../services/refund-request.js');
+
+  const info = getPurchaseInfo(window.STATE);
+  const myRequests = await listMyRefundRequests();
+  const pending = myRequests.find((r) => r.status === 'pending');
+
+  body.innerHTML = `
+    <div class="settings-card">
+      <h2>Bantuan</h2>
+      <p class="settings-desc">Kebijakan refund, dukungan, dan pertanyaan billing.</p>
+      <div class="settings-row">
+        <div class="settings-row-info">
+          <div class="settings-row-label">Kebijakan refund</div>
+          <div class="settings-row-hint">Permintaan dalam ${REFUND_WINDOW_DAYS} hari setelah pembelian</div>
+        </div>
+      </div>
+      <div class="settings-actions">
+        <a class="settings-btn ghost" href="mailto:support@monefyi.com">Email support</a>
+      </div>
+    </div>
+    <div class="settings-card">
+      <h2>Minta refund</h2>
+      <p class="settings-desc">Plan: <strong>${escapeHtml(info.planType)}</strong>${info.purchaseDate ? ` · beli ${escapeHtml(String(info.purchaseDate).slice(0, 10))}` : ''}</p>
+      ${pending ? `
+        <p class="settings-desc">Permintaan refund kamu sedang direview (status: pending).</p>
+      ` : info.eligible ? `
+        <div class="settings-field">
+          <label>Alasan refund</label>
+          <textarea class="settings-input" id="spRefundReason" rows="3" minlength="10" maxlength="1000" placeholder="Jelaskan alasan refund…"></textarea>
+        </div>
+        <div class="settings-actions">
+          <button type="button" class="settings-btn" id="spSubmitRefund">Kirim permintaan</button>
+          <span class="settings-status" id="spRefundStatus">—</span>
+        </div>
+      ` : `
+        <p class="settings-desc">${escapeHtml(info.reason || 'Tidak eligible refund saat ini.')}</p>
+      `}
+      ${myRequests.length ? `
+        <h3 style="margin-top:16px;font-size:14px">Riwayat</h3>
+        <ul class="settings-list" style="font-size:13px">
+          ${myRequests.slice(0, 5).map((r) => `
+            <li>${escapeHtml(String(r.created_at || '').slice(0, 10))} · ${escapeHtml(r.status)} · ${escapeHtml(r.plan_type || '')}</li>
+          `).join('')}
+        </ul>
+      ` : ''}
+    </div>
+  `;
+
+  body.querySelector('#spSubmitRefund')?.addEventListener('click', async () => {
+    const status = body.querySelector('#spRefundStatus');
+    const reason = body.querySelector('#spRefundReason')?.value || '';
+    status.textContent = 'Mengirim…';
+    const res = await submitRefundRequest(reason);
+    if (res.success) {
+      status.textContent = 'Terkirim — tim akan review.';
+      toast('Permintaan refund terkirim', 'success');
+      await renderHelp(body);
+    } else {
+      status.textContent = res.error || 'Gagal';
+    }
   });
 }
 

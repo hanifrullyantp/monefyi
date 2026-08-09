@@ -8,6 +8,7 @@ import {
   getLinkedTransactions,
   PRIORITY_LEVELS,
 } from '../services/budget-model.js';
+import { getCategoryDetailInsight } from '../services/contextual-micro-insights.js';
 import { LABELS } from '../constants/language.js';
 import { Icon } from './icons.js';
 
@@ -49,6 +50,9 @@ export function showBudgetDetailModal(budget, transactions, month, options = {})
   const progress = calculateProgress(budget, transactions, month);
   const linked = progress.linkedTransactions || [];
   const priority = PRIORITY_LEVELS[budget.priority?.toUpperCase()] || PRIORITY_LEVELS.PENTING;
+  const categoryInsight = getCategoryDetailInsight(budget.name, window.STATE || {}, {
+    dailyBudgetTarget: progress.dailyBudget,
+  });
 
   const backdrop = document.createElement('div');
   backdrop.id = 'budgetDetailBackdrop';
@@ -90,6 +94,16 @@ export function showBudgetDetailModal(budget, transactions, month, options = {})
         ${progress.daysLeft > 0 ? `
           <div class="budget-detail-hint">
             Sisa ${progress.daysLeft} hari — Rp ${formatIDR(progress.dailyBudget)}/hari
+          </div>
+        ` : ''}
+
+        ${categoryInsight ? `
+          <div class="budget-micro-insight budget-micro-insight--${categoryInsight.severity || 'info'}">
+            <span class="budget-micro-insight__icon" aria-hidden="true">${categoryInsight.icon || '📈'}</span>
+            <div>
+              <strong>${escapeHtml(categoryInsight.title)}</strong>
+              <p>${escapeHtml(categoryInsight.body)}</p>
+            </div>
           </div>
         ` : ''}
 

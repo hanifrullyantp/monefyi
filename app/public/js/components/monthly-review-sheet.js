@@ -5,7 +5,7 @@
 
 import { Icon } from './icons.js';
 import { REVIEW_PROMPTS, saveJournalEntry } from '../services/monthly-review-journal.js';
-import { detectMonthlyPatterns } from '../services/monthly-review-patterns.js';
+import { detectMonthlyPatterns, buildBehavioralInsights } from '../services/monthly-review-patterns.js';
 import { buildClosingSummary } from '../services/monthly-closing.js';
 
 /** @type {HTMLElement|null} */
@@ -37,7 +37,7 @@ export async function showMonthlyReviewSheet(opts = {}) {
   } = opts;
 
   const summary = buildClosingSummary(period, transactions);
-  const patterns = detectMonthlyPatterns(period, transactions);
+  const patterns = buildBehavioralInsights(period, transactions);
   const monthName = new Date(`${period}-01T12:00:00`).toLocaleDateString('id-ID', {
     month: 'long', year: 'numeric',
   });
@@ -175,7 +175,7 @@ function renderStep(step, summary, answers, monthName, nextLabel) {
   if (step === 2) {
     return `
       <div class="mrs-body">
-        <h3>🔍 Kami Temukan Pattern</h3>
+        <h3>🎯 Behavioral Insight ${escapeHtml(monthName)}</h3>
         <ul class="mrs-pattern-list">
           ${(answers.patterns || []).map((p) => `<li>${escapeHtml(p.text)}</li>`).join('')
             || '<li>Belum cukup data — terus catat transaksi.</li>'}
