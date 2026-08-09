@@ -17,6 +17,7 @@ const SECTIONS = [
   { id: 'email-import', label: 'Email Import' },
   { id: 'ai', label: 'AI' },
   { id: 'monevisor', label: 'Monevisor' },
+  { id: 'social', label: 'Sosial' },
   { id: 'data', label: 'Data' },
 ];
 
@@ -157,6 +158,7 @@ async function renderActiveSection() {
     else if (_section === 'email-import') await renderEmailImport(body);
     else if (_section === 'ai') renderAi(body);
     else if (_section === 'monevisor') await renderMonevisor(body);
+    else if (_section === 'social') renderSocial(body);
     else if (_section === 'data') renderData(body);
   } catch (e) {
     console.error('[settings]', e);
@@ -660,6 +662,134 @@ async function renderMonevisor(body) {
       status.textContent = e.message || 'Gagal';
     }
   });
+}
+
+/* ─── Social (Fase 5) ─── */
+function renderSocial(body) {
+  const benchmarkOn = (() => {
+    try {
+      const { isBenchmarkOptIn } = requireSyncBenchmark();
+      return isBenchmarkOptIn(window.STATE || {});
+    } catch {
+      return localStorage.getItem('monefyi_benchmark_opt_in') === '1';
+    }
+  })();
+
+  const hh = (() => {
+    try {
+      const { loadHousehold } = requireSyncHousehold();
+      return loadHousehold();
+    } catch {
+      return null;
+    }
+  })();
+
+  body.innerHTML = `
+    <div class="settings-card">
+      <h2>Bandingkan Anonim</h2>
+      <p class="settings-desc">Opt-in untuk melihat perbandingan saving rate & pengeluaran vs peer dengan income bracket serupa. Data anonim, tidak pernah share detail transaksi.</p>
+      ${switchRow('benchmarkOptIn', 'Aktifkan perbandingan anonim', 'Tampilkan kartu benchmark di Beranda', benchmarkOn)}
+    </div>
+    <div class="settings-card">
+      <h2>Pencapaian</h2>
+      <p class="settings-desc">Badge streak, saving rate, dan refleksi bulanan.</p>
+      <div class="settings-actions">
+        <button type="button" class="settings-btn" id="spViewAchievements">Lihat badge & level</button>
+      </div>
+    </div>
+    <div class="settings-card">
+      <h2>Household / Keluarga</h2>
+      <p class="settings-desc">Kelola keuangan rumah tangga — anggota & kode undangan (local-first).</p>
+      ${hh ? `
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <div class="settings-row-label">${escapeHtml(hh.name)}</div>
+            <div class="settings-row-hint">${hh.members?.length || 1} anggota · Kode: ${escapeHtml(hh.invite_code)}</div>
+          </div>
+        </div>
+        <div class="settings-field">
+          <label>Tambah anggota</label>
+          <input class="settings-input" id="spMemberName" placeholder="Nama anggota" />
+        </div>
+        <div class="settings-actions">
+          <button type="button" class="settings-btn" id="spAddMember">Tambah</button>
+          <button type="button" class="settings-btn ghost danger" id="spLeaveHousehold">Keluar household</button>
+        </div>
+      ` : `
+        <div class="settings-field">
+          <label>Nama household</label>
+          <input class="settings-input" id="spHouseholdName" placeholder="Contoh: Keluarga Santoso" />
+        </div>
+        <div class="settings-actions">
+          <button type="button" class="settings-btn" id="spCreateHousehold">Buat household</button>
+        </div>
+      `}
+      <span class="settings-status" id="spSocialStatus">—</span>
+    </div>
+  `;
+
+  body.querySelector('[data-toggle="benchmarkOptIn"]')?.addEventListener('change', async (e) => {
+    const on = !!e.target.checked;
+    try {
+      const { setBenchmarkOptInLocal } = await import('../services/anonymous-benchmark.js');
+      setBenchmarkOptInLocal(on);
+      if (window.STATE?.db?.userPreferences) {
+        window.STATE.db.userPreferences.benchmark_opt_in = on;
+      }
+      toast(on ? 'Perbandingan anonim aktif' : 'Perbandingan anonim nonaktif', 'success');
+      if (typeof window.rerenderHomePage === 'function') window.rerenderHomePage();
+    } catch { /* ignore */ }
+  });
+
+  body.querySelector('#spViewAchievements')?.addEventListener('click', async () => {
+    const { showAchievementsPanel } = await import('../components/achievements-panel.js');
+    await showAchievementsPanel();
+  });
+
+  body.querySelector('#spCreateHousehold')?.addEventListener('click', () => {
+    const name = body.querySelector('#spHouseholdName')?.value;
+    import('../services/household-mode.js').then(({ createHousehold }) => {
+      createHousehold(name);
+      body.querySelector('#spSocialStatus').textContent = 'Household dibuat.';
+      renderSocial(body);
+    });
+  });
+
+  body.querySelector('#spAddMember')?.addEventListener('click', () => {
+    const name = body.querySelector('#spMemberName')?.value;
+    import('../services/household-mode.js').then(({ addHouseholdMember }) => {
+      addHouseholdMember(name);
+      body.querySelector('#spSocialStatus').textContent = 'Anggota ditambahkan.';
+      renderSocial(body);
+    });
+  });
+
+  body.querySelector('#spLeaveHousehold')?.addEventListener('click', () => {
+    if (!confirm('Keluar dari household ini?')) return;
+    import('../services/household-mode.js').then(({ leaveHousehold }) => {
+      leaveHousehold();
+      body.querySelector('#spSocialStatus').textContent = 'Household dihapus.';
+      renderSocial(body);
+      if (typeof window.rerenderHomePage === 'function') window.rerenderHomePage();
+    });
+  });
+}
+
+function requireSyncBenchmark() {
+  return { isBenchmarkOptIn: (s) => {
+    const prefs = s?.db?.userPreferences || {};
+    if (typeof prefs.benchmark_opt_in === 'boolean') return prefs.benchmark_opt_in;
+    return localStorage.getItem('monefyi_benchmark_opt_in') === '1';
+  } };
+}
+
+function requireSyncHousehold() {
+  try {
+    const raw = localStorage.getItem('monefyi_household');
+    return { loadHousehold: () => (raw ? JSON.parse(raw) : null) };
+  } catch {
+    return { loadHousehold: () => null };
+  }
 }
 
 /* ─── Data ─── */

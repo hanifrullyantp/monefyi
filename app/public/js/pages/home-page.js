@@ -191,6 +191,34 @@ async function renderV2Home(container, data, ctx, callbacks, formatIDR, formatCo
   );
   if (targetCard) container.appendChild(targetCard);
 
+  try {
+    const { isBenchmarkOptIn, computeAnonymousBenchmark } = await import('../services/anonymous-benchmark.js');
+    if (isBenchmarkOptIn(state)) {
+      const benchmark = computeAnonymousBenchmark(state);
+      if (benchmark) {
+        const { renderBenchmarkCard } = await import('../components/benchmark-card.js');
+        container.appendChild(renderBenchmarkCard(benchmark, {
+          onSettings: () => { window.location.hash = '#settings/social'; },
+        }));
+      }
+    }
+  } catch (e) {
+    console.warn('[home] benchmark card', e);
+  }
+
+  try {
+    const { getHouseholdSummary } = await import('../services/household-mode.js');
+    const hhSummary = getHouseholdSummary(state);
+    if (hhSummary) {
+      const { renderHouseholdCard } = await import('../components/household-card.js');
+      container.appendChild(renderHouseholdCard(hhSummary, {
+        onManage: () => { window.location.hash = '#settings/social'; },
+      }));
+    }
+  } catch (e) {
+    console.warn('[home] household card', e);
+  }
+
   container.appendChild(renderQuickAccess({
     variant: 'compact',
     onActionClick: callbacks.onQuickAction,

@@ -102,6 +102,15 @@
 }
 
 .home-streak-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
   background: var(--color-orange-50);
   border: 1px solid color-mix(in srgb, var(--color-orange-500) 25%, transparent);
 }
@@ -370,3 +379,162 @@ body:not(.theme-light) .home-streak-badge {
   font-size: 12px;
   color: var(--interactive-primary);
 }
+
+/* Benchmark card (Fase 5.1) */
+.benchmark-card__inner {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+}
+
+.benchmark-card__head {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.benchmark-card__title { font-weight: 700; font-size: 14px; }
+.benchmark-card__cohort { font-size: 11px; color: var(--text-secondary); }
+
+.benchmark-metric {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.benchmark-metric:last-of-type { border-bottom: 0; }
+
+.benchmark-metric__label { font-size: 12px; color: var(--text-secondary); }
+
+.benchmark-metric__values {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 13px;
+}
+
+.benchmark-metric--above .benchmark-metric__yours { color: var(--finance-income, #34d399); font-weight: 700; }
+.benchmark-metric--below .benchmark-metric__yours { color: var(--status-warning, #fbbf24); font-weight: 700; }
+
+.benchmark-card__note {
+  margin: 10px 0 0;
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+.benchmark-card__settings {
+  margin-top: 8px;
+  border: 0;
+  background: none;
+  color: var(--interactive-primary);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0;
+}
+
+/* Household card (Fase 5.3) */
+.household-card__inner {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: color-mix(in srgb, #8b5cf6 8%, var(--card-bg));
+  border: 1px solid color-mix(in srgb, #8b5cf6 25%, var(--card-border));
+}
+
+.household-card__head {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.household-card__title { font-weight: 700; font-size: 14px; }
+.household-card__meta { font-size: 11px; color: var(--text-secondary); }
+.household-card__stat { font-size: 13px; margin-bottom: 10px; }
+
+.household-card__cta {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Achievements panel (Fase 5.2) */
+.achievements-panel-host {
+  position: fixed;
+  inset: 0;
+  z-index: 10060;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.achievements-panel-host.is-visible { display: flex; }
+
+.achievements-panel {
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: var(--app-card, #131A24);
+  border-radius: 20px 20px 0 0;
+  padding: 20px;
+  color: var(--app-text, #F1F5F9);
+}
+
+.achievements-panel__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.achievements-panel__kicker {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--interactive-primary);
+  text-transform: uppercase;
+}
+
+.achievements-panel__title { font-size: 18px; font-weight: 800; }
+.achievements-panel__sub { font-size: 12px; color: var(--text-secondary, #94a3b8); }
+
+.achievements-panel__close {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.achievements-panel__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.achievement-badge {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  text-align: center;
+}
+
+.achievement-badge.is-unlocked {
+  background: color-mix(in srgb, #10b981 12%, transparent);
+  border-color: color-mix(in srgb, #10b981 35%, transparent);
+}
+
+.achievement-badge.is-locked {
+  opacity: 0.45;
+  filter: grayscale(0.6);
+}
+
+.achievement-badge__icon { font-size: 24px; display: block; margin-bottom: 4px; }
+.achievement-badge__title { font-size: 11px; font-weight: 700; display: block; }
+.achievement-badge__xp { font-size: 10px; color: var(--text-secondary, #94a3b8); }
