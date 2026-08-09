@@ -552,12 +552,18 @@ async function renderEmailImport(body) {
       `}
       <div class="settings-actions">
         <button type="button" class="settings-btn" id="spOpenEmailImport">Atur Email Import</button>
+        <button type="button" class="settings-btn ghost" id="spOpenWalletConnect">Hubungkan Bank & E-Wallet</button>
       </div>
     </div>
   `;
 
   body.querySelector('#spOpenEmailImport')?.addEventListener('click', () => {
     _ctx.openEmailImport?.();
+  });
+
+  body.querySelector('#spOpenWalletConnect')?.addEventListener('click', async () => {
+    const { showWalletConnectPanel } = await import('../components/wallet-connect-panel.js');
+    await showWalletConnectPanel();
   });
 }
 

@@ -816,3 +816,145 @@
   padding: 10px 20px;
   font-size: 13px;
 }
+
+/* Fase 7.1 — duplicate & auto-categorization hints */
+.ei-pending-card--duplicate {
+  border-color: rgba(251, 191, 36, 0.45);
+  background: rgba(251, 191, 36, 0.06);
+}
+
+.ei-duplicate-warn {
+  font-size: 11px;
+  color: #fbbf24;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.ei-auto-cat {
+  font-size: 11px;
+  color: #60a5fa;
+  margin-bottom: 6px;
+}
+
+.ei-parse-conf {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 6px;
+}
+
+/* Fase 7.2 — wallet connect panel */
+.wallet-connect-host {
+  position: fixed;
+  inset: 0;
+  z-index: 10080;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.wallet-connect-host.is-visible { display: flex; }
+
+.wallet-connect-panel {
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--app-card, #131A24);
+  border-radius: 20px 20px 0 0;
+  padding: 20px;
+  color: var(--app-text, #F1F5F9);
+}
+
+.wallet-connect-panel__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.wallet-connect-panel__kicker {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--interactive-primary, #3b82f6);
+}
+
+.wallet-connect-panel__title { font-size: 18px; font-weight: 800; }
+.wallet-connect-panel__sub { font-size: 12px; color: rgba(255,255,255,0.5); }
+
+.wallet-connect-panel__close {
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.wallet-connect-panel__note {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 14px;
+  line-height: 1.45;
+}
+
+.wallet-connect-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.wallet-connect-card {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.wallet-connect-card.is-linked {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.wallet-connect-card__icon { font-size: 22px; margin-bottom: 4px; }
+.wallet-connect-card__name { font-weight: 700; font-size: 13px; }
+.wallet-connect-card__meta { font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+.wallet-connect-card__sync { font-size: 9px; color: rgba(255,255,255,0.4); margin-top: 4px; }
+
+.wallet-connect-card__actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.wallet-connect-btn {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 0;
+  background: var(--interactive-primary, #3b82f6);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wallet-connect-btn--ghost {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: inherit;
+}
+
+.wallet-connect-panel__email {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}

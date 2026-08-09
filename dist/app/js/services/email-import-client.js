@@ -3,6 +3,8 @@
  * @module services/email-import-client
  */
 
+import { findDuplicateTransaction, enrichImportPreview } from './email-import-enhancer.js';
+
 /**
  * @returns {import('@supabase/supabase-js').SupabaseClient|null}
  */
@@ -124,6 +126,7 @@ export async function getImports(options = {}) {
  * Confirm an import (save as real transaction).
  * @param {string} importId
  * @param {object} [edits]
+ * @returns {Promise<object>}
  */
 export async function confirmImport(importId, edits = {}) {
   const sb = getSb();
@@ -141,15 +144,29 @@ export async function confirmImport(importId, edits = {}) {
   if (fetchErr || !imp) throw new Error('Import not found');
   if (imp.status === 'confirmed') throw new Error('Already confirmed');
 
+  const enriched = await enrichImportPreview(imp);
+  if (!edits.force && enriched._duplicate) {
+    const err = new Error('Transaksi serupa sudah ada');
+    err.code = 'DUPLICATE';
+    err.duplicate = enriched._duplicate;
+    throw err;
+  }
+
+  let category = edits.category ?? imp.parsed_category ?? 'Other';
+  if ((!category || category === 'Other' || category === 'Lainnya') && enriched._categorySuggestion?.category) {
+    category = enriched._categorySuggestion.category;
+  }
+
   const txData = {
     type: edits.type || imp.parsed_type || 'expense',
     amount: Number(edits.amount ?? imp.parsed_amount) || 0,
     merchant: edits.merchant ?? imp.parsed_merchant ?? '',
-    category: edits.category ?? imp.parsed_category ?? 'Other',
+    category,
     account: edits.account ?? imp.parsed_account ?? '',
     date: edits.date || imp.parsed_date || new Date().toISOString().split('T')[0],
     notes: edits.notes || imp.parsed_notes || `Import dari ${imp.bank_id || 'email'}`,
     user_id: userId,
+    meta: { email_import_id: importId, bank_id: imp.bank_id },
   };
 
   if (!(txData.amount > 0)) throw new Error('Invalid amount');
@@ -200,6 +217,13 @@ export async function confirmImport(importId, edits = {}) {
       parsed_notes: txData.notes,
     })
     .eq('id', importId);
+
+  try {
+    const { touchWalletSync, WALLET_PROVIDERS } = await import('./wallet-sync-registry.js');
+    const bankKey = String(imp.bank_id || '').toLowerCase();
+    const provider = WALLET_PROVIDERS.find((p) => bankKey.includes(p.id) || bankKey.includes(p.name.toLowerCase()));
+    if (provider) touchWalletSync(provider.id);
+  } catch { /* ignore */ }
 
   return localTx;
 }

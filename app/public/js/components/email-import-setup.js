@@ -12,12 +12,12 @@ import {
   getPendingImports,
   confirmImport,
   rejectImport,
-  getImportStats,
-  subscribeToImports,
+    getImportStats,
+    subscribeToImports,
 } from '../services/email-import-client.js';
+import { enrichImportBatch, EXTENDED_GMAIL_FILTER, SUPPORTED_IMPORT_SOURCES } from '../services/email-import-enhancer.js';
 
-const GMAIL_FILTER =
-  'noreply@klikbca.co.id OR notification@bankmandiri.co.id OR noreply@bni.co.id OR noreply@bri.co.id OR no-reply@gopay.co.id OR noreply@ovo.id OR no-reply@dana.id';
+const GMAIL_FILTER = EXTENDED_GMAIL_FILTER;
 
 /** @type {(() => void)|null} */
 let _modalUnsub = null;
@@ -29,11 +29,12 @@ export async function showEmailImportSetup() {
   document.querySelector('.email-import-overlay')?.remove();
   cleanupModalRealtime();
 
-  const [config, pending, stats] = await Promise.all([
+  const [config, pendingRaw, stats] = await Promise.all([
     getImportConfig(),
     getPendingImports(),
     getImportStats(),
   ]);
+  const pending = await enrichImportBatch(pendingRaw);
 
   const modal = document.createElement('div');
   modal.className = 'email-import-overlay';
@@ -93,10 +94,9 @@ export async function showEmailImportSetup() {
             <div class="ei-step"><div class="ei-step-num">4</div><div class="ei-step-text"><strong>Konfirmasi atau edit</strong> sebelum disimpan sebagai transaksi</div></div>
           </div>
           <div class="ei-supported">
-            <div class="ei-supported-title">Bank &amp; E-Wallet yang Didukung:</div>
+            <div class="ei-supported-title">Bank &amp; E-Wallet yang Didukung (${SUPPORTED_IMPORT_SOURCES.length}):</div>
             <div class="ei-bank-chips">
-              ${['BCA', 'Mandiri', 'BNI', 'BRI', 'GoPay', 'OVO', 'DANA', 'ShopeePay', 'Tokopedia', 'Grab']
-    .map((b) => `<span class="ei-chip">${b}</span>`).join('')}
+              ${SUPPORTED_IMPORT_SOURCES.map((b) => `<span class="ei-chip">${escapeHtml(b.label)}</span>`).join('')}
             </div>
           </div>
           <div class="ei-privacy">
@@ -464,11 +464,20 @@ function renderPendingImport(imp) {
   const typePrefix = imp.parsed_type === 'income' ? '+' : '-';
 
   return `
-    <div class="ei-pending-card" data-import-id="${imp.id}">
+    <div class="ei-pending-card${imp._duplicate ? ' ei-pending-card--duplicate' : ''}" data-import-id="${imp.id}">
       <div class="ei-pending-header">
         <div class="ei-pending-bank">${escapeHtml(imp.bank_id || 'Unknown')}</div>
         <div class="ei-pending-time">${formatRelativeTime(imp.created_at)}</div>
       </div>
+      ${imp._duplicate ? `
+        <div class="ei-duplicate-warn">⚠️ Kemungkinan duplikat — transaksi serupa sudah ada</div>
+      ` : ''}
+      ${imp._categorySuggestion ? `
+        <div class="ei-auto-cat">Saran kategori: <strong>${escapeHtml(imp._categorySuggestion.category)}</strong> (${escapeHtml(imp._categorySuggestion.badge || '')})</div>
+      ` : ''}
+      ${imp.parse_confidence != null ? `
+        <div class="ei-parse-conf">Parse: ${escapeHtml(imp._confidenceLabel || '')}</div>
+      ` : ''}
       <div class="ei-pending-main">
         <div class="ei-pending-amount" style="color: ${typeColor}">
           ${typePrefix}Rp ${fmt(imp.parsed_amount)}
@@ -550,7 +559,7 @@ async function refreshPendingList(modal) {
   const countEl = modal.querySelector('#ei-pending-count');
   if (!list) return;
 
-  const pending = await getPendingImports();
+  const pending = await enrichImportBatch(await getPendingImports());
   list.innerHTML = pending.map((p) => renderPendingImport(p)).join('');
   if (countEl) countEl.textContent = String(pending.length);
   if (section) {
@@ -569,7 +578,7 @@ function wirePendingActions(modal) {
       const id = btn.getAttribute('data-id');
       if (!id) return;
       try {
-        await confirmImport(id);
+        await tryConfirmImport(id);
         showToast('Transaksi disimpan');
         btn.closest('.ei-pending-card')?.remove();
         await refreshPendingList(modal);
@@ -623,7 +632,7 @@ function wirePendingActions(modal) {
         edits[key] = key === 'amount' ? Number(val) : val;
       });
       try {
-        await confirmImport(id, edits);
+        await tryConfirmImport(id, edits);
         showToast('Import dikonfirmasi & disimpan');
         btn.closest('.ei-pending-card')?.remove();
         await refreshPendingList(modal);
@@ -632,6 +641,21 @@ function wirePendingActions(modal) {
       }
     };
   });
+}
+
+/**
+ * @param {string} id
+ * @param {object} [edits]
+ */
+async function tryConfirmImport(id, edits = {}) {
+  try {
+    return await confirmImport(id, edits);
+  } catch (e) {
+    if (e.code === 'DUPLICATE' && confirm('Transaksi serupa sudah ada. Tetap simpan?')) {
+      return confirmImport(id, { ...edits, force: true });
+    }
+    throw e;
+  }
 }
 
 /**
