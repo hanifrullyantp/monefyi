@@ -20,6 +20,8 @@
     fnAdminFeedback: "monefyi-admin-feedback",
     fnComplianceNotify: "monefyi-compliance-notify",
     fnAccountPurge: "monefyi-account-purge",
+    fnRefundLynk: "monefyi-refund-lynk",
+    fnWeeklyDigestCron: "monefyi-weekly-digest-cron",
     fnLandingConfig: "monefyi-landing-config",
     fnStartTrial: "start-trial",
     checkoutMonthly: "https://lynk.id/asfin-ai/9zexz9z5wom1/checkout",

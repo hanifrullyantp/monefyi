@@ -86,9 +86,30 @@ export function isFeatureEnabled(flagKey, userId = null) {
 }
 
 /**
+ * @param {object} [options]
+ * @param {number} [options.timeoutMs] — abort remote wait after N ms, use cache
  * @returns {Promise<Record<string, object>>}
  */
-export async function syncFeatureFlagsFromRemote() {
+export async function syncFeatureFlagsFromRemote(options = {}) {
+  const timeoutMs = Number(options.timeoutMs || 0);
+  if (!timeoutMs) return _syncFeatureFlagsFromRemote();
+
+  try {
+    return await Promise.race([
+      _syncFeatureFlagsFromRemote(),
+      new Promise((resolve) => {
+        setTimeout(() => resolve(getFlagMap()), timeoutMs);
+      }),
+    ]);
+  } catch {
+    return getFlagMap();
+  }
+}
+
+/**
+ * @returns {Promise<Record<string, object>>}
+ */
+async function _syncFeatureFlagsFromRemote() {
   const client = supa();
   if (!client) return getFlagMap();
 

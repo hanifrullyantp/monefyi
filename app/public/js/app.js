@@ -2258,7 +2258,7 @@ async function upsertTransaction_legacy_local(tx) {
         } catch { /* ignore */ }
         try {
           const { syncFeatureFlagsFromRemote } = await import('./services/feature-flag-store.js');
-          await syncFeatureFlagsFromRemote();
+          await syncFeatureFlagsFromRemote({ timeoutMs: 500 });
         } catch (e) { console.warn('syncFeatureFlagsFromRemote', e); }
         try {
           const { syncHouseholdFromRemote } = await import('./services/household-store.js');

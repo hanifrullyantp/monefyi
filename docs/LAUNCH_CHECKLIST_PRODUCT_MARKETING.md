@@ -32,16 +32,28 @@ Re-deploy product-marketing: `./scripts/deploy-monefyi-product-marketing.sh`
 ./scripts/deploy-compliance-functions.sh
 ```
 
-Set secrets: `RESEND_API_KEY`, `CRON_SECRET`, `APP_URL`. Schedule daily cron → `monefyi-account-purge` with header `x-cron-secret`.
+Set secrets: `RESEND_API_KEY`, `CRON_SECRET`, `APP_URL`, `LYNK_API_KEY` (optional).
 
-**Growth Phase (Sprint 7–18 + advanced):**
+**Cron schedules (UTC):**
+
+| Function | Schedule | Notes |
+|----------|----------|-------|
+| `monefyi-account-purge` | `0 3 * * *` | Daily soft-delete purge; header `x-cron-secret` |
+| `monefyi-weekly-digest-cron` | `0 12 * * 0` | Sunday 19:00 WIB; header `x-cron-secret` |
+
+**Edge functions in compliance deploy:** `monefyi-compliance-notify`, `monefyi-account-purge`, `monefyi-refund-lynk`, `monefyi-weekly-digest-cron`
+
+**Growth Phase (Sprint 7–18 + advanced + household):**
 
 8. `20260809200000_growth_phase1_insights.sql`
 9. `20260809210000_sprint8_monthly_review.sql`
 10. `20260809220000_sprint13_18_community.sql`
 11. `20260809230000_growth_advanced.sql`
+12. `20260809250000_household_shared_visibility.sql`
 
 Re-deploy growth: `./scripts/deploy-growth-migrations.sh`
+
+**Launch gate (local):** `npm run launch:gate` — tests + parity/flag checks
 
 ## 3. Feature Flags (Admin → Feature Flags)
 

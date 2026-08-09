@@ -217,6 +217,9 @@ async function renderDashboard(body) {
       <div class="admin-kpi"><div class="admin-kpi-label">Trial / Paid</div><div class="admin-kpi-value">${fmtNum(t.trialActive)} / ${fmtNum(t.paidActive)}</div><div class="admin-kpi-sub">MRR ≈ Rp ${fmtNum(t.mrr)}</div></div>
       <div class="admin-kpi"><div class="admin-kpi-label">Feedback open</div><div class="admin-kpi-value">${fmtNum(t.feedbackOpen)}</div><div class="admin-kpi-sub">Bug ${fb.bug || 0} · Fitur ${fb.feature || 0}</div></div>
     </div>
+    <div class="admin-card" id="admLaunchGateCard">
+      <p class="admin-muted">Memuat launch gate…</p>
+    </div>
     <div class="admin-card">
       <h2>Plan mix</h2>
       <div class="admin-row-list">
@@ -260,6 +263,49 @@ async function renderDashboard(body) {
       loadTab(_tab);
     });
   });
+
+  const gateCard = body.querySelector('#admLaunchGateCard');
+  if (gateCard) {
+    try {
+      const { runLandingParityAudit } = await import('../services/landing-parity.js');
+      const { evaluateLaunchReadiness } = await import('../services/launch-readiness.js');
+      const audit = await runLandingParityAudit();
+      const readiness = evaluateLaunchReadiness(window.STATE?.featureFlags || {});
+      const scoreClass = readiness.ready ? 'parity-score--ready' : 'parity-score--not-ready';
+      gateCard.innerHTML = `
+        <div class="admin-toolbar" style="align-items:flex-end;margin-bottom:12px">
+          <div>
+            <h2 style="margin:0">Launch Gate</h2>
+            <p class="admin-muted" style="margin:4px 0 0">${readiness.ready ? '✅ Siap public launch' : '⚠️ Blocker ditemukan'}</p>
+          </div>
+          <div class="parity-score ${scoreClass}">${readiness.score}%</div>
+        </div>
+        <div class="admin-row-list">
+          ${readiness.checks.map((c) => `
+            <div class="admin-row">
+              <span>${c.ok ? '✅' : '❌'} ${escapeHtml(c.label)}</span>
+              <span class="admin-muted" style="font-size:11px">${escapeHtml(c.message)}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div class="admin-toolbar" style="margin-top:12px">
+          <button type="button" class="admin-btn ghost" data-go="landing">Parity detail</button>
+          <button type="button" class="admin-btn ghost" data-go="feature-flags">Feature flags</button>
+        </div>
+        <p class="admin-muted" style="margin-top:8px;font-size:11px">Parity audit: ${audit.criticalFails} critical fail · Lihat docs/LAUNCH_CHECKLIST_PRODUCT_MARKETING.md</p>
+      `;
+      gateCard.querySelectorAll('[data-go]').forEach((b) => {
+        b.addEventListener('click', () => {
+          _tab = b.getAttribute('data-go');
+          setAdminHash(_tab);
+          renderShell();
+          loadTab(_tab);
+        });
+      });
+    } catch (e) {
+      gateCard.innerHTML = `<p class="admin-muted">Launch gate error: ${escapeHtml(e.message)}</p>`;
+    }
+  }
 }
 
 /* ─── Users ─── */

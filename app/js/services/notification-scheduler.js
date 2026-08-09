@@ -165,7 +165,7 @@ export async function runScheduledChecks(opts = {}) {
     }
   }
 
-  if (ignoreSchedule || (dayOfWeek === 0 && hour === 20 && !checkedToday('weekly_recap'))) {
+  if (ignoreSchedule || (dayOfWeek === 0 && hour === 19 && !checkedToday('weekly_recap'))) {
     if (ignoreSchedule || isCategoryEnabled('weeklyRecap')) {
       await sendWeeklyRecap(transactions, now);
     }
@@ -362,8 +362,14 @@ async function checkBudgetMilestones(budgetRows, expenses) {
 }
 
 async function sendWeeklyRecap(transactions, now) {
-  const digest = generateWeeklyDigest({ ...(window.STATE || {}), transactions });
-  if (!digest.has_data) return;
+  let digest;
+  try {
+    const { getOrGenerateWeeklyDigest } = await import('./weekly-digest-store.js');
+    digest = await getOrGenerateWeeklyDigest({ ...(window.STATE || {}), transactions });
+  } catch {
+    digest = generateWeeklyDigest({ ...(window.STATE || {}), transactions });
+  }
+  if (!digest?.has_data) return;
   const { title, body } = formatWeeklyDigestNotification(digest);
 
   await showNotification({

@@ -8,6 +8,7 @@
 #   20260809210000_sprint8_monthly_review.sql
 #   20260809220000_sprint13_18_community.sql
 #   20260809230000_growth_advanced.sql
+#   20260809250000_household_shared_visibility.sql
 #
 # Usage:
 #   export SUPABASE_ACCESS_TOKEN="sbp_..."
@@ -45,7 +46,8 @@ for f in \
   growth_phase1_insights \
   sprint8_monthly_review \
   sprint13_18_community \
-  growth_advanced
+  growth_advanced \
+  household_shared_visibility
 do
   src=$(ls "$ROOT/supabase/migrations/"*"_${f}.sql" 2>/dev/null | head -1 || true)
   if [[ -n "$src" && -f "$src" ]]; then

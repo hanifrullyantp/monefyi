@@ -145,6 +145,31 @@ export async function getOrGenerateWeeklyDigest(state = window.STATE) {
   return digest;
 }
 
+/**
+ * Force regenerate digest (optionally with AI when flag enabled).
+ * @param {object} [state]
+ * @returns {Promise<object>}
+ */
+export async function regenerateWeeklyDigest(state = window.STATE) {
+  const { generateWeeklyDigestWithAi } = await import('./weekly-digest-ai.js');
+  let digest;
+  try {
+    const { isFeatureEnabled } = await import('./feature-flag-store.js');
+    const uid = state.db?.user?.id;
+    if (isFeatureEnabled('weekly_ai_digest', uid)) {
+      digest = await generateWeeklyDigestWithAi(state);
+    } else {
+      const { generateWeeklyDigest } = await import('./weekly-digest.js');
+      digest = generateWeeklyDigest(state);
+    }
+  } catch {
+    const { generateWeeklyDigest } = await import('./weekly-digest.js');
+    digest = generateWeeklyDigest(state);
+  }
+  if (digest.has_data) await saveWeeklyDigest(digest);
+  return digest;
+}
+
 if (typeof window !== 'undefined') {
   window.monefyiWeeklyDigestStore = {
     getISOWeekInfo,

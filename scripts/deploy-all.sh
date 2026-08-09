@@ -15,4 +15,6 @@ echo "==> 3/3 Compliance edge functions"
 
 echo ""
 echo "All deploy steps finished."
-echo "Optional: schedule daily cron POST → monefyi-account-purge (header x-cron-secret)"
+echo "Set secrets: RESEND_API_KEY, CRON_SECRET, APP_URL, LYNK_API_KEY (optional)"
+echo "Cron (UTC): daily 0 3 * * * → monefyi-account-purge; 0 12 * * 0 → monefyi-weekly-digest-cron"
+echo "Both require header x-cron-secret"

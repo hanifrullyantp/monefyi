@@ -57,6 +57,13 @@ export async function mountBetaLaunchBanner(container) {
 
   el.querySelector('[data-beta-feedback]')?.addEventListener('click', () => {
     window.location.hash = '#tutorial';
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        const card = document.getElementById('tut-feedback-card');
+        card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        card?.querySelector('textarea, input[type="text"]')?.focus();
+      }, 350);
+    });
   });
   el.querySelector('[data-beta-dismiss]')?.addEventListener('click', () => {
     try {

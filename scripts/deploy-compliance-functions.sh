@@ -43,6 +43,14 @@ npx --yes supabase@latest functions deploy monefyi-compliance-notify --no-verify
 echo "==> Deploy monefyi-account-purge (requires CRON_SECRET + x-cron-secret header)"
 npx --yes supabase@latest functions deploy monefyi-account-purge --no-verify-jwt
 
+echo "==> Deploy monefyi-refund-lynk"
+npx --yes supabase@latest functions deploy monefyi-refund-lynk --no-verify-jwt
+
+echo "==> Deploy monefyi-weekly-digest-cron"
+npx --yes supabase@latest functions deploy monefyi-weekly-digest-cron --no-verify-jwt
+
 echo ""
-echo "Done. Set secrets: RESEND_API_KEY, CRON_SECRET, APP_URL"
-echo "Cron: daily POST to monefyi-account-purge with header x-cron-secret"
+echo "Done. Set secrets: RESEND_API_KEY, CRON_SECRET, APP_URL, LYNK_API_KEY (optional)"
+echo "Cron schedules (UTC):"
+echo "  - monefyi-account-purge: daily 0 3 * * *"
+echo "  - monefyi-weekly-digest-cron: 0 12 * * 0 (19:00 WIB Sunday)"

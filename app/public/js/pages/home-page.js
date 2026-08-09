@@ -558,9 +558,20 @@ export async function renderHomePage(container, ctx, callbacks = {}) {
   }
 
   try {
-    const { renderHouseholdViewToggle } = await import('../services/household-shared.js');
+    const { renderHouseholdViewToggle, getDashboardViewMode } = await import('../services/household-shared.js');
     const toggle = renderHouseholdViewToggle();
     if (toggle) container.appendChild(toggle);
+
+    if (getDashboardViewMode() === 'shared') {
+      const { buildCombinedHouseholdDashboard } = await import('../services/household-combined-dashboard.js');
+      const { renderHouseholdCombinedCard } = await import('../components/household-combined-card.js');
+      const dash = buildCombinedHouseholdDashboard(state);
+      if (dash) {
+        container.appendChild(renderHouseholdCombinedCard(dash, {
+          onManage: () => { window.location.hash = '#settings/social'; },
+        }));
+      }
+    }
   } catch (e) {
     console.warn('[home] household toggle', e);
   }
