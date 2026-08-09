@@ -338,16 +338,32 @@ export function detectSavingOpportunity(txs, period) {
 }
 
 /**
+ * @param {object} debt
+ * @returns {number}
+ */
+function debtBalance(debt) {
+  return Number(debt.current_balance ?? debt.balance ?? 0);
+}
+
+/**
+ * @param {object} debt
+ * @returns {number}
+ */
+function debtMinPayment(debt) {
+  return Number(debt.minimum_payment ?? debt.min_payment ?? 0);
+}
+
+/**
  * @param {object} state
  * @returns {object|null}
  */
 export function detectDebtPayoffBoost(state) {
   try {
     const debts = loadDebts() || [];
-    const active = debts.filter((d) => d.status !== 'paid' && Number(d.current_balance) > 0);
+    const active = debts.filter((d) => d.status !== 'paid' && debtBalance(d) > 0);
     if (active.length) {
-      const total = active.reduce((s, d) => s + Number(d.current_balance || 0), 0);
-      const minPay = active.reduce((s, d) => s + Number(d.minimum_payment || 0), 0) || 500000;
+      const total = active.reduce((s, d) => s + debtBalance(d), 0);
+      const minPay = active.reduce((s, d) => s + debtMinPayment(d), 0) || 500000;
       const monthsLeft = Math.ceil(total / minPay);
       const extra = Math.max(100000, Math.round(minPay * 0.25));
       const boostedMonths = Math.ceil(total / (minPay + extra));

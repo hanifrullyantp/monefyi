@@ -3,7 +3,7 @@
  * @module components/budget-summary-hero
  */
 
-import { calculateProgress, calculatePriorityTotals, getItemTotalAmount, getLinkedTransactions } from '../services/budget-model.js';
+import { calculateProgress, calculatePriorityTotals, getItemTotalAmount, getLinkedTransactions, PRIORITY_LEVELS } from '../services/budget-model.js';
 import { getDaysUntilPayday } from '../services/daily-situation.js';
 import { LABELS } from '../constants/language.js';
 import { Icon } from './icons.js';
@@ -369,7 +369,12 @@ function getHealthStatus(percentUsed, timeProgress) {
  * @param {number} totalBudget
  */
 function renderPriorityMini(priorityTotals, totalBudget) {
-  const colors = { harus: '#ef4444', penting: '#f59e0b', mau: '#eab308', simpan: '#10b981' };
+  const colors = {
+    harus: PRIORITY_LEVELS.HARUS.color,
+    penting: PRIORITY_LEVELS.PENTING.color,
+    mau: PRIORITY_LEVELS.MAU.color,
+    simpan: PRIORITY_LEVELS.SIMPAN.color,
+  };
   const labels = { harus: 'Wajib', penting: 'Kebutuhan', mau: 'Keinginan', simpan: 'Simpan' };
 
   const bars = Object.keys(colors).map((key) => {

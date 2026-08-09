@@ -3,7 +3,7 @@
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { PRIORITY_LEVELS } from '../app/js/services/budget-model.js';
+import { PRIORITY_LEVELS, formatBudgetRowLabels } from '../app/js/services/budget-model.js';
 import { generateSmartSuggestions } from '../app/js/services/smart-suggestions.js';
 import { getGreeting } from '../app/js/services/monevisor-messages.js';
 
@@ -15,6 +15,15 @@ describe('Fase 1.2 — priority colors', () => {
 
   it('penting uses light blue', () => {
     assert.equal(PRIORITY_LEVELS.PENTING.color, '#3b82f6');
+  });
+});
+
+describe('Fase 1.3 — redundant paid labels', () => {
+  it('strips Lunas from title when bill is paid', () => {
+    const row = formatBudgetRowLabels('Kost Lunas', 'paid');
+    assert.equal(row.title, 'Kost');
+    assert.equal(row.subtitle, '✅ Lunas');
+    assert.equal(row.hideStatusBadge, true);
   });
 });
 

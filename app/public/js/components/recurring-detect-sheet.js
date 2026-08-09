@@ -52,10 +52,12 @@ export async function showRecurringDetectSheet(candidate, callbacks = {}) {
     close();
   });
 
-  host.querySelector('[data-manual]')?.addEventListener('click', () => {
+  host.querySelector('[data-manual]')?.addEventListener('click', async () => {
+    const { addScheduleFromCandidate } = await import('../services/recurring-transactions.js');
+    addScheduleFromCandidate(candidate, { auto_create: false });
+    window.showToast?.('Tagihan rutin disimpan — konfirmasi manual saat jatuh tempo', 'success');
+    callbacks.onSaved?.();
     close();
-    window.location.hash = '#settings/recurring';
-    callbacks.onManual?.();
   });
 
   host.querySelector('[data-skip]')?.addEventListener('click', async () => {
@@ -72,6 +74,10 @@ export async function showRecurringDetectSheet(candidate, callbacks = {}) {
 export async function maybePromptRecurringDetection(state = window.STATE) {
   const key = 'monefyi_recurring_detect_prompted';
   if (sessionStorage.getItem(key)) return;
+
+  await new Promise((r) => setTimeout(r, 5000));
+  if (sessionStorage.getItem(key)) return;
+  if (document.querySelector('.marketing-offer-backdrop, .beta-launch-banner')) return;
 
   const { detectRecurringCandidates } = await import('../services/recurring-transactions.js');
   const candidates = detectRecurringCandidates(state?.transactions || [], { months: 3 });

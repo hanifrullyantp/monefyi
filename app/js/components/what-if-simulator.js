@@ -94,19 +94,30 @@ function renderSavingsTab(body, target, options, close) {
   const remaining = stats.remaining;
   let extra = 200000;
 
-  const paint = () => {
+  body.innerHTML = `
+    <p class="modal-subtitle">${escapeHtml(target.name)} · sisa Rp ${fmt(remaining)}</p>
+    <label class="tgt-label">Tambahan sisih per bulan</label>
+    <input type="range" id="what-if-slider" min="0" max="2000000" step="50000" value="${extra}" />
+    <div class="what-if-slider-val" id="wi-s-val">+Rp ${fmt(extra)}/bulan</div>
+    <div class="what-if-preview" id="wi-s-preview"></div>
+    <button type="button" class="btn-primary-budget tap" id="what-if-apply" style="margin-top:12px;width:100%">Terapkan ke target</button>
+  `;
+
+  const slider = body.querySelector('#what-if-slider');
+  const preview = body.querySelector('#wi-s-preview');
+  const valEl = body.querySelector('#wi-s-val');
+
+  const updatePreview = () => {
+    extra = Number(slider?.value || 0);
     const sim = simulateSavingsExtra({ remaining, baseMonthly, extraMonthly: extra });
     const eta = sim.monthsNew
       ? new Date(new Date().getFullYear(), new Date().getMonth() + sim.monthsNew, 1)
           .toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
       : '—';
 
-    body.innerHTML = `
-      <p class="modal-subtitle">${escapeHtml(target.name)} · sisa Rp ${fmt(remaining)}</p>
-      <label class="tgt-label">Tambahan sisih per bulan</label>
-      <input type="range" id="what-if-slider" min="0" max="2000000" step="50000" value="${extra}" />
-      <div class="what-if-slider-val">+Rp ${fmt(extra)}/bulan</div>
-      <div class="what-if-preview">
+    if (valEl) valEl.textContent = `+Rp ${fmt(extra)}/bulan`;
+    if (preview) {
+      preview.innerHTML = `
         <div class="what-if-row"><span>Sekarang</span><strong>${sim.monthsBase ?? '—'} bulan</strong></div>
         <div class="what-if-row what-if-row--highlight">
           <span>Dengan tambahan</span><strong>${eta}${sim.monthsSaved ? ` (${sim.monthsSaved} bln lebih cepat)` : ''}</strong>
@@ -114,37 +125,32 @@ function renderSavingsTab(body, target, options, close) {
         <div class="what-if-row"><span>Extra 1 tahun</span><strong>Rp ${fmt(sim.extraYear1)}</strong></div>
         <div class="what-if-row"><span>5 tahun @ 6%</span><strong>Rp ${fmt(sim.extraYear5)}</strong></div>
         <div class="what-if-row"><span>10 tahun @ 6%</span><strong>Rp ${fmt(sim.extraYear10)}</strong></div>
-      </div>
-      <button type="button" class="btn-primary-budget tap" id="what-if-apply" style="margin-top:12px;width:100%">Terapkan ke target</button>
-    `;
-
-    body.querySelector('#what-if-slider')?.addEventListener('input', (e) => {
-      extra = Number(e.target.value || 0);
-      paint();
-    });
-
-    body.querySelector('#what-if-apply')?.addEventListener('click', async () => {
-      try {
-        const { saveFinancialTarget } = await import('../services/financial-targets.js');
-        await saveFinancialTarget({
-          id: target.id,
-          name: target.name,
-          target_amount: target.target_amount,
-          current_amount: target.current_amount,
-          monthly_contribution: baseMonthly + extra,
-          target_date: target.target_date,
-          is_primary: true,
-        });
-        options.onSaved?.();
-        close();
-      } catch (e) {
-        console.error('[what-if]', e);
-        window.showToast?.('Gagal menyimpan', 'error');
-      }
-    });
+      `;
+    }
   };
 
-  paint();
+  slider?.addEventListener('input', updatePreview);
+  updatePreview();
+
+  body.querySelector('#what-if-apply')?.addEventListener('click', async () => {
+    try {
+      const { saveFinancialTarget } = await import('../services/financial-targets.js');
+      await saveFinancialTarget({
+        id: target.id,
+        name: target.name,
+        target_amount: target.target_amount,
+        current_amount: target.current_amount,
+        monthly_contribution: baseMonthly + extra,
+        target_date: target.target_date,
+        is_primary: true,
+      });
+      options.onSaved?.();
+      close();
+    } catch (e) {
+      console.error('[what-if]', e);
+      window.showToast?.('Gagal menyimpan', 'error');
+    }
+  });
 }
 
 /**
@@ -152,36 +158,43 @@ function renderSavingsTab(body, target, options, close) {
  * @param {object} state
  */
 function renderPurchaseTab(body, state) {
-  let name = '';
-  let amount = 500000;
-  let installments = 1;
+  body.innerHTML = `
+    <label class="tgt-label">Nama item</label>
+    <input class="admin-input" id="wi-p-name" placeholder="Contoh: Laptop kerja" />
+    <label class="tgt-label">Harga (Rp)</label>
+    <input class="admin-input" type="number" id="wi-p-amt" value="500000" min="0" step="50000" />
+    <label class="tgt-label">Cicilan (bulan, 1 = lunas)</label>
+    <input class="admin-input" type="number" id="wi-p-inst" value="1" min="1" max="36" />
+    <div class="what-if-preview" id="wi-p-preview" style="margin-top:12px"></div>
+  `;
 
-  const paint = () => {
-    const sim = simulatePurchaseImpact({ name, amount, installments }, state);
+  const nameEl = body.querySelector('#wi-p-name');
+  const amtEl = body.querySelector('#wi-p-amt');
+  const instEl = body.querySelector('#wi-p-inst');
+  const preview = body.querySelector('#wi-p-preview');
+
+  const updatePreview = () => {
+    const sim = simulatePurchaseImpact({
+      name: nameEl?.value || '',
+      amount: Number(amtEl?.value) || 0,
+      installments: Number(instEl?.value) || 1,
+    }, state);
     const verdictClass = sim.verdict === 'safe' ? 'ok' : sim.verdict === 'warn' ? 'warn' : 'danger';
 
-    body.innerHTML = `
-      <label class="tgt-label">Nama item</label>
-      <input class="admin-input" id="wi-p-name" value="${escapeHtml(name)}" placeholder="Contoh: Laptop kerja" />
-      <label class="tgt-label">Harga (Rp)</label>
-      <input class="admin-input" type="number" id="wi-p-amt" value="${amount}" min="0" step="50000" />
-      <label class="tgt-label">Cicilan (bulan, 1 = lunas)</label>
-      <input class="admin-input" type="number" id="wi-p-inst" value="${installments}" min="1" max="36" />
-      <div class="what-if-preview" style="margin-top:12px">
+    if (preview) {
+      preview.innerHTML = `
         <div class="what-if-row"><span>Cicilan/bulan</span><strong>Rp ${fmt(sim.monthlyPay)}</strong></div>
         <div class="what-if-row"><span>Sisa flexible</span><strong>Rp ${fmt(sim.flexibleBefore)} → Rp ${fmt(sim.flexibleAfter)}</strong></div>
         ${sim.targetDelayMonths ? `<div class="what-if-row"><span>Target mundur</span><strong>~${sim.targetDelayMonths} bulan</strong></div>` : ''}
         <div class="what-if-verdict what-if-verdict--${verdictClass}">${escapeHtml(sim.verdictLabel)}</div>
-      </div>
-    `;
-
-    body.querySelector('#wi-p-name')?.addEventListener('input', (e) => { name = e.target.value; });
-    body.querySelector('#wi-p-amt')?.addEventListener('input', (e) => { amount = Number(e.target.value) || 0; paint(); });
-    body.querySelector('#wi-p-inst')?.addEventListener('input', (e) => { installments = Number(e.target.value) || 1; paint(); });
-    body.querySelector('#wi-p-name')?.addEventListener('change', paint);
+      `;
+    }
   };
 
-  paint();
+  nameEl?.addEventListener('input', updatePreview);
+  amtEl?.addEventListener('input', updatePreview);
+  instEl?.addEventListener('input', updatePreview);
+  updatePreview();
 }
 
 /**

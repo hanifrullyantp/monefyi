@@ -271,6 +271,21 @@ export function getBudgetStatusLabel(status) {
 }
 
 /**
+ * Avoid redundant "Kost Lunas" + badge "Lunas" (Roadmap Fase 1.3).
+ * @param {string} name
+ * @param {string} status
+ * @returns {{ title: string, subtitle: string|null, hideStatusBadge: boolean }}
+ */
+export function formatBudgetRowLabels(name, status) {
+  const raw = String(name || '').trim();
+  if (status === 'paid' && /\blunas\b/i.test(raw)) {
+    const title = raw.replace(/\s*[-–]?\s*lunas\s*$/i, '').trim() || raw;
+    return { title, subtitle: '✅ Lunas', hideStatusBadge: true };
+  }
+  return { title: raw, subtitle: null, hideStatusBadge: false };
+}
+
+/**
  * @param {string} status
  * @returns {string}
  */

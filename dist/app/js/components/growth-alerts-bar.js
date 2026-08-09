@@ -23,7 +23,9 @@ export async function renderGrowthAlertsBar(state = window.STATE, callbacks = {}
   if (daily) items.push({ ...daily, dismissible: false });
   alerts.forEach((a) => items.push({ ...a, dismissible: true }));
 
-  el.innerHTML = items.map((item, i) => `
+  const visible = items.slice(0, 2);
+
+  el.innerHTML = visible.map((item, i) => `
     <div class="growth-alert growth-alert--${item.severity || 'info'}" data-idx="${i}" data-id="${escapeHtml(item.id || '')}">
       <div class="growth-alert__icon">${item.icon || '💡'}</div>
       <div class="growth-alert__body">

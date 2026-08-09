@@ -18,6 +18,7 @@ import {
   countFlexibleAttentionRows,
   getBudgetStatusLabel,
   getBudgetStatusClass,
+  formatBudgetRowLabels,
 } from '../services/budget-model.js';
 import { Icon } from './icons.js';
 import { filterBudgets, getFilter, onFilterChange } from '../services/global-filter.js';
@@ -317,6 +318,7 @@ function renderBudgetListRow(budget, transactions, month, income = 0) {
   const pl = PRIORITY_LEVELS[(budget.priority || 'penting').toUpperCase()] || PRIORITY_LEVELS.PENTING;
   const statusClass = getBudgetStatusClass(progress.status);
   const statusLabel = getBudgetStatusLabel(progress.status);
+  const rowLabels = formatBudgetRowLabels(budget.name, progress.status);
   const remaining = progress.remaining;
   const remainingLabel = progress.status === 'paid'
     ? `Rp ${formatCompact(progress.spent || budget.amount || 0)} terbayar`
@@ -325,6 +327,7 @@ function renderBudgetListRow(budget, transactions, month, income = 0) {
       : remaining >= 0
         ? `Sisa: ${formatCompact(remaining)}`
         : `Over ${formatCompact(-remaining)}`;
+  const subLabel = rowLabels.subtitle || remainingLabel;
   const allDone = budget._allDone || isBudgetFullyDone(budget);
   const expanded = _expandedBudgetId === budget.id;
   const selected = _selectedBudgetId === budget.id;
@@ -342,11 +345,11 @@ function renderBudgetListRow(budget, transactions, month, income = 0) {
         <div class="budget-list-row__icon" aria-hidden="true">${Icon('target', { size: 18 })}</div>
         <div class="budget-list-row__main">
           <div class="budget-list-row__title">
-            ${escapeHtml(budget.name)}
-            <span class="budget-status-badge budget-status-badge--${progress.status}">${escapeHtml(statusLabel)}</span>
+            ${escapeHtml(rowLabels.title)}
+            ${!rowLabels.hideStatusBadge ? `<span class="budget-status-badge budget-status-badge--${progress.status}">${escapeHtml(statusLabel)}</span>` : ''}
             ${allDone ? `<span class="done-badge">${Icon('check', { size: 10 })} Selesai</span>` : ''}
           </div>
-          <div class="budget-list-row__sub ${remaining < 0 && progress.status === 'over' ? 'over' : ''}">${remainingLabel}</div>
+          <div class="budget-list-row__sub ${remaining < 0 && progress.status === 'over' ? 'over' : ''}">${escapeHtml(subLabel)}</div>
           <div class="budget-list-row__track">
             <div class="budget-list-row__fill ${statusClass}" style="width:${Math.min(progress.percentUsed, 100)}%"></div>
           </div>

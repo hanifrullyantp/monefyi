@@ -132,6 +132,7 @@ function renderForum(questions, answers) {
         <textarea rows="2" maxlength="800" placeholder="Tulis jawaban singkat..." required></textarea>
         <button type="submit" class="innovation-btn innovation-btn--primary tap">Kirim jawaban</button>
       </form>
+      <button type="button" class="innovation-btn innovation-btn--ghost tap" data-report-q="${escapeHtml(_openQuestionId)}">Laporkan pertanyaan</button>
     `;
   }
 
@@ -198,6 +199,14 @@ function bindForumActions(opts) {
     if (!ta?.value.trim() || !_openQuestionId) return;
     await postForumAnswer(_openQuestionId, ta.value.trim());
     showCommunityPanel({ ...opts, tab: 'forum' });
+  });
+
+  _host.querySelector('[data-report-q]')?.addEventListener('click', async () => {
+    const id = _host.querySelector('[data-report-q]')?.getAttribute('data-report-q');
+    if (!id) return;
+    const { reportForumContent } = await import('../services/community-forum-moderation.js');
+    await reportForumContent({ content_type: 'question', content_id: id, reason: 'spam_or_harmful' });
+    window.showToast?.('Laporan dikirim — tim moderasi akan review', 'success');
   });
 }
 

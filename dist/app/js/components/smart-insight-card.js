@@ -4,6 +4,7 @@
  */
 
 import { Icon } from './icons.js';
+import { fmtCompact } from '../services/smart-suggestions.js';
 
 /**
  * @param {object} [state]
@@ -32,6 +33,9 @@ export async function renderSmartInsightCard(state, callbacks = {}) {
       <div class="smart-insight-card__body">
         <h3 class="smart-insight-card__title">${escapeHtml(s.title)}</h3>
         <p class="smart-insight-card__text">${escapeHtml(s.body)}</p>
+        ${(s.savingsPotential || s.impact_amount) ? `
+          <span class="smart-insight-card__savings">Potensi hemat ~Rp ${fmtCompact(s.savingsPotential || s.impact_amount)}</span>
+        ` : ''}
         ${s.action ? `
           <button type="button" class="smart-insight-card__action tap" data-target="${s.action.target || ''}" data-id="${escapeHtml(s.id)}">
             ${escapeHtml(s.action.label)} ${Icon('chevronRight', { size: 12 })}

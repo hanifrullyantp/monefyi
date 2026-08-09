@@ -5,6 +5,7 @@ import {
   detectSubscriptions,
   detectWeekendPattern,
   detectSavingOpportunity,
+  detectDebtPayoffBoost,
   fmtCompact,
 } from '../app/js/services/smart-suggestions.js';
 
@@ -72,5 +73,23 @@ describe('growth-phase1 smart suggestions', () => {
   it('fmtCompact formats amounts', () => {
     assert.equal(fmtCompact(1500000), '1.5jt');
     assert.equal(fmtCompact(45000), '45rb');
+  });
+
+  it('detectDebtPayoffBoost reads balance and min_payment fields', () => {
+    globalThis.window = {
+      STATE: {
+        db: {
+          debts: [{
+            name: 'Kartu kredit',
+            balance: 6_000_000,
+            min_payment: 500_000,
+            status: 'active',
+          }],
+        },
+      },
+    };
+    const insight = detectDebtPayoffBoost(window.STATE);
+    assert.ok(insight);
+    assert.equal(insight.id, 'debt-boost');
   });
 });

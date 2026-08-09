@@ -7,6 +7,7 @@ import { generateSmartSuggestions } from './smart-suggestions.js';
 
 const LS_DISMISSED = 'monefyi_insights_dismissed';
 const LS_LAST_SYNC = 'monefyi_insights_last_sync';
+const SYNC_INTERVAL_MS = 15 * 60 * 1000;
 
 function supa() {
   return window.STATE?.db?.supa || null;
@@ -81,15 +82,19 @@ export async function syncAndGenerateInsights(state = window.STATE) {
       for (const row of remote || []) {
         if (row.dismissed_at) dismissed.add(row.insight_key);
       }
+      saveDismissedLocal(dismissed);
 
+      const lastSync = Number(localStorage.getItem(LS_LAST_SYNC) || 0);
+      const shouldUpsert = Date.now() - lastSync >= SYNC_INTERVAL_MS;
       const active = generated.filter((g) => !dismissed.has(g.id));
-      if (active.length) {
+
+      if (shouldUpsert && active.length) {
         await client.from('insights_generated').upsert(
           active.map((s) => toRow(s, uid)),
           { onConflict: 'user_id,insight_key' },
         );
+        localStorage.setItem(LS_LAST_SYNC, String(Date.now()));
       }
-      localStorage.setItem(LS_LAST_SYNC, String(Date.now()));
     } catch (e) {
       console.warn('[insights-store] sync', e);
     }
@@ -119,9 +124,10 @@ export async function recordInsightAction(insightKey, action) {
 
   if (client && uid) {
     try {
-      await client.from('insights_generated').update(patch)
-        .eq('user_id', uid)
-        .eq('insight_key', insightKey);
+      await client.from('insights_generated').upsert(
+        { user_id: uid, insight_key: insightKey, ...patch },
+        { onConflict: 'user_id,insight_key' },
+      );
     } catch (e) {
       console.warn('[insights-store] record', e);
     }
