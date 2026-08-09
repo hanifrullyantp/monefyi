@@ -220,6 +220,16 @@ async function renderDashboard(body) {
     <div class="admin-card" id="admLaunchGateCard">
       <p class="admin-muted">Memuat launch gate…</p>
     </div>
+    <div class="admin-card" id="admBetaCard">
+      <h2>Beta onboarding</h2>
+      <p class="admin-muted">Aktifkan banner feedback di beranda tester. Grant per user atau nyalakan flag global.</p>
+      <div class="admin-toolbar" style="margin-top:12px">
+        <button type="button" class="admin-btn" id="admEnableBetaFlag">Aktifkan flag beta_feedback</button>
+        <button type="button" class="admin-btn ghost" data-go="users">Kelola beta testers</button>
+        <button type="button" class="admin-btn ghost" data-go="feedback">Lihat feedback</button>
+      </div>
+      <p class="admin-muted" id="admBetaStatus" style="margin-top:8px;font-size:11px">—</p>
+    </div>
     <div class="admin-card">
       <h2>Plan mix</h2>
       <div class="admin-row-list">
@@ -305,6 +315,49 @@ async function renderDashboard(body) {
     } catch (e) {
       gateCard.innerHTML = `<p class="admin-muted">Launch gate error: ${escapeHtml(e.message)}</p>`;
     }
+  }
+
+  const betaCard = body.querySelector('#admBetaCard');
+  const betaStatus = body.querySelector('#admBetaStatus');
+  if (betaCard) {
+    try {
+      const { isFeatureEnabled } = await import('../services/feature-flag-store.js');
+      const on = isFeatureEnabled('beta_feedback');
+      if (betaStatus) {
+        betaStatus.textContent = on
+          ? 'Flag beta_feedback: AKTIF (rollout global)'
+          : 'Flag beta_feedback: off — gunakan Grant Beta per user atau klik tombol di atas';
+      }
+    } catch { /* ignore */ }
+
+    body.querySelector('#admEnableBetaFlag')?.addEventListener('click', async () => {
+      const btn = body.querySelector('#admEnableBetaFlag');
+      btn.disabled = true;
+      try {
+        const { saveFeatureFlag } = await import('../services/feature-flag-store.js');
+        await saveFeatureFlag('beta_feedback', {
+          enabled: true,
+          status: 'active',
+          rollout_pct: 100,
+          name: 'Beta Feedback Banner',
+        });
+        toast('Flag beta_feedback aktif 100%', 'success');
+        if (betaStatus) betaStatus.textContent = 'Flag beta_feedback: AKTIF (rollout global)';
+      } catch (e) {
+        toast(e.message || 'Gagal', 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    betaCard.querySelectorAll('[data-go]').forEach((b) => {
+      b.addEventListener('click', () => {
+        _tab = b.getAttribute('data-go');
+        setAdminHash(_tab);
+        renderShell();
+        loadTab(_tab);
+      });
+    });
   }
 }
 
@@ -408,10 +461,14 @@ function renderUserCard(u) {
         <label style="flex-direction:row;align-items:center;gap:8px;text-transform:none">
           <input type="checkbox" data-f="push_notifications" ${u.push_notifications !== false ? 'checked' : ''} /> Push notif
         </label>
+        <label style="flex-direction:row;align-items:center;gap:8px;text-transform:none">
+          <input type="checkbox" data-f="early_access" ${u.early_access ? 'checked' : ''} /> Beta tester
+        </label>
       </div>
       <div class="admin-user-actions">
         <button type="button" class="admin-btn" data-act="save">Simpan</button>
         <button type="button" class="admin-btn ghost" data-act="trial">Grant Trial</button>
+        <button type="button" class="admin-btn ghost" data-act="grant-beta">Grant Beta</button>
         <button type="button" class="admin-btn ghost" data-act="marketing">Marketing</button>
         ${String(window.STATE?.db?.profile?.role || '').toLowerCase() === 'super_admin'
           ? `<button type="button" class="admin-btn ghost" data-act="refund-enable">Aktifkan refund</button>
@@ -448,11 +505,15 @@ function wireUserCards(list) {
               plan_expires_at: plan === 'lifetime' ? null : (dateVal ? new Date(dateVal).toISOString() : null),
               email_notifications: !!val('email_notifications')?.checked,
               push_notifications: !!val('push_notifications')?.checked,
+              early_access: !!val('early_access')?.checked,
             });
             toast('User disimpan', 'success');
           } else if (act === 'trial') {
             await edgePost(fn, { user_id: uid, grant_trial: true, trial_days: 7 });
             toast('Trial 7 hari di-grant', 'success');
+          } else if (act === 'grant-beta') {
+            await edgePost(fn, { user_id: uid, action: 'grant_beta' });
+            toast('Beta tester diaktifkan (+ banner feedback)', 'success');
           } else if (act === 'marketing') {
             const u = _usersCache.find((x) => x.id === uid);
             const { showUserMarketingPanel } = await import('./admin-user-marketing.js');

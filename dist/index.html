@@ -222,24 +222,28 @@
         /* Dynamic Classes Placeholder */
         /* Will be populated by JS based on config */
 
+        .cookie-consent {
+          position: fixed; left: 0; right: 0; bottom: 0; z-index: 9999;
+          padding: 12px 16px; background: rgba(15, 23, 42, 0.96);
+          border-top: 1px solid rgba(255,255,255,0.08);
+          backdrop-filter: blur(8px);
+        }
+        .cookie-consent__inner {
+          max-width: 960px; margin: 0 auto;
+          display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
+        }
+        .cookie-consent__text { font-size: 13px; color: #cbd5e1; margin: 0; flex: 1; min-width: 220px; }
+        .cookie-consent__link { color: #34d399; text-decoration: underline; }
+        .cookie-consent__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .cookie-consent__btn {
+          border: 0; border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+        }
+        .cookie-consent__btn--primary { background: #10b981; color: #0f172a; }
+        .cookie-consent__btn--ghost { background: transparent; color: #94a3b8; border: 1px solid rgba(255,255,255,0.15); }
+
     </style>
-<!-- Meta Pixel Code -->
-<script>
-!function(f,b,e,v,n,t,s)
-{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-n.queue=[];t=b.createElement(e);t.async=!0;
-t.src=v;s=b.getElementsByTagName(e)[0];
-s.parentNode.insertBefore(t,s)}(window, document,'script',
-'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '1530674178146899');
-fbq('track', 'PageView');
-</script>
-<noscript><img height="1" width="1" style="display:none"
-src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
-/></noscript>
-<!-- End Meta Pixel Code -->
+  <script type="module" crossorigin src="/assets/main-s_7awCxT.js"></script>
+  <link rel="modulepreload" crossorigin href="/js/landing-cookie.js">
   <link rel="stylesheet" crossorigin href="/assets/monefyi-brand-BbPZzzEE.css">
 </head>
 <body class="antialiased selection:bg-green-500 selection:text-white">
@@ -1039,12 +1043,12 @@ src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
             initSlider();
 
             // NOTE:
-            // - initPixels() is for main landing admin pixel.
+            // - initPixels() is for main landing admin pixel (requires cookie consent).
             // - Affiliate pixels are injected separately (after affiliate config loaded).
             // Requirement: on /aff/:slug, pixel active should be affiliate's pixel (avoid double-pixels).
             if (!isAffiliate) {
-                logDebug('initPixels() starting...');
-                initPixels();
+                logDebug('bootPixels() starting...');
+                bootPixels();
             } else {
                 logDebug('Skipping main initPixels() because affiliate mode is active.');
             }
@@ -1714,9 +1718,7 @@ src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
                 } else {
                     element.innerHTML = currentString.substring(0, charIndex + 1);
                     charIndex++;
-                    typeSpeed = 100;
-                }
-
+                    typeSpeed = 100;/assets/landing-cookie-mJWa-6DP.js
                 if (!isDeleting && charIndex === currentString.length) {
                     isDeleting = true;
                     typeSpeed = 2000; // Pause at end
@@ -1731,8 +1733,25 @@ src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
             cycle();
         }
 
-        // --- Pixels ---
+        // --- Pixels (gated by cookie consent) ---
+        function hasAnalyticsConsent() {
+            return window.MonefyiCookieConsent?.hasAnalyticsConsent?.() === true;
+        }
+
+        async function bootPixels() {
+            try {
+                const mod = await import('/js/landing-cookie.js');
+                mod.mountCookieConsentBanner({
+                    onAccept: () => initPixels(),
+                });
+                if (hasAnalyticsConsent()) initPixels();
+            } catch (e) {
+                console.warn('[Monefyi] Cookie consent / pixels failed', e);
+            }
+        }
+
         function initPixels() {
+            if (!hasAnalyticsConsent()) return;
             const c = window.appData.config || {};
             if(!c.pixel_code) return;
 
@@ -1758,6 +1777,8 @@ src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
             if (isAffiliate) {
                 return;
             }
+
+            if (!hasAnalyticsConsent()) return;
 
             if (typeof fbq !== 'undefined') {
                 fbq('track', eventName);
@@ -2168,6 +2189,6 @@ src="https://www.facebook.com/tr?id=1530674178146899&ev=PageView&noscript=1"
             window.notifyTimeout = setTimeout(showNotify, 5000);
         }
 
-    </script>
+    </script>
 </body>
 </html>

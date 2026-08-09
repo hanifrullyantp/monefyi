@@ -14,6 +14,12 @@ module.exports = {
         admin: path.join(__dirname, "landing page", "admin.html"),
         privacy: path.join(__dirname, "landing page", "privacy.html"),
         terms: path.join(__dirname, "landing page", "terms.html"),
+        "js/landing-cookie": path.join(__dirname, "landing page", "js", "landing-cookie.js"),
+      },
+      output: {
+        entryFileNames: (chunk) => (
+          chunk.name === "js/landing-cookie" ? "js/landing-cookie.js" : "assets/[name]-[hash].js"
+        ),
       },
     },
   },

@@ -142,12 +142,32 @@ serve(async (req) => {
     if (body.onboarding_completed !== undefined) {
       profilePatch.onboarding_completed = !!body.onboarding_completed;
     }
+    if (body.early_access !== undefined) {
+      profilePatch.early_access = !!body.early_access;
+      profilePatch.early_access_at = body.early_access ? new Date().toISOString() : null;
+      profilePatch.early_access_by = body.early_access ? authData.user.id : null;
+    }
+
+    if (body.grant_beta === true || body.action === "grant_beta") {
+      profilePatch.early_access = true;
+      profilePatch.early_access_at = new Date().toISOString();
+      profilePatch.early_access_by = authData.user.id;
+    }
 
     profilePatch.updated_at = new Date().toISOString();
 
     if (Object.keys(profilePatch).length > 1) {
       const { error: profErr } = await sb.from("profiles").update(profilePatch).eq("id", userId);
       if (profErr) return jsonResponse(req,{ error: profErr.message }, 500);
+    }
+
+    if (body.grant_beta === true || body.action === "grant_beta") {
+      await sb.from("feature_flag_overrides").upsert({
+        user_id: userId,
+        flag_key: "beta_feedback",
+        enabled: true,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "user_id,flag_key" });
     }
 
     if (body.plan_type !== undefined || body.ai_daily_limit !== undefined || body.plan_expires_at !== undefined) {

@@ -176,7 +176,7 @@ serve(async (req) => {
     const { data: profileRows, error: prof2Err } = await supa
       .from("profiles")
       .select(
-        "id, name, phone, role, status, plan_type, plan_expires_at, email_notifications, push_notifications, admin_notes",
+        "id, name, phone, role, status, plan_type, plan_expires_at, email_notifications, push_notifications, admin_notes, early_access, refund_request_enabled",
       )
       .in("id", ids);
 
@@ -280,6 +280,8 @@ serve(async (req) => {
         status: accountStatus,
         email_notifications: prof?.email_notifications !== false,
         push_notifications: prof?.push_notifications !== false,
+        early_access: !!prof?.early_access,
+        refund_request_enabled: !!prof?.refund_request_enabled,
         admin_notes: prof?.admin_notes || "",
         is_planner_user: isPlannerUser,
         planner_role: plannerInfo?.role || null,

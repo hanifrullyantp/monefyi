@@ -9,11 +9,11 @@ const DISMISS_KEY = 'monefyi_beta_banner_dismissed_until';
  * @returns {Promise<boolean>}
  */
 export async function shouldShowBetaBanner() {
-  const profile = window.STATE?.db?.profile;
-  if (profile?.early_access) return true;
   try {
+    const { isBetaTester } = await import('../services/beta-onboarding.js');
     const { isFeatureEnabled } = await import('../services/feature-flag-store.js');
-    return isFeatureEnabled('beta_feedback');
+    const profile = window.STATE?.db?.profile;
+    return isBetaTester(profile, (k) => isFeatureEnabled(k));
   } catch {
     return false;
   }
