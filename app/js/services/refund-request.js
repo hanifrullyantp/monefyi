@@ -3,6 +3,8 @@
  * @module services/refund-request
  */
 
+import { notifyCompliance } from './compliance-client.js';
+
 const LS_PURCHASE = 'monefyi_purchase_record';
 export const REFUND_WINDOW_DAYS = 7;
 
@@ -130,6 +132,7 @@ export async function submitRefundRequest(reason, state = window.STATE || {}) {
         .select('*')
         .single();
       if (error) throw error;
+      notifyCompliance('refund_submitted', { plan_type: info.planType }).catch(() => {});
       return { success: true, data };
     } catch (e) {
       console.error('[refund-request] submitRefundRequest', e);
@@ -146,6 +149,7 @@ export async function submitRefundRequest(reason, state = window.STATE || {}) {
     const localRow = { ...row, id: `local-${Date.now()}`, created_at: new Date().toISOString() };
     list.unshift(localRow);
     localStorage.setItem(localKey, JSON.stringify(list.slice(0, 20)));
+    notifyCompliance('refund_submitted', { plan_type: info.planType }).catch(() => {});
     return { success: true, data: localRow };
   } catch (e) {
     return { success: false, error: e.message || 'Gagal menyimpan lokal.' };

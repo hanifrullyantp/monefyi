@@ -170,6 +170,60 @@ function simulatePayoffSimple(debts, extraPayment = 0) {
 }
 
 /**
+ * Retirement projection — monthly contribution to target nest egg.
+ * @param {object} params
+ * @returns {object}
+ */
+export function simulateRetirement({
+  currentAge = 30,
+  retireAge = 60,
+  currentSavings = 0,
+  monthlyContribution = 0,
+  annualReturn = 0.07,
+  monthlyExpenseAtRetire = 0,
+  inflation = 0.04,
+}) {
+  const age = Math.max(18, Number(currentAge) || 30);
+  const targetAge = Math.max(age + 1, Number(retireAge) || 60);
+  const years = targetAge - age;
+  const months = years * 12;
+  const r = Math.max(0, Number(annualReturn) || 0) / 12;
+  const contrib = Math.max(0, Number(monthlyContribution) || 0);
+  let balance = Math.max(0, Number(currentSavings) || 0);
+
+  for (let i = 0; i < months; i += 1) {
+    balance = balance * (1 + r) + contrib;
+  }
+
+  const expenseNow = Math.max(0, Number(monthlyExpenseAtRetire) || 0);
+  const infl = Math.max(0, Number(inflation) || 0);
+  const expenseAtRetire = expenseNow * Math.pow(1 + infl, years);
+  const safeWithdrawRate = 0.04;
+  const nestEggNeeded = expenseAtRetire > 0 ? Math.round(expenseAtRetire * 12 / safeWithdrawRate) : 0;
+  const gap = nestEggNeeded - Math.round(balance);
+  const onTrack = nestEggNeeded <= 0 || balance >= nestEggNeeded;
+
+  let extraNeeded = 0;
+  if (!onTrack && months > 0 && r > 0) {
+    const factor = (Math.pow(1 + r, months) - 1) / r;
+    extraNeeded = Math.max(0, Math.round(gap / factor));
+  } else if (!onTrack && months > 0) {
+    extraNeeded = Math.max(0, Math.round(gap / months));
+  }
+
+  return {
+    years,
+    projectedBalance: Math.round(balance),
+    nestEggNeeded,
+    monthlyExpenseAtRetire: Math.round(expenseAtRetire),
+    onTrack,
+    gap: Math.max(0, gap),
+    extraMonthlyNeeded: extraNeeded,
+    retireAge: targetAge,
+  };
+}
+
+/**
  * @param {number} n
  * @returns {string}
  */
@@ -185,6 +239,7 @@ if (typeof window !== 'undefined') {
     simulateSavingsExtra,
     simulatePurchaseImpact,
     simulateDebtScenarios,
+    simulateRetirement,
     fmtCompact,
   };
 }

@@ -38,6 +38,9 @@ export function loadDebts() {
  */
 export function saveDebts(rows) {
   localStorage.setItem(LS_DEBTS, JSON.stringify(rows));
+  import('./debt-milestones.js').then(({ checkDebtMilestones }) => {
+    checkDebtMilestones(rows).catch(() => {});
+  }).catch(() => {});
 }
 
 /**

@@ -229,6 +229,85 @@ export async function runLandingParityAudit() {
   return auditLandingParity(flagsMap);
 }
 
+/**
+ * Build landing CMS patch from parity audit (TASK 1.2).
+ * @param {object} [audit]
+ * @returns {object}
+ */
+export function buildLandingParityPatch(audit) {
+  const a = audit || auditLandingParity(window.STATE?.featureFlags || {});
+  const features = a.items.map((item) => ({
+    id: item.id,
+    label: item.label,
+    status: item.status,
+    critical: item.critical,
+    badge: item.status === 'ok' ? '✓' : item.status === 'warn' ? '🚧 Beta' : '⏳ Coming soon',
+    message: item.message,
+  }));
+  return {
+    parity_score: a.score,
+    parity_ready: a.ready,
+    updated_at: new Date().toISOString(),
+    pro_features: features.filter((f) => f.critical),
+    all_features: features,
+  };
+}
+
+/**
+ * Sync parity audit to landing_content via edge function (admin).
+ * @param {string} [slug]
+ * @returns {Promise<{ success: boolean, error?: string, patch?: object }>}
+ */
+export async function syncLandingFromParity(slug = 'default') {
+  const audit = await runLandingParityAudit();
+  const patch = buildLandingParityPatch(audit);
+
+  const base = String(window.MONEFYI_CONFIG?.supabaseUrl || '').replace(/\/+$/, '');
+  const token = window.STATE?.db?.session?.access_token || window.STATE?.session?.access_token;
+  if (!base || !token) {
+    return { success: false, error: 'Login admin + online diperlukan.' };
+  }
+
+  const fn = window.MONEFYI_CONFIG?.fnLandingConfig || 'monefyi-landing-config';
+
+  try {
+    const getRes = await fetch(`${base}/functions/v1/${fn}?slug=${encodeURIComponent(slug)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const getData = await getRes.json().catch(() => ({}));
+    const existing = getData.content && typeof getData.content === 'object' ? getData.content : {};
+
+    const merged = {
+      ...existing,
+      parity: patch,
+      features: patch.all_features,
+    };
+
+    const postRes = await fetch(`${base}/functions/v1/${fn}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ slug, content: merged }),
+    });
+    const postData = await postRes.json().catch(() => ({}));
+    if (!postRes.ok) {
+      return { success: false, error: postData.error || postRes.statusText };
+    }
+    return { success: true, patch };
+  } catch (e) {
+    return { success: false, error: e.message || 'Gagal sync' };
+  }
+}
+
 if (typeof window !== 'undefined') {
-  window.monefyiLandingParity = { LANDING_PROMISES, auditLandingParity, runLandingParityAudit, getUserParitySummary };
+  window.monefyiLandingParity = {
+    LANDING_PROMISES,
+    auditLandingParity,
+    runLandingParityAudit,
+    getUserParitySummary,
+    buildLandingParityPatch,
+    syncLandingFromParity,
+  };
 }

@@ -771,6 +771,57 @@ body:not(.theme-light) .home-streak-badge {
 .impulse-stats .negative { color: #f87171; }
 .impulse-alts { font-size: 12px; padding-left: 18px; margin-bottom: 12px; color: var(--text-secondary, #94a3b8); }
 .impulse-cooldown { font-size: 12px; text-align: center; margin-bottom: 12px; color: var(--text-secondary, #94a3b8); }
+.impulse-goal-note {
+  font-size: 12px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--status-warning) 12%, transparent);
+  color: var(--text-secondary, #94a3b8);
+}
+.impulse-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.impulse-actions .innovation-btn { flex: 1; min-width: 120px; font-size: 12px; }
+
+.wishlist-stats {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+.wishlist-section h4 { font-size: 12px; font-weight: 700; margin: 12px 0 8px; }
+.wishlist-row {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--card-border, rgba(255,255,255,0.08));
+}
+.wishlist-row__main { display: flex; flex-direction: column; gap: 2px; font-size: 12px; margin-bottom: 8px; }
+.wishlist-row__actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.wishlist-row__actions .innovation-btn { font-size: 11px; padding: 6px 10px; }
+
+.personality-result__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.home-mini-stat__inner {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, #10b981 8%, var(--card-bg));
+  border: 1px solid color-mix(in srgb, #10b981 25%, var(--card-border));
+  font-size: 13px;
+}
 
 .emergency-mode-banner__inner {
   padding: 14px;
@@ -795,6 +846,59 @@ body:not(.theme-light) .home-streak-badge {
 }
 .emergency-mode-banner__cta { border: 0; background: #ef4444; color: #fff; }
 .emergency-mode-banner__off { border: 1px solid rgba(148, 163, 184, 0.35); background: transparent; color: inherit; }
+
+.emergency-assess-block {
+  padding: 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, #ef4444 8%, var(--card-bg));
+  border: 1px solid color-mix(in srgb, #ef4444 25%, var(--card-border));
+  margin-bottom: 14px;
+}
+.emergency-assess-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 4px 0;
+}
+.emergency-assess-row--warn strong { color: #f87171; }
+.emergency-assess-section { margin-bottom: 14px; }
+.emergency-assess-section h4 { font-size: 12px; font-weight: 700; margin: 0 0 8px; }
+.emergency-assess-list { font-size: 12px; padding-left: 18px; margin: 0; color: var(--text-secondary, #94a3b8); }
+.emergency-assess-savings { font-size: 12px; font-weight: 600; color: #10b981; margin-top: 6px; }
+.emergency-recovery-phase { font-size: 12px; margin-bottom: 6px; line-height: 1.45; }
+
+.wellness-score-card__inner {
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+}
+.wellness-score-card__head {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.wellness-score-card__score {
+  margin-left: auto;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--interactive-primary);
+}
+.wellness-score-card__meta {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-secondary, #94a3b8);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.wellness-tips-list {
+  font-size: 12px;
+  padding-left: 18px;
+  margin: 12px 0;
+  color: var(--text-secondary, #94a3b8);
+}
 
 .wellness-prompt-card__inner {
   display: flex;

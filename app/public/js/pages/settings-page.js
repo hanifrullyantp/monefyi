@@ -1108,14 +1108,18 @@ async function renderInnovation(body) {
       </div>
     </div>
     <div class="settings-card">
-      <h2>Impulse Guard</h2>
-      <p class="settings-desc">Cooldown sebelum belanja discretionary besar (default ≥ Rp 100rb).</p>
+      <h2>Impulse Guard & Wishlist</h2>
+      <p class="settings-desc">Cooldown sebelum belanja discretionary besar + wishlist review 30 hari.</p>
       ${switchRow('impulseGuard', 'Aktifkan Impulse Guard', 'Pause + impact preview saat save', !!impulse.enabled)}
+      <div class="settings-actions">
+        <button type="button" class="settings-btn" id="spImpulseWishlist">Buka wishlist</button>
+      </div>
     </div>
     <div class="settings-card">
       <h2>Mode Darurat</h2>
       <p class="settings-desc">Kunci kategori discretionary & fokus runway saat kondisi kritis.</p>
       <div class="settings-actions">
+        <button type="button" class="settings-btn" id="spEmergencyPlan">Assessment & rencana darurat</button>
         <button type="button" class="settings-btn danger" id="spEmergencyOn">Aktifkan Mode Darurat</button>
         <button type="button" class="settings-btn ghost" id="spEmergencyOff">Matikan</button>
       </div>
@@ -1169,6 +1173,16 @@ async function renderInnovation(body) {
     const { saveImpulseSettings } = await import('../services/impulse-guard.js');
     saveImpulseSettings({ enabled: !!e.target.checked });
     toast(e.target.checked ? 'Impulse Guard aktif' : 'Impulse Guard nonaktif', 'success');
+  });
+
+  body.querySelector('#spImpulseWishlist')?.addEventListener('click', async () => {
+    const { showImpulseWishlistSheet } = await import('../components/impulse-wishlist-sheet.js');
+    showImpulseWishlistSheet();
+  });
+
+  body.querySelector('#spEmergencyPlan')?.addEventListener('click', async () => {
+    const { showEmergencyPlanSheet } = await import('../components/emergency-plan-sheet.js');
+    showEmergencyPlanSheet();
   });
 
   body.querySelector('#spEmergencyOn')?.addEventListener('click', async () => {

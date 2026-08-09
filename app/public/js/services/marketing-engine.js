@@ -459,6 +459,11 @@ export async function getEligibleOffers(opts = {}) {
     return null;
   }
 
+  try {
+    const { isEmergencyModeActive } = await import('./emergency-mode.js');
+    if (isEmergencyModeActive()) return null;
+  } catch { /* ignore */ }
+
   const rules = await loadGlobalRules();
   const ctx = buildUserContext(opts.state || window.STATE);
 

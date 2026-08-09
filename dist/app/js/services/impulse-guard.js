@@ -4,6 +4,7 @@
  */
 
 import { isEmergencyModeActive } from './emergency-mode.js';
+import { computeTargetStats } from './financial-targets.js';
 
 const LS_SETTINGS = 'monefyi_impulse_guard';
 const DEFAULT_THRESHOLD = 100000;
@@ -67,6 +68,20 @@ export function computeImpulseImpact(tx, state = typeof window !== 'undefined' ?
   const after = safe - amount;
   const dailyAfter = daysLeft > 0 ? after / daysLeft : after;
 
+  let goal_note = null;
+  try {
+    const target = state.db?.primaryTargetDisplay
+      || state.db?.financialTargets?.find((t) => t.is_primary);
+    if (target && amount >= 200000) {
+      const stats = computeTargetStats(target);
+      const monthly = Number(stats.monthly || target.monthly_contribution || 0);
+      const delay = monthly > 0 ? Math.ceil(amount / monthly) : null;
+      if (delay && delay >= 1) {
+        goal_note = `Target "${target.name}" bisa mundur ~${delay} bulan jika beli sekarang.`;
+      }
+    }
+  } catch { /* ignore */ }
+
   return {
     amount,
     safe_before: safe,
@@ -74,9 +89,10 @@ export function computeImpulseImpact(tx, state = typeof window !== 'undefined' ?
     daily_after: Math.round(dailyAfter),
     days_to_payday: daysLeft,
     severity: after < 0 ? 'critical' : after < safe * 0.3 ? 'high' : 'medium',
+    goal_note,
     alternatives: [
       'Tunda 24 jam — masih butuh?',
-      'Set budget max 50% dari nominal ini',
+      'Tambah ke wishlist, review 30 hari',
       'Cari alternatif gratis/lebih murah',
     ],
   };

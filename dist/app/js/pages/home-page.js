@@ -126,6 +126,14 @@ async function renderV2Home(container, data, ctx, callbacks, formatIDR, formatCo
   }
 
   try {
+    const { renderWellnessHomeCard } = await import('../components/wellness-home-card.js');
+    const wellnessCard = renderWellnessHomeCard(state, callbacks);
+    if (wellnessCard) container.appendChild(wellnessCard);
+  } catch (e) {
+    console.warn('[home] wellness card', e);
+  }
+
+  try {
     const { renderGrowthAlertsBar } = await import('../components/growth-alerts-bar.js');
     const growthBar = await renderGrowthAlertsBar(state, callbacks);
     if (growthBar) container.appendChild(growthBar);
@@ -213,7 +221,61 @@ async function renderV2Home(container, data, ctx, callbacks, formatIDR, formatCo
   try {
     const { shouldPromptWeeklyWellness } = await import('../services/financial-wellness.js');
     const { loadPersonalityResult } = await import('../services/money-personality.js');
-    if (shouldPromptWeeklyWellness()) {
+    const { getPersonalityDashboardCard, runPersonalityAction } = await import('../services/personality-personalization.js');
+    const { getWishlistReadyForReview, loadImpulseSkipStats } = await import('../services/impulse-wishlist.js');
+
+    const wishlistReady = getWishlistReadyForReview();
+    if (wishlistReady.length) {
+      const w = wishlistReady[0];
+      const wishCard = document.createElement('section');
+      wishCard.className = 'home-section wellness-prompt-card wellness-prompt-card--wishlist';
+      wishCard.innerHTML = `
+        <div class="wellness-prompt-card__inner tap">
+          <span>💭</span>
+          <div><strong>Wishlist siap review</strong><div class="wellness-prompt-card__sub">${escapeHtml(w.name)} — masih mau beli?</div></div>
+        </div>
+      `;
+      wishCard.querySelector('.wellness-prompt-card__inner')?.addEventListener('click', async () => {
+        const { showImpulseWishlistSheet } = await import('../components/impulse-wishlist-sheet.js');
+        showImpulseWishlistSheet();
+      });
+      container.appendChild(wishCard);
+    }
+
+    const skipStats = loadImpulseSkipStats();
+    if (skipStats.month_skips >= 2) {
+      const skipCard = document.createElement('section');
+      skipCard.className = 'home-section home-mini-stat';
+      skipCard.innerHTML = `
+        <div class="home-mini-stat__inner">
+          <span>🎉</span>
+          <div><strong>${skipStats.month_skips} impulse skip bulan ini</strong>
+          <div class="wellness-prompt-card__sub">~Rp ${new Intl.NumberFormat('id-ID').format(skipStats.month_saved || 0)} tetap di kantong</div></div>
+        </div>
+      `;
+      container.appendChild(skipCard);
+    }
+
+    const personalityCardData = getPersonalityDashboardCard(loadPersonalityResult());
+    if (personalityCardData) {
+      const pCard = document.createElement('section');
+      pCard.className = 'home-section wellness-prompt-card wellness-prompt-card--personality';
+      pCard.innerHTML = `
+        <div class="wellness-prompt-card__inner tap">
+          <span>${personalityCardData.icon}</span>
+          <div><strong>${escapeHtml(personalityCardData.title)}</strong><div class="wellness-prompt-card__sub">${escapeHtml(personalityCardData.body.slice(0, 80))}…</div></div>
+        </div>
+      `;
+      pCard.querySelector('.wellness-prompt-card__inner')?.addEventListener('click', async () => {
+        if (personalityCardData.primaryAction) {
+          await runPersonalityAction(personalityCardData.primaryAction.action, callbacks);
+        } else {
+          const { showMoneyPersonalityQuiz } = await import('../components/money-personality-quiz.js');
+          await showMoneyPersonalityQuiz();
+        }
+      });
+      container.appendChild(pCard);
+    } else if (shouldPromptWeeklyWellness()) {
       const wellnessCard = document.createElement('section');
       wellnessCard.className = 'home-section wellness-prompt-card';
       wellnessCard.innerHTML = `
@@ -537,4 +599,10 @@ export function renderHomePageSkeleton(container) {
       <div class="home-skeleton__card"></div>
     </div>
   `;
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
 }

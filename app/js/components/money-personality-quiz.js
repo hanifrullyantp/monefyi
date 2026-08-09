@@ -9,6 +9,7 @@ import {
   savePersonalityResult,
   loadPersonalityResult,
 } from '../services/money-personality.js';
+import { applyPersonalityDefaults, PERSONALITY_ACTIONS } from '../services/personality-personalization.js';
 
 /** @type {HTMLElement|null} */
 let _host = null;
@@ -57,6 +58,7 @@ export async function showMoneyPersonalityQuiz(opts = {}) {
         step += 1;
         if (step >= PERSONALITY_QUESTIONS.length) {
           const result = savePersonalityResult(computePersonalityResult(answers));
+          applyPersonalityDefaults(result);
           showPersonalityResult(result, opts);
         } else {
           render();
@@ -74,6 +76,7 @@ export async function showMoneyPersonalityQuiz(opts = {}) {
  */
 function showPersonalityResult(result, opts = {}) {
   if (!_host) return;
+  const actions = PERSONALITY_ACTIONS[result.type_id] || PERSONALITY_ACTIONS.balanced;
   _host.innerHTML = `
     <div class="innovation-sheet" role="dialog" aria-modal="true">
       <div class="innovation-sheet__head">
@@ -88,7 +91,14 @@ function showPersonalityResult(result, opts = {}) {
         <div class="personality-result__features">
           ${(result.features || []).map((f) => `<span class="innovation-chip">${escapeHtml(f)}</span>`).join('')}
         </div>
-        <button type="button" class="innovation-btn tap" data-action="retake">Ulangi tes</button>
+        <p class="innovation-sheet__hint">Personalisasi diterapkan: Impulse Guard & rekomendasi fitur disesuaikan tipemu.</p>
+        <div class="personality-result__actions">
+          ${actions.map((a) => `
+            <button type="button" class="innovation-btn innovation-btn--ghost tap" data-personality-act="${escapeHtml(a.action)}">${escapeHtml(a.label)}</button>
+          `).join('')}
+        </div>
+        <button type="button" class="innovation-btn tap" data-action="done">Selesai</button>
+        <button type="button" class="innovation-btn innovation-btn--ghost tap" data-action="retake">Ulangi tes</button>
       </div>
     </div>
   `;
@@ -96,6 +106,16 @@ function showPersonalityResult(result, opts = {}) {
   _host.querySelector('[data-action="close"]')?.addEventListener('click', () => {
     close();
     opts.onComplete?.(result);
+  });
+  _host.querySelector('[data-action="done"]')?.addEventListener('click', () => {
+    close();
+    opts.onComplete?.(result);
+  });
+  _host.querySelectorAll('[data-personality-act]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const { runPersonalityAction } = await import('../services/personality-personalization.js');
+      await runPersonalityAction(btn.getAttribute('data-personality-act'), opts);
+    });
   });
   _host.querySelector('[data-action="retake"]')?.addEventListener('click', () => {
     localStorage.removeItem('monefyi_money_personality');

@@ -7,6 +7,8 @@ import {
   saveWellnessCheckin,
   computeWellnessScore,
   getThisWeekCheckin,
+  getWellnessRecommendations,
+  getWellnessFinancialBlend,
 } from '../services/financial-wellness.js';
 
 /** @type {HTMLElement|null} */
@@ -77,15 +79,19 @@ function sliderField(id, label, defaultVal) {
  */
 function showWellnessResult(score, opts = {}) {
   if (!_host) return;
+  const blend = getWellnessFinancialBlend();
+  const tips = getWellnessRecommendations(score, blend.financial);
+  const trendLabel = score.trend === 'up' ? 'Membaik' : score.trend === 'down' ? 'Perlu perhatian' : 'Stabil';
+
   _host.innerHTML = `
     <div class="innovation-sheet" role="dialog" aria-modal="true">
       <div class="innovation-sheet__head">
-        <div class="innovation-sheet__kicker">Skor Wellness</div>
+        <div class="innovation-sheet__kicker">Skor Wellness · ${escapeHtml(trendLabel)}</div>
         <button type="button" class="innovation-sheet__close" data-action="close">×</button>
       </div>
       <div class="wellness-score-display">
-        <div class="wellness-score-num">${score.overall ?? '—'}</div>
-        <div class="wellness-score-label">${escapeHtml(score.label)}</div>
+        <div class="wellness-score-num">${blend.combined ?? score.overall ?? '—'}</div>
+        <div class="wellness-score-label">${escapeHtml(blend.label || score.label)}</div>
       </div>
       ${score.components ? Object.values(score.components).map((c) => `
         <div class="wellness-bar">
@@ -93,9 +99,20 @@ function showWellnessResult(score, opts = {}) {
           <span>${c.score}/100</span>
         </div>
       `).join('') : ''}
+      <ul class="wellness-tips-list">
+        ${tips.map((t) => `<li>${escapeHtml(t)}</li>`).join('')}
+      </ul>
+      ${blend.financial != null && blend.financial < 45 ? `
+        <button type="button" class="innovation-btn innovation-btn--ghost tap" data-action="emergency">Buka rencana darurat</button>
+      ` : ''}
       <button type="button" class="innovation-btn tap" data-action="close">Oke</button>
     </div>
   `;
+  _host.querySelector('[data-action="emergency"]')?.addEventListener('click', async () => {
+    const { showEmergencyPlanSheet } = await import('./emergency-plan-sheet.js');
+    close();
+    showEmergencyPlanSheet();
+  });
   _host.querySelector('[data-action="close"]')?.addEventListener('click', () => {
     close();
     opts.onComplete?.(score);

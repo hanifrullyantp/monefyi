@@ -23,6 +23,14 @@ Checklist Sprint 6+ sebelum public launch Monefyi PWA.
 
 Re-deploy product-marketing: `./scripts/deploy-monefyi-product-marketing.sh`
 
+**Compliance edge functions** (emails + purge cron):
+
+```bash
+./scripts/deploy-compliance-functions.sh
+```
+
+Set secrets: `RESEND_API_KEY`, `CRON_SECRET`, `APP_URL`. Schedule daily cron → `monefyi-account-purge` with header `x-cron-secret`.
+
 **Growth Phase (Sprint 7–18 + advanced):**
 
 8. `20260809200000_growth_phase1_insights.sql`

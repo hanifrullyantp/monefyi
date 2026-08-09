@@ -3,6 +3,8 @@
  * @module services/account-deletion
  */
 
+import { notifyCompliance } from './compliance-client.js';
+
 const LS_KEY = 'monefyi_account_deletion';
 export const DELETION_CONFIRM_PHRASE = 'HAPUS AKUN SAYA';
 export const RECOVERY_DAYS = 30;
@@ -122,6 +124,9 @@ export async function requestAccountDeletion(confirmPhrase, reason = '') {
         .single();
       if (error) throw error;
       localStorage.setItem(LS_KEY, JSON.stringify(data));
+      notifyCompliance('deletion_requested', {
+        days_left: daysUntilHardDelete(scheduled),
+      }).catch(() => {});
       return { success: true, data };
     } catch (e) {
       console.error('[account-deletion] requestAccountDeletion', e);
@@ -130,6 +135,7 @@ export async function requestAccountDeletion(confirmPhrase, reason = '') {
   }
 
   localStorage.setItem(LS_KEY, JSON.stringify(row));
+  notifyCompliance('deletion_requested', { days_left: RECOVERY_DAYS }).catch(() => {});
   return { success: true, data: row };
 }
 
@@ -158,6 +164,7 @@ export async function cancelAccountDeletion() {
   }
 
   localStorage.removeItem(LS_KEY);
+  notifyCompliance('deletion_cancelled').catch(() => {});
   return { success: true };
 }
 

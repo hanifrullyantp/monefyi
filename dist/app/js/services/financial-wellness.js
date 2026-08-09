@@ -3,6 +3,8 @@
  * @module services/financial-wellness
  */
 
+import { computeFinancialHealthScore } from './financial-health-score.js';
+
 const LS_ENTRIES = 'monefyi_wellness_entries';
 
 /**
@@ -107,8 +109,75 @@ export function computeWellnessScore(entries = loadWellnessEntries()) {
   };
 }
 
+/**
+ * Blend subjective wellness with objective financial health (Sprint 22).
+ * @param {object} [state]
+ * @returns {object}
+ */
+export function getWellnessFinancialBlend(state = typeof window !== 'undefined' ? window.STATE : {}) {
+  const wellness = computeWellnessScore();
+  let financialOverall = null;
+  try {
+    financialOverall = computeFinancialHealthScore(state).overall;
+  } catch {
+    financialOverall = null;
+  }
+
+  if (wellness.overall == null && financialOverall == null) {
+    return { combined: null, label: 'Belum ada data', wellness, financial: financialOverall };
+  }
+
+  const w = wellness.overall ?? 50;
+  const f = financialOverall ?? 50;
+  const combined = Math.round(w * 0.4 + f * 0.6);
+
+  let label = 'Seimbang';
+  if (w < 45 && f >= 60) label = 'Angka OK, tapi stres — prioritaskan self-care';
+  else if (w >= 70 && f < 45) label = 'Mental kuat — lanjut perbaiki angka';
+  else if (combined < 45) label = 'Perlu dukungan — mode darurat & check-in rutin';
+
+  return {
+    combined,
+    label,
+    wellness: wellness.overall,
+    financial: financialOverall,
+    trend: wellness.trend,
+    recommendations: getWellnessRecommendations(wellness, financialOverall),
+  };
+}
+
+/**
+ * @param {object} wellnessScore
+ * @param {number|null} financialOverall
+ * @returns {string[]}
+ */
+export function getWellnessRecommendations(wellnessScore, financialOverall = null) {
+  /** @type {string[]} */
+  const tips = [];
+  const stress = wellnessScore.components?.stress?.raw;
+  const confidence = wellnessScore.components?.confidence?.raw;
+
+  if (stress != null && stress >= 7) {
+    tips.push('Stres tinggi — coba wellness check-in + kurangi notifikasi marketing');
+  }
+  if (confidence != null && confidence <= 4) {
+    tips.push('Keyakinan rendah — mulai target kecil & rayakan progress mingguan');
+  }
+  if (financialOverall != null && financialOverall < 45 && stress != null && stress >= 6) {
+    tips.push('Pertimbangkan Mode Darurat untuk fokus runway');
+  }
+  if (!tips.length) tips.push('Pertahankan ritme check-in mingguan');
+  return tips.slice(0, 3);
+}
+
 if (typeof window !== 'undefined') {
   window.monefyiWellness = {
-    loadWellnessEntries, saveWellnessCheckin, getThisWeekCheckin, shouldPromptWeeklyWellness, computeWellnessScore,
+    loadWellnessEntries,
+    saveWellnessCheckin,
+    getThisWeekCheckin,
+    shouldPromptWeeklyWellness,
+    computeWellnessScore,
+    getWellnessFinancialBlend,
+    getWellnessRecommendations,
   };
 }

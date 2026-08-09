@@ -601,6 +601,8 @@ async function renderLanding(body) {
         <a class="admin-btn" href="${escapeHtml(cmsUrl)}" target="_blank" rel="noopener">Buka Landing CMS</a>
         <button type="button" class="admin-btn ghost" data-go="plans">Edit Plans & Checkout</button>
         <button type="button" class="admin-btn ghost" id="admParityRefresh">Refresh Parity Audit</button>
+        <button type="button" class="admin-btn" id="admParitySync">Sync Landing CMS</button>
+        <span class="admin-muted" id="admParitySyncStatus"></span>
       </div>
     </div>
     <div class="admin-card" id="admParityCard">
@@ -655,6 +657,21 @@ async function renderLanding(body) {
   };
 
   body.querySelector('#admParityRefresh')?.addEventListener('click', paintParity);
+  body.querySelector('#admParitySync')?.addEventListener('click', async () => {
+    const st = body.querySelector('#admParitySyncStatus');
+    st.textContent = 'Syncing…';
+    try {
+      const { syncLandingFromParity } = await import('../services/landing-parity.js');
+      const res = await syncLandingFromParity('default');
+      if (!res.success) throw new Error(res.error || 'Gagal');
+      st.textContent = `OK — score ${res.patch?.parity_score ?? '—'}%`;
+      toast('Landing CMS diperbarui dari parity audit', 'success');
+      await paintParity();
+    } catch (e) {
+      st.textContent = e.message || 'Gagal';
+      toast(e.message || 'Sync gagal', 'error');
+    }
+  });
   body.querySelector('[data-go]')?.addEventListener('click', () => {
     _tab = 'plans';
     setAdminHash('plans');
@@ -934,7 +951,7 @@ async function renderRefunds(body) {
             <thead><tr><th>Tanggal</th><th>Plan</th><th>Alasan</th><th>Status</th><th>Aksi</th></tr></thead>
             <tbody>
               ${rows.map((r) => `
-                <tr data-id="${escapeHtml(r.id)}">
+                <tr data-id="${escapeHtml(r.id)}" data-user-id="${escapeHtml(r.user_id || '')}">
                   <td class="admin-muted" style="font-size:11px">${escapeHtml(String(r.created_at || '').slice(0, 16))}</td>
                   <td>${escapeHtml(r.plan_type || '—')}</td>
                   <td style="max-width:240px">${escapeHtml(String(r.reason || '').slice(0, 120))}</td>
@@ -955,12 +972,19 @@ async function renderRefunds(body) {
         btn.addEventListener('click', async () => {
           const row = btn.closest('tr');
           const id = row?.getAttribute('data-id');
+          const userId = row?.getAttribute('data-user-id');
           const act = btn.getAttribute('data-rf-act');
           if (!id || !act) return;
           const notes = prompt('Catatan admin (opsional):') || '';
           try {
             const { processRefundRequest } = await import('../services/refund-request.js');
             await processRefundRequest(id, act === 'approve' ? 'approved' : 'rejected', notes);
+            const { notifyCompliance } = await import('../services/compliance-client.js');
+            await notifyCompliance('refund_processed', {
+              user_id: userId || undefined,
+              status: act === 'approve' ? 'approved' : 'rejected',
+              admin_notes: notes,
+            });
             toast(`Refund ${act === 'approve' ? 'disetujui' : 'ditolak'}`, 'success');
             await load();
           } catch (e) {

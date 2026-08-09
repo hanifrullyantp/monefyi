@@ -9,6 +9,7 @@ import {
   simulateSavingsExtra,
   simulatePurchaseImpact,
   simulateDebtScenarios,
+  simulateRetirement,
   fmtCompact,
 } from '../services/what-if-engine.js';
 import { loadDebts } from '../services/debt-payoff-planner.js';
@@ -41,6 +42,7 @@ export async function showWhatIfSimulator(options = {}) {
         <button type="button" class="what-if-tab ${defaultTab === 'savings' ? 'is-active' : ''}" data-tab="savings" ${!target ? 'disabled' : ''}>Nabung</button>
         <button type="button" class="what-if-tab ${defaultTab === 'purchase' ? 'is-active' : ''}" data-tab="purchase">Beli</button>
         <button type="button" class="what-if-tab ${defaultTab === 'debt' ? 'is-active' : ''}" data-tab="debt" ${!debts.length ? 'disabled' : ''}>Utang</button>
+        <button type="button" class="what-if-tab ${defaultTab === 'retirement' ? 'is-active' : ''}" data-tab="retirement">Pensiun</button>
       </nav>
       <div class="modal-body" id="what-if-body"></div>
       <footer class="modal-footer">
@@ -64,6 +66,7 @@ export async function showWhatIfSimulator(options = {}) {
     });
     if (tab === 'savings') renderSavingsTab(body, target, options, close);
     else if (tab === 'purchase') renderPurchaseTab(body, state);
+    else if (tab === 'retirement') renderRetirementTab(body);
     else renderDebtTab(body, debts);
   };
 
@@ -226,6 +229,49 @@ function renderDebtTab(body, debts) {
     overlayCloseParent(body);
     await showDebtPayoffPanel();
   });
+}
+
+function renderRetirementTab(body) {
+  body.innerHTML = `
+    <label class="tgt-label">Usia sekarang</label>
+    <input class="admin-input" type="number" id="wi-r-age" value="30" min="18" max="70" />
+    <label class="tgt-label">Usia pensiun target</label>
+    <input class="admin-input" type="number" id="wi-r-retire" value="60" min="40" max="80" />
+    <label class="tgt-label">Tabungan sekarang (Rp)</label>
+    <input class="admin-input" type="number" id="wi-r-savings" value="0" min="0" step="100000" />
+    <label class="tgt-label">Sisih bulanan (Rp)</label>
+    <input class="admin-input" type="number" id="wi-r-contrib" value="1000000" min="0" step="100000" />
+    <label class="tgt-label">Kebutuhan hidup/bulan saat pensiun (Rp, hari ini)</label>
+    <input class="admin-input" type="number" id="wi-r-expense" value="8000000" min="0" step="500000" />
+    <div class="what-if-preview" id="wi-r-preview" style="margin-top:12px"></div>
+  `;
+
+  const fields = ['wi-r-age', 'wi-r-retire', 'wi-r-savings', 'wi-r-contrib', 'wi-r-expense'];
+  const preview = body.querySelector('#wi-r-preview');
+
+  const updatePreview = () => {
+    const sim = simulateRetirement({
+      currentAge: Number(body.querySelector('#wi-r-age')?.value || 30),
+      retireAge: Number(body.querySelector('#wi-r-retire')?.value || 60),
+      currentSavings: Number(body.querySelector('#wi-r-savings')?.value || 0),
+      monthlyContribution: Number(body.querySelector('#wi-r-contrib')?.value || 0),
+      monthlyExpenseAtRetire: Number(body.querySelector('#wi-r-expense')?.value || 0),
+    });
+    if (!preview) return;
+    preview.innerHTML = `
+      <div class="what-if-row"><span>Proyeksi ${sim.years} tahun</span><strong>Rp ${fmt(sim.projectedBalance)}</strong></div>
+      <div class="what-if-row"><span>Target nest egg</span><strong>Rp ${fmt(sim.nestEggNeeded)}</strong></div>
+      <div class="what-if-row what-if-row--highlight">
+        <span>Status</span><strong>${sim.onTrack ? '✅ On track' : `Kurang Rp ${fmt(sim.gap)}`}</strong>
+      </div>
+      ${!sim.onTrack ? `<div class="what-if-row"><span>Tambahan sisih/bulan</span><strong>+Rp ${fmt(sim.extraMonthlyNeeded)}</strong></div>` : ''}
+    `;
+  };
+
+  fields.forEach((id) => {
+    body.querySelector(`#${id}`)?.addEventListener('input', updatePreview);
+  });
+  updatePreview();
 }
 
 function overlayCloseParent(body) {

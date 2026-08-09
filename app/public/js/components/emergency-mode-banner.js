@@ -47,12 +47,17 @@ export function renderEmergencyModeBanner(state = window.STATE, callbacks = {}) 
         ${runway.actions.slice(0, 2).map((a) => `<li>${escapeHtml(a)}</li>`).join('')}
       </ul>
       <div class="emergency-mode-banner__btns">
+        <button type="button" class="emergency-mode-banner__cta tap" data-action="plan">Mulai rencana darurat</button>
         <button type="button" class="emergency-mode-banner__cta tap" data-action="advisor">Lihat saran</button>
         <button type="button" class="emergency-mode-banner__off tap" data-action="off">Matikan mode</button>
       </div>
     </div>
   `;
 
+  el.querySelector('[data-action="plan"]')?.addEventListener('click', async () => {
+    const { showEmergencyPlanSheet } = await import('./emergency-plan-sheet.js');
+    showEmergencyPlanSheet({ onViewBudget: callbacks.onViewBudget });
+  });
   el.querySelector('[data-action="advisor"]')?.addEventListener('click', () => {
     callbacks.onViewAdvisor?.();
   });

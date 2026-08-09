@@ -44,7 +44,12 @@ export function showImpulseGuardSheet(tx, callbacks = {}) {
           <ul class="impulse-alts">
             ${impact.alternatives.map((a) => `<li>${escapeHtml(a)}</li>`).join('')}
           </ul>
+          ${impact.goal_note ? `<p class="impulse-goal-note">${escapeHtml(impact.goal_note)}</p>` : ''}
           <div class="impulse-cooldown">Tunggu <strong id="impulseTimer">${remaining}</strong> detik sebelum lanjut…</div>
+          <div class="impulse-actions">
+            <button type="button" class="innovation-btn innovation-btn--ghost tap" data-action="wishlist">💭 Wishlist 30 hari</button>
+            ${impact.amount >= 300000 ? '<button type="button" class="innovation-btn innovation-btn--ghost tap" data-action="whatif">Simulasi what-if</button>' : ''}
+          </div>
           <button type="button" class="innovation-btn innovation-btn--ghost tap" data-action="cancel">Batal belanja</button>
           <button type="button" class="innovation-btn tap" data-action="confirm" disabled id="impulseConfirm">Tetap beli</button>
         </div>
@@ -52,8 +57,26 @@ export function showImpulseGuardSheet(tx, callbacks = {}) {
       _host.classList.add('is-visible');
 
       _host.querySelector('[data-action="cancel"]')?.addEventListener('click', () => {
+        import('../services/impulse-wishlist.js').then(({ recordImpulseSkip }) => {
+          recordImpulseSkip({ amount: impact.amount, name: tx.merchant || tx.category });
+        }).catch(() => {});
         cleanup();
         resolve(false);
+      });
+
+      _host.querySelector('[data-action="wishlist"]')?.addEventListener('click', async () => {
+        const { wishlistFromTransaction } = await import('../services/impulse-wishlist.js');
+        wishlistFromTransaction(tx);
+        cleanup();
+        window.showToast?.('Ditambah ke wishlist — review 30 hari lagi', 'success');
+        resolve(false);
+      });
+
+      _host.querySelector('[data-action="whatif"]')?.addEventListener('click', async () => {
+        cleanup();
+        resolve(false);
+        const { showWhatIfSimulator } = await import('./what-if-simulator.js');
+        await showWhatIfSimulator({ tab: 'purchase' });
       });
 
       const confirmBtn = _host.querySelector('#impulseConfirm');
