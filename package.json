@@ -31,7 +31,7 @@
     "benchmark:parser": "node scripts/batch-parser-benchmark.cjs",
     "test:upgrade": "node --test tests/daily-situation.test.js tests/transaction-impact.test.js tests/monevisor-intervention.test.js tests/engagement.test.js tests/onboarding-plan-generator.test.js tests/budget-focus-mode.test.js tests/financial-targets.test.js tests/language-contextual.test.js",
     "test:audit": "node --test tests/data-logic-audit.test.js tests/daily-situation.test.js",
-    "test:roadmap": "node --test tests/roadmap-phase1-2.test.js tests/roadmap-phase3.test.js tests/roadmap-phase4.test.js tests/roadmap-phase5.test.js tests/roadmap-phase6.test.js tests/roadmap-phase7.test.js",
+    "test:roadmap": "node --test tests/roadmap-phase1-2.test.js tests/roadmap-phase3.test.js tests/roadmap-phase4.test.js tests/roadmap-phase5.test.js tests/roadmap-phase6.test.js tests/roadmap-phase7.test.js tests/roadmap-phase8.test.js",
     "seed:demo-august": "node scripts/seed-demo-august-2026.cjs"
   }
 }

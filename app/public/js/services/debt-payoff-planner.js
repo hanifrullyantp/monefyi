@@ -9,6 +9,9 @@ const LS_DEBTS = 'monefyi_debts';
  * @returns {object[]}
  */
 export function loadDebts() {
+  if (typeof window !== 'undefined' && window.STATE?.db?.debts?.length) {
+    return window.STATE.db.debts;
+  }
   try {
     const rows = JSON.parse(localStorage.getItem(LS_DEBTS) || '[]');
     if (rows.length) return rows;

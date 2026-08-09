@@ -116,6 +116,52 @@ async function renderV2Home(container, data, ctx, callbacks, formatIDR, formatCo
   }
 
   try {
+    const { renderEmergencyModeBanner } = await import('../components/emergency-mode-banner.js');
+    const emergencyBar = renderEmergencyModeBanner(state, {
+      onViewAdvisor: callbacks.onViewAdvisor,
+    });
+    if (emergencyBar) container.appendChild(emergencyBar);
+  } catch (e) {
+    console.warn('[home] emergency mode banner', e);
+  }
+
+  try {
+    const { shouldPromptWeeklyWellness } = await import('../services/financial-wellness.js');
+    const { loadPersonalityResult } = await import('../services/money-personality.js');
+    if (shouldPromptWeeklyWellness()) {
+      const wellnessCard = document.createElement('section');
+      wellnessCard.className = 'home-section wellness-prompt-card';
+      wellnessCard.innerHTML = `
+        <div class="wellness-prompt-card__inner tap">
+          <span>🧘</span>
+          <div><strong>Wellness check-in minggu ini</strong><div class="wellness-prompt-card__sub">2 menit — stres & keyakinan finansial</div></div>
+        </div>
+      `;
+      wellnessCard.querySelector('.wellness-prompt-card__inner')?.addEventListener('click', async () => {
+        const { showWellnessCheckinSheet } = await import('../components/wellness-checkin-sheet.js');
+        showWellnessCheckinSheet();
+      });
+      container.appendChild(wellnessCard);
+    } else if (!loadPersonalityResult()) {
+      const personalityCard = document.createElement('section');
+      personalityCard.className = 'home-section wellness-prompt-card';
+      personalityCard.innerHTML = `
+        <div class="wellness-prompt-card__inner tap">
+          <span>🎯</span>
+          <div><strong>Kenali money personality-mu</strong><div class="wellness-prompt-card__sub">8 pertanyaan · strategi personal</div></div>
+        </div>
+      `;
+      personalityCard.querySelector('.wellness-prompt-card__inner')?.addEventListener('click', async () => {
+        const { showMoneyPersonalityQuiz } = await import('../components/money-personality-quiz.js');
+        await showMoneyPersonalityQuiz();
+      });
+      container.appendChild(personalityCard);
+    }
+  } catch (e) {
+    console.warn('[home] innovation prompts', e);
+  }
+
+  try {
     const { renderRecurringPendingBar } = await import('../components/recurring-pending-bar.js');
     const recurringBar = await renderRecurringPendingBar({
       onConfirmed: () => callbacks.onViewTransactions?.(),
@@ -126,8 +172,8 @@ async function renderV2Home(container, data, ctx, callbacks, formatIDR, formatCo
   }
 
   try {
-    const { generateWeeklyDigest } = await import('../services/weekly-digest.js');
-    const digest = generateWeeklyDigest(state);
+    const { getOrGenerateWeeklyDigest } = await import('../services/weekly-digest-store.js');
+    const digest = await getOrGenerateWeeklyDigest(state);
     if (digest.has_data && [0, 1].includes(new Date().getDay())) {
       state._weeklyDigest = digest;
       const { renderWeeklyDigestCard } = await import('../components/weekly-digest-card.js');
@@ -190,6 +236,15 @@ async function renderV2Home(container, data, ctx, callbacks, formatIDR, formatCo
     },
   );
   if (targetCard) container.appendChild(targetCard);
+
+  try {
+    const goals = window.STATE?.db?.financialGoals || [];
+    const { renderGoalsListCard } = await import('../components/goals-list-card.js');
+    const goalsCard = renderGoalsListCard(goals, { onViewAll: callbacks.onViewGoals || callbacks.onViewTarget });
+    if (goalsCard) container.appendChild(goalsCard);
+  } catch (e) {
+    console.warn('[home] goals list card', e);
+  }
 
   try {
     const { isBenchmarkOptIn, computeAnonymousBenchmark } = await import('../services/anonymous-benchmark.js');
@@ -279,6 +334,13 @@ export async function renderHomePage(container, ctx, callbacks = {}) {
 
   container.innerHTML = '';
   container.className = layoutV2 ? 'home-page home-page--v2' : 'home-page';
+
+  try {
+    const { mountHomeMarketingBanner } = await import('../services/marketing-engine.js');
+    await mountHomeMarketingBanner(container);
+  } catch (e) {
+    console.warn('[home] marketing banner', e);
+  }
 
   if (layoutV2 && isSimpleHomeMode(state)) {
     container.className = 'home-page home-page--simple';
