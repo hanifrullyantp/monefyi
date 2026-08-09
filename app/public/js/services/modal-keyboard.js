@@ -7,6 +7,21 @@
 /** @type {boolean} */
 let _wired = false;
 
+/** @type {Record<string, string>} */
+const SHEET_BACKDROP_CLOSE_FN = {
+  sheetBackdrop: 'closeAddSheet',
+  budgetBackdrop: 'closeBudget',
+  advisorBackdrop: 'closeAdvisor',
+  menuBackdrop: 'closeMenu',
+  userBackdrop: 'closeUser',
+  accountsBackdrop: 'closeAccounts',
+  accountDetailBackdrop: 'closeAccountDetail',
+  editBackdrop: 'closeEditModal',
+  affBackdrop: 'closeAffModal',
+  adminBackdrop: 'closeAdminPanel',
+  tutorialBackdrop: 'closeTutorial',
+};
+
 /**
  * @param {Element|null|undefined} root
  * @param {string} selectors
@@ -45,6 +60,45 @@ function layerZ(el) {
 }
 
 /**
+ * @param {HTMLElement} el
+ * @returns {boolean}
+ */
+function isVisibleLayer(el) {
+  if (!(el instanceof HTMLElement) || !el.isConnected) return false;
+  const style = getComputedStyle(el);
+  if (style.display === 'none' || style.visibility === 'hidden') return false;
+  if (el.classList.contains('hidden')) return false;
+  return true;
+}
+
+/**
+ * Close a native sheet backdrop by id or generic fallback.
+ * @param {HTMLElement} el
+ */
+function cancelSheetBackdrop(el) {
+  const fnName = SHEET_BACKDROP_CLOSE_FN[el.id];
+  const fn = fnName && typeof window[fnName] === 'function' ? window[fnName] : null;
+  if (fn) {
+    fn();
+    return;
+  }
+
+  const closeBtn = el.querySelector(
+    '[data-close-menu], [data-close-advisor], [data-close-budget], [data-close-user], '
+    + '[data-close-accounts], [data-close-account-detail], [data-close-edit], [data-close-aff], '
+    + '[data-close-admin], [data-close-tutorial], [data-close="true"], [data-action="close"], .sheet-close-btn',
+  );
+  if (closeBtn instanceof HTMLElement) {
+    closeBtn.click();
+    return;
+  }
+
+  el.classList.remove('open');
+  el.querySelector('.sheet.open, .sheet-panel.open')?.classList.remove('open');
+  if (document.body.style.overflow === 'hidden') document.body.style.overflow = '';
+}
+
+/**
  * @returns {{ el: HTMLElement, z: number, save: () => void, cancel: () => void }[]}
  */
 function collectOpenLayers() {
@@ -52,9 +106,7 @@ function collectOpenLayers() {
   const layers = [];
 
   const push = (el, save, cancel, zBoost = 0) => {
-    if (!(el instanceof HTMLElement) || !el.isConnected) return;
-    const style = getComputedStyle(el);
-    if (style.display === 'none' || style.visibility === 'hidden') return;
+    if (!isVisibleLayer(el)) return;
     layers.push({ el, z: layerZ(el) + zBoost, save, cancel });
   };
 
@@ -63,15 +115,19 @@ function collectOpenLayers() {
     + '.filter-popup-overlay, .btm-overlay, .btm-confirm-overlay, '
     + '.pending-modal-overlay, .notif-modal-overlay, .notif-settings-overlay, '
     + '.email-import-overlay, .install-guide-overlay, .monevisor-panel-overlay, '
-    + '.income-modal-overlay',
+    + '.income-modal-overlay, .target-manager-overlay, .bfp-picker-overlay',
   ).forEach((raw) => {
     const el = /** @type {HTMLElement} */ (raw);
+
+    if (el.classList.contains('notif-modal-overlay') && !el.classList.contains('is-open')) return;
+
     const needsShow = el.classList.contains('filter-popup-overlay')
       || el.classList.contains('btm-overlay')
       || el.classList.contains('btm-confirm-overlay')
       || el.classList.contains('email-import-overlay')
       || el.classList.contains('monevisor-panel-overlay')
-      || el.classList.contains('notif-settings-overlay');
+      || el.classList.contains('notif-settings-overlay')
+      || el.classList.contains('install-guide-overlay');
     if (needsShow && !el.classList.contains('show')) return;
 
     const custom = el._modalKeyboard;
@@ -83,9 +139,9 @@ function collectOpenLayers() {
       },
       () => {
         if (typeof custom?.onCancel === 'function') custom.onCancel();
-        else if (clickFirst(el, '[data-action="close"], .sheet-close-btn')) return;
+        else if (clickFirst(el, '[data-action="close"], .sheet-close-btn, .close-btn, .ns-close')) return;
         else {
-          el.classList.remove('show');
+          el.classList.remove('show', 'is-open');
           el.remove();
         }
       },
@@ -122,10 +178,7 @@ function collectOpenLayers() {
         const id = map[tab] || map.quick;
         document.getElementById(id)?.click();
       },
-      () => {
-        if (typeof window.closeAddSheet === 'function') window.closeAddSheet();
-        else sheetBackdrop.classList.remove('open');
-      },
+      () => cancelSheetBackdrop(sheetBackdrop),
       15,
     );
   }
@@ -136,8 +189,7 @@ function collectOpenLayers() {
     push(
       el,
       () => clickFirst(el, '[data-action="save"], .btn-primary, [id^="btnSave"]'),
-      () => clickFirst(el, '[data-close="true"], [data-action="close"], .sheet-close-btn')
-        || el.classList.remove('open'),
+      () => cancelSheetBackdrop(el),
       5,
     );
   });

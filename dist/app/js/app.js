@@ -2372,6 +2372,9 @@ async function upsertTransaction_legacy_local(tx) {
         if (!expandHit && e.target.closest('.sidebar-item, button, a, input, select')) return;
         aside.classList.remove('sidebar--collapsed');
         localStorage.setItem('monefyi_sidebar_collapsed', '0');
+        const w = Number(localStorage.getItem('monefyi_sidebar_width') || 0);
+        if (w >= 180 && w <= 320) aside.style.width = `${w}px`;
+        else aside.style.removeProperty('width');
         syncSidebarCollapsedUI();
       });
     }
@@ -6793,7 +6796,7 @@ function setSheetPosition(mode) {
     window.closeAddSheet = closeAddSheet;
 
     sheetBackdrop.addEventListener('click', (e)=>{
-      if (e.target?.dataset?.close === 'true') closeAddSheet();
+      if (e.target === sheetBackdrop || e.target?.dataset?.close === 'true') closeAddSheet();
     });
 
     // Budget page (full screen, not sheet)
@@ -7084,8 +7087,9 @@ function setSheetPosition(mode) {
     function closeBudget() {
       closeBudgetSheetOnly();
     }
+    window.closeBudget = closeBudget;
     budgetBackdrop.addEventListener('click', (e)=>{
-      if (e.target?.dataset?.closeBudget === 'true') closeBudget();
+      if (e.target === budgetBackdrop || e.target?.dataset?.closeBudget === 'true') closeBudget();
     });
 
     // Advisor / Monevisor — full page (same tab system as Budget); legacy sheet kept as fallback
@@ -7180,8 +7184,9 @@ function setSheetPosition(mode) {
         }
       }
     }
+    window.closeAdvisor = closeAdvisor;
     advisorBackdrop.addEventListener('click', (e)=>{
-      if (e.target?.dataset?.closeAdvisor === 'true') closeAdvisor();
+      if (e.target === advisorBackdrop || e.target?.dataset?.closeAdvisor === 'true') closeAdvisor();
     });
 
     // Menu sheet
@@ -7189,8 +7194,9 @@ function setSheetPosition(mode) {
     const menuSheet = $('#menuSheet');
     function openMenu(){ openSheet(menuBackdrop, menuSheet); }
     function closeMenu(){ closeSheet(menuBackdrop, menuSheet); }
+    window.closeMenu = closeMenu;
     menuBackdrop.addEventListener('click', (e)=>{
-      if (e.target?.dataset?.closeMenu === 'true') closeMenu();
+      if (e.target === menuBackdrop || e.target?.dataset?.closeMenu === 'true') closeMenu();
     });
 
     // Sidebar secondary shortcuts (used by index.html onclick)
@@ -7267,6 +7273,7 @@ function setSheetPosition(mode) {
       }
 
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      rerender();
     }
     function closeSettingsPage() {
       STATE.ui.settingsPageOpen = false;
@@ -7274,6 +7281,8 @@ function setSheetPosition(mode) {
       if (String(location.hash || '').startsWith('#settings')) {
         history.replaceState(null, '', `${location.pathname}${location.search}`);
       }
+      applySpecialPageVisibility();
+      rerender();
     }
     window.openSettings = openSettings;
     window.closeSettingsPage = closeSettingsPage;
@@ -7436,7 +7445,7 @@ function setSheetPosition(mode) {
     }
 
     tutorialBackdrop?.addEventListener('click', (e) => {
-      if (e.target?.dataset?.closeTutorial === 'true') closeTutorial();
+      if (e.target === tutorialBackdrop || e.target?.dataset?.closeTutorial === 'true') closeTutorial();
     });
 
     window.openTutorial = openTutorial;
@@ -7500,8 +7509,9 @@ function setSheetPosition(mode) {
         closeSheet(adminBackdrop, adminSheet);
       }
     }
+    window.closeAdminPanel = closeAdminPanel;
     adminBackdrop?.addEventListener('click', (e)=>{
-      if (e.target?.dataset?.closeAdmin === 'true') closeAdminPanel();
+      if (e.target === adminBackdrop || e.target?.dataset?.closeAdmin === 'true') closeAdminPanel();
     });
     document.getElementById('btnAdminIcon')?.addEventListener('click', () => openAdminPanel());
     document.getElementById('btnAdminIconDesktop')?.addEventListener('click', () => openAdminPanel());
@@ -7956,8 +7966,9 @@ function setSheetPosition(mode) {
       openSheet(affBackdrop, affSheet);
     }
     function closeAffModal(){ closeSheet(affBackdrop, affSheet); }
+    window.closeAffModal = closeAffModal;
     affBackdrop.addEventListener('click', (e)=>{
-      if (e.target?.dataset?.closeAff === 'true') closeAffModal();
+      if (e.target === affBackdrop || e.target?.dataset?.closeAff === 'true') closeAffModal();
     });
 
     // Accounts sheet
@@ -7968,8 +7979,9 @@ function setSheetPosition(mode) {
       openSheet(accountsBackdrop, accountsSheet);
     }
     function closeAccounts(){ closeSheet(accountsBackdrop, accountsSheet); }
+    window.closeAccounts = closeAccounts;
     accountsBackdrop.addEventListener('click', (e)=>{
-      if (e.target?.dataset?.closeAccounts === 'true') closeAccounts();
+      if (e.target === accountsBackdrop || e.target?.dataset?.closeAccounts === 'true') closeAccounts();
     });
 
     function renderAccountsAllSheet(){
@@ -8015,8 +8027,9 @@ function setSheetPosition(mode) {
       closeSheet(accountDetailBackdrop, accountDetailSheet);
       STATE.accountDetail.account = null;
     }
+    window.closeAccountDetail = closeAccountDetail;
     accountDetailBackdrop.addEventListener('click', (e)=>{
-      if (e.target?.dataset?.closeAccountDetail === 'true') closeAccountDetail();
+      if (e.target === accountDetailBackdrop || e.target?.dataset?.closeAccountDetail === 'true') closeAccountDetail();
     });
 
     function sumsForAccountInPeriod(accountName){
@@ -8197,8 +8210,9 @@ function setSheetPosition(mode) {
       openSettings('account');
     }
     function closeUser(){ closeSheet(userBackdrop, userSheet); }
+    window.closeUser = closeUser;
     userBackdrop.addEventListener('click', (e)=>{
-      if (e.target?.dataset?.closeUser === 'true') closeUser();
+      if (e.target === userBackdrop || e.target?.dataset?.closeUser === 'true') closeUser();
     });
 
     // Edit modal
@@ -8220,7 +8234,7 @@ function setSheetPosition(mode) {
     }
     window.closeEditModal = closeEditModal;
     editBackdrop.addEventListener('click', (e)=>{
-      if (e.target?.dataset?.closeEdit === 'true') closeEditModal();
+      if (e.target === editBackdrop || e.target?.dataset?.closeEdit === 'true') closeEditModal();
     });
 
     // Tabs
@@ -12720,14 +12734,55 @@ function toggleNav(view, triggerEl) {
 
     // Logo sekarang membuka Advisor (lihat handler di bagian Header interactions)
 
-    // Close buttons
-    $$('[data-close="true"]').forEach(el => el.addEventListener('click', closeAddSheet));
-    $$('[data-close-advisor="true"]').forEach(el => el.addEventListener('click', closeAdvisor));
-    $$('[data-close-menu="true"]').forEach(el => el.addEventListener('click', closeMenu));
-    $$('[data-close-user="true"]').forEach(el => el.addEventListener('click', closeUser));
-    $$('[data-close-edit="true"]').forEach(el => el.addEventListener('click', closeEditModal));
-    $$('[data-close-budget="true"]').forEach(el => el.addEventListener('click', closeBudget));
-    $$('[data-close-bd="true"]').forEach(el => el.addEventListener('click', () => closeSheet($('#budgetDetailBackdrop'), $('#budgetDetailSheet'))));
+    /**
+     * Delegated dismiss for sheet X buttons, backdrop taps, and data-close-* controls.
+     */
+    function initOverlayDismissHandlers() {
+      const DISMISS_SELECTOR = [
+        '[data-close="true"]',
+        '[data-close-menu="true"]',
+        '[data-close-advisor="true"]',
+        '[data-close-budget="true"]',
+        '[data-close-user="true"]',
+        '[data-close-accounts="true"]',
+        '[data-close-account-detail="true"]',
+        '[data-close-edit="true"]',
+        '[data-close-aff="true"]',
+        '[data-close-admin="true"]',
+        '[data-close-tutorial="true"]',
+        '[data-close-bd="true"]',
+        '[data-close-filter="true"]',
+      ].join(', ');
+
+      document.addEventListener('click', (e) => {
+        const el = e.target.closest?.(DISMISS_SELECTOR);
+        if (!el) return;
+
+        const ds = el.dataset || {};
+        if (ds.close === 'true') { closeAddSheet(); return; }
+        if (ds.closeMenu === 'true') { closeMenu(); return; }
+        if (ds.closeAdvisor === 'true') { closeAdvisor(); return; }
+        if (ds.closeBudget === 'true') { closeBudget(); return; }
+        if (ds.closeUser === 'true') { closeUser(); return; }
+        if (ds.closeAccounts === 'true') { closeAccounts(); return; }
+        if (ds.closeAccountDetail === 'true') { closeAccountDetail(); return; }
+        if (ds.closeEdit === 'true') { closeEditModal(); return; }
+        if (ds.closeAff === 'true') { closeAffModal(); return; }
+        if (ds.closeAdmin === 'true') { closeAdminPanel(); return; }
+        if (ds.closeTutorial === 'true') { closeTutorial(); return; }
+        if (ds.closeBd === 'true') {
+          const bd = document.getElementById('budgetDetailBackdrop');
+          const sheetEl = document.getElementById('budgetDetailSheet');
+          if (bd && sheetEl) closeSheet(bd, sheetEl);
+          else bd?.remove?.();
+          return;
+        }
+        if (ds.closeFilter === 'true') {
+          if (typeof setMonthPopover === 'function') setMonthPopover(false);
+        }
+      });
+    }
+    initOverlayDismissHandlers();
 
     window.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;

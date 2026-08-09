@@ -5,6 +5,18 @@
   background: var(--sidebar-bg);
   border-right: 1px solid var(--sidebar-border);
   color: var(--sidebar-item-text);
+  box-sizing: border-box;
+}
+
+@media (min-width: 768px) {
+  #appSidebar:not(.sidebar--collapsed) {
+    padding-left: 4px;
+    padding-right: 10px;
+  }
+
+  #appSidebar:not(.sidebar--collapsed) .sidebar-saldo-wrap {
+    padding-right: 2px;
+  }
 }
 
 #appSidebar .brand-title,

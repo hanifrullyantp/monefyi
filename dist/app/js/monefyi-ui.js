@@ -100,11 +100,22 @@
     if (!aside || !btn) return;
 
     const stored = localStorage.getItem('monefyi_sidebar_collapsed');
-    if (stored === '1') aside.classList.add('sidebar--collapsed');
+    if (stored === '1') {
+      aside.classList.add('sidebar--collapsed');
+      aside.style.removeProperty('width');
+    }
 
     btn.addEventListener('click', () => {
       aside.classList.toggle('sidebar--collapsed');
-      localStorage.setItem('monefyi_sidebar_collapsed', aside.classList.contains('sidebar--collapsed') ? '1' : '0');
+      const collapsed = aside.classList.contains('sidebar--collapsed');
+      if (collapsed) {
+        aside.style.removeProperty('width');
+      } else {
+        const w = Number(localStorage.getItem('monefyi_sidebar_width') || 0);
+        if (w >= 180 && w <= 320) aside.style.width = `${w}px`;
+        else aside.style.removeProperty('width');
+      }
+      localStorage.setItem('monefyi_sidebar_collapsed', collapsed ? '1' : '0');
       btn.setAttribute(
         'aria-label',
         aside.classList.contains('sidebar--collapsed') ? t('sidebar.expand') : t('sidebar.collapse'),

@@ -1,5 +1,5 @@
 // Offline-capable service worker — v7 budget killer feature.
-const CACHE_VERSION = 'v56-sidebar-monevisor-light';
+const CACHE_VERSION = 'v57-overlay-settings-fix';
 const STATIC_CACHE = `monefyi-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `monefyi-runtime-${CACHE_VERSION}`;
 const IMAGES_CACHE = `monefyi-images-${CACHE_VERSION}`;

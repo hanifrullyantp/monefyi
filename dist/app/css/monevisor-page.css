@@ -6,6 +6,7 @@
   padding: 0 16px calc(100px + env(safe-area-inset-bottom, 0px));
   max-width: 640px;
   margin: 0 auto;
+  color: var(--text-primary);
 }
 
 .monevisor-page.hidden {
@@ -16,7 +17,7 @@
 .mv-error {
   padding: 80px 20px;
   text-align: center;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-tertiary);
 }
 
 .mv-error button {
@@ -73,21 +74,21 @@
 .mv-title {
   font-size: 18px;
   font-weight: 800;
-  color: white;
+  color: var(--text-primary);
 }
 
 .mv-period {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-tertiary);
 }
 
 .mv-refresh {
   width: 36px;
   height: 36px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--interactive-secondary);
+  border: 1px solid var(--border-subtle);
   border-radius: 10px;
-  color: white;
+  color: var(--text-primary);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -95,7 +96,7 @@
 }
 
 .mv-refresh:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--interactive-secondary-hover);
 }
 
 /* Intervention Card (TASK 2.2) */
@@ -169,7 +170,7 @@
 
 .mv-legacy-collapse {
   margin-bottom: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--card-border);
   border-radius: 12px;
   overflow: hidden;
 }
@@ -178,7 +179,7 @@
   list-style: none;
   cursor: pointer;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-secondary);
 }
 
 .mv-legacy-collapse > summary::-webkit-details-marker {
@@ -200,8 +201,8 @@
 
 /* Coach Card */
 .mv-coach-card {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(14, 165, 233, 0.04));
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  background: linear-gradient(135deg, var(--finance-income-bg) 0%, var(--status-info-bg) 100%);
+  border: 1px solid var(--status-success-border);
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 16px;
@@ -210,7 +211,7 @@
 .mv-coach-text {
   font-size: 15px;
   font-weight: 600;
-  color: white;
+  color: var(--text-primary);
   line-height: 1.5;
   margin-bottom: 16px;
 }
@@ -242,7 +243,7 @@
 
 .mv-health-msg {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
   line-height: 1.4;
   margin-bottom: 8px;
 }
@@ -258,8 +259,8 @@
   border-radius: 6px;
   font-size: 10px;
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.7);
+  background: var(--interactive-secondary);
+  color: var(--text-secondary);
 }
 
 .mv-factor.good {
@@ -305,9 +306,9 @@
 
 .mv-dq-issue {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
   padding: 4px 8px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--interactive-secondary);
   border-radius: 6px;
 }
 
@@ -329,14 +330,15 @@
 
 .mv-metric {
   padding: 14px;
-  background: #131a24;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 12px;
+  box-shadow: var(--card-shadow);
 }
 
 .mv-metric-label {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-tertiary);
   margin-bottom: 4px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -345,7 +347,7 @@
 .mv-metric-value {
   font-size: 17px;
   font-weight: 800;
-  color: white;
+  color: var(--text-primary);
 }
 
 .mv-metric.income .mv-metric-value,
@@ -366,23 +368,24 @@
 
 .mv-metric-note {
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-tertiary);
   margin-top: 2px;
 }
 
 /* Sections */
 .mv-section {
-  background: #131a24;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 16px;
   padding: 16px;
   margin-bottom: 12px;
+  box-shadow: var(--card-shadow);
 }
 
 .mv-section-title {
   font-size: 13px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-secondary);
   margin: 0 0 12px;
   display: flex;
   align-items: center;
@@ -392,7 +395,7 @@
 .mv-bench-subtitle {
   font-size: 11px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--text-tertiary);
   margin-bottom: 10px;
   text-transform: uppercase;
   letter-spacing: 0.4px;
@@ -407,8 +410,8 @@
 
 .mv-dx-card {
   padding: 14px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--bg-secondary);
+  border: 1px solid var(--card-border);
   border-left: 4px solid;
   border-radius: 10px;
 }
@@ -428,12 +431,12 @@
 .mv-dx-title {
   font-size: 14px;
   font-weight: 700;
-  color: white;
+  color: var(--text-primary);
 }
 
 .mv-dx-area {
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-top: 2px;
@@ -445,20 +448,20 @@
 
 .mv-dx-explain {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--text-secondary);
   line-height: 1.6;
   margin-bottom: 8px;
 }
 
 .mv-dx-bench {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-tertiary);
   line-height: 1.4;
   display: flex;
   align-items: flex-start;
   gap: 6px;
   padding: 8px 10px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--interactive-secondary);
   border-radius: 6px;
   margin-bottom: 8px;
 }
@@ -493,7 +496,7 @@
 .mv-benchmarks--503020 {
   margin-bottom: 16px;
   padding-bottom: 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .mv-bench-header {
@@ -506,7 +509,7 @@
 
 .mv-bench-name {
   font-size: 12px;
-  color: white;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
@@ -519,17 +522,17 @@
 }
 
 .mv-bench-sep {
-  color: rgba(255, 255, 255, 0.2);
+  color: var(--text-disabled);
 }
 
 .mv-bench-ideal {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-tertiary);
 }
 
 .mv-bench-bar {
   position: relative;
   height: 8px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-tertiary);
   border-radius: 4px;
   overflow: visible;
 }
@@ -545,13 +548,13 @@
   top: -3px;
   height: 14px;
   width: 2px;
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--text-tertiary);
   border-radius: 1px;
 }
 
 .mv-bench-desc {
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-tertiary);
   margin-top: 4px;
 }
 
@@ -587,13 +590,13 @@
 .mv-action-title {
   font-size: 13px;
   font-weight: 700;
-  color: white;
+  color: var(--text-primary);
   margin-bottom: 4px;
 }
 
 .mv-action-desc {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--text-secondary);
   line-height: 1.5;
   margin-bottom: 8px;
 }
@@ -603,9 +606,9 @@
   align-items: center;
   gap: 4px;
   padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.05);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--interactive-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   font-size: 11px;
   font-weight: 600;
@@ -613,7 +616,7 @@
 }
 
 .mv-action-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--interactive-secondary-hover);
 }
 
 /* Projection */
@@ -634,20 +637,20 @@
 
 .mv-projection.neutral,
 .mv-projection.no_data {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--bg-secondary);
+  border: 1px solid var(--card-border);
 }
 
 .mv-proj-title {
   font-size: 13px;
   font-weight: 700;
-  color: white;
+  color: var(--text-primary);
   margin-bottom: 6px;
 }
 
 .mv-proj-msg {
   font-size: 13px;
-  color: white;
+  color: var(--text-secondary);
   line-height: 1.6;
   margin-bottom: 8px;
 }
@@ -660,19 +663,19 @@
   display: flex;
   justify-content: space-between;
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-tertiary);
   margin-top: 2px;
   padding: 0 4px;
 }
 
 .mv-proj-sug {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-secondary);
   display: flex;
   align-items: flex-start;
   gap: 6px;
   padding: 8px 10px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--interactive-secondary);
   border-radius: 6px;
   line-height: 1.5;
 }
@@ -695,10 +698,10 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--interactive-secondary);
   font-size: 10px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-tertiary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -710,7 +713,7 @@
 
 .mv-cat-name {
   font-size: 12px;
-  color: white;
+  color: var(--text-primary);
   font-weight: 600;
   margin-bottom: 4px;
   display: block;
@@ -718,13 +721,13 @@
 
 .mv-cat-bar {
   height: 4px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-tertiary);
   border-radius: 2px;
 }
 
 .mv-cat-bar > div {
   height: 100%;
-  background: #0ea5e9;
+  background: var(--status-info);
   border-radius: 2px;
 }
 
@@ -735,12 +738,12 @@
 .mv-cat-val > div:first-child {
   font-size: 12px;
   font-weight: 700;
-  color: white;
+  color: var(--text-primary);
 }
 
 .mv-cat-pct {
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-tertiary);
 }
 
 /* Month Compare */
@@ -753,21 +756,22 @@
 .mv-compare-col {
   flex: 1;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-secondary);
+  border: 1px solid var(--card-border);
   border-radius: 10px;
   text-align: center;
 }
 
 .mv-compare-period {
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-tertiary);
   margin-bottom: 4px;
 }
 
 .mv-compare-amt {
   font-size: 14px;
   font-weight: 700;
-  color: white;
+  color: var(--text-primary);
 }
 
 .mv-compare-amt.expense {
@@ -801,10 +805,11 @@
 }
 
 .mv-chat-collapse {
-  background: #131a24;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 16px;
   overflow: hidden;
+  box-shadow: var(--card-shadow);
 }
 
 .mv-chat-trigger {
@@ -815,7 +820,7 @@
   gap: 8px;
   font-size: 14px;
   font-weight: 700;
-  color: white;
+  color: var(--text-primary);
   list-style: none;
   user-select: none;
 }
@@ -873,8 +878,8 @@
 }
 
 .mv-msg-ai .mv-bubble {
-  background: rgba(255, 255, 255, 0.06);
-  color: white;
+  background: var(--interactive-secondary);
+  color: var(--text-primary);
   border-bottom-left-radius: 4px;
 }
 
@@ -918,19 +923,19 @@
 
 .mv-starter {
   padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--bg-secondary);
+  border: 1px solid var(--card-border);
   border-radius: 10px;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-secondary);
   font-size: 12px;
   text-align: left;
   cursor: pointer;
 }
 
 .mv-starter:hover {
-  background: rgba(16, 185, 129, 0.1);
-  border-color: rgba(16, 185, 129, 0.3);
-  color: white;
+  background: var(--status-success-bg);
+  border-color: var(--status-success-border);
+  color: var(--status-success-text);
 }
 
 .mv-chat-input {
@@ -941,16 +946,16 @@
 #mv-input {
   flex: 1;
   padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
   border-radius: 10px;
-  color: white;
+  color: var(--input-text);
   font-size: 13px;
   outline: none;
 }
 
 #mv-input:focus {
-  border-color: rgba(16, 185, 129, 0.5);
+  border-color: var(--input-border-focus);
 }
 
 #mv-send {

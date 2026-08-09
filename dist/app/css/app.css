@@ -1627,9 +1627,14 @@ html, body {
       }
     }
     #appSidebar.sidebar--collapsed {
-      width: 52px;
-      overflow: visible;
+      width: 52px !important;
+      min-width: 52px;
+      max-width: 52px;
+      overflow: hidden;
       padding-top: 0;
+      padding-left: 0;
+      padding-right: 0;
+      align-items: center;
     }
     /* Collapsed rail: no expand chevron above logo — tap logo/empty rail to expand */
     #appSidebar.sidebar--collapsed #btnSidebarCollapse {
@@ -1665,6 +1670,18 @@ html, body {
     #appSidebar.sidebar--collapsed #sidebarUserBlock,
     #appSidebar.sidebar--collapsed .sidebar-footer-text {
       display: none;
+    }
+    #appSidebar.sidebar--collapsed .sidebar-brand {
+      justify-content: center;
+      padding: 4px 0;
+      width: 100%;
+    }
+    #appSidebar.sidebar--collapsed .brand-text-block {
+      display: none !important;
+    }
+    #appSidebar.sidebar--collapsed .sidebar-nav-primary {
+      width: 100%;
+      align-items: center;
     }
     #appSidebar.sidebar--collapsed .sidebar-saldo-wrap,
     #appSidebar.sidebar--collapsed .sidebar-divider,

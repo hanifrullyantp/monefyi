@@ -166,6 +166,18 @@ body.theme-light .hero-saldo-card .hero-budget-progress__fill {
   background: linear-gradient(90deg, #fde68a, #fbbf24) !important;
 }
 
+[data-theme="light"] .hero-saldo-card .swf-link,
+[data-theme="light"] .hero-saldo-card .saldo-wealth-footer,
+body.theme-light .hero-saldo-card .swf-link,
+body.theme-light .hero-saldo-card .saldo-wealth-footer {
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+[data-theme="light"] .hero-saldo-card .swf-row,
+body.theme-light .hero-saldo-card .swf-row {
+  color: rgba(255, 255, 255, 0.88) !important;
+}
+
 [data-theme="light"] .hero-saldo-card #btnSaldoMask,
 [data-theme="light"] .hero-saldo-card #btnSaldoMaskDesktop,
 body.theme-light .hero-saldo-card #btnSaldoMask,
