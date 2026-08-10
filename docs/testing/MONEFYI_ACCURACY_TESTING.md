@@ -27,6 +27,35 @@ After every seed or reset: **logout, login, or clear IndexedDB** so the PWA relo
 
 ---
 
+## Admin Testing Lab (in-app)
+
+Admin dapat menjalankan semua skenario langsung dari PWA tanpa terminal:
+
+1. Login sebagai admin (`profiles.role = admin`)
+2. Buka **Admin Console** → tab **Testing Lab** (`#admin/testing`)
+3. **+ Test User** — buat akun tester terisolasi (`is_test_user = true`)
+4. Pilih user → **Apply** preset (Accuracy 8jt / Demo August) atau gunakan **Scenario Builder**
+5. **Jalankan verify** — lihat matriks PASS/FAIL vs `expected-values.json`
+6. **Mulai impersonate** — admin tetap login, app memuat data tester (UI identik user)
+7. Banner ungu **Mode Testing** muncul; klik **Keluar mode test** untuk kembali
+
+### Impersonate vs CLI seed
+
+| | CLI (`npm run seed:accuracy-test`) | Admin Testing Lab |
+|--|-----------------------------------|-------------------|
+| Target user | `SEED_USER_EMAIL` | Test user `is_test_user` |
+| Akses UI | Login sebagai user tester | Impersonate (proxy edge function) |
+| Verify | `npm run verify:accuracy` | Tombol **Jalankan verify** di admin |
+| Deploy | Script lokal | Edge function `monefyi-admin-test-lab` |
+
+**Deploy edge function:** `supabase functions deploy monefyi-admin-test-lab`
+
+**Migrasi:** `20260810140000_admin_test_lab.sql`
+
+Test users **tidak** dihitung di dashboard KPI admin (filtered `is_test_user`).
+
+---
+
 ## Schema appendix (Monefyi reality)
 
 | Concept | Table / shape |

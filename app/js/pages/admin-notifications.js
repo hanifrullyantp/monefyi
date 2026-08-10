@@ -36,6 +36,20 @@ export async function renderAdminNotifications(body, helpers = {}) {
 
   body.innerHTML = `
     <div class="admin-card">
+      <h2>🔔 Notifications Manager</h2>
+      <p class="admin-muted">Kelola template push/in-app dan aturan global. Transactional vs engagement vs marketing.</p>
+    </div>
+    <div class="admin-card">
+      <h2>Test notification</h2>
+      <p class="admin-muted">Kirim notifikasi in-app ke diri sendiri (admin) untuk QA template.</p>
+      <div class="admin-form-grid">
+        <label style="grid-column:1/-1">Judul<input class="admin-input" id="ntTestTitle" value="Test dari Admin Console" /></label>
+        <label style="grid-column:1/-1">Body<textarea class="admin-input" id="ntTestBody" rows="2">Ini notifikasi uji coba.</textarea></label>
+      </div>
+      <button type="button" class="admin-btn ghost" id="ntTestSend" style="margin-top:8px">Kirim ke saya</button>
+      <p class="admin-muted" id="ntTestStatus" style="margin-top:6px">—</p>
+    </div>
+    <div class="admin-card">
       <h2>Global notification rules</h2>
       <div class="admin-form-grid" id="ntRulesForm">
         ${rules.map((r) => `
@@ -78,6 +92,25 @@ export async function renderAdminNotifications(body, helpers = {}) {
       </div>
     </div>
   `;
+
+  body.querySelector('#ntTestSend')?.addEventListener('click', async () => {
+    const title = body.querySelector('#ntTestTitle')?.value?.trim() || 'Test';
+    const bodyText = body.querySelector('#ntTestBody')?.value?.trim() || '';
+    const st = body.querySelector('#ntTestStatus');
+    if (st) st.textContent = 'Mengirim…';
+    try {
+      if (typeof Notification !== 'undefined') {
+        if (Notification.permission === 'default') await Notification.requestPermission();
+        if (Notification.permission === 'granted') {
+          new Notification(title, { body: bodyText, tag: 'admin-test' });
+        }
+      }
+      if (st) st.textContent = 'Test dikirim (browser push jika izin granted).';
+      toast('Test notification', 'success');
+    } catch (e) {
+      if (st) st.textContent = e.message || 'Gagal';
+    }
+  });
 
   body.querySelector('#ntSaveRules')?.addEventListener('click', async () => {
     for (const el of body.querySelectorAll('[data-nt-rule]')) {

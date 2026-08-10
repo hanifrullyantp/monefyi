@@ -4,6 +4,12 @@
  */
 
 import { Icon } from '../components/icons.js';
+import {
+  getAdminPeriod,
+  setAdminPeriod,
+  getAdminEnv,
+  setAdminEnv,
+} from './admin-shared.js';
 
 const TABS = [
   { id: 'dashboard', label: 'Dashboard' },
@@ -13,6 +19,7 @@ const TABS = [
   { id: 'marketing', label: 'Marketing' },
   { id: 'notifications', label: 'Notifications' },
   { id: 'feature-flags', label: 'Feature Flags' },
+  { id: 'testing', label: 'Testing Lab', flag: 'admin_test_lab' },
   { id: 'feedback', label: 'Feedback' },
   { id: 'refunds', label: 'Refunds' },
   { id: 'config', label: 'Config' },
@@ -25,7 +32,6 @@ let _hashBound = false;
 let _ctx = null;
 let _usersCache = [];
 let _feedbackCache = [];
-let _tutRows = [];
 
 /**
  * @param {HTMLElement} root
@@ -133,21 +139,63 @@ async function edgePost(fnName, body = {}) {
   return data;
 }
 
+function visibleTabs() {
+  let flags = {};
+  try {
+    flags = window.STATE?.featureFlags || {};
+  } catch { /* ignore */ }
+  return TABS.filter((t) => {
+    if (!t.flag) return true;
+    const f = flags[t.flag];
+    if (f && typeof f === 'object') return f.enabled !== false && f.status !== 'off';
+    return true;
+  });
+}
+
+function adminNavigate(tab) {
+  if (!tab) return;
+  _tab = tab;
+  setAdminHash(tab);
+  renderShell();
+  loadTab(tab);
+}
+
 function renderShell() {
   if (!_root) return;
+  const tabs = visibleTabs();
+  const period = getAdminPeriod();
+  const env = getAdminEnv();
+  const impersonating = (() => {
+    try {
+      return !!localStorage.getItem('monefyi_admin_test_session');
+    } catch {
+      return false;
+    }
+  })();
   _root.innerHTML = `
     <div class="admin-page-top">
       <div class="admin-page-brand">
         <div class="admin-page-brand-icon">${Icon('shield', { size: 20 })}</div>
         <div>
           <h1>Admin Console</h1>
-          <p>Super Admin · Monefyi</p>
+          <p>Super Admin · Monefyi${impersonating ? ' · Impersonate aktif' : ''}</p>
         </div>
       </div>
-      <button type="button" class="admin-btn ghost" id="adminCloseBtn" aria-label="Tutup">Tutup</button>
+      <div class="admin-page-controls">
+        <select class="admin-input admin-input--sm" id="adminEnvSelect" title="Environment">
+          <option value="live" ${env === 'live' ? 'selected' : ''}>LIVE</option>
+          <option value="staging" ${env === 'staging' ? 'selected' : ''}>STAGING</option>
+        </select>
+        <select class="admin-input admin-input--sm" id="adminPeriodSelect" title="Periode analytics">
+          <option value="7" ${period === 7 ? 'selected' : ''}>7 hari</option>
+          <option value="30" ${period === 30 ? 'selected' : ''}>30 hari</option>
+          <option value="90" ${period === 90 ? 'selected' : ''}>90 hari</option>
+        </select>
+        <button type="button" class="admin-btn ghost" id="adminCloseBtn" aria-label="Tutup">Tutup</button>
+      </div>
     </div>
     <nav class="admin-page-nav" role="tablist">
-      ${TABS.map((t) => `
+      ${tabs.map((t) => `
         <button type="button" class="admin-nav-btn ${_tab === t.id ? 'is-active' : ''}" data-admin-tab="${t.id}">${t.label}</button>
       `).join('')}
     </nav>
@@ -158,6 +206,15 @@ function renderShell() {
   _root.querySelector('#adminCloseBtn')?.addEventListener('click', () => {
     closeAdminPage();
     _ctx?.onClose?.();
+  });
+  _root.querySelector('#adminEnvSelect')?.addEventListener('change', (e) => {
+    const v = e.target.value;
+    setAdminEnv(v);
+    toast(v === 'live' ? 'Mode LIVE — data produksi' : 'Mode STAGING — label saja', 'info');
+  });
+  _root.querySelector('#adminPeriodSelect')?.addEventListener('change', (e) => {
+    setAdminPeriod(Number(e.target.value) || 30);
+    loadTab(_tab);
   });
   _root.querySelectorAll('[data-admin-tab]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -176,13 +233,33 @@ async function loadTab(tab) {
   if (!body) return;
   body.innerHTML = '<p class="admin-muted">Memuat…</p>';
   try {
-    if (tab === 'dashboard') await renderDashboard(body);
+    if (tab === 'dashboard') {
+      const { renderAdminDashboard } = await import('./admin-dashboard.js');
+      await renderAdminDashboard(body, {
+        escapeHtml,
+        fmtNum,
+        edgePost,
+        toast,
+        navigate: adminNavigate,
+      });
+    }
     else if (tab === 'users') await renderUsers(body);
     else if (tab === 'plans') await renderPlans(body);
     else if (tab === 'landing') await renderLanding(body);
     else if (tab === 'marketing') {
+      body.innerHTML = '<div id="mkInsightsV2Host"></div><div id="mkManageHost"></div>';
+      const insightsHost = body.querySelector('#mkInsightsV2Host');
+      const manageHost = body.querySelector('#mkManageHost');
+      const { renderMarketingInsightsV2 } = await import('./admin-marketing-insights.js');
+      await renderMarketingInsightsV2(insightsHost, {
+        toast,
+        escapeHtml,
+        fmtNum,
+        edgePost,
+        navigate: adminNavigate,
+      });
       const { renderAdminMarketing } = await import('./admin-marketing.js');
-      await renderAdminMarketing(body, { toast, escapeHtml, fmtNum });
+      await renderAdminMarketing(manageHost, { toast, escapeHtml, fmtNum, skipAnalytics: true });
     }
     else if (tab === 'notifications') {
       const { renderAdminNotifications } = await import('./admin-notifications.js');
@@ -192,10 +269,17 @@ async function loadTab(tab) {
       const { renderAdminFeatureFlags } = await import('./admin-feature-flags.js');
       await renderAdminFeatureFlags(body, { toast, escapeHtml, fmtNum });
     }
+    else if (tab === 'testing') {
+      const { renderAdminTestLab } = await import('./admin-test-lab.js');
+      await renderAdminTestLab(body, { toast, escapeHtml, fmtNum, closeAdmin: closeAdminPage });
+    }
     else if (tab === 'feedback') await renderFeedback(body);
     else if (tab === 'refunds') await renderRefunds(body);
     else if (tab === 'config') await renderConfig(body);
-    else if (tab === 'tutorial') await renderTutorial(body);
+    else if (tab === 'tutorial') {
+      const { renderAdminTutorial } = await import('./admin-tutorial.js');
+      await renderAdminTutorial(body, { toast, escapeHtml, fmtNum });
+    }
   } catch (e) {
     console.error('[admin]', e);
     body.innerHTML = `<div class="admin-card"><p class="admin-muted">Gagal memuat: ${escapeHtml(e.message)}</p></div>`;
@@ -706,13 +790,18 @@ async function renderPlans(body) {
 /* ─── Landing bridge ─── */
 async function renderLanding(body) {
   const ac = window.STATE?.appConfig || {};
+  const cfg = window.MONEFYI_CONFIG || {};
   const origin = location.origin.replace(/\/app\/?$/, '') || 'https://monefyi.com';
   const cmsUrl = `${origin}/admin/`;
+  const supaBase = (cfg.supabaseUrl || '').replace(/\/$/, '');
+  const publicConfigUrl = supaBase
+    ? `${supaBase}/functions/v1/${cfg.fnPublicConfig || 'monefyi-public-config'}`
+    : '';
 
   body.innerHTML = `
     <div class="admin-card">
       <h2>Landing & Pricing bridge</h2>
-      <p class="admin-muted">Checkout URL & price display di sini sinkron lewat <code>app_config</code>. Untuk copy/media marketing penuh, buka Landing CMS.</p>
+      <p class="admin-muted">Editor landing page penuh akan di-wire setelah repo/file landing siap. Saat ini: checkout & pricing lewat <code>app_config</code>; marketing copy lewat Landing CMS atau Public Config API.</p>
       <div class="admin-toolbar" style="margin-top:12px">
         <a class="admin-btn" href="${escapeHtml(cmsUrl)}" target="_blank" rel="noopener">Buka Landing CMS</a>
         <button type="button" class="admin-btn ghost" data-go="plans">Edit Plans & Checkout</button>
@@ -720,6 +809,17 @@ async function renderLanding(body) {
         <button type="button" class="admin-btn" id="admParitySync">Sync Landing CMS</button>
         <span class="admin-muted" id="admParitySyncStatus"></span>
       </div>
+    </div>
+    <div class="admin-card">
+      <h2>Public Config API (siap di-wire)</h2>
+      <p class="admin-muted" style="margin-bottom:12px">Landing page nanti cukup fetch endpoint ini — CORS enabled, no auth.</p>
+      <div class="admin-row-list">
+        <div class="admin-row"><span>All sections</span><code style="font-size:10px;word-break:break-all">${escapeHtml(publicConfigUrl ? `${publicConfigUrl}?section=all` : '—')}</code></div>
+        <div class="admin-row"><span>Pricing</span><code style="font-size:10px;word-break:break-all">${escapeHtml(publicConfigUrl ? `${publicConfigUrl}?section=pricing` : '—')}</code></div>
+        <div class="admin-row"><span>Landing copy</span><code style="font-size:10px;word-break:break-all">${escapeHtml(publicConfigUrl ? `${publicConfigUrl}?section=landing` : '—')}</code></div>
+        <div class="admin-row"><span>Feature flags</span><code style="font-size:10px;word-break:break-all">${escapeHtml(publicConfigUrl ? `${publicConfigUrl}?section=feature-flags` : '—')}</code></div>
+      </div>
+      <p class="admin-muted" style="margin-top:8px;font-size:11px">Wire di landing: <code>fetch(url).then(r =&gt; r.json())</code> lalu render section. Lihat tab Config → Cross-app Integration.</p>
     </div>
     <div class="admin-card" id="admParityCard">
       <p class="admin-muted">Memuat parity audit…</p>
@@ -897,9 +997,12 @@ async function renderFeedback(body) {
 /* ─── Config ─── */
 async function renderConfig(body) {
   const ac = window.STATE?.appConfig || {};
+  const cfgBase = String((window.MONEFYI_CONFIG || {}).supabaseUrl || '').replace(/\/+$/, '');
+  const publicConfigUrl = cfgBase ? `${cfgBase}/functions/v1/monefyi-public-config?section=all` : '—';
   body.innerHTML = `
     <div class="admin-card">
       <h2>App config</h2>
+      <p class="admin-muted">Pengaturan global aplikasi Monefyi PWA.</p>
       <div class="admin-user-grid">
         <label style="grid-column:1/-1">Monthly checkout<input class="admin-input" id="cfgMon" value="${escapeHtml(ac.checkout_monthly_url || '')}" /></label>
         <label style="grid-column:1/-1">Lifetime checkout<input class="admin-input" id="cfgLife" value="${escapeHtml(ac.checkout_lifetime_url || '')}" /></label>
@@ -912,7 +1015,17 @@ async function renderConfig(body) {
         <button type="button" class="admin-btn" id="cfgSave">Simpan</button>
         <span id="cfgSt" class="admin-muted">—</span>
       </div>
-      <p class="admin-muted" style="margin-top:8px">Upload logo file tetap tersedia lewat Edge Function monefyi-upload-logo (atau set URL di atas).</p>
+    </div>
+    <div class="admin-card">
+      <h2>Cross-app integration</h2>
+      <p class="admin-muted">Landing page terpisah fetch config dari API ini (read-only, CORS).</p>
+      <div class="admin-row-list">
+        <div class="admin-row"><span>Public config API</span><code style="font-size:10px;word-break:break-all">${escapeHtml(publicConfigUrl)}</code></div>
+        <div class="admin-row"><span>Section pricing</span><code style="font-size:10px">${escapeHtml(cfgBase ? `${cfgBase}/functions/v1/monefyi-public-config?section=pricing` : '—')}</code></div>
+        <div class="admin-row"><span>Section landing</span><code style="font-size:10px">${escapeHtml(cfgBase ? `${cfgBase}/functions/v1/monefyi-public-config?section=landing` : '—')}</code></div>
+        <div class="admin-row"><span>Section feature-flags</span><code style="font-size:10px">${escapeHtml(cfgBase ? `${cfgBase}/functions/v1/monefyi-public-config?section=feature-flags` : '—')}</code></div>
+      </div>
+      <p class="admin-muted" style="margin-top:8px">Deploy <code>monefyi-public-config</code> dengan <code>--no-verify-jwt</code>. Landing CMS: tab Landing.</p>
     </div>
   `;
   body.querySelector('#cfgSave')?.addEventListener('click', async () => {
@@ -934,104 +1047,6 @@ async function renderConfig(body) {
       st.textContent = e.message || 'Gagal';
     }
   });
-}
-
-/* ─── Tutorial admin ─── */
-async function renderTutorial(body) {
-  body.innerHTML = `
-    <div class="admin-card">
-      <h2>Tutorial / Help Center</h2>
-      <div class="admin-toolbar">
-        <button type="button" class="admin-btn" id="tutSeed">Seed konten default</button>
-        <button type="button" class="admin-btn ghost" id="tutRefresh">Refresh</button>
-        <input class="admin-input" id="tutFilter" placeholder="Filter…" style="flex:1" />
-        <span id="tutSt" class="admin-muted">—</span>
-      </div>
-      <div id="tutList" class="admin-row-list" style="margin-top:12px"></div>
-    </div>
-  `;
-
-  const load = async () => {
-    const st = body.querySelector('#tutSt');
-    const list = body.querySelector('#tutList');
-    st.textContent = 'Memuat…';
-    try {
-      if (window.STATE?.db?.supa) window.__monefyiSupabase = window.STATE.db.supa;
-      if (window.STATE?.db?.user) window.currentUser = window.STATE.db.user;
-      const mod = await import('../services/tutorial-service.js');
-      _tutRows = await mod.listTutorialStepsForAdmin();
-      paintTut(list, body.querySelector('#tutFilter')?.value || '', mod);
-      st.textContent = `${_tutRows.length} langkah`;
-    } catch (e) {
-      st.textContent = 'Error';
-      list.innerHTML = `<p class="admin-muted">${escapeHtml(e.message)}. Jalankan migration tutorial + Seed.</p>`;
-    }
-  };
-
-  const paintTut = (list, q, mod) => {
-    const qq = String(q || '').toLowerCase();
-    const rows = qq
-      ? _tutRows.filter((r) => `${r.categoryTitle} ${r.articleTitle} ${r.text}`.toLowerCase().includes(qq))
-      : _tutRows;
-    if (!rows.length) {
-      list.innerHTML = '<p class="admin-muted">Tidak ada langkah.</p>';
-      return;
-    }
-    list.innerHTML = rows.map((r) => `
-      <div class="admin-row" style="flex-direction:column;align-items:stretch">
-        <div><strong>${escapeHtml(r.categoryTitle)}</strong> · ${escapeHtml(r.articleTitle)} · #${r.stepIndex + 1}</div>
-        <div class="admin-muted">${escapeHtml(r.text).slice(0, 120)}</div>
-        <div class="admin-user-actions">
-          ${r.media_url ? `<span class="admin-badge">${escapeHtml(r.media_type || 'media')}</span>` : '<span class="admin-muted">tanpa media</span>'}
-          <label class="admin-btn ghost" style="cursor:pointer">Upload
-            <input type="file" accept="image/*,video/*,.gif" class="hidden" data-tut-up="${escapeHtml(r.id)}" style="display:none" />
-          </label>
-          ${r.media_url ? `<button type="button" class="admin-btn danger" data-tut-clear="${escapeHtml(r.id)}">Hapus</button>` : ''}
-        </div>
-      </div>
-    `).join('');
-
-    list.querySelectorAll('[data-tut-up]').forEach((input) => {
-      input.addEventListener('change', async () => {
-        const file = input.files?.[0];
-        const stepId = input.getAttribute('data-tut-up');
-        if (!file || !stepId) return;
-        body.querySelector('#tutSt').textContent = 'Uploading…';
-        const res = await mod.uploadTutorialMedia(file, stepId);
-        if (!res.success) toast(res.error || 'Upload gagal', 'error');
-        else toast('Media tersimpan', 'success');
-        await load();
-      });
-    });
-    list.querySelectorAll('[data-tut-clear]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const res = await mod.clearTutorialMedia(btn.getAttribute('data-tut-clear'));
-        if (!res.success) toast(res.error || 'Gagal', 'error');
-        else toast('Media dihapus', 'success');
-        await load();
-      });
-    });
-  };
-
-  body.querySelector('#tutRefresh')?.addEventListener('click', load);
-  body.querySelector('#tutFilter')?.addEventListener('input', (e) => {
-    const list = body.querySelector('#tutList');
-    import('../services/tutorial-service.js').then((mod) => paintTut(list, e.target.value, mod));
-  });
-  body.querySelector('#tutSeed')?.addEventListener('click', async () => {
-    const st = body.querySelector('#tutSt');
-    st.textContent = 'Seeding…';
-    try {
-      const mod = await import('../services/tutorial-service.js');
-      const res = await mod.seedTutorialDefaults();
-      if (!res.success) throw new Error(res.error || 'seed failed');
-      st.textContent = `Seed OK: ${res.counts.categories} kat`;
-      await load();
-    } catch (e) {
-      st.textContent = e.message || 'Seed gagal';
-    }
-  });
-  await load();
 }
 
 /* ─── Refunds ─── */

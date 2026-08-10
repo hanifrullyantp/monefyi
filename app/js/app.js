@@ -1824,6 +1824,19 @@ function computeSubscriptionStatus(profile){
         period: saved.period || stampTransactionPeriod(saved).period,
       });
 
+      if (STATE.testMode?.active && window.dataStore) {
+        const existing = await window.dataStore.getTransaction?.(stamped.id);
+        const saved = existing
+          ? await window.dataStore.updateTransaction(stamped.id, stamped)
+          : await window.dataStore.createTransaction(stamped);
+        const normalized = normalizeSaved(saved);
+        const i = STATE.transactions.findIndex((t) => t.id === normalized.id);
+        if (i >= 0) STATE.transactions[i] = normalized;
+        else STATE.transactions.unshift(normalized);
+        window.monefyiRefreshTestChecklist?.();
+        return normalized;
+      }
+
       if (isOfflineMode()) {
         if (!window.dataStore) throw new Error('Offline storage not ready');
         const existing = await window.dataStore.getTransaction?.(stamped.id);
@@ -2364,6 +2377,17 @@ async function upsertTransaction_legacy_local(tx) {
         import('./services/achievement-store.js')
           .then(({ syncCatalogAchievements }) => syncCatalogAchievements(STATE).catch(() => {}))
           .catch((e) => console.warn('achievementSync', e));
+        try {
+          const { tryRestoreSession } = await import('./services/test-mode-service.js');
+          const restored = await tryRestoreSession();
+          if (restored) {
+            const { renderTestModeBanner } = await import('./components/test-mode-banner.js');
+            const { renderTestModeChecklist } = await import('./components/test-mode-checklist.js');
+            renderTestModeBanner();
+            renderTestModeChecklist();
+            document.getElementById('adminPanelLauncher')?.classList.add('hidden');
+          }
+        } catch (e) { console.warn('testModeRestore', e); }
         rerender();
         ensureAppShellVisible();
       } catch (e) {
@@ -2371,6 +2395,7 @@ async function upsertTransaction_legacy_local(tx) {
         if (typeof showToast === 'function') showToast('Gagal memuat data. Coba refresh.', 'warn');
       }
     }
+    window.bootstrapAuthed = bootstrapAuthed;
 
     function initMonefyiEnhancements(){
       if (window.MonefyiI18n?.mergeIntoI18N) window.MonefyiI18n.mergeIntoI18N(I18N);

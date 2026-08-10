@@ -47,6 +47,9 @@ ADMIN_FNS=(
   monefyi-admin-revenue
   monefyi-admin-users
   monefyi-admin-dashboard
+  monefyi-admin-analytics
+  monefyi-public-config
+  monefyi-admin-test-lab
   monefyi-admin-feedback
   monefyi-admin-company-types
   monefyi-admin-platform-stats
@@ -70,7 +73,7 @@ for fn in "${ALL[@]}"; do
   fi
   echo "==> Deploy $fn"
   case "$fn" in
-    lynk-webhook|email-drip|monefyi-account-purge|monefyi-weekly-digest-cron|monefyi-refund-lynk)
+    lynk-webhook|email-drip|monefyi-account-purge|monefyi-weekly-digest-cron|monefyi-refund-lynk|monefyi-public-config)
       npx --yes supabase@latest functions deploy "$fn" --no-verify-jwt
       ;;
     *)

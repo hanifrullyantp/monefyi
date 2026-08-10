@@ -6,6 +6,7 @@
 import { getDb, generateLocalId, isLocalId } from './offline-db.js';
 import { queueSync } from './sync-engine.js';
 import { dedupeTransactions } from '../utils/transaction-utils.js';
+import { isTestModeActive, proxyMutation } from './test-mode-service.js';
 
 /**
  * @returns {string|null}
@@ -34,6 +35,23 @@ function normalizeMeta(meta) {
  * @param {object} data
  */
 export async function createTransaction(data) {
+  if (isTestModeActive()) {
+    const localId = data.id && !isLocalId(data.id) ? data.id : generateLocalId();
+    const now = new Date().toISOString();
+    const record = {
+      id: localId,
+      ...data,
+      user_id: window.STATE?.testMode?.testUserId,
+      amount: Number(data.amount || 0),
+      meta: normalizeMeta(data.meta),
+      created_at: data.created_at || now,
+      updated_at: now,
+    };
+    await proxyMutation('transactions', 'upsert', record);
+    if (window.STATE?.transactions) window.STATE.transactions.push(record);
+    return record;
+  }
+
   const db = await getDb();
   const localId = data.id && !isLocalId(data.id) ? data.id : generateLocalId();
   const now = new Date().toISOString();
@@ -61,6 +79,25 @@ export async function createTransaction(data) {
  * @param {object} updates
  */
 export async function updateTransaction(id, updates) {
+  if (isTestModeActive()) {
+    const now = new Date().toISOString();
+    const existing = (window.STATE?.transactions || []).find((t) => t.id === id) || { id };
+    const merged = {
+      ...existing,
+      ...updates,
+      id,
+      updated_at: now,
+    };
+    if (updates.meta !== undefined) merged.meta = normalizeMeta(updates.meta);
+    if (updates.amount !== undefined) merged.amount = Number(updates.amount);
+    await proxyMutation('transactions', 'upsert', merged);
+    if (window.STATE?.transactions) {
+      const idx = window.STATE.transactions.findIndex((t) => t.id === id);
+      if (idx >= 0) window.STATE.transactions[idx] = merged;
+    }
+    return merged;
+  }
+
   const db = await getDb();
   const now = new Date().toISOString();
   const existing = await db.transactions.get(id);
@@ -86,6 +123,14 @@ export async function updateTransaction(id, updates) {
  * @param {string} id
  */
 export async function deleteTransaction(id) {
+  if (isTestModeActive()) {
+    await proxyMutation('transactions', 'delete', { id });
+    if (window.STATE?.transactions) {
+      window.STATE.transactions = window.STATE.transactions.filter((t) => t.id !== id);
+    }
+    return;
+  }
+
   const db = await getDb();
   await queueSync('delete', 'transactions', id, { id });
   const existing = await db.transactions.get(id);

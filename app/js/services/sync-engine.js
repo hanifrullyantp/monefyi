@@ -128,6 +128,9 @@ export async function queueSync(operation, table, recordId, payload) {
  * @param {string} [reason]
  */
 export async function triggerSync(reason = 'manual') {
+  if (typeof window !== 'undefined' && window.STATE?.testMode?.active) {
+    return { skipped: true, reason: 'test_mode' };
+  }
   if (_syncInProgress) {
     console.log('[sync] Already in progress, skipping');
     return { skipped: true, reason: 'in_progress' };

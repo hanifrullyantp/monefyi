@@ -1,0 +1,12 @@
+{
+  "monthly_income": 5000000,
+  "payday_day": 25,
+  "payday_irregular": false,
+  "income_source": "Gaji",
+  "fixed_bills": [
+    { "name": "Kost", "amount": 1200000 },
+    { "name": "Listrik", "amount": 150000 },
+    { "name": "Internet", "amount": 150000 },
+    { "name": "Cicilan HP", "amount": 250000 }
+  ]
+}

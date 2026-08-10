@@ -34,12 +34,12 @@ serve(async (req) => {
 
     const { data: profiles, error: pErr } = await sb
       .from("profiles")
-      .select("id, name, role, status, plan_type, plan_expires_at, created_at, updated_at")
+      .select("id, name, role, status, plan_type, plan_expires_at, created_at, updated_at, is_test_user")
       .order("created_at", { ascending: false })
       .limit(5000);
     if (pErr) return jsonResponse(req, { error: pErr.message }, 500);
 
-    const rows = profiles || [];
+    const rows = (profiles || []).filter((p: any) => !p.is_test_user);
     const byPlan = { none: 0, trial: 0, monthly: 0, lifetime: 0 };
     const byStatus = { active: 0, suspended: 0, pending: 0 };
     let new7 = 0;

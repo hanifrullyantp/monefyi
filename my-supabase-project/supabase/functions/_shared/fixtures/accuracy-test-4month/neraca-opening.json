@@ -1,0 +1,17 @@
+{
+  "assets": [
+    { "id": "acc-neraca-motor", "category": "kendaraan", "name": "Motor Honda Beat", "amount": 15000000, "acquired_at": "2025-01-15" },
+    { "id": "acc-neraca-laptop", "category": "elektronik", "name": "Laptop", "amount": 6000000, "acquired_at": "2025-06-01" },
+    { "id": "acc-neraca-hp-lama", "category": "elektronik", "name": "HP Lama", "amount": 2000000, "acquired_at": "2024-03-10" }
+  ],
+  "debts": [
+    { "id": "acc-neraca-debt-hp", "category": "hutang_lainnya", "name": "Cicilan HP", "amount": 2000000, "notes": "Sisa 8 bulan x 250rb" }
+  ],
+  "openingCash": {
+    "BCA": 15000000,
+    "Cash": 500000,
+    "GoPay": 300000,
+    "OVO": 200000,
+    "Tabungan Dana Darurat": 3000000
+  }
+}
