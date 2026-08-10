@@ -18,16 +18,22 @@ export async function renderAdminTestLab(body, ctx = {}) {
   body.innerHTML = '<p class="admin-muted">Memuat Testing Lab…</p>';
 
   try {
-    const [usersRes, scenariosRes, historyRes] = await Promise.all([
+    const [usersRes, scenariosRes] = await Promise.all([
       callTestLab({ action: 'list_test_users' }),
       callTestLab({ action: 'list_scenarios' }),
-      callTestLab({ action: 'list_test_history', limit: 20 }),
     ]);
+
+    let runs = [];
+    try {
+      const historyRes = await callTestLab({ action: 'list_test_history', limit: 20 });
+      runs = historyRes.runs || [];
+    } catch (histErr) {
+      console.warn('Testing Lab history unavailable:', histErr.message);
+    }
 
     const users = usersRes.users || [];
     const presets = scenariosRes.presets || [];
     const custom = scenariosRes.custom || [];
-    const runs = historyRes.runs || [];
 
     if (!_selectedUserId && users.length) _selectedUserId = users[0].id;
 
@@ -55,6 +61,10 @@ export async function renderAdminTestLab(body, ctx = {}) {
         <div class="admin-row-list" id="tlUserList">
           ${users.length ? users.map((u) => renderUserRow(u)).join('') : '<p class="admin-muted">Belum ada test user.</p>'}
         </div>
+      </div>
+
+      <div class="admin-card" id="tlStatusCard" hidden>
+        <p id="tlStatusMsg" class="admin-muted" style="margin:0"></p>
       </div>
 
       <div class="admin-card">
@@ -288,19 +298,20 @@ function wireTestLabEvents(body, presets, users) {
   body.querySelectorAll('.tl-apply-preset').forEach((btn) => {
     btn.addEventListener('click', async () => {
       if (!_selectedUserId) return toastErr('Pilih test user dulu');
+      const presetKey = btn.dataset.preset;
       try {
         btn.disabled = true;
-        await callTestLab({
-          action: 'apply_scenario',
+        btn.textContent = 'Applying…';
+        await applyScenarioToUser({
           test_user_id: _selectedUserId,
-          preset_key: btn.dataset.preset,
-        });
-        toastOk(`Preset ${btn.dataset.preset} applied`);
+          preset_key: presetKey,
+        }, presetKey);
         await renderAdminTestLab(body, _ctx);
-      } catch (e) {
-        toastErr(e.message);
+      } catch {
+        /* status already shown */
       } finally {
         btn.disabled = false;
+        btn.textContent = 'Apply';
       }
     });
   });
@@ -308,16 +319,18 @@ function wireTestLabEvents(body, presets, users) {
   body.querySelectorAll('.tl-apply-custom').forEach((btn) => {
     btn.addEventListener('click', async () => {
       if (!_selectedUserId) return toastErr('Pilih test user dulu');
+      const scenarioId = btn.dataset.id;
       try {
-        await callTestLab({
-          action: 'apply_scenario',
+        btn.disabled = true;
+        await applyScenarioToUser({
           test_user_id: _selectedUserId,
-          scenario_id: btn.dataset.id,
-        });
-        toastOk('Custom scenario applied');
+          scenario_id: scenarioId,
+        }, 'custom');
         await renderAdminTestLab(body, _ctx);
-      } catch (e) {
-        toastErr(e.message);
+      } catch {
+        /* status already shown */
+      } finally {
+        btn.disabled = false;
       }
     });
   });
@@ -350,16 +363,18 @@ function wireTestLabEvents(body, presets, users) {
 
   body.querySelector('#tlApplyCustom')?.addEventListener('click', async () => {
     if (!_selectedUserId) return toastErr('Pilih test user dulu');
+    const btn = body.querySelector('#tlApplyCustom');
     try {
-      await callTestLab({
-        action: 'apply_scenario',
+      if (btn) btn.disabled = true;
+      await applyScenarioToUser({
         test_user_id: _selectedUserId,
         config: getBuilderConfig(),
-      });
-      toastOk('Custom scenario applied');
+      }, 'builder');
       await renderAdminTestLab(body, _ctx);
-    } catch (e) {
-      toastErr(e.message);
+    } catch {
+      /* status already shown */
+    } finally {
+      if (btn) btn.disabled = false;
     }
   });
 
@@ -459,4 +474,36 @@ function toastOk(msg) {
 function toastErr(msg) {
   if (_ctx.toast) _ctx.toast(msg, 'error');
   else if (window.MonefyiUI?.showToast) window.MonefyiUI.showToast(msg, 'error');
+  else alert(msg);
+}
+
+function setLabStatus(msg, kind = 'info') {
+  const card = document.getElementById('tlStatusCard');
+  const el = document.getElementById('tlStatusMsg');
+  if (!card || !el) return;
+  if (!msg) {
+    card.hidden = true;
+    el.textContent = '';
+    return;
+  }
+  card.hidden = false;
+  el.textContent = msg;
+  el.className = kind === 'error' ? 'admin-badge' : kind === 'success' ? 'admin-badge' : 'admin-muted';
+}
+
+async function applyScenarioToUser(body, label) {
+  setLabStatus(`Menerapkan skenario ${label}…`);
+  try {
+    const res = await callTestLab({ action: 'apply_scenario', ...body });
+    const count = res.transactionCount ?? '—';
+    const msg = `Berhasil apply ${label}: ${count} transaksi (bulan default ${res.defaultMonth || '—'})`;
+    setLabStatus(msg, 'success');
+    toastOk(msg);
+    return res;
+  } catch (e) {
+    const msg = `Gagal apply ${label}: ${e.message}`;
+    setLabStatus(msg, 'error');
+    toastErr(msg);
+    throw e;
+  }
 }

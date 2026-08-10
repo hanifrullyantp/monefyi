@@ -43,6 +43,7 @@ async function edgePost(fnName, body) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || res.statusText);
+  if (data.error) throw new Error(data.error);
   return data;
 }
 

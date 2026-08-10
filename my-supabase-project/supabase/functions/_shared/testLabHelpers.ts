@@ -29,7 +29,7 @@ export const RESET_TABLES = [
 export async function assertTestUser(sb: any, userId: string) {
   const { data, error } = await sb
     .from("profiles")
-    .select("id, is_test_user, email")
+    .select("id, is_test_user, name, test_scenario_label")
     .eq("id", userId)
     .maybeSingle();
   if (error) throw new Error(error.message);
