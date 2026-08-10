@@ -101,6 +101,35 @@ async function renderV2Home(container, data, ctx, callbacks, formatIDR, formatCo
   } catch { /* ignore */ }
 
   try {
+    const { renderPendingTransactionsBanner } = await import('../components/pending-transactions-banner.js');
+    const pendingBanner = renderPendingTransactionsBanner(ctx.state || window.STATE, {
+      onReview: callbacks.onViewTransactions,
+    });
+    if (pendingBanner) container.appendChild(pendingBanner);
+  } catch (e) {
+    console.warn('[home] pending banner', e);
+  }
+
+  try {
+    const { renderAssetReclassificationBanner } = await import('../components/asset-reclassification-banner.js');
+    const reclassBanner = renderAssetReclassificationBanner(ctx.state || window.STATE, {
+      onReview: (tx) => {
+        window.monefyiLargeTransactionSheet?.showLargeTransactionSheet?.(tx, {
+          onConfirm: async (classified) => {
+            classified.status = 'confirmed';
+            classified.confirmed_at = new Date().toISOString();
+            await window.upsertTransaction?.(classified, { skipClassification: true });
+            await window.monefyiLargeTransactionSheet?.syncAssetToNeraca?.(classified);
+          },
+        });
+      },
+    });
+    if (reclassBanner) container.appendChild(reclassBanner);
+  } catch (e) {
+    console.warn('[home] reclass banner', e);
+  }
+
+  try {
     const { buildDailySituationHero } = await import('../components/daily-situation-hero.js');
     const hero = await buildDailySituationHero(
       { ...ctx, state: ctx.state || window.STATE },
@@ -113,6 +142,14 @@ async function renderV2Home(container, data, ctx, callbacks, formatIDR, formatCo
     if (hero) container.appendChild(hero);
   } catch (e) {
     console.warn('[home] daily situation hero', e);
+  }
+
+  try {
+    const { renderHomeBalanceStats } = await import('../components/home-balance-stats.js');
+    const statsRow = renderHomeBalanceStats(data.summary || {}, formatCompactIDR, masked);
+    if (statsRow) container.appendChild(statsRow);
+  } catch (e) {
+    console.warn('[home] balance stats', e);
   }
 
   try {

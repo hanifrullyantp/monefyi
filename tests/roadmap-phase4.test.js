@@ -37,16 +37,17 @@ describe('Fase 4.1 — weekly digest', () => {
 describe('Fase 4.3 — financial health score', () => {
   it('grades high scores correctly', () => {
     assert.equal(getHealthGrade(85), 'Sangat Baik');
-    assert.equal(getHealthGrade(40), 'Perlu Perbaikan');
+    assert.equal(getHealthGrade(40), 'Perlu Perhatian');
+    assert.equal(getHealthGrade(20), 'Kritis');
   });
 
   it('computes overall score from components', () => {
     const result = computeFinancialHealthScore({
       selectedMonth: '2026-08',
       transactions: [
-        { date: '2026-08-01', type: 'income', amount: 10000000 },
-        { date: '2026-08-02', type: 'expense', amount: 6000000, category: 'Makan', account: 'BCA' },
-        { date: '2026-08-03', type: 'expense', amount: 500000, category: 'Transport', account: 'GoPay' },
+        { date: '2026-08-01', type: 'income', amount: 10000000, status: 'confirmed' },
+        { date: '2026-08-02', type: 'expense', amount: 6000000, category: 'Makan', account: 'BCA', status: 'confirmed' },
+        { date: '2026-08-03', type: 'expense', amount: 500000, category: 'Transport', account: 'GoPay', status: 'confirmed' },
       ],
       budgetsByMonth: {
         '2026-08': {

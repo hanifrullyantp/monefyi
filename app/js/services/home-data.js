@@ -5,6 +5,8 @@
 
 import { NEAR_TERM_GOALS } from './onboarding-plan-generator.js';
 import { getDaysUntilPayday } from './daily-situation.js';
+import { isConsumptionExpense } from '../utils/transaction-utils.js';
+import { computePeriodFinancials } from './financial-metrics.js';
 
 /**
  * @param {number} current
@@ -67,7 +69,7 @@ function build7DayChart(transactions) {
     date.setDate(date.getDate() - i);
     const dateStr = isoDate(date);
     const total = transactions
-      .filter((t) => t.date === dateStr && t.type === 'expense')
+      .filter((t) => t.date === dateStr && isConsumptionExpense(t))
       .reduce((sum, t) => sum + Number(t.amount || 0), 0);
     days.push({
       date: dateStr,
@@ -194,11 +196,17 @@ export function buildHomePageData(ctx) {
   } = helpers;
 
   const periodTxs = getTransactionsInPeriod();
+  const monthKey = toMonthKey(period.end || new Date());
+  const metrics = computePeriodFinancials(ctx.state || (typeof window !== 'undefined' ? window.STATE : {}), monthKey);
   const summaryNow = sumByType(periodTxs);
   const summary = {
-    totalIncome: summaryNow.income,
-    totalExpense: summaryNow.expense,
-    totalSavings: summaryNow.net,
+    totalIncome: metrics.income || summaryNow.income,
+    totalExpense: metrics.consumptionExpense || summaryNow.expense,
+    totalSavings: metrics.consumptionNetCashFlow ?? summaryNow.net,
+    assetAcquisitions: metrics.assetAcquisitions || [],
+    hasUnhandledAnomalies: metrics.hasUnhandledAnomalies,
+    unhandledAnomalies: metrics.unhandledAnomalies || [],
+    pendingCount: metrics.pendingCount || 0,
     txCount: periodTxs.length,
   };
 
@@ -234,7 +242,7 @@ export function buildHomePageData(ctx) {
   const catMap = budget.categories || {};
   for (const [cat, plannedAmt] of Object.entries(catMap)) {
     const spent = periodTxs
-      .filter((t) => t.type === 'expense' && (t.category || 'Lainnya') === cat)
+      .filter((t) => isConsumptionExpense(t) && (t.category || 'Lainnya') === cat)
       .reduce((s, t) => s + Number(t.amount || 0), 0);
     if (spent > Number(plannedAmt || 0)) overCount += 1;
     else okCount += 1;

@@ -4,6 +4,7 @@
  */
 
 import { LABELS } from '../constants/language.js';
+import { isConsumptionExpense } from '../utils/transaction-utils.js';
 
 export const PRIORITY_LEVELS = {
   HARUS: {
@@ -496,7 +497,7 @@ export function getLinkedTransactions(row, transactions, month) {
   const catNorm = normalizeCategoryName(row.name);
 
   return (transactions || []).filter((t) => {
-    if (t.type !== 'expense') return false;
+    if (!isConsumptionExpense(t)) return false;
     if (month && t.date && !t.date.startsWith(month)) return false;
 
     const meta = typeof t.meta === 'object' ? t.meta : {};

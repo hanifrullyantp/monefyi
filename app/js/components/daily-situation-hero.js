@@ -5,6 +5,7 @@
 
 import { computeDailySituation, saveDailySnapshot } from '../services/daily-situation.js';
 import { getFinancialStatus } from '../services/financial-status.js';
+import { computePeriodFinancials } from '../services/financial-metrics.js';
 import { Icon } from './icons.js';
 
 /**
@@ -110,22 +111,40 @@ export async function renderDailySituationHero(ctx, callbacks = {}) {
   const state = ctx.state || window.STATE;
   const situation = computeDailySituation(state);
   const finStatus = getFinancialStatus(state);
+  const month = state?.selectedMonth || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  const metrics = computePeriodFinancials(state, month);
 
   saveDailySnapshot(situation).catch(() => {});
 
   const el = document.createElement('section');
   el.className = `daily-hero daily-hero--${situation.status || 'incomplete'} home-section`;
 
+  const anomalyHtml = metrics.hasUnhandledAnomalies ? `
+    <div class="daily-hero__anomaly-bar">
+      <p>⚠️ Ada transaksi besar yang perlu dikategorisasi</p>
+      <p class="daily-hero__anomaly-compare">
+        Dengan anomali: ${formatCompactIDR?.(metrics.netCashFlow) || metrics.netCashFlow}
+        · Tanpa anomali: ${formatCompactIDR?.(metrics.consumptionNetCashFlow) || metrics.consumptionNetCashFlow}
+      </p>
+      <button type="button" class="daily-hero__cta tap" data-action="classify-anomaly">Kategorisasi Sekarang</button>
+    </div>
+  ` : '';
+
   if (situation.isNegativePool && situation.status !== 'incomplete') {
     el.classList.add('daily-hero--negative-pool');
   }
 
   el.innerHTML = `
+    ${anomalyHtml}
     <div class="daily-hero__status-badge daily-hero__status-badge--${finStatus.color}">${escapeHtml(finStatus.badge)}</div>
     <div class="daily-hero__inner">
       ${buildBodyHtml(situation, formatIDR, formatCompactIDR)}
     </div>
   `;
+
+  el.querySelector('[data-action="classify-anomaly"]')?.addEventListener('click', () => {
+    callbacks.onClassifyAnomaly?.(metrics.unhandledAnomalies?.[0]);
+  });
 
   el.querySelector('[data-action="complete-data"]')?.addEventListener('click', () => {
     callbacks.onCompleteData?.();

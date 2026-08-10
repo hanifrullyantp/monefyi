@@ -3,7 +3,7 @@
  * @module services/daily-situation
  */
 
-import { dedupeTransactions, isExpenseTransaction } from '../utils/transaction-utils.js';
+import { dedupeTransactions, isExpenseTransaction, isConsumptionExpense } from '../utils/transaction-utils.js';
 
 /** @typedef {'aman'|'waspada'|'bahaya'|'incomplete'} SituationStatus */
 
@@ -85,7 +85,7 @@ export function computeFlexibleBudget(state) {
   let flexibleSpent = 0;
   let totalExpense = 0;
   for (const tx of txs) {
-    if (!isExpenseTransaction(tx)) continue;
+    if (!isConsumptionExpense(tx)) continue;
     const amt = Number(tx.amount || 0);
     totalExpense += amt;
     const cat = String(tx.category || tx.merchant || '').toLowerCase();

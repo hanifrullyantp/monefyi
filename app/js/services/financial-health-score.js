@@ -1,22 +1,25 @@
 /**
- * Financial Health Score — 5-component scoring (Fase 4.3).
+ * Financial Health Score — adaptive, consumption-aware (Fase 4.3).
  * @module services/financial-health-score
  */
 
 import { calculateProgress, countFlexibleOverBudget } from './budget-model.js';
 import { computeRecordingStreak } from './daily-streak.js';
+import { computePeriodFinancials, getMonthProgress } from './financial-metrics.js';
+import { isConsumptionExpense, isReportableTransaction } from '../utils/transaction-utils.js';
 
 const LS_HISTORY = 'monefyi_health_score_history';
 
 /**
- * @param {number} score 0-100
+ * @param {number|null} score 0-100
  * @returns {string}
  */
 export function getHealthGrade(score) {
+  if (score == null) return 'Menganalisis';
   if (score >= 80) return 'Sangat Baik';
   if (score >= 65) return 'Baik';
-  if (score >= 50) return 'Cukup';
-  if (score >= 35) return 'Perlu Perbaikan';
+  if (score >= 45) return 'Cukup';
+  if (score >= 25) return 'Perlu Perhatian';
   return 'Kritis';
 }
 
@@ -27,17 +30,43 @@ export function getHealthGrade(score) {
 export function computeFinancialHealthScore(state = typeof window !== 'undefined' ? window.STATE : {}) {
   const month = state.selectedMonth
     || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
-  const txs = (state.transactions || []).filter((t) => String(t.date || '').startsWith(month));
-  const income = txs.filter((t) => t.type === 'income').reduce((s, t) => s + (Number(t.amount) || 0), 0);
-  const expense = txs.filter((t) => t.type === 'expense').reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  const monthProgress = getMonthProgress(month);
+
+  if (monthProgress < 30) {
+    return {
+      overall: null,
+      grade: getHealthGrade(null),
+      status: 'analyzing',
+      context: 'early_month',
+      message: 'Kami sedang mengumpulkan data bulanmu. Score tersedia setelah minggu ke-2.',
+      components: {},
+      recommendations: [],
+      history: loadScoreHistory(),
+      computed_at: new Date().toISOString(),
+      month,
+      monthProgress,
+    };
+  }
+
+  const metrics = computePeriodFinancials(state, month);
+  const txs = (state.transactions || []).filter((t) => String(t.date || '').startsWith(month) && isReportableTransaction(t));
+  const income = metrics.income;
+  const consumptionExpense = metrics.consumptionExpense;
   const rows = state.budgetsByMonth?.[month]?.categories?.rows
     || state.budgetsByMonth?.[month]?.rows
     || state.budgetDraft?.rows
     || [];
   const prefs = state.db?.userPreferences || {};
 
-  const savingRate = income > 0 ? Math.max(0, (income - expense) / income) : 0;
-  const savingScore = Math.min(100, Math.round(savingRate * 200));
+  const savingRate = income > 0 ? (income - consumptionExpense) / income : 0;
+  let savingScore = 0;
+  if (savingRate >= 0.2) savingScore = 100;
+  else if (savingRate >= 0.15) savingScore = 85;
+  else if (savingRate >= 0.1) savingScore = 70;
+  else if (savingRate >= 0.05) savingScore = 50;
+  else if (savingRate >= 0) savingScore = 35;
+  else if (savingRate >= -0.05) savingScore = 15;
+  else savingScore = 0;
 
   let onTrack = 0;
   let tracked = 0;
@@ -48,15 +77,26 @@ export function computeFinancialHealthScore(state = typeof window !== 'undefined
     if (prog.percent <= 100) onTrack += 1;
   }
   const overCount = countFlexibleOverBudget(rows, txs, month);
-  const disciplineScore = tracked > 0
+  let disciplineScore = tracked > 0
     ? Math.max(0, Math.round((onTrack / tracked) * 100) - overCount * 8)
     : 50;
+  if (monthProgress < 50) {
+    disciplineScore = Math.round(disciplineScore * (monthProgress / 50));
+  }
 
+  const hasNeracaData = !!(prefs.emergency_fund_balance || state.db?.emergencyFund);
   const emergencyTarget = Number(prefs.emergency_fund_target || income * 3 || 0);
   const emergencyCurrent = Number(prefs.emergency_fund_balance || state.db?.emergencyFund || 0);
-  const emergencyScore = emergencyTarget > 0
-    ? Math.min(100, Math.round((emergencyCurrent / emergencyTarget) * 100))
-    : (savingRate >= 0.1 ? 60 : 35);
+  let emergencyScore = null;
+  let emergencyTip = 'Setup neraca untuk score dana darurat';
+  if (hasNeracaData && emergencyTarget > 0) {
+    const monthsCovered = consumptionExpense > 0 ? emergencyCurrent / consumptionExpense : emergencyCurrent / (income / 3 || 1);
+    if (monthsCovered >= 6) emergencyScore = 100;
+    else if (monthsCovered >= 3) emergencyScore = 75;
+    else if (monthsCovered >= 1) emergencyScore = 50;
+    else emergencyScore = 25;
+    emergencyTip = emergencyScore >= 80 ? 'Dana darurat memadai' : 'Bangun tabungan darurat 3-6x pengeluaran';
+  }
 
   const debtAmount = Number(prefs.debt_amount || 0);
   const debtPayment = Number(prefs.monthly_debt_payment || 0);
@@ -70,7 +110,7 @@ export function computeFinancialHealthScore(state = typeof window !== 'undefined
   }
 
   const accounts = new Set(txs.map((t) => t.account).filter(Boolean));
-  const categories = new Set(txs.filter((t) => t.type === 'expense').map((t) => t.category).filter(Boolean));
+  const categories = new Set(txs.filter(isConsumptionExpense).map((t) => t.category).filter(Boolean));
   let diversificationScore = 40;
   if (accounts.size >= 3) diversificationScore += 25;
   else if (accounts.size >= 2) diversificationScore += 15;
@@ -90,9 +130,10 @@ export function computeFinancialHealthScore(state = typeof window !== 'undefined
   const components = {
     budgetDiscipline: {
       label: 'Disiplin Budget',
-      score: Math.max(0, Math.min(100, Math.round(disciplineScore * 20 / 100))),
+      score: Math.max(0, Math.min(20, Math.round(disciplineScore * 20 / 100))),
       raw: Math.max(0, Math.min(100, disciplineScore)),
       max: 20,
+      note: monthProgress < 60 ? 'preliminary' : null,
       tip: overCount > 0 ? `${overCount} kategori flexible over — review alokasi` : 'Budget terjaga dengan baik',
     },
     savingRate: {
@@ -100,14 +141,16 @@ export function computeFinancialHealthScore(state = typeof window !== 'undefined
       score: Math.round(savingScore * 20 / 100),
       raw: savingScore,
       max: 20,
-      tip: savingRate >= 0.2 ? 'Tabungan sehat' : 'Coba alokasikan minimal 20% dari income',
+      tip: savingRate >= 0.2 ? 'Tabungan sehat (exclude aset)' : 'Coba alokasikan minimal 20% dari income',
     },
     emergencyFund: {
       label: 'Dana Darurat',
-      score: Math.round(emergencyScore * 20 / 100),
+      score: emergencyScore == null ? null : Math.round(emergencyScore * 20 / 100),
       raw: emergencyScore,
       max: 20,
-      tip: emergencyScore >= 80 ? 'Dana darurat memadai' : 'Bangun tabungan darurat 3-6x pengeluaran',
+      unavailable: emergencyScore == null,
+      action: emergencyScore == null ? 'setup_neraca' : null,
+      tip: emergencyTip,
     },
     debtRatio: {
       label: 'Rasio Utang',
@@ -132,27 +175,34 @@ export function computeFinancialHealthScore(state = typeof window !== 'undefined
     },
   };
 
-  const overall = Math.min(100, Object.values(components).reduce((s, c) => s + c.score, 0));
+  const scoredComponents = Object.values(components).filter((c) => c.score != null && !c.unavailable);
+  const maxPossible = scoredComponents.reduce((s, c) => s + c.max, 0);
+  const overall = Math.min(100, scoredComponents.reduce((s, c) => s + c.score, 0));
 
   const history = loadScoreHistory();
   const prev = history[history.length - 1]?.overall;
   const trend = prev == null ? 'stable' : overall > prev + 3 ? 'up' : overall < prev - 3 ? 'down' : 'stable';
 
   const recommendations = Object.values(components)
-    .filter((c) => (c.raw ?? c.score) < 65)
+    .filter((c) => c.raw != null && (c.raw ?? c.score) < 65)
     .sort((a, b) => (a.raw ?? a.score) - (b.raw ?? b.score))
     .slice(0, 3)
     .map((c) => c.tip);
 
   const result = {
     overall,
+    maxPossible,
     grade: getHealthGrade(overall),
+    status: monthProgress < 60 ? 'preliminary' : 'confident',
+    context: monthProgress < 60 ? 'preliminary' : 'confident',
     trend,
     components,
     recommendations,
     history: loadScoreHistory(),
     computed_at: new Date().toISOString(),
     month,
+    monthProgress,
+    savingRateReal: savingRate,
   };
 
   saveScoreSnapshot(result);
@@ -177,6 +227,7 @@ export function loadScoreHistory() {
  */
 export function saveScoreSnapshot(scoreResult) {
   if (typeof localStorage === 'undefined') return;
+  if (scoreResult.overall == null) return;
   const history = loadScoreHistory().filter((h) => h.month !== scoreResult.month);
   history.push({
     month: scoreResult.month,

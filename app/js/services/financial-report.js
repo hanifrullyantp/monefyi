@@ -5,6 +5,7 @@
 
 import { getFilter, filterTransactions } from './global-filter.js';
 import { rowsToBudgetList, calculateProgress, inferCategoryType, CATEGORY_TYPES } from './budget-model.js';
+import { sumByTransactionType, isConsumptionExpense, isReportableTransaction, filterReportableTransactions } from '../utils/transaction-utils.js';
 
 /**
  * Normalize transaction/period dates to YYYY-MM-DD for inclusive compares.
@@ -106,26 +107,29 @@ export async function loadTransactions() {
 
 /**
  * @param {object[]} transactions
- * @returns {{ income: number, expense: number, transfer: number, net: number, saving_rate: number, count: number }}
+ * @param {{ consumptionOnly?: boolean }} [opts]
+ * @returns {{ income: number, expense: number, transfer: number, net: number, saving_rate: number, count: number, consumptionExpense?: number, consumptionNet?: number }}
  */
-export function summarizeTransactions(transactions) {
-  let income = 0;
-  let expense = 0;
-  let transfer = 0;
-  for (const t of transactions || []) {
-    const amt = Number(t.amount || 0);
-    if (t.type === 'income') income += amt;
-    else if (t.type === 'expense') expense += amt;
-    else if (t.type === 'transfer') transfer += amt;
-  }
-  const net = income - expense;
+export function summarizeTransactions(transactions, opts = {}) {
+  const totals = sumByTransactionType(transactions, opts.consumptionOnly ? { consumptionOnly: true } : {});
+  const expense = opts.consumptionOnly ? totals.consumptionExpense : totals.expense;
+  const net = opts.consumptionOnly ? totals.consumptionNet : totals.net;
+  const count = (transactions || []).filter((t) => {
+    try {
+      return typeof isReportableTransaction === 'function' ? isReportableTransaction(t) : true;
+    } catch {
+      return true;
+    }
+  }).length;
   return {
-    income,
+    income: totals.income,
     expense,
-    transfer,
+    transfer: totals.transfer,
     net,
-    saving_rate: income > 0 ? net / income : 0,
-    count: (transactions || []).length,
+    consumptionExpense: totals.consumptionExpense,
+    consumptionNet: totals.consumptionNet,
+    saving_rate: totals.income > 0 ? net / totals.income : 0,
+    count,
   };
 }
 
@@ -137,7 +141,7 @@ export function categoryBreakdown(transactions) {
   const map = new Map();
   let total = 0;
   for (const t of transactions || []) {
-    if (t.type !== 'expense') continue;
+    if (!isConsumptionExpense(t)) continue;
     const cat = t.category || 'Lainnya';
     const amt = Number(t.amount || 0);
     const prev = map.get(cat) || { category: cat, amount: 0, count: 0 };
@@ -294,6 +298,7 @@ export async function buildFinancialReport(options = {}) {
   let filtered = filterTransactions(allTx);
   // Ensure period clamp even if filter period differs from custom range
   filtered = filterByDateRange(filtered, periodStart, periodEnd);
+  filtered = filterReportableTransactions(filtered);
 
   // If global filter emptied by period mismatch, fall back to STATE period range only
   if (!filtered.length && allTx.length) {
@@ -305,9 +310,10 @@ export async function buildFinancialReport(options = {}) {
       if (type && t.type !== type) return false;
       return true;
     });
+    filtered = filterReportableTransactions(filtered);
   }
 
-  const metrics = summarizeTransactions(filtered);
+  const metrics = summarizeTransactions(filtered, { consumptionOnly: true });
   const categories = categoryBreakdown(filtered);
   const top = topSpending(filtered);
   const trend = dailyTrend(filtered, periodStart, periodEnd);
@@ -324,8 +330,8 @@ export async function buildFinancialReport(options = {}) {
   }
 
   const prev = previousMonthBounds(month);
-  const prevTx = filterByDateRange(allTx, prev.start, prev.end);
-  const previousMonth = summarizeTransactions(prevTx);
+  const prevTx = filterReportableTransactions(filterByDateRange(allTx, prev.start, prev.end));
+  const previousMonth = summarizeTransactions(prevTx, { consumptionOnly: true });
 
   const comparison = {
     current: { month, ...metrics },

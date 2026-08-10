@@ -8,6 +8,7 @@
 
 import { getGreeting, getActionPrefix } from './monevisor-messages.js';
 import { getFinancialStatus } from './financial-status.js';
+import { computePeriodFinancials, predictFuture } from './financial-metrics.js';
 
 /** @type {Readonly<object>} */
 export const STANDARDS = {
@@ -106,6 +107,16 @@ export function diagnoseFinancials(report) {
   const hasIncome = m.totalIncome > 0;
 
   const health = calculateHealth(m, normalized);
+  const state = typeof window !== 'undefined' ? window.STATE : {};
+  const periodMetrics = computePeriodFinancials(state, normalized.month || m.month);
+  const future = predictFuture(state, 6);
+  const enrichedMetrics = {
+    ...m,
+    consumptionNet: periodMetrics.consumptionNetCashFlow,
+    consumptionExpense: periodMetrics.consumptionExpense,
+    excludedAnomalies: future.excluded,
+    projectionDisclaimer: future.disclaimer,
+  };
   const diagnoses = [];
 
   diagnoses.push(diagnoseCashFlow(m));
@@ -181,7 +192,7 @@ export function diagnoseFinancials(report) {
     benchmarks: generateBenchmarks(m, normalized),
     rule503020: generate503020(m, normalized),
     actionPlan: generateActionPlan(clean, normalized),
-    projection: generateProjection(m, normalized),
+    projection: generateProjection(enrichedMetrics, normalized),
     dataQuality: assessDataQuality(m, normalized),
     period: normalized.periodLabel,
     generatedAt: new Date().toISOString(),
@@ -721,42 +732,46 @@ function generateProjection(m) {
     return { type: 'no_data', message: 'Mulai catat transaksi untuk melihat proyeksi.' };
   }
 
-  if (m.net < 0) {
-    const monthlyDeficit = Math.abs(m.net);
+  const monthlyNet = m.consumptionNet ?? m.net;
+  const monthlySurplus = monthlyNet;
+
+  if (monthlyNet < 0) {
+    const monthlyDeficit = Math.abs(monthlyNet);
     return {
       type: 'negative',
       icon: 'alertTriangle',
-      title: 'Proyeksi Jika Pola Berlanjut',
-      message: `Dengan defisit Rp ${fmt(monthlyDeficit)}/bulan, tabungan akan terus berkurang. Dalam 6 bulan, kamu akan kehilangan Rp ${fmt(monthlyDeficit * 6)}.`,
-      suggestion: `Kurangi pengeluaran minimal Rp ${fmt(monthlyDeficit)} untuk break-even, atau idealnya Rp ${fmt(monthlyDeficit + m.totalIncome * 0.2)} untuk saving 20%.`,
-      chart: Array.from({ length: 12 }, (_, i) => ({
+      title: 'Proyeksi 6 Bulan (Estimasi Normal)',
+      message: `Prediksi cash flow rutin: defisit Rp ${fmt(monthlyDeficit)}/bulan. ${m.excludedAnomalies?.length ? `Tidak termasuk ${m.excludedAnomalies.length} transaksi besar.` : ''}`,
+      suggestion: `Kurangi pengeluaran rutin minimal Rp ${fmt(monthlyDeficit)} untuk break-even.`,
+      disclaimer: m.projectionDisclaimer || null,
+      chart: Array.from({ length: 6 }, (_, i) => ({
         month: i + 1,
         value: -monthlyDeficit * (i + 1),
       })),
     };
   }
 
-  if (m.savingRate > 0) {
-    const monthlySaving = m.net;
-    const yearSaving = monthlySaving * 12;
+  if (monthlySurplus > 0) {
+    const sixMonth = monthlySurplus * 6;
     return {
       type: 'positive',
       icon: 'trendingUp',
-      title: 'Proyeksi Positif',
-      message: `Dengan saving Rp ${fmt(monthlySaving)}/bulan (${Math.round(m.savingRate * 100)}%), dalam 1 tahun kamu akan punya tambahan Rp ${fmt(yearSaving)}.`,
-      suggestion: m.savingRate < 0.2
-        ? `Naikkan saving rate ke 20% (tambah Rp ${fmt(m.totalIncome * 0.2 - m.net)}/bulan) untuk hasil lebih optimal.`
-        : 'Pertahankan pola ini dan pertimbangkan investasi untuk pertumbuhan.',
-      chart: Array.from({ length: 12 }, (_, i) => ({
+      title: 'Proyeksi 6 Bulan (Estimasi Normal)',
+      message: `Prediksi cash flow: +Rp ${fmt(sixMonth)} (surplus Rp ${fmt(monthlySurplus)}/bulan).`,
+      suggestion: m.savingRate >= 0.2
+        ? 'Pertahankan pola ini dan pertimbangkan investasi untuk pertumbuhan.'
+        : 'Naikkan saving rate ke 20% untuk hasil lebih optimal.',
+      disclaimer: m.projectionDisclaimer || null,
+      chart: Array.from({ length: 6 }, (_, i) => ({
         month: i + 1,
-        value: monthlySaving * (i + 1),
+        value: monthlySurplus * (i + 1),
       })),
     };
   }
 
   return {
     type: 'neutral',
-    message: 'Pola pengeluaran break-even. Tidak ada tabungan yang terbentuk.',
+    message: 'Pola pengeluaran rutin break-even. Tidak ada tabungan yang terbentuk.',
     suggestion: 'Target: Sisihkan minimal 10% dari income untuk tabungan.',
   };
 }
