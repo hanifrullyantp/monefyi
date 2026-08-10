@@ -5,6 +5,7 @@ import {
   jsonResponse,
 } from "../_shared/cors.ts";
 import { getServiceClient } from "../_shared/supabase.ts";
+import { grantProductEntitlement, PRODUCT_STAY } from "../_shared/productEntitlements.ts";
 
 const PROPERTY_TYPES = new Set([
   "hotel", "guest_house", "villa", "homestay", "kost", "cottage", "other",
@@ -154,6 +155,8 @@ serve(async (req) => {
       console.error("stay-register stay_user:", userErr);
       return errorResponse(req, "Gagal membuat profil pengguna", 500);
     }
+
+    await grantProductEntitlement(sb, authUserId, PRODUCT_STAY, "registration");
 
     await sb.from("stay_leads").insert({
       lead_source: leadSource,

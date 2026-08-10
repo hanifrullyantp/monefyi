@@ -1,0 +1,28 @@
+[
+  {
+    "id": "acc-goal-darurat",
+    "name": "Dana Darurat",
+    "icon": "💰",
+    "color": "#10B981",
+    "target_amount": 24000000,
+    "current_amount": 4300000,
+    "target_date": "2027-06-30",
+    "priority": 1,
+    "status": "active",
+    "is_primary": true,
+    "monthly_contribution": 800000
+  },
+  {
+    "id": "acc-goal-motor",
+    "name": "DP Motor Baru",
+    "icon": "🏍️",
+    "color": "#2563EB",
+    "target_amount": 5000000,
+    "current_amount": 1600000,
+    "target_date": "2027-03-31",
+    "priority": 2,
+    "status": "active",
+    "is_primary": false,
+    "monthly_contribution": 300000
+  }
+]

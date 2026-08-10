@@ -5,6 +5,7 @@ import { requireUser } from "../_shared/auth.ts";
 import { writeAudit, createNotification } from "../_shared/audit.ts";
 import { sendWelcomeMemberEmail } from "../_shared/email.ts";
 import { sanitizeText } from "../_shared/sanitize.ts";
+import { grantProductEntitlement, PRODUCT_PLANNER } from "../_shared/productEntitlements.ts";
 
 async function validateInvitation(sb: ReturnType<typeof getServiceClient>, token?: string, code?: string) {
   let q = sb.from("planner_invitations").select("*");
@@ -77,6 +78,8 @@ serve(async (req) => {
     await sb.from("planner_invitations")
       .update({ used_count: invite.used_count + 1 })
       .eq("id", invite.id);
+
+    await grantProductEntitlement(sb, user.id, PRODUCT_PLANNER, "invitation");
 
     await sb.from("profiles").upsert({
       id: user.id,

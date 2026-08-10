@@ -85,7 +85,13 @@ function backfillMockRoomPositions(): void {
 async function applyProfileFromAuth(authUserId: string): Promise<{ success: boolean; error?: string }> {
   const profile = await fetchStayUserProfile(authUserId);
   if (!profile) {
-    return { success: false, error: 'Profil STAY tidak ditemukan' };
+    if (isSupabaseConfigured && supabase) {
+      await supabase.auth.signOut();
+    }
+    return {
+      success: false,
+      error: 'Akun ini belum terdaftar di STAY. Daftar di stay.monefyi.com terlebih dahulu.',
+    };
   }
 
   const user = mapDbUserToProfile(profile);
@@ -120,10 +126,12 @@ export const useAuthStore = create<AuthState>()(
             }
 
             const result = await applyProfileFromAuth(authData.user.id);
+            if (!result.success) {
+              set({ isLoading: false, isAuthenticated: false, user: null, tenant: null });
+              return { success: false, error: result.error };
+            }
             set({ isLoading: false });
-            return result.success
-              ? { success: true }
-              : { success: false, error: result.error };
+            return { success: true };
           }
 
           await new Promise((r) => setTimeout(r, 600));
@@ -194,7 +202,10 @@ export const useAuthStore = create<AuthState>()(
 
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          await applyProfileFromAuth(session.user.id);
+          const result = await applyProfileFromAuth(session.user.id);
+          if (!result.success) {
+            set({ user: null, tenant: null, isAuthenticated: false });
+          }
         }
 
         supabase.auth.onAuthStateChange(async (event, session) => {
@@ -203,7 +214,10 @@ export const useAuthStore = create<AuthState>()(
             return;
           }
           if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-            await applyProfileFromAuth(session.user.id);
+            const result = await applyProfileFromAuth(session.user.id);
+            if (!result.success) {
+              set({ user: null, tenant: null, isAuthenticated: false });
+            }
           }
         });
       },

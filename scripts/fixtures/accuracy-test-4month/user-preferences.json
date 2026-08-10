@@ -1,0 +1,16 @@
+{
+  "payday_day": 25,
+  "payday_irregular": false,
+  "monthly_income": 8000000,
+  "income_source": "salary_fixed",
+  "emergency_fund_balance": 4300000,
+  "emergency_fund_target": 24000000,
+  "fixed_bills": {
+    "kost": 1200000,
+    "listrik": 150000,
+    "internet": 150000,
+    "cicilan_hp": 250000
+  },
+  "debt_amount": 2000000,
+  "monthly_debt_payment": 250000
+}

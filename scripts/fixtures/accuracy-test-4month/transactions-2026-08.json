@@ -1,0 +1,980 @@
+[
+  {
+    "id": "acc-tx-2026-08-01-189",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-01T12:00:00.000Z",
+    "meta": {
+      "expense_treatment": "consumption"
+    },
+    "payment_method": "BCA",
+    "date": "2026-08-01",
+    "amount": 1200000,
+    "category": "Kost",
+    "merchant": "Kost",
+    "account": "BCA"
+  },
+  {
+    "id": "acc-tx-2026-08-05-190",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-05T12:00:00.000Z",
+    "meta": {
+      "expense_treatment": "consumption"
+    },
+    "payment_method": "BCA",
+    "date": "2026-08-05",
+    "amount": 165000,
+    "category": "Listrik",
+    "merchant": "PLN",
+    "account": "BCA"
+  },
+  {
+    "id": "acc-tx-2026-08-10-191",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-10T12:00:00.000Z",
+    "meta": {
+      "expense_treatment": "consumption"
+    },
+    "payment_method": "BCA",
+    "date": "2026-08-10",
+    "amount": 150000,
+    "category": "Internet",
+    "merchant": "Indihome",
+    "account": "BCA"
+  },
+  {
+    "id": "acc-tx-2026-08-15-192",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-15T12:00:00.000Z",
+    "meta": {
+      "expense_treatment": "loan_payment"
+    },
+    "payment_method": "BCA",
+    "date": "2026-08-15",
+    "amount": 250000,
+    "category": "Cicilan HP",
+    "merchant": "Cicilan HP",
+    "account": "BCA"
+  },
+  {
+    "id": "acc-tx-2026-08-02-193",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-02T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "GoPay",
+    "date": "2026-08-02",
+    "amount": 32500,
+    "category": "Makan Sehari-hari",
+    "merchant": "Makan Sehari-hari #1",
+    "account": "GoPay"
+  },
+  {
+    "id": "acc-tx-2026-08-03-194",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-03T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "Cash",
+    "date": "2026-08-03",
+    "amount": 32500,
+    "category": "Makan Sehari-hari",
+    "merchant": "Makan Sehari-hari #2",
+    "account": "Cash"
+  },
+  {
+    "id": "acc-tx-2026-08-04-195",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-04T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "GoPay",
+    "date": "2026-08-04",
+    "amount": 32500,
+    "category": "Makan Sehari-hari",
+    "merchant": "Makan Sehari-hari #3",
+    "account": "GoPay"
+  },
+  {
+    "id": "acc-tx-2026-08-05-196",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-05T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "Cash",
+    "date": "2026-08-05",
+    "amount": 32500,
+    "category": "Makan Sehari-hari",
+    "merchant": "Makan Sehari-hari #4",
+    "account": "Cash"
+  },
+  {
+    "id": "acc-tx-2026-08-06-197",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-06T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "GoPay",
+    "date": "2026-08-06",
+    "amount": 32500,
+    "category": "Makan Sehari-hari",
+    "merchant": "Makan Sehari-hari #5",
+    "account": "GoPay"
+  },
+  {
+    "id": "acc-tx-2026-08-07-198",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-07T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "Cash",
+    "date": "2026-08-07",
+    "amount": 32500,
+    "category": "Makan Sehari-hari",
+    "merchant": "Makan Sehari-hari #6",
+    "account": "Cash"
+  },
+  {
+    "id": "acc-tx-2026-08-08-199",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-08T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "GoPay",
+    "date": "2026-08-08",
+    "amount": 32500,
+    "category": "Makan Sehari-hari",
+    "merchant": "Makan Sehari-hari #7",
+    "account": "GoPay"
+  },
+  {
+    "id": "acc-tx-2026-08-09-200",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-09T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "Cash",
+    "date": "2026-08-09",
+    "amount": 32500,
+    "category": "Makan Sehari-hari",
+    "merchant": "Makan Sehari-hari #8",
+    "account": "Cash"
+  },
+  {
+    "id": "acc-tx-2026-08-10-201",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-10T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "GoPay",
+    "date": "2026-08-10",
+    "amount": 32500,
+    "category": "Makan Sehari-hari",
+    "merchant": "Makan Sehari-hari #9",
+    "account": "GoPay"
+  },
+  {
+    "id": "acc-tx-2026-08-11-202",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-11T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "Cash",
+    "date": "2026-08-11",
+    "amount": 32500,
+    "category": "Makan Sehari-hari",
+    "merchant": "Makan Sehari-hari #10",
+    "account": "Cash"
+  },
+  {
+    "id": "acc-tx-2026-08-12-203",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-12T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "GoPay",
+    "date": "2026-08-12",
+    "amount": 32500,
+    "category": "Makan Sehari-hari",
+    "merchant": "Makan Sehari-hari #11",
+    "account": "GoPay"
+  },
+  {
+    "id": "acc-tx-2026-08-13-204",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-13T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "Cash",
+    "date": "2026-08-13",
+    "amount": 32500,
+    "category": "Makan Sehari-hari",
+    "merchant": "Makan Sehari-hari #12",
+    "account": "Cash"
+  },
+  {
+    "id": "acc-tx-2026-08-14-205",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-14T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "GoPay",
+    "date": "2026-08-14",
+    "amount": 32500,
+    "category": "Makan Sehari-hari",
+    "merchant": "Makan Sehari-hari #13",
+    "account": "GoPay"
+  },
+  {
+    "id": "acc-tx-2026-08-15-206",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-15T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "Cash",
+    "date": "2026-08-15",
+    "amount": 32500,
+    "category": "Makan Sehari-hari",
+    "merchant": "Makan Sehari-hari #14",
+    "account": "Cash"
+  },
+  {
+    "id": "acc-tx-2026-08-16-207",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-16T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "GoPay",
+    "date": "2026-08-16",
+    "amount": 32500,
+    "category": "Makan Sehari-hari",
+    "merchant": "Makan Sehari-hari #15",
+    "account": "GoPay"
+  },
+  {
+    "id": "acc-tx-2026-08-17-208",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-17T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "Cash",
+    "date": "2026-08-17",
+    "amount": 32500,
+    "category": "Makan Sehari-hari",
+    "merchant": "Makan Sehari-hari #16",
+    "account": "Cash"
+  },
+  {
+    "id": "acc-tx-2026-08-18-209",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-18T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "GoPay",
+    "date": "2026-08-18",
+    "amount": 32500,
+    "category": "Makan Sehari-hari",
+    "merchant": "Makan Sehari-hari #17",
+    "account": "GoPay"
+  },
+  {
+    "id": "acc-tx-2026-08-19-210",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-19T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "Cash",
+    "date": "2026-08-19",
+    "amount": 32500,
+    "category": "Makan Sehari-hari",
+    "merchant": "Makan Sehari-hari #18",
+    "account": "Cash"
+  },
+  {
+    "id": "acc-tx-2026-08-20-211",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-20T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "GoPay",
+    "date": "2026-08-20",
+    "amount": 32500,
+    "category": "Makan Sehari-hari",
+    "merchant": "Makan Sehari-hari #19",
+    "account": "GoPay"
+  },
+  {
+    "id": "acc-tx-2026-08-21-212",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-21T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "Cash",
+    "date": "2026-08-21",
+    "amount": 32500,
+    "category": "Makan Sehari-hari",
+    "merchant": "Makan Sehari-hari #20",
+    "account": "Cash"
+  },
+  {
+    "id": "acc-tx-2026-08-02-213",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-02T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "GoPay",
+    "date": "2026-08-02",
+    "amount": 25417,
+    "category": "Transportasi",
+    "merchant": "Transportasi #1",
+    "account": "GoPay"
+  },
+  {
+    "id": "acc-tx-2026-08-03-214",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-03T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "BCA",
+    "date": "2026-08-03",
+    "amount": 25417,
+    "category": "Transportasi",
+    "merchant": "Transportasi #2",
+    "account": "BCA"
+  },
+  {
+    "id": "acc-tx-2026-08-04-215",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-04T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "GoPay",
+    "date": "2026-08-04",
+    "amount": 25417,
+    "category": "Transportasi",
+    "merchant": "Transportasi #3",
+    "account": "GoPay"
+  },
+  {
+    "id": "acc-tx-2026-08-05-216",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-05T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "BCA",
+    "date": "2026-08-05",
+    "amount": 25417,
+    "category": "Transportasi",
+    "merchant": "Transportasi #4",
+    "account": "BCA"
+  },
+  {
+    "id": "acc-tx-2026-08-06-217",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-06T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "GoPay",
+    "date": "2026-08-06",
+    "amount": 25417,
+    "category": "Transportasi",
+    "merchant": "Transportasi #5",
+    "account": "GoPay"
+  },
+  {
+    "id": "acc-tx-2026-08-07-218",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-07T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "BCA",
+    "date": "2026-08-07",
+    "amount": 25417,
+    "category": "Transportasi",
+    "merchant": "Transportasi #6",
+    "account": "BCA"
+  },
+  {
+    "id": "acc-tx-2026-08-08-219",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-08T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "GoPay",
+    "date": "2026-08-08",
+    "amount": 25417,
+    "category": "Transportasi",
+    "merchant": "Transportasi #7",
+    "account": "GoPay"
+  },
+  {
+    "id": "acc-tx-2026-08-09-220",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-09T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "BCA",
+    "date": "2026-08-09",
+    "amount": 25417,
+    "category": "Transportasi",
+    "merchant": "Transportasi #8",
+    "account": "BCA"
+  },
+  {
+    "id": "acc-tx-2026-08-10-221",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-10T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "GoPay",
+    "date": "2026-08-10",
+    "amount": 25416,
+    "category": "Transportasi",
+    "merchant": "Transportasi #9",
+    "account": "GoPay"
+  },
+  {
+    "id": "acc-tx-2026-08-11-222",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-11T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "BCA",
+    "date": "2026-08-11",
+    "amount": 25416,
+    "category": "Transportasi",
+    "merchant": "Transportasi #10",
+    "account": "BCA"
+  },
+  {
+    "id": "acc-tx-2026-08-12-223",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-12T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "GoPay",
+    "date": "2026-08-12",
+    "amount": 25416,
+    "category": "Transportasi",
+    "merchant": "Transportasi #11",
+    "account": "GoPay"
+  },
+  {
+    "id": "acc-tx-2026-08-13-224",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-13T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "BCA",
+    "date": "2026-08-13",
+    "amount": 25416,
+    "category": "Transportasi",
+    "merchant": "Transportasi #12",
+    "account": "BCA"
+  },
+  {
+    "id": "acc-tx-2026-08-02-225",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-02T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "OVO",
+    "date": "2026-08-02",
+    "amount": 39167,
+    "category": "Belanja Kebutuhan",
+    "merchant": "Belanja Kebutuhan #1",
+    "account": "OVO"
+  },
+  {
+    "id": "acc-tx-2026-08-03-226",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-03T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "BCA",
+    "date": "2026-08-03",
+    "amount": 39167,
+    "category": "Belanja Kebutuhan",
+    "merchant": "Belanja Kebutuhan #2",
+    "account": "BCA"
+  },
+  {
+    "id": "acc-tx-2026-08-04-227",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-04T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "OVO",
+    "date": "2026-08-04",
+    "amount": 39167,
+    "category": "Belanja Kebutuhan",
+    "merchant": "Belanja Kebutuhan #3",
+    "account": "OVO"
+  },
+  {
+    "id": "acc-tx-2026-08-05-228",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-05T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "BCA",
+    "date": "2026-08-05",
+    "amount": 39167,
+    "category": "Belanja Kebutuhan",
+    "merchant": "Belanja Kebutuhan #4",
+    "account": "BCA"
+  },
+  {
+    "id": "acc-tx-2026-08-06-229",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-06T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "OVO",
+    "date": "2026-08-06",
+    "amount": 39166,
+    "category": "Belanja Kebutuhan",
+    "merchant": "Belanja Kebutuhan #5",
+    "account": "OVO"
+  },
+  {
+    "id": "acc-tx-2026-08-07-230",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-07T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "BCA",
+    "date": "2026-08-07",
+    "amount": 39166,
+    "category": "Belanja Kebutuhan",
+    "merchant": "Belanja Kebutuhan #6",
+    "account": "BCA"
+  },
+  {
+    "id": "acc-tx-2026-08-02-231",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-02T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "OVO",
+    "date": "2026-08-02",
+    "amount": 7500,
+    "category": "Kesehatan",
+    "merchant": "Kesehatan #1",
+    "account": "OVO"
+  },
+  {
+    "id": "acc-tx-2026-08-03-232",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-03T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "BCA",
+    "date": "2026-08-03",
+    "amount": 7500,
+    "category": "Kesehatan",
+    "merchant": "Kesehatan #2",
+    "account": "BCA"
+  },
+  {
+    "id": "acc-tx-2026-08-04-233",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-04T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "OVO",
+    "date": "2026-08-04",
+    "amount": 7500,
+    "category": "Kesehatan",
+    "merchant": "Kesehatan #3",
+    "account": "OVO"
+  },
+  {
+    "id": "acc-tx-2026-08-05-234",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-05T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "BCA",
+    "date": "2026-08-05",
+    "amount": 7500,
+    "category": "Kesehatan",
+    "merchant": "Kesehatan #4",
+    "account": "BCA"
+  },
+  {
+    "id": "acc-tx-2026-08-06-235",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-06T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "OVO",
+    "date": "2026-08-06",
+    "amount": 7500,
+    "category": "Kesehatan",
+    "merchant": "Kesehatan #5",
+    "account": "OVO"
+  },
+  {
+    "id": "acc-tx-2026-08-07-236",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-07T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "BCA",
+    "date": "2026-08-07",
+    "amount": 7500,
+    "category": "Kesehatan",
+    "merchant": "Kesehatan #6",
+    "account": "BCA"
+  },
+  {
+    "id": "acc-tx-2026-08-02-237",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-02T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "OVO",
+    "date": "2026-08-02",
+    "amount": 25834,
+    "category": "Nongkrong & Kopi",
+    "merchant": "Nongkrong & Kopi #1",
+    "account": "OVO"
+  },
+  {
+    "id": "acc-tx-2026-08-03-238",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-03T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "BCA",
+    "date": "2026-08-03",
+    "amount": 25834,
+    "category": "Nongkrong & Kopi",
+    "merchant": "Nongkrong & Kopi #2",
+    "account": "BCA"
+  },
+  {
+    "id": "acc-tx-2026-08-04-239",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-04T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "OVO",
+    "date": "2026-08-04",
+    "amount": 25833,
+    "category": "Nongkrong & Kopi",
+    "merchant": "Nongkrong & Kopi #3",
+    "account": "OVO"
+  },
+  {
+    "id": "acc-tx-2026-08-05-240",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-05T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "BCA",
+    "date": "2026-08-05",
+    "amount": 25833,
+    "category": "Nongkrong & Kopi",
+    "merchant": "Nongkrong & Kopi #4",
+    "account": "BCA"
+  },
+  {
+    "id": "acc-tx-2026-08-06-241",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-06T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "OVO",
+    "date": "2026-08-06",
+    "amount": 25833,
+    "category": "Nongkrong & Kopi",
+    "merchant": "Nongkrong & Kopi #5",
+    "account": "OVO"
+  },
+  {
+    "id": "acc-tx-2026-08-07-242",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-07T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "BCA",
+    "date": "2026-08-07",
+    "amount": 25833,
+    "category": "Nongkrong & Kopi",
+    "merchant": "Nongkrong & Kopi #6",
+    "account": "BCA"
+  },
+  {
+    "id": "acc-tx-2026-08-02-243",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-02T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "OVO",
+    "date": "2026-08-02",
+    "amount": 40000,
+    "category": "Hiburan",
+    "merchant": "Hiburan #1",
+    "account": "OVO"
+  },
+  {
+    "id": "acc-tx-2026-08-03-244",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-03T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "BCA",
+    "date": "2026-08-03",
+    "amount": 40000,
+    "category": "Hiburan",
+    "merchant": "Hiburan #2",
+    "account": "BCA"
+  },
+  {
+    "id": "acc-tx-2026-08-04-245",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-04T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "OVO",
+    "date": "2026-08-04",
+    "amount": 40000,
+    "category": "Hiburan",
+    "merchant": "Hiburan #3",
+    "account": "OVO"
+  },
+  {
+    "id": "acc-tx-2026-08-05-246",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-05T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "BCA",
+    "date": "2026-08-05",
+    "amount": 40000,
+    "category": "Hiburan",
+    "merchant": "Hiburan #4",
+    "account": "BCA"
+  },
+  {
+    "id": "acc-tx-2026-08-06-247",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-06T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "OVO",
+    "date": "2026-08-06",
+    "amount": 40000,
+    "category": "Hiburan",
+    "merchant": "Hiburan #5",
+    "account": "OVO"
+  },
+  {
+    "id": "acc-tx-2026-08-07-248",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "confirmed",
+    "confirmed_at": "2026-08-07T12:00:00.000Z",
+    "meta": {
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "BCA",
+    "date": "2026-08-07",
+    "amount": 40000,
+    "category": "Hiburan",
+    "merchant": "Hiburan #6",
+    "account": "BCA"
+  },
+  {
+    "id": "acc-tx-2026-08-hp-001",
+    "type": "expense",
+    "currency": "IDR",
+    "status": "pending",
+    "confirmed_at": null,
+    "meta": {
+      "needs_classification": true,
+      "status": "pending",
+      "source": "accuracy-fixture"
+    },
+    "payment_method": "BCA",
+    "date": "2026-08-04",
+    "amount": 7988000,
+    "category": "Elektronik",
+    "merchant": "Beli HP",
+    "account": "BCA"
+  }
+]

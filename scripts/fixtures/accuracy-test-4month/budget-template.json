@@ -1,0 +1,19 @@
+{
+  "income": 8000000,
+  "categories": {
+    "rows": [
+      { "id": "acc-bdg-kost", "name": "Kost", "amount": 1200000, "priority": "harus", "target_type": "monthly", "auto_link_keywords": ["kost"], "auto_link_enabled": true, "items": [] },
+      { "id": "acc-bdg-listrik", "name": "Listrik", "amount": 150000, "priority": "harus", "target_type": "monthly", "auto_link_keywords": ["listrik", "pln"], "auto_link_enabled": true, "items": [] },
+      { "id": "acc-bdg-internet", "name": "Internet", "amount": 150000, "priority": "harus", "target_type": "monthly", "auto_link_keywords": ["internet"], "auto_link_enabled": true, "items": [] },
+      { "id": "acc-bdg-cicilan-hp", "name": "Cicilan HP", "amount": 250000, "priority": "harus", "target_type": "monthly", "auto_link_keywords": ["cicilan hp"], "auto_link_enabled": true, "items": [] },
+      { "id": "acc-bdg-makan", "name": "Makan Sehari-hari", "amount": 1500000, "priority": "penting", "target_type": "monthly", "auto_link_keywords": ["makan", "warteg", "gofood"], "auto_link_enabled": true, "items": [] },
+      { "id": "acc-bdg-transport", "name": "Transportasi", "amount": 600000, "priority": "penting", "target_type": "monthly", "auto_link_keywords": ["grab", "bensin"], "auto_link_enabled": true, "items": [] },
+      { "id": "acc-bdg-belanja", "name": "Belanja Kebutuhan", "amount": 500000, "priority": "penting", "target_type": "monthly", "auto_link_keywords": ["indomaret", "alfamart"], "auto_link_enabled": true, "items": [] },
+      { "id": "acc-bdg-kesehatan", "name": "Kesehatan", "amount": 250000, "priority": "penting", "target_type": "flexible", "auto_link_keywords": ["apotek"], "auto_link_enabled": true, "items": [] },
+      { "id": "acc-bdg-kopi", "name": "Nongkrong & Kopi", "amount": 400000, "priority": "mau", "target_type": "monthly", "auto_link_keywords": ["kopi", "starbucks"], "auto_link_enabled": true, "items": [] },
+      { "id": "acc-bdg-hiburan", "name": "Hiburan", "amount": 500000, "priority": "mau", "target_type": "monthly", "auto_link_keywords": ["netflix", "xxi"], "auto_link_enabled": true, "items": [] },
+      { "id": "acc-bdg-tabungan", "name": "Tabungan", "amount": 1500000, "priority": "simpan", "target_type": "monthly", "auto_link_keywords": ["tabungan"], "auto_link_enabled": true, "items": [] },
+      { "id": "acc-bdg-darurat", "name": "Dana Darurat", "amount": 1000000, "priority": "simpan", "target_type": "monthly", "auto_link_keywords": ["darurat"], "auto_link_enabled": true, "items": [] }
+    ]
+  }
+}

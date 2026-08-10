@@ -27,6 +27,8 @@ import { isPlatformAdmin } from '../services/adminService';
 import { logSessionExpired } from '../services/runtimeTracer';
 import { useAppStore } from '../store/appStore';
 import { bootstrapCustomDomainContext } from '../services/customDomainService';
+import { userHasProduct, PRODUCT_NOT_REGISTERED } from '../services/productEntitlements';
+import { signOutGlobal } from '../services/authService';
 
 function resolvePlatformRole(profile: { role?: string }, email?: string): 'user' | 'admin' {
   if (String(profile?.role || '').toLowerCase() === 'admin') return 'admin';
@@ -128,6 +130,18 @@ async function bootstrapSession(session: Session) {
     if (orgCtx) {
       await applyOrgContext(authUser, profile, orgCtx);
       return;
+    }
+
+    const hasPlanner = await userHasProduct('planner');
+
+    if (!hasPlanner && !signupIntent && !platformAdmin) {
+      await signOutGlobal();
+      store.setAuthenticated(false);
+      store.setUser(null);
+      store.setTenant(null);
+      store.setHasMembership(false);
+      store.setAuthError(PRODUCT_NOT_REGISTERED);
+      throw new Error(PRODUCT_NOT_REGISTERED);
     }
 
     store.setHasMembership(false);

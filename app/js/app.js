@@ -2187,7 +2187,46 @@ async function upsertTransaction_legacy_local(tx) {
       }
     }
 
+    async function assertMonefyiProductAccess(){
+      const supa = STATE.db.supa;
+      const u = STATE.db.user;
+      if (!supa || !u) return false;
+      try {
+        const { data, error } = await supa.rpc('user_has_product', { p_product: 'monefyi' });
+        if (error) {
+          console.warn('user_has_product', error);
+          return false;
+        }
+        return data === true;
+      } catch (e) {
+        console.warn('assertMonefyiProductAccess', e);
+        return false;
+      }
+    }
+
+    async function rejectUnregisteredMonefyiAccess(message){
+      const msg = message || 'Akun ini belum terdaftar di Monefyi. Daftar di monefyi.com terlebih dahulu.';
+      try {
+        await STATE.db.supa?.auth.signOut();
+      } catch (e) {
+        console.warn('signOut after product gate', e);
+      }
+      STATE.db.session = null;
+      STATE.db.user = null;
+      if (typeof window !== 'undefined') window.currentUser = null;
+      document.body.classList.add('auth-only');
+      $('#appShell')?.classList.add('hidden');
+      $('#authOverlay')?.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+      $('#authStatus').textContent = msg;
+    }
+
     async function bootstrapAuthed(){
+      const allowed = await assertMonefyiProductAccess();
+      if (!allowed) {
+        await rejectUnregisteredMonefyiAccess();
+        return;
+      }
       enterAppShell();
       try {
         if (window.MonefyiI18n?.mergeIntoI18N) window.MonefyiI18n.mergeIntoI18N(I18N);
@@ -2789,6 +2828,11 @@ async function upsertTransaction_legacy_local(tx) {
       try {
         const { error } = await STATE.db.supa.auth.signInWithPassword({ email, password: pass });
         if (error) throw error;
+        const allowed = await assertMonefyiProductAccess();
+        if (!allowed) {
+          await rejectUnregisteredMonefyiAccess();
+          return;
+        }
         $('#authStatus').textContent = '';
         // Fallback jika onAuthStateChange lambat atau gagal
         setTimeout(() => {

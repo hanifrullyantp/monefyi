@@ -4,6 +4,7 @@ import { getServiceClient } from "../_shared/supabase.ts";
 import { requireUser } from "../_shared/auth.ts";
 import { writeAudit, createNotification } from "../_shared/audit.ts";
 import { sendWelcomeMemberEmail } from "../_shared/email.ts";
+import { grantProductEntitlement, PRODUCT_PLANNER } from "../_shared/productEntitlements.ts";
 
 serve(async (req) => {
   const opt = handleOptions(req);
@@ -46,6 +47,8 @@ serve(async (req) => {
       status: "active",
       accepted_at: new Date().toISOString(),
     });
+
+    await grantProductEntitlement(sb, user.id, PRODUCT_PLANNER, "domain_join");
 
     await writeAudit(sb, {
       orgId: org.id,

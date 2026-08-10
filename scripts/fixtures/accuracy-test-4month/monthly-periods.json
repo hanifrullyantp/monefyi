@@ -1,0 +1,6 @@
+[
+  { "period": "2026-05", "opening_balance": 9000000, "total_income": 8000000, "total_expense": 6595000, "closing_balance": 10405000, "status": "closed" },
+  { "period": "2026-06", "opening_balance": 10405000, "total_income": 8000000, "total_expense": 6630000, "closing_balance": 11775000, "status": "closed" },
+  { "period": "2026-07", "opening_balance": 11775000, "total_income": 8000000, "total_expense": 6975000, "closing_balance": 12800000, "status": "closed" },
+  { "period": "2026-08", "opening_balance": 15000000, "total_income": 0, "total_expense": 0, "closing_balance": 15000000, "status": "active" }
+]

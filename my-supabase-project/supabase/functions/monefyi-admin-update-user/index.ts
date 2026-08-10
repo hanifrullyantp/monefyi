@@ -5,6 +5,7 @@ import {
   handleCorsPreflightRequest,
   jsonResponse,
 } from "../_shared/cors.ts";
+import { grantProductEntitlement, PRODUCT_MONEFYI } from "../_shared/productEntitlements.ts";
 
 async function requireAdmin(supa: ReturnType<typeof createClient>, callerId: string) {
   const { data: prof } = await supa.from("profiles").select("role").eq("id", callerId).maybeSingle();
@@ -78,6 +79,7 @@ serve(async (req) => {
           expires_at: body.plan_expires_at || null,
           updated_at: new Date().toISOString(),
         }, { onConflict: "user_id" });
+        await grantProductEntitlement(sb, newId, PRODUCT_MONEFYI, "admin");
       }
 
       return jsonResponse(req, { ok: true, user_id: newId });
@@ -181,6 +183,9 @@ serve(async (req) => {
 
       const { error: planErr } = await sb.from("user_plans").upsert(planRow, { onConflict: "user_id" });
       if (planErr) return jsonResponse(req,{ error: planErr.message }, 500);
+      if (body.plan_type !== undefined && String(body.plan_type) !== "none") {
+        await grantProductEntitlement(sb, userId, PRODUCT_MONEFYI, "admin");
+      }
     }
 
     if (body.new_password && String(body.new_password).length >= 8) {

@@ -25,6 +25,7 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { sendEmail } from "../_shared/email.ts";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
+import { grantProductEntitlement, PRODUCT_MONEFYI } from "../_shared/productEntitlements.ts";
 
 const jsonHeaders = { "Content-Type": "application/json" };
 
@@ -470,6 +471,15 @@ serve(async (req) => {
     console.log("✅ profiles.plan_* synced:", finalPlanType);
   } catch (syncErr) {
     console.error("❌ profiles sync failed:", (syncErr as Error)?.message || syncErr);
+  }
+
+  if (finalPlanType === "monthly" || finalPlanType === "lifetime") {
+    try {
+      await grantProductEntitlement(supa, userId, PRODUCT_MONEFYI, "purchase", { plan_type: finalPlanType });
+      console.log("✅ monefyi product entitlement granted");
+    } catch (entErr) {
+      console.error("❌ product entitlement failed:", (entErr as Error)?.message || entErr);
+    }
   }
 
   // 4c) Acquisition event (payment)

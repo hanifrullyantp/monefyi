@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { sendEmail } from "../_shared/email.ts";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
+import { grantProductEntitlement, PRODUCT_MONEFYI } from "../_shared/productEntitlements.ts";
 
 const DISPOSABLE = new Set([
   "tempmail.com", "guerrillamail.com", "mailinator.com", "10minutemail.com",
@@ -164,6 +165,8 @@ serve(async (req) => {
       expires_at: expires.toISOString(),
       updated_at: new Date().toISOString(),
     }, { onConflict: "user_id" });
+
+    await grantProductEntitlement(sb, userId, PRODUCT_MONEFYI, "trial");
 
     await sb.from("profiles").upsert({
       id: userId,

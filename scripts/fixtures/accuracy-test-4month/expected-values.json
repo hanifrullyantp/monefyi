@@ -1,0 +1,85 @@
+{
+  "persona": {
+    "name": "Test User Accuracy",
+    "monthlyIncome": 8000000,
+    "paydayDay": 25,
+    "months": ["2026-05", "2026-06", "2026-07", "2026-08"]
+  },
+  "months": {
+    "2026-05": {
+      "income": 8000000,
+      "totalExpense": 6595000,
+      "nonSavingExpense": 6095000,
+      "savingTransfers": 500000,
+      "consumptionExpense": 6095000,
+      "netCashFlow": 1405000,
+      "savingRate": 0.0625,
+      "healthScoreMin": 50,
+      "healthScoreMax": 70,
+      "healthScoreBand": "fair",
+      "categoriesOverBudget": ["Makan Sehari-hari", "Transportasi", "Nongkrong & Kopi"]
+    },
+    "2026-06": {
+      "income": 8000000,
+      "totalExpense": 6630000,
+      "nonSavingExpense": 5330000,
+      "savingTransfers": 1300000,
+      "consumptionExpense": 5330000,
+      "netCashFlow": 1370000,
+      "savingRate": 0.1625,
+      "healthScoreMin": 65,
+      "healthScoreMax": 80,
+      "healthScoreBand": "good"
+    },
+    "2026-07": {
+      "income": 8000000,
+      "totalExpense": 6975000,
+      "nonSavingExpense": 4975000,
+      "savingTransfers": 2000000,
+      "consumptionExpense": 4975000,
+      "netCashFlow": 1025000,
+      "savingRate": 0.25,
+      "healthScoreMin": 80,
+      "healthScoreMax": 95,
+      "healthScoreBand": "excellent"
+    },
+    "2026-08": {
+      "income": 0,
+      "consumptionExpense": 3395000,
+      "consumptionExpenseWithHpAsExpense": 11383000,
+      "hpAssetAmount": 7988000,
+      "hpMerchant": "Beli HP",
+      "fixedBillsPaid": 1765000,
+      "flexibleSpentDay15": 1630000,
+      "safeToSpendDay15": 212000,
+      "projectedSurplusAfterGajian": 983672,
+      "bcaOpeningAug1": 15000000
+    }
+  },
+  "trend": {
+    "nonSavingExpense": [6095000, 5330000, 4975000],
+    "labels": ["2026-05", "2026-06", "2026-07"]
+  },
+  "goals": {
+    "danaDarurat": {
+      "target": 24000000,
+      "currentEndJuly": 4300000,
+      "progressPctEndJuly": 17.9
+    },
+    "dpMotor": {
+      "target": 5000000,
+      "currentEndJuly": 1600000,
+      "progressPctEndJuly": 32
+    }
+  },
+  "anomaly": {
+    "hpTransactionId": "acc-tx-2026-08-hp-001",
+    "needsClassificationBeforeAsset": true,
+    "consumptionNetWithAsset": 4600000,
+    "consumptionNetWithoutAssetClassified": -3388000
+  },
+  "recommendations": {
+    "augustPriority1Type": "anomaly_categorization",
+    "augustNotExpected": ["Makan Sehari-hari over budget"]
+  }
+}

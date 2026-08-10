@@ -178,8 +178,10 @@ export function sumByTransactionType(transactions, opts = {}) {
       consumptionExpense += amt;
     } else if (isExpenseTransaction(tx)) {
       expense += amt;
-      consumptionExpense += amt;
-    } else {
+      if (tx.meta?.expense_treatment === 'transfer') {
+        transfer += amt;
+      }
+    } else if (tx.type === 'transfer' || tx.meta?.expense_treatment === 'transfer') {
       transfer += amt;
     }
   }

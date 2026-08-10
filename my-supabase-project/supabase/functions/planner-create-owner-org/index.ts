@@ -5,6 +5,7 @@ import { requireUser } from "../_shared/auth.ts";
 import { writeAudit, createNotification } from "../_shared/audit.ts";
 import { sendWelcomeOwnerEmail } from "../_shared/email.ts";
 import { sanitizeText, slugify } from "../_shared/sanitize.ts";
+import { grantProductEntitlement, PRODUCT_PLANNER } from "../_shared/productEntitlements.ts";
 
 serve(async (req) => {
   const opt = handleOptions(req);
@@ -64,6 +65,8 @@ serve(async (req) => {
     });
 
     if (memErr) throw memErr;
+
+    await grantProductEntitlement(sb, user.id, PRODUCT_PLANNER, "owner_org");
 
     await sb.from("profiles").upsert({
       id: user.id,

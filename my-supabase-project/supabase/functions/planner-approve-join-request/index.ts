@@ -6,6 +6,7 @@ import { writeAudit, createNotification } from "../_shared/audit.ts";
 import { sendEmailSafe, sendWelcomeMemberEmail } from "../_shared/email.ts";
 import { requestStatusHtml } from "../_shared/email-templates.ts";
 import { sanitizeText } from "../_shared/sanitize.ts";
+import { grantProductEntitlement, PRODUCT_PLANNER } from "../_shared/productEntitlements.ts";
 
 serve(async (req) => {
   const opt = handleOptions(req);
@@ -56,6 +57,8 @@ serve(async (req) => {
       reviewed_by: user.id,
       reviewed_at: new Date().toISOString(),
     }).eq("id", request_id);
+
+    await grantProductEntitlement(sb, jr.user_id, PRODUCT_PLANNER, "join_request");
 
     await writeAudit(sb, {
       orgId: jr.org_id,

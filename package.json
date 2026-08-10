@@ -36,6 +36,10 @@
     "launch:gate": "node scripts/launch-gate-check.js",
     "launch:full": "npm run test:all && npm run launch:gate && npm run build:app",
     "test:all": "npm run test:roadmap && npm run test:growth",
-    "seed:demo-august": "node scripts/seed-demo-august-2026.cjs"
+    "test:accuracy": "node --test tests/accuracy-test-4month.test.js",
+    "verify:accuracy": "node scripts/verify-accuracy-test.cjs",
+    "reset:test-user": "node scripts/reset-test-user.cjs",
+    "seed:demo-august": "node scripts/seed-demo-august-2026.cjs",
+    "seed:accuracy-test": "node scripts/seed-accuracy-test-4month.cjs"
   }
 }
