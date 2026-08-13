@@ -93,7 +93,7 @@ export function showBudgetDetailModal(budget, transactions, month, options = {})
 
         ${progress.daysLeft > 0 ? `
           <div class="budget-detail-hint">
-            Sisa ${progress.daysLeft} hari — Rp ${formatIDR(progress.dailyBudget)}/hari
+            ${progress.daysLeft} ${LABELS.DAILY.DAYS_TO_PAYDAY} — ${LABELS.DAILY.AMAN_PER_DAY} Rp ${formatIDR(progress.dailyBudget)}
           </div>
         ` : ''}
 

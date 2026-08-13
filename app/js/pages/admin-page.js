@@ -792,7 +792,7 @@ async function renderLanding(body) {
   const ac = window.STATE?.appConfig || {};
   const cfg = window.MONEFYI_CONFIG || {};
   const origin = location.origin.replace(/\/app\/?$/, '') || 'https://monefyi.com';
-  const cmsUrl = `${origin}/admin/`;
+  const cmsUrl = `${origin}/?admin_mode=true`;
   const supaBase = (cfg.supabaseUrl || '').replace(/\/$/, '');
   const publicConfigUrl = supaBase
     ? `${supaBase}/functions/v1/${cfg.fnPublicConfig || 'monefyi-public-config'}`

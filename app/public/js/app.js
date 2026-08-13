@@ -1081,6 +1081,8 @@ document.getElementById('btnOpenAdminPanel')?.addEventListener('click', () => {
         saldoViewMode: 'monthly',
         reportsPageOpen: false,
         householdPageOpen: false,
+        /** Canonical nav: home | transactions | budget | advisor | neraca | settings | reports | household */
+        activeView: 'home',
         inlineEditId: null,
         txDragId: null,
       },
@@ -1822,6 +1824,19 @@ function computeSubscriptionStatus(profile){
         period: saved.period || stampTransactionPeriod(saved).period,
       });
 
+      if (STATE.testMode?.active && window.dataStore) {
+        const existing = await window.dataStore.getTransaction?.(stamped.id);
+        const saved = existing
+          ? await window.dataStore.updateTransaction(stamped.id, stamped)
+          : await window.dataStore.createTransaction(stamped);
+        const normalized = normalizeSaved(saved);
+        const i = STATE.transactions.findIndex((t) => t.id === normalized.id);
+        if (i >= 0) STATE.transactions[i] = normalized;
+        else STATE.transactions.unshift(normalized);
+        window.monefyiRefreshTestChecklist?.();
+        return normalized;
+      }
+
       if (isOfflineMode()) {
         if (!window.dataStore) throw new Error('Offline storage not ready');
         const existing = await window.dataStore.getTransaction?.(stamped.id);
@@ -1836,6 +1851,10 @@ function computeSubscriptionStatus(profile){
       }
 
       const supa = STATE.db.supa;
+      const txStatus = stamped.status || stamped.meta?.status || 'confirmed';
+      const confirmedAt = txStatus === 'confirmed'
+        ? (stamped.confirmed_at || stamped.meta?.confirmed_at || new Date().toISOString())
+        : null;
       const row = {
         id: stamped.id,
         user_id: STATE.db.user.id,
@@ -1852,7 +1871,9 @@ function computeSubscriptionStatus(profile){
         notes: stamped.notes || '',
         created_at: stamped.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        meta: stamped.meta || {},
+        status: txStatus,
+        confirmed_at: confirmedAt,
+        meta: { ...(stamped.meta || {}), status: txStatus },
         visibility: stamped.visibility || stamped.meta?.visibility || 'personal',
         household_id: stamped.household_id || null,
       };
@@ -2179,7 +2200,46 @@ async function upsertTransaction_legacy_local(tx) {
       }
     }
 
+    async function assertMonefyiProductAccess(){
+      const supa = STATE.db.supa;
+      const u = STATE.db.user;
+      if (!supa || !u) return false;
+      try {
+        const { data, error } = await supa.rpc('user_has_product', { p_product: 'monefyi' });
+        if (error) {
+          console.warn('user_has_product', error);
+          return false;
+        }
+        return data === true;
+      } catch (e) {
+        console.warn('assertMonefyiProductAccess', e);
+        return false;
+      }
+    }
+
+    async function rejectUnregisteredMonefyiAccess(message){
+      const msg = message || 'Akun ini belum terdaftar di Monefyi. Daftar di monefyi.com terlebih dahulu.';
+      try {
+        await STATE.db.supa?.auth.signOut();
+      } catch (e) {
+        console.warn('signOut after product gate', e);
+      }
+      STATE.db.session = null;
+      STATE.db.user = null;
+      if (typeof window !== 'undefined') window.currentUser = null;
+      document.body.classList.add('auth-only');
+      $('#appShell')?.classList.add('hidden');
+      $('#authOverlay')?.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+      $('#authStatus').textContent = msg;
+    }
+
     async function bootstrapAuthed(){
+      const allowed = await assertMonefyiProductAccess();
+      if (!allowed) {
+        await rejectUnregisteredMonefyiAccess();
+        return;
+      }
       enterAppShell();
       try {
         if (window.MonefyiI18n?.mergeIntoI18N) window.MonefyiI18n.mergeIntoI18N(I18N);
@@ -2317,6 +2377,17 @@ async function upsertTransaction_legacy_local(tx) {
         import('./services/achievement-store.js')
           .then(({ syncCatalogAchievements }) => syncCatalogAchievements(STATE).catch(() => {}))
           .catch((e) => console.warn('achievementSync', e));
+        try {
+          const { tryRestoreSession } = await import('./services/test-mode-service.js');
+          const restored = await tryRestoreSession();
+          if (restored) {
+            const { renderTestModeBanner } = await import('./components/test-mode-banner.js');
+            const { renderTestModeChecklist } = await import('./components/test-mode-checklist.js');
+            renderTestModeBanner();
+            renderTestModeChecklist();
+            document.getElementById('adminPanelLauncher')?.classList.add('hidden');
+          }
+        } catch (e) { console.warn('testModeRestore', e); }
         rerender();
         ensureAppShellVisible();
       } catch (e) {
@@ -2324,6 +2395,7 @@ async function upsertTransaction_legacy_local(tx) {
         if (typeof showToast === 'function') showToast('Gagal memuat data. Coba refresh.', 'warn');
       }
     }
+    window.bootstrapAuthed = bootstrapAuthed;
 
     function initMonefyiEnhancements(){
       if (window.MonefyiI18n?.mergeIntoI18N) window.MonefyiI18n.mergeIntoI18N(I18N);
@@ -2781,6 +2853,11 @@ async function upsertTransaction_legacy_local(tx) {
       try {
         const { error } = await STATE.db.supa.auth.signInWithPassword({ email, password: pass });
         if (error) throw error;
+        const allowed = await assertMonefyiProductAccess();
+        if (!allowed) {
+          await rejectUnregisteredMonefyiAccess();
+          return;
+        }
         $('#authStatus').textContent = '';
         // Fallback jika onAuthStateChange lambat atau gagal
         setTimeout(() => {
@@ -6449,7 +6526,9 @@ function generateSmartBudgetRecommendation() {
 
     async function renderMobileHome() {
       const root = $('#homePageRoot');
-      if (!root || isDesktopViewport() || !STATE.ui.dashboardOpen) return;
+      if (!root || isDesktopViewport()) return;
+      const viewAtStart = STATE.ui.activeView || (STATE.ui.dashboardOpen ? 'home' : 'transactions');
+      if (viewAtStart !== 'home') return;
       try {
         const { renderHomePage } = await loadAppModule('js/pages/home-page.js');
         await renderHomePage(root, getHomePageContext(), {
@@ -6490,6 +6569,9 @@ function generateSmartBudgetRecommendation() {
         import('./services/financial-condition.js')
           .then((m) => m.syncFinancialCondition(STATE))
           .catch(() => {});
+        if ((STATE.ui.activeView || 'home') !== 'home') {
+          root.replaceChildren();
+        }
       } catch (err) {
         console.error('[home] render failed:', err);
       }
@@ -7106,6 +7188,13 @@ function setSheetPosition(mode) {
         });
       } catch (e) {
         console.error('[budget] page render failed', e);
+        root.innerHTML = `
+          <div class="budget-page-error app-card-opaque p-4 m-4 rounded-xl">
+            <p class="text-sm font-semibold">Gagal memuat halaman budget</p>
+            <p class="text-xs app-muted mt-1">${escapeHtml(String(e?.message || 'Error tidak diketahui'))}</p>
+            <button type="button" class="tap mt-3 rounded-lg px-3 py-2 text-sm btn-primary" data-budget-retry>Muat ulang</button>
+          </div>`;
+        root.querySelector('[data-budget-retry]')?.addEventListener('click', () => renderBudgetPageView());
       }
     }
     window.renderBudgetPageView = renderBudgetPageView;
@@ -7128,12 +7217,7 @@ function setSheetPosition(mode) {
       closeAddSheet();
       closeReports();
       closeHousehold();
-      STATE.ui.neracaPageOpen = true;
-      STATE.ui.budgetPageOpen = false;
-      STATE.ui.monevisorPageOpen = false;
-      STATE.ui.settingsPageOpen = false;
-      STATE.ui.householdPageOpen = false;
-      STATE.ui.dashboardOpen = false;
+      setActiveView('neraca');
       STATE.ui.advisorOpen = false;
       STATE.ui.budgetOpen = false;
 
@@ -7175,13 +7259,7 @@ function setSheetPosition(mode) {
       closeAddSheet();
       closeNeraca();
       closeHousehold();
-      STATE.ui.reportsPageOpen = true;
-      STATE.ui.budgetPageOpen = false;
-      STATE.ui.monevisorPageOpen = false;
-      STATE.ui.neracaPageOpen = false;
-      STATE.ui.settingsPageOpen = false;
-      STATE.ui.householdPageOpen = false;
-      STATE.ui.dashboardOpen = false;
+      setActiveView('reports');
 
       $$('.nav-item[data-nav]').forEach((el) => el.classList.remove('active'));
       $$('.sidebar-item[data-nav]').forEach((el) => {
@@ -7225,13 +7303,7 @@ function setSheetPosition(mode) {
       closeAddSheet();
       closeBudgetPage?.();
 
-      STATE.ui.householdPageOpen = true;
-      STATE.ui.budgetPageOpen = false;
-      STATE.ui.monevisorPageOpen = false;
-      STATE.ui.neracaPageOpen = false;
-      STATE.ui.settingsPageOpen = false;
-      STATE.ui.reportsPageOpen = false;
-      STATE.ui.dashboardOpen = false;
+      setActiveView('household');
 
       $$('.nav-item[data-nav]').forEach((el) => {
         el.classList.toggle('active', el.getAttribute('data-nav') === 'bersama');
@@ -7281,12 +7353,7 @@ function setSheetPosition(mode) {
       closeAddSheet();
 
       // Switch view flags FIRST so TX list never flashes during async draft prep
-      STATE.ui.budgetPageOpen = true;
-      STATE.ui.monevisorPageOpen = false;
-      STATE.ui.neracaPageOpen = false;
-      STATE.ui.settingsPageOpen = false;
-      STATE.ui.householdPageOpen = false;
-      STATE.ui.dashboardOpen = false;
+      setActiveView('budget');
       STATE.ui.budgetOpen = false;
 
       $$('.nav-item[data-nav]').forEach((el) => {
@@ -7320,6 +7387,9 @@ function setSheetPosition(mode) {
 
     function closeBudgetPage() {
       STATE.ui.budgetPageOpen = false;
+      if (STATE.ui.activeView === 'budget') {
+        STATE.ui.activeView = 'transactions';
+      }
       const root = $('#budgetPageRoot');
       if (root) root.classList.add('hidden');
       closeBudgetSheetOnly();
@@ -7379,13 +7449,7 @@ function setSheetPosition(mode) {
       };
 
       // Switch view flags FIRST — never flash TX list while page mounts
-      STATE.ui.monevisorPageOpen = true;
-      STATE.ui.budgetPageOpen = false;
-      STATE.ui.neracaPageOpen = false;
-      STATE.ui.settingsPageOpen = false;
-      STATE.ui.householdPageOpen = false;
-      STATE.ui.reportsPageOpen = false;
-      STATE.ui.dashboardOpen = false;
+      setActiveView('advisor');
       STATE.ui.advisorOpen = false;
       STATE.ui.budgetOpen = false;
 
@@ -7464,13 +7528,7 @@ function setSheetPosition(mode) {
       closeAddSheet();
       closeHousehold?.();
 
-      STATE.ui.settingsPageOpen = true;
-      STATE.ui.budgetPageOpen = false;
-      STATE.ui.monevisorPageOpen = false;
-      STATE.ui.neracaPageOpen = false;
-      STATE.ui.householdPageOpen = false;
-      STATE.ui.reportsPageOpen = false;
-      STATE.ui.dashboardOpen = false;
+      setActiveView('settings');
 
       $$('.nav-item[data-nav]').forEach((el) => el.classList.remove('active'));
       $$('.sidebar-item[data-nav]').forEach((el) => el.classList.remove('active'));
@@ -8528,6 +8586,33 @@ function setSheetPosition(mode) {
   tx.created_at = tx.created_at || tx.updated_at;
   if (!tx.type) tx.type = 'expense';
 
+  if (opts.pending || tx._isPending) {
+    tx.status = 'pending';
+    tx.meta = { ...(tx.meta || {}), pending: true, status: 'pending' };
+  } else if (tx._isDraft) {
+    tx.status = 'draft';
+    tx.meta = { ...(tx.meta || {}), status: 'draft' };
+  } else if (!tx.status) {
+    tx.status = 'confirmed';
+    tx.confirmed_at = tx.confirmed_at || new Date().toISOString();
+    tx.meta = { ...(tx.meta || {}), status: 'confirmed' };
+  }
+
+  // Gate large unclassified expenses — stay pending until user clarifies
+  if (!opts.skipClassification && !opts.silent && (tx.type === 'expense' || !tx.type) && tx.status === 'confirmed') {
+    try {
+      const classMod = await import('./services/transaction-classification.js');
+      if (classMod.needsClassification(tx, {
+        transactions: STATE.transactions,
+        monthKey: String(tx.date || '').slice(0, 7),
+      })) {
+        tx.status = 'pending';
+        delete tx.confirmed_at;
+        tx.meta = { ...(tx.meta || {}), status: 'pending', pending: true, needs_classification: true };
+      }
+    } catch { /* continue */ }
+  }
+
   if (opts.pending) {
     tx.meta = { ...(tx.meta || {}), pending: true };
   }
@@ -8603,9 +8688,11 @@ function setSheetPosition(mode) {
           ...tx,
           ...saved,
           amount: Math.abs(Number(saved.amount ?? tx.amount ?? 0)),
+          status: saved.status || tx.status || 'confirmed',
+          confirmed_at: saved.confirmed_at || tx.confirmed_at,
           meta: { ...(tx.meta || {}), ...(saved.meta || {}) },
         };
-        if (merged.meta?.pending) delete merged.meta.pending;
+        if (merged.status === 'confirmed' && merged.meta?.pending) delete merged.meta.pending;
         if (i >= 0) STATE.transactions[i] = merged;
         else STATE.transactions.unshift(merged);
         Object.assign(tx, merged);
@@ -8662,6 +8749,28 @@ function setSheetPosition(mode) {
   }
 
   let impactShown = false;
+
+  // Show classification sheet for pending large transactions
+  if (!opts.silent && !opts.skipClassification && tx.meta?.needs_classification) {
+    try {
+      const sheetMod = await import('./components/large-transaction-sheet.js');
+      sheetMod.showLargeTransactionSheet(tx, {
+        onConfirm: async (classified) => {
+          classified.status = 'confirmed';
+          classified.confirmed_at = new Date().toISOString();
+          classified.meta = { ...(classified.meta || {}), status: 'confirmed', needs_classification: false };
+          delete classified.meta.pending;
+          await upsertTransaction(classified, { skipClassification: true });
+          await sheetMod.syncAssetToNeraca(classified);
+          showToast('Transaksi diklasifikasi — net worth tetap', 'success');
+        },
+      });
+      return { success: true, needsClassification: true };
+    } catch (classErr) {
+      console.warn('[tx-classify]', classErr);
+    }
+  }
+
   if (!opts.silent && !opts.skipImpact) {
     try {
       const targetMod = await import('./services/financial-targets.js');
@@ -8700,6 +8809,8 @@ function setSheetPosition(mode) {
     } catch { /* ignore */ }
   }
 }
+
+window.upsertTransaction = upsertTransaction;
 
    async function deleteTransaction(id, opts = {}) {
   const removed = STATE.transactions.find(t => t.id === id);
@@ -12287,7 +12398,21 @@ function toggleNav_legacy(mode) {
   }
 }
 
-
+    /**
+     * Single source of truth for main app navigation (Beranda / Transaksi / Budget / …).
+     * @param {'home'|'transactions'|'budget'|'advisor'|'neraca'|'settings'|'reports'|'household'} view
+     */
+    function setActiveView(view) {
+      STATE.ui.activeView = view;
+      STATE.ui.dashboardOpen = view === 'home';
+      STATE.ui.budgetPageOpen = view === 'budget';
+      STATE.ui.monevisorPageOpen = view === 'advisor';
+      STATE.ui.neracaPageOpen = view === 'neraca';
+      STATE.ui.settingsPageOpen = view === 'settings';
+      STATE.ui.reportsPageOpen = view === 'reports';
+      STATE.ui.householdPageOpen = view === 'household';
+    }
+    window.setActiveView = setActiveView;
 
 function toggleNav(view, triggerEl) {
       window.clearSaldoPinState?.();
@@ -12348,22 +12473,10 @@ function toggleNav(view, triggerEl) {
       }
 
       if (view === 'list') {
-        STATE.ui.dashboardOpen = false;
-        STATE.ui.budgetPageOpen = false;
-        STATE.ui.monevisorPageOpen = false;
-        STATE.ui.neracaPageOpen = false;
-        STATE.ui.reportsPageOpen = false;
-        STATE.ui.householdPageOpen = false;
-        STATE.ui.settingsPageOpen = false;
+        setActiveView('transactions');
         runFirstWeekPlanEval({ openedTransactions: true });
       } else if (view === 'dash') {
-        STATE.ui.dashboardOpen = true;
-        STATE.ui.budgetPageOpen = false;
-        STATE.ui.monevisorPageOpen = false;
-        STATE.ui.neracaPageOpen = false;
-        STATE.ui.reportsPageOpen = false;
-        STATE.ui.householdPageOpen = false;
-        STATE.ui.settingsPageOpen = false;
+        setActiveView('home');
       }
       closeReports();
       closeHousehold();
@@ -12752,7 +12865,24 @@ function toggleNav(view, triggerEl) {
       return;
     }
 
-    STATE.ui.dashboardOpen = !STATE.ui.dashboardOpen;
+    // Mobile: expand/collapse saldo card only — do NOT flip Beranda ↔ Transaksi
+    if (!isDesktopViewport()) {
+      const wrap = document.querySelector('.mobile-saldo-wrap');
+      if (wrap && (STATE.ui.activeView === 'home' || STATE.ui.activeView === 'transactions')) {
+        wrap.classList.toggle('saldo-collapsed');
+        wrap.setAttribute('aria-expanded', String(!wrap.classList.contains('saldo-collapsed')));
+      }
+      return;
+    }
+
+    // Desktop: toggle dashboard charts vs transaksi list in main panel
+    if (STATE.ui.activeView === 'transactions') {
+      setActiveView('home');
+    } else if (STATE.ui.activeView === 'home') {
+      setActiveView('transactions');
+    } else {
+      setActiveView('home');
+    }
 
     if (STATE.ui.dashboardOpen) {
       requestAnimationFrame(() =>
@@ -12771,7 +12901,15 @@ function toggleNav(view, triggerEl) {
     $('#btnSaldoToggle').addEventListener('keydown', (e) => {
       if (e.key !== 'Enter' && e.key !== ' ') return;
       e.preventDefault();
-      STATE.ui.dashboardOpen = !STATE.ui.dashboardOpen;
+      const wrap = document.querySelector('.mobile-saldo-wrap');
+      if (wrap && !isDesktopViewport()) {
+        wrap.classList.toggle('saldo-collapsed');
+        wrap.setAttribute('aria-expanded', String(!wrap.classList.contains('saldo-collapsed')));
+        return;
+      }
+      if (STATE.ui.activeView === 'transactions') setActiveView('home');
+      else if (STATE.ui.activeView === 'home') setActiveView('transactions');
+      else setActiveView('home');
       rerender();
     });
 
@@ -13016,7 +13154,7 @@ function toggleNav(view, triggerEl) {
       closeBudgetPage();
 
       STATE.ui.monthPopoverOpen = false;
-      STATE.ui.dashboardOpen = false;
+      setActiveView('transactions');
       STATE.ui.receiptPickerOpened = false;
       STATE.focusCategory = null;
 

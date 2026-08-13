@@ -372,6 +372,39 @@ export async function uploadTutorialMedia(file, stepId) {
 }
 
 /**
+ * Update step text (admin CMS).
+ * @param {string} stepId
+ * @param {string} textContent
+ */
+export async function updateTutorialStepText(stepId, textContent) {
+  const sb = getSupabase();
+  if (!sb || !stepId) return { success: false, error: 'missing' };
+  const text = String(textContent || '').trim();
+  if (!text) return { success: false, error: 'text required' };
+
+  try {
+    const { data: updated, error } = await sb
+      .from('tutorial_content')
+      .update({
+        text_content: text,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', stepId)
+      .select('id');
+
+    if (error) throw error;
+    if (!updated?.length) {
+      throw new Error('Step belum ada di DB. Klik “Seed konten default” dulu.');
+    }
+
+    try { localStorage.removeItem(CACHE_KEY); } catch { /* ignore */ }
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message || String(error) };
+  }
+}
+
+/**
  * Clear media from a step (admin).
  * @param {string} stepId
  */
@@ -452,6 +485,7 @@ if (typeof window !== 'undefined') {
     seedTutorialDefaults,
     uploadTutorialMedia,
     clearTutorialMedia,
+    updateTutorialStepText,
     listTutorialStepsForAdmin,
   };
 }

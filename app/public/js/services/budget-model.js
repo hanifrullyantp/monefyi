@@ -4,6 +4,7 @@
  */
 
 import { LABELS } from '../constants/language.js';
+import { isConsumptionExpense } from '../utils/transaction-utils.js';
 
 export const PRIORITY_LEVELS = {
   HARUS: {
@@ -279,8 +280,11 @@ export function getBudgetStatusLabel(status) {
 export function formatBudgetRowLabels(name, status) {
   const raw = String(name || '').trim();
   if (status === 'paid' && /\blunas\b/i.test(raw)) {
-    const title = raw.replace(/\s*[-–]?\s*lunas\s*$/i, '').trim() || raw;
+    const title = raw.replace(/\s*[-–]?\s*lunas\s*/gi, ' ').replace(/\s+/g, ' ').trim() || raw;
     return { title, subtitle: '✅ Lunas', hideStatusBadge: true };
+  }
+  if (status === 'paid') {
+    return { title: raw, subtitle: '✅ Lunas', hideStatusBadge: true };
   }
   return { title: raw, subtitle: null, hideStatusBadge: false };
 }
@@ -493,7 +497,7 @@ export function getLinkedTransactions(row, transactions, month) {
   const catNorm = normalizeCategoryName(row.name);
 
   return (transactions || []).filter((t) => {
-    if (t.type !== 'expense') return false;
+    if (!isConsumptionExpense(t)) return false;
     if (month && t.date && !t.date.startsWith(month)) return false;
 
     const meta = typeof t.meta === 'object' ? t.meta : {};

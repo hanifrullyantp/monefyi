@@ -4,7 +4,7 @@
 
 | URL | Direktori | Keterangan |
 |-----|-----------|------------|
-| `monefyi.com/` | [`landing/`](../landing/) | Landing page marketing |
+| `monefyi.com/` | [`monefyi-marketing-landing-page/`](../monefyi-marketing-landing-page/) | Landing React (marketing) |
 | `monefyi.com/app/` | [`app/`](../app/) | Aplikasi PWA Monefyi |
 | `monefyi.com/stay/` | [`STAY/`](../STAY/) | STAY — manajemen penginapan |
 

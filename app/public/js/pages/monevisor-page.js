@@ -5,6 +5,7 @@
  */
 
 import { Icon } from '../components/icons.js';
+import { LABELS } from '../constants/language.js';
 import { buildFinancialReport } from '../services/financial-report.js';
 import { diagnoseFinancials } from '../services/financial-diagnosis.js';
 import { buildIntervention, generateStarterQuestions } from '../services/monevisor-intervention.js';
@@ -307,7 +308,7 @@ function renderDiagnosis(container, report, dx) {
           ${Number(comparison.previous.expense || 0) <= 0 ? `
             <div class="mv-compare-empty">
               <span aria-hidden="true">📊</span>
-              <p>Belum ada data bulan lalu untuk perbandingan</p>
+              <p>${LABELS.COMPARE.NO_PREV_MONTH}</p>
             </div>
           ` : `
           <div class="mv-compare-grid">

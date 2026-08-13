@@ -15,15 +15,11 @@
     },
     {
       "source": "/admin",
-      "destination": "/admin/",
-      "permanent": true
+      "destination": "/?admin_mode=true",
+      "permanent": false
     }
   ],
   "rewrites": [
-    {
-      "source": "/admin/",
-      "destination": "/admin.html"
-    },
     {
       "source": "/app/((?!.*\\.(?:js|css|svg|png|jpg|jpeg|webp|gif|ico|json|webmanifest|txt|map|xml)$).*)",
       "destination": "/app/index.html"
@@ -34,6 +30,24 @@
     }
   ],
   "headers": [
+    {
+      "source": "/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
     {
       "source": "/app/manifest.webmanifest",
       "headers": [

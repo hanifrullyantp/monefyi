@@ -3,6 +3,8 @@
  * @module components/transaction-impact-sheet
  */
 
+import { LABELS } from '../constants/language.js';
+
 /** @type {HTMLElement|null} */
 let _root = null;
 /** @type {number|null} */
@@ -61,7 +63,7 @@ function buildHtml(impact) {
   }
 
   if (impact.category && impact.category.status !== 'safe') {
-    lines.push(`<p class="tx-impact-sheet__line tx-impact-sheet__line--sub">Sisa bulan ini: Rp${formatIDR(impact.category.remaining)}</p>`);
+    lines.push(`<p class="tx-impact-sheet__line tx-impact-sheet__line--sub">${LABELS.DAILY.CATEGORY_REMAINING}: Rp${formatIDR(impact.category.remaining)}</p>`);
     if (impact.daysToPayday) {
       lines.push(`<p class="tx-impact-sheet__line tx-impact-sheet__line--sub">Ada ${impact.daysToPayday} hari lagi ke gajian</p>`);
     }

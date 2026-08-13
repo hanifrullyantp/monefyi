@@ -139,7 +139,7 @@ export function getCategoryDetailInsight(category, state = typeof window !== 'un
   const daily = thisWeek.length ? Math.round(thisTotal / Math.max(now.getDay() || 1, 1)) : 0;
   const dailyTarget = Number(opts.dailyBudgetTarget || 0);
 
-  let body = `Minggu ini: Rp ${fmt(thisTotal)} (${pct >= 0 ? '+' : ''}${pct}% vs minggu lalu). Rata-rata harian ~Rp ${fmt(daily)}.`;
+  let body = `Minggu ini: Rp ${fmt(thisTotal)} (${pct >= 0 ? '+' : ''}${pct}% vs minggu lalu). Realisasi harian ~Rp ${fmt(daily)}.`;
   if (dailyTarget > 0 && daily > 0) {
     const vsTarget = Math.round(((dailyTarget - daily) / dailyTarget) * 100);
     if (vsTarget >= 5) body += ` Kamu ${vsTarget}% di bawah target harian ✅`;

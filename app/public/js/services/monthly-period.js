@@ -9,6 +9,8 @@ import {
   sumByTransactionType,
   isExpenseTransaction,
   isIncomeTransaction,
+  isConsumptionExpense,
+  isReportableTransaction,
 } from '../utils/transaction-utils.js';
 
 /**
@@ -45,13 +47,13 @@ export function inferTransactionPeriod(tx) {
  * @param {string} period YYYY-MM
  * @returns {{ income: number, expense: number, transfer: number, net: number, txCount: number }}
  */
-export function computePeriodTotals(transactions, period) {
+export function computePeriodTotals(transactions, period, opts = {}) {
   const { start, end } = periodDateRange(period);
   const filtered = dedupeTransactions(transactions).filter((tx) => {
     const d = String(tx.date || '').slice(0, 10);
-    return d >= start && d <= end;
+    return d >= start && d <= end && isReportableTransaction(tx);
   });
-  const totals = sumByTransactionType(filtered);
+  const totals = sumByTransactionType(filtered, opts.consumptionOnly ? { consumptionOnly: true } : {});
   return { ...totals, txCount: filtered.length };
 }
 
@@ -339,7 +341,7 @@ export function computePeriodCategoryBreakdown(transactions, period) {
   const { start, end } = periodDateRange(period);
   const map = new Map();
   for (const tx of dedupeTransactions(transactions)) {
-    if (!isExpenseTransaction(tx)) continue;
+    if (!isConsumptionExpense(tx)) continue;
     const d = String(tx.date || '').slice(0, 10);
     if (d < start || d > end) continue;
     const cat = tx.category || 'Lainnya';

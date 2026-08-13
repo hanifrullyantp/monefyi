@@ -5,6 +5,7 @@
 
 import { computePeriodTotals, toPeriodKey, periodDateRange } from '../services/monthly-period.js';
 import { computeNeracaReport } from '../services/journal-engine.js';
+import { computePeriodFinancials } from '../services/financial-metrics.js';
 
 export const SALDO_VIEW_MODES = {
   MONTHLY: 'monthly',
@@ -20,12 +21,20 @@ export const SALDO_VIEW_MODES = {
 export async function buildCashFlowCardData(state, viewMode = SALDO_VIEW_MODES.MONTHLY) {
   const period = toPeriodKey(state?.period?.end || state?.selectedMonth);
   const txs = state?.transactions || [];
+  const metrics = computePeriodFinancials(state, period);
   const totals = computePeriodTotals(txs, period);
   const { start, end } = periodDateRange(period);
 
-  let primaryAmount = totals.net;
+  let primaryAmount = metrics.consumptionNetCashFlow;
   let primaryLabel = `Uang Tersisa ${formatMonthLabel(period)}`;
-  let primarySub = `${totals.income > 0 ? '+' : ''}${formatCompact(totals.income)} income · −${formatCompact(totals.expense)} pengeluaran`;
+  let primarySub = `${metrics.income > 0 ? '+' : ''}${formatCompact(metrics.income)} income · −${formatCompact(metrics.consumptionExpense)} expense rutin`;
+
+  if (metrics.hasUnhandledAnomalies) {
+    primarySub = `⚠️ Ada transaksi besar perlu dikategorisasi · Dengan anomali: ${formatCompact(totals.net)} · Tanpa: ${formatCompact(metrics.consumptionNetCashFlow)}`;
+  } else if (metrics.assetAcquisitions?.length) {
+    const assetTotal = metrics.assetExpense || 0;
+    primarySub += ` · Aset: ${formatCompact(assetTotal)}`;
+  }
 
   if (viewMode === SALDO_VIEW_MODES.CUMULATIVE) {
     const all = txs.reduce((acc, tx) => {
@@ -66,8 +75,13 @@ export async function buildCashFlowCardData(state, viewMode = SALDO_VIEW_MODES.M
     primaryLabel,
     primaryAmount,
     primarySub,
-    income: totals.income,
-    expense: totals.expense,
+    income: metrics.income,
+    expense: metrics.consumptionExpense,
+    rawNet: totals.net,
+    consumptionNet: metrics.consumptionNetCashFlow,
+    hasUnhandledAnomalies: metrics.hasUnhandledAnomalies,
+    unhandledAnomalies: metrics.unhandledAnomalies,
+    assetAcquisitions: metrics.assetAcquisitions,
     txCount: totals.txCount,
     totalKas,
     totalKekayaan,

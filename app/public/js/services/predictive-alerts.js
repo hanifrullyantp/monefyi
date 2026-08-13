@@ -135,7 +135,7 @@ function detectCashFlowWarning(state) {
     type: 'cash_flow',
     icon: '🔴',
     title: 'Perhatian: prediksi tekor sebelum gajian',
-    body: `Safe-to-spend Rp ${fmt(safe)}, sisa ${days} hari. Rata-rata Rp ${fmt(dailyAvg)}/hari → prediksi Rp ${fmt(projected)}.`,
+    body: `Safe-to-spend Rp ${fmt(safe)}, ${days} hari ke gajian. Realisasi Rp ${fmt(dailyAvg)}/hari → prediksi Rp ${fmt(projected)}.`,
     actions: [
       { label: 'Mode darurat', target: 'emergency' },
       { label: 'Lihat saran', target: 'advisor' },

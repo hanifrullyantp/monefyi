@@ -18,6 +18,8 @@ const MERCHANT_HINTS = [
   { keys: ['netflix', 'spotify', 'youtube premium', 'disney', 'viu'], category: 'Hiburan', confidence: 0.85 },
   { keys: ['xxi', 'cgv', 'cinemaxx', 'bioskop'], category: 'Hiburan', confidence: 0.84 },
   { keys: ['shopee', 'tokopedia', 'lazada', 'blibli'], category: 'Belanja', confidence: 0.7 },
+  { keys: ['erafone', 'ibox', 'digimap', 'samsung store', 'xiaomi store'], category: 'Elektronik', confidence: 0.88 },
+  { keys: ['honda', 'toyota', 'dealer motor'], category: 'Kendaraan', confidence: 0.85 },
   { keys: ['apollo', 'guardian', 'klinik', 'rumah sakit', 'apotek'], category: 'Kesehatan', confidence: 0.8 },
   { keys: ['tuition', 'spp', 'sekolah', 'kursus', 'udemy'], category: 'Pendidikan', confidence: 0.82 },
 ];

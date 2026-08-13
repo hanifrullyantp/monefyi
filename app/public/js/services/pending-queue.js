@@ -150,7 +150,8 @@ export async function processPendingQueue() {
       if (hit?.amount > 0) {
         await createTransaction({
           ...hit,
-          meta: { ...(hit.meta || {}), _fromPending: item.id },
+          status: 'pending',
+          meta: { ...(hit.meta || {}), _fromPending: item.id, status: 'pending' },
         });
         await removePending(item.id);
         processed++;

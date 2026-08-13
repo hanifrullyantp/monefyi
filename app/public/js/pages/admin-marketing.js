@@ -11,6 +11,7 @@ export async function renderAdminMarketing(body, helpers = {}) {
   const toast = helpers.toast || (() => {});
   const escapeHtml = helpers.escapeHtml || ((s) => String(s ?? ''));
   const fmtNum = helpers.fmtNum || ((n) => String(n));
+  const skipAnalytics = helpers.skipAnalytics === true;
 
   const client = window.STATE?.db?.supa;
   if (!client) {
@@ -18,7 +19,16 @@ export async function renderAdminMarketing(body, helpers = {}) {
     return;
   }
 
-  body.innerHTML = '<p class="admin-muted">Memuat marketing…</p>';
+  body.innerHTML = skipAnalytics ? '<div id="mkMainHost"></div>' : '<div id="mkAnalyticsHost"></div><div id="mkMainHost"></div>';
+  if (!skipAnalytics) {
+    const analyticsHost = body.querySelector('#mkAnalyticsHost');
+    import('./admin-marketing-analytics.js').then(({ renderMarketingAnalytics }) => {
+      renderMarketingAnalytics(analyticsHost, { toast, escapeHtml, fmtNum });
+    }).catch(() => {});
+  }
+
+  const mainHost = body.querySelector('#mkMainHost');
+  mainHost.innerHTML = '<p class="admin-muted">Memuat marketing…</p>';
 
   const [rulesRes, campRes, offerRes] = await Promise.all([
     client.from('marketing_global_rules').select('*').order('key'),
@@ -35,14 +45,6 @@ export async function renderAdminMarketing(body, helpers = {}) {
   const rules = rulesRes.data || [];
   const campaigns = campRes.data || [];
   const offers = offerRes.data || [];
-
-  body.innerHTML = '<div id="mkAnalyticsHost"></div><div id="mkMainHost"></div>';
-  const analyticsHost = body.querySelector('#mkAnalyticsHost');
-  const mainHost = body.querySelector('#mkMainHost');
-
-  import('./admin-marketing-analytics.js').then(({ renderMarketingAnalytics }) => {
-    renderMarketingAnalytics(analyticsHost, { toast, escapeHtml, fmtNum });
-  }).catch(() => {});
 
   const reload = () => renderAdminMarketing(body, helpers);
   renderMarketingShell(mainHost, { rules, campaigns, offers, client, toast, escapeHtml, fmtNum, reload });

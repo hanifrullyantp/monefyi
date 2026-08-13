@@ -519,3 +519,110 @@
   color: #fbbf24;
   font-weight: 600;
 }
+
+/* Large transaction classification sheet */
+.large-tx-sheet-host {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.large-tx-sheet-host.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.large-tx-sheet {
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--surface, #fff);
+  border-radius: 16px 16px 0 0;
+  padding: 16px;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.12);
+}
+.large-tx-sheet__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.large-tx-sheet__header h2 {
+  flex: 1;
+  font-size: 1rem;
+  margin: 0;
+}
+.large-tx-sheet__close {
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.large-tx-sheet__option {
+  display: block;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+.large-tx-sheet__submit {
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: #1e40af;
+  color: #fff;
+  font-weight: 600;
+}
+.large-tx-sheet__impact {
+  font-size: 0.85rem;
+  color: #059669;
+  margin-top: 8px;
+}
+
+/* Pending transactions banner */
+.pending-tx-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #fef3c7;
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+.pending-tx-banner__cta {
+  margin-left: auto;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  background: #1e40af;
+  color: #fff;
+  font-size: 0.85rem;
+}
+.asset-reclass-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: #eff6ff;
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+.daily-hero__anomaly-bar {
+  padding: 10px 12px;
+  background: #fff7ed;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+}
+.daily-hero__anomaly-compare {
+  color: #64748b;
+  font-size: 0.85rem;
+}

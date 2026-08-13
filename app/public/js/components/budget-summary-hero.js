@@ -151,7 +151,7 @@ export async function renderBudgetSummaryHero(container, ctx) {
             <div class="bsh-stat-value">${daysToPayday} hari</div>
           </div>
           <div class="bsh-stat">
-            <div class="bsh-stat-label">${Icon('lightBulb', { size: 12 })} Aman per Hari</div>
+            <div class="bsh-stat-label">${Icon('lightBulb', { size: 12 })} ${LABELS.DAILY.AMAN_PER_DAY}</div>
             <div class="bsh-stat-value">Rp ${fmt(Math.max(0, dailyRemaining))}</div>
           </div>
           <div class="bsh-stat">
@@ -347,7 +347,7 @@ function getHealthStatus(percentUsed, timeProgress) {
       className: 'critical',
       iconHtml: Icon('alertTriangle', { size: 16 }),
       label: 'Perlu Direm',
-      recommendation: `Pengeluaran melaju cepat: ${percentUsed}% budget terpakai di ${timeRounded}% waktu bulan. Jaga rata-rata harian lebih rendah sampai gajian.`,
+      recommendation: `Pengeluaran melaju cepat: ${percentUsed}% budget terpakai di ${timeRounded}% waktu bulan. Jaga realisasi harian lebih rendah sampai gajian.`,
     };
   }
   if (diff > 10) {

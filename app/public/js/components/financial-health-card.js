@@ -20,9 +20,10 @@ export function renderFinancialHealthCard(scoreResult, callbacks = {}) {
       <div>
         <div class="financial-health-card__kicker">Financial Health</div>
         <div class="financial-health-card__grade">${escapeHtml(scoreResult.grade || '')}</div>
+        ${scoreResult.status === 'analyzing' ? `<p class="financial-health-card__msg">${escapeHtml(scoreResult.message || '')}</p>` : ''}
       </div>
-      <div class="financial-health-card__score" aria-label="Skor ${scoreResult.overall}">
-        <span class="financial-health-card__score-num">${scoreResult.overall}</span>
+      <div class="financial-health-card__score" aria-label="Skor ${scoreResult.overall ?? 'pending'}">
+        <span class="financial-health-card__score-num">${scoreResult.overall != null ? scoreResult.overall : '—'}${scoreResult.maxPossible && scoreResult.overall != null ? `<small>/${scoreResult.maxPossible}</small>` : ''}</span>
         <span class="financial-health-card__trend">${trendIcon}</span>
       </div>
     </div>
@@ -31,10 +32,10 @@ export function renderFinancialHealthCard(scoreResult, callbacks = {}) {
         <div class="financial-health-bar">
           <div class="financial-health-bar__label">
             <span>${escapeHtml(c.label)}</span>
-            <span>${c.max ? `${c.score}/${c.max}` : c.score}</span>
+            <span>${c.unavailable ? '?/' + c.max : (c.max ? `${c.score}/${c.max}` : c.score)}</span>
           </div>
           <div class="financial-health-bar__track">
-            <div class="financial-health-bar__fill" style="width:${c.max ? Math.round((c.score / c.max) * 100) : c.score}%"></div>
+            <div class="financial-health-bar__fill" style="width:${c.unavailable ? 0 : (c.max ? Math.round((c.score / c.max) * 100) : c.score)}%"></div>
           </div>
         </div>
       `).join('')}

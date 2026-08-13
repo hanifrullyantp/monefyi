@@ -32,8 +32,13 @@ export function isLoanPaymentTransaction(tx) {
   const meta = getTxMeta(tx);
   if (meta.expense_treatment === 'loan_payment') return true;
   if (meta.linked_debt_id) return true;
-  const cat = String(tx.category || tx.merchant || '').toLowerCase();
-  return /cicilan|utang|kredit|hp/i.test(cat) && String(tx.type || '').toLowerCase() === 'expense';
+  const cat = String(tx.category || '').toLowerCase();
+  const merchant = String(tx.merchant || '').toLowerCase();
+  const combined = `${cat} ${merchant}`;
+  // Require explicit installment keywords — NOT bare "hp" (matches "Beli HP")
+  if (/cicilan|utang|kredit|angsuran/i.test(combined)) return true;
+  if (/cicilan\s*hp|hp\s*cicilan|kredit\s*hp/i.test(combined)) return true;
+  return false;
 }
 
 /**

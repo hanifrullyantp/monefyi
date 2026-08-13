@@ -70,46 +70,70 @@ export async function generateRecommendations(options = {}) {
   const daysPassed = now.getDate();
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
 
-  // Priority 1: Flexible over 100%
-  for (const row of rows) {
-    if (!isFlexibleOverBudget(row, transactions, month)) continue;
-    const progress = calculateProgress(row, transactions, month);
+  const { getPendingTransactions, findUnhandledAnomalies } = await import('./transaction-classification.js');
+  const { computePeriodFinancials } = await import('./financial-metrics.js');
+  const metrics = computePeriodFinancials(state || {}, month);
+
+  const pending = getPendingTransactions(transactions);
+  if (pending.length > 0) {
     recommendations.push({
       priority: 1,
-      type: 'reduce_category',
+      type: 'pending_transactions',
       severity: 'high',
-      icon: '⚠️',
-      title: `${row.name} over budget`,
-      message: `Kategori ${row.name} sudah ${progress.percentUsed}%. Coba tahan sampai akhir bulan.`,
-      category: row.name,
-      actions: [
-        { label: `Freeze ${row.name}`, action: 'decrease_budget', budgetId: row.id },
-      ],
+      icon: '📋',
+      title: `${pending.length} transaksi perlu review`,
+      message: 'Transaksi pending belum masuk laporan — konfirmasi dulu.',
+      actions: [{ label: 'Review Sekarang', action: 'review_pending' }],
     });
   }
 
-  // Priority 2: Flexible 70–99%
+  for (const a of findUnhandledAnomalies(transactions, { monthKey: month })) {
+    recommendations.push({
+      priority: 2,
+      type: 'anomaly_categorization',
+      severity: 'high',
+      icon: '🔔',
+      title: `Transaksi besar Rp ${formatIDR(a.amount)} perlu kategorisasi`,
+      message: 'Ini pembelian aset atau konsumsi?',
+      transactionId: a.id,
+      actions: [{ label: 'Kategorisasi', action: 'classify_anomaly' }],
+    });
+  }
+
+  // Priority 3: Flexible over 90%
   for (const row of rows) {
     if (inferCategoryType(row) !== CATEGORY_TYPES.FLEXIBLE) continue;
     const progress = calculateProgress(row, transactions, month);
-    if (progress.percentUsed >= 70 && progress.percentUsed < 100) {
+    if (progress.percentUsed >= 90) {
       recommendations.push({
-        priority: 2,
-        type: 'watch_category',
-        severity: 'medium',
-        icon: '👀',
-        title: `${row.name} mendekati batas`,
-        message: `${row.name} sudah ${progress.percentUsed}% — perhatikan pengeluaran ini.`,
+        priority: 3,
+        type: 'category_over_budget',
+        severity: progress.percentUsed >= 100 ? 'high' : 'medium',
+        icon: '⚠️',
+        title: `${row.name} sudah ${Math.round(progress.percentUsed)}%`,
+        message: `Kategori ${row.name} mendekati atau melewati batas.`,
         category: row.name,
-        actions: [],
+        actions: [{ label: 'Lihat Detail', action: 'view_budget', budgetId: row.id }],
       });
     }
   }
 
-  // Priority 3: Anomalies
+  if (metrics.savingRateReal >= 0.15 && metrics.income > 0) {
+    recommendations.push({
+      priority: 4,
+      type: 'positive_saving',
+      severity: 'low',
+      icon: '✅',
+      title: `Saving rate real ${Math.round(metrics.savingRateReal * 100)}%`,
+      message: `Income Rp ${formatIDR(metrics.income)}, expense rutin Rp ${formatIDR(metrics.consumptionExpense)}.`,
+      actions: [],
+    });
+  }
+
+  // Legacy anomaly detector (lower priority)
   for (const a of detectAnomalies(transactions, rows)) {
     recommendations.push({
-      priority: 3,
+      priority: 5,
       type: 'anomaly',
       severity: 'medium',
       icon: '🔍',
@@ -119,13 +143,13 @@ export async function generateRecommendations(options = {}) {
     });
   }
 
-  // Priority 4: Saving behind pace
+  // Priority 6: Saving behind pace
   for (const row of rows) {
     if (inferCategoryType(row) !== CATEGORY_TYPES.SAVING) continue;
     const progress = calculateProgress(row, transactions, month);
     if (daysPassed > daysInMonth / 2 && progress.percentUsed < 50) {
       recommendations.push({
-        priority: 4,
+        priority: 6,
         type: 'saving',
         severity: 'low',
         icon: '💰',
