@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
+import { MonefyiAppLayout } from "@/components/monefyi/MonefyiAppLayout";
 
 export const metadata: Metadata = {
   title: "Hitung Waris — Monefyi | Pembagian Warisan Sesuai Al-Qur'an & Sunnah",
   description:
-    "Hitung pembagian harta warisan sesuai syari'ah Islam dengan dalil yang lengkap dan penjelasan yang mudah dipahami. Berdasarkan Ilmu Faraid.",
+    "Hitung pembagian harta warisan sesuai syari'ah Islam. Login akun Monefyi wajib.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -19,7 +20,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           rel="stylesheet"
         />
       </head>
-      <body className="bg-slate-950 text-slate-300 antialiased">{children}</body>
+      <body className="bg-slate-950 text-slate-300 antialiased">
+        <MonefyiAppLayout>{children}</MonefyiAppLayout>
+      </body>
     </html>
   );
 }

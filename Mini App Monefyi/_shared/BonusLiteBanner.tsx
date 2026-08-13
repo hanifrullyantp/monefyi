@@ -44,9 +44,9 @@ export function BonusLiteBanner({ appId, className = '' }: BonusLiteBannerProps)
             </div>
             <p className="text-sm font-semibold text-white leading-snug">{app.name}</p>
             <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
-              Versi ringan (lite) gratis. Versi{' '}
+              Versi ringan (Lite) · Login akun Monefyi wajib · Versi{' '}
               <strong className="text-slate-300">FULL &amp; terintegrasi</strong> termasuk
-              paket Lifetime Monefyi ({LIFETIME_PRICE_DISPLAY}).
+              paket Lifetime ({LIFETIME_PRICE_DISPLAY}).
             </p>
           </div>
         </div>

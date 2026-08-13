@@ -44,9 +44,9 @@ export function LifetimeBonusCTA({ appId, className = '' }: LifetimeBonusCTAProp
         </h2>
         <p className="text-sm text-slate-400 mb-6 max-w-2xl leading-relaxed">
           <strong className="text-slate-300">{current.name}</strong> yang Anda gunakan
-          sekarang adalah versi <strong className="text-amber-400/90">Lite (gratis)</strong>.
-          Dapatkan sinkronisasi otomatis dengan data keuangan Monefyi + 3 bonus apps lain
-          saat ambil paket Lifetime ({LIFETIME_PRICE_DISPLAY}, sekali bayar).
+          sekarang adalah versi <strong className="text-amber-400/90">Lite</strong> untuk
+          user Monefyi terdaftar. Dapatkan sinkronisasi otomatis dengan data keuangan +
+          3 bonus apps lain saat ambil paket Lifetime ({LIFETIME_PRICE_DISPLAY}, sekali bayar).
         </p>
 
         <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6">
@@ -96,8 +96,8 @@ export function LifetimeBonusCTA({ appId, className = '' }: LifetimeBonusCTAProp
         </div>
 
         <p className="mt-4 text-[11px] text-slate-600 leading-relaxed">
-          * Versi Lite di halaman ini gratis tanpa daftar. Versi FULL hanya untuk pemilik
-          paket Lifetime Monefyi — termasuk update selamanya.
+          * Versi Lite membutuhkan login akun Monefyi. Versi FULL hanya untuk pemilik
+          paket Lifetime — termasuk update selamanya.
         </p>
       </div>
     </section>

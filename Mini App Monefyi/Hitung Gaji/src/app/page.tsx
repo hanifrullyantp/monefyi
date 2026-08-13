@@ -1,7 +1,6 @@
-'use client'
+'use client';
 
 import React, { useState } from 'react'
-import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
 import { TabGroup, Tab } from '@/components/ui/TabGroup'
 import { ToastContainer } from '@/components/ui/Toast'
@@ -30,8 +29,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
-
       {/* Hero Section */}
       <section className="bg-gradient-hero border-b-2 border-green-900">
         <div className="container mx-auto px-4 py-12">

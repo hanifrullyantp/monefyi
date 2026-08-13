@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { MonefyiAppLayout } from '@/components/monefyi/MonefyiAppLayout'
 
 export const metadata: Metadata = {
   title: 'Kalkulator Cicilan - Hitung Angsuran KPR, KKB, KTA & Kredit Barang | Monefyi',
-  description: 'Kalkulator cicilan lengkap dengan jadwal amortisasi, komparator bunga, dan peringatan riba. Lihat berapa banyak uang yang hilang saat berhutang. By Monefyi - Platform edukasi keuangan syariah.',
+  description: 'Kalkulator cicilan lengkap dengan jadwal amortisasi, komparator bunga, dan peringatan riba. By Monefyi — login akun wajib.',
   keywords: 'kalkulator cicilan, kalkulator KPR, kalkulator kredit, amortisasi, bunga anuitas, bunga flat, riba, monefyi, keuangan syariah',
   authors: [{ name: 'Monefyi', url: 'https://monefyi.com' }],
   creator: 'Monefyi',
@@ -25,7 +26,7 @@ export default function RootLayout({
   return (
     <html lang="id" className="scroll-smooth">
       <body className="min-h-screen">
-        {children}
+        <MonefyiAppLayout>{children}</MonefyiAppLayout>
       </body>
     </html>
   )

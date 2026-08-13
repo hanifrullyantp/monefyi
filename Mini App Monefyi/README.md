@@ -1,16 +1,57 @@
 # Bonus Apps (Lite) — Monefyi
 
-Mini apps ini adalah **versi Lite (gratis)** dari 4 Extra Bonuses di [monefyi.com](https://monefyi.com/#bonus).
+Mini apps **versi Lite** dengan branding standar **by Monefyi**.  
+**Login akun Monefyi wajib** (`user_has_product('monefyi')`) sebelum akses fitur.
 
-| App | Folder | Bonus ID |
-|-----|--------|----------|
-| Kalkulator Bagi Hasil | `Bagi Hasil/` | `bagi-hasil` |
-| Kalkulator Gaji & PPh21 | `Kalkulator Gaji/` | `salary` |
-| Debt Freedom Planner | `debt-free-planner/` | `debt-free` |
-| Budget Planner | `budget-planner/` | `budget` |
+## Aplikasi
 
-**Versi FULL & terintegrasi** (sinkronisasi otomatis dengan data Monefyi) termasuk paket **Lifetime Rp 99.000** — total bonus senilai **Rp 796.000**.
+| App | Folder | Bonus Lifetime |
+|-----|--------|----------------|
+| Kalkulator Bagi Hasil | `Bagi Hasil/` | ✓ |
+| Kalkulator Gaji & PPh21 | `Kalkulator Gaji/` | ✓ |
+| Debt Freedom Planner | `debt-free-planner/` | ✓ |
+| Budget Planner | `budget-planner/` | ✓ |
+| Kalkulator Cicilan | `Hitung Gaji/` | — |
+| Kalkulator Zakat | `Hitung Zakat/` | — |
+| Hitung Waris | `Hitung Waris/` | — |
 
-Source of truth konfigurasi: `_shared/bonus-config.ts`. Salin ke `src/lib/` tiap app saat update.
+Versi **FULL & terintegrasi** termasuk paket Lifetime (Rp 99.000) — total bonus Rp 796.000.
 
-Apps di luar daftar bonus (mis. Hitung Zakat, Hitung Waris, Hitung Gaji/cicilan) bukan bagian paket Lifetime bonus.
+## Auth & branding
+
+Modul shared (`_shared/`):
+
+| File | Fungsi |
+|------|--------|
+| `monefyi-config.ts` | Supabase URL/key, URL app |
+| `monefyi-auth.ts` | signIn, session, `user_has_product` |
+| `MonefyiProviders.tsx` | Auth + login gate + brand bar |
+| `MonefyiBrandBar.tsx` | Header standar: **App · by Monefyi · Lite** |
+| `MonefyiLoginGate.tsx` | Form login / CTA trial & Lifetime |
+
+Setelah edit `_shared/`, jalankan:
+
+```bash
+./scripts/sync-monefyi-shared.sh
+```
+
+Per app: metadata di `src/lib/mini-app-meta.ts`, layout memakai `<MonefyiAppLayout>`.
+
+## Env (opsional)
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://zzwqfmdyncxbolestkqp.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+```
+
+Default fallback = sama dengan `app/js/config.js`.
+
+## Dev
+
+```bash
+cd "Mini App Monefyi/Kalkulator Gaji"  # atau app lain
+npm install
+npm run dev
+```
+
+Buka app → layar login Monefyi → masuk dengan email/password akun yang sudah punya entitlement `monefyi` (trial atau Lifetime).

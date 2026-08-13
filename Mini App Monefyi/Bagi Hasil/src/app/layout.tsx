@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
+import { MonefyiAppLayout } from "@/components/monefyi/MonefyiAppLayout";
 
 export const metadata: Metadata = {
   title: "Kalkulator Bagi Hasil Islami — Monefyi",
@@ -20,7 +21,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="bg-slate-950 text-slate-300 antialiased font-inter">
-        {children}
+        <MonefyiAppLayout>{children}</MonefyiAppLayout>
       </body>
     </html>
   );

@@ -1,6 +1,5 @@
 "use client";
 
-import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { BonusLiteBanner } from "@/components/shared/BonusLiteBanner";
 import { LifetimeBonusCTA } from "@/components/shared/LifetimeBonusCTA";
@@ -9,8 +8,6 @@ import { SalaryCalculator } from "@/components/calculator/SalaryCalculator";
 export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-slate-950">
-      <Header />
-
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-8 space-y-8">
         <section className="text-center">
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
