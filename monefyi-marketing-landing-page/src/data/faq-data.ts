@@ -20,9 +20,9 @@ export const faqData: FAQItem[] = [
   { id: 'k3', category: 'Keamanan', question: 'Di mana data saya disimpan?', answer: 'Data disimpan secara lokal di perangkatmu dan ter-backup di cloud yang terenkripsi. Hanya kamu yang bisa mengakses datamu.' },
   
   // Harga
-  { id: 'h1', category: 'Harga', question: 'Berapa harga Monefyi?', answer: 'Ada tiga pilihan: Trial Gratis (7 hari, fitur dasar), Lifetime Rp 99.000 (sekali bayar, akses selamanya + bonus 4 apps), dan Pro+ Rp 250.000/tahun (fitur premium lengkap).' },
-  { id: 'h2', category: 'Harga', question: 'Apa yang termasuk dalam paket Lifetime?', answer: 'Paket Lifetime Rp 99.000 mencakup: akses semua fitur selamanya, update gratis selamanya, dan prioritas support.' },
-  { id: 'h3', category: 'Harga', question: 'Ada garansi uang kembali?', answer: 'Ya! Kami memberikan garansi 7 hari uang kembali 100%. Jika dalam 7 hari kamu tidak puas karena alasan apapun, kami kembalikan penuh tanpa pertanyaan.' },
+  { id: 'h1', category: 'Harga', question: 'Berapa harga Monefyi?', answer: 'Ada tiga pilihan: Gratis Selamanya (fitur dasar), Lifetime Rp 99.000 (sekali bayar, akses permanen fitur premium), dan Pro+ Rp 30.000/bulan (Household Bersama, AI premium, integrasi bank — butuh Lifetime dulu).' },
+  { id: 'h2', category: 'Harga', question: 'Apa yang termasuk dalam paket Lifetime?', answer: 'Semua fitur Gratis, plus Monevisor AI Coach penuh, Hero Situasi Hari Ini, budget unlimited, goals & debt planner, weekly digest, export PDF/CSV, OCR scan, multi-device sync, dan update selamanya.' },
+  { id: 'h3', category: 'Harga', question: 'Ada garansi uang kembali?', answer: 'Ya! Garansi 7 hari uang kembali 100%. Syaratnya sederhana: sudah mulai pakai aplikasinya. Proses refund < 24 jam tanpa potongan.' },
   { id: 'h4', category: 'Harga', question: 'Apakah ada diskon untuk pasangan/keluarga?', answer: 'Ya! Couple Pack tersedia dengan harga Rp 149.000 untuk 2 akun (hemat 25%). Cocok untuk pasangan yang ingin kelola keuangan bersama.' },
   
   // Bonus Apps

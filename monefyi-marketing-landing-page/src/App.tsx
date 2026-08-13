@@ -28,7 +28,7 @@ import { useSiteSettings } from './hooks/useSiteSettings';
 
 export default function App() {
   const isAdmin = useAdminMode();
-  const { getOrderedSections } = useSiteSettings();
+  const { getOrderedSections, isReady, isLoading } = useSiteSettings();
 
   const renderSection = (id: string) => {
     switch (id) {
@@ -50,8 +50,8 @@ export default function App() {
     }
   };
 
-  if (!getOrderedSections()?.length) {
-     return <div className="bg-slate-950 min-h-screen flex items-center justify-center text-white">Memuat…</div>;
+  if (!isReady || isLoading || !getOrderedSections()?.length) {
+     return <div className="bg-slate-950 min-h-screen flex items-center justify-center text-white">Memuat konten…</div>;
   }
 
   return (

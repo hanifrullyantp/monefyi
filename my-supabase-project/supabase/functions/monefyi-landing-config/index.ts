@@ -37,6 +37,19 @@ async function assertAdminFromBearer(authHeader: string): Promise<{
   if (authErr || !authData?.user?.id) {
     return { ok: false, status: 401, error: "Unauthorized" };
   }
+
+  const adminEmails = (
+    Deno.env.get("LANDING_ADMIN_EMAILS") ||
+    "admin@asfin.app,hanif.rullyant@gmail.com"
+  )
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  const userEmail = String(authData.user.email || "").trim().toLowerCase();
+  if (adminEmails.includes(userEmail)) {
+    return { ok: true, status: 200 };
+  }
+
   const { data: profile, error: profileErr } = await supabaseAdmin
     .from("profiles")
     .select("role")

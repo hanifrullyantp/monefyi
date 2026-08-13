@@ -1,3 +1,5 @@
+import { buildPlanFeaturesForCard } from '../lib/pricing-features';
+
 export const pricingData = {
   header: {
     badge: "PRICING",
@@ -7,9 +9,6 @@ export const pricingData = {
   },
 
   plans: [
-    // ═══════════════════════════════════════
-    // PLAN 1: GRATIS SELAMANYA
-    // ═══════════════════════════════════════
     {
       id: "gratis",
       badge: "MULAI GRATIS",
@@ -30,17 +29,17 @@ export const pricingData = {
           {
             icon: "Sparkles" as const,
             title: "Coba tanpa risiko",
-            desc: "Rasakan langsung bagaimana Monefyi mengubah cara kamu melihat uang, tanpa keluar sepeser pun."
+            desc: "Rasakan Safe-to-Spend dan catat transaksi semudah chat — tanpa keluar sepeser pun."
           },
           {
             icon: "Brain" as const,
-            title: "Nasihat finansial dasar",
-            desc: "AI Monevisor tetap kasih kamu insight harian tentang pola pengeluaranmu — cukup untuk mulai sadar kemana uangmu pergi."
+            title: "Insight harian dasar",
+            desc: "Monevisor memberi gambaran pola pengeluaranmu setiap hari, cukup untuk mulai sadar kemana uang pergi."
           },
           {
             icon: "TrendingUp" as const,
             title: "Bangun kebiasaan tertib",
-            desc: "Fitur catat pengeluaran + Safe-to-Spend basic sudah cukup untuk mengubah kebiasaan finansialmu dalam 30 hari."
+            desc: "Budget 1 kategori + dashboard sederhana sudah cukup mengubah kebiasaan finansial dalam 30 hari."
           }
         ]
       },
@@ -55,18 +54,7 @@ export const pricingData = {
         ]
       },
 
-      features: [
-        { included: true, text: "Safe-to-Spend Basic (harian)" },
-        { included: true, text: "Catat pengeluaran manual" },
-        { included: true, text: "Budget 1 kategori aktif" },
-        { included: true, text: "AI Insight harian (basic)" },
-        { included: true, text: "Dashboard sederhana" },
-        { included: true, text: "Sync 1 device" },
-        { included: true, text: "Support via email" },
-        { included: false, text: "Multi kategori budget" },
-        { included: false, text: "Monevisor AI Coach premium" },
-        { included: false, text: "Debt Freedom Planner" }
-      ],
+      features: buildPlanFeaturesForCard("gratis"),
 
       cta: {
         label: "Mulai Gratis Sekarang",
@@ -79,9 +67,6 @@ export const pricingData = {
       highlighted: false
     },
 
-    // ═══════════════════════════════════════
-    // PLAN 2: LIFETIME (TERPOPULER)
-    // ═══════════════════════════════════════
     {
       id: "lifetime",
       badge: "PALING POPULER",
@@ -104,22 +89,22 @@ export const pricingData = {
           {
             icon: "ShieldCheck" as const,
             title: "Bayar sekali, tenang selamanya",
-            desc: "Nggak perlu mikirin subscription bulanan. Beli Rp 99rb sekarang, pakai sampai tua. Kamu hemat Rp 1.1 JUTA per tahun dibanding aplikasi lain."
+            desc: "Nggak perlu mikirin subscription bulanan. Satu kali Rp 99rb, akses permanen selama Monefyi beroperasi."
           },
           {
             icon: "Brain" as const,
-            title: "Financial Coach AI 24/7",
-            desc: "Monevisor analisis polamu, warning sebelum overspend, dan kasih saran spesifik. Seperti punya financial advisor pribadi."
+            title: "Monevisor AI Coach penuh",
+            desc: "Skor kesehatan, diagnosis, action plan, dan chat coach — bukan cuma angka di dashboard."
           },
           {
             icon: "Zap" as const,
-            title: "Balik modal dalam 7 hari",
-            desc: "Rata-rata user hemat Rp 1.2 JUTA per bulan dari kebocoran yang tidak disadari. Investasi Rp 99rb balik dalam kurang dari 1 minggu."
+            title: "Hero Situasi Hari Ini",
+            desc: "Tahu aman pakai berapa hari ini, prediksi tekor, dan runway sebelum gajian — keputusan harian jadi jelas."
           },
           {
             icon: "TrendingUp" as const,
             title: "Update selamanya, gratis",
-            desc: "Setiap fitur baru yang kami rilis, kamu dapat otomatis. Aplikasi terus berkembang, harga kamu tetap Rp 99rb yang dulu."
+            desc: "Setiap fitur baru yang kami rilis, kamu dapat otomatis tanpa biaya tambahan."
           }
         ]
       },
@@ -141,31 +126,12 @@ export const pricingData = {
           {
             icon: "Trophy" as const,
             metric: "Bulan 3",
-            desc: "Sistem finansial jalan otomatis. Bisa fokus ke goal besar: DP rumah atau bebas hutang."
+            desc: "Sistem finansial jalan otomatis. Fokus ke goal besar: DP rumah atau bebas hutang."
           }
         ]
       },
 
-      features: [
-        { included: true, text: "Safe-to-Spend Basic (harian)" },
-        { included: true, text: "Catat pengeluaran manual" },
-        { included: true, text: "Budget 1 kategori aktif" },
-        { included: true, text: "AI Insight harian (basic)" },
-        { included: true, text: "Dashboard sederhana" },
-        { included: true, text: "Sync 1 device" },
-        { included: true, text: "Support via email" },
-        { included: true, text: "Safe-to-Spend FULL (prediksi akurat)" },
-        { included: true, text: "Monevisor AI Coach 24/7", highlight: true },
-        { included: true, text: "Budget UNLIMITED kategori" },
-        { included: true, text: "Cash Flow Prediction 30 hari ke depan" },
-        { included: true, text: "Debt Freedom Planner" },
-        { included: true, text: "Multi rekening (unlimited)" },
-        { included: true, text: "Offline mode + auto-sync" },
-        { included: true, text: "Weekly AI Digest personal" },
-        { included: true, text: "Multi-device sync" },
-        { included: true, text: "Update fitur selamanya" },
-        { included: true, text: "Priority support (respon <1 jam)" }
-      ],
+      features: buildPlanFeaturesForCard("lifetime"),
 
       cta: {
         label: "Ambil Lifetime Sekarang",
@@ -189,15 +155,12 @@ export const pricingData = {
       highlighted: true
     },
 
-    // ═══════════════════════════════════════
-    // PLAN 3: PRO+ (POWER USER)
-    // ═══════════════════════════════════════
     {
       id: "pro",
       badge: "POWER USER",
       badgeColor: "purple" as const,
       name: "Pro+",
-      tagline: "Untuk kamu yang mau HASIL MAKSIMAL dari keuangan",
+      tagline: "Untuk pasangan, usaha, atau power user yang butuh automasi",
 
       price: {
         amount: 30000,
@@ -213,23 +176,23 @@ export const pricingData = {
         reasons: [
           {
             icon: "Brain" as const,
-            title: "AI Insight PREMIUM",
-            desc: "Analisis mendalam: deteksi kebocoran tersembunyi, optimasi alokasi per kategori, dan proyeksi pertumbuhan aset jangka panjang."
+            title: "AI Insight premium",
+            desc: "Analisis mendalam: kebocoran tersembunyi, optimasi alokasi, dan proyeksi jangka panjang."
           },
           {
             icon: "Users" as const,
-            title: "Couple Mode (Suami-Istri)",
-            desc: "Kelola keuangan rumah tangga secara transparan dalam 1 dashboard. Bangun kepercayaan dan capai goal aset bersama tanpa drama."
+            title: "Household Bersama",
+            desc: "Kelola keuangan rumah tangga dalam satu dashboard — transaksi shared + privasi personal."
           },
           {
             icon: "Building2" as const,
             title: "Integrasi bank otomatis",
-            desc: "Transaksi masuk otomatis dari bank besar Indonesia. Hemat waktu input manual dan pastikan data selalu akurat setiap saat."
+            desc: "Transaksi masuk otomatis dari bank besar Indonesia — hemat waktu input manual."
           },
           {
             icon: "FileText" as const,
-            title: "Laporan Bulanan Terpadu",
-            desc: "Report profesional untuk evaluasi mendalam kondisi kesehatan finansial dan perencanaan kepemilikan aset secara tunai/syar'i."
+            title: "Laporan bulanan terpadu",
+            desc: "Report visual profesional untuk evaluasi kesehatan finansial dan perencanaan aset."
           }
         ]
       },
@@ -237,25 +200,14 @@ export const pricingData = {
       impact: {
         title: "Perbedaan Nyata dengan Lifetime",
         outcomes: [
-          "Manajemen keuangan jauh lebih akurat dan presisi",
-          "Waktu input data berkurang drastis berkat auto-sync",
-          "Visualisasi aset rumah tangga yang lebih transparan",
+          "Manajemen keuangan lebih akurat berkat automasi",
+          "Waktu input data berkurang drastis",
+          "Transparansi keuangan rumah tangga dalam satu tempat",
           "Keputusan finansial lebih terukur berkat data real-time"
         ]
       },
 
-      features: [
-        { included: true, text: "SEMUA fitur Lifetime, PLUS:" },
-        { included: true, text: "AI Insight PREMIUM (analisis mendalam)", highlight: true },
-        { included: true, text: "Couple Mode (2 akun terhubung)", highlight: true },
-        { included: true, text: "Integrasi bank otomatis", highlight: true },
-        { included: true, text: "Export Excel & PDF Profesional" },
-        { included: true, text: "Custom Categories Tanpa Batas" },
-        { included: true, text: "Laporan Visual Bulanan" },
-        { included: true, text: "Prioritas Update Fitur Baru" },
-        { included: true, text: "Akses Fitur Beta" },
-        { included: true, text: "Support VIP (Respon Cepat)" }
-      ],
+      features: buildPlanFeaturesForCard("pro"),
 
       cta: {
         label: "Upgrade ke Pro+",
@@ -283,13 +235,13 @@ export const pricingData = {
         scenario: "Sudah kerja, gaji habis terus, mau beres-beres",
         recommended: "Lifetime",
         badgeColor: "green" as const,
-        reason: "Investment terbaik. Balik modal <7 hari, pakai selamanya"
+        reason: "Investasi sekali bayar — Monevisor penuh + prediksi cash flow"
       },
       {
         scenario: "Sudah menikah / punya usaha / income Rp 10jt+",
         recommended: "Pro+",
         badgeColor: "purple" as const,
-        reason: "Butuh Couple Mode, bank integration, dan AI advisor"
+        reason: "Butuh Household Bersama, bank integration, dan AI premium"
       }
     ]
   },
@@ -297,15 +249,15 @@ export const pricingData = {
   quickFAQ: [
     {
       q: "Apakah paket Gratis benar-benar gratis selamanya?",
-      a: "YA. Bukan trial. Bukan freemium jebakan. Paket Gratis bisa kamu pakai selamanya tanpa bayar sepeserpun. Fiturnya cukup untuk basic financial tracking."
+      a: "Ya. Bukan trial jebakan. Paket Gratis bisa dipakai selamanya untuk fitur dasar: Safe-to-Spend basic, catat transaksi, budget 1 kategori, dan dashboard."
     },
     {
       q: "Bedanya Lifetime vs Pro+ apa?",
-      a: "Lifetime = SEKALI BAYAR Rp 99rb pakai selamanya. Pro+ = subscription tambahan Rp 30rb/bln untuk fitur premium: AI advanced, Couple Mode, bank integration, konsultasi 1-on-1. Pro+ membutuhkan Lifetime dulu."
+      a: "Lifetime = sekali bayar Rp 99rb, akses permanen fitur inti premium (Monevisor penuh, goals, digest, export, dll). Pro+ = langganan tambahan untuk Household Bersama, AI premium, dan integrasi bank otomatis. Pro+ membutuhkan Lifetime dulu."
     },
     {
       q: "Kalau saya beli Lifetime, apa selamanya beneran?",
-      a: "IYA. Selama Monefyi masih beroperasi, kamu bisa akses semua fitur Lifetime tanpa bayar lagi. Update fitur baru juga gratis. Kamu benar-benar OWN aplikasinya."
+      a: "Ya. Selama Monefyi masih beroperasi, kamu akses semua fitur Lifetime tanpa bayar lagi. Update fitur baru juga gratis."
     }
   ],
 
@@ -313,7 +265,8 @@ export const pricingData = {
     { icon: "ShieldCheck" as const, text: "Garansi 7 hari 100%" },
     { icon: "Lock" as const, text: "Data terenkripsi" },
     { icon: "CreditCard" as const, text: "Pembayaran aman" },
-    { icon: "Users" as const, text: "3.847+ pengguna" },
     { icon: "Star" as const, text: "Rating 4.8/5" }
-  ]
+  ],
 };
+
+export { PRICING_FEATURE_CATALOG, isFeatureIncludedForPlan } from '../lib/pricing-features';

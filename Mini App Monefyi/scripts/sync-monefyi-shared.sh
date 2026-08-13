@@ -21,7 +21,8 @@ for app in "${APPS[@]}"; do
   cp "$SHARED/monefyi-config.ts" "$DEST/src/lib/"
   cp "$SHARED/supabase-client.ts" "$DEST/src/lib/"
   cp "$SHARED/monefyi-auth.ts" "$DEST/src/lib/"
-  cp "$SHARED/bonus-config.ts" "$DEST/src/lib/" 2>/dev/null || true
+  cp "$SHARED/MonefyiAppLayout.tsx" "$DEST/src/components/monefyi/"
+  cp "$SHARED/bonus-config.ts" "$DEST/src/lib/"
   cp "$SHARED/MonefyiAuthProvider.tsx" "$DEST/src/components/monefyi/"
   cp "$SHARED/MonefyiLoginGate.tsx" "$DEST/src/components/monefyi/"
   cp "$SHARED/MonefyiBrandBar.tsx" "$DEST/src/components/monefyi/"

@@ -7,7 +7,6 @@ import {
   Zap, 
   Brain, 
   TrendingUp, 
-  Gift, 
   Calendar, 
   PiggyBank, 
   Trophy, 
@@ -27,6 +26,7 @@ import { PremiumIcon } from '../ui/PremiumIcon';
 import { Accordion } from '../ui/Accordion';
 import { useSiteSettings } from '../../hooks/useSiteSettings';
 import { EditableText } from '../admin/EditableText';
+import { PRICING_FEATURE_CATALOG, isFeatureIncludedForPlan } from '../../lib/pricing-features';
 
 export function Pricing() {
   const { settings } = useSiteSettings();
@@ -80,37 +80,15 @@ export function Pricing() {
                  </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                 {(() => {
-                    const gratisPlan = pricing.plans.find((p: any) => p.id === 'gratis');
-                    const lifetimePlan = pricing.plans.find((p: any) => p.id === 'lifetime');
-
-                    const isFeatureIncluded = (plan: any, featText: string): boolean => {
-                      const feature = plan.features.find((feat: any) => feat.text === featText);
-                      if (feature?.included) return true;
-
-                      if (plan.id === 'lifetime' || plan.id === 'pro') {
-                        const gratisFeature = gratisPlan?.features.find((feat: any) => feat.text === featText);
-                        if (gratisFeature?.included) return true;
-                      }
-
-                      if (plan.id === 'pro') {
-                        const lifetimeFeature = lifetimePlan?.features.find((feat: any) => feat.text === featText);
-                        if (lifetimeFeature?.included) return true;
-                      }
-
-                      return false;
-                    };
-
-                    const allFeatureTexts = Array.from(new Set(pricing.plans.flatMap((p: any) => p.features.map((f: any) => f.text))));
-                    return allFeatureTexts.map((featText: any, idx: number) => (
-                      <tr key={idx} className="hover:bg-white/5 transition-colors group">
-                        <td className="p-5 text-sm text-slate-300 group-hover:text-white transition-colors">{featText}</td>
-                        {pricing.plans.map((p: any) => (
+                 {PRICING_FEATURE_CATALOG.map((feature) => (
+                      <tr key={feature.id} className="hover:bg-white/5 transition-colors group">
+                        <td className="p-5 text-sm text-slate-300 group-hover:text-white transition-colors">{feature.text}</td>
+                        {pricing.plans.map((p: { id: string; highlighted?: boolean }) => (
                           <td key={p.id} className={cn(
                             "p-5 text-center transition-colors",
                             p.highlighted && "bg-green-500/5"
                           )}>
-                             {isFeatureIncluded(p, featText) ? (
+                             {isFeatureIncludedForPlan(p.id, feature) ? (
                                <div className="flex justify-center"><Check size={20} className={p.highlighted ? "text-green-400" : "text-slate-500"} /></div>
                              ) : (
                                <div className="flex justify-center"><X size={16} className="text-slate-800" /></div>
@@ -118,8 +96,7 @@ export function Pricing() {
                           </td>
                         ))}
                       </tr>
-                    ));
-                 })()}
+                    ))}
               </tbody>
            </table>
         </div>
@@ -195,9 +172,8 @@ function PricingCard({ plan, index, onOrder }: any) {
       <div className="mb-8"><Badge variant={plan.badgeColor} className="mb-4">{plan.badge}</Badge><h3 className="text-3xl font-black text-white mb-1 tracking-tight">{plan.name}</h3><p className="text-slate-400 text-sm leading-relaxed">{plan.tagline}</p></div>
       <div className="mb-10"><div className="flex flex-col">{plan.price.originalAmount && <span className="text-slate-500 text-sm line-through decoration-red-500/50 mb-1">{formatRupiah(plan.price.originalAmount)}</span>}<div className="flex items-baseline gap-2"><span className="text-5xl font-black text-white tracking-tighter">{plan.price.display}</span><div className="flex flex-col"><span className="text-slate-400 text-sm font-bold uppercase">{plan.price.period}</span>{plan.price.savingsText && <span className="text-[10px] text-green-400 font-bold">{plan.price.savingsText}</span>}</div></div><p className="text-[10px] text-slate-500 italic mt-2 font-medium">{plan.price.note}</p></div></div>
       <div className="mb-10 pt-8 border-t border-slate-800 space-y-6"><h4 className="text-xs font-black text-white uppercase tracking-widest">{plan.whyChoose.title}</h4><div className="space-y-5">{plan.whyChoose.reasons.map((r: any, idx: number) => (<div key={idx} className="flex gap-4 group/reason"><div className="w-8 h-8 rounded-xl bg-gradient-to-br from-green-500/20 to-green-700/20 flex items-center justify-center flex-shrink-0 group-hover/reason:scale-110 transition-transform"><PremiumIcon name={r.icon} size="xs" color="green" /></div><div><p className="text-xs font-bold text-white mb-1 leading-tight">{r.title}</p><p className="text-[10px] text-slate-500 leading-relaxed">{r.desc}</p></div></div>))}</div></div>
-      <div className="mb-10 p-5 bg-green-500/5 border border-green-500/10 rounded-3xl relative overflow-hidden"><h4 className="text-xs font-black text-green-400 uppercase tracking-widest mb-4">{plan.impact.title}</h4>{plan.impact.isTimeline ? (<div className="space-y-4">{plan.impact.outcomes.map((o: any, idx: number) => (<div key={idx} className="flex gap-3 relative">{idx < 2 && <div className="absolute left-2.5 top-6 bottom-[-20px] w-px bg-green-500/20" />}<div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0 z-10"><PremiumIcon name={o.icon} size="xs" className="text-slate-900" /></div><div><p className="text-[10px] font-black text-green-400 uppercase tracking-tighter">{o.metric}</p><p className="text-[11px] text-slate-300 leading-snug">{o.desc}</p></div></div>))}</div>) : (<ul className="space-y-3">{plan.impact.outcomes.map((o: string, idx: number) => (<li key={idx} className="flex items-start gap-2"><Check size={12} className="text-green-500 mt-0.5 flex-shrink-0" /><p className="text-[11px] text-slate-300 leading-snug">{o}</p></li>))}</ul>)}{plan.impact.socialProof && (<div className="mt-6 pt-4 border-t border-green-500/10"><p className="text-[10px] italic text-slate-500 font-medium">"{plan.impact.socialProof}"</p></div>)}</div>
-      <div className="mb-10 space-y-4"><h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Fitur Terpilih</h4><ul className="space-y-3">{plan.features.slice(0, 5).map((f: any, idx: number) => (<li key={idx} className={cn("flex items-start gap-3", !f.included && "opacity-40")}>{f.included ? <Check size={14} className="text-green-500 mt-0.5" /> : <X size={14} className="text-slate-600 mt-0.5" />}<span className={cn("text-xs", f.highlight ? "text-white font-bold" : "text-slate-400", f.highlight && "bg-white/5 px-2 py-0.5 rounded")}>{f.text}</span></li>))}</ul></div>
-      {plan.bonusHighlight && (<div className="mb-10 p-5 bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/30 rounded-3xl"><h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-3">{plan.bonusHighlight.title}</h4><ul className="space-y-2 mb-4">{plan.bonusHighlight.items.map((item: string, idx: number) => (<li key={idx} className="flex items-center gap-2 text-[10px] text-slate-300"><Gift size={10} className="text-amber-500" /> {item}</li>))}</ul><p className="text-[10px] font-black text-white leading-relaxed">{plan.bonusHighlight.note}</p></div>)}
+      <div className="mb-10 p-5 bg-green-500/5 border border-green-500/10 rounded-3xl relative overflow-hidden"><h4 className="text-xs font-black text-green-400 uppercase tracking-widest mb-4">{plan.impact.title}</h4>{plan.impact.isTimeline ? (<div className="space-y-4">{plan.impact.outcomes.map((o: { icon: string; metric: string; desc: string }, idx: number) => (<div key={idx} className="flex gap-3 relative">{idx < 2 && <div className="absolute left-2.5 top-6 bottom-[-20px] w-px bg-green-500/20" />}<div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0 z-10"><PremiumIcon name={o.icon} size="xs" className="text-slate-900" /></div><div><p className="text-[10px] font-black text-green-400 uppercase tracking-tighter">{o.metric}</p><p className="text-[11px] text-slate-300 leading-snug">{o.desc}</p></div></div>))}</div>) : (<ul className="space-y-3">{plan.impact.outcomes.map((o: string, idx: number) => (<li key={idx} className="flex items-start gap-2"><Check size={12} className="text-green-500 mt-0.5 flex-shrink-0" /><p className="text-[11px] text-slate-300 leading-snug">{o}</p></li>))}</ul>)}</div>
+      <div className="mb-10 space-y-4"><h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Fitur Terpilih</h4><ul className="space-y-3">{plan.features.slice(0, 6).map((f: { included?: boolean; text: string; highlight?: boolean }, idx: number) => (<li key={idx} className={cn("flex items-start gap-3", f.included === false && "opacity-40")}>{f.included !== false ? <Check size={14} className="text-green-500 mt-0.5" /> : <X size={14} className="text-slate-600 mt-0.5" />}<span className={cn("text-xs", f.highlight ? "text-white font-bold" : "text-slate-400", f.highlight && "bg-white/5 px-2 py-0.5 rounded")}>{f.text}</span></li>))}</ul></div>
       <div className="mt-auto"><Button variant={plan.highlighted ? 'primary' : 'outline'} fullWidth className={cn("flex flex-col h-auto py-4 gap-0.5 group", plan.highlighted && "shadow-green-glow animate-pulse hover:animate-none")} onClick={() => onOrder(plan.id)}><span className="text-base font-black">{plan.cta.label}</span><span className="text-[10px] uppercase font-bold opacity-70 tracking-widest">{plan.cta.subtext}</span></Button><p className="text-[10px] text-slate-500 text-center mt-4 flex items-center justify-center gap-2"><ShieldCheck size={10} /> {Array.isArray(plan.trust) ? plan.trust[0] : plan.trust}</p></div>
     </motion.div>
   );

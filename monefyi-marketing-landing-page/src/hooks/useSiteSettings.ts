@@ -1,58 +1,36 @@
-import { useCallback, useEffect, useMemo } from 'react';
-import { useLocalStorage } from './useLocalStorage';
-import { SiteSettings } from '../types';
-import { INITIAL_SETTINGS } from '../data/initial-site-settings';
-import { mergeSiteSettings } from '../lib/merge-site-settings';
+import { useCallback } from 'react';
+import { useLandingCms } from '../context/LandingCmsContext';
+import type { SiteSettings } from '../types';
 
 export { INITIAL_SETTINGS } from '../data/initial-site-settings';
 
 export function useSiteSettings() {
-  const [savedSettings, setSavedSettings] = useLocalStorage<SiteSettings>('monefyi_v6_settings', INITIAL_SETTINGS);
+  const cms = useLandingCms();
 
-  useEffect(() => {
-    const sync = () => {
-      try {
-        const raw = localStorage.getItem('monefyi_v6_settings');
-        if (raw) setSavedSettings(JSON.parse(raw));
-      } catch {
-        /* ignore corrupt storage */
-      }
-    };
-    window.addEventListener('monefyi:leads-updated', sync);
-    return () => window.removeEventListener('monefyi:leads-updated', sync);
-  }, [setSavedSettings]);
-
-  const settings = useMemo(() => mergeSiteSettings(savedSettings), [savedSettings]);
-
-  const hasChanges = false;
-
-  const save = useCallback(() => {
-    /* persisted via setSettings */
-  }, []);
-
-  const reset = useCallback(() => {
-    if (confirm('Hapus semua perubahan landing CMS?')) {
-      setSavedSettings(INITIAL_SETTINGS);
-      window.location.reload();
+  const reset = () => {
+    if (confirm('Reset draft ke versi terakhir disimpan di Supabase?')) {
+      cms.discardDraft();
     }
-  }, [setSavedSettings]);
+  };
 
-  const getOrderedSections = useCallback(() => {
-    const sections = settings.sections || INITIAL_SETTINGS.sections;
-    return [...sections].sort((a, b) => a.order - b.order);
-  }, [settings.sections]);
-
-  const setSettings = useCallback((val: SiteSettings) => {
-    setSavedSettings(val);
-  }, [setSavedSettings]);
+  const save = useCallback(
+    (settingsOverride?: SiteSettings) => cms.saveToSupabase(settingsOverride),
+    [cms]
+  );
 
   return {
-    settings,
-    savedSettings,
-    setSettings,
+    settings: cms.settings,
+    savedSettings: cms.settings,
+    setSettings: cms.setSettings,
     save,
     reset,
-    getOrderedSections,
-    hasChanges,
+    getOrderedSections: cms.getOrderedSections,
+    hasChanges: cms.hasDraftChanges,
+    isReady: cms.isReady,
+    isLoading: cms.isLoading,
+    isSaving: cms.isSaving,
+    saveError: cms.saveError,
   };
 }
+
+export type { SiteSettings };

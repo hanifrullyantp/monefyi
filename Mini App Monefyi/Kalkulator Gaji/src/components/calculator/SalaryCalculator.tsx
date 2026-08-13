@@ -78,7 +78,7 @@ export function SalaryCalculator() {
     const thp = bruto - pph21 - totalBPJS;
 
     return { bruto, pph21, rate, bpjsKes, jht, jp, totalBPJS, thp };
-  }, [gaji, tunjangan, ptpk, bpjs, npwp]);
+  }, [gaji, tunjangan, ptkp, bpjs, npwp]);
 
   return (
     <div className="space-y-6">

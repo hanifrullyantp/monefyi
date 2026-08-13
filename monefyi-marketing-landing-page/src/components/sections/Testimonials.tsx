@@ -67,7 +67,7 @@ export function Testimonials() {
         </h2>
         
         <p className="text-lg text-slate-400 mt-6 max-w-2xl mx-auto leading-relaxed">
-          3.847+ orang sudah rasakan ketenangan finansial yang selama ini mereka cari.
+          Cerita nyata dari pengguna yang menemukan ketenangan finansial lewat Monefyi.
         </p>
       </div>
 
@@ -108,11 +108,10 @@ export function Testimonials() {
       {/* 5. Community Impact Numbers */}
       <div className="max-w-6xl mx-auto mt-32 pt-20 border-t border-white/5">
         <h3 className="text-center text-white font-bold text-2xl mb-16 uppercase tracking-tighter">Dampak Kolektif Kami</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-12 md:gap-8">
-          <ImpactStat end={3847} label="Pengguna Aktif" suffix="+" />
-          <ImpactStat end={12.4} label="Total User Savings" prefix="Rp " suffix="M" decimals={1} />
-          <ImpactStat end={8.2} label="Hutang Dilunasi" prefix="Rp " suffix="M" decimals={1} />
-          <ImpactStat end={4.8} label="Rating Real Users" suffix="/5" decimals={1} />
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-12 md:gap-8">
+          <ImpactStat end={4.8} label="Rating Pengguna" suffix="/5" decimals={1} />
+          <ImpactStat end={90} label="Hari Transformasi" suffix=" hari" decimals={0} />
+          <ImpactStat end={7} label="Garansi Uang Kembali" suffix=" hari" decimals={0} />
         </div>
       </div>
 

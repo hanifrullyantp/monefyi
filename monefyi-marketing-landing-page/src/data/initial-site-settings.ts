@@ -110,10 +110,10 @@ export const INITIAL_SETTINGS: SiteSettings = {
       how_it_works: { eyebrow: 'SIMPLE STEPS', title: 'Cara Monefyi', highlight: 'Mengubah Hidupmu', subtitle: 'Hanya 3 langkah sederhana untuk menghentikan kebiasaan gaji habis sebelum waktunya.' },
       features: { eyebrow: 'POWERFUL FEATURES', title: 'Didesain Untuk', highlight: 'Kenyamanan Finansial', subtitle: 'Monefyi menggabungkan AI cerdas dengan prinsip keuangan yang sudah teruji.' },
       transformation: { eyebrow: 'THE TRANSFORMATION', title: 'Dua Nasib yang', highlight: 'Berbeda Jauh', subtitle: 'Monefyi bukan cuma aplikasi, tapi sistem navigasi hidup Anda.' },
-      testimonials: { eyebrow: 'USER STORIES', title: 'Kisah Nyata Dari', highlight: 'Mereka yang Berhasil', subtitle: 'Lebih dari 3.800 orang telah mengubah cara mereka memandang uang.' },
+      testimonials: { eyebrow: 'USER STORIES', title: 'Kisah Nyata Dari', highlight: 'Mereka yang Berhasil', subtitle: 'Cerita pengguna yang sudah mengubah cara mereka memandang uang dengan Monefyi.' },
       faq: { eyebrow: 'F.A.Q', title: 'Masih Ada', highlight: 'Pertanyaan?', subtitle: 'Kami merangkum pertanyaan yang paling sering ditanyakan oleh calon pengguna.' },
       pricing: { eyebrow: 'PRICING', title: 'Mulai Perjalanan', highlight: 'Finansialmu Hari Ini', subtitle: 'Pilih paket yang cocok dengan situasi keuanganmu. Semua paket punya satu tujuan: kamu berhenti tekor sebelum gajian.' },
-      bonus: { eyebrow: 'BONUS EKSKLUSIF', title: '4 Aplikasi Bonus', highlight: 'Senilai Rp 796.000', subtitle: 'Gratis selamanya untuk pembeli paket Lifetime & Couple Pack.' },
+      bonus: { eyebrow: 'ALAT BANTU', title: 'Coba Kalkulator', highlight: 'Finansial Gratis', subtitle: 'Gunakan kalkulator dan planner di bawah untuk keputusan cerdas — tanpa perlu daftar.' },
     },
     footer: {
       navHeader: 'Navigasi',

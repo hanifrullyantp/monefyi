@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Menu, X } from 'lucide-react';
+import { Settings, Menu, X, Loader2 } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { useSiteSettings } from '../../hooks/useSiteSettings';
@@ -10,29 +10,39 @@ import { AdminPanelTabContent } from './panel/AdminPanelTabContent';
 import type { SiteSettings } from '../../types';
 
 export function AdminPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { settings, setSettings, reset } = useSiteSettings();
+  const { settings, setSettings, save, reset, hasChanges, isSaving, saveError } = useSiteSettings();
   const [tab, setTab] = useState<AdminPanelTab>('dashboard');
-  const [draft, setDraft] = useState<SiteSettings>(settings);
   const [localJson, setLocalJson] = useState(JSON.stringify(settings, null, 2));
   const [mobileNav, setMobileNav] = useState(false);
 
   useEffect(() => {
     if (open) {
-      setDraft(settings);
       setLocalJson(JSON.stringify(settings, null, 2));
     }
   }, [open, settings]);
 
-  const hasChanges = useMemo(
-    () => JSON.stringify(draft) !== JSON.stringify(settings),
-    [draft, settings]
-  );
+  const handleApplyDraft = (next: SiteSettings) => {
+    setSettings(next);
+  };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     try {
-      const payload = tab === 'json-editor' ? JSON.parse(localJson) : draft;
-      setSettings(payload as SiteSettings);
-      onClose();
+      if (tab === 'json-editor') {
+        const parsed = JSON.parse(localJson) as SiteSettings;
+        const result = await save(parsed);
+        if (result.ok) {
+          onClose();
+          return;
+        }
+        alert(result.error || 'Gagal menyimpan ke Supabase');
+        return;
+      }
+      const result = await save();
+      if (result.ok) {
+        onClose();
+        return;
+      }
+      alert(result.error || 'Gagal menyimpan ke Supabase');
     } catch {
       alert('JSON tidak valid. Periksa struktur di JSON Editor.');
     }
@@ -63,14 +73,23 @@ export function AdminPanel({ open, onClose }: { open: boolean; onClose: () => vo
           <div className="flex items-center gap-2 shrink-0">
             {hasChanges && (
               <span className="hidden sm:inline text-[10px] font-black uppercase text-amber-500 bg-amber-500/10 px-2 py-1 rounded-full">
-                Unsaved
+                Draft lokal
               </span>
+            )}
+            {saveError && (
+              <span className="hidden lg:inline text-[10px] text-red-400 max-w-[160px] truncate">{saveError}</span>
             )}
             <button type="button" onClick={reset} className="hidden sm:block px-3 py-2 text-xs font-bold text-slate-500 hover:text-white">
               Reset
             </button>
-            <Button size="sm" onClick={handleSave} className="bg-green-500 text-slate-950 font-black px-4 md:px-8">
-              Simpan
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="bg-green-500 text-slate-950 font-black px-4 md:px-8 disabled:opacity-60"
+            >
+              {isSaving ? <Loader2 size={14} className="animate-spin" /> : null}
+              Simpan ke Supabase
             </Button>
           </div>
         </header>
@@ -85,8 +104,8 @@ export function AdminPanel({ open, onClose }: { open: boolean; onClose: () => vo
               <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                 <AdminPanelTabContent
                   tab={tab}
-                  draft={draft}
-                  onChange={setDraft}
+                  draft={settings}
+                  onChange={handleApplyDraft}
                   localJson={localJson}
                   onJsonChange={setLocalJson}
                 />
