@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { SectionWrapper } from '../ui/SectionWrapper';
 import { storiesData, StoryTestimonial } from '../../data/testimonials-data';
+import { useSiteSettings } from '../../hooks/useSiteSettings';
 import { cn } from '../../lib/cn';
 import { Button } from '../ui/Button';
 import { AnimatedCounter } from '../ui/AnimatedCounter';
@@ -37,9 +38,14 @@ const iconMap: Record<string, any> = {
 };
 
 export function Testimonials() {
+  const { settings } = useSiteSettings();
+  const stories = (settings.content.testimonials?.length
+    ? settings.content.testimonials
+    : storiesData) as StoryTestimonial[];
+
   const [selectedStory, setSelectedPlan] = useState<StoryTestimonial | null>(null);
-  const featuredStory = storiesData.find(s => s.featured);
-  const otherStories = storiesData.filter(s => !s.featured);
+  const featuredStory = stories.find((s) => s.featured);
+  const otherStories = stories.filter((s) => !s.featured);
 
   return (
     <SectionWrapper id="testimonials" background="dark" className="overflow-hidden">

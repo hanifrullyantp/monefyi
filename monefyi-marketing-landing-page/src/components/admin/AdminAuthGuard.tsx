@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { useAdminAuth } from '../../hooks/useAdminAuth';
 import { Loader2 } from 'lucide-react';
+import { useAdminAuthContext } from '../../context/AdminAuthContext';
 
 export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
-  const { isAuth } = useAdminAuth();
+  const { loading, isAdminUser, openLogin } = useAdminAuthContext();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  if (!mounted || isAuth === null) {
+  useEffect(() => {
+    if (!mounted || loading) return;
+    if (!isAdminUser) openLogin();
+  }, [mounted, loading, isAdminUser, openLogin]);
+
+  if (!mounted || loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center gap-4">
         <Loader2 className="animate-spin text-green-500" size={40} />
@@ -19,12 +24,7 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (isAuth === false) {
-    if (typeof window !== 'undefined') {
-      window.location.href = '/admin/login';
-    }
-    return null;
-  }
+  if (!isAdminUser) return null;
 
   return <>{children}</>;
 }

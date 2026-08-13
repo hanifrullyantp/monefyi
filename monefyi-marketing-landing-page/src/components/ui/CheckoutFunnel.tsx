@@ -7,6 +7,7 @@ import { pricingData } from '../../data/pricing-data';
 import { formatRupiah } from '../../lib/formatters';
 import { UserData, CheckoutStep, PricingPlan } from '../../types';
 import { getPlanCheckoutUrl } from '../../data/checkout-urls';
+import { captureLead } from '../../lib/leads';
 
 interface CheckoutFunnelProps {
   open: boolean;
@@ -26,6 +27,15 @@ export function CheckoutFunnel({ open, onClose, initialPlanId }: CheckoutFunnelP
 
   const handleDataSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    captureLead({
+      name: userData.nama.trim(),
+      whatsapp: userData.noHp.trim(),
+      city: userData.domisili.trim(),
+      birthDate: userData.tanggalLahir,
+      planId: plan.id,
+      planName: plan.name,
+      source: 'checkout-funnel',
+    });
     if (plan.id === 'gratis' || plan.id === 'lifetime') {
       setStep('upsell');
     } else {

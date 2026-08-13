@@ -81,25 +81,42 @@ export function Pricing() {
               </thead>
               <tbody className="divide-y divide-white/5">
                  {(() => {
+                    const gratisPlan = pricing.plans.find((p: any) => p.id === 'gratis');
+                    const lifetimePlan = pricing.plans.find((p: any) => p.id === 'lifetime');
+
+                    const isFeatureIncluded = (plan: any, featText: string): boolean => {
+                      const feature = plan.features.find((feat: any) => feat.text === featText);
+                      if (feature?.included) return true;
+
+                      if (plan.id === 'lifetime' || plan.id === 'pro') {
+                        const gratisFeature = gratisPlan?.features.find((feat: any) => feat.text === featText);
+                        if (gratisFeature?.included) return true;
+                      }
+
+                      if (plan.id === 'pro') {
+                        const lifetimeFeature = lifetimePlan?.features.find((feat: any) => feat.text === featText);
+                        if (lifetimeFeature?.included) return true;
+                      }
+
+                      return false;
+                    };
+
                     const allFeatureTexts = Array.from(new Set(pricing.plans.flatMap((p: any) => p.features.map((f: any) => f.text))));
                     return allFeatureTexts.map((featText: any, idx: number) => (
                       <tr key={idx} className="hover:bg-white/5 transition-colors group">
                         <td className="p-5 text-sm text-slate-300 group-hover:text-white transition-colors">{featText}</td>
-                        {pricing.plans.map((p: any) => {
-                          const f = p.features.find((feat: any) => feat.text === featText);
-                          return (
-                            <td key={p.id} className={cn(
-                              "p-5 text-center transition-colors",
-                              p.highlighted && "bg-green-500/5"
-                            )}>
-                               {f?.included ? (
-                                 <div className="flex justify-center"><Check size={20} className={p.highlighted ? "text-green-400" : "text-slate-500"} /></div>
-                               ) : (
-                                 <div className="flex justify-center"><X size={16} className="text-slate-800" /></div>
-                               )}
-                            </td>
-                          );
-                        })}
+                        {pricing.plans.map((p: any) => (
+                          <td key={p.id} className={cn(
+                            "p-5 text-center transition-colors",
+                            p.highlighted && "bg-green-500/5"
+                          )}>
+                             {isFeatureIncluded(p, featText) ? (
+                               <div className="flex justify-center"><Check size={20} className={p.highlighted ? "text-green-400" : "text-slate-500"} /></div>
+                             ) : (
+                               <div className="flex justify-center"><X size={16} className="text-slate-800" /></div>
+                             )}
+                          </td>
+                        ))}
                       </tr>
                     ));
                  })()}

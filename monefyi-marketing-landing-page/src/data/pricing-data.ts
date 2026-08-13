@@ -65,8 +65,7 @@ export const pricingData = {
         { included: true, text: "Support via email" },
         { included: false, text: "Multi kategori budget" },
         { included: false, text: "Monevisor AI Coach premium" },
-        { included: false, text: "Debt Freedom Planner" },
-        { included: false, text: "Bonus 4 apps" }
+        { included: false, text: "Debt Freedom Planner" }
       ],
 
       cta: {
@@ -118,11 +117,6 @@ export const pricingData = {
             desc: "Rata-rata user hemat Rp 1.2 JUTA per bulan dari kebocoran yang tidak disadari. Investasi Rp 99rb balik dalam kurang dari 1 minggu."
           },
           {
-            icon: "Gift" as const,
-            title: "BONUS senilai Rp 796.000",
-            desc: "Dapatkan 4 aplikasi bonus finansial secara gratis. Nilai bonus 8x lipat dari harga yang kamu bayar."
-          },
-          {
             icon: "TrendingUp" as const,
             title: "Update selamanya, gratis",
             desc: "Setiap fitur baru yang kami rilis, kamu dapat otomatis. Aplikasi terus berkembang, harga kamu tetap Rp 99rb yang dulu."
@@ -149,8 +143,7 @@ export const pricingData = {
             metric: "Bulan 3",
             desc: "Sistem finansial jalan otomatis. Bisa fokus ke goal besar: DP rumah atau bebas hutang."
           }
-        ],
-        socialProof: "3.847+ user Monefyi Lifetime sudah merasakan transformasi ini. dan BONUS EKSKLUSIF SENILAI Rp 796.000"
+        ]
       },
 
       features: [
@@ -171,20 +164,8 @@ export const pricingData = {
         { included: true, text: "Weekly AI Digest personal" },
         { included: true, text: "Multi-device sync" },
         { included: true, text: "Update fitur selamanya" },
-        { included: true, text: "4 Bonus Apps (Rp 796rb) GRATIS", highlight: true },
         { included: true, text: "Priority support (respon <1 jam)" }
       ],
-
-      bonusHighlight: {
-        title: "BONUS EKSKLUSIF SENILAI Rp 796.000",
-        items: [
-          "Kalkulator Bagi Hasil Syari'ah (Rp 199rb)",
-          "Kalkulator Gaji Indonesia (Rp 199rb)",
-          "Debt Freedom Planner (Rp 199rb)",
-          "Budget Planner Advanced (Rp 199rb)"
-        ],
-        note: ""
-      },
 
       cta: {
         label: "Ambil Lifetime Sekarang",

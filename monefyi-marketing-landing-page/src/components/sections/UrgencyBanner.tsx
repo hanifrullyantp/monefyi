@@ -38,9 +38,9 @@ export function UrgencyBanner() {
               <Zap size={20} fill="currentColor" /> <EditableText id="urgency_h3" defaultValue="Jangan Sampai Menyesal" />
             </h3>
             <h2 className="text-3xl md:text-5xl font-black text-white mb-4 tracking-tighter">
-              <EditableText id="urgency_h2_1" defaultValue="Tidak Kebagian Bonus" /> <br className="hidden md:block" />
+              <EditableText id="urgency_h2_1" defaultValue="Harga Launch" /> <br className="hidden md:block" />
               <span className="text-red-500">
-                <EditableText id="urgency_h2_2" defaultValue="Senilai Rp 796.000" />
+                <EditableText id="urgency_h2_2" defaultValue="Segera Berakhir" />
               </span>
             </h2>
             <p className="text-slate-400 text-lg md:text-xl font-bold mb-12">
@@ -104,7 +104,7 @@ export function UrgencyBanner() {
 
             <div className="mt-16 flex items-center justify-center gap-2 text-red-500/80 text-[10px] md:text-xs font-black uppercase tracking-widest">
                <AlertCircle size={14} />
-               <span>Bonus Hangus Jika Waktu Habis</span>
+               <span>Promo Berakhir Jika Waktu Habis</span>
             </div>
           </div>
         </div>

@@ -1,0 +1,60 @@
+import type { ZakatType } from '@/types/zakat';
+
+export const ZAKAT_TYPES: ZakatType[] = [
+  {
+    id: 'penghasilan',
+    name: 'Zakat Penghasilan',
+    description: 'Zakat dari gaji, honor, atau penghasilan profesi',
+    icon: 'Briefcase',
+    rate: '2.5% × penghasilan',
+    href: '/penghasilan',
+  },
+  {
+    id: 'maal',
+    name: 'Zakat Maal',
+    description: 'Zakat harta simpanan dan aset',
+    icon: 'Coins',
+    rate: '2.5% × harta',
+    href: '/maal',
+  },
+  {
+    id: 'emas',
+    name: 'Zakat Emas & Perak',
+    description: 'Zakat emas batangan dan perhiasan simpanan',
+    icon: 'Gem',
+    rate: '2.5% × nilai',
+    href: '/emas',
+  },
+  {
+    id: 'perdagangan',
+    name: 'Zakat Perdagangan',
+    description: 'Zakat dari aset bisnis dan usaha',
+    icon: 'Building2',
+    rate: '2.5% × aset bersih',
+    href: '/perdagangan',
+  },
+  {
+    id: 'pertanian',
+    name: 'Zakat Pertanian',
+    description: 'Zakat hasil panen tanaman',
+    icon: 'Wheat',
+    rate: '5-10% × hasil panen',
+    href: '/pertanian',
+  },
+  {
+    id: 'fitrah',
+    name: 'Zakat Fitrah',
+    description: 'Zakat wajib di bulan Ramadhan',
+    icon: 'Moon',
+    rate: '2.5 kg beras/jiwa',
+    href: '/fitrah',
+  },
+  {
+    id: 'investasi',
+    name: 'Zakat Investasi',
+    description: 'Zakat saham, reksadana, dan sukuk syariah',
+    icon: 'TrendingUp',
+    rate: '2.5% × nilai investasi',
+    href: '/investasi',
+  },
+];

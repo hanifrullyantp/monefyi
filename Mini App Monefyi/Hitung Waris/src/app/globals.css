@@ -1,0 +1,103 @@
+@import url("https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Inter:wght@300;400;500;600;700;800;900&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-amiri: "Amiri", serif;
+  --font-inter: "Inter", sans-serif;
+
+  --color-green-950: #022c22;
+  --color-green-900: #064e3b;
+  --color-green-800: #065f46;
+  --color-green-600: #059669;
+  --color-green-500: #10b981;
+  --color-green-400: #34d399;
+
+  --color-red-950: #450a0a;
+  --color-red-900: #7f1d1d;
+  --color-red-600: #dc2626;
+  --color-red-500: #ef4444;
+  --color-red-400: #f87171;
+
+  --color-amber-500: #f59e0b;
+  --color-amber-400: #fbbf24;
+
+  --color-blue-900: #1e3a5f;
+  --color-blue-500: #3b82f6;
+  --color-blue-400: #60a5fa;
+
+  --color-purple-500: #8b5cf6;
+  --color-purple-400: #a78bfa;
+
+  --color-slate-950: #020617;
+  --color-slate-900: #0f172a;
+  --color-slate-800: #1e293b;
+  --color-slate-700: #334155;
+  --color-slate-400: #94a3b8;
+  --color-slate-300: #cbd5e1;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "Inter", sans-serif;
+  background-color: #020617;
+  color: #cbd5e1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.font-amiri {
+  font-family: "Amiri", serif;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Tabular nums for amounts */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Arabic text */
+.arabic-text {
+  font-family: "Amiri", serif;
+  direction: rtl;
+  text-align: right;
+  line-height: 2;
+}
+
+/* Gradient utilities */
+.gradient-hero {
+  background: linear-gradient(180deg, #022c22 0%, #064e3b 100%);
+}
+.gradient-green {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+.gradient-danger {
+  background: linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%);
+}
+.gradient-dalil {
+  background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+}
+.gradient-waris {
+  background: linear-gradient(135deg, #065f46 0%, #022c22 100%);
+}

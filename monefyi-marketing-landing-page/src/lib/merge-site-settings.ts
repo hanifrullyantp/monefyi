@@ -65,6 +65,10 @@ export function mergeSiteSettings(raw: Partial<SiteSettings> | null | undefined)
           : INITIAL_SETTINGS.content.testimonials,
       faq: raw.content?.faq?.length ? raw.content.faq : INITIAL_SETTINGS.content.faq,
       pricing: raw.content?.pricing ?? INITIAL_SETTINGS.content.pricing,
+      bonusApps:
+        raw.content?.bonusApps?.length
+          ? raw.content.bonusApps
+          : INITIAL_SETTINGS.content.bonusApps,
       guarantee:
         raw.content?.guarantee?.length
           ? raw.content.guarantee
@@ -72,5 +76,6 @@ export function mergeSiteSettings(raw: Partial<SiteSettings> | null | undefined)
     },
     sections,
     media: { ...INITIAL_SETTINGS.media, ...raw.media },
+    leads: Array.isArray(raw.leads) ? raw.leads : INITIAL_SETTINGS.leads,
   };
 }

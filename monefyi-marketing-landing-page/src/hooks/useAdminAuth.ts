@@ -1,33 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useAdminAuthContext } from '../context/AdminAuthContext';
 
+/** Legacy hook — backed by Supabase session + admin email list. */
 export function useAdminAuth() {
-  const [isAuth, setIsAuth] = useState<boolean | null>(null);
+  const { loading, isAdminUser, signIn, signOut } = useAdminAuthContext();
 
-  useEffect(() => {
-    const auth = localStorage.getItem('monefyi_admin_auth');
-    if (auth === 'true') {
-      setIsAuth(true);
-    } else {
-      setIsAuth(false);
-    }
-  }, []);
-
-  const login = useCallback((password: string): boolean => {
-    if (password === 'monefyi2026') {
-      localStorage.setItem('monefyi_admin_auth', 'true');
-      setIsAuth(true);
-      return true;
-    }
-    return false;
-  }, []);
-
-  const logout = useCallback(() => {
-    localStorage.removeItem('monefyi_admin_auth');
-    setIsAuth(false);
-    if (typeof window !== 'undefined') {
-      window.location.href = '/admin/login';
-    }
-  }, []);
-
-  return { isAuth, login, logout };
+  return {
+    isAuth: loading ? null : isAdminUser,
+    login: async (email: string, password: string) => {
+      const result = await signIn(email, password);
+      return result.ok;
+    },
+    logout: signOut,
+  };
 }

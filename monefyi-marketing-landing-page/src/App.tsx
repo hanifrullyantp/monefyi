@@ -22,6 +22,7 @@ import { Footer } from './components/sections/Footer';
 import { WhatsAppButton } from './components/floating/WhatsAppButton';
 import { TrustTicker } from './components/floating/TrustTicker';
 import { ExitIntentModal } from './components/floating/ExitIntentModal';
+import { AdminLoginModal } from './components/admin/AdminLoginModal';
 import { useAdminMode } from './hooks/useAdminMode';
 import { useSiteSettings } from './hooks/useSiteSettings';
 
@@ -72,6 +73,7 @@ export default function App() {
       <WhatsAppButton />
       <TrustTicker />
       <AdminDraftPanel />
+      <AdminLoginModal />
       <ExitIntentModal />
     </div>
   );

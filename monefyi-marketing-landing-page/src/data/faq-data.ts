@@ -21,12 +21,12 @@ export const faqData: FAQItem[] = [
   
   // Harga
   { id: 'h1', category: 'Harga', question: 'Berapa harga Monefyi?', answer: 'Ada tiga pilihan: Trial Gratis (7 hari, fitur dasar), Lifetime Rp 99.000 (sekali bayar, akses selamanya + bonus 4 apps), dan Pro+ Rp 250.000/tahun (fitur premium lengkap).' },
-  { id: 'h2', category: 'Harga', question: 'Apa yang termasuk dalam paket Lifetime?', answer: 'Paket Lifetime Rp 99.000 mencakup: Akses semua fitur selamanya, update gratis selamanya, 4 bonus aplikasi keuangan (senilai Rp 796.000) dan prioritas support.' },
+  { id: 'h2', category: 'Harga', question: 'Apa yang termasuk dalam paket Lifetime?', answer: 'Paket Lifetime Rp 99.000 mencakup: akses semua fitur selamanya, update gratis selamanya, dan prioritas support.' },
   { id: 'h3', category: 'Harga', question: 'Ada garansi uang kembali?', answer: 'Ya! Kami memberikan garansi 7 hari uang kembali 100%. Jika dalam 7 hari kamu tidak puas karena alasan apapun, kami kembalikan penuh tanpa pertanyaan.' },
   { id: 'h4', category: 'Harga', question: 'Apakah ada diskon untuk pasangan/keluarga?', answer: 'Ya! Couple Pack tersedia dengan harga Rp 149.000 untuk 2 akun (hemat 25%). Cocok untuk pasangan yang ingin kelola keuangan bersama.' },
   
   // Bonus Apps
-  { id: 'b1', category: 'Bonus', question: 'Apa saja 4 bonus aplikasi yang didapat?', answer: 'Kamu mendapat: (1) Kalkulator Bagi Hasil Mudharabah & Musyarakah, (2) Kalkulator Gaji & PPh21 TER, (3) Debt Freedom Planner, (4) Budget Planner — total senilai Rp 796.000, GRATIS!' },
+  { id: 'b1', category: 'Bonus', question: 'Apa saja alat bantu finansial yang bisa dicoba?', answer: 'Kamu bisa coba Kalkulator Bagi Hasil, Kalkulator Gaji & PPh21, Debt Freedom Planner, dan Budget Planner langsung di halaman landing — gratis tanpa daftar.' },
   { id: 'b2', category: 'Bonus', question: 'Apakah bonus apps bisa langsung dicoba?', answer: 'Ya! Semua 4 bonus apps bisa langsung kamu coba GRATIS di halaman ini sekarang, tanpa perlu daftar atau beli apapun. Klik "Coba Sekarang" di card masing-masing aplikasi.' },
   { id: 'b3', category: 'Bonus', question: 'Apa itu kalkulator bagi hasil?', answer: 'Kalkulator Bagi Hasil membantu menghitung distribusi keuntungan usaha sesuai prinsip Islam — Mudharabah (modal dari satu pihak) dan Musyarakah (modal dari beberapa pihak). Lengkap dengan dalil syari dan skenario analisis.' },
   

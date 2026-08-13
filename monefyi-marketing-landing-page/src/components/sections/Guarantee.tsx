@@ -34,7 +34,7 @@ export function Guarantee() {
             {[
               'Sudah mulai pakai aplikasinya',
               'Proses refund < 24 jam',
-              'Akses bonus tetap milik Anda',
+              '100% uang kembali, tanpa potongan',
               'Support responsif via WA'
             ].map((item, i) => (
               <div key={i} className="flex items-center gap-3 text-slate-300 font-medium">

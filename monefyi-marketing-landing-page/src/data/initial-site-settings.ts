@@ -4,6 +4,7 @@ import { featuresData } from './features-data';
 import { storiesData } from './testimonials-data';
 import { faqData } from './faq-data';
 import { pricingData } from './pricing-data';
+import { bonusAppsData } from './bonus-apps-data';
 
 export const INITIAL_SETTINGS: SiteSettings = {
   general: {
@@ -103,6 +104,7 @@ export const INITIAL_SETTINGS: SiteSettings = {
     testimonials: storiesData,
     faq: faqData,
     pricing: pricingData,
+    bonusApps: bonusAppsData,
     headers: {
       pain_points: { eyebrow: 'RELATABLE?', title: 'Kamu Pasti Sudah', highlight: 'Rasakan Ini...', subtitle: 'Kelola uang bukan soal matematika, tapi soal kebiasaan. Mana yang sering kamu alami?' },
       how_it_works: { eyebrow: 'SIMPLE STEPS', title: 'Cara Monefyi', highlight: 'Mengubah Hidupmu', subtitle: 'Hanya 3 langkah sederhana untuk menghentikan kebiasaan gaji habis sebelum waktunya.' },
@@ -111,6 +113,7 @@ export const INITIAL_SETTINGS: SiteSettings = {
       testimonials: { eyebrow: 'USER STORIES', title: 'Kisah Nyata Dari', highlight: 'Mereka yang Berhasil', subtitle: 'Lebih dari 3.800 orang telah mengubah cara mereka memandang uang.' },
       faq: { eyebrow: 'F.A.Q', title: 'Masih Ada', highlight: 'Pertanyaan?', subtitle: 'Kami merangkum pertanyaan yang paling sering ditanyakan oleh calon pengguna.' },
       pricing: { eyebrow: 'PRICING', title: 'Mulai Perjalanan', highlight: 'Finansialmu Hari Ini', subtitle: 'Pilih paket yang cocok dengan situasi keuanganmu. Semua paket punya satu tujuan: kamu berhenti tekor sebelum gajian.' },
+      bonus: { eyebrow: 'BONUS EKSKLUSIF', title: '4 Aplikasi Bonus', highlight: 'Senilai Rp 796.000', subtitle: 'Gratis selamanya untuk pembeli paket Lifetime & Couple Pack.' },
     },
     footer: {
       navHeader: 'Navigasi',
@@ -120,7 +123,7 @@ export const INITIAL_SETTINGS: SiteSettings = {
     guarantee: [
       'Sudah mulai pakai aplikasinya',
       'Proses refund < 24 jam',
-      'Akses bonus tetap milik Anda',
+      '100% uang kembali, tanpa potongan',
       'Support responsif via WA',
     ],
   },
@@ -144,4 +147,5 @@ export const INITIAL_SETTINGS: SiteSettings = {
     hero_video: { type: 'video', url: '' },
     transformation_image: { type: 'image', url: '' },
   },
+  leads: [],
 };

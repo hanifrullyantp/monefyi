@@ -7,12 +7,14 @@ import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { Logo } from '../ui/Logo';
 import { EditableText } from '../admin/EditableText';
 import { useSiteSettings } from '../../hooks/useSiteSettings';
+import { useAdminMode } from '../../hooks/useAdminMode';
 import { checkoutUrls } from '../../data/checkout-urls';
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [announcementVisible] = useLocalStorage('monefyi_announcement_visible', true);
+  const isAdmin = useAdminMode();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -27,7 +29,10 @@ export function Navbar() {
   };
 
   const { settings } = useSiteSettings();
-  const navTop = (announcementVisible && settings.announcement.active) ? 'top-10' : 'top-0';
+  const showAnnouncement = announcementVisible && settings.announcement.active;
+  const navTop = isAdmin
+    ? (showAnnouncement ? 'top-20' : 'top-10')
+    : (showAnnouncement ? 'top-10' : 'top-0');
 
   return (
     <nav
@@ -36,7 +41,7 @@ export function Navbar() {
         navTop,
         scrolled
           ? 'bg-slate-950/80 backdrop-blur-xl border-b border-white/5 py-3'
-          : (announcementVisible && settings.announcement.active) ? 'py-6' : 'py-8'
+          : showAnnouncement ? 'py-6' : 'py-8'
       )}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">

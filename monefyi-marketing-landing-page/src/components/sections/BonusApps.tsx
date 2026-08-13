@@ -14,22 +14,11 @@ export function BonusApps() {
           <Sparkles size={12} /> EXTRA BONUSES
         </Badge>
         <SectionHeader
-          title="Dapatkan 4 Aplikasi"
-          highlight="Bonus Senilai Rp 796rb"
-          subtitle="Gunakan alat bantu finansial nyata ini untuk mengambil keputusan cerdas sekarang juga."
+          title="Coba Alat Bantu"
+          highlight="Finansial Gratis"
+          subtitle="Gunakan kalkulator dan planner ini untuk mengambil keputusan cerdas sekarang juga."
           className="mb-0!"
         />
-        <div className="mt-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-4">
-           <div className="text-left">
-              <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Total Value</p>
-              <p className="text-2xl font-black text-white line-through decoration-red-500/50">Rp 796.000</p>
-           </div>
-           <div className="w-px h-10 bg-slate-800" />
-           <div className="text-left">
-              <p className="text-amber-500 text-xs font-bold uppercase tracking-widest">Special Price</p>
-              <p className="text-2xl font-black text-green-400">GRATIS</p>
-           </div>
-        </div>
       </div>
 
       <AppsGrid />

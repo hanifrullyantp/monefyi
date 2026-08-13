@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import { SiteSettings } from '../types';
 import { INITIAL_SETTINGS } from '../data/initial-site-settings';
@@ -9,14 +9,29 @@ export { INITIAL_SETTINGS } from '../data/initial-site-settings';
 export function useSiteSettings() {
   const [savedSettings, setSavedSettings] = useLocalStorage<SiteSettings>('monefyi_v6_settings', INITIAL_SETTINGS);
 
-  const settings = mergeSiteSettings(savedSettings);
+  useEffect(() => {
+    const sync = () => {
+      try {
+        const raw = localStorage.getItem('monefyi_v6_settings');
+        if (raw) setSavedSettings(JSON.parse(raw));
+      } catch {
+        /* ignore corrupt storage */
+      }
+    };
+    window.addEventListener('monefyi:leads-updated', sync);
+    return () => window.removeEventListener('monefyi:leads-updated', sync);
+  }, [setSavedSettings]);
+
+  const settings = useMemo(() => mergeSiteSettings(savedSettings), [savedSettings]);
+
+  const hasChanges = false;
 
   const save = useCallback(() => {
-    alert('Settings are auto-saved in this version');
+    /* persisted via setSettings */
   }, []);
 
   const reset = useCallback(() => {
-    if (confirm('Hapus semua perubahan?')) {
+    if (confirm('Hapus semua perubahan landing CMS?')) {
       setSavedSettings(INITIAL_SETTINGS);
       window.location.reload();
     }
@@ -38,6 +53,6 @@ export function useSiteSettings() {
     save,
     reset,
     getOrderedSections,
-    hasChanges: false,
+    hasChanges,
   };
 }
