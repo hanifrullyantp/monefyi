@@ -14,7 +14,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss(), viteSingleFile()],
   build: {
     outDir: path.resolve(__dirname, "../dist"),
-    emptyOutDir: true,
+    // dist/ also holds /app and /stay — do not wipe on landing-only build
+    emptyOutDir: false,
   },
   server: {
     port: 5174,

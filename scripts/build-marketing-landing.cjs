@@ -16,6 +16,8 @@ if (!existsSync(path.join(LP_DIR, 'package.json'))) {
   process.exit(1);
 }
 
+execSync('node scripts/generate-icons.cjs', { cwd: ROOT, stdio: 'inherit' });
+
 const installCmd = existsSync(path.join(LP_DIR, 'package-lock.json')) ? 'npm ci' : 'npm install';
 console.log(`[build:landing] ${LP_DIR} (${installCmd})`);
 execSync(installCmd, { cwd: LP_DIR, stdio: 'inherit' });
@@ -29,13 +31,15 @@ if (!existsSync(path.join(DIST, 'index.html'))) {
 /** Static assets not inlined by vite singlefile */
 mkdirSync(path.join(DIST, 'icons'), { recursive: true });
 
-const iconSrc = path.join(LEGACY, 'public', 'icons');
+const iconSrc = path.join(ROOT, 'app', 'public', 'icons');
 const lpPublicIcons = path.join(LP_DIR, 'public', 'icons');
+const distIcons = path.join(DIST, 'icons');
 
 if (existsSync(iconSrc)) {
   mkdirSync(lpPublicIcons, { recursive: true });
+  mkdirSync(distIcons, { recursive: true });
   cpSync(iconSrc, lpPublicIcons, { recursive: true });
-  cpSync(iconSrc, path.join(DIST, 'icons'), { recursive: true });
+  cpSync(iconSrc, distIcons, { recursive: true });
 }
 
 const staticCopies = [

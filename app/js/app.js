@@ -263,8 +263,8 @@
       return Math.round(n);
     }
 
-    const DEFAULT_LOGO = './icons/monefyi-logo.png?v=2026-07-25-logo';
-    const DEFAULT_LOGO_MARK = './icons/monefyi-logo.png?v=2026-07-25-logo';
+    const DEFAULT_LOGO = './icons/monefyi-logo.png?v=2026-08-13-m';
+    const DEFAULT_LOGO_MARK = './icons/monefyi-logo.png?v=2026-08-13-m';
 
     function normalizeText(t){
       return (t||'').toLowerCase().replace(/\s+/g,' ').trim();

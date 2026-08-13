@@ -1,4 +1,4 @@
-export const MONEFYI_LOGO_SRC = '/icons/monefyi-logo.png';
+export const MONEFYI_LOGO_SRC = '/icons/monefyi-logo.png?v=2026-08-13-m';
 
 interface MonefyiLogoProps {
   className?: string;

@@ -20,6 +20,7 @@ import {
   MessageCircle, 
   Heart,
   X,
+  Check,
   Trophy,
   Calendar,
   Sparkles
@@ -29,6 +30,7 @@ import { storiesData, StoryTestimonial } from '../../data/testimonials-data';
 import { cn } from '../../lib/cn';
 import { Button } from '../ui/Button';
 import { AnimatedCounter } from '../ui/AnimatedCounter';
+import { GradientText } from '../ui/GradientText';
 
 const iconMap: Record<string, any> = {
   Search, Brain, TrendingDown, PiggyBank, Smile, Frown, Shield, Calculator, Eye, Target, Users, MessageCircle, Heart, Trophy, Calendar

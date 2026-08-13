@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 
 // Singleton-like state for draft
@@ -93,5 +93,3 @@ export function useGlobalDraft() {
     canRedo: currentIndex < history.length - 1
   };
 }
-
-import { useEffect } from 'react';

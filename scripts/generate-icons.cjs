@@ -1,15 +1,26 @@
 #!/usr/bin/env node
 /**
- * Generate square PWA icons from icons/monefyi-logo.png
+ * Generate & sync Monefyi brand icons from app/icons/monefyi-logo-source.png
+ * Usage: node scripts/generate-icons.cjs
  */
 const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const src = path.join(root, 'app', 'icons', 'monefyi-logo.png');
+const src = path.join(root, 'app', 'icons', 'monefyi-logo-source.png');
+const ICON_VERSION = '2026-08-13-m';
+/** Brand squircle green — matches official Monefyi mark */
+const BRAND_GREEN = { r: 121, g: 200, b: 95, alpha: 1 };
+
 const outDirs = [
   path.join(root, 'app', 'icons'),
   path.join(root, 'app', 'public', 'icons'),
+  path.join(root, 'landing page', 'public', 'icons'),
+  path.join(root, 'monefyi-marketing-landing-page', 'public', 'icons'),
+  path.join(root, 'landing', 'public', 'icons'),
+  path.join(root, 'planner', 'icons'),
+  path.join(root, 'planner', 'public', 'icons'),
+  path.join(root, 'monefyi_planner', 'public', 'icons'),
 ];
 
 async function main() {
@@ -26,7 +37,9 @@ async function main() {
     process.exit(1);
   }
 
-  outDirs.forEach((dir) => fs.mkdirSync(dir, { recursive: true }));
+  for (const dir of outDirs) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
 
   const meta = await sharp(src).metadata();
   const side = Math.min(meta.width || 512, meta.height || 512);
@@ -35,7 +48,15 @@ async function main() {
 
   const square = sharp(src).extract({ left, top, width: side, height: side });
 
+  const logo1024 = await square.clone().resize(1024, 1024).png().toBuffer();
+  for (const dir of outDirs) {
+    fs.writeFileSync(path.join(dir, 'monefyi-logo.png'), logo1024);
+    fs.copyFileSync(src, path.join(dir, 'monefyi-logo-source.png'));
+  }
+  console.log('Wrote monefyi-logo.png (1024) →', outDirs.length, 'dirs');
+
   const sizes = [
+    { name: 'icon-32.png', size: 32 },
     { name: 'icon-180.png', size: 180 },
     { name: 'icon-192.png', size: 192 },
     { name: 'icon-512.png', size: 512 },
@@ -49,8 +70,13 @@ async function main() {
     console.log('Wrote', name);
   }
 
-  // Maskable: 512 with ~10% safe padding
-  const pad = Math.round(512 * 0.1);
+  const favicon32 = await square.clone().resize(32, 32).png().toBuffer();
+  for (const dir of outDirs) {
+    fs.writeFileSync(path.join(dir, 'favicon.png'), favicon32);
+  }
+  console.log('Wrote favicon.png (32)');
+
+  const pad = Math.round(512 * 0.12);
   const inner = 512 - pad * 2;
   const maskable = await square
     .clone()
@@ -60,15 +86,17 @@ async function main() {
       bottom: pad,
       left: pad,
       right: pad,
-      background: { r: 15, g: 17, b: 23, alpha: 1 },
+      background: BRAND_GREEN,
     })
     .png()
     .toBuffer();
 
   for (const dir of outDirs) {
-    fs.writeFileSync(path.join(dir, 'icon-512-maskable.png'), maskable);
+    fs.writeFileSync(path.join(dir, 'icon-maskable-512.png'), maskable);
   }
-  console.log('Wrote icon-512-maskable.png');
+  console.log('Wrote icon-maskable-512.png');
+
+  console.log('Done. Icon cache version:', ICON_VERSION);
 }
 
 main().catch((err) => {
