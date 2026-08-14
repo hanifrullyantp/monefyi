@@ -1,5 +1,30 @@
 import type { SiteSettings } from '../types';
 import { INITIAL_SETTINGS } from '../data/initial-site-settings';
+import { buildPlanFeaturesForCard } from './pricing-features';
+import { pricingData } from '../data/pricing-data';
+
+function mergePricingContent(rawPricing: Record<string, unknown> | undefined) {
+  const base = INITIAL_SETTINGS.content.pricing as Record<string, unknown>;
+  const merged = { ...base, ...(rawPricing || {}) };
+  const basePlans = (base.plans || []) as { id: string; impact?: Record<string, unknown> }[];
+  const rawPlans = Array.isArray(merged.plans) ? (merged.plans as { id: string; impact?: Record<string, unknown> }[]) : basePlans;
+
+  merged.plans = rawPlans.map((plan) => {
+    const defaults = basePlans.find((p) => p.id === plan.id);
+    const impact = plan.impact || defaults?.impact;
+    const cleanImpact = impact ? { ...impact, socialProof: undefined } : impact;
+    return {
+      ...(defaults || {}),
+      ...plan,
+      features: buildPlanFeaturesForCard(plan.id),
+      bonusHighlight: undefined,
+      impact: cleanImpact,
+    };
+  });
+
+  merged.trustSignals = pricingData.trustSignals;
+  return merged;
+}
 
 /**
  * Deep-merge saved CMS settings with defaults so partial/corrupt localStorage cannot crash the page.
@@ -26,6 +51,14 @@ export function mergeSiteSettings(raw: Partial<SiteSettings> | null | undefined)
     cta: {
       ...INITIAL_SETTINGS.content.hero.cta,
       ...raw.content?.hero?.cta,
+    },
+    mockup: {
+      ...INITIAL_SETTINGS.content.hero.mockup,
+      ...raw.content?.hero?.mockup,
+      slides:
+        raw.content?.hero?.mockup?.slides?.length
+          ? raw.content.hero.mockup.slides
+          : INITIAL_SETTINGS.content.hero.mockup?.slides || [],
     },
   };
 
@@ -64,7 +97,7 @@ export function mergeSiteSettings(raw: Partial<SiteSettings> | null | undefined)
           ? raw.content.testimonials
           : INITIAL_SETTINGS.content.testimonials,
       faq: raw.content?.faq?.length ? raw.content.faq : INITIAL_SETTINGS.content.faq,
-      pricing: raw.content?.pricing ?? INITIAL_SETTINGS.content.pricing,
+      pricing: mergePricingContent(raw.content?.pricing as Record<string, unknown> | undefined),
       bonusApps:
         raw.content?.bonusApps?.length
           ? raw.content.bonusApps

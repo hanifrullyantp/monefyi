@@ -68,7 +68,7 @@ export default function AdminDashboardPage() {
       { id: 'footer', label: 'Footer & Privasi', icon: FileText },
     ]},
     { section: 'KOMPONEN KHUSUS', items: [
-      { id: 'phone-mockup', label: 'Phone Mockup', icon: Smartphone },
+      { id: 'phone-mockup', label: 'Media & Demo', icon: Smartphone },
       { id: 'floating', label: 'Floating Elements', icon: MessageCircle },
     ]},
     { section: 'ADVANCED', items: [

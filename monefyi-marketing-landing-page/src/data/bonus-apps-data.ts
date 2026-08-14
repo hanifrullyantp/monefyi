@@ -1,4 +1,5 @@
 import type { BonusApp } from '../types';
+import { DEFAULT_BONUS_APP_URLS } from './mini-app-urls';
 
 export const bonusAppsData: BonusApp[] = [
   {
@@ -8,6 +9,7 @@ export const bonusAppsData: BonusApp[] = [
     icon: 'Calculator',
     color: 'green',
     value: 199000,
+    url: DEFAULT_BONUS_APP_URLS['bagi-hasil'],
   },
   {
     id: 'salary',
@@ -16,6 +18,7 @@ export const bonusAppsData: BonusApp[] = [
     icon: 'Receipt',
     color: 'blue',
     value: 199000,
+    url: DEFAULT_BONUS_APP_URLS.salary,
   },
   {
     id: 'debt-free',
@@ -24,6 +27,7 @@ export const bonusAppsData: BonusApp[] = [
     icon: 'Target',
     color: 'purple',
     value: 199000,
+    url: DEFAULT_BONUS_APP_URLS['debt-free'],
   },
   {
     id: 'budget',
@@ -32,5 +36,6 @@ export const bonusAppsData: BonusApp[] = [
     icon: 'PieChart',
     color: 'amber',
     value: 199000,
+    url: DEFAULT_BONUS_APP_URLS.budget,
   },
 ];

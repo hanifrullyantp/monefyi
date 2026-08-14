@@ -16,5 +16,14 @@ export function GradientText({ children, variant = 'green', className, as: Tag =
     blue: 'bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent',
     red: 'bg-gradient-to-r from-red-400 to-red-600 bg-clip-text text-transparent',
   };
-  return <Tag className={cn(gradients[variant], className)}>{children}</Tag>;
+  const gradientClass = cn(gradients[variant], className);
+
+  // bg-clip-text must sit on the same element as the text — nested spans go invisible
+  if (React.isValidElement<{ className?: string }>(children)) {
+    return React.cloneElement(children, {
+      className: cn(gradientClass, children.props.className),
+    });
+  }
+
+  return <Tag className={gradientClass}>{children}</Tag>;
 }

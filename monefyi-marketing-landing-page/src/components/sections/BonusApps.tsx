@@ -4,9 +4,12 @@ import { SectionWrapper } from '../ui/SectionWrapper';
 import { SectionHeader } from '../ui/SectionHeader';
 import { AppsGrid } from '../bonus-apps/AppsGrid';
 import { Badge } from '../ui/Badge';
-import { EditableText } from '../admin/EditableText';
+import { useSiteSettings } from '../../hooks/useSiteSettings';
 
 export function BonusApps() {
+  const { settings } = useSiteSettings();
+  const header = settings.content.headers.bonus;
+
   return (
     <SectionWrapper background="alt">
       <div className="flex flex-col items-center mb-12">
@@ -14,9 +17,10 @@ export function BonusApps() {
           <Sparkles size={12} /> EXTRA BONUSES
         </Badge>
         <SectionHeader
-          title="Coba Alat Bantu"
-          highlight="Finansial Gratis"
-          subtitle="Gunakan kalkulator dan planner ini untuk mengambil keputusan cerdas sekarang juga."
+          eyebrow={header.eyebrow}
+          title={header.title}
+          highlight={header.highlight}
+          subtitle={header.subtitle}
           className="mb-0!"
         />
       </div>

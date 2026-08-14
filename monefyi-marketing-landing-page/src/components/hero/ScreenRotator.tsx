@@ -47,7 +47,7 @@ export function ScreenRotator({ currentIndex, onIndexChange }: ScreenRotatorProp
   );
 }
 
-export function useScreenRotator() {
+export function useScreenRotator(intervalSeconds = 4) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [paused, setPaused] = useState(false);
 
@@ -55,9 +55,9 @@ export function useScreenRotator() {
     if (paused) return;
     const interval = setInterval(() => {
       setCurrentIndex(prev => (prev + 1) % screens.length);
-    }, 4000);
+    }, Math.max(2000, intervalSeconds * 1000));
     return () => clearInterval(interval);
-  }, [paused]);
+  }, [paused, intervalSeconds]);
 
   return { currentIndex, setCurrentIndex, setPaused };
 }

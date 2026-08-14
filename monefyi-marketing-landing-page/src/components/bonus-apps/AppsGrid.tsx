@@ -3,15 +3,16 @@ import { bonusAppsData } from '../../data/bonus-apps-data';
 import { AppCard } from './AppCard';
 import { AppModal } from './AppModal';
 import { useSiteSettings } from '../../hooks/useSiteSettings';
+import type { BonusApp } from '../../types';
 
 export function AppsGrid() {
   const { settings } = useSiteSettings();
   const apps = settings.content.bonusApps?.length ? settings.content.bonusApps : bonusAppsData;
   const [modalOpen, setModalOpen] = useState(false);
-  const [activeApp, setActiveApp] = useState<{ id: string; name: string } | null>(null);
+  const [activeApp, setActiveApp] = useState<BonusApp | null>(null);
 
-  const handleOpenApp = (id: string, name: string) => {
-    setActiveApp({ id, name });
+  const handleOpenApp = (app: BonusApp) => {
+    setActiveApp(app);
     setModalOpen(true);
   };
 
@@ -26,8 +27,7 @@ export function AppsGrid() {
       <AppModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        appId={activeApp?.id ?? null}
-        appName={activeApp?.name ?? ''}
+        app={activeApp}
       />
     </div>
   );

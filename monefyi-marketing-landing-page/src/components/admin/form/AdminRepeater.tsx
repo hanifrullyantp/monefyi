@@ -5,12 +5,15 @@ import { AdminInput } from './AdminInput';
 import { AdminTextarea } from './AdminTextarea';
 import { AdminSelect } from './AdminSelect';
 import { AdminToggle } from './AdminToggle';
+import { AdminImageUpload } from './AdminImageUpload';
+import { AdminVideoUpload } from './AdminVideoUpload';
 
 export interface FieldConfig {
   key: string;
   label: string;
-  type: "text" | "textarea" | "select" | "toggle";
+  type: 'text' | 'textarea' | 'select' | 'toggle' | 'image' | 'video';
   options?: { value: string; label: string }[];
+  helperText?: string;
 }
 
 interface AdminRepeaterProps {
@@ -80,8 +83,40 @@ export function AdminRepeater({
                     return <AdminSelect key={field.key} label={field.label} value={item[field.key]} options={field.options || []} onChange={(v) => handleUpdateItem(index, field.key, v)} />;
                   case 'toggle':
                     return <AdminToggle key={field.key} label={field.label} checked={item[field.key]} onChange={(v) => handleUpdateItem(index, field.key, v)} />;
+                  case 'image':
+                    return (
+                      <AdminImageUpload
+                        key={field.key}
+                        label={field.label}
+                        currentUrl={item[field.key] || ''}
+                        onChange={(v) => handleUpdateItem(index, field.key, v)}
+                        helperText={field.helperText}
+                        maxSizeKb={2048}
+                        showUrlInput
+                      />
+                    );
+                  case 'video':
+                    return (
+                      <AdminVideoUpload
+                        key={field.key}
+                        label={field.label}
+                        currentUrl={item[field.key] || ''}
+                        onChange={(v) => handleUpdateItem(index, field.key, v)}
+                        helperText={field.helperText}
+                      />
+                    );
                   default:
-                    return <AdminInput key={field.key} label={field.label} value={item[field.key]} onChange={(v) => handleUpdateItem(index, field.key, v)} />;
+                    return (
+                      <AdminInput
+                        key={field.key}
+                        label={field.label}
+                        value={item[field.key] || ''}
+                        onChange={(v) => handleUpdateItem(index, field.key, v)}
+                        placeholder={field.key === 'url' ? 'https://monefyi.com/bonus/...' : undefined}
+                        helperText={field.helperText}
+                        type={field.key === 'url' ? 'url' : 'text'}
+                      />
+                    );
                 }
               })}
             </div>

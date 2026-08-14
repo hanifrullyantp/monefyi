@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Rocket, Star, PlayCircle as Play } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { GradientText } from '../ui/GradientText';
 import { PhoneMockup } from '../hero/PhoneMockup';
+import { DemoVideoModal } from '../hero/DemoVideoModal';
 import { EditableText } from '../admin/EditableText';
 import { PremiumIcon } from '../ui/PremiumIcon';
 import { useSiteSettings } from '../../hooks/useSiteSettings';
@@ -11,6 +12,9 @@ import { useSiteSettings } from '../../hooks/useSiteSettings';
 export function Hero() {
   const { settings } = useSiteSettings();
   const content = settings.content.hero;
+  const [demoOpen, setDemoOpen] = useState(false);
+  const videoUrl = settings.media?.hero_video?.url || '';
+  const posterUrl = settings.media?.hero_video_poster?.url || '';
 
   return (
     <section className="relative pt-32 pb-20 overflow-hidden">
@@ -49,10 +53,10 @@ export function Hero() {
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.4 }}
-                className="block"
+                className="block break-words"
               >
                 <GradientText variant="green">
-                  <EditableText id="content_hero_headline2" defaultValue={content.headline2} />
+                  <EditableText id="content_hero_headline2" defaultValue={content.headline2} as="span" />
                 </GradientText>
               </motion.span>
             </h1>
@@ -89,7 +93,11 @@ export function Hero() {
                 <Rocket size={20} />
                 <EditableText id="content_hero_cta_primary" defaultValue={content.cta.primary} />
               </Button>
-              <button className="flex items-center gap-2 text-slate-400 hover:text-white transition-all group py-3 px-6">
+              <button
+                type="button"
+                onClick={() => setDemoOpen(true)}
+                className="flex items-center gap-2 text-slate-400 hover:text-white transition-all group py-3 px-6"
+              >
                 <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10">
                   <Play size={16} fill="currentColor" />
                 </div>
@@ -118,6 +126,14 @@ export function Hero() {
           </div>
         </div>
       </div>
+
+      <DemoVideoModal
+        open={demoOpen}
+        onClose={() => setDemoOpen(false)}
+        videoUrl={videoUrl}
+        posterUrl={posterUrl}
+        title={content.cta?.secondary || 'Demo Monefyi'}
+      />
     </section>
   );
 }

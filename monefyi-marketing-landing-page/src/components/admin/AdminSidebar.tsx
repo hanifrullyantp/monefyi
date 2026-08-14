@@ -64,7 +64,7 @@ export function AdminSidebar({ activePage, onPageChange, isOpen, onClose, onLogo
     { 
       label: 'KOMPONEN KHUSUS', 
       items: [
-        { id: 'phone-mockup', label: 'Phone Mockup', icon: Smartphone },
+        { id: 'phone-mockup', label: 'Media & Demo', icon: Smartphone },
         { id: 'floating', label: 'Floating Elements', icon: MessageCircle },
       ] 
     },

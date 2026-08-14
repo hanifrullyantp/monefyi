@@ -28,6 +28,22 @@ export function BeforeAfter() {
         subtitle={header.subtitle}
       />
 
+      {settings.media?.transformation_image?.url ? (
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="max-w-3xl mx-auto mb-16 rounded-3xl overflow-hidden border border-slate-800 bg-slate-900/50"
+        >
+          <img
+            src={settings.media.transformation_image.url}
+            alt="Perjalanan transformasi finansial dengan Monefyi"
+            className="w-full h-auto object-contain"
+            loading="lazy"
+          />
+        </motion.div>
+      ) : null}
+
       <div ref={containerRef} className="max-w-2xl mx-auto relative pt-10 pb-20 px-4 md:px-0 text-left">
         <div className="absolute left-6 md:left-1/2 top-0 bottom-0 w-[2px] bg-slate-800 -translate-x-1/2 z-0" />
         <motion.div className="absolute left-6 md:left-1/2 top-0 w-[2px] bg-green-500 -translate-x-1/2 z-10 origin-top shadow-[0_0_15px_rgba(16,185,129,0.5)]" style={{ scaleY }} />

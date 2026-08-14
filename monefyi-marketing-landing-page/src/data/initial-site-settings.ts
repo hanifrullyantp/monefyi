@@ -145,6 +145,7 @@ export const INITIAL_SETTINGS: SiteSettings = {
   ],
   media: {
     hero_video: { type: 'video', url: '' },
+    hero_video_poster: { type: 'image', url: '' },
     transformation_image: { type: 'image', url: '' },
   },
   leads: [],

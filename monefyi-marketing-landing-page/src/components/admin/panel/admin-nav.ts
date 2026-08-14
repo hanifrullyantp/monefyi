@@ -74,7 +74,7 @@ export const ADMIN_PANEL_NAV: AdminNavGroup[] = [
   {
     section: 'KOMPONEN',
     items: [
-      { id: 'phone-mockup', label: 'Phone Mockup', icon: Smartphone },
+      { id: 'phone-mockup', label: 'Media & Demo', icon: Smartphone },
       { id: 'floating', label: 'Floating Elements', icon: MessageCircle },
     ],
   },

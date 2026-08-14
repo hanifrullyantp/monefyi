@@ -47,7 +47,13 @@ export function FeaturesShowcase() {
 
             {/* Feature Demo Illustration */}
             <div className="mt-8 relative h-40 bg-slate-950/50 rounded-2xl border border-slate-800 p-4 overflow-hidden">
-               {f.id === 'safe-to-spend' && (
+               {f.imageUrl ? (
+                 <img
+                   src={f.imageUrl}
+                   alt={f.title}
+                   className="w-full h-full object-contain object-center rounded-lg"
+                 />
+               ) : f.id === 'safe-to-spend' ? (
                  <div className="flex flex-col items-center justify-center h-full">
                     <motion.div animate={{ y: [0, -5, 0], opacity: [0.8, 1, 0.8] }} transition={{ duration: 3, repeat: Infinity }} className="flex flex-col items-center">
                       <span className="text-[10px] text-slate-500 uppercase font-bold mb-1">HARI INI</span>
@@ -57,8 +63,7 @@ export function FeaturesShowcase() {
                       <motion.div initial={{ width: 0 }} whileInView={{ width: '66%' }} transition={{ duration: 1.5, delay: 0.5 }} className="h-full bg-green-500 rounded-full" />
                     </div>
                  </div>
-               )}
-               {f.id === 'monevisor' && (
+               ) : f.id === 'monevisor' ? (
                  <div className="space-y-3">
                     <div className="flex gap-2">
                       <div className="w-6 h-6 rounded-lg bg-green-500/20 flex items-center justify-center"><span className="text-[10px] font-bold text-green-400">AI</span></div>
@@ -71,9 +76,8 @@ export function FeaturesShowcase() {
                       </motion.div>
                     </div>
                  </div>
-               )}
-               {/* Fallback animations for others */}
-               {f.id !== 'safe-to-spend' && f.id !== 'monevisor' && (
+               ) : (
+                 /* Fallback animations for others */
                  <div className="flex items-center justify-center h-full">
                     <motion.div animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }} transition={{ duration: 5, repeat: Infinity }} className="text-slate-800">
                        <PremiumIcon name={f.icon as any} size="xl" color="slate" />

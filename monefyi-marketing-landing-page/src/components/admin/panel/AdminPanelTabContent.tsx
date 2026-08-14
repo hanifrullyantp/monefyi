@@ -15,6 +15,8 @@ import { AdminToggle } from '../form/AdminToggle';
 import { AdminRepeater } from '../form/AdminRepeater';
 import { AdminColorPicker } from '../form/AdminColorPicker';
 import { AdminImageUpload } from '../form/AdminImageUpload';
+import { AdminVideoUpload } from '../form/AdminVideoUpload';
+import { AdminHeroMockupEditor } from '../form/AdminHeroMockupEditor';
 import { LeadsTab } from './LeadsTab';
 import { setSettingsPath } from './settings-path';
 import type { AdminPanelTab } from './admin-nav';
@@ -172,6 +174,12 @@ export function AdminPanelTabContent({
               maxItems={8}
             />
           </SectionCard>
+          <SectionCard title="Mockup Animasi Hero">
+            <AdminHeroMockupEditor
+              value={draft.content.hero.mockup || { mode: 'screens', intervalSeconds: 4, slides: [] }}
+              onChange={(v) => patch('content.hero.mockup', v)}
+            />
+          </SectionCard>
         </div>
       );
 
@@ -242,6 +250,12 @@ export function AdminPanelTabContent({
                     { value: 'slate', label: 'Slate' },
                     { value: 'gold', label: 'Gold' },
                   ],
+                },
+                {
+                  key: 'imageUrl',
+                  label: 'Gambar Demo (big cards)',
+                  type: 'image',
+                  helperText: 'Opsional. Mengganti animasi bawaan jika diisi.',
                 },
               ]}
               maxItems={20}
@@ -427,6 +441,18 @@ export function AdminPanelTabContent({
                   ],
                 },
                 { key: 'value', label: 'Nilai (Rp)', type: 'text' },
+                {
+                  key: 'url',
+                  label: 'Link Mini App',
+                  type: 'text',
+                  helperText: 'URL versi Lite (mis. https://monefyi.com/bonus/gaji/). Kosongkan = pakai default per ID.',
+                },
+                {
+                  key: 'imageUrl',
+                  label: 'Preview Gambar',
+                  type: 'image',
+                  helperText: 'Screenshot mini app — tampil di kartu bonus.',
+                },
               ]}
               addLabel="Tambah Bonus App"
               maxItems={8}
@@ -470,10 +496,33 @@ export function AdminPanelTabContent({
     case 'phone-mockup':
       return (
         <div className="space-y-8 max-w-2xl">
-          <SectionCard title="Phone Mockup Media">
-            <AdminImageUpload label="Hero Video URL" currentUrl={draft.media?.hero_video?.url || ''} onChange={(v) => patch('media.hero_video', { type: 'video', url: v })} />
-            <AdminImageUpload label="Transformation Image" currentUrl={draft.media?.transformation_image?.url || ''} onChange={(v) => patch('media.transformation_image', { type: 'image', url: v })} />
-            <p className="text-xs text-slate-500 mt-4">Data angka di phone mockup bisa diedit inline saat admin mode aktif (klik Edit di mockup).</p>
+          <SectionCard title="Video Demo Hero">
+            <AdminVideoUpload
+              label="Video Demo"
+              currentUrl={draft.media?.hero_video?.url || ''}
+              onChange={(v) => patch('media.hero_video', { type: 'video', url: v })}
+              helperText="Diputar saat pengunjung klik CTA secondary (Lihat Demo). YouTube, Vimeo, atau MP4."
+            />
+            <AdminImageUpload
+              label="Poster Video (thumbnail)"
+              currentUrl={draft.media?.hero_video_poster?.url || ''}
+              onChange={(v) => patch('media.hero_video_poster', { type: 'image', url: v })}
+              showUrlInput
+              maxSizeKb={1024}
+            />
+          </SectionCard>
+          <SectionCard title="Media Lainnya">
+            <AdminImageUpload
+              label="Gambar Transformation (opsional)"
+              currentUrl={draft.media?.transformation_image?.url || ''}
+              onChange={(v) => patch('media.transformation_image', { type: 'image', url: v })}
+              showUrlInput
+              maxSizeKb={2048}
+              helperText="Infografis before/after — ditampilkan di section Transformation jika diisi."
+            />
+            <p className="text-xs text-slate-500 mt-4">
+              Mockup animasi hero (slideshow screenshot) atur di tab Hero Section → Mockup Animasi.
+            </p>
           </SectionCard>
         </div>
       );

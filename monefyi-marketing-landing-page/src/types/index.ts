@@ -20,6 +20,8 @@ export interface Feature {
   description: string;
   color: ColorVariant;
   size: 'big' | 'small';
+  /** Gambar ilustrasi fitur (upload admin) */
+  imageUrl?: string;
 }
 
 export interface PricingPlan {
@@ -82,6 +84,23 @@ export interface BonusApp {
   icon: string;
   color: ColorVariant;
   value: number;
+  /** Preview card image (upload admin) */
+  imageUrl?: string;
+  /** URL mini app Lite (buka tab baru, login Monefyi) */
+  url?: string;
+}
+
+export interface HeroMockupSlide {
+  id: string;
+  url: string;
+  label?: string;
+}
+
+export interface HeroMockupSettings {
+  /** 'screens' = animasi React bawaan; 'images' = slideshow gambar upload */
+  mode: 'screens' | 'images';
+  intervalSeconds: number;
+  slides: HeroMockupSlide[];
 }
 
 export interface HeroScreen {

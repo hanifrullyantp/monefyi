@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, ExternalLink } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -8,15 +8,20 @@ import { SalaryApp } from './apps/SalaryApp';
 import { DebtFreeApp } from './apps/DebtFreeApp';
 import { BudgetApp } from './apps/BudgetApp';
 import { PremiumIcon } from '../ui/PremiumIcon';
+import { resolveBonusAppUrl } from '../../data/mini-app-urls';
+import type { BonusApp } from '../../types';
 
 interface AppModalProps {
   open: boolean;
   onClose: () => void;
-  appId: string | null;
-  appName: string;
+  app: BonusApp | null;
 }
 
-export function AppModal({ open, onClose, appId, appName }: AppModalProps) {
+export function AppModal({ open, onClose, app }: AppModalProps) {
+  const appId = app?.id ?? null;
+  const appName = app?.name ?? '';
+  const appUrl = app ? resolveBonusAppUrl(app) : '';
+
   const renderApp = () => {
     switch (appId) {
       case 'bagi-hasil': return <BagiHasilApp />;
@@ -59,15 +64,28 @@ export function AppModal({ open, onClose, appId, appName }: AppModalProps) {
           <Sparkles size={16} className="text-amber-400" />
           <p className="text-xs">Dapatkan versi <b>FULL & Terintegrasi</b> di aplikasi Monefyi</p>
         </div>
-        <Button
-          size="sm"
-          onClick={() => {
-            onClose();
-            window.location.hash = 'pricing';
-          }}
-        >
-          Lihat Harga & Promo
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {appUrl && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              onClick={() => window.open(appUrl, '_blank', 'noopener,noreferrer')}
+            >
+              Buka Mini App
+              <ExternalLink size={14} />
+            </Button>
+          )}
+          <Button
+            size="sm"
+            onClick={() => {
+              onClose();
+              window.location.hash = 'pricing';
+            }}
+          >
+            Lihat Harga & Promo
+          </Button>
+        </div>
       </div>
     </Modal>
   );

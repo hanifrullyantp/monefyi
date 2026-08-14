@@ -17,6 +17,11 @@ export const heroConfig = {
     { icon: 'ShieldCheck', text: 'Data 100% aman' },
     { icon: 'CloudOff', text: 'Bisa offline' },
   ],
+  mockup: {
+    mode: 'screens' as const,
+    intervalSeconds: 4,
+    slides: [] as { id: string; url: string; label?: string }[],
+  },
   screens: [
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'safetospend', label: 'Safe to Spend' },
