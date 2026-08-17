@@ -6,6 +6,8 @@ import { formatRupiah } from '../../../utils/projectUi';
 import { getProjectCashSummary } from '../../../services/projectTransferService';
 import { loadRapItems, rapActualsFromCosts, rapSummary } from '../../../services/rapService';
 import { aggregateCostByRapItem } from '../../../services/costService';
+import { loadReceivablesByProject } from '../../../services/financeV2/receivableService';
+import { loadPayablesByProject } from '../../../services/financeV2/payableService';
 
 interface GanttMiniProjectDashboardProps {
   project: Project;
@@ -86,16 +88,20 @@ export default function GanttMiniProjectDashboard({
     (async () => {
       setLoading(true);
       try {
-        const [cash, rapItems, rapActuals] = await Promise.all([
+        const [cash, rapItems, rapActuals, recs, pays] = await Promise.all([
           getProjectCashSummary(project.id, orgId, project.name, project.spent_amount),
           loadRapItems(project.id),
           aggregateCostByRapItem(project.id),
+          loadReceivablesByProject(orgId, project.id),
+          loadPayablesByProject(orgId, project.id),
         ]);
         if (cancelled) return;
 
+        const recOutstanding = recs.reduce((s, r) => s + (r.amount - r.paid_amount), 0);
+        const payOutstanding = pays.reduce((s, row) => s + (row.amount - row.paid_amount), 0);
         setSaldo(cash.surplus);
-        setPiutang(cash.owedFrom.reduce((s, d) => s + d.amount, 0));
-        setHutang(cash.owedTo.reduce((s, d) => s + d.amount, 0));
+        setPiutang(recOutstanding + cash.owedFrom.reduce((s, d) => s + d.amount, 0));
+        setHutang(payOutstanding + cash.owedTo.reduce((s, d) => s + d.amount, 0));
 
         const actualByType = rapActualsFromCosts(rapItems, rapActuals);
         const summary = rapSummary(rapItems, actualByType);

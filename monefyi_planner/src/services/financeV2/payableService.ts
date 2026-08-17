@@ -44,6 +44,18 @@ export async function loadPayables(orgId: string): Promise<Payable[]> {
   return (data || []).map(mapPayable);
 }
 
+export async function loadPayablesByProject(orgId: string, projectId: string): Promise<Payable[]> {
+  const { data, error } = await supabase
+    .from('planner_payables')
+    .select('*')
+    .eq('org_id', orgId)
+    .eq('creditor_project_id', projectId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data || []).map(mapPayable);
+}
+
 export async function createPayable(input: {
   orgId: string;
   creditorType: string;

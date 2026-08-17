@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
-  Calendar, Wallet, Package, HardHat, FileCheck, ListChecks,
+  Calendar, Wallet, Package, HardHat, FileCheck, ListChecks, Receipt,
   Filter, ArrowUpDown, Plus, Pencil,
 } from 'lucide-react';
 import type { NormalizedProjectView } from '../../../lib/migration/project-normalize';
@@ -144,7 +144,7 @@ export default function TabV2Overview({
         </p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         <BudgetCard label="Bahan" icon={Package} iconBg="bg-rose-50" iconColor="text-rose-600"
           plan={p.budget.bahan.plan} actual={p.budget.bahan.actual} pct={bahanPct}
           sisa={p.budget.bahan.plan - p.budget.bahan.actual} barColor="bg-rose-500" onClick={() => setPopup('bahan')} />
@@ -160,8 +160,29 @@ export default function TabV2Overview({
             <span className="text-xs font-semibold text-slate-500 uppercase">Piutang</span>
           </div>
           <div className="text-xl font-black text-slate-900 mb-2">{formatRupiah(p.budget.piutang)}</div>
-          <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full bg-rose-50 text-rose-600">
-            Belum Ditagih
+          <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${
+            normalized.piutangItems.length > 0 ? 'bg-amber-50 text-amber-700' : 'bg-slate-50 text-slate-500'
+          }`}>
+            {normalized.piutangItems.length > 0
+              ? `${normalized.piutangItems.length} pihak`
+              : 'Tidak ada'}
+          </span>
+        </button>
+        <button type="button" onClick={() => setPopup('hutang')}
+          className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm text-left hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center">
+              <Receipt className="w-4 h-4 text-rose-600" />
+            </div>
+            <span className="text-xs font-semibold text-slate-500 uppercase">Hutang</span>
+          </div>
+          <div className="text-xl font-black text-slate-900 mb-2">{formatRupiah(p.budget.hutang)}</div>
+          <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${
+            normalized.hutangItems.length > 0 ? 'bg-rose-50 text-rose-600' : 'bg-slate-50 text-slate-500'
+          }`}>
+            {normalized.hutangItems.length > 0
+              ? `${normalized.hutangItems.length} pihak`
+              : 'Tidak ada'}
           </span>
         </button>
         <button type="button" onClick={() => setPopup('saldo')}
@@ -255,9 +276,14 @@ export default function TabV2Overview({
                       { label: 'Tambah Piutang', variant: 'primary' as const, onClick: () => { setPopup(null); setModal('receivable'); } },
                       { label: 'Catat Pembayaran', onClick: () => { setPopup(null); setModal('receivable'); } },
                     ]
-                  : popup === 'saldo' && canManage
-                    ? [{ label: 'Tambah Dana Masuk', variant: 'primary' as const, onClick: () => { setPopup(null); setModal('income'); } }]
-                    : undefined
+                  : popup === 'hutang' && canManage
+                    ? [
+                        { label: 'Tambah Hutang', variant: 'primary' as const, onClick: () => { setPopup(null); setModal('hutang'); } },
+                        { label: 'Bayar Hutang', onClick: () => { setPopup(null); setModal('hutang'); } },
+                      ]
+                    : popup === 'saldo' && canManage
+                      ? [{ label: 'Tambah Dana Masuk', variant: 'primary' as const, onClick: () => { setPopup(null); setModal('income'); } }]
+                      : undefined
           } />
       )}
 

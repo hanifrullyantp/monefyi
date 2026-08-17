@@ -27,14 +27,15 @@ import { computeTabBadges } from '../../lib/projectCommandUtils';
 import ProjectEditModal from './ProjectEditModal';
 import ProjectJsonPanel from './ProjectJsonPanel';
 import ProjectIncomePanel from './ProjectIncomePanel';
-import ProjectTransferPanel from './ProjectTransferPanel';
 import ProjectReceivablePanel from './ProjectReceivablePanel';
+import ProjectPayablePanel from './ProjectPayablePanel';
 import RapItemList from './RapItemList';
 import RapChecklistView from './RapChecklistView';
 import RapEditableTable from './RapEditableTable';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { getProjectCashSummary } from '../../services/projectTransferService';
 import { loadReceivablesByProject } from '../../services/financeV2/receivableService';
+import { loadPayablesByProject } from '../../services/financeV2/payableService';
 import { exportRapWorkbook } from '../../services/rapExcelService';
 import { todayStr } from '../../lib/adapters';
 import {
@@ -47,7 +48,7 @@ interface ProjectDetailProps {
 }
 
 export default function ProjectDetail({ project: initialProject, onClose }: ProjectDetailProps) {
-  const { setCommandModalOpen, setSelectedProjectId, updateProject, removeProject, refreshData, tenant, user, projects, migrationFlags } = useAppStore();
+  const { setCommandModalOpen, setSelectedProjectId, updateProject, removeProject, refreshData, tenant, user, migrationFlags } = useAppStore();
   const showToast = useUiStore(s => s.showToast);
   const [project, setProject] = useState(initialProject);
   const [activeTab, setActiveTab] = useState<CommandTabId>('overview');
@@ -127,15 +128,17 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
       const a = await analyzeProject(current.id);
       setAnalysis(a);
       if (tenant?.id) {
-        const [cash, recs] = await Promise.all([
+        const [cash, recs, pays] = await Promise.all([
           getProjectCashSummary(current.id, tenant.id, current.name, costsSumLocal),
           loadReceivablesByProject(tenant.id, current.id),
+          loadPayablesByProject(tenant.id, current.id),
         ]);
         setCashSummary({
           received: cash.received,
           surplus: cash.surplus,
           spent: cash.spent,
-          debtOwed: cash.owedTo.reduce((s, d) => s + d.amount, 0),
+          debtOwed: cash.owedTo.reduce((s, d) => s + d.amount, 0)
+            + pays.reduce((s, row) => s + (row.amount - row.paid_amount), 0),
           debtReceivable: cash.owedFrom.reduce((s, d) => s + d.amount, 0),
         });
         setPiutangSummary({
@@ -753,7 +756,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
                     ) : activeSubTab === 'uangmasuk' ? (
                       <ProjectIncomePanel projectId={project.id} orgId={tenant?.id || ''} userId={user?.id || ''} budget={project.total_budget_planned} canManage={canManage} onUpdated={reload} />
                     ) : activeSubTab === 'hutang' ? (
-                      <ProjectTransferPanel projectId={project.id} orgId={tenant?.id || ''} userId={user?.id || ''} projects={projects} spentAmount={project.spent_amount} canManage={canManage} onUpdated={reload} />
+                      <ProjectPayablePanel projectId={project.id} projectName={project.name} orgId={tenant?.id || ''} userId={user?.id || ''} canManage={canManage} onUpdated={reload} />
                     ) : activeSubTab === 'piutang' ? (
                       <ProjectReceivablePanel projectId={project.id} projectName={project.name} orgId={tenant?.id || ''} userId={user?.id || ''} canManage={canManage} onUpdated={reload} />
                     ) : activeSubTab === 'progres' ? (

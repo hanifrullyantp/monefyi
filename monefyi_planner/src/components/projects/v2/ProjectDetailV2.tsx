@@ -13,6 +13,8 @@ import { loadRapItems } from '../../../services/rapService';
 import { loadWorkItems } from '../../../services/workItemService';
 import { loadCostRealizations, aggregateCostByRapItem } from '../../../services/costService';
 import { loadProjectIncomes } from '../../../services/incomeService';
+import { loadReceivablesByProject } from '../../../services/financeV2/receivableService';
+import { loadPayablesByProject } from '../../../services/financeV2/payableService';
 import { mapPlannerProject } from '../../../lib/migration/planner-mapper';
 import { normalizeProjectView } from '../../../lib/migration/project-normalize';
 import { validateProjectBalance } from '../../../lib/migration/balance-sheet';
@@ -65,11 +67,14 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
       const proj = fresh || projectRef.current;
       if (fresh) setProject(fresh);
 
-      const [rap, costs, incomes, wi] = await Promise.all([
+      const orgId = tenant?.id;
+      const [rap, costs, incomes, wi, recs, pays] = await Promise.all([
         loadRapItems(proj.id),
         loadCostRealizations(proj.id),
         loadProjectIncomes(proj.id),
         loadWorkItems(proj.id),
+        orgId ? loadReceivablesByProject(orgId, proj.id).catch(() => []) : Promise.resolve([]),
+        orgId ? loadPayablesByProject(orgId, proj.id).catch(() => []) : Promise.resolve([]),
       ]);
       setRapItems(rap);
       setWorkItems(wi);
@@ -132,13 +137,29 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
           weight: w.weight,
           status: w.status,
         })),
+        payables: pays.map(p => ({
+          id: p.id,
+          creditor_name: p.creditor_name,
+          amount: p.amount,
+          paid_amount: p.paid_amount,
+          due_date: p.due_date,
+          status: p.status,
+        })),
+        receivables: recs.map(r => ({
+          id: r.id,
+          debtor_name: r.debtor_name,
+          amount: r.amount,
+          paid_amount: r.paid_amount,
+          due_date: r.due_date,
+          status: r.status,
+        })),
       });
       setMapped(view);
     } finally {
       loadedOnceRef.current = true;
       setLoading(false);
     }
-  }, [project.id, tenant?.currency]);
+  }, [project.id, tenant?.currency, tenant?.id]);
 
   useEffect(() => { void reload(); }, [reload]);
 

@@ -3,6 +3,7 @@ import { X, Plus, ArrowLeftRight } from 'lucide-react';
 import ProjectIncomePanel from '../ProjectIncomePanel';
 import ProjectTransferPanel from '../ProjectTransferPanel';
 import ProjectReceivablePanel from '../ProjectReceivablePanel';
+import ProjectPayablePanel from '../ProjectPayablePanel';
 import { createCostRealization } from '../../../services/costService';
 import { todayStr } from '../../../lib/adapters';
 import { parseMoneyInput } from '../../../utils/projectUi';
@@ -85,18 +86,17 @@ export default function ProjectTransactionModals({
               orgId={orgId}
               userId={userId}
               canManage={canManage}
-              onUpdated={async () => { await onUpdated(); onClose(); }}
+              onUpdated={onUpdated}
             />
           )}
           {kind === 'hutang' && (
-            <ProjectTransferPanel
+            <ProjectPayablePanel
               projectId={project.id}
+              projectName={project.name}
               orgId={orgId}
               userId={userId}
-              projects={projects}
-              spentAmount={project.spent_amount}
               canManage={canManage}
-              onUpdated={async () => { await onUpdated(); onClose(); }}
+              onUpdated={onUpdated}
             />
           )}
         </div>
@@ -179,7 +179,7 @@ function QuickCostForm({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
       <label className="text-xs font-bold text-slate-500 uppercase">{label}</label>
@@ -187,5 +187,3 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </div>
   );
 }
-
-export type { ModalKind };

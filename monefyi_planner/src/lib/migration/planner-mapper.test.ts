@@ -110,4 +110,76 @@ describe('planner-mapper', () => {
     expect(mapped.contractValue).toBe(53_000_000);
     expect(mapped.budget.piutang).toBe(33_000_000);
   });
+
+  it('uses planner_payables and planner_receivables when provided', () => {
+    const mapped = mapPlannerProject({
+      project: {
+        id: 'p4',
+        org_id: 'org-1',
+        name: 'Kitchen set Cece',
+        client_name: 'INTERO',
+        planned_start: '2026-01-01',
+        planned_end: '2026-06-01',
+        total_budget: 53_000_000,
+        total_spent: 27_200_000,
+        total_received: 20_000_000,
+        settings: { contract_value: 53_000_000 },
+      },
+      rapItems: [],
+      costs: [],
+      incomes: [],
+      workItems: [],
+      payables: [
+        {
+          id: 'pay-1',
+          creditor_name: 'PT Baja',
+          amount: 5_000_000,
+          paid_amount: 1_000_000,
+          due_date: '2026-04-01',
+          status: 'partial',
+        },
+      ],
+      receivables: [
+        {
+          id: 'rec-1',
+          debtor_name: 'Klien A',
+          amount: 8_000_000,
+          paid_amount: 0,
+          due_date: '2026-05-01',
+          status: 'open',
+        },
+      ],
+    });
+
+    expect(mapped.budget.hutang).toBe(4_000_000);
+    expect(mapped.budget.piutang).toBe(8_000_000);
+    expect(mapped.hutangPiutang.find(h => h.type === 'hutang')?.partyName).toBe('PT Baja');
+    expect(mapped.hutangPiutang.find(h => h.type === 'piutang')?.partyName).toBe('Klien A');
+  });
+
+  it('empty ledger rows override derived hutang and piutang', () => {
+    const mapped = mapPlannerProject({
+      project: {
+        id: 'p5',
+        org_id: 'org-1',
+        name: 'Proyek',
+        client_name: 'Klien',
+        planned_start: '2026-01-01',
+        planned_end: '2026-06-01',
+        total_budget: 50_000_000,
+        total_spent: 30_000_000,
+        total_received: 10_000_000,
+      },
+      rapItems: [],
+      costs: [],
+      incomes: [],
+      workItems: [],
+      payables: [],
+      receivables: [],
+    });
+
+    expect(mapped.budget.hutang).toBe(0);
+    expect(mapped.budget.piutang).toBe(0);
+    expect(mapped.hutangPiutang).toEqual([]);
+  });
 });

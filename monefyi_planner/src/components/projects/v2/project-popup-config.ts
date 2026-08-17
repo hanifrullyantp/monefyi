@@ -65,7 +65,7 @@ export function buildProjectPopupConfig(
         { title: 'Dana Masuk', meta: 'Total pembayaran klien', value: formatRupiah(normalized.totalPemasukan) },
         { title: 'Realisasi', meta: 'Total biaya tercatat', value: formatRupiah(normalized.totalRealisasi), valueColor: '#e11d48' },
         { title: 'Saldo (= Masuk − Realisasi)', meta: p.saldo < 0 ? 'Defisit kas' : 'Kas tersedia', value: formatRupiah(p.saldo), valueColor: p.saldo < 0 ? '#e11d48' : '#059669' },
-        ...(p.budget.hutang > 0 ? [{ title: 'Hutang Vendor', meta: 'Realisasi melebihi dana masuk', value: formatRupiah(p.budget.hutang), valueColor: '#e11d48' }] : []),
+        ...(p.budget.hutang > 0 ? [{ title: 'Hutang Vendor', meta: 'Hutang tercatat ke vendor / pihak lain', value: formatRupiah(p.budget.hutang), valueColor: '#e11d48' }] : []),
       ],
     };
   }

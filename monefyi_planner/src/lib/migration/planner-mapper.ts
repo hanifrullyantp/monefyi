@@ -115,6 +115,26 @@ export type PlannerWorkRow = {
   status?: string | null;
 };
 
+/** Row from planner_payables linked via creditor_project_id. */
+export type PlannerPayableRow = {
+  id: string;
+  creditor_name: string;
+  amount: string | number;
+  paid_amount?: string | number | null;
+  due_date?: string | null;
+  status?: string | null;
+};
+
+/** Row from planner_receivables linked via debtor_project_id. */
+export type PlannerReceivableRow = {
+  id: string;
+  debtor_name: string;
+  amount: string | number;
+  paid_amount?: string | number | null;
+  due_date?: string | null;
+  status?: string | null;
+};
+
 type RapActualAgg = { qty: number; amount: number };
 
 function num(value: unknown, fallback = 0): number {
@@ -200,6 +220,10 @@ export function mapPlannerProject(input: {
   costs: PlannerCostRow[];
   incomes: PlannerIncomeRow[];
   workItems: PlannerWorkRow[];
+  /** When set (even empty), hutang comes from planner_payables instead of kas deficit. */
+  payables?: PlannerPayableRow[];
+  /** When set (even empty), piutang comes from planner_receivables instead of sisa kontrak. */
+  receivables?: PlannerReceivableRow[];
 }): MappedProjectView {
   const p = input.project;
   const settings = (p.settings || {}) as Record<string, string | number>;
@@ -263,18 +287,35 @@ export function mapPlannerProject(input: {
   const start = dateOnly(p.planned_start);
   const end = dateOnly(p.planned_end);
   const estLaba = Math.max(0, contractValue - spent);
-  const piutang = Math.max(0, contractValue - received);
-  const hutang = Math.max(0, spent - received);
+  const useLedgerHutang = Array.isArray(input.payables);
+  const useLedgerPiutang = Array.isArray(input.receivables);
+  const piutang = useLedgerPiutang
+    ? sumOutstanding(input.receivables)
+    : Math.max(0, contractValue - received);
+  const hutang = useLedgerHutang
+    ? sumOutstanding(input.payables)
+    : Math.max(0, spent - received);
   const saldo = received - spent;
 
-  const hutangPiutang: MappedProjectView['hutangPiutang'] = buildHutangPiutangList({
-    costs: input.costs,
-    hutang,
-    spent,
-    piutang,
-    clientName: p.client_name || 'Klien',
-    end,
-  });
+  const derivedList = (!useLedgerHutang || !useLedgerPiutang)
+    ? buildHutangPiutangList({
+        costs: input.costs,
+        hutang: useLedgerHutang ? 0 : hutang,
+        spent,
+        piutang: useLedgerPiutang ? 0 : piutang,
+        clientName: p.client_name || 'Klien',
+        end,
+      })
+    : [];
+
+  const hutangPiutang: MappedProjectView['hutangPiutang'] = [
+    ...(useLedgerHutang
+      ? mapLedgerPayables(input.payables || [], end)
+      : derivedList.filter(h => h.type === 'hutang')),
+    ...(useLedgerPiutang
+      ? mapLedgerReceivables(input.receivables || [], end)
+      : derivedList.filter(h => h.type === 'piutang')),
+  ].map((item, idx) => ({ ...item, id: idx + 1 }));
 
   return {
     id: p.id,
@@ -306,6 +347,60 @@ export function mapPlannerProject(input: {
     timeline,
     hutangPiutang,
   };
+}
+
+function sumOutstanding(
+  rows: Array<{ amount: string | number; paid_amount?: string | number | null }> | undefined,
+): number {
+  if (!rows?.length) return 0;
+  return rows.reduce((s, row) => s + Math.max(0, num(row.amount) - num(row.paid_amount)), 0);
+}
+
+function ledgerStatus(status: string | null | undefined): string {
+  if (status === 'overdue') return 'overdue';
+  if (status === 'paid') return 'paid';
+  if (status === 'partial') return 'partial';
+  return 'upcoming';
+}
+
+function mapLedgerPayables(
+  rows: PlannerPayableRow[],
+  fallbackDue: string,
+): MappedProjectView['hutangPiutang'] {
+  return rows
+    .map((row, idx) => {
+      const amount = Math.max(0, num(row.amount) - num(row.paid_amount));
+      return {
+        id: idx + 1,
+        type: 'hutang' as const,
+        name: `Hutang ke ${row.creditor_name}`,
+        partyName: row.creditor_name,
+        amount,
+        due: row.due_date ? dateOnly(row.due_date) : fallbackDue,
+        status: ledgerStatus(row.status),
+      };
+    })
+    .filter(item => item.amount > 0);
+}
+
+function mapLedgerReceivables(
+  rows: PlannerReceivableRow[],
+  fallbackDue: string,
+): MappedProjectView['hutangPiutang'] {
+  return rows
+    .map((row, idx) => {
+      const amount = Math.max(0, num(row.amount) - num(row.paid_amount));
+      return {
+        id: idx + 1,
+        type: 'piutang' as const,
+        name: `Piutang dari ${row.debtor_name}`,
+        partyName: row.debtor_name,
+        amount,
+        due: row.due_date ? dateOnly(row.due_date) : fallbackDue,
+        status: ledgerStatus(row.status),
+      };
+    })
+    .filter(item => item.amount > 0);
 }
 
 const GENERIC_VENDOR = /^(import|vendor|realisasi|biaya|umum)$/i;
