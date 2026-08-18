@@ -95,7 +95,7 @@ export default function TabV2Overview({
     [project, workItems],
   );
 
-  const workItems = useMemo(() => {
+  const filteredWorkItemRows = useMemo(() => {
     let rows = [...normalized.workItems];
     if (statusFilter !== 'all') {
       rows = rows.filter(r => r.item.status === statusFilter);
@@ -277,9 +277,9 @@ export default function TabV2Overview({
           </div>
         </div>
         <div>
-          {workItems.length === 0 ? (
+          {filteredWorkItemRows.length === 0 ? (
             <p className="text-sm text-slate-500 text-center py-8">Belum ada item RAP.</p>
-          ) : workItems.map(row => (
+          ) : filteredWorkItemRows.map(row => (
             <WorkItemRow
               key={`${row.kind}-${row.idx}`}
               item={row.item}
