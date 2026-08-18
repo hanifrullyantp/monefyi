@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft, MoreVertical, LayoutGrid, Wallet, BarChart3, FileSpreadsheet, Brain, FileText, Pencil,
   Undo2, Redo2, Save,
@@ -18,6 +18,7 @@ import { loadPayablesByProject } from '../../../services/financeV2/payableServic
 import { mapPlannerProject } from '../../../lib/migration/planner-mapper';
 import { normalizeProjectView } from '../../../lib/migration/project-normalize';
 import { validateProjectBalance } from '../../../lib/migration/balance-sheet';
+import { computeProgressSummary } from '../../../lib/progressMetrics';
 import BalanceDiagnosisModal from '../../finance-v2/BalanceDiagnosisModal';
 import TabV2Overview from './TabV2Overview';
 import TabV2Keuangan from './TabV2Keuangan';
@@ -176,6 +177,11 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
   const normalized = mapped ? normalizeProjectView(mapped) : null;
   const balanceCheck = mapped ? validateProjectBalance(mapped) : null;
   const keuanganBadge = rapItems.length > 0 ? rapItems.length : undefined;
+  const progressSummary = useMemo(
+    () => computeProgressSummary(project, workItems),
+    [project, workItems],
+  );
+  const progressBadge = progressSummary.overdue > 0 ? progressSummary.overdue : undefined;
 
   const handleSaveProject = async (patch: Partial<Project>) => {
     const updated = await updateProjectApi(project.id, patch, tenant?.currency);
@@ -249,6 +255,16 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
               {balanceCheck.isBalanced ? 'Balance' : 'Tidak Balance'}
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => trySetTab('progress')}
+            className={`hidden sm:inline-flex text-xs font-bold px-3 py-1.5 rounded-full ${
+              progressSummary.deviation >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+            }`}
+            title="Buka tab Progress"
+          >
+            Progress {progressSummary.actual}% / {progressSummary.plan}%
+          </button>
           {tab === 'rap' && rapDraft && rapDraft.hasChanges && (
             <>
               <span className="text-xs font-bold text-amber-600 hidden sm:inline">
@@ -311,6 +327,11 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
                 {keuanganBadge}
               </span>
             )}
+            {t.id === 'progress' && progressBadge != null && progressBadge > 0 && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600">
+                {progressBadge}
+              </span>
+            )}
           </button>
         ))}
       </nav>
@@ -327,6 +348,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
                 orgId={tenant?.id || ''}
                 userId={user?.id || ''}
                 rapItems={rapItems}
+                workItems={workItems}
                 onRefresh={reload}
                 onSwitchTab={tabId => trySetTab(tabId)}
                 onEditProject={openEdit}
@@ -348,7 +370,10 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
             {tab === 'progress' && (
               <TabV2Progress
                 normalized={normalized}
+                project={project}
                 workItems={workItems}
+                userId={user?.id || ''}
+                canManage
                 onRefresh={reload}
               />
             )}

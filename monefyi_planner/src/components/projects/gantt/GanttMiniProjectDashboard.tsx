@@ -8,6 +8,7 @@ import { loadRapItems, rapActualsFromCosts, rapSummary } from '../../../services
 import { aggregateCostByRapItem } from '../../../services/costService';
 import { loadReceivablesByProject } from '../../../services/financeV2/receivableService';
 import { loadPayablesByProject } from '../../../services/financeV2/payableService';
+import { schedulePlanProgress } from '../../../lib/progressMetrics';
 
 interface GanttMiniProjectDashboardProps {
   project: Project;
@@ -21,45 +22,6 @@ interface CostSplit {
   tukangPlanned: number;
   bahanActual: number;
   tukangActual: number;
-}
-
-function ProgressBar({
-  label,
-  value,
-  color,
-  subBars,
-}: {
-  label: string;
-  value: number;
-  color: string;
-  subBars?: { label: string; pct: number; color: string }[];
-}) {
-  const pct = Math.min(100, Math.max(0, value));
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-[11px] font-bold text-slate-600">{label}</span>
-        <span className="text-[11px] font-black text-slate-800">{Math.round(pct)}%</span>
-      </div>
-      <div className="relative h-3 bg-slate-100 rounded-full overflow-hidden">
-        {subBars?.length ? (
-          <div className="absolute inset-0 flex">
-            {subBars.map(bar => (
-              <div
-                key={bar.label}
-                className="h-full transition-all"
-                style={{ width: `${Math.min(100, bar.pct)}%`, backgroundColor: bar.color }}
-                title={`${bar.label}: ${Math.round(bar.pct)}%`}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
-        )}
-      </div>
-    </div>
-  );
 }
 
 /**
@@ -132,6 +94,8 @@ export default function GanttMiniProjectDashboard({
   const budgetActual = project.spent_amount;
   const costProgress = budgetPlanned ? (budgetActual / budgetPlanned) * 100 : 0;
   const workProgress = project.progress_percentage || 0;
+  const plannedProgress = project.planned_progress ?? schedulePlanProgress(project.start_date, project.end_date);
+  const progressDeviation = workProgress - plannedProgress;
 
   const bahanPct = budgetPlanned ? (costSplit.bahanActual / budgetPlanned) * 100 : 0;
   const tukangPct = budgetPlanned ? (costSplit.tukangActual / budgetPlanned) * 100 : 0;
@@ -202,7 +166,33 @@ export default function GanttMiniProjectDashboard({
             </div>
 
             <div className="space-y-3">
-              <ProgressBar label="Progress Pekerjaan" value={workProgress} color="#3B82F6" />
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[11px] font-bold text-slate-600">Progress Pekerjaan</span>
+                  <div className="text-[10px] text-right leading-tight">
+                    <div className="text-slate-500">
+                      Rencana <span className="font-bold text-slate-700">{Math.round(plannedProgress)}%</span>
+                    </div>
+                    <div className="text-slate-500">
+                      Aktual <span className="font-bold text-blue-700">{Math.round(workProgress)}%</span>
+                      {' '}
+                      <span className={progressDeviation >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
+                        ({progressDeviation >= 0 ? '+' : ''}{Math.round(progressDeviation)}%)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="relative h-4 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className="absolute inset-y-0 left-0 bg-blue-200/60 rounded-full"
+                    style={{ width: `${Math.min(100, plannedProgress)}%` }}
+                  />
+                  <div
+                    className="absolute inset-y-0 left-0 bg-blue-500 rounded-full transition-all"
+                    style={{ width: `${Math.min(100, workProgress)}%` }}
+                  />
+                </div>
+              </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1">

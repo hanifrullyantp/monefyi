@@ -1,7 +1,7 @@
 import type { GanttSnapshot } from '../lib/gantt/snapshot';
 import type { GanttTask } from '../lib/gantt/types';
 import { updateProject as updateProjectApi } from './projectService';
-import { updateWorkItem } from './workItemService';
+import { updateWorkItem, updateProjectProgressFromWorkItems } from './workItemService';
 import { persistGanttDependency, removeGanttDependency } from './ganttDependencyService';
 import { saveBarColors } from './ganttBarColorService';
 import type { WorkItem } from './workItemService';
@@ -89,7 +89,22 @@ export async function saveGanttChanges(
     await mergeOrgSettingsJson(orgId, { gantt_project_order: current.projectOrder });
   }
 
-  return [...wiMap.values()];
+  const projectTask = current.tasks.find(t => t.type === 'project');
+  const affectedProjectIds = new Set<string>();
+  for (const task of current.tasks) {
+    if (task.type !== 'project') {
+      affectedProjectIds.add(task.projectId);
+    }
+  }
+  if (projectTask) affectedProjectIds.add(projectTask.id);
+
+  const projectProgress: Record<string, number> = {};
+  for (const pid of affectedProjectIds) {
+    const avg = await updateProjectProgressFromWorkItems(pid);
+    if (avg != null) projectProgress[pid] = avg;
+  }
+
+  return { workItems: [...wiMap.values()], projectProgress };
 }
 
 export async function loadProjectOrder(orgId: string): Promise<string[] | null> {

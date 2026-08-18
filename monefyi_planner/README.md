@@ -2,6 +2,8 @@
 
 Frontend Planner — React + Vite + Tailwind, terhubung ke Supabase shared dengan Planner vanilla di `planner/`.
 
+**Dokumentasi lengkap:** [`../docs/MONEFYI_PLANNER_MASTER.md`](../docs/MONEFYI_PLANNER_MASTER.md) (teknis) · [`../docs/APA_ITU_PLANNER.md`](../docs/APA_ITU_PLANNER.md) (stakeholder) · [`docs/README.md`](docs/README.md) (indeks operasional)
+
 ## Environment
 
 Salin `.env.example` ke `.env.local`:

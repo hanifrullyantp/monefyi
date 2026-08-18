@@ -13,15 +13,18 @@ import type { ParsedEstimationItem } from '../../lib/estimatorParser';
 import type { EstimationAdjustment, EstimationItemDraft } from '../../types/estimator';
 import type { PricelistItem } from '../../types/estimator';
 import { COMMON_UNITS, pricelistToEstimationItem, PRICELIST_CATEGORIES } from '../../services/pricelistService';
+import { ENABLE_ESTIMATOR_SMART_INPUT } from '../../lib/estimatorFeatureFlags';
 import RupiahInput from './RupiahInput';
 import QtyInput from './QtyInput';
 import SmartInputModal from './SmartInputModal';
 import PricelistPickerModal from './PricelistPickerModal';
+import { useUiStore } from '../../store/uiStore';
 
 type EditableField = 'name' | 'qty' | 'selling' | 'margin' | 'hpp';
 
 interface Props {
   orgId: string;
+  userId?: string;
   items: EstimationItemDraft[];
   defaultMargin?: number;
   overheadPct?: number;
@@ -34,6 +37,7 @@ interface Props {
 
 export default function EstimationItemsTable({
   orgId,
+  userId = '',
   items,
   defaultMargin = 20,
   overheadPct = 0,
@@ -45,6 +49,7 @@ export default function EstimationItemsTable({
 }: Props) {
   const [smartOpen, setSmartOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const showToast = useUiStore(s => s.showToast);
   const cellRefs = useRef<Map<string, HTMLInputElement | HTMLSelectElement>>(new Map());
 
   // Perbaiki HPP yang tidak selaras dengan margin (data lama / formula markup).
@@ -181,26 +186,35 @@ export default function EstimationItemsTable({
             <p className="text-[11px] text-slate-600 mt-0.5">Harga jual & margin% menentukan HPP (margin = laba ÷ jual)</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setSmartOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg hover:opacity-90 shadow-sm"
-            >
-              <Sparkles className="w-3.5 h-3.5" /> Smart Input
-            </button>
+            {ENABLE_ESTIMATOR_SMART_INPUT && (
+              <button
+                type="button"
+                onClick={() => setSmartOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg hover:opacity-90 shadow-sm"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Smart Input</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setPickerOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-emerald-600 border border-emerald-200 rounded-lg hover:bg-emerald-50 bg-white"
+              className="inline-flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 text-xs font-semibold text-emerald-600 border border-emerald-200 rounded-lg hover:bg-emerald-50 bg-white min-w-[2.5rem]"
+              title="Dari Pricelist"
+              aria-label="Tambah item dari pricelist"
             >
-              <List className="w-3.5 h-3.5" /> Dari Pricelist
+              <List className="w-4 h-4" />
+              <span className="hidden sm:inline">Dari Pricelist</span>
             </button>
             <button
               type="button"
               onClick={addRow}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-white bg-white"
+              className="inline-flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-white bg-white min-w-[2.5rem]"
+              title="Tambah manual"
+              aria-label="Tambah item manual"
             >
-              <Plus className="w-3.5 h-3.5" /> Manual
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Manual</span>
             </button>
           </div>
         </div>
@@ -211,17 +225,17 @@ export default function EstimationItemsTable({
             <div className="flex flex-wrap justify-center gap-2">
               <button
                 type="button"
-                onClick={() => setSmartOpen(true)}
-                className="px-4 py-2 text-xs font-bold text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100"
+                onClick={() => setPickerOpen(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700"
               >
-                ✨ Smart Input
+                <List className="w-4 h-4" /> Dari Pricelist
               </button>
               <button
                 type="button"
-                onClick={() => setPickerOpen(true)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200"
+                onClick={addRow}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50"
               >
-                Dari Pricelist
+                <Plus className="w-4 h-4" /> Manual
               </button>
             </div>
           </div>
@@ -490,8 +504,10 @@ export default function EstimationItemsTable({
       {pickerOpen && (
         <PricelistPickerModal
           orgId={orgId}
+          userId={userId}
           onClose={() => setPickerOpen(false)}
           onSelect={handlePricelistSelect}
+          onToast={(msg, type) => showToast(msg, type)}
         />
       )}
     </>

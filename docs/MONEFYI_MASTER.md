@@ -79,7 +79,7 @@ planner.monefyi.com      → monefyi_planner/  Planner React (SaaS bisnis/proyek
 | **Planner (React)** | subdomain terpisah | React + Vite + Tailwind | Manajemen proyek/bisnis, multitenant org |
 | **Planner (vanilla)** | deploy Vercel `planner/` | Vite + HTML/JS | Versi alternatif planner |
 
-**Dokumen ini fokus pada PWA Monefyi** (`app/`). Planner: [`../planner/README.md`](../planner/README.md), [`../monefyi_planner/README.md`](../monefyi_planner/README.md), [`../PLANNER_PRODUCTION_PLAN.md`](../PLANNER_PRODUCTION_PLAN.md).
+**Dokumen ini fokus pada PWA Monefyi** (`app/`). Planner: [`APA_ITU_PLANNER.md`](APA_ITU_PLANNER.md), [`MONEFYI_PLANNER_MASTER.md`](MONEFYI_PLANNER_MASTER.md), [`../planner/README.md`](../planner/README.md), [`../monefyi_planner/README.md`](../monefyi_planner/README.md).
 
 ---
 
@@ -642,9 +642,11 @@ Target coverage: 70% (`.cursorrules`).
 
 | Dokumen | Topik |
 |---------|-------|
-| [`../PLANNER_PRODUCTION_PLAN.md`](../PLANNER_PRODUCTION_PLAN.md) | Spec produksi planner |
-| [`../planner/README.md`](../planner/README.md) | Planner vanilla |
-| [`../monefyi_planner/README.md`](../monefyi_planner/README.md) | Planner React |
+| [`APA_ITU_PLANNER.md`](APA_ITU_PLANNER.md) | Penjelasan produk Planner (stakeholder) |
+| [`MONEFYI_PLANNER_MASTER.md`](MONEFYI_PLANNER_MASTER.md) | Referensi teknis lengkap Planner |
+| [`../planner/README.md`](../planner/README.md) | Planner vanilla (legacy) |
+| [`../monefyi_planner/README.md`](../monefyi_planner/README.md) | Planner React (kanonik) |
+| [`archive/PLANNER_PRODUCTION_PLAN_v1.md`](archive/PLANNER_PRODUCTION_PLAN_v1.md) | Spec produksi v1 (arsip) |
 
 ---
 

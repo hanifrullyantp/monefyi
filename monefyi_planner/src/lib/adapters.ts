@@ -1,6 +1,7 @@
 import type { Notification, Project, Tenant, User, UserRole } from '../store/appStore';
 import { computeFinanceReportMonth, monthPickerToReportDate } from './financeReportMonth';
 import { parseWorkHours } from '../utils/workHours';
+import { schedulePlanProgress } from './progressMetrics';
 
 export interface DbOrganization {
   id: string;
@@ -203,7 +204,7 @@ export function toProject(row: DbProject, currency = 'IDR'): Project {
   const spent = Number(row.total_spent) || 0;
   const budget = Number(row.total_budget) || 0;
   const contractValue = Number(settings.contract_value) || 0;
-  const plannedProgress = progress;
+  const plannedProgress = schedulePlanProgress(row.planned_start, row.planned_end);
 
   return {
     id: row.id,

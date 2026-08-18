@@ -55,7 +55,14 @@ export async function loadWorkItemsForOrg(orgId: string): Promise<WorkItem[]> {
 export async function updateProjectProgressFromWorkItems(projectId: string) {
   const items = await loadWorkItems(projectId);
   if (!items.length) return;
-  const avg = items.reduce((s, wi) => s + (Number(wi.progress_pct) || 0), 0) / items.length;
+  let totalWeight = 0;
+  let sum = 0;
+  for (const wi of items) {
+    const w = Number(wi.weight) > 0 ? Number(wi.weight) : 1;
+    totalWeight += w;
+    sum += (Number(wi.progress_pct) || 0) * w;
+  }
+  const avg = Math.round(sum / totalWeight);
   const { error } = await supabase.from('planner_projects').update({ progress_pct: avg }).eq('id', projectId);
   assertNoDbError(error);
   return avg;

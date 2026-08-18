@@ -1,5 +1,7 @@
 // Map planner_* rows → sandbox-compatible project view for balance sheet & V2 tabs.
 
+import { schedulePlanProgress, weightedActualProgress } from '../progressMetrics';
+
 export type MappedRapItem = {
   id: number;
   plannerId?: string;
@@ -272,20 +274,27 @@ export function mapPlannerProject(input: {
 
   const timeline = input.workItems.map((w, idx) => {
     const prog = num(w.progress_pct);
+    const wiStart = dateOnly(w.planned_start);
+    const wiEnd = dateOnly(w.planned_end);
     return {
       id: idx + 1,
       name: w.name,
       weight: num(w.weight, 10),
       progress: prog,
-      planProgress: progress,
+      planProgress: schedulePlanProgress(wiStart, wiEnd),
       status: mapWorkStatus(w.status, prog),
-      start: dateOnly(w.planned_start),
-      end: dateOnly(w.planned_end),
+      start: wiStart,
+      end: wiEnd,
     };
   });
 
   const start = dateOnly(p.planned_start);
   const end = dateOnly(p.planned_end);
+  const planProgress = schedulePlanProgress(start, end);
+  const actualProgress = input.workItems.length
+    ? weightedActualProgress(input.workItems)
+    : progress;
+  const progressDeviation = actualProgress - planProgress;
   const estLaba = Math.max(0, contractValue - spent);
   const useLedgerHutang = Array.isArray(input.payables);
   const useLedgerPiutang = Array.isArray(input.receivables);
@@ -328,7 +337,7 @@ export function mapPlannerProject(input: {
     contractValue,
     saldo,
     status: mapProjectStatus(p.status, spent, budget),
-    progress: { plan: progress, actual: progress, deviation: 0 },
+    progress: { plan: planProgress, actual: actualProgress, deviation: progressDeviation },
     rap: {
       totalRAP: totalRap,
       realisasi: spent,

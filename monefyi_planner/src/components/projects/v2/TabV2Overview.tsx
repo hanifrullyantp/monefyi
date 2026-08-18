@@ -1,8 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
-  Calendar, Wallet, Package, HardHat, FileCheck, ListChecks, Receipt,
-  Filter, ArrowUpDown, Plus, Pencil,
+  Calendar, Wallet, Package, HardHat, FileCheck, ListChecks,
+  Filter, ArrowUpDown, Plus, Pencil, AlertTriangle, BarChart3, TrendingDown, TrendingUp,
 } from 'lucide-react';
+import type { WorkItem } from '../../../services/workItemService';
+import { computeProgressSummary } from '../../../lib/progressMetrics';
 import type { NormalizedProjectView } from '../../../lib/migration/project-normalize';
 import type { MappedRapItem } from '../../../lib/migration/planner-mapper';
 import type { RapItem } from '../../../services/rapService';
@@ -14,7 +16,7 @@ import WorkItemRow from '../../sandbox-ui/WorkItemRow';
 import TransactionList from '../../sandbox-ui/TransactionList';
 import BottomActionBar from '../../sandbox-ui/BottomActionBar';
 import ProjectTransactionModals, { type ModalKind } from './ProjectTransactionModals';
-import { buildProjectPopupConfig, type ProjectPopupKind } from './project-popup-config';
+import { buildProjectPopupConfig, checkContractComposition, type ProjectPopupKind } from './project-popup-config';
 import type { Project } from '../../../store/appStore';
 
 type PopupKind = ProjectPopupKind;
@@ -26,14 +28,15 @@ type Props = {
   orgId: string;
   userId: string;
   rapItems: RapItem[];
+  workItems?: WorkItem[];
   canManage?: boolean;
   onRefresh: () => void | Promise<void>;
-  onSwitchTab?: (tab: 'keuangan' | 'rap') => void;
+  onSwitchTab?: (tab: 'keuangan' | 'rap' | 'progress') => void;
   onEditProject?: () => void;
 };
 
 export default function TabV2Overview({
-  normalized, project, orgId, userId, rapItems, canManage = true, onRefresh, onSwitchTab, onEditProject,
+  normalized, project, orgId, userId, rapItems, workItems = [], canManage = true, onRefresh, onSwitchTab, onEditProject,
 }: Props) {
   const showToast = useUiStore(s => s.showToast);
   const [popup, setPopup] = useState<PopupKind>(null);
@@ -86,6 +89,11 @@ export default function TabV2Overview({
   const tukangPlan = p.budget.tukang.plan || 1;
   const bahanPct = Math.min((p.budget.bahan.actual / bahanPlan) * 100, 100);
   const tukangPct = Math.min((p.budget.tukang.actual / tukangPlan) * 100, 100);
+  const contractCheck = checkContractComposition(normalized);
+  const progressSummary = useMemo(
+    () => computeProgressSummary(project, workItems),
+    [project, workItems],
+  );
 
   const workItems = useMemo(() => {
     let rows = [...normalized.workItems];
@@ -127,10 +135,24 @@ export default function TabV2Overview({
           {formatRupiah(nilaiProyek)}
         </div>
         <p className="text-xs text-slate-500 mb-4">
-          Realisasi {formatRupiah(normalized.totalRealisasi)}
-          {' + '}Saldo {formatRupiah(p.saldo)}
-          {' + '}Piutang {formatRupiah(p.budget.piutang)}
+          Piutang {formatRupiah(contractCheck.piutang)}
+          {' + '}Cash {formatRupiah(contractCheck.cash)}
+          {' + '}Bahan {formatRupiah(contractCheck.bahan)}
+          {' + '}Tukang {formatRupiah(contractCheck.tukang)}
+          {' = '}{formatRupiah(contractCheck.componentsTotal)}
         </p>
+        {!contractCheck.isMatch && nilaiProyek > 0 && (
+          <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
+            <div>
+              <p className="font-bold">Nilai kontrak tidak sesuai komposisi aktiva</p>
+              <p className="mt-0.5 text-amber-800">
+                Kontrak {formatRupiah(contractCheck.contractValue)} ≠ komponen {formatRupiah(contractCheck.componentsTotal)}
+                {' '}(selisih {formatRupiah(Math.abs(contractCheck.gap))})
+              </p>
+            </div>
+          </div>
+        )}
         <div className="h-7 bg-slate-100 rounded-lg overflow-hidden relative">
           <div
             className="h-full bg-rose-500 rounded-lg flex items-center justify-center text-white text-xs font-bold min-w-[5rem] transition-all"
@@ -144,7 +166,53 @@ export default function TabV2Overview({
         </p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <button
+        type="button"
+        onClick={() => onSwitchTab?.('progress')}
+        className="w-full bg-white rounded-2xl border border-slate-100 p-5 shadow-sm text-left hover:shadow-md transition-shadow"
+      >
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+              <BarChart3 className="w-4 h-4 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase">Progress Pekerjaan</p>
+              <p className="text-2xl font-black text-slate-900">{progressSummary.actual}%</p>
+            </div>
+          </div>
+          <div className="text-right text-xs">
+            <p className="text-slate-500">Rencana <span className="font-bold text-slate-700">{progressSummary.plan}%</span></p>
+            <p className={`font-bold flex items-center justify-end gap-0.5 mt-0.5 ${
+              progressSummary.deviation >= 0 ? 'text-emerald-600' : 'text-amber-600'
+            }`}>
+              {progressSummary.deviation >= 0
+                ? <TrendingUp className="w-3 h-3" />
+                : <TrendingDown className="w-3 h-3" />}
+              {progressSummary.deviation >= 0 ? '+' : ''}{progressSummary.deviation}%
+            </p>
+          </div>
+        </div>
+        <div className="relative h-3 bg-slate-100 rounded-full overflow-hidden">
+          <div className="absolute inset-y-0 left-0 bg-blue-200/70 rounded-full" style={{ width: `${progressSummary.plan}%` }} />
+          <div className="absolute inset-y-0 left-0 bg-blue-600 rounded-full" style={{ width: `${progressSummary.actual}%` }} />
+        </div>
+        <div className="flex flex-wrap gap-2 mt-3 text-[10px] font-bold">
+          <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
+            {progressSummary.completed}/{progressSummary.total || '—'} selesai
+          </span>
+          {progressSummary.overdue > 0 && (
+            <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700">
+              {progressSummary.overdue} terlambat
+            </span>
+          )}
+          <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 ml-auto">
+            Buka detail →
+          </span>
+        </div>
+      </button>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <BudgetCard label="Bahan" icon={Package} iconBg="bg-rose-50" iconColor="text-rose-600"
           plan={p.budget.bahan.plan} actual={p.budget.bahan.actual} pct={bahanPct}
           sisa={p.budget.bahan.plan - p.budget.bahan.actual} barColor="bg-rose-500" onClick={() => setPopup('bahan')} />
@@ -159,31 +227,7 @@ export default function TabV2Overview({
             </div>
             <span className="text-xs font-semibold text-slate-500 uppercase">Piutang</span>
           </div>
-          <div className="text-xl font-black text-slate-900 mb-2">{formatRupiah(p.budget.piutang)}</div>
-          <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${
-            normalized.piutangItems.length > 0 ? 'bg-amber-50 text-amber-700' : 'bg-slate-50 text-slate-500'
-          }`}>
-            {normalized.piutangItems.length > 0
-              ? `${normalized.piutangItems.length} pihak`
-              : 'Tidak ada'}
-          </span>
-        </button>
-        <button type="button" onClick={() => setPopup('hutang')}
-          className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm text-left hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center">
-              <Receipt className="w-4 h-4 text-rose-600" />
-            </div>
-            <span className="text-xs font-semibold text-slate-500 uppercase">Hutang</span>
-          </div>
-          <div className="text-xl font-black text-slate-900 mb-2">{formatRupiah(p.budget.hutang)}</div>
-          <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${
-            normalized.hutangItems.length > 0 ? 'bg-rose-50 text-rose-600' : 'bg-slate-50 text-slate-500'
-          }`}>
-            {normalized.hutangItems.length > 0
-              ? `${normalized.hutangItems.length} pihak`
-              : 'Tidak ada'}
-          </span>
+          <div className="text-xl font-black text-slate-900">{formatRupiah(p.budget.piutang)}</div>
         </button>
         <button type="button" onClick={() => setPopup('saldo')}
           className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm text-left hover:shadow-md transition-shadow">
@@ -276,14 +320,9 @@ export default function TabV2Overview({
                       { label: 'Tambah Piutang', variant: 'primary' as const, onClick: () => { setPopup(null); setModal('receivable'); } },
                       { label: 'Catat Pembayaran', onClick: () => { setPopup(null); setModal('receivable'); } },
                     ]
-                  : popup === 'hutang' && canManage
-                    ? [
-                        { label: 'Tambah Hutang', variant: 'primary' as const, onClick: () => { setPopup(null); setModal('hutang'); } },
-                        { label: 'Bayar Hutang', onClick: () => { setPopup(null); setModal('hutang'); } },
-                      ]
-                    : popup === 'saldo' && canManage
-                      ? [{ label: 'Tambah Dana Masuk', variant: 'primary' as const, onClick: () => { setPopup(null); setModal('income'); } }]
-                      : undefined
+                  : popup === 'saldo' && canManage
+                    ? [{ label: 'Tambah Dana Masuk', variant: 'primary' as const, onClick: () => { setPopup(null); setModal('income'); } }]
+                    : undefined
           } />
       )}
 

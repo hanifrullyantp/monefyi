@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Wallet, CreditCard, TrendingUp, Receipt, Scale, Info, Lock,
+  Wallet, CreditCard, TrendingUp, Receipt, FileCheck, Info, Lock,
   Plus, ArrowLeftRight,
 } from 'lucide-react';
 import type { NormalizedProjectView } from '../../../lib/migration/project-normalize';
@@ -37,6 +37,7 @@ export default function TabV2Keuangan({
   const [closeWizardOpen, setCloseWizardOpen] = useState(false);
   const p = normalized.project;
   const hutang = p.budget.hutang || 0;
+  const piutang = p.budget.piutang || 0;
   const pemasukanPct = p.contractValue > 0
     ? Math.min((normalized.totalPemasukan / p.contractValue) * 100, 100)
     : 0;
@@ -148,7 +149,7 @@ export default function TabV2Keuangan({
         </p>
       </button>
 
-      <div className="grid sm:grid-cols-3 gap-4">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           label="Pembayaran"
           value={formatRupiah(normalized.totalPemasukan)}
@@ -181,11 +182,14 @@ export default function TabV2Keuangan({
           iconBg="bg-rose-50"
           iconColor="text-rose-600"
           onClick={() => setPopup('hutang')}
-          badge={
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-600">
-              {normalized.hutangItems.length} pihak
-            </span>
-          }
+        />
+        <StatCard
+          label="Piutang"
+          value={formatRupiah(piutang)}
+          icon={FileCheck}
+          iconBg="bg-blue-50"
+          iconColor="text-blue-600"
+          onClick={() => setPopup('piutang')}
         />
       </div>
 
@@ -212,35 +216,6 @@ export default function TabV2Keuangan({
           </div>
         )}
       />
-
-      <div className="grid md:grid-cols-2 gap-4">
-        <DetailCard
-          title="Hutang"
-          subtitle="Kepada (vendor / pinjaman)"
-          total={hutang}
-          items={normalized.hutangItems}
-          color="rose"
-          onClick={() => setPopup('hutang')}
-        />
-        <DetailCard
-          title="Piutang"
-          subtitle={`Dari ${p.client || 'klien'}`}
-          total={p.budget.piutang}
-          items={
-            normalized.piutangItems.length > 0
-              ? normalized.piutangItems
-              : p.budget.piutang > 0
-                ? [{
-                    name: `Piutang ${p.client || 'Klien'}`,
-                    partyName: p.client || 'Klien',
-                    amount: p.budget.piutang,
-                  }]
-                : []
-          }
-          color="emerald"
-          onClick={() => setPopup('piutang')}
-        />
-      </div>
 
       <TransactionList
         transactions={normalized.allTransactions.map(tx => ({
@@ -300,7 +275,7 @@ export default function TabV2Keuangan({
                       },
                       {
                         label: 'Bayar Hutang',
-                        onClick: () => { setPopup(null); setModal('transfer'); },
+                        onClick: () => { setPopup(null); setModal('hutang'); },
                       },
                     ]
                   : undefined
@@ -328,52 +303,5 @@ export default function TabV2Keuangan({
         onSuccess={onRefresh}
       />
     </div>
-  );
-}
-
-function DetailCard({
-  title, subtitle, total, items, color, onClick,
-}: {
-  title: string;
-  subtitle: string;
-  total: number;
-  items: Array<{ name: string; partyName?: string; amount: number }>;
-  color: 'rose' | 'emerald';
-  onClick?: () => void;
-}) {
-  const text = color === 'rose' ? 'text-rose-600' : 'text-emerald-600';
-  const bg = color === 'rose' ? 'bg-rose-50' : 'bg-emerald-50';
-  const Wrapper = onClick ? 'button' : 'div';
-  return (
-    <Wrapper
-      type={onClick ? 'button' : undefined}
-      onClick={onClick}
-      className={`bg-white rounded-2xl border border-slate-100 p-4 shadow-sm text-left w-full ${
-        onClick ? 'hover:shadow-md transition-shadow cursor-pointer' : ''
-      }`}
-    >
-      <div className="flex items-center gap-2 mb-1">
-        <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center`}>
-          <Scale className={`w-4 h-4 ${text}`} />
-        </div>
-        <div>
-          <span className={`text-xs font-bold uppercase ${text}`}>{title}</span>
-          <div className="text-[10px] text-slate-400">{subtitle}</div>
-        </div>
-      </div>
-      <div className={`text-xl font-black mb-3 ${text}`}>{formatRupiah(total)}</div>
-      <div className="space-y-1">
-        {items.length === 0 ? (
-          <p className="text-xs text-slate-400">Tidak ada item.</p>
-        ) : items.map((h, i) => (
-          <div key={i} className="flex justify-between text-xs py-1.5 border-b border-slate-50 last:border-0">
-            <span className="text-slate-600 truncate pr-2">
-              {h.partyName ? `${h.partyName}` : h.name}
-            </span>
-            <span className={`font-bold shrink-0 ${text}`}>{formatRupiah(h.amount)}</span>
-          </div>
-        ))}
-      </div>
-    </Wrapper>
   );
 }

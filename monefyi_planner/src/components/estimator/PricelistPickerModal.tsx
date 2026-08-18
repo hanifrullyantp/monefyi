@@ -1,45 +1,78 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, X, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import {
-  groupPricelistByProduct,
+  Search, X, Check, ChevronLeft, Pencil, Plus, Loader2,
+} from 'lucide-react';
+import {
+  createPricelistItem,
+  groupPricelistByCategory,
   loadPricelistItems,
   PRICELIST_CATEGORIES,
 } from '../../services/pricelistService';
 import { formatRupiahFull } from '../../lib/estimatorFormat';
 import type { PricelistCategory, PricelistItem } from '../../types/estimator';
+import PricelistCategoryCards from './PricelistCategoryCards';
+import PricelistItemQuickEdit from './PricelistItemQuickEdit';
 
 interface Props {
   orgId: string;
+  userId?: string;
   onClose: () => void;
   onSelect: (items: PricelistItem[]) => void;
+  onToast?: (msg: string, type: 'success' | 'error') => void;
 }
 
-export default function PricelistPickerModal({ orgId, onClose, onSelect }: Props) {
+export default function PricelistPickerModal({
+  orgId,
+  userId = '',
+  onClose,
+  onSelect,
+  onToast,
+}: Props) {
   const [items, setItems] = useState<PricelistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState<'' | PricelistCategory>('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [expandedCategory, setExpandedCategory] = useState<PricelistCategory | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [addingNew, setAddingNew] = useState(false);
+  const [creating, setCreating] = useState(false);
 
-  useEffect(() => {
-    loadPricelistItems(orgId)
-      .then(setItems)
-      .catch(() => setItems([]))
-      .finally(() => setLoading(false));
-  }, [orgId]);
+  const reload = async () => {
+    setLoading(true);
+    try {
+      const data = await loadPricelistItems(orgId, false);
+      setItems(data.filter(i => i.is_active !== false));
+    } catch {
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const filtered = useMemo(() => items.filter(i => {
+  useEffect(() => { void reload(); }, [orgId]);
+
+  const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    const matchQ = !q
-      || i.name.toLowerCase().includes(q)
-      || (i.product || '').toLowerCase().includes(q);
-    const matchC = !category || i.category === category;
-    return matchQ && matchC;
-  }), [items, search, category]);
+    if (!q) return items;
+    return items.filter(i =>
+      i.name.toLowerCase().includes(q)
+      || (i.product || '').toLowerCase().includes(q),
+    );
+  }, [items, search]);
 
-  const groups = useMemo(() => groupPricelistByProduct(filtered), [filtered]);
+  const categoryGroups = useMemo(() => groupPricelistByCategory(filtered), [filtered]);
+
+  const expandedGroup = useMemo(
+    () => categoryGroups.find(g => g.category === expandedCategory) ?? null,
+    [categoryGroups, expandedCategory],
+  );
+
+  const searchExactMatch = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return filtered.some(i => i.name.toLowerCase() === q);
+  }, [filtered, search]);
 
   const toggle = (id: string) => {
     setSelected(prev => {
@@ -50,7 +83,7 @@ export default function PricelistPickerModal({ orgId, onClose, onSelect }: Props
     });
   };
 
-  const toggleGroup = (groupItems: PricelistItem[]) => {
+  const toggleAllInCategory = (groupItems: PricelistItem[]) => {
     const ids = groupItems.map(i => i.id);
     const allSelected = ids.every(id => selected.has(id));
     setSelected(prev => {
@@ -63,23 +96,55 @@ export default function PricelistPickerModal({ orgId, onClose, onSelect }: Props
     });
   };
 
-  const toggleCollapse = (key: string) => {
-    setCollapsed(prev => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  };
-
   const handleConfirm = () => {
     const picked = items.filter(i => selected.has(i.id));
     if (picked.length) onSelect(picked);
     onClose();
   };
 
-  const groupKey = (product: string) => product || '__tanpa_produk__';
-  const groupLabel = (product: string) => product || 'Tanpa kelompok produk';
+  const handleItemSaved = (updated: PricelistItem) => {
+    setItems(prev => prev.map(i => (i.id === updated.id ? updated : i)));
+    setEditingId(null);
+    onToast?.('Item pricelist diperbarui', 'success');
+  };
+
+  const handleCreateNew = async () => {
+    const name = search.trim();
+    if (!name || !userId) {
+      onToast?.('Nama item wajib diisi', 'error');
+      return;
+    }
+    setCreating(true);
+    try {
+      const category = expandedCategory || 'material';
+      const created = await createPricelistItem({
+        org_id: orgId,
+        name,
+        product: null,
+        category,
+        unit: 'pcs',
+        base_cost: 0,
+        default_margin_pct: 20,
+        selling_price: 0,
+        notes: null,
+        is_active: true,
+        created_by: userId,
+      });
+      setItems(prev => [...prev, created]);
+      setSelected(prev => new Set([...prev, created.id]));
+      setSearch('');
+      setAddingNew(false);
+      if (!expandedCategory) setExpandedCategory(category);
+      onToast?.('Item baru ditambahkan ke pricelist', 'success');
+    } catch (e) {
+      onToast?.(e instanceof Error ? e.message : 'Gagal menambah item', 'error');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const categoryLabel = (cat: PricelistCategory) =>
+    PRICELIST_CATEGORIES.find(c => c.value === cat)?.label ?? cat;
 
   return (
     <div
@@ -89,134 +154,186 @@ export default function PricelistPickerModal({ orgId, onClose, onSelect }: Props
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[85vh] flex flex-col"
+        className="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[90vh] flex flex-col"
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-          <div>
-            <h2 className="font-bold text-slate-900">Pilih dari Pricelist</h2>
-            <p className="text-[11px] text-slate-500 mt-0.5">Dikelompokkan per produk</p>
-          </div>
+        <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-slate-100">
+          {expandedCategory ? (
+            <button
+              type="button"
+              onClick={() => { setExpandedCategory(null); setEditingId(null); setAddingNew(false); }}
+              className="flex items-center gap-1.5 text-sm font-bold text-slate-700 hover:text-emerald-700"
+            >
+              <ChevronLeft className="w-5 h-5" />
+              {categoryLabel(expandedCategory)}
+            </button>
+          ) : (
+            <div>
+              <h2 className="font-bold text-slate-900">Pricelist</h2>
+              <p className="text-[11px] text-slate-500 mt-0.5">Pilih, edit, atau tambah item</p>
+            </div>
+          )}
           <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100">
             <X className="w-5 h-5 text-slate-500" />
           </button>
         </div>
 
-        <div className="px-5 py-3 space-y-2 border-b border-slate-100">
+        <div className="px-4 sm:px-5 py-3 border-b border-slate-100">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Cari item atau produk..."
-              autoFocus
               className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm"
             />
           </div>
-          <select
-            value={category}
-            onChange={e => setCategory(e.target.value as '' | PricelistCategory)}
-            className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
-          >
-            <option value="">Semua kategori</option>
-            {PRICELIST_CATEGORIES.map(c => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          {loading ? (
-            <div className="p-8 text-center text-sm text-slate-600">Memuat...</div>
-          ) : groups.length === 0 ? (
-            <div className="p-8 text-center text-sm text-slate-600">
-              Tidak ada item. Tambahkan di halaman Pricelist dulu.
-            </div>
-          ) : (
-            groups.map(group => {
-              const key = groupKey(group.product);
-              const isCollapsed = collapsed.has(key);
-              const groupIds = group.items.map(i => i.id);
-              const selectedInGroup = groupIds.filter(id => selected.has(id)).length;
-              const allInGroup = selectedInGroup === group.items.length && group.items.length > 0;
-              const someInGroup = selectedInGroup > 0 && !allInGroup;
-
-              return (
-                <div key={key} className="border-b border-slate-100">
-                  <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50/90 sticky top-0 z-10">
-                    <button
-                      type="button"
-                      onClick={() => toggleCollapse(key)}
-                      className="p-1 rounded hover:bg-slate-200 text-slate-500"
-                      aria-label={isCollapsed ? 'Buka grup' : 'Tutup grup'}
-                    >
-                      {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleGroup(group.items)}
-                      className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 ${
-                        allInGroup
-                          ? 'bg-emerald-600 border-emerald-600'
-                          : someInGroup
-                            ? 'bg-emerald-100 border-emerald-400'
-                            : 'border-slate-300'
-                      }`}
-                      title="Pilih semua item produk ini"
-                    >
-                      {allInGroup && <Check className="w-3 h-3 text-white" />}
-                      {someInGroup && <div className="w-2 h-0.5 bg-emerald-600 rounded" />}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleCollapse(key)}
-                      className="flex-1 min-w-0 text-left"
-                    >
-                      <div className="font-semibold text-sm text-slate-800 truncate">
-                        {groupLabel(group.product)}
-                      </div>
-                      <div className="text-[10px] text-slate-500">
-                        {group.items.length} item
-                        {selectedInGroup > 0 && ` · ${selectedInGroup} dipilih`}
-                      </div>
-                    </button>
-                  </div>
-
-                  {!isCollapsed && group.items.map(item => {
-                    const isSelected = selected.has(item.id);
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => toggle(item.id)}
-                        className={`w-full flex items-center gap-3 pl-10 pr-5 py-3 text-left hover:bg-slate-50 ${
-                          isSelected ? 'bg-emerald-50/80' : ''
-                        }`}
-                      >
-                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 ${
-                          isSelected ? 'bg-emerald-600 border-emerald-600' : 'border-slate-300'
-                        }`}>
-                          {isSelected && <Check className="w-3 h-3 text-white" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-slate-800 truncate">{item.name}</div>
-                          <div className="text-xs text-slate-600">
-                            {item.category} · {item.unit} · Jual {formatRupiahFull(Number(item.selling_price))}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            })
+          {search.trim() && !searchExactMatch && userId && (
+            <button
+              type="button"
+              onClick={() => void handleCreateNew()}
+              disabled={creating}
+              className="mt-2 w-full flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-100 disabled:opacity-60"
+            >
+              {creating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+              Tambah &quot;{search.trim()}&quot; sebagai item baru
+            </button>
           )}
         </div>
 
-        <div className="px-5 py-4 border-t border-slate-100 flex gap-2">
+        <div className="flex-1 overflow-y-auto min-h-0">
+          {loading ? (
+            <div className="p-8 text-center text-sm text-slate-500">
+              <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-emerald-500" />
+              Memuat...
+            </div>
+          ) : !expandedCategory ? (
+            <PricelistCategoryCards
+              groups={categoryGroups}
+              selectedIds={selected}
+              onSelectCategory={cat => setExpandedCategory(cat)}
+            />
+          ) : expandedGroup ? (
+            <div>
+              <div className="flex items-center justify-between px-4 py-2 bg-slate-50/80 border-b border-slate-100 sticky top-0 z-10">
+                <span className="text-xs text-slate-500">{expandedGroup.items.length} item</span>
+                <button
+                  type="button"
+                  onClick={() => toggleAllInCategory(expandedGroup.items)}
+                  className="text-xs font-bold text-emerald-600 hover:text-emerald-700"
+                >
+                  Pilih semua
+                </button>
+              </div>
+
+              {expandedGroup.items.length === 0 ? (
+                <div className="p-6 text-center text-sm text-slate-500">
+                  Belum ada item di kategori ini.
+                  {userId && (
+                    <button
+                      type="button"
+                      onClick={() => setAddingNew(true)}
+                      className="block mx-auto mt-2 text-emerald-600 font-bold text-xs"
+                    >
+                      + Tambah item baru
+                    </button>
+                  )}
+                </div>
+              ) : (
+                expandedGroup.items.map(item => {
+                  const isSelected = selected.has(item.id);
+                  const isEditing = editingId === item.id;
+
+                  return (
+                    <div key={item.id} className="border-b border-slate-50">
+                      {!isEditing ? (
+                        <div className={`flex items-center gap-2 px-4 py-3 ${isSelected ? 'bg-emerald-50/60' : ''}`}>
+                          <button
+                            type="button"
+                            onClick={() => toggle(item.id)}
+                            className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 ${
+                              isSelected ? 'bg-emerald-600 border-emerald-600' : 'border-slate-300'
+                            }`}
+                            aria-label={isSelected ? 'Batalkan pilihan' : 'Pilih item'}
+                          >
+                            {isSelected && <Check className="w-3 h-3 text-white" />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => toggle(item.id)}
+                            className="flex-1 min-w-0 text-left"
+                          >
+                            <div className="font-medium text-sm text-slate-800 truncate">{item.name}</div>
+                            <div className="text-xs text-slate-500 truncate">
+                              {item.product || '—'} · {item.unit} · {formatRupiahFull(Number(item.selling_price))}
+                            </div>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingId(item.id)}
+                            className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 shrink-0"
+                            title="Edit item"
+                            aria-label="Edit item pricelist"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <PricelistItemQuickEdit
+                          item={item}
+                          onSaved={handleItemSaved}
+                          onCancel={() => setEditingId(null)}
+                          onError={msg => onToast?.(msg, 'error')}
+                        />
+                      )}
+                    </div>
+                  );
+                })
+              )}
+
+              {userId && !addingNew && expandedGroup.items.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setAddingNew(true)}
+                  className="w-full flex items-center justify-center gap-1.5 py-3 text-xs font-bold text-emerald-600 hover:bg-emerald-50"
+                >
+                  <Plus className="w-4 h-4" /> Tambah item baru
+                </button>
+              )}
+
+              {addingNew && userId && (
+                <div className="p-4 border-t border-slate-100 bg-slate-50/50 space-y-2">
+                  <p className="text-xs font-bold text-slate-600">Item baru — {categoryLabel(expandedCategory)}</p>
+                  <input
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Nama item..."
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setAddingNew(false)} className="flex-1 py-2 text-xs border rounded-xl">
+                      Batal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleCreateNew()}
+                      disabled={creating || !search.trim()}
+                      className="flex-1 py-2 text-xs font-bold bg-emerald-600 text-white rounded-xl disabled:opacity-50"
+                    >
+                      {creating ? 'Menyimpan...' : 'Simpan'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="px-4 sm:px-5 py-4 border-t border-slate-100 flex gap-2 safe-bottom">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-3 border border-slate-200 rounded-xl text-sm"
+            className="flex-1 py-3 border border-slate-200 rounded-xl text-sm font-medium"
           >
             Batal
           </button>
@@ -226,7 +343,7 @@ export default function PricelistPickerModal({ orgId, onClose, onSelect }: Props
             disabled={selected.size === 0}
             className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-50"
           >
-            Tambah ({selected.size})
+            Tambah ke estimasi ({selected.size})
           </button>
         </div>
       </motion.div>

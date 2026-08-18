@@ -1,10 +1,68 @@
 import type { NormalizedProjectView } from '../../lib/migration/project-normalize';
+import type { MappedProjectView } from '../../lib/migration/planner-mapper';
 import type { PopupCard, PopupListItem } from '../migration/CardPopup';
 import { formatRupiah, formatDateId } from '../../../utils/projectUi';
 
 export type ProjectPopupKind =
   | 'bahan' | 'tukang' | 'piutang' | 'hutang'
   | 'saldo' | 'pembayaran' | 'laba';
+
+const CONTRACT_TOLERANCE = 1;
+
+type LedgerItem = MappedProjectView['hutangPiutang'][number];
+
+/** Kontrak harus = piutang + cash + bahan + tukang (actual). */
+export function checkContractComposition(normalized: NormalizedProjectView): {
+  isMatch: boolean;
+  contractValue: number;
+  componentsTotal: number;
+  gap: number;
+  piutang: number;
+  cash: number;
+  bahan: number;
+  tukang: number;
+} {
+  const p = normalized.project;
+  const piutang = p.budget.piutang || 0;
+  const cash = p.saldo || 0;
+  const bahan = p.budget.bahan.actual || 0;
+  const tukang = p.budget.tukang.actual || 0;
+  const componentsTotal = piutang + cash + bahan + tukang;
+  const contractValue = p.contractValue || 0;
+  const gap = contractValue - componentsTotal;
+  return {
+    isMatch: Math.abs(gap) <= CONTRACT_TOLERANCE,
+    contractValue,
+    componentsTotal,
+    gap,
+    piutang,
+    cash,
+    bahan,
+    tukang,
+  };
+}
+
+function groupLedgerByParty(
+  items: LedgerItem[],
+  valueColor: string,
+): PopupListItem[] {
+  const groups = new Map<string, { count: number; total: number }>();
+  for (const item of items) {
+    const key = (item.partyName || item.name).trim() || 'Lainnya';
+    const g = groups.get(key) || { count: 0, total: 0 };
+    g.count += 1;
+    g.total += item.amount;
+    groups.set(key, g);
+  }
+  return [...groups.entries()]
+    .sort((a, b) => b[1].total - a[1].total)
+    .map(([title, { count, total }]) => ({
+      title,
+      meta: `${count} item`,
+      value: formatRupiah(total),
+      valueColor,
+    }));
+}
 
 export function buildProjectPopupConfig(
   kind: ProjectPopupKind | null,
@@ -105,46 +163,53 @@ export function buildProjectPopupConfig(
   }
 
   if (kind === 'hutang') {
+    const grouped = groupLedgerByParty(normalized.hutangItems, '#e11d48');
+    const subjectCount = grouped.length;
+    const itemCount = normalized.hutangItems.length;
     return {
       title: 'Hutang Project', detailTab: 'keuangan',
       cards: [
-        { value: `${normalized.hutangItems.length} pihak`, label: 'Jumlah Hutang' },
+        { value: `${subjectCount} subjek`, label: 'Kelompok Hutang' },
+        { value: `${itemCount} item`, label: 'Jumlah Item' },
         { value: formatRupiah(p.budget.hutang), label: 'Total Hutang' },
-        { value: p.saldo < 0 ? 'Defisit Kas' : 'Aktif', label: 'Status' },
       ],
-      list: normalized.hutangItems.map(h => ({
-        title: h.name,
-        meta: `Kepada: ${h.partyName || h.name} · Jatuh tempo: ${formatDateId(h.due)}`,
-        value: formatRupiah(h.amount),
-        valueColor: '#e11d48',
-      })),
+      list: grouped.length > 0 ? grouped : [{
+        title: 'Belum ada hutang',
+        meta: 'Catat hutang vendor dari tab Keuangan',
+        value: formatRupiah(0),
+      }],
     };
   }
 
   // piutang
-  const piutangList = normalized.piutangItems.length > 0
-    ? normalized.piutangItems.map(item => ({
-        title: item.partyName || item.name,
-        meta: `Piutang proyek · Jatuh tempo: ${formatDateId(item.due)}`,
-        value: formatRupiah(item.amount),
-        valueColor: '#059669',
-      }))
+  const piutangItems = normalized.piutangItems.length > 0
+    ? normalized.piutangItems
     : p.budget.piutang > 0
       ? [{
-          title: p.client || 'Klien',
-          meta: 'Piutang belum ditagih — sisa nilai kontrak',
-          value: formatRupiah(p.budget.piutang),
-          valueColor: '#059669',
+          id: 0,
+          type: 'piutang' as const,
+          name: `Piutang ${p.client || 'Klien'}`,
+          partyName: p.client || 'Klien',
+          amount: p.budget.piutang,
+          due: p.endDate,
+          status: 'upcoming',
         }]
       : [];
+
+  const groupedPiutang = groupLedgerByParty(piutangItems, '#059669');
+  const piutangSubjectCount = groupedPiutang.length;
 
   return {
     title: 'Piutang Project', detailTab: 'keuangan',
     cards: [
-      { value: piutangList.length > 0 ? `${piutangList.length} pihak` : '0 pihak', label: 'Debitur' },
+      { value: `${piutangSubjectCount} subjek`, label: 'Kelompok Piutang' },
+      { value: `${piutangItems.length} item`, label: 'Jumlah Item' },
       { value: formatRupiah(p.budget.piutang), label: 'Total Piutang' },
-      { value: p.client || '—', label: 'Klien' },
     ],
-    list: piutangList,
+    list: groupedPiutang.length > 0 ? groupedPiutang : [{
+      title: 'Belum ada piutang',
+      meta: 'Catat piutang klien dari tab Keuangan',
+      value: formatRupiah(0),
+    }],
   };
 }

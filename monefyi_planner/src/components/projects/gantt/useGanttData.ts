@@ -6,6 +6,7 @@ import { loadWorkItemsForOrg, createWorkItem, type WorkItem } from '../../../ser
 import { loadAllGanttDependencies } from '../../../services/ganttDependencyService';
 import { loadBarColors } from '../../../services/ganttBarColorService';
 import { applyBarColors, loadProjectOrder, saveGanttChanges } from '../../../services/ganttSaveService';
+import { schedulePlanProgress } from '../../../lib/progressMetrics';
 import { hasGanttDraft, loadGanttDraft } from '../../../services/ganttDraftService';
 import { projectToGanttTask, workItemToGanttTask } from '../../../lib/gantt/utils';
 import type { GanttTask } from '../../../lib/gantt/types';
@@ -103,9 +104,10 @@ export function useGanttData(projects: Project[], orgId: string | undefined, cur
     const current = getSnapshot();
     setIsSaving(true);
     try {
-      workItemsRef.current = await saveGanttChanges(
+      const { workItems: savedItems, projectProgress } = await saveGanttChanges(
         orgId, current, baseline, workItemsRef.current, currency,
       );
+      workItemsRef.current = savedItems;
 
       for (const task of current.tasks) {
         if (task.type === 'project') {
@@ -115,7 +117,8 @@ export function useGanttData(projects: Project[], orgId: string | undefined, cur
               name: task.name,
               start_date: task.startDate,
               end_date: task.endDate,
-              progress_percentage: task.progress,
+              progress_percentage: projectProgress[task.id] ?? task.progress,
+              planned_progress: schedulePlanProgress(task.startDate, task.endDate),
               status: task.status as Project['status'],
             });
           }

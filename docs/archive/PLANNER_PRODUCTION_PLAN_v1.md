@@ -1,6 +1,12 @@
 # Monefyi Planner — Production Plan
 
-> 📚 **Indeks dokumentasi:** [`docs/README.md`](docs/README.md) · **Master:** [`docs/MONEFYI_MASTER.md`](docs/MONEFYI_MASTER.md) § Ekosistem
+> **⚠️ ARSIP — Dokumen ini digantikan Agustus 2026.**  
+> Gunakan dokumen kanonik baru:  
+> · **Teknis:** [`../MONEFYI_PLANNER_MASTER.md`](../MONEFYI_PLANNER_MASTER.md)  
+> · **Stakeholder:** [`../APA_ITU_PLANNER.md`](../APA_ITU_PLANNER.md)  
+> · **Indeks:** [`../README.md`](../README.md)
+
+> 📚 **Indeks dokumentasi (arsip):** [`../README.md`](../README.md) · **Master ekosistem:** [`../MONEFYI_MASTER.md`](../MONEFYI_MASTER.md) § Ekosistem
 
 > **Subdomain:** `planner.monefyi.com`
 > **Tipe:** SaaS Multitenant Project Planner PWA

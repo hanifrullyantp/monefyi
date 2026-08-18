@@ -1,20 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Plus, Save, Trash2, Upload } from 'lucide-react';
+import { ArrowLeft, Loader2, Plus, Save, Upload } from 'lucide-react';
 import PricelistCsvImport from '../../components/estimator/PricelistCsvImport';
+import PricelistTableView from '../../components/estimator/PricelistTableView';
+import PricelistCardView from '../../components/estimator/PricelistCardView';
 import UnsavedChangesDialog from '../../components/ui/UnsavedChangesDialog';
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
 import {
   applyPricelistPricePatch,
-  COMMON_UNITS,
   createPricelistItem,
   deletePricelistItem,
   loadPricelistItems,
   PRICELIST_CATEGORIES,
   updatePricelistItem,
 } from '../../services/pricelistService';
-import { formatRupiahFull } from '../../lib/estimatorFormat';
 import type { PricelistCategory, PricelistItem } from '../../types/estimator';
 
 type EditableFields = Pick<
@@ -240,55 +240,70 @@ export default function PricelistPage({ embedded = false }: PricelistPageProps) 
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6">
-      <div className="flex items-center gap-3 mb-6">
-        {!embedded && (
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 pb-24">
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex items-start gap-3">
+          {!embedded && (
+            <button
+              type="button"
+              onClick={handleBack}
+              className="p-2 rounded-xl hover:bg-slate-100 text-slate-500 shrink-0 mt-0.5"
+              aria-label="Kembali"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900">Pricelist</h1>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Edit harga jual & margin — klik Simpan untuk menyimpan</p>
+          </div>
+          {hasUnsaved && (
+            <span className="shrink-0 text-[10px] sm:text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full">
+              {dirtyIds.length}
+              <span className="hidden sm:inline"> belum disimpan</span>
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={handleBack}
-            className="p-2 rounded-xl hover:bg-slate-100 text-slate-500"
+            onClick={saveDirtyRows}
+            disabled={!hasUnsaved || saving}
+            className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-40 min-w-[2.75rem]"
+            title="Simpan perubahan"
+            aria-label="Simpan perubahan pricelist"
           >
-            <ArrowLeft className="w-5 h-5" />
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            <span className="hidden sm:inline">Simpan</span>
           </button>
-        )}
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-black text-slate-900">Pricelist</h1>
-          <p className="text-sm text-slate-500">Edit harga jual & margin — klik Simpan untuk menyimpan</p>
+          <button
+            type="button"
+            onClick={() => {
+              if (hasUnsaved) {
+                showToast('Simpan atau buang perubahan sebelum import CSV', 'error');
+                return;
+              }
+              setCsvOpen(true);
+            }}
+            className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 min-w-[2.75rem]"
+            title="Import CSV"
+            aria-label="Import pricelist dari CSV"
+          >
+            <Upload className="w-4 h-4" />
+            <span className="hidden sm:inline">Import CSV</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleAdd}
+            className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 border border-emerald-200 text-emerald-700 rounded-xl text-sm font-bold hover:bg-emerald-50 min-w-[2.75rem]"
+            title="Tambah item"
+            aria-label="Tambah item pricelist"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Tambah</span>
+          </button>
         </div>
-        {hasUnsaved && (
-          <span className="hidden sm:inline text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
-            {dirtyIds.length} belum disimpan
-          </span>
-        )}
-        <button
-          type="button"
-          onClick={saveDirtyRows}
-          disabled={!hasUnsaved || saving}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-40"
-        >
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          Simpan
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            if (hasUnsaved) {
-              showToast('Simpan atau buang perubahan sebelum import CSV', 'error');
-              return;
-            }
-            setCsvOpen(true);
-          }}
-          className="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50"
-        >
-          <Upload className="w-4 h-4" /> Import CSV
-        </button>
-        <button
-          type="button"
-          onClick={handleAdd}
-          className="inline-flex items-center gap-2 px-4 py-2.5 border border-emerald-200 text-emerald-700 rounded-xl text-sm font-bold hover:bg-emerald-50"
-        >
-          <Plus className="w-4 h-4" /> Tambah
-        </button>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
@@ -311,129 +326,58 @@ export default function PricelistPage({ embedded = false }: PricelistPageProps) 
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-24 bg-slate-100 rounded-2xl animate-pulse" />
+          ))}
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
           <p className="text-slate-500">Belum ada item pricelist</p>
-          <button type="button" onClick={handleAdd} className="mt-3 text-emerald-600 text-sm font-bold">
-            + Tambah item pertama
-          </button>
+          <div className="flex flex-wrap justify-center gap-2 mt-4">
+            <button type="button" onClick={handleAdd} className="inline-flex items-center gap-1.5 px-4 py-2 text-emerald-600 text-sm font-bold border border-emerald-200 rounded-xl hover:bg-emerald-50">
+              <Plus className="w-4 h-4" /> Tambah item
+            </button>
+            <button
+              type="button"
+              onClick={() => setCsvOpen(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-slate-600 text-sm font-semibold border border-slate-200 rounded-xl hover:bg-white"
+            >
+              <Upload className="w-4 h-4" /> Import CSV
+            </button>
+          </div>
         </div>
       ) : (
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-x-auto">
-          <table className="w-full text-sm min-w-[900px]">
-            <thead>
-              <tr className="bg-slate-50 text-left text-xs text-slate-500 uppercase">
-                <th className="p-3 min-w-[140px]">Item</th>
-                <th className="p-3 min-w-[120px]">Produk</th>
-                <th className="p-3 w-24">Kategori</th>
-                <th className="p-3 w-16">Satuan</th>
-                <th className="p-3 w-32">Harga Jual/Satuan</th>
-                <th className="p-3 w-20">Margin%</th>
-                <th className="p-3 w-28">Est. HPP</th>
-                <th className="p-3 w-16">Aktif</th>
-                <th className="p-3 w-10" />
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(row => {
-                const dirty = isRowDirty(row);
-                return (
-                  <tr
-                    key={row.id}
-                    className={`border-t border-slate-100 ${dirty ? 'bg-amber-50/40' : ''}`}
-                  >
-                    <td className="p-2">
-                      <input
-                        value={row.name}
-                        onChange={e => patchRow(row.id, { name: e.target.value })}
-                        className="w-full px-2 py-1 border border-transparent hover:border-slate-200 focus:border-emerald-300 rounded outline-none bg-transparent"
-                        placeholder="Nama pekerjaan/item"
-                      />
-                    </td>
-                    <td className="p-2">
-                      <input
-                        value={row.product || ''}
-                        onChange={e => patchRow(row.id, { product: e.target.value || null })}
-                        className="w-full px-2 py-1 border border-transparent hover:border-slate-200 focus:border-emerald-300 rounded outline-none bg-transparent"
-                        placeholder="Merk / spesifikasi"
-                      />
-                    </td>
-                    <td className="p-2">
-                      <select
-                        value={row.category || 'material'}
-                        onChange={e => patchRow(row.id, { category: e.target.value as PricelistCategory })}
-                        className="w-full px-1 py-1 text-xs border border-slate-200 rounded"
-                      >
-                        {PRICELIST_CATEGORIES.map(c => (
-                          <option key={c.value} value={c.value}>{c.label}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="p-2">
-                      <select
-                        value={row.unit}
-                        onChange={e => patchRow(row.id, { unit: e.target.value })}
-                        className="w-full px-1 py-1 text-xs border border-slate-200 rounded"
-                      >
-                        {COMMON_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-                      </select>
-                    </td>
-                    <td className="p-2">
-                      <input
-                        type="number"
-                        min={0}
-                        value={Math.round(Number(row.selling_price))}
-                        onChange={e => handlePriceUpdate(row.id, 'selling_price', Number(e.target.value))}
-                        className="w-full px-2 py-1 border border-emerald-200 bg-emerald-50/40 rounded text-right font-semibold"
-                      />
-                      <div className="text-[10px] text-emerald-600 text-right font-medium">
-                        {formatRupiahFull(Number(row.selling_price))}
-                      </div>
-                    </td>
-                    <td className="p-2">
-                      <input
-                        type="number"
-                        min={0}
-                        value={Math.round(Number(row.default_margin_pct) * 10) / 10}
-                        onChange={e => handlePriceUpdate(row.id, 'default_margin_pct', Number(e.target.value))}
-                        className="w-full px-2 py-1 border border-slate-200 rounded text-right"
-                      />
-                    </td>
-                    <td className="p-2">
-                      <input
-                        type="number"
-                        min={0}
-                        value={Math.round(Number(row.base_cost))}
-                        onChange={e => handlePriceUpdate(row.id, 'base_cost', Number(e.target.value))}
-                        className="w-full px-2 py-1 border border-slate-200 bg-slate-50 rounded text-right text-slate-600"
-                        title="Estimasi HPP dari harga jual & margin"
-                      />
-                      <div className="text-[10px] text-slate-600 text-right">{formatRupiahFull(Number(row.base_cost))}</div>
-                    </td>
-                    <td className="p-2 text-center">
-                      <input
-                        type="checkbox"
-                        checked={row.is_active}
-                        onChange={e => patchRow(row.id, { is_active: e.target.checked })}
-                      />
-                    </td>
-                    <td className="p-2">
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(row.id, row.name)}
-                        className="p-1 text-slate-600 hover:text-rose-600"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <>
+          <PricelistCardView
+            rows={filtered}
+            isRowDirty={isRowDirty}
+            onPatch={patchRow}
+            onPriceUpdate={handlePriceUpdate}
+            onDelete={handleDelete}
+          />
+          <PricelistTableView
+            rows={filtered}
+            isRowDirty={isRowDirty}
+            onPatch={patchRow}
+            onPriceUpdate={handlePriceUpdate}
+            onDelete={handleDelete}
+          />
+        </>
+      )}
+
+      {hasUnsaved && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-20 bg-white/95 backdrop-blur border-t border-amber-200 px-4 py-2.5 flex items-center justify-between gap-3 safe-bottom">
+          <span className="text-xs font-semibold text-amber-700">{dirtyIds.length} belum disimpan</span>
+          <button
+            type="button"
+            onClick={saveDirtyRows}
+            disabled={saving}
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold disabled:opacity-60"
+          >
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            Simpan
+          </button>
         </div>
       )}
 

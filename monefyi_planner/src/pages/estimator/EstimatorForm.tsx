@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ChevronDown, FileText, Loader2, Save, Eye, Settings2, MessageCircle, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Loader2, Save, Settings2, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import EstimatorActionBar from '../../components/estimator/EstimatorActionBar';
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
 import EstimationItemsTable from '../../components/estimator/EstimationItemsTable';
@@ -239,10 +240,12 @@ export default function EstimatorForm() {
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-60 shrink-0"
+          className="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-60 shrink-0 min-w-[2.75rem]"
+          title="Simpan estimasi"
+          aria-label="Simpan estimasi"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          Simpan
+          <span className="hidden sm:inline">Simpan</span>
         </button>
       </div>
 
@@ -412,6 +415,7 @@ export default function EstimatorForm() {
         <div className="flex-1 min-w-0 w-full">
           <EstimationItemsTable
             orgId={tenant!.id}
+            userId={user?.id || ''}
             items={draft.items}
             defaultMargin={draft.margin_pct}
             overheadPct={draft.overhead_pct}
@@ -465,53 +469,15 @@ export default function EstimatorForm() {
         </div>
       )}
 
-      {/* Sticky bottom bar */}
-      <div
-        className={`fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-3 flex flex-wrap gap-2 justify-end z-20 safe-bottom ${
-          navSidebarCollapsed ? 'lg:left-[4.5rem]' : 'lg:left-64'
-        }`}
-      >
-        <button
-          type="button"
-          onClick={() => navigate('/app/estimator')}
-          className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-600"
-        >
-          Batal
-        </button>
-        <button
-          type="button"
-          onClick={handleShareWhatsApp}
-          disabled={isNew}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 border border-emerald-200 text-emerald-600 rounded-xl text-sm font-semibold disabled:opacity-50"
-        >
-          <MessageCircle className="w-4 h-4" /> WhatsApp
-        </button>
-        <button
-          type="button"
-          onClick={handlePreviewPdf}
-          disabled={pdfLoading || isNew}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 border border-slate-200 text-slate-700 rounded-xl text-sm font-semibold disabled:opacity-50"
-        >
-          <Eye className="w-4 h-4" /> Preview PDF
-        </button>
-        <button
-          type="button"
-          onClick={handleDownloadPdf}
-          disabled={pdfLoading || isNew}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 disabled:opacity-50"
-        >
-          {pdfLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-          Download PDF
-        </button>
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={saving}
-          className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-60"
-        >
-          {saving ? 'Menyimpan...' : 'Simpan Draft'}
-        </button>
-      </div>
+      <EstimatorActionBar
+        navSidebarCollapsed={navSidebarCollapsed}
+        isNew={isNew}
+        pdfLoading={pdfLoading}
+        onCancel={() => navigate('/app/estimator')}
+        onWhatsApp={handleShareWhatsApp}
+        onPreviewPdf={handlePreviewPdf}
+        onDownloadPdf={handleDownloadPdf}
+      />
 
       {pdfPreviewOpen && pdfSettings && (
         <PdfPreviewModal

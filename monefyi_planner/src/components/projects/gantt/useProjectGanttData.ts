@@ -3,6 +3,7 @@ import type { Project } from '../../../store/appStore';
 import { useAppStore } from '../../../store/appStore';
 import { useGanttStore } from '../../../store/ganttStore';
 import type { WorkItem } from '../../../services/workItemService';
+import { schedulePlanProgress } from '../../../lib/progressMetrics';
 import { loadBarColors } from '../../../services/ganttBarColorService';
 import { applyBarColors, saveGanttChanges } from '../../../services/ganttSaveService';
 import { depsFromWorkItems } from '../../../services/ganttDependencyService';
@@ -83,16 +84,28 @@ export function useProjectGanttData(
     const current = getSnapshot();
     setIsSaving(true);
     try {
-      workItemsRef.current = await saveGanttChanges(
+      const { workItems: savedItems, projectProgress } = await saveGanttChanges(
         orgId, current, baseline, workItemsRef.current, currency,
       );
+      workItemsRef.current = savedItems;
       const projTask = current.tasks.find(t => t.id === project.id);
+      const planned = schedulePlanProgress(
+        projTask?.startDate ?? project.start_date,
+        projTask?.endDate ?? project.end_date,
+      );
+      const avg = projectProgress[project.id];
       if (projTask) {
         updateProject(project.id, {
           name: projTask.name,
           start_date: projTask.startDate,
           end_date: projTask.endDate,
-          progress_percentage: projTask.progress,
+          progress_percentage: avg ?? projTask.progress,
+          planned_progress: planned,
+        });
+      } else if (avg != null) {
+        updateProject(project.id, {
+          progress_percentage: avg,
+          planned_progress: planned,
         });
       }
       commitBaseline();

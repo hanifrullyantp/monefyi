@@ -1,7 +1,7 @@
 # Dokumentasi Monefyi
 
 > **Mulai di sini:** [`MONEFYI_MASTER.md`](MONEFYI_MASTER.md) — dokumen referensi lengkap (produk, arsitektur, data, fitur, deploy, dev).  
-> Terakhir diperbarui: **Juli 2026**.
+> Terakhir diperbarui: **Agustus 2026**.
 
 ---
 
@@ -10,7 +10,9 @@
 | Saya ingin… | Baca |
 |-------------|------|
 | **Menjelaskan apa itu Monefyi** (presentasi, stakeholder) | [`APA_ITU_MONEFYI.md`](APA_ITU_MONEFYI.md) |
+| **Menjelaskan apa itu Monefyi Planner** (presentasi, stakeholder) | [`APA_ITU_PLANNER.md`](APA_ITU_PLANNER.md) |
 | Gambaran lengkap seluruh ekosistem (dev & arsitektur) | [`MONEFYI_MASTER.md`](MONEFYI_MASTER.md) |
+| Gambaran lengkap Planner (dev & arsitektur) | [`MONEFYI_PLANNER_MASTER.md`](MONEFYI_PLANNER_MASTER.md) |
 | Memahami produk PWA & roadmap | [`MONEFYI_PRODUCT_PROMPT.md`](MONEFYI_PRODUCT_PROMPT.md) |
 | Arsitektur parsing transaksi (L0–L5) | [`ARSITEKTUR_PARSING_MONEFYI.md`](ARSITEKTUR_PARSING_MONEFYI.md) |
 | Fitur Monevisor / AI Advisor | [`MONEVISOR.md`](MONEVISOR.md) |
@@ -27,8 +29,10 @@
 ```
 docs/
 ├── README.md                      ← Indeks ini
-├── APA_ITU_MONEFYI.md             ← ★ Penjelasan produk (untuk perkenalan)
-├── MONEFYI_MASTER.md              ← Referensi teknis lengkap (dev)
+├── APA_ITU_MONEFYI.md             ← ★ Penjelasan produk PWA (untuk perkenalan)
+├── APA_ITU_PLANNER.md             ← ★ Penjelasan produk Planner (untuk perkenalan)
+├── MONEFYI_MASTER.md              ← Referensi teknis lengkap PWA (dev)
+├── MONEFYI_PLANNER_MASTER.md      ← Referensi teknis lengkap Planner (dev)
 ├── MONEFYI_PRODUCT_PROMPT.md      ← Spec produk PWA + master prompt AI dev
 ├── ARSITEKTUR_PARSING_MONEFYI.md  ← Arsitektur parsing (target L0–L5)
 ├── MONEVISOR.md                   ← AI financial advisor
@@ -42,9 +46,11 @@ docs/
 ├── testing/                       ← QA & dataset uji
 │   ├── GOLDEN_DATASET.json
 │   └── FUNNEL_E2E_CHECKLIST.md
-└── preview/                       ← Wireframe & entitlement preview
-    ├── index.html
-    └── ENTITLEMENT_MATRIX.md
+├── preview/                       ← Wireframe & entitlement preview
+│   ├── index.html
+│   └── ENTITLEMENT_MATRIX.md
+└── archive/                       ← Dokumen arsip (spec lama)
+    └── PLANNER_PRODUCTION_PLAN_v1.md
 
 .monefyi/                          ← Konteks AI (Cursor) — jangan pindah
 ├── PARSE_MIGRATION_CONTEXT.md
@@ -56,7 +62,6 @@ docs/
 ├── EDGE_FUNCTION_AUDIT.md         ← Mapping frontend ↔ edge functions
 ├── MIGRATION_VERCEL_PLAN.md       ← Rencana migrasi Vercel
 ├── RISK_ANALYSIS.md               ← Analisis risiko migrasi
-├── PLANNER_PRODUCTION_PLAN.md     ← Spec Planner produksi
 └── README_SPLIT_FILES.md          ← Panduan attach file ke Cursor
 ```
 
@@ -72,7 +77,7 @@ docs/
 | **Planner (vanilla)** | [`planner/`](../planner/) | [`../planner/README.md`](../planner/README.md) |
 | **Planner (React)** | [`monefyi_planner/`](../monefyi_planner/) | [`../monefyi_planner/README.md`](../monefyi_planner/README.md) |
 
-Dokumen Planner tambahan: [`../monefyi_planner/docs/`](../monefyi_planner/docs/).
+Dokumen Planner: [`MONEFYI_PLANNER_MASTER.md`](MONEFYI_PLANNER_MASTER.md) · [`APA_ITU_PLANNER.md`](APA_ITU_PLANNER.md) · [`../monefyi_planner/docs/`](../monefyi_planner/docs/).
 
 ---
 
@@ -97,5 +102,7 @@ Saat mengerjakan fitur tertentu, attach file kontek relevan:
 | Budget UI | `@docs/MONEFYI_MASTER.md` § Budget |
 | Monevisor | `@docs/MONEVISOR.md` |
 | Deploy | `@docs/DEPLOY_STRUCTURE.md` |
+| Planner (fitur/arsitektur) | `@docs/MONEFYI_PLANNER_MASTER.md` |
+| Planner (stakeholder) | `@docs/APA_ITU_PLANNER.md` |
 
 Panduan lengkap attach: [`../README_SPLIT_FILES.md`](../README_SPLIT_FILES.md).

@@ -110,6 +110,34 @@ export interface PricelistProductGroup {
   items: PricelistItem[];
 }
 
+export interface PricelistCategoryGroup {
+  category: PricelistCategory;
+  label: string;
+  items: PricelistItem[];
+}
+
+/** Kelompokkan pricelist per kategori untuk picker card grid. */
+export function groupPricelistByCategory(items: PricelistItem[]): PricelistCategoryGroup[] {
+  const labelMap = new Map(PRICELIST_CATEGORIES.map(c => [c.value, c.label]));
+  const map = new Map<PricelistCategory, PricelistItem[]>();
+
+  for (const cat of PRICELIST_CATEGORIES) {
+    map.set(cat.value, []);
+  }
+
+  for (const item of items) {
+    const cat = (item.category || 'material') as PricelistCategory;
+    if (!map.has(cat)) map.set(cat, []);
+    map.get(cat)!.push(item);
+  }
+
+  return PRICELIST_CATEGORIES.map(({ value, label }) => ({
+    category: value,
+    label,
+    items: (map.get(value) || []).sort((a, b) => a.name.localeCompare(b.name, 'id')),
+  })).filter(g => g.items.length > 0);
+}
+
 /** Kelompokkan pricelist per nama produk untuk tampilan picker. */
 export function groupPricelistByProduct(items: PricelistItem[]): PricelistProductGroup[] {
   const map = new Map<string, PricelistItem[]>();

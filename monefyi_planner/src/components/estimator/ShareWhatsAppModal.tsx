@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Loader2, MessageCircle, X } from 'lucide-react';
+import { Check, Copy, Loader2, MessageCircle, X } from 'lucide-react';
 import type { EstimationFormDraft } from '../../types/estimator';
 import type { PdfSettings } from '../../types/pdfSettings';
 import type { WhatsAppTemplateConfig } from '../../lib/whatsappQuotationMessage';
@@ -38,6 +38,8 @@ export default function ShareWhatsAppModal({
   );
   const [subtitle, setSubtitle] = useState(templateConfig.defaultSubtitle || '');
   const [message, setMessage] = useState('');
+  const [phoneOverride, setPhoneOverride] = useState('');
+  const [copied, setCopied] = useState(false);
   const [sending, setSending] = useState(false);
 
   const buildMessage = () =>
@@ -50,6 +52,8 @@ export default function ShareWhatsAppModal({
       : 'Pak') as Salutation;
     setSalutation(sal);
     setSubtitle(templateConfig.defaultSubtitle || '');
+    setPhoneOverride(draft.customer_phone || '');
+    setCopied(false);
     setMessage(buildWhatsAppQuotationMessage(draft, settings, templateConfig, sal, templateConfig.defaultSubtitle));
   }, [open, draft, settings, templateConfig]);
 
@@ -61,6 +65,23 @@ export default function ShareWhatsAppModal({
   if (!open) return null;
 
   const handleReset = () => setMessage(buildMessage());
+
+  const handleCopy = async () => {
+    if (!message.trim()) {
+      onToast('Pesan kosong', 'error');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(message);
+      setCopied(true);
+      onToast('Pesan disalin', 'success');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      onToast('Gagal menyalin teks', 'error');
+    }
+  };
+
+  const targetPhone = phoneOverride.trim() || draft.customer_phone || '';
 
   const handleShare = async () => {
     if (!message.trim()) {
@@ -90,12 +111,12 @@ export default function ShareWhatsAppModal({
 
         downloadBlob(blob, filename);
         openWhatsAppChat(
-          draft.customer_phone,
+          targetPhone,
           `${message}\n\n📎 File PDF "${filename}" telah diunduh — silakan lampirkan di WhatsApp.`,
         );
         onToast('PDF diunduh — buka WhatsApp dan lampirkan file', 'success');
       } else {
-        openWhatsAppChat(draft.customer_phone, message);
+        openWhatsAppChat(targetPhone, message);
         onToast('Membuka WhatsApp', 'success');
       }
       onClose();
@@ -170,22 +191,40 @@ export default function ShareWhatsAppModal({
             </label>
           </div>
 
-          {draft.customer_phone ? (
-            <p className="text-xs text-slate-500">
-              Ke: <span className="font-semibold text-slate-700">{draft.customer_phone}</span>
-            </p>
-          ) : (
-            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-              Telepon customer kosong — WhatsApp akan terbuka tanpa nomor tujuan.
-            </p>
-          )}
+          <label className="block">
+            <span className="text-xs text-slate-500">Nomor WhatsApp tujuan</span>
+            <input
+              type="tel"
+              value={phoneOverride}
+              onChange={e => setPhoneOverride(e.target.value)}
+              placeholder="08xxxxxxxxxx"
+              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+            />
+            {!targetPhone && (
+              <p className="text-[11px] text-amber-600 mt-1">
+                Kosong — WhatsApp akan terbuka tanpa nomor tujuan.
+              </p>
+            )}
+          </label>
 
           <label className="block">
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs text-slate-500">Pesan (bisa diedit)</span>
-              <button type="button" onClick={handleReset} className="text-xs text-emerald-600 font-semibold">
-                Reset template
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  className="inline-flex items-center gap-1 text-xs text-emerald-600 font-semibold hover:text-emerald-700"
+                  title="Salin seluruh pesan"
+                  aria-label="Salin pesan WhatsApp"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? 'Tersalin' : 'Salin'}
+                </button>
+                <button type="button" onClick={handleReset} className="text-xs text-slate-500 font-semibold hover:text-slate-700">
+                  Reset
+                </button>
+              </div>
             </div>
             <textarea
               value={message}
