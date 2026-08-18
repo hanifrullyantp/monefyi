@@ -3,6 +3,11 @@ const ID_MONTHS = [
   'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
 ];
 
+const ID_MONTHS_SHORT = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+  'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
+];
+
 /** Angka dengan pemisah ribuan (tanpa Rp) */
 export function formatNumberId(n: number): string {
   if (!Number.isFinite(n)) return '';
@@ -28,7 +33,15 @@ export function formatRupiahFull(n: number): string {
 /** Indonesian date: 16 Mei 2026 */
 export function formatDateId(iso: string | Date): string {
   const d = typeof iso === 'string' ? new Date(iso) : iso;
+  if (Number.isNaN(d.getTime())) return '';
   return `${d.getDate()} ${ID_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/** Short date: 18 Agu 2026 */
+export function formatDateIdShort(iso: string | Date): string {
+  const d = typeof iso === 'string' ? new Date(iso) : iso;
+  if (Number.isNaN(d.getTime())) return '';
+  return `${d.getDate()} ${ID_MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 export function formatPhoneWa(phone: string): string {
@@ -58,9 +71,17 @@ export const ESTIMATION_STATUS_LABEL: Record<string, string> = {
 };
 
 export const ESTIMATION_STATUS_COLOR: Record<string, string> = {
-  draft: 'bg-slate-100 text-slate-600',
+  draft: 'bg-slate-100 text-slate-700',
   sent: 'bg-blue-100 text-blue-700',
   accepted: 'bg-emerald-100 text-emerald-700',
-  rejected: 'bg-rose-100 text-rose-700',
-  converted: 'bg-emerald-100 text-emerald-700',
+  rejected: 'bg-red-100 text-red-700',
+  converted: 'bg-teal-100 text-teal-700',
+};
+
+export const ESTIMATION_STATUS_DOT: Record<string, string> = {
+  draft: 'bg-slate-500',
+  sent: 'bg-blue-500',
+  accepted: 'bg-emerald-500',
+  rejected: 'bg-red-500',
+  converted: 'bg-teal-500',
 };

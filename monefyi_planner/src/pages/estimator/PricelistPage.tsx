@@ -255,7 +255,9 @@ export default function PricelistPage({ embedded = false }: PricelistPageProps) 
           )}
           <div className="flex-1 min-w-0">
             <h1 className="text-xl sm:text-2xl font-black text-slate-900">Pricelist</h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Edit harga jual & margin — klik Simpan untuk menyimpan</p>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              {rows.length} item · {new Set(rows.map(r => r.category).filter(Boolean)).size} kategori
+            </p>
           </div>
           {hasUnsaved && (
             <span className="shrink-0 text-[10px] sm:text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full">
@@ -332,18 +334,27 @@ export default function PricelistPage({ embedded = false }: PricelistPageProps) 
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-          <p className="text-slate-500">Belum ada item pricelist</p>
-          <div className="flex flex-wrap justify-center gap-2 mt-4">
-            <button type="button" onClick={handleAdd} className="inline-flex items-center gap-1.5 px-4 py-2 text-emerald-600 text-sm font-bold border border-emerald-200 rounded-xl hover:bg-emerald-50">
-              <Plus className="w-4 h-4" /> Tambah item
+        <div className="text-center py-16 px-6 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+          <p className="text-lg font-bold text-slate-700">Belum ada item di pricelist</p>
+          <p className="text-sm text-slate-500 mt-2">Setup harga sekali, pakai berkali-kali.</p>
+          <div className="flex flex-wrap justify-center gap-2 mt-6">
+            <button type="button" onClick={handleAdd} className="inline-flex items-center gap-1.5 px-4 py-2.5 text-white bg-emerald-600 text-sm font-bold rounded-xl hover:bg-emerald-700">
+              <Plus className="w-4 h-4" /> Tambah Item Manual
             </button>
             <button
               type="button"
               onClick={() => setCsvOpen(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-slate-600 text-sm font-semibold border border-slate-200 rounded-xl hover:bg-white"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-slate-600 text-sm font-semibold border border-slate-200 rounded-xl hover:bg-white"
             >
               <Upload className="w-4 h-4" /> Import CSV
+            </button>
+            <button
+              type="button"
+              disabled
+              title="Coming in Phase 4"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-slate-400 text-sm font-semibold border border-slate-200 rounded-xl cursor-not-allowed"
+            >
+              Mulai dari Template →
             </button>
           </div>
         </div>

@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, FolderOpen, Wallet, Settings, Bell, Menu, X,
-  Sparkles, Wifi, WifiOff, Clock, Users, Calculator,
+  Sparkles, Wifi, WifiOff, Clock, Users, Receipt,
   BarChart3, Shield, ChevronRight, Database, PanelRightClose, PanelRight,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
@@ -68,7 +68,7 @@ export default function Layout({ children }: LayoutProps) {
 
   const ownerMobileTabs = [
     { id: 'home', label: 'Home', icon: Home },
-    { id: 'estimator', label: 'Estimator', icon: Calculator },
+    { id: 'estimator', label: 'Estimator', icon: Receipt },
     { id: 'command', label: '✦', icon: Sparkles, special: true },
     { id: 'finance', label: 'Finance', icon: Wallet },
     ...(canAccessHr ? [{ id: 'hr', label: 'HR', icon: Users }] : []),
@@ -105,7 +105,7 @@ export default function Layout({ children }: LayoutProps) {
     { id: 'home', label: 'Dashboard', icon: Home },
     { id: 'projects', label: 'Proyek', icon: FolderOpen },
     { id: 'database', label: 'Database', icon: Database },
-    { id: 'estimator', label: 'Estimator', icon: Calculator },
+    { id: 'estimator', label: 'Estimator', icon: Receipt },
     { id: 'finance', label: 'Keuangan Bisnis', icon: Wallet },
     ...(canAccessHr
       ? [{ id: 'hr', label: 'HR & Karyawan', icon: Users }]

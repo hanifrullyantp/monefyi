@@ -4,6 +4,9 @@ import { ArrowLeft, Loader2, Save } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
 import ColorPickerField from '../../components/estimator/ColorPickerField';
+import EstimatorBreadcrumb from '../../components/estimator/EstimatorBreadcrumb';
+import LogoUpload from '../../components/estimator/LogoUpload';
+import PdfPreviewCard from '../../components/estimator/PdfPreviewCard';
 import { loadPdfSettings, updatePdfSettings } from '../../services/pdfSettingsService';
 import {
   loadWhatsAppTemplate,
@@ -89,8 +92,44 @@ export default function EstimatorSettings() {
     );
   }
 
+  const progressFields = [
+    Boolean(settings.company_name?.trim()),
+    Boolean(settings.phone?.trim()),
+    Boolean(settings.address?.trim()),
+    Boolean(settings.logo_url),
+    Boolean(settings.bank_name?.trim() && settings.bank_account?.trim()),
+    Boolean(settings.signature_url || settings.signature_name?.trim()),
+    Boolean(settings.default_pdf_template),
+    Boolean(settings.primary_color),
+    Boolean(waTemplate.body?.trim()),
+  ];
+  const progressDone = progressFields.filter(Boolean).length;
+
+  const showSetupBanner = !settings.company_name?.trim();
+
   return (
-    <div className="max-w-2xl mx-auto p-4 sm:p-6">
+    <div className="max-w-5xl mx-auto p-4 sm:p-6">
+      <EstimatorBreadcrumb items={[{ label: 'Pengaturan' }]} />
+
+      {showSetupBanner && (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Setup identitas perusahaan Anda agar penawaran terlihat profesional. Mulai dari nama dan logo.
+        </div>
+      )}
+
+      <div className="mb-4">
+        <div className="flex justify-between text-xs font-semibold text-slate-600 mb-1">
+          <span>Profil perusahaan</span>
+          <span>{progressDone}/9 lengkap</span>
+        </div>
+        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-emerald-500 rounded-full transition-all"
+            style={{ width: `${(progressDone / 9) * 100}%` }}
+          />
+        </div>
+      </div>
+
       <div className="flex items-center gap-3 mb-6">
         <button type="button" onClick={() => navigate('/app/estimator')} className="p-2 rounded-xl hover:bg-slate-100">
           <ArrowLeft className="w-5 h-5 text-slate-500" />
@@ -110,7 +149,8 @@ export default function EstimatorSettings() {
         </button>
       </div>
 
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="space-y-4">
         <Section title="Identitas Perusahaan">
           <Field label="Nama perusahaan" value={settings.company_name || ''} onChange={v => patch({ company_name: v })} />
           <Field label="Tagline" value={settings.company_tagline || ''} onChange={v => patch({ company_tagline: v })} />
@@ -120,7 +160,16 @@ export default function EstimatorSettings() {
             <Field label="Email" value={settings.email || ''} onChange={v => patch({ email: v })} />
           </div>
           <Field label="Website" value={settings.website || ''} onChange={v => patch({ website: v })} />
-          <Field label="URL Logo (company-assets)" value={settings.logo_url || ''} onChange={v => patch({ logo_url: v || null })} />
+          {tenant?.id && (
+            <LogoUpload
+              orgId={tenant.id}
+              kind="logo"
+              label="Logo perusahaan"
+              value={settings.logo_url}
+              onChange={url => patch({ logo_url: url })}
+              onError={msg => showToast(msg, 'error')}
+            />
+          )}
         </Section>
 
         <Section title="Rekening Bank">
@@ -130,7 +179,17 @@ export default function EstimatorSettings() {
         </Section>
 
         <Section title="Tanda Tangan">
-          <Field label="URL gambar tanda tangan" value={settings.signature_url || ''} onChange={v => patch({ signature_url: v || null })} />
+          {tenant?.id && (
+            <LogoUpload
+              orgId={tenant.id}
+              kind="signature"
+              label="Gambar tanda tangan"
+              value={settings.signature_url}
+              onChange={url => patch({ signature_url: url })}
+              onError={msg => showToast(msg, 'error')}
+              previewClassName="w-32 h-16"
+            />
+          )}
           <div className="grid grid-cols-2 gap-3">
             <Field label="Nama" value={settings.signature_name || ''} onChange={v => patch({ signature_name: v })} />
             <Field label="Jabatan" value={settings.signature_title || ''} onChange={v => patch({ signature_title: v })} />
@@ -200,6 +259,13 @@ export default function EstimatorSettings() {
           </label>
           <Field label="Footer text" value={settings.footer_text} onChange={v => patch({ footer_text: v })} />
         </Section>
+        </div>
+        <div className="hidden lg:block">
+          <PdfPreviewCard settings={settings} />
+        </div>
+        <div className="lg:hidden">
+          <PdfPreviewCard settings={settings} />
+        </div>
       </div>
     </div>
   );

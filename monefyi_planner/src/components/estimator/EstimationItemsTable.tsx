@@ -220,22 +220,38 @@ export default function EstimationItemsTable({
         </div>
 
         {items.length === 0 ? (
-          <div className="p-10 text-center text-sm text-slate-600 space-y-4">
-            <p>Belum ada item estimasi.</p>
-            <div className="flex flex-wrap justify-center gap-2">
+          <div className="p-10 text-center space-y-5">
+            <p className="text-sm font-semibold text-slate-700">Belum ada item</p>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">Tambah item dari 3 cara:</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto">
+              {ENABLE_ESTIMATOR_SMART_INPUT && (
+                <button
+                  type="button"
+                  onClick={() => setSmartOpen(true)}
+                  className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-50 text-left"
+                >
+                  <Sparkles className="w-5 h-5 text-emerald-600 mb-2" />
+                  <div className="text-xs font-bold text-slate-800">Smart Input</div>
+                  <div className="text-[10px] text-slate-500 mt-1">Ketik natural (paling cepat)</div>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setPickerOpen(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700"
+                className="p-4 rounded-xl border border-slate-200 hover:border-emerald-200 hover:bg-emerald-50/30 text-left"
               >
-                <List className="w-4 h-4" /> Dari Pricelist
+                <List className="w-5 h-5 text-emerald-600 mb-2" />
+                <div className="text-xs font-bold text-slate-800">Dari Pricelist</div>
+                <div className="text-[10px] text-slate-500 mt-1">Pilih dari harga master</div>
               </button>
               <button
                 type="button"
                 onClick={addRow}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50"
+                className="p-4 rounded-xl border border-slate-200 hover:border-emerald-200 hover:bg-emerald-50/30 text-left"
               >
-                <Plus className="w-4 h-4" /> Manual
+                <Plus className="w-5 h-5 text-slate-600 mb-2" />
+                <div className="text-xs font-bold text-slate-800">Manual</div>
+                <div className="text-[10px] text-slate-500 mt-1">Isi baris satu-satu</div>
               </button>
             </div>
           </div>
@@ -247,7 +263,7 @@ export default function EstimationItemsTable({
                   <th className={`${thClass} ${stickyCheck} ${stickyHead} w-10 text-center`} title="Centang untuk masuk total estimasi">✓</th>
                   <th className={`${thClass} ${stickyNum} ${stickyHead} w-10`}>#</th>
                   <th className={`${thClass} ${stickyItem} ${stickyHead} min-w-[160px]`}>Item</th>
-                  <th className={`${thClass} min-w-[80px]`}>Kat.</th>
+                  <th className={`${thClass} min-w-[80px] hidden lg:table-cell`}>Kat.</th>
                   <th className={`${thClass} min-w-[64px]`}>Sat.</th>
                   <th className={`${thClass} min-w-[64px] text-right`}>Qty</th>
                   <th className={`${thClass} min-w-[148px] text-right`}>Jual / unit</th>
@@ -343,7 +359,7 @@ export default function EstimationItemsTable({
                             </div>
                           </div>
                         </td>
-                        <td className={tdClass}>
+                        <td className={`${tdClass} hidden lg:table-cell`}>
                           <select
                             value={item.category}
                             onChange={e => updateItem(idx, { category: e.target.value })}

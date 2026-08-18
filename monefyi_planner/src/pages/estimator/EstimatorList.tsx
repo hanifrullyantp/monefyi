@@ -1,23 +1,17 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  Plus, Search, Loader2, Copy, Pencil, Trash2, Calculator, RefreshCw,
+  Plus, Search, Loader2, Calculator, RefreshCw, FileText, ChevronDown, Sparkles,
 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
+import EstimationCard from '../../components/estimator/EstimationCard';
 import {
   deleteEstimation,
   duplicateEstimation,
   loadEstimations,
 } from '../../services/estimatorService';
-import {
-  ESTIMATION_STATUS_COLOR,
-  ESTIMATION_STATUS_LABEL,
-  formatDateId,
-  formatRupiahFull,
-} from '../../lib/estimatorFormat';
-import { getSignedImageUrl } from '../../services/estimationImageService';
 import type { Estimation, EstimationStatus } from '../../types/estimator';
 
 const STATUS_FILTERS: Array<{ value: '' | EstimationStatus; label: string }> = [
@@ -25,8 +19,35 @@ const STATUS_FILTERS: Array<{ value: '' | EstimationStatus; label: string }> = [
   { value: 'draft', label: 'Draft' },
   { value: 'sent', label: 'Terkirim' },
   { value: 'accepted', label: 'Diterima' },
+  { value: 'rejected', label: 'Ditolak' },
   { value: 'converted', label: 'Jadi Proyek' },
 ];
+
+type SortKey = 'newest' | 'oldest' | 'value_desc' | 'value_asc' | 'profit_desc';
+
+const SORT_OPTIONS: Array<{ value: SortKey; label: string }> = [
+  { value: 'newest', label: 'Terbaru' },
+  { value: 'oldest', label: 'Terlama' },
+  { value: 'value_desc', label: 'Nilai Tertinggi' },
+  { value: 'value_asc', label: 'Nilai Terendah' },
+  { value: 'profit_desc', label: 'Profit Tertinggi' },
+];
+
+function sortRows(rows: Estimation[], key: SortKey): Estimation[] {
+  const copy = [...rows];
+  switch (key) {
+    case 'oldest':
+      return copy.sort((a, b) => new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime());
+    case 'value_desc':
+      return copy.sort((a, b) => Number(b.total_selling_price) - Number(a.total_selling_price));
+    case 'value_asc':
+      return copy.sort((a, b) => Number(a.total_selling_price) - Number(b.total_selling_price));
+    case 'profit_desc':
+      return copy.sort((a, b) => Number(b.total_profit) - Number(a.total_profit));
+    default:
+      return copy.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+  }
+}
 
 export default function EstimatorList() {
   const navigate = useNavigate();
@@ -36,7 +57,7 @@ export default function EstimatorList() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'' | EstimationStatus>('');
-  const [thumbs, setThumbs] = useState<Record<string, string>>({});
+  const [sortKey, setSortKey] = useState<SortKey>('newest');
 
   const load = useCallback(async () => {
     if (!tenant?.id) return;
@@ -56,27 +77,7 @@ export default function EstimatorList() {
 
   useEffect(() => { load(); }, [load]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const loadThumbs = async () => {
-      const withImage = rows.filter(r => r.image_1_url);
-      const entries = await Promise.all(
-        withImage.map(async r => {
-          try {
-            const url = await getSignedImageUrl(r.image_1_url!);
-            return [r.id, url] as const;
-          } catch {
-            return null;
-          }
-        }),
-      );
-      if (!cancelled) {
-        setThumbs(Object.fromEntries(entries.filter((e): e is [string, string] => e !== null)));
-      }
-    };
-    loadThumbs();
-    return () => { cancelled = true; };
-  }, [rows]);
+  const sortedRows = useMemo(() => sortRows(rows, sortKey), [rows, sortKey]);
 
   const handleDelete = async (id: string, title: string) => {
     if (!window.confirm(`Hapus estimasi "${title}"?`)) return;
@@ -109,7 +110,7 @@ export default function EstimatorList() {
           </h1>
           <p className="text-sm text-slate-500 mt-1">Hitung HPP, margin, dan buat penawaran profesional</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => navigate('/app/estimator/settings')}
@@ -134,122 +135,103 @@ export default function EstimatorList() {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+      <div className="flex flex-col lg:flex-row gap-3 mb-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Cari kode, judul, customer..."
+            placeholder="Cari kode, judul, klien..."
             className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-emerald-400 outline-none"
           />
         </div>
-        <div className="flex gap-2 overflow-x-auto">
-          {STATUS_FILTERS.map(f => (
-            <button
-              key={f.value}
-              type="button"
-              onClick={() => setStatusFilter(f.value)}
-              className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap ${
-                statusFilter === f.value
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-          <button type="button" onClick={load} className="p-2 text-slate-600 hover:text-emerald-600">
-            <RefreshCw className="w-4 h-4" />
-          </button>
+        <div className="relative">
+          <select
+            value={sortKey}
+            onChange={e => setSortKey(e.target.value as SortKey)}
+            className="appearance-none w-full lg:w-48 pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 bg-white"
+          >
+            {SORT_OPTIONS.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
         </div>
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto mb-4 pb-1">
+        {STATUS_FILTERS.map(f => (
+          <button
+            key={f.value}
+            type="button"
+            onClick={() => setStatusFilter(f.value)}
+            className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap ${
+              statusFilter === f.value
+                ? 'bg-emerald-600 text-white'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+        <button type="button" onClick={load} className="p-2 text-slate-500 hover:text-emerald-600 ml-auto shrink-0">
+          <RefreshCw className="w-4 h-4" />
+        </button>
       </div>
 
       {loading ? (
         <div className="flex justify-center py-20">
           <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
         </div>
-      ) : rows.length === 0 ? (
+      ) : sortedRows.length === 0 ? (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="text-center py-16 bg-slate-50 rounded-2xl border border-dashed border-slate-200"
+          className="text-center py-16 px-6 bg-gradient-to-b from-slate-50 to-white rounded-2xl border border-dashed border-slate-200"
         >
-          <Calculator className="w-12 h-12 text-slate-500 mx-auto mb-4" />
-          <p className="font-semibold text-slate-600">Belum ada estimasi</p>
-          <p className="text-sm text-slate-600 mt-1 mb-4">Buat estimasi pertama untuk penawaran customer</p>
+          <div className="relative inline-flex mb-4">
+            <FileText className="w-14 h-14 text-slate-300" />
+            <Sparkles className="w-5 h-5 text-emerald-500 absolute -top-1 -right-1" />
+          </div>
+          <h2 className="text-lg font-black text-slate-800">Buat penawaran pertama Anda</h2>
+          <p className="text-sm text-slate-500 mt-2 max-w-md mx-auto">
+            Dari pricelist ke PDF profesional dalam 5 menit.
+            Hitung margin, kirim via WhatsApp, langsung dapat jawaban.
+          </p>
           <button
             type="button"
             onClick={() => navigate('/app/estimator/new')}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold"
+            className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700"
           >
-            + Estimasi Baru
+            <Plus className="w-4 h-4" /> Buat Estimasi Baru
+          </button>
+          <div className="flex items-center gap-3 justify-center mt-6 text-xs text-slate-400">
+            <span className="h-px w-12 bg-slate-200" />
+            atau setup pricelist dulu
+            <span className="h-px w-12 bg-slate-200" />
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/app/estimator/pricelist')}
+            className="mt-3 text-sm font-semibold text-emerald-600 hover:text-emerald-700"
+          >
+            Setup Pricelist →
           </button>
         </motion.div>
       ) : (
         <div className="space-y-3">
-          {rows.map(est => (
-            <motion.div
+          {sortedRows.map(est => (
+            <EstimationCard
               key={est.id}
-              layout
-              className="bg-white border border-slate-200 rounded-2xl p-4 hover:border-emerald-200 transition-colors"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                {thumbs[est.id] && (
-                  <img
-                    src={thumbs[est.id]}
-                    alt=""
-                    className="w-14 h-14 rounded-xl object-cover border border-slate-200 shrink-0 hidden sm:block"
-                  />
-                )}
-                <div className="flex-1 min-w-0 cursor-pointer" onClick={() => navigate(`/app/estimator/${est.id}`)}>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-xs text-emerald-600 font-bold">{est.code}</span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${ESTIMATION_STATUS_COLOR[est.status]}`}>
-                      {ESTIMATION_STATUS_LABEL[est.status]}
-                    </span>
-                  </div>
-                  <h3 className="font-bold text-slate-800 truncate">{est.title}</h3>
-                  <p className="text-xs text-slate-500">
-                    {est.customer_name || '—'} · {formatDateId(est.updated_at)}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <div className="text-lg font-black text-slate-900">{formatRupiahFull(Number(est.total_selling_price))}</div>
-                </div>
-                <div className="flex gap-1">
-                  <IconBtn icon={Pencil} label="Edit" onClick={() => navigate(`/app/estimator/${est.id}`)} />
-                  <IconBtn icon={Copy} label="Duplikat" onClick={() => handleDuplicate(est.id)} />
-                  <IconBtn icon={Trash2} label="Hapus" danger onClick={() => handleDelete(est.id, est.title)} />
-                </div>
-              </div>
-            </motion.div>
+              estimation={est}
+              onOpen={() => navigate(`/app/estimator/${est.id}`)}
+              onEdit={() => navigate(`/app/estimator/${est.id}`)}
+              onDuplicate={() => handleDuplicate(est.id)}
+              onDelete={() => handleDelete(est.id, est.title)}
+            />
           ))}
         </div>
       )}
     </div>
-  );
-}
-
-function IconBtn({
-  icon: Icon,
-  label,
-  onClick,
-  danger,
-}: {
-  icon: typeof Pencil;
-  label: string;
-  onClick: () => void;
-  danger?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      title={label}
-      onClick={onClick}
-      className={`p-2 rounded-lg ${danger ? 'text-slate-600 hover:text-rose-600 hover:bg-rose-50' : 'text-slate-600 hover:text-emerald-600 hover:bg-emerald-50'}`}
-    >
-      <Icon className="w-4 h-4" />
-    </button>
   );
 }
