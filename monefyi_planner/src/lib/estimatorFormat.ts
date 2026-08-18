@@ -44,6 +44,18 @@ export function formatDateIdShort(iso: string | Date): string {
   return `${d.getDate()} ${ID_MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+/** Date + time: 18 Agu 2026, 14:22 */
+export function formatDateTimeId(iso: string | Date): string {
+  const d = typeof iso === 'string' ? new Date(iso) : iso;
+  if (Number.isNaN(d.getTime())) return '';
+  const time = d.toLocaleTimeString('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  return `${formatDateIdShort(d)}, ${time}`;
+}
+
 export function formatPhoneWa(phone: string): string {
   const digits = phone.replace(/\D/g, '');
   if (digits.startsWith('0')) return `62${digits.slice(1)}`;

@@ -21,6 +21,7 @@ interface Props {
   projectName?: string | null;
   templateConfig: WhatsAppTemplateConfig;
   onToast: (msg: string, type: 'success' | 'error') => void;
+  onShared?: () => void;
 }
 
 export default function ShareWhatsAppModal({
@@ -31,6 +32,7 @@ export default function ShareWhatsAppModal({
   projectName,
   templateConfig,
   onToast,
+  onShared,
 }: Props) {
   const [mode, setMode] = useState<ShareMode>('text');
   const [salutation, setSalutation] = useState<Salutation>(
@@ -105,6 +107,7 @@ export default function ShareWhatsAppModal({
             files: [file],
           });
           onToast('Dibagikan ke WhatsApp', 'success');
+          onShared?.();
           onClose();
           return;
         }
@@ -119,6 +122,7 @@ export default function ShareWhatsAppModal({
         openWhatsAppChat(targetPhone, message);
         onToast('Membuka WhatsApp', 'success');
       }
+      onShared?.();
       onClose();
     } catch (e) {
       onToast(e instanceof Error ? e.message : 'Gagal membagikan', 'error');

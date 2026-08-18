@@ -74,6 +74,11 @@ export interface Estimation {
   terms_conditions: string | null;
   validity_days: number;
   status: EstimationStatus;
+  sent_at: string | null;
+  accepted_at: string | null;
+  rejected_at: string | null;
+  converted_at: string | null;
+  converted_project_id: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

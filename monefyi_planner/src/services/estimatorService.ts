@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { buildStatusUpdatePayload, isStatusTransitionAllowed } from '../lib/estimationStatus';
 import { calcEstimationSummary, countedEstimationItems, normalizeEstimationItem } from '../lib/estimatorCalc';
 import { nextEstimationCode } from '../lib/estimatorFormat';
 import { emptyImageDrafts, hydrateImageDrafts, imagesToDbFields } from './estimationImageService';
@@ -168,6 +169,12 @@ export async function updateEstimation(
   id: string,
   draft: EstimationFormDraft,
 ): Promise<Estimation> {
+  const existing = await loadEstimation(id);
+  if (!existing) throw new Error('Estimasi tidak ditemukan');
+  if (existing.status === 'converted') {
+    throw new Error('Estimasi sudah menjadi proyek dan tidak bisa diedit');
+  }
+
   const items = draft.items.filter(i => i.name.trim());
   const header = summaryToHeader(draft, items);
 
@@ -217,6 +224,29 @@ export async function updateEstimation(
 export async function deleteEstimation(id: string): Promise<void> {
   const { error } = await supabase.from('planner_estimations').delete().eq('id', id);
   if (error) throw new Error(error.message);
+}
+
+export async function updateEstimationStatus(
+  id: string,
+  newStatus: EstimationStatus,
+): Promise<Estimation> {
+  const current = await loadEstimation(id);
+  if (!current) throw new Error('Estimasi tidak ditemukan');
+  if (current.status === 'converted') {
+    throw new Error('Estimasi sudah menjadi proyek');
+  }
+  if (!isStatusTransitionAllowed(current.status, newStatus)) {
+    throw new Error('Transisi status tidak valid');
+  }
+
+  const payload = buildStatusUpdatePayload(current.status, newStatus);
+  const { error } = await supabase
+    .from('planner_estimations')
+    .update(payload)
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+
+  return (await loadEstimation(id)) as Estimation;
 }
 
 export async function duplicateEstimation(

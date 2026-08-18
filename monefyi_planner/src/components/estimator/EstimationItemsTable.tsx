@@ -33,6 +33,7 @@ interface Props {
   adjustments?: EstimationAdjustment[];
   taxPct?: number;
   onChange: (items: EstimationItemDraft[]) => void;
+  readOnly?: boolean;
 }
 
 export default function EstimationItemsTable({
@@ -46,6 +47,7 @@ export default function EstimationItemsTable({
   adjustments = [],
   taxPct = 0,
   onChange,
+  readOnly = false,
 }: Props) {
   const [smartOpen, setSmartOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -76,6 +78,7 @@ export default function EstimationItemsTable({
   );
 
   const updateItem = (index: number, patch: Partial<EstimationItemDraft>, editField: ItemPriceEdit = 'selling') => {
+    if (readOnly) return;
     const next = [...items];
     const merged = { ...next[index], ...patch };
     const calc = calcItemRow(merged, editField);
@@ -85,14 +88,21 @@ export default function EstimationItemsTable({
     onChange(next);
   };
 
-  const addRow = () => onChange([...items, emptyItem(items.length)]);
-  const removeRow = (index: number) => onChange(items.filter((_, i) => i !== index));
+  const addRow = () => {
+    if (readOnly) return;
+    onChange([...items, emptyItem(items.length)]);
+  };
+  const removeRow = (index: number) => {
+    if (readOnly) return;
+    onChange(items.filter((_, i) => i !== index));
+  };
 
   const shouldShowGroupHeader = (group: EstimationItemGroup) =>
     group.indices.length > 1 ||
     (group.indices.length === 1 && hasProductGroup(items[group.indices[0]]));
 
   const setGroupQty = (indices: number[], qty: number) => {
+    if (readOnly) return;
     const next = [...items];
     for (const idx of indices) {
       const merged = { ...next[idx], qty };
@@ -186,6 +196,8 @@ export default function EstimationItemsTable({
             <p className="text-[11px] text-slate-600 mt-0.5">Harga jual & margin% menentukan HPP (margin = laba ÷ jual)</p>
           </div>
           <div className="flex flex-wrap gap-2">
+            {!readOnly && (
+              <>
             {ENABLE_ESTIMATOR_SMART_INPUT && (
               <button
                 type="button"
@@ -216,12 +228,16 @@ export default function EstimationItemsTable({
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">Manual</span>
             </button>
+              </>
+            )}
           </div>
         </div>
 
         {items.length === 0 ? (
           <div className="p-10 text-center space-y-5">
             <p className="text-sm font-semibold text-slate-700">Belum ada item</p>
+            {!readOnly && (
+              <>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">Tambah item dari 3 cara:</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto">
               {ENABLE_ESTIMATOR_SMART_INPUT && (
@@ -254,6 +270,8 @@ export default function EstimationItemsTable({
                 <div className="text-[10px] text-slate-500 mt-1">Isi baris satu-satu</div>
               </button>
             </div>
+              </>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto overscroll-x-contain">
