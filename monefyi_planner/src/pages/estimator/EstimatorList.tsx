@@ -7,6 +7,7 @@ import {
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
 import EstimationCard from '../../components/estimator/EstimationCard';
+import { countEstimationsByStatus } from '../../lib/estimationStatus';
 import {
   deleteEstimation,
   duplicateEstimation,
@@ -63,21 +64,25 @@ export default function EstimatorList() {
     if (!tenant?.id) return;
     setLoading(true);
     try {
-      const data = await loadEstimations(tenant.id, {
-        status: statusFilter || undefined,
-        search,
-      });
+      const data = await loadEstimations(tenant.id, { search });
       setRows(data);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal memuat estimasi', 'error');
     } finally {
       setLoading(false);
     }
-  }, [tenant?.id, statusFilter, search, showToast]);
+  }, [tenant?.id, search, showToast]);
 
   useEffect(() => { load(); }, [load]);
 
-  const sortedRows = useMemo(() => sortRows(rows, sortKey), [rows, sortKey]);
+  const statusCounts = useMemo(() => countEstimationsByStatus(rows), [rows]);
+
+  const filteredRows = useMemo(() => {
+    if (!statusFilter) return rows;
+    return rows.filter(r => r.status === statusFilter);
+  }, [rows, statusFilter]);
+
+  const sortedRows = useMemo(() => sortRows(filteredRows, sortKey), [filteredRows, sortKey]);
 
   const handleDelete = async (id: string, title: string) => {
     if (!window.confirm(`Hapus estimasi "${title}"?`)) return;
@@ -160,7 +165,9 @@ export default function EstimatorList() {
       </div>
 
       <div className="flex gap-2 overflow-x-auto mb-4 pb-1">
-        {STATUS_FILTERS.map(f => (
+        {STATUS_FILTERS.map(f => {
+          const count = f.value ? statusCounts[f.value] : statusCounts.all;
+          return (
           <button
             key={f.value}
             type="button"
@@ -171,9 +178,10 @@ export default function EstimatorList() {
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            {f.label}
+            {f.label} {count}
           </button>
-        ))}
+          );
+        })}
         <button type="button" onClick={load} className="p-2 text-slate-500 hover:text-emerald-600 ml-auto shrink-0">
           <RefreshCw className="w-4 h-4" />
         </button>

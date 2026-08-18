@@ -6,7 +6,9 @@ import {
 } from 'lucide-react';
 import EstimatorActionBar from '../../components/estimator/EstimatorActionBar';
 import EstimatorBreadcrumb from '../../components/estimator/EstimatorBreadcrumb';
-import StatusBadge from '../../components/estimator/StatusBadge';
+import StatusBadgeDropdown from '../../components/estimator/StatusBadgeDropdown';
+import EstimationStatusHistory from '../../components/estimator/EstimationStatusHistory';
+import MarkAsSentPrompt from '../../components/estimator/MarkAsSentPrompt';
 import AutoSaveIndicator from '../../components/estimator/AutoSaveIndicator';
 import { useAutoSave } from '../../hooks/useAutoSave';
 import { useAppStore } from '../../store/appStore';
@@ -34,8 +36,11 @@ import {
   loadEstimation,
   newEstimationDraft,
   updateEstimation,
+  updateEstimationStatus,
 } from '../../services/estimatorService';
-import type { EstimationImageDraft } from '../../types/estimator';
+import type { EstimationStatusTimestamps } from '../../lib/estimationStatus';
+import { ESTIMATION_STATUS_LABEL } from '../../lib/estimatorFormat';
+import type { EstimationImageDraft, EstimationStatus } from '../../types/estimator';
 import { formatDateIdShort, formatPhoneWa, formatRupiahFull } from '../../lib/estimatorFormat';
 import { calcEstimationSummary, countedEstimationItems } from '../../lib/estimatorCalc';
 import type { EstimationFormDraft } from '../../types/estimator';
@@ -63,17 +68,23 @@ export default function EstimatorForm() {
   const [pdfSettings, setPdfSettings] = useState<PdfSettings | null>(null);
   const [waTemplate, setWaTemplate] = useState<WhatsAppTemplateConfig>(defaultWhatsAppTemplateConfig());
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [statusMeta, setStatusMeta] = useState<EstimationStatusTimestamps | null>(null);
+  const [sentPromptOpen, setSentPromptOpen] = useState(false);
+  const [statusChanging, setStatusChanging] = useState(false);
+
+  const isReadOnly = draft?.status === 'converted';
 
   const patch = useCallback((p: Partial<EstimationFormDraft>) => {
+    if (isReadOnly) return;
     setDraft(prev => (prev ? { ...prev, ...p } : prev));
-  }, []);
+  }, [isReadOnly]);
 
   useEffect(() => {
     draftRef.current = draft;
   }, [draft]);
 
   const persistDraft = useCallback(async (payload: EstimationFormDraft) => {
-    if (!tenant?.id || !user?.id || isNew || !id) return;
+    if (!tenant?.id || !user?.id || isNew || !id || payload.status === 'converted') return;
     let images = payload.images;
     if (images.some(img => img.pendingFile)) {
       images = await uploadPendingImages(tenant.id, id, images);
@@ -145,6 +156,13 @@ export default function EstimatorForm() {
             pdf_secondary_color: est.pdf_secondary_color || settings.secondary_color,
             pdf_template: est.pdf_template || settings.default_pdf_template,
           });
+          setStatusMeta({
+            created_at: est.created_at,
+            sent_at: est.sent_at ?? null,
+            accepted_at: est.accepted_at ?? null,
+            rejected_at: est.rejected_at ?? null,
+            converted_at: est.converted_at ?? null,
+          });
           if (formDraft.customer_name || formDraft.customer_phone) {
             setDetailOpen(false);
           } else {
@@ -163,6 +181,10 @@ export default function EstimatorForm() {
 
   const handleSave = async () => {
     if (!draft || !tenant?.id || !user?.id) return;
+    if (isReadOnly) {
+      showToast('Estimasi sudah menjadi proyek dan tidak bisa diedit', 'error');
+      return;
+    }
     if (!draft.title.trim()) {
       showToast('Judul estimasi wajib diisi', 'error');
       return;
@@ -207,6 +229,46 @@ export default function EstimatorForm() {
     return true;
   };
 
+  const scheduleSentPrompt = useCallback(() => {
+    if (draft?.status !== 'draft') return;
+    window.setTimeout(() => setSentPromptOpen(true), 500);
+  }, [draft?.status]);
+
+  const applyStatusTransition = async (next: EstimationStatus, opts?: { skipConfirm?: boolean }) => {
+    if (!draft || isNew || !id) return;
+    const currentLabel = ESTIMATION_STATUS_LABEL[draft.status] || draft.status;
+    const nextLabel = ESTIMATION_STATUS_LABEL[next] || next;
+    if (
+      !opts?.skipConfirm &&
+      !window.confirm(`Ubah status ke ${nextLabel}? Status sekarang: ${currentLabel}`)
+    ) {
+      return;
+    }
+
+    setStatusChanging(true);
+    try {
+      const updated = await updateEstimationStatus(id, next);
+      patch({ status: updated.status });
+      setStatusMeta({
+        created_at: updated.created_at,
+        sent_at: updated.sent_at ?? null,
+        accepted_at: updated.accepted_at ?? null,
+        rejected_at: updated.rejected_at ?? null,
+        converted_at: updated.converted_at ?? null,
+      });
+      showToast(`Status diubah ke ${nextLabel}`, 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal mengubah status', 'error');
+    } finally {
+      setStatusChanging(false);
+    }
+  };
+
+  const handleMarkAsSent = async () => {
+    setSentPromptOpen(false);
+    await applyStatusTransition('sent', { skipConfirm: true });
+  };
+
   const handleDownloadPdf = async () => {
     if (!draft || !pdfSettings || !requireSaved()) return;
     setPdfLoading(true);
@@ -222,6 +284,7 @@ export default function EstimatorForm() {
         estimationProjectName,
       );
       showToast('PDF diunduh', 'success');
+      scheduleSentPrompt();
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal membuat PDF', 'error');
     } finally {
@@ -251,6 +314,12 @@ export default function EstimatorForm() {
     <div className="w-full max-w-[100rem] mx-auto px-3 sm:px-5 py-4 pb-28">
       <EstimatorBreadcrumb items={[{ label: isNew ? 'Baru' : draft.code }]} />
 
+      {isReadOnly && (
+        <div className="mb-4 px-4 py-3 bg-teal-50 border border-teal-200 rounded-xl text-sm text-teal-800">
+          Estimasi ini sudah menjadi proyek — mode baca saja.
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col gap-3 mb-4">
         <div className="flex items-start gap-3">
@@ -265,13 +334,24 @@ export default function EstimatorForm() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <span className="font-mono text-xs text-emerald-600 font-bold">{draft.code}</span>
-              <StatusBadge status={draft.status} />
+              {isNew ? (
+                <span className="inline-flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded-full font-semibold bg-slate-100 text-slate-700">
+                  Draft
+                </span>
+              ) : (
+                <StatusBadgeDropdown
+                  status={draft.status}
+                  onTransition={applyStatusTransition}
+                  disabled={statusChanging}
+                />
+              )}
             </div>
             <input
               value={draft.title}
               onChange={e => patch({ title: e.target.value })}
               placeholder="Judul estimasi *"
-              className="w-full text-2xl sm:text-3xl font-black text-slate-900 bg-transparent border-0 border-b-2 border-transparent hover:border-slate-200 focus:border-emerald-500 outline-none py-0.5"
+              disabled={isReadOnly}
+              className="w-full text-2xl sm:text-3xl font-black text-slate-900 bg-transparent border-0 border-b-2 border-transparent hover:border-slate-200 focus:border-emerald-500 outline-none py-0.5 disabled:opacity-70"
             />
             {(draft.customer_name || draft.customer_phone) && (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-sm text-slate-600">
@@ -309,7 +389,7 @@ export default function EstimatorForm() {
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={saving}
+                disabled={saving || isReadOnly}
                 className="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-60 min-w-[2.75rem]"
                 title="Simpan estimasi"
               >
@@ -365,14 +445,16 @@ export default function EstimatorForm() {
                 <input
                   value={draft.code}
                   onChange={e => patch({ code: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-mono"
+                  disabled={isReadOnly}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-mono disabled:bg-slate-50"
                 />
               </Field>
               <Field label="Proyek (opsional)">
                 <select
                   value={draft.project_id || ''}
                   onChange={e => patch({ project_id: e.target.value || null })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                  disabled={isReadOnly}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm disabled:bg-slate-50"
                 >
                   <option value="">— Tidak terhubung —</option>
                   {projects.map(p => (
@@ -384,7 +466,8 @@ export default function EstimatorForm() {
                 <input
                   value={draft.customer_name}
                   onChange={e => patch({ customer_name: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                  disabled={isReadOnly}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm disabled:bg-slate-50"
                 />
               </Field>
               <Field label="Telepon">
@@ -392,7 +475,8 @@ export default function EstimatorForm() {
                   value={draft.customer_phone}
                   onChange={e => patch({ customer_phone: e.target.value })}
                   placeholder="+62..."
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                  disabled={isReadOnly}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm disabled:bg-slate-50"
                 />
               </Field>
             </div>
@@ -401,7 +485,8 @@ export default function EstimatorForm() {
                 value={draft.customer_address}
                 onChange={e => patch({ customer_address: e.target.value })}
                 rows={2}
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm resize-none"
+                disabled={isReadOnly}
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm resize-none disabled:bg-slate-50"
               />
             </Field>
             <Field label={`Masa berlaku (${draft.validity_days} hari)`}>
@@ -412,7 +497,8 @@ export default function EstimatorForm() {
                 step={7}
                 value={draft.validity_days}
                 onChange={e => patch({ validity_days: Number(e.target.value) })}
-                className="w-full"
+                disabled={isReadOnly}
+                className="w-full disabled:opacity-60"
               />
               <div className="flex justify-between text-[10px] text-slate-600">
                 <span>7 hari</span>
@@ -495,6 +581,7 @@ export default function EstimatorForm() {
             adjustments={draft.adjustments}
             taxPct={draft.tax_pct}
             onChange={items => patch({ items })}
+            readOnly={isReadOnly}
           />
         </div>
         {summaryOpen && (
@@ -527,17 +614,23 @@ export default function EstimatorForm() {
               onChange={e => patch({ notes: e.target.value })}
               placeholder="Catatan untuk customer..."
               rows={3}
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm resize-none"
+              disabled={isReadOnly}
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm resize-none disabled:bg-slate-50"
             />
             <textarea
               value={draft.terms_conditions}
               onChange={e => patch({ terms_conditions: e.target.value })}
               placeholder="Syarat & ketentuan..."
               rows={3}
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm resize-none"
+              disabled={isReadOnly}
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm resize-none disabled:bg-slate-50"
             />
           </section>
         </div>
+      )}
+
+      {!isNew && statusMeta && (
+        <EstimationStatusHistory meta={statusMeta} className="mt-6" />
       )}
 
       <EstimatorActionBar
@@ -567,8 +660,15 @@ export default function EstimatorForm() {
           projectName={estimationProjectName}
           templateConfig={waTemplate}
           onToast={(msg, type) => showToast(msg, type)}
+          onShared={scheduleSentPrompt}
         />
       )}
+
+      <MarkAsSentPrompt
+        open={sentPromptOpen}
+        onMarkSent={handleMarkAsSent}
+        onDismiss={() => setSentPromptOpen(false)}
+      />
     </div>
   );
 }

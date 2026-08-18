@@ -488,6 +488,7 @@ export default function EstimationItemsTable({
                           {formatRupiahFull(netSelling)}
                         </td>
                         <td className={tdClass}>
+                          {!readOnly && (
                           <button
                             type="button"
                             onClick={() => removeRow(idx)}
@@ -496,6 +497,7 @@ export default function EstimationItemsTable({
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
+                          )}
                         </td>
                       </tr>
                     </Fragment>
