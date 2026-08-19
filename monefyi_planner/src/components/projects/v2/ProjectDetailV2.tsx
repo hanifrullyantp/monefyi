@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, MoreVertical, LayoutGrid, Wallet, BarChart3, FileSpreadsheet, Brain, FileText, Pencil,
-  Undo2, Redo2, Save,
+  Undo2, Redo2, Save, Paperclip,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { Project } from '../../../store/appStore';
@@ -15,6 +16,7 @@ import { loadCostRealizations, aggregateCostByRapItem } from '../../../services/
 import { loadProjectIncomes } from '../../../services/incomeService';
 import { loadReceivablesByProject } from '../../../services/financeV2/receivableService';
 import { loadPayablesByProject } from '../../../services/financeV2/payableService';
+import { loadSourceEstimationForProject, type SourceEstimationInfo } from '../../../services/estimationConvertService';
 import { mapPlannerProject } from '../../../lib/migration/planner-mapper';
 import { normalizeProjectView } from '../../../lib/migration/project-normalize';
 import { validateProjectBalance } from '../../../lib/migration/balance-sheet';
@@ -45,6 +47,7 @@ type Props = {
 };
 
 export default function ProjectDetailV2({ project: initialProject, onClose }: Props) {
+  const navigate = useNavigate();
   const { user, tenant, updateProject } = useAppStore();
   const { setShellMeta, clearShellMeta } = useShellStore();
   const [project, setProject] = useState(initialProject);
@@ -57,6 +60,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
   const [workItems, setWorkItems] = useState<Awaited<ReturnType<typeof loadWorkItems>>>([]);
   const [rapActuals, setRapActuals] = useState<Record<string, { qty: number; amount: number }>>({});
   const [rapDraft, setRapDraft] = useState<RapDraftControls | null>(null);
+  const [sourceEstimation, setSourceEstimation] = useState<SourceEstimationInfo | null>(null);
   const loadedOnceRef = useRef(false);
   const projectRef = useRef(project);
   projectRef.current = project;
@@ -69,15 +73,17 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
       if (fresh) setProject(fresh);
 
       const orgId = tenant?.id;
-      const [rap, costs, incomes, wi, recs, pays] = await Promise.all([
+      const [rap, costs, incomes, wi, recs, pays, sourceEst] = await Promise.all([
         loadRapItems(proj.id),
         loadCostRealizations(proj.id),
         loadProjectIncomes(proj.id),
         loadWorkItems(proj.id),
         orgId ? loadReceivablesByProject(orgId, proj.id).catch(() => []) : Promise.resolve([]),
         orgId ? loadPayablesByProject(orgId, proj.id).catch(() => []) : Promise.resolve([]),
+        loadSourceEstimationForProject(proj.id).catch(() => null),
       ]);
       setRapItems(rap);
+      setSourceEstimation(sourceEst);
       setWorkItems(wi);
       setRapActuals(await aggregateCostByRapItem(proj.id));
       const view = mapPlannerProject({
@@ -310,6 +316,17 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
           </button>
         </div>
       </header>
+
+      {sourceEstimation && (
+        <button
+          type="button"
+          onClick={() => navigate(`/app/estimator/${sourceEstimation.id}`)}
+          className="mx-4 mt-2 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-left text-sm text-emerald-800 hover:bg-emerald-100 transition-colors flex items-center gap-2"
+        >
+          <Paperclip className="w-4 h-4 shrink-0" />
+          Dibuat dari Estimasi {sourceEstimation.code} →
+        </button>
+      )}
 
       <nav className="tab-pills mx-4 mt-3 mb-1 overflow-x-auto shrink-0 sticky top-[4.5rem] z-10">
         {TABS.map(t => (

@@ -98,6 +98,29 @@ export async function loadEstimations(
   return rows;
 }
 
+export async function countEstimationsInLast30Days(orgId: string): Promise<{
+  count: number;
+  totalAmount: number;
+}> {
+  const since = new Date();
+  since.setDate(since.getDate() - 30);
+
+  const { data, error } = await supabase
+    .from('planner_estimations')
+    .select('total_selling_price, created_at')
+    .eq('org_id', orgId)
+    .gte('created_at', since.toISOString());
+
+  if (error) throw new Error(error.message);
+
+  const rows = data || [];
+  const totalAmount = rows.reduce(
+    (sum, row) => sum + Number(row.total_selling_price || 0),
+    0,
+  );
+  return { count: rows.length, totalAmount };
+}
+
 export async function loadEstimation(id: string): Promise<Estimation | null> {
   const { data: est, error } = await supabase
     .from('planner_estimations')

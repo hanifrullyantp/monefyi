@@ -22,6 +22,8 @@ cp .env.example .env.local
 | `SUPABASE_URL` / `SUPABASE_ANON_KEY` | Alias integrasi Supabase (di-map otomatis saat build) |
 | `VITE_APP_ENV` | `development` atau `production` (opsional) |
 | `VITE_DEV_DEMO_AUTH` | `true` = tampilkan tombol demo role (dev only) |
+| `VITE_POSTHOG_KEY` / `NEXT_PUBLIC_POSTHOG_KEY` | PostHog project API key (analytics Estimator funnel) |
+| `VITE_POSTHOG_HOST` / `NEXT_PUBLIC_POSTHOG_HOST` | PostHog ingest host (default `https://app.posthog.com`) |
 
 **Vercel:** jika sudah connect Supabase, env `NEXT_PUBLIC_*` / `SUPABASE_*` cukup — tidak perlu menambah `VITE_*` manual.
 
@@ -37,6 +39,19 @@ Ringkas:
 - Tim: tab **Tim** di app (undang, approve request, audit log)
 
 Deploy migrasi `20260531120000_planner_onboarding.sql` dan edge functions di `my-supabase-project/supabase/functions/planner-*` sebelum production.
+
+**Estimator upgrade (Agustus 2026):** push migrasi berikut ke Supabase:
+
+```bash
+cd my-supabase-project
+supabase db push --include-all
+```
+
+| Migrasi | Isi |
+|---------|-----|
+| `20260818220000_estimation_status_timestamps.sql` | Pipeline status + timestamps |
+| `20260819010000_estimation_project_bridge.sql` | Convert estimasi → proyek (RPC) |
+| `20260819120000_planner_org_subscriptions.sql` | Tier entitlement + `activate_subscription` |
 
 ### Supabase Auth (Dashboard)
 

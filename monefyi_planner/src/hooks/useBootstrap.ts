@@ -25,6 +25,7 @@ import {
 } from '../services/notificationService';
 import { isPlatformAdmin } from '../services/adminService';
 import { logSessionExpired } from '../services/runtimeTracer';
+import { initAnalytics, resetAnalytics } from '../lib/analytics/client';
 import { useAppStore } from '../store/appStore';
 import { bootstrapCustomDomainContext } from '../services/customDomainService';
 import { userHasProduct, PRODUCT_NOT_REGISTERED } from '../services/productEntitlements';
@@ -61,6 +62,11 @@ async function applyOrgContext(
   updateLastActive(authUser.id, orgCtx.org.id).catch(console.error);
   store.setLastSynced(new Date());
   store.setSyncStatus('synced');
+
+  initAnalytics(authUser.id, orgCtx.org.id, {
+    org_plan: orgCtx.org.plan,
+    role: orgCtx.role,
+  });
 }
 
 async function bootstrapSession(session: Session) {
@@ -214,6 +220,7 @@ export function useBootstrap() {
         }
         setUser(null);
         setTenant(null);
+        resetAnalytics();
         setAuthenticated(false);
         setProjects([]);
         setNotifications([]);

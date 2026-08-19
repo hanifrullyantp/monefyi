@@ -1,6 +1,7 @@
 import { fromProjectInsert, fromProjectUpdate, toProject, type DbProject } from '../lib/adapters';
 import { supabase } from '../lib/supabase';
 import type { Project } from '../store/appStore';
+import { assertCanCreateProjectByEntitlement } from './entitlementService';
 import { assertCanCreateProject } from './pricingPlanService';
 import { computeFinanceReportMonth } from '../lib/financeReportMonth';
 
@@ -137,6 +138,7 @@ export async function createProject(
   currency = 'IDR',
   planType?: string,
 ): Promise<Project> {
+  await assertCanCreateProjectByEntitlement(input.org_id, planType);
   await assertCanCreateProject(input.org_id, planType);
   const payload = fromProjectInsert(input);
   const { data, error } = await supabase

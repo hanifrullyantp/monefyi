@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAppStore } from '../../store/appStore';
+import FinanceAccessGuard from '../../components/entitlement/FinanceAccessGuard';
 import { loadFinanceVersion } from '../../lib/financeVersion';
 import { LEGACY_FINANCE_REDIRECTS } from '../../types/sandboxFinance';
 import FinanceV2Layout from './FinanceV2Layout';
@@ -44,8 +45,9 @@ export default function FinanceV2Routes() {
   }, [user?.id, setFinanceVersionPreference]);
 
   return (
-    <Routes>
-      <Route element={<FinanceV2Layout />}>
+    <FinanceAccessGuard>
+      <Routes>
+        <Route element={<FinanceV2Layout />}>
         <Route index element={<FinanceV2Dashboard />} />
         <Route path="kasbank" element={<KasPage />} />
         <Route path="hutangpiutang" element={<FinanceHutangPiutangTab mode="combined" />} />
@@ -63,7 +65,8 @@ export default function FinanceV2Routes() {
         <Route path="prabayar" element={<LegacyRedirect from="prabayar" />} />
         <Route path="investor" element={<LegacyRedirect from="investor" />} />
         <Route path="opex" element={<LegacyRedirect from="opex" />} />
-      </Route>
-    </Routes>
+        </Route>
+      </Routes>
+    </FinanceAccessGuard>
   );
 }

@@ -3,10 +3,8 @@ import { Check, Copy, Loader2, MessageCircle, X } from 'lucide-react';
 import type { EstimationFormDraft } from '../../types/estimator';
 import type { PdfSettings } from '../../types/pdfSettings';
 import type { WhatsAppTemplateConfig } from '../../lib/whatsappQuotationMessage';
-import {
-  buildWhatsAppQuotationMessage,
-  openWhatsAppChat,
-} from '../../lib/whatsappQuotationMessage';
+import { buildWhatsAppQuotationMessage, openWhatsAppChat } from '../../lib/whatsappQuotationMessage';
+import { analytics } from '../../lib/analytics/events';
 import { generateQuotationPdfBlob, quotationPdfFilename } from '../../lib/pdf/generateQuotationPdf';
 import { downloadBlob } from '../../lib/pdf/pdfMakeSetup';
 
@@ -19,6 +17,7 @@ interface Props {
   draft: EstimationFormDraft;
   settings: PdfSettings;
   projectName?: string | null;
+  estimationId?: string;
   templateConfig: WhatsAppTemplateConfig;
   onToast: (msg: string, type: 'success' | 'error') => void;
   onShared?: () => void;
@@ -30,6 +29,7 @@ export default function ShareWhatsAppModal({
   draft,
   settings,
   projectName,
+  estimationId,
   templateConfig,
   onToast,
   onShared,
@@ -107,6 +107,7 @@ export default function ShareWhatsAppModal({
             files: [file],
           });
           onToast('Dibagikan ke WhatsApp', 'success');
+          analytics.estimationWaShared({ estimationId, shareType: 'pdf' });
           onShared?.();
           onClose();
           return;
@@ -122,6 +123,7 @@ export default function ShareWhatsAppModal({
         openWhatsAppChat(targetPhone, message);
         onToast('Membuka WhatsApp', 'success');
       }
+      analytics.estimationWaShared({ estimationId, shareType: mode });
       onShared?.();
       onClose();
     } catch (e) {

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../store/appStore';
+import EstimatorAccessGuard from '../../components/entitlement/EstimatorAccessGuard';
 import EstimatorList from './EstimatorList';
 import EstimatorForm from './EstimatorForm';
 import PricelistPage from './PricelistPage';
@@ -15,12 +16,14 @@ export default function EstimatorRoutes() {
   }, [location.pathname, setActiveTab]);
 
   return (
-    <Routes>
-      <Route index element={<EstimatorList />} />
-      <Route path="new" element={<EstimatorForm />} />
-      <Route path="pricelist" element={<PricelistPage />} />
-      <Route path="settings" element={<EstimatorSettings />} />
-      <Route path=":id" element={<EstimatorForm />} />
-    </Routes>
+    <EstimatorAccessGuard>
+      <Routes>
+        <Route index element={<EstimatorList />} />
+        <Route path="new" element={<EstimatorForm />} />
+        <Route path="pricelist" element={<PricelistPage />} />
+        <Route path="settings" element={<EstimatorSettings />} />
+        <Route path=":id" element={<EstimatorForm />} />
+      </Routes>
+    </EstimatorAccessGuard>
   );
 }

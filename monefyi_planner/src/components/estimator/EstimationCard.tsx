@@ -1,5 +1,5 @@
 import type { MouseEvent } from 'react';
-import { Copy, Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import { Copy, Pencil, Trash2, AlertTriangle, Rocket } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import { formatDateIdShort, formatRupiahFull } from '../../lib/estimatorFormat';
 import type { Estimation } from '../../types/estimator';
@@ -10,6 +10,7 @@ type Props = {
   onEdit: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  onConvert?: () => void;
 };
 
 export default function EstimationCard({
@@ -18,9 +19,11 @@ export default function EstimationCard({
   onEdit,
   onDuplicate,
   onDelete,
+  onConvert,
 }: Props) {
   const profit = Number(est.total_profit) || 0;
   const profitNegative = profit < 0;
+  const showConvert = est.status === 'accepted' && onConvert;
 
   return (
     <article
@@ -60,7 +63,12 @@ export default function EstimationCard({
             Profit: {formatRupiahFull(profit)}
           </p>
         </div>
-        <CardActions onEdit={onEdit} onDuplicate={onDuplicate} onDelete={onDelete} />
+        <CardActions
+          onEdit={onEdit}
+          onDuplicate={onDuplicate}
+          onDelete={onDelete}
+          onConvert={showConvert ? onConvert : undefined}
+        />
       </div>
 
       {/* Desktop horizontal */}
@@ -86,7 +94,12 @@ export default function EstimationCard({
             Profit: {formatRupiahFull(profit)}
           </p>
         </div>
-        <CardActions onEdit={onEdit} onDuplicate={onDuplicate} onDelete={onDelete} />
+        <CardActions
+          onEdit={onEdit}
+          onDuplicate={onDuplicate}
+          onDelete={onDelete}
+          onConvert={showConvert ? onConvert : undefined}
+        />
       </div>
     </article>
   );
@@ -96,10 +109,12 @@ function CardActions({
   onEdit,
   onDuplicate,
   onDelete,
+  onConvert,
 }: {
   onEdit: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  onConvert?: () => void;
 }) {
   const stop = (e: MouseEvent, fn: () => void) => {
     e.stopPropagation();
@@ -108,6 +123,18 @@ function CardActions({
 
   return (
     <div className="flex gap-1 shrink-0 md:opacity-80 md:group-hover:opacity-100">
+      {onConvert && (
+        <button
+          type="button"
+          title="Jadikan Proyek"
+          aria-label="Jadikan Proyek"
+          onClick={e => stop(e, onConvert)}
+          className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
+        >
+          <Rocket className="w-3.5 h-3.5" />
+          <span className="hidden lg:inline">Jadikan Proyek</span>
+        </button>
+      )}
       <ActionIcon icon={Pencil} label="Edit" onClick={e => stop(e, onEdit)} />
       <ActionIcon icon={Copy} label="Duplikat" onClick={e => stop(e, onDuplicate)} />
       <ActionIcon icon={Trash2} label="Hapus" danger onClick={e => stop(e, onDelete)} />

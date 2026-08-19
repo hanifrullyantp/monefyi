@@ -36,6 +36,14 @@ export const config = {
   devDemoAuth: import.meta.env.VITE_DEV_DEMO_AUTH === 'true',
   skipEmailVerify: import.meta.env.VITE_SKIP_EMAIL_VERIFY === 'true',
   adminEmails: ['admin@asfin.app', 'hanif.rullyant@gmail.com'],
+  posthogKey:
+    (import.meta.env.VITE_POSTHOG_KEY as string) ||
+    (import.meta.env.NEXT_PUBLIC_POSTHOG_KEY as string) ||
+    '',
+  posthogHost:
+    (import.meta.env.VITE_POSTHOG_HOST as string) ||
+    (import.meta.env.NEXT_PUBLIC_POSTHOG_HOST as string) ||
+    'https://app.posthog.com',
 };
 
 export function assertSupabaseConfig(): void {

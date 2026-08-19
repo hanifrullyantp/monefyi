@@ -7,12 +7,22 @@ import {
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
 import EstimationCard from '../../components/estimator/EstimationCard';
+import ConvertEstimationWizard from '../../components/estimator/ConvertEstimationWizard';
+import EstimatorOnboardingWizard from '../../components/estimator/EstimatorOnboardingWizard';
+import PostPurchaseBanner, {
+  dismissPostPurchaseBanner,
+  readPostPurchaseBanner,
+} from '../../components/entitlement/PostPurchaseBanner';
 import { countEstimationsByStatus } from '../../lib/estimationStatus';
 import {
   deleteEstimation,
   duplicateEstimation,
+  loadEstimation,
   loadEstimations,
 } from '../../services/estimatorService';
+import { assertEstimationConvertible } from '../../services/estimationConvertService';
+import { getProject } from '../../services/projectService';
+import { shouldShowEstimatorOnboarding } from '../../services/estimatorOnboardingService';
 import type { Estimation, EstimationStatus } from '../../types/estimator';
 
 const STATUS_FILTERS: Array<{ value: '' | EstimationStatus; label: string }> = [
@@ -52,13 +62,20 @@ function sortRows(rows: Estimation[], key: SortKey): Estimation[] {
 
 export default function EstimatorList() {
   const navigate = useNavigate();
-  const { tenant, user } = useAppStore();
+  const { tenant, user, addProject } = useAppStore();
   const showToast = useUiStore(s => s.showToast);
   const [rows, setRows] = useState<Estimation[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'' | EstimationStatus>('');
   const [sortKey, setSortKey] = useState<SortKey>('newest');
+  const [convertOpen, setConvertOpen] = useState(false);
+  const [convertEstimation, setConvertEstimation] = useState<Estimation | null>(null);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [postPurchaseProduct, setPostPurchaseProduct] = useState<'estimator' | 'pro' | null>(
+    () => readPostPurchaseBanner(),
+  );
 
   const load = useCallback(async () => {
     if (!tenant?.id) return;
@@ -74,6 +91,14 @@ export default function EstimatorList() {
   }, [tenant?.id, search, showToast]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!tenant?.id || !user?.id || loading || onboardingChecked) return;
+    void shouldShowEstimatorOnboarding(user.id, tenant.id, tenant.name).then(should => {
+      setOnboardingChecked(true);
+      if (should) setOnboardingOpen(true);
+    });
+  }, [tenant?.id, tenant?.name, user?.id, loading, onboardingChecked]);
 
   const statusCounts = useMemo(() => countEstimationsByStatus(rows), [rows]);
 
@@ -106,8 +131,42 @@ export default function EstimatorList() {
     }
   };
 
+  const handleConvert = async (id: string) => {
+    try {
+      const est = await loadEstimation(id);
+      if (!est) throw new Error('Estimasi tidak ditemukan');
+      assertEstimationConvertible(est);
+      setConvertEstimation(est);
+      setConvertOpen(true);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Tidak bisa dijadikan proyek', 'error');
+    }
+  };
+
+  const handleConverted = async (summary: { projectId: string; projectName: string }) => {
+    showToast('Proyek berhasil dibuat', 'success');
+    setConvertOpen(false);
+    setConvertEstimation(null);
+    try {
+      const project = await getProject(summary.projectId, tenant?.currency);
+      if (project) addProject(project);
+    } catch {
+      /* non-blocking */
+    }
+    load();
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6">
+      {postPurchaseProduct && (
+        <PostPurchaseBanner
+          product={postPurchaseProduct}
+          onDismiss={() => {
+            dismissPostPurchaseBanner();
+            setPostPurchaseProduct(null);
+          }}
+        />
+      )}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
@@ -236,9 +295,38 @@ export default function EstimatorList() {
               onEdit={() => navigate(`/app/estimator/${est.id}`)}
               onDuplicate={() => handleDuplicate(est.id)}
               onDelete={() => handleDelete(est.id, est.title)}
+              onConvert={() => handleConvert(est.id)}
             />
           ))}
         </div>
+      )}
+
+      {convertOpen && convertEstimation && (
+        <ConvertEstimationWizard
+          open={convertOpen}
+          estimation={convertEstimation}
+          onClose={() => {
+            setConvertOpen(false);
+            setConvertEstimation(null);
+          }}
+          onConverted={summary => {
+            void handleConverted(summary);
+          }}
+        />
+      )}
+
+      {onboardingOpen && tenant?.id && user?.id && (
+        <EstimatorOnboardingWizard
+          open={onboardingOpen}
+          orgId={tenant.id}
+          orgName={tenant.name}
+          userId={user.id}
+          onClose={() => setOnboardingOpen(false)}
+          onCompleted={() => {
+            setOnboardingChecked(true);
+            load();
+          }}
+        />
       )}
     </div>
   );

@@ -8,7 +8,8 @@ import EstimatorActionBar from '../../components/estimator/EstimatorActionBar';
 import EstimatorBreadcrumb from '../../components/estimator/EstimatorBreadcrumb';
 import StatusBadgeDropdown from '../../components/estimator/StatusBadgeDropdown';
 import EstimationStatusHistory from '../../components/estimator/EstimationStatusHistory';
-import MarkAsSentPrompt from '../../components/estimator/MarkAsSentPrompt';
+import EstimatorActionsMenu from '../../components/estimator/EstimatorActionsMenu';
+import ConvertEstimationWizard from '../../components/estimator/ConvertEstimationWizard';
 import AutoSaveIndicator from '../../components/estimator/AutoSaveIndicator';
 import { useAutoSave } from '../../hooks/useAutoSave';
 import { useAppStore } from '../../store/appStore';
@@ -20,6 +21,12 @@ import EstimationSummaryPanel from '../../components/estimator/EstimationSummary
 import PdfDesignCustomizer from '../../components/estimator/PdfDesignCustomizer';
 import PdfPreviewModal from '../../components/estimator/PdfPreviewModal';
 import ShareWhatsAppModal from '../../components/estimator/ShareWhatsAppModal';
+import MarkAsSentPrompt from '../../components/estimator/MarkAsSentPrompt';
+import UpgradeModal from '../../components/entitlement/UpgradeModal';
+import MilestoneUpsellModal from '../../components/entitlement/MilestoneUpsellModal';
+import { useEntitlement } from '../../hooks/useEntitlement';
+import { analytics } from '../../lib/analytics/events';
+import { shouldShowMilestone5Upsell } from '../../lib/analytics/milestones';
 import {
   loadWhatsAppTemplate,
   defaultWhatsAppTemplateConfig,
@@ -31,6 +38,9 @@ import { loadPdfSettings } from '../../services/pdfSettingsService';
 import type { PdfSettings } from '../../types/pdfSettings';
 import {
   createEstimation,
+  countEstimationsInLast30Days,
+  deleteEstimation,
+  duplicateEstimation,
   estimationToFormDraft,
   generateEstimationCode,
   loadEstimation,
@@ -38,9 +48,12 @@ import {
   updateEstimation,
   updateEstimationStatus,
 } from '../../services/estimatorService';
+import { assertEstimationConvertible } from '../../services/estimationConvertService';
+import { assertCanCreateProjectByEntitlement } from '../../services/entitlementService';
+import { getProject } from '../../services/projectService';
 import type { EstimationStatusTimestamps } from '../../lib/estimationStatus';
 import { ESTIMATION_STATUS_LABEL } from '../../lib/estimatorFormat';
-import type { EstimationImageDraft, EstimationStatus } from '../../types/estimator';
+import type { EstimationImageDraft, EstimationStatus, Estimation } from '../../types/estimator';
 import { formatDateIdShort, formatPhoneWa, formatRupiahFull } from '../../lib/estimatorFormat';
 import { calcEstimationSummary, countedEstimationItems } from '../../lib/estimatorCalc';
 import type { EstimationFormDraft } from '../../types/estimator';
@@ -49,7 +62,7 @@ export default function EstimatorForm() {
   const { id } = useParams();
   const isNew = !id || id === 'new';
   const navigate = useNavigate();
-  const { tenant, user, projects } = useAppStore();
+  const { tenant, user, projects, addProject } = useAppStore();
   const showToast = useUiStore(s => s.showToast);
   const navSidebarCollapsed = useAppStore(s => s.navSidebarCollapsed);
 
@@ -71,6 +84,21 @@ export default function EstimatorForm() {
   const [statusMeta, setStatusMeta] = useState<EstimationStatusTimestamps | null>(null);
   const [sentPromptOpen, setSentPromptOpen] = useState(false);
   const [statusChanging, setStatusChanging] = useState(false);
+  const [convertOpen, setConvertOpen] = useState(false);
+  const [convertEstimation, setConvertEstimation] = useState<Estimation | null>(null);
+  const [convertedProjectId, setConvertedProjectId] = useState<string | null>(null);
+  const [convertedProjectName, setConvertedProjectName] = useState<string | null>(null);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeTrigger, setUpgradeTrigger] = useState<'estimation_accepted' | 'project_limit'>('estimation_accepted');
+  const [milestoneOpen, setMilestoneOpen] = useState(false);
+  const [milestoneTotal, setMilestoneTotal] = useState(0);
+  const {
+    canCreateProject,
+    isEstimator,
+    remainingProjectSlots,
+    tier,
+    currentActiveProjects,
+  } = useEntitlement();
 
   const isReadOnly = draft?.status === 'converted';
 
@@ -163,6 +191,13 @@ export default function EstimatorForm() {
             rejected_at: est.rejected_at ?? null,
             converted_at: est.converted_at ?? null,
           });
+          setConvertedProjectId(est.converted_project_id ?? null);
+          if (est.converted_project_id) {
+            const linked = projects.find(p => p.id === est.converted_project_id);
+            setConvertedProjectName(linked?.name || est.title);
+          } else {
+            setConvertedProjectName(null);
+          }
           if (formDraft.customer_name || formDraft.customer_phone) {
             setDetailOpen(false);
           } else {
@@ -196,12 +231,43 @@ export default function EstimatorForm() {
 
       if (isNew) {
         const created = await createEstimation(tenant.id, user.id, draft);
+        const itemCount = draft.items.filter(i => i.name.trim()).length;
+        const totalAmount = calcEstimationSummary(
+          countedEstimationItems(draft.items),
+          draft.overhead_pct,
+          draft.discount_pct,
+          draft.tax_pct,
+          { discountAmount: draft.discount_amount, adjustments: draft.adjustments },
+        ).grandTotal;
+        analytics.estimationCreated({
+          estimationId: created.id,
+          itemCount,
+          totalAmount,
+        });
         if (images.some(img => img.pendingFile)) {
           images = await uploadPendingImages(tenant.id, created.id, images);
           await updateEstimation(created.id, { ...draft, images });
         }
         showToast('Estimasi disimpan', 'success');
         navigate(`/app/estimator/${created.id}`, { replace: true });
+
+        if (isEstimator) {
+          try {
+            const stats = await countEstimationsInLast30Days(tenant.id);
+            if (shouldShowMilestone5Upsell({
+              estimationCountLast30Days: stats.count,
+              isEstimator,
+            })) {
+              window.setTimeout(() => {
+                setMilestoneTotal(stats.totalAmount);
+                setMilestoneOpen(true);
+                analytics.upgradeModalShown('milestone_5_estimations');
+              }, 1500);
+            }
+          } catch {
+            /* non-blocking */
+          }
+        }
       } else {
         if (images.some(img => img.pendingFile)) {
           images = await uploadPendingImages(tenant.id, id, images);
@@ -247,6 +313,7 @@ export default function EstimatorForm() {
 
     setStatusChanging(true);
     try {
+      const prevStatus = draft.status;
       const updated = await updateEstimationStatus(id, next);
       patch({ status: updated.status });
       setStatusMeta({
@@ -256,7 +323,39 @@ export default function EstimatorForm() {
         rejected_at: updated.rejected_at ?? null,
         converted_at: updated.converted_at ?? null,
       });
+      analytics.estimationStatusChanged({
+        estimationId: id,
+        from: prevStatus,
+        to: next,
+      });
       showToast(`Status diubah ke ${nextLabel}`, 'success');
+
+      if (next === 'accepted') {
+        const daysFromCreated = statusMeta?.created_at
+          ? Math.max(0, Math.floor((Date.now() - new Date(statusMeta.created_at).getTime()) / 86_400_000))
+          : 0;
+        analytics.estimationAccepted({
+          estimationId: id,
+          total: summaryTotal,
+          profit: Number(updated.total_profit || 0),
+          daysFromCreated,
+        });
+        if (isEstimator && !convertedProjectId) {
+          window.setTimeout(() => {
+            const trigger = remainingProjectSlots > 0 ? 'estimation_accepted' : 'project_limit';
+            setUpgradeTrigger(trigger);
+            setUpgradeOpen(true);
+            analytics.upgradeModalShown(trigger);
+          }, 1000);
+        }
+      }
+
+      if (next === 'rejected') {
+        const daysFromSent = statusMeta?.sent_at
+          ? Math.max(0, Math.floor((Date.now() - new Date(statusMeta.sent_at).getTime()) / 86_400_000))
+          : null;
+        analytics.estimationRejected({ estimationId: id, daysFromSent });
+      }
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal mengubah status', 'error');
     } finally {
@@ -283,6 +382,10 @@ export default function EstimatorForm() {
         },
         estimationProjectName,
       );
+      analytics.estimationPdfDownloaded({
+        estimationId: id,
+        template: draft.pdf_template,
+      });
       showToast('PDF diunduh', 'success');
       scheduleSentPrompt();
     } catch (e) {
@@ -294,12 +397,91 @@ export default function EstimatorForm() {
 
   const handlePreviewPdf = () => {
     if (!requireSaved()) return;
+    analytics.estimationPdfPreviewed({ estimationId: id });
     setPdfPreviewOpen(true);
   };
 
   const handleShareWhatsApp = () => {
     if (!requireSaved()) return;
     setWaShareOpen(true);
+  };
+
+  const handleOpenConvert = async () => {
+    if (isNew || !id) {
+      showToast('Simpan estimasi terlebih dahulu', 'error');
+      return;
+    }
+    if (convertedProjectId) {
+      navigate(`/app/projects/${convertedProjectId}`);
+      return;
+    }
+    try {
+      if (draftRef.current && !draftRef.current.title.trim()) {
+        showToast('Judul estimasi wajib diisi', 'error');
+        return;
+      }
+      if (!canCreateProject && tenant?.id) {
+        try {
+          await assertCanCreateProjectByEntitlement(tenant.id, tenant.plan);
+        } catch {
+          analytics.projectLimitHit({ currentCount: currentActiveProjects, tier });
+          setUpgradeTrigger('project_limit');
+          setUpgradeOpen(true);
+          analytics.upgradeModalShown('project_limit');
+          return;
+        }
+      }
+      const est = await loadEstimation(id);
+      if (!est) throw new Error('Estimasi tidak ditemukan');
+      assertEstimationConvertible(est);
+      setConvertEstimation(est);
+      setConvertOpen(true);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Tidak bisa dijadikan proyek', 'error');
+    }
+  };
+
+  const handleConverted = async (summary: {
+    projectId: string;
+    projectName: string;
+  }) => {
+    setConvertedProjectId(summary.projectId);
+    setConvertedProjectName(summary.projectName);
+    patch({ status: 'converted' });
+    setStatusMeta(prev => ({
+      ...(prev || {}),
+      converted_at: new Date().toISOString(),
+    }));
+    try {
+      const project = await getProject(summary.projectId, tenant?.currency);
+      if (project) addProject(project);
+    } catch {
+      /* non-blocking */
+    }
+    showToast('Proyek berhasil dibuat', 'success');
+  };
+
+  const handleDuplicate = async () => {
+    if (!tenant?.id || !user?.id || isNew || !id) return;
+    try {
+      const copy = await duplicateEstimation(id, tenant.id, user.id);
+      showToast('Estimasi diduplikasi', 'success');
+      navigate(`/app/estimator/${copy.id}`);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal menduplikasi', 'error');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (isNew || !id || !draft) return;
+    if (!window.confirm(`Hapus estimasi "${draft.title}"?`)) return;
+    try {
+      await deleteEstimation(id);
+      showToast('Estimasi dihapus', 'success');
+      navigate('/app/estimator');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal menghapus', 'error');
+    }
   };
 
   if (loading || !draft) {
@@ -314,7 +496,16 @@ export default function EstimatorForm() {
     <div className="w-full max-w-[100rem] mx-auto px-3 sm:px-5 py-4 pb-28">
       <EstimatorBreadcrumb items={[{ label: isNew ? 'Baru' : draft.code }]} />
 
-      {isReadOnly && (
+      {isReadOnly && convertedProjectId && (
+        <button
+          type="button"
+          onClick={() => navigate(`/app/projects/${convertedProjectId}`)}
+          className="mb-4 w-full text-left px-4 py-3 bg-teal-50 border border-teal-200 rounded-xl text-sm text-teal-800 hover:bg-teal-100 transition-colors"
+        >
+          ✅ Estimasi ini sudah menjadi proyek &quot;{convertedProjectName || draft.title}&quot; →
+        </button>
+      )}
+      {isReadOnly && !convertedProjectId && (
         <div className="mb-4 px-4 py-3 bg-teal-50 border border-teal-200 rounded-xl text-sm text-teal-800">
           Estimasi ini sudah menjadi proyek — mode baca saja.
         </div>
@@ -396,6 +587,15 @@ export default function EstimatorForm() {
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 <span className="hidden sm:inline">Simpan</span>
               </button>
+              {!isNew && (
+                <EstimatorActionsMenu
+                  status={draft.status}
+                  convertedProjectId={convertedProjectId}
+                  onConvert={handleOpenConvert}
+                  onDuplicate={handleDuplicate}
+                  onDelete={handleDelete}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -658,6 +858,7 @@ export default function EstimatorForm() {
           draft={draft}
           settings={pdfSettings}
           projectName={estimationProjectName}
+          estimationId={id}
           templateConfig={waTemplate}
           onToast={(msg, type) => showToast(msg, type)}
           onShared={scheduleSentPrompt}
@@ -668,6 +869,34 @@ export default function EstimatorForm() {
         open={sentPromptOpen}
         onMarkSent={handleMarkAsSent}
         onDismiss={() => setSentPromptOpen(false)}
+      />
+
+      {convertOpen && convertEstimation && (
+        <ConvertEstimationWizard
+          open={convertOpen}
+          estimation={convertEstimation}
+          onClose={() => {
+            setConvertOpen(false);
+            setConvertEstimation(null);
+          }}
+          onConverted={summary => {
+            void handleConverted(summary);
+          }}
+        />
+      )}
+
+      <UpgradeModal
+        open={upgradeOpen}
+        trigger={upgradeTrigger}
+        onClose={() => setUpgradeOpen(false)}
+        onManageProjects={() => navigate('/app?tab=projects')}
+        onConvertProject={handleOpenConvert}
+      />
+
+      <MilestoneUpsellModal
+        open={milestoneOpen}
+        totalAmount={milestoneTotal}
+        onClose={() => setMilestoneOpen(false)}
       />
     </div>
   );

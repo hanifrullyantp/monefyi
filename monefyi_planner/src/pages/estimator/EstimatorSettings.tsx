@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, Save } from 'lucide-react';
+import EstimatorOnboardingWizard from '../../components/estimator/EstimatorOnboardingWizard';
+import { resetEstimatorOnboarding } from '../../lib/estimatorOnboarding';
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
 import ColorPickerField from '../../components/estimator/ColorPickerField';
@@ -20,12 +22,13 @@ import type { PdfTemplate } from '../../types/estimator';
 
 export default function EstimatorSettings() {
   const navigate = useNavigate();
-  const { tenant } = useAppStore();
+  const { tenant, user } = useAppStore();
   const showToast = useUiStore(s => s.showToast);
   const [settings, setSettings] = useState<PdfSettings | null>(null);
   const [waTemplate, setWaTemplate] = useState<WhatsAppTemplateConfig>(defaultWhatsAppTemplateConfig());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!tenant?.id) return;
@@ -267,6 +270,38 @@ export default function EstimatorSettings() {
           <PdfPreviewCard settings={settings} />
         </div>
       </div>
+
+      <section className="mt-6 bg-white border border-slate-200 rounded-2xl p-4">
+        <h3 className="text-sm font-bold text-slate-800 mb-1">Onboarding Estimator</h3>
+        <p className="text-xs text-slate-500 mb-3">
+          Ulangi wizard setup identitas dan pricelist jika perlu.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            if (!user?.id) return;
+            resetEstimatorOnboarding(user.id);
+            setOnboardingOpen(true);
+          }}
+          className="px-4 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 text-slate-700 hover:bg-slate-50"
+        >
+          🔄 Buka Ulang Onboarding
+        </button>
+      </section>
+
+      {onboardingOpen && tenant?.id && user?.id && (
+        <EstimatorOnboardingWizard
+          open={onboardingOpen}
+          orgId={tenant.id}
+          orgName={tenant.name}
+          userId={user.id}
+          onClose={() => setOnboardingOpen(false)}
+          onCompleted={() => {
+            showToast('Onboarding selesai', 'success');
+            void load();
+          }}
+        />
+      )}
     </div>
   );
 }

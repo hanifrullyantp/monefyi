@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, Plus, Save, Upload } from 'lucide-react';
 import PricelistCsvImport from '../../components/estimator/PricelistCsvImport';
+import PricelistTemplateSelector from '../../components/estimator/PricelistTemplateSelector';
+import PricelistTemplateModal from '../../components/estimator/PricelistTemplateModal';
 import PricelistTableView from '../../components/estimator/PricelistTableView';
 import PricelistCardView from '../../components/estimator/PricelistCardView';
 import UnsavedChangesDialog from '../../components/ui/UnsavedChangesDialog';
@@ -15,6 +17,8 @@ import {
   PRICELIST_CATEGORIES,
   updatePricelistItem,
 } from '../../services/pricelistService';
+import { importPricelistTemplate, getPricelistTemplate } from '../../services/pricelistTemplateService';
+import { analytics } from '../../lib/analytics/events';
 import type { PricelistCategory, PricelistItem } from '../../types/estimator';
 
 type EditableFields = Pick<
@@ -48,6 +52,8 @@ export default function PricelistPage({ embedded = false }: PricelistPageProps) 
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'' | PricelistCategory>('');
   const [csvOpen, setCsvOpen] = useState(false);
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [templateImporting, setTemplateImporting] = useState(false);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
 
   const savedSnapshots = useRef<Map<string, string>>(new Map());
@@ -221,6 +227,7 @@ export default function PricelistPage({ embedded = false }: PricelistPageProps) 
       });
       savedSnapshots.current.set(created.id, rowSnapshot(created));
       setRows(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+      analytics.pricelistItemAdded({ category: created.category, source: 'manual' });
       showToast('Item ditambahkan — edit lalu klik Simpan', 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal menambah', 'error');
@@ -236,6 +243,26 @@ export default function PricelistPage({ embedded = false }: PricelistPageProps) 
       showToast('Item dihapus', 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal menghapus', 'error');
+    }
+  };
+
+  const handleImportTemplate = async (templateId: string) => {
+    if (!tenant?.id || !user?.id) return;
+    if (hasUnsaved) {
+      showToast('Simpan perubahan terlebih dahulu', 'error');
+      return;
+    }
+    setTemplateImporting(true);
+    try {
+      const count = await importPricelistTemplate(tenant.id, user.id, templateId);
+      const name = getPricelistTemplate(templateId)?.name || 'Template';
+      showToast(`${count} item dari ${name} ditambahkan. Sesuaikan harga di pricelist.`, 'success');
+      setTemplateModalOpen(false);
+      await load();
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal memuat template', 'error');
+    } finally {
+      setTemplateImporting(false);
     }
   };
 
@@ -278,6 +305,21 @@ export default function PricelistPage({ embedded = false }: PricelistPageProps) 
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             <span className="hidden sm:inline">Simpan</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (hasUnsaved) {
+                showToast('Simpan perubahan terlebih dahulu', 'error');
+                return;
+              }
+              setTemplateModalOpen(true);
+            }}
+            className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 border border-emerald-200 text-emerald-700 rounded-xl text-sm font-semibold hover:bg-emerald-50 min-w-[2.75rem]"
+            title="Muat template pricelist"
+          >
+            <span className="hidden sm:inline">Muat Template</span>
+            <span className="sm:hidden">Template</span>
           </button>
           <button
             type="button"
@@ -333,31 +375,16 @@ export default function PricelistPage({ embedded = false }: PricelistPageProps) 
             <div key={i} className="h-24 bg-slate-100 rounded-2xl animate-pulse" />
           ))}
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-16 px-6 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-          <p className="text-lg font-bold text-slate-700">Belum ada item di pricelist</p>
-          <p className="text-sm text-slate-500 mt-2">Setup harga sekali, pakai berkali-kali.</p>
-          <div className="flex flex-wrap justify-center gap-2 mt-6">
-            <button type="button" onClick={handleAdd} className="inline-flex items-center gap-1.5 px-4 py-2.5 text-white bg-emerald-600 text-sm font-bold rounded-xl hover:bg-emerald-700">
-              <Plus className="w-4 h-4" /> Tambah Item Manual
-            </button>
-            <button
-              type="button"
-              onClick={() => setCsvOpen(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-slate-600 text-sm font-semibold border border-slate-200 rounded-xl hover:bg-white"
-            >
-              <Upload className="w-4 h-4" /> Import CSV
-            </button>
-            <button
-              type="button"
-              disabled
-              title="Coming in Phase 4"
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-slate-400 text-sm font-semibold border border-slate-200 rounded-xl cursor-not-allowed"
-            >
-              Mulai dari Template →
-            </button>
-          </div>
+      ) : filtered.length === 0 && rows.length === 0 ? (
+        <div className="py-8 px-4 sm:px-6 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+          <PricelistTemplateSelector
+            onSelectTemplate={handleImportTemplate}
+            onStartEmpty={handleAdd}
+            loading={templateImporting}
+          />
         </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-12 text-slate-500 text-sm">Tidak ada item cocok dengan filter.</div>
       ) : (
         <>
           <PricelistCardView
@@ -403,6 +430,13 @@ export default function PricelistPage({ embedded = false }: PricelistPageProps) 
           }}
         />
       )}
+
+      <PricelistTemplateModal
+        open={templateModalOpen}
+        onClose={() => setTemplateModalOpen(false)}
+        onSelectTemplate={handleImportTemplate}
+        importing={templateImporting}
+      />
 
       <UnsavedChangesDialog
         open={leaveDialogOpen}

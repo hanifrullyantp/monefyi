@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, FolderOpen, Wallet, Settings, Bell, Menu, X,
   Sparkles, Wifi, WifiOff, Clock, Users, Receipt,
-  BarChart3, Shield, ChevronRight, Database, PanelRightClose, PanelRight,
+  BarChart3, Shield, ChevronRight, Database, PanelRightClose, PanelRight, Lock,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { useUiStore } from '../store/uiStore';
@@ -23,6 +23,10 @@ import { useOrgBrand } from '../hooks/useOrgBrand';
 import { MONEFYI_BRAND } from '../lib/orgBrand';
 import RightPanel from './layout/RightPanel';
 import { useShellStore } from '../store/shellStore';
+import { useEntitlement } from '../hooks/useEntitlement';
+import UpgradeModal from './entitlement/UpgradeModal';
+import type { UpgradeModalTrigger } from '../types/entitlement';
+import { analytics } from '../lib/analytics/events';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -41,6 +45,9 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
 
   const [notifOpen, setNotifOpen] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeTrigger, setUpgradeTrigger] = useState<UpgradeModalTrigger>('pro_feature');
+  const { canAccessEstimator, canAccessFinance } = useEntitlement();
 
   useEffect(() => {
     if (!user?.id) return;
@@ -123,6 +130,17 @@ export default function Layout({ children }: LayoutProps) {
 
   const navigationGuard = useUiStore(s => s.navigationGuard);
 
+  const openUpgrade = (trigger: UpgradeModalTrigger) => {
+    setUpgradeTrigger(trigger);
+    setUpgradeOpen(true);
+  };
+
+  const isNavLocked = (tabId: string) => {
+    if (tabId === 'estimator') return !canAccessEstimator;
+    if (tabId === 'finance') return !canAccessFinance;
+    return false;
+  };
+
   const navigateToTab = async (tabId: string) => {
     if (navigationGuard) {
       const canLeave = await navigationGuard.promptLeave();
@@ -135,6 +153,12 @@ export default function Layout({ children }: LayoutProps) {
       setActiveTab('database');
       navigate('/app/database');
     } else if (tabId === 'finance') {
+      if (!canAccessFinance) {
+        analytics.proFeatureClicked({ featureName: 'Keuangan Bisnis' });
+        openUpgrade('pro_feature');
+        setSidebarOpen(false);
+        return;
+      }
       setActiveTab('finance');
       navigate('/app/finance-v2');
     } else {
@@ -299,8 +323,11 @@ export default function Layout({ children }: LayoutProps) {
               {!navSidebarCollapsed && (
                 <>
                   <span className="truncate">{item.label}</span>
+                  {isNavLocked(item.id) && (
+                    <Lock className="w-3.5 h-3.5 text-slate-400 ml-auto shrink-0" />
+                  )}
                   {item.id === 'home' && unreadCount > 0 && (
-                    <span className="ml-auto px-1.5 py-0.5 bg-rose-500 text-white text-xs font-bold rounded-full">
+                    <span className={`${isNavLocked(item.id) ? '' : 'ml-auto'} px-1.5 py-0.5 bg-rose-500 text-white text-xs font-bold rounded-full`}>
                       {unreadCount}
                     </span>
                   )}
@@ -358,6 +385,9 @@ export default function Layout({ children }: LayoutProps) {
                   >
                     <item.icon className="w-5 h-5" />
                     {item.label}
+                    {isNavLocked(item.id) && (
+                      <Lock className="w-3.5 h-3.5 text-slate-400 ml-auto" />
+                    )}
                   </button>
                 ))}
               </nav>
@@ -521,8 +551,9 @@ export default function Layout({ children }: LayoutProps) {
                   }`}
                 >
                   <tab.icon className="w-5 h-5" />
-                  <span className={`text-[10px] font-semibold ${isTabActive(tab.id) ? 'font-bold' : ''}`}>
+                  <span className={`text-[10px] font-semibold flex items-center gap-0.5 ${isTabActive(tab.id) ? 'font-bold' : ''}`}>
                     {tab.label}
+                    {isNavLocked(tab.id) && <Lock className="w-2.5 h-2.5" />}
                   </span>
                 </button>
               )
@@ -537,6 +568,13 @@ export default function Layout({ children }: LayoutProps) {
       </AnimatePresence>
       <ToastHost />
       <UndoToast />
+      <UpgradeModal
+        open={upgradeOpen}
+        trigger={upgradeTrigger}
+        featureName="Keuangan Bisnis"
+        onClose={() => setUpgradeOpen(false)}
+        onManageProjects={() => navigate('/app?tab=projects')}
+      />
     </div>
   );
 }
