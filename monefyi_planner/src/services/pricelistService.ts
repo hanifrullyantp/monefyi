@@ -1,3 +1,4 @@
+import { PRICELIST_TEMPLATES } from '../lib/data/pricelist-templates';
 import { supabase } from '../lib/supabase';
 import {
   calcItemRow,
@@ -105,10 +106,57 @@ export async function searchPricelist(
   );
 }
 
+export interface PricelistProductMeta {
+  label: string;
+  icon: string;
+  description: string;
+}
+
 export interface PricelistProductGroup {
   product: string;
+  label: string;
+  icon: string;
+  description: string;
   items: PricelistItem[];
 }
+
+const PRODUCT_META = buildPricelistProductMetaMap();
+
+function buildPricelistProductMetaMap(): Map<string, PricelistProductMeta> {
+  const map = new Map<string, PricelistProductMeta>();
+  for (const tpl of PRICELIST_TEMPLATES) {
+    const meta = { label: tpl.name, icon: tpl.icon, description: tpl.description };
+    map.set(tpl.name, meta);
+    for (const item of tpl.items) {
+      const key = item.product.trim();
+      if (key && !map.has(key)) map.set(key, meta);
+    }
+  }
+  return map;
+}
+
+/** Metadata kelompok kerja (Kitchen Set, Kanopi, …) untuk card picker. */
+export function getPricelistProductMeta(product: string): PricelistProductMeta {
+  const key = product.trim();
+  if (!key) {
+    return {
+      label: 'Lainnya',
+      icon: '📦',
+      description: 'Item tanpa kelompok kerja',
+    };
+  }
+  return PRODUCT_META.get(key) ?? {
+    label: key,
+    icon: '🏷️',
+    description: 'Kelompok kerja custom',
+  };
+}
+
+const PRODUCT_SORT_ORDER = PRICELIST_TEMPLATES.flatMap(t => {
+  const keys = new Set(t.items.map(i => i.product.trim()).filter(Boolean));
+  keys.add(t.name);
+  return [...keys];
+});
 
 export interface PricelistCategoryGroup {
   category: PricelistCategory;
@@ -138,7 +186,7 @@ export function groupPricelistByCategory(items: PricelistItem[]): PricelistCateg
   })).filter(g => g.items.length > 0);
 }
 
-/** Kelompokkan pricelist per nama produk untuk tampilan picker. */
+/** Kelompokkan pricelist per kelompok kerja (field `product`) untuk picker card grid. */
 export function groupPricelistByProduct(items: PricelistItem[]): PricelistProductGroup[] {
   const map = new Map<string, PricelistItem[]>();
   for (const item of items) {
@@ -146,16 +194,50 @@ export function groupPricelistByProduct(items: PricelistItem[]): PricelistProduc
     if (!map.has(key)) map.set(key, []);
     map.get(key)!.push(item);
   }
+
+  const sortIndex = (product: string) => {
+    const idx = PRODUCT_SORT_ORDER.indexOf(product);
+    return idx === -1 ? 999 : idx;
+  };
+
   return [...map.entries()]
-    .map(([product, groupItems]) => ({
-      product,
-      items: groupItems.sort((a, b) => a.name.localeCompare(b.name, 'id')),
-    }))
+    .map(([product, groupItems]) => {
+      const meta = getPricelistProductMeta(product);
+      return {
+        product,
+        label: meta.label,
+        icon: meta.icon,
+        description: meta.description,
+        items: groupItems.sort((a, b) => a.name.localeCompare(b.name, 'id')),
+      };
+    })
     .sort((a, b) => {
       if (!a.product) return 1;
       if (!b.product) return -1;
-      return a.product.localeCompare(b.product, 'id');
+      const order = sortIndex(a.product) - sortIndex(b.product);
+      if (order !== 0) return order;
+      return a.label.localeCompare(b.label, 'id');
     });
+}
+
+/** Sub-kelompok item dalam satu kelompok kerja, diurutkan per kategori. */
+export function groupPricelistItemsByCategory(items: PricelistItem[]): PricelistCategoryGroup[] {
+  const labelMap = new Map(PRICELIST_CATEGORIES.map(c => [c.value, c.label]));
+  const map = new Map<PricelistCategory, PricelistItem[]>();
+
+  for (const item of items) {
+    const cat = (item.category || 'material') as PricelistCategory;
+    if (!map.has(cat)) map.set(cat, []);
+    map.get(cat)!.push(item);
+  }
+
+  return PRICELIST_CATEGORIES
+    .map(({ value, label }) => ({
+      category: value,
+      label: labelMap.get(value) ?? label,
+      items: (map.get(value) || []).sort((a, b) => a.name.localeCompare(b.name, 'id')),
+    }))
+    .filter(g => g.items.length > 0);
 }
 
 export function pricelistToDraftRow(item: PricelistItem) {

@@ -57,6 +57,21 @@ const KITCHEN_SET_ITEMS: ItemInput[] = [
   t('Finishing & Cleaning', 'Kitchen Set', 'jasa', 'ls', 300000, 50),
 ];
 
+const KANOPI_ITEMS: ItemInput[] = [
+  t('Kanopi Baja Ringan', 'Kanopi', 'borongan', 'm2', 850000, 35),
+  t('Kanopi Polycarbonate', 'Kanopi', 'borongan', 'm2', 650000, 38),
+  t('Kanopi Kaca Tempered', 'Kanopi', 'borongan', 'm2', 1200000, 32),
+  t('Kanopi Membran', 'Kanopi', 'borongan', 'm2', 550000, 40),
+  t('Rangka Hollow Kanopi', 'Kanopi', 'material', 'm', 85000, 28),
+  t('Atap Spandek Kanopi', 'Kanopi', 'material', 'm2', 95000, 28),
+  t('Talang Air Kanopi', 'Kanopi', 'material', 'm', 85000, 30),
+  t('Baut & Sekrup Kanopi', 'Kanopi', 'material', 'set', 125000, 35),
+  t('Cat Epoxy Rangka', 'Kanopi', 'material', 'ls', 285000, 40),
+  t('Pemasangan Kanopi', 'Kanopi', 'upah', 'm2', 85000, 35),
+  t('Survey & Desain', 'Kanopi', 'jasa', 'ls', 350000, 50),
+  t('Pengiriman Material', 'Kanopi', 'jasa', 'ls', 350000, 40),
+];
+
 const RENOVASI_RUMAH_ITEMS: ItemInput[] = [
   t('Galian Tanah', 'Renovasi Rumah', 'upah', 'm3', 85000, 35),
   t('Urugan Pasir', 'Renovasi Rumah', 'material', 'm3', 320000, 25),
@@ -131,7 +146,6 @@ const KONSTRUKSI_RINGAN_ITEMS: ItemInput[] = [
   t('Plafon PVC', 'Konstruksi Ringan', 'material', 'm2', 95000, 28),
   t('Pagar Besi Hollow', 'Konstruksi Ringan', 'material', 'm', 650000, 25),
   t('Pintu Gerbang Besi', 'Konstruksi Ringan', 'material', 'pcs', 4500000, 22),
-  t('Kanopi Baja Ringan', 'Konstruksi Ringan', 'borongan', 'm2', 850000, 35),
   t('Lantai Cor Tipis', 'Konstruksi Ringan', 'material', 'm2', 285000, 20),
   t('Plester Lantai', 'Konstruksi Ringan', 'upah', 'm2', 75000, 35),
   t('Cat Epoxy Lantai', 'Konstruksi Ringan', 'material', 'm2', 125000, 30),
@@ -183,6 +197,14 @@ export const PRICELIST_TEMPLATES: PricelistTemplate[] = [
     'Untuk usaha kitchen set custom dan built-in furniture',
     ['Kabinet', 'countertop', 'backsplash'],
     KITCHEN_SET_ITEMS,
+  ),
+  buildTemplate(
+    'kanopi',
+    'Kanopi',
+    '⛱️',
+    'Kanopi baja ringan, polycarbonate, kaca, dan membran',
+    ['Baja ringan', 'polycarbonate', 'kaca'],
+    KANOPI_ITEMS,
   ),
   buildTemplate(
     'renovasi-rumah',

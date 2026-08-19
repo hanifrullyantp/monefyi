@@ -1,5 +1,5 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { Plus, Trash2, Sparkles, List } from 'lucide-react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { Plus, Trash2, Sparkles, List, SlidersHorizontal } from 'lucide-react';
 import { calcEstimationSummary, calcItemRow, countedEstimationItems, effectiveItemSelling, emptyItem, sellingFromHpp, syncEstimationItemPricesList, estimationItemsNeedPriceSync, type ItemPriceEdit } from '../../lib/estimatorCalc';
 import { formatRupiahFull } from '../../lib/estimatorFormat';
 import {
@@ -34,6 +34,7 @@ interface Props {
   taxPct?: number;
   onChange: (items: EstimationItemDraft[]) => void;
   readOnly?: boolean;
+  onRegisterAddItem?: (add: () => void) => void;
 }
 
 export default function EstimationItemsTable({
@@ -48,9 +49,11 @@ export default function EstimationItemsTable({
   taxPct = 0,
   onChange,
   readOnly = false,
+  onRegisterAddItem,
 }: Props) {
   const [smartOpen, setSmartOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [mobileDetailMode, setMobileDetailMode] = useState(false);
   const showToast = useUiStore(s => s.showToast);
   const cellRefs = useRef<Map<string, HTMLInputElement | HTMLSelectElement>>(new Map());
 
@@ -88,10 +91,14 @@ export default function EstimationItemsTable({
     onChange(next);
   };
 
-  const addRow = () => {
+  const addRow = useCallback(() => {
     if (readOnly) return;
     onChange([...items, emptyItem(items.length)]);
-  };
+  }, [readOnly, items, onChange]);
+
+  useEffect(() => {
+    onRegisterAddItem?.(addRow);
+  }, [onRegisterAddItem, addRow]);
   const removeRow = (index: number) => {
     if (readOnly) return;
     onChange(items.filter((_, i) => i !== index));
@@ -189,8 +196,9 @@ export default function EstimationItemsTable({
 
   return (
     <>
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 bg-slate-50/50">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden max-w-full">
+        {/* Desktop-only table header */}
+        <div className="hidden md:flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 bg-slate-50/50">
           <div>
             <h3 className="font-bold text-slate-800">Rincian Item</h3>
             <p className="text-[11px] text-slate-600 mt-0.5">Harga jual & margin% menentukan HPP (margin = laba ÷ jual)</p>
@@ -205,28 +213,26 @@ export default function EstimationItemsTable({
                 className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg hover:opacity-90 shadow-sm"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Smart Input</span>
+                Smart Input
               </button>
             )}
             <button
               type="button"
               onClick={() => setPickerOpen(true)}
-              className="inline-flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 text-xs font-semibold text-emerald-600 border border-emerald-200 rounded-lg hover:bg-emerald-50 bg-white min-w-[2.5rem]"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-emerald-600 border border-emerald-200 rounded-lg hover:bg-emerald-50 bg-white"
               title="Dari Pricelist"
-              aria-label="Tambah item dari pricelist"
             >
               <List className="w-4 h-4" />
-              <span className="hidden sm:inline">Dari Pricelist</span>
+              Dari Pricelist
             </button>
             <button
               type="button"
               onClick={addRow}
-              className="inline-flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-white bg-white min-w-[2.5rem]"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-white bg-white"
               title="Tambah manual"
-              aria-label="Tambah item manual"
             >
               <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Manual</span>
+              Manual
             </button>
               </>
             )}
@@ -234,12 +240,11 @@ export default function EstimationItemsTable({
         </div>
 
         {items.length === 0 ? (
-          <div className="p-10 text-center space-y-5">
+          <div className="p-8 md:p-10 text-center space-y-4">
             <p className="text-sm font-semibold text-slate-700">Belum ada item</p>
+            <p className="text-xs text-slate-500 md:hidden">Tap <strong>Tambah Rincian</strong> di kartu atas</p>
             {!readOnly && (
-              <>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">Tambah item dari 3 cara:</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto">
+              <div className="hidden md:grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto">
               {ENABLE_ESTIMATOR_SMART_INPUT && (
                 <button
                   type="button"
@@ -270,86 +275,157 @@ export default function EstimationItemsTable({
                 <div className="text-[10px] text-slate-500 mt-1">Isi baris satu-satu</div>
               </button>
             </div>
-              </>
             )}
           </div>
         ) : (
           <>
-        <div className="md:hidden p-3 space-y-2.5">
+        <div className="md:hidden p-2 space-y-2 overflow-x-hidden max-w-full">
           {items.map((item, idx) => {
             const netSelling = effectiveItemSelling(item);
             const rowMuted = item.name.trim() && item.included === false;
             return (
               <div
                 key={idx}
-                className={`rounded-xl border p-3 space-y-2 ${
+                className={`rounded-xl border p-2.5 max-w-full overflow-hidden ${
                   rowMuted ? 'border-slate-200 bg-slate-50/80 opacity-80' : 'border-slate-200 bg-white'
                 }`}
               >
-                <div className="flex items-start gap-2">
+                <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-1.5 items-start min-w-0">
                   <input
                     type="checkbox"
                     checked={item.included !== false}
                     onChange={e => updateItem(idx, { included: e.target.checked }, 'qty')}
-                    className="w-4 h-4 mt-1 rounded border-slate-300 text-emerald-600 shrink-0"
+                    className="w-4 h-4 mt-0.5 rounded border-slate-300 text-emerald-600 shrink-0"
                     title="Masuk total"
                   />
                   <input
                     value={item.name}
                     onChange={e => updateItem(idx, { name: e.target.value })}
                     placeholder="Nama item"
-                    className="flex-1 min-w-0 font-semibold text-sm text-slate-900 bg-transparent border-0 border-b border-transparent focus:border-emerald-400 outline-none py-0.5"
+                    className="min-w-0 w-full font-semibold text-sm text-slate-900 bg-transparent border-0 outline-none truncate"
                   />
-                  <div className="text-sm font-black text-slate-900 tabular-nums shrink-0">
+                  <div className="text-xs font-black text-slate-900 tabular-nums shrink-0 max-w-[5.5rem] truncate text-right">
                     {formatRupiahFull(netSelling)}
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5 pl-6">
+
+                <div className="grid grid-cols-[3.25rem_2.75rem_minmax(0,1fr)_2rem] gap-1 items-center mt-2 pl-5 min-w-0">
                   <QtyInput
                     value={item.qty}
                     onChange={v => updateItem(idx, { qty: v }, 'qty')}
-                    className="w-14 px-2 py-1.5 border border-slate-200 rounded-lg text-right text-sm tabular-nums focus:border-emerald-400 outline-none"
+                    className="w-full px-1.5 py-1 border border-slate-200 rounded-lg text-right text-xs tabular-nums focus:border-emerald-400 outline-none"
                   />
-                  <span className="text-slate-400 text-xs">/</span>
                   <select
                     value={item.unit}
                     onChange={e => updateItem(idx, { unit: e.target.value })}
-                    className="w-16 px-1 py-1.5 text-xs border border-slate-200 rounded-lg bg-white"
+                    className="w-full px-0.5 py-1 text-[11px] border border-slate-200 rounded-lg bg-white min-w-0"
                   >
                     {COMMON_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                   </select>
-                  <div className="flex-1" />
                   <RupiahInput
                     value={item.selling_price_per_unit}
                     onChange={v => updateItem(idx, { selling_price_per_unit: v }, 'selling')}
                     title="Jual / unit"
-                    className="w-[5.5rem] px-1.5 py-1.5 border border-emerald-200 bg-emerald-50/50 rounded-lg text-right text-xs font-semibold tabular-nums focus:border-emerald-400 outline-none"
+                    className="min-w-0 w-full px-1.5 py-1 border border-emerald-200 bg-emerald-50/50 rounded-lg text-right text-[11px] font-semibold tabular-nums focus:border-emerald-400 outline-none"
                   />
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step="0.1"
-                    value={item.margin_pct}
-                    onChange={e => updateItem(idx, { margin_pct: Number(e.target.value) }, 'margin')}
-                    title="Margin %"
-                    className="w-12 px-1 py-1.5 border border-slate-200 rounded-lg text-right text-xs tabular-nums focus:border-emerald-400 outline-none"
-                  />
-                  <span className="text-[10px] text-slate-400">%</span>
                   {!readOnly && (
                     <button
                       type="button"
                       onClick={() => removeRow(idx)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                      className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 justify-self-end"
                       aria-label="Hapus item"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
+
+                {mobileDetailMode && (
+                  <div className="mt-2 pt-2 pl-5 border-t border-slate-100 grid grid-cols-2 gap-2 min-w-0">
+                    <label className="text-[10px] text-slate-500">
+                      Margin %
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step="0.1"
+                        value={item.margin_pct}
+                        onChange={e => updateItem(idx, { margin_pct: Number(e.target.value) }, 'margin')}
+                        className="mt-0.5 w-full px-1.5 py-1 border border-slate-200 rounded-lg text-right text-xs tabular-nums"
+                      />
+                    </label>
+                    <label className="text-[10px] text-slate-500">
+                      HPP / unit
+                      <RupiahInput
+                        value={item.hpp_per_unit}
+                        onChange={v => updateItem(idx, { hpp_per_unit: v }, 'hpp')}
+                        className="mt-0.5 w-full px-1.5 py-1 border border-slate-200 rounded-lg text-right text-xs tabular-nums"
+                      />
+                    </label>
+                    <label className="text-[10px] text-slate-500 flex items-center gap-2 col-span-2">
+                      <input
+                        type="checkbox"
+                        checked={item.is_bonus}
+                        onChange={e => updateItem(idx, { is_bonus: e.target.checked }, 'qty')}
+                        className="rounded border-slate-300 text-emerald-600"
+                      />
+                      Item bonus (gratis)
+                    </label>
+                    <label className="text-[10px] text-slate-500">
+                      Disk. %
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step="0.1"
+                        value={item.item_discount_pct || ''}
+                        disabled={item.is_bonus}
+                        onChange={e => updateItem(idx, { item_discount_pct: Number(e.target.value) }, 'qty')}
+                        className="mt-0.5 w-full px-1.5 py-1 border border-slate-200 rounded-lg text-right text-xs disabled:bg-slate-50"
+                        placeholder="0"
+                      />
+                    </label>
+                    <label className="text-[10px] text-slate-500">
+                      Disk. Rp
+                      <RupiahInput
+                        value={item.item_discount_amount}
+                        onChange={v => updateItem(idx, { item_discount_amount: v }, 'qty')}
+                        className="mt-0.5 w-full px-1.5 py-1 border border-slate-200 rounded-lg text-right text-xs"
+                        min={0}
+                      />
+                    </label>
+                    <label className="text-[10px] text-slate-500 col-span-2">
+                      Kategori
+                      <select
+                        value={item.category}
+                        onChange={e => updateItem(idx, { category: e.target.value })}
+                        className="mt-0.5 w-full px-1.5 py-1 text-xs border border-slate-200 rounded-lg bg-white"
+                      >
+                        {PRICELIST_CATEGORIES.map(c => (
+                          <option key={c.value} value={c.value}>{c.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                )}
               </div>
             );
           })}
+
+          {items.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setMobileDetailMode(v => !v)}
+            className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-semibold transition-colors ${
+              mobileDetailMode
+                ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            {mobileDetailMode ? 'Sembunyikan rincian detail' : 'Tampilkan rincian detail'}
+          </button>
+          )}
         </div>
         <div className="hidden md:block overflow-x-auto overscroll-x-contain">
           <table className="w-full text-sm min-w-[1280px] table-auto">
