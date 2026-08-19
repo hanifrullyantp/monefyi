@@ -143,7 +143,8 @@ export default function EstimatorForm() {
   const handleBackToList = useCallback(() => {
     autoSave.discard();
     setActiveTab('estimator');
-  }, [autoSave, setActiveTab]);
+    navigate('/app/estimator');
+  }, [autoSave, setActiveTab, navigate]);
 
   useEffect(() => {
     if (!draft || isNew || isReadOnly) return;
@@ -542,7 +543,7 @@ export default function EstimatorForm() {
     <div className="w-full max-w-[100rem] mx-auto px-3 sm:px-5 py-4 pb-36 lg:pb-24 overflow-x-hidden">
       <EstimatorBreadcrumb
         items={[{ label: isNew ? 'Baru' : draft.code }]}
-        onBeforeBack={handleBackToList}
+        onBack={handleBackToList}
       />
 
       {isReadOnly && convertedProjectId && (
@@ -801,10 +802,7 @@ export default function EstimatorForm() {
         canRedo={draftHistory.canRedo}
         canDiscard={draftHistory.canDiscard && !isNew}
         inline
-        onCancel={() => {
-          handleBackToList();
-          navigate('/app/estimator');
-        }}
+        onCancel={handleBackToList}
         onSave={handleSave}
         onUndo={handleUndo}
         onRedo={handleRedo}

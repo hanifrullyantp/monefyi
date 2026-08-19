@@ -34,7 +34,7 @@ function cardKeyDown(e: KeyboardEvent, onOpen: () => void) {
 
 export default function EstimationCard({
   estimation: est,
-  viewMode = 'card',
+  viewMode = 'standard',
   onOpen,
   onEdit,
   onDuplicate,

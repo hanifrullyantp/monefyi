@@ -28,7 +28,7 @@ import PostPurchaseBanner, {
   dismissPostPurchaseBanner,
   readPostPurchaseBanner,
 } from '../../components/entitlement/PostPurchaseBanner';
-import { countEstimationsByStatus, normalizeEstimationStatus } from '../../lib/estimationStatus';
+import { countEstimationsByStatus, countEstimationsByPipelineSummary, matchesPipelineSummaryFilter, normalizeEstimationStatus, type PipelineSummaryBucket } from '../../lib/estimationStatus';
 import {
   groupEstimationsForList,
   statusSortIndex,
@@ -154,6 +154,7 @@ export default function EstimatorList() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'' | EstimationStatus>('');
+  const [pipelineFilter, setPipelineFilter] = useState<'' | PipelineSummaryBucket>('');
   const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [groupMode, setGroupMode] = useState<EstimationGroupMode>('none');
   const [listViewMode, setListViewMode] = useState<EstimationListViewMode>(readEstimationListViewMode);
@@ -226,11 +227,17 @@ export default function EstimatorList() {
   }, []);
 
   const statusCounts = useMemo(() => countEstimationsByStatus(rows), [rows]);
+  const pipelineSummaryCounts = useMemo(() => countEstimationsByPipelineSummary(rows), [rows]);
 
   const filteredRows = useMemo(() => {
-    if (!statusFilter) return rows;
-    return rows.filter(r => normalizeEstimationStatus(r.status) === statusFilter);
-  }, [rows, statusFilter]);
+    if (statusFilter) {
+      return rows.filter(r => normalizeEstimationStatus(r.status) === statusFilter);
+    }
+    if (pipelineFilter) {
+      return rows.filter(r => matchesPipelineSummaryFilter(r.status, pipelineFilter));
+    }
+    return rows;
+  }, [rows, statusFilter, pipelineFilter]);
 
   const sortedRows = useMemo(() => sortRows(filteredRows, sortKey), [filteredRows, sortKey]);
 
@@ -239,13 +246,17 @@ export default function EstimatorList() {
     [sortedRows, groupMode],
   );
 
-  const activeFilterLabel = STATUS_FILTERS.find(f => f.value === statusFilter)?.label || 'Semua';
+  const activeFilterLabel = STATUS_FILTERS.find(f => f.value === statusFilter)?.label
+    || (pipelineFilter === 'wa' ? 'WA'
+      : pipelineFilter === 'survei' ? 'Survei & Penawaran'
+        : pipelineFilter === 'closing' ? 'Closing & Produksi'
+          : 'Semua');
   const activeSortLabel = SORT_OPTIONS.find(o => o.value === sortKey)?.label || 'Terbaru';
   const activeGroupLabel = GROUP_OPTIONS.find(g => g.value === groupMode)?.label || 'Tanpa kelompok';
   const toolbarSortLabel = [
     activeSortLabel,
     groupMode !== 'none' ? activeGroupLabel : '',
-    statusFilter ? activeFilterLabel : '',
+    statusFilter || pipelineFilter ? activeFilterLabel : '',
   ].filter(Boolean).join(' · ');
 
   const handleDelete = async (id: string, title: string) => {
@@ -393,13 +404,12 @@ export default function EstimatorList() {
       </div>
 
       <EstimationPipelineSummary
-        counts={{
-          wa: statusCounts.wa,
-          survei: statusCounts.survei,
-          closing: statusCounts.closing,
+        counts={pipelineSummaryCounts}
+        activePipelineFilter={pipelineFilter}
+        onSelect={bucket => {
+          setPipelineFilter(bucket);
+          if (bucket) setStatusFilter('');
         }}
-        activeStatus={statusFilter}
-        onSelect={status => setStatusFilter(status)}
       />
 
       {/* Icon toolbar */}
@@ -444,7 +454,7 @@ export default function EstimatorList() {
         <div className="relative" ref={sortRef}>
           <ToolbarIconButton
             label={`Urutkan & filter: ${toolbarSortLabel}`}
-            active={sortOpen || Boolean(statusFilter)}
+            active={sortOpen || Boolean(statusFilter) || Boolean(pipelineFilter)}
             onClick={() => setSortOpen(v => !v)}
           >
             <ArrowUpDown className="w-4 h-4" />
@@ -486,7 +496,11 @@ export default function EstimatorList() {
                   <button
                     key={f.value || 'all'}
                     type="button"
-                    onClick={() => { setStatusFilter(f.value); setSortOpen(false); }}
+                    onClick={() => {
+                      setStatusFilter(f.value);
+                      setPipelineFilter('');
+                      setSortOpen(false);
+                    }}
                     className={`w-full text-left px-3 py-2 text-sm flex justify-between gap-2 ${
                       statusFilter === f.value ? 'bg-emerald-50 text-emerald-800 font-semibold' : 'text-slate-700 hover:bg-slate-50'
                     }`}
@@ -566,7 +580,10 @@ export default function EstimatorList() {
         </select>
         <select
           value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value as '' | EstimationStatus)}
+          onChange={e => {
+            setStatusFilter(e.target.value as '' | EstimationStatus);
+            setPipelineFilter('');
+          }}
           className="appearance-none w-44 pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 bg-white"
         >
           {STATUS_FILTERS.map(f => {

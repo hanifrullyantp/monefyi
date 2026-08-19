@@ -7,12 +7,12 @@ export const ESTIMATION_LIST_VIEW_OPTIONS: Array<{
   label: string;
   description: string;
 }> = [
-  { value: 'card', label: 'Kartu', description: 'Nama estimasi dan total nilai' },
   { value: 'standard', label: 'Standar', description: 'Tampilan ringkas dengan status dan aksi' },
+  { value: 'card', label: 'Kartu', description: 'Nama estimasi dan total nilai' },
   { value: 'detail', label: 'Detail', description: 'Informasi lengkap estimasi' },
 ];
 
-/** Default: kartu (nama + total). */
+/** Default: standar. */
 export function readEstimationListViewMode(): EstimationListViewMode {
   try {
     const v = localStorage.getItem(STORAGE_KEY);
@@ -20,7 +20,7 @@ export function readEstimationListViewMode(): EstimationListViewMode {
   } catch {
     /* ignore */
   }
-  return 'card';
+  return 'standard';
 }
 
 export function persistEstimationListViewMode(mode: EstimationListViewMode): void {

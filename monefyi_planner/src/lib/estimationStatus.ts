@@ -195,3 +195,53 @@ export function countEstimationsByStatus(
   }
   return counts;
 }
+
+/** Bucket ringkas untuk 3 kartu pipeline di atas daftar estimasi. */
+export type PipelineSummaryBucket = 'wa' | 'survei' | 'closing';
+
+/** Survei + penawaran → kartu Survei. */
+export const PIPELINE_SUMMARY_SURVEI_STATUSES: EstimationStatus[] = ['survei', 'penawaran'];
+
+/** Closing hingga selesai → kartu Closing. */
+export const PIPELINE_SUMMARY_CLOSING_STATUSES: EstimationStatus[] = [
+  'closing',
+  'proses',
+  'finishing',
+  'selesai',
+];
+
+/**
+ * Map status ke kartu pipeline atas.
+ * Ditolak & jadi proyek tidak masuk bucket manapun.
+ */
+export function getPipelineSummaryBucket(
+  status: EstimationStatus | string,
+): PipelineSummaryBucket | null {
+  const normalized = normalizeEstimationStatus(status);
+  if (normalized === 'wa') return 'wa';
+  if (PIPELINE_SUMMARY_SURVEI_STATUSES.includes(normalized)) return 'survei';
+  if (PIPELINE_SUMMARY_CLOSING_STATUSES.includes(normalized)) return 'closing';
+  return null;
+}
+
+export function countEstimationsByPipelineSummary(
+  rows: Array<{ status: EstimationStatus | string }>,
+): Record<PipelineSummaryBucket, number> {
+  const counts: Record<PipelineSummaryBucket, number> = {
+    wa: 0,
+    survei: 0,
+    closing: 0,
+  };
+  for (const row of rows) {
+    const bucket = getPipelineSummaryBucket(row.status);
+    if (bucket) counts[bucket] += 1;
+  }
+  return counts;
+}
+
+export function matchesPipelineSummaryFilter(
+  status: EstimationStatus | string,
+  filter: PipelineSummaryBucket,
+): boolean {
+  return getPipelineSummaryBucket(status) === filter;
+}

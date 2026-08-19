@@ -3,8 +3,11 @@ import {
   buildStatusHistory,
   buildStatusUpdatePayload,
   countEstimationsByStatus,
+  countEstimationsByPipelineSummary,
+  getPipelineSummaryBucket,
   getStatusTransitionActions,
   isStatusTransitionAllowed,
+  matchesPipelineSummaryFilter,
   normalizeEstimationStatus,
 } from './estimationStatus';
 
@@ -63,6 +66,33 @@ describe('estimationStatus - buildStatusHistory - ordered rows', () => {
       accepted_at: '2026-08-16T09:15:00.000Z',
     });
     expect(rows.map(r => r.key)).toEqual(['created', 'wa', 'penawaran', 'closing']);
+  });
+});
+
+describe('estimationStatus - countEstimationsByPipelineSummary - grouped cards', () => {
+  it('groups survei+penawaran, closing stages, excludes rejected', () => {
+    const counts = countEstimationsByPipelineSummary([
+      { status: 'wa' },
+      { status: 'survei' },
+      { status: 'penawaran' },
+      { status: 'sent' },
+      { status: 'closing' },
+      { status: 'proses' },
+      { status: 'finishing' },
+      { status: 'selesai' },
+      { status: 'rejected' },
+      { status: 'converted' },
+    ]);
+    expect(counts.wa).toBe(1);
+    expect(counts.survei).toBe(3);
+    expect(counts.closing).toBe(4);
+  });
+
+  it('matches pipeline filter bucket', () => {
+    expect(matchesPipelineSummaryFilter('penawaran', 'survei')).toBe(true);
+    expect(matchesPipelineSummaryFilter('finishing', 'closing')).toBe(true);
+    expect(matchesPipelineSummaryFilter('rejected', 'survei')).toBe(false);
+    expect(getPipelineSummaryBucket('rejected')).toBeNull();
   });
 });
 
