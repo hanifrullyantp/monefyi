@@ -3,8 +3,10 @@ import {
   Copy, MessageCircle, Pencil, Rocket, Trash2, AlertTriangle,
 } from 'lucide-react';
 import StatusBadge from './StatusBadge';
+import EstimationWorkflowIcons from './EstimationWorkflowIcons';
 import { formatDateIdShort, formatRupiahFull } from '../../lib/estimatorFormat';
-import type { Estimation } from '../../types/estimator';
+import { normalizeEstimationStatus } from '../../lib/estimationStatus';
+import type { Estimation, EstimationWorkflowStatus } from '../../types/estimator';
 
 type Props = {
   estimation: Estimation;
@@ -14,6 +16,8 @@ type Props = {
   onDelete: () => void;
   onConvert?: () => void;
   onShareWhatsApp?: () => void;
+  onStatusChange?: (status: EstimationWorkflowStatus) => void;
+  statusLoading?: EstimationWorkflowStatus | null;
 };
 
 export default function EstimationCard({
@@ -24,10 +28,13 @@ export default function EstimationCard({
   onDelete,
   onConvert,
   onShareWhatsApp,
+  onStatusChange,
+  statusLoading = null,
 }: Props) {
+  const status = normalizeEstimationStatus(est.status);
   const profit = Number(est.total_profit) || 0;
   const profitNegative = profit < 0;
-  const isConverted = est.status === 'converted';
+  const isConverted = status === 'converted';
   const showConvert = !isConverted && onConvert;
   const showWhatsApp = !isConverted && onShareWhatsApp;
 
@@ -50,7 +57,7 @@ export default function EstimationCard({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <span className="font-mono text-xs text-emerald-600 font-bold">{est.code}</span>
-              <StatusBadge status={est.status} />
+              <StatusBadge status={status} />
             </div>
             <h3 className="font-bold text-slate-900 leading-snug line-clamp-2">{est.title}</h3>
             {(est.customer_name || est.customer_phone) && (
@@ -62,6 +69,16 @@ export default function EstimationCard({
             <p className="text-xs text-slate-400 mt-0.5">{formatDateIdShort(est.updated_at)}</p>
           </div>
         </div>
+
+        {onStatusChange && (
+          <EstimationWorkflowIcons
+            status={status}
+            onSelect={onStatusChange}
+            loadingStatus={statusLoading}
+            disabled={isConverted}
+            compact
+          />
+        )}
 
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0">
@@ -85,35 +102,46 @@ export default function EstimationCard({
       </div>
 
       {/* Desktop */}
-      <div className="hidden md:flex md:items-center gap-4">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="font-mono text-xs text-emerald-600 font-bold">{est.code}</span>
-            <StatusBadge status={est.status} />
+      <div className="hidden md:flex md:flex-col gap-3">
+        <div className="flex md:items-center gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <span className="font-mono text-xs text-emerald-600 font-bold">{est.code}</span>
+              <StatusBadge status={status} />
+            </div>
+            <h3 className="font-bold text-slate-900 truncate">{est.title}</h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {est.customer_name ? est.customer_name : 'Tanpa klien'}
+              {est.customer_phone ? ` · ${est.customer_phone}` : ''}
+            </p>
+            <p className="text-xs text-slate-400">{formatDateIdShort(est.updated_at)}</p>
           </div>
-          <h3 className="font-bold text-slate-900 truncate">{est.title}</h3>
-          <p className="text-xs text-slate-500 mt-0.5">
-            {est.customer_name ? est.customer_name : 'Tanpa klien'}
-            {est.customer_phone ? ` · ${est.customer_phone}` : ''}
-          </p>
-          <p className="text-xs text-slate-400">{formatDateIdShort(est.updated_at)}</p>
-        </div>
-        <div className="text-right shrink-0">
-          <div className="text-lg font-black text-slate-900 tabular-nums">
-            {formatRupiahFull(Number(est.total_selling_price))}
+          <div className="text-right shrink-0">
+            <div className="text-lg font-black text-slate-900 tabular-nums">
+              {formatRupiahFull(Number(est.total_selling_price))}
+            </div>
+            <p className={`text-xs font-semibold mt-0.5 flex items-center justify-end gap-1 ${profitNegative ? 'text-red-600' : 'text-emerald-600'}`}>
+              {profitNegative && <AlertTriangle className="w-3 h-3" />}
+              Profit: {formatRupiahFull(profit)}
+            </p>
           </div>
-          <p className={`text-xs font-semibold mt-0.5 flex items-center justify-end gap-1 ${profitNegative ? 'text-red-600' : 'text-emerald-600'}`}>
-            {profitNegative && <AlertTriangle className="w-3 h-3" />}
-            Profit: {formatRupiahFull(profit)}
-          </p>
+          <CardActions
+            onShareWhatsApp={showWhatsApp ? onShareWhatsApp : undefined}
+            onConvert={showConvert ? onConvert : undefined}
+            onEdit={onEdit}
+            onDuplicate={onDuplicate}
+            onDelete={onDelete}
+          />
         </div>
-        <CardActions
-          onShareWhatsApp={showWhatsApp ? onShareWhatsApp : undefined}
-          onConvert={showConvert ? onConvert : undefined}
-          onEdit={onEdit}
-          onDuplicate={onDuplicate}
-          onDelete={onDelete}
-        />
+
+        {onStatusChange && (
+          <EstimationWorkflowIcons
+            status={status}
+            onSelect={onStatusChange}
+            loadingStatus={statusLoading}
+            disabled={isConverted}
+          />
+        )}
       </div>
     </article>
   );

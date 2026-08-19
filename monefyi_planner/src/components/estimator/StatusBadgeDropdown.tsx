@@ -5,7 +5,7 @@ import {
   ESTIMATION_STATUS_DOT,
   ESTIMATION_STATUS_LABEL,
 } from '../../lib/estimatorFormat';
-import { getStatusTransitionActions } from '../../lib/estimationStatus';
+import { getStatusTransitionActions, isStatusReadOnly, normalizeEstimationStatus } from '../../lib/estimationStatus';
 import type { EstimationStatus } from '../../types/estimator';
 
 type Props = {
@@ -23,8 +23,9 @@ export default function StatusBadgeDropdown({
 }: Props) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  const actions = getStatusTransitionActions(status);
-  const isReadOnly = status === 'converted' || actions.length === 0;
+  const normalizedStatus = normalizeEstimationStatus(status);
+  const actions = getStatusTransitionActions(normalizedStatus);
+  const isReadOnly = isStatusReadOnly(normalizedStatus) || actions.length === 0;
 
   useEffect(() => {
     if (!open) return;
@@ -37,9 +38,9 @@ export default function StatusBadgeDropdown({
     return () => document.removeEventListener('mousedown', onDoc);
   }, [open]);
 
-  const label = ESTIMATION_STATUS_LABEL[status] || status;
-  const color = ESTIMATION_STATUS_COLOR[status] || ESTIMATION_STATUS_COLOR.draft;
-  const dot = ESTIMATION_STATUS_DOT[status] || ESTIMATION_STATUS_DOT.draft;
+  const label = ESTIMATION_STATUS_LABEL[normalizedStatus] || normalizedStatus;
+  const color = ESTIMATION_STATUS_COLOR[normalizedStatus] || ESTIMATION_STATUS_COLOR.wa;
+  const dot = ESTIMATION_STATUS_DOT[normalizedStatus] || ESTIMATION_STATUS_DOT.wa;
 
   if (isReadOnly) {
     return (

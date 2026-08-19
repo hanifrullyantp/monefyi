@@ -21,7 +21,7 @@ export default function EstimatorActionsMenu({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const isConverted = status === 'converted' || Boolean(convertedProjectId);
-  const convertProminent = status === 'accepted';
+  const convertProminent = status === 'closing' || status === 'accepted';
 
   useEffect(() => {
     if (!open) return;

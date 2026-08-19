@@ -31,7 +31,7 @@ export default function MarkAsSentPrompt({
         <Send className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" aria-hidden />
         <div className="flex-1 min-w-0">
           <p className="font-bold text-sm">PDF sudah dibagikan</p>
-          <p className="text-xs text-slate-300 mt-0.5">Tandai estimasi sebagai Terkirim?</p>
+          <p className="text-xs text-slate-300 mt-0.5">Tandai estimasi sebagai Penawaran?</p>
           <div className="flex gap-2 mt-3">
             <button
               type="button"

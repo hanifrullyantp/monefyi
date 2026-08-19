@@ -43,8 +43,10 @@ describe('estimationConvert - project defaults', () => {
 });
 
 describe('estimationConvert - convert warning', () => {
-  it('warns for non-accepted statuses', () => {
+  it('warns for non-closing statuses', () => {
+    expect(needsConvertWarning('wa')).toBe(true);
     expect(needsConvertWarning('draft')).toBe(true);
+    expect(needsConvertWarning('closing')).toBe(false);
     expect(needsConvertWarning('accepted')).toBe(false);
     expect(needsConvertWarning('converted')).toBe(false);
   });

@@ -197,8 +197,13 @@ export default function EstimatorForm() {
           draftHistory.setSavedSnapshot(formDraft);
           setStatusMeta({
             created_at: est.created_at,
+            wa_at: est.wa_at ?? null,
+            survei_at: est.survei_at ?? null,
             sent_at: est.sent_at ?? null,
             accepted_at: est.accepted_at ?? null,
+            proses_at: est.proses_at ?? null,
+            finishing_at: est.finishing_at ?? null,
+            selesai_at: est.selesai_at ?? null,
             rejected_at: est.rejected_at ?? null,
             converted_at: est.converted_at ?? null,
           });
@@ -328,7 +333,7 @@ export default function EstimatorForm() {
   };
 
   const scheduleSentPrompt = useCallback(() => {
-    if (draft?.status !== 'draft') return;
+    if (draft?.status !== 'wa' && draft?.status !== 'draft') return;
     window.setTimeout(() => setSentPromptOpen(true), 500);
   }, [draft?.status]);
 
@@ -350,8 +355,13 @@ export default function EstimatorForm() {
       patch({ status: updated.status });
       setStatusMeta({
         created_at: updated.created_at,
+        wa_at: updated.wa_at ?? null,
+        survei_at: updated.survei_at ?? null,
         sent_at: updated.sent_at ?? null,
         accepted_at: updated.accepted_at ?? null,
+        proses_at: updated.proses_at ?? null,
+        finishing_at: updated.finishing_at ?? null,
+        selesai_at: updated.selesai_at ?? null,
         rejected_at: updated.rejected_at ?? null,
         converted_at: updated.converted_at ?? null,
       });
@@ -362,7 +372,7 @@ export default function EstimatorForm() {
       });
       showToast(`Status diubah ke ${nextLabel}`, 'success');
 
-      if (next === 'accepted') {
+      if (next === 'closing') {
         const daysFromCreated = statusMeta?.created_at
           ? Math.max(0, Math.floor((Date.now() - new Date(statusMeta.created_at).getTime()) / 86_400_000))
           : 0;
@@ -397,7 +407,7 @@ export default function EstimatorForm() {
 
   const handleMarkAsSent = async () => {
     setSentPromptOpen(false);
-    await applyStatusTransition('sent', { skipConfirm: true });
+    await applyStatusTransition('penawaran', { skipConfirm: true });
   };
 
   const handleDownloadPdf = async () => {

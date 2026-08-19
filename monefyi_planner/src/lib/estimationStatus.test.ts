@@ -5,60 +5,78 @@ import {
   countEstimationsByStatus,
   getStatusTransitionActions,
   isStatusTransitionAllowed,
+  normalizeEstimationStatus,
 } from './estimationStatus';
 
-describe('estimationStatus - transitions - allowed paths', () => {
-  it('draft can go to sent, accepted, or rejected', () => {
-    expect(isStatusTransitionAllowed('draft', 'sent')).toBe(true);
-    expect(isStatusTransitionAllowed('draft', 'accepted')).toBe(true);
-    expect(isStatusTransitionAllowed('draft', 'rejected')).toBe(true);
-    expect(isStatusTransitionAllowed('draft', 'converted')).toBe(false);
+describe('estimationStatus - normalizeEstimationStatus - legacy values', () => {
+  it('maps legacy draft/sent/accepted to workflow statuses', () => {
+    expect(normalizeEstimationStatus('draft')).toBe('wa');
+    expect(normalizeEstimationStatus('sent')).toBe('penawaran');
+    expect(normalizeEstimationStatus('accepted')).toBe('closing');
+    expect(normalizeEstimationStatus('wa')).toBe('wa');
+  });
+});
+
+describe('estimationStatus - transitions - workflow quick set', () => {
+  it('allows jumping between workflow stages', () => {
+    expect(isStatusTransitionAllowed('wa', 'penawaran')).toBe(true);
+    expect(isStatusTransitionAllowed('survei', 'closing')).toBe(true);
+    expect(isStatusTransitionAllowed('penawaran', 'wa')).toBe(true);
+    expect(isStatusTransitionAllowed('closing', 'selesai')).toBe(true);
   });
 
-  it('converted is read-only', () => {
+  it('blocks transitions from or to converted', () => {
+    expect(isStatusTransitionAllowed('converted', 'wa')).toBe(false);
+    expect(isStatusTransitionAllowed('closing', 'converted')).toBe(false);
+  });
+
+  it('converted is read-only in dropdown actions', () => {
     expect(getStatusTransitionActions('converted')).toEqual([]);
   });
 });
 
 describe('estimationStatus - buildStatusUpdatePayload - timestamps', () => {
-  it('sent transition sets sent_at and clears later timestamps', () => {
-    const payload = buildStatusUpdatePayload('draft', 'sent', '2026-08-18T10:00:00.000Z');
-    expect(payload.status).toBe('sent');
+  it('penawaran transition sets sent_at', () => {
+    const payload = buildStatusUpdatePayload('wa', 'penawaran', '2026-08-18T10:00:00.000Z');
+    expect(payload.status).toBe('penawaran');
     expect(payload.sent_at).toBe('2026-08-18T10:00:00.000Z');
-    expect(payload.accepted_at).toBeNull();
-    expect(payload.rejected_at).toBeNull();
   });
 
-  it('revert to draft clears pipeline timestamps', () => {
-    const payload = buildStatusUpdatePayload('sent', 'draft', '2026-08-18T11:00:00.000Z');
-    expect(payload.sent_at).toBeNull();
-    expect(payload.accepted_at).toBeNull();
-    expect(payload.rejected_at).toBeNull();
+  it('closing transition sets accepted_at', () => {
+    const payload = buildStatusUpdatePayload('penawaran', 'closing', '2026-08-18T11:00:00.000Z');
+    expect(payload.status).toBe('closing');
+    expect(payload.accepted_at).toBe('2026-08-18T11:00:00.000Z');
+  });
+
+  it('survei transition sets survei_at', () => {
+    const payload = buildStatusUpdatePayload('wa', 'survei', '2026-08-18T09:00:00.000Z');
+    expect(payload.survei_at).toBe('2026-08-18T09:00:00.000Z');
   });
 });
 
 describe('estimationStatus - buildStatusHistory - ordered rows', () => {
-  it('includes created and status milestones', () => {
+  it('includes created and workflow milestones', () => {
     const rows = buildStatusHistory({
       created_at: '2026-08-14T10:30:00.000Z',
+      wa_at: '2026-08-14T10:30:00.000Z',
       sent_at: '2026-08-15T14:22:00.000Z',
       accepted_at: '2026-08-16T09:15:00.000Z',
     });
-    expect(rows.map(r => r.key)).toEqual(['created', 'sent', 'accepted']);
+    expect(rows.map(r => r.key)).toEqual(['created', 'wa', 'penawaran', 'closing']);
   });
 });
 
 describe('estimationStatus - countEstimationsByStatus - totals', () => {
-  it('counts all statuses', () => {
+  it('counts all workflow statuses including legacy normalization', () => {
     const counts = countEstimationsByStatus([
+      { status: 'wa' },
       { status: 'draft' },
-      { status: 'draft' },
-      { status: 'sent' },
+      { status: 'penawaran' },
       { status: 'rejected' },
     ]);
     expect(counts.all).toBe(4);
-    expect(counts.draft).toBe(2);
-    expect(counts.sent).toBe(1);
+    expect(counts.wa).toBe(2);
+    expect(counts.penawaran).toBe(1);
     expect(counts.rejected).toBe(1);
   });
 });

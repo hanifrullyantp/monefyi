@@ -26,13 +26,14 @@ import PostPurchaseBanner, {
   dismissPostPurchaseBanner,
   readPostPurchaseBanner,
 } from '../../components/entitlement/PostPurchaseBanner';
-import { countEstimationsByStatus } from '../../lib/estimationStatus';
+import { countEstimationsByStatus, normalizeEstimationStatus } from '../../lib/estimationStatus';
 import {
   deleteEstimation,
   duplicateEstimation,
   estimationToFormDraft,
   loadEstimation,
   loadEstimations,
+  updateEstimationStatus,
 } from '../../services/estimatorService';
 import { assertEstimationConvertible } from '../../services/estimationConvertService';
 import { getProject } from '../../services/projectService';
@@ -42,16 +43,22 @@ import {
   defaultWhatsAppTemplateConfig,
 } from '../../services/quotationTemplateService';
 import { loadPdfSettings } from '../../services/pdfSettingsService';
+import { analytics } from '../../lib/analytics/events';
+import { ESTIMATION_STATUS_LABEL } from '../../lib/estimatorFormat';
 import type { EstimationFormDraft } from '../../types/estimator';
 import type { PdfSettings } from '../../types/pdfSettings';
 import type { WhatsAppTemplateConfig } from '../../lib/whatsappQuotationMessage';
-import type { Estimation, EstimationStatus } from '../../types/estimator';
+import type { Estimation, EstimationStatus, EstimationWorkflowStatus } from '../../types/estimator';
 
 const STATUS_FILTERS: Array<{ value: '' | EstimationStatus; label: string }> = [
   { value: '', label: 'Semua' },
-  { value: 'draft', label: 'Draft' },
-  { value: 'sent', label: 'Terkirim' },
-  { value: 'accepted', label: 'Diterima' },
+  { value: 'wa', label: 'WA' },
+  { value: 'survei', label: 'Survei' },
+  { value: 'penawaran', label: 'Penawaran' },
+  { value: 'closing', label: 'Closing' },
+  { value: 'proses', label: 'Proses' },
+  { value: 'finishing', label: 'Finishing' },
+  { value: 'selesai', label: 'Selesai' },
   { value: 'rejected', label: 'Ditolak' },
   { value: 'converted', label: 'Jadi Proyek' },
 ];
@@ -136,6 +143,8 @@ export default function EstimatorList() {
   const [waEstimationId, setWaEstimationId] = useState<string | undefined>();
   const [waProjectName, setWaProjectName] = useState<string | null>(null);
   const [waLoadingId, setWaLoadingId] = useState<string | null>(null);
+  const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
+  const [statusLoadingStage, setStatusLoadingStage] = useState<EstimationWorkflowStatus | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const sortRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLDivElement>(null);
@@ -180,7 +189,7 @@ export default function EstimatorList() {
 
   const filteredRows = useMemo(() => {
     if (!statusFilter) return rows;
-    return rows.filter(r => r.status === statusFilter);
+    return rows.filter(r => normalizeEstimationStatus(r.status) === statusFilter);
   }, [rows, statusFilter]);
 
   const sortedRows = useMemo(() => sortRows(filteredRows, sortKey), [filteredRows, sortKey]);
@@ -246,6 +255,47 @@ export default function EstimatorList() {
       showToast(e instanceof Error ? e.message : 'Gagal memuat data share', 'error');
     } finally {
       setWaLoadingId(null);
+    }
+  };
+
+  const handleStatusChange = async (estId: string, next: EstimationWorkflowStatus) => {
+    const est = rows.find(r => r.id === estId);
+    if (!est) return;
+    const prevStatus = normalizeEstimationStatus(est.status);
+    if (prevStatus === next || prevStatus === 'converted') return;
+
+    setStatusUpdatingId(estId);
+    setStatusLoadingStage(next);
+    setRows(prev =>
+      prev.map(r => (r.id === estId ? { ...r, status: next, updated_at: new Date().toISOString() } : r)),
+    );
+
+    try {
+      const updated = await updateEstimationStatus(estId, next);
+      setRows(prev => prev.map(r => (r.id === estId ? updated : r)));
+      analytics.estimationStatusChanged({
+        estimationId: estId,
+        from: prevStatus,
+        to: next,
+      });
+      if (next === 'closing') {
+        const daysFromCreated = est.created_at
+          ? Math.max(0, Math.floor((Date.now() - new Date(est.created_at).getTime()) / 86_400_000))
+          : 0;
+        analytics.estimationAccepted({
+          estimationId: estId,
+          total: Number(est.total_selling_price || 0),
+          profit: Number(est.total_profit || 0),
+          daysFromCreated,
+        });
+      }
+      showToast(`Status diubah ke ${ESTIMATION_STATUS_LABEL[next]}`, 'success');
+    } catch (e) {
+      setRows(prev => prev.map(r => (r.id === estId ? est : r)));
+      showToast(e instanceof Error ? e.message : 'Gagal mengubah status', 'error');
+    } finally {
+      setStatusUpdatingId(null);
+      setStatusLoadingStage(null);
     }
   };
 
@@ -482,6 +532,8 @@ export default function EstimatorList() {
               onDelete={() => handleDelete(est.id, est.title)}
               onConvert={() => handleConvert(est.id)}
               onShareWhatsApp={() => handleShareWhatsApp(est.id)}
+              onStatusChange={next => handleStatusChange(est.id, next)}
+              statusLoading={statusUpdatingId === est.id ? statusLoadingStage : null}
             />
           ))}
         </div>

@@ -74,5 +74,6 @@ export function buildDefaultProjectInputFromEstimation(est: {
 }
 
 export function needsConvertWarning(status: string): boolean {
-  return status !== 'accepted' && status !== 'converted';
+  const normalized = status === 'accepted' ? 'closing' : status === 'draft' ? 'wa' : status;
+  return normalized !== 'closing' && normalized !== 'converted';
 }

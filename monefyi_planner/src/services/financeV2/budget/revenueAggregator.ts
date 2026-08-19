@@ -4,7 +4,7 @@ import { loadAllIncomes } from '../../incomeService';
 
 const PIPELINE_WEIGHT = 0.6;
 const ACTIVE_STATUSES = new Set(['active', 'planning']);
-const PIPELINE_STATUSES = new Set(['draft']);
+const PIPELINE_STATUSES = new Set(['wa', 'draft']);
 
 function contractValue(project: Project): number {
   return Number(project.contract_value) || Number(project.total_budget_planned) || 0;

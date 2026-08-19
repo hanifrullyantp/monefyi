@@ -75,25 +75,47 @@ export function nextEstimationCode(existingCodes: string[], year = new Date().ge
 }
 
 export const ESTIMATION_STATUS_LABEL: Record<string, string> = {
-  draft: 'Draft',
-  sent: 'Terkirim',
-  accepted: 'Diterima',
+  wa: 'WA',
+  survei: 'Survei',
+  penawaran: 'Penawaran',
+  closing: 'Closing',
+  proses: 'Proses',
+  finishing: 'Finishing',
+  selesai: 'Selesai',
   rejected: 'Ditolak',
   converted: 'Jadi Proyek',
+  // Legacy aliases (pre-migration reads)
+  draft: 'WA',
+  sent: 'Penawaran',
+  accepted: 'Closing',
 };
 
 export const ESTIMATION_STATUS_COLOR: Record<string, string> = {
-  draft: 'bg-slate-100 text-slate-700',
-  sent: 'bg-blue-100 text-blue-700',
-  accepted: 'bg-emerald-100 text-emerald-700',
+  wa: 'bg-emerald-100 text-emerald-700',
+  survei: 'bg-sky-100 text-sky-700',
+  penawaran: 'bg-blue-100 text-blue-700',
+  closing: 'bg-amber-100 text-amber-800',
+  proses: 'bg-violet-100 text-violet-700',
+  finishing: 'bg-fuchsia-100 text-fuchsia-700',
+  selesai: 'bg-teal-100 text-teal-700',
   rejected: 'bg-red-100 text-red-700',
-  converted: 'bg-teal-100 text-teal-700',
+  converted: 'bg-slate-100 text-slate-700',
+  draft: 'bg-emerald-100 text-emerald-700',
+  sent: 'bg-blue-100 text-blue-700',
+  accepted: 'bg-amber-100 text-amber-800',
 };
 
 export const ESTIMATION_STATUS_DOT: Record<string, string> = {
-  draft: 'bg-slate-500',
-  sent: 'bg-blue-500',
-  accepted: 'bg-emerald-500',
+  wa: 'bg-emerald-500',
+  survei: 'bg-sky-500',
+  penawaran: 'bg-blue-500',
+  closing: 'bg-amber-500',
+  proses: 'bg-violet-500',
+  finishing: 'bg-fuchsia-500',
+  selesai: 'bg-teal-500',
   rejected: 'bg-red-500',
-  converted: 'bg-teal-500',
+  converted: 'bg-slate-500',
+  draft: 'bg-emerald-500',
+  sent: 'bg-blue-500',
+  accepted: 'bg-amber-500',
 };

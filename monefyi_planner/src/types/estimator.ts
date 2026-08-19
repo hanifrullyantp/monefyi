@@ -1,5 +1,15 @@
 export type PricelistCategory = 'material' | 'upah' | 'alat' | 'jasa' | 'borongan' | 'other';
-export type EstimationStatus = 'draft' | 'sent' | 'accepted' | 'rejected' | 'converted';
+/** Sales / delivery pipeline stages shown on estimation cards. */
+export type EstimationWorkflowStatus =
+  | 'wa'
+  | 'survei'
+  | 'penawaran'
+  | 'closing'
+  | 'proses'
+  | 'finishing'
+  | 'selesai';
+
+export type EstimationStatus = EstimationWorkflowStatus | 'rejected' | 'converted';
 export type PdfTemplate = 'modern' | 'classic' | 'minimal' | 'bold';
 
 export interface PricelistItem {
@@ -74,8 +84,13 @@ export interface Estimation {
   terms_conditions: string | null;
   validity_days: number;
   status: EstimationStatus;
+  wa_at: string | null;
+  survei_at: string | null;
   sent_at: string | null;
   accepted_at: string | null;
+  proses_at: string | null;
+  finishing_at: string | null;
+  selesai_at: string | null;
   rejected_at: string | null;
   converted_at: string | null;
   converted_project_id: string | null;

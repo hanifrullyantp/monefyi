@@ -12,8 +12,8 @@ type Props = {
 
 export default function StatusBadge({ status, className = '' }: Props) {
   const label = ESTIMATION_STATUS_LABEL[status] || status;
-  const color = ESTIMATION_STATUS_COLOR[status] || ESTIMATION_STATUS_COLOR.draft;
-  const dot = ESTIMATION_STATUS_DOT[status] || ESTIMATION_STATUS_DOT.draft;
+  const color = ESTIMATION_STATUS_COLOR[status] || ESTIMATION_STATUS_COLOR.wa;
+  const dot = ESTIMATION_STATUS_DOT[status] || ESTIMATION_STATUS_DOT.wa;
 
   return (
     <span className={`inline-flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded-full font-semibold ${color} ${className}`}>

@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { buildStatusUpdatePayload, isStatusTransitionAllowed } from '../lib/estimationStatus';
+import { buildStatusUpdatePayload, isStatusTransitionAllowed, normalizeEstimationStatus } from '../lib/estimationStatus';
 import { calcEstimationSummary, countedEstimationItems, normalizeEstimationItem } from '../lib/estimatorCalc';
 import { nextEstimationCode } from '../lib/estimatorFormat';
 import { emptyImageDrafts, hydrateImageDrafts, imagesToDbFields } from './estimationImageService';
@@ -85,7 +85,10 @@ export async function loadEstimations(
   const { data, error } = await q;
   if (error) throw new Error(error.message);
 
-  let rows = (data || []) as Estimation[];
+  let rows = (data || []).map(row => ({
+    ...(row as Estimation),
+    status: normalizeEstimationStatus((row as Estimation).status),
+  }));
   const search = opts?.search?.toLowerCase().trim();
   if (search) {
     rows = rows.filter(
@@ -137,7 +140,11 @@ export async function loadEstimation(id: string): Promise<Estimation | null> {
     .order('sort_order', { ascending: true });
   if (itemsErr) throw new Error(itemsErr.message);
 
-  return { ...(est as Estimation), items: (items || []) as EstimationItem[] };
+  return {
+    ...(est as Estimation),
+    status: normalizeEstimationStatus((est as Estimation).status),
+    items: (items || []) as EstimationItem[],
+  };
 }
 
 export async function createEstimation(
@@ -255,14 +262,16 @@ export async function updateEstimationStatus(
 ): Promise<Estimation> {
   const current = await loadEstimation(id);
   if (!current) throw new Error('Estimasi tidak ditemukan');
-  if (current.status === 'converted') {
+  const fromStatus = normalizeEstimationStatus(current.status);
+  if (fromStatus === 'converted') {
     throw new Error('Estimasi sudah menjadi proyek');
   }
-  if (!isStatusTransitionAllowed(current.status, newStatus)) {
+  const toStatus = normalizeEstimationStatus(newStatus);
+  if (!isStatusTransitionAllowed(fromStatus, toStatus)) {
     throw new Error('Transisi status tidak valid');
   }
 
-  const payload = buildStatusUpdatePayload(current.status, newStatus);
+  const payload = buildStatusUpdatePayload(fromStatus, toStatus);
   const { error } = await supabase
     .from('planner_estimations')
     .update(payload)
@@ -297,7 +306,7 @@ export async function duplicateEstimation(
     notes: source.notes || '',
     terms_conditions: source.terms_conditions || '',
     validity_days: source.validity_days,
-    status: 'draft',
+    status: 'wa',
     pdf_template: source.pdf_template,
     pdf_primary_color: source.pdf_primary_color || '#059669',
     pdf_secondary_color: source.pdf_secondary_color || '#1e293b',
@@ -396,7 +405,7 @@ export function newEstimationDraft(code: string): EstimationFormDraft {
     notes: '',
     terms_conditions: '',
     validity_days: 14,
-    status: 'draft',
+    status: 'wa',
     pdf_template: 'modern',
     pdf_primary_color: '#059669',
     pdf_secondary_color: '#1e293b',
