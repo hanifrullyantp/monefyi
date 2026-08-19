@@ -183,8 +183,8 @@ export default function EstimatorList() {
   };
 
   const listViewIcons: Record<EstimationListViewMode, typeof LayoutGrid> = {
-    card: LayoutGrid,
     standard: AlignJustify,
+    card: LayoutGrid,
     detail: PanelTop,
   };
 
@@ -660,8 +660,7 @@ export default function EstimatorList() {
                     setPipelineFilter(bucket);
                     if (bucket) setStatusFilter('');
                   }}
-                  onOpen={id => navigate(`/app/estimator/${id}`)}
-                  onFollowUp={id => handleShareWhatsApp(id)}
+                  renderItem={est => renderEstimationCard(est)}
                 />
               )}
               {archiveRows.length > 0 && !pipelineFilter && (

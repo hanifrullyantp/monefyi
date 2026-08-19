@@ -1,6 +1,6 @@
 export type EstimationListViewMode = 'standard' | 'card' | 'detail';
 
-const STORAGE_KEY = 'monefyi_estimator_list_view';
+const STORAGE_KEY = 'monefyi_estimator_list_view_v2';
 
 export const ESTIMATION_LIST_VIEW_OPTIONS: Array<{
   value: EstimationListViewMode;
