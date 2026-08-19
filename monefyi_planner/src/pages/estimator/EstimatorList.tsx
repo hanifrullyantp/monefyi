@@ -27,6 +27,11 @@ import PostPurchaseBanner, {
 } from '../../components/entitlement/PostPurchaseBanner';
 import { countEstimationsByStatus, normalizeEstimationStatus } from '../../lib/estimationStatus';
 import {
+  groupEstimationsForList,
+  statusSortIndex,
+  type EstimationGroupMode,
+} from '../../lib/estimationListGrouping';
+import {
   deleteEstimation,
   duplicateEstimation,
   estimationToFormDraft,
@@ -62,14 +67,22 @@ const STATUS_FILTERS: Array<{ value: '' | EstimationStatus; label: string }> = [
   { value: 'converted', label: 'Jadi Proyek' },
 ];
 
-type SortKey = 'newest' | 'oldest' | 'value_desc' | 'value_asc' | 'profit_desc';
+type SortKey = 'newest' | 'oldest' | 'value_desc' | 'value_asc' | 'profit_desc' | 'status';
 
 const SORT_OPTIONS: Array<{ value: SortKey; label: string }> = [
   { value: 'newest', label: 'Terbaru' },
   { value: 'oldest', label: 'Terlama' },
+  { value: 'status', label: 'Status pipeline' },
   { value: 'value_desc', label: 'Nilai Tertinggi' },
   { value: 'value_asc', label: 'Nilai Terendah' },
   { value: 'profit_desc', label: 'Profit Tertinggi' },
+];
+
+const GROUP_OPTIONS: Array<{ value: EstimationGroupMode; label: string }> = [
+  { value: 'none', label: 'Tanpa kelompok' },
+  { value: 'status', label: 'Kelompok status' },
+  { value: 'product', label: 'Kelompok produk' },
+  { value: 'client', label: 'Kelompok klien' },
 ];
 
 function sortRows(rows: Estimation[], key: SortKey): Estimation[] {
@@ -83,6 +96,12 @@ function sortRows(rows: Estimation[], key: SortKey): Estimation[] {
       return copy.sort((a, b) => Number(a.total_selling_price) - Number(b.total_selling_price));
     case 'profit_desc':
       return copy.sort((a, b) => Number(b.total_profit) - Number(a.total_profit));
+    case 'status':
+      return copy.sort((a, b) => {
+        const byStatus = statusSortIndex(a.status) - statusSortIndex(b.status);
+        if (byStatus !== 0) return byStatus;
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      });
     default:
       return copy.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
   }
@@ -127,6 +146,7 @@ export default function EstimatorList() {
   const [sortOpen, setSortOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'' | EstimationStatus>('');
   const [sortKey, setSortKey] = useState<SortKey>('newest');
+  const [groupMode, setGroupMode] = useState<EstimationGroupMode>('none');
   const [convertOpen, setConvertOpen] = useState(false);
   const [convertEstimation, setConvertEstimation] = useState<Estimation | null>(null);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
@@ -190,9 +210,19 @@ export default function EstimatorList() {
 
   const sortedRows = useMemo(() => sortRows(filteredRows, sortKey), [filteredRows, sortKey]);
 
+  const groupedRows = useMemo(
+    () => groupEstimationsForList(sortedRows, groupMode),
+    [sortedRows, groupMode],
+  );
+
   const activeFilterLabel = STATUS_FILTERS.find(f => f.value === statusFilter)?.label || 'Semua';
   const activeSortLabel = SORT_OPTIONS.find(o => o.value === sortKey)?.label || 'Terbaru';
-  const toolbarSortLabel = statusFilter ? `${activeSortLabel} · ${activeFilterLabel}` : activeSortLabel;
+  const activeGroupLabel = GROUP_OPTIONS.find(g => g.value === groupMode)?.label || 'Tanpa kelompok';
+  const toolbarSortLabel = [
+    activeSortLabel,
+    groupMode !== 'none' ? activeGroupLabel : '',
+    statusFilter ? activeFilterLabel : '',
+  ].filter(Boolean).join(' · ');
 
   const handleDelete = async (id: string, title: string) => {
     if (!window.confirm(`Hapus estimasi "${title}"?`)) return;
@@ -388,6 +418,20 @@ export default function EstimatorList() {
                 </button>
               ))}
               <div className="my-1 border-t border-slate-100" />
+              <p className="px-3 pt-1 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wide">Kelompokkan</p>
+              {GROUP_OPTIONS.map(g => (
+                <button
+                  key={g.value}
+                  type="button"
+                  onClick={() => { setGroupMode(g.value); setSortOpen(false); }}
+                  className={`w-full text-left px-3 py-2 text-sm ${
+                    groupMode === g.value ? 'bg-emerald-50 text-emerald-800 font-semibold' : 'text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  {g.label}
+                </button>
+              ))}
+              <div className="my-1 border-t border-slate-100" />
               <p className="px-3 pt-1 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wide">Filter status</p>
               {STATUS_FILTERS.map(f => {
                 const count = f.value ? statusCounts[f.value] : statusCounts.all;
@@ -465,6 +509,15 @@ export default function EstimatorList() {
           ))}
         </select>
         <select
+          value={groupMode}
+          onChange={e => setGroupMode(e.target.value as EstimationGroupMode)}
+          className="appearance-none w-44 pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 bg-white"
+        >
+          {GROUP_OPTIONS.map(g => (
+            <option key={g.value} value={g.value}>{g.label}</option>
+          ))}
+        </select>
+        <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value as '' | EstimationStatus)}
           className="appearance-none w-44 pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 bg-white"
@@ -505,21 +558,33 @@ export default function EstimatorList() {
           </button>
         </motion.div>
       ) : (
-        <div className="space-y-3">
-          {sortedRows.map(est => (
-            <EstimationCard
-              key={est.id}
-              estimation={est}
-              onOpen={() => navigate(`/app/estimator/${est.id}`)}
-              onEdit={() => navigate(`/app/estimator/${est.id}`)}
-              onDuplicate={() => handleDuplicate(est.id)}
-              onDelete={() => handleDelete(est.id, est.title)}
-              onConvert={() => handleConvert(est.id)}
-              onShareWhatsApp={() => handleShareWhatsApp(est.id)}
-              onStatusChange={next => handleStatusChange(est.id, next)}
-              statusLoading={statusUpdatingId === est.id ? statusLoadingStage : null}
-              waLoading={waLoadingId === est.id}
-            />
+        <div className="space-y-4">
+          {groupedRows.map(group => (
+            <div key={group.key}>
+              {groupMode !== 'none' && group.label && (
+                <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 px-1">
+                  {group.label}
+                  <span className="text-slate-400 font-semibold normal-case ml-1.5">({group.rows.length})</span>
+                </h2>
+              )}
+              <div className="space-y-3">
+                {group.rows.map(est => (
+                  <EstimationCard
+                    key={est.id}
+                    estimation={est}
+                    onOpen={() => navigate(`/app/estimator/${est.id}`)}
+                    onEdit={() => navigate(`/app/estimator/${est.id}`)}
+                    onDuplicate={() => handleDuplicate(est.id)}
+                    onDelete={() => handleDelete(est.id, est.title)}
+                    onConvert={() => handleConvert(est.id)}
+                    onShareWhatsApp={() => handleShareWhatsApp(est.id)}
+                    onStatusChange={next => handleStatusChange(est.id, next)}
+                    statusLoading={statusUpdatingId === est.id ? statusLoadingStage : null}
+                    waLoading={waLoadingId === est.id}
+                  />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}

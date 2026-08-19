@@ -8,12 +8,14 @@ interface Props {
   draft: EstimationFormDraft;
   expanded: boolean;
   onToggleExpanded: () => void;
+  navSidebarCollapsed: boolean;
 }
 
 export default function EstimationStickySummary({
   draft,
   expanded,
   onToggleExpanded,
+  navSidebarCollapsed,
 }: Props) {
   const countedItems = useMemo(() => countedEstimationItems(draft.items), [draft.items]);
   const summary = useMemo(
@@ -30,7 +32,12 @@ export default function EstimationStickySummary({
   const profitNegative = summary.totalProfit < 0;
 
   return (
-    <div className="px-3 sm:px-5">
+    <div
+      className={`fixed left-0 right-0 z-30 bottom-[5.5rem] lg:bottom-0 pointer-events-none ${
+        navSidebarCollapsed ? 'lg:left-[4.5rem]' : 'lg:left-64'
+      }`}
+    >
+      <div className="pointer-events-auto px-3 sm:px-4 max-w-[100rem] mx-auto">
       {expanded && (
         <div className="mb-2 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-[40vh] overflow-y-auto">
           <div className={`mx-4 mt-4 p-3 rounded-xl border ${
@@ -109,6 +116,7 @@ export default function EstimationStickySummary({
           </div>
         </div>
       </button>
+      </div>
     </div>
   );
 }

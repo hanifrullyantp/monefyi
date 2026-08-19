@@ -137,10 +137,12 @@ export default function EstimatorForm() {
     onError: () => showToast('Auto-save gagal', 'error'),
   });
 
+  const scheduleAutoSave = autoSave.schedule;
+
   useEffect(() => {
     if (!draft || isNew || isReadOnly) return;
-    autoSave.schedule(draft);
-  }, [draft, isNew, isReadOnly, autoSave]);
+    scheduleAutoSave(draft);
+  }, [draft, isNew, isReadOnly, scheduleAutoSave]);
 
   const estimationProjectName = useMemo(() => {
     if (!draft) return '';
@@ -531,7 +533,7 @@ export default function EstimatorForm() {
   }
 
   return (
-    <div className="w-full max-w-[100rem] mx-auto px-3 sm:px-5 py-4 pb-6 overflow-x-hidden">
+    <div className="w-full max-w-[100rem] mx-auto px-3 sm:px-5 py-4 pb-36 lg:pb-24 overflow-x-hidden">
       <EstimatorBreadcrumb items={[{ label: isNew ? 'Baru' : draft.code }]} />
 
       {isReadOnly && convertedProjectId && (
@@ -858,13 +860,12 @@ export default function EstimatorForm() {
         <EstimationStatusHistory meta={statusMeta} className="mt-6" />
       )}
 
-      <div className="sticky bottom-0 z-20 -mx-3 sm:-mx-5 mt-6">
-        <EstimationStickySummary
-          draft={draft}
-          expanded={summaryExpanded}
-          onToggleExpanded={() => setSummaryExpanded(v => !v)}
-        />
-      </div>
+      <EstimationStickySummary
+        draft={draft}
+        expanded={summaryExpanded}
+        onToggleExpanded={() => setSummaryExpanded(v => !v)}
+        navSidebarCollapsed={navSidebarCollapsed}
+      />
 
       {pdfPreviewOpen && pdfSettings && (
         <PdfPreviewModal

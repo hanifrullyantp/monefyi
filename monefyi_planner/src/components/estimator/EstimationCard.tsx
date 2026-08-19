@@ -2,7 +2,7 @@ import type { MouseEvent } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import EstimationCardStatusDropdown from './EstimationCardStatusDropdown';
 import EstimationCardActions from './EstimationCardActions';
-import { formatDateIdShort, formatRupiahFull } from '../../lib/estimatorFormat';
+import { formatRupiahFull } from '../../lib/estimatorFormat';
 import { normalizeEstimationStatus } from '../../lib/estimationStatus';
 import type { Estimation, EstimationWorkflowStatus } from '../../types/estimator';
 
@@ -68,10 +68,6 @@ export default function EstimationCard({
               {est.customer_phone ? ` · ${est.customer_phone}` : ''}
             </p>
           )}
-          {!est.customer_name && !est.customer_phone && (
-            <p className="text-xs text-slate-500 mt-0.5">Tanpa klien</p>
-          )}
-          <p className="text-xs text-slate-400 mt-0.5">{formatDateIdShort(est.updated_at)}</p>
         </div>
 
         <EstimationCardActions
