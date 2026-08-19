@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, ChevronDown, Loader2, Save, PanelRightClose, PanelRightOpen,
-  Phone, User, Calendar,
+  ArrowLeft, ChevronDown, Loader2, PanelRightClose, PanelRightOpen,
+  Phone, User,
 } from 'lucide-react';
 import EstimatorActionBar from '../../components/estimator/EstimatorActionBar';
 import EstimatorBreadcrumb from '../../components/estimator/EstimatorBreadcrumb';
@@ -12,6 +12,7 @@ import EstimatorActionsMenu from '../../components/estimator/EstimatorActionsMen
 import ConvertEstimationWizard from '../../components/estimator/ConvertEstimationWizard';
 import AutoSaveIndicator from '../../components/estimator/AutoSaveIndicator';
 import { useAutoSave } from '../../hooks/useAutoSave';
+import { useEstimationDraftHistory } from '../../hooks/useEstimationDraftHistory';
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
 import EstimationItemsTable from '../../components/estimator/EstimationItemsTable';
@@ -54,7 +55,7 @@ import { getProject } from '../../services/projectService';
 import type { EstimationStatusTimestamps } from '../../lib/estimationStatus';
 import { ESTIMATION_STATUS_LABEL } from '../../lib/estimatorFormat';
 import type { EstimationImageDraft, EstimationStatus, Estimation } from '../../types/estimator';
-import { formatDateIdShort, formatPhoneWa, formatRupiahFull } from '../../lib/estimatorFormat';
+import { formatPhoneWa, formatRupiahFull } from '../../lib/estimatorFormat';
 import { calcEstimationSummary, countedEstimationItems } from '../../lib/estimatorCalc';
 import type { EstimationFormDraft } from '../../types/estimator';
 
@@ -69,7 +70,7 @@ export default function EstimatorForm() {
   const [draft, setDraft] = useState<EstimationFormDraft | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [detailOpen, setDetailOpen] = useState(() => isNew);
+  const [detailOpen, setDetailOpen] = useState(false);
   const draftRef = useRef<EstimationFormDraft | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(() =>
@@ -100,12 +101,18 @@ export default function EstimatorForm() {
     currentActiveProjects,
   } = useEntitlement();
 
+  const draftHistory = useEstimationDraftHistory();
+
   const isReadOnly = draft?.status === 'converted';
 
-  const patch = useCallback((p: Partial<EstimationFormDraft>) => {
+  const patch = useCallback((p: Partial<EstimationFormDraft>, opts?: { skipHistory?: boolean }) => {
     if (isReadOnly) return;
-    setDraft(prev => (prev ? { ...prev, ...p } : prev));
-  }, [isReadOnly]);
+    setDraft(prev => {
+      if (!prev) return prev;
+      if (!opts?.skipHistory) draftHistory.recordBeforeChange(prev);
+      return { ...prev, ...p };
+    });
+  }, [isReadOnly, draftHistory]);
 
   useEffect(() => {
     draftRef.current = draft;
@@ -118,20 +125,20 @@ export default function EstimatorForm() {
       images = await uploadPendingImages(tenant.id, id, images);
     }
     await updateEstimation(id, { ...payload, images });
-    patch({ images });
-  }, [tenant?.id, user?.id, isNew, id, patch]);
+    patch({ images }, { skipHistory: true });
+    draftHistory.setSavedSnapshot({ ...payload, images });
+  }, [tenant?.id, user?.id, isNew, id, patch, draftHistory]);
 
   const autoSave = useAutoSave<EstimationFormDraft>({
-    debounceMs: 30_000,
+    debounceMs: 1200,
     onSave: persistDraft,
     onError: () => showToast('Auto-save gagal', 'error'),
   });
 
   useEffect(() => {
-    if (!draft || isNew || !draft.title.trim()) return;
+    if (!draft || isNew || isReadOnly) return;
     autoSave.schedule(draft);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- schedule stable enough; draft drives saves
-  }, [draft, isNew]);
+  }, [draft, isNew, isReadOnly, autoSave]);
 
   const estimationProjectName = useMemo(() => {
     if (!draft) return '';
@@ -184,6 +191,8 @@ export default function EstimatorForm() {
             pdf_secondary_color: est.pdf_secondary_color || settings.secondary_color,
             pdf_template: est.pdf_template || settings.default_pdf_template,
           });
+          draftHistory.resetHistory();
+          draftHistory.setSavedSnapshot(formDraft);
           setStatusMeta({
             created_at: est.created_at,
             sent_at: est.sent_at ?? null,
@@ -213,6 +222,24 @@ export default function EstimatorForm() {
 
     init();
   }, [tenant?.id, id, isNew, navigate, showToast]);
+
+  const handleUndo = () => {
+    setDraft(prev => draftHistory.undo(prev) ?? prev);
+    autoSave.discard();
+  };
+
+  const handleRedo = () => {
+    setDraft(prev => draftHistory.redo(prev) ?? prev);
+    autoSave.discard();
+  };
+
+  const handleDiscardChanges = () => {
+    const restored = draftHistory.revertToSaved();
+    if (!restored) return;
+    setDraft(restored);
+    autoSave.discard();
+    showToast('Perubahan dibatalkan', 'success');
+  };
 
   const handleSave = async () => {
     if (!draft || !tenant?.id || !user?.id) return;
@@ -273,7 +300,10 @@ export default function EstimatorForm() {
           images = await uploadPendingImages(tenant.id, id, images);
         }
         await updateEstimation(id, { ...draft, images });
-        patch({ images });
+        const saved = { ...draft, images };
+        patch({ images }, { skipHistory: true });
+        draftHistory.setSavedSnapshot(saved);
+        autoSave.discard();
         showToast('Perubahan disimpan', 'success');
       }
     } catch (e) {
@@ -493,7 +523,7 @@ export default function EstimatorForm() {
   }
 
   return (
-    <div className="w-full max-w-[100rem] mx-auto px-3 sm:px-5 py-4 pb-28">
+    <div className="w-full max-w-[100rem] mx-auto px-3 sm:px-5 py-4 pb-[9.5rem] lg:pb-28">
       <EstimatorBreadcrumb items={[{ label: isNew ? 'Baru' : draft.code }]} />
 
       {isReadOnly && convertedProjectId && (
@@ -511,128 +541,127 @@ export default function EstimatorForm() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col gap-3 mb-4">
-        <div className="flex items-start gap-3">
-          <button
-            type="button"
-            onClick={() => navigate('/app/estimator')}
-            className="p-2 rounded-xl hover:bg-slate-100 text-slate-500 shrink-0 mt-1"
-            aria-label="Kembali"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <span className="font-mono text-xs text-emerald-600 font-bold">{draft.code}</span>
-              {isNew ? (
-                <span className="inline-flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded-full font-semibold bg-slate-100 text-slate-700">
-                  Draft
-                </span>
-              ) : (
-                <StatusBadgeDropdown
-                  status={draft.status}
-                  onTransition={applyStatusTransition}
-                  disabled={statusChanging}
-                />
-              )}
-            </div>
-            <input
-              value={draft.title}
-              onChange={e => patch({ title: e.target.value })}
-              placeholder="Judul estimasi *"
-              disabled={isReadOnly}
-              className="w-full text-2xl sm:text-3xl font-black text-slate-900 bg-transparent border-0 border-b-2 border-transparent hover:border-slate-200 focus:border-emerald-500 outline-none py-0.5 disabled:opacity-70"
-            />
-            {(draft.customer_name || draft.customer_phone) && (
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-sm text-slate-600">
-                {draft.customer_name && (
-                  <span className="inline-flex items-center gap-1">
-                    <User className="w-3.5 h-3.5 text-slate-400" />
-                    {draft.customer_name}
+      {/* Header card */}
+      <div className="rounded-2xl overflow-hidden mb-4 shadow-lg shadow-emerald-900/15 border border-emerald-800/20">
+        <div className="bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-800 px-4 py-4 text-white">
+          <div className="flex items-start gap-2">
+            <button
+              type="button"
+              onClick={() => navigate('/app/estimator')}
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white shrink-0"
+              aria-label="Kembali"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                <span className="font-mono text-xs font-bold text-emerald-100">{draft.code}</span>
+                {isNew ? (
+                  <span className="inline-flex text-[10px] px-2 py-0.5 rounded-full font-semibold bg-white/20 text-white">
+                    Draft
                   </span>
+                ) : (
+                  <div className="[&_button]:bg-white/15 [&_button]:text-white [&_button]:border-white/20">
+                    <StatusBadgeDropdown
+                      status={draft.status}
+                      onTransition={applyStatusTransition}
+                      disabled={statusChanging}
+                    />
+                  </div>
                 )}
-                {draft.customer_phone && (
-                  <a
-                    href={`https://wa.me/${formatPhoneWa(draft.customer_phone)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-emerald-600 hover:underline"
-                    onClick={e => e.stopPropagation()}
-                  >
-                    <Phone className="w-3.5 h-3.5" />
-                    {draft.customer_phone}
-                  </a>
+                {!isNew && (
+                  <div className="ml-auto hidden sm:block">
+                    <AutoSaveIndicator
+                      status={autoSave.status}
+                      onRetry={() => draftRef.current && autoSave.flush()}
+                    />
+                  </div>
                 )}
-                <span className="inline-flex items-center gap-1 text-xs text-slate-400">
-                  <Calendar className="w-3.5 h-3.5" />
-                  {formatDateIdShort(new Date().toISOString())}
+              </div>
+              <input
+                value={draft.title}
+                onChange={e => patch({ title: e.target.value })}
+                placeholder="Judul estimasi *"
+                disabled={isReadOnly}
+                className="w-full text-xl sm:text-2xl font-black bg-transparent border-0 border-b border-transparent hover:border-white/30 focus:border-white outline-none py-0.5 placeholder:text-emerald-100/70 disabled:opacity-70 text-white"
+              />
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-sm text-emerald-50/90">
+                {(draft.customer_name || draft.customer_phone) && (
+                  <>
+                    {draft.customer_name && (
+                      <span className="inline-flex items-center gap-1">
+                        <User className="w-3.5 h-3.5 opacity-80" />
+                        {draft.customer_name}
+                      </span>
+                    )}
+                    {draft.customer_phone && (
+                      <a
+                        href={`https://wa.me/${formatPhoneWa(draft.customer_phone)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-white hover:underline"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                        {draft.customer_phone}
+                      </a>
+                    )}
+                  </>
+                )}
+                <span className="inline-flex items-center gap-1 text-xs text-emerald-100/80 ml-auto tabular-nums font-bold">
+                  {formatRupiahFull(summaryTotal)}
                 </span>
               </div>
+            </div>
+            {!isNew && (
+              <EstimatorActionsMenu
+                status={draft.status}
+                convertedProjectId={convertedProjectId}
+                onConvert={handleOpenConvert}
+                onDuplicate={handleDuplicate}
+                onDelete={handleDelete}
+              />
             )}
           </div>
-          <div className="flex flex-col items-end gap-1 shrink-0">
-            <div className="flex items-center gap-2">
+        </div>
+
+        <div className="bg-white/95 backdrop-blur px-3 py-2 flex flex-wrap items-center gap-2 border-t border-emerald-900/10">
+          <button
+            type="button"
+            onClick={() => setDetailOpen(v => !v)}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+              detailOpen
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            Detail Klien
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${detailOpen ? 'rotate-180' : ''}`} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setSummaryOpen(v => !v)}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+              summaryOpen
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            {summaryOpen ? <PanelRightClose className="w-3.5 h-3.5" /> : <PanelRightOpen className="w-3.5 h-3.5" />}
+            Ringkasan
+          </button>
+          {draft.customer_name && !detailOpen && (
+            <span className="text-xs text-slate-500 truncate max-w-[140px]">{draft.customer_name}</span>
+          )}
+          {!isNew && (
+            <div className="sm:hidden ml-auto">
               <AutoSaveIndicator
                 status={autoSave.status}
                 onRetry={() => draftRef.current && autoSave.flush()}
               />
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={saving || isReadOnly}
-                className="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-60 min-w-[2.75rem]"
-                title="Simpan estimasi"
-              >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                <span className="hidden sm:inline">Simpan</span>
-              </button>
-              {!isNew && (
-                <EstimatorActionsMenu
-                  status={draft.status}
-                  convertedProjectId={convertedProjectId}
-                  onConvert={handleOpenConvert}
-                  onDuplicate={handleDuplicate}
-                  onDelete={handleDelete}
-                />
-              )}
             </div>
-          </div>
+          )}
         </div>
-      </div>
-
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <button
-          type="button"
-          onClick={() => setDetailOpen(v => !v)}
-          className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold border transition-colors ${
-            detailOpen
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-          }`}
-        >
-          Detail Klien
-          <ChevronDown className={`w-4 h-4 transition-transform ${detailOpen ? 'rotate-180' : ''}`} />
-        </button>
-        <button
-          type="button"
-          onClick={() => setSummaryOpen(v => !v)}
-          className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold border transition-colors ${
-            summaryOpen
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-          }`}
-        >
-          {summaryOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
-          Ringkasan
-          <span className="font-bold tabular-nums">{formatRupiahFull(summaryTotal)}</span>
-        </button>
-        {draft.customer_name && !detailOpen && (
-          <span className="text-xs text-slate-500 truncate max-w-[200px]">
-            {draft.customer_name}
-          </span>
-        )}
       </div>
 
       {/* Panel detail — collapsible, di atas tabel tapi tidak di samping */}
@@ -836,8 +865,19 @@ export default function EstimatorForm() {
       <EstimatorActionBar
         navSidebarCollapsed={navSidebarCollapsed}
         isNew={isNew}
+        saving={saving}
         pdfLoading={pdfLoading}
+        isReadOnly={isReadOnly}
+        autoSaveStatus={autoSave.status}
+        canUndo={draftHistory.canUndo}
+        canRedo={draftHistory.canRedo}
+        canDiscard={draftHistory.canDiscard && !isNew}
         onCancel={() => navigate('/app/estimator')}
+        onSave={handleSave}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        onDiscardChanges={handleDiscardChanges}
+        onRetryAutoSave={() => draftRef.current && autoSave.flush()}
         onWhatsApp={handleShareWhatsApp}
         onPreviewPdf={handlePreviewPdf}
         onDownloadPdf={handleDownloadPdf}

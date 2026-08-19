@@ -274,8 +274,85 @@ export default function EstimationItemsTable({
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto overscroll-x-contain">
-            <table className="w-full text-sm min-w-[1280px] table-auto">
+          <>
+        <div className="md:hidden p-3 space-y-2.5">
+          {items.map((item, idx) => {
+            const netSelling = effectiveItemSelling(item);
+            const rowMuted = item.name.trim() && item.included === false;
+            return (
+              <div
+                key={idx}
+                className={`rounded-xl border p-3 space-y-2 ${
+                  rowMuted ? 'border-slate-200 bg-slate-50/80 opacity-80' : 'border-slate-200 bg-white'
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    checked={item.included !== false}
+                    onChange={e => updateItem(idx, { included: e.target.checked }, 'qty')}
+                    className="w-4 h-4 mt-1 rounded border-slate-300 text-emerald-600 shrink-0"
+                    title="Masuk total"
+                  />
+                  <input
+                    value={item.name}
+                    onChange={e => updateItem(idx, { name: e.target.value })}
+                    placeholder="Nama item"
+                    className="flex-1 min-w-0 font-semibold text-sm text-slate-900 bg-transparent border-0 border-b border-transparent focus:border-emerald-400 outline-none py-0.5"
+                  />
+                  <div className="text-sm font-black text-slate-900 tabular-nums shrink-0">
+                    {formatRupiahFull(netSelling)}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 pl-6">
+                  <QtyInput
+                    value={item.qty}
+                    onChange={v => updateItem(idx, { qty: v }, 'qty')}
+                    className="w-14 px-2 py-1.5 border border-slate-200 rounded-lg text-right text-sm tabular-nums focus:border-emerald-400 outline-none"
+                  />
+                  <span className="text-slate-400 text-xs">/</span>
+                  <select
+                    value={item.unit}
+                    onChange={e => updateItem(idx, { unit: e.target.value })}
+                    className="w-16 px-1 py-1.5 text-xs border border-slate-200 rounded-lg bg-white"
+                  >
+                    {COMMON_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                  </select>
+                  <div className="flex-1" />
+                  <RupiahInput
+                    value={item.selling_price_per_unit}
+                    onChange={v => updateItem(idx, { selling_price_per_unit: v }, 'selling')}
+                    title="Jual / unit"
+                    className="w-[5.5rem] px-1.5 py-1.5 border border-emerald-200 bg-emerald-50/50 rounded-lg text-right text-xs font-semibold tabular-nums focus:border-emerald-400 outline-none"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.1"
+                    value={item.margin_pct}
+                    onChange={e => updateItem(idx, { margin_pct: Number(e.target.value) }, 'margin')}
+                    title="Margin %"
+                    className="w-12 px-1 py-1.5 border border-slate-200 rounded-lg text-right text-xs tabular-nums focus:border-emerald-400 outline-none"
+                  />
+                  <span className="text-[10px] text-slate-400">%</span>
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      onClick={() => removeRow(idx)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                      aria-label="Hapus item"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="hidden md:block overflow-x-auto overscroll-x-contain">
+          <table className="w-full text-sm min-w-[1280px] table-auto">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
                   <th className={`${thClass} ${stickyCheck} ${stickyHead} w-10 text-center`} title="Centang untuk masuk total estimasi">✓</th>
@@ -526,6 +603,7 @@ export default function EstimationItemsTable({
               )}
             </table>
           </div>
+          </>
         )}
       </div>
 

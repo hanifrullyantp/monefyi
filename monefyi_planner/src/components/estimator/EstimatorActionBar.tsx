@@ -1,29 +1,48 @@
-import { ArrowLeft, Eye, FileDown, Loader2, MessageCircle } from 'lucide-react';
+import {
+  ArrowLeft,
+  Eye,
+  FileDown,
+  Loader2,
+  MessageCircle,
+  Redo2,
+  RotateCcw,
+  Save,
+  Undo2,
+} from 'lucide-react';
 import type { ReactNode } from 'react';
+import type { AutoSaveStatus } from '../../hooks/useAutoSave';
+import AutoSaveIndicator from './AutoSaveIndicator';
 
 interface Props {
   navSidebarCollapsed: boolean;
   isNew: boolean;
+  saving: boolean;
   pdfLoading: boolean;
+  isReadOnly?: boolean;
+  autoSaveStatus: AutoSaveStatus;
+  canUndo: boolean;
+  canRedo: boolean;
+  canDiscard: boolean;
   onCancel: () => void;
+  onSave: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  onDiscardChanges: () => void;
+  onRetryAutoSave: () => void;
   onWhatsApp: () => void;
   onPreviewPdf: () => void;
   onDownloadPdf: () => void;
 }
 
-function ActionBtn({
+function IconBtn({
+  label,
   onClick,
   disabled,
-  label,
-  title,
-  className,
   children,
 }: {
+  label: string;
   onClick: () => void;
   disabled?: boolean;
-  label: string;
-  title: string;
-  className?: string;
   children: ReactNode;
 }) {
   return (
@@ -31,12 +50,11 @@ function ActionBtn({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      title={title}
+      title={label}
       aria-label={label}
-      className={`inline-flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50 min-w-[2.75rem] ${className ?? ''}`}
+      className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-35 disabled:pointer-events-none shrink-0"
     >
       {children}
-      <span className="hidden sm:inline">{label}</span>
     </button>
   );
 }
@@ -44,55 +62,93 @@ function ActionBtn({
 export default function EstimatorActionBar({
   navSidebarCollapsed,
   isNew,
+  saving,
   pdfLoading,
+  isReadOnly,
+  autoSaveStatus,
+  canUndo,
+  canRedo,
+  canDiscard,
   onCancel,
+  onSave,
+  onUndo,
+  onRedo,
+  onDiscardChanges,
+  onRetryAutoSave,
   onWhatsApp,
   onPreviewPdf,
   onDownloadPdf,
 }: Props) {
   return (
     <div
-      className={`fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-slate-200 px-3 sm:px-4 py-2.5 flex items-center justify-between gap-2 z-20 safe-bottom ${
+      className={`fixed left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] bottom-[4.75rem] lg:bottom-0 safe-bottom ${
         navSidebarCollapsed ? 'lg:left-[4.5rem]' : 'lg:left-64'
       }`}
     >
-      <ActionBtn
-        onClick={onCancel}
-        label="Batal"
-        title="Kembali ke daftar estimasi"
-        className="border border-slate-200 text-slate-600 hover:bg-slate-50"
-      >
-        <ArrowLeft className="w-4 h-4 shrink-0" />
-      </ActionBtn>
+      <div className="max-w-[100rem] mx-auto px-3 sm:px-4 py-2.5 flex items-center gap-1.5 sm:gap-2">
+        <IconBtn label="Kembali" onClick={onCancel}>
+          <ArrowLeft className="w-4 h-4" />
+        </IconBtn>
 
-      <div className="flex items-center gap-1 sm:gap-2">
-        <ActionBtn
-          onClick={onWhatsApp}
-          disabled={isNew}
-          label="WhatsApp"
-          title="Bagikan estimasi via WhatsApp"
-          className="border border-emerald-200 text-emerald-600 hover:bg-emerald-50"
+        <div className="hidden sm:flex items-center gap-1">
+          <IconBtn label="Undo" onClick={onUndo} disabled={isReadOnly || !canUndo}>
+            <Undo2 className="w-4 h-4" />
+          </IconBtn>
+          <IconBtn label="Redo" onClick={onRedo} disabled={isReadOnly || !canRedo}>
+            <Redo2 className="w-4 h-4" />
+          </IconBtn>
+          <IconBtn
+            label="Batal simpan"
+            onClick={onDiscardChanges}
+            disabled={isReadOnly || isNew || !canDiscard}
+          >
+            <RotateCcw className="w-4 h-4" />
+          </IconBtn>
+        </div>
+
+        <div className="flex sm:hidden items-center gap-0.5">
+          <IconBtn label="Undo" onClick={onUndo} disabled={isReadOnly || !canUndo}>
+            <Undo2 className="w-4 h-4" />
+          </IconBtn>
+          <IconBtn label="Redo" onClick={onRedo} disabled={isReadOnly || !canRedo}>
+            <Redo2 className="w-4 h-4" />
+          </IconBtn>
+          <IconBtn
+            label="Batal simpan"
+            onClick={onDiscardChanges}
+            disabled={isReadOnly || isNew || !canDiscard}
+          >
+            <RotateCcw className="w-4 h-4" />
+          </IconBtn>
+        </div>
+
+        {!isNew && (
+          <div className="hidden md:block">
+            <AutoSaveIndicator status={autoSaveStatus} onRetry={onRetryAutoSave} />
+          </div>
+        )}
+
+        <div className="flex-1 min-w-2" />
+
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={saving || isReadOnly}
+          className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-50 shrink-0 min-w-[5.5rem]"
         >
-          <MessageCircle className="w-4 h-4 shrink-0" />
-        </ActionBtn>
-        <ActionBtn
-          onClick={onPreviewPdf}
-          disabled={pdfLoading || isNew}
-          label="Preview"
-          title="Pratinjau PDF penawaran"
-          className="border border-slate-200 text-slate-700 hover:bg-slate-50"
-        >
-          {pdfLoading ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : <Eye className="w-4 h-4 shrink-0" />}
-        </ActionBtn>
-        <ActionBtn
-          onClick={onDownloadPdf}
-          disabled={pdfLoading || isNew}
-          label="Download"
-          title="Unduh PDF penawaran"
-          className="border border-slate-200 text-slate-700 hover:bg-slate-50"
-        >
-          {pdfLoading ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : <FileDown className="w-4 h-4 shrink-0" />}
-        </ActionBtn>
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          Simpan
+        </button>
+
+        <IconBtn label="WhatsApp" onClick={onWhatsApp} disabled={isNew}>
+          <MessageCircle className="w-4 h-4 text-emerald-600" />
+        </IconBtn>
+        <IconBtn label="Preview PDF" onClick={onPreviewPdf} disabled={pdfLoading || isNew}>
+          {pdfLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+        </IconBtn>
+        <IconBtn label="Download PDF" onClick={onDownloadPdf} disabled={pdfLoading || isNew}>
+          {pdfLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+        </IconBtn>
       </div>
     </div>
   );
