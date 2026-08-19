@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, ClipboardList, Loader2, Plus,
+  ClipboardList, Loader2, Plus,
   User,
 } from 'lucide-react';
 import EstimatorActionBar from '../../components/estimator/EstimatorActionBar';
@@ -18,7 +18,7 @@ import { useUiStore } from '../../store/uiStore';
 import EstimationItemsTable from '../../components/estimator/EstimationItemsTable';
 import EstimationAdjustmentsPanel from '../../components/estimator/EstimationAdjustmentsPanel';
 import EstimationImageSlots from '../../components/estimator/EstimationImageSlots';
-import EstimationSummaryPanel from '../../components/estimator/EstimationSummaryPanel';
+import EstimationStickySummary from '../../components/estimator/EstimationStickySummary';
 import PdfDesignCustomizer from '../../components/estimator/PdfDesignCustomizer';
 import PdfPreviewModal from '../../components/estimator/PdfPreviewModal';
 import ShareWhatsAppModal from '../../components/estimator/ShareWhatsAppModal';
@@ -73,7 +73,7 @@ export default function EstimatorForm() {
   const [detailOpen, setDetailOpen] = useState(false);
   const draftRef = useRef<EstimationFormDraft | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
   const addItemRef = useRef<(() => void) | null>(null);
   const registerAddItem = useCallback((fn: () => void) => {
     addItemRef.current = fn;
@@ -535,7 +535,7 @@ export default function EstimatorForm() {
   }
 
   return (
-    <div className="w-full max-w-[100rem] mx-auto px-3 sm:px-5 py-4 pb-[9.5rem] lg:pb-28 overflow-x-hidden">
+    <div className="w-full max-w-[100rem] mx-auto px-3 sm:px-5 py-4 pb-44 lg:pb-32 overflow-x-hidden">
       <EstimatorBreadcrumb items={[{ label: isNew ? 'Baru' : draft.code }]} />
 
       {isReadOnly && convertedProjectId && (
@@ -554,33 +554,24 @@ export default function EstimatorForm() {
       )}
 
       {/* Header card */}
-      <div className="rounded-2xl overflow-hidden mb-4 shadow-xl shadow-emerald-900/20 border border-emerald-700/25">
-        <div className="relative bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-800 px-4 pt-4 pb-3 text-white overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.14),transparent_55%)] pointer-events-none" />
+      <div className="rounded-2xl mb-4 shadow-xl shadow-emerald-900/20 border border-emerald-700/25">
+        <div className="relative bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-800 px-4 pt-4 pb-3 text-white rounded-2xl">
+          <div className="absolute inset-0 rounded-2xl bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.14),transparent_55%)] pointer-events-none" />
           <div className="relative flex items-start gap-2">
-            <button
-              type="button"
-              onClick={() => navigate('/app/estimator')}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white shrink-0 backdrop-blur-sm"
-              aria-label="Kembali"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-1">
+              <div className="flex items-center gap-2 flex-wrap mb-1.5">
                 <span className="font-mono text-[11px] font-bold text-emerald-100/90 tracking-wide">{draft.code}</span>
                 {isNew ? (
                   <span className="inline-flex text-[10px] px-2 py-0.5 rounded-full font-semibold bg-white/20 text-white backdrop-blur-sm">
-                    Draft
+                    WA
                   </span>
                 ) : (
-                  <div className="[&_button]:bg-white/15 [&_button]:text-white [&_button]:border-white/20">
-                    <StatusBadgeDropdown
-                      status={draft.status}
-                      onTransition={applyStatusTransition}
-                      disabled={statusChanging}
-                    />
-                  </div>
+                  <StatusBadgeDropdown
+                    status={draft.status}
+                    onTransition={applyStatusTransition}
+                    disabled={statusChanging}
+                    variant="onDark"
+                  />
                 )}
                 {!isNew && (
                   <div className="ml-auto hidden sm:block">
@@ -599,11 +590,6 @@ export default function EstimatorForm() {
                 disabled={isReadOnly}
                 className="w-full text-xl sm:text-2xl font-black bg-transparent border-0 border-b border-transparent hover:border-white/30 focus:border-white outline-none py-0.5 placeholder:text-emerald-100/60 disabled:opacity-70 text-white"
               />
-              <div className="mt-2 flex items-end justify-end gap-3">
-                <div className="text-lg sm:text-xl font-black tabular-nums shrink-0">
-                  {formatRupiahFull(summaryTotal)}
-                </div>
-              </div>
             </div>
             {!isNew && (
               <EstimatorActionsMenu
@@ -616,24 +602,12 @@ export default function EstimatorForm() {
             )}
           </div>
 
-          <div className="relative flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-white/15">
-            {!isReadOnly && (
-              <button
-                type="button"
-                onClick={() => addItemRef.current?.()}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-white text-emerald-700 hover:bg-emerald-50 shadow-sm transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Tambah Rincian
-              </button>
-            )}
+          <div className="relative flex items-center gap-2 mt-3 pt-3 border-t border-white/15">
             <button
               type="button"
               onClick={() => setDetailOpen(v => !v)}
-              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border backdrop-blur-sm transition-colors ${
-                detailOpen
-                  ? 'bg-white/25 border-white/40 text-white'
-                  : 'bg-white/10 border-white/20 text-emerald-50 hover:bg-white/15'
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                detailOpen ? 'bg-white/25 text-white' : 'text-emerald-100/90 hover:bg-white/10 hover:text-white'
               }`}
             >
               <User className="w-3.5 h-3.5" />
@@ -641,24 +615,34 @@ export default function EstimatorForm() {
             </button>
             <button
               type="button"
-              onClick={() => setSummaryOpen(v => !v)}
-              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border backdrop-blur-sm transition-colors ${
-                summaryOpen
-                  ? 'bg-white/25 border-white/40 text-white'
-                  : 'bg-white/10 border-white/20 text-emerald-50 hover:bg-white/15'
+              onClick={() => setSummaryExpanded(v => !v)}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                summaryExpanded ? 'bg-white/25 text-white' : 'text-emerald-100/90 hover:bg-white/10 hover:text-white'
               }`}
             >
               <ClipboardList className="w-3.5 h-3.5" />
               Ringkasan
             </button>
             {!isNew && (
-              <div className="sm:hidden ml-auto">
+              <div className="sm:hidden">
                 <AutoSaveIndicator
                   status={autoSave.status}
                   onRetry={() => draftRef.current && autoSave.flush()}
                   variant="light"
                 />
               </div>
+            )}
+            <div className="flex-1 min-w-2" />
+            {!isReadOnly && (
+              <button
+                type="button"
+                onClick={() => addItemRef.current?.()}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-bold bg-white text-emerald-700 hover:bg-emerald-50 shadow-lg shadow-emerald-950/25 transition-colors shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden min-[420px]:inline">Tambah Rincian</span>
+                <span className="min-[420px]:hidden">Tambah</span>
+              </button>
             )}
           </div>
         </div>
@@ -796,30 +780,43 @@ export default function EstimatorForm() {
         </div>
       )}
 
-      {/* Fokus utama: tabel lebar + ringkasan samping */}
-      <div className="flex flex-col xl:flex-row gap-4 items-start">
-        <div className="flex-1 min-w-0 w-full">
-          <EstimationItemsTable
-            orgId={tenant!.id}
-            userId={user?.id || ''}
-            items={draft.items}
-            defaultMargin={draft.margin_pct}
-            overheadPct={draft.overhead_pct}
-            discountPct={draft.discount_pct}
-            discountAmount={draft.discount_amount}
-            adjustments={draft.adjustments}
-            taxPct={draft.tax_pct}
-            onChange={items => patch({ items })}
-            readOnly={isReadOnly}
-            onRegisterAddItem={registerAddItem}
-          />
-        </div>
-        {summaryOpen && (
-          <div className="w-full xl:w-72 shrink-0 xl:sticky xl:top-20">
-            <EstimationSummaryPanel draft={draft} />
-          </div>
-        )}
-      </div>
+      {/* Toolbar + tabel item */}
+      <EstimatorActionBar
+        navSidebarCollapsed={navSidebarCollapsed}
+        isNew={isNew}
+        saving={saving}
+        pdfLoading={pdfLoading}
+        isReadOnly={isReadOnly}
+        autoSaveStatus={autoSave.status}
+        canUndo={draftHistory.canUndo}
+        canRedo={draftHistory.canRedo}
+        canDiscard={draftHistory.canDiscard && !isNew}
+        inline
+        onCancel={() => navigate('/app/estimator')}
+        onSave={handleSave}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        onDiscardChanges={handleDiscardChanges}
+        onRetryAutoSave={() => draftRef.current && autoSave.flush()}
+        onWhatsApp={handleShareWhatsApp}
+        onPreviewPdf={handlePreviewPdf}
+        onDownloadPdf={handleDownloadPdf}
+      />
+
+      <EstimationItemsTable
+        orgId={tenant!.id}
+        userId={user?.id || ''}
+        items={draft.items}
+        defaultMargin={draft.margin_pct}
+        overheadPct={draft.overhead_pct}
+        discountPct={draft.discount_pct}
+        discountAmount={draft.discount_amount}
+        adjustments={draft.adjustments}
+        taxPct={draft.tax_pct}
+        onChange={items => patch({ items })}
+        readOnly={isReadOnly}
+        onRegisterAddItem={registerAddItem}
+      />
 
       {/* Pengaturan sekunder — di bawah tabel */}
       {detailOpen && (
@@ -863,25 +860,11 @@ export default function EstimatorForm() {
         <EstimationStatusHistory meta={statusMeta} className="mt-6" />
       )}
 
-      <EstimatorActionBar
+      <EstimationStickySummary
+        draft={draft}
+        expanded={summaryExpanded}
+        onToggleExpanded={() => setSummaryExpanded(v => !v)}
         navSidebarCollapsed={navSidebarCollapsed}
-        isNew={isNew}
-        saving={saving}
-        pdfLoading={pdfLoading}
-        isReadOnly={isReadOnly}
-        autoSaveStatus={autoSave.status}
-        canUndo={draftHistory.canUndo}
-        canRedo={draftHistory.canRedo}
-        canDiscard={draftHistory.canDiscard && !isNew}
-        onCancel={() => navigate('/app/estimator')}
-        onSave={handleSave}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-        onDiscardChanges={handleDiscardChanges}
-        onRetryAutoSave={() => draftRef.current && autoSave.flush()}
-        onWhatsApp={handleShareWhatsApp}
-        onPreviewPdf={handlePreviewPdf}
-        onDownloadPdf={handleDownloadPdf}
       />
 
       {pdfPreviewOpen && pdfSettings && (

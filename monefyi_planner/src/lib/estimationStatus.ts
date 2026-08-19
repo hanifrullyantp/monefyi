@@ -34,6 +34,19 @@ const TRANSITION_LABELS: Record<EstimationStatus, string> = {
   converted: 'Jadikan Proyek',
 };
 
+/** Keterangan singkat tiap tahap pipeline — ditampilkan di dropdown status card list. */
+export const ESTIMATION_STATUS_DESCRIPTION: Record<EstimationStatus, string> = {
+  wa: 'Kontak awal & follow-up WhatsApp klien',
+  survei: 'Survei lokasi dan kebutuhan di lapangan',
+  penawaran: 'Penawaran harga sudah dikirim ke klien',
+  closing: 'Negosiasi dan deal closing',
+  proses: 'Produksi atau pengerjaan sedang berjalan',
+  finishing: 'Finishing dan penyelesaian akhir',
+  selesai: 'Pekerjaan selesai dan diterima klien',
+  rejected: 'Estimasi ditolak oleh klien',
+  converted: 'Estimasi sudah dijadikan proyek',
+};
+
 const WORKFLOW_TIMESTAMP_FIELD: Partial<Record<EstimationStatus, string>> = {
   wa: 'wa_at',
   survei: 'survei_at',

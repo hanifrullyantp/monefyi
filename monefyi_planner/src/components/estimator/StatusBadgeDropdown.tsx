@@ -13,6 +13,7 @@ type Props = {
   onTransition: (next: EstimationStatus) => void;
   disabled?: boolean;
   className?: string;
+  variant?: 'default' | 'onDark';
 };
 
 export default function StatusBadgeDropdown({
@@ -20,6 +21,7 @@ export default function StatusBadgeDropdown({
   onTransition,
   disabled = false,
   className = '',
+  variant = 'default',
 }: Props) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -39,7 +41,10 @@ export default function StatusBadgeDropdown({
   }, [open]);
 
   const label = ESTIMATION_STATUS_LABEL[normalizedStatus] || normalizedStatus;
-  const color = ESTIMATION_STATUS_COLOR[normalizedStatus] || ESTIMATION_STATUS_COLOR.wa;
+  const onDark = variant === 'onDark';
+  const color = onDark
+    ? 'bg-white/20 text-white backdrop-blur-sm'
+    : (ESTIMATION_STATUS_COLOR[normalizedStatus] || ESTIMATION_STATUS_COLOR.wa);
   const dot = ESTIMATION_STATUS_DOT[normalizedStatus] || ESTIMATION_STATUS_DOT.wa;
 
   if (isReadOnly) {
@@ -61,18 +66,20 @@ export default function StatusBadgeDropdown({
         type="button"
         disabled={disabled}
         onClick={() => setOpen(v => !v)}
-        className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-semibold ${color} hover:ring-2 hover:ring-offset-1 hover:ring-slate-200 disabled:opacity-60`}
+        className={`inline-flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-full font-semibold ${color} ${
+          onDark ? 'hover:bg-white/30' : 'hover:ring-2 hover:ring-offset-1 hover:ring-slate-200'
+        } disabled:opacity-60`}
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} aria-hidden />
+        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${onDark ? 'bg-white' : dot}`} aria-hidden />
         {label}
         <ChevronDown className={`w-3 h-3 opacity-70 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
         <div
           role="menu"
-          className="absolute left-0 top-full mt-1 z-30 min-w-[11rem] bg-white border border-slate-200 rounded-xl shadow-lg py-1 text-sm"
+          className="absolute left-0 top-full mt-1 z-[60] min-w-[11rem] bg-white border border-slate-200 rounded-xl shadow-xl py-1 text-sm text-slate-800"
         >
           {actions.map(action => (
             <button

@@ -8,12 +8,10 @@ import {
   Calculator,
   RefreshCw,
   FileText,
-  ChevronDown,
   Sparkles,
   Settings,
   List,
   ArrowUpDown,
-  SlidersHorizontal,
   X,
 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
@@ -127,7 +125,6 @@ export default function EstimatorList() {
   const [search, setSearch] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
-  const [filterOpen, setFilterOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'' | EstimationStatus>('');
   const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [convertOpen, setConvertOpen] = useState(false);
@@ -145,10 +142,9 @@ export default function EstimatorList() {
   const [waProjectName, setWaProjectName] = useState<string | null>(null);
   const [waLoadingId, setWaLoadingId] = useState<string | null>(null);
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
-  const [statusLoadingStage, setStatusLoadingStage] = useState<EstimationWorkflowStatus | null>(null);
+  const [statusLoadingStage, setStatusLoadingStage] = useState<EstimationWorkflowStatus | 'rejected' | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const sortRef = useRef<HTMLDivElement>(null);
-  const filterRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     if (!tenant?.id) return;
@@ -180,7 +176,6 @@ export default function EstimatorList() {
   useEffect(() => {
     const closeMenus = (e: MouseEvent) => {
       if (sortRef.current && !sortRef.current.contains(e.target as Node)) setSortOpen(false);
-      if (filterRef.current && !filterRef.current.contains(e.target as Node)) setFilterOpen(false);
     };
     document.addEventListener('mousedown', closeMenus);
     return () => document.removeEventListener('mousedown', closeMenus);
@@ -197,6 +192,7 @@ export default function EstimatorList() {
 
   const activeFilterLabel = STATUS_FILTERS.find(f => f.value === statusFilter)?.label || 'Semua';
   const activeSortLabel = SORT_OPTIONS.find(o => o.value === sortKey)?.label || 'Terbaru';
+  const toolbarSortLabel = statusFilter ? `${activeSortLabel} · ${activeFilterLabel}` : activeSortLabel;
 
   const handleDelete = async (id: string, title: string) => {
     if (!window.confirm(`Hapus estimasi "${title}"?`)) return;
@@ -259,7 +255,7 @@ export default function EstimatorList() {
     }
   };
 
-  const handleStatusChange = async (estId: string, next: EstimationWorkflowStatus) => {
+  const handleStatusChange = async (estId: string, next: EstimationWorkflowStatus | 'rejected') => {
     const est = rows.find(r => r.id === estId);
     if (!est) return;
     const prevStatus = normalizeEstimationStatus(est.status);
@@ -342,7 +338,17 @@ export default function EstimatorList() {
         </button>
       </div>
 
-      {/* Icon toolbar — mobile-first; desktop keeps wider search row below */}
+      <EstimationPipelineSummary
+        counts={{
+          wa: statusCounts.wa,
+          survei: statusCounts.survei,
+          closing: statusCounts.closing,
+        }}
+        activeStatus={statusFilter}
+        onSelect={status => setStatusFilter(status)}
+      />
+
+      {/* Icon toolbar */}
       <div className="flex items-center gap-1.5 mb-3">
         <ToolbarIconButton label="Pengaturan" onClick={() => navigate('/app/estimator/settings')}>
           <Settings className="w-4 h-4" />
@@ -360,14 +366,15 @@ export default function EstimatorList() {
 
         <div className="relative" ref={sortRef}>
           <ToolbarIconButton
-            label={`Urutkan: ${activeSortLabel}`}
-            active={sortOpen}
-            onClick={() => { setSortOpen(v => !v); setFilterOpen(false); }}
+            label={`Urutkan & filter: ${toolbarSortLabel}`}
+            active={sortOpen || Boolean(statusFilter)}
+            onClick={() => setSortOpen(v => !v)}
           >
             <ArrowUpDown className="w-4 h-4" />
           </ToolbarIconButton>
           {sortOpen && (
-            <div className="absolute left-0 top-full mt-1 z-30 min-w-[11rem] bg-white border border-slate-200 rounded-xl shadow-lg py-1">
+            <div className="absolute left-0 top-full mt-1 z-30 min-w-[12rem] bg-white border border-slate-200 rounded-xl shadow-lg py-1 max-h-80 overflow-y-auto">
+              <p className="px-3 pt-2 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wide">Urutkan</p>
               {SORT_OPTIONS.map(o => (
                 <button
                   key={o.value}
@@ -380,27 +387,15 @@ export default function EstimatorList() {
                   {o.label}
                 </button>
               ))}
-            </div>
-          )}
-        </div>
-
-        <div className="relative" ref={filterRef}>
-          <ToolbarIconButton
-            label={`Filter: ${activeFilterLabel}`}
-            active={filterOpen || Boolean(statusFilter)}
-            onClick={() => { setFilterOpen(v => !v); setSortOpen(false); }}
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-          </ToolbarIconButton>
-          {filterOpen && (
-            <div className="absolute right-0 top-full mt-1 z-30 min-w-[10rem] bg-white border border-slate-200 rounded-xl shadow-lg py-1 max-h-64 overflow-y-auto">
+              <div className="my-1 border-t border-slate-100" />
+              <p className="px-3 pt-1 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wide">Filter status</p>
               {STATUS_FILTERS.map(f => {
                 const count = f.value ? statusCounts[f.value] : statusCounts.all;
                 return (
                   <button
                     key={f.value || 'all'}
                     type="button"
-                    onClick={() => { setStatusFilter(f.value); setFilterOpen(false); }}
+                    onClick={() => { setStatusFilter(f.value); setSortOpen(false); }}
                     className={`w-full text-left px-3 py-2 text-sm flex justify-between gap-2 ${
                       statusFilter === f.value ? 'bg-emerald-50 text-emerald-800 font-semibold' : 'text-slate-700 hover:bg-slate-50'
                     }`}
@@ -449,7 +444,7 @@ export default function EstimatorList() {
         </div>
       )}
 
-      {/* Desktop: inline search + sort (hidden on mobile — toolbar handles it) */}
+      {/* Desktop: inline search + urut/filter */}
       <div className="hidden lg:flex flex-row gap-3 mb-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -460,49 +455,27 @@ export default function EstimatorList() {
             className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-emerald-400 outline-none"
           />
         </div>
-        <div className="relative">
-          <select
-            value={sortKey}
-            onChange={e => setSortKey(e.target.value as SortKey)}
-            className="appearance-none w-48 pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 bg-white"
-          >
-            {SORT_OPTIONS.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-          <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-        </div>
-      </div>
-
-      <EstimationPipelineSummary
-        counts={{
-          wa: statusCounts.wa,
-          survei: statusCounts.survei,
-          closing: statusCounts.closing,
-        }}
-        activeStatus={statusFilter}
-        onSelect={status => setStatusFilter(status)}
-      />
-
-      {/* Status chips — compact on mobile */}
-      <div className="flex gap-2 overflow-x-auto mb-4 pb-1 -mx-1 px-1 scrollbar-none">
-        {STATUS_FILTERS.map(f => {
-          const count = f.value ? statusCounts[f.value] : statusCounts.all;
-          return (
-            <button
-              key={f.value}
-              type="button"
-              onClick={() => setStatusFilter(f.value)}
-              className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 ${
-                statusFilter === f.value
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              {f.label} {count}
-            </button>
-          );
-        })}
+        <select
+          value={sortKey}
+          onChange={e => setSortKey(e.target.value as SortKey)}
+          className="appearance-none w-44 pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 bg-white"
+        >
+          {SORT_OPTIONS.map(o => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+        <select
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value as '' | EstimationStatus)}
+          className="appearance-none w-44 pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 bg-white"
+        >
+          {STATUS_FILTERS.map(f => {
+            const count = f.value ? statusCounts[f.value] : statusCounts.all;
+            return (
+              <option key={f.value || 'all'} value={f.value}>{f.label} ({count})</option>
+            );
+          })}
+        </select>
       </div>
 
       {loading ? (
@@ -545,6 +518,7 @@ export default function EstimatorList() {
               onShareWhatsApp={() => handleShareWhatsApp(est.id)}
               onStatusChange={next => handleStatusChange(est.id, next)}
               statusLoading={statusUpdatingId === est.id ? statusLoadingStage : null}
+              waLoading={waLoadingId === est.id}
             />
           ))}
         </div>

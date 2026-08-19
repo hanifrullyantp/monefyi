@@ -23,6 +23,7 @@ interface Props {
   canUndo: boolean;
   canRedo: boolean;
   canDiscard: boolean;
+  inline?: boolean;
   onCancel: () => void;
   onSave: () => void;
   onUndo: () => void;
@@ -69,6 +70,7 @@ export default function EstimatorActionBar({
   canUndo,
   canRedo,
   canDiscard,
+  inline = false,
   onCancel,
   onSave,
   onUndo,
@@ -81,14 +83,20 @@ export default function EstimatorActionBar({
 }: Props) {
   return (
     <div
-      className={`fixed left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] bottom-[4.75rem] lg:bottom-0 safe-bottom ${
-        navSidebarCollapsed ? 'lg:left-[4.5rem]' : 'lg:left-64'
-      }`}
+      className={
+        inline
+          ? 'mb-3 bg-white border border-slate-200 rounded-2xl shadow-sm'
+          : `fixed left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] bottom-[4.75rem] lg:bottom-0 safe-bottom ${
+              navSidebarCollapsed ? 'lg:left-[4.5rem]' : 'lg:left-64'
+            }`
+      }
     >
-      <div className="max-w-[100rem] mx-auto px-3 sm:px-4 py-2.5 flex items-center gap-1.5 sm:gap-2">
+      <div className={`max-w-[100rem] mx-auto px-3 sm:px-4 py-2.5 flex items-center gap-1.5 sm:gap-2 ${inline ? 'flex-wrap' : ''}`}>
+        {!inline && (
         <IconBtn label="Kembali" onClick={onCancel}>
           <ArrowLeft className="w-4 h-4" />
         </IconBtn>
+        )}
 
         <div className="hidden sm:flex items-center gap-1">
           <IconBtn label="Undo" onClick={onUndo} disabled={isReadOnly || !canUndo}>
