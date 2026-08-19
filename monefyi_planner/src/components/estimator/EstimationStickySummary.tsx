@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { ChevronUp, AlertTriangle } from 'lucide-react';
 import { calcEstimationSummary, countedEstimationItems } from '../../lib/estimatorCalc';
 import { formatRupiahFull } from '../../lib/estimatorFormat';
@@ -8,14 +8,12 @@ interface Props {
   draft: EstimationFormDraft;
   expanded: boolean;
   onToggleExpanded: () => void;
-  navSidebarCollapsed: boolean;
 }
 
 export default function EstimationStickySummary({
   draft,
   expanded,
   onToggleExpanded,
-  navSidebarCollapsed,
 }: Props) {
   const countedItems = useMemo(() => countedEstimationItems(draft.items), [draft.items]);
   const summary = useMemo(
@@ -32,13 +30,27 @@ export default function EstimationStickySummary({
   const profitNegative = summary.totalProfit < 0;
 
   return (
-    <div
-      className={`fixed left-0 right-0 z-30 bottom-[4.75rem] lg:bottom-0 safe-bottom ${
-        navSidebarCollapsed ? 'lg:left-[4.5rem]' : 'lg:left-64'
-      }`}
-    >
+    <div className="px-3 sm:px-5">
       {expanded && (
-        <div className="mx-3 sm:mx-4 mb-2 max-w-[100rem] sm:ml-auto sm:mr-auto bg-white border border-slate-200 rounded-2xl shadow-xl max-h-[45vh] overflow-y-auto">
+        <div className="mb-2 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-[40vh] overflow-y-auto">
+          <div className={`mx-4 mt-4 p-3 rounded-xl border ${
+            profitNegative ? 'bg-red-50 border-red-100' : 'bg-emerald-50 border-emerald-100'
+          }`}>
+            <div className={`text-xs font-medium flex items-center gap-1 ${
+              profitNegative ? 'text-red-700' : 'text-emerald-700'
+            }`}>
+              {profitNegative && <AlertTriangle className="w-3.5 h-3.5" />}
+              Profit estimasi
+            </div>
+            <div className={`text-lg font-bold tabular-nums ${
+              profitNegative ? 'text-red-800' : 'text-emerald-800'
+            }`}>
+              {formatRupiahFull(summary.totalProfit)}
+            </div>
+            <p className={`text-[10px] mt-1 ${profitNegative ? 'text-red-600/80' : 'text-emerald-600/80'}`}>
+              Margin rata-rata: {summary.avgMarginPct.toFixed(1)}%
+            </p>
+          </div>
           <div className="px-4 py-3 border-b border-slate-100">
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Breakdown</p>
           </div>
@@ -70,7 +82,6 @@ export default function EstimationStickySummary({
             {draft.tax_pct > 0 && (
               <Row label={`PPN (${draft.tax_pct}%)`} value={formatRupiahFull(summary.taxAmount)} />
             )}
-            <Row label="Margin rata-rata" value={`${summary.avgMarginPct.toFixed(1)}%`} bold />
           </div>
         </div>
       )}
@@ -78,10 +89,10 @@ export default function EstimationStickySummary({
       <button
         type="button"
         onClick={onToggleExpanded}
-        className="w-full bg-gradient-to-r from-emerald-600 via-emerald-600 to-teal-700 text-white shadow-[0_-4px_24px_rgba(5,150,105,0.35)] border-t border-emerald-500/30"
+        className="w-full bg-gradient-to-r from-emerald-600 via-emerald-600 to-teal-700 text-white rounded-2xl shadow-lg shadow-emerald-900/20 border border-emerald-500/30"
         aria-expanded={expanded}
       >
-        <div className="max-w-[100rem] mx-auto px-4 py-3 flex items-center gap-3">
+        <div className="px-4 py-3 flex items-center gap-3 min-w-0">
           <div className="flex-1 min-w-0 text-left">
             <div className="text-[10px] font-semibold uppercase tracking-wide text-emerald-100/90">
               Total penawaran
@@ -90,22 +101,12 @@ export default function EstimationStickySummary({
               {formatRupiahFull(summary.grandTotal)}
             </div>
           </div>
-          <div className="shrink-0 text-right border-l border-white/20 pl-3">
-            <div className={`text-[10px] font-semibold uppercase tracking-wide flex items-center justify-end gap-1 ${
-              profitNegative ? 'text-red-200' : 'text-emerald-100/90'
-            }`}>
-              {profitNegative && <AlertTriangle className="w-3 h-3" />}
-              Profit
-            </div>
-            <div className={`text-base sm:text-lg font-bold tabular-nums ${
-              profitNegative ? 'text-red-100' : 'text-white'
-            }`}>
-              {formatRupiahFull(summary.totalProfit)}
-            </div>
+          <div className="flex items-center gap-1.5 shrink-0 text-emerald-100/90 text-xs font-semibold">
+            <span>{expanded ? 'Tutup' : 'Detail'}</span>
+            <ChevronUp
+              className={`w-5 h-5 transition-transform ${expanded ? 'rotate-180' : ''}`}
+            />
           </div>
-          <ChevronUp
-            className={`w-5 h-5 shrink-0 text-emerald-100 transition-transform ${expanded ? 'rotate-180' : ''}`}
-          />
         </div>
       </button>
     </div>

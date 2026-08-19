@@ -214,11 +214,7 @@ export default function EstimatorForm() {
           } else {
             setConvertedProjectName(null);
           }
-          if (formDraft.customer_name || formDraft.customer_phone) {
-            setDetailOpen(false);
-          } else {
-            setDetailOpen(true);
-          }
+          setDetailOpen(false);
         }
       } catch (e) {
         showToast(e instanceof Error ? e.message : 'Gagal memuat', 'error');
@@ -535,7 +531,7 @@ export default function EstimatorForm() {
   }
 
   return (
-    <div className="w-full max-w-[100rem] mx-auto px-3 sm:px-5 py-4 pb-44 lg:pb-32 overflow-x-hidden">
+    <div className="w-full max-w-[100rem] mx-auto px-3 sm:px-5 py-4 pb-6 overflow-x-hidden">
       <EstimatorBreadcrumb items={[{ label: isNew ? 'Baru' : draft.code }]} />
 
       {isReadOnly && convertedProjectId && (
@@ -602,47 +598,49 @@ export default function EstimatorForm() {
             )}
           </div>
 
-          <div className="relative flex items-center gap-2 mt-3 pt-3 border-t border-white/15">
-            <button
-              type="button"
-              onClick={() => setDetailOpen(v => !v)}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                detailOpen ? 'bg-white/25 text-white' : 'text-emerald-100/90 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              <User className="w-3.5 h-3.5" />
-              Klien
-            </button>
-            <button
-              type="button"
-              onClick={() => setSummaryExpanded(v => !v)}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                summaryExpanded ? 'bg-white/25 text-white' : 'text-emerald-100/90 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              <ClipboardList className="w-3.5 h-3.5" />
-              Ringkasan
-            </button>
-            {!isNew && (
-              <div className="sm:hidden">
-                <AutoSaveIndicator
-                  status={autoSave.status}
-                  onRetry={() => draftRef.current && autoSave.flush()}
-                  variant="light"
-                />
-              </div>
-            )}
-            <div className="flex-1 min-w-2" />
-            {!isReadOnly && (
+          <div className="relative mt-3 pt-3 border-t border-white/15 space-y-2">
+            <div className="flex items-center gap-2 min-w-0">
               <button
                 type="button"
-                onClick={() => addItemRef.current?.()}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-bold bg-white text-emerald-700 hover:bg-emerald-50 shadow-lg shadow-emerald-950/25 transition-colors shrink-0"
+                onClick={() => setDetailOpen(v => !v)}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors shrink-0 ${
+                  detailOpen ? 'bg-white/25 text-white' : 'text-emerald-100/90 hover:bg-white/10 hover:text-white'
+                }`}
               >
-                <Plus className="w-4 h-4" />
-                <span className="hidden min-[420px]:inline">Tambah Rincian</span>
-                <span className="min-[420px]:hidden">Tambah</span>
+                <User className="w-3.5 h-3.5" />
+                Klien
               </button>
+              <button
+                type="button"
+                onClick={() => setSummaryExpanded(v => !v)}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors shrink-0 ${
+                  summaryExpanded ? 'bg-white/25 text-white' : 'text-emerald-100/90 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <ClipboardList className="w-3.5 h-3.5" />
+                Ringkasan
+              </button>
+              {!isNew && (
+                <div className="ml-auto shrink-0">
+                  <AutoSaveIndicator
+                    status={autoSave.status}
+                    onRetry={() => draftRef.current && autoSave.flush()}
+                    variant="light"
+                  />
+                </div>
+              )}
+            </div>
+            {!isReadOnly && (
+              <div className="flex justify-stretch sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => addItemRef.current?.()}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-bold bg-white text-emerald-700 hover:bg-emerald-50 shadow-lg shadow-emerald-950/25 transition-colors"
+                >
+                  <Plus className="w-4 h-4 shrink-0" />
+                  Tambah Rincian
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -860,12 +858,13 @@ export default function EstimatorForm() {
         <EstimationStatusHistory meta={statusMeta} className="mt-6" />
       )}
 
-      <EstimationStickySummary
-        draft={draft}
-        expanded={summaryExpanded}
-        onToggleExpanded={() => setSummaryExpanded(v => !v)}
-        navSidebarCollapsed={navSidebarCollapsed}
-      />
+      <div className="sticky bottom-0 z-20 -mx-3 sm:-mx-5 mt-6">
+        <EstimationStickySummary
+          draft={draft}
+          expanded={summaryExpanded}
+          onToggleExpanded={() => setSummaryExpanded(v => !v)}
+        />
+      </div>
 
       {pdfPreviewOpen && pdfSettings && (
         <PdfPreviewModal
