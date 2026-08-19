@@ -221,7 +221,7 @@ export default function PricelistPickerModal({
               className="flex items-center gap-1.5 text-sm font-bold text-slate-700 hover:text-emerald-700 min-w-0"
             >
               <ChevronLeft className="w-5 h-5 shrink-0" />
-              <span className="truncate">{expandedGroup?.label ?? expandedProduct || 'Lainnya'}</span>
+              <span className="truncate">{expandedGroup?.label || 'Lainnya'}</span>
             </button>
           ) : (
             <div>

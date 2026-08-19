@@ -7,12 +7,13 @@ import {
 } from './estimatorOnboarding';
 
 describe('pricelist templates - catalog', () => {
-  it('exposes four starter templates with expected counts', () => {
-    expect(PRICELIST_TEMPLATES).toHaveLength(4);
+  it('exposes starter templates with expected counts', () => {
+    expect(PRICELIST_TEMPLATES).toHaveLength(5);
     expect(getPricelistTemplate('kitchen-set')?.itemCount).toBe(22);
+    expect(getPricelistTemplate('kanopi')?.itemCount).toBe(12);
     expect(getPricelistTemplate('renovasi-rumah')?.itemCount).toBe(30);
     expect(getPricelistTemplate('interior-furniture')?.itemCount).toBe(25);
-    expect(getPricelistTemplate('konstruksi-ringan')?.itemCount).toBe(35);
+    expect(getPricelistTemplate('konstruksi-ringan')?.itemCount).toBe(34);
   });
 
   it('maps template rows to importable CSV rows', () => {

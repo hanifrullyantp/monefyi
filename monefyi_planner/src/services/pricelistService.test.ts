@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupPricelistByCategory } from '../services/pricelistService';
+import { groupPricelistByCategory, groupPricelistByProduct } from '../services/pricelistService';
 import type { PricelistItem } from '../types/estimator';
 
 function mockItem(overrides: Partial<PricelistItem>): PricelistItem {
@@ -21,6 +21,22 @@ function mockItem(overrides: Partial<PricelistItem>): PricelistItem {
     ...overrides,
   };
 }
+
+describe('groupPricelistByProduct', () => {
+  it('groups items by kelompok kerja (product field)', () => {
+    const items = [
+      mockItem({ id: 'a', name: 'Kabinet Atas', product: 'Kitchen Set', category: 'borongan' }),
+      mockItem({ id: 'b', name: 'Kanopi Baja', product: 'Kanopi', category: 'borongan' }),
+      mockItem({ id: 'c', name: 'Kabinet Bawah', product: 'Kitchen Set', category: 'borongan' }),
+    ];
+    const groups = groupPricelistByProduct(items);
+    expect(groups).toHaveLength(2);
+    expect(groups[0].label).toBe('Kitchen Set');
+    expect(groups[0].items).toHaveLength(2);
+    expect(groups[1].label).toBe('Kanopi');
+    expect(groups[1].items).toHaveLength(1);
+  });
+});
 
 describe('groupPricelistByCategory', () => {
   it('groups items by category and omits empty categories', () => {
