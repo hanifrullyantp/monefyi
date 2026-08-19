@@ -66,6 +66,7 @@ export default function EstimatorForm() {
   const { tenant, user, projects, addProject } = useAppStore();
   const showToast = useUiStore(s => s.showToast);
   const navSidebarCollapsed = useAppStore(s => s.navSidebarCollapsed);
+  const setActiveTab = useAppStore(s => s.setActiveTab);
 
   const [draft, setDraft] = useState<EstimationFormDraft | null>(null);
   const [loading, setLoading] = useState(true);
@@ -138,6 +139,11 @@ export default function EstimatorForm() {
   });
 
   const scheduleAutoSave = autoSave.schedule;
+
+  const handleBackToList = useCallback(() => {
+    autoSave.discard();
+    setActiveTab('estimator');
+  }, [autoSave, setActiveTab]);
 
   useEffect(() => {
     if (!draft || isNew || isReadOnly) return;
@@ -534,7 +540,10 @@ export default function EstimatorForm() {
 
   return (
     <div className="w-full max-w-[100rem] mx-auto px-3 sm:px-5 py-4 pb-36 lg:pb-24 overflow-x-hidden">
-      <EstimatorBreadcrumb items={[{ label: isNew ? 'Baru' : draft.code }]} />
+      <EstimatorBreadcrumb
+        items={[{ label: isNew ? 'Baru' : draft.code }]}
+        onBeforeBack={handleBackToList}
+      />
 
       {isReadOnly && convertedProjectId && (
         <button
@@ -792,7 +801,10 @@ export default function EstimatorForm() {
         canRedo={draftHistory.canRedo}
         canDiscard={draftHistory.canDiscard && !isNew}
         inline
-        onCancel={() => navigate('/app/estimator')}
+        onCancel={() => {
+          handleBackToList();
+          navigate('/app/estimator');
+        }}
         onSave={handleSave}
         onUndo={handleUndo}
         onRedo={handleRedo}

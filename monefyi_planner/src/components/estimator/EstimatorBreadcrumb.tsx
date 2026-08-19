@@ -1,3 +1,4 @@
+import type { MouseEvent } from 'react';
 import { ChevronRight, ArrowLeft } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -7,22 +8,39 @@ type Props = {
   items: Crumb[];
   showBack?: boolean;
   backTo?: string;
+  /** Dipanggil sebelum navigasi (mis. batalkan auto-save). */
+  onBeforeBack?: () => void;
 };
 
-export default function EstimatorBreadcrumb({ items, showBack = true, backTo = '/app/estimator' }: Props) {
+export default function EstimatorBreadcrumb({
+  items,
+  showBack = true,
+  backTo = '/app/estimator',
+  onBeforeBack,
+}: Props) {
   const navigate = useNavigate();
 
+  const handleBack = (e: MouseEvent<HTMLAnchorElement>) => {
+    onBeforeBack?.();
+    // Fallback jika Link tidak memicu navigasi (nested route / event terblokir).
+    e.preventDefault();
+    navigate(backTo);
+  };
+
   return (
-    <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-slate-500 mb-3 flex-wrap">
+    <nav
+      aria-label="Breadcrumb"
+      className="relative z-10 flex items-center gap-1.5 text-xs text-slate-500 mb-3 flex-wrap"
+    >
       {showBack && (
-        <button
-          type="button"
-          onClick={() => navigate(backTo)}
-          className="p-1.5 -ml-1 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors shrink-0"
+        <Link
+          to={backTo}
+          onClick={handleBack}
+          className="inline-flex items-center justify-center min-w-[2.75rem] min-h-[2.75rem] -ml-1 rounded-xl text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors shrink-0"
           aria-label="Kembali ke daftar estimasi"
         >
           <ArrowLeft className="w-4 h-4" />
-        </button>
+        </Link>
       )}
       <Link to="/app/estimator" className="font-semibold hover:text-emerald-600 transition-colors">
         Estimator

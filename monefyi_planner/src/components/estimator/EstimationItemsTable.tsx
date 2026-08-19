@@ -96,9 +96,14 @@ export default function EstimationItemsTable({
     onChange([...items, emptyItem(items.length)]);
   }, [readOnly, items, onChange]);
 
+  const openPricelistPicker = useCallback(() => {
+    if (readOnly) return;
+    setPickerOpen(true);
+  }, [readOnly]);
+
   useEffect(() => {
-    onRegisterAddItem?.(addRow);
-  }, [onRegisterAddItem, addRow]);
+    onRegisterAddItem?.(openPricelistPicker);
+  }, [onRegisterAddItem, openPricelistPicker]);
   const removeRow = (index: number) => {
     if (readOnly) return;
     onChange(items.filter((_, i) => i !== index));
@@ -246,7 +251,7 @@ export default function EstimationItemsTable({
         {items.length === 0 ? (
           <div className="p-8 md:p-10 text-center space-y-4">
             <p className="text-sm font-semibold text-slate-700">Belum ada item</p>
-            <p className="text-xs text-slate-500 md:hidden">Tap <strong>Tambah Rincian</strong> di kartu atas</p>
+            <p className="text-xs text-slate-500 md:hidden">Tap <strong>Tambah Rincian</strong> di kartu atas untuk pilih dari pricelist</p>
             {!readOnly && (
               <div className="hidden md:grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto">
               {ENABLE_ESTIMATOR_SMART_INPUT && (

@@ -101,6 +101,11 @@ export default function EstimatorActionBar({
             <ArrowLeft className="w-4 h-4" />
           </IconBtn>
         )}
+        {inline && (
+          <IconBtn label="Kembali ke daftar" onClick={onCancel}>
+            <ArrowLeft className="w-4 h-4" />
+          </IconBtn>
+        )}
 
         <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
           <IconBtn label="Undo" onClick={onUndo} disabled={isReadOnly || !canUndo}>
