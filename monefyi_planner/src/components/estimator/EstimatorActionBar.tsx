@@ -91,30 +91,18 @@ export default function EstimatorActionBar({
             }`
       }
     >
-      <div className={`max-w-[100rem] mx-auto px-3 sm:px-4 py-2.5 flex items-center gap-1.5 sm:gap-2 ${inline ? 'flex-wrap' : ''}`}>
+      <div
+        className={`max-w-[100rem] mx-auto px-3 sm:px-4 py-2.5 flex flex-nowrap items-center gap-1 sm:gap-1.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden ${
+          inline ? 'min-h-[3.25rem]' : ''
+        }`}
+      >
         {!inline && (
-        <IconBtn label="Kembali" onClick={onCancel}>
-          <ArrowLeft className="w-4 h-4" />
-        </IconBtn>
+          <IconBtn label="Kembali" onClick={onCancel}>
+            <ArrowLeft className="w-4 h-4" />
+          </IconBtn>
         )}
 
-        <div className="hidden sm:flex items-center gap-1">
-          <IconBtn label="Undo" onClick={onUndo} disabled={isReadOnly || !canUndo}>
-            <Undo2 className="w-4 h-4" />
-          </IconBtn>
-          <IconBtn label="Redo" onClick={onRedo} disabled={isReadOnly || !canRedo}>
-            <Redo2 className="w-4 h-4" />
-          </IconBtn>
-          <IconBtn
-            label="Batal simpan"
-            onClick={onDiscardChanges}
-            disabled={isReadOnly || isNew || !canDiscard}
-          >
-            <RotateCcw className="w-4 h-4" />
-          </IconBtn>
-        </div>
-
-        <div className="flex sm:hidden items-center gap-0.5">
+        <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
           <IconBtn label="Undo" onClick={onUndo} disabled={isReadOnly || !canUndo}>
             <Undo2 className="w-4 h-4" />
           </IconBtn>
@@ -131,32 +119,34 @@ export default function EstimatorActionBar({
         </div>
 
         {!isNew && (
-          <div className="hidden md:block">
+          <div className="hidden md:block shrink-0">
             <AutoSaveIndicator status={autoSaveStatus} onRetry={onRetryAutoSave} />
           </div>
         )}
 
-        <div className="flex-1 min-w-2" />
+        <div className="flex-1 min-w-2 shrink" />
+
+        <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
+          <IconBtn label="WhatsApp" onClick={onWhatsApp} disabled={isNew}>
+            <MessageCircle className="w-4 h-4 text-emerald-600" />
+          </IconBtn>
+          <IconBtn label="Preview PDF" onClick={onPreviewPdf} disabled={pdfLoading || isNew}>
+            {pdfLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+          </IconBtn>
+          <IconBtn label="Download PDF" onClick={onDownloadPdf} disabled={pdfLoading || isNew}>
+            {pdfLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+          </IconBtn>
+        </div>
 
         <button
           type="button"
           onClick={onSave}
           disabled={saving || isReadOnly}
-          className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-50 shrink-0 min-w-[5.5rem]"
+          className="inline-flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-50 shrink-0 min-w-[5rem] sm:min-w-[5.5rem] ml-0.5"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           Simpan
         </button>
-
-        <IconBtn label="WhatsApp" onClick={onWhatsApp} disabled={isNew}>
-          <MessageCircle className="w-4 h-4 text-emerald-600" />
-        </IconBtn>
-        <IconBtn label="Preview PDF" onClick={onPreviewPdf} disabled={pdfLoading || isNew}>
-          {pdfLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
-        </IconBtn>
-        <IconBtn label="Download PDF" onClick={onDownloadPdf} disabled={pdfLoading || isNew}>
-          {pdfLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
-        </IconBtn>
       </div>
     </div>
   );

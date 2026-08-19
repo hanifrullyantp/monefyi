@@ -197,10 +197,14 @@ export default function EstimationItemsTable({
   return (
     <>
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden max-w-full">
+        <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/50 md:hidden">
+          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Rincian Produk</h3>
+        </div>
+
         {/* Desktop-only table header */}
         <div className="hidden md:flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 bg-slate-50/50">
           <div>
-            <h3 className="font-bold text-slate-800">Rincian Item</h3>
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Rincian Produk</h3>
             <p className="text-[11px] text-slate-600 mt-0.5">Harga jual & margin% menentukan HPP (margin = laba ÷ jual)</p>
           </div>
           <div className="flex flex-wrap gap-2">

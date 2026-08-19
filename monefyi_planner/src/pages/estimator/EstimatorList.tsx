@@ -13,6 +13,9 @@ import {
   List,
   ArrowUpDown,
   X,
+  LayoutGrid,
+  AlignJustify,
+  PanelTop,
 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
@@ -31,6 +34,12 @@ import {
   statusSortIndex,
   type EstimationGroupMode,
 } from '../../lib/estimationListGrouping';
+import {
+  ESTIMATION_LIST_VIEW_OPTIONS,
+  persistEstimationListViewMode,
+  readEstimationListViewMode,
+  type EstimationListViewMode,
+} from '../../lib/estimationListView';
 import {
   deleteEstimation,
   duplicateEstimation,
@@ -147,6 +156,7 @@ export default function EstimatorList() {
   const [statusFilter, setStatusFilter] = useState<'' | EstimationStatus>('');
   const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [groupMode, setGroupMode] = useState<EstimationGroupMode>('none');
+  const [listViewMode, setListViewMode] = useState<EstimationListViewMode>(readEstimationListViewMode);
   const [convertOpen, setConvertOpen] = useState(false);
   const [convertEstimation, setConvertEstimation] = useState<Estimation | null>(null);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
@@ -165,6 +175,20 @@ export default function EstimatorList() {
   const [statusLoadingStage, setStatusLoadingStage] = useState<EstimationWorkflowStatus | 'rejected' | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const sortRef = useRef<HTMLDivElement>(null);
+
+  const setListView = (mode: EstimationListViewMode) => {
+    setListViewMode(mode);
+    persistEstimationListViewMode(mode);
+  };
+
+  const listViewIcons: Record<EstimationListViewMode, typeof LayoutGrid> = {
+    card: LayoutGrid,
+    standard: AlignJustify,
+    detail: PanelTop,
+  };
+
+  const listRowSpacing =
+    listViewMode === 'card' ? 'space-y-2' : listViewMode === 'detail' ? 'space-y-4' : 'space-y-3';
 
   const load = useCallback(async () => {
     if (!tenant?.id) return;
@@ -394,6 +418,29 @@ export default function EstimatorList() {
           <Search className="w-4 h-4" />
         </ToolbarIconButton>
 
+        <div className="flex items-center rounded-xl border border-slate-200 bg-white p-0.5 shrink-0">
+          {ESTIMATION_LIST_VIEW_OPTIONS.map(option => {
+            const Icon = listViewIcons[option.value];
+            return (
+              <button
+                key={option.value}
+                type="button"
+                title={option.description}
+                aria-label={option.label}
+                aria-pressed={listViewMode === option.value}
+                onClick={() => setListView(option.value)}
+                className={`p-2 rounded-lg transition-colors ${
+                  listViewMode === option.value
+                    ? 'bg-emerald-50 text-emerald-700'
+                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+              </button>
+            );
+          })}
+        </div>
+
         <div className="relative" ref={sortRef}>
           <ToolbarIconButton
             label={`Urutkan & filter: ${toolbarSortLabel}`}
@@ -529,6 +576,16 @@ export default function EstimatorList() {
             );
           })}
         </select>
+        <select
+          value={listViewMode}
+          onChange={e => setListView(e.target.value as EstimationListViewMode)}
+          className="appearance-none w-40 pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 bg-white"
+          aria-label="Tampilan daftar"
+        >
+          {ESTIMATION_LIST_VIEW_OPTIONS.map(v => (
+            <option key={v.value} value={v.value}>{v.label}</option>
+          ))}
+        </select>
       </div>
 
       {loading ? (
@@ -567,11 +624,12 @@ export default function EstimatorList() {
                   <span className="text-slate-400 font-semibold normal-case ml-1.5">({group.rows.length})</span>
                 </h2>
               )}
-              <div className="space-y-3">
+              <div className={listRowSpacing}>
                 {group.rows.map(est => (
                   <EstimationCard
                     key={est.id}
                     estimation={est}
+                    viewMode={listViewMode}
                     onOpen={() => navigate(`/app/estimator/${est.id}`)}
                     onEdit={() => navigate(`/app/estimator/${est.id}`)}
                     onDuplicate={() => handleDuplicate(est.id)}
