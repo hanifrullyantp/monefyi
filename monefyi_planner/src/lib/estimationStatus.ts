@@ -245,3 +245,45 @@ export function matchesPipelineSummaryFilter(
 ): boolean {
   return getPipelineSummaryBucket(status) === filter;
 }
+
+export const PIPELINE_GROUP_ORDER: PipelineSummaryBucket[] = ['wa', 'survei', 'closing'];
+
+/** Label & tema section pipeline (sesuai mockup CRM). */
+export const PIPELINE_GROUP_META: Record<
+  PipelineSummaryBucket,
+  { title: string; sectionClass: string; headerClass: string; iconClass: string }
+> = {
+  wa: {
+    title: 'Lead Baru',
+    sectionClass: 'bg-sky-50/90 border-sky-100',
+    headerClass: 'text-sky-700',
+    iconClass: 'text-sky-600',
+  },
+  survei: {
+    title: 'Penawaran',
+    sectionClass: 'bg-violet-50/90 border-violet-100',
+    headerClass: 'text-violet-700',
+    iconClass: 'text-violet-600',
+  },
+  closing: {
+    title: 'Proyek Berjalan',
+    sectionClass: 'bg-emerald-50/90 border-emerald-100',
+    headerClass: 'text-emerald-800',
+    iconClass: 'text-emerald-700',
+  },
+};
+
+export function estimationProgressPercent(status: EstimationStatus | string): number {
+  switch (normalizeEstimationStatus(status)) {
+    case 'closing':
+      return 25;
+    case 'proses':
+      return 50;
+    case 'finishing':
+      return 75;
+    case 'selesai':
+      return 100;
+    default:
+      return 0;
+  }
+}

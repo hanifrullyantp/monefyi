@@ -30,6 +30,30 @@ export function formatRupiahFull(n: number): string {
   }).format(n);
 }
 
+/** Ringkas: Rp 45jt, Rp 850rb */
+export function formatRupiahCompact(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return 'Rp 0';
+  if (n >= 1_000_000_000) {
+    const m = n / 1_000_000_000;
+    return `Rp ${Number.isInteger(m) ? m : m.toFixed(1).replace(/\.0$/, '')}M`;
+  }
+  if (n >= 1_000_000) {
+    return `Rp ${Math.round(n / 1_000_000)}jt`;
+  }
+  if (n >= 1_000) {
+    return `Rp ${Math.round(n / 1_000)}rb`;
+  }
+  return formatRupiahFull(n);
+}
+
+/** Hari sejak tanggal ISO (minimum 0). */
+export function daysSinceIso(iso: string | null | undefined): number {
+  if (!iso) return 0;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return 0;
+  return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86_400_000));
+}
+
 /** Indonesian date: 16 Mei 2026 */
 export function formatDateId(iso: string | Date): string {
   const d = typeof iso === 'string' ? new Date(iso) : iso;

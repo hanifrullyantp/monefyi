@@ -20,7 +20,7 @@ import {
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
 import EstimationCard from '../../components/estimator/EstimationCard';
-import EstimationPipelineSummary from '../../components/estimator/EstimationPipelineSummary';
+import EstimationPipelineGroupList, { buildPipelineGroups } from '../../components/estimator/EstimationPipelineGroupList';
 import ConvertEstimationWizard from '../../components/estimator/ConvertEstimationWizard';
 import EstimatorOnboardingWizard from '../../components/estimator/EstimatorOnboardingWizard';
 import ShareWhatsAppModal from '../../components/estimator/ShareWhatsAppModal';
@@ -28,7 +28,7 @@ import PostPurchaseBanner, {
   dismissPostPurchaseBanner,
   readPostPurchaseBanner,
 } from '../../components/entitlement/PostPurchaseBanner';
-import { countEstimationsByStatus, countEstimationsByPipelineSummary, matchesPipelineSummaryFilter, normalizeEstimationStatus, type PipelineSummaryBucket } from '../../lib/estimationStatus';
+import { countEstimationsByStatus, matchesPipelineSummaryFilter, normalizeEstimationStatus, type PipelineSummaryBucket } from '../../lib/estimationStatus';
 import {
   groupEstimationsForList,
   statusSortIndex,
@@ -227,7 +227,6 @@ export default function EstimatorList() {
   }, []);
 
   const statusCounts = useMemo(() => countEstimationsByStatus(rows), [rows]);
-  const pipelineSummaryCounts = useMemo(() => countEstimationsByPipelineSummary(rows), [rows]);
 
   const filteredRows = useMemo(() => {
     if (statusFilter) {
@@ -244,6 +243,16 @@ export default function EstimatorList() {
   const groupedRows = useMemo(
     () => groupEstimationsForList(sortedRows, groupMode),
     [sortedRows, groupMode],
+  );
+
+  const pipelineGroups = useMemo(() => buildPipelineGroups(sortedRows), [sortedRows]);
+
+  const archiveRows = useMemo(
+    () => sortedRows.filter(r => {
+      const s = normalizeEstimationStatus(r.status);
+      return s === 'rejected' || s === 'converted';
+    }),
+    [sortedRows],
   );
 
   const activeFilterLabel = STATUS_FILTERS.find(f => f.value === statusFilter)?.label
@@ -374,6 +383,23 @@ export default function EstimatorList() {
     load();
   };
 
+  const renderEstimationCard = (est: Estimation) => (
+    <EstimationCard
+      key={est.id}
+      estimation={est}
+      viewMode={listViewMode}
+      onOpen={() => navigate(`/app/estimator/${est.id}`)}
+      onEdit={() => navigate(`/app/estimator/${est.id}`)}
+      onDuplicate={() => handleDuplicate(est.id)}
+      onDelete={() => handleDelete(est.id, est.title)}
+      onConvert={() => handleConvert(est.id)}
+      onShareWhatsApp={() => handleShareWhatsApp(est.id)}
+      onStatusChange={next => handleStatusChange(est.id, next)}
+      statusLoading={statusUpdatingId === est.id ? statusLoadingStage : null}
+      waLoading={waLoadingId === est.id}
+    />
+  );
+
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 pb-24 lg:pb-6">
       {postPurchaseProduct && (
@@ -402,15 +428,6 @@ export default function EstimatorList() {
           <span className="hidden min-[420px]:inline">Estimasi Baru</span>
         </button>
       </div>
-
-      <EstimationPipelineSummary
-        counts={pipelineSummaryCounts}
-        activePipelineFilter={pipelineFilter}
-        onSelect={bucket => {
-          setPipelineFilter(bucket);
-          if (bucket) setStatusFilter('');
-        }}
-      />
 
       {/* Icon toolbar */}
       <div className="flex items-center gap-1.5 mb-3">
@@ -633,34 +650,46 @@ export default function EstimatorList() {
         </motion.div>
       ) : (
         <div className="space-y-4">
-          {groupedRows.map(group => (
-            <div key={group.key}>
-              {groupMode !== 'none' && group.label && (
-                <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 px-1">
-                  {group.label}
-                  <span className="text-slate-400 font-semibold normal-case ml-1.5">({group.rows.length})</span>
-                </h2>
+          {groupMode === 'none' ? (
+            <>
+              {(pipelineGroups.length > 0 || pipelineFilter) && (
+                <EstimationPipelineGroupList
+                  groups={pipelineGroups}
+                  activePipelineFilter={pipelineFilter}
+                  onToggleFilter={bucket => {
+                    setPipelineFilter(bucket);
+                    if (bucket) setStatusFilter('');
+                  }}
+                  onOpen={id => navigate(`/app/estimator/${id}`)}
+                  onFollowUp={id => handleShareWhatsApp(id)}
+                />
               )}
-              <div className={listRowSpacing}>
-                {group.rows.map(est => (
-                  <EstimationCard
-                    key={est.id}
-                    estimation={est}
-                    viewMode={listViewMode}
-                    onOpen={() => navigate(`/app/estimator/${est.id}`)}
-                    onEdit={() => navigate(`/app/estimator/${est.id}`)}
-                    onDuplicate={() => handleDuplicate(est.id)}
-                    onDelete={() => handleDelete(est.id, est.title)}
-                    onConvert={() => handleConvert(est.id)}
-                    onShareWhatsApp={() => handleShareWhatsApp(est.id)}
-                    onStatusChange={next => handleStatusChange(est.id, next)}
-                    statusLoading={statusUpdatingId === est.id ? statusLoadingStage : null}
-                    waLoading={waLoadingId === est.id}
-                  />
-                ))}
+              {archiveRows.length > 0 && !pipelineFilter && (
+                <section className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3 sm:p-4">
+                  <h2 className="text-xs font-black text-slate-500 uppercase tracking-wide mb-2.5 px-1">
+                    Arsip · {archiveRows.length}
+                  </h2>
+                  <div className={listRowSpacing}>
+                    {archiveRows.map(est => renderEstimationCard(est))}
+                  </div>
+                </section>
+              )}
+            </>
+          ) : (
+            groupedRows.map(group => (
+              <div key={group.key}>
+                {group.label && (
+                  <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 px-1">
+                    {group.label}
+                    <span className="text-slate-400 font-semibold normal-case ml-1.5">({group.rows.length})</span>
+                  </h2>
+                )}
+                <div className={listRowSpacing}>
+                  {group.rows.map(est => renderEstimationCard(est))}
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       )}
 
