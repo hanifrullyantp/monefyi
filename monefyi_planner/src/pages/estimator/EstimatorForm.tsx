@@ -73,7 +73,7 @@ export default function EstimatorForm() {
   const [detailOpen, setDetailOpen] = useState(false);
   const draftRef = useRef<EstimationFormDraft | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [summaryOpen, setSummaryOpen] = useState(true);
+  const [summaryOpen, setSummaryOpen] = useState(false);
   const addItemRef = useRef<(() => void) | null>(null);
   const registerAddItem = useCallback((fn: () => void) => {
     addItemRef.current = fn;
@@ -599,10 +599,7 @@ export default function EstimatorForm() {
                 disabled={isReadOnly}
                 className="w-full text-xl sm:text-2xl font-black bg-transparent border-0 border-b border-transparent hover:border-white/30 focus:border-white outline-none py-0.5 placeholder:text-emerald-100/60 disabled:opacity-70 text-white"
               />
-              <div className="mt-2 flex items-end justify-between gap-3">
-                <div className="min-w-0 text-sm text-emerald-50/85 truncate">
-                  {draft.customer_name || 'Belum ada klien'}
-                </div>
+              <div className="mt-2 flex items-end justify-end gap-3">
                 <div className="text-lg sm:text-xl font-black tabular-nums shrink-0">
                   {formatRupiahFull(summaryTotal)}
                 </div>

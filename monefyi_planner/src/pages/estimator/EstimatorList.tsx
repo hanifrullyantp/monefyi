@@ -19,6 +19,7 @@ import {
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
 import EstimationCard from '../../components/estimator/EstimationCard';
+import EstimationPipelineSummary from '../../components/estimator/EstimationPipelineSummary';
 import ConvertEstimationWizard from '../../components/estimator/ConvertEstimationWizard';
 import EstimatorOnboardingWizard from '../../components/estimator/EstimatorOnboardingWizard';
 import ShareWhatsAppModal from '../../components/estimator/ShareWhatsAppModal';
@@ -472,6 +473,16 @@ export default function EstimatorList() {
           <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
         </div>
       </div>
+
+      <EstimationPipelineSummary
+        counts={{
+          wa: statusCounts.wa,
+          survei: statusCounts.survei,
+          closing: statusCounts.closing,
+        }}
+        activeStatus={statusFilter}
+        onSelect={status => setStatusFilter(status)}
+      />
 
       {/* Status chips — compact on mobile */}
       <div className="flex gap-2 overflow-x-auto mb-4 pb-1 -mx-1 px-1 scrollbar-none">
