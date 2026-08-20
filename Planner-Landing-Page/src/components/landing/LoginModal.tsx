@@ -11,10 +11,12 @@ import {
 } from "@/components/ui/dialog";
 import { useUiStore } from "@/lib/store/uiStore";
 import { useAuthStore } from "@/lib/store/authStore";
+import { saveSession } from "@/lib/utils/auth";
 
 export function LoginModal() {
   const { isLoginModalOpen, setLoginModalOpen } = useUiStore();
   const login = useAuthStore((s) => s.login);
+  const setIsAdmin = useUiStore((s) => s.setIsAdmin);
   const [email, setEmail] = useState("user@monefyi.com");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -34,6 +36,10 @@ export function LoginModal() {
     if (!result.success) {
       setError(result.error ?? "Login gagal.");
       return;
+    }
+    if (result.user?.isAdmin) {
+      saveSession();
+      setIsAdmin(true);
     }
     setLoginModalOpen(false);
     setPassword("");
@@ -89,7 +95,7 @@ export function LoginModal() {
         </form>
 
         <p className="mt-4 text-center text-xs text-slate-500">
-          Demo: <strong>user@monefyi.com</strong> / password123
+          Demo: <strong>user@monefyi.com</strong> / password123 · Admin: <strong>hanif.rullyant@gmail.com</strong>
         </p>
 
         <button

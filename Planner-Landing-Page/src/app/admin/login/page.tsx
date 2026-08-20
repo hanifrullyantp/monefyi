@@ -1,11 +1,16 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Lock } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { saveSession } from "@/lib/utils/auth";
+import { useUiStore } from "@/lib/store/uiStore";
+import { useAuthStore } from "@/lib/store/authStore";
 
 export default function AdminLoginPage() {
   const router = useRouter();
+  const setIsAdmin = useUiStore((s) => s.setIsAdmin);
+  const authLogin = useAuthStore((s) => s.login);
+  const [email, setEmail] = useState("hanif.rullyant@gmail.com");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
@@ -20,14 +25,29 @@ export default function AdminLoginPage() {
       const res = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ email, password }),
       });
 
       if (res.ok) {
         saveSession();
+        authLogin(email, password);
+        setIsAdmin(true);
+        router.push("/admin");
+        return;
+      }
+
+      const legacy = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+
+      if (legacy.ok) {
+        saveSession();
+        setIsAdmin(true);
         router.push("/admin");
       } else {
-        setError("Password salah. Coba lagi.");
+        setError("Email atau password salah.");
       }
     } catch {
       setError("Terjadi kesalahan. Coba lagi.");
@@ -49,8 +69,29 @@ export default function AdminLoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
+              <label className="text-sm font-semibold text-slate-700 block mb-2" htmlFor="email">
+                Email Admin
+              </label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2">
+                  <Mail className="w-4 h-4 text-slate-400" />
+                </div>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3.5 rounded-xl border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                  placeholder="email@contoh.com"
+                  required
+                  autoComplete="email"
+                />
+              </div>
+            </div>
+
+            <div>
               <label className="text-sm font-semibold text-slate-700 block mb-2" htmlFor="password">
-                Password Admin
+                Password
               </label>
               <div className="relative">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2">
@@ -62,7 +103,7 @@ export default function AdminLoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-10 pr-12 py-3.5 rounded-xl border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                  placeholder="Masukkan password"
+                  placeholder="••••••••••"
                   required
                   autoComplete="current-password"
                 />
@@ -77,9 +118,7 @@ export default function AdminLoginPage() {
               </div>
             </div>
 
-            {error && (
-              <p className="text-red-600 text-sm font-medium">{error}</p>
-            )}
+            {error && <p className="text-red-600 text-sm font-medium">{error}</p>}
 
             <button
               type="submit"
