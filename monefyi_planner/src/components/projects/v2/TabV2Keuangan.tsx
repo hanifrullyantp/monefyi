@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   Wallet, CreditCard, TrendingUp, Receipt, FileCheck, Info, Lock,
-  Plus, ArrowLeftRight,
+  Plus, ArrowLeftRight, FileText,
 } from 'lucide-react';
 import type { NormalizedProjectView } from '../../../lib/migration/project-normalize';
 import type { BalanceCheckResult } from '../../../lib/migration/balance-sheet';
@@ -15,7 +15,12 @@ import ProgressBarLg from '../../sandbox-ui/ProgressBarLg';
 import CardPopup from '../../migration/CardPopup';
 import ProjectTransactionModals, { type ModalKind } from './ProjectTransactionModals';
 import ProjectCloseFinanceWizard from '../../finance-v2/ProjectCloseFinanceWizard';
+import ProformaInvoiceModal from '../ProformaInvoiceModal';
 import { buildProjectPopupConfig, type ProjectPopupKind } from './project-popup-config';
+import { useAppStore } from '../../../store/appStore';
+import { showToast } from '../../../store/uiStore';
+import { loadPdfSettings } from '../../../services/pdfSettingsService';
+import type { PdfSettings } from '../../../types/pdfSettings';
 
 type Props = {
   normalized: NormalizedProjectView;
@@ -32,9 +37,30 @@ type Props = {
 export default function TabV2Keuangan({
   normalized, balanceCheck, onOpenDiagnosis, project, orgId, userId, canManage, onRefresh, onEditProject,
 }: Props) {
+  const tenant = useAppStore(s => s.tenant);
   const [modal, setModal] = useState<ModalKind>(null);
   const [popup, setPopup] = useState<ProjectPopupKind | null>(null);
   const [closeWizardOpen, setCloseWizardOpen] = useState(false);
+  const [proformaOpen, setProformaOpen] = useState(false);
+  const [pdfSettings, setPdfSettings] = useState<PdfSettings | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  const openProforma = useCallback(async () => {
+    if (!tenant?.id) {
+      showToast('Organisasi belum dimuat', 'error');
+      return;
+    }
+    setPdfLoading(true);
+    try {
+      const settings = await loadPdfSettings(tenant.id, tenant.name);
+      setPdfSettings(settings);
+      setProformaOpen(true);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal memuat pengaturan PDF', 'error');
+    } finally {
+      setPdfLoading(false);
+    }
+  }, [tenant?.id, tenant?.name]);
   const p = normalized.project;
   const hutang = p.budget.hutang || 0;
   const piutang = p.budget.piutang || 0;
@@ -233,6 +259,12 @@ export default function TabV2Keuangan({
       <BottomActionBar
         actions={[
           { label: 'Edit Project', onClick: () => onEditProject?.() },
+          {
+            label: pdfLoading ? 'Memuat PDF…' : 'Proforma Invoice',
+            icon: <FileText className="w-4 h-4" />,
+            onClick: openProforma,
+            disabled: pdfLoading || p.contractValue <= 0,
+          },
           { label: 'Tambah Transaksi', icon: <Plus className="w-4 h-4" />, onClick: () => setModal('income') },
           { label: 'Transfer', icon: <ArrowLeftRight className="w-4 h-4" />, onClick: () => setModal('transfer'), variant: 'primary' },
         ]}
@@ -302,6 +334,17 @@ export default function TabV2Keuangan({
         userId={userId}
         onSuccess={onRefresh}
       />
+
+      {proformaOpen && pdfSettings && (
+        <ProformaInvoiceModal
+          open={proformaOpen}
+          project={project}
+          normalized={normalized}
+          settings={pdfSettings}
+          onClose={() => setProformaOpen(false)}
+          onToast={showToast}
+        />
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ type Action = {
   icon?: ReactNode;
   onClick: () => void;
   variant?: 'primary' | 'outline';
+  disabled?: boolean;
 };
 
 type Props = {
@@ -19,7 +20,8 @@ export default function BottomActionBar({ actions }: Props) {
           key={i}
           type="button"
           onClick={a.onClick}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold ${
+          disabled={a.disabled}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold disabled:opacity-50 disabled:pointer-events-none ${
             a.variant === 'primary'
               ? 'bg-emerald-600 text-white hover:bg-emerald-700'
               : 'bg-slate-100 text-slate-700 hover:bg-slate-200/80'
