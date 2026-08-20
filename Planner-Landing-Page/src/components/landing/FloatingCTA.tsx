@@ -2,10 +2,10 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { useContentStore } from "@/lib/store/contentStore";
+import { useLandingCta } from "@/lib/hooks/useLandingCta";
 
 export function FloatingCTA() {
-  const { content } = useContentStore();
+  const { label, handleCtaClick } = useLandingCta();
   const [visible, setVisible] = useState(false);
   const pricingRef = useRef<Element | null>(null);
 
@@ -17,7 +17,6 @@ export function FloatingCTA() {
       const scrollY = window.scrollY;
       const afterHero = scrollY > heroHeight;
 
-      // Cek apakah pricing section terlihat
       if (pricingRef.current) {
         const rect = pricingRef.current.getBoundingClientRect();
         const pricingVisible = rect.top < window.innerHeight && rect.bottom > 0;
@@ -31,23 +30,19 @@ export function FloatingCTA() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const scrollToPricing = () => {
-    const el = document.getElementById("harga");
-    if (el) el.scrollIntoView({ behavior: "smooth" });
-  };
-
   return (
     <div
       className={cn(
         "fixed bottom-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300",
-        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8 pointer-events-none"
+        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8 pointer-events-none",
       )}
     >
       <button
-        onClick={scrollToPricing}
+        type="button"
+        onClick={handleCtaClick}
         className="bg-slate-900 text-white shadow-2xl rounded-full px-6 py-3 font-semibold text-sm inline-flex items-center gap-2 hover:bg-slate-800 transition-colors whitespace-nowrap"
       >
-        {content.pricing.plans[1]?.cta.text ?? "Ambil Estimator Pro"} — {content.pricing.plans[1]?.priceDisplay ?? "Rp 149.000"}
+        {label}
         <ArrowRight className="w-4 h-4" />
       </button>
     </div>

@@ -12,6 +12,12 @@ interface UiState {
   setIsAdmin: (isAdmin: boolean) => void;
   inlineEditMode: boolean;
   setInlineEditMode: (mode: boolean) => void;
+  isLoginModalOpen: boolean;
+  setLoginModalOpen: (open: boolean) => void;
+  isUpsellModalOpen: boolean;
+  upsellMessage: string;
+  setUpsellModalOpen: (open: boolean) => void;
+  openUpsell: (message?: string) => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -25,4 +31,11 @@ export const useUiStore = create<UiState>((set) => ({
   setIsAdmin: (isAdmin) => set({ isAdmin }),
   inlineEditMode: false,
   setInlineEditMode: (mode) => set({ inlineEditMode: mode }),
+  isLoginModalOpen: false,
+  setLoginModalOpen: (open) => set({ isLoginModalOpen: open }),
+  isUpsellModalOpen: false,
+  upsellMessage: "",
+  setUpsellModalOpen: (open) => set({ isUpsellModalOpen: open }),
+  openUpsell: (message) =>
+    set({ isUpsellModalOpen: true, upsellMessage: message ?? "" }),
 }));

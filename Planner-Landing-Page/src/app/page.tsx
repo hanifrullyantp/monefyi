@@ -19,6 +19,8 @@ import { ScrollProgress } from "@/components/landing/ScrollProgress";
 import { BackToTop } from "@/components/landing/BackToTop";
 import { AdminBar } from "@/components/landing/AdminBar";
 import { Editable } from "@/components/landing/Editable";
+import { LoginModal } from "@/components/landing/LoginModal";
+import { UpsellModal } from "@/components/shared/UpsellModal";
 import { useUiStore } from "@/lib/store/uiStore";
 
 export default function HomePage() {
@@ -100,6 +102,8 @@ export default function HomePage() {
       <ToastNotification />
       <FloatingCTA />
       <BackToTop />
+      <LoginModal />
+      <UpsellModal />
     </div>
   );
 }

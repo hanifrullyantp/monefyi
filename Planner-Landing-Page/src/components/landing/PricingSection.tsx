@@ -3,12 +3,13 @@ import { Check, ShieldCheck, Sparkles, ArrowRight } from "lucide-react";
 import { useContentStore } from "@/lib/store/contentStore";
 import { useInView } from "@/lib/hooks/useInView";
 import { cn } from "@/lib/utils/cn";
-import { plannerAppPath } from "@/lib/config/plannerApp";
+import { useLandingCta } from "@/lib/hooks/useLandingCta";
 
 export function PricingSection() {
   const { content } = useContentStore();
   const { pricing } = content;
   const [ref, inView] = useInView<HTMLDivElement>({ threshold: 0.1 });
+  const { label, handleCtaClick } = useLandingCta();
 
   return (
     <section id="harga" className="py-24 md:py-32 bg-slate-50">
@@ -105,17 +106,18 @@ export function PricingSection() {
 
                 {/* CTA Button */}
                 <div className="mt-10">
-                  <a
-                    href={plannerAppPath("/signup/owner")}
+                  <button
+                    type="button"
+                    onClick={handleCtaClick}
                     className={cn(
                       "block w-full text-center rounded-xl py-4 font-semibold transition-all duration-200",
                       plan.cta.variant === "primary"
                         ? "bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/30"
-                        : "bg-white border-2 border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white"
+                        : "bg-white border-2 border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white",
                     )}
                   >
-                    {plan.cta.text}
-                  </a>
+                    {label}
+                  </button>
                 </div>
               </div>
             );

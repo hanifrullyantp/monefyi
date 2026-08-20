@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useContentStore } from "@/lib/store/contentStore";
 import { InlineText } from "./InlineEditors";
+import { useLandingCta } from "@/lib/hooks/useLandingCta";
 import type { Transition } from "framer-motion";
 
 const easeOut: Transition = { duration: 0.5, ease: [0.0, 0.0, 0.2, 1.0] };
@@ -25,12 +26,7 @@ const fadeUp = (delay = 0) => ({
 export function HeroSection() {
   const { content } = useContentStore();
   const { hero } = content;
-
-  const scrollTo = (target: string) => {
-    const id = target.replace("#", "");
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: "smooth" });
-  };
+  const { label, handleCtaClick } = useLandingCta();
 
   return (
     <section
@@ -111,10 +107,11 @@ export function HeroSection() {
             {/* CTA */}
             <motion.div {...fadeUp(0.45)} className="mt-10">
               <button
-                onClick={() => scrollTo(hero.ctaTarget)}
+                type="button"
+                onClick={handleCtaClick}
                 className="group bg-slate-900 hover:bg-slate-800 text-white rounded-xl px-8 py-4 font-semibold text-base shadow-xl shadow-slate-900/20 inline-flex items-center gap-2 transition-all duration-200"
               >
-                {hero.ctaText}
+                {label}
                 <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
               </button>
             </motion.div>
