@@ -1,15 +1,32 @@
 import type { NextConfig } from "next";
 
-const plannerAppOrigin = (
-  process.env.PLANNER_APP_ORIGIN || "https://planner.monefyi.com"
-).replace(/\/$/, "");
+/** Landing v1 — served at planner.monefyi.com/lp2 via planner-lp2 rewrites. */
+const basePath = (process.env.NEXT_PUBLIC_BASE_PATH || "/lp2").replace(/\/$/, "") || "/lp2";
+
+function resolvePlannerAppOrigin(): string {
+  const raw =
+    process.env.PLANNER_APP_ORIGIN?.trim() ||
+    process.env.NEXT_PUBLIC_PLANNER_APP_URL?.trim() ||
+    "https://monefyi-planner.vercel.app";
+  const normalized = raw.replace(/\/$/, "");
+  if (normalized.includes("SENSITIVE")) return "https://monefyi-planner.vercel.app";
+  return normalized.startsWith("http") ? normalized : `https://${normalized}`;
+}
+
+const plannerAppOrigin = resolvePlannerAppOrigin();
+const publicPlannerUrl =
+  process.env.NEXT_PUBLIC_PLANNER_APP_URL?.trim()?.replace(/\/$/, "") ||
+  "https://planner.monefyi.com";
 
 const nextConfig: NextConfig = {
+  basePath,
+  assetPrefix: basePath,
   turbopack: {
     root: __dirname,
   },
   env: {
-    NEXT_PUBLIC_PLANNER_APP_URL: plannerAppOrigin,
+    NEXT_PUBLIC_PLANNER_APP_URL: publicPlannerUrl,
+    NEXT_PUBLIC_BASE_PATH: basePath,
   },
   async rewrites() {
     return [

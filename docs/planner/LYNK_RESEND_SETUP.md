@@ -1,5 +1,13 @@
 # Lynk.id + Resend — Setup Manual (Planner)
 
+## URL map (production)
+
+| Vercel project | Public URL |
+|----------------|------------|
+| `planner-lp2` | `https://planner.monefyi.com` (landing utama) |
+| `planner-landing` | `https://planner.monefyi.com/lp2` (landing v1, `basePath=/lp2`) |
+| `monefyi-planner` | `https://planner.monefyi.com/app` (SPA, via rewrite) |
+
 ## Lynk store Planner (terpisah dari Finance)
 
 1. Buat store baru di [Lynk.id](https://lynk.id) (jangan pakai store `asfin-ai` Finance).

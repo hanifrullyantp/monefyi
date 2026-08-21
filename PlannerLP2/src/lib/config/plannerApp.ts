@@ -1,4 +1,4 @@
-/** Base URL aplikasi Planner (login, signup, /app). */
+/** Public site origin (landing root). App lives at /app on same host. */
 export function getPlannerAppOrigin(): string {
   const fromEnv = process.env.NEXT_PUBLIC_PLANNER_APP_URL?.replace(/\/$/, "");
   if (fromEnv) return fromEnv;

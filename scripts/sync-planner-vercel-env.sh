@@ -32,8 +32,11 @@ if [[ -f "$SPA_ENV" ]]; then
 fi
 
 PLANNER_ADMIN_PASSWORD="${PLANNER_ADMIN_PASSWORD:-${ADMIN_PASSWORD:-monefyi2026}}"
-PLANNER_APP_ORIGIN="${PLANNER_APP_ORIGIN:-https://app.planner.monefyi.com}"
-NEXT_PUBLIC_PLANNER_APP_URL="${NEXT_PUBLIC_PLANNER_APP_URL:-$PLANNER_APP_ORIGIN}"
+PLANNER_APP_ORIGIN="${PLANNER_APP_ORIGIN:-https://monefyi-planner.vercel.app}"
+NEXT_PUBLIC_PLANNER_APP_URL="${NEXT_PUBLIC_PLANNER_APP_URL:-https://planner.monefyi.com}"
+PLANNER_LANDING_ORIGIN="${PLANNER_LANDING_ORIGIN:-https://planner-landing-henna.vercel.app}"
+PLANNER_LANDING_BASE_PATH="${PLANNER_LANDING_BASE_PATH:-/lp2}"
+NEXT_PUBLIC_BASE_PATH="${NEXT_PUBLIC_BASE_PATH:-/lp2}"
 
 add_env() {
   local key="$1"
@@ -43,13 +46,29 @@ add_env() {
   echo "  $key"
 }
 
-sync_landing() {
-  local dir="$1"
-  local label="$2"
-  echo "==> $label"
+sync_landing_v1() {
+  echo "==> planner-landing (/lp2)"
   (
-    cd "$dir"
+    cd "$ROOT/Planner-Landing-Page"
     add_env ADMIN_PASSWORD "$PLANNER_ADMIN_PASSWORD"
+    add_env NEXT_PUBLIC_BASE_PATH "$NEXT_PUBLIC_BASE_PATH"
+    add_env PLANNER_APP_ORIGIN "$PLANNER_APP_ORIGIN"
+    add_env NEXT_PUBLIC_PLANNER_APP_URL "$NEXT_PUBLIC_PLANNER_APP_URL"
+    add_env NEXT_PUBLIC_SUPABASE_URL "${NEXT_PUBLIC_SUPABASE_URL:-}"
+    add_env NEXT_PUBLIC_SUPABASE_ANON_KEY "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}"
+    add_env NEXT_PUBLIC_LYNK_ESTIMATOR_STANDARD "${NEXT_PUBLIC_LYNK_ESTIMATOR_STANDARD:-}"
+    add_env NEXT_PUBLIC_LYNK_ESTIMATOR_PRO "${NEXT_PUBLIC_LYNK_ESTIMATOR_PRO:-}"
+    add_env NEXT_PUBLIC_LYNK_PLANNER_PRO "${NEXT_PUBLIC_LYNK_PLANNER_PRO:-}"
+  )
+}
+
+sync_landing_root() {
+  echo "==> planner-lp2 (planner.monefyi.com)"
+  (
+    cd "$ROOT/PlannerLP2"
+    add_env ADMIN_PASSWORD "$PLANNER_ADMIN_PASSWORD"
+    add_env PLANNER_LANDING_ORIGIN "$PLANNER_LANDING_ORIGIN"
+    add_env PLANNER_LANDING_BASE_PATH "$PLANNER_LANDING_BASE_PATH"
     add_env PLANNER_APP_ORIGIN "$PLANNER_APP_ORIGIN"
     add_env NEXT_PUBLIC_PLANNER_APP_URL "$NEXT_PUBLIC_PLANNER_APP_URL"
     add_env NEXT_PUBLIC_SUPABASE_URL "${NEXT_PUBLIC_SUPABASE_URL:-}"
@@ -72,8 +91,8 @@ sync_spa() {
   )
 }
 
-sync_landing "$ROOT/Planner-Landing-Page" "planner-landing"
-sync_landing "$ROOT/PlannerLP2" "planner-lp2"
+sync_landing_v1
+sync_landing_root
 sync_spa
 
 echo "Done. Redeploy projects if env changed."

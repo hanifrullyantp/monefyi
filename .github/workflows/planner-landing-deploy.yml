@@ -33,8 +33,10 @@ jobs:
         run: npm run build
         env:
           ADMIN_PASSWORD: ci-build-only
-          PLANNER_APP_ORIGIN: https://app.planner.monefyi.com
-          NEXT_PUBLIC_PLANNER_APP_URL: https://app.planner.monefyi.com
+          NEXT_PUBLIC_BASE_PATH: /lp2
+          PLANNER_APP_ORIGIN: https://monefyi-planner.vercel.app
+          NEXT_PUBLIC_PLANNER_APP_URL: https://planner.monefyi.com
+          PLANNER_LANDING_ORIGIN: https://planner-landing.vercel.app
 
       - name: Deploy to Vercel
         if: github.ref == 'refs/heads/main'
