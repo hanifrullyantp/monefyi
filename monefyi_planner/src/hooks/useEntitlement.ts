@@ -17,6 +17,9 @@ const CACHE_MS = 60_000;
 
 export function invalidateEntitlementCache(): void {
   cache = null;
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('monefyi:entitlement-invalidate'));
+  }
 }
 
 export function useEntitlement() {
@@ -76,9 +79,13 @@ export function useEntitlement() {
   }, [refresh]);
 
   useEffect(() => {
-    const onFocus = () => { void refresh(); };
-    window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
+    const onRefresh = () => { void refresh(); };
+    window.addEventListener('focus', onRefresh);
+    window.addEventListener('monefyi:entitlement-invalidate', onRefresh);
+    return () => {
+      window.removeEventListener('focus', onRefresh);
+      window.removeEventListener('monefyi:entitlement-invalidate', onRefresh);
+    };
   }, [refresh]);
 
   return { ...entitlement, isLoading, refresh };

@@ -1,63 +1,50 @@
 "use client";
 import { useState } from "react";
-import { useContentStore } from "@/lib/store/contentStore";
-import { PageHeader } from "@/components/admin/PageHeader";
-import { SaveIndicator } from "@/components/admin/SaveIndicator";
-import { Save, RotateCcw, Edit3, Info, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { useContentStore } from "@/lib/store/contentStore";
+import { SaveIndicator } from "@/components/admin/SaveIndicator";
 import { cn } from "@/lib/utils/cn";
+import { useAdminContentSave, type SaveStatus } from "@/lib/hooks/useAdminContentSave";
+
+const TABS = ["Hero", "Navbar", "Final CTA", "Visibilitas Section"] as const;
 
 export default function KontenPage() {
-  const { content, save, updateSection } = useContentStore();
-  const [activeTab, setActiveTab] = useState("Hero & video");
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-
-  const [heroData, setHeroData] = useState({
-    badge: "WOCENSA",
-    titleLine1: "Waterproof",
-    titleAccent: "Kitchen Set",
-    subtitle: "1x buat, pakai selamanya",
-    description: "Kitchen set tahan air = dapur bunda bebas rayap, warna awet, dan tahan lama",
-    primaryCta: "KONSULTASI WA",
-    secondaryCta: "LIHAT KEUNGGULAN",
-    primaryCtaHref: "/pricelist",
-    secondaryCtaHref: "#solusi",
-    videoUrl: "https://youtube.com/shorts/Vlw6rBtOkC8",
-  });
+  const { content } = useContentStore();
+  const { persistSection } = useAdminContentSave();
+  const [tab, setTab] = useState<(typeof TABS)[number]>("Hero");
+  const [hero, setHero] = useState(content.hero);
+  const [navbar, setNavbar] = useState(content.navbar);
+  const [finalCta, setFinalCta] = useState(content.finalCta);
+  const [visibility, setVisibility] = useState(content.sectionVisibility);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
 
   const handleSave = () => {
     setSaveStatus("saving");
-    setTimeout(() => {
-      setSaveStatus("saved");
-      setTimeout(() => setSaveStatus("idle"), 3000);
-    }, 500);
+    if (tab === "Hero") persistSection("hero", hero, setSaveStatus);
+    else if (tab === "Navbar") persistSection("navbar", navbar, setSaveStatus);
+    else if (tab === "Final CTA") persistSection("finalCta", finalCta, setSaveStatus);
+    else persistSection("sectionVisibility", visibility, setSaveStatus);
   };
 
-  const tabs = ["Hero & video", "Problem", "Solusi", "Galeri proyek", "Detail produk", "Proses (5 step)", "Bonus", "Harga & promo", "CTA & sticky"];
-
   return (
-    <div className="max-w-6xl pb-20">
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-3xl font-extrabold text-slate-900">Konten landing (visual)</h2>
-      </div>
-      <p className="text-slate-500 text-sm mb-8 leading-relaxed">
-        Edit seperti CMS: unggah gambar, tempel URL YouTube, tanpa menyentuh JSON. Untuk tabel perbandingan, urgency HTML, dan halaman kompleks lainnya gunakan <Link href="/admin/konten-json" className="text-blue-600 font-bold hover:underline">mode JSON lanjutan</Link>.
+    <div className="max-w-4xl pb-20">
+      <h2 className="text-3xl font-extrabold text-slate-900 mb-2">Konten Landing Page</h2>
+      <p className="text-sm text-slate-500 mb-6">
+        Edit section yang tampil di landing. Untuk section lain gunakan{" "}
+        <Link href="/admin/pricing" className="text-emerald-600 font-semibold hover:underline">Pricing</Link>,{" "}
+        <Link href="/admin/testimonial" className="text-emerald-600 font-semibold hover:underline">Testimonial</Link>, atau{" "}
+        <Link href="/admin/konten-json" className="text-emerald-600 font-semibold hover:underline">JSON Editor</Link>.
       </p>
 
-      <div className="flex items-center gap-4 mb-8">
-        <button onClick={handleSave} className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold text-sm hover:bg-slate-800 transition-all shadow-lg">Simpan perubahan</button>
-        <button className="text-slate-400 hover:text-slate-600 text-sm underline decoration-slate-200">tutup pesan</button>
-        <SaveIndicator status={saveStatus} className="ml-auto" />
-      </div>
-
-      <div className="flex flex-wrap gap-2 mb-8">
-        {tabs.map(t => (
+      <div className="flex flex-wrap gap-2 mb-6">
+        {TABS.map((t) => (
           <button
             key={t}
-            onClick={() => setActiveTab(t)}
+            type="button"
+            onClick={() => setTab(t)}
             className={cn(
-              "px-4 py-2.5 rounded-xl text-xs font-bold transition-all border",
-              activeTab === t ? "bg-orange-500 text-white border-orange-500" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+              "px-4 py-2 rounded-xl text-sm font-bold border transition-all",
+              tab === t ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-slate-600 border-slate-200",
             )}
           >
             {t}
@@ -65,67 +52,95 @@ export default function KontenPage() {
         ))}
       </div>
 
-      <div className="bg-white rounded-[2rem] border border-slate-200 p-10 shadow-sm">
-        {activeTab === "Hero & video" && (
-          <div className="space-y-6">
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">BADGE ATAS</label>
-              <input type="text" value={heroData.badge} onChange={e => setHeroData({...heroData, badge: e.target.value})} className="w-full px-5 py-4 rounded-xl border-2 border-slate-200 font-medium" />
-            </div>
+      <div className="flex items-center gap-4 mb-6">
+        <button type="button" onClick={handleSave} className="bg-slate-900 text-white px-6 py-2.5 rounded-xl text-sm font-bold">
+          Simpan
+        </button>
+        <SaveIndicator status={saveStatus} />
+      </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">JUDUL BARIS 1</label>
-                <input type="text" value={heroData.titleLine1} onChange={e => setHeroData({...heroData, titleLine1: e.target.value})} className="w-full px-5 py-4 rounded-xl border-2 border-slate-200 font-medium" />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">JUDUL AKSEN (WARNA EMAS)</label>
-                <input type="text" value={heroData.titleAccent} onChange={e => setHeroData({...heroData, titleAccent: e.target.value})} className="w-full px-5 py-4 rounded-xl border-2 border-slate-200 font-medium" />
-              </div>
-            </div>
+      <div className="bg-white rounded-2xl border border-slate-200 p-8 space-y-5">
+        {tab === "Hero" && (
+          <>
+            {(
+              [
+                ["badge", "Badge"],
+                ["headline", "Headline"],
+                ["subheadline", "Subheadline"],
+                ["painParagraph", "Paragraf pain point"],
+                ["ctaText", "Teks CTA"],
+                ["ctaTarget", "Target CTA (anchor)"],
+              ] as const
+            ).map(([key, label]) => (
+              <label key={key} className="block">
+                <span className="text-sm font-bold text-slate-700">{label}</span>
+                <input
+                  value={hero[key]}
+                  onChange={(e) => setHero({ ...hero, [key]: e.target.value })}
+                  className="mt-1 w-full px-4 py-2.5 rounded-xl border border-slate-200"
+                />
+              </label>
+            ))}
+          </>
+        )}
 
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">SUBJUDUL</label>
-              <input type="text" value={heroData.subtitle} onChange={e => setHeroData({...heroData, subtitle: e.target.value})} className="w-full px-5 py-4 rounded-xl border-2 border-slate-200 font-medium" />
-            </div>
+        {tab === "Navbar" && (
+          <>
+            <label className="block">
+              <span className="text-sm font-bold text-slate-700">Logo teks</span>
+              <input
+                value={navbar.logo}
+                onChange={(e) => setNavbar({ ...navbar, logo: e.target.value })}
+                className="mt-1 w-full px-4 py-2.5 rounded-xl border border-slate-200"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-bold text-slate-700">CTA label</span>
+              <input
+                value={navbar.cta.label}
+                onChange={(e) => setNavbar({ ...navbar, cta: { ...navbar.cta, label: e.target.value } })}
+                className="mt-1 w-full px-4 py-2.5 rounded-xl border border-slate-200"
+              />
+            </label>
+          </>
+        )}
 
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">DESKRIPSI</label>
-              <textarea value={heroData.description} onChange={e => setHeroData({...heroData, description: e.target.value})} rows={3} className="w-full px-5 py-4 rounded-xl border-2 border-slate-200 font-medium" />
-            </div>
+        {tab === "Final CTA" && (
+          <>
+            <label className="block">
+              <span className="text-sm font-bold text-slate-700">Judul</span>
+              <textarea
+                value={finalCta.title}
+                onChange={(e) => setFinalCta({ ...finalCta, title: e.target.value })}
+                rows={2}
+                className="mt-1 w-full px-4 py-2.5 rounded-xl border border-slate-200"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-bold text-slate-700">Deskripsi</span>
+              <textarea
+                value={finalCta.description}
+                onChange={(e) => setFinalCta({ ...finalCta, description: e.target.value })}
+                rows={3}
+                className="mt-1 w-full px-4 py-2.5 rounded-xl border border-slate-200"
+              />
+            </label>
+          </>
+        )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">TOMBOL UTAMA</label>
-                <input type="text" value={heroData.primaryCta} onChange={e => setHeroData({...heroData, primaryCta: e.target.value})} className="w-full px-5 py-4 rounded-xl border-2 border-slate-200 font-medium" />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">TOMBOL SEKUNDER</label>
-                <input type="text" value={heroData.secondaryCta} onChange={e => setHeroData({...heroData, secondaryCta: e.target.value})} className="w-full px-5 py-4 rounded-xl border-2 border-slate-200 font-medium" />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">LINK TOMBOL UTAMA (HREF)</label>
-              <input type="text" value={heroData.primaryCtaHref} onChange={e => setHeroData({...heroData, primaryCtaHref: e.target.value})} className="w-full px-5 py-4 rounded-xl border-2 border-slate-200 font-medium" />
-              <p className="text-[10px] text-slate-400 mt-2">Disarankan: https://www.intero.id/#bonus (tab sama). Hanya #bonus/#harga = scroll di halaman ini. wa.me = scroll ke harga. URL luar: tab baru.</p>
-            </div>
-
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">LINK TOMBOL SEKUNDER (HREF)</label>
-              <input type="text" value={heroData.secondaryCtaHref} onChange={e => setHeroData({...heroData, secondaryCtaHref: e.target.value})} className="w-full px-5 py-4 rounded-xl border-2 border-slate-200 font-medium" />
-            </div>
-
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">VIDEO HERO (YOUTUBE ATAU TIKTOK)</label>
-              <input type="text" value={heroData.videoUrl} onChange={e => setHeroData({...heroData, videoUrl: e.target.value})} className="w-full px-5 py-4 rounded-xl border-2 border-slate-200 font-medium" />
-              <p className="text-[10px] text-slate-400 mt-2">YouTube: watch / Shorts. TikTok: URL halaman video (bukan vm.tiktok.com). Kosongkan bila hanya gambar.</p>
-            </div>
-            
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">TEKS KECIL DI BAWAH VIDEO / THUMBNAIL</label>
-              <input type="text" placeholder="Masukkan teks kecil..." className="w-full px-5 py-4 rounded-xl border-2 border-slate-200 font-medium" />
-            </div>
+        {tab === "Visibilitas Section" && (
+          <div className="grid sm:grid-cols-2 gap-3">
+            {Object.entries(visibility).map(([key, on]) => (
+              <label key={key} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100">
+                <input
+                  type="checkbox"
+                  checked={on}
+                  onChange={(e) => setVisibility({ ...visibility, [key]: e.target.checked })}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm font-medium text-slate-700">{key}</span>
+              </label>
+            ))}
           </div>
         )}
       </div>

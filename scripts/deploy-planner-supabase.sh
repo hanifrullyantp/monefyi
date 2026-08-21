@@ -74,6 +74,7 @@ PLANNER_FUNCTIONS=(
   planner-verify-custom-domain
   planner-resolve-domain
   planner-direct-create-member
+  planner-lynk-webhook
   monefyi-admin-users
   monefyi-admin-update-user
   monefyi-admin-app-config
@@ -87,6 +88,7 @@ NO_VERIFY_JWT_FUNCTIONS=(
   auth-send-email
   monefyi-landing-config
   planner-resolve-domain
+  planner-lynk-webhook
 )
 
 echo "==> Deploying ${#PLANNER_FUNCTIONS[@]} Edge Functions..."
@@ -117,5 +119,6 @@ fi
 echo ""
 echo "Done. Set Edge Function secrets in Supabase Dashboard if needed:"
 echo "  RESEND_API_KEY, RESEND_FROM_EMAIL, SEND_EMAIL_HOOK_SECRET, APP_URL, APP_CORS_ORIGIN, GEMINI_API_KEY"
+echo "  PLANNER_LYNK_SIGNATURE_TOKEN, REQUIRE_LYNK_SIGNATURE, PLANNER_APP_URL"
 echo ""
 echo "Auth signup emails: ./scripts/enable-auth-email-hook.sh"

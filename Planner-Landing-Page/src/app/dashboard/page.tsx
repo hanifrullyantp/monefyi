@@ -38,7 +38,7 @@ export default function DashboardPage() {
   const [activeProjects, setActiveProjects] = useState(0);
 
   useEffect(() => {
-    hydrate();
+    void hydrate();
     const n = Number(localStorage.getItem(TRIAL_PROJECTS_KEY) ?? "0");
     setActiveProjects(Number.isFinite(n) ? n : 0);
   }, [hydrate]);

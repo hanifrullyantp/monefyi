@@ -44,6 +44,7 @@ export default function UpgradeModal({
     redirectToCheckout('pro', {
       orgId: tenant.id,
       userId: user.id,
+      email: user.email ?? undefined,
       creditAmount: estimatorCreditAvailable ? estimatorCreditAmount : undefined,
     });
   };
@@ -51,7 +52,11 @@ export default function UpgradeModal({
   const buyEstimator = () => {
     if (!tenant?.id || !user?.id) return;
     analytics.upgradeCtaClicked({ triggerType: trigger, targetTier: 'estimator' });
-    redirectToCheckout('estimator', { orgId: tenant.id, userId: user.id });
+    redirectToCheckout('estimator', {
+      orgId: tenant.id,
+      userId: user.id,
+      email: user.email ?? undefined,
+    });
   };
 
   return (

@@ -30,6 +30,13 @@ Buka http://localhost:3000
 | `ADMIN_PASSWORD` | Password admin `/admin` |
 | `PLANNER_APP_ORIGIN` | URL deployment SPA Planner (lihat cutover) |
 | `NEXT_PUBLIC_PLANNER_APP_URL` | Sama dengan `PLANNER_APP_ORIGIN` |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
+| `NEXT_PUBLIC_LYNK_ESTIMATOR_STANDARD` | Lynk checkout Estimator Standard |
+| `NEXT_PUBLIC_LYNK_ESTIMATOR_PRO` | Lynk checkout Estimator Pro |
+| `NEXT_PUBLIC_LYNK_PLANNER_PRO` | Lynk checkout Planner Pro bulanan |
+
+Setup Lynk + Resend: [`docs/planner/LYNK_RESEND_SETUP.md`](../docs/planner/LYNK_RESEND_SETUP.md)
 
 `DATABASE_URL` opsional (content disimpan di localStorage browser).
 

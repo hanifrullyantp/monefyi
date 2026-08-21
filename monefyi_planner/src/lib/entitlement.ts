@@ -1,8 +1,8 @@
 import type { EntitlementSnapshot, OrgSubscriptionRow, SubscriptionTier } from '../types/entitlement';
 
 export const ESTIMATOR_PRICE_IDR = 99_000;
+export const ESTIMATOR_PRO_PRICE_IDR = 199_000;
 export const PRO_PRICE_MONTHLY_IDR = 199_000;
-export const CHECKOUT_BASE_URL = 'https://checkout.monefyi.com';
 
 const ACTIVE_PROJECT_STATUSES = new Set(['planning', 'active', 'on_hold']);
 
@@ -46,6 +46,12 @@ export function buildEntitlementSnapshot(input: {
   const remainingProjectSlots = Math.max(0, maxActiveProjects - input.activeProjectCount);
   const canCreateProject = remainingProjectSlots > 0;
 
+  const meta = input.subscription?.metadata ?? {};
+  const estimatorVariant =
+    (input.subscription?.estimator_variant as 'standard' | 'pro' | undefined) ??
+    (meta.estimator_variant === 'pro' ? 'pro' : meta.estimator_variant === 'standard' ? 'standard' : null);
+  const isEstimatorPro = tier === 'estimator' && estimatorVariant === 'pro';
+
   return {
     tier,
     canAccessEstimator,
@@ -59,6 +65,8 @@ export function buildEntitlementSnapshot(input: {
     currentMembers: input.memberCount,
     estimatorCreditAvailable: Boolean(input.subscription?.estimator_credit_available),
     estimatorCreditAmount: Number(input.subscription?.estimator_credit_amount ?? ESTIMATOR_PRICE_IDR),
+    estimatorVariant,
+    isEstimatorPro,
     isFree: tier === 'free',
     isEstimator: tier === 'estimator',
     isPro: tier === 'pro',

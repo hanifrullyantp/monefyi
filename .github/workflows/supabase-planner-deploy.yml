@@ -103,10 +103,15 @@ jobs:
             planner-transfer-ownership \
             planner-search-companies \
             planner-try-domain-join \
-            planner-direct-create-member
+            planner-direct-create-member \
+            planner-lynk-webhook
           do
             echo "Deploying $fn..."
-            supabase functions deploy "$fn"
+            if [ "$fn" = "planner-lynk-webhook" ]; then
+              supabase functions deploy "$fn" --no-verify-jwt
+            else
+              supabase functions deploy "$fn"
+            fi
           done
 
       - name: Edge function smoke test

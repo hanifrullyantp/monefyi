@@ -17,6 +17,7 @@ export interface OrgSubscriptionRow {
   max_active_projects: number;
   max_members: number;
   metadata: Record<string, unknown> | null;
+  estimator_variant?: 'standard' | 'pro' | null;
   created_at: string;
   updated_at: string;
 }
@@ -41,6 +42,8 @@ export interface EntitlementSnapshot {
   currentMembers: number;
   estimatorCreditAvailable: boolean;
   estimatorCreditAmount: number;
+  estimatorVariant: 'standard' | 'pro' | null;
+  isEstimatorPro: boolean;
   isFree: boolean;
   isEstimator: boolean;
   isPro: boolean;

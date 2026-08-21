@@ -1,0 +1,45 @@
+name: Deploy Planner LP2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "PlannerLP2/**"
+      - ".github/workflows/planner-lp2-deploy.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: PlannerLP2
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: PlannerLP2/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+        env:
+          ADMIN_PASSWORD: ci-build-only
+          PLANNER_APP_ORIGIN: https://app.planner.monefyi.com
+          NEXT_PUBLIC_PLANNER_APP_URL: https://app.planner.monefyi.com
+
+      - name: Deploy to Vercel
+        if: github.ref == 'refs/heads/main'
+        run: npx vercel deploy --prod --yes --token "$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PLANNER_LP2_PROJECT_ID }}

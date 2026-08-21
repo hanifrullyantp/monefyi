@@ -9,7 +9,7 @@ export function PricingSection() {
   const { content } = useContentStore();
   const { pricing } = content;
   const [ref, inView] = useInView<HTMLDivElement>({ threshold: 0.1 });
-  const { label, handleCtaClick } = useLandingCta();
+  const { startCheckout } = useLandingCta();
 
   return (
     <section id="harga" className="py-24 md:py-32 bg-slate-50">
@@ -108,7 +108,7 @@ export function PricingSection() {
                 <div className="mt-10">
                   <button
                     type="button"
-                    onClick={handleCtaClick}
+                    onClick={() => void startCheckout(plan.id)}
                     className={cn(
                       "block w-full text-center rounded-xl py-4 font-semibold transition-all duration-200",
                       plan.cta.variant === "primary"
@@ -116,7 +116,7 @@ export function PricingSection() {
                         : "bg-white border-2 border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white",
                     )}
                   >
-                    {label}
+                    {plan.cta.text}
                   </button>
                 </div>
               </div>

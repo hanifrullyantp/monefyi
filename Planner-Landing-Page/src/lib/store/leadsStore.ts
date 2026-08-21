@@ -5,96 +5,6 @@ import { getStorage, setStorage } from "@/lib/utils/storage";
 
 const STORAGE_KEY = "monefyi_leads";
 
-// Sample default leads
-const defaultLeads: Lead[] = [
-  {
-    id: "1",
-    name: "Bpk Andi Prasetyo",
-    phone: "08112345678",
-    email: "andi@email.com",
-    projectType: "renovasi",
-    estimatedValue: 45000000,
-    status: "survey",
-    source: "whatsapp",
-    location: "Jakarta Selatan",
-    notes: "Renovasi kamar mandi dan dapur",
-    surveyDate: new Date(Date.now() + 86400000).toISOString(),
-    assignedTo: "Admin",
-    activities: [
-      {
-        id: "a1",
-        type: "note",
-        content: "Lead masuk dari WA blast",
-        timestamp: new Date(Date.now() - 172800000).toISOString(),
-        user: "Admin",
-      },
-      {
-        id: "a2",
-        type: "status-change",
-        content: "Status berubah ke Survei",
-        timestamp: new Date(Date.now() - 86400000).toISOString(),
-        user: "Admin",
-      },
-    ],
-    createdAt: new Date(Date.now() - 172800000).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    name: "Ibu Sari Dewi",
-    phone: "08987654321",
-    projectType: "kitchen-set",
-    estimatedValue: 35000000,
-    status: "proposal",
-    source: "instagram",
-    location: "Bandung",
-    notes: "Kitchen set untuk rumah baru",
-    activities: [],
-    createdAt: new Date(Date.now() - 345600000).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "3",
-    name: "Bpk Rudi Santoso",
-    phone: "08765432198",
-    projectType: "interior",
-    estimatedValue: 120000000,
-    status: "won",
-    source: "referral",
-    location: "Surabaya",
-    notes: "Interior design apartemen 3 kamar",
-    activities: [],
-    createdAt: new Date(Date.now() - 604800000).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "4",
-    name: "Ibu Maya Lestari",
-    phone: "08234567890",
-    projectType: "furniture",
-    estimatedValue: 25000000,
-    status: "new",
-    source: "website",
-    location: "Yogyakarta",
-    activities: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "5",
-    name: "Studio Interior Cipta",
-    phone: "08345678901",
-    projectType: "interior",
-    estimatedValue: 200000000,
-    status: "negotiation",
-    source: "referral",
-    location: "Jakarta Barat",
-    activities: [],
-    createdAt: new Date(Date.now() - 259200000).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
-
 interface LeadsState {
   leads: Lead[];
   selectedIds: string[];
@@ -114,7 +24,7 @@ interface LeadsState {
 }
 
 export const useLeadsStore = create<LeadsState>((set, get) => ({
-  leads: defaultLeads,
+  leads: [],
   selectedIds: [],
   searchQuery: "",
   statusFilter: "all",
@@ -134,7 +44,7 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
   updateLead: (id, data) => {
     set((state) => ({
       leads: state.leads.map((l) =>
-        l.id === id ? { ...l, ...data, updatedAt: new Date().toISOString() } : l
+        l.id === id ? { ...l, ...data, updatedAt: new Date().toISOString() } : l,
       ),
     }));
     get().save();
@@ -169,7 +79,7 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
                 },
               ],
             }
-          : l
+          : l,
       ),
     }));
     get().save();
@@ -187,7 +97,7 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
               ],
               updatedAt: new Date().toISOString(),
             }
-          : l
+          : l,
       ),
     }));
     get().save();
@@ -198,12 +108,11 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
   setStatusFilter: (s) => set({ statusFilter: s }),
 
   load: () => {
-    const stored = getStorage<Lead[]>(STORAGE_KEY, defaultLeads);
+    const stored = getStorage<Lead[]>(STORAGE_KEY, []);
     set({ leads: stored });
   },
 
   save: () => {
-    const { leads } = get();
-    setStorage(STORAGE_KEY, leads);
+    setStorage(STORAGE_KEY, get().leads);
   },
 }));

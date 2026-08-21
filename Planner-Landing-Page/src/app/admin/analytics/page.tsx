@@ -1,42 +1,70 @@
 "use client";
+import { useMemo } from "react";
 import { PageHeader } from "@/components/admin/PageHeader";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, AreaChart, Area } from "recharts";
-import { TrendingUp, Users, Eye, Target, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { useLeadsStore } from "@/lib/store/leadsStore";
+import { formatRupiah } from "@/lib/utils/format";
+import { LeadStatusLabels } from "@/lib/types/leads";
+import { Users, Target, TrendingUp, BarChart3 } from "lucide-react";
 
-const data = [
-  { name: "Jan", leads: 40, closing: 24, revenue: 2400 },
-  { name: "Feb", leads: 30, closing: 13, revenue: 1398 },
-  { name: "Mar", leads: 20, closing: 98, revenue: 9800 },
-  { name: "Apr", leads: 27, closing: 39, revenue: 3908 },
-  { name: "May", leads: 18, closing: 48, revenue: 4800 },
-  { name: "Jun", leads: 23, closing: 38, revenue: 3800 },
-];
+function monthKey(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
 
 export default function AnalyticsPage() {
+  const { leads } = useLeadsStore();
+
+  const stats = useMemo(() => {
+    const total = leads.length;
+    const won = leads.filter((l) => l.status === "won");
+    const wonCount = won.length;
+    const revenue = won.reduce((s, l) => s + l.estimatedValue, 0);
+    const closingRate = total > 0 ? Math.round((wonCount / total) * 100) : 0;
+    return { total, wonCount, revenue, closingRate };
+  }, [leads]);
+
+  const byMonth = useMemo(() => {
+    const map = new Map<string, { leads: number; won: number; revenue: number }>();
+    for (const lead of leads) {
+      const key = monthKey(lead.createdAt);
+      const row = map.get(key) ?? { leads: 0, won: 0, revenue: 0 };
+      row.leads += 1;
+      if (lead.status === "won") {
+        row.won += 1;
+        row.revenue += lead.estimatedValue;
+      }
+      map.set(key, row);
+    }
+    return [...map.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-6)
+      .map(([key, v]) => ({
+        name: key,
+        leads: v.leads,
+        won: v.won,
+        revenue: Math.round(v.revenue / 1_000_000),
+      }));
+  }, [leads]);
+
+  const cards = [
+    { label: "Total Lead", value: String(stats.total), icon: Users, color: "text-blue-600" },
+    { label: "Deal Menang", value: String(stats.wonCount), icon: Target, color: "text-emerald-600" },
+    { label: "Closing Rate", value: `${stats.closingRate}%`, icon: BarChart3, color: "text-amber-600" },
+    { label: "Revenue Deal", value: formatRupiah(stats.revenue), icon: TrendingUp, color: "text-purple-600" },
+  ];
+
   return (
     <div className="space-y-8">
       <PageHeader
         title="Analytics"
-        description="Performa leads, closing, dan landing page"
+        description="Data real dari CRM leads (localStorage) — bukan mock chart"
       />
 
-      {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Visits", value: "2,450", icon: Eye, color: "text-blue-600", trend: "+12.5%", up: true },
-          { label: "Total Leads", value: "185", icon: Users, color: "text-emerald-600", trend: "+5.2%", up: true },
-          { label: "Closing Rate", value: "14.2%", icon: Target, color: "text-amber-600", trend: "-1.1%", up: false },
-          { label: "Revenue", value: "Rp 320jt", icon: TrendingUp, color: "text-purple-600", trend: "+18.4%", up: true },
-        ].map((stat, i) => (
-          <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200">
-            <div className="flex items-center justify-between mb-4">
-              <div className={`p-2 rounded-xl bg-slate-50 ${stat.color}`}>
-                <stat.icon className="w-5 h-5" />
-              </div>
-              <div className={`flex items-center gap-1 text-xs font-bold ${stat.up ? "text-emerald-600" : "text-red-600"}`}>
-                {stat.trend}
-                {stat.up ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-              </div>
+        {cards.map((stat) => (
+          <div key={stat.label} className="bg-white p-6 rounded-2xl border border-slate-200">
+            <div className={`p-2 rounded-xl bg-slate-50 w-fit mb-4 ${stat.color}`}>
+              <stat.icon className="w-5 h-5" />
             </div>
             <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
             <p className="text-sm text-slate-500 mt-1">{stat.label}</p>
@@ -44,48 +72,48 @@ export default function AnalyticsPage() {
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Leads Trend */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200">
-          <h3 className="font-bold text-slate-900 mb-6">Trend Leads & Closing</h3>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data}>
-                <defs>
-                  <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
-                <Tooltip
-                  contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}}
-                />
-                <Area type="monotone" dataKey="leads" stroke="#10b981" fillOpacity={1} fill="url(#colorLeads)" strokeWidth={3} />
-              </AreaChart>
-            </ResponsiveContainer>
+      <div className="bg-white rounded-2xl border border-slate-200 p-6">
+        <h3 className="font-bold text-slate-900 mb-4">Lead per bulan</h3>
+        {byMonth.length === 0 ? (
+          <p className="text-sm text-slate-500 py-8 text-center">Belum ada data lead. Tambah lead di CRM.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-slate-500 border-b border-slate-100">
+                  <th className="py-2">Bulan</th>
+                  <th className="py-2">Lead</th>
+                  <th className="py-2">Menang</th>
+                  <th className="py-2">Revenue (jt)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {byMonth.map((row) => (
+                  <tr key={row.name} className="border-b border-slate-50">
+                    <td className="py-2 font-medium">{row.name}</td>
+                    <td className="py-2">{row.leads}</td>
+                    <td className="py-2">{row.won}</td>
+                    <td className="py-2">{row.revenue}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
+        )}
+      </div>
 
-        {/* Revenue Chart */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200">
-          <h3 className="font-bold text-slate-900 mb-6">Revenue Monthly (Millions)</h3>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
-                <Tooltip
-                  cursor={{fill: '#f8fafc'}}
-                  contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}}
-                />
-                <Bar dataKey="revenue" fill="#0f172a" radius={[6, 6, 0, 0]} barSize={40} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+      <div className="bg-white rounded-2xl border border-slate-200 p-6">
+        <h3 className="font-bold text-slate-900 mb-4">Breakdown status</h3>
+        <div className="flex flex-wrap gap-3">
+          {Object.entries(LeadStatusLabels).map(([status, label]) => {
+            const count = leads.filter((l) => l.status === status).length;
+            return (
+              <div key={status} className="px-4 py-2 rounded-xl bg-slate-50 text-sm">
+                <span className="font-semibold text-slate-800">{label}</span>
+                <span className="text-slate-500 ml-2">{count}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

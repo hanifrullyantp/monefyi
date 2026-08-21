@@ -30,7 +30,7 @@ export default function AdminLoginPage() {
 
       if (res.ok) {
         saveSession();
-        authLogin(email, password);
+        authLogin(email, password).catch(() => undefined);
         setIsAdmin(true);
         router.push("/admin");
         return;

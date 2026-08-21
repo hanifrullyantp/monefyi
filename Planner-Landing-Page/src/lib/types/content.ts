@@ -257,6 +257,11 @@ export interface PricingContent {
   subtitle: string;
   plans: PricingPlan[];
   trustLine: string;
+  lynkCheckoutUrls?: {
+    estimator_standard?: string;
+    estimator_pro?: string;
+    planner_pro?: string;
+  };
   enterprise: {
     text: string;
     linkText: string;
@@ -334,6 +339,16 @@ export interface ToastContent {
   notifications: ToastNotification[];
 }
 
+export interface SeoContent {
+  title: string;
+  description: string;
+  keywords: string;
+  ogImage: string;
+  googleAnalyticsId: string;
+  fbPixelId: string;
+  gtmId: string;
+}
+
 export interface LandingContent {
   global: GlobalContent;
   contactSocial: ContactSocialContent;
@@ -350,6 +365,7 @@ export interface LandingContent {
   finalCta: FinalCtaContent;
   footer: FooterContent;
   toast: ToastContent;
+  seo: SeoContent;
   sectionOrder: string[];
   sectionVisibility: Record<string, boolean>;
 }

@@ -54,8 +54,18 @@ export const useContentStore = create<ContentState>((set, get) => ({
 
   load: () => {
     const stored = getStorage<LandingContent>(STORAGE_KEY, defaultContent);
-    // Merge dengan defaultContent untuk menangani field baru
-    const merged = { ...defaultContent, ...stored };
+    const merged: LandingContent = {
+      ...defaultContent,
+      ...stored,
+      pricing: {
+        ...defaultContent.pricing,
+        ...stored.pricing,
+        lynkCheckoutUrls: {
+          ...defaultContent.pricing.lynkCheckoutUrls,
+          ...stored.pricing?.lynkCheckoutUrls,
+        },
+      },
+    };
     set({ content: merged, isDirty: false });
   },
 }));

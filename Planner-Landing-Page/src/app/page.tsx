@@ -21,6 +21,7 @@ import { AdminBar } from "@/components/landing/AdminBar";
 import { Editable } from "@/components/landing/Editable";
 import { LoginModal } from "@/components/landing/LoginModal";
 import { UpsellModal } from "@/components/shared/UpsellModal";
+import { SeoInjector } from "@/components/landing/SeoInjector";
 import { useUiStore } from "@/lib/store/uiStore";
 
 export default function HomePage() {
@@ -35,6 +36,7 @@ export default function HomePage() {
 
   return (
     <div className={isAdmin ? "pt-12" : ""}>
+      <SeoInjector />
       <AdminBar />
       <ScrollProgress />
       <Navbar />

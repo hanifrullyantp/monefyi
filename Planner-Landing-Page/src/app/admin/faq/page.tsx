@@ -8,11 +8,12 @@ import { Save, Plus, Trash2, GripVertical } from "lucide-react";
 export default function FaqPage() {
   const { content, updateSection, save } = useContentStore();
   const [faqs, setFaqs] = useState(content.guaranteeFaq.faqs);
+  const [guarantee, setGuarantee] = useState(content.guaranteeFaq.guarantee);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   const handleSave = () => {
     setSaveStatus("saving");
-    updateSection("guaranteeFaq", { ...content.guaranteeFaq, faqs });
+    updateSection("guaranteeFaq", { ...content.guaranteeFaq, faqs, guarantee });
     setTimeout(() => {
       save();
       setSaveStatus("saved");
@@ -51,6 +52,24 @@ export default function FaqPage() {
           </div>
         }
       />
+
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6 space-y-4">
+        <h3 className="font-bold text-slate-900">Garansi</h3>
+        <input
+          type="text"
+          value={guarantee.title}
+          onChange={(e) => setGuarantee({ ...guarantee, title: e.target.value })}
+          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
+          placeholder="Judul garansi"
+        />
+        <textarea
+          value={guarantee.description}
+          onChange={(e) => setGuarantee({ ...guarantee, description: e.target.value })}
+          rows={3}
+          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
+          placeholder="Deskripsi garansi"
+        />
+      </div>
 
       <div className="space-y-4">
         {faqs.map((faq, i) => (

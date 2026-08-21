@@ -320,16 +320,18 @@ export const defaultContent: LandingContent = {
         id: "estimator-standard",
         label: "UNTUK PERSONAL",
         name: "Estimator Standard",
-        description: "Alat closing untuk kontraktor mandiri",
+        description: "Closing & penawaran — cukup untuk kontraktor solo",
         price: 99000,
         priceDisplay: "Rp 99.000",
-        priceSubtitle: "sekali bayar",
+        priceSubtitle: "sekali bayar · lisensi selamanya",
         features: [
-          "Estimator harga proyek unlimited",
-          "Template PDF penawaran standar",
-          "Script balasan WA (15 template)",
-          "Export PDF profesional",
-          "Update selamanya",
+          "Estimasi harga proyek unlimited",
+          "Export PDF penawaran (1 template standar)",
+          "Script balasan WA — 15 template screening",
+          "Database klien & lead WA",
+          "Trial Planner: convert max 2 proyek aktif",
+          "Tanpa logo / branding custom di PDF",
+          "Tanpa template PDF premium & rincian material otomatis",
         ],
         cta: { text: "Ambil Standard", variant: "outline" },
         recommended: false,
@@ -338,16 +340,18 @@ export const defaultContent: LandingContent = {
         id: "estimator-pro",
         label: "PALING POPULER",
         name: "Estimator Pro",
-        description: "Bangun reputasi perusahaan profesional",
-        price: 149000,
-        priceDisplay: "Rp 149.000",
-        priceSubtitle: "sekali bayar",
+        description: "Penawaran profesional + branding perusahaan Anda",
+        price: 199000,
+        priceDisplay: "Rp 199.000",
+        priceSubtitle: "sekali bayar · lisensi selamanya",
         features: [
-          "Semua fitur Standard",
-          "Custom Logo & Branding di PDF",
-          "5 Desain PDF Premium",
-          "Rincian Material Otomatis",
-          "Support WhatsApp Prioritas",
+          "Semua fitur Estimator Standard",
+          "Logo & branding perusahaan di PDF penawaran",
+          "5 desain template PDF premium",
+          "Rincian material otomatis di penawaran",
+          "Support WhatsApp prioritas",
+          "Trial Planner: convert max 2 proyek aktif",
+          "Upgrade Planner penuh (proyek unlimited) — opsi terpisah",
         ],
         cta: { text: "Ambil Estimator Pro", variant: "primary" },
         recommended: true,
@@ -356,6 +360,11 @@ export const defaultContent: LandingContent = {
       },
     ],
     trustLine: "Garansi 7 hari uang kembali · Tanpa pertanyaan",
+    lynkCheckoutUrls: {
+      estimator_standard: "",
+      estimator_pro: "",
+      planner_pro: "",
+    },
     enterprise: {
       text: "Punya tim lebih dari 5 orang atau butuh custom feature?",
       linkText: "Hubungi kami untuk paket Enterprise",
@@ -374,7 +383,7 @@ export const defaultContent: LandingContent = {
       {
         question: "Bedanya Estimator Standard dan Pro apa?",
         answer:
-          "Standard fokus pada fungsi hitung dan export PDF dasar. Pro memungkinkan Anda menambahkan Logo & Branding perusahaan Anda sendiri pada PDF, serta memberikan akses ke desain template yang lebih mewah untuk meningkatkan kepercayaan klien.",
+          "Standard (Rp 99.000): estimasi unlimited, PDF template standar, script WA, database klien, trial Planner max 2 proyek — tanpa logo custom & tanpa template PDF premium.\n\nPro (Rp 199.000): semua Standard + logo/branding di PDF, 5 template premium, rincian material otomatis, dan support WA prioritas. Trial Planner tetap max 2 proyek; untuk proyek unlimited + tim + keuangan proyek, upgrade ke Monefyi Planner penuh.",
       },
       {
         question: "Apakah benar hanya sekali bayar?",
@@ -382,9 +391,9 @@ export const defaultContent: LandingContent = {
           "Iya. Tidak ada biaya langganan bulanan. Sekali Anda membeli lisensi Monefyi Estimator, Anda bisa menggunakannya selamanya untuk proyek-proyek Anda di masa depan.",
       },
       {
-        question: "Kalau beli Lifetime, benar-benar akses selamanya?",
+        question: "Kalau beli Estimator Pro, benar-benar akses selamanya?",
         answer:
-          "Iya. Sekali bayar Rp 199.000, akses selama Monefyi Planner beroperasi. Termasuk semua update fitur yang kami rilis di masa depan — tanpa biaya tambahan.",
+          "Iya. Sekali bayar Rp 199.000 untuk Estimator Pro — lisensi selamanya selama Monefyi beroperasi, termasuk update fitur Estimator. Upgrade ke Monefyi Planner penuh (proyek tanpa batas, tim, keuangan) adalah paket terpisah.",
       },
       {
         question: "Cocok untuk bisnis jasa selain konstruksi dan interior?",
@@ -394,7 +403,7 @@ export const defaultContent: LandingContent = {
       {
         question: "Bagaimana cara mulai setelah pembayaran?",
         answer:
-          "1. Bayar via BCA, Mandiri, QRIS, atau GoPay.\n2. Terima akses via WhatsApp dalam 5 menit.\n3. Login, ikuti setup wizard (5 menit).\n4. Langsung siap dipakai — support WA tersedia jika butuh bantuan.",
+          "1. Selesaikan pembayaran via BCA, Mandiri, QRIS, atau e-wallet di Lynk.id.\n2. Cek email konfirmasi (inbox & spam) — untuk akun baru, klik \"Atur password & masuk\".\n3. Login di planner.monefyi.com/app dan ikuti setup wizard (~5 menit).\n4. Estimator langsung aktif; support WA tersedia jika butuh bantuan.",
       },
       {
         question: "Support-nya bagaimana?",
@@ -445,32 +454,28 @@ export const defaultContent: LandingContent = {
   },
 
   toast: {
-    enabled: true,
+    enabled: false,
     initialDelay: 5000,
     intervalMin: 15000,
     intervalMax: 45000,
     autoDismiss: 6000,
-    sound: true,
+    sound: false,
     soundUrl: "/sounds/notification.mp3",
     volume: 0.5,
     position: "bottom-right",
-    notifications: [
-      { id: 1, name: "Ridwan Hakim", action: "baru saja upgrade ke", product: "Planner Lifetime", location: "Bandung", timeAgo: "2 menit lalu" },
-      { id: 2, name: "Andi Prasetyo", action: "baru saja beli", product: "Estimator", location: "Jakarta", timeAgo: "5 menit lalu" },
-      { id: 3, name: "Studio Interior Sakura", action: "upgrade ke", product: "Planner Lifetime", location: "Surabaya", timeAgo: "12 menit lalu" },
-      { id: 4, name: "Bimo Prakoso", action: "baru saja beli", product: "Planner Lifetime", location: "Yogyakarta", timeAgo: "18 menit lalu" },
-      { id: 5, name: "Dedi Kurniawan", action: "upgrade ke", product: "Planner Lifetime", location: "Semarang", timeAgo: "24 menit lalu" },
-      { id: 6, name: "Rina Marlina", action: "baru saja beli", product: "Estimator", location: "Malang", timeAgo: "32 menit lalu" },
-      { id: 7, name: "Kitchen Studio Cimahi", action: "upgrade ke", product: "Planner Lifetime", location: "Bandung", timeAgo: "45 menit lalu" },
-      { id: 8, name: "Ahmad Fadli", action: "baru saja beli", product: "Planner Lifetime", location: "Denpasar", timeAgo: "1 jam lalu" },
-      { id: 9, name: "CV Sinar Jaya", action: "upgrade ke", product: "Planner Lifetime", location: "Medan", timeAgo: "1 jam lalu" },
-      { id: 10, name: "Sarah Wijaya", action: "baru saja beli", product: "Estimator", location: "Palembang", timeAgo: "2 jam lalu" },
-      { id: 11, name: "Interior Bandung Studio", action: "upgrade ke", product: "Planner Lifetime", location: "Bandung", timeAgo: "2 jam lalu" },
-      { id: 12, name: "Bagus Setiawan", action: "baru saja beli", product: "Planner Lifetime", location: "Solo", timeAgo: "3 jam lalu" },
-      { id: 13, name: "Hendra Kusuma", action: "upgrade ke", product: "Planner Lifetime", location: "Makassar", timeAgo: "3 jam lalu" },
-      { id: 14, name: "PT Karya Bersama", action: "baru saja beli", product: "Planner Lifetime", location: "Jakarta", timeAgo: "4 jam lalu" },
-      { id: 15, name: "Firman Ahmad", action: "baru saja beli", product: "Estimator", location: "Balikpapan", timeAgo: "4 jam lalu" },
-    ],
+    notifications: [],
+  },
+
+  seo: {
+    title: "Monefyi Estimator — Sistem Closing Profesional untuk Jasa Proyek",
+    description:
+      "Generate PDF penawaran profesional secara instan. Saring lead WA, beri penawaran saat survei, dan tingkatkan kepercayaan klien.",
+    keywords:
+      "estimator proyek, closing kontraktor, pdf penawaran, manajemen proyek, monefyi planner",
+    ogImage: "",
+    googleAnalyticsId: "",
+    fbPixelId: "",
+    gtmId: "",
   },
 
   sectionOrder: [

@@ -83,6 +83,39 @@ export default function PricingPage() {
         ))}
       </div>
 
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6 space-y-4">
+        <h3 className="font-bold text-slate-900">Lynk.id Checkout URLs</h3>
+        <p className="text-sm text-slate-500">
+          Direct checkout store Planner. Kosongkan untuk pakai env Vercel.
+        </p>
+        {(
+          [
+            { key: "estimator_standard" as const, label: "Estimator Standard (Rp 99.000)" },
+            { key: "estimator_pro" as const, label: "Estimator Pro (Rp 199.000)" },
+            { key: "planner_pro" as const, label: "Planner Pro Bulanan (Rp 199.000/bulan)" },
+          ] as const
+        ).map(({ key, label }) => (
+          <div key={key}>
+            <label className="text-sm font-semibold text-slate-700 block mb-1">{label}</label>
+            <input
+              type="url"
+              value={pricing.lynkCheckoutUrls?.[key] ?? ""}
+              onChange={(e) =>
+                setPricing({
+                  ...pricing,
+                  lynkCheckoutUrls: {
+                    ...pricing.lynkCheckoutUrls,
+                    [key]: e.target.value,
+                  },
+                })
+              }
+              placeholder={`https://lynk.id/.../${key}/checkout`}
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+        ))}
+      </div>
+
       {/* Plans */}
       <div className="grid md:grid-cols-2 gap-6">
         {pricing.plans.map((plan, pi) => (

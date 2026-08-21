@@ -1,5 +1,6 @@
 "use client";
 import { create } from "zustand";
+import type { LynkProduct } from "@/lib/checkout/products";
 
 interface UiState {
   mobileMenuOpen: boolean;
@@ -18,6 +19,8 @@ interface UiState {
   upsellMessage: string;
   setUpsellModalOpen: (open: boolean) => void;
   openUpsell: (message?: string) => void;
+  pendingCheckoutProduct: LynkProduct | null;
+  setPendingCheckoutProduct: (product: LynkProduct | null) => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -38,4 +41,6 @@ export const useUiStore = create<UiState>((set) => ({
   setUpsellModalOpen: (open) => set({ isUpsellModalOpen: open }),
   openUpsell: (message) =>
     set({ isUpsellModalOpen: true, upsellMessage: message ?? "" }),
+  pendingCheckoutProduct: null,
+  setPendingCheckoutProduct: (product) => set({ pendingCheckoutProduct: product }),
 }));

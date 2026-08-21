@@ -11,6 +11,7 @@ export default function EstimatorPaywall() {
     redirectToCheckout('estimator', {
       orgId: tenant.id,
       userId: user.id,
+      email: user.email ?? undefined,
     });
   };
 
@@ -64,7 +65,7 @@ export default function EstimatorPaywall() {
         ✓ 7 hari uang kembali · Pembayaran via QRIS, transfer, e-wallet
       </p>
       <p className="text-xs text-slate-500 mt-2 flex items-center justify-center gap-1">
-        <Lock className="w-3 h-3" /> Checkout aman di checkout.monefyi.com
+        <Lock className="w-3 h-3" /> Checkout aman via Lynk.id
       </p>
     </div>
   );

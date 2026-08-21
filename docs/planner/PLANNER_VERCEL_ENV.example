@@ -1,0 +1,8 @@
+# Shared Vercel env for planner-landing + planner-lp2
+# Copy to repo root as .env.planner-vercel (gitignored) then run:
+#   ./scripts/sync-planner-vercel-env.sh
+
+ADMIN_PASSWORD=monefyi2026
+NEXT_PUBLIC_LYNK_ESTIMATOR_STANDARD=
+NEXT_PUBLIC_LYNK_ESTIMATOR_PRO=
+NEXT_PUBLIC_LYNK_PLANNER_PRO=

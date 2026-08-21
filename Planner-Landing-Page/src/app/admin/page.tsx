@@ -19,11 +19,13 @@ export default function AdminDashboardPage() {
 
   const recentLeads = [...leads].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5);
 
+  const activeSections = Object.values(content.sectionVisibility).filter(Boolean).length;
+
   const stats = [
     { label: "Total Lead", value: totalLeads, icon: Users, color: "bg-blue-50 text-blue-600", change: `${newLeads} baru` },
     { label: "Deal Berhasil", value: wonLeads, icon: TrendingUp, color: "bg-emerald-50 text-emerald-600", change: `${totalLeads > 0 ? Math.round((wonLeads / totalLeads) * 100) : 0}% closing rate` },
-    { label: "Revenue (Deal)", value: formatRupiah(totalValue), icon: FileText, color: "bg-amber-50 text-amber-600", change: "Dari semua deal" },
-    { label: "Landing Page", value: "Live", icon: Eye, color: "bg-purple-50 text-purple-600", change: "Semua section aktif" },
+    { label: "Revenue (Deal)", value: formatRupiah(totalValue), icon: FileText, color: "bg-amber-50 text-amber-600", change: "Dari CRM leads" },
+    { label: "Section Aktif", value: String(activeSections), icon: Eye, color: "bg-purple-50 text-purple-600", change: "Di landing page" },
   ];
 
   return (
@@ -93,7 +95,7 @@ export default function AdminDashboardPage() {
           <h3 className="font-bold text-slate-900 mb-5">Aksi Cepat</h3>
           <div className="space-y-2">
             {[
-              { href: "/admin/konten", label: "Edit Landing Page", desc: "Ubah konten hero, pricing, FAQ" },
+              { href: "/admin/konten", label: "Edit Landing Page", desc: "Hero, navbar, visibilitas section" },
               { href: "/admin/crm", label: "Kelola CRM", desc: "Lihat dan update status lead" },
               { href: "/admin/pricing", label: "Edit Pricing", desc: "Update harga dan paket" },
               { href: "/admin/testimonial", label: "Edit Testimonial", desc: "Ubah cerita pengguna" },
