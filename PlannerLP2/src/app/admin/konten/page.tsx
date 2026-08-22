@@ -1,49 +1,133 @@
 "use client";
-import { useState } from "react";
-import { useContentStore } from "@/lib/store/contentStore";
-import { Save, RefreshCw, Eye, Edit3, ChevronRight } from "lucide-react";
+
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { useContentStore } from "@/lib/store/contentStore";
+import {
+  LANDING_SECTIONS,
+  resolveSectionOrder,
+  type LandingSectionKey,
+} from "@/lib/landingSections";
+import { Save, RefreshCw, Eye, Edit3, ChevronRight, GripVertical } from "lucide-react";
 
-type SectionKey =
-  | "hero"
-  | "threeStep"
-  | "transition"
-  | "relatable"
-  | "features"
-  | "transformation"
-  | "testimonial"
-  | "pricing"
-  | "guarantee"
-  | "faq"
-  | "finalCta"
-  | "footer";
+type SectionMeta = (typeof LANDING_SECTIONS)[number];
 
-const SECTIONS: { key: SectionKey; label: string; desc: string }[] = [
-  { key: "hero", label: "Hero Section", desc: "Headline, subheadline, CTA" },
-  { key: "threeStep", label: "3 Step", desc: "Konten 3 langkah closing" },
-  { key: "transition", label: "Transisi", desc: "Paragraf penghubung" },
-  { key: "relatable", label: "Relatable Checklist", desc: "Daftar masalah" },
-  { key: "features", label: "Fitur", desc: "Grid 12 fitur" },
-  { key: "transformation", label: "Transformasi", desc: "5 skenario perbandingan" },
-  { key: "testimonial", label: "Testimoni", desc: "Cerita & quote" },
-  { key: "pricing", label: "Harga", desc: "3 paket pricing" },
-  { key: "guarantee", label: "Garansi", desc: "7 hari uang kembali" },
-  { key: "faq", label: "FAQ", desc: "Pertanyaan yang sering ditanya" },
-  { key: "finalCta", label: "Final CTA", desc: "Section CTA penutup" },
-  { key: "footer", label: "Footer", desc: "Link & kontak" },
-];
+function SortableSectionRow({
+  section,
+  isActive,
+  isVisible,
+  onOpen,
+  onToggleVisibility,
+}: {
+  section: SectionMeta;
+  isActive: boolean;
+  isVisible: boolean;
+  onOpen: () => void;
+  onToggleVisibility: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: section.key });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`bg-white rounded-xl border p-4 transition-all ${
+        isDragging
+          ? "border-emerald-400 shadow-lg z-10 opacity-95"
+          : isActive
+            ? "border-emerald-500 bg-emerald-50"
+            : "border-slate-200 hover:border-slate-300"
+      }`}
+    >
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-grab active:cursor-grabbing touch-none shrink-0"
+          aria-label={`Urutkan ${section.label}`}
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="w-4 h-4" />
+        </button>
+
+        <button
+          type="button"
+          onClick={onOpen}
+          className="flex-1 min-w-0 text-left"
+        >
+          <p className="font-semibold text-slate-900 text-sm">{section.label}</p>
+          <p className="text-xs text-slate-500 mt-0.5 truncate">{section.desc}</p>
+        </button>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={onToggleVisibility}
+            className={`text-xs font-semibold px-2 py-1 rounded-lg transition-colors ${
+              isVisible
+                ? "bg-emerald-100 text-emerald-700"
+                : "bg-slate-100 text-slate-500"
+            }`}
+          >
+            {isVisible ? "Aktif" : "Sembunyikan"}
+          </button>
+          <ChevronRight className="w-4 h-4 text-slate-400" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function KontenPage() {
   const { content, updateSection, publishContent, isDirty, isSaving } =
     useContentStore();
-  const [activeSection, setActiveSection] = useState<SectionKey | null>(null);
+  const [activeSection, setActiveSection] = useState<LandingSectionKey | null>(null);
   const [editData, setEditData] = useState<Record<string, unknown>>({});
   const [saved, setSaved] = useState(false);
 
-  const openSection = (key: SectionKey) => {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const orderedSections = useMemo(() => {
+    const order = resolveSectionOrder(content.sectionOrder);
+    const metaMap = new Map(LANDING_SECTIONS.map((s) => [s.key, s]));
+    return order.map((key) => metaMap.get(key)).filter(Boolean) as SectionMeta[];
+  }, [content.sectionOrder]);
+
+  const openSection = (key: LandingSectionKey) => {
     setActiveSection(key);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setEditData(JSON.parse(JSON.stringify((content as any)[key] || {})));
+    setEditData(JSON.parse(JSON.stringify((content as Record<string, unknown>)[key] || {})));
   };
 
   const saveSection = async () => {
@@ -54,7 +138,7 @@ export default function KontenPage() {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const toggleVisibility = (key: string) => {
+  const toggleVisibility = (key: LandingSectionKey) => {
     const updated = {
       ...content.sectionVisibility,
       [key]: !content.sectionVisibility[key],
@@ -62,12 +146,30 @@ export default function KontenPage() {
     updateSection("sectionVisibility", updated);
   };
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = orderedSections.findIndex((s) => s.key === active.id);
+    const newIndex = orderedSections.findIndex((s) => s.key === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+
+    const newOrder = arrayMove(
+      orderedSections.map((s) => s.key),
+      oldIndex,
+      newIndex,
+    );
+    updateSection("sectionOrder", newOrder);
+  };
+
   return (
     <div className="p-6 md:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">Konten Visual Editor</h1>
-          <p className="text-slate-500 text-sm mt-1">Klik section untuk mengedit konten</p>
+          <p className="text-slate-500 text-sm mt-1">
+            Drag icon grip untuk ubah urutan · klik section untuk edit
+          </p>
         </div>
         <div className="flex gap-2">
           <Link
@@ -87,69 +189,68 @@ export default function KontenPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Section List */}
-        <div className="lg:col-span-1 space-y-2">
-          {SECTIONS.map(({ key, label, desc }) => (
-            <div
-              key={key}
-              className={`bg-white rounded-xl border p-4 cursor-pointer transition-all ${
-                activeSection === key
-                  ? "border-emerald-500 bg-emerald-50"
-                  : "border-slate-200 hover:border-slate-300"
-              }`}
+        <div className="lg:col-span-1">
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={orderedSections.map((s) => s.key)}
+              strategy={verticalListSortingStrategy}
             >
-              <div className="flex items-center justify-between">
-                <button
-                  onClick={() => openSection(key)}
-                  className="flex-1 text-left"
-                >
-                  <p className="font-semibold text-slate-900 text-sm">{label}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">{desc}</p>
-                </button>
-                <div className="flex items-center gap-2 ml-2">
-                  <button
-                    onClick={() => toggleVisibility(key)}
-                    className={`text-xs font-semibold px-2 py-1 rounded-lg transition-colors ${
-                      content.sectionVisibility[key] !== false
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-slate-100 text-slate-500"
-                    }`}
-                  >
-                    {content.sectionVisibility[key] !== false ? "Aktif" : "Sembunyikan"}
-                  </button>
-                  <ChevronRight className="w-4 h-4 text-slate-400" />
-                </div>
+              <div className="space-y-2">
+                {orderedSections.map((section) => (
+                  <SortableSectionRow
+                    key={section.key}
+                    section={section}
+                    isActive={activeSection === section.key}
+                    isVisible={content.sectionVisibility[section.key] !== false}
+                    onOpen={() => openSection(section.key)}
+                    onToggleVisibility={() => toggleVisibility(section.key)}
+                  />
+                ))}
               </div>
-            </div>
-          ))}
+            </SortableContext>
+          </DndContext>
         </div>
 
-        {/* Editor Panel */}
         <div className="lg:col-span-2">
           {activeSection ? (
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
               <div className="flex items-center justify-between p-5 border-b border-slate-100">
                 <h2 className="font-bold text-slate-900">
-                  Edit: {SECTIONS.find((s) => s.key === activeSection)?.label}
+                  Edit: {LANDING_SECTIONS.find((s) => s.key === activeSection)?.label}
                 </h2>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setEditData(JSON.parse(JSON.stringify((content as unknown as Record<string, unknown>)[activeSection] || {})))}
+                    type="button"
+                    onClick={() =>
+                      setEditData(
+                        JSON.parse(
+                          JSON.stringify(
+                            (content as unknown as Record<string, unknown>)[activeSection] || {},
+                          ),
+                        ),
+                      )
+                    }
                     className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
                   >
                     <RefreshCw className="w-4 h-4" />
                   </button>
                   <button
+                    type="button"
                     onClick={saveSection}
-                    className="flex items-center gap-1.5 bg-emerald-600 text-white rounded-xl px-4 py-2 text-sm font-semibold hover:bg-emerald-700"
+                    disabled={isSaving}
+                    className="flex items-center gap-1.5 bg-emerald-600 text-white rounded-xl px-4 py-2 text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50"
                   >
                     <Save className="w-4 h-4" />
-                    {saved ? "Tersimpan!" : "Simpan"}
+                    {saved ? "Tersimpan!" : isSaving ? "Menyimpan..." : "Simpan"}
                   </button>
                 </div>
               </div>
               <div className="p-5">
-                  <p className="text-sm text-slate-500 mb-4">
+                <p className="text-sm text-slate-500 mb-4">
                   Edit field-field di bawah. Atau gunakan{" "}
                   <Link href="/admin/konten-json" className="text-emerald-600 hover:underline">
                     JSON Editor
@@ -185,13 +286,13 @@ export default function KontenPage() {
                         </div>
                       );
                     }
-                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                     if (value === null || value === undefined) return null;
                     if (typeof value === "boolean") {
                       return (
                         <div key={key} className="flex items-center justify-between">
                           <label className="text-sm font-semibold text-slate-700">{key}</label>
                           <button
+                            type="button"
                             onClick={() =>
                               setEditData((prev) => ({ ...prev, [key]: !prev[key] }))
                             }
@@ -206,7 +307,7 @@ export default function KontenPage() {
                         </div>
                       );
                     }
-                    const isLongText = typeof value === "string" && (value as string).length > 80;
+                    const isLongText = typeof value === "string" && value.length > 80;
                     return (
                       <div key={key}>
                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
@@ -241,11 +342,7 @@ export default function KontenPage() {
               <Edit3 className="w-12 h-12 text-slate-300 mx-auto mb-4" />
               <p className="text-slate-500 font-medium">Pilih section di sebelah kiri untuk mulai mengedit</p>
               <p className="text-slate-400 text-sm mt-2">
-                Atau gunakan{" "}
-                <Link href="/admin/konten-json" className="text-emerald-600 hover:underline">
-                  JSON Editor
-                </Link>{" "}
-                untuk edit seluruh konten sekaligus
+                Tarik icon grip untuk mengubah urutan tampilan di landing page
               </p>
             </div>
           )}
@@ -254,7 +351,7 @@ export default function KontenPage() {
 
       {isDirty && (
         <div className="fixed bottom-6 right-6 bg-amber-500 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-lg">
-          Ada perubahan yang belum disimpan
+          Ada perubahan yang belum disimpan — klik Simpan atau publish dari panel admin
         </div>
       )}
     </div>

@@ -1,5 +1,6 @@
 import type { SiteContent } from "@/lib/types/content";
 import { defaultContent } from "@/data/defaultContent";
+import { resolveSectionOrder } from "@/lib/landingSections";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { resolveSupabaseEnv } from "@/lib/supabase/env";
 
@@ -23,6 +24,7 @@ export function mergeSiteContent(raw: Partial<SiteContent> | null | undefined): 
     hero: { ...defaultContent.hero, ...(raw.hero || {}) },
     pricing: { ...defaultContent.pricing, ...(raw.pricing || {}) },
     footer: { ...defaultContent.footer, ...(raw.footer || {}) },
+    sectionOrder: resolveSectionOrder(raw.sectionOrder),
     sectionVisibility: {
       ...defaultContent.sectionVisibility,
       ...(raw.sectionVisibility || {}),

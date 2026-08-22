@@ -5,7 +5,6 @@ import { Container } from "@/components/shared/Container";
 import { EditableText } from "@/components/shared/EditableText";
 import { EditableImage } from "@/components/shared/EditableImage";
 import { useContentStore } from "@/lib/store/contentStore";
-import { cn } from "@/lib/utils/cn";
 
 export function HeroSection() {
   const { content } = useContentStore();
@@ -27,22 +26,11 @@ export function HeroSection() {
           
           {/* 1. BADGE & HEADLINE (Order 1) */}
           <div className="order-1 flex flex-col items-center md:items-start w-full">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-full w-fit shadow-sm border border-emerald-100/50 mt-2 md:mt-0"
-            >
-              <Zap className="w-3.5 h-3.5 fill-emerald-700" />
-              <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-emerald-700">
-                <EditableText section="hero" field="badge" value="EDUKASI CLOSING PROYEK" />
-              </span>
-            </motion.div>
-
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="mt-4 md:mt-6 text-[32px] sm:text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 leading-[1.1] tracking-tight text-center md:text-left"
+              className="mt-2 md:mt-0 text-[32px] sm:text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 leading-[1.1] tracking-tight text-center md:text-left"
             >
               <EditableText 
                 section="hero" 
