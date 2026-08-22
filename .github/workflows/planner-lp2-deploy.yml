@@ -47,8 +47,12 @@ jobs:
           sync_env() {
             local name="$1"
             local value="$2"
+            local vis=()
+            if [[ "$name" == NEXT_PUBLIC_* ]]; then
+              vis=(--visibility plain)
+            fi
             for env in production preview development; do
-              printf '%s' "$value" | npx vercel env add "$name" "$env" --force --yes \
+              printf '%s' "$value" | npx vercel env add "$name" "$env" --force --yes "${vis[@]}" \
                 --token "$VERCEL_TOKEN" 2>/dev/null || true
             done
           }

@@ -42,7 +42,11 @@ add_env() {
   local key="$1"
   local val="$2"
   [[ -z "$val" ]] && return 0
-  printf '%s' "$val" | npx vercel env add "$key" production --force >/dev/null
+  local extra=()
+  if [[ "$key" == NEXT_PUBLIC_* || "$key" == VITE_* ]]; then
+    extra=(--visibility plain)
+  fi
+  printf '%s' "$val" | npx vercel env add "$key" production --force "${extra[@]}" >/dev/null
   echo "  $key"
 }
 
