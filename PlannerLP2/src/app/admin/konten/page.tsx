@@ -20,6 +20,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useContentStore } from "@/lib/store/contentStore";
+import type { SiteContent } from "@/lib/types/content";
 import {
   LANDING_SECTIONS,
   resolveSectionOrder,
@@ -108,11 +109,21 @@ function SortableSectionRow({
 }
 
 export default function KontenPage() {
-  const { content, updateSection, publishContent, isDirty, isSaving } =
-    useContentStore();
+  const {
+    content,
+    updateSection,
+    publishContent,
+    isDirty,
+    isSaving,
+    dbSynced,
+    remoteUpdatedAt,
+    publishError,
+    loadError,
+  } = useContentStore();
   const [activeSection, setActiveSection] = useState<LandingSectionKey | null>(null);
   const [editData, setEditData] = useState<Record<string, unknown>>({});
   const [saved, setSaved] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -127,26 +138,48 @@ export default function KontenPage() {
 
   const openSection = (key: LandingSectionKey) => {
     setActiveSection(key);
-    setEditData(JSON.parse(JSON.stringify((content as Record<string, unknown>)[key] || {})));
+    setEditData(
+      JSON.parse(
+        JSON.stringify((content as unknown as Record<string, unknown>)[key] ?? {}),
+      ),
+    );
+  };
+
+  const persistToDatabase = async (applyChange: () => void) => {
+    applyChange();
+    const ok = await publishContent();
+    if (ok) {
+      setSyncMessage("Tersimpan ke database Supabase");
+      setTimeout(() => setSyncMessage(null), 2500);
+    }
+    return ok;
   };
 
   const saveSection = async () => {
     if (!activeSection) return;
-    updateSection(activeSection, editData as never);
-    await publishContent();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    if (activeSection === "trustBadges") {
+      setSyncMessage("Trust Badges belum bisa diedit di CMS");
+      setTimeout(() => setSyncMessage(null), 2500);
+      return;
+    }
+    const ok = await persistToDatabase(() => {
+      updateSection(activeSection as keyof SiteContent, editData as never);
+    });
+    if (ok) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    }
   };
 
-  const toggleVisibility = (key: LandingSectionKey) => {
+  const toggleVisibility = async (key: LandingSectionKey) => {
     const updated = {
       ...content.sectionVisibility,
       [key]: !content.sectionVisibility[key],
     };
-    updateSection("sectionVisibility", updated);
+    await persistToDatabase(() => updateSection("sectionVisibility", updated));
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
@@ -159,7 +192,7 @@ export default function KontenPage() {
       oldIndex,
       newIndex,
     );
-    updateSection("sectionOrder", newOrder);
+    await persistToDatabase(() => updateSection("sectionOrder", newOrder));
   };
 
   return (
@@ -168,10 +201,46 @@ export default function KontenPage() {
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">Konten Visual Editor</h1>
           <p className="text-slate-500 text-sm mt-1">
-            Drag icon grip untuk ubah urutan · klik section untuk edit
+            Drag untuk ubah urutan (auto-save ke database) · klik section untuk edit
           </p>
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <span
+              className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg ${
+                dbSynced
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-amber-100 text-amber-800"
+              }`}
+            >
+              {dbSynced ? "Terhubung Supabase" : "Belum sync database"}
+            </span>
+            {remoteUpdatedAt && (
+              <span className="text-[10px] text-slate-400">
+                Update DB: {new Date(remoteUpdatedAt).toLocaleString("id-ID")}
+              </span>
+            )}
+          </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col items-end gap-2">
+          {(publishError || loadError) && (
+            <p className="text-xs text-red-600 max-w-xs text-right">
+              {publishError || loadError}
+            </p>
+          )}
+          {syncMessage && (
+            <p className="text-xs text-emerald-600 font-semibold">{syncMessage}</p>
+          )}
+          {isDirty && (
+            <button
+              type="button"
+              onClick={() => void publishContent()}
+              disabled={isSaving}
+              className="flex items-center gap-1.5 bg-slate-900 text-white rounded-xl px-4 py-2 text-sm font-semibold hover:bg-slate-800 disabled:opacity-50"
+            >
+              <Save className="w-4 h-4" />
+              {isSaving ? "Menyimpan…" : "Publish ke Database"}
+            </button>
+          )}
+          <div className="flex gap-2">
           <Link
             href="/"
             target="_blank"
@@ -185,6 +254,7 @@ export default function KontenPage() {
           >
             <Edit3 className="w-4 h-4" /> JSON Editor
           </Link>
+          </div>
         </div>
       </div>
 
@@ -350,8 +420,8 @@ export default function KontenPage() {
       </div>
 
       {isDirty && (
-        <div className="fixed bottom-6 right-6 bg-amber-500 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-lg">
-          Ada perubahan yang belum disimpan — klik Simpan atau publish dari panel admin
+        <div className="fixed bottom-6 right-6 bg-amber-500 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-lg max-w-xs">
+          Ada perubahan lokal — klik Publish ke Database di sidebar atau header
         </div>
       )}
     </div>

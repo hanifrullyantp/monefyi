@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
   if (req.method === "GET") {
     const { data, error } = await supabaseAdmin
       .from("landing_content")
-      .select("content")
+      .select("content, updated_at")
       .eq("slug", slug)
       .maybeSingle();
 
@@ -84,10 +84,14 @@ Deno.serve(async (req) => {
     }
 
     if (!data) {
-      return jsonResponse(req, { slug, content: null });
+      return jsonResponse(req, { slug, content: null, updated_at: null });
     }
 
-    return jsonResponse(req, { slug, content: data.content });
+    return jsonResponse(req, {
+      slug,
+      content: data.content,
+      updated_at: data.updated_at,
+    });
   }
 
   if (req.method === "POST") {
@@ -124,7 +128,7 @@ Deno.serve(async (req) => {
       return errorResponse(req, "Failed to save content", 500);
     }
 
-    return jsonResponse(req, { ok: true, slug: bodySlug });
+    return jsonResponse(req, { ok: true, slug: bodySlug, updated_at: new Date().toISOString() });
   }
 
   return errorResponse(req, "Method not allowed", 405);

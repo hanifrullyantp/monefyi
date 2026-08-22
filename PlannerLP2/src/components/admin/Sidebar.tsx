@@ -59,7 +59,7 @@ export function Sidebar({ onClose }: SidebarProps) {
   const router = useRouter();
   const logout = useAuthStore((s) => s.logout);
   const setAdmin = useUIStore((s) => s.setAdmin);
-  const { isDirty, lastSaved, isSaving, publishContent } = useContentStore();
+  const { isDirty, lastSaved, isSaving, publishContent, publishError, dbSynced } = useContentStore();
 
   const handleLogout = async () => {
     await logout();
@@ -91,7 +91,10 @@ export function Sidebar({ onClose }: SidebarProps) {
           )}
         </div>
         
-        <SaveIndicator isDirty={isDirty} lastSaved={lastSaved} isSaving={isSaving} />
+        <SaveIndicator isDirty={isDirty} lastSaved={lastSaved} isSaving={isSaving} dbSynced={dbSynced} />
+        {publishError && (
+          <p className="text-[10px] text-red-400 leading-snug">{publishError}</p>
+        )}
         {isDirty && (
           <button
             type="button"
@@ -99,7 +102,7 @@ export function Sidebar({ onClose }: SidebarProps) {
             disabled={isSaving}
             className="w-full text-xs font-bold py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
           >
-            {isSaving ? "Menyimpan…" : "Publish ke Server"}
+            {isSaving ? "Menyimpan ke DB…" : "Publish ke Database"}
           </button>
         )}
       </div>

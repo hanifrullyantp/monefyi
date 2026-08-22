@@ -7,6 +7,12 @@ import { resolveSupabaseEnv } from "@/lib/supabase/env";
 export const LANDING_SLUG = "estimator-lp";
 export const LANDING_CACHE_KEY = "monefyi_estimator_lp_cache_v1";
 
+export type LandingContentFetchResult = {
+  content: SiteContent;
+  updatedAt: string | null;
+  fromDatabase: boolean;
+};
+
 function landingFunctionHint(status: number): string {
   if (status === 404 || status === 502) {
     return " Pastikan edge function monefyi-landing-config sudah di-deploy.";
@@ -48,9 +54,16 @@ export function writeCachedContent(content: SiteContent): void {
   localStorage.setItem(LANDING_CACHE_KEY, JSON.stringify(content));
 }
 
-export async function fetchLandingContent(slug = LANDING_SLUG): Promise<SiteContent | null> {
+export async function fetchLandingContent(
+  slug = LANDING_SLUG,
+): Promise<LandingContentFetchResult | null> {
   const { url, anonKey } = resolveSupabaseEnv();
-  if (!url || !anonKey) return readCachedContent();
+  if (!url || !anonKey) {
+    const cached = readCachedContent();
+    return cached
+      ? { content: cached, updatedAt: null, fromDatabase: false }
+      : null;
+  }
 
   const res = await fetch(
     `${url.replace(/\/$/, "")}/functions/v1/monefyi-landing-config?slug=${encodeURIComponent(slug)}`,
@@ -66,24 +79,45 @@ export async function fetchLandingContent(slug = LANDING_SLUG): Promise<SiteCont
     if (process.env.NODE_ENV === "development") {
       console.warn(`[landing] GET failed HTTP ${res.status}.${landingFunctionHint(res.status)}`);
     }
-    return readCachedContent();
+    const cached = readCachedContent();
+    return cached
+      ? { content: cached, updatedAt: null, fromDatabase: false }
+      : null;
   }
 
-  const data = (await res.json()) as { content?: Partial<SiteContent> | null };
-  if (!data.content) return null;
+  const data = (await res.json()) as {
+    content?: Partial<SiteContent> | null;
+    updated_at?: string | null;
+  };
+
+  if (!data.content || Object.keys(data.content).length === 0) {
+    return null;
+  }
+
   const merged = mergeSiteContent(data.content);
   writeCachedContent(merged);
-  return merged;
+  return {
+    content: merged,
+    updatedAt: data.updated_at ?? null,
+    fromDatabase: true,
+  };
 }
 
 export async function saveLandingContent(
   content: SiteContent,
   slug = LANDING_SLUG,
-): Promise<void> {
+): Promise<{ updatedAt: string | null }> {
   const supabase = getSupabaseClient();
   if (!supabase) {
     writeCachedContent(content);
-    throw new Error("Supabase belum dikonfigurasi — konten disimpan lokal saja.");
+    throw new Error(
+      "Supabase belum dikonfigurasi (NEXT_PUBLIC_SUPABASE_URL / ANON_KEY). Konten hanya tersimpan lokal.",
+    );
+  }
+
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) {
+    throw new Error("Login Supabase diperlukan untuk menyimpan ke database.");
   }
 
   const { data, error } = await supabase.functions.invoke("monefyi-landing-config", {
@@ -98,4 +132,5 @@ export async function saveLandingContent(
   if (data?.error) throw new Error(String(data.error));
 
   writeCachedContent(content);
+  return { updatedAt: (data?.updated_at as string | undefined) ?? new Date().toISOString() };
 }

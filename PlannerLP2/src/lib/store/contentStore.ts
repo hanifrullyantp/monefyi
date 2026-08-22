@@ -15,6 +15,9 @@ interface ContentStore {
   isSaving: boolean;
   isLoaded: boolean;
   lastSaved: string | null;
+  remoteUpdatedAt: string | null;
+  dbSynced: boolean;
+  publishError: string | null;
   loadError: string | null;
   history: SiteContent[];
   updateContent: (updates: Partial<SiteContent>) => void;
@@ -22,7 +25,7 @@ interface ContentStore {
   updateField: (section: keyof SiteContent, field: string, value: unknown) => void;
   resetContent: () => void;
   markSaved: () => void;
-  publishContent: () => Promise<void>;
+  publishContent: () => Promise<boolean>;
   loadFromRemote: () => Promise<void>;
   saveToHistory: () => void;
   restoreFromHistory: (index: number) => void;
@@ -36,6 +39,9 @@ export const useContentStore = create<ContentStore>()(
       isSaving: false,
       isLoaded: false,
       lastSaved: null,
+      remoteUpdatedAt: null,
+      dbSynced: false,
+      publishError: null,
       loadError: null,
       history: [],
 
@@ -43,6 +49,7 @@ export const useContentStore = create<ContentStore>()(
         set((state) => ({
           content: { ...state.content, ...updates },
           isDirty: true,
+          publishError: null,
         }));
       },
 
@@ -50,6 +57,7 @@ export const useContentStore = create<ContentStore>()(
         set((state) => ({
           content: { ...state.content, [key]: value },
           isDirty: true,
+          publishError: null,
         }));
       },
 
@@ -63,11 +71,12 @@ export const useContentStore = create<ContentStore>()(
             },
           },
           isDirty: true,
+          publishError: null,
         }));
       },
 
       resetContent: () => {
-        set({ content: defaultContent, isDirty: true });
+        set({ content: defaultContent, isDirty: true, publishError: null });
       },
 
       markSaved: () => {
@@ -75,34 +84,50 @@ export const useContentStore = create<ContentStore>()(
       },
 
       publishContent: async () => {
-        set({ isSaving: true });
+        set({ isSaving: true, publishError: null });
         try {
-          await saveLandingContent(get().content);
+          const { updatedAt } = await saveLandingContent(get().content);
           set({
             isDirty: false,
             isSaving: false,
             lastSaved: new Date().toISOString(),
+            remoteUpdatedAt: updatedAt,
+            dbSynced: true,
             loadError: null,
+            publishError: null,
           });
+          return true;
         } catch (e) {
-          set({ isSaving: false });
-          throw e;
+          const message = e instanceof Error ? e.message : "Gagal menyimpan ke database";
+          set({ isSaving: false, publishError: message });
+          return false;
         }
       },
 
       loadFromRemote: async () => {
         try {
           const remote = await fetchLandingContent();
-          if (remote) {
+          if (remote?.fromDatabase) {
             set({
-              content: mergeSiteContent(remote),
+              content: mergeSiteContent(remote.content),
               isDirty: false,
               isLoaded: true,
               loadError: null,
+              publishError: null,
+              remoteUpdatedAt: remote.updatedAt,
+              dbSynced: true,
+              lastSaved: remote.updatedAt ?? get().lastSaved,
             });
-          } else {
-            set({ isLoaded: true });
+            return;
           }
+
+          set({
+            isLoaded: true,
+            dbSynced: false,
+            loadError: remote
+              ? null
+              : "Konten belum ada di database — klik Publish Changes untuk simpan permanen.",
+          });
         } catch (e) {
           set({
             isLoaded: true,
@@ -120,7 +145,7 @@ export const useContentStore = create<ContentStore>()(
       restoreFromHistory: (index) => {
         const { history } = get();
         if (history[index]) {
-          set({ content: history[index], isDirty: true });
+          set({ content: history[index], isDirty: true, publishError: null });
         }
       },
     }),
@@ -129,8 +154,15 @@ export const useContentStore = create<ContentStore>()(
       partialize: (state) => ({
         content: state.content,
         lastSaved: state.lastSaved,
+        remoteUpdatedAt: state.remoteUpdatedAt,
+        dbSynced: state.dbSynced,
         history: state.history,
       }),
+      onRehydrateStorage: () => {
+        return () => {
+          void useContentStore.getState().loadFromRemote();
+        };
+      },
     },
   ),
 );

@@ -7,9 +7,10 @@ interface SaveIndicatorProps {
   isDirty: boolean;
   lastSaved: string | null;
   isSaving?: boolean;
+  dbSynced?: boolean;
 }
 
-export function SaveIndicator({ isDirty, lastSaved, isSaving = false }: SaveIndicatorProps) {
+export function SaveIndicator({ isDirty, lastSaved, isSaving = false, dbSynced = false }: SaveIndicatorProps) {
   const [showSaved, setShowSaved] = useState(false);
 
   useEffect(() => {
@@ -46,7 +47,13 @@ export function SaveIndicator({ isDirty, lastSaved, isSaving = false }: SaveIndi
           >
             <div className="w-2 h-2 bg-emerald-500 rounded-full" />
             <span className="text-[10px] font-bold uppercase tracking-widest">
-              {showSaved ? "All Changes Saved" : "System Synchronized"}
+              {showSaved
+                ? dbSynced
+                  ? "Tersimpan di Database"
+                  : "All Changes Saved"
+                : dbSynced
+                  ? "Database Synced"
+                  : "System Synchronized"}
             </span>
           </motion.div>
         )}

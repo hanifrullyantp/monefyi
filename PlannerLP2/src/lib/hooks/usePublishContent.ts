@@ -13,13 +13,11 @@ export function usePublishContent() {
 
   const publish = useCallback(async () => {
     setError(null);
-    try {
-      await publishContent();
-      return true;
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal menyimpan");
-      return false;
+    const ok = await publishContent();
+    if (!ok) {
+      setError(useContentStore.getState().publishError);
     }
+    return ok;
   }, [publishContent]);
 
   return { publish, isDirty, isSaving, lastSaved, error };

@@ -37,6 +37,27 @@ jobs:
           NEXT_PUBLIC_PLANNER_APP_URL: https://planner.monefyi.com
           PLANNER_LANDING_ORIGIN: https://planner-landing-henna.vercel.app
           NEXT_PUBLIC_BASE_PATH: /lp2
+          NEXT_PUBLIC_SUPABASE_URL: https://zzwqfmdyncxbolestkqp.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6d3FmbWR5bmN4Ym9sZXN0a3FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYzNDI3OTQsImV4cCI6MjA4MTkxODc5NH0.qtvqzDicRmIixFh3A46ExuitpAXDWaYHmB7NVBxsc7w
+
+      - name: Sync Vercel env (Supabase CMS)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          set -e
+          sync_env() {
+            local name="$1"
+            local value="$2"
+            for env in production preview development; do
+              printf '%s' "$value" | npx vercel env add "$name" "$env" --force --yes \
+                --token "$VERCEL_TOKEN" 2>/dev/null || true
+            done
+          }
+          sync_env NEXT_PUBLIC_SUPABASE_URL "https://zzwqfmdyncxbolestkqp.supabase.co"
+          sync_env NEXT_PUBLIC_SUPABASE_ANON_KEY "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6d3FmbWR5bmN4Ym9sZXN0a3FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYzNDI3OTQsImV4cCI6MjA4MTkxODc5NH0.qtvqzDicRmIixFh3A46ExuitpAXDWaYHmB7NVBxsc7w"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PLANNER_LP2_PROJECT_ID }}
 
       - name: Deploy to Vercel
         if: github.ref == 'refs/heads/main'
@@ -45,3 +66,5 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PLANNER_LP2_PROJECT_ID }}
+          NEXT_PUBLIC_SUPABASE_URL: https://zzwqfmdyncxbolestkqp.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6d3FmbWR5bmN4Ym9sZXN0a3FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYzNDI3OTQsImV4cCI6MjA4MTkxODc5NH0.qtvqzDicRmIixFh3A46ExuitpAXDWaYHmB7NVBxsc7w
