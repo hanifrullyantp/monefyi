@@ -6,9 +6,10 @@ import { CheckCircle2, CloudUpload } from "lucide-react";
 interface SaveIndicatorProps {
   isDirty: boolean;
   lastSaved: string | null;
+  isSaving?: boolean;
 }
 
-export function SaveIndicator({ isDirty, lastSaved }: SaveIndicatorProps) {
+export function SaveIndicator({ isDirty, lastSaved, isSaving = false }: SaveIndicatorProps) {
   const [showSaved, setShowSaved] = useState(false);
 
   useEffect(() => {
@@ -22,7 +23,7 @@ export function SaveIndicator({ isDirty, lastSaved }: SaveIndicatorProps) {
   return (
     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 shadow-inner">
       <AnimatePresence mode="wait">
-        {isDirty ? (
+        {isDirty || isSaving ? (
           <motion.div
             key="unsaved"
             initial={{ opacity: 0, scale: 0.8 }}
@@ -31,7 +32,9 @@ export function SaveIndicator({ isDirty, lastSaved }: SaveIndicatorProps) {
             className="flex items-center gap-2 text-amber-600"
           >
             <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-            <span className="text-[10px] font-bold uppercase tracking-widest">Unsaved Changes</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest">
+              {isSaving ? "Publishing…" : "Unsaved Changes"}
+            </span>
           </motion.div>
         ) : (
           <motion.div

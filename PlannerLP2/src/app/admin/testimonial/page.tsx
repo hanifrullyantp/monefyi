@@ -5,14 +5,14 @@ import { Save, Edit } from "lucide-react";
 import type { TestimonialCard } from "@/lib/types/content";
 
 export default function TestimonialAdminPage() {
-  const { content, updateSection, markSaved } = useContentStore();
+  const { content, updateSection, publishContent } = useContentStore();
   const [others, setOthers] = useState<TestimonialCard[]>(content.testimonial.others);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [saved, setSaved] = useState(false);
 
-  const save = () => {
+  const save = async () => {
     updateSection("testimonial", { ...content.testimonial, others });
-    markSaved();
+    await publishContent();
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };

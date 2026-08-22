@@ -35,7 +35,7 @@ export function FreeToolsSection() {
   const totalValue = "Rp 846.000";
 
   return (
-    <section className="py-14 md:py-32 bg-white relative overflow-hidden">
+    <section id="bonus" className="py-14 md:py-32 bg-white relative overflow-hidden">
       {/* Decorative Orbs */}
       <div className="absolute top-1/4 -left-20 w-64 h-64 bg-amber-400/5 rounded-full blur-[100px]" />
       <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-emerald-500/5 rounded-full blur-[100px]" />

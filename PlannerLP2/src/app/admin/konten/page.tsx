@@ -34,7 +34,7 @@ const SECTIONS: { key: SectionKey; label: string; desc: string }[] = [
 ];
 
 export default function KontenPage() {
-  const { content, updateSection, markSaved, isDirty } =
+  const { content, updateSection, publishContent, isDirty, isSaving } =
     useContentStore();
   const [activeSection, setActiveSection] = useState<SectionKey | null>(null);
   const [editData, setEditData] = useState<Record<string, unknown>>({});
@@ -46,10 +46,10 @@ export default function KontenPage() {
     setEditData(JSON.parse(JSON.stringify((content as any)[key] || {})));
   };
 
-  const saveSection = () => {
+  const saveSection = async () => {
     if (!activeSection) return;
     updateSection(activeSection, editData as never);
-    markSaved();
+    await publishContent();
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };

@@ -75,6 +75,10 @@ export function buildEntitlementSnapshot(input: {
   };
 }
 
+export function canGenerateKwitansi(snapshot: EntitlementSnapshot): boolean {
+  return snapshot.isEstimatorPro;
+}
+
 export function isActiveProjectStatus(status?: string | null): boolean {
   return ACTIVE_PROJECT_STATUSES.has(String(status || 'planning'));
 }

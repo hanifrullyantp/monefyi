@@ -1,24 +1,28 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import {
-  Copy, MessageCircle, MoreVertical, Pencil, Rocket, Trash2,
+  Copy, MessageCircle, MoreVertical, Pencil, Receipt, Rocket, Trash2,
 } from 'lucide-react';
 
 type Props = {
   onShareWhatsApp?: () => void;
+  onKwitansi?: () => void;
   onEdit: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
   onConvert?: () => void;
   waLoading?: boolean;
+  kwitansiLoading?: boolean;
 };
 
 export default function EstimationCardActions({
   onShareWhatsApp,
+  onKwitansi,
   onEdit,
   onDuplicate,
   onDelete,
   onConvert,
   waLoading = false,
+  kwitansiLoading = false,
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -52,6 +56,19 @@ export default function EstimationCardActions({
           className="p-2.5 rounded-xl text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 transition-colors disabled:opacity-60"
         >
           <MessageCircle className="w-4 h-4" />
+        </button>
+      )}
+
+      {onKwitansi && (
+        <button
+          type="button"
+          title="Kwitansi"
+          aria-label="Generate kwitansi"
+          disabled={kwitansiLoading}
+          onClick={e => stop(e, onKwitansi)}
+          className="p-2.5 rounded-xl text-emerald-800 bg-white hover:bg-emerald-50 border border-emerald-200 transition-colors disabled:opacity-60"
+        >
+          <Receipt className="w-4 h-4" />
         </button>
       )}
 

@@ -3,12 +3,7 @@
 import { create } from "zustand";
 import type { Session } from "@supabase/supabase-js";
 import { getStorage, setStorage, removeStorage } from "@/lib/utils/storage";
-import {
-  type AppUser,
-  type ProductId,
-  findAccount,
-  toPublicUser,
-} from "@/lib/accounts";
+import type { AppUser } from "@/lib/accounts";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
@@ -16,8 +11,9 @@ import {
   signOutGlobal,
 } from "@/lib/services/authService";
 import { loadUserSubscriptionContext } from "@/lib/services/subscriptionService";
+import { resolveAdminAccess } from "@/lib/services/adminAuth";
 
-export type { ProductId, AppUser as User };
+export type { ProductId, AppUser as User } from "@/lib/accounts";
 
 const AUTH_STORAGE_KEY = "monefyi_user_auth";
 const TRIAL_USES_KEY = "monefyi_planner_trial_uses";
@@ -29,7 +25,6 @@ interface AuthState {
   orgId: string | null;
   hydrate: () => Promise<void>;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: AppUser }>;
-  loginMock: (email: string, password: string) => { success: boolean; error?: string; user?: AppUser };
   refreshUser: () => Promise<void>;
   logout: () => Promise<void>;
   consumePlannerTrialSlot: () => boolean;
@@ -55,21 +50,23 @@ function writeTrialUsesOverride(userId: string, uses: number) {
 async function buildUserFromSession(session: Session): Promise<AppUser> {
   const ctx = await loadUserSubscriptionContext(session.user.id);
   const trialOverride = readTrialUsesOverride(session.user.id);
+  const email = session.user.email || "";
   const name =
     (session.user.user_metadata?.name as string | undefined) ||
-    session.user.email?.split("@")[0] ||
+    email.split("@")[0] ||
     "User";
+  const isAdmin = await resolveAdminAccess(session.user.id, email);
 
   return {
     id: session.user.id,
     name,
-    email: session.user.email || "",
+    email,
     orgId: ctx.orgId,
     subscriptionTier: ctx.subscriptionTier,
     estimatorVariant: ctx.estimatorVariant,
     ownedProducts: ctx.ownedProducts,
     plannerTrialUses: trialOverride ?? ctx.plannerTrialUses,
-    isAdmin: false,
+    isAdmin,
   };
 }
 
@@ -81,13 +78,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   hydrate: async () => {
     if (!isSupabaseConfigured()) {
-      const stored = getStorage<AppUser | null>(AUTH_STORAGE_KEY, null);
-      set({
-        user: stored,
-        isAuthenticated: Boolean(stored),
-        orgId: stored?.orgId ?? null,
-        hydrated: true,
-      });
+      set({ user: null, isAuthenticated: false, orgId: null, hydrated: true });
       return;
     }
 
@@ -111,7 +102,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   login: async (email, password) => {
     if (!isSupabaseConfigured()) {
-      return get().loginMock(email, password);
+      return {
+        success: false,
+        error: "Supabase belum dikonfigurasi. Hubungi administrator.",
+      };
     }
 
     const { data, error } = await sbSignIn(email, password);
@@ -122,17 +116,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const user = await buildUserFromSession(data.session);
     persistUser(user);
     set({ user, isAuthenticated: true, orgId: user.orgId });
-    return { success: true, user };
-  },
-
-  loginMock: (email, password) => {
-    const match = findAccount(email, password);
-    if (!match) {
-      return { success: false, error: "Email atau password salah." };
-    }
-    const user = toPublicUser(match);
-    persistUser(user);
-    set({ user, isAuthenticated: true, orgId: user.orgId ?? null });
     return { success: true, user };
   },
 
@@ -168,6 +151,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 }));
 
-export function hasOwnedProduct(user: AppUser | null, product: ProductId): boolean {
+export function hasOwnedProduct(user: AppUser | null, product: import("@/lib/accounts").ProductId): boolean {
   return Boolean(user?.ownedProducts.includes(product));
 }

@@ -24,8 +24,9 @@ import {
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { clearSession } from "@/lib/utils/auth";
 import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/lib/store/authStore";
+import { useUIStore } from "@/lib/store/uiStore";
 import { useContentStore } from "@/lib/store/contentStore";
 import { SaveIndicator } from "./SaveIndicator";
 
@@ -56,11 +57,14 @@ interface SidebarProps {
 export function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { isDirty, lastSaved } = useContentStore();
+  const logout = useAuthStore((s) => s.logout);
+  const setAdmin = useUIStore((s) => s.setAdmin);
+  const { isDirty, lastSaved, isSaving, publishContent } = useContentStore();
 
-  const handleLogout = () => {
-    clearSession();
-    router.push("/admin/login");
+  const handleLogout = async () => {
+    await logout();
+    setAdmin(false);
+    router.push("/");
   };
 
   return (
@@ -87,7 +91,17 @@ export function Sidebar({ onClose }: SidebarProps) {
           )}
         </div>
         
-        <SaveIndicator isDirty={isDirty} lastSaved={lastSaved} />
+        <SaveIndicator isDirty={isDirty} lastSaved={lastSaved} isSaving={isSaving} />
+        {isDirty && (
+          <button
+            type="button"
+            onClick={() => void publishContent()}
+            disabled={isSaving}
+            className="w-full text-xs font-bold py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {isSaving ? "Menyimpan…" : "Publish ke Server"}
+          </button>
+        )}
       </div>
 
       {/* Navigation */}

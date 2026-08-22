@@ -5,14 +5,14 @@ import { Save, Plus, Trash2 } from "lucide-react";
 import type { ToastNotification } from "@/lib/types/content";
 
 export default function ToastAdminPage() {
-  const { content, updateSection, markSaved } = useContentStore();
+  const { content, updateSection, publishContent } = useContentStore();
   const [config, setConfig] = useState(content.toast);
   const [saved, setSaved] = useState(false);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
 
-  const save = () => {
+  const save = async () => {
     updateSection("toast", config);
-    markSaved();
+    await publishContent();
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };

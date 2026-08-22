@@ -8,7 +8,6 @@ export interface SiteSettings {
   favicon?: string;
   primaryColor: string;
   secondaryColor: string;
-  adminPassword: string;
   waNumber: string;
   waDefaultMessage: string;
   waFloatEnabled: boolean;
@@ -31,12 +30,12 @@ export const defaultSettings: SiteSettings = {
   siteUrl: "https://monefyi.com",
   primaryColor: "#059669",
   secondaryColor: "#f59e0b",
-  adminPassword: "monefyi2026",
   waNumber: "6281234567890",
   waDefaultMessage: "Halo, saya tertarik dengan Monefyi Estimator. Boleh minta info lebih lanjut?",
   waFloatEnabled: false,
   liveChatEnabled: false,
   metaTitle: "Monefyi Estimator — Sistem Closing & Proyek untuk Jasa Proyek",
-  metaDescription: "Saring lead WA, closing di tempat saat survei, dan kelola proyek sampai selesai. Sistem all-in-one untuk kontraktor, interior designer, kitchen set & furniture custom.",
+  metaDescription:
+    "Saring lead WA, closing di tempat saat survei, dan kelola proyek sampai selesai. Sistem all-in-one untuk kontraktor, interior designer, kitchen set & furniture custom.",
   maintenanceMode: false,
 };

@@ -16,9 +16,11 @@ type Props = {
   onDelete: () => void;
   onConvert?: () => void;
   onShareWhatsApp?: () => void;
+  onKwitansi?: () => void;
   onStatusChange?: (status: EstimationWorkflowStatus | 'rejected') => void;
   statusLoading?: EstimationWorkflowStatus | 'rejected' | null;
   waLoading?: boolean;
+  kwitansiLoading?: boolean;
 };
 
 function stopCardClick(e: MouseEvent) {
@@ -41,9 +43,11 @@ export default function EstimationCard({
   onDelete,
   onConvert,
   onShareWhatsApp,
+  onKwitansi,
   onStatusChange,
   statusLoading = null,
   waLoading = false,
+  kwitansiLoading = false,
 }: Props) {
   const status = normalizeEstimationStatus(est.status);
   const profit = Number(est.total_profit) || 0;
@@ -51,6 +55,7 @@ export default function EstimationCard({
   const isConverted = status === 'converted';
   const showConvert = !isConverted && onConvert;
   const showWhatsApp = !isConverted && onShareWhatsApp;
+  const showKwitansi = !isConverted && onKwitansi;
 
   const cardClass =
     viewMode === 'card'
@@ -83,11 +88,13 @@ export default function EstimationCard({
   const actions = (
     <EstimationCardActions
       onShareWhatsApp={showWhatsApp ? onShareWhatsApp : undefined}
+      onKwitansi={showKwitansi ? onKwitansi : undefined}
       onEdit={onEdit}
       onDuplicate={onDuplicate}
       onDelete={onDelete}
       onConvert={showConvert ? onConvert : undefined}
       waLoading={waLoading}
+      kwitansiLoading={kwitansiLoading}
     />
   );
 

@@ -1,5 +1,7 @@
 import { Navbar } from "@/components/landing/Navbar";
 import { AuthHydrator } from "@/components/landing/AuthHydrator";
+import { ContentHydrator } from "@/components/landing/ContentHydrator";
+import { LoginRedirect } from "@/components/landing/LoginRedirect";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { ThreeStepSection } from "@/components/landing/ThreeStepSection";
 import { TransitionSection } from "@/components/landing/TransitionSection";
@@ -28,6 +30,8 @@ export default function LandingPage() {
   return (
     <>
       <AuthHydrator />
+      <ContentHydrator />
+      <LoginRedirect />
       <ScrollProgress />
       <Navbar />
       <main>

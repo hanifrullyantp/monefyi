@@ -5,14 +5,14 @@ import { Save, Edit, Star } from "lucide-react";
 import type { FeatureItem } from "@/lib/types/content";
 
 export default function FeaturesAdminPage() {
-  const { content, updateSection, markSaved } = useContentStore();
+  const { content, updateSection, publishContent } = useContentStore();
   const [features, setFeatures] = useState<FeatureItem[]>(content.features.features);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [saved, setSaved] = useState(false);
 
-  const save = () => {
+  const save = async () => {
     updateSection("features", { ...content.features, features });
-    markSaved();
+    await publishContent();
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };

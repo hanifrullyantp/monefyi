@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { LogIn, X } from "lucide-react";
 import { useUIStore } from "@/lib/store/uiStore";
 import { useAuthStore } from "@/lib/store/authStore";
 import { useContentStore } from "@/lib/store/contentStore";
-import { saveSession } from "@/lib/utils/auth";
 import {
   resetPasswordForEmail,
   resendSignupVerification,
@@ -20,6 +20,8 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 type AuthMode = "login" | "signup" | "forgot";
 
 export function LoginModal() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { isLoginModalOpen, setLoginModalOpen, pendingCheckoutProduct, setPendingCheckoutProduct } =
     useUIStore();
   const login = useAuthStore((s) => s.login);
@@ -78,7 +80,6 @@ export function LoginModal() {
       return;
     }
     if (result.user.isAdmin) {
-      saveSession();
       setAdmin(true);
     }
     if (pendingCheckoutProduct && isSupabaseConfigured()) {
@@ -87,6 +88,11 @@ export function LoginModal() {
     }
     setLoginModalOpen(false);
     setPassword("");
+
+    const next = searchParams.get("next");
+    if (result.user.isAdmin && next?.startsWith("/admin")) {
+      router.push(next);
+    }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -266,7 +272,7 @@ export function LoginModal() {
 
             {!isSupabaseConfigured() && (
               <p className="mt-2 text-center text-xs text-amber-700">
-                Supabase belum dikonfigurasi — mode demo mock aktif.
+                Supabase belum dikonfigurasi — login tidak tersedia.
               </p>
             )}
 

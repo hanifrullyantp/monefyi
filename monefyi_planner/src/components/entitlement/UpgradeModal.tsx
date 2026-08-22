@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Lock, Rocket, X } from 'lucide-react';
 import { redirectToCheckout } from '../../lib/checkout';
 import { analytics } from '../../lib/analytics/events';
-import { PRO_PRICE_MONTHLY_IDR } from '../../lib/entitlement';
+import { ESTIMATOR_PRO_PRICE_IDR, PRO_PRICE_MONTHLY_IDR } from '../../lib/entitlement';
 import { useAppStore } from '../../store/appStore';
 import { useEntitlement } from '../../hooks/useEntitlement';
 import type { UpgradeModalTrigger } from '../../types/entitlement';
@@ -59,6 +59,16 @@ export default function UpgradeModal({
     });
   };
 
+  const upgradeEstimatorPro = () => {
+    if (!tenant?.id || !user?.id) return;
+    analytics.upgradeCtaClicked({ triggerType: trigger, targetTier: 'estimator' });
+    redirectToCheckout('estimator_pro', {
+      orgId: tenant.id,
+      userId: user.id,
+      email: user.email ?? undefined,
+    });
+  };
+
   return (
     <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-4 bg-black/40">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
@@ -66,6 +76,7 @@ export default function UpgradeModal({
           <h2 className="font-bold text-slate-900">
             {trigger === 'project_limit' && 'Kuota proyek tercapai'}
             {trigger === 'pro_feature' && 'Fitur Planner Pro'}
+            {trigger === 'estimator_pro_feature' && 'Estimator Pro'}
             {trigger === 'estimation_accepted' && 'Penawaran diterima!'}
             {trigger === 'estimator_paywall' && 'Akses Estimator'}
             {trigger === 'manual' && 'Upgrade paket'}
@@ -103,6 +114,23 @@ export default function UpgradeModal({
                   )}
                 </p>
               </div>
+            </>
+          )}
+
+          {trigger === 'estimator_pro_feature' && (
+            <>
+              <p className="flex items-center gap-2 font-semibold text-slate-800">
+                <Lock className="w-4 h-4" />
+                {featureName || 'Generator Kwitansi Pro'} tersedia di Estimator Pro
+              </p>
+              <ul className="text-xs space-y-1 text-slate-600">
+                <li>• Kwitansi pembayaran PDF profesional</li>
+                <li>• Terbilang otomatis & branding custom</li>
+                <li>• Semua fitur Estimator Standard</li>
+              </ul>
+              <p className="font-bold text-emerald-800">
+                Rp {ESTIMATOR_PRO_PRICE_IDR.toLocaleString('id-ID')} · sekali bayar selamanya
+              </p>
             </>
           )}
 
@@ -154,6 +182,10 @@ export default function UpgradeModal({
           {trigger === 'estimator_paywall' ? (
             <button type="button" onClick={buyEstimator} className="px-4 py-2 rounded-xl text-sm font-bold bg-emerald-600 text-white">
               Beli Estimator
+            </button>
+          ) : trigger === 'estimator_pro_feature' ? (
+            <button type="button" onClick={upgradeEstimatorPro} className="inline-flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-bold bg-emerald-600 text-white">
+              <Rocket className="w-4 h-4" /> Upgrade Estimator Pro
             </button>
           ) : trigger !== 'estimation_accepted' && (
             <button type="button" onClick={upgradePro} className="inline-flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-bold bg-emerald-600 text-white">

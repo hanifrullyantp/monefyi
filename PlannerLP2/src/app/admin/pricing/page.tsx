@@ -5,15 +5,15 @@ import { Save, Edit } from "lucide-react";
 import type { PricingCard } from "@/lib/types/content";
 
 export default function PricingAdminPage() {
-  const { content, updateSection, markSaved } = useContentStore();
+  const { content, updateSection, publishContent } = useContentStore();
   const [cards, setCards] = useState<PricingCard[]>(content.pricing.cards);
   const [lynkUrls, setLynkUrls] = useState(content.pricing.lynkCheckoutUrls ?? {});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  const save = () => {
+  const save = async () => {
     updateSection("pricing", { ...content.pricing, cards, lynkCheckoutUrls: lynkUrls });
-    markSaved();
+    await publishContent();
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };

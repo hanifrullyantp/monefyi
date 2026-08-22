@@ -18,7 +18,7 @@ import { LEAD_STATUS_LABELS, LEAD_STATUS_COLORS } from "@/lib/types/leads";
 
 export default function AdminDashboard() {
   const { leads } = useLeadsStore();
-  const { content, lastSaved, isDirty, markSaved } = useContentStore();
+  const { content, lastSaved, isDirty, isSaving, publishContent } = useContentStore();
 
   const totalLeads = leads.length;
   const wonLeads = leads.filter((l) => l.status === "won").length;
@@ -91,11 +91,13 @@ export default function AdminDashboard() {
           </Link>
           {isDirty && (
             <button
-              onClick={() => markSaved()}
-              className="flex items-center gap-2 bg-slate-900 text-white rounded-2xl px-8 py-3.5 font-bold text-sm shadow-2xl hover:bg-slate-800 transition-all active:scale-95 group"
+              type="button"
+              onClick={() => void publishContent()}
+              disabled={isSaving}
+              className="flex items-center gap-2 bg-slate-900 text-white rounded-2xl px-8 py-3.5 font-bold text-sm shadow-2xl hover:bg-slate-800 transition-all active:scale-95 group disabled:opacity-50"
             >
               <Save className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
-              PUBLISH CHANGES
+              {isSaving ? "MENYIMPAN…" : "PUBLISH CHANGES"}
             </button>
           )}
         </div>

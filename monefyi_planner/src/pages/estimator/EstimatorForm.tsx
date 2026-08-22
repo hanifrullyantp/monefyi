@@ -21,6 +21,7 @@ import EstimationImageSlots from '../../components/estimator/EstimationImageSlot
 import EstimationStickySummary from '../../components/estimator/EstimationStickySummary';
 import PdfDesignCustomizer from '../../components/estimator/PdfDesignCustomizer';
 import PdfPreviewModal from '../../components/estimator/PdfPreviewModal';
+import KwitansiModal from '../../components/estimator/KwitansiModal';
 import ShareWhatsAppModal from '../../components/estimator/ShareWhatsAppModal';
 import MarkAsSentPrompt from '../../components/estimator/MarkAsSentPrompt';
 import UpgradeModal from '../../components/entitlement/UpgradeModal';
@@ -28,6 +29,7 @@ import MilestoneUpsellModal from '../../components/entitlement/MilestoneUpsellMo
 import { useEntitlement } from '../../hooks/useEntitlement';
 import { analytics } from '../../lib/analytics/events';
 import { shouldShowMilestone5Upsell } from '../../lib/analytics/milestones';
+import { canGenerateKwitansi } from '../../lib/entitlement';
 import {
   loadWhatsAppTemplate,
   defaultWhatsAppTemplateConfig,
@@ -53,6 +55,7 @@ import { assertEstimationConvertible } from '../../services/estimationConvertSer
 import { assertCanCreateProjectByEntitlement } from '../../services/entitlementService';
 import { getProject } from '../../services/projectService';
 import type { EstimationStatusTimestamps } from '../../lib/estimationStatus';
+import type { UpgradeModalTrigger } from '../../types/entitlement';
 import { ESTIMATION_STATUS_LABEL } from '../../lib/estimatorFormat';
 import type { EstimationImageDraft, EstimationStatus, Estimation } from '../../types/estimator';
 import { formatRupiahFull } from '../../lib/estimatorFormat';
@@ -81,6 +84,7 @@ export default function EstimatorForm() {
   }, []);
   const [pdfDesignOpen, setPdfDesignOpen] = useState(false);
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
+  const [kwitansiOpen, setKwitansiOpen] = useState(false);
   const [waShareOpen, setWaShareOpen] = useState(false);
   const [pdfSettings, setPdfSettings] = useState<PdfSettings | null>(null);
   const [waTemplate, setWaTemplate] = useState<WhatsAppTemplateConfig>(defaultWhatsAppTemplateConfig());
@@ -93,16 +97,19 @@ export default function EstimatorForm() {
   const [convertedProjectId, setConvertedProjectId] = useState<string | null>(null);
   const [convertedProjectName, setConvertedProjectName] = useState<string | null>(null);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
-  const [upgradeTrigger, setUpgradeTrigger] = useState<'estimation_accepted' | 'project_limit'>('estimation_accepted');
+  const [upgradeTrigger, setUpgradeTrigger] = useState<UpgradeModalTrigger>('estimation_accepted');
+  const [upgradeFeatureName, setUpgradeFeatureName] = useState<string | undefined>();
   const [milestoneOpen, setMilestoneOpen] = useState(false);
   const [milestoneTotal, setMilestoneTotal] = useState(0);
+  const entitlement = useEntitlement();
   const {
     canCreateProject,
     isEstimator,
     remainingProjectSlots,
     tier,
     currentActiveProjects,
-  } = useEntitlement();
+    isEstimatorPro,
+  } = entitlement;
 
   const draftHistory = useEstimationDraftHistory();
 
@@ -450,6 +457,26 @@ export default function EstimatorForm() {
   const handleShareWhatsApp = () => {
     if (!requireSaved()) return;
     setWaShareOpen(true);
+  };
+
+  const handleOpenKwitansi = async () => {
+    if (!requireSaved() || !tenant?.id) return;
+    if (!canGenerateKwitansi(entitlement)) {
+      setUpgradeFeatureName('Generator Kwitansi Pro');
+      setUpgradeTrigger('estimator_pro_feature');
+      setUpgradeOpen(true);
+      return;
+    }
+    setPdfLoading(true);
+    try {
+      const settings = pdfSettings ?? await loadPdfSettings(tenant.id, tenant.name);
+      if (!pdfSettings) setPdfSettings(settings);
+      setKwitansiOpen(true);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal memuat pengaturan PDF', 'error');
+    } finally {
+      setPdfLoading(false);
+    }
   };
 
   const handleOpenConvert = async () => {
@@ -813,6 +840,7 @@ export default function EstimatorForm() {
         onWhatsApp={handleShareWhatsApp}
         onPreviewPdf={handlePreviewPdf}
         onDownloadPdf={handleDownloadPdf}
+        onKwitansi={handleOpenKwitansi}
       />
 
       <EstimationItemsTable
@@ -879,6 +907,16 @@ export default function EstimatorForm() {
         navSidebarCollapsed={navSidebarCollapsed}
       />
 
+      {kwitansiOpen && pdfSettings && draft && (
+        <KwitansiModal
+          open={kwitansiOpen}
+          draft={draft}
+          settings={pdfSettings}
+          onClose={() => setKwitansiOpen(false)}
+          onToast={(msg, type) => showToast(msg, type)}
+        />
+      )}
+
       {pdfPreviewOpen && pdfSettings && (
         <PdfPreviewModal
           draft={draft}
@@ -924,6 +962,7 @@ export default function EstimatorForm() {
       <UpgradeModal
         open={upgradeOpen}
         trigger={upgradeTrigger}
+        featureName={upgradeFeatureName}
         onClose={() => setUpgradeOpen(false)}
         onManageProjects={() => navigate('/app?tab=projects')}
         onConvertProject={handleOpenConvert}

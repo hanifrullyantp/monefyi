@@ -24,6 +24,8 @@ import EstimationPipelineGroupList, { buildPipelineGroups } from '../../componen
 import ConvertEstimationWizard from '../../components/estimator/ConvertEstimationWizard';
 import EstimatorOnboardingWizard from '../../components/estimator/EstimatorOnboardingWizard';
 import ShareWhatsAppModal from '../../components/estimator/ShareWhatsAppModal';
+import KwitansiModal from '../../components/estimator/KwitansiModal';
+import UpgradeModal from '../../components/entitlement/UpgradeModal';
 import PostPurchaseBanner, {
   dismissPostPurchaseBanner,
   readPostPurchaseBanner,
@@ -56,6 +58,8 @@ import {
   defaultWhatsAppTemplateConfig,
 } from '../../services/quotationTemplateService';
 import { loadPdfSettings } from '../../services/pdfSettingsService';
+import { canGenerateKwitansi } from '../../lib/entitlement';
+import { useEntitlement } from '../../hooks/useEntitlement';
 import { analytics } from '../../lib/analytics/events';
 import { ESTIMATION_STATUS_LABEL } from '../../lib/estimatorFormat';
 import type { EstimationFormDraft } from '../../types/estimator';
@@ -148,6 +152,7 @@ export default function EstimatorList() {
   const navigate = useNavigate();
   const { tenant, user, projects, addProject } = useAppStore();
   const showToast = useUiStore(s => s.showToast);
+  const entitlement = useEntitlement();
   const [rows, setRows] = useState<Estimation[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -172,6 +177,11 @@ export default function EstimatorList() {
   const [waEstimationId, setWaEstimationId] = useState<string | undefined>();
   const [waProjectName, setWaProjectName] = useState<string | null>(null);
   const [waLoadingId, setWaLoadingId] = useState<string | null>(null);
+  const [kwitansiOpen, setKwitansiOpen] = useState(false);
+  const [kwitansiDraft, setKwitansiDraft] = useState<EstimationFormDraft | null>(null);
+  const [kwitansiPdfSettings, setKwitansiPdfSettings] = useState<PdfSettings | null>(null);
+  const [kwitansiLoadingId, setKwitansiLoadingId] = useState<string | null>(null);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
   const [statusLoadingStage, setStatusLoadingStage] = useState<EstimationWorkflowStatus | 'rejected' | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -329,6 +339,30 @@ export default function EstimatorList() {
     }
   };
 
+  const handleKwitansi = async (id: string) => {
+    if (!tenant?.id) return;
+    if (!canGenerateKwitansi(entitlement)) {
+      setUpgradeOpen(true);
+      return;
+    }
+    setKwitansiLoadingId(id);
+    try {
+      const est = await loadEstimation(id);
+      if (!est) throw new Error('Estimasi tidak ditemukan');
+      const [draft, settings] = await Promise.all([
+        estimationToFormDraft(est),
+        loadPdfSettings(tenant.id, tenant.name),
+      ]);
+      setKwitansiDraft(draft);
+      setKwitansiPdfSettings(settings);
+      setKwitansiOpen(true);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal memuat data kwitansi', 'error');
+    } finally {
+      setKwitansiLoadingId(null);
+    }
+  };
+
   const handleStatusChange = async (estId: string, next: EstimationWorkflowStatus | 'rejected') => {
     const est = rows.find(r => r.id === estId);
     if (!est) return;
@@ -394,9 +428,11 @@ export default function EstimatorList() {
       onDelete={() => handleDelete(est.id, est.title)}
       onConvert={() => handleConvert(est.id)}
       onShareWhatsApp={() => handleShareWhatsApp(est.id)}
+      onKwitansi={() => handleKwitansi(est.id)}
       onStatusChange={next => handleStatusChange(est.id, next)}
       statusLoading={statusUpdatingId === est.id ? statusLoadingStage : null}
       waLoading={waLoadingId === est.id}
+      kwitansiLoading={kwitansiLoadingId === est.id}
     />
   );
 
@@ -691,6 +727,27 @@ export default function EstimatorList() {
           )}
         </div>
       )}
+
+      {kwitansiOpen && kwitansiDraft && kwitansiPdfSettings && (
+        <KwitansiModal
+          open={kwitansiOpen}
+          draft={kwitansiDraft}
+          settings={kwitansiPdfSettings}
+          onClose={() => {
+            setKwitansiOpen(false);
+            setKwitansiDraft(null);
+            setKwitansiPdfSettings(null);
+          }}
+          onToast={(msg, type) => showToast(msg, type)}
+        />
+      )}
+
+      <UpgradeModal
+        open={upgradeOpen}
+        trigger="estimator_pro_feature"
+        featureName="Generator Kwitansi Pro"
+        onClose={() => setUpgradeOpen(false)}
+      />
 
       {waShareOpen && waDraft && waPdfSettings && (
         <ShareWhatsAppModal

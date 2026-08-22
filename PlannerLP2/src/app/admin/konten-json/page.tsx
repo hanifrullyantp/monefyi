@@ -4,7 +4,7 @@ import { useContentStore } from "@/lib/store/contentStore";
 import { Save, RefreshCw, AlertCircle, Check } from "lucide-react";
 
 export default function KontenJsonPage() {
-  const { content, updateContent, markSaved, resetContent } = useContentStore();
+  const { content, updateContent, publishContent, resetContent } = useContentStore();
   const [jsonText, setJsonText] = useState("");
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -13,16 +13,16 @@ export default function KontenJsonPage() {
     setJsonText(JSON.stringify(content, null, 2));
   }, [content]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     try {
       const parsed = JSON.parse(jsonText);
       updateContent(parsed);
-      markSaved();
+      await publishContent();
       setSaved(true);
       setError("");
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
-      setError("JSON tidak valid: " + String(err));
+      setError(err instanceof Error ? err.message : "JSON tidak valid: " + String(err));
     }
   };
 

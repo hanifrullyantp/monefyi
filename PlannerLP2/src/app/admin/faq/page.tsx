@@ -5,14 +5,14 @@ import { Plus, Trash2, Save, GripVertical, Edit } from "lucide-react";
 import type { FAQItem } from "@/lib/types/content";
 
 export default function FAQAdminPage() {
-  const { content, updateSection, markSaved } = useContentStore();
+  const { content, updateSection, publishContent } = useContentStore();
   const [items, setItems] = useState<FAQItem[]>(content.faq.items);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  const save = () => {
+  const save = async () => {
     updateSection("faq", { ...content.faq, items });
-    markSaved();
+    await publishContent();
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };

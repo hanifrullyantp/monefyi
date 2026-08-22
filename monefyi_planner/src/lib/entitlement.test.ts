@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildEntitlementSnapshot,
+  canGenerateKwitansi,
   isActiveProjectStatus,
   mapLegacyOrgPlan,
 } from './entitlement';
@@ -64,6 +65,45 @@ describe('entitlement - buildEntitlementSnapshot', () => {
     expect(snap.canAccessFinance).toBe(true);
     expect(snap.maxActiveProjects).toBe(10);
     expect(snap.canCreateProject).toBe(true);
+  });
+});
+
+describe('entitlement - canGenerateKwitansi', () => {
+  it('allows Estimator Pro only', () => {
+    const pro = buildEntitlementSnapshot({
+      subscription: {
+        id: 's1',
+        org_id: 'o1',
+        tier: 'estimator',
+        payment_provider: null,
+        external_payment_id: null,
+        amount_paid: 199000,
+        currency: 'IDR',
+        purchased_at: null,
+        activated_at: null,
+        expires_at: null,
+        estimator_credit_available: false,
+        estimator_credit_used_at: null,
+        estimator_credit_amount: 0,
+        max_active_projects: 1,
+        max_members: 1,
+        metadata: null,
+        estimator_variant: 'pro',
+        created_at: '',
+        updated_at: '',
+      },
+      activeProjectCount: 0,
+      memberCount: 1,
+    });
+    const standard = buildEntitlementSnapshot({
+      subscription: null,
+      orgPlan: 'starter',
+      activeProjectCount: 0,
+      memberCount: 1,
+    });
+
+    expect(canGenerateKwitansi(pro)).toBe(true);
+    expect(canGenerateKwitansi(standard)).toBe(false);
   });
 });
 

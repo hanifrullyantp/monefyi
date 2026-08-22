@@ -4,6 +4,7 @@ import {
   FileDown,
   Loader2,
   MessageCircle,
+  Receipt,
   Redo2,
   RotateCcw,
   Save,
@@ -33,6 +34,7 @@ interface Props {
   onWhatsApp: () => void;
   onPreviewPdf: () => void;
   onDownloadPdf: () => void;
+  onKwitansi: () => void;
 }
 
 function IconBtn({
@@ -80,6 +82,7 @@ export default function EstimatorActionBar({
   onWhatsApp,
   onPreviewPdf,
   onDownloadPdf,
+  onKwitansi,
 }: Props) {
   return (
     <div
@@ -140,6 +143,9 @@ export default function EstimatorActionBar({
           </IconBtn>
           <IconBtn label="Download PDF" onClick={onDownloadPdf} disabled={pdfLoading || isNew}>
             {pdfLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+          </IconBtn>
+          <IconBtn label="Kwitansi" onClick={onKwitansi} disabled={pdfLoading || isNew}>
+            <Receipt className="w-4 h-4 text-emerald-700" />
           </IconBtn>
         </div>
 

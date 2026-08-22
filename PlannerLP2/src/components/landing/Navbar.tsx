@@ -5,14 +5,16 @@ import { Menu, X, ArrowRight, Zap, LogIn, LayoutDashboard, Edit3, Save } from "l
 import { useContentStore } from "@/lib/store/contentStore";
 import { useUIStore } from "@/lib/store/uiStore";
 import { useLandingCta } from "@/lib/hooks/useLandingCta";
-import { clearSession } from "@/lib/utils/auth";
+import { useAuthStore } from "@/lib/store/authStore";
 import { plannerAppPath } from "@/lib/config/plannerApp";
 import { cn } from "@/lib/utils/cn";
+import { Suspense } from "react";
 import { LoginModal } from "./LoginModal";
 import Link from "next/link";
 
 export function Navbar() {
   const { isAdmin, isEditMode, setEditMode, setAdmin } = useUIStore();
+  const logout = useAuthStore((s) => s.logout);
   const { content } = useContentStore();
   const { navbar } = content;
   const { isAuthenticated, label, handleCtaClick, openLogin } = useLandingCta();
@@ -57,8 +59,8 @@ export function Navbar() {
     setActiveSection(id);
   };
 
-  const handleAdminLogout = () => {
-    clearSession();
+  const handleAdminLogout = async () => {
+    await logout();
     setAdmin(false);
     setEditMode(false);
   };
@@ -180,8 +182,6 @@ export function Navbar() {
               )}
             </div>
 
-            <LoginModal />
-
             <button
               onClick={() => setIsMobileOpen(!isMobileOpen)}
               className="md:hidden p-2 rounded-lg text-slate-700 hover:bg-slate-100"
@@ -192,6 +192,10 @@ export function Navbar() {
           </div>
         </div>
       </motion.nav>
+
+      <Suspense fallback={null}>
+        <LoginModal />
+      </Suspense>
 
       <AnimatePresence>
         {isMobileOpen && (
@@ -221,34 +225,39 @@ export function Navbar() {
                   {item.label}
                 </button>
               ))}
-              {!isAdmin && !isAuthenticated && (
+              {!isAdmin && (
                 <button
+                  type="button"
                   onClick={() => {
                     setIsMobileOpen(false);
                     openLogin();
                   }}
-                  className="text-left px-4 py-3 rounded-xl text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 font-medium transition-all"
+                  className="text-left px-4 py-3 rounded-xl text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 font-medium transition-all flex items-center gap-2"
                 >
+                  <LogIn className="w-4 h-4" />
                   Login
                 </button>
               )}
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  onClick={() => setIsMobileOpen(false)}
+                  className="text-left px-4 py-3 rounded-xl text-emerald-700 hover:bg-emerald-50 font-bold transition-all flex items-center gap-2"
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  Admin Panel
+                </Link>
+              )}
             </nav>
-            <div className="p-4 border-t border-slate-100 space-y-2">
+            <div className="p-4 border-t border-slate-100">
               <button
+                type="button"
                 onClick={() => scrollTo(navbar.ctaHref)}
                 className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white rounded-xl px-6 py-3.5 font-semibold shadow-lg"
               >
                 {navbar.ctaText}
                 <ArrowRight className="w-4 h-4" />
               </button>
-              {!isAdmin && (
-                <Link
-                  href="/admin/login"
-                  className="block w-full text-center text-xs text-slate-400 hover:text-emerald-600 py-2"
-                >
-                  Admin CMS
-                </Link>
-              )}
             </div>
           </motion.div>
         )}

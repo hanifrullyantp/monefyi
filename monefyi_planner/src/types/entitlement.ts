@@ -25,6 +25,7 @@ export interface OrgSubscriptionRow {
 export type UpgradeModalTrigger =
   | 'project_limit'
   | 'pro_feature'
+  | 'estimator_pro_feature'
   | 'estimation_accepted'
   | 'manual'
   | 'estimator_paywall';

@@ -4,13 +4,13 @@ import { useContentStore } from "@/lib/store/contentStore";
 import { Save } from "lucide-react";
 
 export default function KontakPage() {
-  const { content, updateSection, markSaved } = useContentStore();
+  const { content, updateSection, publishContent } = useContentStore();
   const [footer, setFooter] = useState(content.footer);
   const [saved, setSaved] = useState(false);
 
-  const save = () => {
+  const save = async () => {
     updateSection("footer", footer);
-    markSaved();
+    await publishContent();
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };

@@ -18,8 +18,42 @@ import {
 
 const COLORS = ["#059669", "#3b82f6", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4", "#10b981", "#6366f1"];
 
+const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"];
+
+function buildMonthlyLeadStats(leads: { createdAt: string; status: string; estimatedValue?: number }[]) {
+  const buckets = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date();
+    d.setDate(1);
+    d.setHours(0, 0, 0, 0);
+    d.setMonth(d.getMonth() - (5 - i));
+    return {
+      month: MONTH_LABELS[d.getMonth()],
+      revenue: 0,
+      leads: 0,
+      key: `${d.getFullYear()}-${d.getMonth()}`,
+    };
+  });
+
+  const bucketMap = new Map(buckets.map((b) => [b.key, b]));
+
+  for (const lead of leads) {
+    const created = new Date(lead.createdAt);
+    const key = `${created.getFullYear()}-${created.getMonth()}`;
+    const bucket = bucketMap.get(key);
+    if (!bucket) continue;
+    bucket.leads += 1;
+    if (lead.status === "won") {
+      bucket.revenue += lead.estimatedValue || 0;
+    }
+  }
+
+  return buckets.map(({ month, revenue, leads: count }) => ({ month, revenue, leads: count }));
+}
+
 export default function AnalyticsPage() {
   const { leads } = useLeadsStore();
+
+  const monthlyData = buildMonthlyLeadStats(leads);
 
   // Status distribution
   const statusData = Object.entries(
@@ -39,16 +73,6 @@ export default function AnalyticsPage() {
       return acc;
     }, {})
   ).map(([source, count]) => ({ name: source, value: count }));
-
-  // Revenue by month (simulated)
-  const monthlyData = [
-    { month: "Agt", revenue: 120000000, leads: 12 },
-    { month: "Sep", revenue: 185000000, leads: 18 },
-    { month: "Okt", revenue: 145000000, leads: 15 },
-    { month: "Nov", revenue: 220000000, leads: 22 },
-    { month: "Des", revenue: 310000000, leads: 28 },
-    { month: "Jan", revenue: 280000000, leads: 25 },
-  ];
 
   const totalRevenue = leads
     .filter((l) => l.status === "won")
