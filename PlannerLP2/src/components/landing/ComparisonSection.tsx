@@ -26,7 +26,7 @@ export function ComparisonSection() {
   const { comparison } = content;
 
   return (
-    <section className="py-20 md:py-28 bg-white">
+    <section className="py-12 md:py-28 bg-white">
       <Container>
         <motion.div
           initial={{ opacity: 0, y: 20 }}

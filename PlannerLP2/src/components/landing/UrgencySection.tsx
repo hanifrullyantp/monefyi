@@ -33,7 +33,7 @@ export function UrgencySection() {
   };
 
   return (
-    <section className="py-24 md:py-32 bg-slate-50 relative overflow-hidden">
+    <section className="py-14 md:py-32 bg-slate-50 relative overflow-hidden">
       <Container>
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}

@@ -38,7 +38,7 @@ export function FeaturesSection() {
   const { features } = content;
 
   return (
-    <section id="fitur" className="py-20 md:py-28 bg-white">
+    <section id="fitur" className="py-12 md:py-28 bg-white">
       <Container>
         {/* Header */}
         <motion.div

@@ -20,7 +20,7 @@ const badges = [
 
 export function TrustBadges() {
   return (
-    <section className="py-12 bg-white">
+    <section className="py-8 md:py-12 bg-white">
       <Container>
         <motion.div
           initial={{ opacity: 0, y: 10 }}

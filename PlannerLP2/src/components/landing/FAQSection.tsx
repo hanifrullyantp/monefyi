@@ -17,7 +17,7 @@ export function FAQSection() {
   );
 
   return (
-    <section id="faq" className="py-20 md:py-28 bg-slate-50">
+    <section id="faq" className="py-12 md:py-28 bg-slate-50">
       <Container>
         <motion.div
           initial={{ opacity: 0, y: 20 }}

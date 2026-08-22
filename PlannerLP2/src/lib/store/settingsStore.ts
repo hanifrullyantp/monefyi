@@ -19,6 +19,13 @@ export const useSettingsStore = create<SettingsStore>()(
     }),
     {
       name: "monefyi-settings",
+      merge: (persisted, current) => ({
+        ...current,
+        settings: {
+          ...defaultSettings,
+          ...(persisted as SettingsStore | undefined)?.settings,
+        },
+      }),
     }
   )
 );

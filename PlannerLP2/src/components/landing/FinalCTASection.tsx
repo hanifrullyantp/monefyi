@@ -14,7 +14,7 @@ export function FinalCTASection() {
   };
 
   return (
-    <section className="py-24 md:py-32 bg-slate-900 relative overflow-hidden">
+    <section className="py-14 md:py-32 bg-slate-900 relative overflow-hidden">
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950 pointer-events-none" />
       <div className="absolute inset-0 dot-pattern pointer-events-none opacity-5" />

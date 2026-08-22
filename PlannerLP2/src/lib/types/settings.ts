@@ -12,6 +12,8 @@ export interface SiteSettings {
   waNumber: string;
   waDefaultMessage: string;
   waFloatEnabled: boolean;
+  /** Widget chat pojok kanan bawah (mobile/desktop). */
+  liveChatEnabled: boolean;
   googleAnalyticsId?: string;
   fbPixelId?: string;
   gtmId?: string;
@@ -33,6 +35,7 @@ export const defaultSettings: SiteSettings = {
   waNumber: "6281234567890",
   waDefaultMessage: "Halo, saya tertarik dengan Monefyi Estimator. Boleh minta info lebih lanjut?",
   waFloatEnabled: false,
+  liveChatEnabled: false,
   metaTitle: "Monefyi Estimator — Sistem Closing & Proyek untuk Jasa Proyek",
   metaDescription: "Saring lead WA, closing di tempat saat survei, dan kelola proyek sampai selesai. Sistem all-in-one untuk kontraktor, interior designer, kitchen set & furniture custom.",
   maintenanceMode: false,

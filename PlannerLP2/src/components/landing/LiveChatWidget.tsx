@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, X, Send, Minimize2 } from "lucide-react";
+import { useSettingsStore } from "@/lib/store/settingsStore";
 
 interface Message {
   id: string;
@@ -17,6 +18,7 @@ const botReplies = [
 ];
 
 export function LiveChatWidget() {
+  const liveChatEnabled = useSettingsStore((s) => s.settings.liveChatEnabled);
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -71,6 +73,8 @@ export function LiveChatWidget() {
     const replyIndex = Math.floor(Math.random() * (botReplies.length - 1)) + 1;
     addBotMessage(botReplies[replyIndex]);
   };
+
+  if (!liveChatEnabled) return null;
 
   return (
     <>

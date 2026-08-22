@@ -55,7 +55,7 @@ export function CalculatorSection() {
   };
 
   return (
-    <section className="py-20 md:py-28 bg-gradient-to-b from-emerald-50 to-white">
+    <section className="py-12 md:py-28 bg-gradient-to-b from-emerald-50 to-white">
       <Container>
         {/* Header */}
         <motion.div

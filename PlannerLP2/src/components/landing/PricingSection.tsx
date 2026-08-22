@@ -31,7 +31,7 @@ export function PricingSection() {
   }, {});
 
   return (
-    <section id="harga" className="py-20 md:py-28 bg-slate-50">
+    <section id="harga" className="py-12 md:py-28 bg-slate-50">
       <Container>
         {/* Header */}
         <motion.div

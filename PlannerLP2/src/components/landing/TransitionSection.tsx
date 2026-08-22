@@ -17,7 +17,7 @@ export function TransitionSection() {
   };
 
   return (
-    <section className="py-16 bg-slate-50">
+    <section className="py-10 md:py-16 bg-slate-50">
       <Container>
         <motion.div
           initial={{ opacity: 0, y: 20 }}

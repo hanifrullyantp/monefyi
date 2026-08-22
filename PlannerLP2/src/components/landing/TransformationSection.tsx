@@ -10,7 +10,7 @@ export function TransformationSection() {
   const { transformation } = content;
 
   return (
-    <section className="py-24 md:py-32 bg-white text-slate-900 relative overflow-hidden">
+    <section className="py-14 md:py-32 bg-white text-slate-900 relative overflow-hidden">
       <div className="absolute inset-0 dot-pattern opacity-5" />
       <Container className="relative z-10">
         {/* Header */}

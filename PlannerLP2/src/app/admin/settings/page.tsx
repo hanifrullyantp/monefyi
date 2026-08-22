@@ -60,14 +60,31 @@ export default function SettingsPage() {
           </div>
         ))}
 
-        <div className="flex items-center gap-3">
-          <label className="text-sm font-semibold text-slate-700">WA Float Aktif</label>
-          <button
-            onClick={() => setTempSettings((p) => ({ ...p, waFloatEnabled: !p.waFloatEnabled }))}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold ${tempSettings.waFloatEnabled ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}
-          >
-            {tempSettings.waFloatEnabled ? "Aktif" : "Nonaktif"}
-          </button>
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-4 pt-2 border-t border-slate-100">
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-semibold text-slate-700 min-w-[140px]">
+              Chat pojok kanan
+            </label>
+            <button
+              type="button"
+              onClick={() => setTempSettings((p) => ({ ...p, liveChatEnabled: !p.liveChatEnabled }))}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold ${tempSettings.liveChatEnabled ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}
+            >
+              {tempSettings.liveChatEnabled ? "Aktif" : "Nonaktif"}
+            </button>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-semibold text-slate-700 min-w-[140px]">
+              Tombol WA kiri bawah
+            </label>
+            <button
+              type="button"
+              onClick={() => setTempSettings((p) => ({ ...p, waFloatEnabled: !p.waFloatEnabled }))}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold ${tempSettings.waFloatEnabled ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}
+            >
+              {tempSettings.waFloatEnabled ? "Aktif" : "Nonaktif"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

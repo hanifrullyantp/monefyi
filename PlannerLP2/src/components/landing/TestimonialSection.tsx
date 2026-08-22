@@ -27,7 +27,7 @@ export function TestimonialSection() {
   };
 
   return (
-    <section id="testimoni" className="py-24 md:py-32 bg-white relative overflow-hidden">
+    <section id="testimoni" className="py-14 md:py-32 bg-white relative overflow-hidden">
       <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-slate-50 to-transparent" />
       <Container>
         {/* Header */}

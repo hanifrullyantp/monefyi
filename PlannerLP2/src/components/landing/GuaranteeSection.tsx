@@ -9,7 +9,7 @@ export function GuaranteeSection() {
   const { guarantee } = content;
 
   return (
-    <section className="py-20 bg-white">
+    <section className="py-12 md:py-20 bg-white">
       <Container>
         <motion.div
           initial={{ opacity: 0, y: 20 }}

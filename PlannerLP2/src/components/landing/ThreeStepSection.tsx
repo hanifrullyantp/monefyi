@@ -31,7 +31,7 @@ export function ThreeStepSection() {
   const { threeStep } = content;
 
   return (
-    <section id="tiga-step" className="py-20 md:py-28 bg-white">
+    <section id="tiga-step" className="py-12 md:py-28 bg-white">
       <Container>
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">

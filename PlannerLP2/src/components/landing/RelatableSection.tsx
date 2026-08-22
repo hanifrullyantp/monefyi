@@ -38,7 +38,7 @@ export function RelatableSection() {
   };
 
   return (
-    <section className="py-20 md:py-28 bg-white">
+    <section className="py-12 md:py-28 bg-white">
       <Container>
         <div className="max-w-5xl mx-auto">
           {/* Header */}
