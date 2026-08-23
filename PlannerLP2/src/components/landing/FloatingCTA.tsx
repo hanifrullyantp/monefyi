@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { useAuthStore } from "@/lib/store/authStore";
+import { useUIStore } from "@/lib/store/uiStore";
 import { ownsEstimator } from "@/lib/permissions";
 import { useLandingCta } from "@/lib/hooks/useLandingCta";
 
@@ -12,6 +13,7 @@ export function FloatingCTA() {
   const hydrated = useAuthStore((s) => s.hydrated);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
+  const isAdmin = useUIStore((s) => s.isAdmin);
   const { startCheckout } = useLandingCta();
 
   const [bonusSectionSeen, setBonusSectionSeen] = useState(false);
@@ -20,6 +22,7 @@ export function FloatingCTA() {
   const hasEstimator = ownsEstimator(user);
   const canShow =
     hydrated &&
+    !isAdmin &&
     !hasEstimator &&
     !pricingVisible &&
     (isAuthenticated || bonusSectionSeen);

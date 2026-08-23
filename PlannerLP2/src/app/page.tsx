@@ -9,6 +9,7 @@ import { ScrollProgress } from "@/components/landing/ScrollProgress";
 import { BackToTop } from "@/components/landing/BackToTop";
 import { LiveChatWidget } from "@/components/landing/LiveChatWidget";
 import { WhatsAppFloat } from "@/components/landing/WhatsAppFloat";
+import { MobileAdminToolbar } from "@/components/landing/MobileAdminToolbar";
 
 export default function LandingPage() {
   return (
@@ -26,6 +27,7 @@ export default function LandingPage() {
       <BackToTop />
       <WhatsAppFloat />
       <LiveChatWidget />
+      <MobileAdminToolbar />
     </>
   );
 }

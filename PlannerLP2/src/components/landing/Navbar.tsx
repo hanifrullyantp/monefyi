@@ -239,14 +239,42 @@ export function Navbar() {
                 </button>
               )}
               {isAdmin && (
-                <Link
-                  href="/admin"
-                  onClick={() => setIsMobileOpen(false)}
-                  className="text-left px-4 py-3 rounded-xl text-emerald-700 hover:bg-emerald-50 font-bold transition-all flex items-center gap-2"
-                >
-                  <LayoutDashboard className="w-4 h-4" />
-                  Admin Panel
-                </Link>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditMode(!isEditMode);
+                      setIsMobileOpen(false);
+                    }}
+                    className={cn(
+                      "text-left px-4 py-3 rounded-xl font-bold transition-all flex items-center gap-2 touch-manipulation",
+                      isEditMode
+                        ? "bg-emerald-600 text-white"
+                        : "text-emerald-700 hover:bg-emerald-50",
+                    )}
+                  >
+                    {isEditMode ? <Save className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
+                    {isEditMode ? "Selesai Inline Edit" : "Inline Edit"}
+                  </button>
+                  <Link
+                    href="/admin"
+                    onClick={() => setIsMobileOpen(false)}
+                    className="text-left px-4 py-3 rounded-xl text-emerald-700 hover:bg-emerald-50 font-bold transition-all flex items-center gap-2"
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    Admin Panel
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileOpen(false);
+                      void handleAdminLogout();
+                    }}
+                    className="text-left px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 font-medium transition-all"
+                  >
+                    Logout Admin
+                  </button>
+                </>
               )}
             </nav>
             <div className="p-4 border-t border-slate-100">

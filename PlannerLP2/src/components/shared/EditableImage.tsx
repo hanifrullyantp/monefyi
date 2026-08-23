@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUIStore } from "@/lib/store/uiStore";
 import { useContentStore } from "@/lib/store/contentStore";
 import { useMediaStore } from "@/lib/store/mediaStore";
@@ -29,6 +29,10 @@ export function EditableImage({
   const [tempSrc, setTempSrc] = useState(src);
   const [tab, setTab] = useState<"library" | "url">("library");
 
+  useEffect(() => {
+    if (!isEditMode) setIsEditing(false);
+  }, [isEditMode]);
+
   if (!isAdmin || !isEditMode) {
     return <img src={src} alt={alt} className={cn("object-cover", className)} />;
   }
@@ -41,19 +45,29 @@ export function EditableImage({
   return (
     <div className={cn("relative group cursor-pointer", className)}>
       <img src={src} alt={alt} className="w-full h-full object-cover" />
-      
-      <div className="absolute inset-0 bg-emerald-600/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none ring-4 ring-emerald-500 ring-inset">
-        <div className="pointer-events-auto p-4 bg-white text-emerald-600 rounded-2xl shadow-2xl flex items-center gap-3 scale-90 group-hover:scale-100 transition-transform">
-          <Camera className="w-6 h-6" />
-          <span className="font-black text-xs uppercase tracking-widest">Ganti Gambar</span>
+
+      <div
+        className={cn(
+          "absolute inset-0 transition-opacity flex items-center justify-center pointer-events-none ring-4 ring-emerald-500/60 ring-inset md:ring-0",
+          "bg-emerald-600/25 opacity-100 md:bg-emerald-600/20 md:opacity-0 md:group-hover:opacity-100",
+        )}
+      >
+        <div className="pointer-events-auto p-3 sm:p-4 bg-white text-emerald-600 rounded-2xl shadow-2xl flex items-center gap-2 sm:gap-3 touch-manipulation min-h-[44px]">
+          <Camera className="w-5 h-5 sm:w-6 sm:h-6" />
+          <span className="font-black text-[10px] sm:text-xs uppercase tracking-widest">Ganti Gambar</span>
         </div>
       </div>
 
-      <div className="absolute inset-0 pointer-events-auto" onClick={() => setIsEditing(true)} />
+      <button
+        type="button"
+        aria-label="Ganti gambar"
+        className="absolute inset-0 touch-manipulation"
+        onClick={() => setIsEditing(true)}
+      />
 
       {isEditing && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md pointer-events-auto">
-          <div className="bg-white rounded-[40px] p-8 w-full max-w-2xl shadow-2xl border border-slate-100 overflow-hidden relative">
+        <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-md pointer-events-auto">
+          <div className="bg-white rounded-t-[32px] sm:rounded-[40px] p-5 sm:p-8 w-full max-w-2xl max-h-[92dvh] sm:max-h-none overflow-y-auto shadow-2xl border border-slate-100 relative pb-[env(safe-area-inset-bottom)]">
             <button 
                onClick={() => setIsEditing(false)}
                className="absolute top-6 right-6 p-2 text-slate-400 hover:bg-slate-100 rounded-full transition-all"

@@ -24,16 +24,23 @@ export function EditableText({
   const { isEditMode, isAdmin } = useUIStore();
   const { updateField } = useContentStore();
   const [isEditing, setIsEditing] = useState(false);
-  const [tempValue, setOriginalValue] = useState(value);
+  const [tempValue, setTempValue] = useState(value);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    setOriginalValue(value);
+    setTempValue(value);
   }, [value]);
+
+  useEffect(() => {
+    if (!isEditMode) setIsEditing(false);
+  }, [isEditMode]);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
+      if ("select" in inputRef.current) {
+        inputRef.current.select();
+      }
     }
   }, [isEditing]);
 
@@ -47,54 +54,84 @@ export function EditableText({
   };
 
   const handleCancel = () => {
-    setOriginalValue(value);
+    setTempValue(value);
     setIsEditing(false);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") handleCancel();
+    if (e.key === "Enter" && !multiline && !e.shiftKey) {
+      e.preventDefault();
+      handleSave();
+    }
+  };
+
   return (
-    <span className={cn("relative group inline-block min-w-[20px]", className)}>
+    <span className={cn("relative group inline-block min-w-[20px] max-w-full", className)}>
       {isEditing ? (
-        <div className="relative z-50">
+        <div className="relative z-50 w-full min-w-[120px]">
           {multiline ? (
             <textarea
-              ref={inputRef as any}
+              ref={inputRef as React.RefObject<HTMLTextAreaElement>}
               value={tempValue}
-              onChange={(e) => setOriginalValue(e.target.value)}
-              className="w-full p-2 border-2 border-emerald-500 rounded-lg bg-white text-slate-900 focus:outline-none"
+              onChange={(e) => setTempValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="w-full p-3 border-2 border-emerald-500 rounded-xl bg-white text-slate-900 focus:outline-none text-base touch-manipulation"
               rows={4}
             />
           ) : (
             <input
-              ref={inputRef as any}
+              ref={inputRef as React.RefObject<HTMLInputElement>}
               value={tempValue}
-              onChange={(e) => setOriginalValue(e.target.value)}
-              className="w-full p-1 border-b-2 border-emerald-500 bg-emerald-50 text-slate-900 focus:outline-none"
+              onChange={(e) => setTempValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="w-full min-w-[120px] p-2 border-2 border-emerald-500 rounded-xl bg-white text-slate-900 focus:outline-none text-base touch-manipulation"
             />
           )}
-          <div className="absolute right-0 -top-10 flex gap-1">
+          <div className="flex gap-2 mt-2 justify-end">
             <button
+              type="button"
               onClick={handleSave}
-              className="p-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 shadow-lg"
+              aria-label="Simpan"
+              className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 shadow-lg touch-manipulation"
             >
-              <Check className="w-4 h-4" />
+              <Check className="w-5 h-5" />
             </button>
             <button
+              type="button"
               onClick={handleCancel}
-              className="p-1.5 bg-slate-500 text-white rounded-lg hover:bg-slate-600 shadow-lg"
+              aria-label="Batal"
+              className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] bg-slate-500 text-white rounded-xl hover:bg-slate-600 shadow-lg touch-manipulation"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
       ) : (
         <>
           <span
+            role="button"
+            tabIndex={0}
             onClick={() => setIsEditing(true)}
-            className="cursor-pointer hover:bg-emerald-50 hover:ring-2 hover:ring-emerald-200 transition-all rounded px-1"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setIsEditing(true);
+              }
+            }}
+            className={cn(
+              "cursor-pointer transition-all rounded-md px-1 -mx-1 touch-manipulation",
+              "ring-2 ring-dashed ring-emerald-400/80 bg-emerald-50/50",
+              "active:bg-emerald-100 active:ring-emerald-500",
+              "md:ring-0 md:bg-transparent md:hover:bg-emerald-50 md:hover:ring-2 md:hover:ring-emerald-200",
+            )}
           >
             {value}
           </span>
-          <Edit2 className="w-3 h-3 text-emerald-600 absolute -right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+          <Edit2
+            aria-hidden
+            className="w-3.5 h-3.5 text-emerald-600 absolute -right-4 top-1/2 -translate-y-1/2 opacity-80 md:opacity-0 md:group-hover:opacity-100 pointer-events-none"
+          />
         </>
       )}
     </span>
