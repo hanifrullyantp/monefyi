@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { useUIStore } from "@/lib/store/uiStore";
 import { useContentStore } from "@/lib/store/contentStore";
+import { useLandingAdmin } from "@/lib/hooks/useLandingAdmin";
 import { cn } from "@/lib/utils/cn";
 import { Check, X, Edit2 } from "lucide-react";
 import type { SiteContent } from "@/lib/types/content";
@@ -21,7 +21,7 @@ export function EditableText({
   className,
   multiline = false,
 }: EditableTextProps) {
-  const { isEditMode, isAdmin } = useUIStore();
+  const { isEditMode, isAdmin } = useLandingAdmin();
   const { updateField } = useContentStore();
   const [isEditing, setIsEditing] = useState(false);
   const [tempValue, setTempValue] = useState(value);

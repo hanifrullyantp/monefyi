@@ -22,12 +22,14 @@ import {
   Zap,
   X,
   LogOut,
+  Edit3,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/authStore";
 import { useUIStore } from "@/lib/store/uiStore";
 import { useContentStore } from "@/lib/store/contentStore";
+import { INLINE_EDIT_LANDING_PATH } from "@/lib/hooks/useLandingAdmin";
 import { SaveIndicator } from "./SaveIndicator";
 
 const navItems = [
@@ -131,11 +133,19 @@ export function Sidebar({ onClose }: SidebarProps) {
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-slate-800">
+      <div className="p-4 border-t border-slate-800 space-y-1">
+        <Link
+          href={INLINE_EDIT_LANDING_PATH}
+          onClick={onClose}
+          className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold text-emerald-400 bg-emerald-950/40 hover:bg-emerald-900/40 transition-all"
+        >
+          <Edit3 className="w-3.5 h-3.5" />
+          Inline Edit Landing
+        </Link>
         <Link
           href="/"
-          target="_blank"
-          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-slate-400 hover:text-white hover:bg-slate-800 transition-all mb-2"
+          onClick={onClose}
+          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
         >
           <Globe className="w-3.5 h-3.5" />
           Lihat Landing Page

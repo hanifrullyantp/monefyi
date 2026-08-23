@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useUIStore } from "@/lib/store/uiStore";
 import { useContentStore } from "@/lib/store/contentStore";
+import { useLandingAdmin } from "@/lib/hooks/useLandingAdmin";
 import { useMediaStore } from "@/lib/store/mediaStore";
 import { Image as ImageIcon, Check, X, Camera, Plus } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
@@ -22,7 +22,7 @@ export function EditableImage({
   alt,
   className,
 }: EditableImageProps) {
-  const { isEditMode, isAdmin } = useUIStore();
+  const { isEditMode, isAdmin } = useLandingAdmin();
   const { updateField } = useContentStore();
   const { files } = useMediaStore();
   const [isEditing, setIsEditing] = useState(false);

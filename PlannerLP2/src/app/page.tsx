@@ -10,6 +10,7 @@ import { BackToTop } from "@/components/landing/BackToTop";
 import { LiveChatWidget } from "@/components/landing/LiveChatWidget";
 import { WhatsAppFloat } from "@/components/landing/WhatsAppFloat";
 import { MobileAdminToolbar } from "@/components/landing/MobileAdminToolbar";
+import { EditModeRedirect } from "@/components/landing/EditModeRedirect";
 
 export default function LandingPage() {
   return (
@@ -17,6 +18,7 @@ export default function LandingPage() {
       <AuthHydrator />
       <ContentHydrator />
       <LoginRedirect />
+      <EditModeRedirect />
       <ScrollProgress />
       <Navbar />
       <main>

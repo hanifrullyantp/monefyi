@@ -3,8 +3,8 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, ArrowRight, Zap, LogIn, LayoutDashboard, Edit3, Save } from "lucide-react";
 import { useContentStore } from "@/lib/store/contentStore";
-import { useUIStore } from "@/lib/store/uiStore";
 import { useLandingCta } from "@/lib/hooks/useLandingCta";
+import { useLandingAdmin } from "@/lib/hooks/useLandingAdmin";
 import { useAuthStore } from "@/lib/store/authStore";
 import { plannerAppPath } from "@/lib/config/plannerApp";
 import { cn } from "@/lib/utils/cn";
@@ -13,7 +13,7 @@ import { LoginModal } from "./LoginModal";
 import Link from "next/link";
 
 export function Navbar() {
-  const { isAdmin, isEditMode, setEditMode, setAdmin } = useUIStore();
+  const { isAdmin, isEditMode, setEditMode, setAdmin } = useLandingAdmin();
   const logout = useAuthStore((s) => s.logout);
   const { content } = useContentStore();
   const { navbar } = content;
