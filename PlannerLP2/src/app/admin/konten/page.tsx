@@ -27,6 +27,9 @@ import {
   type LandingSectionKey,
 } from "@/lib/landingSections";
 import { Save, RefreshCw, Eye, Edit3, ChevronRight, GripVertical } from "lucide-react";
+import { HeroAdminFields } from "@/components/admin/HeroAdminFields";
+import { defaultContent } from "@/data/defaultContent";
+import type { HeroContent } from "@/lib/types/content";
 
 type SectionMeta = (typeof LANDING_SECTIONS)[number];
 
@@ -137,12 +140,28 @@ export default function KontenPage() {
   }, [content.sectionOrder]);
 
   const openSection = (key: LandingSectionKey) => {
+    let data = JSON.parse(
+      JSON.stringify((content as unknown as Record<string, unknown>)[key] ?? {}),
+    ) as Record<string, unknown>;
+
+    if (key === "hero") {
+      const heroRaw = data as Partial<HeroContent>;
+      data = {
+        ...defaultContent.hero,
+        ...heroRaw,
+        headlineAnimated: {
+          ...defaultContent.hero.headlineAnimated,
+          ...(heroRaw.headlineAnimated || {}),
+          rotatingWords:
+            heroRaw.headlineAnimated?.rotatingWords?.length
+              ? heroRaw.headlineAnimated.rotatingWords
+              : defaultContent.hero.headlineAnimated.rotatingWords,
+        },
+      };
+    }
+
     setActiveSection(key);
-    setEditData(
-      JSON.parse(
-        JSON.stringify((content as unknown as Record<string, unknown>)[key] ?? {}),
-      ),
-    );
+    setEditData(data);
   };
 
   const persistToDatabase = async (applyChange: () => void) => {
@@ -328,7 +347,16 @@ export default function KontenPage() {
                   untuk edit lebih detail.
                 </p>
                 <div className="space-y-4">
+                  {activeSection === "hero" && (
+                    <HeroAdminFields
+                      hero={editData as unknown as HeroContent}
+                      onChange={(hero) => setEditData(hero as unknown as Record<string, unknown>)}
+                    />
+                  )}
                   {Object.entries(editData).map(([key, value]: [string, unknown]) => {
+                    if (activeSection === "hero" && (key === "headlineAnimated" || key === "quickPoints" || key === "trustIndicators")) {
+                      return null;
+                    }
                     if (Array.isArray(value)) {
                       return (
                         <div key={key}>

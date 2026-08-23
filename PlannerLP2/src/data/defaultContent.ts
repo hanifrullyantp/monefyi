@@ -17,22 +17,30 @@ export const defaultContent: SiteContent = {
 
   hero: {
     badge: "",
-    headline: "Deal Pesanan dengan Estimator, Dalam 5 Detik!",
-    headlineHighlight: "5 Detik!",
+    headline: 'Bisa Buat "Estimasi Project" Dalam 1 Menit, Mau?',
+    headlineHighlight: "",
+    headlineAnimated: {
+      prefix: "Bisa Buat ",
+      suffix: " Dalam 1 Menit, Mau?",
+      rotatingWords: [
+        "Estimasi Project",
+        "RAB",
+        "Total Tagihan",
+        "Total Pesanan",
+      ],
+      animation: "scroll-up",
+      intervalMs: 2500,
+    },
     subheadline: "Closing Mudah, Tanpa Lelah harus ngeladeni semua orang",
     painParagraph: "",
     quickPoints: [
       "Balas WA hanya yang memang serius \"Punya Uang\"",
       "Survei di tempat yang memang mau Pesan!",
-      "90% Deal Proyek dengan teknik Closing Di tempat!"
+      "90% Deal Proyek dengan teknik Closing Di tempat!",
     ],
     ctaPrimary: "Lihat Caranya",
     ctaSecondary: "Demo",
-    trustIndicators: [
-      "1x Beli, Pakai Selamanya.",
-      "Integrasi Whatsapp.",
-      "Kwitansi + Penawaran PDF"
-    ],
+    trustIndicators: [],
     dashboardImage: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=2426&auto=format&fit=crop",
   },
 

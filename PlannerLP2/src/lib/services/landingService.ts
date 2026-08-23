@@ -27,7 +27,18 @@ export function mergeSiteContent(raw: Partial<SiteContent> | null | undefined): 
     ...defaultContent,
     ...raw,
     navbar: { ...defaultContent.navbar, ...(raw.navbar || {}) },
-    hero: { ...defaultContent.hero, ...(raw.hero || {}) },
+    hero: {
+      ...defaultContent.hero,
+      ...(raw.hero || {}),
+      headlineAnimated: {
+        ...defaultContent.hero.headlineAnimated,
+        ...(raw.hero?.headlineAnimated || {}),
+        rotatingWords:
+          raw.hero?.headlineAnimated?.rotatingWords?.length
+            ? raw.hero.headlineAnimated.rotatingWords
+            : defaultContent.hero.headlineAnimated.rotatingWords,
+      },
+    },
     pricing: { ...defaultContent.pricing, ...(raw.pricing || {}) },
     footer: { ...defaultContent.footer, ...(raw.footer || {}) },
     sectionOrder: resolveSectionOrder(raw.sectionOrder),

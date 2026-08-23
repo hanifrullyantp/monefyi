@@ -8,10 +8,27 @@ export interface NavbarContent {
   ctaHref: string;
 }
 
+export type HeadlineAnimationEffect =
+  | "scroll-up"
+  | "scroll-down"
+  | "typing"
+  | "fade";
+
+export interface HeroHeadlineAnimated {
+  prefix: string;
+  suffix: string;
+  rotatingWords: string[];
+  animation: HeadlineAnimationEffect;
+  /** Interval rotasi kata (ms). Default 2500. */
+  intervalMs?: number;
+}
+
 export interface HeroContent {
   badge: string;
+  /** @deprecated Gunakan headlineAnimated — fallback jika kosong */
   headline: string;
   headlineHighlight: string;
+  headlineAnimated: HeroHeadlineAnimated;
   subheadline: string;
   painParagraph: string;
   quickPoints: string[];
