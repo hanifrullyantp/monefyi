@@ -521,7 +521,7 @@ export default function Layout({ children }: LayoutProps) {
         </div>
 
         {/* Bottom Navigation — Mobile */}
-        <nav className="lg:hidden bg-white/90 backdrop-blur-lg safe-bottom shrink-0 shadow-[0_-4px_24px_rgba(15,23,42,0.06)]">
+        <nav className="lg:hidden relative z-40 bg-white/90 backdrop-blur-lg safe-bottom shrink-0 shadow-[0_-4px_24px_rgba(15,23,42,0.06)]">
           <div className="flex items-end justify-around px-2 pt-2 pb-3">
             {mobileTabs.map((tab) => (
               tab.special ? (

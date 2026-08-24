@@ -22,6 +22,7 @@ import EstimationStickySummary from '../../components/estimator/EstimationSticky
 import PdfDesignCustomizer from '../../components/estimator/PdfDesignCustomizer';
 import PdfPreviewModal from '../../components/estimator/PdfPreviewModal';
 import KwitansiModal from '../../components/estimator/KwitansiModal';
+import EstimationPaymentPanel from '../../components/estimator/EstimationPaymentPanel';
 import ShareWhatsAppModal from '../../components/estimator/ShareWhatsAppModal';
 import MarkAsSentPrompt from '../../components/estimator/MarkAsSentPrompt';
 import UpgradeModal from '../../components/entitlement/UpgradeModal';
@@ -61,15 +62,18 @@ import type { EstimationImageDraft, EstimationStatus, Estimation } from '../../t
 import { formatRupiahFull } from '../../lib/estimatorFormat';
 import { calcEstimationSummary, countedEstimationItems } from '../../lib/estimatorCalc';
 import type { EstimationFormDraft } from '../../types/estimator';
+import { resolveEstimationProjectId } from '../../lib/estimationProjectLink';
+import { debugNavLog } from '../../lib/debugNavLog';
+import type { ProjectIncome } from '../../services/incomeService';
 
 export default function EstimatorForm() {
   const { id } = useParams();
   const isNew = !id || id === 'new';
   const navigate = useNavigate();
+  const location = useLocation();
   const { tenant, user, projects, addProject } = useAppStore();
   const showToast = useUiStore(s => s.showToast);
   const navSidebarCollapsed = useAppStore(s => s.navSidebarCollapsed);
-  const setActiveTab = useAppStore(s => s.setActiveTab);
 
   const [draft, setDraft] = useState<EstimationFormDraft | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,6 +89,8 @@ export default function EstimatorForm() {
   const [pdfDesignOpen, setPdfDesignOpen] = useState(false);
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
   const [kwitansiOpen, setKwitansiOpen] = useState(false);
+  const [kwitansiLinkedIncome, setKwitansiLinkedIncome] = useState<ProjectIncome | null>(null);
+  const [paymentsRefreshKey, setPaymentsRefreshKey] = useState(0);
   const [waShareOpen, setWaShareOpen] = useState(false);
   const [pdfSettings, setPdfSettings] = useState<PdfSettings | null>(null);
   const [waTemplate, setWaTemplate] = useState<WhatsAppTemplateConfig>(defaultWhatsAppTemplateConfig());
@@ -130,6 +136,12 @@ export default function EstimatorForm() {
 
   const persistDraft = useCallback(async (payload: EstimationFormDraft) => {
     if (!tenant?.id || !user?.id || isNew || !id || payload.status === 'converted') return;
+    const namedCount = payload.items.filter(i => i.name.trim()).length;
+    const savedNamedCount = draftHistory.getSavedNamedItemCount();
+    if (namedCount === 0 && savedNamedCount > 0) {
+      console.error('Auto-save blocked: refusing to wipe estimation items', { id, savedNamedCount });
+      return;
+    }
     let images = payload.images;
     if (images.some(img => img.pendingFile)) {
       images = await uploadPendingImages(tenant.id, id, images);
@@ -149,32 +161,23 @@ export default function EstimatorForm() {
 
   const handleBeforeLeaveList = useCallback(() => {
     autoSave.discard();
-    setActiveTab('estimator');
-  }, [autoSave, setActiveTab]);
+  }, [autoSave]);
+
+  const goBackToList = useCallback(() => {
+    handleBeforeLeaveList();
+    navigate('/app/estimator', { replace: true });
+  }, [handleBeforeLeaveList, navigate]);
 
   useEffect(() => {
-    if (!draft || isNew || isReadOnly) return;
+    if (!draft || isNew || isReadOnly || loading) return;
     scheduleAutoSave(draft);
-  }, [draft, isNew, isReadOnly, scheduleAutoSave]);
-
-  const estimationProjectName = useMemo(() => {
-    if (!draft) return '';
-    return (draft.project_id && projects.find(p => p.id === draft.project_id)?.name) || draft.title;
-  }, [draft, projects]);
-
-  const summaryTotal = useMemo(() => {
-    if (!draft) return 0;
-    return calcEstimationSummary(
-      countedEstimationItems(draft.items),
-      draft.overhead_pct,
-      draft.discount_pct,
-      draft.tax_pct,
-      { discountAmount: draft.discount_amount, adjustments: draft.adjustments },
-    ).grandTotal;
-  }, [draft]);
+  }, [draft, isNew, isReadOnly, loading, scheduleAutoSave]);
 
   useEffect(() => {
     if (!tenant?.id) return;
+
+    let cancelled = false;
+    autoSave.discard();
 
     const init = async () => {
       setLoading(true);
@@ -202,6 +205,21 @@ export default function EstimatorForm() {
             return;
           }
           const formDraft = await estimationToFormDraft(est);
+          if (cancelled) return;
+          // #region agent log
+          debugNavLog(
+            'EstimatorForm.tsx:loaded',
+            'estimation items loaded',
+            {
+              id,
+              title: formDraft.title,
+              itemCount: formDraft.items.length,
+              namedItemCount: formDraft.items.filter(i => i.name.trim()).length,
+              dbTotal: Number(est.total_selling_price),
+            },
+            'H-ITEMS',
+          );
+          // #endregion
           setDraft({
             ...formDraft,
             pdf_primary_color: est.pdf_primary_color || settings.primary_color,
@@ -234,12 +252,49 @@ export default function EstimatorForm() {
       } catch (e) {
         showToast(e instanceof Error ? e.message : 'Gagal memuat', 'error');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
-    init();
-  }, [tenant?.id, id, isNew, navigate, showToast]);
+    void init();
+    return () => {
+      cancelled = true;
+      autoSave.discard();
+    };
+  }, [tenant?.id, id, isNew, navigate, showToast, autoSave]);
+
+  const estimationProjectName = useMemo(() => {
+    if (!draft) return '';
+    const linkedId = resolveEstimationProjectId({
+      project_id: draft.project_id,
+      converted_project_id: convertedProjectId,
+    });
+    return (linkedId && projects.find(p => p.id === linkedId)?.name) || draft.title;
+  }, [draft, projects, convertedProjectId]);
+
+  const linkedProjectId = useMemo(() => {
+    if (!draft) return null;
+    return resolveEstimationProjectId({
+      project_id: draft.project_id,
+      converted_project_id: convertedProjectId,
+    });
+  }, [draft, convertedProjectId]);
+
+  const linkedProjectName = useMemo(() => {
+    if (!linkedProjectId) return undefined;
+    return projects.find(p => p.id === linkedProjectId)?.name;
+  }, [linkedProjectId, projects]);
+
+  const summaryTotal = useMemo(() => {
+    if (!draft) return 0;
+    return calcEstimationSummary(
+      countedEstimationItems(draft.items),
+      draft.overhead_pct,
+      draft.discount_pct,
+      draft.tax_pct,
+      { discountAmount: draft.discount_amount, adjustments: draft.adjustments },
+    ).grandTotal;
+  }, [draft]);
 
   const handleUndo = () => {
     setDraft(prev => draftHistory.undo(prev) ?? prev);
@@ -459,7 +514,7 @@ export default function EstimatorForm() {
     setWaShareOpen(true);
   };
 
-  const handleOpenKwitansi = async () => {
+  const handleOpenKwitansi = async (linkedIncome?: ProjectIncome) => {
     if (!requireSaved() || !tenant?.id) return;
     if (!canGenerateKwitansi(entitlement)) {
       setUpgradeFeatureName('Generator Kwitansi Pro');
@@ -471,6 +526,7 @@ export default function EstimatorForm() {
     try {
       const settings = pdfSettings ?? await loadPdfSettings(tenant.id, tenant.name);
       if (!pdfSettings) setPdfSettings(settings);
+      setKwitansiLinkedIncome(linkedIncome ?? null);
       setKwitansiOpen(true);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal memuat pengaturan PDF', 'error');
@@ -569,7 +625,7 @@ export default function EstimatorForm() {
     <div className="w-full max-w-[100rem] mx-auto px-3 sm:px-5 py-4 pb-36 lg:pb-24 overflow-x-hidden">
       <EstimatorBreadcrumb
         items={[{ label: isNew ? 'Baru' : draft.code }]}
-        onBeforeBack={handleBeforeLeaveList}
+        onBack={goBackToList}
       />
 
       {isReadOnly && convertedProjectId && (
@@ -816,6 +872,29 @@ export default function EstimatorForm() {
         </div>
       )}
 
+      {!isNew && linkedProjectId && tenant?.id && user?.id && draft && (
+        <div className="mb-4">
+          <EstimationPaymentPanel
+            key={paymentsRefreshKey}
+            projectId={linkedProjectId}
+            projectName={linkedProjectName}
+            estimationId={id!}
+            orgId={tenant.id}
+            userId={user.id}
+            draft={draft}
+            isReadOnly={isReadOnly}
+            onOpenKwitansi={handleOpenKwitansi}
+            onPaymentsChanged={() => setPaymentsRefreshKey(k => k + 1)}
+          />
+        </div>
+      )}
+
+      {!isNew && !linkedProjectId && (
+        <div className="mb-4 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600">
+          Hubungkan ke proyek (dropdown Proyek di Detail) atau jadikan proyek untuk mencatat pembayaran DP/Termin/Pelunasan.
+        </div>
+      )}
+
       {/* Toolbar + tabel item */}
       <EstimatorActionBar
         navSidebarCollapsed={navSidebarCollapsed}
@@ -827,10 +906,8 @@ export default function EstimatorForm() {
         canUndo={draftHistory.canUndo}
         canRedo={draftHistory.canRedo}
         canDiscard={draftHistory.canDiscard && !isNew}
-        inline
         onCancel={() => {
-          handleBeforeLeaveList();
-          navigate('/app/estimator');
+          goBackToList();
         }}
         onSave={handleSave}
         onUndo={handleUndo}
@@ -840,7 +917,7 @@ export default function EstimatorForm() {
         onWhatsApp={handleShareWhatsApp}
         onPreviewPdf={handlePreviewPdf}
         onDownloadPdf={handleDownloadPdf}
-        onKwitansi={handleOpenKwitansi}
+        onKwitansi={() => void handleOpenKwitansi()}
       />
 
       <EstimationItemsTable
@@ -912,8 +989,17 @@ export default function EstimatorForm() {
           open={kwitansiOpen}
           draft={draft}
           settings={pdfSettings}
-          onClose={() => setKwitansiOpen(false)}
+          onClose={() => {
+            setKwitansiOpen(false);
+            setKwitansiLinkedIncome(null);
+          }}
           onToast={(msg, type) => showToast(msg, type)}
+          projectId={linkedProjectId}
+          estimationId={id ?? undefined}
+          userId={user?.id}
+          orgId={tenant?.id}
+          linkedIncome={kwitansiLinkedIncome}
+          onPaymentSynced={() => setPaymentsRefreshKey(k => k + 1)}
         />
       )}
 

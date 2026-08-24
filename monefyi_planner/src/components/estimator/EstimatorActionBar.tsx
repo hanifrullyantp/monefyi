@@ -84,6 +84,10 @@ export default function EstimatorActionBar({
   onDownloadPdf,
   onKwitansi,
 }: Props) {
+  const handleCancel = () => {
+    onCancel();
+  };
+
   return (
     <div
       className={
@@ -100,12 +104,12 @@ export default function EstimatorActionBar({
         }`}
       >
         {!inline && (
-          <IconBtn label="Kembali" onClick={onCancel}>
+          <IconBtn label="Kembali" onClick={handleCancel}>
             <ArrowLeft className="w-4 h-4" />
           </IconBtn>
         )}
         {inline && (
-          <IconBtn label="Kembali ke daftar" onClick={onCancel}>
+          <IconBtn label="Kembali ke daftar" onClick={handleCancel}>
             <ArrowLeft className="w-4 h-4" />
           </IconBtn>
         )}

@@ -16,6 +16,7 @@ import { ensureOwnerOrg } from "@/lib/services/orgService";
 import { redirectToLynkCheckout } from "@/lib/checkout/lynk";
 import { lynkProductLabel } from "@/lib/checkout/products";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { navigateToPlannerApp } from "@/lib/config/plannerApp";
 
 type AuthMode = "login" | "signup" | "forgot";
 
@@ -90,6 +91,10 @@ export function LoginModal() {
     setPassword("");
 
     const next = searchParams.get("next");
+    if (next?.startsWith("/app")) {
+      navigateToPlannerApp(next);
+      return;
+    }
     if (result.user.isAdmin && next?.startsWith("/admin")) {
       router.push(next);
     }

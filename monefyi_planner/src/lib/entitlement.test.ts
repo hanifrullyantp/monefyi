@@ -69,8 +69,8 @@ describe('entitlement - buildEntitlementSnapshot', () => {
 });
 
 describe('entitlement - canGenerateKwitansi', () => {
-  it('allows Estimator Pro only', () => {
-    const pro = buildEntitlementSnapshot({
+  it('allows Estimator Pro, Pro, and Enterprise', () => {
+    const estimatorPro = buildEntitlementSnapshot({
       subscription: {
         id: 's1',
         org_id: 'o1',
@@ -101,7 +101,14 @@ describe('entitlement - canGenerateKwitansi', () => {
       activeProjectCount: 0,
       memberCount: 1,
     });
+    const pro = buildEntitlementSnapshot({
+      subscription: null,
+      orgPlan: 'pro',
+      activeProjectCount: 0,
+      memberCount: 1,
+    });
 
+    expect(canGenerateKwitansi(estimatorPro)).toBe(true);
     expect(canGenerateKwitansi(pro)).toBe(true);
     expect(canGenerateKwitansi(standard)).toBe(false);
   });

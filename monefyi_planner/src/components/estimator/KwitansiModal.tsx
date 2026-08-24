@@ -13,7 +13,13 @@ import {
   suggestKwitansiAmount,
   type KwitansiPaymentCategory,
 } from '../../lib/pdf/generateKwitansiPdf';
-import { KWITANSI_CATEGORY_LABELS } from '../../lib/pdf/kwitansiPdfContext';
+import { buildKwitansiNumber, KWITANSI_CATEGORY_LABELS } from '../../lib/pdf/kwitansiPdfContext';
+import {
+  attachReceiptToIncome,
+  recordEstimationPayment,
+  type IncomeCategory,
+} from '../../services/estimationPaymentService';
+import type { ProjectIncome } from '../../services/incomeService';
 
 type Props = {
   open: boolean;
@@ -21,6 +27,14 @@ type Props = {
   settings: PdfSettings;
   onClose: () => void;
   onToast?: (msg: string, type: 'success' | 'error') => void;
+  /** Proyek terhubung — sinkron pembayaran */
+  projectId?: string | null;
+  estimationId?: string;
+  userId?: string;
+  orgId?: string;
+  /** Isi dari baris pembayaran yang sudah tercatat */
+  linkedIncome?: ProjectIncome | null;
+  onPaymentSynced?: () => void;
 };
 
 const CATEGORIES: KwitansiPaymentCategory[] = ['dp', 'termin', 'pelunasan', 'other'];
@@ -31,6 +45,12 @@ export default function KwitansiModal({
   settings,
   onClose,
   onToast,
+  projectId,
+  estimationId,
+  userId,
+  orgId,
+  linkedIncome,
+  onPaymentSynced,
 }: Props) {
   const [category, setCategory] = useState<KwitansiPaymentCategory>('dp');
   const [paymentDate, setPaymentDate] = useState(todayStr());
@@ -38,6 +58,7 @@ export default function KwitansiModal({
   const [amountInput, setAmountInput] = useState('');
   const [description, setDescription] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
+  const [syncToProject, setSyncToProject] = useState(true);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -60,8 +81,20 @@ export default function KwitansiModal({
 
   useEffect(() => {
     if (!open) return;
+    if (linkedIncome) {
+      const cat = (linkedIncome.category === 'retensi' ? 'other' : linkedIncome.category) as KwitansiPaymentCategory;
+      setCategory(cat);
+      setPaymentDate(linkedIncome.date);
+      setAmount(linkedIncome.amount);
+      setAmountInput(formatRupiahFull(linkedIncome.amount).replace('Rp', '').trim());
+      setDescription(linkedIncome.description);
+      setPaymentMethod(linkedIncome.payment_method || '');
+      setSyncToProject(false);
+      return;
+    }
     resetForm('dp');
-  }, [open, resetForm]);
+    setSyncToProject(Boolean(projectId && estimationId && userId && orgId));
+  }, [open, resetForm, linkedIncome, projectId, estimationId, userId, orgId]);
 
   const handleCategoryChange = (cat: KwitansiPaymentCategory) => {
     const suggested = suggestKwitansiAmount(draft, cat);
@@ -133,8 +166,38 @@ export default function KwitansiModal({
       return;
     }
     try {
+      const receiptNumber = buildKwitansiNumber(draft.code, new Date(`${paymentDate}T12:00:00`));
       await downloadKwitansiPdf(buildInput());
-      onToast?.('Kwitansi diunduh', 'success');
+
+      if (linkedIncome?.id && !linkedIncome.invoice_ref) {
+        await attachReceiptToIncome(linkedIncome.id, receiptNumber);
+        onToast?.('Kwitansi diunduh & ditautkan ke pembayaran', 'success');
+        onPaymentSynced?.();
+      } else if (
+        syncToProject
+        && projectId
+        && estimationId
+        && userId
+        && orgId
+        && !linkedIncome
+      ) {
+        await recordEstimationPayment({
+          projectId,
+          estimationId,
+          orgId,
+          userId,
+          date: paymentDate,
+          amount,
+          category: category as IncomeCategory,
+          description: description.trim() || defaultKwitansiDescription(draft, category),
+          payment_method: paymentMethod.trim() || null,
+          receiptNumber,
+        });
+        onToast?.('Kwitansi diunduh & pembayaran tercatat di proyek', 'success');
+        onPaymentSynced?.();
+      } else {
+        onToast?.('Kwitansi diunduh', 'success');
+      }
     } catch (e) {
       onToast?.(e instanceof Error ? e.message : 'Gagal unduh PDF', 'error');
     }
@@ -233,6 +296,26 @@ export default function KwitansiModal({
                 className="mt-1 w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-emerald-500 outline-none"
               />
             </label>
+
+            {projectId && estimationId && userId && orgId && !linkedIncome && (
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={syncToProject}
+                  onChange={e => setSyncToProject(e.target.checked)}
+                  className="mt-1 rounded border-slate-300 text-emerald-600"
+                />
+                <span className="text-xs text-slate-600">
+                  Catat pembayaran ini ke proyek terhubung (sinkron dengan halaman Proyek)
+                </span>
+              </label>
+            )}
+
+            {linkedIncome && (
+              <p className="text-[10px] text-teal-700 bg-teal-50 border border-teal-100 rounded-lg px-3 py-2">
+                Generate kwitansi untuk pembayaran yang sudah tercatat. Nomor kwitansi akan disimpan di proyek.
+              </p>
+            )}
 
             <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
               Nomor kwitansi dibuat otomatis per hari. Generate ulang di hari yang sama bisa menghasilkan nomor serupa.

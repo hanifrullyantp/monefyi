@@ -1,5 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import LandingPage from './components/LandingPage';
+import LandingEntry from './components/LandingEntry';
 import { LoginPage } from './components/AuthPages';
 import ProtectedRoute from './components/ProtectedRoute';
 import AuthOnlyRoute from './components/AuthOnlyRoute';
@@ -22,11 +22,11 @@ import PwaInstallBanner from './components/PwaInstallBanner';
 
 export default function AppRouter() {
   return (
-    <BrowserRouter>
+    <BrowserRouter useTransitions={false}>
       <AuthBootstrap>
       <PwaInstallBanner />
       <Routes>
-        <Route path="/" element={<><AuthRedirect /><LandingPage /></>} />
+        <Route path="/" element={<><AuthRedirect /><LandingEntry /></>} />
         <Route path="/login" element={<><AuthRedirect /><LoginPage /></>} />
         <Route path="/signup" element={<><AuthRedirect /><SignupHubPage /></>} />
         <Route path="/signup/owner" element={<><AuthRedirect /><OwnerSignupPage /></>} />

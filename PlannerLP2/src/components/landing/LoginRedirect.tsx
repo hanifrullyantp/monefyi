@@ -4,6 +4,7 @@ import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUIStore } from "@/lib/store/uiStore";
 import { useAuthStore } from "@/lib/store/authStore";
+import { navigateToPlannerApp } from "@/lib/config/plannerApp";
 
 function LoginRedirectInner() {
   const searchParams = useSearchParams();
@@ -29,7 +30,12 @@ function LoginRedirectInner() {
       setAdmin(true);
       if (next.startsWith("/admin")) {
         router.replace(next);
+        return;
       }
+    }
+
+    if (isAuthenticated && next.startsWith("/app")) {
+      navigateToPlannerApp(next);
     }
   }, [hydrated, isAuthenticated, user, searchParams, setLoginModalOpen, setAdmin, router]);
 

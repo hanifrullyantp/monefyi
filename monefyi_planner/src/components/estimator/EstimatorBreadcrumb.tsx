@@ -1,5 +1,5 @@
 import { ChevronRight, ArrowLeft } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 type Crumb = { label: string; href?: string };
 
@@ -7,7 +7,9 @@ type Props = {
   items: Crumb[];
   showBack?: boolean;
   backTo?: string;
-  /** Dipanggil sebelum navigasi (batalkan auto-save, sync tab). */
+  /** Override navigasi back (disarankan dari parent yang memegang navigate). */
+  onBack?: () => void;
+  /** @deprecated Gunakan onBack; dipanggil sebelum navigasi bawaan. */
   onBeforeBack?: () => void;
 };
 
@@ -15,12 +17,24 @@ export default function EstimatorBreadcrumb({
   items,
   showBack = true,
   backTo = '/app/estimator',
+  onBack,
   onBeforeBack,
 }: Props) {
   const navigate = useNavigate();
 
-  const handleBeforeBack = () => {
-    onBeforeBack?.();
+  const handleBack = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onBack) {
+      onBack();
+    } else {
+      onBeforeBack?.();
+      navigate(backTo);
+    }
+  };
+
+  const handleCrumbNavigate = (href: string) => {
+    navigate(href);
   };
 
   return (
@@ -29,29 +43,29 @@ export default function EstimatorBreadcrumb({
       className="relative z-50 flex items-center gap-1.5 text-xs text-slate-500 mb-3 flex-wrap"
     >
       {showBack && (
-        <Link
-          to={backTo}
-          onClick={handleBeforeBack}
+        <button
+          type="button"
+          onClick={handleBack}
           className="inline-flex items-center justify-center min-w-[2.75rem] min-h-[2.75rem] -ml-1 rounded-xl text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 active:bg-emerald-100 transition-colors shrink-0 touch-manipulation"
           aria-label="Kembali ke daftar estimasi"
         >
           <ArrowLeft className="w-4 h-4 pointer-events-none" />
-        </Link>
+        </button>
       )}
-      <Link
-        to={backTo}
-        onClick={handleBeforeBack}
+      <button
+        type="button"
+        onClick={handleBack}
         className="font-semibold hover:text-emerald-600 active:text-emerald-700 transition-colors touch-manipulation"
       >
         Estimator
-      </Link>
+      </button>
       {items.map((item, i) => (
         <span key={`${item.label}-${i}`} className="inline-flex items-center gap-1 min-w-0">
           <ChevronRight className="w-3 h-3 text-slate-400 shrink-0" />
           {item.href ? (
             <button
               type="button"
-              onClick={() => navigate(item.href!)}
+              onClick={() => handleCrumbNavigate(item.href!)}
               className="font-semibold hover:text-emerald-600 transition-colors truncate max-w-[12rem] touch-manipulation"
             >
               {item.label}

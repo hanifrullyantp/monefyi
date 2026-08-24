@@ -64,6 +64,11 @@ export function useEstimationDraftHistory() {
   const canRedo = futureRef.current.length > 0;
   const canDiscard = savedRef.current !== null;
 
+  const getSavedNamedItemCount = useCallback((): number => {
+    if (!savedRef.current) return 0;
+    return savedRef.current.items.filter(i => i.name.trim()).length;
+  }, []);
+
   void tick;
 
   return {
@@ -76,5 +81,6 @@ export function useEstimationDraftHistory() {
     canUndo,
     canRedo,
     canDiscard,
+    getSavedNamedItemCount,
   };
 }

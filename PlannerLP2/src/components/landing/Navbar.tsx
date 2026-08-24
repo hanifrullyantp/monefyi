@@ -117,6 +117,13 @@ export function Navbar() {
             <div className="hidden md:flex items-center gap-3">
               {isAdmin ? (
                 <div className="flex items-center gap-2 bg-slate-900 rounded-2xl p-1.5 shadow-2xl">
+                  <a
+                    href={plannerAppPath("/app")}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-500 transition-all border border-emerald-500/30"
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    MASUK APP
+                  </a>
                   <Link
                     href="/admin"
                     className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-700 transition-all border border-white/5"
@@ -240,6 +247,14 @@ export function Navbar() {
               )}
               {isAdmin && (
                 <>
+                  <a
+                    href={plannerAppPath("/app")}
+                    onClick={() => setIsMobileOpen(false)}
+                    className="text-left px-4 py-3 rounded-xl bg-emerald-600 text-white font-bold transition-all flex items-center gap-2"
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    Masuk Aplikasi
+                  </a>
                   <button
                     type="button"
                     onClick={() => {

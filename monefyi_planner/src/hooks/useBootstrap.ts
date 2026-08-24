@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { buildUser } from '../lib/adapters';
 import { config } from '../lib/config';
@@ -38,6 +38,8 @@ function resolvePlatformRole(profile: { role?: string }, email?: string): 'user'
 }
 
 let bootstrapPromise: Promise<void> | null = null;
+/** Survives StrictMode remount — jangan ulang spinner jika auth sudah selesai. */
+let globalAuthInitDone = false;
 
 async function applyOrgContext(
   authUser: Session['user'],
@@ -173,7 +175,6 @@ async function bootstrapSession(session: Session) {
 }
 
 export function useBootstrap() {
-  const initialized = useRef(false);
   const {
     setAuthenticated,
     setUser,
@@ -187,25 +188,49 @@ export function useBootstrap() {
   } = useAppStore();
 
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
+    if (!globalAuthInitDone) {
+      setAuthInitializing(true);
+    }
 
-    setAuthInitializing(true);
     bootstrapCustomDomainContext()
       .then(ctx => useAppStore.getState().setCustomDomainContext(ctx))
       .catch(() => {});
 
-    const subscription = onAuthStateChange((event, session) => {
+    let initSettled = globalAuthInitDone;
+    const settleInit = (reason: string) => {
+      if (initSettled) return;
+      initSettled = true;
+      globalAuthInitDone = true;
+      setAuthInitializing(false);
+    };
+
+    if (globalAuthInitDone) {
+      setAuthInitializing(false);
+    }
+
+    const safetyTimer = globalAuthInitDone
+      ? null
+      : window.setTimeout(() => settleInit('safety-timeout-12s'), 12_000);
+
+    let getSessionHandled = false;
+
+    const processAuth = (event: string, session: Session | null) => {
       if (useAppStore.getState().isDemoMode) {
-        setAuthInitializing(false);
+        settleInit('demo-mode');
         return;
       }
 
       if (session?.user) {
-        // Must NOT await bootstrap here — Supabase blocks signIn until this callback settles.
+        if (
+          globalAuthInitDone
+          && useAppStore.getState().isAuthenticated
+          && (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN' || event === 'INITIAL_SESSION')
+        ) {
+          return;
+        }
         void runBootstrap(session)
           .catch((e) => console.error('Bootstrap error:', e))
-          .finally(() => setAuthInitializing(false));
+          .finally(() => settleInit(`bootstrap-done:${event}`));
         return;
       }
 
@@ -225,10 +250,23 @@ export function useBootstrap() {
         setProjects([]);
         setNotifications([]);
       }
-      setAuthInitializing(false);
+      settleInit(`no-user:${event}`);
+    };
+
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      getSessionHandled = true;
+      processAuth('GET_SESSION', session);
+    }).catch(() => settleInit('getSession-error'));
+
+    const subscription = onAuthStateChange((event, session) => {
+      if (event === 'INITIAL_SESSION' && getSessionHandled) return;
+      processAuth(event, session);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      if (safetyTimer != null) window.clearTimeout(safetyTimer);
+      subscription.unsubscribe();
+    };
   }, [
     setAuthenticated,
     setUser,

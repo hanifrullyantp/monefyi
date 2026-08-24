@@ -36,14 +36,30 @@ export function useEntitlement() {
     }
 
     if (isPlatformAdmin(platformRole, user?.email)) {
+      const activeCount = projects.filter(p => p.status !== 'archived' && p.status !== 'completed').length;
       const adminEntitlement = buildEntitlementSnapshot({
         subscription: null,
         orgPlan: 'enterprise',
-        activeProjectCount: projects.filter(p => p.status !== 'archived' && p.status !== 'completed').length,
+        activeProjectCount: activeCount,
         memberCount: 1,
         hasEstimations: true,
       });
-      setEntitlement({ ...adminEntitlement, tier: 'enterprise', canAccessEstimator: true, canAccessFinance: true, canCreateProject: true, hasPaid: true });
+      setEntitlement({
+        ...adminEntitlement,
+        tier: 'enterprise',
+        canAccessEstimator: true,
+        canAccessFinance: true,
+        canCreateProject: true,
+        canInviteMembers: true,
+        hasPaid: true,
+        isEstimatorPro: true,
+        isEnterprise: true,
+        isPro: true,
+        estimatorVariant: 'pro',
+        maxActiveProjects: 999,
+        maxMembers: 999,
+        remainingProjectSlots: Math.max(0, 999 - activeCount),
+      });
       setIsLoading(false);
       return;
     }
