@@ -93,7 +93,7 @@ export default function EstimatorActionBar({
       className={
         inline
           ? 'mb-3 bg-white border border-slate-200 rounded-2xl shadow-sm'
-          : `fixed left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] bottom-[4.75rem] lg:bottom-0 safe-bottom ${
+          : `fixed left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] bottom-[9.25rem] lg:bottom-[4.5rem] safe-bottom ${
               navSidebarCollapsed ? 'lg:left-[4.5rem]' : 'lg:left-64'
             }`
       }

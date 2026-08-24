@@ -132,22 +132,32 @@ export default function EstimatorForm() {
     draftRef.current = draft;
   }, [draft]);
 
+  const {
+    setSavedSnapshot,
+    getSavedNamedItemCount,
+    isDirty,
+  } = draftHistory;
+
   const persistDraft = useCallback(async (payload: EstimationFormDraft) => {
     if (!tenant?.id || !user?.id || isNew || !id || payload.status === 'converted') return;
     const namedCount = payload.items.filter(i => i.name.trim()).length;
-    const savedNamedCount = draftHistory.getSavedNamedItemCount();
+    const savedNamedCount = getSavedNamedItemCount();
     if (namedCount === 0 && savedNamedCount > 0) {
       console.error('Auto-save blocked: refusing to wipe estimation items', { id, savedNamedCount });
       return;
     }
     let images = payload.images;
-    if (images.some(img => img.pendingFile)) {
+    const hadPendingUploads = images.some(img => img.pendingFile);
+    if (hadPendingUploads) {
       images = await uploadPendingImages(tenant.id, id, images);
     }
-    await updateEstimation(id, { ...payload, images });
-    patch({ images }, { skipHistory: true });
-    draftHistory.setSavedSnapshot({ ...payload, images });
-  }, [tenant?.id, user?.id, isNew, id, patch, draftHistory]);
+    const saved = { ...payload, images };
+    await updateEstimation(id, saved);
+    setSavedSnapshot(saved);
+    if (hadPendingUploads) {
+      patch({ images }, { skipHistory: true });
+    }
+  }, [tenant?.id, user?.id, isNew, id, patch, getSavedNamedItemCount, setSavedSnapshot]);
 
   const autoSave = useAutoSave<EstimationFormDraft>({
     debounceMs: 1200,
@@ -168,8 +178,9 @@ export default function EstimatorForm() {
 
   useEffect(() => {
     if (!draft || isNew || isReadOnly || loading) return;
+    if (!isDirty(draft)) return;
     scheduleAutoSave(draft);
-  }, [draft, isNew, isReadOnly, loading, scheduleAutoSave]);
+  }, [draft, isNew, isReadOnly, loading, scheduleAutoSave, isDirty]);
 
   useEffect(() => {
     if (!tenant?.id) return;
@@ -204,14 +215,15 @@ export default function EstimatorForm() {
           }
           const formDraft = await estimationToFormDraft(est);
           if (cancelled) return;
-          setDraft({
+          const loadedDraft = {
             ...formDraft,
             pdf_primary_color: est.pdf_primary_color || settings.primary_color,
             pdf_secondary_color: est.pdf_secondary_color || settings.secondary_color,
             pdf_template: est.pdf_template || settings.default_pdf_template,
-          });
+          };
+          setDraft(loadedDraft);
           draftHistory.resetHistory();
-          draftHistory.setSavedSnapshot(formDraft);
+          draftHistory.setSavedSnapshot(loadedDraft);
           setStatusMeta({
             created_at: est.created_at,
             wa_at: est.wa_at ?? null,
@@ -606,7 +618,7 @@ export default function EstimatorForm() {
   }
 
   return (
-    <div className="w-full max-w-[100rem] mx-auto px-3 sm:px-5 py-4 pb-36 lg:pb-24 overflow-x-hidden">
+    <div className="w-full max-w-[100rem] mx-auto px-3 sm:px-5 py-4 pb-52 lg:pb-32 overflow-x-hidden">
       <EstimatorBreadcrumb
         items={[{ label: isNew ? 'Baru' : draft.code }]}
         onBack={goBackToList}
@@ -646,15 +658,6 @@ export default function EstimatorForm() {
                     disabled={statusChanging}
                     variant="onDark"
                   />
-                )}
-                {!isNew && (
-                  <div className="ml-auto hidden sm:block">
-                    <AutoSaveIndicator
-                      status={autoSave.status}
-                      onRetry={() => draftRef.current && autoSave.flush()}
-                      variant="light"
-                    />
-                  </div>
                 )}
               </div>
               <input

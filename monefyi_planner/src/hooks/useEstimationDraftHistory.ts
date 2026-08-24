@@ -69,6 +69,13 @@ export function useEstimationDraftHistory() {
     return savedRef.current.items.filter(i => i.name.trim()).length;
   }, []);
 
+  const isDirty = useCallback((current: EstimationFormDraft): boolean => {
+    if (!savedRef.current) return true;
+    const a = cloneEstimationDraft(current);
+    const b = cloneEstimationDraft(savedRef.current);
+    return JSON.stringify(a) !== JSON.stringify(b);
+  }, []);
+
   void tick;
 
   return {
@@ -82,5 +89,6 @@ export function useEstimationDraftHistory() {
     canRedo,
     canDiscard,
     getSavedNamedItemCount,
+    isDirty,
   };
 }
