@@ -1,22 +1,37 @@
 "use client";
 import { motion } from "framer-motion";
-import { ArrowRight, CheckCircle2, ArrowDown, PlayCircle, Zap } from "lucide-react";
+import { ArrowRight, CheckCircle2, ArrowDown, PlayCircle, Zap, LayoutDashboard } from "lucide-react";
 import { Container } from "@/components/shared/Container";
 import { EditableText } from "@/components/shared/EditableText";
 import { EditableImage } from "@/components/shared/EditableImage";
 import { AnimatedHeadline } from "@/components/landing/AnimatedHeadline";
 import { useContentStore } from "@/lib/store/contentStore";
 import { defaultContent } from "@/data/defaultContent";
+import { useAuthStore } from "@/lib/store/authStore";
+import { navigateToPlannerApp } from "@/lib/config/plannerApp";
 
 export function HeroSection() {
   const { content } = useContentStore();
   const { hero } = content;
+  const hydrated = useAuthStore((s) => s.hydrated);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const headlineConfig = hero.headlineAnimated ?? defaultContent.hero.headlineAnimated;
 
   const scrollToStep = () => {
     const el = document.getElementById("tiga-step");
     if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 80, behavior: "smooth" });
   };
+
+  const handlePrimaryCta = () => {
+    if (hydrated && isAuthenticated) {
+      navigateToPlannerApp("/app");
+      return;
+    }
+    scrollToStep();
+  };
+
+  const primaryCtaLabel = hydrated && isAuthenticated ? "Masuk" : hero.ctaPrimary;
+  const PrimaryCtaIcon = hydrated && isAuthenticated ? LayoutDashboard : ArrowDown;
 
   return (
     <section id="hero" className="relative overflow-hidden bg-white">
@@ -121,11 +136,18 @@ export function HeroSection() {
               className="mt-6 md:mt-10 flex flex-col sm:flex-row gap-4 w-full md:w-auto"
             >
               <button
-                onClick={scrollToStep}
+                type="button"
+                onClick={handlePrimaryCta}
                 className="w-full md:w-fit relative overflow-hidden group gradient-premium text-white rounded-2xl px-10 py-5 font-black text-lg shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all active:scale-95 btn-premium flex items-center justify-center gap-3"
               >
-                <span className="relative z-10">{hero.ctaPrimary}</span>
-                <ArrowDown className="w-6 h-6 group-hover:translate-y-1 transition-transform relative z-10" />
+                <span className="relative z-10">{primaryCtaLabel}</span>
+                <PrimaryCtaIcon
+                  className={`w-6 h-6 relative z-10 transition-transform ${
+                    hydrated && isAuthenticated
+                      ? "group-hover:translate-x-0.5"
+                      : "group-hover:translate-y-1"
+                  }`}
+                />
               </button>
 
               <button className="hidden md:flex items-center justify-center gap-3 glass border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 rounded-2xl px-8 py-5 font-bold text-lg transition-all">

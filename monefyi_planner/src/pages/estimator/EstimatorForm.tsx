@@ -155,11 +155,11 @@ export default function EstimatorForm() {
     onError: () => showToast('Auto-save gagal', 'error'),
   });
 
-  const scheduleAutoSave = autoSave.schedule;
+  const { schedule: scheduleAutoSave, discard: discardAutoSave } = autoSave;
 
   const handleBeforeLeaveList = useCallback(() => {
-    autoSave.discard();
-  }, [autoSave]);
+    discardAutoSave();
+  }, [discardAutoSave]);
 
   const goBackToList = useCallback(() => {
     handleBeforeLeaveList();
@@ -175,7 +175,7 @@ export default function EstimatorForm() {
     if (!tenant?.id) return;
 
     let cancelled = false;
-    autoSave.discard();
+    discardAutoSave();
 
     const init = async () => {
       setLoading(true);
@@ -226,7 +226,7 @@ export default function EstimatorForm() {
           });
           setConvertedProjectId(est.converted_project_id ?? null);
           if (est.converted_project_id) {
-            const linked = projects.find(p => p.id === est.converted_project_id);
+            const linked = useAppStore.getState().projects.find(p => p.id === est.converted_project_id);
             setConvertedProjectName(linked?.name || est.title);
           } else {
             setConvertedProjectName(null);
@@ -243,9 +243,9 @@ export default function EstimatorForm() {
     void init();
     return () => {
       cancelled = true;
-      autoSave.discard();
+      discardAutoSave();
     };
-  }, [tenant?.id, id, isNew, navigate, showToast, autoSave]);
+  }, [tenant?.id, id, isNew, navigate, showToast, discardAutoSave]);
 
   const estimationProjectName = useMemo(() => {
     if (!draft) return '';
