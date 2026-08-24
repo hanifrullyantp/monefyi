@@ -63,14 +63,12 @@ import { formatRupiahFull } from '../../lib/estimatorFormat';
 import { calcEstimationSummary, countedEstimationItems } from '../../lib/estimatorCalc';
 import type { EstimationFormDraft } from '../../types/estimator';
 import { resolveEstimationProjectId } from '../../lib/estimationProjectLink';
-import { debugNavLog } from '../../lib/debugNavLog';
 import type { ProjectIncome } from '../../services/incomeService';
 
 export default function EstimatorForm() {
   const { id } = useParams();
   const isNew = !id || id === 'new';
   const navigate = useNavigate();
-  const location = useLocation();
   const { tenant, user, projects, addProject } = useAppStore();
   const showToast = useUiStore(s => s.showToast);
   const navSidebarCollapsed = useAppStore(s => s.navSidebarCollapsed);
@@ -206,20 +204,6 @@ export default function EstimatorForm() {
           }
           const formDraft = await estimationToFormDraft(est);
           if (cancelled) return;
-          // #region agent log
-          debugNavLog(
-            'EstimatorForm.tsx:loaded',
-            'estimation items loaded',
-            {
-              id,
-              title: formDraft.title,
-              itemCount: formDraft.items.length,
-              namedItemCount: formDraft.items.filter(i => i.name.trim()).length,
-              dbTotal: Number(est.total_selling_price),
-            },
-            'H-ITEMS',
-          );
-          // #endregion
           setDraft({
             ...formDraft,
             pdf_primary_color: est.pdf_primary_color || settings.primary_color,

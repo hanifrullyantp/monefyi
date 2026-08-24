@@ -15,9 +15,11 @@ import Link from "next/link";
 export function Navbar() {
   const { isAdmin, isEditMode, setEditMode, setAdmin } = useLandingAdmin();
   const logout = useAuthStore((s) => s.logout);
+  const hydrated = useAuthStore((s) => s.hydrated);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const { content } = useContentStore();
   const { navbar } = content;
-  const { isAuthenticated, label, handleCtaClick, openLogin } = useLandingCta();
+  const { label, openLogin } = useLandingCta();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("hero");
@@ -64,6 +66,29 @@ export function Navbar() {
     setAdmin(false);
     setEditMode(false);
   };
+
+  const showUserNav = hydrated && isAuthenticated;
+
+  const masukAppLink = (
+    <a
+      href={plannerAppPath("/app")}
+      className="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-500 transition-all shrink-0"
+    >
+      <LayoutDashboard className="w-4 h-4 shrink-0" />
+      <span>Masuk App</span>
+    </a>
+  );
+
+  const loginButton = (
+    <button
+      type="button"
+      onClick={openLogin}
+      className="inline-flex items-center gap-1.5 px-3 py-2 sm:px-5 sm:py-2.5 text-slate-600 hover:text-slate-900 font-bold text-xs sm:text-sm transition-all shrink-0"
+    >
+      <LogIn className="w-4 h-4 shrink-0" />
+      {label}
+    </button>
+  );
 
   return (
     <>
@@ -114,88 +139,82 @@ export function Navbar() {
               ))}
             </div>
 
-            <div className="hidden md:flex items-center gap-3">
-              {isAdmin ? (
-                <div className="flex items-center gap-2 bg-slate-900 rounded-2xl p-1.5 shadow-2xl">
-                  <a
-                    href={plannerAppPath("/app")}
-                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-500 transition-all border border-emerald-500/30"
-                  >
-                    <LayoutDashboard className="w-4 h-4" />
-                    MASUK APP
-                  </a>
-                  <Link
-                    href="/admin"
-                    className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-700 transition-all border border-white/5"
-                  >
-                    <LayoutDashboard className="w-4 h-4 text-emerald-400" />
-                    ADMIN PANEL
-                  </Link>
-                  <button
-                    onClick={() => setEditMode(!isEditMode)}
-                    className={cn(
-                      "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border",
-                      isEditMode
-                        ? "bg-emerald-600 text-white border-emerald-500 shadow-glow"
-                        : "bg-slate-800 text-slate-300 border-white/5 hover:text-white",
-                    )}
-                  >
-                    {isEditMode ? (
-                      <>
-                        <Save className="w-4 h-4 animate-pulse" />
-                        EXIT EDIT MODE
-                      </>
-                    ) : (
-                      <>
-                        <Edit3 className="w-4 h-4 text-emerald-400" />
-                        INLINE EDIT
-                      </>
-                    )}
-                  </button>
-                  <button
-                    onClick={handleAdminLogout}
-                    className="p-2 text-slate-500 hover:text-red-400 transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <>
-                  {isAuthenticated ? (
-                    <a
-                      href={plannerAppPath("/app")}
-                      className="flex items-center gap-2 px-5 py-2.5 text-slate-600 hover:text-slate-900 font-bold text-sm transition-all"
-                    >
-                      <LayoutDashboard className="w-4 h-4" />
-                      Dashboard
-                    </a>
-                  ) : (
-                    <button
-                      onClick={openLogin}
-                      className="flex items-center gap-2 px-5 py-2.5 text-slate-600 hover:text-slate-900 font-bold text-sm transition-all"
-                    >
-                      <LogIn className="w-4 h-4" />
-                      {label}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => (isAuthenticated ? handleCtaClick() : scrollTo(navbar.ctaHref))}
-                    className="group relative overflow-hidden flex items-center gap-2 gradient-premium text-white rounded-xl px-6 py-2.5 font-bold text-sm shadow-premium hover:shadow-glow transition-all duration-300 btn-premium"
-                  >
-                    <span className="relative z-10">{navbar.ctaText}</span>
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform relative z-10" />
-                  </button>
-                </>
-              )}
-            </div>
+            <div className="flex items-center gap-2 shrink-0 min-w-0">
+              {/* Mobile: auth selalu terlihat di header */}
+              <div className="flex md:hidden items-center gap-1.5">
+                {showUserNav ? masukAppLink : loginButton}
+              </div>
 
-            <button
-              onClick={() => setIsMobileOpen(!isMobileOpen)}
-              className="md:hidden p-2 rounded-lg text-slate-700 hover:bg-slate-100"
-              aria-label="Toggle menu"
-            >
-              {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
+              {/* Desktop: menu kanan */}
+              <div className="hidden md:flex items-center gap-2 lg:gap-3 min-w-0">
+                {showUserNav ? (
+                  <>
+                    {masukAppLink}
+                    {isAdmin && (
+                      <>
+                        <Link
+                          href="/admin"
+                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-800 text-white hover:bg-slate-700 transition-all shrink-0"
+                        >
+                          <LayoutDashboard className="w-4 h-4 text-emerald-400" />
+                          Admin
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => setEditMode(!isEditMode)}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border shrink-0",
+                            isEditMode
+                              ? "bg-emerald-600 text-white border-emerald-500"
+                              : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50",
+                          )}
+                        >
+                          {isEditMode ? (
+                            <>
+                              <Save className="w-4 h-4" />
+                              Selesai Edit
+                            </>
+                          ) : (
+                            <>
+                              <Edit3 className="w-4 h-4" />
+                              Inline Edit
+                            </>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleAdminLogout()}
+                          className="p-2 rounded-xl text-slate-500 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0"
+                          aria-label="Logout"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {loginButton}
+                    <button
+                      type="button"
+                      onClick={() => scrollTo(navbar.ctaHref)}
+                      className="group relative overflow-hidden flex items-center gap-2 gradient-premium text-white rounded-xl px-5 py-2.5 font-bold text-sm shadow-premium hover:shadow-glow transition-all duration-300 btn-premium shrink-0"
+                    >
+                      <span className="relative z-10">{navbar.ctaText}</span>
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform relative z-10" />
+                    </button>
+                  </>
+                )}
+              </div>
+
+              <button
+                onClick={() => setIsMobileOpen(!isMobileOpen)}
+                className="md:hidden p-2 rounded-lg text-slate-700 hover:bg-slate-100 shrink-0"
+                aria-label="Toggle menu"
+              >
+                {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
         </div>
       </motion.nav>
@@ -232,7 +251,7 @@ export function Navbar() {
                   {item.label}
                 </button>
               ))}
-              {!isAdmin && (
+              {!showUserNav && (
                 <button
                   type="button"
                   onClick={() => {
@@ -245,7 +264,7 @@ export function Navbar() {
                   Login
                 </button>
               )}
-              {isAdmin && (
+              {showUserNav && (
                 <>
                   <a
                     href={plannerAppPath("/app")}
@@ -255,40 +274,44 @@ export function Navbar() {
                     <LayoutDashboard className="w-4 h-4" />
                     Masuk Aplikasi
                   </a>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditMode(!isEditMode);
-                      setIsMobileOpen(false);
-                    }}
-                    className={cn(
-                      "text-left px-4 py-3 rounded-xl font-bold transition-all flex items-center gap-2 touch-manipulation",
-                      isEditMode
-                        ? "bg-emerald-600 text-white"
-                        : "text-emerald-700 hover:bg-emerald-50",
-                    )}
-                  >
-                    {isEditMode ? <Save className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
-                    {isEditMode ? "Selesai Inline Edit" : "Inline Edit"}
-                  </button>
-                  <Link
-                    href="/admin"
-                    onClick={() => setIsMobileOpen(false)}
-                    className="text-left px-4 py-3 rounded-xl text-emerald-700 hover:bg-emerald-50 font-bold transition-all flex items-center gap-2"
-                  >
-                    <LayoutDashboard className="w-4 h-4" />
-                    Admin Panel
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMobileOpen(false);
-                      void handleAdminLogout();
-                    }}
-                    className="text-left px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 font-medium transition-all"
-                  >
-                    Logout Admin
-                  </button>
+                  {isAdmin && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditMode(!isEditMode);
+                          setIsMobileOpen(false);
+                        }}
+                        className={cn(
+                          "text-left px-4 py-3 rounded-xl font-bold transition-all flex items-center gap-2 touch-manipulation",
+                          isEditMode
+                            ? "bg-emerald-600 text-white"
+                            : "text-emerald-700 hover:bg-emerald-50",
+                        )}
+                      >
+                        {isEditMode ? <Save className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
+                        {isEditMode ? "Selesai Inline Edit" : "Inline Edit"}
+                      </button>
+                      <Link
+                        href="/admin"
+                        onClick={() => setIsMobileOpen(false)}
+                        className="text-left px-4 py-3 rounded-xl text-emerald-700 hover:bg-emerald-50 font-bold transition-all flex items-center gap-2"
+                      >
+                        <LayoutDashboard className="w-4 h-4" />
+                        Admin Panel
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMobileOpen(false);
+                          void handleAdminLogout();
+                        }}
+                        className="text-left px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 font-medium transition-all"
+                      >
+                        Logout
+                      </button>
+                    </>
+                  )}
                 </>
               )}
             </nav>
