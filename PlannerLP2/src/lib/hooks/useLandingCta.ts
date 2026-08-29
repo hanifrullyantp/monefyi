@@ -7,7 +7,6 @@ import { plannerAppPath } from "@/lib/config/plannerApp";
 import {
   getUpsellReason,
   isPlannerFeatureLocked,
-  ownsEstimator,
   type PlannerLockedFeature,
 } from "@/lib/permissions";
 import type { User } from "@/lib/store/authStore";
@@ -96,20 +95,14 @@ export function useLandingCta() {
     );
   };
 
-  const label = !isAuthenticated
-    ? "Login"
-    : ownsEstimator(user)
-      ? "Masuk Dashboard"
-      : "Login";
+  const label = !isAuthenticated ? "Login" : "Masuk";
 
   const handleCtaClick = () => {
     if (!isAuthenticated) {
       setLoginModalOpen(true);
       return;
     }
-    if (ownsEstimator(user)) {
-      window.location.href = plannerAppPath("/app");
-    }
+    window.location.href = plannerAppPath("/app");
   };
 
   return {

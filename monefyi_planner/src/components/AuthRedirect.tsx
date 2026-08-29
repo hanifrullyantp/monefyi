@@ -28,7 +28,7 @@ export default function AuthRedirect() {
       }
     }
 
-    const guestOnlyPaths = ['/', '/login', '/signup'];
+    const guestOnlyPaths = ['/', '/signup'];
     if (guestOnlyPaths.includes(location.pathname)) {
       return <Navigate to="/app" replace />;
     }

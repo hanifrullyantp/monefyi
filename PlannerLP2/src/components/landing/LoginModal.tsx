@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogIn, X } from "lucide-react";
+import { LogIn, X, CheckCircle2, LayoutDashboard } from "lucide-react";
+import type { AppUser } from "@/lib/accounts";
 import { useUIStore } from "@/lib/store/uiStore";
 import { useAuthStore } from "@/lib/store/authStore";
 import { useContentStore } from "@/lib/store/contentStore";
@@ -36,14 +37,46 @@ export function LoginModal() {
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loginSuccess, setLoginSuccess] = useState(false);
+  const [loggedInUser, setLoggedInUser] = useState<AppUser | null>(null);
 
   useEffect(() => {
     if (!isLoginModalOpen) {
       setMode("login");
       setError("");
       setInfo("");
+      setLoginSuccess(false);
+      setLoggedInUser(null);
     }
   }, [isLoginModalOpen]);
+
+  const enterAppPath = () => {
+    const next = searchParams.get("next");
+    return next?.startsWith("/app") ? next : "/app";
+  };
+
+  const enterAdminPath = () => {
+    const next = searchParams.get("next");
+    return next?.startsWith("/admin") ? next : "/admin";
+  };
+
+  const handleEnterApp = () => {
+    setLoginModalOpen(false);
+    navigateToPlannerApp(enterAppPath());
+  };
+
+  const handleEnterAdmin = () => {
+    setLoginModalOpen(false);
+    router.push(enterAdminPath());
+  };
+
+  const showLoginSuccess = (user: AppUser) => {
+    setLoggedInUser(user);
+    setLoginSuccess(true);
+    setPassword("");
+    setError("");
+    setInfo("");
+  };
 
   const scrollToPricing = () => {
     setLoginModalOpen(false);
@@ -87,17 +120,7 @@ export function LoginModal() {
       const redirected = await completePendingCheckout(result.user.id, result.user.email);
       if (redirected) return;
     }
-    setLoginModalOpen(false);
-    setPassword("");
-
-    const next = searchParams.get("next");
-    if (next?.startsWith("/app")) {
-      navigateToPlannerApp(next);
-      return;
-    }
-    if (result.user.isAdmin && next?.startsWith("/admin")) {
-      router.push(next);
-    }
+    showLoginSuccess(result.user);
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -116,7 +139,14 @@ export function LoginModal() {
         const redirected = await completePendingCheckout(data.user.id, data.user.email || email);
         if (redirected) return;
       }
-      setLoginModalOpen(false);
+      await refreshUser();
+      const user = useAuthStore.getState().user;
+      if (user) {
+        if (user.isAdmin) setAdmin(true);
+        showLoginSuccess(user);
+      } else {
+        setLoginModalOpen(false);
+      }
       return;
     }
     setInfo("Cek email untuk verifikasi akun. Setelah verifikasi, login lalu lanjut checkout.");
@@ -179,12 +209,47 @@ export function LoginModal() {
 
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-4">
-                <LogIn className="w-8 h-8" />
+                {loginSuccess ? <CheckCircle2 className="w-8 h-8" /> : <LogIn className="w-8 h-8" />}
               </div>
-              <h2 className="text-2xl font-extrabold text-slate-900">Masuk ke Monefyi</h2>
-              <p className="text-slate-500 mt-2 text-sm">{checkoutHint}</p>
+              <h2 className="text-2xl font-extrabold text-slate-900">
+                {loginSuccess ? "Login berhasil!" : "Masuk ke Monefyi"}
+              </h2>
+              <p className="text-slate-500 mt-2 text-sm">
+                {loginSuccess
+                  ? `Selamat datang, ${loggedInUser?.name || loggedInUser?.email || "User"}.`
+                  : checkoutHint}
+              </p>
             </div>
 
+            {loginSuccess && loggedInUser ? (
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={handleEnterApp}
+                  className="w-full gradient-premium text-white rounded-2xl py-3.5 font-bold text-sm shadow-premium flex items-center justify-center gap-2"
+                >
+                  <LayoutDashboard className="w-5 h-5" />
+                  Masuk
+                </button>
+                {loggedInUser.isAdmin && (
+                  <button
+                    type="button"
+                    onClick={handleEnterAdmin}
+                    className="w-full rounded-2xl py-3.5 font-bold text-sm border-2 border-slate-200 text-slate-700 hover:bg-slate-50 transition-all"
+                  >
+                    Admin Panel
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setLoginModalOpen(false)}
+                  className="w-full text-center text-sm text-slate-500 hover:text-emerald-600 font-semibold py-2"
+                >
+                  Tetap di landing page
+                </button>
+              </div>
+            ) : (
+              <>
             <div className="flex gap-2 text-xs mb-4">
               {(["login", "signup", "forgot"] as AuthMode[]).map((m) => (
                 <button
@@ -288,6 +353,8 @@ export function LoginModal() {
             >
               Belum punya akun? Lihat paket harga
             </button>
+              </>
+            )}
           </motion.div>
         </div>
       )}

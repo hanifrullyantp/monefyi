@@ -75,7 +75,7 @@ export function Navbar() {
       className="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-500 transition-all shrink-0"
     >
       <LayoutDashboard className="w-4 h-4 shrink-0" />
-      <span>Masuk App</span>
+      <span>Masuk</span>
     </a>
   );
 
@@ -272,7 +272,7 @@ export function Navbar() {
                     className="text-left px-4 py-3 rounded-xl bg-emerald-600 text-white font-bold transition-all flex items-center gap-2"
                   >
                     <LayoutDashboard className="w-4 h-4" />
-                    Masuk Aplikasi
+                    Masuk
                   </a>
                   {isAdmin && (
                     <>

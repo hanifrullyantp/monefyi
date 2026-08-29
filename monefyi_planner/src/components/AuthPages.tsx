@@ -24,6 +24,7 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [resetSent, setResetSent] = useState(false);
+  const [loginSuccess, setLoginSuccess] = useState(false);
   const navigate = useNavigate();
   const { setUser, setTenant, setAuthenticated, setDemoMode, setAuthInitializing, customDomainContext } = useAppStore();
   const loginTitle = customDomainContext?.org_name || 'Monefyi Planner';
@@ -77,7 +78,7 @@ export function LoginPage() {
         } finally {
           setAuthInitializing(false);
         }
-        navigate('/app');
+        setLoginSuccess(true);
       } else {
         setError('Login berhasil tetapi sesi tidak tersedia. Verifikasi email terlebih dahulu.');
       }
@@ -131,7 +132,23 @@ export function LoginPage() {
             </p>
           )}
 
-          {config.devDemoAuth && (
+          {loginSuccess ? (
+            <div className="space-y-4 text-center">
+              <CheckCircle className="w-14 h-14 text-emerald-500 mx-auto" />
+              <div>
+                <h3 className="font-black text-xl text-slate-900">Login berhasil!</h3>
+                <p className="text-sm text-slate-500 mt-2">Klik tombol di bawah untuk masuk ke dashboard.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/app')}
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-200 flex items-center justify-center gap-2"
+              >
+                Masuk ke Dashboard
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          ) : config.devDemoAuth && (
             <div className="mb-6 p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
               <p className="text-xs text-emerald-700 font-semibold mb-3">Demo — Pilih role:</p>
               <div className="grid grid-cols-3 gap-2">
@@ -149,6 +166,7 @@ export function LoginPage() {
             </div>
           )}
 
+          {!loginSuccess && (
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
@@ -211,7 +229,10 @@ export function LoginPage() {
               )}
             </button>
           </form>
+          )}
 
+          {!loginSuccess && (
+          <>
           <p className="text-center text-sm text-slate-500 mt-4">
             <Link to="/join" className="text-emerald-600 font-semibold hover:underline">
               Punya undangan? Klik di sini
@@ -223,6 +244,8 @@ export function LoginPage() {
               Daftar gratis
             </Link>
           </p>
+          </>
+          )}
         </motion.div>
       </div>
     </div>
