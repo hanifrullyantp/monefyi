@@ -1,4 +1,4 @@
-export type EstimationListViewMode = 'standard' | 'card' | 'detail';
+export type EstimationListViewMode = 'standard' | 'kanban';
 
 const STORAGE_KEY = 'monefyi_estimator_list_view_v2';
 
@@ -7,16 +7,16 @@ export const ESTIMATION_LIST_VIEW_OPTIONS: Array<{
   label: string;
   description: string;
 }> = [
-  { value: 'standard', label: 'Standar', description: 'Tampilan ringkas dengan status dan aksi' },
-  { value: 'card', label: 'Kartu', description: 'Nama estimasi dan total nilai' },
-  { value: 'detail', label: 'Detail', description: 'Informasi lengkap estimasi' },
+  { value: 'standard', label: 'Standar', description: 'Daftar estimasi dengan tab pipeline' },
+  { value: 'kanban', label: 'Kanban', description: 'Board kolom status workflow' },
 ];
 
-/** Default: standar. */
+/** Default: standar. Migrasi card/detail lama → standar. */
 export function readEstimationListViewMode(): EstimationListViewMode {
   try {
     const v = localStorage.getItem(STORAGE_KEY);
-    if (v === 'standard' || v === 'card' || v === 'detail') return v;
+    if (v === 'standard' || v === 'kanban') return v;
+    if (v === 'card' || v === 'detail') return 'standard';
   } catch {
     /* ignore */
   }
