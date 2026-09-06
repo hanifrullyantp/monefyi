@@ -3,7 +3,7 @@ import { useAppStore } from '../store/appStore';
 import { isPlatformAdmin } from '../services/adminService';
 import { loadEntitlementSnapshot } from '../services/entitlementService';
 import type { EntitlementSnapshot } from '../types/entitlement';
-import { buildEntitlementSnapshot } from '../lib/entitlement';
+import { buildEntitlementSnapshot, buildFullAccessEntitlement } from '../lib/entitlement';
 
 const EMPTY: EntitlementSnapshot = buildEntitlementSnapshot({
   subscription: null,
@@ -23,43 +23,26 @@ export function invalidateEntitlementCache(): void {
 }
 
 export function useEntitlement() {
-  const { tenant, user, platformRole, projects } = useAppStore();
+  const { tenant, user, platformRole, projects, authInitializing } = useAppStore();
   const [entitlement, setEntitlement] = useState<EntitlementSnapshot>(EMPTY);
   const [isLoading, setIsLoading] = useState(true);
   const loadingRef = useRef(false);
 
   const refresh = useCallback(async () => {
-    if (!tenant?.id) {
-      setEntitlement(EMPTY);
+    if (isPlatformAdmin(platformRole, user?.email)) {
+      const activeCount = projects.filter(p => p.status !== 'archived' && p.status !== 'completed').length;
+      setEntitlement(buildFullAccessEntitlement(activeCount, 1));
       setIsLoading(false);
       return;
     }
 
-    if (isPlatformAdmin(platformRole, user?.email)) {
-      const activeCount = projects.filter(p => p.status !== 'archived' && p.status !== 'completed').length;
-      const adminEntitlement = buildEntitlementSnapshot({
-        subscription: null,
-        orgPlan: 'enterprise',
-        activeProjectCount: activeCount,
-        memberCount: 1,
-        hasEstimations: true,
-      });
-      setEntitlement({
-        ...adminEntitlement,
-        tier: 'enterprise',
-        canAccessEstimator: true,
-        canAccessFinance: true,
-        canCreateProject: true,
-        canInviteMembers: true,
-        hasPaid: true,
-        isEstimatorPro: true,
-        isEnterprise: true,
-        isPro: true,
-        estimatorVariant: 'pro',
-        maxActiveProjects: 999,
-        maxMembers: 999,
-        remainingProjectSlots: Math.max(0, 999 - activeCount),
-      });
+    if (authInitializing) {
+      setIsLoading(true);
+      return;
+    }
+
+    if (!tenant?.id) {
+      setEntitlement(EMPTY);
       setIsLoading(false);
       return;
     }
@@ -88,7 +71,7 @@ export function useEntitlement() {
       loadingRef.current = false;
       setIsLoading(false);
     }
-  }, [tenant?.id, tenant?.plan, platformRole, user?.email, projects]);
+  }, [tenant?.id, tenant?.plan, platformRole, user?.email, projects, authInitializing]);
 
   useEffect(() => {
     void refresh();

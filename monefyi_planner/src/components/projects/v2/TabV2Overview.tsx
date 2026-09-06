@@ -142,16 +142,26 @@ export default function TabV2Overview({
           {' = '}{formatRupiah(contractCheck.componentsTotal)}
         </p>
         {!contractCheck.isMatch && nilaiProyek > 0 && (
-          <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
+          <button
+            type="button"
+            onClick={() => setPopup('kontrak')}
+            className="mb-4 w-full flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900 text-left hover:bg-amber-100/80 transition-colors"
+          >
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
-            <div>
+            <div className="min-w-0 flex-1">
               <p className="font-bold">Nilai kontrak tidak sesuai komposisi aktiva</p>
               <p className="mt-0.5 text-amber-800">
                 Kontrak {formatRupiah(contractCheck.contractValue)} ≠ komponen {formatRupiah(contractCheck.componentsTotal)}
                 {' '}(selisih {formatRupiah(Math.abs(contractCheck.gap))})
               </p>
+              {contractCheck.diagnoses[0] && (
+                <p className="mt-1 font-semibold text-amber-900">
+                  Perkiraan: {contractCheck.diagnoses[0].title}
+                </p>
+              )}
+              <p className="mt-1 text-amber-700 font-bold">Ketuk untuk lihat rincian & rekomendasi →</p>
             </div>
-          </div>
+          </button>
         )}
         <div className="h-7 bg-slate-100 rounded-lg overflow-hidden relative">
           <div
@@ -322,7 +332,12 @@ export default function TabV2Overview({
                     ]
                   : popup === 'saldo' && canManage
                     ? [{ label: 'Tambah Dana Masuk', variant: 'primary' as const, onClick: () => { setPopup(null); setModal('income'); } }]
-                    : undefined
+                    : popup === 'kontrak' && canManage
+                      ? [
+                          { label: 'Periksa Piutang', variant: 'primary' as const, onClick: () => setPopup('piutang') },
+                          { label: 'Edit Nilai Kontrak', onClick: () => { setPopup(null); onEditProject?.(); } },
+                        ]
+                      : undefined
           } />
       )}
 

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { buildCheckoutUrl, normalizeCheckoutProduct } from './checkout';
-import { ESTIMATOR_PRICE_IDR, PRO_PRICE_MONTHLY_IDR } from './entitlement';
+import { ESTIMATOR_PRICE_IDR, ESTIMATOR_UPGRADE_DELTA_IDR, PRO_PRICE_MONTHLY_IDR } from './entitlement';
 
 describe('checkout - buildCheckoutUrl', () => {
   it('normalizes legacy estimator to estimator_standard', () => {
@@ -36,6 +36,20 @@ describe('checkout - buildCheckoutUrl', () => {
     expect(url).toContain(`amount=${PRO_PRICE_MONTHLY_IDR}`);
     expect(url).toContain('credit=99000');
     expect(url).toContain('product=planner_pro');
+    vi.unstubAllEnvs();
+  });
+
+  it('includes upgrade delta for estimator pro upgrade', () => {
+    vi.stubEnv('VITE_LYNK_ESTIMATOR_PRO', 'https://lynk.id/store/estimator-pro/checkout');
+    const url = buildCheckoutUrl('estimator_pro', {
+      orgId: 'org-1',
+      userId: 'user-1',
+      checkoutAmount: ESTIMATOR_UPGRADE_DELTA_IDR,
+      upgradeFrom: 'estimator_standard',
+    });
+    expect(url).toContain(`amount=${ESTIMATOR_UPGRADE_DELTA_IDR}`);
+    expect(url).toContain('upgrade_from=estimator_standard');
+    expect(url).toContain('product=estimator_pro');
     vi.unstubAllEnvs();
   });
 });

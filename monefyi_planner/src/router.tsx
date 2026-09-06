@@ -19,11 +19,13 @@ import { MemberOnboardingWizard } from './pages/onboarding/MemberWizard';
 import AdminRoute from './components/AdminRoute';
 import SuperAdmin from './pages/SuperAdmin';
 import PwaInstallBanner from './components/PwaInstallBanner';
+import PaymentReturnHandler from './components/entitlement/PaymentReturnHandler';
 
 export default function AppRouter() {
   return (
     <BrowserRouter useTransitions={false}>
       <AuthBootstrap>
+      <PaymentReturnHandler />
       <PwaInstallBanner />
       <Routes>
         <Route path="/" element={<><AuthRedirect /><LandingEntry /></>} />

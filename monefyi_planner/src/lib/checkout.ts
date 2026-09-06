@@ -12,6 +12,10 @@ export interface CheckoutRedirectOptions {
   creditAmount?: number;
   returnUrl?: string;
   email?: string;
+  /** Override jumlah tagihan Lynk (upgrade selisih, dll.). */
+  checkoutAmount?: number;
+  /** Tandai upgrade dari paket sebelumnya — dikirim ke webhook Lynk. */
+  upgradeFrom?: 'estimator_standard';
 }
 
 const ENV_KEYS: Record<'estimator_standard' | 'estimator_pro' | 'planner_pro', string> = {
@@ -61,11 +65,15 @@ export function buildCheckoutUrl(
   if (options.email) url.searchParams.set('customer_email', options.email);
   url.searchParams.set('return_url', returnUrl);
 
+  const amount = options.checkoutAmount;
   if (lynkProduct === 'estimator_standard') {
-    url.searchParams.set('amount', String(ESTIMATOR_PRICE_IDR));
+    url.searchParams.set('amount', String(amount ?? ESTIMATOR_PRICE_IDR));
   }
   if (lynkProduct === 'estimator_pro') {
-    url.searchParams.set('amount', String(ESTIMATOR_PRO_PRICE_IDR));
+    url.searchParams.set('amount', String(amount ?? ESTIMATOR_PRO_PRICE_IDR));
+    if (options.upgradeFrom === 'estimator_standard') {
+      url.searchParams.set('upgrade_from', 'estimator_standard');
+    }
   }
   if (lynkProduct === 'planner_pro') {
     url.searchParams.set('amount', String(PRO_PRICE_MONTHLY_IDR));

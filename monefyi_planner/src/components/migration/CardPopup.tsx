@@ -15,6 +15,7 @@ export type PopupListItem = {
   meta?: string;
   value: string;
   valueColor?: string;
+  wrap?: boolean;
 };
 
 export type CardPopupProps = {
@@ -77,8 +78,12 @@ export default function CardPopup({
                 {list.map((item, i) => (
                   <div key={i} className="flex items-center gap-3 py-3">
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-slate-800 truncate">{item.title}</div>
-                      {item.meta && <div className="text-xs text-slate-500 truncate">{item.meta}</div>}
+                      <div className={`text-sm font-semibold text-slate-800 ${item.wrap ? '' : 'truncate'}`}>{item.title}</div>
+                      {item.meta && (
+                        <div className={`text-xs text-slate-500 ${item.wrap ? 'whitespace-normal leading-relaxed mt-0.5' : 'truncate'}`}>
+                          {item.meta}
+                        </div>
+                      )}
                     </div>
                     <div className="text-sm font-bold shrink-0" style={{ color: item.valueColor || undefined }}>
                       {item.value}

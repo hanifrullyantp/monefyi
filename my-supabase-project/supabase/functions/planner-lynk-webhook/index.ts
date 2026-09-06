@@ -78,8 +78,30 @@ function mapProductFromPayload(
   item: Record<string, unknown>,
   custom: Record<string, string>,
   amount: number,
-): { product: PlannerProduct; tier: "estimator" | "pro"; variant: "standard" | "pro" | null; label: string } {
+): { product: PlannerProduct; tier: "estimator" | "pro"; variant: "standard" | "pro" | null; label: string; isUpgrade?: boolean } {
+  const upgradeDelta = Number(pickEnv("ESTIMATOR_UPGRADE_DELTA", "100000")) || 100000;
+  const upgradeFrom = (custom.upgrade_from || custom.upgradeFrom || "").toLowerCase().replace(/-/g, "_");
   const explicit = (custom.product || custom.plan || "").toLowerCase().replace(/-/g, "_");
+
+  if (explicit === "estimator_pro" && upgradeFrom === "estimator_standard") {
+    return {
+      product: "estimator_pro",
+      tier: "estimator",
+      variant: "pro",
+      label: "Upgrade Estimator Pro",
+      isUpgrade: true,
+    };
+  }
+  if (amount === upgradeDelta && (explicit === "estimator_pro" || upgradeFrom === "estimator_standard")) {
+    return {
+      product: "estimator_pro",
+      tier: "estimator",
+      variant: "pro",
+      label: "Upgrade Estimator Pro",
+      isUpgrade: true,
+    };
+  }
+
   if (explicit === "estimator_standard") {
     return { product: "estimator_standard", tier: "estimator", variant: "standard", label: "Monefyi Estimator Standard" };
   }
@@ -372,6 +394,19 @@ serve(async (req) => {
     orgId = await ensureOwnerOrg(supa, userId, customerName || "Organisasi Saya");
   }
 
+  if (mapped.isUpgrade) {
+    const { data: currentSub } = await supa
+      .from("planner_org_subscriptions")
+      .select("tier, estimator_variant")
+      .eq("org_id", orgId)
+      .maybeSingle();
+    const variant = String(currentSub?.estimator_variant || "");
+    if (currentSub?.tier !== "estimator" || (variant && variant !== "standard")) {
+      console.warn("Upgrade Estimator Pro ignored: org not on Estimator Basic", orgId);
+    }
+    mapped.variant = "pro";
+  }
+
   const monthlyDays = Number(pickEnv("MONTHLY_DAYS", "30")) || 30;
   let expiresAt: string | null = null;
   let expiresLabel: string | null = null;
@@ -399,6 +434,7 @@ serve(async (req) => {
     product: mapped.product,
     item_title: String(item?.title || ""),
     qty,
+    ...(mapped.isUpgrade ? { upgrade_from: "estimator_standard" } : {}),
     ...(mapped.variant ? { estimator_variant: mapped.variant } : {}),
   };
 
@@ -448,7 +484,7 @@ serve(async (req) => {
     setupPasswordUrl = await generateSetupPasswordUrl(
       supa,
       customerEmail,
-      `${plannerAppUrl}/login?payment=success`,
+      `${plannerAppUrl}/estimator?payment=success`,
     );
   }
 

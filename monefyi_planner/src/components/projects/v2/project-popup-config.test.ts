@@ -69,12 +69,56 @@ describe('checkContractComposition', () => {
     const check = checkContractComposition(baseNormalized());
     expect(check.isMatch).toBe(true);
     expect(check.componentsTotal).toBe(100_000_000);
+    expect(check.diagnoses).toHaveLength(0);
   });
 
   it('flags mismatch with gap', () => {
     const check = checkContractComposition(baseNormalized(baseProject({ contractValue: 120_000_000 })));
     expect(check.isMatch).toBe(false);
     expect(check.gap).toBe(20_000_000);
+  });
+
+  it('Kitchen Set Fina case: extra piutang after contract is fully paid', () => {
+    const project = baseProject({
+      contractValue: 30_200_000,
+      saldo: 13_200_000,
+      budget: {
+        bahan: { plan: 10_000_000, actual: 10_000_000 },
+        tukang: { plan: 7_000_000, actual: 7_000_000 },
+        piutang: 1_787_000,
+        hutang: 0,
+      },
+    });
+    const normalized = baseNormalized(project);
+    normalized.totalPemasukan = 30_200_000;
+    normalized.totalRealisasi = 17_000_000;
+    const check = checkContractComposition(normalized);
+    expect(check.isMatch).toBe(false);
+    expect(check.componentsTotal).toBe(31_987_000);
+    expect(Math.abs(check.gap)).toBe(1_787_000);
+    expect(check.diagnoses[0]?.code).toBe('EXTRA_PIUTANG');
+    expect(check.diagnoses[0]?.recommendation).toMatch(/Tandai piutang lunas|naikkan nilai kontrak/i);
+  });
+});
+
+describe('buildProjectPopupConfig kontrak diagnosis', () => {
+  it('lists components and a recommended fix', () => {
+    const project = baseProject({
+      contractValue: 30_200_000,
+      saldo: 13_200_000,
+      budget: {
+        bahan: { plan: 10_000_000, actual: 10_000_000 },
+        tukang: { plan: 7_000_000, actual: 7_000_000 },
+        piutang: 1_787_000,
+        hutang: 0,
+      },
+    });
+    const normalized = baseNormalized(project);
+    normalized.totalPemasukan = 30_200_000;
+    normalized.totalRealisasi = 17_000_000;
+    const cfg = buildProjectPopupConfig('kontrak', normalized);
+    expect(cfg?.title).toMatch(/Komposisi/);
+    expect(cfg?.list.some(i => i.title.includes('Piutang masih terbuka'))).toBe(true);
   });
 });
 

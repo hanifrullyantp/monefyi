@@ -2,9 +2,10 @@ import { useEffect } from 'react';
 import { Lock, Rocket, X } from 'lucide-react';
 import { redirectToCheckout } from '../../lib/checkout';
 import { analytics } from '../../lib/analytics/events';
-import { ESTIMATOR_PRO_PRICE_IDR, PRO_PRICE_MONTHLY_IDR } from '../../lib/entitlement';
+import { ESTIMATOR_PRO_PRICE_IDR, PRO_PRICE_MONTHLY_IDR, computeEstimatorProCheckoutAmount, isEstimatorProUpgrade } from '../../lib/entitlement';
 import { useAppStore } from '../../store/appStore';
 import { useEntitlement } from '../../hooks/useEntitlement';
+import { isPlatformAdmin } from '../../services/adminService';
 import type { UpgradeModalTrigger } from '../../types/entitlement';
 
 type Props = {
@@ -24,14 +25,22 @@ export default function UpgradeModal({
   onManageProjects,
   onConvertProject,
 }: Props) {
-  const { tenant, user } = useAppStore();
-  const { estimatorCreditAvailable, estimatorCreditAmount } = useEntitlement();
+  const { tenant, user, platformRole } = useAppStore();
+  const entitlement = useEntitlement();
+  const { estimatorCreditAvailable, estimatorCreditAmount } = entitlement;
+  const proUpgrade = isEstimatorProUpgrade(entitlement);
+  const proCheckoutAmount = computeEstimatorProCheckoutAmount(entitlement);
+  const isSuperAdmin = isPlatformAdmin(platformRole, user?.email);
 
   useEffect(() => {
+    if (open && isSuperAdmin) {
+      onClose();
+      return;
+    }
     if (open) analytics.upgradeModalShown(trigger);
-  }, [open, trigger]);
+  }, [open, trigger, isSuperAdmin, onClose]);
 
-  if (!open) return null;
+  if (!open || isSuperAdmin) return null;
 
   const handleClose = () => {
     analytics.upgradeModalDismissed(trigger);
@@ -66,6 +75,8 @@ export default function UpgradeModal({
       orgId: tenant.id,
       userId: user.id,
       email: user.email ?? undefined,
+      checkoutAmount: proCheckoutAmount,
+      upgradeFrom: proUpgrade ? 'estimator_standard' : undefined,
     });
   };
 
@@ -129,7 +140,16 @@ export default function UpgradeModal({
                 <li>• Semua fitur Estimator Standard</li>
               </ul>
               <p className="font-bold text-emerald-800">
-                Rp {ESTIMATOR_PRO_PRICE_IDR.toLocaleString('id-ID')} · sekali bayar selamanya
+                {proUpgrade ? (
+                  <>
+                    Upgrade selisih Rp {proCheckoutAmount.toLocaleString('id-ID')}
+                    <span className="block text-xs font-normal text-emerald-700 mt-0.5">
+                      (sudah bayar Basic Rp {(ESTIMATOR_PRO_PRICE_IDR - proCheckoutAmount).toLocaleString('id-ID')})
+                    </span>
+                  </>
+                ) : (
+                  <>Rp {ESTIMATOR_PRO_PRICE_IDR.toLocaleString('id-ID')} · sekali bayar selamanya</>
+                )}
               </p>
             </>
           )}

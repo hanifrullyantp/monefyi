@@ -9,7 +9,11 @@ export type ProjectClosePreview = {
   totalReceived: number;
   totalSpent: number;
   finalProfit: number;
+  /** Kas operasional proyek (dana masuk − realisasi ± transfer). */
   kasBalance: number;
+  /** Saldo akun Kas Proyek di buku finance-v2, jika ada. */
+  ledgerKasBalance: number | null;
+  transfersNet: number;
   interProjectDebt: number;
   openReceivables: number;
   financeStatus: string;
@@ -42,6 +46,10 @@ export async function buildProjectClosePreview(
 
   const interProjectDebt = cashSummary.owedTo.reduce((s, d) => s + d.amount, 0);
   const openReceivables = receivables.reduce((s, r) => s + (r.amount - r.paid_amount), 0);
+  const transfersNet =
+    cashSummary.loansIn + cashSummary.repaymentsIn - cashSummary.loansOut - cashSummary.repaymentsOut;
+  const projectCash = cashSummary.surplus;
+  const ledgerKas = kasAccount ? Number(kasAccount.current_balance) || 0 : null;
 
   const warnings: string[] = [];
   if (project.finance_status === 'finance_closed') {
@@ -56,6 +64,11 @@ export async function buildProjectClosePreview(
   if (finalProfit < 0) {
     warnings.push(`Proyek defisit (basis kas): Rp ${Math.abs(finalProfit).toLocaleString('id-ID')}`);
   }
+  if (ledgerKas != null && Math.abs(ledgerKas - projectCash) > 1) {
+    warnings.push(
+      `Buku kas finance (Rp ${ledgerKas.toLocaleString('id-ID')}) belum sinkron dengan sisa kas operasional (Rp ${projectCash.toLocaleString('id-ID')}). Angka di kartu memakai kas operasional = Dana masuk − Realisasi ± transfer.`,
+    );
+  }
 
   const canClose = project.finance_status !== 'finance_closed';
 
@@ -65,7 +78,9 @@ export async function buildProjectClosePreview(
     totalReceived,
     totalSpent,
     finalProfit,
-    kasBalance: kasAccount?.current_balance ?? cashSummary.surplus,
+    kasBalance: projectCash,
+    ledgerKasBalance: ledgerKas,
+    transfersNet,
     interProjectDebt,
     openReceivables,
     financeStatus: (project.finance_status as string) || 'active',

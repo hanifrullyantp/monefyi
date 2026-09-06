@@ -101,8 +101,22 @@ export default function ProjectCloseFinanceWizard({
                   <Stat label="Dana Masuk" value={formatRupiah(preview.totalReceived)} />
                   <Stat label="Realisasi" value={formatRupiah(preview.totalSpent)} className="text-rose-600" />
                   <Stat label="Laba (basis kas)" value={formatRupiah(preview.finalProfit)} className={preview.finalProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'} />
-                  <Stat label="Sisa Kas Proyek" value={formatRupiah(preview.kasBalance)} />
+                  <Stat
+                    label="Sisa Kas Proyek"
+                    value={formatRupiah(preview.kasBalance)}
+                    className={preview.kasBalance < 0 ? 'text-rose-600' : ''}
+                  />
                 </div>
+                <p className="text-[11px] text-slate-500 leading-relaxed">
+                  Sisa kas = Dana masuk − Realisasi
+                  {preview.transfersNet !== 0
+                    ? ` ${preview.transfersNet > 0 ? '+' : '−'} transfer ${formatRupiah(Math.abs(preview.transfersNet))}`
+                    : ' (sama dengan laba jika tidak ada transfer antar-proyek)'}
+                  {preview.ledgerKasBalance != null
+                    && Math.abs(preview.ledgerKasBalance - preview.kasBalance) > 1
+                    ? `. Buku kas finance: ${formatRupiah(preview.ledgerKasBalance)}.`
+                    : ''}
+                </p>
                 {preview.warnings.length > 0 && (
                   <ul className="space-y-2">
                     {preview.warnings.map((w, i) => (

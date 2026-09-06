@@ -47,7 +47,7 @@ export default function Layout({ children }: LayoutProps) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeTrigger, setUpgradeTrigger] = useState<UpgradeModalTrigger>('pro_feature');
-  const { canAccessEstimator, canAccessFinance } = useEntitlement();
+  const { canAccessEstimator, canAccessFinance, isLoading: entitlementLoading } = useEntitlement();
 
   useEffect(() => {
     if (!user?.id) return;
@@ -136,6 +136,7 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   const isNavLocked = (tabId: string) => {
+    if (isSuperAdmin || entitlementLoading) return false;
     if (tabId === 'estimator') return !canAccessEstimator;
     if (tabId === 'finance') return !canAccessFinance;
     return false;
@@ -153,7 +154,7 @@ export default function Layout({ children }: LayoutProps) {
       setActiveTab('database');
       navigate('/app/database');
     } else if (tabId === 'finance') {
-      if (!canAccessFinance) {
+      if (!isSuperAdmin && !canAccessFinance) {
         analytics.proFeatureClicked({ featureName: 'Keuangan Bisnis' });
         openUpgrade('pro_feature');
         setSidebarOpen(false);

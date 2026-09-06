@@ -60,6 +60,12 @@ export function isPlatformAdmin(platformRole: string, email?: string) {
   return config.adminEmails.some(e => e.toLowerCase() === (email || '').toLowerCase());
 }
 
+/** Cek sesi auth saat ini (email allowlist) — untuk bypass kuota di service. */
+export async function currentSessionIsPlatformAdmin(): Promise<boolean> {
+  const { data } = await supabase.auth.getUser();
+  return isPlatformAdmin('user', data.user?.email);
+}
+
 export async function fetchAdminUsers(params?: {
   q?: string;
   plan?: string;

@@ -162,6 +162,17 @@ export function AnimatedHeadline({ config, className }: AnimatedHeadlineProps) {
               onChange={(e) => setDraft((d) => ({ ...d, prefix: e.target.value }))}
               className="mt-1 w-full rounded-xl border-2 border-emerald-500 px-3 py-2 text-sm"
             />
+            <label className="mt-2 flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={Boolean(draft.lineBreakAfterPrefix)}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, lineBreakAfterPrefix: e.target.checked }))
+                }
+                className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+              />
+              Enter setelah prefix
+            </label>
           </label>
           <label className="block">
             <span className="text-xs font-bold text-slate-500 uppercase">Suffix</span>
@@ -170,6 +181,17 @@ export function AnimatedHeadline({ config, className }: AnimatedHeadlineProps) {
               onChange={(e) => setDraft((d) => ({ ...d, suffix: e.target.value }))}
               className="mt-1 w-full rounded-xl border-2 border-emerald-500 px-3 py-2 text-sm"
             />
+            <label className="mt-2 flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={Boolean(draft.lineBreakBeforeSuffix)}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, lineBreakBeforeSuffix: e.target.checked }))
+                }
+                className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+              />
+              Enter sebelum suffix
+            </label>
           </label>
         </div>
 
@@ -272,6 +294,7 @@ export function AnimatedHeadline({ config, className }: AnimatedHeadlineProps) {
   const headlineBody = (
     <>
       {config.prefix}
+      {config.lineBreakAfterPrefix ? <br /> : null}
       <span className="relative inline-block align-bottom mx-0.5">
         <span className="inline-flex items-center justify-center min-w-[2ch] overflow-hidden">
           {config.animation === "typing" ? (
@@ -288,6 +311,7 @@ export function AnimatedHeadline({ config, className }: AnimatedHeadlineProps) {
           )}
         </span>
       </span>
+      {config.lineBreakBeforeSuffix ? <br /> : null}
       {config.suffix}
     </>
   );

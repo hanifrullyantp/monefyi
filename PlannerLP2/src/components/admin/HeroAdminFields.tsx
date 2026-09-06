@@ -48,6 +48,15 @@ export function HeroAdminFields({ hero, onChange }: HeroAdminFieldsProps) {
               onChange={(e) => patchAnimated({ prefix: e.target.value })}
               className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"
             />
+            <label className="mt-2 flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={Boolean(animated.lineBreakAfterPrefix)}
+                onChange={(e) => patchAnimated({ lineBreakAfterPrefix: e.target.checked })}
+                className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+              />
+              Enter setelah prefix
+            </label>
           </label>
           <label className="block">
             <span className="text-xs font-bold text-slate-500 uppercase">Suffix</span>
@@ -56,6 +65,15 @@ export function HeroAdminFields({ hero, onChange }: HeroAdminFieldsProps) {
               onChange={(e) => patchAnimated({ suffix: e.target.value })}
               className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"
             />
+            <label className="mt-2 flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={Boolean(animated.lineBreakBeforeSuffix)}
+                onChange={(e) => patchAnimated({ lineBreakBeforeSuffix: e.target.checked })}
+                className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+              />
+              Enter sebelum suffix
+            </label>
           </label>
           <label className="block">
             <span className="text-xs font-bold text-slate-500 uppercase">Efek Animasi</span>

@@ -1,7 +1,8 @@
-import { buildEntitlementSnapshot } from '../lib/entitlement';
+import { buildEntitlementSnapshot, buildFullAccessEntitlement } from '../lib/entitlement';
 import { supabase } from '../lib/supabase';
 import type { EntitlementSnapshot, OrgSubscriptionRow } from '../types/entitlement';
 import { isActiveProjectStatus } from '../lib/entitlement';
+import { currentSessionIsPlatformAdmin } from './adminService';
 
 export async function loadOrgSubscription(orgId: string): Promise<OrgSubscriptionRow | null> {
   const { data, error } = await supabase
@@ -71,6 +72,9 @@ export async function assertCanCreateProjectByEntitlement(
   orgId: string,
   orgPlan?: string | null,
 ): Promise<EntitlementSnapshot> {
+  if (await currentSessionIsPlatformAdmin()) {
+    return buildFullAccessEntitlement();
+  }
   const entitlement = await loadEntitlementSnapshot(orgId, orgPlan);
   if (!entitlement.canCreateProject) {
     if (entitlement.tier === 'free') {

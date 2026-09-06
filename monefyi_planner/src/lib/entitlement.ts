@@ -2,6 +2,7 @@ import type { EntitlementSnapshot, OrgSubscriptionRow, SubscriptionTier } from '
 
 export const ESTIMATOR_PRICE_IDR = 99_000;
 export const ESTIMATOR_PRO_PRICE_IDR = 199_000;
+export const ESTIMATOR_UPGRADE_DELTA_IDR = ESTIMATOR_PRO_PRICE_IDR - ESTIMATOR_PRICE_IDR;
 export const PRO_PRICE_MONTHLY_IDR = 199_000;
 
 const ACTIVE_PROJECT_STATUSES = new Set(['planning', 'active', 'on_hold']);
@@ -83,6 +84,48 @@ export function canGenerateKwitansi(snapshot: EntitlementSnapshot): boolean {
   );
 }
 
+/** Harga checkout Estimator Pro: selisih upgrade jika sudah punya Basic. */
+export function computeEstimatorProCheckoutAmount(snapshot: EntitlementSnapshot): number {
+  if (snapshot.isEstimator && snapshot.estimatorVariant === 'standard' && !snapshot.isEstimatorPro) {
+    return ESTIMATOR_UPGRADE_DELTA_IDR;
+  }
+  return ESTIMATOR_PRO_PRICE_IDR;
+}
+
+export function isEstimatorProUpgrade(snapshot: EntitlementSnapshot): boolean {
+  return snapshot.isEstimator
+    && snapshot.estimatorVariant === 'standard'
+    && !snapshot.isEstimatorPro;
+}
+
 export function isActiveProjectStatus(status?: string | null): boolean {
   return ACTIVE_PROJECT_STATUSES.has(String(status || 'planning'));
+}
+
+/** Super admin / platform admin: semua fitur terbuka tanpa paywall. */
+export function buildFullAccessEntitlement(
+  activeProjectCount = 0,
+  memberCount = 1,
+): EntitlementSnapshot {
+  return {
+    tier: 'enterprise',
+    canAccessEstimator: true,
+    canCreateProject: true,
+    canAccessFinance: true,
+    canInviteMembers: true,
+    maxActiveProjects: 999,
+    currentActiveProjects: activeProjectCount,
+    remainingProjectSlots: 999,
+    maxMembers: 999,
+    currentMembers: memberCount,
+    estimatorCreditAvailable: false,
+    estimatorCreditAmount: ESTIMATOR_PRICE_IDR,
+    estimatorVariant: 'pro',
+    isEstimatorPro: true,
+    isFree: false,
+    isEstimator: false,
+    isPro: true,
+    isEnterprise: true,
+    hasPaid: true,
+  };
 }

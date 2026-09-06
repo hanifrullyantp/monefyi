@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useAppStore } from '../../store/appStore';
+import { isPlatformAdmin } from '../../services/adminService';
 import { useEntitlement } from '../../hooks/useEntitlement';
 import LockedFeaturePreview from './LockedFeaturePreview';
 
@@ -10,6 +12,10 @@ type Props = {
 
 export default function FinanceAccessGuard({ featureName = 'Keuangan Bisnis', children }: Props) {
   const { canAccessFinance, isLoading } = useEntitlement();
+  const { platformRole, user } = useAppStore();
+  if (isPlatformAdmin(platformRole, user?.email)) {
+    return <>{children}</>;
+  }
 
   if (isLoading) {
     return (

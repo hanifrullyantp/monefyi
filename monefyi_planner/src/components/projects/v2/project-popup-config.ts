@@ -5,14 +5,21 @@ import { formatRupiah, formatDateId } from '../../../utils/projectUi';
 
 export type ProjectPopupKind =
   | 'bahan' | 'tukang' | 'piutang' | 'hutang'
-  | 'saldo' | 'pembayaran' | 'laba';
+  | 'saldo' | 'pembayaran' | 'laba' | 'kontrak';
 
 const CONTRACT_TOLERANCE = 1;
 
 type LedgerItem = MappedProjectView['hutangPiutang'][number];
 
-/** Kontrak harus = piutang + cash + bahan + tukang (actual). */
-export function checkContractComposition(normalized: NormalizedProjectView): {
+export type CompositionDiagnosis = {
+  code: 'EXTRA_PIUTANG' | 'MISSING_PIUTANG' | 'CONTRACT_UNDERSTATED' | 'OTHER_COSTS' | 'SALDO_GAP' | 'UNEXPLAINED';
+  title: string;
+  detail: string;
+  recommendation: string;
+  amount: number;
+};
+
+export type ContractCompositionCheck = {
   isMatch: boolean;
   contractValue: number;
   componentsTotal: number;
@@ -21,7 +28,20 @@ export function checkContractComposition(normalized: NormalizedProjectView): {
   cash: number;
   bahan: number;
   tukang: number;
-} {
+  received: number;
+  spent: number;
+  expectedPiutang: number;
+  extraPiutang: number;
+  otherCosts: number;
+  diagnoses: CompositionDiagnosis[];
+};
+
+function near(a: number, b: number, tol = 5_000) {
+  return Math.abs(a - b) <= Math.max(tol, 1);
+}
+
+/** Kontrak harus = piutang + cash + bahan + tukang (actual). */
+export function checkContractComposition(normalized: NormalizedProjectView): ContractCompositionCheck {
   const p = normalized.project;
   const piutang = p.budget.piutang || 0;
   const cash = p.saldo || 0;
@@ -30,6 +50,70 @@ export function checkContractComposition(normalized: NormalizedProjectView): {
   const componentsTotal = piutang + cash + bahan + tukang;
   const contractValue = p.contractValue || 0;
   const gap = contractValue - componentsTotal;
+  const received = normalized.totalPemasukan || 0;
+  const spent = normalized.totalRealisasi || 0;
+  const expectedPiutang = Math.max(0, contractValue - received);
+  const extraPiutang = piutang - expectedPiutang;
+  const otherCosts = spent - bahan - tukang;
+
+  const diagnoses: CompositionDiagnosis[] = [];
+  if (Math.abs(gap) > CONTRACT_TOLERANCE) {
+    if (extraPiutang > CONTRACT_TOLERANCE && near(extraPiutang, Math.abs(gap))) {
+      diagnoses.push({
+        code: received >= contractValue ? 'EXTRA_PIUTANG' : 'CONTRACT_UNDERSTATED',
+        title: received >= contractValue
+          ? 'Piutang masih terbuka meski kontrak sudah terbayar'
+          : 'Nilai kontrak lebih rendah dari tagihan',
+        detail: received >= contractValue
+          ? `Dana masuk ${formatRupiah(received)} sudah sama dengan kontrak, tetapi piutang ${formatRupiah(piutang)} masih tercatat. Selisih komposisi ${formatRupiah(Math.abs(gap))} ≈ piutang ini.`
+          : `Piutang ${formatRupiah(piutang)} + dana masuk ${formatRupiah(received)} = ${formatRupiah(piutang + received)}, di atas kontrak ${formatRupiah(contractValue)}.`,
+        recommendation: received >= contractValue
+          ? `Tandai piutang lunas jika pembayaran sudah diterima, atau naikkan nilai kontrak ke ${formatRupiah(componentsTotal)} jika ini addendum/pekerjaan tambahan.`
+          : `Naikkan nilai kontrak ke ${formatRupiah(componentsTotal)} jika piutang itu bagian dari kesepakatan, atau kurangi/hapus piutang yang bukan sisa kontrak.`,
+        amount: extraPiutang,
+      });
+    } else if (extraPiutang < -CONTRACT_TOLERANCE && expectedPiutang > 0) {
+      diagnoses.push({
+        code: 'MISSING_PIUTANG',
+        title: 'Piutang lebih kecil dari sisa kontrak',
+        detail: `Sisa kontrak yang belum diterima ${formatRupiah(expectedPiutang)}, tetapi piutang tercatat hanya ${formatRupiah(piutang)}.`,
+        recommendation: 'Catat piutang klien untuk sisa termin, atau sesuaikan nilai kontrak jika sudah dinegosiasi ulang.',
+        amount: expectedPiutang - piutang,
+      });
+    }
+
+    if (Math.abs(otherCosts) > CONTRACT_TOLERANCE) {
+      diagnoses.push({
+        code: 'OTHER_COSTS',
+        title: 'Realisasi tidak sama dengan Bahan + Tukang',
+        detail: `Total realisasi ${formatRupiah(spent)} vs Bahan ${formatRupiah(bahan)} + Tukang ${formatRupiah(tukang)} (selisih ${formatRupiah(otherCosts)}).`,
+        recommendation: 'Periksa biaya di luar RAP bahan/tukang (overhead, transport, lain-lain) yang masuk realisasi.',
+        amount: otherCosts,
+      });
+    }
+
+    const expectedSaldo = received - spent;
+    if (Math.abs(cash - expectedSaldo) > CONTRACT_TOLERANCE) {
+      diagnoses.push({
+        code: 'SALDO_GAP',
+        title: 'Saldo kas tidak sama dengan Dana masuk − Realisasi',
+        detail: `Kas ${formatRupiah(cash)} vs ${formatRupiah(expectedSaldo)}.`,
+        recommendation: 'Periksa transfer antar-proyek atau jurnal kas yang belum masuk ke ringkasan proyek.',
+        amount: cash - expectedSaldo,
+      });
+    }
+
+    if (diagnoses.length === 0) {
+      diagnoses.push({
+        code: 'UNEXPLAINED',
+        title: 'Selisih belum teridentifikasi otomatis',
+        detail: `Kontrak ${formatRupiah(contractValue)} ≠ Piutang + Kas + Bahan + Tukang ${formatRupiah(componentsTotal)}.`,
+        recommendation: 'Buka tab Keuangan dan cocokkan termin, piutang, serta realisasi satu per satu.',
+        amount: gap,
+      });
+    }
+  }
+
   return {
     isMatch: Math.abs(gap) <= CONTRACT_TOLERANCE,
     contractValue,
@@ -39,6 +123,12 @@ export function checkContractComposition(normalized: NormalizedProjectView): {
     cash,
     bahan,
     tukang,
+    received,
+    spent,
+    expectedPiutang,
+    extraPiutang,
+    otherCosts,
+    diagnoses,
   };
 }
 
@@ -75,6 +165,34 @@ export function buildProjectPopupConfig(
 } | null {
   if (!kind) return null;
   const p = normalized.project;
+
+  if (kind === 'kontrak') {
+    const check = checkContractComposition(normalized);
+    const gapAbs = Math.abs(check.gap);
+    return {
+      title: 'Komposisi vs Nilai Kontrak',
+      detailTab: 'keuangan',
+      cards: [
+        { value: formatRupiah(check.contractValue), label: 'Nilai Kontrak' },
+        { value: formatRupiah(check.componentsTotal), label: 'Jumlah Komponen' },
+        { value: formatRupiah(gapAbs), label: check.gap < 0 ? 'Komponen lebih' : 'Kontrak lebih' },
+      ],
+      list: [
+        { title: 'Piutang', meta: `Seharusnya sisa kontrak ${formatRupiah(check.expectedPiutang)}`, value: formatRupiah(check.piutang), valueColor: check.extraPiutang > 1 ? '#d97706' : undefined },
+        { title: 'Cash / Kas', meta: 'Dana masuk − realisasi', value: formatRupiah(check.cash) },
+        { title: 'Bahan (actual)', meta: 'Realisasi material', value: formatRupiah(check.bahan) },
+        { title: 'Tukang (actual)', meta: 'Realisasi upah', value: formatRupiah(check.tukang) },
+        { title: 'Dana masuk', meta: 'Pembayaran klien diterima', value: formatRupiah(check.received) },
+        ...check.diagnoses.map(d => ({
+          title: d.title,
+          meta: `${d.detail} → ${d.recommendation}`,
+          value: formatRupiah(Math.abs(d.amount)),
+          valueColor: '#d97706',
+          wrap: true,
+        })),
+      ],
+    };
+  }
 
   if (kind === 'bahan') {
     const mats = p.rap.materials;

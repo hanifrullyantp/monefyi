@@ -21,6 +21,10 @@ export interface HeroHeadlineAnimated {
   animation: HeadlineAnimationEffect;
   /** Interval rotasi kata (ms). Default 2500. */
   intervalMs?: number;
+  /** Baris baru setelah prefix (sebelum teks bergilir). */
+  lineBreakAfterPrefix?: boolean;
+  /** Baris baru sebelum suffix (setelah teks bergilir). */
+  lineBreakBeforeSuffix?: boolean;
 }
 
 export interface HeroContent {
@@ -268,6 +272,7 @@ export interface GuaranteeContent {
   title: string;
   paragraph: string;
   checkpoints: string[];
+  refundCtaText?: string;
 }
 
 export interface FAQItem {

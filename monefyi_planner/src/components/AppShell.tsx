@@ -11,7 +11,6 @@ import Settings from '../pages/Settings';
 import HrEmployees from '../pages/HrEmployees';
 import WorkerDashboard from '../pages/WorkerDashboard';
 import EstimatorRoutes from '../pages/estimator/EstimatorRoutes';
-import PaymentReturnHandler from './entitlement/PaymentReturnHandler';
 import OnboardingChecklist from './OnboardingChecklist';
 import { useAppStore } from '../store/appStore';
 import { isSandboxFinance } from '../lib/financeVersion';
@@ -139,15 +138,12 @@ function DatabaseShell() {
 
 export default function AppShell() {
   return (
-    <>
-      <PaymentReturnHandler />
-      <Routes>
+    <Routes>
         <Route index element={<AppContent />} />
         <Route path="projects/:id" element={<AppContent />} />
         <Route path="database" element={<DatabaseShell />} />
         <Route path="estimator/*" element={<EstimatorShell />} />
         <Route path="finance-v2/*" element={<FinanceV2Shell />} />
       </Routes>
-    </>
   );
 }

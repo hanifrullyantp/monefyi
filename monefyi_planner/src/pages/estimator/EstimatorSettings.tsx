@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Save } from 'lucide-react';
+import { ArrowLeft, Loader2, Rocket, Save } from 'lucide-react';
+import { redirectToCheckout } from '../../lib/checkout';
+import {
+  computeEstimatorProCheckoutAmount,
+  isEstimatorProUpgrade,
+} from '../../lib/entitlement';
+import { useEntitlement } from '../../hooks/useEntitlement';
 import EstimatorOnboardingWizard from '../../components/estimator/EstimatorOnboardingWizard';
 import { resetEstimatorOnboarding } from '../../lib/estimatorOnboarding';
 import { useAppStore } from '../../store/appStore';
+import { isPlatformAdmin } from '../../services/adminService';
 import { useUiStore } from '../../store/uiStore';
 import ColorPickerField from '../../components/estimator/ColorPickerField';
 import EstimatorBreadcrumb from '../../components/estimator/EstimatorBreadcrumb';
@@ -22,8 +29,11 @@ import type { PdfTemplate } from '../../types/estimator';
 
 export default function EstimatorSettings() {
   const navigate = useNavigate();
-  const { tenant, user } = useAppStore();
+  const { tenant, user, platformRole } = useAppStore();
   const showToast = useUiStore(s => s.showToast);
+  const entitlement = useEntitlement();
+  const showProUpgrade = !isPlatformAdmin(platformRole, user?.email) && isEstimatorProUpgrade(entitlement);
+  const proUpgradeAmount = computeEstimatorProCheckoutAmount(entitlement);
   const [settings, setSettings] = useState<PdfSettings | null>(null);
   const [waTemplate, setWaTemplate] = useState<WhatsAppTemplateConfig>(defaultWhatsAppTemplateConfig());
   const [loading, setLoading] = useState(true);
@@ -117,6 +127,31 @@ export default function EstimatorSettings() {
       {showSetupBanner && (
         <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           Setup identitas perusahaan Anda agar penawaran terlihat profesional. Mulai dari nama dan logo.
+        </div>
+      )}
+
+      {showProUpgrade && tenant?.id && user?.id && (
+        <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="text-sm text-emerald-900">
+            <p className="font-semibold">Upgrade ke Estimator Pro</p>
+            <p className="text-emerald-800 mt-0.5">
+              Kwitansi PDF, pricelist kustom &amp; lebih banyak template — selisih Rp {proUpgradeAmount.toLocaleString('id-ID')}.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => redirectToCheckout('estimator_pro', {
+              orgId: tenant.id,
+              userId: user.id,
+              email: user.email ?? undefined,
+              checkoutAmount: proUpgradeAmount,
+              upgradeFrom: 'estimator_standard',
+            })}
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold bg-emerald-600 text-white shrink-0"
+          >
+            <Rocket className="w-4 h-4" />
+            Upgrade Pro
+          </button>
         </div>
       )}
 

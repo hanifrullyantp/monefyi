@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildEntitlementSnapshot,
+  buildFullAccessEntitlement,
   canGenerateKwitansi,
+  computeEstimatorProCheckoutAmount,
+  ESTIMATOR_PRO_PRICE_IDR,
+  ESTIMATOR_UPGRADE_DELTA_IDR,
   isActiveProjectStatus,
+  isEstimatorProUpgrade,
   mapLegacyOrgPlan,
 } from './entitlement';
 
@@ -114,11 +119,69 @@ describe('entitlement - canGenerateKwitansi', () => {
   });
 });
 
+describe('entitlement - estimator pro upgrade pricing', () => {
+  const standardEstimator = buildEntitlementSnapshot({
+    subscription: {
+      id: 's1',
+      org_id: 'o1',
+      tier: 'estimator',
+      payment_provider: null,
+      external_payment_id: null,
+      amount_paid: 99000,
+      currency: 'IDR',
+      purchased_at: null,
+      activated_at: null,
+      expires_at: null,
+      estimator_credit_available: false,
+      estimator_credit_used_at: null,
+      estimator_credit_amount: 0,
+      max_active_projects: 1,
+      max_members: 1,
+      metadata: null,
+      estimator_variant: 'standard',
+      created_at: '',
+      updated_at: '',
+    },
+    activeProjectCount: 0,
+    memberCount: 1,
+  });
+
+  it('charges delta for Basic → Pro upgrade', () => {
+    expect(isEstimatorProUpgrade(standardEstimator)).toBe(true);
+    expect(computeEstimatorProCheckoutAmount(standardEstimator)).toBe(ESTIMATOR_UPGRADE_DELTA_IDR);
+  });
+
+  it('charges full price for new Estimator Pro buyers', () => {
+    const freeUser = buildEntitlementSnapshot({
+      subscription: null,
+      activeProjectCount: 0,
+      memberCount: 1,
+    });
+    expect(isEstimatorProUpgrade(freeUser)).toBe(false);
+    expect(computeEstimatorProCheckoutAmount(freeUser)).toBe(ESTIMATOR_PRO_PRICE_IDR);
+  });
+});
+
 describe('entitlement - isActiveProjectStatus', () => {
   it('counts planning, active, on_hold as active slots', () => {
     expect(isActiveProjectStatus('planning')).toBe(true);
     expect(isActiveProjectStatus('active')).toBe(true);
     expect(isActiveProjectStatus('completed')).toBe(false);
     expect(isActiveProjectStatus('archived')).toBe(false);
+  });
+});
+
+describe('entitlement - buildFullAccessEntitlement', () => {
+  it('unlocks estimator, finance, projects, and kwitansi', () => {
+    const snap = buildFullAccessEntitlement(12, 3);
+    expect(snap.tier).toBe('enterprise');
+    expect(snap.canAccessEstimator).toBe(true);
+    expect(snap.canAccessFinance).toBe(true);
+    expect(snap.canCreateProject).toBe(true);
+    expect(snap.canInviteMembers).toBe(true);
+    expect(snap.isEstimatorPro).toBe(true);
+    expect(isEstimatorProUpgrade(snap)).toBe(false);
+    expect(canGenerateKwitansi(snap)).toBe(true);
+    expect(snap.currentActiveProjects).toBe(12);
   });
 });

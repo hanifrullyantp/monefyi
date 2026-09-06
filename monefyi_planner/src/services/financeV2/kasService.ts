@@ -83,7 +83,7 @@ export async function closeProjectFinance(input: {
   const labaDitahan = await findSystemAccount(input.orgId, 'laba_ditahan');
   if (!laba || !labaDitahan) throw new Error('Akun laba tidak ditemukan.');
 
-  const kasRemainder = Math.max(0, projectKas.current_balance);
+  const kasRemainder = Math.max(0, preview.kasBalance);
   const finalProfit = preview.finalProfit;
 
   if (kasRemainder > 0) {

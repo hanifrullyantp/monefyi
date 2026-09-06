@@ -4,8 +4,10 @@ import {
   Users, Building2, Settings, LayoutDashboard, Loader2, RefreshCw,
   Plus, Trash2, Save, ArrowLeft, Search, Pencil, Activity, AlertTriangle, Archive, RotateCcw,
   CreditCard,
+  ShieldCheck,
 } from 'lucide-react';
 import PricingPlansAdmin from '../components/admin/PricingPlansAdmin';
+import AdminRefundsPanel from '../components/admin/AdminRefundsPanel';
 import {
   loadArchivedProjects,
   restoreArchivedProject,
@@ -21,7 +23,7 @@ import {
 import { showToast } from '../store/uiStore';
 import { fetchRuntimeTraces, type RuntimeTraceRow } from '../services/runtimeTracer';
 
-type Tab = 'overview' | 'users' | 'organizations' | 'company-types' | 'platform' | 'monitoring' | 'archives' | 'pricing';
+type Tab = 'overview' | 'users' | 'organizations' | 'company-types' | 'platform' | 'monitoring' | 'archives' | 'pricing' | 'refunds';
 
 export default function SuperAdmin() {
   const [tab, setTab] = useState<Tab>('overview');
@@ -198,6 +200,7 @@ export default function SuperAdmin() {
     { id: 'users', label: 'Pengguna', icon: Users },
     { id: 'organizations', label: 'Organisasi', icon: Building2 },
     { id: 'pricing', label: 'Paket Harga', icon: CreditCard },
+    { id: 'refunds', label: 'Refund', icon: ShieldCheck },
     { id: 'monitoring', label: 'Monitoring', icon: Activity },
     { id: 'archives', label: 'Arsip Proyek', icon: Archive },
     { id: 'company-types', label: 'Jenis Perusahaan', icon: Building2 },
@@ -504,6 +507,10 @@ export default function SuperAdmin() {
 
         {tab === 'pricing' && (
           <PricingPlansAdmin />
+        )}
+
+        {tab === 'refunds' && (
+          <AdminRefundsPanel />
         )}
 
         {tab === 'company-types' && (
