@@ -120,6 +120,7 @@ export function checkContractComposition(normalized: NormalizedProjectView): Con
 function groupLedgerByParty(
   items: LedgerItem[],
   valueColor: string,
+  onPartyClick?: (partyName: string) => void,
 ): PopupListItem[] {
   const groups = new Map<string, { count: number; total: number }>();
   for (const item of items) {
@@ -133,15 +134,17 @@ function groupLedgerByParty(
     .sort((a, b) => b[1].total - a[1].total)
     .map(([title, { count, total }]) => ({
       title,
-      meta: `${count} item`,
+      meta: `${count} item · ketuk untuk lihat akun`,
       value: formatRupiah(total),
       valueColor,
+      onClick: onPartyClick ? () => onPartyClick(title) : undefined,
     }));
 }
 
 export function buildProjectPopupConfig(
   kind: ProjectPopupKind | null,
   normalized: NormalizedProjectView,
+  options?: { onPartyClick?: (partyName: string) => void },
 ): {
   title: string;
   cards: PopupCard[];
@@ -275,7 +278,7 @@ export function buildProjectPopupConfig(
   }
 
   if (kind === 'hutang') {
-    const grouped = groupLedgerByParty(normalized.hutangItems, '#e11d48');
+    const grouped = groupLedgerByParty(normalized.hutangItems, '#e11d48', options?.onPartyClick);
     const subjectCount = grouped.length;
     const itemCount = normalized.hutangItems.length;
     return {
@@ -308,7 +311,7 @@ export function buildProjectPopupConfig(
         }]
       : [];
 
-  const groupedPiutang = groupLedgerByParty(piutangItems, '#059669');
+  const groupedPiutang = groupLedgerByParty(piutangItems, '#059669', options?.onPartyClick);
   const piutangSubjectCount = groupedPiutang.length;
 
   return {

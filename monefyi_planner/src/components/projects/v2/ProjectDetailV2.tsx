@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, MoreVertical, LayoutGrid, Wallet, BarChart3, FileSpreadsheet, Brain, FileText, Pencil,
+  ArrowLeft, MoreVertical, LayoutGrid, Wallet, BarChart3, FileSpreadsheet, Brain, FileText, Pencil, Coins,
   Undo2, Redo2, Save, Paperclip,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -28,13 +28,15 @@ import TabV2Progress from './TabV2Progress';
 import TabV2Rap, { type RapDraftControls } from './TabV2Rap';
 import TabV2Analisa from './TabV2Analisa';
 import TabV2Laporan from './TabV2Laporan';
+import TabV2Deviden from './TabV2Deviden';
 import ProjectEditModal from '../ProjectEditModal';
 
-type TabId = 'overview' | 'keuangan' | 'progress' | 'rap' | 'analisa' | 'laporan';
+type TabId = 'overview' | 'keuangan' | 'deviden' | 'progress' | 'rap' | 'analisa' | 'laporan';
 
 const TABS: { id: TabId; label: string; icon: typeof LayoutGrid }[] = [
   { id: 'overview', label: 'Overview', icon: LayoutGrid },
   { id: 'keuangan', label: 'Keuangan', icon: Wallet },
+  { id: 'deviden', label: 'Deviden', icon: Coins },
   { id: 'progress', label: 'Progress', icon: BarChart3 },
   { id: 'rap', label: 'RAP', icon: FileSpreadsheet },
   { id: 'analisa', label: 'Analisa', icon: Brain },
@@ -382,6 +384,16 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
                 canManage
                 onRefresh={reload}
                 onEditProject={openEdit}
+              />
+            )}
+            {tab === 'deviden' && (
+              <TabV2Deviden
+                project={project}
+                normalized={normalized}
+                orgId={tenant?.id || ''}
+                userId={user?.id || ''}
+                canManage
+                onRefresh={reload}
               />
             )}
             {tab === 'progress' && (

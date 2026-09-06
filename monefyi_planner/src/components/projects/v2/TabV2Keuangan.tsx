@@ -17,6 +17,7 @@ import ProjectTransactionModals, { type ModalKind } from './ProjectTransactionMo
 import ProjectCloseFinanceWizard from '../../finance-v2/ProjectCloseFinanceWizard';
 import ProformaInvoiceModal from '../ProformaInvoiceModal';
 import { buildProjectPopupConfig, type ProjectPopupKind } from './project-popup-config';
+import PartyAccountModal from '../../finance-v2/PartyAccountModal';
 import { useAppStore } from '../../../store/appStore';
 import { showToast } from '../../../store/uiStore';
 import { loadPdfSettings } from '../../../services/pdfSettingsService';
@@ -42,6 +43,7 @@ export default function TabV2Keuangan({
   const [popup, setPopup] = useState<ProjectPopupKind | null>(null);
   const [closeWizardOpen, setCloseWizardOpen] = useState(false);
   const [proformaOpen, setProformaOpen] = useState(false);
+  const [partyName, setPartyName] = useState<string | null>(null);
   const [pdfSettings, setPdfSettings] = useState<PdfSettings | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
 
@@ -112,7 +114,9 @@ export default function TabV2Keuangan({
     </button>
   );
 
-  const popupConfig = buildProjectPopupConfig(popup, normalized);
+  const popupConfig = buildProjectPopupConfig(popup, normalized, {
+    onPartyClick: name => { setPopup(null); setPartyName(name); },
+  });
 
   return (
     <div className="space-y-5 pb-4">
@@ -334,6 +338,16 @@ export default function TabV2Keuangan({
         userId={userId}
         onSuccess={onRefresh}
       />
+
+      {partyName && (
+        <PartyAccountModal
+          open
+          onClose={() => setPartyName(null)}
+          orgId={orgId}
+          partyName={partyName}
+          projectId={project.id}
+        />
+      )}
 
       {proformaOpen && pdfSettings && (
         <ProformaInvoiceModal

@@ -17,6 +17,7 @@ import TransactionList from '../../sandbox-ui/TransactionList';
 import BottomActionBar from '../../sandbox-ui/BottomActionBar';
 import ProjectTransactionModals, { type ModalKind } from './ProjectTransactionModals';
 import { buildProjectPopupConfig, checkContractComposition, type ProjectPopupKind } from './project-popup-config';
+import PartyAccountModal from '../../finance-v2/PartyAccountModal';
 import type { Project } from '../../../store/appStore';
 
 type PopupKind = ProjectPopupKind;
@@ -45,6 +46,7 @@ export default function TabV2Overview({
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [toggleBusy, setToggleBusy] = useState<string | null>(null);
   const [modal, setModal] = useState<ModalKind>(null);
+  const [partyName, setPartyName] = useState<string | null>(null);
 
   const rapByPlannerId = useMemo(() => {
     const m = new Map<string, RapItem>();
@@ -108,7 +110,9 @@ export default function TabV2Overview({
     return rows;
   }, [normalized.workItems, statusFilter, sortKey]);
 
-  const popupConfig = buildProjectPopupConfig(popup, normalized);
+  const popupConfig = buildProjectPopupConfig(popup, normalized, {
+    onPartyClick: name => { setPopup(null); setPartyName(name); },
+  });
 
   return (
     <div className="space-y-5 pb-4">
@@ -359,6 +363,16 @@ export default function TabV2Overview({
 
       <ProjectTransactionModals open={modal !== null} kind={modal} onClose={() => setModal(null)}
         project={project} orgId={orgId} userId={userId} canManage={canManage} onUpdated={onRefresh} />
+
+      {partyName && (
+        <PartyAccountModal
+          open
+          onClose={() => setPartyName(null)}
+          orgId={orgId}
+          partyName={partyName}
+          projectId={project.id}
+        />
+      )}
     </div>
   );
 }

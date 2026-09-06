@@ -16,6 +16,7 @@ export type PopupListItem = {
   value: string;
   valueColor?: string;
   wrap?: boolean;
+  onClick?: () => void;
 };
 
 export type CardPopupProps = {
@@ -75,21 +76,37 @@ export default function CardPopup({
               </div>
 
               <div className="divide-y divide-slate-50">
-                {list.map((item, i) => (
-                  <div key={i} className="flex items-center gap-3 py-3">
-                    <div className="flex-1 min-w-0">
-                      <div className={`text-sm font-semibold text-slate-800 ${item.wrap ? '' : 'truncate'}`}>{item.title}</div>
-                      {item.meta && (
-                        <div className={`text-xs text-slate-500 ${item.wrap ? 'whitespace-normal leading-relaxed mt-0.5' : 'truncate'}`}>
-                          {item.meta}
-                        </div>
-                      )}
-                    </div>
-                    <div className="text-sm font-bold shrink-0" style={{ color: item.valueColor || undefined }}>
-                      {item.value}
-                    </div>
-                  </div>
-                ))}
+                {list.map((item, i) => {
+                  const body = (
+                    <>
+                      <div className="flex-1 min-w-0">
+                        <div className={`text-sm font-semibold text-slate-800 ${item.wrap ? '' : 'truncate'}`}>{item.title}</div>
+                        {item.meta && (
+                          <div className={`text-xs text-slate-500 ${item.wrap ? 'whitespace-normal leading-relaxed mt-0.5' : 'truncate'}`}>
+                            {item.meta}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-sm font-bold shrink-0" style={{ color: item.valueColor || undefined }}>
+                        {item.value}
+                      </div>
+                      {item.onClick && <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />}
+                    </>
+                  );
+                  if (item.onClick) {
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={item.onClick}
+                        className="flex items-center gap-3 py-3 w-full text-left hover:bg-slate-50 rounded-lg px-1 -mx-1"
+                      >
+                        {body}
+                      </button>
+                    );
+                  }
+                  return <div key={i} className="flex items-center gap-3 py-3">{body}</div>;
+                })}
               </div>
             </div>
 

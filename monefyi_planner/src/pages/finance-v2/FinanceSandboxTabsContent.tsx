@@ -8,6 +8,8 @@ import { loadKasAccounts } from '../../services/financeV2/kasService';
 import { buildFinanceReportBundle } from '../../lib/financeV2/reports';
 import { formatRupiah, parseMoneyInput } from '../../utils/projectUi';
 import type { PayableCategory, DebtorType } from '../../types/financeV2';
+import { buildPartyAccounts } from '../../lib/financeV2/partyLedger';
+import PartyAccountModal from '../../components/finance-v2/PartyAccountModal';
 
 type Props = {
   mode: 'combined';
@@ -25,6 +27,7 @@ export default function FinanceHutangPiutangTab(_props: Props) {
   const [payTarget, setPayTarget] = useState<{ kind: 'hutang' | 'piutang'; id: string } | null>(null);
   const [payAmount, setPayAmount] = useState('');
   const [payKasId, setPayKasId] = useState('');
+  const [partyName, setPartyName] = useState<string | null>(null);
 
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
@@ -56,6 +59,10 @@ export default function FinanceHutangPiutangTab(_props: Props) {
 
   const totalHutang = payables.reduce((s, p) => s + (p.amount - p.paid_amount), 0);
   const totalPiutang = receivables.reduce((s, r) => s + (r.amount - r.paid_amount), 0);
+  const partyAccounts = useMemo(
+    () => buildPartyAccounts({ receivables, payables }),
+    [receivables, payables],
+  );
 
   const resetForm = () => {
     setFormKind(null);
@@ -180,20 +187,52 @@ export default function FinanceHutangPiutangTab(_props: Props) {
         </div>
       )}
 
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={() => { setPayTarget(null); setFormKind('hutang'); }} className="text-xs font-bold text-rose-600 flex items-center gap-1 px-3 py-2 rounded-xl border">
+          <Plus className="w-3.5 h-3.5" /> Hutang
+        </button>
+        <button type="button" onClick={() => { setPayTarget(null); setFormKind('piutang'); }} className="text-xs font-bold text-emerald-600 flex items-center gap-1 px-3 py-2 rounded-xl border">
+          <Plus className="w-3.5 h-3.5" /> Piutang
+        </button>
+        <p className="text-xs text-slate-500 self-center">
+          Hutang {formatRupiah(totalHutang)} · Piutang {formatRupiah(totalPiutang)}
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        {partyAccounts.map(acc => (
+          <button
+            key={acc.partyKey}
+            type="button"
+            onClick={() => setPartyName(acc.displayName)}
+            className="w-full flex items-center gap-3 bg-white border rounded-xl p-4 text-left hover:bg-slate-50"
+          >
+            <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-xs">
+              {acc.displayName.slice(0, 1).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-sm truncate">{acc.displayName}</div>
+              <div className="text-xs text-slate-500">{acc.lines.length} mutasi · ketuk untuk rincian akun</div>
+            </div>
+            <div className="text-right shrink-0 text-xs">
+              <div className="font-bold text-emerald-700">P {formatRupiah(acc.piutang)}</div>
+              <div className="font-bold text-rose-600">H {formatRupiah(acc.hutang)}</div>
+            </div>
+          </button>
+        ))}
+        {partyAccounts.length === 0 && <p className="text-sm text-slate-500">Belum ada akun hutang/piutang.</p>}
+      </div>
+
       <div className="grid md:grid-cols-2 gap-6">
       <section>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-rose-600">Hutang — {formatRupiah(totalHutang)}</h3>
-          <button type="button" onClick={() => { setPayTarget(null); setFormKind('hutang'); }} className="text-xs font-bold text-rose-600 flex items-center gap-1">
-            <Plus className="w-3.5 h-3.5" /> Tambah
-          </button>
-        </div>
+        <h3 className="text-sm font-bold text-rose-600 mb-3">Item hutang terbuka</h3>
         <div className="space-y-2">
           {payables.filter(p => p.amount > p.paid_amount).map(p => (
             <div key={p.id} className="flex items-center gap-3 bg-white border rounded-xl p-4">
-              <div className="w-10 h-10 rounded-lg bg-rose-50 flex items-center justify-center text-rose-600 font-bold text-xs">H</div>
               <div className="flex-1 min-w-0">
-                <div className="font-semibold text-sm truncate">{p.vendor_name || p.description || 'Vendor'}</div>
+                <button type="button" onClick={() => setPartyName(p.creditor_name)} className="font-semibold text-sm truncate text-left hover:underline">
+                  {p.creditor_name}
+                </button>
                 <div className="text-xs text-slate-500">Jatuh tempo: {p.due_date || '—'}</div>
               </div>
               <div className="text-right shrink-0">
@@ -204,22 +243,17 @@ export default function FinanceHutangPiutangTab(_props: Props) {
               </div>
             </div>
           ))}
-          {!payables.length && <p className="text-sm text-slate-500">Tidak ada hutang terbuka.</p>}
         </div>
       </section>
       <section>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-emerald-600">Piutang — {formatRupiah(totalPiutang)}</h3>
-          <button type="button" onClick={() => { setPayTarget(null); setFormKind('piutang'); }} className="text-xs font-bold text-emerald-600 flex items-center gap-1">
-            <Plus className="w-3.5 h-3.5" /> Tambah
-          </button>
-        </div>
+        <h3 className="text-sm font-bold text-emerald-600 mb-3">Item piutang terbuka</h3>
         <div className="space-y-2">
           {receivables.filter(r => r.amount > r.paid_amount).map(r => (
             <div key={r.id} className="flex items-center gap-3 bg-white border rounded-xl p-4">
-              <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 font-bold text-xs">P</div>
               <div className="flex-1 min-w-0">
-                <div className="font-semibold text-sm truncate">{r.client_name || r.description || 'Klien'}</div>
+                <button type="button" onClick={() => setPartyName(r.debtor_name)} className="font-semibold text-sm truncate text-left hover:underline">
+                  {r.debtor_name}
+                </button>
                 <div className="text-xs text-slate-500">Jatuh tempo: {r.due_date || '—'}</div>
               </div>
               <div className="text-right shrink-0">
@@ -230,10 +264,18 @@ export default function FinanceHutangPiutangTab(_props: Props) {
               </div>
             </div>
           ))}
-          {!receivables.length && <p className="text-sm text-slate-500">Tidak ada piutang terbuka.</p>}
         </div>
       </section>
       </div>
+
+      {partyName && tenant?.id && (
+        <PartyAccountModal
+          open
+          onClose={() => setPartyName(null)}
+          orgId={tenant.id}
+          partyName={partyName}
+        />
+      )}
     </div>
   );
 }

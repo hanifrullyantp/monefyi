@@ -110,6 +110,8 @@ export async function recordReceivablePayment(input: {
   entryDate?: string;
   notes?: string;
   createdBy?: string;
+  /** Offset internal (deviden) — jangan posting ke kas bisnis. */
+  withJournal?: boolean;
 }): Promise<Receivable> {
   if (input.amount <= 0) throw new Error('Nominal pembayaran harus lebih dari 0.');
 
@@ -129,24 +131,26 @@ export async function recordReceivablePayment(input: {
   const newPaid = Math.round((rec.paid_amount + input.amount) * 100) / 100;
   const status = deriveStatus(rec.amount, newPaid, rec.due_date);
 
-  const kas = input.kasAccountId
-    ? { id: input.kasAccountId }
-    : await findSystemAccount(input.orgId, 'kas', 'bisnis');
-  const piutang = await findSystemAccount(input.orgId, 'piutang');
-  if (!kas || !piutang) throw new Error('Akun kas atau piutang tidak ditemukan.');
+  if (input.withJournal !== false) {
+    const kas = input.kasAccountId
+      ? { id: input.kasAccountId }
+      : await findSystemAccount(input.orgId, 'kas', 'bisnis');
+    const piutang = await findSystemAccount(input.orgId, 'piutang');
+    if (!kas || !piutang) throw new Error('Akun kas atau piutang tidak ditemukan.');
 
-  await createJournalEntry({
-    orgId: input.orgId,
-    entryDate: input.entryDate,
-    description: input.notes || `Penerimaan piutang: ${rec.debtor_name}`,
-    referenceType: 'project_income',
-    referenceId: input.receivableId,
-    createdBy: input.createdBy,
-    lines: [
-      { accountId: kas.id, debit: input.amount, credit: 0 },
-      { accountId: piutang.id, debit: 0, credit: input.amount },
-    ],
-  });
+    await createJournalEntry({
+      orgId: input.orgId,
+      entryDate: input.entryDate,
+      description: input.notes || `Penerimaan piutang: ${rec.debtor_name}`,
+      referenceType: 'project_income',
+      referenceId: input.receivableId,
+      createdBy: input.createdBy,
+      lines: [
+        { accountId: kas.id, debit: input.amount, credit: 0 },
+        { accountId: piutang.id, debit: 0, credit: input.amount },
+      ],
+    });
+  }
 
   const { data, error } = await supabase
     .from('planner_receivables')

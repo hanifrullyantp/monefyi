@@ -127,7 +127,7 @@ describe('buildProjectPopupConfig hutang/piutang grouping', () => {
     const cfg = buildProjectPopupConfig('hutang', baseNormalized());
     expect(cfg?.list).toHaveLength(1);
     expect(cfg?.list[0].title).toBe('Vendor A');
-    expect(cfg?.list[0].meta).toBe('2 item');
+    expect(cfg?.list[0].meta).toMatch(/2 item/);
   });
 
   it('groups piutang by party', () => {
