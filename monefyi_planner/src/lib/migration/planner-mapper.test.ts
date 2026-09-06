@@ -182,4 +182,37 @@ describe('planner-mapper', () => {
     expect(mapped.budget.piutang).toBe(0);
     expect(mapped.hutangPiutang).toEqual([]);
   });
+
+  it('reduces cash when ledger piutang exceeds remaining contract', () => {
+    const mapped = mapPlannerProject({
+      project: {
+        id: 'p6',
+        org_id: 'org-1',
+        name: 'KITCHEN SET FINA',
+        client_name: 'Fina',
+        planned_start: '2026-01-01',
+        planned_end: '2026-06-01',
+        total_budget: 30_200_000,
+        total_spent: 17_000_000,
+        total_received: 30_200_000,
+        settings: { contract_value: 30_200_000 },
+      },
+      rapItems: [],
+      costs: [],
+      incomes: [],
+      workItems: [],
+      payables: [],
+      receivables: [{
+        id: 'rec-fina',
+        debtor_name: 'Fina',
+        amount: 1_787_000,
+        paid_amount: 0,
+        due_date: '2026-06-01',
+        status: 'open',
+      }],
+    });
+
+    expect(mapped.budget.piutang).toBe(1_787_000);
+    expect(mapped.saldo).toBe(11_413_000);
+  });
 });

@@ -127,7 +127,7 @@ export default function TabV2Overview({
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-sm font-bold border border-emerald-100 hover:bg-emerald-100 transition-colors shrink-0"
           >
             <Wallet className="w-4 h-4" />
-            Saldo: {formatRupiah(p.saldo)}
+            Saldo: {formatRupiah(contractCheck.cash)}
           </button>
         </div>
         <p className="text-xs font-bold text-slate-500 uppercase mb-1">Total Nilai Proyek</p>
@@ -141,6 +141,22 @@ export default function TabV2Overview({
           {' + '}Tukang {formatRupiah(contractCheck.tukang)}
           {' = '}{formatRupiah(contractCheck.componentsTotal)}
         </p>
+        {contractCheck.isMatch && contractCheck.extraPiutang > 0 && (
+          <button
+            type="button"
+            onClick={() => setPopup('kontrak')}
+            className="mb-4 w-full flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-700 text-left hover:bg-slate-100 transition-colors"
+          >
+            <Wallet className="w-4 h-4 shrink-0 mt-0.5 text-slate-500" />
+            <div>
+              <p className="font-bold">Kas dikurangi piutang {formatRupiah(contractCheck.extraPiutang)}</p>
+              <p className="mt-0.5 text-slate-500">
+                Dana masuk − realisasi {formatRupiah(contractCheck.received - contractCheck.spent)}
+                {' → '}kas {formatRupiah(contractCheck.cash)}. Ketuk untuk rincian.
+              </p>
+            </div>
+          </button>
+        )}
         {!contractCheck.isMatch && nilaiProyek > 0 && (
           <button
             type="button"
@@ -242,18 +258,18 @@ export default function TabV2Overview({
         <button type="button" onClick={() => setPopup('saldo')}
           className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm text-left hover:shadow-md transition-shadow">
           <div className="flex items-center gap-2 mb-3">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${p.saldo < 0 ? 'bg-rose-50' : 'bg-emerald-50'}`}>
-              <Wallet className={`w-4 h-4 ${p.saldo < 0 ? 'text-rose-600' : 'text-emerald-600'}`} />
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${contractCheck.cash < 0 ? 'bg-rose-50' : 'bg-emerald-50'}`}>
+              <Wallet className={`w-4 h-4 ${contractCheck.cash < 0 ? 'text-rose-600' : 'text-emerald-600'}`} />
             </div>
             <span className="text-xs font-semibold text-slate-500 uppercase">Cash / Kas</span>
           </div>
-          <div className={`text-xl font-black mb-2 ${p.saldo < 0 ? 'text-rose-600' : 'text-slate-900'}`}>
-            {formatRupiah(p.saldo)}
+          <div className={`text-xl font-black mb-2 ${contractCheck.cash < 0 ? 'text-rose-600' : 'text-slate-900'}`}>
+            {formatRupiah(contractCheck.cash)}
           </div>
           <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${
-            p.saldo < 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'
+            contractCheck.cash < 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'
           }`}>
-            {p.saldo < 0 ? 'Defisit' : 'Tersedia'}
+            {contractCheck.cash < 0 ? 'Defisit' : 'Tersedia'}
           </span>
         </button>
       </div>

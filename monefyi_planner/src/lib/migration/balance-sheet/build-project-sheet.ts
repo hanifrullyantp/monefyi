@@ -1,5 +1,6 @@
 import type { MappedProjectView } from '../planner-mapper';
 import type { BalanceLine, BalanceSheet } from './types';
+import { projectOperatingCash } from '../../projects/cashIdentity';
 
 /**
  * Build project balance sheet.
@@ -50,7 +51,7 @@ export function buildProjectSheet(project: MappedProjectView): BalanceSheet {
       received,
       spent,
       contractValue,
-      expectedSaldo: received - spent,
+      expectedSaldo: projectOperatingCash({ received, spent, piutang, contractValue }),
       expectedPiutang: Math.max(0, contractValue - received),
       hutangListSum,
       piutangListSum,

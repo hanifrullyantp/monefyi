@@ -109,9 +109,14 @@ export default function ProjectCloseFinanceWizard({
                 </div>
                 <p className="text-[11px] text-slate-500 leading-relaxed">
                   Sisa kas = Dana masuk − Realisasi
+                  {preview.extraReceivables > 0
+                    ? ` − piutang ${formatRupiah(preview.extraReceivables)}`
+                    : ''}
                   {preview.transfersNet !== 0
                     ? ` ${preview.transfersNet > 0 ? '+' : '−'} transfer ${formatRupiah(Math.abs(preview.transfersNet))}`
-                    : ' (sama dengan laba jika tidak ada transfer antar-proyek)'}
+                    : preview.extraReceivables > 0
+                      ? ''
+                      : ' (sama dengan laba jika tidak ada transfer antar-proyek)'}
                   {preview.ledgerKasBalance != null
                     && Math.abs(preview.ledgerKasBalance - preview.kasBalance) > 1
                     ? `. Buku kas finance: ${formatRupiah(preview.ledgerKasBalance)}.`

@@ -2,6 +2,7 @@ import type { NormalizedProjectView } from '../../lib/migration/project-normaliz
 import type { MappedProjectView } from '../../lib/migration/planner-mapper';
 import type { PopupCard, PopupListItem } from '../migration/CardPopup';
 import { formatRupiah, formatDateId } from '../../../utils/projectUi';
+import { cashAfterExtraPiutang, extraPiutangBeyondContract } from '../../../lib/projects/cashIdentity';
 
 export type ProjectPopupKind =
   | 'bahan' | 'tukang' | 'piutang' | 'hutang'
@@ -12,7 +13,7 @@ const CONTRACT_TOLERANCE = 1;
 type LedgerItem = MappedProjectView['hutangPiutang'][number];
 
 export type CompositionDiagnosis = {
-  code: 'EXTRA_PIUTANG' | 'MISSING_PIUTANG' | 'CONTRACT_UNDERSTATED' | 'OTHER_COSTS' | 'SALDO_GAP' | 'UNEXPLAINED';
+  code: 'CASH_REDUCED_BY_PIUTANG' | 'MISSING_PIUTANG' | 'CONTRACT_UNDERSTATED' | 'OTHER_COSTS' | 'SALDO_GAP' | 'UNEXPLAINED';
   title: string;
   detail: string;
   recommendation: string;
@@ -36,49 +37,43 @@ export type ContractCompositionCheck = {
   diagnoses: CompositionDiagnosis[];
 };
 
-function near(a: number, b: number, tol = 5_000) {
-  return Math.abs(a - b) <= Math.max(tol, 1);
-}
-
-/** Kontrak harus = piutang + cash + bahan + tukang (actual). */
+/** Kontrak harus = piutang + cash + bahan + tukang (actual). Piutang di luar sisa kontrak memotong kas. */
 export function checkContractComposition(normalized: NormalizedProjectView): ContractCompositionCheck {
   const p = normalized.project;
   const piutang = p.budget.piutang || 0;
-  const cash = p.saldo || 0;
   const bahan = p.budget.bahan.actual || 0;
   const tukang = p.budget.tukang.actual || 0;
-  const componentsTotal = piutang + cash + bahan + tukang;
   const contractValue = p.contractValue || 0;
-  const gap = contractValue - componentsTotal;
   const received = normalized.totalPemasukan || 0;
   const spent = normalized.totalRealisasi || 0;
   const expectedPiutang = Math.max(0, contractValue - received);
-  const extraPiutang = piutang - expectedPiutang;
+  const extraPiutang = extraPiutangBeyondContract(piutang, contractValue, received);
+  const cash = cashAfterExtraPiutang(p.saldo || 0, extraPiutang, received, spent);
+  const componentsTotal = piutang + cash + bahan + tukang;
+  const gap = contractValue - componentsTotal;
   const otherCosts = spent - bahan - tukang;
+  const missingPiutang = expectedPiutang - piutang;
+  const grossCash = received - spent;
 
   const diagnoses: CompositionDiagnosis[] = [];
+  if (extraPiutang > CONTRACT_TOLERANCE) {
+    diagnoses.push({
+      code: 'CASH_REDUCED_BY_PIUTANG',
+      title: 'Kas dikurangi piutang terbuka',
+      detail: `Piutang ${formatRupiah(extraPiutang)} memotong kas. Dana masuk − realisasi ${formatRupiah(grossCash)} → kas ${formatRupiah(cash)}.`,
+      recommendation: 'Piutang yang belum tertagih mengurangi cash, bukan menambah total aktiva di atas nilai kontrak.',
+      amount: extraPiutang,
+    });
+  }
+
   if (Math.abs(gap) > CONTRACT_TOLERANCE) {
-    if (extraPiutang > CONTRACT_TOLERANCE && near(extraPiutang, Math.abs(gap))) {
-      diagnoses.push({
-        code: received >= contractValue ? 'EXTRA_PIUTANG' : 'CONTRACT_UNDERSTATED',
-        title: received >= contractValue
-          ? 'Piutang masih terbuka meski kontrak sudah terbayar'
-          : 'Nilai kontrak lebih rendah dari tagihan',
-        detail: received >= contractValue
-          ? `Dana masuk ${formatRupiah(received)} sudah sama dengan kontrak, tetapi piutang ${formatRupiah(piutang)} masih tercatat. Selisih komposisi ${formatRupiah(Math.abs(gap))} ≈ piutang ini.`
-          : `Piutang ${formatRupiah(piutang)} + dana masuk ${formatRupiah(received)} = ${formatRupiah(piutang + received)}, di atas kontrak ${formatRupiah(contractValue)}.`,
-        recommendation: received >= contractValue
-          ? `Tandai piutang lunas jika pembayaran sudah diterima, atau naikkan nilai kontrak ke ${formatRupiah(componentsTotal)} jika ini addendum/pekerjaan tambahan.`
-          : `Naikkan nilai kontrak ke ${formatRupiah(componentsTotal)} jika piutang itu bagian dari kesepakatan, atau kurangi/hapus piutang yang bukan sisa kontrak.`,
-        amount: extraPiutang,
-      });
-    } else if (extraPiutang < -CONTRACT_TOLERANCE && expectedPiutang > 0) {
+    if (missingPiutang > CONTRACT_TOLERANCE && expectedPiutang > 0) {
       diagnoses.push({
         code: 'MISSING_PIUTANG',
         title: 'Piutang lebih kecil dari sisa kontrak',
         detail: `Sisa kontrak yang belum diterima ${formatRupiah(expectedPiutang)}, tetapi piutang tercatat hanya ${formatRupiah(piutang)}.`,
         recommendation: 'Catat piutang klien untuk sisa termin, atau sesuaikan nilai kontrak jika sudah dinegosiasi ulang.',
-        amount: expectedPiutang - piutang,
+        amount: missingPiutang,
       });
     }
 
@@ -92,18 +87,8 @@ export function checkContractComposition(normalized: NormalizedProjectView): Con
       });
     }
 
-    const expectedSaldo = received - spent;
-    if (Math.abs(cash - expectedSaldo) > CONTRACT_TOLERANCE) {
-      diagnoses.push({
-        code: 'SALDO_GAP',
-        title: 'Saldo kas tidak sama dengan Dana masuk − Realisasi',
-        detail: `Kas ${formatRupiah(cash)} vs ${formatRupiah(expectedSaldo)}.`,
-        recommendation: 'Periksa transfer antar-proyek atau jurnal kas yang belum masuk ke ringkasan proyek.',
-        amount: cash - expectedSaldo,
-      });
-    }
-
-    if (diagnoses.length === 0) {
+    const unexplainedOnly = diagnoses.filter(d => d.code !== 'CASH_REDUCED_BY_PIUTANG');
+    if (unexplainedOnly.length === 0) {
       diagnoses.push({
         code: 'UNEXPLAINED',
         title: 'Selisih belum teridentifikasi otomatis',
@@ -179,7 +164,7 @@ export function buildProjectPopupConfig(
       ],
       list: [
         { title: 'Piutang', meta: `Seharusnya sisa kontrak ${formatRupiah(check.expectedPiutang)}`, value: formatRupiah(check.piutang), valueColor: check.extraPiutang > 1 ? '#d97706' : undefined },
-        { title: 'Cash / Kas', meta: 'Dana masuk − realisasi', value: formatRupiah(check.cash) },
+        { title: 'Cash / Kas', meta: check.extraPiutang > 0 ? `Dana masuk − realisasi − piutang ${formatRupiah(check.extraPiutang)}` : 'Dana masuk − realisasi', value: formatRupiah(check.cash) },
         { title: 'Bahan (actual)', meta: 'Realisasi material', value: formatRupiah(check.bahan) },
         { title: 'Tukang (actual)', meta: 'Realisasi upah', value: formatRupiah(check.tukang) },
         { title: 'Dana masuk', meta: 'Pembayaran klien diterima', value: formatRupiah(check.received) },
@@ -230,17 +215,26 @@ export function buildProjectPopupConfig(
   }
 
   if (kind === 'saldo') {
+    const cashCheck = checkContractComposition(normalized);
     return {
       title: 'Saldo Project', detailTab: 'keuangan',
       cards: [
-        { value: formatRupiah(p.saldo), label: 'Saldo Kas' },
+        { value: formatRupiah(cashCheck.cash), label: 'Saldo Kas' },
         { value: formatRupiah(normalized.totalPemasukan), label: 'Dana Masuk' },
         { value: formatRupiah(normalized.totalRealisasi), label: 'Realisasi' },
       ],
       list: [
         { title: 'Dana Masuk', meta: 'Total pembayaran klien', value: formatRupiah(normalized.totalPemasukan) },
         { title: 'Realisasi', meta: 'Total biaya tercatat', value: formatRupiah(normalized.totalRealisasi), valueColor: '#e11d48' },
-        { title: 'Saldo (= Masuk − Realisasi)', meta: p.saldo < 0 ? 'Defisit kas' : 'Kas tersedia', value: formatRupiah(p.saldo), valueColor: p.saldo < 0 ? '#e11d48' : '#059669' },
+        ...(cashCheck.extraPiutang > 0
+          ? [{ title: 'Piutang (memotong kas)', meta: 'Di luar sisa kontrak', value: formatRupiah(cashCheck.extraPiutang), valueColor: '#d97706' }]
+          : []),
+        {
+          title: cashCheck.extraPiutang > 0 ? 'Saldo (= Masuk − Realisasi − Piutang)' : 'Saldo (= Masuk − Realisasi)',
+          meta: cashCheck.cash < 0 ? 'Defisit kas' : 'Kas tersedia',
+          value: formatRupiah(cashCheck.cash),
+          valueColor: cashCheck.cash < 0 ? '#e11d48' : '#059669',
+        },
         ...(p.budget.hutang > 0 ? [{ title: 'Hutang Vendor', meta: 'Hutang tercatat ke vendor / pihak lain', value: formatRupiah(p.budget.hutang), valueColor: '#e11d48' }] : []),
       ],
     };

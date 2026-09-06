@@ -78,7 +78,7 @@ describe('checkContractComposition', () => {
     expect(check.gap).toBe(20_000_000);
   });
 
-  it('Kitchen Set Fina case: extra piutang after contract is fully paid', () => {
+  it('Kitchen Set Fina: extra piutang reduces cash so composition matches', () => {
     const project = baseProject({
       contractValue: 30_200_000,
       saldo: 13_200_000,
@@ -93,16 +93,16 @@ describe('checkContractComposition', () => {
     normalized.totalPemasukan = 30_200_000;
     normalized.totalRealisasi = 17_000_000;
     const check = checkContractComposition(normalized);
-    expect(check.isMatch).toBe(false);
-    expect(check.componentsTotal).toBe(31_987_000);
-    expect(Math.abs(check.gap)).toBe(1_787_000);
-    expect(check.diagnoses[0]?.code).toBe('EXTRA_PIUTANG');
-    expect(check.diagnoses[0]?.recommendation).toMatch(/Tandai piutang lunas|naikkan nilai kontrak/i);
+    expect(check.extraPiutang).toBe(1_787_000);
+    expect(check.cash).toBe(11_413_000);
+    expect(check.componentsTotal).toBe(30_200_000);
+    expect(check.isMatch).toBe(true);
+    expect(check.diagnoses[0]?.code).toBe('CASH_REDUCED_BY_PIUTANG');
   });
 });
 
 describe('buildProjectPopupConfig kontrak diagnosis', () => {
-  it('lists components and a recommended fix', () => {
+  it('explains that cash is reduced by open receivables', () => {
     const project = baseProject({
       contractValue: 30_200_000,
       saldo: 13_200_000,
@@ -118,7 +118,7 @@ describe('buildProjectPopupConfig kontrak diagnosis', () => {
     normalized.totalRealisasi = 17_000_000;
     const cfg = buildProjectPopupConfig('kontrak', normalized);
     expect(cfg?.title).toMatch(/Komposisi/);
-    expect(cfg?.list.some(i => i.title.includes('Piutang masih terbuka'))).toBe(true);
+    expect(cfg?.list.some(i => i.title.includes('Kas dikurangi piutang'))).toBe(true);
   });
 });
 

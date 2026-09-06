@@ -1,6 +1,7 @@
 // Map planner_* rows → sandbox-compatible project view for balance sheet & V2 tabs.
 
 import { schedulePlanProgress, weightedActualProgress } from '../progressMetrics';
+import { extraPiutangBeyondContract } from '../projects/cashIdentity';
 
 export type MappedRapItem = {
   id: number;
@@ -304,7 +305,8 @@ export function mapPlannerProject(input: {
   const hutang = useLedgerHutang
     ? sumOutstanding(input.payables)
     : Math.max(0, spent - received);
-  const saldo = received - spent;
+  const extraPiutang = extraPiutangBeyondContract(piutang, contractValue, received);
+  const saldo = received - spent - extraPiutang;
 
   const derivedList = (!useLedgerHutang || !useLedgerPiutang)
     ? buildHutangPiutangList({

@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase';
+import { extraPiutangBeyondContract } from '../../lib/projects/cashIdentity';
 import { getProjectCashSummary } from '../projectTransferService';
 import { loadReceivablesByProject } from './receivableService';
 import { getOrCreateProjectKasAccount } from './kasService';
@@ -16,6 +17,7 @@ export type ProjectClosePreview = {
   transfersNet: number;
   interProjectDebt: number;
   openReceivables: number;
+  extraReceivables: number;
   financeStatus: string;
   warnings: string[];
   canClose: boolean;
@@ -27,7 +29,7 @@ export async function buildProjectClosePreview(
 ): Promise<ProjectClosePreview> {
   const { data: project, error } = await supabase
     .from('planner_projects')
-    .select('id, name, total_received, total_spent, finance_status')
+    .select('id, name, total_received, total_spent, finance_status, total_budget, settings')
     .eq('id', projectId)
     .eq('org_id', orgId)
     .single();
@@ -44,11 +46,14 @@ export async function buildProjectClosePreview(
     getOrCreateProjectKasAccount(orgId, projectId, project.name as string).catch(() => null),
   ]);
 
+  const settings = (project.settings || {}) as Record<string, unknown>;
+  const contractValue = Number(settings.contract_value) || Number(project.total_budget) || 0;
   const interProjectDebt = cashSummary.owedTo.reduce((s, d) => s + d.amount, 0);
   const openReceivables = receivables.reduce((s, r) => s + (r.amount - r.paid_amount), 0);
+  const extraReceivables = extraPiutangBeyondContract(openReceivables, contractValue, totalReceived);
   const transfersNet =
     cashSummary.loansIn + cashSummary.repaymentsIn - cashSummary.loansOut - cashSummary.repaymentsOut;
-  const projectCash = cashSummary.surplus;
+  const projectCash = cashSummary.surplus - extraReceivables;
   const ledgerKas = kasAccount ? Number(kasAccount.current_balance) || 0 : null;
 
   const warnings: string[] = [];
@@ -66,7 +71,7 @@ export async function buildProjectClosePreview(
   }
   if (ledgerKas != null && Math.abs(ledgerKas - projectCash) > 1) {
     warnings.push(
-      `Buku kas finance (Rp ${ledgerKas.toLocaleString('id-ID')}) belum sinkron dengan sisa kas operasional (Rp ${projectCash.toLocaleString('id-ID')}). Angka di kartu memakai kas operasional = Dana masuk − Realisasi ± transfer.`,
+      `Buku kas finance (Rp ${ledgerKas.toLocaleString('id-ID')}) belum sinkron dengan sisa kas operasional (Rp ${projectCash.toLocaleString('id-ID')}). Angka di kartu memakai kas operasional = Dana masuk − Realisasi − piutang ± transfer.`,
     );
   }
 
@@ -83,6 +88,7 @@ export async function buildProjectClosePreview(
     transfersNet,
     interProjectDebt,
     openReceivables,
+    extraReceivables,
     financeStatus: (project.finance_status as string) || 'active',
     warnings,
     canClose,
