@@ -70,8 +70,10 @@ function AppContent() {
   useEffect(() => {
     if (isWorker || entitlement.isLoading || adminFullAccess) return;
     if (!isEstimatorOnlyPlan(entitlement)) return;
-    const onProjects = activeTab === 'projects' || Boolean(projectIdParam);
-    if (!onProjects) {
+    const onAllowedModule =
+      activeTab === 'projects'
+      || Boolean(projectIdParam);
+    if (!onAllowedModule) {
       setActiveTab('projects');
       navigate('/app?tab=projects', { replace: true });
     }

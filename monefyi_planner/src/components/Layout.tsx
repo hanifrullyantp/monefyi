@@ -93,7 +93,10 @@ export default function Layout({ children }: LayoutProps) {
   }, [showEstimatorBrand, entitlementLoading]);
 
   const ownerMobileTabs = estimatorOnly
-    ? [{ id: 'projects', label: 'Proyek', icon: FolderOpen }]
+    ? [
+      { id: 'projects', label: 'Proyek', icon: FolderOpen },
+      { id: 'estimator', label: 'Estimator', icon: Receipt },
+    ]
     : [
       { id: 'home', label: 'Home', icon: Home },
       { id: 'estimator', label: 'Estimator', icon: Receipt },

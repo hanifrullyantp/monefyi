@@ -221,12 +221,12 @@ describe('entitlement - buildPreviewEntitlement', () => {
 });
 
 describe('entitlement - canAccessPlannerNavModule', () => {
-  it('estimator basic/pro only allows projects nav', () => {
+  it('estimator basic/pro allows projects and estimator nav', () => {
     const basic = buildPreviewEntitlement('estimator_basic', 0, 1);
     expect(canAccessPlannerNavModule(basic, 'projects')).toBe(true);
+    expect(canAccessPlannerNavModule(basic, 'estimator')).toBe(true);
     expect(canAccessPlannerNavModule(basic, 'home')).toBe(false);
     expect(canAccessPlannerNavModule(basic, 'database')).toBe(false);
-    expect(canAccessPlannerNavModule(basic, 'estimator')).toBe(false);
     expect(canAccessPlannerNavModule(basic, 'finance')).toBe(false);
     expect(canAccessPlannerNavModule(basic, 'hr')).toBe(false);
   });
