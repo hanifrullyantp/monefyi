@@ -34,6 +34,7 @@ jobs:
 
       - name: Deploy to Vercel
         if: github.ref == 'refs/heads/main'
+        working-directory: .
         run: npx vercel deploy --prod --yes --token "$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
