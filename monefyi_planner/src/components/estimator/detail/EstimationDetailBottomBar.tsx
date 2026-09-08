@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import {
-  ClipboardList, FileText, Loader2, MessageCircle, Redo2, Save, Undo2,
+  ChevronUp, FileText, Loader2, MessageCircle, Redo2, Save, Undo2,
 } from 'lucide-react';
 import EstimationDetailBreakdown from './EstimationDetailBreakdown';
 import { formatRupiahFull } from '../../../lib/estimatorFormat';
@@ -13,6 +13,7 @@ type Props = {
   isNew: boolean;
   isReadOnly: boolean;
   saving: boolean;
+  showSaveActions: boolean;
   canUndo: boolean;
   canRedo: boolean;
   breakdownOpen: boolean;
@@ -29,13 +30,11 @@ function IconBtn({
   onClick,
   disabled,
   children,
-  active,
 }: {
   label: string;
   onClick: () => void;
   disabled?: boolean;
   children: ReactNode;
-  active?: boolean;
 }) {
   return (
     <button
@@ -44,11 +43,7 @@ function IconBtn({
       disabled={disabled}
       title={label}
       aria-label={label}
-      className={`p-2 rounded-xl border transition-all duration-200 active:scale-95 shrink-0 disabled:opacity-35 disabled:pointer-events-none ${
-        active
-          ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
-          : 'border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-      }`}
+      className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all duration-200 active:scale-95 shrink-0 disabled:opacity-35 disabled:pointer-events-none"
     >
       {children}
     </button>
@@ -62,6 +57,7 @@ export default function EstimationDetailBottomBar({
   isNew,
   isReadOnly,
   saving,
+  showSaveActions,
   canUndo,
   canRedo,
   breakdownOpen,
@@ -79,26 +75,29 @@ export default function EstimationDetailBottomBar({
       }`}
     >
       <div className="pointer-events-auto max-w-[100rem] mx-auto px-3 sm:px-4 relative">
+        <button
+          type="button"
+          onClick={onToggleBreakdown}
+          aria-label="Rincian total"
+          aria-expanded={breakdownOpen}
+          className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 inline-flex items-center justify-center w-7 h-7 rounded-full bg-white border border-slate-200 shadow-md text-slate-600 hover:bg-slate-50 transition-all duration-200 active:scale-95"
+        >
+          <ChevronUp
+            className={`w-4 h-4 transition-transform duration-200 ${breakdownOpen ? 'rotate-180' : ''}`}
+          />
+        </button>
+
         {breakdownOpen && (
           <EstimationDetailBreakdown
             draft={draft}
             summary={summary}
             expanded
-            className="mb-0 absolute bottom-full left-3 right-3 sm:left-4 sm:right-4"
+            className="mb-0 absolute bottom-full left-3 right-3 sm:left-4 sm:right-4 mb-2"
           />
         )}
 
-        <div className="bg-white/95 backdrop-blur-lg border border-slate-200 rounded-2xl shadow-lg">
+        <div className="bg-white/95 backdrop-blur-lg border border-slate-200 rounded-2xl shadow-lg relative">
           <div className="px-2 sm:px-3 py-2 flex items-center gap-1 sm:gap-1.5 min-h-[3.25rem]">
-            <div className="flex items-center gap-0.5 shrink-0">
-              <IconBtn label="Undo" onClick={onUndo} disabled={isReadOnly || !canUndo}>
-                <Undo2 className="w-4 h-4" />
-              </IconBtn>
-              <IconBtn label="Redo" onClick={onRedo} disabled={isReadOnly || !canRedo}>
-                <Redo2 className="w-4 h-4" />
-              </IconBtn>
-            </div>
-
             <div className="flex items-center gap-0.5 shrink-0">
               <IconBtn label="WhatsApp" onClick={onWhatsApp} disabled={isNew}>
                 <MessageCircle className="w-4 h-4 text-emerald-600" />
@@ -106,16 +105,28 @@ export default function EstimationDetailBottomBar({
               <IconBtn label="Dokumen" onClick={onDocument} disabled={isNew}>
                 <FileText className="w-4 h-4" />
               </IconBtn>
-              <IconBtn
-                label="Rincian total"
-                onClick={onToggleBreakdown}
-                active={breakdownOpen}
-              >
-                <ClipboardList className="w-4 h-4" />
-              </IconBtn>
             </div>
 
-            <div className="flex-1 min-w-0 text-right px-1 sm:px-2">
+            <div className="flex-1 min-w-0 text-right px-1 sm:px-2 relative">
+              {showSaveActions && (
+                <div className="absolute bottom-full right-0 mb-1 flex items-center gap-0.5 bg-white shadow-lg border border-slate-200 rounded-xl px-2 py-1">
+                  <IconBtn label="Undo" onClick={onUndo} disabled={isReadOnly || !canUndo}>
+                    <Undo2 className="w-4 h-4" />
+                  </IconBtn>
+                  <IconBtn label="Redo" onClick={onRedo} disabled={isReadOnly || !canRedo}>
+                    <Redo2 className="w-4 h-4" />
+                  </IconBtn>
+                  <button
+                    type="button"
+                    onClick={onSave}
+                    disabled={saving || isReadOnly}
+                    className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 disabled:opacity-50 shrink-0 active:scale-95 transition-all duration-200"
+                  >
+                    {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    Simpan
+                  </button>
+                </div>
+              )}
               <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 truncate">
                 Total penawaran
               </div>
@@ -123,16 +134,6 @@ export default function EstimationDetailBottomBar({
                 {formatRupiahFull(summary.grandTotal)}
               </div>
             </div>
-
-            <button
-              type="button"
-              onClick={onSave}
-              disabled={saving || isReadOnly}
-              className="inline-flex items-center justify-center gap-1 px-3 sm:px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-50 shrink-0 active:scale-95 transition-all duration-200"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              <span className="hidden xs:inline">Simpan</span>
-            </button>
           </div>
         </div>
       </div>

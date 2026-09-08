@@ -5,10 +5,9 @@ import type { PdfSettings } from '../../../types/pdfSettings';
 import type { DocumentType } from './EstimationDocumentMenu';
 import { generateQuotationPdfBlob, quotationPdfFilename } from '../../../lib/pdf/generateQuotationPdf';
 import {
+  buildKwitansiPdfInputFromDraft,
   generateKwitansiPdfBlob,
   kwitansiPdfFilename,
-  suggestKwitansiAmount,
-  defaultKwitansiDescription,
 } from '../../../lib/pdf/generateKwitansiPdf';
 import { downloadBlob } from '../../../lib/pdf/pdfMakeSetup';
 
@@ -52,14 +51,7 @@ export default function EstimationDocumentPreviewModal({
               showBank: draft.pdf_show_bank,
               showSignature: draft.pdf_show_signature,
             })
-          : await generateKwitansiPdfBlob({
-              draft,
-              settings,
-              amount: suggestKwitansiAmount(draft, 'dp'),
-              paymentDate: new Date().toISOString().slice(0, 10),
-              description: defaultKwitansiDescription(draft, 'dp'),
-              category: 'dp',
-            });
+          : await generateKwitansiPdfBlob(buildKwitansiPdfInputFromDraft(draft, settings));
         if (cancelled) return;
         url = URL.createObjectURL(blob);
         setBlobUrl(url);
@@ -91,14 +83,7 @@ export default function EstimationDocumentPreviewModal({
         });
         downloadBlob(blob, quotationPdfFilename(draft, projectName));
       } else {
-        const blob = await generateKwitansiPdfBlob({
-          draft,
-          settings,
-          amount: suggestKwitansiAmount(draft, 'dp'),
-          paymentDate: new Date().toISOString().slice(0, 10),
-          description: defaultKwitansiDescription(draft, 'dp'),
-          category: 'dp',
-        });
+        const blob = await generateKwitansiPdfBlob(buildKwitansiPdfInputFromDraft(draft, settings));
         downloadBlob(blob, kwitansiPdfFilename(draft));
       }
     } catch {

@@ -5,6 +5,7 @@ import {
   defaultKwitansiDescription,
   type KwitansiPdfInput,
 } from './kwitansiPdfContext';
+import { buildKwitansiPdfInputFromDraft } from './generateKwitansiPdf';
 import type { EstimationFormDraft } from '../../types/estimator';
 import type { PdfSettings } from '../../types/pdfSettings';
 
@@ -122,5 +123,18 @@ describe('kwitansiPdfContext - buildKwitansiPdfContext', () => {
       draft: { ...baseDraft, customer_name: '' },
     }));
     expect(ctx.payerName).toBe('—');
+  });
+});
+
+describe('kwitansiPdfContext - buildKwitansiPdfInputFromDraft', () => {
+  it('includes options required for PDF generation', () => {
+    const input = buildKwitansiPdfInputFromDraft(baseDraft, baseSettings);
+    expect(input.options).toEqual({
+      showImages: false,
+      showBank: true,
+      showSignature: true,
+    });
+    expect(input.amount).toBeGreaterThan(0);
+    expect(input.category).toBe('dp');
   });
 });

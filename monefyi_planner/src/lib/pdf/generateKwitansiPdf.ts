@@ -1,5 +1,6 @@
 import { calcEstimationSummary, countedEstimationItems } from '../estimatorCalc';
 import type { EstimationFormDraft } from '../../types/estimator';
+import type { PdfSettings } from '../../types/pdfSettings';
 import {
   buildKwitansiPdfContext,
   defaultKwitansiDescription,
@@ -36,6 +37,30 @@ export function suggestKwitansiAmount(
 }
 
 export { defaultKwitansiDescription, type KwitansiPaymentCategory, type KwitansiPdfInput };
+
+/** Build complete kwitansi input from draft — ensures options is always set. */
+export function buildKwitansiPdfInputFromDraft(
+  draft: EstimationFormDraft,
+  settings: PdfSettings,
+  partial?: Partial<Pick<KwitansiPdfInput, 'amount' | 'category' | 'paymentDate' | 'description' | 'paymentMethod'>>,
+): KwitansiPdfInput {
+  const category = partial?.category ?? 'dp';
+  const amount = partial?.amount ?? suggestKwitansiAmount(draft, category);
+  return {
+    draft,
+    settings,
+    options: {
+      showImages: false,
+      showBank: draft.pdf_show_bank,
+      showSignature: draft.pdf_show_signature,
+    },
+    amount,
+    paymentDate: partial?.paymentDate ?? new Date().toISOString().slice(0, 10),
+    category,
+    description: partial?.description ?? defaultKwitansiDescription(draft, category),
+    paymentMethod: partial?.paymentMethod,
+  };
+}
 
 export async function generateKwitansiPdfBlob(input: KwitansiPdfInput): Promise<Blob> {
   const ctx = await buildKwitansiPdfContext(input);

@@ -13,10 +13,9 @@ import {
 import { analytics } from '../../../lib/analytics/events';
 import { generateQuotationPdfBlob, quotationPdfFilename } from '../../../lib/pdf/generateQuotationPdf';
 import {
+  buildKwitansiPdfInputFromDraft,
   generateKwitansiPdfBlob,
   kwitansiPdfFilename,
-  suggestKwitansiAmount,
-  defaultKwitansiDescription,
 } from '../../../lib/pdf/generateKwitansiPdf';
 import { downloadBlob } from '../../../lib/pdf/pdfMakeSetup';
 
@@ -108,15 +107,7 @@ export default function EstimationWhatsAppPickerModal({
         }
         analytics.estimationWaShared({ estimationId, shareType: 'pdf' });
       } else if (attachFile && attachment === 'kwitansi') {
-        const amount = suggestKwitansiAmount(draft, 'dp');
-        const blob = await generateKwitansiPdfBlob({
-          draft,
-          settings,
-          amount,
-          paymentDate: new Date().toISOString().slice(0, 10),
-          description: defaultKwitansiDescription(draft, 'dp'),
-          category: 'dp',
-        });
+        const blob = await generateKwitansiPdfBlob(buildKwitansiPdfInputFromDraft(draft, settings));
         const filename = kwitansiPdfFilename(draft);
         const file = new File([blob], filename, { type: 'application/pdf' });
         if (typeof navigator !== 'undefined' && navigator.canShare?.({ files: [file] })) {

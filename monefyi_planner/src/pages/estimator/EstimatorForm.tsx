@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { ChevronDown, Loader2 } from 'lucide-react';
 import EstimationDetailHeaderCard from '../../components/estimator/detail/EstimationDetailHeaderCard';
 import EstimationDetailBottomBar from '../../components/estimator/detail/EstimationDetailBottomBar';
 import EstimationWhatsAppPickerModal from '../../components/estimator/detail/EstimationWhatsAppPickerModal';
@@ -285,6 +285,15 @@ export default function EstimatorForm() {
 
   const { summary, countedItemCount } = useEstimationSummary(draft);
   const summaryTotal = summary.grandTotal;
+
+  const showSaveActions = !isReadOnly && (
+    isNew
+    || isDirty(draft)
+    || draftHistory.canUndo
+    || draftHistory.canRedo
+    || autoSave.status === 'pending'
+    || autoSave.status === 'error'
+  );
 
   const handleUndo = () => {
     setDraft(prev => draftHistory.undo(prev) ?? prev);
@@ -661,9 +670,8 @@ export default function EstimatorForm() {
           isNew={isNew}
           isReadOnly={isReadOnly}
           statusChanging={statusChanging}
-          detailOpen={detailOpen}
-          onToggleDetail={() => setDetailOpen(v => !v)}
           onTitleChange={title => patch({ title })}
+          onClientNameChange={name => patch({ customer_name: name })}
           onStatusTransition={applyStatusTransition}
           onAddItem={() => addItemRef.current?.()}
           onConvert={handleOpenConvert}
@@ -678,6 +686,21 @@ export default function EstimatorForm() {
           autoSaveStatus={autoSave.status}
           onRetryAutoSave={() => draftRef.current && autoSave.flush()}
         />
+      )}
+
+      {draft && (
+        <button
+          type="button"
+          id="estimation-client-tab"
+          onClick={() => setDetailOpen(v => !v)}
+          className="mb-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all duration-200 active:scale-95"
+        >
+          <ChevronDown
+            className={`w-4 h-4 shrink-0 transition-transform duration-200 ${detailOpen ? 'rotate-180' : ''}`}
+            aria-hidden
+          />
+          Klien
+        </button>
       )}
 
       {/* Panel detail — collapsible, di atas tabel tapi tidak di samping */}
@@ -894,6 +917,7 @@ export default function EstimatorForm() {
         isNew={isNew}
         isReadOnly={isReadOnly}
         saving={saving}
+        showSaveActions={showSaveActions}
         canUndo={draftHistory.canUndo}
         canRedo={draftHistory.canRedo}
         breakdownOpen={breakdownOpen}
