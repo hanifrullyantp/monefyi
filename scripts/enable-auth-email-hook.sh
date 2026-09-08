@@ -35,9 +35,9 @@ const body = {
   hook_send_email_enabled: true,
   hook_send_email_uri: process.env.HOOK_URI,
   hook_send_email_secrets: process.env.SEND_EMAIL_HOOK_SECRET,
-  site_url: "https://planner.monefyi.com",
+  site_url: "https://estimator.monefyi.com",
   uri_allow_list:
-    "https://planner.monefyi.com/**,https://monefyi-planner.vercel.app/**,http://localhost:5173/**",
+    "https://planner.monefyi.com/**,https://estimator.monefyi.com/**,https://monefyi-planner.vercel.app/**,https://app.planner.monefyi.com/**,http://localhost:5173/**,http://localhost:3000/**",
   rate_limit_email_sent: 30,
 };
 process.stdout.write(JSON.stringify(body));
