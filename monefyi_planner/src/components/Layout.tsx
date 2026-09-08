@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, FolderOpen, Wallet, Settings, Bell, Menu, X,
   Sparkles, Wifi, WifiOff, Clock, Users, Receipt,
-  BarChart3, Shield, ChevronRight, Database, PanelRightClose, PanelRight, Lock,
+  BarChart3, Shield, ChevronRight, Database, PanelRightClose, PanelRight, Lock, User,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { useUiStore } from '../store/uiStore';
@@ -31,6 +31,8 @@ import type { UpgradeModalTrigger } from '../types/entitlement';
 import { analytics } from '../lib/analytics/events';
 import { applyEstimatorDocumentBrand } from '../lib/estimatorBrand';
 import { isAdminFullAccess, canAccessPlannerNavModule, plannerNavModuleLabel, isEstimatorOnlyPlan, type PlannerNavModule } from '../lib/entitlement';
+import UserMenuDropdown from './estimator/shell/UserMenuDropdown';
+import EstimatorBottomNavItem from './estimator/shell/EstimatorBottomNavItem';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -254,6 +256,27 @@ export default function Layout({ children }: LayoutProps) {
 
   const sync = getSyncIndicator();
   const lastSyncText = lastSynced ? `${Math.floor((Date.now() - lastSynced.getTime()) / 60000)} mnt lalu` : 'Belum pernah';
+
+  const userMenuItems = [
+    {
+      id: 'profile',
+      label: 'Profil saya',
+      icon: <User className="w-4 h-4 shrink-0" />,
+      onClick: () => goSettingsTab('profil'),
+    },
+    {
+      id: 'settings',
+      label: 'Pengaturan',
+      icon: <Settings className="w-4 h-4 shrink-0" />,
+      onClick: () => goSettingsTab('organisasi'),
+    },
+    ...(isSuperAdmin ? [{
+      id: 'admin',
+      label: 'Super Admin',
+      icon: <Shield className="w-4 h-4 shrink-0" />,
+      onClick: () => navigate('/admin'),
+    }] : []),
+  ];
 
   const showRightPanel =
     /^\/app\/projects\/[^/]+$/.test(location.pathname)
@@ -487,11 +510,13 @@ export default function Layout({ children }: LayoutProps) {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="shell-header px-4 lg:px-6 h-14 flex items-center justify-between shrink-0 z-20">
-          <div className="flex items-center gap-3">
+        <header className={`shell-header px-4 lg:px-6 h-14 flex items-center justify-between shrink-0 z-20 ${
+          isEstimatorShell ? 'lg:hidden bg-white/80 backdrop-blur-md border-b border-slate-100' : ''
+        }`}>
+          <div className="flex items-center gap-2 min-w-0">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-lg hover:bg-slate-100 lg:hidden transition-colors"
+              className="p-2 rounded-lg hover:bg-slate-100 lg:hidden transition-colors active:scale-95"
             >
               <Menu className="w-5 h-5 text-slate-600" />
             </button>
@@ -500,19 +525,56 @@ export default function Layout({ children }: LayoutProps) {
                 {headerTitle}
               </div>
             </div>
-            <div className="lg:hidden flex items-center gap-2">
-              {showEstimatorBrand ? (
-                <EstimatorLogo className="w-7 h-7 rounded-lg object-contain" />
-              ) : (
-                <MonefyiLogo className="w-7 h-7 rounded-lg object-contain" />
-              )}
-              <span className="font-bold text-slate-900 text-sm">
-                {showEstimatorBrand ? 'Estimator' : 'Monefyi'}
-              </span>
-            </div>
+            {isEstimatorShell ? (
+              <div className="lg:hidden flex items-center gap-2 min-w-0">
+                <EstimatorLogo className="w-7 h-7 rounded-lg object-contain shrink-0" />
+                <span className="font-bold text-slate-900 text-sm truncate">Estimator</span>
+                <span
+                  className={`w-2 h-2 rounded-full shrink-0 ${sync.color}`}
+                  title={sync.text}
+                  aria-label={sync.text}
+                />
+              </div>
+            ) : (
+              <div className="lg:hidden flex items-center gap-2">
+                {showEstimatorBrand ? (
+                  <EstimatorLogo className="w-7 h-7 rounded-lg object-contain" />
+                ) : (
+                  <MonefyiLogo className="w-7 h-7 rounded-lg object-contain" />
+                )}
+                <span className="font-bold text-slate-900 text-sm">
+                  {showEstimatorBrand ? 'Estimator' : 'Monefyi'}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
+            {isEstimatorShell ? (
+              <>
+                <div className="relative lg:hidden">
+                  <button
+                    onClick={() => setNotifOpen(!notifOpen)}
+                    className="relative p-2 rounded-xl hover:bg-slate-100 transition-all duration-200 active:scale-95"
+                    aria-label="Notifikasi"
+                  >
+                    <Bell className="w-5 h-5 text-slate-600" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-rose-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </button>
+                  <AnimatePresence>
+                    {notifOpen && <NotificationPanel onClose={() => setNotifOpen(false)} />}
+                  </AnimatePresence>
+                </div>
+                <div className="lg:hidden">
+                  <UserMenuDropdown userName={user?.name} items={userMenuItems} />
+                </div>
+              </>
+            ) : (
+              <>
             {/* Sync Status — desktop & tablet */}
             <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${sync.bg} ${sync.textColor}`}>
               <div className={`w-1.5 h-1.5 rounded-full ${sync.color}`} />
@@ -585,8 +647,55 @@ export default function Layout({ children }: LayoutProps) {
             >
               {user?.name.charAt(0) || 'U'}
             </button>
+              </>
+            )}
           </div>
         </header>
+
+        {/* Desktop header for estimator shell */}
+        {isEstimatorShell && (
+          <header className="hidden lg:flex shell-header px-6 h-14 items-center justify-between shrink-0 z-20">
+            <div className="text-sm font-semibold capitalize flex items-center flex-wrap gap-0.5">
+              {headerTitle}
+            </div>
+            <div className="flex items-center gap-2">
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${sync.bg} ${sync.textColor}`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${sync.color}`} />
+                <span>{sync.text}</span>
+                <span className="text-slate-600 font-normal">· {lastSyncText}</span>
+                {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+              </div>
+              <div className="relative">
+                <button
+                  onClick={() => setNotifOpen(!notifOpen)}
+                  className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors"
+                >
+                  <Bell className="w-5 h-5 text-slate-600" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-rose-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+                <AnimatePresence>
+                  {notifOpen && <NotificationPanel onClose={() => setNotifOpen(false)} />}
+                </AnimatePresence>
+              </div>
+              {isSuperAdmin && <PreviewModeMenu />}
+              {isSuperAdmin && (
+                <button type="button" onClick={() => navigate('/admin')} className="p-2 rounded-xl hover:bg-slate-100 text-slate-600" aria-label="Super Admin">
+                  <Shield className="w-5 h-5" />
+                </button>
+              )}
+              <button type="button" onClick={() => goSettingsTab('organisasi')} className="p-2 rounded-xl hover:bg-slate-100" aria-label="Pengaturan">
+                <Settings className="w-5 h-5 text-slate-600" />
+              </button>
+              <button type="button" onClick={() => goSettingsTab('profil')} className="w-8 h-8 rounded-full bg-org-primary flex items-center justify-center text-org-on-primary text-xs font-bold">
+                {user?.name.charAt(0) || 'U'}
+              </button>
+            </div>
+          </header>
+        )}
 
         {/* Page Content + Right Panel */}
         <div className="flex-1 flex overflow-hidden min-h-0">
@@ -614,30 +723,39 @@ export default function Layout({ children }: LayoutProps) {
         </div>
 
         {/* Bottom Navigation — Mobile */}
-        <nav className="lg:hidden relative z-40 bg-white/90 backdrop-blur-lg safe-bottom shrink-0 shadow-[0_-4px_24px_rgba(15,23,42,0.06)]">
-          <div className="flex items-end justify-around px-2 pt-2 pb-3">
+        <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-lg border-t border-slate-100 safe-bottom shrink-0 shadow-[0_-4px_24px_rgba(15,23,42,0.06)]">
+          <div className="flex items-center justify-around h-16 px-2">
             {mobileTabs.map((tab) => (
               tab.special ? (
                 <button
                   key={tab.id}
                   onClick={openCommandModal}
-                  className="relative -mt-6 flex flex-col items-center"
+                  className="relative -mt-6 flex flex-col items-center active:scale-95 transition-all duration-200"
                 >
                   <div className="w-14 h-14 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-xl shadow-emerald-300/40 animate-breathe relative">
                     <Sparkles className="w-6 h-6 text-white" />
                     {pendingSyncCount > 0 && (
                       <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                        {pendingSyncCount}
+                        {pendingSyncCount > 9 ? '9+' : pendingSyncCount}
                       </span>
                     )}
                   </div>
                   <span className="text-xs text-emerald-600 font-bold mt-1">Monefyi</span>
                 </button>
+              ) : showEstimatorBrand ? (
+                <EstimatorBottomNavItem
+                  key={tab.id}
+                  icon={tab.icon}
+                  label={tab.label}
+                  active={isTabActive(tab.id)}
+                  locked={isNavLocked(tab.id)}
+                  onClick={() => handleNav(tab.id)}
+                />
               ) : (
                 <button
                   key={tab.id}
                   onClick={() => handleNav(tab.id)}
-                  className={`flex flex-col items-center gap-0.5 px-3 py-1 transition-colors duration-150 rounded-xl ${
+                  className={`flex flex-col items-center gap-0.5 px-3 py-1 transition-all duration-200 rounded-xl active:scale-95 ${
                     isTabActive(tab.id)
                       ? 'text-emerald-600 bg-emerald-50'
                       : 'text-slate-600 hover:text-slate-800'

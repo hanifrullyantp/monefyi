@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../store/appStore';
 import EstimatorAccessGuard from '../../components/entitlement/EstimatorAccessGuard';
-import EstimatorList from './EstimatorList';
+import EstimatorListPage from './EstimatorListPage';
 import EstimatorForm from './EstimatorForm';
 import PricelistPage from './PricelistPage';
 import EstimatorSettings from './EstimatorSettings';
@@ -18,7 +18,7 @@ export default function EstimatorRoutes() {
   return (
     <EstimatorAccessGuard>
       <Routes>
-        <Route index element={<EstimatorList />} />
+        <Route index element={<EstimatorListPage />} />
         <Route path="new" element={<EstimatorForm />} />
         <Route path="pricelist" element={<PricelistPage />} />
         <Route path="settings" element={<EstimatorSettings />} />
