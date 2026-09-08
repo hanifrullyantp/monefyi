@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../store/appStore';
+import { applyEstimatorDocumentBrand } from '../../lib/estimatorBrand';
 import EstimatorAccessGuard from '../../components/entitlement/EstimatorAccessGuard';
 import EstimatorList from './EstimatorList';
 import EstimatorForm from './EstimatorForm';
@@ -14,6 +15,11 @@ export default function EstimatorRoutes() {
   useEffect(() => {
     setActiveTab('estimator');
   }, [location.pathname, setActiveTab]);
+
+  useEffect(() => {
+    applyEstimatorDocumentBrand(true);
+    return () => applyEstimatorDocumentBrand(false);
+  }, []);
 
   return (
     <EstimatorAccessGuard>

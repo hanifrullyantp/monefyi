@@ -1,5 +1,6 @@
 "use client";
-import { Link, Share2, Play, Zap } from "lucide-react";
+import { Link, Share2, Play } from "lucide-react";
+import { EstimatorLogo } from "@/components/brand/EstimatorLogo";
 import { useContentStore } from "@/lib/store/contentStore";
 import { Container } from "@/components/shared/Container";
 
@@ -24,9 +25,7 @@ export function FooterSection() {
           {/* About */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-2 font-extrabold text-lg mb-4">
-              <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
-                <Zap className="w-4 h-4 text-white fill-white" />
-              </div>
+              <EstimatorLogo className="w-8 h-8 rounded-lg" />
               <span>
                 Monefyi <span className="text-emerald-400">Estimator</span>
               </span>

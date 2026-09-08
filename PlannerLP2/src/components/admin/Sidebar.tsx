@@ -19,11 +19,11 @@ import {
   Sparkles,
   BarChart3,
   Settings,
-  Zap,
   X,
   LogOut,
   Edit3,
 } from "lucide-react";
+import { EstimatorLogo } from "@/components/brand/EstimatorLogo";
 import { cn } from "@/lib/utils/cn";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/authStore";
@@ -75,9 +75,7 @@ export function Sidebar({ onClose }: SidebarProps) {
       <div className="flex flex-col p-4 border-b border-slate-800 gap-4">
         <div className="flex items-center justify-between">
           <Link href="/admin" className="flex items-center gap-2 font-bold">
-            <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center shadow-glow">
-              <Zap className="w-4 h-4 text-white fill-white" />
-            </div>
+            <EstimatorLogo className="w-8 h-8 rounded-lg" />
             <div>
               <p className="text-sm font-extrabold leading-tight">Monefyi</p>
               <p className="text-[10px] text-slate-400 leading-tight">Admin Panel</p>

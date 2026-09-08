@@ -17,6 +17,7 @@ import { ensureOwnerOrg } from "@/lib/services/orgService";
 import { redirectToLynkCheckout } from "@/lib/checkout/lynk";
 import { lynkProductLabel } from "@/lib/checkout/products";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { EstimatorLogo } from "@/components/brand/EstimatorLogo";
 import { navigateToPlannerApp } from "@/lib/config/plannerApp";
 
 type AuthMode = "login" | "signup" | "forgot";
@@ -208,8 +209,14 @@ export function LoginModal() {
             </button>
 
             <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-4">
-                {loginSuccess ? <CheckCircle2 className="w-8 h-8" /> : <LogIn className="w-8 h-8" />}
+              <div className="mx-auto mb-4 flex justify-center">
+                {loginSuccess ? (
+                  <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-3xl flex items-center justify-center">
+                    <CheckCircle2 className="w-8 h-8" />
+                  </div>
+                ) : (
+                  <EstimatorLogo className="w-16 h-16 rounded-2xl shadow-md" />
+                )}
               </div>
               <h2 className="text-2xl font-extrabold text-slate-900">
                 {loginSuccess ? "Login berhasil!" : "Masuk ke Monefyi"}

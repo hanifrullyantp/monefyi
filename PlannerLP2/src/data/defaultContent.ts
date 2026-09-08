@@ -3,6 +3,7 @@ import type { SiteContent } from "@/lib/types/content";
 export const defaultContent: SiteContent = {
   navbar: {
     logo: "Monefyi Estimator",
+    logoImage: "/brand/estimator-logo.png",
     menuItems: [
       { label: "Beranda", href: "#hero" },
       { label: "Cara Kerja", href: "#tiga-step" },

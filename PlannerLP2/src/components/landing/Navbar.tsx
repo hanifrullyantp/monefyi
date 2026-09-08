@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, ArrowRight, Zap, LogIn, LayoutDashboard, Edit3, Save } from "lucide-react";
+import { Menu, X, ArrowRight, LogIn, LayoutDashboard, Edit3, Save } from "lucide-react";
+import { EstimatorLogo } from "@/components/brand/EstimatorLogo";
 import { useContentStore } from "@/lib/store/contentStore";
 import { useLandingCta } from "@/lib/hooks/useLandingCta";
 import { useLandingAdmin } from "@/lib/hooks/useLandingAdmin";
@@ -107,11 +108,15 @@ export function Navbar() {
               onClick={() => scrollTo("#hero")}
               className="flex items-center gap-2 font-extrabold text-lg text-slate-900 tracking-tight"
             >
-              <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
-                <Zap className="w-4 h-4 text-white fill-white" />
-              </div>
+              <EstimatorLogo className="w-8 h-8 rounded-lg" />
               <span>
-                Monefyi <span className="text-emerald-600">Estimator</span>
+                {navbar.logo.includes("Estimator") ? (
+                  <>
+                    Monefyi <span className="text-emerald-600">Estimator</span>
+                  </>
+                ) : (
+                  navbar.logo
+                )}
               </span>
             </button>
 

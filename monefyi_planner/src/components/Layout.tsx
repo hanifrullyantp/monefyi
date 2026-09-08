@@ -14,6 +14,7 @@ import CommandModal from './CommandModal';
 import NotificationPanel from './NotificationPanel';
 import PreviewModeMenu from './layout/PreviewModeMenu';
 import { MonefyiLogo } from './MonefyiLogo';
+import { EstimatorLogo } from './EstimatorLogo';
 import ToastHost from './ToastHost';
 import UndoToast from './ui/UndoToast';
 import { loadFinanceVersion } from '../lib/financeVersion';
@@ -72,6 +73,7 @@ export default function Layout({ children }: LayoutProps) {
   const isSuperAdmin = isPlatformAdmin(platformRole, user?.email);
   const isWorker = showWorkerShell(user?.role, platformRole, user?.email, uiViewMode);
   const canAccessHr = canAccessManagerFeatures(user?.role, platformRole, user?.email, uiViewMode);
+  const isEstimatorShell = location.pathname.startsWith('/app/estimator');
 
   const ownerMobileTabs = [
     { id: 'home', label: 'Home', icon: Home },
@@ -231,15 +233,24 @@ export default function Layout({ children }: LayoutProps) {
         {/* Logo + collapse + Monefyi AI */}
         <div className={`${navSidebarCollapsed ? 'px-2 py-3' : 'p-4'}`}>
           <div className={`flex items-center gap-2 ${navSidebarCollapsed ? 'flex-col' : ''}`}>
-            <MonefyiLogo
-              className={`rounded-xl object-contain shadow-md shrink-0 ${
-                navSidebarCollapsed ? 'w-9 h-9' : 'w-9 h-9'
-              }`}
-            />
+            {isEstimatorShell ? (
+              <EstimatorLogo className="rounded-xl object-contain shadow-md shrink-0 w-9 h-9" />
+            ) : (
+              <MonefyiLogo
+                className={`rounded-xl object-contain shadow-md shrink-0 ${
+                  navSidebarCollapsed ? 'w-9 h-9' : 'w-9 h-9'
+                }`}
+              />
+            )}
             {!navSidebarCollapsed && (
               <div className="flex-1 min-w-0">
                 <div className="font-black text-slate-900 text-sm leading-tight">Monefyi</div>
-                <div className="text-xs font-semibold" style={{ color: MONEFYI_BRAND.dark }}>Planner</div>
+                <div
+                  className="text-xs font-semibold"
+                  style={{ color: isEstimatorShell ? '#76b82a' : MONEFYI_BRAND.dark }}
+                >
+                  {isEstimatorShell ? 'Estimator' : 'Planner'}
+                </div>
               </div>
             )}
             <button
@@ -362,10 +373,19 @@ export default function Layout({ children }: LayoutProps) {
             >
               <div className="p-6 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <MonefyiLogo className="w-9 h-9 rounded-xl object-contain" />
+                  {isEstimatorShell ? (
+                    <EstimatorLogo className="w-9 h-9 rounded-xl object-contain" />
+                  ) : (
+                    <MonefyiLogo className="w-9 h-9 rounded-xl object-contain" />
+                  )}
                   <div>
                     <div className="font-black text-slate-900">Monefyi</div>
-                    <div className="text-xs text-emerald-600 font-semibold">Planner</div>
+                    <div
+                      className="text-xs font-semibold"
+                      style={{ color: isEstimatorShell ? '#76b82a' : undefined }}
+                    >
+                      {isEstimatorShell ? 'Estimator' : 'Planner'}
+                    </div>
                   </div>
                 </div>
                 <button onClick={() => setSidebarOpen(false)} className="p-2 rounded-lg hover:bg-slate-100">
@@ -415,7 +435,11 @@ export default function Layout({ children }: LayoutProps) {
               </div>
             </div>
             <div className="lg:hidden flex items-center gap-2">
-              <MonefyiLogo className="w-7 h-7 rounded-lg object-contain" />
+              {isEstimatorShell ? (
+                <EstimatorLogo className="w-7 h-7 rounded-lg object-contain" />
+              ) : (
+                <MonefyiLogo className="w-7 h-7 rounded-lg object-contain" />
+              )}
               <span className="font-bold text-slate-900 text-sm">Monefyi</span>
             </div>
           </div>

@@ -1,4 +1,10 @@
 import type { Metadata } from "next";
+import {
+  ESTIMATOR_APPLE_ICON,
+  ESTIMATOR_FAVICON_32,
+  ESTIMATOR_ICON_192,
+  ESTIMATOR_THEME_COLOR,
+} from "@/lib/brand/estimatorBrand";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -7,6 +13,14 @@ export const metadata: Metadata = {
     "Saring lead WA, closing di tempat saat survei, dan kelola proyek sampai selesai. Sistem all-in-one untuk kontraktor, interior designer, kitchen set & furniture custom.",
   keywords:
     "sistem closing proyek, manajemen proyek kontraktor, interior designer app, kitchen set software, penawaran proyek",
+  icons: {
+    icon: [
+      { url: ESTIMATOR_FAVICON_32, sizes: "32x32", type: "image/png" },
+      { url: ESTIMATOR_ICON_192, sizes: "192x192", type: "image/png" },
+    ],
+    apple: ESTIMATOR_APPLE_ICON,
+  },
+  themeColor: ESTIMATOR_THEME_COLOR,
   openGraph: {
     title: "Monefyi Estimator — Sistem Closing & Proyek",
     description: "All-in-one sistem untuk pelaku jasa proyek Indonesia",

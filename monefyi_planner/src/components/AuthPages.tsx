@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -15,7 +15,9 @@ import {
   resetPasswordForEmail,
 } from '../services/authService';
 import { useAppStore } from '../store/appStore';
+import { EstimatorLogo } from './EstimatorLogo';
 import { MonefyiLogo } from './MonefyiLogo';
+import { applyEstimatorDocumentBrand, isEstimatorBrandContext } from '../lib/estimatorBrand';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -27,10 +29,19 @@ export function LoginPage() {
   const [loginSuccess, setLoginSuccess] = useState(false);
   const navigate = useNavigate();
   const { setUser, setTenant, setAuthenticated, setDemoMode, setAuthInitializing, customDomainContext } = useAppStore();
-  const loginTitle = customDomainContext?.org_name || 'Monefyi Planner';
+  const estimatorBrand = isEstimatorBrandContext();
+  const loginTitle = customDomainContext?.org_name || (estimatorBrand ? 'Monefyi Estimator' : 'Monefyi Planner');
   const loginSubtitle = customDomainContext
     ? 'Masuk ke workspace perusahaan Anda'
-    : 'Masuk ke akun kamu';
+    : estimatorBrand
+      ? 'Masuk ke dashboard Estimator'
+      : 'Masuk ke akun kamu';
+
+  useEffect(() => {
+    if (!estimatorBrand) return;
+    applyEstimatorDocumentBrand(true);
+    return () => applyEstimatorDocumentBrand(false);
+  }, [estimatorBrand]);
 
   const handleDemoLogin = async (role: 'owner' | 'manager' | 'worker') => {
     if (!config.devDemoAuth) return;
@@ -120,7 +131,11 @@ export function LoginPage() {
           className="bg-white rounded-3xl p-8 shadow-2xl"
         >
           <div className="flex items-center gap-2 mb-8">
-            <MonefyiLogo className="w-10 h-10 rounded-xl object-contain shadow-md" />
+            {estimatorBrand ? (
+              <EstimatorLogo className="w-10 h-10 rounded-xl object-contain shadow-md" />
+            ) : (
+              <MonefyiLogo className="w-10 h-10 rounded-xl object-contain shadow-md" />
+            )}
             <div>
               <div className="font-black text-slate-900">{loginTitle}</div>
               <div className="text-xs text-slate-500">{loginSubtitle}</div>
