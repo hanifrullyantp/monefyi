@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { Plus, Trash2, Sparkles, List, SlidersHorizontal } from 'lucide-react';
+import { Plus, Trash2, Sparkles, List, ChevronDown } from 'lucide-react';
 import { calcEstimationSummary, calcItemRow, countedEstimationItems, effectiveItemSelling, emptyItem, sellingFromHpp, syncEstimationItemPricesList, estimationItemsNeedPriceSync, type ItemPriceEdit } from '../../lib/estimatorCalc';
 import { formatRupiahFull } from '../../lib/estimatorFormat';
 import {
@@ -53,7 +53,8 @@ export default function EstimationItemsTable({
 }: Props) {
   const [smartOpen, setSmartOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [mobileDetailMode, setMobileDetailMode] = useState(false);
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(() => new Set());
+  const [bulkUnit, setBulkUnit] = useState('');
   const showToast = useUiStore(s => s.showToast);
   const cellRefs = useRef<Map<string, HTMLInputElement | HTMLSelectElement>>(new Map());
 
@@ -108,6 +109,22 @@ export default function EstimationItemsTable({
     if (readOnly) return;
     onChange(items.filter((_, i) => i !== index));
   };
+
+  const applyBulkUnit = (unit: string) => {
+    if (readOnly || !unit) return;
+    onChange(items.map(item => ({ ...item, unit })));
+  };
+
+  const toggleRowExpanded = (index: number) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
+
+  const bulkUnitValue = bulkUnit || items[0]?.unit || 'pcs';
 
   const shouldShowGroupHeader = (group: EstimationItemGroup) =>
     group.indices.length > 1 ||
@@ -202,15 +219,47 @@ export default function EstimationItemsTable({
   return (
     <>
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden max-w-full">
-        <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/50 md:hidden">
-          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Rincian Produk</h3>
+        <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/50 md:hidden flex items-center justify-between gap-2">
+          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide shrink-0">Rincian Produk</h3>
+          {!readOnly && items.length > 0 && (
+            <label className="flex items-center gap-1.5 text-[10px] text-slate-500 shrink-0">
+              <span className="whitespace-nowrap">Satuan semua</span>
+              <select
+                value={bulkUnitValue}
+                onChange={e => {
+                  setBulkUnit(e.target.value);
+                  applyBulkUnit(e.target.value);
+                }}
+                className="px-1.5 py-1 text-xs border border-slate-200 rounded-lg bg-white min-w-0"
+              >
+                {COMMON_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+              </select>
+            </label>
+          )}
         </div>
 
         {/* Desktop-only table header */}
         <div className="hidden md:flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 bg-slate-50/50">
-          <div>
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Rincian Produk</h3>
-            <p className="text-[11px] text-slate-600 mt-0.5">Harga jual & margin% menentukan HPP (margin = laba ÷ jual)</p>
+          <div className="flex items-center gap-3 flex-wrap min-w-0">
+            <div>
+              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Rincian Produk</h3>
+              <p className="text-[11px] text-slate-600 mt-0.5">Harga jual & margin% menentukan HPP (margin = laba ÷ jual)</p>
+            </div>
+            {!readOnly && items.length > 0 && (
+              <label className="flex items-center gap-1.5 text-xs text-slate-500">
+                <span className="whitespace-nowrap font-semibold">Satuan semua</span>
+                <select
+                  value={bulkUnitValue}
+                  onChange={e => {
+                    setBulkUnit(e.target.value);
+                    applyBulkUnit(e.target.value);
+                  }}
+                  className="px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white"
+                >
+                  {COMMON_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+              </label>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
             {!readOnly && (
@@ -292,6 +341,7 @@ export default function EstimationItemsTable({
           {items.map((item, idx) => {
             const netSelling = effectiveItemSelling(item);
             const rowMuted = item.name.trim() && item.included === false;
+            const rowExpanded = expandedRows.has(idx);
             return (
               <div
                 key={idx}
@@ -299,7 +349,7 @@ export default function EstimationItemsTable({
                   rowMuted ? 'border-slate-200 bg-slate-50/80 opacity-80' : 'border-slate-200 bg-white'
                 }`}
               >
-                <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-1.5 items-start min-w-0">
+                <div className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] gap-1.5 items-start min-w-0">
                   <input
                     type="checkbox"
                     checked={item.included !== false}
@@ -316,6 +366,15 @@ export default function EstimationItemsTable({
                   <div className="text-xs font-black text-slate-900 tabular-nums shrink-0 max-w-[5.5rem] truncate text-right">
                     {formatRupiahFull(netSelling)}
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleRowExpanded(idx)}
+                    className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 shrink-0"
+                    aria-expanded={rowExpanded}
+                    aria-label={rowExpanded ? 'Tutup detail item' : 'Buka detail item'}
+                  >
+                    <ChevronDown className={`w-4 h-4 transition-transform ${rowExpanded ? 'rotate-180' : ''}`} />
+                  </button>
                 </div>
 
                 <div className="grid grid-cols-[3.25rem_2.75rem_minmax(0,1fr)_2rem] gap-1 items-center mt-2 pl-5 min-w-0">
@@ -349,7 +408,7 @@ export default function EstimationItemsTable({
                   )}
                 </div>
 
-                {mobileDetailMode && (
+                {rowExpanded && (
                   <div className="mt-2 pt-2 pl-5 border-t border-slate-100 grid grid-cols-2 gap-2 min-w-0">
                     <label className="text-[10px] text-slate-500">
                       Margin %
@@ -420,21 +479,6 @@ export default function EstimationItemsTable({
               </div>
             );
           })}
-
-          {items.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setMobileDetailMode(v => !v)}
-            className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-semibold transition-colors ${
-              mobileDetailMode
-                ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
-                : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-            {mobileDetailMode ? 'Sembunyikan rincian detail' : 'Tampilkan rincian detail'}
-          </button>
-          )}
         </div>
         <div className="hidden md:block overflow-x-auto overscroll-x-contain">
           <table className="w-full text-sm min-w-[1280px] table-auto">

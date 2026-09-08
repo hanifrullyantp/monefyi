@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
-import EstimatorActionBar from '../../components/estimator/EstimatorActionBar';
-import EstimatorBreadcrumb from '../../components/estimator/EstimatorBreadcrumb';
 import EstimationDetailHeaderCard from '../../components/estimator/detail/EstimationDetailHeaderCard';
+import EstimationDetailBottomBar from '../../components/estimator/detail/EstimationDetailBottomBar';
+import EstimationWhatsAppPickerModal from '../../components/estimator/detail/EstimationWhatsAppPickerModal';
+import EstimationDocumentMenu from '../../components/estimator/detail/EstimationDocumentMenu';
+import EstimationDocumentPreviewModal from '../../components/estimator/detail/EstimationDocumentPreviewModal';
+import type { DocumentType } from '../../components/estimator/detail/EstimationDocumentMenu';
+import type { WhatsAppEstimationPreset } from '../../lib/whatsappEstimationPresets';
+import EstimatorBreadcrumb from '../../components/estimator/EstimatorBreadcrumb';
 import EstimationStatusHistory from '../../components/estimator/EstimationStatusHistory';
 import ConvertEstimationWizard from '../../components/estimator/ConvertEstimationWizard';
 import { useAutoSave } from '../../hooks/useAutoSave';
@@ -14,12 +19,9 @@ import { useUiStore } from '../../store/uiStore';
 import EstimationItemsTable from '../../components/estimator/EstimationItemsTable';
 import EstimationAdjustmentsPanel from '../../components/estimator/EstimationAdjustmentsPanel';
 import EstimationImageSlots from '../../components/estimator/EstimationImageSlots';
-import EstimationStickySummary from '../../components/estimator/EstimationStickySummary';
 import PdfDesignCustomizer from '../../components/estimator/PdfDesignCustomizer';
-import PdfPreviewModal from '../../components/estimator/PdfPreviewModal';
 import KwitansiModal from '../../components/estimator/KwitansiModal';
 import EstimationPaymentPanel from '../../components/estimator/EstimationPaymentPanel';
-import ShareWhatsAppModal from '../../components/estimator/ShareWhatsAppModal';
 import MarkAsSentPrompt from '../../components/estimator/MarkAsSentPrompt';
 import UpgradeModal from '../../components/entitlement/UpgradeModal';
 import MilestoneUpsellModal from '../../components/entitlement/MilestoneUpsellModal';
@@ -74,17 +76,20 @@ export default function EstimatorForm() {
   const [detailOpen, setDetailOpen] = useState(false);
   const draftRef = useRef<EstimationFormDraft | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [summaryExpanded, setSummaryExpanded] = useState(false);
+  const [breakdownOpen, setBreakdownOpen] = useState(false);
   const addItemRef = useRef<(() => void) | null>(null);
   const registerAddItem = useCallback((fn: () => void) => {
     addItemRef.current = fn;
   }, []);
   const [pdfDesignOpen, setPdfDesignOpen] = useState(false);
-  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
+  const [documentMenuOpen, setDocumentMenuOpen] = useState(false);
+  const [documentPreviewOpen, setDocumentPreviewOpen] = useState(false);
+  const [documentPreviewType, setDocumentPreviewType] = useState<DocumentType>('penawaran');
+  const [waPickerOpen, setWaPickerOpen] = useState(false);
+  const [waInitialPreset, setWaInitialPreset] = useState<WhatsAppEstimationPreset>('follow_up');
   const [kwitansiOpen, setKwitansiOpen] = useState(false);
   const [kwitansiLinkedIncome, setKwitansiLinkedIncome] = useState<ProjectIncome | null>(null);
   const [paymentsRefreshKey, setPaymentsRefreshKey] = useState(0);
-  const [waShareOpen, setWaShareOpen] = useState(false);
   const [pdfSettings, setPdfSettings] = useState<PdfSettings | null>(null);
   const [waTemplate, setWaTemplate] = useState<WhatsAppTemplateConfig>(defaultWhatsAppTemplateConfig());
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -488,15 +493,35 @@ export default function EstimatorForm() {
     }
   };
 
-  const handlePreviewPdf = () => {
+  const handleShareWhatsApp = (preset: WhatsAppEstimationPreset = 'follow_up') => {
     if (!requireSaved()) return;
-    analytics.estimationPdfPreviewed({ estimationId: id });
-    setPdfPreviewOpen(true);
+    setWaInitialPreset(preset);
+    setWaPickerOpen(true);
   };
 
-  const handleShareWhatsApp = () => {
+  const handleOpenDocumentMenu = () => {
     if (!requireSaved()) return;
-    setWaShareOpen(true);
+    setDocumentMenuOpen(true);
+  };
+
+  const handleSelectDocument = (type: DocumentType) => {
+    setDocumentPreviewType(type);
+    setDocumentPreviewOpen(true);
+  };
+
+  const handleDocumentEdit = (type: DocumentType) => {
+    setDocumentPreviewOpen(false);
+    if (type === 'penawaran') {
+      setPdfDesignOpen(true);
+      setDetailOpen(true);
+    } else {
+      void handleOpenKwitansi();
+    }
+  };
+
+  const handleDocumentWhatsApp = (type: DocumentType) => {
+    setDocumentPreviewOpen(false);
+    handleShareWhatsApp(type === 'penawaran' ? 'penawaran' : 'penagihan');
   };
 
   const handleOpenKwitansi = async (linkedIncome?: ProjectIncome) => {
@@ -637,9 +662,7 @@ export default function EstimatorForm() {
           isReadOnly={isReadOnly}
           statusChanging={statusChanging}
           detailOpen={detailOpen}
-          summaryExpanded={summaryExpanded}
           onToggleDetail={() => setDetailOpen(v => !v)}
-          onToggleSummary={() => setSummaryExpanded(v => !v)}
           onTitleChange={title => patch({ title })}
           onStatusTransition={applyStatusTransition}
           onAddItem={() => addItemRef.current?.()}
@@ -647,9 +670,11 @@ export default function EstimatorForm() {
           onDuplicate={handleDuplicate}
           onDelete={handleDelete}
           convertedProjectId={convertedProjectId}
+          linkedProjectId={linkedProjectId}
           linkedProjectName={linkedProjectName}
           sentAt={statusMeta?.sent_at}
           updatedAt={updatedAt}
+          userId={user?.id}
           autoSaveStatus={autoSave.status}
           onRetryAutoSave={() => draftRef.current && autoSave.flush()}
         />
@@ -804,37 +829,7 @@ export default function EstimatorForm() {
         </div>
       )}
 
-      {!isNew && !linkedProjectId && (
-        <div className="mb-4 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600">
-          Hubungkan ke proyek (dropdown Proyek di Detail) atau jadikan proyek untuk mencatat pembayaran DP/Termin/Pelunasan.
-        </div>
-      )}
-
-      {/* Toolbar + tabel item */}
-      <EstimatorActionBar
-        navSidebarCollapsed={navSidebarCollapsed}
-        isNew={isNew}
-        saving={saving}
-        pdfLoading={pdfLoading}
-        isReadOnly={isReadOnly}
-        autoSaveStatus={autoSave.status}
-        canUndo={draftHistory.canUndo}
-        canRedo={draftHistory.canRedo}
-        canDiscard={draftHistory.canDiscard && !isNew}
-        onCancel={() => {
-          goBackToList();
-        }}
-        onSave={handleSave}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-        onDiscardChanges={handleDiscardChanges}
-        onRetryAutoSave={() => draftRef.current && autoSave.flush()}
-        onWhatsApp={handleShareWhatsApp}
-        onPreviewPdf={handlePreviewPdf}
-        onDownloadPdf={handleDownloadPdf}
-        onKwitansi={() => void handleOpenKwitansi()}
-      />
-
+      {/* Tabel item */}
       <EstimationItemsTable
         orgId={tenant!.id}
         userId={user?.id || ''}
@@ -892,12 +887,57 @@ export default function EstimatorForm() {
         <EstimationStatusHistory meta={statusMeta} className="mt-6" />
       )}
 
-      <EstimationStickySummary
+      <EstimationDetailBottomBar
+        draft={draft}
         summary={summary}
-        summaryExpanded={summaryExpanded}
-        onOpenBreakdown={() => setSummaryExpanded(v => !v)}
         navSidebarCollapsed={navSidebarCollapsed}
+        isNew={isNew}
+        isReadOnly={isReadOnly}
+        saving={saving}
+        canUndo={draftHistory.canUndo}
+        canRedo={draftHistory.canRedo}
+        breakdownOpen={breakdownOpen}
+        onToggleBreakdown={() => setBreakdownOpen(v => !v)}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        onSave={handleSave}
+        onWhatsApp={() => handleShareWhatsApp('follow_up')}
+        onDocument={handleOpenDocumentMenu}
       />
+
+      <EstimationDocumentMenu
+        open={documentMenuOpen}
+        onClose={() => setDocumentMenuOpen(false)}
+        onSelect={handleSelectDocument}
+      />
+
+      {documentPreviewOpen && pdfSettings && (
+        <EstimationDocumentPreviewModal
+          open={documentPreviewOpen}
+          type={documentPreviewType}
+          draft={draft}
+          settings={pdfSettings}
+          projectName={estimationProjectName}
+          onClose={() => setDocumentPreviewOpen(false)}
+          onEdit={handleDocumentEdit}
+          onSendWhatsApp={handleDocumentWhatsApp}
+        />
+      )}
+
+      {waPickerOpen && pdfSettings && (
+        <EstimationWhatsAppPickerModal
+          open={waPickerOpen}
+          onClose={() => setWaPickerOpen(false)}
+          draft={draft}
+          settings={pdfSettings}
+          projectName={estimationProjectName}
+          estimationId={id}
+          templateConfig={waTemplate}
+          initialPreset={waInitialPreset}
+          onToast={(msg, type) => showToast(msg, type)}
+          onShared={scheduleSentPrompt}
+        />
+      )}
 
       {kwitansiOpen && pdfSettings && draft && (
         <KwitansiModal
@@ -915,28 +955,6 @@ export default function EstimatorForm() {
           orgId={tenant?.id}
           linkedIncome={kwitansiLinkedIncome}
           onPaymentSynced={() => setPaymentsRefreshKey(k => k + 1)}
-        />
-      )}
-
-      {pdfPreviewOpen && pdfSettings && (
-        <PdfPreviewModal
-          draft={draft}
-          settings={pdfSettings}
-          projectName={estimationProjectName}
-          onClose={() => setPdfPreviewOpen(false)}
-        />
-      )}
-      {waShareOpen && pdfSettings && (
-        <ShareWhatsAppModal
-          open={waShareOpen}
-          onClose={() => setWaShareOpen(false)}
-          draft={draft}
-          settings={pdfSettings}
-          projectName={estimationProjectName}
-          estimationId={id}
-          templateConfig={waTemplate}
-          onToast={(msg, type) => showToast(msg, type)}
-          onShared={scheduleSentPrompt}
         />
       )}
 

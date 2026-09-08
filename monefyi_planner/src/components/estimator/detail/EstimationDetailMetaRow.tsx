@@ -8,8 +8,8 @@ type Props = {
   sentAt?: string | null;
   updatedAt?: string | null;
   itemCount: number;
-  marginPct: number;
   linkedProjectName?: string;
+  variant?: 'light' | 'onDark';
 };
 
 export default function EstimationDetailMetaRow({
@@ -17,36 +17,35 @@ export default function EstimationDetailMetaRow({
   sentAt,
   updatedAt,
   itemCount,
-  marginPct,
   linkedProjectName,
+  variant = 'light',
 }: Props) {
+  const onDark = variant === 'onDark';
   const pdfLabel = estimationPdfMetaLabel(status, sentAt);
   const relativeTime = formatRelativeTimeId(updatedAt);
+  const textClass = onDark ? 'text-emerald-100/80' : 'text-slate-400';
+  const itemClass = onDark ? 'text-white/90' : 'text-slate-500';
+  const projectClass = onDark ? 'text-emerald-100' : 'text-emerald-600';
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pt-3 border-t border-slate-100 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-      <span className="text-slate-500">{itemCount} item</span>
-      <span>Margin {marginPct.toFixed(1)}%</span>
+    <div className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 pt-2 text-[10px] font-semibold uppercase tracking-wide ${textClass}`}>
+      <span className={itemClass}>{itemCount} item</span>
       <span className="inline-flex items-center gap-1">
         <FileText className="w-3 h-3 shrink-0" aria-hidden />
         {pdfLabel}
       </span>
-      {!isNewPlaceholder(relativeTime) && (
+      {relativeTime !== '—' && (
         <span className="inline-flex items-center gap-1">
           <Clock className="w-3 h-3 shrink-0" aria-hidden />
           {relativeTime}
         </span>
       )}
       {linkedProjectName && (
-        <span className="inline-flex items-center gap-1 text-emerald-600 normal-case font-medium">
+        <span className={`inline-flex items-center gap-1 normal-case font-medium ${projectClass}`}>
           <FolderOpen className="w-3 h-3 shrink-0" aria-hidden />
           {linkedProjectName}
         </span>
       )}
     </div>
   );
-}
-
-function isNewPlaceholder(relativeTime: string): boolean {
-  return relativeTime === '—';
 }
