@@ -933,6 +933,15 @@ export default function EstimatorForm() {
         open={documentMenuOpen}
         onClose={() => setDocumentMenuOpen(false)}
         onSelect={handleSelectDocument}
+        draft={draft}
+        summary={summary}
+        projectId={linkedProjectId}
+        projectName={linkedProjectName}
+        estimationId={id}
+        orgId={tenant?.id}
+        userId={user?.id}
+        isReadOnly={isReadOnly}
+        onPaymentsChanged={() => setPaymentsRefreshKey(k => k + 1)}
       />
 
       {documentPreviewOpen && pdfSettings && (

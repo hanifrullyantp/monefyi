@@ -71,7 +71,7 @@ export default function EstimationDocumentPreviewModal({
 
   if (!open) return null;
 
-  const title = type === 'penawaran' ? 'Preview Penawaran' : 'Preview Kwitansi';
+  const title = type === 'penawaran' ? 'Preview Penawaran' : 'Preview Bukti Pembayaran';
 
   const handleDownload = async () => {
     try {

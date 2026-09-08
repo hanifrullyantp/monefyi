@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import {
-  ChevronUp, FileText, Loader2, MessageCircle, Redo2, Save, Undo2,
+  ChevronUp, Loader2, MessageCircle, Redo2, Save, Undo2,
 } from 'lucide-react';
 import EstimationDetailBreakdown from './EstimationDetailBreakdown';
 import { formatRupiahFull } from '../../../lib/estimatorFormat';
@@ -30,11 +30,13 @@ function IconBtn({
   onClick,
   disabled,
   children,
+  premium,
 }: {
   label: string;
   onClick: () => void;
   disabled?: boolean;
   children: ReactNode;
+  premium?: boolean;
 }) {
   return (
     <button
@@ -43,7 +45,11 @@ function IconBtn({
       disabled={disabled}
       title={label}
       aria-label={label}
-      className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all duration-200 active:scale-95 shrink-0 disabled:opacity-35 disabled:pointer-events-none"
+      className={`p-2 rounded-xl border transition-all duration-200 active:scale-95 shrink-0 disabled:opacity-35 disabled:pointer-events-none ${
+        premium
+          ? 'border-emerald-200/80 bg-gradient-to-br from-emerald-50 to-teal-50 text-emerald-700 hover:from-emerald-100 hover:to-teal-100 hover:border-emerald-300 shadow-sm shadow-emerald-200/40'
+          : 'border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+      }`}
     >
       {children}
     </button>
@@ -102,8 +108,17 @@ export default function EstimationDetailBottomBar({
               <IconBtn label="WhatsApp" onClick={onWhatsApp} disabled={isNew}>
                 <MessageCircle className="w-4 h-4 text-emerald-600" />
               </IconBtn>
-              <IconBtn label="Dokumen" onClick={onDocument} disabled={isNew}>
-                <FileText className="w-4 h-4" />
+              <IconBtn label="Dokumen" onClick={onDocument} disabled={isNew} premium>
+                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" aria-hidden>
+                  <path
+                    d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"
+                    stroke="currentColor"
+                    strokeWidth="1.75"
+                    strokeLinejoin="round"
+                  />
+                  <path d="M14 3v5h5" stroke="currentColor" strokeWidth="1.75" strokeLinejoin="round" />
+                  <path d="M9 13h6M9 17h4" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+                </svg>
               </IconBtn>
             </div>
 
