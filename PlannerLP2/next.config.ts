@@ -40,6 +40,9 @@ const nextConfig: NextConfig = {
   async rewrites() {
     const lp = landingBasePath;
     const spaRewrites = [
+      { source: "/icons/:path*", destination: `${plannerAppOrigin}/icons/:path*` },
+      { source: "/manifest.webmanifest", destination: `${plannerAppOrigin}/manifest.webmanifest` },
+      { source: "/sw.js", destination: `${plannerAppOrigin}/sw.js` },
       { source: "/app", destination: `${plannerAppOrigin}/app` },
       { source: "/app/:path*", destination: `${plannerAppOrigin}/app/:path*` },
       { source: "/login", destination: `${plannerAppOrigin}/login` },

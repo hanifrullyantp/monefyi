@@ -1,4 +1,6 @@
 /** Brand assets — Monefyi Estimator (logo hijau-hitam). */
+import { resolveSpaAssetUrl } from './spaAssets';
+
 export const ESTIMATOR_LOGO_SRC = '/icons/estimator/estimator-logo.png?v=2026-09-08';
 export const ESTIMATOR_FAVICON_SRC = '/icons/estimator/favicon.png?v=2026-09-08';
 export const ESTIMATOR_APPLE_ICON_SRC = '/icons/estimator/icon-180.png?v=2026-09-08';
@@ -24,8 +26,8 @@ export function applyEstimatorDocumentBrand(active: boolean): void {
   const theme = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
 
   if (active) {
-    if (icon) icon.href = ESTIMATOR_FAVICON_SRC;
-    if (apple) apple.href = ESTIMATOR_APPLE_ICON_SRC;
+    if (icon) icon.href = resolveSpaAssetUrl(ESTIMATOR_FAVICON_SRC);
+    if (apple) apple.href = resolveSpaAssetUrl(ESTIMATOR_APPLE_ICON_SRC);
     if (theme) theme.content = ESTIMATOR_THEME_COLOR;
     document.title = document.title.includes('Estimator')
       ? document.title
@@ -33,7 +35,7 @@ export function applyEstimatorDocumentBrand(active: boolean): void {
     return;
   }
 
-  if (icon) icon.href = '/icons/favicon.png?v=2026-08-13-m';
-  if (apple) apple.href = '/icons/icon-180.png?v=2026-08-13-m';
+  if (icon) icon.href = resolveSpaAssetUrl('/icons/favicon.png?v=2026-08-13-m');
+  if (apple) apple.href = resolveSpaAssetUrl('/icons/icon-180.png?v=2026-08-13-m');
   if (theme) theme.content = '#059669';
 }

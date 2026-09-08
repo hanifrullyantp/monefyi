@@ -29,6 +29,7 @@ import { useEntitlement } from '../hooks/useEntitlement';
 import UpgradeModal from './entitlement/UpgradeModal';
 import type { UpgradeModalTrigger } from '../types/entitlement';
 import { analytics } from '../lib/analytics/events';
+import { applyEstimatorDocumentBrand } from '../lib/estimatorBrand';
 import { isAdminFullAccess, canAccessPlannerNavModule, plannerNavModuleLabel, isEstimatorOnlyPlan, type PlannerNavModule } from '../lib/entitlement';
 
 interface LayoutProps {
@@ -80,6 +81,16 @@ export default function Layout({ children }: LayoutProps) {
   const isWorker = showWorkerShell(user?.role, platformRole, user?.email, uiViewMode);
   const canAccessHr = canAccessManagerFeatures(user?.role, platformRole, user?.email, uiViewMode);
   const isEstimatorShell = location.pathname.startsWith('/app/estimator');
+  const showEstimatorBrand =
+    isEstimatorShell || entitlement.isEstimator || estimatorOnly;
+
+  useEffect(() => {
+    if (entitlementLoading) return;
+    applyEstimatorDocumentBrand(showEstimatorBrand);
+    return () => {
+      if (showEstimatorBrand) applyEstimatorDocumentBrand(false);
+    };
+  }, [showEstimatorBrand, entitlementLoading]);
 
   const ownerMobileTabs = estimatorOnly
     ? [{ id: 'projects', label: 'Proyek', icon: FolderOpen }]
@@ -279,7 +290,7 @@ export default function Layout({ children }: LayoutProps) {
         {/* Logo + collapse + Monefyi AI */}
         <div className={`${navSidebarCollapsed ? 'px-2 py-3' : 'p-4'}`}>
           <div className={`flex items-center gap-2 ${navSidebarCollapsed ? 'flex-col' : ''}`}>
-            {isEstimatorShell ? (
+            {showEstimatorBrand ? (
               <EstimatorLogo className="rounded-xl object-contain shadow-md shrink-0 w-9 h-9" />
             ) : (
               <MonefyiLogo
@@ -293,9 +304,9 @@ export default function Layout({ children }: LayoutProps) {
                 <div className="font-black text-slate-900 text-sm leading-tight">Monefyi</div>
                 <div
                   className="text-xs font-semibold"
-                  style={{ color: isEstimatorShell ? '#76b82a' : MONEFYI_BRAND.dark }}
+                  style={{ color: showEstimatorBrand ? '#76b82a' : MONEFYI_BRAND.dark }}
                 >
-                  {isEstimatorShell ? 'Estimator' : 'Planner'}
+                  {showEstimatorBrand ? 'Estimator' : 'Planner'}
                 </div>
               </div>
             )}
@@ -423,7 +434,7 @@ export default function Layout({ children }: LayoutProps) {
             >
               <div className="p-6 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  {isEstimatorShell ? (
+                  {showEstimatorBrand ? (
                     <EstimatorLogo className="w-9 h-9 rounded-xl object-contain" />
                   ) : (
                     <MonefyiLogo className="w-9 h-9 rounded-xl object-contain" />
@@ -432,9 +443,9 @@ export default function Layout({ children }: LayoutProps) {
                     <div className="font-black text-slate-900">Monefyi</div>
                     <div
                       className="text-xs font-semibold"
-                      style={{ color: isEstimatorShell ? '#76b82a' : undefined }}
+                      style={{ color: showEstimatorBrand ? '#76b82a' : undefined }}
                     >
-                      {isEstimatorShell ? 'Estimator' : 'Planner'}
+                      {showEstimatorBrand ? 'Estimator' : 'Planner'}
                     </div>
                   </div>
                 </div>
@@ -487,12 +498,14 @@ export default function Layout({ children }: LayoutProps) {
               </div>
             </div>
             <div className="lg:hidden flex items-center gap-2">
-              {isEstimatorShell ? (
+              {showEstimatorBrand ? (
                 <EstimatorLogo className="w-7 h-7 rounded-lg object-contain" />
               ) : (
                 <MonefyiLogo className="w-7 h-7 rounded-lg object-contain" />
               )}
-              <span className="font-bold text-slate-900 text-sm">Monefyi</span>
+              <span className="font-bold text-slate-900 text-sm">
+                {showEstimatorBrand ? 'Estimator' : 'Monefyi'}
+              </span>
             </div>
           </div>
 
