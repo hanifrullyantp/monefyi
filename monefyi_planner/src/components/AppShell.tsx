@@ -15,12 +15,17 @@ import OnboardingChecklist from './OnboardingChecklist';
 import { useAppStore } from '../store/appStore';
 import { isSandboxFinance } from '../lib/financeVersion';
 import { showWorkerShell, canAccessManagerFeatures } from '../utils/platformUi';
+import { useEntitlement } from '../hooks/useEntitlement';
+import { isAdminFullAccess, isEstimatorOnlyPlan } from '../lib/entitlement';
+import PlannerModuleGuard from './entitlement/PlannerModuleGuard';
 
 function AppContent() {
   const { id: projectIdParam } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, activeTab, setOnline, setSyncStatus, setSelectedProjectId, setActiveTab, platformRole, uiViewMode, financeVersion } = useAppStore();
+  const { user, activeTab, setOnline, setSyncStatus, setSelectedProjectId, setActiveTab, platformRole, uiViewMode, financeVersion, entitlementPreviewMode } = useAppStore();
+  const entitlement = useEntitlement();
+  const adminFullAccess = isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode);
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -62,6 +67,25 @@ function AppContent() {
     }
   }, [activeTab, financeVersion, navigate]);
 
+  useEffect(() => {
+    if (isWorker || entitlement.isLoading || adminFullAccess) return;
+    if (!isEstimatorOnlyPlan(entitlement)) return;
+    const onProjects = activeTab === 'projects' || Boolean(projectIdParam);
+    if (!onProjects) {
+      setActiveTab('projects');
+      navigate('/app?tab=projects', { replace: true });
+    }
+  }, [
+    activeTab,
+    projectIdParam,
+    adminFullAccess,
+    entitlement,
+    entitlement.isLoading,
+    isWorker,
+    navigate,
+    setActiveTab,
+  ]);
+
   const renderPage = () => {
     if (isWorker) return <WorkerDashboard />;
     switch (activeTab) {
@@ -72,7 +96,7 @@ function AppContent() {
           <Projects
             initialProjectId={projectIdParam}
             onOpenProject={id => navigate(`/app/projects/${id}`)}
-            onCloseProject={() => navigate('/app')}
+            onCloseProject={() => navigate('/app?tab=projects')}
           />
         );
       case 'finance':
@@ -115,7 +139,9 @@ function AppContent() {
 function EstimatorShell() {
   return (
     <Layout>
-      <EstimatorRoutes />
+      <PlannerModuleGuard module="estimator">
+        <EstimatorRoutes />
+      </PlannerModuleGuard>
     </Layout>
   );
 }
@@ -123,7 +149,9 @@ function EstimatorShell() {
 function FinanceV2Shell() {
   return (
     <Layout>
-      <FinanceV2Routes />
+      <PlannerModuleGuard module="finance">
+        <FinanceV2Routes />
+      </PlannerModuleGuard>
     </Layout>
   );
 }
@@ -131,7 +159,9 @@ function FinanceV2Shell() {
 function DatabaseShell() {
   return (
     <Layout>
-      <DatabaseMaster />
+      <PlannerModuleGuard module="database">
+        <DatabaseMaster />
+      </PlannerModuleGuard>
     </Layout>
   );
 }

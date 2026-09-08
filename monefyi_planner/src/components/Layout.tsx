@@ -29,7 +29,7 @@ import { useEntitlement } from '../hooks/useEntitlement';
 import UpgradeModal from './entitlement/UpgradeModal';
 import type { UpgradeModalTrigger } from '../types/entitlement';
 import { analytics } from '../lib/analytics/events';
-import { isAdminFullAccess } from '../lib/entitlement';
+import { isAdminFullAccess, canAccessPlannerNavModule, plannerNavModuleLabel, isEstimatorOnlyPlan, type PlannerNavModule } from '../lib/entitlement';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -50,7 +50,9 @@ export default function Layout({ children }: LayoutProps) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeTrigger, setUpgradeTrigger] = useState<UpgradeModalTrigger>('pro_feature');
-  const { canAccessEstimator, canAccessFinance, isLoading: entitlementLoading } = useEntitlement();
+  const [upgradeFeatureName, setUpgradeFeatureName] = useState<string | undefined>();
+  const entitlement = useEntitlement();
+  const { isLoading: entitlementLoading } = entitlement;
 
   useEffect(() => {
     if (!user?.id) return;
@@ -74,17 +76,20 @@ export default function Layout({ children }: LayoutProps) {
   const { style: orgBrandStyle } = useOrgBrand(tenant?.brandColor);
   const isSuperAdmin = isPlatformAdmin(platformRole, user?.email);
   const adminFullAccess = isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode);
+  const estimatorOnly = !adminFullAccess && isEstimatorOnlyPlan(entitlement);
   const isWorker = showWorkerShell(user?.role, platformRole, user?.email, uiViewMode);
   const canAccessHr = canAccessManagerFeatures(user?.role, platformRole, user?.email, uiViewMode);
   const isEstimatorShell = location.pathname.startsWith('/app/estimator');
 
-  const ownerMobileTabs = [
-    { id: 'home', label: 'Home', icon: Home },
-    { id: 'estimator', label: 'Estimator', icon: Receipt },
-    { id: 'command', label: '✦', icon: Sparkles, special: true },
-    { id: 'finance', label: 'Finance', icon: Wallet },
-    ...(canAccessHr ? [{ id: 'hr', label: 'HR', icon: Users }] : []),
-  ];
+  const ownerMobileTabs = estimatorOnly
+    ? [{ id: 'projects', label: 'Proyek', icon: FolderOpen }]
+    : [
+      { id: 'home', label: 'Home', icon: Home },
+      { id: 'estimator', label: 'Estimator', icon: Receipt },
+      { id: 'command', label: '✦', icon: Sparkles, special: true },
+      { id: 'finance', label: 'Finance', icon: Wallet },
+      ...(canAccessHr ? [{ id: 'hr', label: 'HR', icon: Users }] : []),
+    ];
 
   const workerTabs = [
     { id: 'home', label: 'Home', icon: Home },
@@ -97,6 +102,9 @@ export default function Layout({ children }: LayoutProps) {
   const mobileTabs = isWorker ? workerTabs : ownerMobileTabs;
 
   const isTabActive = (tabId: string) => {
+    if (tabId === 'projects') {
+      return activeTab === 'projects' || location.pathname.startsWith('/app/projects/');
+    }
     if (tabId === 'estimator') return location.pathname.startsWith('/app/estimator');
     if (tabId === 'finance') {
       return activeTab === 'finance' || location.pathname.startsWith('/app/finance-v2');
@@ -135,15 +143,27 @@ export default function Layout({ children }: LayoutProps) {
 
   const navigationGuard = useUiStore(s => s.navigationGuard);
 
-  const openUpgrade = (trigger: UpgradeModalTrigger) => {
+  const openUpgrade = (trigger: UpgradeModalTrigger, featureName?: string) => {
     setUpgradeTrigger(trigger);
+    setUpgradeFeatureName(featureName);
     setUpgradeOpen(true);
   };
 
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ trigger?: UpgradeModalTrigger; featureName?: string }>).detail;
+      openUpgrade(detail?.trigger ?? 'pro_feature', detail?.featureName);
+    };
+    window.addEventListener('monefyi:open-upgrade', handler);
+    return () => window.removeEventListener('monefyi:open-upgrade', handler);
+  }, []);
+
   const isNavLocked = (tabId: string) => {
     if (adminFullAccess || entitlementLoading) return false;
-    if (tabId === 'estimator') return !canAccessEstimator;
-    if (tabId === 'finance') return !canAccessFinance;
+    const module = tabId as PlannerNavModule;
+    if (['home', 'projects', 'database', 'estimator', 'finance', 'hr'].includes(tabId)) {
+      return !canAccessPlannerNavModule(entitlement, module);
+    }
     return false;
   };
 
@@ -152,24 +172,30 @@ export default function Layout({ children }: LayoutProps) {
       const canLeave = await navigationGuard.promptLeave();
       if (!canLeave) return;
     }
-    if (tabId === 'estimator') {
-      if (!adminFullAccess && !canAccessEstimator) {
-        openUpgrade('estimator_paywall');
-        setSidebarOpen(false);
-        return;
+
+    const plannerModule = tabId as PlannerNavModule;
+    if (
+      !adminFullAccess
+      && ['home', 'projects', 'database', 'estimator', 'finance', 'hr'].includes(tabId)
+      && !canAccessPlannerNavModule(entitlement, plannerModule)
+    ) {
+      if (tabId === 'estimator' && !entitlement.isEstimator) {
+        openUpgrade('estimator_paywall', plannerNavModuleLabel(plannerModule));
+      } else {
+        analytics.proFeatureClicked({ featureName: plannerNavModuleLabel(plannerModule) });
+        openUpgrade('pro_feature', plannerNavModuleLabel(plannerModule));
       }
+      setSidebarOpen(false);
+      return;
+    }
+
+    if (tabId === 'estimator') {
       setActiveTab('estimator');
       navigate('/app/estimator');
     } else if (tabId === 'database') {
       setActiveTab('database');
       navigate('/app/database');
     } else if (tabId === 'finance') {
-      if (!adminFullAccess && !canAccessFinance) {
-        analytics.proFeatureClicked({ featureName: 'Keuangan Bisnis' });
-        openUpgrade('pro_feature');
-        setSidebarOpen(false);
-        return;
-      }
       setActiveTab('finance');
       navigate('/app/finance-v2');
     } else {
@@ -186,9 +212,21 @@ export default function Layout({ children }: LayoutProps) {
       const canLeave = await navigationGuard.promptLeave();
       if (!canLeave) return;
     }
+    if (estimatorOnly) {
+      openUpgrade('pro_feature', 'Pengaturan');
+      return;
+    }
     setActiveTab('settings');
     navigate(`/app?tab=settings&st=${st}`);
     setSidebarOpen(false);
+  };
+
+  const openCommandModal = () => {
+    if (estimatorOnly) {
+      openUpgrade('pro_feature', 'Monefyi AI');
+      return;
+    }
+    setCommandModalOpen(true);
   };
 
   const getSyncIndicator = () => {
@@ -280,7 +318,7 @@ export default function Layout({ children }: LayoutProps) {
 
           <button
             type="button"
-            onClick={() => setCommandModalOpen(true)}
+            onClick={openCommandModal}
             className={`mt-3 relative flex items-center justify-center shadow-md hover:opacity-95 transition-all ${
               navSidebarCollapsed
                 ? 'w-10 h-10 mx-auto rounded-xl'
@@ -566,7 +604,7 @@ export default function Layout({ children }: LayoutProps) {
               tab.special ? (
                 <button
                   key={tab.id}
-                  onClick={() => setCommandModalOpen(true)}
+                  onClick={openCommandModal}
                   className="relative -mt-6 flex flex-col items-center"
                 >
                   <div className="w-14 h-14 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-xl shadow-emerald-300/40 animate-breathe relative">
@@ -610,8 +648,11 @@ export default function Layout({ children }: LayoutProps) {
       <UpgradeModal
         open={upgradeOpen}
         trigger={upgradeTrigger}
-        featureName="Keuangan Bisnis"
-        onClose={() => setUpgradeOpen(false)}
+        featureName={upgradeFeatureName}
+        onClose={() => {
+          setUpgradeOpen(false);
+          setUpgradeFeatureName(undefined);
+        }}
         onManageProjects={() => navigate('/app?tab=projects')}
       />
     </div>

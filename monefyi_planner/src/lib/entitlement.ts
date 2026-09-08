@@ -242,3 +242,34 @@ export function isAdminFullAccess(
 ): boolean {
   return isPlatformAdmin(platformRole, email) && preview === 'full';
 }
+
+export type PlannerNavModule = 'home' | 'projects' | 'database' | 'estimator' | 'finance' | 'hr';
+
+/** Paket Estimator Basic/Pro — di Planner hanya modul proyek yang terbuka. */
+export function isEstimatorOnlyPlan(snapshot: Pick<EntitlementSnapshot, 'isEstimator'>): boolean {
+  return snapshot.isEstimator;
+}
+
+export function canAccessPlannerNavModule(
+  snapshot: EntitlementSnapshot,
+  module: PlannerNavModule,
+): boolean {
+  if (isEstimatorOnlyPlan(snapshot)) {
+    return module === 'projects';
+  }
+  if (module === 'estimator') return snapshot.canAccessEstimator;
+  if (module === 'finance') return snapshot.canAccessFinance;
+  return true;
+}
+
+export function plannerNavModuleLabel(module: PlannerNavModule): string {
+  switch (module) {
+    case 'home': return 'Dashboard';
+    case 'projects': return 'Proyek';
+    case 'database': return 'Database';
+    case 'estimator': return 'Estimator';
+    case 'finance': return 'Keuangan Bisnis';
+    case 'hr': return 'HR & Karyawan';
+    default: return 'Fitur Planner';
+  }
+}

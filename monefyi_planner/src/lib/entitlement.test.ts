@@ -3,6 +3,7 @@ import {
   buildEntitlementSnapshot,
   buildFullAccessEntitlement,
   buildPreviewEntitlement,
+  canAccessPlannerNavModule,
   canGenerateKwitansi,
   computeEstimatorProCheckoutAmount,
   ESTIMATOR_PRO_PRICE_IDR,
@@ -216,5 +217,30 @@ describe('entitlement - buildPreviewEntitlement', () => {
     expect(snap.canAccessFinance).toBe(true);
     expect(snap.isPro).toBe(true);
     expect(snap.maxActiveProjects).toBe(10);
+  });
+});
+
+describe('entitlement - canAccessPlannerNavModule', () => {
+  it('estimator basic/pro only allows projects nav', () => {
+    const basic = buildPreviewEntitlement('estimator_basic', 0, 1);
+    expect(canAccessPlannerNavModule(basic, 'projects')).toBe(true);
+    expect(canAccessPlannerNavModule(basic, 'home')).toBe(false);
+    expect(canAccessPlannerNavModule(basic, 'database')).toBe(false);
+    expect(canAccessPlannerNavModule(basic, 'estimator')).toBe(false);
+    expect(canAccessPlannerNavModule(basic, 'finance')).toBe(false);
+    expect(canAccessPlannerNavModule(basic, 'hr')).toBe(false);
+  });
+
+  it('planner pro allows dashboard and database', () => {
+    const pro = buildPreviewEntitlement('planner_pro', 0, 1);
+    expect(canAccessPlannerNavModule(pro, 'home')).toBe(true);
+    expect(canAccessPlannerNavModule(pro, 'database')).toBe(true);
+    expect(canAccessPlannerNavModule(pro, 'finance')).toBe(true);
+  });
+
+  it('free blocks estimator nav', () => {
+    const free = buildPreviewEntitlement('free', 0, 1);
+    expect(canAccessPlannerNavModule(free, 'estimator')).toBe(false);
+    expect(canAccessPlannerNavModule(free, 'home')).toBe(true);
   });
 });
