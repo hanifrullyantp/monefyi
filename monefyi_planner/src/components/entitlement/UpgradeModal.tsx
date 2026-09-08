@@ -2,10 +2,9 @@ import { useEffect } from 'react';
 import { Lock, Rocket, X } from 'lucide-react';
 import { redirectToCheckout } from '../../lib/checkout';
 import { analytics } from '../../lib/analytics/events';
-import { ESTIMATOR_PRO_PRICE_IDR, PRO_PRICE_MONTHLY_IDR, computeEstimatorProCheckoutAmount, isEstimatorProUpgrade } from '../../lib/entitlement';
+import { ESTIMATOR_PRO_PRICE_IDR, PRO_PRICE_MONTHLY_IDR, computeEstimatorProCheckoutAmount, isAdminFullAccess, isEstimatorProUpgrade } from '../../lib/entitlement';
 import { useAppStore } from '../../store/appStore';
 import { useEntitlement } from '../../hooks/useEntitlement';
-import { isPlatformAdmin } from '../../services/adminService';
 import type { UpgradeModalTrigger } from '../../types/entitlement';
 
 type Props = {
@@ -25,22 +24,22 @@ export default function UpgradeModal({
   onManageProjects,
   onConvertProject,
 }: Props) {
-  const { tenant, user, platformRole } = useAppStore();
+  const { tenant, user, platformRole, entitlementPreviewMode } = useAppStore();
   const entitlement = useEntitlement();
   const { estimatorCreditAvailable, estimatorCreditAmount } = entitlement;
   const proUpgrade = isEstimatorProUpgrade(entitlement);
   const proCheckoutAmount = computeEstimatorProCheckoutAmount(entitlement);
-  const isSuperAdmin = isPlatformAdmin(platformRole, user?.email);
+  const adminFullAccess = isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode);
 
   useEffect(() => {
-    if (open && isSuperAdmin) {
+    if (open && adminFullAccess) {
       onClose();
       return;
     }
     if (open) analytics.upgradeModalShown(trigger);
-  }, [open, trigger, isSuperAdmin, onClose]);
+  }, [open, trigger, adminFullAccess, onClose]);
 
-  if (!open || isSuperAdmin) return null;
+  if (!open || adminFullAccess) return null;
 
   const handleClose = () => {
     analytics.upgradeModalDismissed(trigger);

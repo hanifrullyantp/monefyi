@@ -30,6 +30,15 @@ export type UpgradeModalTrigger =
   | 'manual'
   | 'estimator_paywall';
 
+/** Super-admin preview: simulasi tier tanpa mengubah data org. */
+export type EntitlementPreviewMode =
+  | 'full'
+  | 'free'
+  | 'estimator_basic'
+  | 'estimator_pro'
+  | 'planner_pro'
+  | 'enterprise';
+
 export interface EntitlementSnapshot {
   tier: SubscriptionTier;
   canAccessEstimator: boolean;

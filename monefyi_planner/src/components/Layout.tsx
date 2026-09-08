@@ -13,6 +13,7 @@ import { showWorkerShell, canAccessManagerFeatures } from '../utils/platformUi';
 import CommandModal from './CommandModal';
 import NotificationPanel from './NotificationPanel';
 import PreviewModeMenu from './layout/PreviewModeMenu';
+import EntitlementPreviewPanel from './layout/EntitlementPreviewPanel';
 import { MonefyiLogo } from './MonefyiLogo';
 import { EstimatorLogo } from './EstimatorLogo';
 import ToastHost from './ToastHost';
@@ -28,6 +29,7 @@ import { useEntitlement } from '../hooks/useEntitlement';
 import UpgradeModal from './entitlement/UpgradeModal';
 import type { UpgradeModalTrigger } from '../types/entitlement';
 import { analytics } from '../lib/analytics/events';
+import { isAdminFullAccess } from '../lib/entitlement';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -40,7 +42,7 @@ export default function Layout({ children }: LayoutProps) {
     syncStatus, pendingSyncCount, isOnline, lastSynced, unreadCount, commandModalOpen,
     setCommandModalOpen, sidebarOpen, setSidebarOpen, navSidebarCollapsed, toggleNavSidebarCollapsed,
     rightPanelHidden, toggleRightPanelHidden,
-    platformRole, uiViewMode,
+    platformRole, uiViewMode, entitlementPreviewMode,
   } = useAppStore();
   const navigate = useNavigate();
   const location = useLocation();
@@ -71,6 +73,7 @@ export default function Layout({ children }: LayoutProps) {
 
   const { style: orgBrandStyle } = useOrgBrand(tenant?.brandColor);
   const isSuperAdmin = isPlatformAdmin(platformRole, user?.email);
+  const adminFullAccess = isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode);
   const isWorker = showWorkerShell(user?.role, platformRole, user?.email, uiViewMode);
   const canAccessHr = canAccessManagerFeatures(user?.role, platformRole, user?.email, uiViewMode);
   const isEstimatorShell = location.pathname.startsWith('/app/estimator');
@@ -138,7 +141,7 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   const isNavLocked = (tabId: string) => {
-    if (isSuperAdmin || entitlementLoading) return false;
+    if (adminFullAccess || entitlementLoading) return false;
     if (tabId === 'estimator') return !canAccessEstimator;
     if (tabId === 'finance') return !canAccessFinance;
     return false;
@@ -150,13 +153,18 @@ export default function Layout({ children }: LayoutProps) {
       if (!canLeave) return;
     }
     if (tabId === 'estimator') {
+      if (!adminFullAccess && !canAccessEstimator) {
+        openUpgrade('estimator_paywall');
+        setSidebarOpen(false);
+        return;
+      }
       setActiveTab('estimator');
       navigate('/app/estimator');
     } else if (tabId === 'database') {
       setActiveTab('database');
       navigate('/app/database');
     } else if (tabId === 'finance') {
-      if (!isSuperAdmin && !canAccessFinance) {
+      if (!adminFullAccess && !canAccessFinance) {
         analytics.proFeatureClicked({ featureName: 'Keuangan Bisnis' });
         openUpgrade('pro_feature');
         setSidebarOpen(false);
@@ -351,6 +359,10 @@ export default function Layout({ children }: LayoutProps) {
             </button>
           ))}
         </nav>
+
+        {isSuperAdmin && (
+          <EntitlementPreviewPanel collapsed={navSidebarCollapsed} />
+        )}
       </aside>
 
       {/* Mobile Sidebar Overlay */}
@@ -412,6 +424,8 @@ export default function Layout({ children }: LayoutProps) {
                   </button>
                 ))}
               </nav>
+
+              {isSuperAdmin && <EntitlementPreviewPanel />}
 
             </motion.aside>
           </>

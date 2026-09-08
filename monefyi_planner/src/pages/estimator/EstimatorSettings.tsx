@@ -4,13 +4,13 @@ import { ArrowLeft, Loader2, Rocket, Save } from 'lucide-react';
 import { redirectToCheckout } from '../../lib/checkout';
 import {
   computeEstimatorProCheckoutAmount,
+  isAdminFullAccess,
   isEstimatorProUpgrade,
 } from '../../lib/entitlement';
 import { useEntitlement } from '../../hooks/useEntitlement';
 import EstimatorOnboardingWizard from '../../components/estimator/EstimatorOnboardingWizard';
 import { resetEstimatorOnboarding } from '../../lib/estimatorOnboarding';
 import { useAppStore } from '../../store/appStore';
-import { isPlatformAdmin } from '../../services/adminService';
 import { useUiStore } from '../../store/uiStore';
 import ColorPickerField from '../../components/estimator/ColorPickerField';
 import EstimatorBreadcrumb from '../../components/estimator/EstimatorBreadcrumb';
@@ -29,10 +29,11 @@ import type { PdfTemplate } from '../../types/estimator';
 
 export default function EstimatorSettings() {
   const navigate = useNavigate();
-  const { tenant, user, platformRole } = useAppStore();
+  const { tenant, user, platformRole, entitlementPreviewMode } = useAppStore();
   const showToast = useUiStore(s => s.showToast);
   const entitlement = useEntitlement();
-  const showProUpgrade = !isPlatformAdmin(platformRole, user?.email) && isEstimatorProUpgrade(entitlement);
+  const showProUpgrade = !isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode)
+    && isEstimatorProUpgrade(entitlement);
   const proUpgradeAmount = computeEstimatorProCheckoutAmount(entitlement);
   const [settings, setSettings] = useState<PdfSettings | null>(null);
   const [waTemplate, setWaTemplate] = useState<WhatsAppTemplateConfig>(defaultWhatsAppTemplateConfig());

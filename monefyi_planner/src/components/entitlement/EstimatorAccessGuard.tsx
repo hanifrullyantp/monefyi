@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
-import { isPlatformAdmin } from '../../services/adminService';
+import { isAdminFullAccess } from '../../lib/entitlement';
 import { useEntitlement } from '../../hooks/useEntitlement';
 import EstimatorPaywall from './EstimatorPaywall';
 
@@ -11,8 +11,8 @@ type Props = {
 
 export default function EstimatorAccessGuard({ children }: Props) {
   const { canAccessEstimator, isLoading } = useEntitlement();
-  const { platformRole, user } = useAppStore();
-  if (isPlatformAdmin(platformRole, user?.email)) {
+  const { platformRole, user, entitlementPreviewMode } = useAppStore();
+  if (isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode)) {
     return <>{children}</>;
   }
 

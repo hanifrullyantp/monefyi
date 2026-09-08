@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildEntitlementSnapshot,
   buildFullAccessEntitlement,
+  buildPreviewEntitlement,
   canGenerateKwitansi,
   computeEstimatorProCheckoutAmount,
   ESTIMATOR_PRO_PRICE_IDR,
@@ -183,5 +184,37 @@ describe('entitlement - buildFullAccessEntitlement', () => {
     expect(isEstimatorProUpgrade(snap)).toBe(false);
     expect(canGenerateKwitansi(snap)).toBe(true);
     expect(snap.currentActiveProjects).toBe(12);
+  });
+});
+
+describe('entitlement - buildPreviewEntitlement', () => {
+  it('free blocks estimator and finance', () => {
+    const snap = buildPreviewEntitlement('free', 0, 1);
+    expect(snap.isFree).toBe(true);
+    expect(snap.canAccessEstimator).toBe(false);
+    expect(snap.canAccessFinance).toBe(false);
+    expect(snap.canCreateProject).toBe(false);
+  });
+
+  it('estimator basic allows estimator without kwitansi pro', () => {
+    const snap = buildPreviewEntitlement('estimator_basic', 0, 1);
+    expect(snap.canAccessEstimator).toBe(true);
+    expect(snap.canAccessFinance).toBe(false);
+    expect(snap.isEstimatorPro).toBe(false);
+    expect(canGenerateKwitansi(snap)).toBe(false);
+  });
+
+  it('estimator pro unlocks kwitansi', () => {
+    const snap = buildPreviewEntitlement('estimator_pro', 0, 1);
+    expect(snap.canAccessEstimator).toBe(true);
+    expect(snap.isEstimatorPro).toBe(true);
+    expect(canGenerateKwitansi(snap)).toBe(true);
+  });
+
+  it('planner pro unlocks finance', () => {
+    const snap = buildPreviewEntitlement('planner_pro', 2, 1);
+    expect(snap.canAccessFinance).toBe(true);
+    expect(snap.isPro).toBe(true);
+    expect(snap.maxActiveProjects).toBe(10);
   });
 });

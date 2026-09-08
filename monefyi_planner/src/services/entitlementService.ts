@@ -1,4 +1,4 @@
-import { buildEntitlementSnapshot, buildFullAccessEntitlement } from '../lib/entitlement';
+import { buildEntitlementSnapshot, buildFullAccessEntitlement, buildPreviewEntitlement, getStoredEntitlementPreview } from '../lib/entitlement';
 import { supabase } from '../lib/supabase';
 import type { EntitlementSnapshot, OrgSubscriptionRow } from '../types/entitlement';
 import { isActiveProjectStatus } from '../lib/entitlement';
@@ -73,7 +73,22 @@ export async function assertCanCreateProjectByEntitlement(
   orgPlan?: string | null,
 ): Promise<EntitlementSnapshot> {
   if (await currentSessionIsPlatformAdmin()) {
-    return buildFullAccessEntitlement();
+    const preview = getStoredEntitlementPreview();
+    if (preview === 'full') return buildFullAccessEntitlement();
+    const [activeProjectCount, memberCount] = await Promise.all([
+      countActiveProjects(orgId),
+      countActiveMembers(orgId),
+    ]);
+    const entitlement = buildPreviewEntitlement(preview, activeProjectCount, memberCount);
+    if (!entitlement.canCreateProject) {
+      if (entitlement.tier === 'free') {
+        throw new Error('Beli Estimator untuk membuat proyek pertama Anda.');
+      }
+      throw new Error(
+        `Kuota proyek aktif tercapai (${entitlement.currentActiveProjects}/${entitlement.maxActiveProjects}). Upgrade ke Planner Pro untuk lebih banyak proyek.`,
+      );
+    }
+    return entitlement;
   }
   const entitlement = await loadEntitlementSnapshot(orgId, orgPlan);
   if (!entitlement.canCreateProject) {

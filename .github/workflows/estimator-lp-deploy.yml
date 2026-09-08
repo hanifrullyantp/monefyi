@@ -42,6 +42,35 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: https://zzwqfmdyncxbolestkqp.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6d3FmbWR5bmN4Ym9sZXN0a3FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYzNDI3OTQsImV4cCI6MjA4MTkxODc5NH0.qtvqzDicRmIixFh3A46ExuitpAXDWaYHmB7NVBxsc7w
 
+      - name: Sync Vercel env (Supabase + Estimator)
+        if: github.ref == 'refs/heads/main'
+        working-directory: PlannerLP2
+        run: |
+          set -e
+          sync_env() {
+            local name="$1"
+            local value="$2"
+            local type_flag=(--type config)
+            if [[ "$name" != NEXT_PUBLIC_* ]]; then
+              type_flag=(--type secret)
+            fi
+            for env in production preview development; do
+              printf '%s' "$value" | npx vercel env add "$name" "$env" --force --yes "${type_flag[@]}" \
+                --token "$VERCEL_TOKEN" 2>/dev/null || true
+            done
+          }
+          sync_env ESTIMATOR_STANDALONE "true"
+          sync_env PLANNER_APP_ORIGIN "https://monefyi-planner.vercel.app"
+          sync_env NEXT_PUBLIC_PLANNER_APP_URL "https://estimator.monefyi.com"
+          sync_env NEXT_PUBLIC_LYNK_ESTIMATOR_STANDARD "http://lynk.id/asfin-ai/16w36xe7z3v1/checkout"
+          sync_env NEXT_PUBLIC_LYNK_ESTIMATOR_PRO "http://lynk.id/asfin-ai/qynky6065k37/checkout"
+          sync_env NEXT_PUBLIC_SUPABASE_URL "https://zzwqfmdyncxbolestkqp.supabase.co"
+          sync_env NEXT_PUBLIC_SUPABASE_ANON_KEY "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6d3FmbWR5bmN4Ym9sZXN0a3FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYzNDI3OTQsImV4cCI6MjA4MTkxODc5NH0.qtvqzDicRmIixFh3A46ExuitpAXDWaYHmB7NVBxsc7w"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_ESTIMATOR_LP_PROJECT_ID }}
+
       - name: Deploy to Vercel (estimator.monefyi.com)
         if: github.ref == 'refs/heads/main'
         run: npx vercel deploy --prod --yes --token "$VERCEL_TOKEN"

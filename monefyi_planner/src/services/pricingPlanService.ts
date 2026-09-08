@@ -1,6 +1,8 @@
 import { supabase } from '../lib/supabase';
 import { DEFAULT_PRICING_PLANS, normalizePlanSlug, type PricingPlan } from '../lib/pricingPlans';
+import { getStoredEntitlementPreview } from '../lib/entitlement';
 import { currentSessionIsPlatformAdmin } from './adminService';
+import { assertCanCreateProjectByEntitlement } from './entitlementService';
 
 function mapRow(row: Record<string, unknown>): PricingPlan {
   const features = row.features;
@@ -91,7 +93,11 @@ export async function countProjectsCreatedThisMonth(orgId: string): Promise<numb
 }
 
 export async function assertCanCreateProject(orgId: string, planType?: string): Promise<void> {
-  if (await currentSessionIsPlatformAdmin()) return;
+  if (await currentSessionIsPlatformAdmin()) {
+    if (getStoredEntitlementPreview() === 'full') return;
+    await assertCanCreateProjectByEntitlement(orgId, planType);
+    return;
+  }
   const plans = await loadPricingPlans(true);
   const slug = normalizePlanSlug(planType);
   const plan = plans.find(p => p.slug === slug) || plans.find(p => p.is_default) || DEFAULT_PRICING_PLANS[0];

@@ -1,4 +1,5 @@
-import type { EntitlementSnapshot, OrgSubscriptionRow, SubscriptionTier } from '../types/entitlement';
+import type { EntitlementSnapshot, EntitlementPreviewMode, OrgSubscriptionRow, SubscriptionTier } from '../types/entitlement';
+import { isPlatformAdmin } from '../services/adminService';
 
 export const ESTIMATOR_PRICE_IDR = 99_000;
 export const ESTIMATOR_PRO_PRICE_IDR = 199_000;
@@ -128,4 +129,116 @@ export function buildFullAccessEntitlement(
     isEnterprise: true,
     hasPaid: true,
   };
+}
+
+const PREVIEW_STORAGE_KEY = 'monefyi_entitlement_preview';
+
+export const ENTITLEMENT_PREVIEW_OPTIONS: Array<{
+  id: EntitlementPreviewMode;
+  label: string;
+  hint: string;
+}> = [
+  { id: 'full', label: 'Akses penuh', hint: 'Semua fitur — default admin' },
+  { id: 'free', label: 'Free', hint: 'Paywall estimator & finance' },
+  { id: 'estimator_basic', label: 'Estimator Basic', hint: '1 proyek, tanpa kwitansi pro' },
+  { id: 'estimator_pro', label: 'Estimator Pro', hint: '1 proyek + kwitansi & template' },
+  { id: 'planner_pro', label: 'Planner Pro', hint: 'Keuangan bisnis + 10 proyek' },
+  { id: 'enterprise', label: 'Enterprise', hint: 'Kuota besar + semua modul' },
+];
+
+export function getStoredEntitlementPreview(): EntitlementPreviewMode {
+  if (typeof sessionStorage === 'undefined') return 'full';
+  const v = sessionStorage.getItem(PREVIEW_STORAGE_KEY);
+  if (
+    v === 'free'
+    || v === 'estimator_basic'
+    || v === 'estimator_pro'
+    || v === 'planner_pro'
+    || v === 'enterprise'
+    || v === 'full'
+  ) {
+    return v;
+  }
+  return 'full';
+}
+
+export function persistEntitlementPreview(mode: EntitlementPreviewMode): void {
+  if (typeof sessionStorage !== 'undefined') {
+    sessionStorage.setItem(PREVIEW_STORAGE_KEY, mode);
+  }
+}
+
+function mockPreviewSubscription(
+  partial: Partial<OrgSubscriptionRow> & Pick<OrgSubscriptionRow, 'tier'>,
+): OrgSubscriptionRow {
+  return {
+    id: 'preview',
+    org_id: 'preview',
+    tier: partial.tier,
+    payment_provider: null,
+    external_payment_id: null,
+    amount_paid: null,
+    currency: 'IDR',
+    purchased_at: null,
+    activated_at: null,
+    expires_at: null,
+    estimator_credit_available: false,
+    estimator_credit_used_at: null,
+    estimator_credit_amount: 0,
+    max_active_projects: partial.max_active_projects
+      ?? (partial.tier === 'estimator' ? 1 : partial.tier === 'pro' ? 10 : partial.tier === 'enterprise' ? 999 : 0),
+    max_members: partial.max_members
+      ?? (partial.tier === 'pro' ? 5 : partial.tier === 'enterprise' ? 20 : 1),
+    metadata: null,
+    estimator_variant: partial.estimator_variant ?? null,
+    created_at: '',
+    updated_at: '',
+  };
+}
+
+/** Bangun snapshot entitlement untuk skenario preview super admin. */
+export function buildPreviewEntitlement(
+  mode: EntitlementPreviewMode,
+  activeProjectCount = 0,
+  memberCount = 1,
+): EntitlementSnapshot {
+  if (mode === 'full') return buildFullAccessEntitlement(activeProjectCount, memberCount);
+
+  const base = { activeProjectCount, memberCount, hasEstimations: false as boolean | undefined };
+
+  switch (mode) {
+    case 'free':
+      return buildEntitlementSnapshot({ ...base, subscription: null, orgPlan: null });
+    case 'estimator_basic':
+      return buildEntitlementSnapshot({
+        ...base,
+        subscription: mockPreviewSubscription({ tier: 'estimator', estimator_variant: 'standard' }),
+      });
+    case 'estimator_pro':
+      return buildEntitlementSnapshot({
+        ...base,
+        subscription: mockPreviewSubscription({ tier: 'estimator', estimator_variant: 'pro' }),
+      });
+    case 'planner_pro':
+      return buildEntitlementSnapshot({
+        ...base,
+        subscription: mockPreviewSubscription({ tier: 'pro', max_active_projects: 10, max_members: 5 }),
+      });
+    case 'enterprise':
+      return buildEntitlementSnapshot({
+        ...base,
+        subscription: mockPreviewSubscription({ tier: 'enterprise', max_active_projects: 999, max_members: 20 }),
+      });
+    default:
+      return buildFullAccessEntitlement(activeProjectCount, memberCount);
+  }
+}
+
+/** Admin dengan preview `full` saja yang melewati paywall/kuota. */
+export function isAdminFullAccess(
+  platformRole: string,
+  email: string | undefined,
+  preview: EntitlementPreviewMode = getStoredEntitlementPreview(),
+): boolean {
+  return isPlatformAdmin(platformRole, email) && preview === 'full';
 }

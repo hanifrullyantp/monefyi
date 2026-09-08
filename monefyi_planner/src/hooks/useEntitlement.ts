@@ -3,7 +3,7 @@ import { useAppStore } from '../store/appStore';
 import { isPlatformAdmin } from '../services/adminService';
 import { loadEntitlementSnapshot } from '../services/entitlementService';
 import type { EntitlementSnapshot } from '../types/entitlement';
-import { buildEntitlementSnapshot, buildFullAccessEntitlement } from '../lib/entitlement';
+import { buildEntitlementSnapshot, buildFullAccessEntitlement, buildPreviewEntitlement } from '../lib/entitlement';
 
 const EMPTY: EntitlementSnapshot = buildEntitlementSnapshot({
   subscription: null,
@@ -23,7 +23,9 @@ export function invalidateEntitlementCache(): void {
 }
 
 export function useEntitlement() {
-  const { tenant, user, platformRole, projects, authInitializing } = useAppStore();
+  const {
+    tenant, user, platformRole, projects, authInitializing, entitlementPreviewMode,
+  } = useAppStore();
   const [entitlement, setEntitlement] = useState<EntitlementSnapshot>(EMPTY);
   const [isLoading, setIsLoading] = useState(true);
   const loadingRef = useRef(false);
@@ -31,7 +33,10 @@ export function useEntitlement() {
   const refresh = useCallback(async () => {
     if (isPlatformAdmin(platformRole, user?.email)) {
       const activeCount = projects.filter(p => p.status !== 'archived' && p.status !== 'completed').length;
-      setEntitlement(buildFullAccessEntitlement(activeCount, 1));
+      const snap = entitlementPreviewMode === 'full'
+        ? buildFullAccessEntitlement(activeCount, 1)
+        : buildPreviewEntitlement(entitlementPreviewMode, activeCount, 1);
+      setEntitlement(snap);
       setIsLoading(false);
       return;
     }
@@ -71,7 +76,7 @@ export function useEntitlement() {
       loadingRef.current = false;
       setIsLoading(false);
     }
-  }, [tenant?.id, tenant?.plan, platformRole, user?.email, projects, authInitializing]);
+  }, [tenant?.id, tenant?.plan, platformRole, user?.email, projects, authInitializing, entitlementPreviewMode]);
 
   useEffect(() => {
     void refresh();

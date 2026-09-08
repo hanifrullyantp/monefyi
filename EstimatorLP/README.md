@@ -13,6 +13,8 @@ Domain khusus pelanggan **Monefyi Estimator**. Kode landing sama dengan [`Planne
 | `PLANNER_APP_ORIGIN` | `https://monefyi-planner.vercel.app` |
 | `NEXT_PUBLIC_LYNK_ESTIMATOR_STANDARD` | `http://lynk.id/asfin-ai/16w36xe7z3v1/checkout` |
 | `NEXT_PUBLIC_LYNK_ESTIMATOR_PRO` | `http://lynk.id/asfin-ai/qynky6065k37/checkout` |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://zzwqfmdyncxbolestkqp.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | *(anon key dari Supabase dashboard)* |
 
 ## GitHub Actions
 

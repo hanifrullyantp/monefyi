@@ -3,8 +3,10 @@ import { signOut as authSignOut } from '../services/authService';
 import { loadNotifications } from '../services/notificationService';
 import { loadProjects } from '../services/projectService';
 import type { FinanceVersion } from '../types/financeV2';
+import type { EntitlementPreviewMode } from '../types/entitlement';
 import type { MigrationFlags } from '../types/rpp';
 import { DEFAULT_MIGRATION_FLAGS } from '../types/rpp';
+import { getStoredEntitlementPreview, persistEntitlementPreview } from '../lib/entitlement';
 
 export type UserRole = 'owner' | 'admin' | 'manager' | 'staff' | 'worker';
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
@@ -124,6 +126,8 @@ interface AppState {
   emailVerified: boolean;
   platformRole: 'user' | 'admin';
   uiViewMode: 'auto' | 'owner' | 'worker';
+  /** Super admin: simulasi tier paket (sessionStorage). */
+  entitlementPreviewMode: EntitlementPreviewMode;
 
   syncStatus: SyncStatus;
   pendingSyncCount: number;
@@ -162,6 +166,7 @@ interface AppState {
   setEmailVerified: (val: boolean) => void;
   setPlatformRole: (role: 'user' | 'admin') => void;
   setUiViewMode: (mode: 'auto' | 'owner' | 'worker') => void;
+  setEntitlementPreviewMode: (mode: EntitlementPreviewMode) => void;
   setSyncStatus: (status: SyncStatus) => void;
   setPendingSyncCount: (count: number) => void;
   setOnline: (val: boolean) => void;
@@ -212,6 +217,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   uiViewMode: (typeof sessionStorage !== 'undefined'
     ? (sessionStorage.getItem('monefyi_ui_view_mode') as 'auto' | 'owner' | 'worker') || 'auto'
     : 'auto'),
+  entitlementPreviewMode: getStoredEntitlementPreview(),
 
   syncStatus: 'synced',
   pendingSyncCount: 0,
@@ -254,6 +260,13 @@ export const useAppStore = create<AppState>((set, get) => ({
       sessionStorage.setItem('monefyi_ui_view_mode', uiViewMode);
     }
     set({ uiViewMode });
+  },
+  setEntitlementPreviewMode: entitlementPreviewMode => {
+    persistEntitlementPreview(entitlementPreviewMode);
+    set({ entitlementPreviewMode });
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('monefyi:entitlement-invalidate'));
+    }
   },
   setSyncStatus: syncStatus => set({ syncStatus }),
   setPendingSyncCount: pendingSyncCount => set({ pendingSyncCount }),
