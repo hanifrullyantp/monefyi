@@ -2,6 +2,9 @@
 export function getPlannerAppOrigin(): string {
   const fromEnv = process.env.NEXT_PUBLIC_PLANNER_APP_URL?.replace(/\/$/, "");
   if (fromEnv) return fromEnv;
+  if (process.env.ESTIMATOR_STANDALONE === "true") {
+    return "https://estimator.monefyi.com";
+  }
   return "https://planner.monefyi.com";
 }
 

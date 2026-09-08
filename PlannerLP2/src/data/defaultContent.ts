@@ -557,8 +557,8 @@ Jika iya, saya jadwalkan survei pekan ini."`,
     subtitle:
       "Pilih paket Estimator yang sesuai dengan kebutuhan bisnismu. Berhenti menebak-nebak harga di depan klien.",
     lynkCheckoutUrls: {
-      estimator_standard: "",
-      estimator_pro: "",
+      estimator_standard: "http://lynk.id/asfin-ai/16w36xe7z3v1/checkout",
+      estimator_pro: "http://lynk.id/asfin-ai/qynky6065k37/checkout",
       planner_pro: "",
     },
     cards: [

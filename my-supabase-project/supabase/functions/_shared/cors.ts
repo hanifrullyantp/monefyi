@@ -9,6 +9,7 @@ const ALLOWED_ORIGINS = [
   "https://www.monefyi.com",
   "https://monefyi.com",
   "https://planner.monefyi.com",
+  "https://estimator.monefyi.com",
   "http://localhost:5500",
   "http://127.0.0.1:5500",
   "http://localhost:5173",

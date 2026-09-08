@@ -10,21 +10,23 @@ function resolveOrigin(
   return normalized.startsWith("http") ? normalized : `https://${normalized}`;
 }
 
-/** SPA backend (Vercel project monefyi-planner) — proxied as planner.monefyi.com/app */
+/** SPA backend (Vercel project monefyi-planner) — proxied as /app on public domain */
 const plannerAppOrigin = resolveOrigin(
   "PLANNER_APP_ORIGIN",
   "https://monefyi-planner.vercel.app",
 );
 
-/** Landing v1 backend — proxied as planner.monefyi.com/lp2 */
+/** Landing v1 backend — proxied as /lp2 (skipped when ESTIMATOR_STANDALONE=true) */
 const plannerLandingOrigin = resolveOrigin(
   "PLANNER_LANDING_ORIGIN",
   "https://planner-landing-henna.vercel.app",
 );
 
+const isEstimatorStandalone = process.env.ESTIMATOR_STANDALONE === "true";
+
 const publicPlannerUrl =
   process.env.NEXT_PUBLIC_PLANNER_APP_URL?.trim()?.replace(/\/$/, "") ||
-  "https://planner.monefyi.com";
+  (isEstimatorStandalone ? "https://estimator.monefyi.com" : "https://planner.monefyi.com");
 
 const landingBasePath = (process.env.PLANNER_LANDING_BASE_PATH || "/lp2").replace(/\/$/, "") || "/lp2";
 
@@ -37,9 +39,7 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     const lp = landingBasePath;
-    return [
-      { source: lp, destination: `${plannerLandingOrigin}${lp}` },
-      { source: `${lp}/:path*`, destination: `${plannerLandingOrigin}${lp}/:path*` },
+    const spaRewrites = [
       { source: "/app", destination: `${plannerAppOrigin}/app` },
       { source: "/app/:path*", destination: `${plannerAppOrigin}/app/:path*` },
       { source: "/login", destination: `${plannerAppOrigin}/login` },
@@ -53,6 +53,14 @@ const nextConfig: NextConfig = {
       { source: "/privacy", destination: `${plannerAppOrigin}/privacy` },
       { source: "/terms", destination: `${plannerAppOrigin}/terms` },
       { source: "/contact", destination: `${plannerAppOrigin}/contact` },
+    ];
+    if (isEstimatorStandalone) {
+      return spaRewrites;
+    }
+    return [
+      { source: lp, destination: `${plannerLandingOrigin}${lp}` },
+      { source: `${lp}/:path*`, destination: `${plannerLandingOrigin}${lp}/:path*` },
+      ...spaRewrites,
     ];
   },
 };

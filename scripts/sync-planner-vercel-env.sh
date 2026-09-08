@@ -89,14 +89,29 @@ sync_spa() {
     cd "$ROOT/monefyi_planner"
     add_env VITE_SUPABASE_URL "${NEXT_PUBLIC_SUPABASE_URL:-}"
     add_env VITE_SUPABASE_ANON_KEY "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}"
-    add_env VITE_LYNK_ESTIMATOR_STANDARD "${NEXT_PUBLIC_LYNK_ESTIMATOR_STANDARD:-}"
-    add_env VITE_LYNK_ESTIMATOR_PRO "${NEXT_PUBLIC_LYNK_ESTIMATOR_PRO:-}"
+    add_env VITE_LYNK_ESTIMATOR_STANDARD "${NEXT_PUBLIC_LYNK_ESTIMATOR_STANDARD:-http://lynk.id/asfin-ai/16w36xe7z3v1/checkout}"
+    add_env VITE_LYNK_ESTIMATOR_PRO "${NEXT_PUBLIC_LYNK_ESTIMATOR_PRO:-http://lynk.id/asfin-ai/qynky6065k37/checkout}"
     add_env VITE_LYNK_PLANNER_PRO "${NEXT_PUBLIC_LYNK_PLANNER_PRO:-}"
+  )
+}
+
+sync_estimator_lp() {
+  echo "==> estimator-lp (estimator.monefyi.com)"
+  (
+    cd "$ROOT/PlannerLP2"
+    add_env ESTIMATOR_STANDALONE "true"
+    add_env PLANNER_APP_ORIGIN "$PLANNER_APP_ORIGIN"
+    add_env NEXT_PUBLIC_PLANNER_APP_URL "${ESTIMATOR_SITE_URL:-https://estimator.monefyi.com}"
+    add_env NEXT_PUBLIC_SUPABASE_URL "${NEXT_PUBLIC_SUPABASE_URL:-}"
+    add_env NEXT_PUBLIC_SUPABASE_ANON_KEY "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}"
+    add_env NEXT_PUBLIC_LYNK_ESTIMATOR_STANDARD "${NEXT_PUBLIC_LYNK_ESTIMATOR_STANDARD:-http://lynk.id/asfin-ai/16w36xe7z3v1/checkout}"
+    add_env NEXT_PUBLIC_LYNK_ESTIMATOR_PRO "${NEXT_PUBLIC_LYNK_ESTIMATOR_PRO:-http://lynk.id/asfin-ai/qynky6065k37/checkout}"
   )
 }
 
 sync_landing_v1
 sync_landing_root
 sync_spa
+sync_estimator_lp
 
 echo "Done. Redeploy projects if env changed."

@@ -39,7 +39,14 @@ export function mergeSiteContent(raw: Partial<SiteContent> | null | undefined): 
             : defaultContent.hero.headlineAnimated.rotatingWords,
       },
     },
-    pricing: { ...defaultContent.pricing, ...(raw.pricing || {}) },
+    pricing: {
+      ...defaultContent.pricing,
+      ...(raw.pricing || {}),
+      lynkCheckoutUrls: {
+        ...defaultContent.pricing.lynkCheckoutUrls,
+        ...(raw.pricing?.lynkCheckoutUrls || {}),
+      },
+    },
     footer: { ...defaultContent.footer, ...(raw.footer || {}) },
     sectionOrder: resolveSectionOrder(raw.sectionOrder),
     sectionVisibility: {

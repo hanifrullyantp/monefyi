@@ -6,6 +6,8 @@ function moneyIDR(n: number): string {
 
 export type PurchaseEmailParams = {
   appUrl: string;
+  /** Full SPA base incl. /app — e.g. https://estimator.monefyi.com/app */
+  appBaseUrl?: string;
   name: string;
   planLabel: string;
   amount: number;
@@ -16,10 +18,12 @@ export type PurchaseEmailParams = {
 };
 
 export function purchaseEmailSubject(planLabel: string): string {
-  return `Pembayaran ${planLabel} berhasil — Monefyi Planner`;
+  return `Pembayaran ${planLabel} berhasil — Monefyi Estimator`;
 }
 
 export function purchaseEmailHtml(params: PurchaseEmailParams): string {
+  const appBase = (params.appBaseUrl || `${params.appUrl.replace(/\/$/, "")}/app`).replace(/\/$/, "");
+  const estimatorUrl = `${appBase}/estimator`;
   const intro = params.isNewUser
     ? "Akun Anda sudah dibuat. Atur password lalu masuk ke aplikasi."
     : "Pembayaran Anda sudah diproses. Login dengan email dan password yang sama.";
@@ -35,11 +39,11 @@ export function purchaseEmailHtml(params: PurchaseEmailParams): string {
       actionLabel: "Atur password & masuk",
       actionUrl: params.setupPasswordUrl,
     })
-    : `<a href="${params.appUrl}/app/estimator" style="display:inline-block;background:#059669;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0">Buka Monefyi Planner</a>`;
+    : `<a href="${estimatorUrl}" style="display:inline-block;background:#059669;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0">Buka Monefyi Estimator</a>`;
 
   return `<!DOCTYPE html><html><body style="font-family:sans-serif;background:#f8fafc;padding:24px">
 <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;padding:32px;border:1px solid #e2e8f0">
-  <p style="color:#6366f1;font-weight:bold;margin:0 0 8px">Monefyi Planner</p>
+  <p style="color:#6366f1;font-weight:bold;margin:0 0 8px">Monefyi Estimator</p>
   <h1 style="margin:0 0 12px;font-size:22px">Konfirmasi pembayaran</h1>
   <p style="color:#475569">Halo ${params.name || ""},</p>
   <p style="color:#475569">${intro}</p>
@@ -55,6 +59,8 @@ export function purchaseEmailHtml(params: PurchaseEmailParams): string {
 }
 
 export function purchaseEmailText(params: PurchaseEmailParams): string {
+  const appBase = (params.appBaseUrl || `${params.appUrl.replace(/\/$/, "")}/app`).replace(/\/$/, "");
+  const estimatorUrl = `${appBase}/estimator`;
   const lines = [
     `Konfirmasi pembayaran — ${params.planLabel}`,
     `Total: Rp ${moneyIDR(params.amount)}`,
@@ -64,7 +70,7 @@ export function purchaseEmailText(params: PurchaseEmailParams): string {
   if (params.isNewUser && params.setupPasswordUrl) {
     lines.push("", "Atur password:", params.setupPasswordUrl);
   } else {
-    lines.push("", `Buka aplikasi: ${params.appUrl}/app/estimator`);
+    lines.push("", `Buka aplikasi: ${estimatorUrl}`);
   }
   return lines.join("\n");
 }

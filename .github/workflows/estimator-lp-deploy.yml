@@ -1,0 +1,58 @@
+name: Deploy Estimator LP
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "PlannerLP2/**"
+      - "EstimatorLP/**"
+      - ".github/workflows/estimator-lp-deploy.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: PlannerLP2/package-lock.json
+
+      - name: Install
+        working-directory: PlannerLP2
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: PlannerLP2
+        run: npm run typecheck
+
+      - name: Build
+        working-directory: PlannerLP2
+        run: npm run build
+        env:
+          ADMIN_PASSWORD: ci-build-only
+          ESTIMATOR_STANDALONE: "true"
+          PLANNER_APP_ORIGIN: https://monefyi-planner.vercel.app
+          NEXT_PUBLIC_PLANNER_APP_URL: https://estimator.monefyi.com
+          NEXT_PUBLIC_LYNK_ESTIMATOR_STANDARD: http://lynk.id/asfin-ai/16w36xe7z3v1/checkout
+          NEXT_PUBLIC_LYNK_ESTIMATOR_PRO: http://lynk.id/asfin-ai/qynky6065k37/checkout
+          NEXT_PUBLIC_SUPABASE_URL: https://zzwqfmdyncxbolestkqp.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6d3FmbWR5bmN4Ym9sZXN0a3FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYzNDI3OTQsImV4cCI6MjA4MTkxODc5NH0.qtvqzDicRmIixFh3A46ExuitpAXDWaYHmB7NVBxsc7w
+
+      - name: Deploy to Vercel (estimator.monefyi.com)
+        if: github.ref == 'refs/heads/main'
+        run: npx vercel deploy --prod --yes --token "$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_ESTIMATOR_LP_PROJECT_ID }}
+          ESTIMATOR_STANDALONE: "true"
+          PLANNER_APP_ORIGIN: https://monefyi-planner.vercel.app
+          NEXT_PUBLIC_PLANNER_APP_URL: https://estimator.monefyi.com
+          NEXT_PUBLIC_LYNK_ESTIMATOR_STANDARD: http://lynk.id/asfin-ai/16w36xe7z3v1/checkout
+          NEXT_PUBLIC_LYNK_ESTIMATOR_PRO: http://lynk.id/asfin-ai/qynky6065k37/checkout
+          NEXT_PUBLIC_SUPABASE_URL: https://zzwqfmdyncxbolestkqp.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6d3FmbWR5bmN4Ym9sZXN0a3FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYzNDI3OTQsImV4cCI6MjA4MTkxODc5NH0.qtvqzDicRmIixFh3A46ExuitpAXDWaYHmB7NVBxsc7w

@@ -368,8 +368,13 @@ serve(async (req) => {
   const amount = Number(totals?.customerPay ?? totals?.grandTotal ?? totals?.totalPrice ?? 0) || 0;
 
   const mapped = mapProductFromPayload(item, custom, amount);
-  const appUrl = pickEnv("APP_URL", "https://planner.monefyi.com").replace(/\/$/, "");
-  const plannerAppUrl = pickEnv("PLANNER_APP_URL", `${appUrl}/app`).replace(/\/$/, "");
+  const plannerSiteUrl = pickEnv("APP_URL", "https://planner.monefyi.com").replace(/\/$/, "");
+  const estimatorSiteUrl = pickEnv("ESTIMATOR_SITE_URL", "https://estimator.monefyi.com").replace(/\/$/, "");
+  const plannerAppUrl = pickEnv("PLANNER_APP_URL", `${plannerSiteUrl}/app`).replace(/\/$/, "");
+  const estimatorAppUrl = pickEnv("ESTIMATOR_APP_URL", `${estimatorSiteUrl}/app`).replace(/\/$/, "");
+  const isEstimatorPurchase = mapped.tier === "estimator";
+  const siteUrl = isEstimatorPurchase ? estimatorSiteUrl : plannerSiteUrl;
+  const appBaseUrl = isEstimatorPurchase ? estimatorAppUrl : plannerAppUrl;
 
   let userId = custom.user_id || "";
   let isNewUser = false;
@@ -484,12 +489,13 @@ serve(async (req) => {
     setupPasswordUrl = await generateSetupPasswordUrl(
       supa,
       customerEmail,
-      `${plannerAppUrl}/estimator?payment=success`,
+      `${appBaseUrl}/estimator?payment=success`,
     );
   }
 
   const mailParams = {
-    appUrl,
+    appUrl: siteUrl,
+    appBaseUrl,
     name: customerName,
     planLabel: mapped.label,
     amount,

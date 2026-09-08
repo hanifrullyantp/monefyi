@@ -56,7 +56,7 @@ export function buildCheckoutUrl(
   }
 
   const returnUrl = options.returnUrl
-    ?? (typeof window !== 'undefined' ? window.location.href : 'https://planner.monefyi.com/app/estimator');
+    ?? (typeof window !== 'undefined' ? window.location.href : 'https://estimator.monefyi.com/app/estimator');
 
   const url = new URL(base);
   url.searchParams.set('org_id', options.orgId);
