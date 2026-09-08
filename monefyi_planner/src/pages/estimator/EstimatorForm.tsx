@@ -1,17 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  ClipboardList, Loader2, Plus,
-  User,
-} from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import EstimatorActionBar from '../../components/estimator/EstimatorActionBar';
 import EstimatorBreadcrumb from '../../components/estimator/EstimatorBreadcrumb';
-import StatusBadgeDropdown from '../../components/estimator/StatusBadgeDropdown';
+import EstimationDetailHeaderCard from '../../components/estimator/detail/EstimationDetailHeaderCard';
 import EstimationStatusHistory from '../../components/estimator/EstimationStatusHistory';
-import EstimatorActionsMenu from '../../components/estimator/EstimatorActionsMenu';
 import ConvertEstimationWizard from '../../components/estimator/ConvertEstimationWizard';
-import AutoSaveIndicator from '../../components/estimator/AutoSaveIndicator';
 import { useAutoSave } from '../../hooks/useAutoSave';
+import { useEstimationSummary } from '../../hooks/useEstimationSummary';
 import { useEstimationDraftHistory } from '../../hooks/useEstimationDraftHistory';
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
@@ -59,7 +55,6 @@ import type { EstimationStatusTimestamps } from '../../lib/estimationStatus';
 import type { UpgradeModalTrigger } from '../../types/entitlement';
 import { ESTIMATION_STATUS_LABEL } from '../../lib/estimatorFormat';
 import type { EstimationImageDraft, EstimationStatus, Estimation } from '../../types/estimator';
-import { formatRupiahFull } from '../../lib/estimatorFormat';
 import { calcEstimationSummary, countedEstimationItems } from '../../lib/estimatorCalc';
 import type { EstimationFormDraft } from '../../types/estimator';
 import { resolveEstimationProjectId } from '../../lib/estimationProjectLink';
@@ -94,6 +89,7 @@ export default function EstimatorForm() {
   const [waTemplate, setWaTemplate] = useState<WhatsAppTemplateConfig>(defaultWhatsAppTemplateConfig());
   const [pdfLoading, setPdfLoading] = useState(false);
   const [statusMeta, setStatusMeta] = useState<EstimationStatusTimestamps | null>(null);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [sentPromptOpen, setSentPromptOpen] = useState(false);
   const [statusChanging, setStatusChanging] = useState(false);
   const [convertOpen, setConvertOpen] = useState(false);
@@ -236,6 +232,7 @@ export default function EstimatorForm() {
             rejected_at: est.rejected_at ?? null,
             converted_at: est.converted_at ?? null,
           });
+          setUpdatedAt(est.updated_at ?? null);
           setConvertedProjectId(est.converted_project_id ?? null);
           if (est.converted_project_id) {
             const linked = useAppStore.getState().projects.find(p => p.id === est.converted_project_id);
@@ -281,16 +278,8 @@ export default function EstimatorForm() {
     return projects.find(p => p.id === linkedProjectId)?.name;
   }, [linkedProjectId, projects]);
 
-  const summaryTotal = useMemo(() => {
-    if (!draft) return 0;
-    return calcEstimationSummary(
-      countedEstimationItems(draft.items),
-      draft.overhead_pct,
-      draft.discount_pct,
-      draft.tax_pct,
-      { discountAmount: draft.discount_amount, adjustments: draft.adjustments },
-    ).grandTotal;
-  }, [draft]);
+  const { summary, countedItemCount } = useEstimationSummary(draft);
+  const summaryTotal = summary.grandTotal;
 
   const handleUndo = () => {
     setDraft(prev => draftHistory.undo(prev) ?? prev);
@@ -639,93 +628,32 @@ export default function EstimatorForm() {
         </div>
       )}
 
-      {/* Header card */}
-      <div className="rounded-2xl mb-4 shadow-xl shadow-emerald-900/20 border border-emerald-700/25">
-        <div className="relative bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-800 px-4 pt-4 pb-3 text-white rounded-2xl">
-          <div className="absolute inset-0 rounded-2xl bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.14),transparent_55%)] pointer-events-none" />
-          <div className="relative flex items-start gap-2">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                <span className="font-mono text-[11px] font-bold text-emerald-100/90 tracking-wide">{draft.code}</span>
-                {isNew ? (
-                  <span className="inline-flex text-[10px] px-2 py-0.5 rounded-full font-semibold bg-white/20 text-white backdrop-blur-sm">
-                    WA
-                  </span>
-                ) : (
-                  <StatusBadgeDropdown
-                    status={draft.status}
-                    onTransition={applyStatusTransition}
-                    disabled={statusChanging}
-                    variant="onDark"
-                  />
-                )}
-              </div>
-              <input
-                value={draft.title}
-                onChange={e => patch({ title: e.target.value })}
-                placeholder="Judul estimasi *"
-                disabled={isReadOnly}
-                className="w-full text-xl sm:text-2xl font-black bg-transparent border-0 border-b border-transparent hover:border-white/30 focus:border-white outline-none py-0.5 placeholder:text-emerald-100/60 disabled:opacity-70 text-white"
-              />
-            </div>
-            {!isNew && (
-              <EstimatorActionsMenu
-                status={draft.status}
-                convertedProjectId={convertedProjectId}
-                onConvert={handleOpenConvert}
-                onDuplicate={handleDuplicate}
-                onDelete={handleDelete}
-              />
-            )}
-          </div>
-
-          <div className="relative mt-3 pt-3 border-t border-white/15 space-y-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <button
-                type="button"
-                onClick={() => setDetailOpen(v => !v)}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors shrink-0 ${
-                  detailOpen ? 'bg-white/25 text-white' : 'text-emerald-100/90 hover:bg-white/10 hover:text-white'
-                }`}
-              >
-                <User className="w-3.5 h-3.5" />
-                Klien
-              </button>
-              <button
-                type="button"
-                onClick={() => setSummaryExpanded(v => !v)}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors shrink-0 ${
-                  summaryExpanded ? 'bg-white/25 text-white' : 'text-emerald-100/90 hover:bg-white/10 hover:text-white'
-                }`}
-              >
-                <ClipboardList className="w-3.5 h-3.5" />
-                Ringkasan
-              </button>
-              {!isNew && (
-                <div className="ml-auto shrink-0">
-                  <AutoSaveIndicator
-                    status={autoSave.status}
-                    onRetry={() => draftRef.current && autoSave.flush()}
-                    variant="light"
-                  />
-                </div>
-              )}
-            </div>
-            {!isReadOnly && (
-              <div className="flex justify-stretch sm:justify-end">
-                <button
-                  type="button"
-                  onClick={() => addItemRef.current?.()}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-bold bg-white text-emerald-700 hover:bg-emerald-50 shadow-lg shadow-emerald-950/25 transition-colors"
-                >
-                  <Plus className="w-4 h-4 shrink-0" />
-                  Tambah Rincian
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      {draft && (
+        <EstimationDetailHeaderCard
+          draft={draft}
+          summary={summary}
+          countedItemCount={countedItemCount}
+          isNew={isNew}
+          isReadOnly={isReadOnly}
+          statusChanging={statusChanging}
+          detailOpen={detailOpen}
+          summaryExpanded={summaryExpanded}
+          onToggleDetail={() => setDetailOpen(v => !v)}
+          onToggleSummary={() => setSummaryExpanded(v => !v)}
+          onTitleChange={title => patch({ title })}
+          onStatusTransition={applyStatusTransition}
+          onAddItem={() => addItemRef.current?.()}
+          onConvert={handleOpenConvert}
+          onDuplicate={handleDuplicate}
+          onDelete={handleDelete}
+          convertedProjectId={convertedProjectId}
+          linkedProjectName={linkedProjectName}
+          sentAt={statusMeta?.sent_at}
+          updatedAt={updatedAt}
+          autoSaveStatus={autoSave.status}
+          onRetryAutoSave={() => draftRef.current && autoSave.flush()}
+        />
+      )}
 
       {/* Panel detail — collapsible, di atas tabel tapi tidak di samping */}
       {detailOpen && (
@@ -965,9 +893,9 @@ export default function EstimatorForm() {
       )}
 
       <EstimationStickySummary
-        draft={draft}
-        expanded={summaryExpanded}
-        onToggleExpanded={() => setSummaryExpanded(v => !v)}
+        summary={summary}
+        summaryExpanded={summaryExpanded}
+        onOpenBreakdown={() => setSummaryExpanded(v => !v)}
         navSidebarCollapsed={navSidebarCollapsed}
       />
 

@@ -8,8 +8,9 @@ import {
   formatRupiahCompact,
   formatRupiahFull,
 } from '../../../lib/estimatorFormat';
+import { formatEstimationClientLine, estimationPdfMetaLabel } from '../../../lib/estimatorClientLine';
 import { normalizeEstimationStatus } from '../../../lib/estimationStatus';
-import type { Estimation, EstimationWorkflowStatus } from '../../../types/estimator';
+import type { Estimation } from '../../../types/estimator';
 
 type Props = {
   estimation: Estimation;
@@ -35,20 +36,6 @@ function cardKeyDown(e: KeyboardEvent, onOpen: () => void) {
   }
 }
 
-function clientLine(est: Estimation): string | null {
-  const name = est.customer_name?.trim();
-  const place = est.customer_address?.trim() || est.customer_phone?.trim();
-  if (!name && !place) return null;
-  if (name && place) return `${name} · ${place}`;
-  return name || place || null;
-}
-
-function pdfMetaLabel(est: Estimation): string {
-  if (est.sent_at) return 'PDF Sent';
-  if (normalizeEstimationStatus(est.status) === 'penawaran') return 'Penawaran';
-  return 'Draft';
-}
-
 export default function EstimationListCard({
   estimation: est,
   onOpen,
@@ -67,7 +54,7 @@ export default function EstimationListCard({
   const profit = Number(est.total_profit) || 0;
   const profitNegative = profit < 0;
   const isConverted = status === 'converted';
-  const client = clientLine(est);
+  const client = formatEstimationClientLine(est);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -165,7 +152,7 @@ export default function EstimationListCard({
           </span>
           <span className="flex items-center gap-1 truncate">
             <FileText size={12} className="shrink-0" aria-hidden />
-            {pdfMetaLabel(est)}
+            {estimationPdfMetaLabel(est.status, est.sent_at)}
           </span>
         </div>
         {!isConverted && (
