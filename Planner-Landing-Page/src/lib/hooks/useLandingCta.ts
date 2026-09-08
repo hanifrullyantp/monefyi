@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useAuthStore } from "@/lib/store/authStore";
 import { useUiStore } from "@/lib/store/uiStore";
-import { plannerAppPath } from "@/lib/config/plannerApp";
+import { plannerAppPath, plannerPaymentReturnPath } from "@/lib/config/plannerApp";
 import {
   getUpsellReason,
   isPlannerFeatureLocked,
@@ -90,7 +90,7 @@ export function useLandingCta() {
         orgId: resolvedOrgId,
         userId: user.id,
         email: user.email,
-        returnUrl: plannerAppPath("?payment=success"),
+        returnUrl: plannerPaymentReturnPath("app"),
       },
       lynkOverrides,
     );

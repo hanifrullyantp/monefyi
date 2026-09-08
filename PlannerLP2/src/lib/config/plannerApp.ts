@@ -41,6 +41,14 @@ export function plannerAppPath(path: string): string {
   return `${getPlannerAppOrigin()}${normalized}`;
 }
 
+/** URL redirect Lynk setelah pembayaran sukses (harus di bawah /app). */
+export function plannerPaymentReturnPath(
+  section: "estimator" | "app" = "estimator",
+): string {
+  const path = section === "app" ? "/app" : "/app/estimator";
+  return plannerAppPath(`${path}?payment=success`);
+}
+
 /** Navigasi penuh ke app (reload SPA) — dipakai setelah login dari landing. */
 export function navigateToPlannerApp(path = "/app"): void {
   if (typeof window === "undefined") return;

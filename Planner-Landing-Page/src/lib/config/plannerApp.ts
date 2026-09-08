@@ -10,3 +10,11 @@ export function plannerAppPath(path: string): string {
   const normalized = path.startsWith("/") ? path : `/${path}`;
   return `${base}${normalized}`;
 }
+
+/** URL redirect Lynk setelah pembayaran sukses (harus di bawah /app). */
+export function plannerPaymentReturnPath(
+  section: "estimator" | "app" = "estimator",
+): string {
+  const path = section === "app" ? "/app" : "/app/estimator";
+  return plannerAppPath(`${path}?payment=success`);
+}

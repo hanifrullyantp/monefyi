@@ -1,4 +1,4 @@
-import { plannerAppPath } from "@/lib/config/plannerApp";
+import { plannerPaymentReturnPath } from "@/lib/config/plannerApp";
 import type { LynkProduct } from "./products";
 
 export interface LynkCheckoutParams {
@@ -41,7 +41,7 @@ export function buildLynkCheckoutUrl(
 
   const returnUrl =
     params.returnUrl ??
-    plannerAppPath("/estimator?payment=success");
+    plannerPaymentReturnPath("estimator");
 
   const url = new URL(base);
   url.searchParams.set("org_id", params.orgId);
