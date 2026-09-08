@@ -13,6 +13,12 @@ export const metadata: Metadata = {
     "Saring lead WA, closing di tempat saat survei, dan kelola proyek sampai selesai. Sistem all-in-one untuk kontraktor, interior designer, kitchen set & furniture custom.",
   keywords:
     "sistem closing proyek, manajemen proyek kontraktor, interior designer app, kitchen set software, penawaran proyek",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Estimator",
+    statusBarStyle: "black-translucent",
+  },
   icons: {
     icon: [
       { url: ESTIMATOR_FAVICON_32, sizes: "32x32", type: "image/png" },

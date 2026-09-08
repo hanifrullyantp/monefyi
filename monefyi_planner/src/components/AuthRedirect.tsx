@@ -1,6 +1,8 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAppStore } from '../store/appStore';
 import { isPlatformAdmin } from '../services/adminService';
+import { estimatorAppEntryPath, initEstimatorPwaDocument } from '../lib/pwaBrand';
+import { isEstimatorBrandContext } from '../lib/estimatorBrand';
 
 const MEMBERSHIP_SETUP_PATHS = [
   '/signup/owner',
@@ -17,6 +19,8 @@ export default function AuthRedirect() {
   const location = useLocation();
   if (authInitializing) return null;
 
+  initEstimatorPwaDocument();
+
   if (isAuthenticated) {
     const onLanding = location.pathname === '/';
     const isAdmin = isPlatformAdmin(platformRole, user?.email);
@@ -30,11 +34,12 @@ export default function AuthRedirect() {
 
     const guestOnlyPaths = ['/', '/signup'];
     if (guestOnlyPaths.includes(location.pathname)) {
-      return <Navigate to="/app" replace />;
+      const dest = isEstimatorBrandContext() ? estimatorAppEntryPath() : '/app';
+      return <Navigate to={dest} replace />;
     }
 
     if (location.pathname === '/signup/owner' && hasMembership) {
-      return <Navigate to="/app" replace />;
+      return <Navigate to={isEstimatorBrandContext() ? estimatorAppEntryPath() : '/app'} replace />;
     }
   }
 

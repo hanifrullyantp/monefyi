@@ -11,10 +11,12 @@ import { LiveChatWidget } from "@/components/landing/LiveChatWidget";
 import { WhatsAppFloat } from "@/components/landing/WhatsAppFloat";
 import { MobileAdminToolbar } from "@/components/landing/MobileAdminToolbar";
 import { EditModeRedirect } from "@/components/landing/EditModeRedirect";
+import EstimatorPwaLaunchRedirect from "@/components/brand/EstimatorPwaLaunchRedirect";
 
 export default function LandingPage() {
   return (
     <>
+      <EstimatorPwaLaunchRedirect />
       <AuthHydrator />
       <ContentHydrator />
       <LoginRedirect />

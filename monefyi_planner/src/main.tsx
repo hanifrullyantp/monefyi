@@ -9,7 +9,9 @@ function ThemeInit() {
 }
 import AppRouter from './router';
 import { registerServiceWorker } from './lib/pwa';
+import { initEstimatorPwaDocument } from './lib/pwaBrand';
 
+initEstimatorPwaDocument();
 registerServiceWorker();
 
 createRoot(document.getElementById('root')!).render(

@@ -36,12 +36,22 @@ const nextConfig: NextConfig = {
   },
   env: {
     NEXT_PUBLIC_PLANNER_APP_URL: publicPlannerUrl,
+    NEXT_PUBLIC_ESTIMATOR_STANDALONE: isEstimatorStandalone ? 'true' : 'false',
   },
   async rewrites() {
     const lp = landingBasePath;
     const spaRewrites = [
       { source: "/icons/:path*", destination: `${plannerAppOrigin}/icons/:path*` },
-      { source: "/manifest.webmanifest", destination: `${plannerAppOrigin}/manifest.webmanifest` },
+      {
+        source: "/manifest.webmanifest",
+        destination: isEstimatorStandalone
+          ? `${plannerAppOrigin}/manifest-estimator.webmanifest`
+          : `${plannerAppOrigin}/manifest.webmanifest`,
+      },
+      {
+        source: "/manifest-estimator.webmanifest",
+        destination: `${plannerAppOrigin}/manifest-estimator.webmanifest`,
+      },
       { source: "/sw.js", destination: `${plannerAppOrigin}/sw.js` },
       { source: "/app", destination: `${plannerAppOrigin}/app` },
       { source: "/app/:path*", destination: `${plannerAppOrigin}/app/:path*` },
