@@ -1,11 +1,12 @@
-import { CalendarClock, CircleDollarSign, TrendingUp, Wallet } from 'lucide-react';
+import { CalendarClock, ChevronRight, CircleDollarSign, MessageCircle, TrendingUp, Wallet } from 'lucide-react';
 import { formatRupiahFull } from '../../../lib/estimatorFormat';
-import type { EstimationBillingSnapshot } from '../../../lib/estimationBillingSchedule';
+import type { BillingMilestone, EstimationBillingSnapshot } from '../../../lib/estimationBillingSchedule';
 
 type Props = {
   snapshot: EstimationBillingSnapshot;
   projectName?: string;
   linkedToProject: boolean;
+  onMilestoneClick?: (milestone: BillingMilestone) => void;
 };
 
 const STATUS_STYLES = {
@@ -20,7 +21,12 @@ const STATUS_LABELS = {
   pending: 'Belum',
 } as const;
 
-export default function EstimationPaymentDashboard({ snapshot, projectName, linkedToProject }: Props) {
+export default function EstimationPaymentDashboard({
+  snapshot,
+  projectName,
+  linkedToProject,
+  onMilestoneClick,
+}: Props) {
   const { contractTotal, totalReceived, remaining, progressPct, milestones, nextDue } = snapshot;
 
   return (
@@ -61,17 +67,22 @@ export default function EstimationPaymentDashboard({ snapshot, projectName, link
         </div>
 
         {nextDue && (
-          <div className="flex items-center gap-2 rounded-xl bg-white/10 border border-white/15 px-3 py-2.5">
+          <button
+            type="button"
+            onClick={() => onMilestoneClick?.(nextDue)}
+            className="w-full flex items-center gap-2 rounded-xl bg-white/10 border border-white/15 px-3 py-2.5 text-left hover:bg-white/15 transition-colors"
+          >
             <CalendarClock className="w-4 h-4 shrink-0 text-emerald-100" />
             <div className="min-w-0 flex-1">
               <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-100/80">
-                Tagihan berikutnya
+                Tagihan berikutnya · tap untuk tagih WA
               </p>
               <p className="text-sm font-bold truncate">
-                {nextDue.label} · {formatRupiahFull(Math.max(0, nextDue.amount - nextDue.paidAmount))}
+                {nextDue.label} · {formatRupiahFull(nextDue.dueAmount)}
               </p>
             </div>
-          </div>
+            <MessageCircle className="w-4 h-4 shrink-0 text-emerald-100" />
+          </button>
         )}
 
         <div className="rounded-xl bg-white/95 backdrop-blur-sm p-3 space-y-2">
@@ -81,31 +92,38 @@ export default function EstimationPaymentDashboard({ snapshot, projectName, link
           </div>
           <ul className="space-y-1.5">
             {milestones.map(m => (
-              <li
-                key={m.id}
-                className="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-2.5 py-2"
-              >
-                <CircleDollarSign className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-slate-800 truncate">{m.label}</p>
-                  <p className="text-[10px] text-slate-500 tabular-nums">
-                    {formatRupiahFull(m.amount)}
-                    {m.paidAmount > 0 && m.status !== 'paid' && (
-                      <> · terbayar {formatRupiahFull(m.paidAmount)}</>
-                    )}
-                  </p>
-                </div>
-                <span
-                  className={`shrink-0 text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border ${STATUS_STYLES[m.status]}`}
+              <li key={m.id}>
+                <button
+                  type="button"
+                  onClick={() => onMilestoneClick?.(m)}
+                  disabled={m.status === 'paid'}
+                  className="w-full flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-2.5 py-2 text-left hover:border-emerald-200 hover:bg-emerald-50/40 transition-colors disabled:opacity-60 disabled:pointer-events-none"
                 >
-                  {STATUS_LABELS[m.status]}
-                </span>
+                  <CircleDollarSign className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-slate-800 truncate">{m.label}</p>
+                    <p className="text-[10px] text-slate-500 tabular-nums">
+                      {formatRupiahFull(m.amount)}
+                      {m.paidAmount > 0 && m.status !== 'paid' && (
+                        <> · terbayar {formatRupiahFull(m.paidAmount)}</>
+                      )}
+                    </p>
+                  </div>
+                  <span
+                    className={`shrink-0 text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border ${STATUS_STYLES[m.status]}`}
+                  >
+                    {STATUS_LABELS[m.status]}
+                  </span>
+                  {m.status !== 'paid' && (
+                    <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                  )}
+                </button>
               </li>
             ))}
           </ul>
-          {!linkedToProject && (
-            <p className="text-[10px] text-slate-500 leading-relaxed pt-1">
-              Hubungkan ke proyek untuk mencatat pembayaran dan sinkron jadwal tagihan otomatis.
+          {linkedToProject && (
+            <p className="text-[10px] text-emerald-700 leading-relaxed pt-1">
+              Terhubung ke proyek — pembayaran tersinkron otomatis.
             </p>
           )}
         </div>

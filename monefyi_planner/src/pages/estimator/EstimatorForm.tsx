@@ -8,6 +8,7 @@ import EstimationDocumentMenu from '../../components/estimator/detail/Estimation
 import EstimationDocumentPreviewModal from '../../components/estimator/detail/EstimationDocumentPreviewModal';
 import type { DocumentType } from '../../components/estimator/detail/EstimationDocumentMenu';
 import type { WhatsAppEstimationPreset } from '../../lib/whatsappEstimationPresets';
+import type { BillingMilestone } from '../../lib/estimationBillingSchedule';
 import EstimatorBreadcrumb from '../../components/estimator/EstimatorBreadcrumb';
 import EstimationStatusHistory from '../../components/estimator/EstimationStatusHistory';
 import ConvertEstimationWizard from '../../components/estimator/ConvertEstimationWizard';
@@ -87,6 +88,7 @@ export default function EstimatorForm() {
   const [documentPreviewType, setDocumentPreviewType] = useState<DocumentType>('penawaran');
   const [waPickerOpen, setWaPickerOpen] = useState(false);
   const [waInitialPreset, setWaInitialPreset] = useState<WhatsAppEstimationPreset>('follow_up');
+  const [waTagihMilestone, setWaTagihMilestone] = useState<BillingMilestone | null>(null);
   const [kwitansiOpen, setKwitansiOpen] = useState(false);
   const [kwitansiLinkedIncome, setKwitansiLinkedIncome] = useState<ProjectIncome | null>(null);
   const [paymentsRefreshKey, setPaymentsRefreshKey] = useState(0);
@@ -202,7 +204,7 @@ export default function EstimatorForm() {
         if (isNew) {
           const code = await generateEstimationCode(tenant.id);
           setDraft({
-            ...newEstimationDraft(code),
+            ...newEstimationDraft(code, Number(settings.default_dp_pct) || 50),
             pdf_template: settings.default_pdf_template,
             pdf_primary_color: settings.primary_color,
             pdf_secondary_color: settings.secondary_color,
@@ -504,7 +506,15 @@ export default function EstimatorForm() {
 
   const handleShareWhatsApp = (preset: WhatsAppEstimationPreset = 'follow_up') => {
     if (!requireSaved()) return;
+    setWaTagihMilestone(null);
     setWaInitialPreset(preset);
+    setWaPickerOpen(true);
+  };
+
+  const handleTagihMilestone = (milestone: BillingMilestone) => {
+    if (!requireSaved()) return;
+    setWaTagihMilestone(milestone);
+    setWaInitialPreset('penagihan');
     setWaPickerOpen(true);
   };
 
@@ -699,7 +709,7 @@ export default function EstimatorForm() {
             className={`w-4 h-4 shrink-0 transition-transform duration-200 ${detailOpen ? 'rotate-180' : ''}`}
             aria-hidden
           />
-          Klien
+          Detail Project
         </button>
       )}
 
@@ -935,6 +945,9 @@ export default function EstimatorForm() {
         onSelect={handleSelectDocument}
         draft={draft}
         summary={summary}
+        billingConfig={draft.billing_config}
+        onBillingConfigChange={config => patch({ billing_config: config })}
+        onTagihMilestone={handleTagihMilestone}
         projectId={linkedProjectId}
         projectName={linkedProjectName}
         estimationId={id}
@@ -960,13 +973,17 @@ export default function EstimatorForm() {
       {waPickerOpen && pdfSettings && (
         <EstimationWhatsAppPickerModal
           open={waPickerOpen}
-          onClose={() => setWaPickerOpen(false)}
+          onClose={() => {
+            setWaPickerOpen(false);
+            setWaTagihMilestone(null);
+          }}
           draft={draft}
           settings={pdfSettings}
           projectName={estimationProjectName}
           estimationId={id}
           templateConfig={waTemplate}
           initialPreset={waInitialPreset}
+          tagihMilestone={waTagihMilestone}
           onToast={(msg, type) => showToast(msg, type)}
           onShared={scheduleSentPrompt}
         />

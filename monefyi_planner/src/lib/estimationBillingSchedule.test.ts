@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildEstimationBillingSnapshot } from './estimationBillingSchedule';
+import { defaultBillingMilestones, emptyBillingConfig, validateBillingMilestonePcts } from './estimationBillingConfig';
 import type { ProjectIncome } from '../services/estimationPaymentService';
 
 function income(partial: Partial<ProjectIncome> & Pick<ProjectIncome, 'amount' | 'category'>): ProjectIncome {
@@ -20,35 +21,56 @@ function income(partial: Partial<ProjectIncome> & Pick<ProjectIncome, 'amount' |
   };
 }
 
-describe('buildEstimationBillingSnapshot - contract with no payments', () => {
-  it('returns full remaining and pending milestones', () => {
-    const snap = buildEstimationBillingSnapshot(10_000_000, []);
-    expect(snap.totalReceived).toBe(0);
-    expect(snap.remaining).toBe(10_000_000);
-    expect(snap.progressPct).toBe(0);
-    expect(snap.nextDue?.id).toBe('dp');
-    expect(snap.milestones.every(m => m.status === 'pending')).toBe(true);
+describe('defaultBillingMilestones - 50% DP default', () => {
+  it('splits remainder across termin and pelunasan', () => {
+    const ms = defaultBillingMilestones(50);
+    const total = ms.filter(m => m.enabled).reduce((s, m) => s + m.pct, 0);
+    expect(ms[0].pct).toBe(50);
+    expect(total).toBe(100);
   });
 });
 
-describe('buildEstimationBillingSnapshot - partial DP paid', () => {
-  it('marks DP partial and sets progress', () => {
-    const snap = buildEstimationBillingSnapshot(10_000_000, [
-      income({ amount: 1_500_000, category: 'dp' }),
-    ]);
-    expect(snap.totalReceived).toBe(1_500_000);
-    expect(snap.progressPct).toBe(15);
+describe('validateBillingMilestonePcts', () => {
+  it('flags over 100%', () => {
+    const ms = defaultBillingMilestones(60);
+    ms[1].pct = 50;
+    const v = validateBillingMilestonePcts(ms);
+    expect(v.isOver).toBe(true);
+  });
+});
+
+describe('buildEstimationBillingSnapshot - local payments', () => {
+  it('tracks DP partial without project', () => {
+    const config = emptyBillingConfig(50);
+    config.payments.push({
+      id: 'p1',
+      milestone_key: 'dp',
+      date: '2026-08-01',
+      amount: 2_500_000,
+    });
+    const snap = buildEstimationBillingSnapshot(10_000_000, config, []);
+    expect(snap.contractTotal).toBe(10_000_000);
+    expect(snap.milestones[0].paidAmount).toBe(2_500_000);
     expect(snap.milestones[0].status).toBe('partial');
-    expect(snap.nextDue?.id).toBe('dp');
+    expect(snap.progressPct).toBe(25);
   });
 });
 
-describe('buildEstimationBillingSnapshot - DP fully paid', () => {
-  it('marks DP paid and next due termin', () => {
-    const snap = buildEstimationBillingSnapshot(10_000_000, [
-      income({ amount: 3_000_000, category: 'dp' }),
+describe('buildEstimationBillingSnapshot - billing discount', () => {
+  it('reduces contract total', () => {
+    const config = emptyBillingConfig(50);
+    config.billing_discount_amount = 1_000_000;
+    const snap = buildEstimationBillingSnapshot(10_000_000, config, []);
+    expect(snap.contractTotal).toBe(9_000_000);
+  });
+});
+
+describe('buildEstimationBillingSnapshot - project payments merge', () => {
+  it('marks DP paid from project income', () => {
+    const config = emptyBillingConfig(50);
+    const snap = buildEstimationBillingSnapshot(10_000_000, config, [
+      income({ amount: 5_000_000, category: 'dp' }),
     ]);
     expect(snap.milestones[0].status).toBe('paid');
-    expect(snap.nextDue?.id).toBe('termin');
   });
 });

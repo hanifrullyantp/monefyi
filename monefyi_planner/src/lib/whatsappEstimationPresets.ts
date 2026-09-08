@@ -1,5 +1,6 @@
 import { calcEstimationSummary, countedEstimationItems } from './estimatorCalc';
 import { formatRupiahFull } from './estimatorFormat';
+import type { BillingMilestone } from './estimationBillingSchedule';
 import {
   buildWhatsAppQuotationMessage,
   type WhatsAppTemplateConfig,
@@ -62,7 +63,34 @@ export function buildWhatsAppPenagihanMessage(
     `Berikut reminder pembayaran untuk proyek *${draft.title.trim() || draft.code}*.`,
     `Total penawaran: *${formatRupiahFull(summary.grandTotal)}*`,
     '',
-    'Silakan konfirmasi jadwal pembayaran DP/Termin/Pelunasan. Kwitansi terlampir jika diperlukan.',
+    'Silakan konfirmasi jadwal pembayaran DP/Termin/Pelunasan. Bukti pembayaran terlampir jika diperlukan.',
+    '',
+    settings.company_name || '',
+    settings.company_tagline || '',
+  ].filter(Boolean).join('\n').trim();
+}
+
+/** Pesan penagihan spesifik per milestone jadwal tagihan. */
+export function buildWhatsAppMilestoneTagihMessage(
+  draft: EstimationFormDraft,
+  settings: PdfSettings,
+  milestone: BillingMilestone,
+  salutation = 'Pak',
+): string {
+  const name = draft.customer_name.trim() || 'Bapak/Ibu';
+  const sal = salutation.trim();
+  const greeting = sal ? `${sal} ${name}` : name;
+  const due = Math.max(0, milestone.dueAmount);
+  return [
+    `Halo ${greeting},`,
+    '',
+    `Reminder pembayaran *${milestone.label}* untuk proyek *${draft.title.trim() || draft.code}*.`,
+    `Nominal tagihan: *${formatRupiahFull(due)}*`,
+    milestone.status === 'partial'
+      ? `(Sudah terbayar ${formatRupiahFull(milestone.paidAmount)} dari ${formatRupiahFull(milestone.amount)})`
+      : '',
+    '',
+    'Mohon konfirmasi jadwal transfer. Bukti pembayaran akan kami kirim setelah diterima.',
     '',
     settings.company_name || '',
     settings.company_tagline || '',

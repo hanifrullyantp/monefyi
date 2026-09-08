@@ -94,6 +94,7 @@ export interface Estimation {
   rejected_at: string | null;
   converted_at: string | null;
   converted_project_id: string | null;
+  billing_config?: EstimationBillingConfig | Record<string, unknown> | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -106,6 +107,34 @@ export interface EstimationAdjustment {
   label: string;
   /** Nominal positif — dikurangkan dari subtotal penawaran. */
   amount: number;
+}
+
+export type BillingMilestoneKey = 'dp' | 'termin_1' | 'termin_2' | 'termin_3' | 'pelunasan';
+
+export interface BillingMilestoneConfig {
+  key: BillingMilestoneKey;
+  label: string;
+  pct: number;
+  enabled: boolean;
+}
+
+export interface EstimationLocalPayment {
+  id: string;
+  milestone_key: BillingMilestoneKey;
+  date: string;
+  amount: number;
+  payment_method?: string | null;
+  note?: string;
+}
+
+/** Konfigurasi tagihan & pembayaran lokal per estimasi (tanpa wajib proyek). */
+export interface EstimationBillingConfig {
+  milestones: BillingMilestoneConfig[];
+  /** Potongan / diskon khusus kontrak tagihan (Rp). */
+  billing_discount_amount: number;
+  /** Catatan bonus untuk klien (tidak mengurangi tagihan). */
+  billing_bonus_note: string;
+  payments: EstimationLocalPayment[];
 }
 
 /** Draft row for the editable items table (may lack id until saved). */
@@ -172,6 +201,7 @@ export interface EstimationFormDraft {
   pdf_show_signature: boolean;
   images: EstimationImageDraft[];
   items: EstimationItemDraft[];
+  billing_config: EstimationBillingConfig;
 }
 
 export const PDF_TEMPLATE_OPTIONS: Array<{ value: PdfTemplate; label: string; desc: string }> = [

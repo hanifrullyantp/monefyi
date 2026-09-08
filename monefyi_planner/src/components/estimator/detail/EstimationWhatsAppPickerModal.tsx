@@ -4,12 +4,12 @@ import type { EstimationFormDraft } from '../../../types/estimator';
 import type { PdfSettings } from '../../../types/pdfSettings';
 import type { WhatsAppTemplateConfig } from '../../../lib/whatsappQuotationMessage';
 import { openWhatsAppChat } from '../../../lib/whatsappQuotationMessage';
-import {
-  buildWhatsAppPresetMessage,
+import { buildWhatsAppMilestoneTagihMessage, buildWhatsAppPresetMessage,
   WHATSAPP_PRESET_ATTACHMENTS,
   WHATSAPP_PRESET_LABELS,
   type WhatsAppEstimationPreset,
 } from '../../../lib/whatsappEstimationPresets';
+import type { BillingMilestone } from '../../../lib/estimationBillingSchedule';
 import { analytics } from '../../../lib/analytics/events';
 import { generateQuotationPdfBlob, quotationPdfFilename } from '../../../lib/pdf/generateQuotationPdf';
 import {
@@ -30,6 +30,7 @@ type Props = {
   estimationId?: string;
   templateConfig: WhatsAppTemplateConfig;
   initialPreset?: WhatsAppEstimationPreset;
+  tagihMilestone?: BillingMilestone | null;
   onToast: (msg: string, type: 'success' | 'error') => void;
   onShared?: () => void;
 };
@@ -45,6 +46,7 @@ export default function EstimationWhatsAppPickerModal({
   estimationId,
   templateConfig,
   initialPreset,
+  tagihMilestone,
   onToast,
   onShared,
 }: Props) {
@@ -68,13 +70,22 @@ export default function EstimationWhatsAppPickerModal({
     setPhoneOverride(draft.customer_phone || '');
     setAttachFile(WHATSAPP_PRESET_ATTACHMENTS[p] !== 'none');
     setCopied(false);
-    setMessage(buildWhatsAppPresetMessage(p, draft, settings, templateConfig, salutation, subtitle));
-  }, [open, draft, settings, templateConfig, initialPreset]);
+    const sal = (templateConfig.defaultSalutation as Salutation) || 'Pak';
+    if (p === 'penagihan' && tagihMilestone) {
+      setMessage(buildWhatsAppMilestoneTagihMessage(draft, settings, tagihMilestone, sal));
+    } else {
+      setMessage(buildWhatsAppPresetMessage(p, draft, settings, templateConfig, sal, templateConfig.defaultSubtitle || ''));
+    }
+  }, [open, draft, settings, templateConfig, initialPreset, tagihMilestone]);
 
   useEffect(() => {
     if (!open) return;
-    setMessage(buildWhatsAppPresetMessage(preset, draft, settings, templateConfig, salutation, subtitle));
-  }, [open, preset, salutation, subtitle, draft, settings, templateConfig]);
+    if (preset === 'penagihan' && tagihMilestone) {
+      setMessage(buildWhatsAppMilestoneTagihMessage(draft, settings, tagihMilestone, salutation));
+    } else {
+      setMessage(buildWhatsAppPresetMessage(preset, draft, settings, templateConfig, salutation, subtitle));
+    }
+  }, [open, preset, salutation, subtitle, draft, settings, templateConfig, tagihMilestone]);
 
   if (!open) return null;
 

@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { buildStatusUpdatePayload, isStatusTransitionAllowed, normalizeEstimationStatus } from '../lib/estimationStatus';
+import { billingConfigToDb, emptyBillingConfig, normalizeBillingConfig } from '../lib/estimationBillingConfig';
 import { calcEstimationSummary, countedEstimationItems, normalizeEstimationItem } from '../lib/estimatorCalc';
 import { nextEstimationCode } from '../lib/estimatorFormat';
 import { emptyImageDrafts, hydrateImageDrafts, imagesToDbFields } from './estimationImageService';
@@ -177,6 +178,7 @@ export async function createEstimation(
       pdf_template: draft.pdf_template,
       pdf_primary_color: draft.pdf_primary_color || null,
       pdf_secondary_color: draft.pdf_secondary_color || null,
+      billing_config: billingConfigToDb(draft.billing_config),
       created_by: userId,
       ...imagesToDbFields(draft.images),
       ...header,
@@ -229,6 +231,7 @@ export async function updateEstimation(
       pdf_template: draft.pdf_template,
       pdf_primary_color: draft.pdf_primary_color || null,
       pdf_secondary_color: draft.pdf_secondary_color || null,
+      billing_config: billingConfigToDb(draft.billing_config),
       updated_at: new Date().toISOString(),
       ...imagesToDbFields(draft.images),
       ...header,
@@ -314,6 +317,10 @@ export async function duplicateEstimation(
     pdf_show_bank: true,
     pdf_show_signature: true,
     images: emptyImageDrafts(),
+    billing_config: {
+      ...normalizeBillingConfig(source.billing_config),
+      payments: [],
+    },
     items: (source.items || []).map((item, idx) => ({
       pricelist_item_id: item.pricelist_item_id,
       name: item.name,
@@ -363,6 +370,7 @@ export async function estimationToFormDraft(est: Estimation): Promise<Estimation
     pdf_show_bank: true,
     pdf_show_signature: true,
     images,
+    billing_config: normalizeBillingConfig(est.billing_config),
     items: (est.items || []).map(item =>
       normalizeEstimationItem({
         id: item.id,
@@ -388,7 +396,7 @@ export async function estimationToFormDraft(est: Estimation): Promise<Estimation
   };
 }
 
-export function newEstimationDraft(code: string): EstimationFormDraft {
+export function newEstimationDraft(code: string, defaultDpPct = 50): EstimationFormDraft {
   return {
     code,
     title: '',
@@ -413,6 +421,7 @@ export function newEstimationDraft(code: string): EstimationFormDraft {
     pdf_show_bank: true,
     pdf_show_signature: true,
     images: emptyImageDrafts(),
+    billing_config: emptyBillingConfig(defaultDpPct),
     items: [],
   };
 }

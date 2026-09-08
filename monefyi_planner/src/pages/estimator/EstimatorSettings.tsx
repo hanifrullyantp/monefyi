@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Rocket, Save } from 'lucide-react';
+import { ArrowLeft, Loader2, List, Rocket, Save } from 'lucide-react';
 import { redirectToCheckout } from '../../lib/checkout';
 import {
   computeEstimatorProCheckoutAmount,
@@ -24,6 +24,7 @@ import {
 } from '../../services/quotationTemplateService';
 import type { WhatsAppTemplateConfig } from '../../lib/whatsappQuotationMessage';
 import { PDF_TEMPLATE_OPTIONS } from '../../types/estimator';
+import { defaultBillingMilestones } from '../../lib/estimationBillingConfig';
 import type { PdfSettings } from '../../types/pdfSettings';
 import type { PdfTemplate } from '../../types/estimator';
 
@@ -40,6 +41,7 @@ export default function EstimatorSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'company' | 'whatsapp' | 'billing' | 'tools'>('company');
 
   const load = useCallback(async () => {
     if (!tenant?.id) return;
@@ -87,6 +89,7 @@ export default function EstimatorSettings() {
         accent_color: settings.accent_color,
         default_pdf_template: settings.default_pdf_template,
         footer_text: settings.footer_text,
+        default_dp_pct: settings.default_dp_pct ?? 50,
       });
       await saveWhatsAppTemplate(tenant.id, waTemplate);
       setSettings(updated);
@@ -188,8 +191,32 @@ export default function EstimatorSettings() {
         </button>
       </div>
 
+      <div className="flex gap-1 overflow-x-auto mb-6 pb-1 -mx-1 px-1">
+        {([
+          ['company', 'Perusahaan & PDF'],
+          ['whatsapp', 'WhatsApp'],
+          ['billing', 'Pembayaran'],
+          ['tools', 'Pricelist & Lainnya'],
+        ] as const).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setActiveTab(id)}
+            className={`shrink-0 px-3 py-2 rounded-xl text-xs font-bold transition-colors ${
+              activeTab === id
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-4">
+        {activeTab === 'company' && (
+        <>
         <Section title="Identitas Perusahaan">
           <Field label="Nama perusahaan" value={settings.company_name || ''} onChange={v => patch({ company_name: v })} />
           <Field label="Tagline" value={settings.company_tagline || ''} onChange={v => patch({ company_tagline: v })} />
@@ -235,6 +262,30 @@ export default function EstimatorSettings() {
           </div>
         </Section>
 
+        <Section title="Warna & Template PDF">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <ColorPickerField label="Primary" value={settings.primary_color} onChange={v => patch({ primary_color: v })} />
+            <ColorPickerField label="Secondary" value={settings.secondary_color} onChange={v => patch({ secondary_color: v })} />
+            <ColorPickerField label="Accent" value={settings.accent_color} onChange={v => patch({ accent_color: v })} />
+          </div>
+          <label className="block">
+            <span className="text-xs text-slate-500">Template default</span>
+            <select
+              value={settings.default_pdf_template}
+              onChange={e => patch({ default_pdf_template: e.target.value as PdfTemplate })}
+              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+            >
+              {PDF_TEMPLATE_OPTIONS.map(t => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
+          </label>
+          <Field label="Footer text" value={settings.footer_text} onChange={v => patch({ footer_text: v })} />
+        </Section>
+        </>
+        )}
+
+        {activeTab === 'whatsapp' && (
         <Section title="Template WhatsApp Penawaran">
           <p className="text-xs text-slate-500">
             Placeholder:
@@ -277,53 +328,91 @@ export default function EstimatorSettings() {
             Reset template default
           </button>
         </Section>
+        )}
 
-        <Section title="Warna & Template PDF">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <ColorPickerField label="Primary" value={settings.primary_color} onChange={v => patch({ primary_color: v })} />
-            <ColorPickerField label="Secondary" value={settings.secondary_color} onChange={v => patch({ secondary_color: v })} />
-            <ColorPickerField label="Accent" value={settings.accent_color} onChange={v => patch({ accent_color: v })} />
-          </div>
+        {activeTab === 'billing' && (
+        <Section title="Default Jadwal Tagihan">
+          <p className="text-xs text-slate-500">
+            Persentase DP default untuk estimasi baru. Termin & pelunasan dihitung otomatis dari sisa.
+          </p>
           <label className="block">
-            <span className="text-xs text-slate-500">Template default</span>
-            <select
-              value={settings.default_pdf_template}
-              onChange={e => patch({ default_pdf_template: e.target.value as PdfTemplate })}
-              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
-            >
-              {PDF_TEMPLATE_OPTIONS.map(t => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
+            <span className="text-xs text-slate-500">DP default ({Math.round(settings.default_dp_pct ?? 50)}%)</span>
+            <input
+              type="range"
+              min={10}
+              max={80}
+              step={5}
+              value={settings.default_dp_pct ?? 50}
+              onChange={e => patch({ default_dp_pct: Number(e.target.value) })}
+              className="w-full mt-2"
+            />
+            <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+              <span>10%</span>
+              <span>50%</span>
+              <span>80%</span>
+            </div>
           </label>
-          <Field label="Footer text" value={settings.footer_text} onChange={v => patch({ footer_text: v })} />
+          <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 space-y-1">
+            <p className="text-[10px] font-bold text-slate-500 uppercase">Preview pembagian</p>
+            {defaultBillingMilestones(settings.default_dp_pct ?? 50)
+              .filter(m => m.enabled)
+              .map(m => (
+                <div key={m.key} className="flex justify-between text-xs text-slate-700">
+                  <span>{m.label}</span>
+                  <span className="font-bold tabular-nums">{m.pct}%</span>
+                </div>
+              ))}
+          </div>
+          <p className="text-[10px] text-slate-500">
+            Setiap estimasi bisa menyesuaikan jadwal tagihan per proyek di halaman Dokumen & Pembayaran.
+          </p>
         </Section>
+        )}
+
+        {activeTab === 'tools' && (
+        <>
+        <Section title="Pricelist">
+          <p className="text-xs text-slate-500 mb-3">Kelola harga master material, upah, dan jasa.</p>
+          <button
+            type="button"
+            onClick={() => navigate('/app/estimator/pricelist')}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border border-slate-200 hover:bg-slate-50"
+          >
+            <List className="w-4 h-4" />
+            Buka Pricelist
+          </button>
+        </Section>
+        <section className="bg-white border border-slate-200 rounded-2xl p-4">
+          <h3 className="text-xs font-bold text-slate-500 uppercase mb-1">Onboarding Estimator</h3>
+          <p className="text-xs text-slate-500 mb-3">
+            Ulangi wizard setup identitas dan pricelist jika perlu.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              if (!user?.id) return;
+              resetEstimatorOnboarding(user.id);
+              setOnboardingOpen(true);
+            }}
+            className="px-4 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 text-slate-700 hover:bg-slate-50"
+          >
+            Buka Ulang Onboarding
+          </button>
+        </section>
+        </>
+        )}
         </div>
+        {(activeTab === 'company') && (
+        <>
         <div className="hidden lg:block">
           <PdfPreviewCard settings={settings} />
         </div>
         <div className="lg:hidden">
           <PdfPreviewCard settings={settings} />
         </div>
+        </>
+        )}
       </div>
-
-      <section className="mt-6 bg-white border border-slate-200 rounded-2xl p-4">
-        <h3 className="text-sm font-bold text-slate-800 mb-1">Onboarding Estimator</h3>
-        <p className="text-xs text-slate-500 mb-3">
-          Ulangi wizard setup identitas dan pricelist jika perlu.
-        </p>
-        <button
-          type="button"
-          onClick={() => {
-            if (!user?.id) return;
-            resetEstimatorOnboarding(user.id);
-            setOnboardingOpen(true);
-          }}
-          className="px-4 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 text-slate-700 hover:bg-slate-50"
-        >
-          🔄 Buka Ulang Onboarding
-        </button>
-      </section>
 
       {onboardingOpen && tenant?.id && user?.id && (
         <EstimatorOnboardingWizard

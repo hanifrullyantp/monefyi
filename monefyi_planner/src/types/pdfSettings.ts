@@ -21,6 +21,8 @@ export interface PdfSettings {
   accent_color: string;
   default_pdf_template: PdfTemplate;
   footer_text: string;
+  /** Default persentase DP untuk jadwal tagihan baru. */
+  default_dp_pct?: number;
   created_at: string;
   updated_at: string;
 }

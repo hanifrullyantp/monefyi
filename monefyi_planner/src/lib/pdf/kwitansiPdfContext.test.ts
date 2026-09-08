@@ -6,6 +6,7 @@ import {
   type KwitansiPdfInput,
 } from './kwitansiPdfContext';
 import { buildKwitansiPdfInputFromDraft } from './generateKwitansiPdf';
+import { emptyBillingConfig } from '../estimationBillingConfig';
 import type { EstimationFormDraft } from '../../types/estimator';
 import type { PdfSettings } from '../../types/pdfSettings';
 
@@ -33,6 +34,7 @@ const baseDraft: EstimationFormDraft = {
   pdf_show_bank: true,
   pdf_show_signature: true,
   images: [],
+  billing_config: emptyBillingConfig(50),
   items: [{
     name: 'Renovasi KM',
     category: 'Renovasi',

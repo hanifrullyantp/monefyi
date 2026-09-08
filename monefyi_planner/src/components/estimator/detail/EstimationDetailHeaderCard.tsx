@@ -87,14 +87,14 @@ export default function EstimationDetailHeaderCard({
               onChange={e => onTitleChange(e.target.value)}
               placeholder="Nama proyek *"
               disabled={isReadOnly}
-              className="w-full text-xl font-black bg-transparent border-0 border-b border-transparent hover:border-white/30 focus:border-white outline-none py-0.5 placeholder:text-emerald-100/60 disabled:opacity-70 text-white"
+              className="w-full text-xl font-black bg-transparent border-0 border-b border-transparent hover:border-white/30 focus:border-white outline-none py-0.5 placeholder:text-white/50 disabled:opacity-70 text-white caret-white [&:-webkit-autofill]:shadow-[inset_0_0_0px_1000px_rgb(16,185,129)] [&:-webkit-autofill]:[-webkit-text-fill-color:white]"
             />
             <input
               value={draft.customer_name}
               onChange={e => onClientNameChange(e.target.value)}
               placeholder="Nama klien"
               disabled={isReadOnly}
-              className="mt-1.5 w-full text-sm font-medium bg-transparent border-0 border-b border-transparent hover:border-white/25 focus:border-white/50 outline-none py-0.5 placeholder:text-emerald-100/50 disabled:opacity-70 text-emerald-50"
+              className="mt-1.5 w-full text-sm font-medium bg-transparent border-0 border-b border-transparent hover:border-white/30 focus:border-white/70 outline-none py-0.5 placeholder:text-white/45 disabled:opacity-70 text-white/95 caret-white [&:-webkit-autofill]:shadow-[inset_0_0_0px_1000px_rgb(16,185,129)] [&:-webkit-autofill]:[-webkit-text-fill-color:white]"
             />
           </div>
           <div className="flex items-center gap-1 shrink-0">

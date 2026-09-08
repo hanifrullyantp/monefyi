@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2, Search, Settings } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
 import EstimationKanbanView from '../../components/estimator/EstimationKanbanView';
@@ -404,6 +404,7 @@ export default function EstimatorListPage() {
           totalCount={listStats.total}
           activeOffers={listStats.activeOffers}
           onCreate={goNew}
+          onOpenSettings={() => navigate('/app/estimator/settings')}
         />
       </div>
 
@@ -415,6 +416,14 @@ export default function EstimatorListPage() {
             {listStats.total} estimasi · {listStats.activeOffers} penawaran aktif
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => navigate('/app/estimator/settings')}
+          className="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-emerald-700 transition-colors"
+          aria-label="Pengaturan estimator"
+        >
+          <Settings className="w-4 h-4" />
+        </button>
         <button
           type="button"
           onClick={goNew}

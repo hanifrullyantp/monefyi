@@ -6,6 +6,7 @@ import {
   WHATSAPP_PRESET_ATTACHMENTS,
 } from './whatsappEstimationPresets';
 import { defaultWhatsAppTemplateConfig } from '../services/quotationTemplateService';
+import { emptyBillingConfig } from './estimationBillingConfig';
 import type { EstimationFormDraft } from '../types/estimator';
 import type { PdfSettings } from '../types/pdfSettings';
 
@@ -33,6 +34,7 @@ const draft: EstimationFormDraft = {
   pdf_show_bank: true,
   pdf_show_signature: true,
   images: [],
+  billing_config: emptyBillingConfig(50),
   items: [{
     name: 'Lemari',
     category: 'material',

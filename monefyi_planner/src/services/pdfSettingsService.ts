@@ -24,6 +24,7 @@ export function defaultPdfSettings(orgId: string, companyName: string): Omit<Pdf
     accent_color: '#10b981',
     default_pdf_template: 'modern',
     footer_text: 'Terima kasih atas kepercayaan Anda',
+    default_dp_pct: 50,
   };
 }
 

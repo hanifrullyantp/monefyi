@@ -349,7 +349,7 @@ export default function EstimationItemsTable({
                   rowMuted ? 'border-slate-200 bg-slate-50/80 opacity-80' : 'border-slate-200 bg-white'
                 }`}
               >
-                <div className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] gap-1.5 items-start min-w-0">
+                <div className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto_auto] gap-1.5 items-start min-w-0">
                   <input
                     type="checkbox"
                     checked={item.included !== false}
@@ -366,6 +366,16 @@ export default function EstimationItemsTable({
                   <div className="text-xs font-black text-slate-900 tabular-nums shrink-0 max-w-[5.5rem] truncate text-right">
                     {formatRupiahFull(netSelling)}
                   </div>
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      onClick={() => removeRow(idx)}
+                      className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 shrink-0"
+                      aria-label="Hapus item"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => toggleRowExpanded(idx)}
@@ -377,7 +387,7 @@ export default function EstimationItemsTable({
                   </button>
                 </div>
 
-                <div className="grid grid-cols-[3.25rem_2.75rem_minmax(0,1fr)_2rem] gap-1 items-center mt-2 pl-5 min-w-0">
+                <div className="grid grid-cols-[3.25rem_2.75rem_minmax(0,1fr)] gap-1.5 items-center mt-2 pl-5 min-w-0">
                   <QtyInput
                     value={item.qty}
                     onChange={v => updateItem(idx, { qty: v }, 'qty')}
@@ -396,16 +406,6 @@ export default function EstimationItemsTable({
                     title="Jual / unit"
                     className="min-w-0 w-full px-1.5 py-1 border border-emerald-200 bg-emerald-50/50 rounded-lg text-right text-[11px] font-semibold tabular-nums focus:border-emerald-400 outline-none"
                   />
-                  {!readOnly && (
-                    <button
-                      type="button"
-                      onClick={() => removeRow(idx)}
-                      className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 justify-self-end"
-                      aria-label="Hapus item"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
                 </div>
 
                 {rowExpanded && (
