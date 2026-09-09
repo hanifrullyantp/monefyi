@@ -38,7 +38,7 @@ import type { WhatsAppTemplateConfig } from '../../lib/whatsappQuotationMessage'
 import { uploadPendingImages } from '../../services/estimationImageService';
 import { downloadQuotationPdf } from '../../lib/pdf/generateQuotationPdf';
 import { loadPdfSettings } from '../../services/pdfSettingsService';
-import type { PdfSettings } from '../../types/pdfSettings';
+import { displayOptionsFromDraft, type PdfSettings } from '../../types/pdfSettings';
 import {
   createEstimation,
   countEstimationsInLast30Days,
@@ -88,6 +88,7 @@ export default function EstimatorForm() {
   const [documentPreviewType, setDocumentPreviewType] = useState<DocumentType>('penawaran');
   const [waPickerOpen, setWaPickerOpen] = useState(false);
   const [waInitialPreset, setWaInitialPreset] = useState<WhatsAppEstimationPreset>('follow_up');
+  const [waAttachDocument, setWaAttachDocument] = useState<DocumentType | null>(null);
   const [waTagihMilestone, setWaTagihMilestone] = useState<BillingMilestone | null>(null);
   const [kwitansiOpen, setKwitansiOpen] = useState(false);
   const [kwitansiLinkedIncome, setKwitansiLinkedIncome] = useState<ProjectIncome | null>(null);
@@ -206,6 +207,7 @@ export default function EstimatorForm() {
           setDraft({
             ...newEstimationDraft(code, Number(settings.default_dp_pct) || 50),
             pdf_template: settings.default_pdf_template,
+            pdf_invoice_template: settings.default_invoice_template || settings.default_pdf_template,
             pdf_primary_color: settings.primary_color,
             pdf_secondary_color: settings.secondary_color,
           });
@@ -223,6 +225,7 @@ export default function EstimatorForm() {
             pdf_primary_color: est.pdf_primary_color || settings.primary_color,
             pdf_secondary_color: est.pdf_secondary_color || settings.secondary_color,
             pdf_template: est.pdf_template || settings.default_pdf_template,
+            pdf_invoice_template: est.pdf_invoice_template || settings.default_invoice_template || settings.default_pdf_template,
           };
           setDraft(loadedDraft);
           draftHistory.resetHistory();
@@ -484,11 +487,7 @@ export default function EstimatorForm() {
       await downloadQuotationPdf(
         draft,
         pdfSettings,
-        {
-          showImages: draft.pdf_show_images,
-          showBank: draft.pdf_show_bank,
-          showSignature: draft.pdf_show_signature,
-        },
+        displayOptionsFromDraft(draft),
         estimationProjectName,
       );
       analytics.estimationPdfDownloaded({
@@ -506,6 +505,7 @@ export default function EstimatorForm() {
 
   const handleShareWhatsApp = (preset: WhatsAppEstimationPreset = 'follow_up') => {
     if (!requireSaved()) return;
+    setWaAttachDocument(null);
     setWaTagihMilestone(null);
     setWaInitialPreset(preset);
     setWaPickerOpen(true);
@@ -513,6 +513,7 @@ export default function EstimatorForm() {
 
   const handleTagihMilestone = (milestone: BillingMilestone) => {
     if (!requireSaved()) return;
+    setWaAttachDocument(null);
     setWaTagihMilestone(milestone);
     setWaInitialPreset('penagihan');
     setWaPickerOpen(true);
@@ -530,17 +531,21 @@ export default function EstimatorForm() {
 
   const handleDocumentEdit = (type: DocumentType) => {
     setDocumentPreviewOpen(false);
-    if (type === 'penawaran') {
-      setPdfDesignOpen(true);
-      setDetailOpen(true);
-    } else {
+    if (type === 'kwitansi') {
       void handleOpenKwitansi();
+      return;
     }
+    setPdfDesignOpen(true);
+    setDetailOpen(true);
   };
 
   const handleDocumentWhatsApp = (type: DocumentType) => {
     setDocumentPreviewOpen(false);
-    handleShareWhatsApp(type === 'penawaran' ? 'penawaran' : 'penagihan');
+    if (!requireSaved()) return;
+    setWaAttachDocument(type);
+    setWaTagihMilestone(null);
+    setWaInitialPreset(type === 'penawaran' ? 'penawaran' : 'penagihan');
+    setWaPickerOpen(true);
   };
 
   const handleOpenKwitansi = async (linkedIncome?: ProjectIncome) => {
@@ -976,6 +981,7 @@ export default function EstimatorForm() {
           onClose={() => {
             setWaPickerOpen(false);
             setWaTagihMilestone(null);
+            setWaAttachDocument(null);
           }}
           draft={draft}
           settings={pdfSettings}
@@ -984,6 +990,7 @@ export default function EstimatorForm() {
           templateConfig={waTemplate}
           initialPreset={waInitialPreset}
           tagihMilestone={waTagihMilestone}
+          attachDocument={waAttachDocument}
           onToast={(msg, type) => showToast(msg, type)}
           onShared={scheduleSentPrompt}
         />

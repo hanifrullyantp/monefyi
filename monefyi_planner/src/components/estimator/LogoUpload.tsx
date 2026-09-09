@@ -4,7 +4,7 @@ import { uploadCompanyAsset } from '../../services/companyAssetService';
 
 type Props = {
   orgId: string;
-  kind: 'logo' | 'signature';
+  kind: 'logo' | 'signature' | 'stamp';
   label: string;
   value: string | null;
   onChange: (url: string | null) => void;
@@ -53,7 +53,7 @@ export default function LogoUpload({
               onClick={() => inputRef.current?.click()}
               className="text-xs font-semibold text-emerald-600 hover:text-emerald-700"
             >
-              Ganti {kind === 'logo' ? 'Logo' : 'Gambar'}
+              Ganti {kind === 'logo' ? 'Logo' : kind === 'stamp' ? 'Cap' : 'Gambar'}
             </button>
             <button
               type="button"

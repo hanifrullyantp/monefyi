@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Download, Edit3, Loader2, MessageCircle, X } from 'lucide-react';
 import type { EstimationFormDraft } from '../../../types/estimator';
-import type { PdfSettings } from '../../../types/pdfSettings';
+import { displayOptionsFromDraft, type PdfSettings } from '../../../types/pdfSettings';
 import type { DocumentType } from './EstimationDocumentMenu';
 import { generateQuotationPdfBlob, quotationPdfFilename } from '../../../lib/pdf/generateQuotationPdf';
+import { generateInvoicePdfBlob, invoicePdfFilename } from '../../../lib/pdf/generateInvoicePdf';
 import {
   buildKwitansiPdfInputFromDraft,
   generateKwitansiPdfBlob,
@@ -21,6 +22,33 @@ type Props = {
   onEdit: (type: DocumentType) => void;
   onSendWhatsApp: (type: DocumentType) => void;
 };
+
+const TITLES: Record<DocumentType, string> = {
+  penawaran: 'Preview Penawaran',
+  invoice: 'Preview Invoice',
+  kwitansi: 'Preview Kwitansi',
+};
+
+async function buildBlob(
+  type: DocumentType,
+  draft: EstimationFormDraft,
+  settings: PdfSettings,
+): Promise<Blob> {
+  const opts = displayOptionsFromDraft(draft);
+  if (type === 'penawaran') return generateQuotationPdfBlob(draft, settings, opts);
+  if (type === 'invoice') return generateInvoicePdfBlob(draft, settings, opts);
+  return generateKwitansiPdfBlob(buildKwitansiPdfInputFromDraft(draft, settings));
+}
+
+function filenameFor(
+  type: DocumentType,
+  draft: EstimationFormDraft,
+  projectName?: string | null,
+): string {
+  if (type === 'penawaran') return quotationPdfFilename(draft, projectName);
+  if (type === 'invoice') return invoicePdfFilename(draft);
+  return kwitansiPdfFilename(draft);
+}
 
 export default function EstimationDocumentPreviewModal({
   open,
@@ -45,13 +73,7 @@ export default function EstimationDocumentPreviewModal({
       setLoading(true);
       setError('');
       try {
-        const blob = type === 'penawaran'
-          ? await generateQuotationPdfBlob(draft, settings, {
-              showImages: draft.pdf_show_images,
-              showBank: draft.pdf_show_bank,
-              showSignature: draft.pdf_show_signature,
-            })
-          : await generateKwitansiPdfBlob(buildKwitansiPdfInputFromDraft(draft, settings));
+        const blob = await buildBlob(type, draft, settings);
         if (cancelled) return;
         url = URL.createObjectURL(blob);
         setBlobUrl(url);
@@ -71,21 +93,12 @@ export default function EstimationDocumentPreviewModal({
 
   if (!open) return null;
 
-  const title = type === 'penawaran' ? 'Preview Penawaran' : 'Preview Bukti Pembayaran';
+  const title = TITLES[type];
 
   const handleDownload = async () => {
     try {
-      if (type === 'penawaran') {
-        const blob = await generateQuotationPdfBlob(draft, settings, {
-          showImages: draft.pdf_show_images,
-          showBank: draft.pdf_show_bank,
-          showSignature: draft.pdf_show_signature,
-        });
-        downloadBlob(blob, quotationPdfFilename(draft, projectName));
-      } else {
-        const blob = await generateKwitansiPdfBlob(buildKwitansiPdfInputFromDraft(draft, settings));
-        downloadBlob(blob, kwitansiPdfFilename(draft));
-      }
+      const blob = await buildBlob(type, draft, settings);
+      downloadBlob(blob, filenameFor(type, draft, projectName));
     } catch {
       /* ignore */
     }

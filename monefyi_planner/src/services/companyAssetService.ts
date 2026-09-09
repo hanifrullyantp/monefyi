@@ -37,7 +37,7 @@ function extFromMime(mime: string): string {
 
 export async function uploadCompanyAsset(
   orgId: string,
-  kind: 'logo' | 'signature',
+  kind: 'logo' | 'signature' | 'stamp',
   file: File,
 ): Promise<string> {
   const maxDim = kind === 'logo' ? 400 : 300;

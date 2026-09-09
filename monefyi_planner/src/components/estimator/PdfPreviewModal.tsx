@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { X, Download, Loader2 } from 'lucide-react';
 import type { EstimationFormDraft } from '../../types/estimator';
 import type { PdfSettings } from '../../types/pdfSettings';
+import { displayOptionsFromDraft } from '../../types/pdfSettings';
 import { generateQuotationPdfBlob, quotationPdfFilename } from '../../lib/pdf/generateQuotationPdf';
 import { downloadBlob } from '../../lib/pdf/pdfMakeSetup';
 
@@ -26,11 +27,7 @@ export default function PdfPreviewModal({ draft, settings, projectName, onClose 
       setLoading(true);
       setError('');
       try {
-        const blob = await generateQuotationPdfBlob(draft, settings, {
-          showImages: draft.pdf_show_images,
-          showBank: draft.pdf_show_bank,
-          showSignature: draft.pdf_show_signature,
-        });
+        const blob = await generateQuotationPdfBlob(draft, settings, displayOptionsFromDraft(draft));
         if (cancelled) return;
         url = URL.createObjectURL(blob);
         setBlobUrl(url);
@@ -50,11 +47,7 @@ export default function PdfPreviewModal({ draft, settings, projectName, onClose 
 
   const handleDownload = async () => {
     try {
-      const blob = await generateQuotationPdfBlob(draft, settings, {
-        showImages: draft.pdf_show_images,
-        showBank: draft.pdf_show_bank,
-        showSignature: draft.pdf_show_signature,
-      });
+      const blob = await generateQuotationPdfBlob(draft, settings, displayOptionsFromDraft(draft));
       downloadBlob(blob, quotationPdfFilename(draft, projectName));
     } catch {
       // ignore

@@ -1,7 +1,7 @@
 import { pdfColorsFromBrand } from '../lib/orgBrand';
 import { supabase } from '../lib/supabase';
 import type { PdfSettings } from '../types/pdfSettings';
-import type { PdfTemplate } from '../types/estimator';
+import { normalizePdfSettingsRow } from '../types/pdfSettings';
 
 export function defaultPdfSettings(orgId: string, companyName: string): Omit<PdfSettings, 'id' | 'created_at' | 'updated_at'> {
   return {
@@ -19,11 +19,14 @@ export function defaultPdfSettings(orgId: string, companyName: string): Omit<Pdf
     signature_url: null,
     signature_name: null,
     signature_title: null,
+    stamp_url: null,
     primary_color: '#059669',
     secondary_color: '#1e293b',
     accent_color: '#10b981',
     default_pdf_template: 'modern',
+    default_invoice_template: 'modern',
     footer_text: 'Terima kasih atas kepercayaan Anda',
+    watermark_text: null,
     default_dp_pct: 50,
   };
 }
@@ -35,7 +38,7 @@ export async function loadPdfSettings(orgId: string, companyName: string): Promi
     .eq('org_id', orgId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  if (data) return data as PdfSettings;
+  if (data) return normalizePdfSettingsRow(data as PdfSettings);
 
   const defaults = defaultPdfSettings(orgId, companyName);
   const { data: created, error: insErr } = await supabase
@@ -44,7 +47,7 @@ export async function loadPdfSettings(orgId: string, companyName: string): Promi
     .select()
     .single();
   if (insErr) throw new Error(insErr.message);
-  return created as PdfSettings;
+  return normalizePdfSettingsRow(created as PdfSettings);
 }
 
 /** Sinkronkan warna PDF default dari brand organisasi */
@@ -68,6 +71,6 @@ export async function updatePdfSettings(
     .select()
     .single();
   if (error) throw new Error(error.message);
-  return data as PdfSettings;
+  return normalizePdfSettingsRow(data as PdfSettings);
 }
 

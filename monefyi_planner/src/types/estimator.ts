@@ -10,7 +10,24 @@ export type EstimationWorkflowStatus =
   | 'selesai';
 
 export type EstimationStatus = EstimationWorkflowStatus | 'rejected' | 'converted';
-export type PdfTemplate = 'modern' | 'classic' | 'minimal' | 'bold';
+export type PdfTemplate = 'formal' | 'modern' | 'clean' | 'fullcolor' | 'futuristic';
+export type LegacyPdfTemplate = 'classic' | 'minimal' | 'bold';
+
+const PDF_TEMPLATE_SET = new Set<PdfTemplate>(['formal', 'modern', 'clean', 'fullcolor', 'futuristic']);
+
+const PDF_TEMPLATE_ALIASES: Record<LegacyPdfTemplate, PdfTemplate> = {
+  classic: 'formal',
+  minimal: 'clean',
+  bold: 'fullcolor',
+};
+
+/** Map ID lama (classic/minimal/bold) ke template baru. */
+export function normalizePdfTemplate(value: string | null | undefined): PdfTemplate {
+  if (!value) return 'modern';
+  if (value in PDF_TEMPLATE_ALIASES) return PDF_TEMPLATE_ALIASES[value as LegacyPdfTemplate];
+  if (PDF_TEMPLATE_SET.has(value as PdfTemplate)) return value as PdfTemplate;
+  return 'modern';
+}
 
 export interface PricelistItem {
   id: string;
@@ -80,6 +97,7 @@ export interface Estimation {
   pdf_primary_color: string | null;
   pdf_secondary_color: string | null;
   pdf_template: PdfTemplate;
+  pdf_invoice_template?: PdfTemplate | null;
   notes: string | null;
   terms_conditions: string | null;
   validity_days: number;
@@ -194,21 +212,32 @@ export interface EstimationFormDraft {
   validity_days: number;
   status: EstimationStatus;
   pdf_template: PdfTemplate;
+  pdf_invoice_template: PdfTemplate;
   pdf_primary_color: string;
   pdf_secondary_color: string;
   pdf_show_images: boolean;
   pdf_show_bank: boolean;
   pdf_show_signature: boolean;
+  pdf_show_logo: boolean;
+  pdf_show_stamp: boolean;
+  pdf_show_footer: boolean;
   images: EstimationImageDraft[];
   items: EstimationItemDraft[];
   billing_config: EstimationBillingConfig;
 }
 
-export const PDF_TEMPLATE_OPTIONS: Array<{ value: PdfTemplate; label: string; desc: string }> = [
-  { value: 'modern', label: 'Modern', desc: 'Gradient header, grid foto' },
-  { value: 'classic', label: 'Classic', desc: 'Formal, garis & border' },
-  { value: 'minimal', label: 'Minimal', desc: 'Bersih, banyak whitespace' },
-  { value: 'bold', label: 'Bold', desc: 'Typography kuat, CTA box' },
+export const PDF_TEMPLATE_OPTIONS: Array<{
+  value: PdfTemplate;
+  label: string;
+  desc: string;
+  tags: string[];
+  accent: string;
+}> = [
+  { value: 'formal', label: 'Formal', desc: 'Korporat, garis ganda, stamp', tags: ['B2B', 'Pemerintah'], accent: '#1e3a8a' },
+  { value: 'modern', label: 'Modern', desc: 'Kartu rounded, gaya startup', tags: ['Agency', 'Interior'], accent: '#6d28d9' },
+  { value: 'clean', label: 'Clean', desc: 'Minimalis, banyak whitespace', tags: ['Arsitek', 'High-end'], accent: '#111111' },
+  { value: 'fullcolor', label: 'Full Color', desc: 'Gradient, badge, playful', tags: ['Kreatif', 'Kitchen set'], accent: '#059669' },
+  { value: 'futuristic', label: 'Futuristic', desc: 'Dark mode, aksen neon', tags: ['Tech', 'Smart home'], accent: '#00c853' },
 ];
 
 export interface EstimationSummary {

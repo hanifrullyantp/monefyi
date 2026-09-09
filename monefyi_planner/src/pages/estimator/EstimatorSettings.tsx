@@ -12,10 +12,11 @@ import EstimatorOnboardingWizard from '../../components/estimator/EstimatorOnboa
 import { resetEstimatorOnboarding } from '../../lib/estimatorOnboarding';
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
-import ColorPickerField from '../../components/estimator/ColorPickerField';
 import EstimatorBreadcrumb from '../../components/estimator/EstimatorBreadcrumb';
 import LogoUpload from '../../components/estimator/LogoUpload';
-import PdfPreviewCard from '../../components/estimator/PdfPreviewCard';
+import TemplateSelector from '../../components/estimator/pdf-settings/TemplateSelector';
+import TemplatePreview from '../../components/estimator/pdf-settings/TemplatePreview';
+import TemplateCustomizer, { type PreviewDisplayToggles } from '../../components/estimator/pdf-settings/TemplateCustomizer';
 import { loadPdfSettings, updatePdfSettings } from '../../services/pdfSettingsService';
 import {
   loadWhatsAppTemplate,
@@ -23,10 +24,8 @@ import {
   defaultWhatsAppTemplateConfig,
 } from '../../services/quotationTemplateService';
 import type { WhatsAppTemplateConfig } from '../../lib/whatsappQuotationMessage';
-import { PDF_TEMPLATE_OPTIONS } from '../../types/estimator';
 import { defaultBillingMilestones } from '../../lib/estimationBillingConfig';
 import type { PdfSettings } from '../../types/pdfSettings';
-import type { PdfTemplate } from '../../types/estimator';
 
 export default function EstimatorSettings() {
   const navigate = useNavigate();
@@ -42,6 +41,13 @@ export default function EstimatorSettings() {
   const [saving, setSaving] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'company' | 'whatsapp' | 'billing' | 'tools'>('company');
+  const [pdfKind, setPdfKind] = useState<'quotation' | 'invoice'>('quotation');
+  const [previewDisplay, setPreviewDisplay] = useState<PreviewDisplayToggles>({
+    showLogo: true,
+    showSignature: true,
+    showStamp: true,
+    showFooter: true,
+  });
 
   const load = useCallback(async () => {
     if (!tenant?.id) return;
@@ -88,7 +94,10 @@ export default function EstimatorSettings() {
         secondary_color: settings.secondary_color,
         accent_color: settings.accent_color,
         default_pdf_template: settings.default_pdf_template,
+        default_invoice_template: settings.default_invoice_template,
         footer_text: settings.footer_text,
+        watermark_text: settings.watermark_text,
+        stamp_url: settings.stamp_url,
         default_dp_pct: settings.default_dp_pct ?? 50,
       });
       await saveWhatsAppTemplate(tenant.id, waTemplate);
@@ -244,7 +253,7 @@ export default function EstimatorSettings() {
           <Field label="Atas nama" value={settings.bank_account_name || ''} onChange={v => patch({ bank_account_name: v })} />
         </Section>
 
-        <Section title="Tanda Tangan">
+        <Section title="Tanda Tangan & Cap">
           {tenant?.id && (
             <LogoUpload
               orgId={tenant.id}
@@ -260,28 +269,46 @@ export default function EstimatorSettings() {
             <Field label="Nama" value={settings.signature_name || ''} onChange={v => patch({ signature_name: v })} />
             <Field label="Jabatan" value={settings.signature_title || ''} onChange={v => patch({ signature_title: v })} />
           </div>
+          {tenant?.id && (
+            <LogoUpload
+              orgId={tenant.id}
+              kind="stamp"
+              label="Cap / stamp perusahaan"
+              value={settings.stamp_url}
+              onChange={url => patch({ stamp_url: url })}
+              onError={msg => showToast(msg, 'error')}
+              previewClassName="w-24 h-24"
+            />
+          )}
         </Section>
 
-        <Section title="Warna & Template PDF">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <ColorPickerField label="Primary" value={settings.primary_color} onChange={v => patch({ primary_color: v })} />
-            <ColorPickerField label="Secondary" value={settings.secondary_color} onChange={v => patch({ secondary_color: v })} />
-            <ColorPickerField label="Accent" value={settings.accent_color} onChange={v => patch({ accent_color: v })} />
-          </div>
-          <label className="block">
-            <span className="text-xs text-slate-500">Template default</span>
-            <select
-              value={settings.default_pdf_template}
-              onChange={e => patch({ default_pdf_template: e.target.value as PdfTemplate })}
-              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+        <div className="flex gap-1 p-1 bg-slate-100 rounded-xl">
+          {(['quotation', 'invoice'] as const).map(id => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setPdfKind(id)}
+              className={`flex-1 py-2 rounded-lg text-xs font-bold ${
+                pdfKind === id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+              }`}
             >
-              {PDF_TEMPLATE_OPTIONS.map(t => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
-          </label>
-          <Field label="Footer text" value={settings.footer_text} onChange={v => patch({ footer_text: v })} />
-        </Section>
+              {id === 'quotation' ? 'Penawaran' : 'Invoice'}
+            </button>
+          ))}
+        </div>
+        <TemplateSelector
+          title={pdfKind === 'quotation' ? 'Template penawaran' : 'Template invoice'}
+          selected={pdfKind === 'quotation' ? settings.default_pdf_template : settings.default_invoice_template}
+          onSelect={id => patch(pdfKind === 'quotation'
+            ? { default_pdf_template: id }
+            : { default_invoice_template: id })}
+        />
+        <TemplateCustomizer
+          settings={settings}
+          onChange={patch}
+          display={previewDisplay}
+          onDisplayChange={p => setPreviewDisplay(prev => ({ ...prev, ...p }))}
+        />
         </>
         )}
 
@@ -403,14 +430,12 @@ export default function EstimatorSettings() {
         )}
         </div>
         {(activeTab === 'company') && (
-        <>
-        <div className="hidden lg:block">
-          <PdfPreviewCard settings={settings} />
-        </div>
-        <div className="lg:hidden">
-          <PdfPreviewCard settings={settings} />
-        </div>
-        </>
+        <TemplatePreview
+          kind={pdfKind}
+          template={pdfKind === 'quotation' ? settings.default_pdf_template : settings.default_invoice_template}
+          settings={settings}
+          display={previewDisplay}
+        />
         )}
       </div>
 

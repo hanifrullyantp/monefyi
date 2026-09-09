@@ -12,12 +12,15 @@ import { buildWhatsAppMilestoneTagihMessage, buildWhatsAppPresetMessage,
 import type { BillingMilestone } from '../../../lib/estimationBillingSchedule';
 import { analytics } from '../../../lib/analytics/events';
 import { generateQuotationPdfBlob, quotationPdfFilename } from '../../../lib/pdf/generateQuotationPdf';
+import { generateInvoicePdfBlob, invoicePdfFilename } from '../../../lib/pdf/generateInvoicePdf';
 import {
   buildKwitansiPdfInputFromDraft,
   generateKwitansiPdfBlob,
   kwitansiPdfFilename,
 } from '../../../lib/pdf/generateKwitansiPdf';
 import { downloadBlob } from '../../../lib/pdf/pdfMakeSetup';
+import { displayOptionsFromDraft } from '../../../types/pdfSettings';
+import type { DocumentType } from './EstimationDocumentMenu';
 
 type Salutation = 'Pak' | 'Bu' | 'Kak' | '';
 
@@ -31,6 +34,7 @@ type Props = {
   templateConfig: WhatsAppTemplateConfig;
   initialPreset?: WhatsAppEstimationPreset;
   tagihMilestone?: BillingMilestone | null;
+  attachDocument?: DocumentType | null;
   onToast: (msg: string, type: 'success' | 'error') => void;
   onShared?: () => void;
 };
@@ -47,6 +51,7 @@ export default function EstimationWhatsAppPickerModal({
   templateConfig,
   initialPreset,
   tagihMilestone,
+  attachDocument,
   onToast,
   onShared,
 }: Props) {
@@ -99,12 +104,22 @@ export default function EstimationWhatsAppPickerModal({
     }
     setSending(true);
     try {
-      if (attachFile && attachment === 'pdf') {
-        const blob = await generateQuotationPdfBlob(draft, settings, {
-          showImages: draft.pdf_show_images,
-          showBank: draft.pdf_show_bank,
-          showSignature: draft.pdf_show_signature,
-        });
+      if (attachFile && attachDocument === 'invoice') {
+        const blob = await generateInvoicePdfBlob(draft, settings, displayOptionsFromDraft(draft));
+        const filename = invoicePdfFilename(draft);
+        const file = new File([blob], filename, { type: 'application/pdf' });
+        if (typeof navigator !== 'undefined' && navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ text: message, files: [file] });
+        } else {
+          downloadBlob(blob, filename);
+          openWhatsAppChat(
+            targetPhone,
+            `${message}\n\n📎 Invoice "${filename}" telah diunduh — silakan lampirkan di WhatsApp.`,
+          );
+        }
+        analytics.estimationWaShared({ estimationId, shareType: 'pdf' });
+      } else if (attachFile && attachment === 'pdf') {
+        const blob = await generateQuotationPdfBlob(draft, settings, displayOptionsFromDraft(draft));
         const filename = quotationPdfFilename(draft, projectName);
         const file = new File([blob], filename, { type: 'application/pdf' });
         if (typeof navigator !== 'undefined' && navigator.canShare?.({ files: [file] })) {
@@ -179,7 +194,7 @@ export default function EstimationWhatsAppPickerModal({
             ))}
           </div>
 
-          {attachment !== 'none' && (
+          {(attachment !== 'none' || attachDocument === 'invoice') && (
             <label className="flex items-center gap-2 text-sm text-slate-600">
               <input
                 type="checkbox"
@@ -187,7 +202,7 @@ export default function EstimationWhatsAppPickerModal({
                 onChange={e => setAttachFile(e.target.checked)}
                 className="rounded border-slate-300 text-emerald-600"
               />
-              Lampirkan {attachment === 'pdf' ? 'PDF penawaran' : 'PDF kwitansi'}
+              Lampirkan {attachDocument === 'invoice' ? 'PDF invoice' : attachment === 'pdf' ? 'PDF penawaran' : 'PDF kwitansi'}
             </label>
           )}
 

@@ -18,7 +18,7 @@ import {
 import { showToast } from '../../../store/uiStore';
 import type { BillingMilestoneKey, EstimationBillingConfig, EstimationFormDraft, EstimationSummary } from '../../../types/estimator';
 
-export type DocumentType = 'penawaran' | 'kwitansi';
+export type DocumentType = 'penawaran' | 'invoice' | 'kwitansi';
 
 type Props = {
   open: boolean;
@@ -286,8 +286,16 @@ export default function EstimationDocumentMenu({
               onClick={() => handleSelect('penawaran')}
             />
             <DocumentTile
-              title="Bukti Pembayaran"
-              subtitle="Generate kwitansi / receipt"
+              title="Invoice"
+              subtitle="Tagihan & status pembayaran"
+              gradient="from-indigo-500 to-violet-700"
+              shadow="shadow-indigo-600/30"
+              icon={<FileText className="w-6 h-6 text-white" />}
+              onClick={() => handleSelect('invoice')}
+            />
+            <DocumentTile
+              title="Kwitansi"
+              subtitle="Bukti 1 pembayaran masuk"
               gradient="from-emerald-500 to-teal-700"
               shadow="shadow-emerald-600/30"
               icon={<Receipt className="w-6 h-6 text-white" />}

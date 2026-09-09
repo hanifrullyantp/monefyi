@@ -2,8 +2,13 @@ import convertTerbilang from 'terbilang-ts';
 import { calcEstimationSummary, countedEstimationItems, effectiveItemSelling } from '../estimatorCalc';
 import { formatDateId, formatRupiahFull } from '../estimatorFormat';
 import { urlToDataUri, fileToDataUri } from './pdfImageUtils';
-import type { EstimationFormDraft, PdfTemplate } from '../../types/estimator';
-import type { PdfDisplayOptions, PdfSettings } from '../../types/pdfSettings';
+import { normalizePdfTemplate, type EstimationFormDraft, type PdfTemplate } from '../../types/estimator';
+import {
+  resolvePdfDisplayOptions,
+  type PdfDisplayOptions,
+  type PdfSettings,
+  type ResolvedPdfDisplayOptions,
+} from '../../types/pdfSettings';
 import type { Content } from 'pdfmake/interfaces';
 
 export interface QuotationPdfImage {
@@ -28,6 +33,7 @@ export interface QuotationPdfContext {
   companyWebsite: string;
   logoDataUri: string | null;
   signatureDataUri: string | null;
+  stampDataUri: string | null;
   signatureName: string;
   signatureTitle: string;
   bankName: string;
@@ -41,13 +47,15 @@ export interface QuotationPdfContext {
   adjustmentLabels: Array<{ label: string; value: string }>;
   taxLabel: string | null;
   grandTotal: string;
+  grandTotalRaw: number;
   grandTotalWords: string;
   notes: string;
   termsLines: string[];
   images: QuotationPdfImage[];
   colors: { primary: string; secondary: string; accent: string };
   footerText: string;
-  options: PdfDisplayOptions;
+  watermarkText: string;
+  options: ResolvedPdfDisplayOptions;
 }
 
 function addDays(days: number): Date {
@@ -65,6 +73,7 @@ export async function buildQuotationPdfContext(
   settings: PdfSettings,
   options: PdfDisplayOptions,
 ): Promise<QuotationPdfContext> {
+  const resolved = resolvePdfDisplayOptions(options);
   const items = countedEstimationItems(draft.items);
   const summary = calcEstimationSummary(items, draft.overhead_pct, draft.discount_pct, draft.tax_pct, {
     discountAmount: draft.discount_amount,
@@ -75,7 +84,7 @@ export async function buildQuotationPdfContext(
   const secondary = draft.pdf_secondary_color || settings.secondary_color || '#1e293b';
 
   const images: QuotationPdfImage[] = [];
-  if (options.showImages) {
+  if (resolved.showImages) {
     for (const img of draft.images) {
       let dataUri: string | null = null;
       if (img.pendingFile) {
@@ -87,9 +96,12 @@ export async function buildQuotationPdfContext(
     }
   }
 
-  const logoDataUri = settings.logo_url ? await urlToDataUri(settings.logo_url) : null;
-  const signatureDataUri = settings.signature_url && options.showSignature
+  const logoDataUri = settings.logo_url && resolved.showLogo ? await urlToDataUri(settings.logo_url) : null;
+  const signatureDataUri = settings.signature_url && resolved.showSignature
     ? await urlToDataUri(settings.signature_url)
+    : null;
+  const stampDataUri = settings.stamp_url && resolved.showStamp
+    ? await urlToDataUri(settings.stamp_url)
     : null;
 
   const termsRaw = draft.terms_conditions.trim();
@@ -98,7 +110,7 @@ export async function buildQuotationPdfContext(
     : [];
 
   return {
-    template: draft.pdf_template,
+    template: normalizePdfTemplate(draft.pdf_template),
     code: draft.code,
     title: draft.title,
     dateLabel: formatDateId(new Date()),
@@ -114,6 +126,7 @@ export async function buildQuotationPdfContext(
     companyWebsite: settings.website || '',
     logoDataUri,
     signatureDataUri,
+    stampDataUri,
     signatureName: settings.signature_name || '',
     signatureTitle: settings.signature_title || '',
     bankName: settings.bank_name || '',
@@ -143,13 +156,15 @@ export async function buildQuotationPdfContext(
       .map(a => ({ label: a.label.trim(), value: `-${rp(a.amount)}` })),
     taxLabel: draft.tax_pct > 0 ? `${rp(summary.taxAmount)} (${draft.tax_pct}%)` : null,
     grandTotal: rp(summary.grandTotal),
+    grandTotalRaw: summary.grandTotal,
     grandTotalWords: capitalizeFirst(convertTerbilang(Math.round(summary.grandTotal))),
     notes: draft.notes.trim(),
     termsLines,
     images,
     colors: { primary, secondary, accent: settings.accent_color || '#10b981' },
     footerText: settings.footer_text || 'Terima kasih atas kepercayaan Anda',
-    options,
+    watermarkText: (settings.watermark_text || '').trim(),
+    options: resolved,
   };
 }
 
@@ -172,7 +187,7 @@ export function buildImageSection(ctx: QuotationPdfContext, layout: PdfTemplate)
 
   const imgs = ctx.images;
 
-  if (layout === 'minimal' && imgs.length >= 1) {
+  if (layout === 'clean' && imgs.length >= 1) {
     return {
       stack: [
         { image: imgs[0].dataUri, width: 480, margin: [0, 0, 0, 4] as [number, number, number, number] },
