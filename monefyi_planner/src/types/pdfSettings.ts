@@ -1,4 +1,4 @@
-import type { EstimationFormDraft, PdfTemplate } from './estimator';
+import type { BillingMilestoneConfig, EstimationFormDraft, PdfTemplate } from './estimator';
 import { normalizePdfTemplate } from './estimator';
 
 export interface PdfSettings {
@@ -27,6 +27,8 @@ export interface PdfSettings {
   watermark_text: string | null;
   /** Default persentase DP untuk jadwal tagihan baru. */
   default_dp_pct?: number;
+  /** Template milestone DP/termin/pelunasan untuk estimasi baru. */
+  default_billing_milestones?: BillingMilestoneConfig[] | null;
   created_at: string;
   updated_at: string;
 }

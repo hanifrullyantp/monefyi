@@ -24,7 +24,9 @@ import {
   defaultWhatsAppTemplateConfig,
 } from '../../services/quotationTemplateService';
 import type { WhatsAppTemplateConfig } from '../../lib/whatsappQuotationMessage';
-import { defaultBillingMilestones } from '../../lib/estimationBillingConfig';
+import { billingConfigFromOrgDefaults } from '../../lib/estimationBillingConfig';
+import EstimationBillingScheduleEditor from '../../components/estimator/detail/EstimationBillingScheduleEditor';
+import type { EstimationBillingConfig } from '../../types/estimator';
 import type { PdfSettings } from '../../types/pdfSettings';
 
 export default function EstimatorSettings() {
@@ -99,6 +101,7 @@ export default function EstimatorSettings() {
         watermark_text: settings.watermark_text,
         stamp_url: settings.stamp_url,
         default_dp_pct: settings.default_dp_pct ?? 50,
+        default_billing_milestones: settings.default_billing_milestones ?? null,
       });
       await saveWhatsAppTemplate(tenant.id, waTemplate);
       setSettings(updated);
@@ -360,38 +363,23 @@ export default function EstimatorSettings() {
         {activeTab === 'billing' && (
         <Section title="Default Jadwal Tagihan">
           <p className="text-xs text-slate-500">
-            Persentase DP default untuk estimasi baru. Termin & pelunasan dihitung otomatis dari sisa.
+            Atur persentase DP, termin, dan pelunasan untuk estimasi baru. Total harus 100%.
           </p>
-          <label className="block">
-            <span className="text-xs text-slate-500">DP default ({Math.round(settings.default_dp_pct ?? 50)}%)</span>
-            <input
-              type="range"
-              min={10}
-              max={80}
-              step={5}
-              value={settings.default_dp_pct ?? 50}
-              onChange={e => patch({ default_dp_pct: Number(e.target.value) })}
-              className="w-full mt-2"
-            />
-            <div className="flex justify-between text-[10px] text-slate-500 mt-1">
-              <span>10%</span>
-              <span>50%</span>
-              <span>80%</span>
-            </div>
-          </label>
-          <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 space-y-1">
-            <p className="text-[10px] font-bold text-slate-500 uppercase">Preview pembagian</p>
-            {defaultBillingMilestones(settings.default_dp_pct ?? 50)
-              .filter(m => m.enabled)
-              .map(m => (
-                <div key={m.key} className="flex justify-between text-xs text-slate-700">
-                  <span>{m.label}</span>
-                  <span className="font-bold tabular-nums">{m.pct}%</span>
-                </div>
-              ))}
-          </div>
+          <EstimationBillingScheduleEditor
+            config={billingConfigFromOrgDefaults(
+              settings.default_billing_milestones,
+              settings.default_dp_pct ?? 50,
+            )}
+            onChange={(cfg: EstimationBillingConfig) => {
+              const dpPct = cfg.milestones.find(m => m.key === 'dp')?.pct ?? settings.default_dp_pct ?? 50;
+              patch({
+                default_billing_milestones: cfg.milestones,
+                default_dp_pct: dpPct,
+              });
+            }}
+          />
           <p className="text-[10px] text-slate-500">
-            Setiap estimasi bisa menyesuaikan jadwal tagihan per proyek di halaman Dokumen & Pembayaran.
+            Setiap estimasi bisa menyesuaikan jadwal tagihan per proyek di menu Dokumen & Pembayaran.
           </p>
         </Section>
         )}

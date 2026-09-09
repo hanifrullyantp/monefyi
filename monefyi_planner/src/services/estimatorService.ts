@@ -1,11 +1,17 @@
 import { supabase } from '../lib/supabase';
 import { buildStatusUpdatePayload, isStatusTransitionAllowed, normalizeEstimationStatus } from '../lib/estimationStatus';
-import { billingConfigToDb, emptyBillingConfig, normalizeBillingConfig } from '../lib/estimationBillingConfig';
+import {
+  billingConfigFromOrgDefaults,
+  billingConfigToDb,
+  emptyBillingConfig,
+  normalizeBillingConfig,
+} from '../lib/estimationBillingConfig';
 import { calcEstimationSummary, countedEstimationItems, normalizeEstimationItem } from '../lib/estimatorCalc';
 import { nextEstimationCode } from '../lib/estimatorFormat';
 import { emptyImageDrafts, hydrateImageDrafts, imagesToDbFields } from './estimationImageService';
 import { normalizePdfTemplate } from '../types/estimator';
 import type {
+  BillingMilestoneConfig,
   Estimation,
   EstimationFormDraft,
   EstimationItem,
@@ -407,7 +413,12 @@ export async function estimationToFormDraft(est: Estimation): Promise<Estimation
   };
 }
 
-export function newEstimationDraft(code: string, defaultDpPct = 50): EstimationFormDraft {
+export function newEstimationDraft(
+  code: string,
+  defaultDpPct = 50,
+  defaultMilestones?: BillingMilestoneConfig[] | null,
+): EstimationFormDraft {
+  const billing_config = billingConfigFromOrgDefaults(defaultMilestones, defaultDpPct);
   return {
     code,
     title: '',
@@ -436,7 +447,7 @@ export function newEstimationDraft(code: string, defaultDpPct = 50): EstimationF
     pdf_show_stamp: true,
     pdf_show_footer: true,
     images: emptyImageDrafts(),
-    billing_config: emptyBillingConfig(defaultDpPct),
+    billing_config,
     items: [],
   };
 }

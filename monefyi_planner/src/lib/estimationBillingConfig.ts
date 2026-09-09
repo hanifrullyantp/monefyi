@@ -43,6 +43,24 @@ export function emptyBillingConfig(defaultDpPct = 50): EstimationBillingConfig {
   };
 }
 
+/** Milestone default org → config tagihan estimasi baru (tanpa pembayaran). */
+export function billingConfigFromOrgDefaults(
+  milestones: BillingMilestoneConfig[] | null | undefined,
+  defaultDpPct = 50,
+): EstimationBillingConfig {
+  const base = emptyBillingConfig(defaultDpPct);
+  if (!milestones?.length) return base;
+  return {
+    ...base,
+    milestones: milestones.map(m => ({
+      key: m.key,
+      label: m.label || MILESTONE_LABELS[m.key] || m.key,
+      pct: Math.max(0, Math.round(Number(m.pct) || 0)),
+      enabled: m.enabled !== false,
+    })),
+  };
+}
+
 export function normalizeBillingConfig(
   raw: unknown,
   defaultDpPct = 50,

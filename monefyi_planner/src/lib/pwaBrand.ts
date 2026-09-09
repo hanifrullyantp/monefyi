@@ -14,9 +14,12 @@ export function initEstimatorPwaDocument(): void {
 
   const onProxiedHost = PROXIED_PWA_HOSTS.includes(window.location.hostname);
   const manifest = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
-  if (manifest && !onProxiedHost) {
-    // Langsung ke planner origin (dev / vercel.app) — pakai manifest khusus Estimator.
-    manifest.href = '/manifest-estimator.webmanifest';
+  if (manifest) {
+    // estimator.monefyi.com: LP rewrite /manifest.webmanifest → manifest Estimator.
+    // Dev / vercel.app langsung: pakai file manifest-estimator.
+    manifest.href = onProxiedHost
+      ? '/manifest.webmanifest'
+      : '/manifest-estimator.webmanifest';
   }
 
   const appleTitle = document.querySelector<HTMLMetaElement>('meta[name="apple-mobile-web-app-title"]');

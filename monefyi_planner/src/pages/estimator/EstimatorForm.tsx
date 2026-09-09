@@ -205,7 +205,7 @@ export default function EstimatorForm() {
         if (isNew) {
           const code = await generateEstimationCode(tenant.id);
           setDraft({
-            ...newEstimationDraft(code, Number(settings.default_dp_pct) || 50),
+            ...newEstimationDraft(code, Number(settings.default_dp_pct) || 50, settings.default_billing_milestones),
             pdf_template: settings.default_pdf_template,
             pdf_invoice_template: settings.default_invoice_template || settings.default_pdf_template,
             pdf_primary_color: settings.primary_color,

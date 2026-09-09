@@ -2,8 +2,9 @@
   "name": "Monefyi Estimator",
   "short_name": "Estimator",
   "description": "Sistem closing & estimasi proyek — penawaran PDF, pricelist, dan manajemen proyek.",
-  "start_url": "/app/estimator",
+  "start_url": "/app/estimator?utm_source=pwa",
   "scope": "/",
+  "id": "/app/estimator",
   "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#76b82a",
@@ -11,6 +12,12 @@
   "lang": "id",
   "categories": ["business", "productivity", "finance"],
   "icons": [
+    {
+      "src": "/icons/estimator/icon-180.png?v=2026-09-08",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/icons/estimator/icon-192.png?v=2026-09-08",
       "sizes": "192x192",

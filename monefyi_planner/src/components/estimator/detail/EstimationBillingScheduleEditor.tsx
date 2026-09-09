@@ -16,12 +16,8 @@ export default function EstimationBillingScheduleEditor({ config, onChange, read
     const next = config.milestones.map(m => {
       if (m.key !== key) return m;
       const updated = { ...m, ...patch };
-      if (patch.pct !== undefined && updated.enabled) {
-        const others = config.milestones
-          .filter(x => x.key !== key && x.enabled)
-          .reduce((s, x) => s + x.pct, 0);
-        const maxAllowed = Math.max(0, 100 - others);
-        updated.pct = Math.min(maxAllowed, Math.max(0, updated.pct));
+      if (patch.pct !== undefined) {
+        updated.pct = Math.min(100, Math.max(0, Math.round(Number(patch.pct) || 0)));
       }
       return updated;
     });
