@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import {
-  ChevronUp, Loader2, MessageCircle, Redo2, Save, Undo2,
+  ChevronUp, Loader2, MessageCircle, Redo2, RotateCcw, Save, Undo2,
 } from 'lucide-react';
 import EstimationDetailBreakdown from './EstimationDetailBreakdown';
 import { formatRupiahFull } from '../../../lib/estimatorFormat';
@@ -16,10 +16,12 @@ type Props = {
   showSaveActions: boolean;
   canUndo: boolean;
   canRedo: boolean;
+  canDiscard: boolean;
   breakdownOpen: boolean;
   onToggleBreakdown: () => void;
   onUndo: () => void;
   onRedo: () => void;
+  onDiscardChanges: () => void;
   onSave: () => void;
   onWhatsApp: () => void;
   onDocument: () => void;
@@ -30,14 +32,12 @@ function IconBtn({
   onClick,
   disabled,
   children,
-  premium,
   onGradient,
 }: {
   label: string;
   onClick: () => void;
   disabled?: boolean;
   children: ReactNode;
-  premium?: boolean;
   onGradient?: boolean;
 }) {
   return (
@@ -50,9 +50,7 @@ function IconBtn({
       className={`p-2 rounded-xl border transition-all duration-200 active:scale-95 shrink-0 disabled:opacity-35 disabled:pointer-events-none ${
         onGradient
           ? 'border-white/30 bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm'
-          : premium
-            ? 'border-emerald-200/80 bg-gradient-to-br from-emerald-50 to-teal-50 text-emerald-700 hover:from-emerald-100 hover:to-teal-100 hover:border-emerald-300 shadow-sm shadow-emerald-200/40'
-            : 'border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+          : 'border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 bg-white'
       }`}
     >
       {children}
@@ -70,10 +68,12 @@ export default function EstimationDetailBottomBar({
   showSaveActions,
   canUndo,
   canRedo,
+  canDiscard,
   breakdownOpen,
   onToggleBreakdown,
   onUndo,
   onRedo,
+  onDiscardChanges,
   onSave,
   onWhatsApp,
   onDocument,
@@ -106,56 +106,66 @@ export default function EstimationDetailBottomBar({
           />
         )}
 
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-700/25 shadow-xl shadow-emerald-900/20">
-          <div className="relative bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-800 text-white">
+        <div className="relative rounded-2xl border border-emerald-700/25 shadow-xl shadow-emerald-900/20 overflow-visible">
+          <div className="relative bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-800 text-white rounded-2xl overflow-hidden">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.14),transparent_55%)] pointer-events-none" />
-          <div className="relative px-2 sm:px-3 py-2 flex items-center gap-1 sm:gap-1.5 min-h-[3.25rem]">
-            <div className="flex items-center gap-0.5 shrink-0">
-              <IconBtn label="WhatsApp" onClick={onWhatsApp} disabled={isNew} onGradient>
-                <MessageCircle className="w-4 h-4 text-white" />
-              </IconBtn>
-              <IconBtn label="Dokumen" onClick={onDocument} disabled={isNew} onGradient>
-                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" aria-hidden>
-                  <path
-                    d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"
-                    stroke="currentColor"
-                    strokeWidth="1.75"
-                    strokeLinejoin="round"
-                  />
-                  <path d="M14 3v5h5" stroke="currentColor" strokeWidth="1.75" strokeLinejoin="round" />
-                  <path d="M9 13h6M9 17h4" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
-                </svg>
-              </IconBtn>
-            </div>
 
-            <div className="flex-1 min-w-0 text-right px-1 sm:px-2 relative">
-              {showSaveActions && (
-                <div className="absolute bottom-full right-0 mb-1 flex items-center gap-0.5 bg-white shadow-lg border border-slate-200 rounded-xl px-2 py-1 text-slate-700">
-                  <IconBtn label="Undo" onClick={onUndo} disabled={isReadOnly || !canUndo}>
-                    <Undo2 className="w-4 h-4" />
-                  </IconBtn>
-                  <IconBtn label="Redo" onClick={onRedo} disabled={isReadOnly || !canRedo}>
-                    <Redo2 className="w-4 h-4" />
-                  </IconBtn>
-                  <button
-                    type="button"
-                    onClick={onSave}
-                    disabled={saving || isReadOnly}
-                    className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 disabled:opacity-50 shrink-0 active:scale-95 transition-all duration-200"
-                  >
-                    {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                    Simpan
-                  </button>
-                </div>
-              )}
-              <div className="text-[10px] font-semibold uppercase tracking-wide text-white/75 truncate">
-                Total penawaran
+            {showSaveActions && (
+              <div className="relative flex items-center gap-1 px-2 sm:px-3 py-1.5 border-b border-white/15 bg-black/10">
+                <IconBtn label="Undo" onClick={onUndo} disabled={isReadOnly || !canUndo} onGradient>
+                  <Undo2 className="w-4 h-4" />
+                </IconBtn>
+                <IconBtn label="Redo" onClick={onRedo} disabled={isReadOnly || !canRedo} onGradient>
+                  <Redo2 className="w-4 h-4" />
+                </IconBtn>
+                <IconBtn
+                  label="Reset perubahan"
+                  onClick={onDiscardChanges}
+                  disabled={isReadOnly || isNew || !canDiscard}
+                  onGradient
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </IconBtn>
+                <button
+                  type="button"
+                  onClick={onSave}
+                  disabled={saving || isReadOnly}
+                  className="ml-auto inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-white text-emerald-700 rounded-lg text-xs font-bold hover:bg-emerald-50 disabled:opacity-50 shrink-0 active:scale-95 transition-all duration-200"
+                >
+                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  Simpan
+                </button>
               </div>
-              <div className="text-base sm:text-xl font-black tabular-nums text-white truncate leading-tight">
-                {formatRupiahFull(summary.grandTotal)}
+            )}
+
+            <div className="relative px-2 sm:px-3 py-2 flex items-center gap-1 sm:gap-1.5 min-h-[3.25rem]">
+              <div className="flex items-center gap-0.5 shrink-0">
+                <IconBtn label="WhatsApp" onClick={onWhatsApp} disabled={isNew} onGradient>
+                  <MessageCircle className="w-4 h-4 text-white" />
+                </IconBtn>
+                <IconBtn label="Dokumen" onClick={onDocument} disabled={isNew} onGradient>
+                  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" aria-hidden>
+                    <path
+                      d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"
+                      stroke="currentColor"
+                      strokeWidth="1.75"
+                      strokeLinejoin="round"
+                    />
+                    <path d="M14 3v5h5" stroke="currentColor" strokeWidth="1.75" strokeLinejoin="round" />
+                    <path d="M9 13h6M9 17h4" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+                  </svg>
+                </IconBtn>
+              </div>
+
+              <div className="flex-1 min-w-0 text-right px-1 sm:px-2">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-white/75 truncate">
+                  Total penawaran
+                </div>
+                <div className="text-base sm:text-xl font-black tabular-nums text-white truncate leading-tight">
+                  {formatRupiahFull(summary.grandTotal)}
+                </div>
               </div>
             </div>
-          </div>
           </div>
         </div>
       </div>

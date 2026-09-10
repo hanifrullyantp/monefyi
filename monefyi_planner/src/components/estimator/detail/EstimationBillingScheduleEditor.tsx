@@ -1,7 +1,16 @@
+import { useRef } from 'react';
 import { AlertTriangle, Gift, Percent } from 'lucide-react';
 import RupiahInput from '../RupiahInput';
-import { validateBillingMilestonePcts } from '../../../lib/estimationBillingConfig';
-import type { BillingMilestoneConfig, EstimationBillingConfig } from '../../../types/estimator';
+import {
+  cloneBillingMilestones,
+  disableBillingMilestone,
+  validateBillingMilestonePcts,
+} from '../../../lib/estimationBillingConfig';
+import type {
+  BillingMilestoneConfig,
+  BillingMilestoneKey,
+  EstimationBillingConfig,
+} from '../../../types/estimator';
 
 type Props = {
   config: EstimationBillingConfig;
@@ -11,6 +20,7 @@ type Props = {
 
 export default function EstimationBillingScheduleEditor({ config, onChange, readOnly }: Props) {
   const validation = validateBillingMilestonePcts(config.milestones);
+  const restoreSnapshots = useRef<Partial<Record<BillingMilestoneKey, BillingMilestoneConfig[]>>>({});
 
   const patchMilestone = (key: string, patch: Partial<BillingMilestoneConfig>) => {
     const next = config.milestones.map(m => {
@@ -22,6 +32,28 @@ export default function EstimationBillingScheduleEditor({ config, onChange, read
       return updated;
     });
     onChange({ ...config, milestones: next });
+  };
+
+  const toggleEnabled = (key: BillingMilestoneKey, enabled: boolean) => {
+    if (readOnly || key === 'dp') return;
+
+    if (!enabled) {
+      restoreSnapshots.current[key] = cloneBillingMilestones(config.milestones);
+      onChange({
+        ...config,
+        milestones: disableBillingMilestone(config.milestones, key),
+      });
+      return;
+    }
+
+    const snap = restoreSnapshots.current[key];
+    if (snap) {
+      onChange({ ...config, milestones: cloneBillingMilestones(snap) });
+      delete restoreSnapshots.current[key];
+      return;
+    }
+
+    patchMilestone(key, { enabled: true });
   };
 
   return (
@@ -57,7 +89,7 @@ export default function EstimationBillingScheduleEditor({ config, onChange, read
                 type="checkbox"
                 checked={m.enabled}
                 disabled={readOnly || m.key === 'dp'}
-                onChange={e => patchMilestone(m.key, { enabled: e.target.checked })}
+                onChange={e => toggleEnabled(m.key, e.target.checked)}
                 className="rounded border-slate-300 text-emerald-600 shrink-0"
               />
               <span className="text-xs font-semibold text-slate-700 truncate">{m.label}</span>

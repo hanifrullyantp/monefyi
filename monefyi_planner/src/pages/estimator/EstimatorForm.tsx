@@ -935,10 +935,12 @@ export default function EstimatorForm() {
         showSaveActions={showSaveActions}
         canUndo={draftHistory.canUndo}
         canRedo={draftHistory.canRedo}
+        canDiscard={draftHistory.canDiscard && isDirty(draft)}
         breakdownOpen={breakdownOpen}
         onToggleBreakdown={() => setBreakdownOpen(v => !v)}
         onUndo={handleUndo}
         onRedo={handleRedo}
+        onDiscardChanges={handleDiscardChanges}
         onSave={handleSave}
         onWhatsApp={() => handleShareWhatsApp('follow_up')}
         onDocument={handleOpenDocumentMenu}

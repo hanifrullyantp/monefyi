@@ -100,6 +100,67 @@ export type BillingPctValidation = {
   isUnder: boolean;
 };
 
+/** Salin milestone untuk snapshot UI (toggle check/uncheck). */
+export function cloneBillingMilestones(milestones: BillingMilestoneConfig[]): BillingMilestoneConfig[] {
+  return milestones.map(m => ({ ...m }));
+}
+
+/**
+ * Bagikan persentase milestone yang di-uncheck ke milestone lain yang masih aktif.
+ * Proporsional ke % mereka saat ini; sisa pembulatan masuk ke pelunasan (atau penerima terakhir).
+ */
+export function redistributeBillingPct(
+  milestones: BillingMilestoneConfig[],
+  freedPct: number,
+  fromKey: BillingMilestoneKey,
+): BillingMilestoneConfig[] {
+  if (freedPct <= 0) return milestones;
+
+  const recipients = milestones.filter(m => m.enabled && m.key !== fromKey);
+  if (recipients.length === 0) return milestones;
+
+  const totalRecipientPct = recipients.reduce((s, m) => s + m.pct, 0);
+  let remaining = freedPct;
+
+  const next = milestones.map(m => {
+    if (!m.enabled || m.key === fromKey) return m;
+    let add = 0;
+    if (totalRecipientPct <= 0) {
+      add = Math.floor(freedPct / recipients.length);
+    } else {
+      add = Math.round(freedPct * (m.pct / totalRecipientPct));
+    }
+    remaining -= add;
+    return { ...m, pct: m.pct + add };
+  });
+
+  if (remaining !== 0) {
+    const fallbackKey = recipients.find(m => m.key === 'pelunasan')?.key
+      ?? recipients[recipients.length - 1]?.key;
+    if (fallbackKey) {
+      const idx = next.findIndex(m => m.key === fallbackKey);
+      if (idx >= 0) next[idx] = { ...next[idx], pct: next[idx].pct + remaining };
+    }
+  }
+
+  return next;
+}
+
+/** Nonaktifkan milestone: pct-nya dibagikan ke yang masih aktif. */
+export function disableBillingMilestone(
+  milestones: BillingMilestoneConfig[],
+  key: BillingMilestoneKey,
+): BillingMilestoneConfig[] {
+  const target = milestones.find(m => m.key === key);
+  if (!target?.enabled) return milestones;
+
+  const freed = target.pct;
+  const without = milestones.map(m => (
+    m.key === key ? { ...m, enabled: false, pct: 0 } : m
+  ));
+  return redistributeBillingPct(without, freed, key);
+}
+
 /** Validasi total % milestone yang aktif. */
 export function validateBillingMilestonePcts(milestones: BillingMilestoneConfig[]): BillingPctValidation {
   const totalPct = milestones
