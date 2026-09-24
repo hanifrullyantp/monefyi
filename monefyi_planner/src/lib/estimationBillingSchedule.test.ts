@@ -40,19 +40,53 @@ describe('validateBillingMilestonePcts', () => {
 });
 
 describe('buildEstimationBillingSnapshot - local payments', () => {
-  it('tracks DP partial without project', () => {
+  it('tracks DP under plan and moves remainder to pelunasan', () => {
     const config = emptyBillingConfig(50);
+    config.milestones = [
+      { key: 'dp', label: 'DP / Uang Muka', pct: 50, enabled: true },
+      { key: 'termin_1', label: 'Termin 1', pct: 0, enabled: false },
+      { key: 'termin_2', label: 'Termin 2', pct: 0, enabled: false },
+      { key: 'termin_3', label: 'Termin 3', pct: 0, enabled: false },
+      { key: 'pelunasan', label: 'Pelunasan', pct: 50, enabled: true },
+    ];
     config.payments.push({
       id: 'p1',
       milestone_key: 'dp',
       date: '2026-08-01',
-      amount: 2_500_000,
+      amount: 10_000_000,
     });
-    const snap = buildEstimationBillingSnapshot(10_000_000, config, []);
-    expect(snap.contractTotal).toBe(10_000_000);
-    expect(snap.milestones[0].paidAmount).toBe(2_500_000);
-    expect(snap.milestones[0].status).toBe('partial');
-    expect(snap.progressPct).toBe(25);
+    const snap = buildEstimationBillingSnapshot(14_000_000, config, []);
+    const dp = snap.milestones.find(m => m.id === 'dp')!;
+    const pelunasan = snap.milestones.find(m => m.id === 'pelunasan')!;
+    expect(dp.paidAmount).toBe(10_000_000);
+    expect(dp.amount).toBe(10_000_000);
+    expect(dp.status).toBe('paid');
+    expect(pelunasan.amount).toBe(4_000_000);
+    expect(pelunasan.dueAmount).toBe(4_000_000);
+    expect(pelunasan.status).toBe('pending');
+    expect(snap.remaining).toBe(4_000_000);
+  });
+
+  it('tracks DP over plan and shrinks pelunasan', () => {
+    const config = emptyBillingConfig(50);
+    config.milestones = [
+      { key: 'dp', label: 'DP / Uang Muka', pct: 50, enabled: true },
+      { key: 'termin_1', label: 'Termin 1', pct: 0, enabled: false },
+      { key: 'termin_2', label: 'Termin 2', pct: 0, enabled: false },
+      { key: 'termin_3', label: 'Termin 3', pct: 0, enabled: false },
+      { key: 'pelunasan', label: 'Pelunasan', pct: 50, enabled: true },
+    ];
+    config.payments.push({
+      id: 'p1',
+      milestone_key: 'dp',
+      date: '2026-08-01',
+      amount: 9_000_000,
+    });
+    const snap = buildEstimationBillingSnapshot(14_000_000, config, []);
+    const dp = snap.milestones.find(m => m.id === 'dp')!;
+    const pelunasan = snap.milestones.find(m => m.id === 'pelunasan')!;
+    expect(dp.amount).toBe(9_000_000);
+    expect(pelunasan.amount).toBe(5_000_000);
   });
 });
 

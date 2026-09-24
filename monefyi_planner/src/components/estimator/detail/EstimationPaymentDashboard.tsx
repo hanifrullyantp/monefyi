@@ -104,8 +104,11 @@ export default function EstimationPaymentDashboard({
                     <p className="text-xs font-semibold text-slate-800 truncate">{m.label}</p>
                     <p className="text-[10px] text-slate-500 tabular-nums">
                       {formatRupiahFull(m.amount)}
-                      {m.paidAmount > 0 && m.status !== 'paid' && (
+                      {m.paidAmount > 0 && (
                         <> · terbayar {formatRupiahFull(m.paidAmount)}</>
+                      )}
+                      {m.status !== 'paid' && m.dueAmount > 0 && m.paidAmount > 0 && (
+                        <> · sisa {formatRupiahFull(m.dueAmount)}</>
                       )}
                     </p>
                   </div>

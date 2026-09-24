@@ -71,9 +71,12 @@ describe('whatsappEstimationPresets - follow up - short message', () => {
 });
 
 describe('whatsappEstimationPresets - penagihan - includes total', () => {
-  it('mentions pembayaran', () => {
+  it('includes contract remaining and schedule', () => {
     const msg = buildWhatsAppPenagihanMessage(draft, settings, 'Pak');
-    expect(msg.toLowerCase()).toContain('pembayaran');
+    expect(msg.toLowerCase()).toContain('tagihan');
+    expect(msg).toContain('Total kontrak');
+    expect(msg).toContain('Jadwal pembayaran');
+    expect(msg).toContain('Kitchen Set');
   });
 });
 

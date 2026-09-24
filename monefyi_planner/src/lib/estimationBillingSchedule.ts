@@ -38,6 +38,37 @@ function categoryForKey(key: BillingMilestoneKey): BillingMilestone['category'] 
   return 'termin';
 }
 
+function applyPaidToMilestone(m: BillingMilestone, paid: number): void {
+  m.paidAmount = Math.max(0, paid);
+  m.dueAmount = Math.max(0, m.amount - m.paidAmount);
+  m.status = milestoneStatus(m.amount, m.paidAmount);
+}
+
+/**
+ * DP/termin yang sudah dibayar (bisa kurang/lebih dari %) jadi acuan.
+ * Sisa kontrak otomatis masuk ke pelunasan, bukan tetap % rencana.
+ */
+export function settleMilestoneAmountsFromPayments(milestones: BillingMilestone[]): BillingMilestone[] {
+  if (milestones.length === 0) return milestones;
+
+  const contractTotal = milestones.reduce((s, m) => s + m.amount, 0);
+  const pelunasan = milestones.find(m => m.category === 'pelunasan');
+  const earlier = milestones.filter(m => m.category !== 'pelunasan');
+
+  for (const m of earlier) {
+    if (m.paidAmount <= 0) continue;
+    m.amount = Math.max(m.amount, m.paidAmount);
+  }
+
+  if (pelunasan) {
+    const earlierSum = earlier.reduce((s, m) => s + m.amount, 0);
+    pelunasan.amount = Math.max(0, contractTotal - earlierSum);
+  }
+
+  for (const m of milestones) applyPaidToMilestone(m, m.paidAmount);
+  return milestones;
+}
+
 function distributeCategoryPaid(
   category: 'dp' | 'termin' | 'pelunasan',
   totalPaid: number,
@@ -47,12 +78,9 @@ function distributeCategoryPaid(
   let remaining = totalPaid;
   for (const key of milestoneKeys) {
     const m = milestones.find(x => x.id === key);
-    if (!m || m.category !== category) continue;
-    const applied = Math.min(m.amount, remaining);
-    m.paidAmount = applied;
-    m.status = milestoneStatus(m.amount, applied);
-    m.dueAmount = Math.max(0, m.amount - applied);
-    remaining -= applied;
+    if (!m || m.category !== category || remaining <= 0) continue;
+    m.paidAmount = remaining;
+    remaining = 0;
   }
 }
 
@@ -120,10 +148,7 @@ export function buildEstimationBillingSnapshot(
     }
   }
 
-  for (const m of milestones) {
-    m.dueAmount = Math.max(0, m.amount - m.paidAmount);
-    m.status = milestoneStatus(m.amount, m.paidAmount);
-  }
+  settleMilestoneAmountsFromPayments(milestones);
 
   const localReceived = localPayments.reduce((s, p) => s + p.amount, 0);
   const totalReceived = Math.min(contractTotal, localReceived + receivedProject);

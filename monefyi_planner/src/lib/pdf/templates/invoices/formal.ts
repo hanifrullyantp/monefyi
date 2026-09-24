@@ -34,22 +34,36 @@ function installmentTable(ctx: InvoicePdfContext, header: string, alt?: string):
   if (!ctx.installments.length) return { text: '' };
   const body = [
     [
-      { text: 'Termin', bold: true, color: '#ffffff', fillColor: header, fontSize: 9 },
-      { text: 'Nominal', bold: true, color: '#ffffff', fillColor: header, fontSize: 9, alignment: 'right' as const },
-      { text: 'Status', bold: true, color: '#ffffff', fillColor: header, fontSize: 9 },
-      { text: 'Tanggal', bold: true, color: '#ffffff', fillColor: header, fontSize: 9 },
+      { text: 'Termin', bold: true, color: '#ffffff', fillColor: header, fontSize: 8 },
+      { text: 'Tagihan', bold: true, color: '#ffffff', fillColor: header, fontSize: 8, alignment: 'right' as const },
+      { text: 'Terbayar', bold: true, color: '#ffffff', fillColor: header, fontSize: 8, alignment: 'right' as const },
+      { text: 'Sisa', bold: true, color: '#ffffff', fillColor: header, fontSize: 8, alignment: 'right' as const },
+      { text: 'Status', bold: true, color: '#ffffff', fillColor: header, fontSize: 8 },
     ],
     ...ctx.installments.map((row, i) => [
-      { text: row.label, fillColor: alt && i % 2 ? alt : undefined, fontSize: 9 },
-      { text: row.amount, alignment: 'right' as const, fillColor: alt && i % 2 ? alt : undefined, fontSize: 9 },
-      { text: row.statusLabel, fillColor: alt && i % 2 ? alt : undefined, fontSize: 9 },
-      { text: row.paidDate || '—', fillColor: alt && i % 2 ? alt : undefined, fontSize: 9 },
+      {
+        stack: [
+          { text: row.label, fontSize: 9 },
+          { text: `Rencana ${row.plannedPct}%`, fontSize: 7, color: '#64748b' },
+        ],
+        fillColor: alt && i % 2 ? alt : undefined,
+      },
+      { text: row.amount, alignment: 'right' as const, fillColor: alt && i % 2 ? alt : undefined, fontSize: 8 },
+      { text: row.paidAmount, alignment: 'right' as const, fillColor: alt && i % 2 ? alt : undefined, fontSize: 8 },
+      { text: row.dueAmount, alignment: 'right' as const, fillColor: alt && i % 2 ? alt : undefined, fontSize: 8 },
+      {
+        stack: [
+          { text: row.statusLabel, fontSize: 8 },
+          { text: row.paidDate || '', fontSize: 7, color: '#64748b' },
+        ],
+        fillColor: alt && i % 2 ? alt : undefined,
+      },
     ]),
   ];
   return {
     table: {
       headerRows: 1,
-      widths: ['*', 90, 70, 80],
+      widths: ['*', 72, 72, 72, 70],
       body,
     },
     layout: {

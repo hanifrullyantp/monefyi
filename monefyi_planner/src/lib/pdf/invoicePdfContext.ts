@@ -11,6 +11,12 @@ export type InvoicePaymentStatus = 'paid' | 'partial' | 'pending';
 export interface InvoiceInstallmentRow {
   label: string;
   amount: string;
+  amountRaw: number;
+  paidAmount: string;
+  paidAmountRaw: number;
+  dueAmount: string;
+  dueAmountRaw: number;
+  plannedPct: number;
   status: InvoicePaymentStatus;
   statusLabel: string;
   paidDate?: string;
@@ -83,6 +89,12 @@ export async function buildInvoicePdfContext(
   const installments: InvoiceInstallmentRow[] = snapshot.milestones.map(m => ({
     label: m.label,
     amount: formatRupiahFull(m.amount),
+    amountRaw: m.amount,
+    paidAmount: formatRupiahFull(m.paidAmount),
+    paidAmountRaw: m.paidAmount,
+    dueAmount: formatRupiahFull(m.dueAmount),
+    dueAmountRaw: m.dueAmount,
+    plannedPct: m.pct,
     status: m.status,
     statusLabel: STATUS_LABEL[m.status],
     paidDate: m.status === 'pending' ? undefined : lastPaidDate(draft, m.id),
