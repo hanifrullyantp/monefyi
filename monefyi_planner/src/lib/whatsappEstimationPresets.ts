@@ -11,6 +11,7 @@ import {
 } from './whatsappQuotationMessage';
 import type { EstimationFormDraft } from '../types/estimator';
 import type { PdfSettings } from '../types/pdfSettings';
+import type { ProjectIncome } from '../services/estimationPaymentService';
 
 export type WhatsAppEstimationPreset = 'follow_up' | 'penawaran' | 'penagihan';
 
@@ -45,7 +46,10 @@ export function buildWhatsAppFollowUpMessage(
   ].filter(Boolean).join('\n').trim();
 }
 
-function snapshotFromDraft(draft: EstimationFormDraft): EstimationBillingSnapshot {
+function snapshotFromDraft(
+  draft: EstimationFormDraft,
+  projectPayments: ProjectIncome[] = [],
+): EstimationBillingSnapshot {
   const items = countedEstimationItems(draft.items);
   const summary = calcEstimationSummary(
     items,
@@ -54,7 +58,7 @@ function snapshotFromDraft(draft: EstimationFormDraft): EstimationBillingSnapsho
     draft.tax_pct,
     { discountAmount: draft.discount_amount, adjustments: draft.adjustments },
   );
-  return buildEstimationBillingSnapshot(summary.grandTotal, draft.billing_config);
+  return buildEstimationBillingSnapshot(summary.grandTotal, draft.billing_config, projectPayments);
 }
 
 function bankLines(settings: PdfSettings): string[] {
@@ -80,8 +84,9 @@ export function buildWhatsAppPenagihanMessage(
   draft: EstimationFormDraft,
   settings: PdfSettings,
   salutation = 'Pak',
+  projectPayments: ProjectIncome[] = [],
 ): string {
-  const snapshot = snapshotFromDraft(draft);
+  const snapshot = snapshotFromDraft(draft, projectPayments);
   const name = draft.customer_name.trim() || 'Bapak/Ibu';
   const sal = salutation.trim();
   const greeting = sal ? `${sal} ${name}` : name;
@@ -115,8 +120,9 @@ export function buildWhatsAppMilestoneTagihMessage(
   settings: PdfSettings,
   milestone: BillingMilestone,
   salutation = 'Pak',
+  projectPayments: ProjectIncome[] = [],
 ): string {
-  const snapshot = snapshotFromDraft(draft);
+  const snapshot = snapshotFromDraft(draft, projectPayments);
   const live = snapshot.milestones.find(m => m.id === milestone.id) ?? milestone;
   const name = draft.customer_name.trim() || 'Bapak/Ibu';
   const sal = salutation.trim();
@@ -153,12 +159,13 @@ export function buildWhatsAppPresetMessage(
   templateConfig: WhatsAppTemplateConfig,
   salutation = 'Pak',
   subtitle?: string,
+  projectPayments: ProjectIncome[] = [],
 ): string {
   if (preset === 'follow_up') {
     return buildWhatsAppFollowUpMessage(draft, settings, salutation);
   }
   if (preset === 'penagihan') {
-    return buildWhatsAppPenagihanMessage(draft, settings, salutation);
+    return buildWhatsAppPenagihanMessage(draft, settings, salutation, projectPayments);
   }
   return buildWhatsAppQuotationMessage(
     draft,

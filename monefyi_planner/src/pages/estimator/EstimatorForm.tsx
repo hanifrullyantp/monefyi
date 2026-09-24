@@ -971,6 +971,7 @@ export default function EstimatorForm() {
           draft={draft}
           settings={pdfSettings}
           projectName={estimationProjectName}
+          projectId={linkedProjectId}
           onClose={() => setDocumentPreviewOpen(false)}
           onEdit={handleDocumentEdit}
           onSendWhatsApp={handleDocumentWhatsApp}
@@ -993,6 +994,7 @@ export default function EstimatorForm() {
           initialPreset={waInitialPreset}
           tagihMilestone={waTagihMilestone}
           attachDocument={waAttachDocument}
+          projectId={linkedProjectId}
           onToast={(msg, type) => showToast(msg, type)}
           onShared={scheduleSentPrompt}
         />

@@ -103,13 +103,11 @@ export default function EstimationPaymentDashboard({
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-semibold text-slate-800 truncate">{m.label}</p>
                     <p className="text-[10px] text-slate-500 tabular-nums">
-                      {formatRupiahFull(m.amount)}
-                      {m.paidAmount > 0 && (
-                        <> · terbayar {formatRupiahFull(m.paidAmount)}</>
-                      )}
-                      {m.status !== 'paid' && m.dueAmount > 0 && m.paidAmount > 0 && (
-                        <> · sisa {formatRupiahFull(m.dueAmount)}</>
-                      )}
+                      {m.status === 'paid'
+                        ? formatRupiahFull(m.amount)
+                        : m.paidAmount > 0
+                          ? `${formatRupiahFull(m.amount)} · terbayar ${formatRupiahFull(m.paidAmount)} · sisa ${formatRupiahFull(m.dueAmount)}`
+                          : formatRupiahFull(m.amount)}
                     </p>
                   </div>
                   <span

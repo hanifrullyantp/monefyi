@@ -45,24 +45,37 @@ function applyPaidToMilestone(m: BillingMilestone, paid: number): void {
 }
 
 /**
- * DP/termin yang sudah dibayar (bisa kurang/lebih dari %) jadi acuan.
- * Sisa kontrak otomatis masuk ke pelunasan, bukan tetap % rencana.
+ * Nominal yang sudah masuk mengunci tahap itu.
+ * Pelunasan = total penawaran − jumlah tahap sebelumnya (bukan % rencana).
+ * Contoh: total 14jt, DP dibayar 10jt → pelunasan 4jt.
  */
-export function settleMilestoneAmountsFromPayments(milestones: BillingMilestone[]): BillingMilestone[] {
+export function settleMilestoneAmountsFromPayments(
+  milestones: BillingMilestone[],
+  contractTotal: number,
+): BillingMilestone[] {
   if (milestones.length === 0) return milestones;
 
-  const contractTotal = milestones.reduce((s, m) => s + m.amount, 0);
   const pelunasan = milestones.find(m => m.category === 'pelunasan');
   const earlier = milestones.filter(m => m.category !== 'pelunasan');
 
   for (const m of earlier) {
-    if (m.paidAmount <= 0) continue;
-    m.amount = Math.max(m.amount, m.paidAmount);
+    if (m.paidAmount > 0) m.amount = m.paidAmount;
+  }
+
+  let allocated = earlier.reduce((s, m) => s + m.amount, 0);
+  if (allocated > contractTotal) {
+    let overflow = allocated - contractTotal;
+    for (let i = earlier.length - 1; i >= 0 && overflow > 0; i -= 1) {
+      if (earlier[i].paidAmount > 0) continue;
+      const cut = Math.min(earlier[i].amount, overflow);
+      earlier[i].amount -= cut;
+      overflow -= cut;
+    }
+    allocated = earlier.reduce((s, m) => s + m.amount, 0);
   }
 
   if (pelunasan) {
-    const earlierSum = earlier.reduce((s, m) => s + m.amount, 0);
-    pelunasan.amount = Math.max(0, contractTotal - earlierSum);
+    pelunasan.amount = Math.max(0, contractTotal - allocated);
   }
 
   for (const m of milestones) applyPaidToMilestone(m, m.paidAmount);
@@ -93,7 +106,9 @@ export function buildEstimationBillingSnapshot(
   const billingDiscount = Math.max(0, Math.round(billingConfig.billing_discount_amount));
   const contractTotal = Math.max(0, Math.round(baseGrandTotal - billingDiscount));
 
-  const enabled = billingConfig.milestones.filter(m => m.enabled && m.pct > 0);
+  const enabled = billingConfig.milestones.filter(m => (
+    m.enabled && (m.pct > 0 || m.key === 'pelunasan')
+  ));
   const totalPct = enabled.reduce((s, m) => s + m.pct, 0);
 
   const milestones: BillingMilestone[] = enabled.map(m => {
@@ -119,19 +134,15 @@ export function buildEstimationBillingSnapshot(
     }
   }
 
-  const localPayments = projectPayments.length > 0 ? [] : billingConfig.payments;
-  const receivedProject = projectPayments
-    .filter(p => p.status === 'received')
-    .reduce((s, p) => s + p.amount, 0);
+  const receivedProjectList = projectPayments.filter(p => p.status === 'received');
+  const receivedProject = receivedProjectList.reduce((s, p) => s + p.amount, 0);
+  const localPayments = receivedProject > 0 ? [] : billingConfig.payments;
 
-  const byCategory = projectPayments
-    .filter(p => p.status === 'received')
-    .reduce<Record<string, number>>((acc, p) => {
+  if (receivedProject > 0) {
+    const byCategory = receivedProjectList.reduce<Record<string, number>>((acc, p) => {
       acc[p.category] = (acc[p.category] || 0) + p.amount;
       return acc;
     }, {});
-
-  if (receivedProject > 0) {
     distributeCategoryPaid('dp', byCategory.dp || 0, ['dp'], milestones);
     distributeCategoryPaid(
       'termin',
@@ -148,7 +159,7 @@ export function buildEstimationBillingSnapshot(
     }
   }
 
-  settleMilestoneAmountsFromPayments(milestones);
+  settleMilestoneAmountsFromPayments(milestones, contractTotal);
 
   const localReceived = localPayments.reduce((s, p) => s + p.amount, 0);
   const totalReceived = Math.min(contractTotal, localReceived + receivedProject);

@@ -21,6 +21,7 @@ import {
 import { downloadBlob } from '../../../lib/pdf/pdfMakeSetup';
 import { displayOptionsFromDraft } from '../../../types/pdfSettings';
 import type { DocumentType } from './EstimationDocumentMenu';
+import { loadEstimationProjectPayments, type ProjectIncome } from '../../../services/estimationPaymentService';
 
 type Salutation = 'Pak' | 'Bu' | 'Kak' | '';
 
@@ -35,6 +36,7 @@ type Props = {
   initialPreset?: WhatsAppEstimationPreset;
   tagihMilestone?: BillingMilestone | null;
   attachDocument?: DocumentType | null;
+  projectId?: string | null;
   onToast: (msg: string, type: 'success' | 'error') => void;
   onShared?: () => void;
 };
@@ -52,6 +54,7 @@ export default function EstimationWhatsAppPickerModal({
   initialPreset,
   tagihMilestone,
   attachDocument,
+  projectId,
   onToast,
   onShared,
 }: Props) {
@@ -65,6 +68,26 @@ export default function EstimationWhatsAppPickerModal({
   const [attachFile, setAttachFile] = useState(true);
   const [copied, setCopied] = useState(false);
   const [sending, setSending] = useState(false);
+  const [projectPayments, setProjectPayments] = useState<ProjectIncome[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    const load = async () => {
+      if (!projectId) {
+        setProjectPayments([]);
+        return;
+      }
+      try {
+        const rows = await loadEstimationProjectPayments(projectId);
+        if (!cancelled) setProjectPayments(rows);
+      } catch {
+        if (!cancelled) setProjectPayments([]);
+      }
+    };
+    void load();
+    return () => { cancelled = true; };
+  }, [open, projectId]);
 
   useEffect(() => {
     if (!open) return;
@@ -77,20 +100,24 @@ export default function EstimationWhatsAppPickerModal({
     setCopied(false);
     const sal = (templateConfig.defaultSalutation as Salutation) || 'Pak';
     if (p === 'penagihan' && tagihMilestone) {
-      setMessage(buildWhatsAppMilestoneTagihMessage(draft, settings, tagihMilestone, sal));
+      setMessage(buildWhatsAppMilestoneTagihMessage(draft, settings, tagihMilestone, sal, projectPayments));
     } else {
-      setMessage(buildWhatsAppPresetMessage(p, draft, settings, templateConfig, sal, templateConfig.defaultSubtitle || ''));
+      setMessage(buildWhatsAppPresetMessage(
+        p, draft, settings, templateConfig, sal, templateConfig.defaultSubtitle || '', projectPayments,
+      ));
     }
-  }, [open, draft, settings, templateConfig, initialPreset, tagihMilestone]);
+  }, [open, draft, settings, templateConfig, initialPreset, tagihMilestone, projectPayments]);
 
   useEffect(() => {
     if (!open) return;
     if (preset === 'penagihan' && tagihMilestone) {
-      setMessage(buildWhatsAppMilestoneTagihMessage(draft, settings, tagihMilestone, salutation));
+      setMessage(buildWhatsAppMilestoneTagihMessage(draft, settings, tagihMilestone, salutation, projectPayments));
     } else {
-      setMessage(buildWhatsAppPresetMessage(preset, draft, settings, templateConfig, salutation, subtitle));
+      setMessage(buildWhatsAppPresetMessage(
+        preset, draft, settings, templateConfig, salutation, subtitle, projectPayments,
+      ));
     }
-  }, [open, preset, salutation, subtitle, draft, settings, templateConfig, tagihMilestone]);
+  }, [open, preset, salutation, subtitle, draft, settings, templateConfig, tagihMilestone, projectPayments]);
 
   if (!open) return null;
 
@@ -105,7 +132,7 @@ export default function EstimationWhatsAppPickerModal({
     setSending(true);
     try {
       if (attachFile && attachDocument === 'invoice') {
-        const blob = await generateInvoicePdfBlob(draft, settings, displayOptionsFromDraft(draft));
+        const blob = await generateInvoicePdfBlob(draft, settings, displayOptionsFromDraft(draft), projectPayments);
         const filename = invoicePdfFilename(draft);
         const file = new File([blob], filename, { type: 'application/pdf' });
         if (typeof navigator !== 'undefined' && navigator.canShare?.({ files: [file] })) {

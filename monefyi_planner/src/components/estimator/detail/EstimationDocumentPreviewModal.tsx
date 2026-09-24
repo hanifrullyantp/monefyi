@@ -11,6 +11,7 @@ import {
   kwitansiPdfFilename,
 } from '../../../lib/pdf/generateKwitansiPdf';
 import { downloadBlob } from '../../../lib/pdf/pdfMakeSetup';
+import { loadEstimationProjectPayments, type ProjectIncome } from '../../../services/estimationPaymentService';
 
 type Props = {
   open: boolean;
@@ -18,6 +19,7 @@ type Props = {
   draft: EstimationFormDraft;
   settings: PdfSettings;
   projectName?: string | null;
+  projectId?: string | null;
   onClose: () => void;
   onEdit: (type: DocumentType) => void;
   onSendWhatsApp: (type: DocumentType) => void;
@@ -33,10 +35,11 @@ async function buildBlob(
   type: DocumentType,
   draft: EstimationFormDraft,
   settings: PdfSettings,
+  projectPayments: ProjectIncome[] = [],
 ): Promise<Blob> {
   const opts = displayOptionsFromDraft(draft);
   if (type === 'penawaran') return generateQuotationPdfBlob(draft, settings, opts);
-  if (type === 'invoice') return generateInvoicePdfBlob(draft, settings, opts);
+  if (type === 'invoice') return generateInvoicePdfBlob(draft, settings, opts, projectPayments);
   return generateKwitansiPdfBlob(buildKwitansiPdfInputFromDraft(draft, settings));
 }
 
@@ -56,6 +59,7 @@ export default function EstimationDocumentPreviewModal({
   draft,
   settings,
   projectName,
+  projectId,
   onClose,
   onEdit,
   onSendWhatsApp,
@@ -63,6 +67,26 @@ export default function EstimationDocumentPreviewModal({
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [projectPayments, setProjectPayments] = useState<ProjectIncome[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    const loadPays = async () => {
+      if (!projectId) {
+        setProjectPayments([]);
+        return;
+      }
+      try {
+        const rows = await loadEstimationProjectPayments(projectId);
+        if (!cancelled) setProjectPayments(rows);
+      } catch {
+        if (!cancelled) setProjectPayments([]);
+      }
+    };
+    void loadPays();
+    return () => { cancelled = true; };
+  }, [open, projectId]);
 
   useEffect(() => {
     if (!open) return;
@@ -73,7 +97,7 @@ export default function EstimationDocumentPreviewModal({
       setLoading(true);
       setError('');
       try {
-        const blob = await buildBlob(type, draft, settings);
+        const blob = await buildBlob(type, draft, settings, projectPayments);
         if (cancelled) return;
         url = URL.createObjectURL(blob);
         setBlobUrl(url);
@@ -89,7 +113,7 @@ export default function EstimationDocumentPreviewModal({
       cancelled = true;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [open, type, draft, settings]);
+  }, [open, type, draft, settings, projectPayments]);
 
   if (!open) return null;
 
@@ -97,7 +121,7 @@ export default function EstimationDocumentPreviewModal({
 
   const handleDownload = async () => {
     try {
-      const blob = await buildBlob(type, draft, settings);
+      const blob = await buildBlob(type, draft, settings, projectPayments);
       downloadBlob(blob, filenameFor(type, draft, projectName));
     } catch {
       /* ignore */
