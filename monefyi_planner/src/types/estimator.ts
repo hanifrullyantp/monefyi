@@ -253,6 +253,11 @@ export interface EstimationSummary {
   discountAmount: number;
   afterDiscount: number;
   taxAmount: number;
+  /** Total setelah PPN, sebelum potongan tagihan. */
+  grossTotal: number;
+  billingDiscountAmount: number;
+  billingBonusNote: string;
+  /** Total akhir (setelah potongan tagihan). */
   grandTotal: number;
   totalProfit: number;
   avgMarginPct: number;

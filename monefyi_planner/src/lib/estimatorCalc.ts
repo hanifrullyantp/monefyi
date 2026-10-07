@@ -1,4 +1,9 @@
-import type { EstimationAdjustment, EstimationItemDraft, EstimationSummary } from '../types/estimator';
+import type {
+  EstimationAdjustment,
+  EstimationFormDraft,
+  EstimationItemDraft,
+  EstimationSummary,
+} from '../types/estimator';
 
 /** Bulatkan ke Rupiah utuh */
 export function roundIdr(n: number): number {
@@ -166,6 +171,23 @@ export function countedEstimationItems(items: EstimationItemDraft[]): Estimation
   return items.filter(isEstimationItemCounted);
 }
 
+export function summaryOptsFromDraft(draft: Pick<
+  EstimationFormDraft,
+  'discount_amount' | 'adjustments' | 'billing_config'
+>): {
+  discountAmount?: number;
+  adjustments?: EstimationAdjustment[];
+  billingDiscountAmount?: number;
+  billingBonusNote?: string;
+} {
+  return {
+    discountAmount: draft.discount_amount,
+    adjustments: draft.adjustments,
+    billingDiscountAmount: draft.billing_config?.billing_discount_amount,
+    billingBonusNote: draft.billing_config?.billing_bonus_note,
+  };
+}
+
 export function calcEstimationSummary(
   items: EstimationItemDraft[],
   overheadPct: number,
@@ -174,6 +196,8 @@ export function calcEstimationSummary(
   opts?: {
     discountAmount?: number;
     adjustments?: EstimationAdjustment[];
+    billingDiscountAmount?: number;
+    billingBonusNote?: string;
   },
 ): EstimationSummary {
   const counted = countedEstimationItems(items);
@@ -196,8 +220,11 @@ export function calcEstimationSummary(
   const discountAmount = discountAmountPct + discountAmountFixed + adjustmentTotal;
   const afterDiscount = Math.max(0, subtotalBeforeDiscount - discountAmountPct - discountAmountFixed - adjustmentTotal);
   const taxAmount = roundIdr(afterDiscount * (taxPct / 100));
-  const grandTotal = afterDiscount + taxAmount;
-  const totalProfit = itemProfit + overheadAmount - discountAmountPct - discountAmountFixed - adjustmentTotal;
+  const grossTotal = afterDiscount + taxAmount;
+  const billingDiscountAmount = roundIdr(Math.max(0, Number(opts?.billingDiscountAmount) || 0));
+  const billingBonusNote = String(opts?.billingBonusNote || '').trim();
+  const grandTotal = Math.max(0, grossTotal - billingDiscountAmount);
+  const totalProfit = itemProfit + overheadAmount - discountAmountPct - discountAmountFixed - adjustmentTotal - billingDiscountAmount;
   const avgMarginPct = subtotalSellingItems > 0
     ? ((subtotalSellingItems - subtotalHpp) / subtotalSellingItems) * 100
     : 0;
@@ -215,6 +242,9 @@ export function calcEstimationSummary(
     discountAmount,
     afterDiscount,
     taxAmount,
+    grossTotal,
+    billingDiscountAmount,
+    billingBonusNote,
     grandTotal,
     totalProfit,
     avgMarginPct,

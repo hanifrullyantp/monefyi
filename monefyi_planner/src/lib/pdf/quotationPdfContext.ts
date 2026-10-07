@@ -1,5 +1,5 @@
 import convertTerbilang from 'terbilang-ts';
-import { calcEstimationSummary, countedEstimationItems, effectiveItemSelling } from '../estimatorCalc';
+import { calcEstimationSummary, countedEstimationItems, effectiveItemSelling, summaryOptsFromDraft } from '../estimatorCalc';
 import { formatDateId, formatRupiahFull } from '../estimatorFormat';
 import { urlToDataUri, fileToDataUri } from './pdfImageUtils';
 import { normalizePdfTemplate, type EstimationFormDraft, type PdfTemplate } from '../../types/estimator';
@@ -46,6 +46,8 @@ export interface QuotationPdfContext {
   discountFixedLabel: string | null;
   adjustmentLabels: Array<{ label: string; value: string }>;
   taxLabel: string | null;
+  billingDiscountLabel: string | null;
+  bonusNote: string;
   grandTotal: string;
   grandTotalRaw: number;
   grandTotalWords: string;
@@ -75,10 +77,7 @@ export async function buildQuotationPdfContext(
 ): Promise<QuotationPdfContext> {
   const resolved = resolvePdfDisplayOptions(options);
   const items = countedEstimationItems(draft.items);
-  const summary = calcEstimationSummary(items, draft.overhead_pct, draft.discount_pct, draft.tax_pct, {
-    discountAmount: draft.discount_amount,
-    adjustments: draft.adjustments,
-  });
+  const summary = calcEstimationSummary(items, draft.overhead_pct, draft.discount_pct, draft.tax_pct, summaryOptsFromDraft(draft));
 
   const primary = draft.pdf_primary_color || settings.primary_color || '#059669';
   const secondary = draft.pdf_secondary_color || settings.secondary_color || '#1e293b';
@@ -155,6 +154,8 @@ export async function buildQuotationPdfContext(
       .filter(a => a.label.trim() && a.amount > 0)
       .map(a => ({ label: a.label.trim(), value: `-${rp(a.amount)}` })),
     taxLabel: draft.tax_pct > 0 ? `${rp(summary.taxAmount)} (${draft.tax_pct}%)` : null,
+    billingDiscountLabel: summary.billingDiscountAmount > 0 ? `-${rp(summary.billingDiscountAmount)}` : null,
+    bonusNote: summary.billingBonusNote,
     grandTotal: rp(summary.grandTotal),
     grandTotalRaw: summary.grandTotal,
     grandTotalWords: capitalizeFirst(convertTerbilang(Math.round(summary.grandTotal))),

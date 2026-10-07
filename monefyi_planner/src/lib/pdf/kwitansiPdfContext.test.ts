@@ -127,6 +127,22 @@ describe('kwitansiPdfContext - buildKwitansiPdfContext', () => {
     expect(ctx.estimationTotal).toMatch(/^Rp/);
   });
 
+  it('uses billed estimation total after billing discount', async () => {
+    const draft = {
+      ...baseDraft,
+      billing_config: {
+        ...baseDraft.billing_config,
+        billing_discount_amount: 1_000_000,
+        billing_bonus_note: 'Cat dinding bonus',
+      },
+    };
+    const full = await buildKwitansiPdfContext(makeInput({ draft: baseDraft }));
+    const billed = await buildKwitansiPdfContext(makeInput({ draft }));
+    expect(billed.bonusNote).toBe('Cat dinding bonus');
+    expect(billed.billingDiscountLabel).toMatch(/1\.000\.000/);
+    expect(billed.estimationTotal).not.toBe(full.estimationTotal);
+  });
+
   it('falls back when customer name is empty', async () => {
     const ctx = await buildKwitansiPdfContext(makeInput({
       draft: { ...baseDraft, customer_name: '' },

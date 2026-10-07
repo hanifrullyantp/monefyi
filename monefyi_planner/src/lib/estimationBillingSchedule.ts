@@ -104,7 +104,8 @@ export function buildEstimationBillingSnapshot(
   projectPayments: ProjectIncome[] = [],
 ): EstimationBillingSnapshot {
   const billingDiscount = Math.max(0, Math.round(billingConfig.billing_discount_amount));
-  const contractTotal = Math.max(0, Math.round(baseGrandTotal - billingDiscount));
+  /** baseGrandTotal harus sudah total akhir (setelah potongan tagihan). */
+  const contractTotal = Math.max(0, Math.round(baseGrandTotal));
 
   const enabled = billingConfig.milestones.filter(m => (
     m.enabled && (m.pct > 0 || m.key === 'pelunasan')

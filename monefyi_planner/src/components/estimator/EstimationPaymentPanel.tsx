@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ExternalLink, Loader2, Plus, Receipt } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { EstimationFormDraft } from '../../types/estimator';
-import { calcEstimationSummary, countedEstimationItems } from '../../lib/estimatorCalc';
+import { calcEstimationSummary, countedEstimationItems, summaryOptsFromDraft } from '../../lib/estimatorCalc';
 import { formatRupiah, parseMoneyInput } from '../../utils/projectUi';
 import { todayStr } from '../../lib/adapters';
 import {
@@ -64,7 +64,7 @@ export default function EstimationPaymentPanel({
       draft.overhead_pct,
       draft.discount_pct,
       draft.tax_pct,
-      { discountAmount: draft.discount_amount, adjustments: draft.adjustments },
+      summaryOptsFromDraft(draft),
     ).grandTotal;
   }, [draft]);
 

@@ -1,4 +1,4 @@
-import { calcEstimationSummary, countedEstimationItems } from '../../lib/estimatorCalc';
+import { calcEstimationSummary, countedEstimationItems, summaryOptsFromDraft } from '../../lib/estimatorCalc';
 import { formatRupiahFull } from '../../lib/estimatorFormat';
 import type { EstimationFormDraft } from '../../types/estimator';
 import { AlertTriangle } from 'lucide-react';
@@ -15,7 +15,7 @@ export default function EstimationSummaryPanel({ draft }: Props) {
     draft.overhead_pct,
     draft.discount_pct,
     draft.tax_pct,
-    { discountAmount: draft.discount_amount, adjustments: draft.adjustments },
+    summaryOptsFromDraft(draft),
   );
 
   const marginWidth = Math.min(100, Math.max(0, s.avgMarginPct));
@@ -89,6 +89,12 @@ export default function EstimationSummaryPanel({ draft }: Props) {
         ))}
         {draft.tax_pct > 0 && (
           <Row label={`PPN (${draft.tax_pct}%)`} value={formatRupiahFull(s.taxAmount)} />
+        )}
+        {s.billingDiscountAmount > 0 && (
+          <Row label="Potongan tagihan" value={`−${formatRupiahFull(s.billingDiscountAmount)}`} negative />
+        )}
+        {s.billingBonusNote && (
+          <p className="text-[11px] text-emerald-700 pt-1">Bonus: {s.billingBonusNote}</p>
         )}
       </div>
 

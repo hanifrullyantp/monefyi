@@ -58,7 +58,7 @@ import type { EstimationStatusTimestamps } from '../../lib/estimationStatus';
 import type { UpgradeModalTrigger } from '../../types/entitlement';
 import { ESTIMATION_STATUS_LABEL } from '../../lib/estimatorFormat';
 import type { EstimationImageDraft, EstimationStatus, Estimation } from '../../types/estimator';
-import { calcEstimationSummary, countedEstimationItems } from '../../lib/estimatorCalc';
+import { calcEstimationSummary, countedEstimationItems, summaryOptsFromDraft } from '../../lib/estimatorCalc';
 import type { EstimationFormDraft } from '../../types/estimator';
 import { resolveEstimationProjectId } from '../../lib/estimationProjectLink';
 import type { ProjectIncome } from '../../services/incomeService';
@@ -341,7 +341,7 @@ export default function EstimatorForm() {
           draft.overhead_pct,
           draft.discount_pct,
           draft.tax_pct,
-          { discountAmount: draft.discount_amount, adjustments: draft.adjustments },
+          summaryOptsFromDraft(draft),
         ).grandTotal;
         analytics.estimationCreated({
           estimationId: created.id,
@@ -878,6 +878,8 @@ export default function EstimatorForm() {
         discountAmount={draft.discount_amount}
         adjustments={draft.adjustments}
         taxPct={draft.tax_pct}
+        billingDiscountAmount={draft.billing_config.billing_discount_amount}
+        billingBonusNote={draft.billing_config.billing_bonus_note}
         onChange={items => patch({ items })}
         readOnly={isReadOnly}
         onRegisterAddItem={registerAddItem}

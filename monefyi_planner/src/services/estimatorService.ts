@@ -6,7 +6,7 @@ import {
   emptyBillingConfig,
   normalizeBillingConfig,
 } from '../lib/estimationBillingConfig';
-import { calcEstimationSummary, countedEstimationItems, normalizeEstimationItem } from '../lib/estimatorCalc';
+import { calcEstimationSummary, countedEstimationItems, normalizeEstimationItem, summaryOptsFromDraft } from '../lib/estimatorCalc';
 import { nextEstimationCode } from '../lib/estimatorFormat';
 import { emptyImageDrafts, hydrateImageDrafts, imagesToDbFields } from './estimationImageService';
 import { normalizePdfTemplate } from '../types/estimator';
@@ -59,7 +59,7 @@ function summaryToHeader(
     draft.overhead_pct,
     draft.discount_pct,
     draft.tax_pct,
-    { discountAmount: draft.discount_amount, adjustments: draft.adjustments },
+    summaryOptsFromDraft(draft),
   );
   return {
     subtotal_hpp: s.subtotalHpp,

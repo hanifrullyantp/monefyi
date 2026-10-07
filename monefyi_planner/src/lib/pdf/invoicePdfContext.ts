@@ -1,4 +1,4 @@
-import { calcEstimationSummary, countedEstimationItems } from '../estimatorCalc';
+import { calcEstimationSummary, countedEstimationItems, summaryOptsFromDraft } from '../estimatorCalc';
 import { formatDateId, formatRupiahFull } from '../estimatorFormat';
 import { buildEstimationBillingSnapshot } from '../estimationBillingSchedule';
 import { normalizePdfTemplate, type EstimationFormDraft, type PdfTemplate } from '../../types/estimator';
@@ -75,10 +75,7 @@ export async function buildInvoicePdfContext(
   );
 
   const items = countedEstimationItems(draft.items);
-  const summary = calcEstimationSummary(items, draft.overhead_pct, draft.discount_pct, draft.tax_pct, {
-    discountAmount: draft.discount_amount,
-    adjustments: draft.adjustments,
-  });
+  const summary = calcEstimationSummary(items, draft.overhead_pct, draft.discount_pct, draft.tax_pct, summaryOptsFromDraft(draft));
   const snapshot = buildEstimationBillingSnapshot(summary.grandTotal, draft.billing_config, projectPayments);
   const paymentStatus = invoiceStatusFromAmounts(snapshot.totalReceived, snapshot.contractTotal);
   const lastPayment = [...draft.billing_config.payments].sort((a, b) => b.date.localeCompare(a.date))[0];

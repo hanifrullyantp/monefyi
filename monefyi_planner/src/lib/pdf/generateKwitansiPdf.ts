@@ -1,4 +1,4 @@
-import { calcEstimationSummary, countedEstimationItems } from '../estimatorCalc';
+import { calcEstimationSummary, countedEstimationItems, summaryOptsFromDraft } from '../estimatorCalc';
 import type { EstimationFormDraft } from '../../types/estimator';
 import type { PdfSettings } from '../../types/pdfSettings';
 import {
@@ -25,10 +25,7 @@ export function suggestKwitansiAmount(
   category: KwitansiPaymentCategory,
 ): number {
   const items = countedEstimationItems(draft.items);
-  const summary = calcEstimationSummary(items, draft.overhead_pct, draft.discount_pct, draft.tax_pct, {
-    discountAmount: draft.discount_amount,
-    adjustments: draft.adjustments,
-  });
+  const summary = calcEstimationSummary(items, draft.overhead_pct, draft.discount_pct, draft.tax_pct, summaryOptsFromDraft(draft));
   const total = summary.grandTotal;
   if (total <= 0) return 0;
   if (category === 'pelunasan') return total;

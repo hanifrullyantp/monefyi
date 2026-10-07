@@ -47,6 +47,8 @@ export type PdfBrandFields = {
   discountFixedLabel: string | null;
   adjustmentLabels: Array<{ label: string; value: string }>;
   taxLabel: string | null;
+  billingDiscountLabel: string | null;
+  bonusNote: string;
   grandTotal: string;
   grandTotalWords: string;
   notes: string;
@@ -188,7 +190,7 @@ export function itemsTable(
 }
 
 export function summaryBlock(
-  ctx: Pick<PdfBrandFields, 'subtotalLabel' | 'overheadLabel' | 'discountLabel' | 'discountFixedLabel' | 'adjustmentLabels' | 'taxLabel' | 'grandTotal' | 'grandTotalWords'>,
+  ctx: Pick<PdfBrandFields, 'subtotalLabel' | 'overheadLabel' | 'discountLabel' | 'discountFixedLabel' | 'adjustmentLabels' | 'taxLabel' | 'billingDiscountLabel' | 'bonusNote' | 'grandTotal' | 'grandTotalWords'>,
   highlightColor: string,
   textColor = '#ffffff',
   totalLabel = 'GRAND TOTAL',
@@ -203,6 +205,9 @@ export function summaryBlock(
     rows.push({ columns: [{ text: adj.label, width: '*' }, { text: adj.value, width: 'auto', alignment: 'right', color: '#e11d48' }], margin: [0, 2, 0, 2] as [number, number, number, number] });
   }
   if (ctx.taxLabel) rows.push({ columns: [{ text: 'PPN', width: '*' }, { text: ctx.taxLabel, width: 'auto', alignment: 'right' }], margin: [0, 2, 0, 2] as [number, number, number, number] });
+  if (ctx.billingDiscountLabel) {
+    rows.push({ columns: [{ text: 'Potongan tagihan', width: '*' }, { text: ctx.billingDiscountLabel, width: 'auto', alignment: 'right', color: '#e11d48' }], margin: [0, 2, 0, 2] as [number, number, number, number] });
+  }
 
   rows.push({
     table: {
@@ -285,8 +290,14 @@ export function termsBlock(ctx: PdfBrandFields, titleColor?: string): Content[] 
 }
 
 export function notesBlock(ctx: PdfBrandFields): Content[] {
-  if (!ctx.notes) return [];
-  return [{ text: `Catatan: ${ctx.notes}`, fontSize: 9, italics: true, margin: [0, 8, 0, 0] as [number, number, number, number] }];
+  const parts: Content[] = [];
+  if (ctx.bonusNote) {
+    parts.push({ text: `Bonus: ${ctx.bonusNote}`, fontSize: 9, bold: true, margin: [0, 8, 0, ctx.notes ? 2 : 0] as [number, number, number, number] });
+  }
+  if (ctx.notes) {
+    parts.push({ text: `Catatan: ${ctx.notes}`, fontSize: 9, italics: true, margin: [0, ctx.bonusNote ? 0 : 8, 0, 0] as [number, number, number, number] });
+  }
+  return parts;
 }
 
 export function fromToCards(ctx: PdfBrandFields, fromLabel: string, toLabel: string, fill: string, text = '#0f172a'): Content {

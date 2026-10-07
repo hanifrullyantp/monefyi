@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { calcEstimationSummary, countedEstimationItems } from '../lib/estimatorCalc';
+import { calcEstimationSummary, countedEstimationItems, summaryOptsFromDraft } from '../lib/estimatorCalc';
 import type { EstimationFormDraft, EstimationSummary } from '../types/estimator';
 
 const EMPTY_SUMMARY: EstimationSummary = {
@@ -15,6 +15,9 @@ const EMPTY_SUMMARY: EstimationSummary = {
   discountAmount: 0,
   afterDiscount: 0,
   taxAmount: 0,
+  grossTotal: 0,
+  billingDiscountAmount: 0,
+  billingBonusNote: '',
   grandTotal: 0,
   totalProfit: 0,
   avgMarginPct: 0,
@@ -31,7 +34,7 @@ export function useEstimationSummary(draft: EstimationFormDraft | null) {
       draft.overhead_pct,
       draft.discount_pct,
       draft.tax_pct,
-      { discountAmount: draft.discount_amount, adjustments: draft.adjustments },
+      summaryOptsFromDraft(draft),
     );
     return { summary, countedItemCount: countedItems.length };
   }, [draft]);

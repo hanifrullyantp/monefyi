@@ -1,4 +1,4 @@
-import { calcEstimationSummary, countedEstimationItems } from './estimatorCalc';
+import { calcEstimationSummary, countedEstimationItems, summaryOptsFromDraft } from './estimatorCalc';
 import { formatRupiahFull } from './estimatorFormat';
 import {
   buildEstimationBillingSnapshot,
@@ -56,7 +56,7 @@ function snapshotFromDraft(
     draft.overhead_pct,
     draft.discount_pct,
     draft.tax_pct,
-    { discountAmount: draft.discount_amount, adjustments: draft.adjustments },
+    summaryOptsFromDraft(draft),
   );
   return buildEstimationBillingSnapshot(summary.grandTotal, draft.billing_config, projectPayments);
 }
@@ -96,6 +96,12 @@ export function buildWhatsAppPenagihanMessage(
     '',
     `Berikut rincian tagihan proyek *${draft.title.trim() || draft.code}* (${draft.code}).`,
     `Total kontrak: *${formatRupiahFull(snapshot.contractTotal)}*`,
+    snapshot.billingDiscount > 0
+      ? `Potongan tagihan: *−${formatRupiahFull(snapshot.billingDiscount)}*`
+      : '',
+    draft.billing_config.billing_bonus_note.trim()
+      ? `Bonus: ${draft.billing_config.billing_bonus_note.trim()}`
+      : '',
     `Sudah dibayar: *${formatRupiahFull(snapshot.totalReceived)}*`,
     `Sisa tagihan: *${formatRupiahFull(snapshot.remaining)}*`,
     '',
@@ -133,6 +139,12 @@ export function buildWhatsAppMilestoneTagihMessage(
     '',
     `Reminder pembayaran *${live.label}* untuk proyek *${draft.title.trim() || draft.code}* (${draft.code}).`,
     `Total kontrak: *${formatRupiahFull(snapshot.contractTotal)}*`,
+    snapshot.billingDiscount > 0
+      ? `Potongan tagihan: *−${formatRupiahFull(snapshot.billingDiscount)}*`
+      : '',
+    draft.billing_config.billing_bonus_note.trim()
+      ? `Bonus: ${draft.billing_config.billing_bonus_note.trim()}`
+      : '',
     `Sudah dibayar: *${formatRupiahFull(snapshot.totalReceived)}*`,
     `Sisa seluruh tagihan: *${formatRupiahFull(snapshot.remaining)}*`,
     '',

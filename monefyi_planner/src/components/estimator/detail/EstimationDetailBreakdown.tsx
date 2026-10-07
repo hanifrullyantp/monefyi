@@ -57,6 +57,16 @@ export default function EstimationDetailBreakdown({
       {draft.tax_pct > 0 && (
         <Row label={`PPN (${draft.tax_pct}%)`} value={formatRupiahFull(summary.taxAmount)} />
       )}
+      {summary.billingDiscountAmount > 0 && (
+        <Row
+          label="Potongan tagihan"
+          value={`−${formatRupiahFull(summary.billingDiscountAmount)}`}
+          negative
+        />
+      )}
+      {summary.billingBonusNote && (
+        <p className="text-[11px] text-emerald-700">Bonus: {summary.billingBonusNote}</p>
+      )}
       <div className="border-t border-slate-200 pt-2">
         <Row label="Total penawaran" value={formatRupiahFull(summary.grandTotal)} bold />
       </div>

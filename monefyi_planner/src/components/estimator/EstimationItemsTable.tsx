@@ -32,6 +32,8 @@ interface Props {
   discountAmount?: number;
   adjustments?: EstimationAdjustment[];
   taxPct?: number;
+  billingDiscountAmount?: number;
+  billingBonusNote?: string;
   onChange: (items: EstimationItemDraft[]) => void;
   readOnly?: boolean;
   onRegisterAddItem?: (add: () => void) => void;
@@ -47,6 +49,8 @@ export default function EstimationItemsTable({
   discountAmount = 0,
   adjustments = [],
   taxPct = 0,
+  billingDiscountAmount = 0,
+  billingBonusNote = '',
   onChange,
   readOnly = false,
   onRegisterAddItem,
@@ -77,8 +81,13 @@ export default function EstimationItemsTable({
     return map;
   }, [productGroups]);
   const totals = useMemo(
-    () => calcEstimationSummary(countedItems, overheadPct, discountPct, taxPct, { discountAmount, adjustments }),
-    [countedItems, overheadPct, discountPct, discountAmount, adjustments, taxPct],
+    () => calcEstimationSummary(countedItems, overheadPct, discountPct, taxPct, {
+      discountAmount,
+      adjustments,
+      billingDiscountAmount,
+      billingBonusNote,
+    }),
+    [countedItems, overheadPct, discountPct, discountAmount, adjustments, taxPct, billingDiscountAmount, billingBonusNote],
   );
 
   const updateItem = (index: number, patch: Partial<EstimationItemDraft>, editField: ItemPriceEdit = 'selling') => {
@@ -728,6 +737,31 @@ export default function EstimationItemsTable({
                     </td>
                     <td />
                   </tr>
+                  {(totals.billingDiscountAmount > 0 || totals.billingBonusNote) && (
+                    <tr className="bg-white text-xs">
+                      <td colSpan={12} className="px-3 py-2 text-right text-slate-500">
+                        {totals.billingDiscountAmount > 0 ? 'Potongan tagihan' : 'Bonus'}
+                        {totals.billingBonusNote ? ` · ${totals.billingBonusNote}` : ''}
+                      </td>
+                      <td />
+                      <td className="px-2 py-2 text-right text-rose-600 tabular-nums">
+                        {totals.billingDiscountAmount > 0 ? `−${formatRupiahFull(totals.billingDiscountAmount)}` : '—'}
+                      </td>
+                      <td />
+                    </tr>
+                  )}
+                  {(totals.billingDiscountAmount > 0 || totals.billingBonusNote) && (
+                    <tr className="bg-emerald-50 text-xs font-bold">
+                      <td colSpan={12} className="px-3 py-2 text-right text-emerald-800 uppercase tracking-wide">
+                        Total akhir
+                      </td>
+                      <td />
+                      <td className="px-2 py-2 text-right text-emerald-800 tabular-nums">
+                        {formatRupiahFull(totals.grandTotal)}
+                      </td>
+                      <td />
+                    </tr>
+                  )}
                 </tfoot>
               )}
             </table>

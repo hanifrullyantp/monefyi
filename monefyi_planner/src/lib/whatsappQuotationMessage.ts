@@ -1,4 +1,4 @@
-import { calcEstimationSummary, countedEstimationItems, effectiveItemSelling } from './estimatorCalc';
+import { calcEstimationSummary, countedEstimationItems, effectiveItemSelling, summaryOptsFromDraft } from './estimatorCalc';
 import { formatRupiahFull } from './estimatorFormat';
 import type { EstimationFormDraft } from '../types/estimator';
 import type { PdfSettings } from '../types/pdfSettings';
@@ -9,6 +9,8 @@ Rincian produk:
 {{items_list}}
 
 Total: {{total}}
+{{billing_discount_line}}
+{{bonus_note_line}}
 
 {{company_name}}
 {{company_tagline}}`;
@@ -68,7 +70,7 @@ export function buildWhatsAppQuotationMessage(
     draft.overhead_pct,
     draft.discount_pct,
     draft.tax_pct,
-    { discountAmount: draft.discount_amount, adjustments: draft.adjustments },
+    summaryOptsFromDraft(draft),
   );
 
   const itemLines = activeItems.map(item => {
@@ -90,6 +92,16 @@ export function buildWhatsAppQuotationMessage(
     subtitle: (subtitle || config.defaultSubtitle || '').trim(),
     items_list: itemLines.join('\n'),
     total: formatRupiahFull(summary.grandTotal),
+    billing_discount: summary.billingDiscountAmount > 0
+      ? formatRupiahFull(summary.billingDiscountAmount)
+      : '',
+    billing_discount_line: summary.billingDiscountAmount > 0
+      ? `Potongan tagihan: −${formatRupiahFull(summary.billingDiscountAmount)}`
+      : '',
+    bonus_note: summary.billingBonusNote,
+    bonus_note_line: summary.billingBonusNote
+      ? `Bonus: ${summary.billingBonusNote}`
+      : '',
     company_name: settings.company_name || '',
     company_tagline: settings.company_tagline || '',
     code: draft.code,

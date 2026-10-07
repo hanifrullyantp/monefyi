@@ -1,5 +1,5 @@
 import convertTerbilang from 'terbilang-ts';
-import { calcEstimationSummary, countedEstimationItems } from '../estimatorCalc';
+import { calcEstimationSummary, countedEstimationItems, summaryOptsFromDraft } from '../estimatorCalc';
 import { formatDateId, formatRupiahFull } from '../estimatorFormat';
 import { urlToDataUri } from './pdfImageUtils';
 import type { EstimationFormDraft } from '../../types/estimator';
@@ -29,6 +29,8 @@ export interface KwitansiPdfContext {
   estimationCode: string;
   estimationTitle: string;
   estimationTotal: string;
+  billingDiscountLabel: string | null;
+  bonusNote: string;
   companyName: string;
   companyTagline: string;
   companyAddress: string;
@@ -81,10 +83,7 @@ export async function buildKwitansiPdfContext(input: KwitansiPdfInput): Promise<
   const { draft, settings, options, amount, paymentDate, category, description, paymentMethod } = input;
 
   const items = countedEstimationItems(draft.items);
-  const summary = calcEstimationSummary(items, draft.overhead_pct, draft.discount_pct, draft.tax_pct, {
-    discountAmount: draft.discount_amount,
-    adjustments: draft.adjustments,
-  });
+  const summary = calcEstimationSummary(items, draft.overhead_pct, draft.discount_pct, draft.tax_pct, summaryOptsFromDraft(draft));
 
   const primary = draft.pdf_primary_color || settings.primary_color || '#059669';
   const secondary = draft.pdf_secondary_color || settings.secondary_color || '#1e293b';
@@ -113,6 +112,10 @@ export async function buildKwitansiPdfContext(input: KwitansiPdfInput): Promise<
     estimationCode: draft.code || '—',
     estimationTitle: draft.title?.trim() || '—',
     estimationTotal: rp(summary.grandTotal),
+    billingDiscountLabel: summary.billingDiscountAmount > 0
+      ? `−${rp(summary.billingDiscountAmount)}`
+      : null,
+    bonusNote: summary.billingBonusNote,
     companyName: settings.company_name || 'Perusahaan',
     companyTagline: settings.company_tagline || '',
     companyAddress: settings.address || '',

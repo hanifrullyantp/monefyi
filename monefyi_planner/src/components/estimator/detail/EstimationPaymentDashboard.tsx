@@ -27,7 +27,7 @@ export default function EstimationPaymentDashboard({
   linkedToProject,
   onMilestoneClick,
 }: Props) {
-  const { contractTotal, totalReceived, remaining, progressPct, milestones, nextDue } = snapshot;
+  const { contractTotal, billingDiscount, totalReceived, remaining, progressPct, milestones, nextDue } = snapshot;
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-emerald-200/60 bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 text-white shadow-xl shadow-emerald-900/20">
@@ -52,6 +52,11 @@ export default function EstimationPaymentDashboard({
           <MetricTile label="Sudah Dibayar" value={formatRupiahFull(totalReceived)} accent />
           <MetricTile label="Sisa Tagihan" value={formatRupiahFull(remaining)} warn={remaining > 0} />
         </div>
+        {billingDiscount > 0 && (
+          <p className="text-[11px] text-emerald-50/90">
+            Termasuk potongan tagihan {formatRupiahFull(billingDiscount)}
+          </p>
+        )}
 
         <div>
           <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide text-emerald-100/80 mb-1.5">

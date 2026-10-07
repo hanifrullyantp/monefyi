@@ -93,11 +93,12 @@ describe('buildEstimationBillingSnapshot - local payments', () => {
 });
 
 describe('buildEstimationBillingSnapshot - billing discount', () => {
-  it('reduces contract total', () => {
+  it('uses billed total as contract and keeps discount for display', () => {
     const config = emptyBillingConfig(50);
     config.billing_discount_amount = 1_000_000;
-    const snap = buildEstimationBillingSnapshot(10_000_000, config, []);
+    const snap = buildEstimationBillingSnapshot(9_000_000, config, []);
     expect(snap.contractTotal).toBe(9_000_000);
+    expect(snap.billingDiscount).toBe(1_000_000);
   });
 });
 

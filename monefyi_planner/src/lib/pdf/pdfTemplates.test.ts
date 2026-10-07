@@ -39,6 +39,29 @@ describe('buildInvoiceNumber', () => {
   });
 });
 
+describe('quotationPdfContext - potongan tagihan', () => {
+  it('uses billed grand total after billing discount', async () => {
+    const draft = previewEstimationDraft('modern');
+    draft.billing_config = {
+      ...draft.billing_config,
+      billing_discount_amount: 1_000_000,
+      billing_bonus_note: 'Gratis 1 bulan garansi',
+    };
+    const settings = previewPdfSettings(defaultPdfSettings('org', 'CV Test'));
+    const ctx = await buildQuotationPdfContext(draft, settings, displayOptionsFromDraft(draft));
+    expect(ctx.billingDiscountLabel).toMatch(/1\.000\.000/);
+    expect(ctx.bonusNote).toBe('Gratis 1 bulan garansi');
+    expect(ctx.grandTotal).toMatch(/Rp/);
+    expect(ctx.grandTotal).not.toEqual(
+      (await buildQuotationPdfContext(
+        { ...draft, billing_config: { ...draft.billing_config, billing_discount_amount: 0, billing_bonus_note: '' } },
+        settings,
+        displayOptionsFromDraft(draft),
+      )).grandTotal,
+    );
+  });
+});
+
 describe('invoicePdfContext - termin dari billing', () => {
   it('marks DP paid from local payments', async () => {
     const draft = previewEstimationDraft('modern');
