@@ -15,7 +15,8 @@
 
 ## Estimator Standard (Rp 99.000)
 
-- [ ] Landing CTA → login → redirect Lynk dengan `org_id`, `user_id`, `product=estimator_standard`
+- [ ] Landing CTA Beli → langsung Lynk (`product=estimator_standard`; `org_id`/`user_id` hanya jika sudah login)
+- [ ] Tombol Login (bukan Beli) membuka modal login
 - [ ] Webhook → `planner_org_subscriptions.tier = estimator`, `estimator_variant = standard`
 - [ ] Email konfirmasi terkirim
 - [ ] Return URL `?payment=success` → entitlement refresh di `/app/estimator`

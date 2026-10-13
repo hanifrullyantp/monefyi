@@ -150,7 +150,7 @@ export function LoginModal() {
       }
       return;
     }
-    setInfo("Cek email untuk verifikasi akun. Setelah verifikasi, login lalu lanjut checkout.");
+    setInfo("Cek email untuk verifikasi akun. Setelah verifikasi, login untuk masuk ke Estimator.");
     setMode("login");
   };
 
@@ -181,8 +181,8 @@ export function LoginModal() {
   };
 
   const checkoutHint = pendingCheckoutProduct
-    ? `Login untuk melanjutkan checkout ${lynkProductLabel(pendingCheckoutProduct)}.`
-    : "Login untuk akses Estimator dan trial Planner (2 proyek).";
+    ? `Login untuk akses ${lynkProductLabel(pendingCheckoutProduct)}.`
+    : "Login untuk akses Estimator.";
 
   return (
     <AnimatePresence>

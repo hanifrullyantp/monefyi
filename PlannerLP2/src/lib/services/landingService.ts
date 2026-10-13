@@ -5,7 +5,25 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { resolveSupabaseEnv } from "@/lib/supabase/env";
 
 export const LANDING_SLUG = "estimator-lp";
-export const LANDING_CACHE_KEY = "monefyi_estimator_lp_cache_v1";
+export const LANDING_CACHE_KEY = "monefyi_estimator_lp_cache_v2";
+
+function unifyEstimatorStandardCopy(value: unknown): unknown {
+  if (typeof value === "string") {
+    return value
+      .replaceAll("Estimator Basic", "Estimator Standard")
+      .replaceAll("Ambil Basic", "Ambil Standard")
+      .replaceAll("dari Basic ke Pro", "dari Standard ke Pro");
+  }
+  if (Array.isArray(value)) return value.map(unifyEstimatorStandardCopy);
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      out[k] = k === "id" && v === "estimator-basic" ? "estimator-standard" : unifyEstimatorStandardCopy(v);
+    }
+    return out;
+  }
+  return value;
+}
 
 export type LandingContentFetchResult = {
   content: SiteContent;
@@ -22,8 +40,10 @@ function landingFunctionHint(status: number): string {
 
 /** Merge remote payload dengan default — field yang hilang diisi default. */
 export function mergeSiteContent(raw: Partial<SiteContent> | null | undefined): SiteContent {
-  if (!raw || typeof raw !== "object") return { ...defaultContent };
-  return {
+  if (!raw || typeof raw !== "object") {
+    return unifyEstimatorStandardCopy({ ...defaultContent }) as SiteContent;
+  }
+  return unifyEstimatorStandardCopy({
     ...defaultContent,
     ...raw,
     navbar: { ...defaultContent.navbar, ...(raw.navbar || {}) },
@@ -53,7 +73,7 @@ export function mergeSiteContent(raw: Partial<SiteContent> | null | undefined): 
       ...defaultContent.sectionVisibility,
       ...(raw.sectionVisibility || {}),
     },
-  };
+  }) as SiteContent;
 }
 
 export function readCachedContent(): SiteContent | null {

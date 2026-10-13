@@ -10,7 +10,7 @@ import {
   type PlannerLockedFeature,
 } from "@/lib/permissions";
 import type { User } from "@/lib/store/authStore";
-import { planIdToLynkProduct, type LynkProduct } from "@/lib/checkout/products";
+import { planIdToLynkProduct } from "@/lib/checkout/products";
 import { redirectToLynkCheckout } from "@/lib/checkout/lynk";
 import { ensureOwnerOrg } from "@/lib/services/orgService";
 import { useContentStore } from "@/lib/store/contentStore";
@@ -25,7 +25,6 @@ export function useLandingCta() {
   const orgId = useAuthStore((s) => s.orgId);
   const refreshUser = useAuthStore((s) => s.refreshUser);
   const setLoginModalOpen = useUIStore((s) => s.setLoginModalOpen);
-  const setPendingCheckoutProduct = useUIStore((s) => s.setPendingCheckoutProduct);
   const { content } = useContentStore();
 
   useEffect(() => {
@@ -34,63 +33,34 @@ export function useLandingCta() {
 
   const lynkOverrides = content.pricing.lynkCheckoutUrls;
 
+  const checkoutParams = async (returnUrl?: string) => {
+    if (!isAuthenticated || !user) {
+      return returnUrl ? { returnUrl } : {};
+    }
+    let resolvedOrgId = orgId ?? user.orgId ?? null;
+    if (!resolvedOrgId) {
+      resolvedOrgId = await ensureOwnerOrg(user.id, user.name);
+      await refreshUser();
+      resolvedOrgId = resolvedOrgId ?? useAuthStore.getState().orgId;
+    }
+    return {
+      orgId: resolvedOrgId ?? undefined,
+      userId: user.id,
+      email: user.email,
+      ...(returnUrl ? { returnUrl } : {}),
+    };
+  };
+
   const startCheckout = async (planId: string) => {
     const product = planIdToLynkProduct(planId);
     if (!product) return;
-
-    if (!isAuthenticated || !user) {
-      setPendingCheckoutProduct(product);
-      setLoginModalOpen(true);
-      return;
-    }
-
-    let resolvedOrgId = orgId ?? user.orgId ?? null;
-    if (!resolvedOrgId) {
-      resolvedOrgId = await ensureOwnerOrg(user.id, user.name);
-      await refreshUser();
-    }
-    if (!resolvedOrgId) {
-      setPendingCheckoutProduct(product);
-      setLoginModalOpen(true);
-      return;
-    }
-
-    redirectToLynkCheckout(
-      product,
-      {
-        orgId: resolvedOrgId,
-        userId: user.id,
-        email: user.email,
-      },
-      lynkOverrides,
-    );
+    redirectToLynkCheckout(product, await checkoutParams(), lynkOverrides);
   };
 
   const startPlannerProCheckout = async () => {
-    const product: LynkProduct = "planner_pro";
-    if (!isAuthenticated || !user) {
-      setPendingCheckoutProduct(product);
-      setLoginModalOpen(true);
-      return;
-    }
-    let resolvedOrgId = orgId ?? user.orgId ?? null;
-    if (!resolvedOrgId) {
-      resolvedOrgId = await ensureOwnerOrg(user.id, user.name);
-      await refreshUser();
-    }
-    if (!resolvedOrgId) {
-      setPendingCheckoutProduct(product);
-      setLoginModalOpen(true);
-      return;
-    }
     redirectToLynkCheckout(
-      product,
-      {
-        orgId: resolvedOrgId,
-        userId: user.id,
-        email: user.email,
-        returnUrl: plannerPaymentReturnPath("app"),
-      },
+      "planner_pro",
+      await checkoutParams(plannerPaymentReturnPath("app")),
       lynkOverrides,
     );
   };

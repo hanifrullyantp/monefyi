@@ -140,7 +140,7 @@ export const ENTITLEMENT_PREVIEW_OPTIONS: Array<{
 }> = [
   { id: 'full', label: 'Akses penuh', hint: 'Semua fitur — default admin' },
   { id: 'free', label: 'Free', hint: 'Paywall estimator & finance' },
-  { id: 'estimator_basic', label: 'Estimator Basic', hint: 'Proyek + Estimator, tanpa kwitansi pro' },
+  { id: 'estimator_basic', label: 'Estimator Standard', hint: 'Proyek + Estimator, tanpa kwitansi pro' },
   { id: 'estimator_pro', label: 'Estimator Pro', hint: 'Proyek + Estimator + kwitansi & template pro' },
   { id: 'planner_pro', label: 'Planner Pro', hint: 'Keuangan bisnis + 10 proyek' },
   { id: 'enterprise', label: 'Enterprise', hint: 'Kuota besar + semua modul' },
@@ -245,7 +245,7 @@ export function isAdminFullAccess(
 
 export type PlannerNavModule = 'home' | 'projects' | 'database' | 'estimator' | 'finance' | 'hr';
 
-/** Paket Estimator Basic/Pro — modul Planner terbatas (proyek + estimator). */
+/** Paket Estimator Standard/Pro — modul Planner terbatas (proyek + estimator). */
 export function isEstimatorOnlyPlan(snapshot: Pick<EntitlementSnapshot, 'isEstimator'>): boolean {
   return snapshot.isEstimator;
 }

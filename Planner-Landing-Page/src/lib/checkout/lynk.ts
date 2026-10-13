@@ -2,9 +2,9 @@ import { plannerPaymentReturnPath } from "@/lib/config/plannerApp";
 import type { LynkProduct } from "./products";
 
 export interface LynkCheckoutParams {
-  orgId: string;
-  userId: string;
-  email: string;
+  orgId?: string;
+  userId?: string;
+  email?: string;
   returnUrl?: string;
 }
 
@@ -44,11 +44,11 @@ export function buildLynkCheckoutUrl(
     plannerPaymentReturnPath("estimator");
 
   const url = new URL(base);
-  url.searchParams.set("org_id", params.orgId);
-  url.searchParams.set("user_id", params.userId);
   url.searchParams.set("product", product);
-  url.searchParams.set("customer_email", params.email);
   url.searchParams.set("return_url", returnUrl);
+  if (params.orgId) url.searchParams.set("org_id", params.orgId);
+  if (params.userId) url.searchParams.set("user_id", params.userId);
+  if (params.email) url.searchParams.set("customer_email", params.email);
   return url.toString();
 }
 

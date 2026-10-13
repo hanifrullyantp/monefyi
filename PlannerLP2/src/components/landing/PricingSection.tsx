@@ -224,7 +224,7 @@ export function PricingSection() {
               <thead>
                 <tr className="bg-slate-100">
                   <th className="py-3 px-6 text-left text-sm font-semibold text-slate-700">Detail Fitur</th>
-                  <th className="py-3 px-4 text-center text-sm font-semibold text-slate-700">Basic</th>
+                  <th className="py-3 px-4 text-center text-sm font-semibold text-slate-700">Standard</th>
                   <th className="py-3 px-4 text-center text-sm font-semibold text-emerald-700 bg-emerald-50 border-x border-emerald-100">Estimator Pro ⭐</th>
                 </tr>
               </thead>

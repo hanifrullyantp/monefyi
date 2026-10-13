@@ -407,7 +407,7 @@ serve(async (req) => {
       .maybeSingle();
     const variant = String(currentSub?.estimator_variant || "");
     if (currentSub?.tier !== "estimator" || (variant && variant !== "standard")) {
-      console.warn("Upgrade Estimator Pro ignored: org not on Estimator Basic", orgId);
+      console.warn("Upgrade Estimator Pro ignored: org not on Estimator Standard", orgId);
     }
     mapped.variant = "pro";
   }

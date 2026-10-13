@@ -32,6 +32,6 @@ Tambah redirect URLs:
 ## Alur pelanggan
 
 1. Iklan → `estimator.monefyi.com`
-2. Beli → Lynk (Basic / Pro)
+2. Beli → langsung Lynk (Standard / Pro), tanpa wajib login
 3. Email konfirmasi → link ke `estimator.monefyi.com/app/estimator`
-4. Login / atur password → Estimator aktif
+4. Login (modal / halaman masuk) atau atur password → Estimator aktif
