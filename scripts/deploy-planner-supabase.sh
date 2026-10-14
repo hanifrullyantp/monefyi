@@ -75,6 +75,7 @@ PLANNER_FUNCTIONS=(
   planner-resolve-domain
   planner-direct-create-member
   planner-lynk-webhook
+  lynk-webhook
   monefyi-admin-users
   monefyi-admin-update-user
   monefyi-admin-app-config
@@ -89,6 +90,7 @@ NO_VERIFY_JWT_FUNCTIONS=(
   monefyi-landing-config
   planner-resolve-domain
   planner-lynk-webhook
+  lynk-webhook
 )
 
 echo "==> Deploying ${#PLANNER_FUNCTIONS[@]} Edge Functions..."

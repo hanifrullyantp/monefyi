@@ -26,6 +26,12 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import { sendEmail } from "../_shared/email.ts";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 import { grantProductEntitlement, PRODUCT_MONEFYI } from "../_shared/productEntitlements.ts";
+import {
+  isLynkPaymentSuccess,
+  looksLikePlannerLynkPurchase,
+  processPlannerLynkPurchase,
+  verifyLynkSignature,
+} from "../_shared/plannerLynkPayment.ts";
 
 const jsonHeaders = { "Content-Type": "application/json" };
 
@@ -150,27 +156,13 @@ serve(async (req) => {
     });
   }
 
-  // Signature check — LYNK_SIGNATURE_TOKEN or legacy LYNK_WEBHOOK_SECRET
-  const expectedSig = pickEnv("LYNK_SIGNATURE_TOKEN", "") || pickEnv("LYNK_WEBHOOK_SECRET", "");
-  const requireSig = pickEnv("REQUIRE_LYNK_SIGNATURE", "false").toLowerCase() === "true";
-  if (requireSig && !expectedSig) {
-    console.error("❌ REQUIRE_LYNK_SIGNATURE=true but signature secret missing");
-    return new Response(JSON.stringify({ error: "Server misconfigured: signature required" }), {
-      status: 500,
+  const sig = verifyLynkSignature(req);
+  if (!sig.ok) {
+    console.error("❌ Invalid or missing Lynk signature");
+    return new Response(JSON.stringify({ error: sig.error }), {
+      status: sig.status || 401,
       headers: { ...corsHeaders, ...jsonHeaders },
     });
-  }
-  if (expectedSig) {
-    const got = (req.headers.get("X-Lynk-Signature") || req.headers.get("x-lynk-signature") || "").trim();
-    if (!got || got !== expectedSig) {
-      console.error("❌ Invalid signature");
-      return new Response(JSON.stringify({ error: "Invalid signature" }), {
-        status: 401,
-        headers: { ...corsHeaders, ...jsonHeaders },
-      });
-    }
-  } else {
-    console.warn("⚠️ No Lynk signature secret set — webhook accepts unsigned requests");
   }
 
   const SUPABASE_URL = pickEnv("SUPABASE_URL");
@@ -204,13 +196,19 @@ serve(async (req) => {
 
   console.log("🔍 Event details:", { event, messageAction, messageCode, messageId });
 
-  // IMPORTANT FIX:
-  // Hanya cek event & message_action.
-  // Jangan pakai message_code, karena dari log nilainya kosong ("").
-  if (event !== "payment.received" || messageAction !== "SUCCESS") {
+  if (!isLynkPaymentSuccess(payload)) {
     console.log("⏭️ Skipping: not a successful payment event (based on event/action)");
     return new Response(JSON.stringify({ ok: true, ignored: true }), {
       status: 200,
+      headers: { ...corsHeaders, ...jsonHeaders },
+    });
+  }
+
+  if (looksLikePlannerLynkPurchase(payload)) {
+    console.log("➡️ Routing Estimator/Planner purchase to planner-lynk handler");
+    const result = await processPlannerLynkPurchase(supa, payload as Record<string, unknown>);
+    return new Response(JSON.stringify(result.body), {
+      status: result.status,
       headers: { ...corsHeaders, ...jsonHeaders },
     });
   }

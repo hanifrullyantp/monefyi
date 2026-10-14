@@ -19,11 +19,16 @@
 | `estimator-pro` | `Monefyi Estimator Pro` | Rp 199.000 |
 | `planner-pro-monthly` | `Monefyi Planner Pro Bulanan` | Rp 199.000 |
 
-3. **Webhook URL** (store Planner):
+3. **Webhook URL**
+
+Store Estimator yang masih `asfin-ai` harus mengarah ke **salah satu** (keduanya memproses Estimator):
 
 ```
-https://YOUR_PROJECT.supabase.co/functions/v1/planner-lynk-webhook
+https://zzwqfmdyncxbolestkqp.supabase.co/functions/v1/lynk-webhook
+https://zzwqfmdyncxbolestkqp.supabase.co/functions/v1/planner-lynk-webhook
 ```
+
+`lynk-webhook` (Finance) otomatis meneruskan produk Estimator ke handler Planner + email konfirmasi.
 
 4. Set header signature `X-Lynk-Signature` = nilai env `PLANNER_LYNK_SIGNATURE_TOKEN`.
 
