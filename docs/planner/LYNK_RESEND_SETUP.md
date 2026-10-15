@@ -30,7 +30,8 @@ https://zzwqfmdyncxbolestkqp.supabase.co/functions/v1/planner-lynk-webhook
 
 `lynk-webhook` (Finance) otomatis meneruskan produk Estimator ke handler Planner + email konfirmasi.
 
-4. Set header signature `X-Lynk-Signature` = nilai env `PLANNER_LYNK_SIGNATURE_TOKEN`.
+4. **Signature Lynk** — Lynk mengirim header `X-Lynk-Signature` (SHA256). Detail lengkap: **[`LYNK_WEBHOOK.md`](./LYNK_WEBHOOK.md)**.  
+   Merchant key disimpan di Supabase secret **`LYNK_MERCHANT_KEY`** (bukan di Git). Lynk menghitung signature otomatis; **jangan** tempel merchant key mentah di header manual.
 
 5. Salin checkout URL tiap produk ke env Vercel landing + SPA:
 
@@ -50,8 +51,10 @@ org_id, user_id, product, customer_email, return_url
 ```bash
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
-PLANNER_LYNK_SIGNATURE_TOKEN=
+LYNK_MERCHANT_KEY=          # merchant key dari Lynk (setelah simpan webhook URL)
 REQUIRE_LYNK_SIGNATURE=true
+ESTIMATOR_SITE_URL=https://estimator.monefyi.com
+ESTIMATOR_APP_URL=https://estimator.monefyi.com/app
 RESEND_API_KEY=
 RESEND_FROM_EMAIL="Monefyi Planner <noreply@support.monefyi.com>"
 APP_URL=https://planner.monefyi.com
@@ -79,3 +82,5 @@ supabase functions deploy planner-lynk-webhook --no-verify-jwt
 ## Post-payment user baru
 
 Webhook **tidak** mengirim password plain-text. User baru menerima email konfirmasi + tombol **Atur password & masuk** (Supabase `generateLink` recovery).
+
+Alur lengkap Finance vs Estimator vs auth hook: [`../email/MONEFYI_TRANSACTIONAL_EMAIL.md`](../email/MONEFYI_TRANSACTIONAL_EMAIL.md).

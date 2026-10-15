@@ -1,0 +1,28 @@
+{
+  "event": "payment.received",
+  "data": {
+    "message_action": "SUCCESS",
+    "message_code": "0",
+    "message_id": "API_CALL_TEST_ESTIMATOR_001",
+    "message_data": {
+      "createdAt": "2026-10-15T10:00:00",
+      "customer": {
+        "email": "pembeli@example.com",
+        "name": "Tes Pembeli",
+        "phone": "08123456789"
+      },
+      "items": [
+        {
+          "title": "Monefyi Estimator Standard",
+          "qty": 1,
+          "price": 99000
+        }
+      ],
+      "refId": "test_ref_estimator_001",
+      "totals": {
+        "grandTotal": 99000,
+        "totalPrice": 99000
+      }
+    }
+  }
+}

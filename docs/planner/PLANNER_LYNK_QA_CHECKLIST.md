@@ -4,7 +4,8 @@
 
 - [ ] Store Planner terpisah dari Finance (`asfin-ai`)
 - [ ] 3 produk dengan title exact (lihat `docs/planner/LYNK_RESEND_SETUP.md`)
-- [ ] Webhook → `planner-lynk-webhook` + signature token
+- [ ] Webhook URL → `lynk-webhook` (asfin-ai) atau `planner-lynk-webhook`
+- [ ] `LYNK_MERCHANT_KEY` di Supabase = merchant key Lynk (SHA256 signature, lihat `LYNK_WEBHOOK.md`)
 
 ## Resend + Auth
 

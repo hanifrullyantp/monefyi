@@ -29,6 +29,10 @@ Tambah redirect URLs:
 - `https://estimator.monefyi.com/**`
 - `https://estimator.monefyi.com/app/**`
 
+## Lynk webhook + email
+
+Petunjuk lengkap: [`docs/planner/LYNK_WEBHOOK.md`](../docs/planner/LYNK_WEBHOOK.md) (merchant key hanya di Supabase secret `LYNK_MERCHANT_KEY`).
+
 ## Alur pelanggan
 
 1. Iklan → `estimator.monefyi.com`

@@ -56,6 +56,12 @@ serve(async (req) => {
 
     if (orgErr) throw orgErr;
 
+    await sb.from("profiles").upsert({
+      id: user.id,
+      name: sanitizeText(body.name || user.user_metadata?.name, 120),
+      onboarding_completed: false,
+    });
+
     const { error: memErr } = await sb.from("planner_org_members").insert({
       org_id: org.id,
       user_id: user.id,
@@ -67,12 +73,6 @@ serve(async (req) => {
     if (memErr) throw memErr;
 
     await grantProductEntitlement(sb, user.id, PRODUCT_PLANNER, "owner_org");
-
-    await sb.from("profiles").upsert({
-      id: user.id,
-      name: sanitizeText(body.name || user.user_metadata?.name, 120),
-      onboarding_completed: false,
-    });
 
     await writeAudit(sb, {
       orgId: org.id,

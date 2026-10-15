@@ -6,7 +6,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT/my-supabase-project"
 
 echo "==> Supabase secrets (Resend + email)"
-if ! npx supabase secrets list 2>/dev/null | grep -E "RESEND_API_KEY|RESEND_FROM_EMAIL|SEND_EMAIL_HOOK_SECRET|APP_URL|ESTIMATOR"; then
+if ! npx supabase secrets list 2>/dev/null | grep -E "LYNK_MERCHANT_KEY|RESEND_API_KEY|RESEND_FROM_EMAIL|SEND_EMAIL_HOOK_SECRET|APP_URL|ESTIMATOR"; then
   echo "WARN: supabase CLI tidak terhubung atau secrets tidak terbaca."
 fi
 
@@ -40,5 +40,5 @@ echo "  Auth hook: Supabase Dashboard → Authentication → Hooks → Send Emai
 echo ""
 echo "Uji manual:"
 echo "  1. Signup di estimator.monefyi.com → cek email verifikasi"
-echo "  2. Test pembayaran Lynk → cek email konfirmasi + link atur password"
+echo "  2. Test pembayaran Lynk → cek email konfirmasi + link atur password (lihat docs/planner/LYNK_WEBHOOK.md)"
 echo "  3. Resend Dashboard → Logs → delivery status"

@@ -121,6 +121,7 @@ fi
 echo ""
 echo "Done. Set Edge Function secrets in Supabase Dashboard if needed:"
 echo "  RESEND_API_KEY, RESEND_FROM_EMAIL, SEND_EMAIL_HOOK_SECRET, APP_URL, APP_CORS_ORIGIN, GEMINI_API_KEY"
-echo "  PLANNER_LYNK_SIGNATURE_TOKEN, REQUIRE_LYNK_SIGNATURE, PLANNER_APP_URL"
+echo "  LYNK_MERCHANT_KEY, REQUIRE_LYNK_SIGNATURE, ESTIMATOR_SITE_URL, ESTIMATOR_APP_URL"
+echo "  (Lynk webhook: docs/planner/LYNK_WEBHOOK.md)"
 echo ""
 echo "Auth signup emails: ./scripts/enable-auth-email-hook.sh"
