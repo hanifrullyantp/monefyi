@@ -1,6 +1,9 @@
 # Di mana menaruh token & secret (jangan di chat / jangan di Git)
 
-**Jangan** tempel merchant key, `VERCEL_TOKEN`, atau `SUPABASE_SERVICE_ROLE_KEY` di chat Cursor, issue GitHub, atau commit.
+> **File ini (`SECRETS_WHERE_TO_PUT.md`) hanya panduan baca — jangan tempel token di sini.**  
+> File ini ikut GitHub; token yang ditulis di sini bisa bocor ke publik.
+
+**Jangan** tempel merchant key, `VERCEL_TOKEN`, atau `SUPABASE_SERVICE_ROLE_KEY` di chat Cursor, issue GitHub, **file `.md`**, atau commit.
 
 Gunakan lokasi di bawah. File **contoh** (`.env.example`) hanya berisi placeholder; file **asli** sudah di-ignore Git.
 
@@ -50,10 +53,12 @@ Detail: [`planner/LYNK_WEBHOOK.md`](planner/LYNK_WEBHOOK.md).
 | `SUPABASE_ACCESS_TOKEN` | Deploy Edge Functions / db push |
 | `SUPABASE_PROJECT_REF` | `zzwqfmdyncxbolestkqp` |
 | `LYNK_MERCHANT_KEY` | Tes `./scripts/verify-product-funnel.sh` di CI |
-| `VERCEL_TOKEN` | Deploy front-end (perbarui jika CI Vercel gagal) |
+| `VERCEL_TOKEN` | Deploy front-end — buat di [Vercel → Account → Tokens](https://vercel.com/account/tokens), paste **hanya** di form secret GitHub ini |
 | `VERCEL_ORG_ID`, `VERCEL_*_PROJECT_ID` | Sudah ada di repo |
 
-Anda **tidak** perlu copy secret ini ke file lokal kecuali mau deploy manual dari laptop.
+**Langkah `VERCEL_TOKEN`:** GitHub repo **monefyi** → **Settings** → **Secrets and variables** → **Actions** → **New repository secret** → Name: `VERCEL_TOKEN` → Value: token dari Vercel → Save.
+
+Anda **tidak** perlu copy secret ini ke file lokal kecuali mau `vercel deploy` dari laptop (taruh di `secrets.local.env`, gitignored).
 
 ---
 
