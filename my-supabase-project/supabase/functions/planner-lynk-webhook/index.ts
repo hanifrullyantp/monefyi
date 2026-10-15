@@ -4,7 +4,8 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
-import { processPlannerLynkPurchase, verifyLynkSignature } from "../_shared/plannerLynkPayment.ts";
+import { processPlannerLynkPurchase } from "../_shared/plannerLynkPayment.ts";
+import { verifyLynkWebhookPayload } from "../_shared/lynkSignature.ts";
 
 const jsonHeaders = { "Content-Type": "application/json" };
 
@@ -28,7 +29,15 @@ serve(async (req) => {
     });
   }
 
-  const sig = verifyLynkSignature(req);
+  const payload = await req.json().catch(() => null);
+  if (!payload || typeof payload !== "object") {
+    return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+      status: 400,
+      headers: { ...corsHeaders, ...jsonHeaders },
+    });
+  }
+
+  const sig = await verifyLynkWebhookPayload(payload as Record<string, unknown>, req);
   if (!sig.ok) {
     return new Response(JSON.stringify({ error: sig.error }), {
       status: sig.status || 401,
@@ -45,18 +54,19 @@ serve(async (req) => {
     });
   }
 
-  const payload = await req.json().catch(() => null);
-  if (!payload || typeof payload !== "object") {
-    return new Response(JSON.stringify({ error: "Invalid JSON" }), {
-      status: 400,
+  try {
+    const supa = createClient(SUPABASE_URL, SERVICE_ROLE);
+    const result = await processPlannerLynkPurchase(supa, payload as Record<string, unknown>);
+    return new Response(JSON.stringify(result.body), {
+      status: result.status,
+      headers: { ...corsHeaders, ...jsonHeaders },
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    console.error("planner-lynk-webhook:", msg);
+    return new Response(JSON.stringify({ error: msg }), {
+      status: 500,
       headers: { ...corsHeaders, ...jsonHeaders },
     });
   }
-
-  const supa = createClient(SUPABASE_URL, SERVICE_ROLE);
-  const result = await processPlannerLynkPurchase(supa, payload as Record<string, unknown>);
-  return new Response(JSON.stringify(result.body), {
-    status: result.status,
-    headers: { ...corsHeaders, ...jsonHeaders },
-  });
 });

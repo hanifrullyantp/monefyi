@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { generateSetupPasswordUrl } from "./auth-setup-link.ts";
 import { sendEmailSafe } from "./email.ts";
 import { purchaseEmailHtml, purchaseEmailSubject, purchaseEmailText } from "./purchase-email.ts";
 import { grantProductEntitlement, PRODUCT_PLANNER } from "./productEntitlements.ts";
@@ -15,33 +16,7 @@ function pickEnv(name: string, fallback = "") {
   return (Deno.env.get(name) ?? fallback).trim();
 }
 
-/** Terima token Finance ATAU Planner — store asfin-ai dan store Estimator memakai secret berbeda. */
-export function verifyLynkSignature(req: Request): { ok: boolean; status?: number; error?: string } {
-  const header = (
-    req.headers.get("X-Lynk-Signature")
-    || req.headers.get("x-lynk-signature")
-    || ""
-  ).trim();
-  const bearer = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
-  const got = header || bearer;
-  const allowed = [
-    pickEnv("LYNK_SIGNATURE_TOKEN"),
-    pickEnv("LYNK_WEBHOOK_SECRET"),
-    pickEnv("PLANNER_LYNK_SIGNATURE_TOKEN"),
-  ].filter(Boolean);
-  const requireSig = pickEnv("REQUIRE_LYNK_SIGNATURE", "false").toLowerCase() === "true";
-
-  if (allowed.length === 0) {
-    if (requireSig) {
-      return { ok: false, status: 500, error: "Server misconfigured: signature required" };
-    }
-    return { ok: true };
-  }
-  if (!got || !allowed.includes(got)) {
-    return { ok: false, status: 401, error: "Invalid signature" };
-  }
-  return { ok: true };
-}
+export { verifyLynkWebhookPayload } from "./lynkSignature.ts";
 
 function addDays(date: Date, days: number) {
   const d = new Date(date);
@@ -273,6 +248,12 @@ async function ensureOwnerOrg(supa: SupabaseClient, userId: string, orgName: str
     .single();
   if (orgErr || !org?.id) throw new Error(orgErr?.message || "Failed to create org");
 
+  await supa.from("profiles").upsert({
+    id: userId,
+    name: sanitizeText(orgName, 120),
+    onboarding_completed: false,
+  });
+
   const { error: memErr } = await supa.from("planner_org_members").insert({
     org_id: org.id,
     user_id: userId,
@@ -282,30 +263,12 @@ async function ensureOwnerOrg(supa: SupabaseClient, userId: string, orgName: str
   });
   if (memErr) throw new Error(memErr.message);
 
-  await grantProductEntitlement(supa, userId, PRODUCT_PLANNER, "lynk_purchase");
-  await supa.from("profiles").upsert({
-    id: userId,
-    name: sanitizeText(orgName, 120),
-    onboarding_completed: false,
-  });
-  return org.id as string;
-}
-
-async function generateSetupPasswordUrl(
-  supa: SupabaseClient,
-  email: string,
-  redirectTo: string,
-): Promise<string | null> {
-  const { data, error } = await supa.auth.admin.generateLink({
-    type: "recovery",
-    email,
-    options: { redirectTo },
-  });
-  if (error) {
-    console.error("generateLink error:", error.message);
-    return null;
+  try {
+    await grantProductEntitlement(supa, userId, PRODUCT_PLANNER, "lynk_purchase");
+  } catch (e) {
+    console.warn("grantProductEntitlement (planner) non-fatal:", (e as Error).message);
   }
-  return data?.properties?.action_link ?? null;
+  return org.id as string;
 }
 
 async function sendPurchaseConfirmation(params: {
@@ -350,6 +313,19 @@ async function sendPurchaseConfirmation(params: {
 
 /** Aktifkan paket Estimator/Planner + kirim email konfirmasi (termasuk replay duplicate). */
 export async function processPlannerLynkPurchase(
+  supa: SupabaseClient,
+  payload: Record<string, unknown>,
+): Promise<PlannerLynkResult> {
+  try {
+    return await processPlannerLynkPurchaseInner(supa, payload);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    console.error("processPlannerLynkPurchase:", msg);
+    return { status: 500, body: { error: msg } };
+  }
+}
+
+async function processPlannerLynkPurchaseInner(
   supa: SupabaseClient,
   payload: Record<string, unknown>,
 ): Promise<PlannerLynkResult> {
@@ -532,6 +508,22 @@ export async function processPlannerLynkPurchase(
     expiresLabel,
     setupPasswordUrl,
   });
+
+  const requireEmail = pickEnv("REQUIRE_PURCHASE_EMAIL", "true").toLowerCase() === "true";
+  if (!emailRes.ok && requireEmail && !emailRes.skipped) {
+    console.error("purchase email failed (Lynk will retry):", emailRes.reason);
+    return {
+      status: 502,
+      body: {
+        error: "Confirmation email failed",
+        reason: emailRes.reason || null,
+        retry: true,
+        userId,
+        orgId,
+        alreadyProcessed,
+      },
+    };
+  }
 
   return {
     status: 200,

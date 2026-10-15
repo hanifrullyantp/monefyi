@@ -1,5 +1,12 @@
 import { Webhook } from "https://esm.sh/standardwebhooks@1.0.0";
 import { getAppUrl, getResendFrom, sendEmail } from "../_shared/email.ts";
+import {
+  emailParagraph,
+  emailPrimaryButton,
+  monefyiEmailShell,
+  resolveEmailBrand,
+  type MonefyiEmailBrand,
+} from "../_shared/monefyi-email-layout.ts";
 
 type EmailActionType =
   | "signup"
@@ -28,15 +35,18 @@ type HookPayload = {
   };
 };
 
-const SUBJECTS: Record<EmailActionType, string> = {
-  signup: "Verifikasi email — Monefyi Planner",
-  recovery: "Reset password — Monefyi Planner",
-  invite: "Undangan akun — Monefyi Planner",
-  magiclink: "Link masuk — Monefyi Planner",
-  email_change: "Konfirmasi perubahan email — Monefyi Planner",
-  email_change_new: "Konfirmasi email baru — Monefyi Planner",
-  reauthentication: "Kode verifikasi — Monefyi Planner",
-};
+function subjectFor(action: EmailActionType, productName: string): string {
+  const map: Record<EmailActionType, string> = {
+    signup: `Verifikasi email — ${productName}`,
+    recovery: `Reset password — ${productName}`,
+    invite: `Undangan akun — ${productName}`,
+    magiclink: `Link masuk — ${productName}`,
+    email_change: `Konfirmasi perubahan email — ${productName}`,
+    email_change_new: `Konfirmasi email baru — ${productName}`,
+    reauthentication: `Kode verifikasi — ${productName}`,
+  };
+  return map[action];
+}
 
 function confirmationUrl(emailData: HookPayload["email_data"]): string | null {
   if (emailData.email_action_type === "reauthentication") return null;
@@ -55,23 +65,25 @@ function buildAuthEmailHtml(params: {
   confirmUrl: string | null;
   token: string;
   appUrl: string;
+  brand: MonefyiEmailBrand;
 }): string {
-  const { action, confirmUrl, token, appUrl } = params;
-  const brand = "#6366f1";
+  const { action, confirmUrl, token, appUrl, brand } = params;
 
   if (action === "reauthentication") {
-    return `<!DOCTYPE html><html><body style="font-family:sans-serif;background:#f8fafc;padding:24px">
-<div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;padding:32px;border:1px solid #e2e8f0">
-  <h1 style="color:${brand}">Kode verifikasi</h1>
-  <p>Gunakan kode berikut untuk melanjutkan:</p>
-  <p style="font-size:28px;font-weight:bold;letter-spacing:4px">${token}</p>
-</div></body></html>`;
+    return monefyiEmailShell({
+      brand,
+      title: "Kode verifikasi",
+      bodyHtml: [
+        emailParagraph("Gunakan kode berikut untuk melanjutkan (jangan bagikan ke siapa pun):"),
+        `<p style="margin:16px 0;font-size:32px;font-weight:800;letter-spacing:6px;color:#0f172a;text-align:center;">${token}</p>`,
+      ].join(""),
+    });
   }
 
   const copy: Record<EmailActionType, { title: string; body: string; cta: string }> = {
     signup: {
       title: "Verifikasi email Anda",
-      body: "Klik tombol di bawah untuk mengaktifkan akun Monefyi Planner.",
+      body: "Klik tombol di bawah untuk mengaktifkan akun.",
       cta: "Verifikasi email",
     },
     recovery: {
@@ -103,26 +115,29 @@ function buildAuthEmailHtml(params: {
   };
 
   const c = copy[action];
-  const link = confirmUrl || `${appUrl}/login`;
+  const link = confirmUrl || `${appUrl.replace(/\/$/, "")}/login`;
 
-  return `<!DOCTYPE html><html><body style="font-family:sans-serif;background:#f8fafc;padding:24px">
-<div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;padding:32px;border:1px solid #e2e8f0">
-  <h1 style="color:${brand};margin:0 0 8px">${c.title}</h1>
-  <p style="color:#64748b">${c.body}</p>
-  <a href="${link}" style="display:inline-block;background:${brand};color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0">${c.cta}</a>
-  <p style="color:#94a3b8;font-size:12px">Jika tombol tidak berfungsi, salin link: ${link}</p>
-</div></body></html>`;
+  return monefyiEmailShell({
+    brand,
+    title: c.title,
+    preheader: c.body,
+    bodyHtml: [
+      emailParagraph(c.body),
+      emailPrimaryButton(c.cta, link, brand.accent),
+    ].join(""),
+  });
 }
 
 function buildAuthEmailText(params: {
   action: EmailActionType;
   confirmUrl: string | null;
   token: string;
+  productName: string;
 }): string {
   if (params.action === "reauthentication") {
-    return `Kode verifikasi Monefyi: ${params.token}`;
+    return `Kode verifikasi ${params.productName}: ${params.token}`;
   }
-  return `${SUBJECTS[params.action]}\n\nBuka link: ${params.confirmUrl || getAppUrl() + "/login"}`;
+  return `${subjectFor(params.action, params.productName)}\n\nBuka link: ${params.confirmUrl || getAppUrl() + "/login"}`;
 }
 
 Deno.serve(async (req) => {
@@ -159,21 +174,24 @@ Deno.serve(async (req) => {
   const action = emailData.email_action_type;
   const confirmUrl = confirmationUrl(emailData);
   const appUrl = getAppUrl();
+  const brand = resolveEmailBrand(emailData.redirect_to || appUrl);
 
   const result = await sendEmail({
     to: user.email,
-    subject: SUBJECTS[action] || "Monefyi Planner",
+    subject: subjectFor(action, brand.productName),
     html: buildAuthEmailHtml({
       action,
       confirmUrl,
       token: emailData.token,
       appUrl,
+      brand,
     }),
-    text: buildAuthEmailText({ action, confirmUrl, token: emailData.token }),
+    text: buildAuthEmailText({ action, confirmUrl, token: emailData.token, productName: brand.productName }),
   });
 
   console.log("auth-send-email:", {
     action,
+    product: brand.product,
     hasConfirmUrl: !!confirmUrl,
     redirectTo: emailData.redirect_to,
     resendId: result.resendId ?? null,
