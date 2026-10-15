@@ -64,41 +64,25 @@ Anda **tidak** perlu copy secret ini ke file lokal kecuali mau `vercel deploy` d
 
 ## 3. File lokal di laptop (develop & tes)
 
-### A. Supabase CLI — **`my-supabase-project/.env`**
+### A. **`my-supabase-project/.env`** (sudah dibuat)
 
-Salin dari contoh:
-
-```bash
-cp my-supabase-project/.env.example my-supabase-project/.env
-```
-
-Isi minimal:
-
-- `SUPABASE_ACCESS_TOKEN` — https://supabase.com/dashboard/account/tokens  
-- `SUPABASE_PROJECT_REF` — `zzwqfmdyncxbolestkqp`  
-
-Opsional (hanya untuk script tes Lynk di laptop):
-
-- `LYNK_MERCHANT_KEY` — sama dengan di Supabase Dashboard  
-
-File ini **gitignored** (`my-supabase-project/.env`).
+Buka: [`my-supabase-project/.env`](../my-supabase-project/.env) — isi `SUPABASE_ACCESS_TOKEN=` (gitignored).
 
 ### B. Frontend Planner/Estimator — **`monefyi_planner/.env.local`**
 
 Sudah dipakai untuk `VITE_SUPABASE_URL` dan `VITE_SUPABASE_ANON_KEY` (bukan secret server).
 
-### C. Opsional — **`my-supabase-project/secrets.local.env`**
+### C. **`my-supabase-project/secrets.local.env`** (sudah dibuat — tempel token di sini)
 
-Jika ingin pisah token Lynk dari `.env`:
+Buka: [`my-supabase-project/secrets.local.env`](../my-supabase-project/secrets.local.env)
 
-```bash
-cp my-supabase-project/secrets.local.env.example my-supabase-project/secrets.local.env
-# edit secrets.local.env
-source my-supabase-project/secrets.local.env
-./scripts/verify-product-funnel.sh
-```
+Paste setelah `=` pada baris `VERCEL_TOKEN`, `LYNK_MERCHANT_KEY`, `SUPABASE_ACCESS_TOKEN` → **Save**. Tidak masuk Git.
 
-File `secrets.local.env` **gitignored**.
+### D. GitHub Actions — `VERCEL_TOKEN` (deploy front-end otomatis)
+
+Link langsung: https://github.com/hanifrullyantp/monefyi/settings/secrets/actions  
+
+**New repository secret** → Name: `VERCEL_TOKEN` → Value: (paste dari Vercel) → Save.
 
 ---
 
