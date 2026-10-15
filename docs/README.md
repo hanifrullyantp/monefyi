@@ -19,6 +19,7 @@
 | Email transaksional (Lynk, auth, template bersama) | [`email/MONEFYI_TRANSACTIONAL_EMAIL.md`](email/MONEFYI_TRANSACTIONAL_EMAIL.md) |
 | Isolasi produk (`monefyi` / `planner` / tier) | [`MONEFYI_PRODUCT_ENTITLEMENTS.md`](MONEFYI_PRODUCT_ENTITLEMENTS.md) |
 | Order Lynk tanpa intervensi manual | [`planner/ZERO_TOUCH_ORDERS.md`](planner/ZERO_TOUCH_ORDERS.md) |
+| **Di mana taruh token (jangan di chat)** | [`SECRETS_WHERE_TO_PUT.md`](SECRETS_WHERE_TO_PUT.md) |
 | Deploy & struktur URL | [`DEPLOY_STRUCTURE.md`](DEPLOY_STRUCTURE.md) |
 | Menjalankan lokal & smoke test | [`../README.md`](../README.md) |
 | Admin console & operasional | [`ADMIN_RUNBOOK.md`](ADMIN_RUNBOOK.md) |

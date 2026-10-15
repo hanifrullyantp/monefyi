@@ -4,6 +4,7 @@ node_modules/
 *.log
 # Supabase CLI credentials (local only)
 my-supabase-project/.env
+my-supabase-project/secrets.local.env
 # Supabase CLI local link / version probes (not source of truth)
 my-supabase-project/supabase/.temp/
 # Jangan commit salinan config produksi berisi secret tambahan
