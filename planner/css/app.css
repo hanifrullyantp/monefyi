@@ -825,6 +825,39 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1rem 0; }
   .project-cards { grid-template-columns: repeat(3, 1fr); }
 }
 
+/* ============ Planner schema missing (Supabase migration) ============ */
+.planner-schema-banner {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--warning-bg);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.35);
+}
+.planner-schema-banner strong { font-weight: 600; }
+.planner-schema-banner code {
+  font-size: 0.75rem;
+  padding: 0.1rem 0.25rem;
+  border-radius: 0.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+html.dark .planner-schema-banner {
+  color: var(--text);
+  background: rgba(245, 158, 11, 0.12);
+  border-bottom-color: rgba(245, 158, 11, 0.25);
+}
+html.dark .planner-schema-banner code {
+  background: var(--bg-2);
+  border-color: var(--border);
+}
+
+@media (min-width: 1024px) {
+  .planner-schema-banner { margin-left: 200px; }
+}
+
 /* ============ PRINT ============ */
 @media print {
   #bottomNav, #topBar, .btn, .sheet, .smart-overlay, .detail-header button { display: none !important; }
