@@ -26,7 +26,7 @@ BEGIN
   SELECT om.org_id INTO v_org_id
   FROM planner_org_members om
   WHERE om.user_id = v_user_id AND om.status = 'active'
-  ORDER BY om.created_at ASC
+  ORDER BY om.joined_at ASC NULLS LAST
   LIMIT 1;
 
   IF v_org_id IS NULL THEN
