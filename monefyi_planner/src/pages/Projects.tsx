@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   Plus, Search, Grid, List, ChevronRight, MapPin,
@@ -23,16 +23,18 @@ import {
   formatRupiah, HEALTH_CONFIG, STATUS_LABEL, sortProjects, type ProjectSort,
   groupProjectsByStatusSection,
 } from '../utils/projectUi';
+import { useEntitlement } from '../hooks/useEntitlement';
+import { isAdminFullAccess, isEstimatorOnlyPlan } from '../lib/entitlement';
 
 type ProjectView = 'list' | 'kanban' | 'timeline' | 'calendar';
 const VIEW_STORAGE_KEY = 'monefyi_projects_view';
 
-function readStoredView(): ProjectView {
+function readStoredView(estimatorOnlyDefaultList: boolean): ProjectView {
   try {
     const v = localStorage.getItem(VIEW_STORAGE_KEY);
     if (v === 'list' || v === 'kanban' || v === 'timeline' || v === 'calendar') return v;
   } catch { /* ignore */ }
-  return 'timeline';
+  return estimatorOnlyDefaultList ? 'list' : 'timeline';
 }
 
 function CreateProjectModal({ onClose }: { onClose: () => void }) {
@@ -228,8 +230,11 @@ interface ProjectsProps {
 }
 
 export default function Projects({ initialProjectId, onOpenProject, onCloseProject }: ProjectsProps) {
-  const { projects, projectsListFilter, setProjectsListFilter, setSelectedProjectId, user, updateProject, tenant } = useAppStore();
-  const [projectView, setProjectView] = useState<ProjectView>(readStoredView);
+  const { projects, projectsListFilter, setProjectsListFilter, setSelectedProjectId, user, updateProject, tenant, platformRole, entitlementPreviewMode } = useAppStore();
+  const entitlement = useEntitlement();
+  const adminFullAccess = isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode);
+  const viewInitRef = useRef(false);
+  const [projectView, setProjectView] = useState<ProjectView>(() => readStoredView(false));
   const [listLayout, setListLayout] = useState<'card' | 'compact'>('card');
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState(projectsListFilter || 'all');
@@ -257,6 +262,13 @@ export default function Projects({ initialProjectId, onOpenProject, onCloseProje
   useEffect(() => {
     if (projectsListFilter && projectsListFilter !== 'all') setFilter(projectsListFilter);
   }, [projectsListFilter]);
+
+  useEffect(() => {
+    if (entitlement.isLoading || viewInitRef.current) return;
+    viewInitRef.current = true;
+    const estOnly = !adminFullAccess && isEstimatorOnlyPlan(entitlement);
+    setProjectView(readStoredView(estOnly));
+  }, [adminFullAccess, entitlement, entitlement.isLoading]);
 
   const openProject = (p: Project) => {
     if (projectView === 'timeline') {

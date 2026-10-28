@@ -58,7 +58,7 @@ export function HeroSection() {
     <section id="hero" className="lp-bleed relative overflow-visible bg-white">
       <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ background: "var(--brand-gradient)" }} />
       <Container className="relative z-10 pt-6 pb-10 lg:pt-12 lg:pb-16">
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,55%)_minmax(0,40%)] gap-8 lg:gap-10 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(332px,40%)] gap-8 lg:gap-10 items-center">
           <div className="flex flex-col items-center lg:items-start text-center lg:text-left min-w-0">
             <p className="inline-flex items-center rounded-full bg-[var(--surface-soft)] border border-[var(--surface-alt)] px-3 py-1 text-[13px] font-semibold text-[var(--ink)] mb-3">
               {copy.eyebrow}
@@ -145,7 +145,7 @@ export function HeroSection() {
             transition={{ delay: 0.25 }}
             className="flex flex-col items-center min-w-0 overflow-visible"
           >
-            <p className="text-[12px] font-semibold text-[var(--muted)] mb-3 text-center max-w-[280px]">
+            <p className="text-[12px] font-semibold text-[var(--muted)] mb-3 text-center max-w-[332px]">
               Demo langsung — scroll & tambah rincian
             </p>
             <HeroLiveDemo />

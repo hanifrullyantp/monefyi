@@ -139,20 +139,22 @@ export default function DemoEmbedPage() {
   const demoToast = () => showToast('Daftar gratis untuk fitur penuh', 'info');
 
   return (
-    <div className="min-h-[100dvh] bg-[#f4f6f5] pb-28 max-w-[390px] mx-auto">
-      <div className="sticky top-0 z-30 flex items-center justify-between gap-2 px-3 py-2 bg-emerald-900/95 text-white text-xs backdrop-blur-md border-b border-white/10">
-        <span className="font-semibold truncate">Demo interaktif — data fiktif</span>
-        <button
-          type="button"
-          onClick={handleManualReset}
-          className="inline-flex items-center gap-1 shrink-0 px-2.5 py-1 rounded-lg bg-white/15 hover:bg-white/25 font-bold"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-          Mulai ulang
-        </button>
+    <div className="h-[844px] w-[390px] bg-[#f4f6f5] pb-28 overflow-y-auto overflow-x-hidden">
+      <div className="sticky top-0 z-30 pt-8">
+        <div className="mx-3 mb-2 flex items-center justify-between gap-2 px-3 py-1.5 rounded-full bg-emerald-950/90 text-white text-[11px] backdrop-blur-md shadow-sm">
+          <span className="font-semibold truncate">Demo interaktif</span>
+          <button
+            type="button"
+            onClick={handleManualReset}
+            className="inline-flex items-center gap-1 shrink-0 px-2 py-0.5 rounded-full bg-white/15 hover:bg-white/25 font-bold"
+          >
+            <RotateCcw className="w-3 h-3" />
+            Mulai ulang
+          </button>
+        </div>
       </div>
 
-      <div className="px-3 pt-3 space-y-3">
+      <div className="px-3 pt-1 space-y-3">
         <EstimationDetailHeaderCard
           draft={draft}
           summary={summary}

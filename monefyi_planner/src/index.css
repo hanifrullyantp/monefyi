@@ -417,3 +417,15 @@ html:not(.dark) main,
 .gantt-bar:active {
   cursor: grabbing;
 }
+
+/* Landing iframe /demo-embed — kunci viewport ke ukuran iPhone native */
+html.demo-embed-active,
+html.demo-embed-active body,
+html.demo-embed-active #root {
+  width: 390px;
+  height: 844px;
+  max-width: 390px;
+  margin: 0;
+  overflow: hidden;
+  background: #f4f6f5;
+}

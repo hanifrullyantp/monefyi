@@ -6,7 +6,6 @@ import { plannerAppPath } from "@/lib/config/plannerApp";
 import { trackEvent } from "@/lib/analytics/events";
 
 const DEMO_SRC = () => plannerAppPath("/demo-embed");
-const IFRAME_HEIGHT = 560;
 
 type DemoMessage = {
   type?: string;
@@ -16,22 +15,7 @@ type DemoMessage = {
 
 export function HeroLiveDemo() {
   const [loaded, setLoaded] = useState(false);
-  const [inView, setInView] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
   const engagedRef = useRef(false);
-
-  useEffect(() => {
-    const el = rootRef.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) setInView(true);
-      },
-      { rootMargin: "120px", threshold: 0.15 },
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
 
   useEffect(() => {
     const onMessage = (ev: MessageEvent) => {
@@ -51,23 +35,23 @@ export function HeroLiveDemo() {
   }, []);
 
   return (
-    <div ref={rootRef} className="w-full flex justify-center">
-      <PhoneMockup screenHeight={IFRAME_HEIGHT}>
-        {!inView && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#f4f6f5] text-xs font-semibold text-[var(--muted)]">
+    <div className="w-full flex justify-center">
+      <PhoneMockup>
+        {!loaded && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#f4f6f5] text-sm font-semibold text-slate-500">
             Memuat demo…
           </div>
         )}
-        {inView && (
-          <iframe
-            title="Demo Estimator Monefyi"
-            src={DEMO_SRC()}
-            className={`w-full h-full border-0 transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
-            loading="lazy"
-            onLoad={() => setLoaded(true)}
-            allow="clipboard-write"
-          />
-        )}
+        <iframe
+          title="Demo Estimator Monefyi"
+          src={DEMO_SRC()}
+          width={390}
+          height={844}
+          className={`block border-0 transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
+          style={{ width: 390, height: 844 }}
+          onLoad={() => setLoaded(true)}
+          allow="clipboard-write"
+        />
       </PhoneMockup>
     </div>
   );

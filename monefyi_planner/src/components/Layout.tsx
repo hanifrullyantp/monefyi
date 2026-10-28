@@ -140,16 +140,21 @@ export default function Layout({ children }: LayoutProps) {
     return activeTab === tabId;
   };
 
-  const ownerSidebarItems = [
-    { id: 'home', label: 'Dashboard', icon: Home },
-    { id: 'projects', label: 'Proyek', icon: FolderOpen },
-    { id: 'database', label: 'Database', icon: Database },
-    { id: 'estimator', label: 'Estimator', icon: Receipt },
-    { id: 'finance', label: 'Keuangan Bisnis', icon: Wallet },
-    ...(canAccessHr
-      ? [{ id: 'hr', label: 'HR & Karyawan', icon: Users }]
-      : []),
-  ];
+  const ownerSidebarItems = estimatorOnly
+    ? [
+      { id: 'projects', label: 'Proyek', icon: FolderOpen },
+      { id: 'estimator', label: 'Estimator', icon: Receipt },
+    ]
+    : [
+      { id: 'home', label: 'Dashboard', icon: Home },
+      { id: 'projects', label: 'Proyek', icon: FolderOpen },
+      { id: 'database', label: 'Database', icon: Database },
+      { id: 'estimator', label: 'Estimator', icon: Receipt },
+      { id: 'finance', label: 'Keuangan Bisnis', icon: Wallet },
+      ...(canAccessHr
+        ? [{ id: 'hr', label: 'HR & Karyawan', icon: Users }]
+        : []),
+    ];
 
   const workerSidebarItems = [
     { id: 'home', label: 'Home', icon: Home },

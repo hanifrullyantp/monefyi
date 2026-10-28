@@ -70,10 +70,12 @@ function AppContent() {
   useEffect(() => {
     if (isWorker || entitlement.isLoading || adminFullAccess) return;
     if (!isEstimatorOnlyPlan(entitlement)) return;
+    const blockedTabs = new Set(['home', 'database', 'finance', 'hr', 'team', 'settings']);
     const onAllowedModule =
       activeTab === 'projects'
+      || activeTab === 'estimator'
       || Boolean(projectIdParam);
-    if (!onAllowedModule) {
+    if (!onAllowedModule || blockedTabs.has(activeTab)) {
       setActiveTab('projects');
       navigate('/app?tab=projects', { replace: true });
     }
@@ -92,7 +94,11 @@ function AppContent() {
     if (isWorker) return <WorkerDashboard />;
     switch (activeTab) {
       case 'home':
-        return <Dashboard onOpenProject={id => navigate(`/app/projects/${id}`)} />;
+        return (
+          <PlannerModuleGuard module="home">
+            <Dashboard onOpenProject={id => navigate(`/app/projects/${id}`)} />
+          </PlannerModuleGuard>
+        );
       case 'projects':
         return (
           <Projects
@@ -102,14 +108,24 @@ function AppContent() {
           />
         );
       case 'finance':
-        return financeVersion === 'v1' ? <Finance /> : null;
+        return (
+          <PlannerModuleGuard module="finance">
+            {financeVersion === 'v1' ? <Finance /> : null}
+          </PlannerModuleGuard>
+        );
       case 'hr':
       case 'team':
-        return canAccessHr
-          ? <HrEmployees />
-          : <Dashboard onOpenProject={id => navigate(`/app/projects/${id}`)} />;
+        return (
+          <PlannerModuleGuard module="hr">
+            {canAccessHr ? <HrEmployees /> : null}
+          </PlannerModuleGuard>
+        );
       case 'settings':
-        return <Settings />;
+        return (
+          <PlannerModuleGuard module="home">
+            <Settings />
+          </PlannerModuleGuard>
+        );
       case 'estimator':
         return null;
       default:
