@@ -7,8 +7,7 @@ import { cn } from "@/lib/utils/cn";
 import { useLandingCta } from "@/lib/hooks/useLandingCta";
 import {
   ESTIMATOR_PLANS,
-  GUARANTEE_MICROCOPY,
-  PRO_VALUE_FRAME,
+  PRICING_FOOTNOTE,
   formatIdr,
   type EstimatorPlanId,
 } from "@/lib/pricing/plans";
@@ -141,8 +140,7 @@ export function PricingSection() {
           ))}
         </div>
 
-        <p className="text-center text-sm text-[var(--brand-400)] mb-2">{PRO_VALUE_FRAME}</p>
-        <p className="text-center text-xs text-white/50 max-w-xl mx-auto">{GUARANTEE_MICROCOPY}</p>
+        <p className="text-center text-xs text-white/50 max-w-xl mx-auto">{PRICING_FOOTNOTE}</p>
       </Container>
     </section>
   );

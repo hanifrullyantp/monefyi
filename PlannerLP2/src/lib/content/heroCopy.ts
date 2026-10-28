@@ -36,7 +36,7 @@ export const HERO_VARIANTS: Record<HeroVariantId, HeroVariantCopy> = {
     ctaSecondary: "Demo 1 Menit",
     loginLink: "Sudah punya akun? Masuk",
     microcopyFree: "Tanpa kartu kredit · 3 estimasi gratis",
-    microcopyGuarantee: "Garansi 7 hari uang kembali",
+    microcopyGuarantee: "Sekali bayar · akses selamanya",
   },
   H2: {
     id: "H2",
@@ -53,7 +53,7 @@ export const HERO_VARIANTS: Record<HeroVariantId, HeroVariantCopy> = {
     ctaSecondary: "Demo 1 Menit",
     loginLink: "Sudah punya akun? Masuk",
     microcopyFree: "Tanpa kartu kredit · 3 estimasi gratis",
-    microcopyGuarantee: "Garansi 7 hari uang kembali",
+    microcopyGuarantee: "Sekali bayar · akses selamanya",
   },
   H3: {
     id: "H3",
@@ -70,7 +70,7 @@ export const HERO_VARIANTS: Record<HeroVariantId, HeroVariantCopy> = {
     ctaSecondary: "Demo 1 Menit",
     loginLink: "Sudah punya akun? Masuk",
     microcopyFree: "Tanpa kartu kredit · 3 estimasi gratis",
-    microcopyGuarantee: "Garansi 7 hari uang kembali",
+    microcopyGuarantee: "Sekali bayar · akses selamanya",
   },
   H0: {
     id: "H0",
@@ -86,7 +86,7 @@ export const HERO_VARIANTS: Record<HeroVariantId, HeroVariantCopy> = {
     ctaSecondary: "Demo 1 Menit",
     loginLink: "Sudah punya akun? Masuk",
     microcopyFree: "Tanpa kartu kredit · 3 estimasi gratis",
-    microcopyGuarantee: "Garansi 7 hari uang kembali",
+    microcopyGuarantee: "Sekali bayar · akses selamanya",
   },
 };
 

@@ -48,7 +48,7 @@ export function JsonLd() {
         name: "Ada garansi uang kembali?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Ya. Garansi 7 hari 100% uang kembali jika tidak cocok.",
+          text: "Tidak ada garansi refund. Gunakan paket Gratis (3 estimasi) untuk mencoba alur hitung dan PDF sebelum membeli Standard atau Pro.",
         },
       },
     ],

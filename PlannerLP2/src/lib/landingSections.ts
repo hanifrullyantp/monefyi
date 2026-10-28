@@ -62,7 +62,6 @@ export const DEFAULT_SECTION_ORDER: LandingSectionKey[] = [
   "calculator",
   "testimonial",
   "pricing",
-  "guarantee",
   "faq",
   "finalCta",
   "footer",

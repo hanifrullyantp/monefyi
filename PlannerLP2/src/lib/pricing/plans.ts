@@ -59,14 +59,15 @@ export const ESTIMATOR_PLANS: EstimatorPlan[] = [
   {
     id: "estimator-standard",
     lynkProduct: "estimator_standard",
-    badge: "COCOK UNTUK PEMULA",
     title: "Estimator Standard",
     subtitle: "Hitung harga cepat & akurat tanpa batas",
     priceIdr: 99_000,
     originalPriceIdr: null,
     pricePeriod: "Sekali bayar",
     priceNote: "Akses selamanya",
-    highlighted: false,
+    highlighted: true,
+    popular: true,
+    badge: "PALING POPULER",
     ctaText: "Ambil Standard — Rp 99.000",
     fitFor: "Freelancer & perorangan yang butuh hitung cepat",
     whyChoose: [
@@ -88,15 +89,14 @@ export const ESTIMATOR_PLANS: EstimatorPlan[] = [
   {
     id: "estimator-pro",
     lynkProduct: "estimator_pro",
-    badge: "PALING POPULER",
+    badge: "BRANDING LENGKAP",
     title: "Estimator Pro",
     subtitle: "Branding penuh + kwitansi untuk closing lebih rapi",
     priceIdr: 199_000,
     originalPriceIdr: null,
     pricePeriod: "Sekali bayar",
     priceNote: "Akses selamanya · Upgrade dari Standard bayar selisih Rp 100.000",
-    highlighted: true,
-    popular: true,
+    highlighted: false,
     ctaText: "Ambil Pro — Rp 199.000",
     fitFor: "Kontraktor yang ingin penawaran berlogo sendiri",
     whyChoose: [
@@ -128,9 +128,5 @@ export function getPlan(id: EstimatorPlanId): EstimatorPlan {
   return ESTIMATOR_PLANS.find((p) => p.id === id) ?? ESTIMATOR_PLANS[0];
 }
 
-/** Framing nilai — tanpa klaim closing rate palsu */
-export const PRO_VALUE_FRAME =
-  "Rp 199.000 sekali bayar = kurang dari ongkos bensin satu survei.";
-
-export const GUARANTEE_MICROCOPY =
-  "Garansi 7 hari uang kembali · Bayar via QRIS/BCA/Mandiri/GoPay · Akses langsung setelah bayar";
+export const PRICING_FOOTNOTE =
+  "Bayar via QRIS/BCA/Mandiri/GoPay · Akses langsung setelah bayar · Sekali bayar, tanpa langganan";
