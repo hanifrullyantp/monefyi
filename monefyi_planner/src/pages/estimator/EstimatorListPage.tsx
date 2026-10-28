@@ -51,7 +51,11 @@ import {
   defaultWhatsAppTemplateConfig,
 } from '../../services/quotationTemplateService';
 import { loadPdfSettings } from '../../services/pdfSettingsService';
-import { canGenerateKwitansi } from '../../lib/entitlement';
+import {
+  canCreateEstimation,
+  canGenerateKwitansi,
+  FREE_ESTIMATION_LIMIT,
+} from '../../lib/entitlement';
 import { useEntitlement } from '../../hooks/useEntitlement';
 import { analytics } from '../../lib/analytics/events';
 import { ESTIMATION_STATUS_LABEL } from '../../lib/estimatorFormat';
@@ -59,6 +63,7 @@ import type { EstimationFormDraft } from '../../types/estimator';
 import type { PdfSettings } from '../../types/pdfSettings';
 import type { WhatsAppTemplateConfig } from '../../lib/whatsappQuotationMessage';
 import type { Estimation, EstimationStatus, EstimationWorkflowStatus } from '../../types/estimator';
+import type { UpgradeModalTrigger } from '../../types/entitlement';
 
 const STATUS_FILTERS: Array<{ value: '' | EstimationStatus; label: string }> = [
   { value: '', label: 'Semua' },
@@ -148,6 +153,8 @@ export default function EstimatorListPage() {
   const [kwitansiPdfSettings, setKwitansiPdfSettings] = useState<PdfSettings | null>(null);
   const [kwitansiLoadingId, setKwitansiLoadingId] = useState<string | null>(null);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeTrigger, setUpgradeTrigger] = useState<UpgradeModalTrigger>('estimator_pro_feature');
+  const [upgradeFeatureName, setUpgradeFeatureName] = useState('Generator Kwitansi Pro');
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
 
   const setListView = (mode: EstimationListViewMode) => {
@@ -297,6 +304,8 @@ export default function EstimatorListPage() {
   const handleKwitansi = async (id: string) => {
     if (!tenant?.id) return;
     if (!canGenerateKwitansi(entitlement)) {
+      setUpgradeTrigger('estimator_pro_feature');
+      setUpgradeFeatureName('Generator Kwitansi Pro');
       setUpgradeOpen(true);
       return;
     }
@@ -382,7 +391,20 @@ export default function EstimatorListPage() {
     />
   );
 
-  const goNew = () => navigate('/app/estimator/new');
+  const goNew = () => {
+    if (!canCreateEstimation(entitlement, listStats.total)) {
+      setUpgradeTrigger('estimator_paywall');
+      setUpgradeFeatureName(`Kuota gratis ${FREE_ESTIMATION_LIMIT} estimasi habis`);
+      setUpgradeOpen(true);
+      return;
+    }
+    navigate('/app/estimator/new');
+  };
+
+  const freeRemaining =
+    entitlement.isFree && entitlement.maxEstimations != null
+      ? Math.max(0, entitlement.maxEstimations - listStats.total)
+      : null;
 
   return (
     <div className="max-w-6xl mx-auto pb-24 lg:pb-6 lg:p-6">
@@ -395,6 +417,28 @@ export default function EstimatorListPage() {
               setPostPurchaseProduct(null);
             }}
           />
+        </div>
+      )}
+
+      {entitlement.isFree && freeRemaining != null && (
+        <div className="mx-4 mt-4 lg:mx-0 lg:mt-0 mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <p className="font-semibold">
+            Paket gratis · {freeRemaining} dari {FREE_ESTIMATION_LIMIT} estimasi tersisa
+          </p>
+          <p className="text-xs text-amber-800 mt-0.5">
+            PDF berwatermark Estimator. Upgrade ke Standard untuk unlimited + tanpa watermark.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setUpgradeTrigger('estimator_paywall');
+              setUpgradeFeatureName('Estimasi unlimited');
+              setUpgradeOpen(true);
+            }}
+            className="mt-2 text-xs font-bold text-emerald-700 hover:underline"
+          >
+            Upgrade sekarang →
+          </button>
         </div>
       )}
 
@@ -570,8 +614,8 @@ export default function EstimatorListPage() {
 
       <UpgradeModal
         open={upgradeOpen}
-        trigger="estimator_pro_feature"
-        featureName="Generator Kwitansi Pro"
+        trigger={upgradeTrigger}
+        featureName={upgradeFeatureName}
         onClose={() => setUpgradeOpen(false)}
       />
 

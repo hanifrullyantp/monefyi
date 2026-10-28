@@ -5,6 +5,8 @@ export const ESTIMATOR_PRICE_IDR = 99_000;
 export const ESTIMATOR_PRO_PRICE_IDR = 199_000;
 export const ESTIMATOR_UPGRADE_DELTA_IDR = ESTIMATOR_PRO_PRICE_IDR - ESTIMATOR_PRICE_IDR;
 export const PRO_PRICE_MONTHLY_IDR = 199_000;
+/** Gratis trial — PDF berwatermark Estimator */
+export const FREE_ESTIMATION_LIMIT = 3;
 
 const ACTIVE_PROJECT_STATUSES = new Set(['planning', 'active', 'on_hold']);
 
@@ -34,7 +36,10 @@ export function buildEntitlementSnapshot(input: {
   if (!input.subscription) {
     const legacy = mapLegacyOrgPlan(input.orgPlan);
     if (legacy) tier = legacy;
-    else if (input.hasEstimations) tier = 'estimator';
+    // Legacy unpaid orgs that already used Estimator before free-trial funnel
+    else if (input.hasEstimations && input.orgPlan && input.orgPlan !== 'free') {
+      tier = 'estimator';
+    }
   }
 
   const maxActiveProjects = input.subscription?.max_active_projects
@@ -42,7 +47,9 @@ export function buildEntitlementSnapshot(input: {
   const maxMembers = input.subscription?.max_members
     ?? (tier === 'pro' ? 5 : tier === 'enterprise' ? 20 : 1);
 
-  const canAccessEstimator = tier !== 'free';
+  // Free = coba Estimator terbatas (3 estimasi + watermark). Paid = unlimited.
+  const canAccessEstimator = true;
+  const maxEstimations = tier === 'free' ? FREE_ESTIMATION_LIMIT : null;
   const canAccessFinance = tier === 'pro' || tier === 'enterprise';
   const canInviteMembers = tier === 'pro' || tier === 'enterprise';
   const remainingProjectSlots = Math.max(0, maxActiveProjects - input.activeProjectCount);
@@ -65,6 +72,7 @@ export function buildEntitlementSnapshot(input: {
     remainingProjectSlots,
     maxMembers,
     currentMembers: input.memberCount,
+    maxEstimations,
     estimatorCreditAvailable: Boolean(input.subscription?.estimator_credit_available),
     estimatorCreditAmount: Number(input.subscription?.estimator_credit_amount ?? ESTIMATOR_PRICE_IDR),
     estimatorVariant,
@@ -75,6 +83,18 @@ export function buildEntitlementSnapshot(input: {
     isEnterprise: tier === 'enterprise',
     hasPaid: tier !== 'free',
   };
+}
+
+/**
+ * Free trial: max 3 estimasi. Paid tiers: unlimited.
+ */
+export function canCreateEstimation(
+  snapshot: Pick<EntitlementSnapshot, 'canAccessEstimator' | 'maxEstimations'>,
+  currentEstimationCount: number,
+): boolean {
+  if (!snapshot.canAccessEstimator) return false;
+  if (snapshot.maxEstimations == null) return true;
+  return currentEstimationCount < snapshot.maxEstimations;
 }
 
 export function canGenerateKwitansi(snapshot: EntitlementSnapshot): boolean {
@@ -119,6 +139,7 @@ export function buildFullAccessEntitlement(
     remainingProjectSlots: 999,
     maxMembers: 999,
     currentMembers: memberCount,
+    maxEstimations: null,
     estimatorCreditAvailable: false,
     estimatorCreditAmount: ESTIMATOR_PRICE_IDR,
     estimatorVariant: 'pro',
@@ -139,7 +160,7 @@ export const ENTITLEMENT_PREVIEW_OPTIONS: Array<{
   hint: string;
 }> = [
   { id: 'full', label: 'Akses penuh', hint: 'Semua fitur — default admin' },
-  { id: 'free', label: 'Free', hint: 'Paywall estimator & finance' },
+  { id: 'free', label: 'Free', hint: `Estimator trial ${FREE_ESTIMATION_LIMIT} estimasi · finance terkunci` },
   { id: 'estimator_basic', label: 'Estimator Standard', hint: 'Proyek + Estimator, tanpa kwitansi pro' },
   { id: 'estimator_pro', label: 'Estimator Pro', hint: 'Proyek + Estimator + kwitansi & template pro' },
   { id: 'planner_pro', label: 'Planner Pro', hint: 'Keuangan bisnis + 10 proyek' },

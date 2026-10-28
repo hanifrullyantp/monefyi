@@ -29,7 +29,11 @@ import MilestoneUpsellModal from '../../components/entitlement/MilestoneUpsellMo
 import { useEntitlement } from '../../hooks/useEntitlement';
 import { analytics } from '../../lib/analytics/events';
 import { shouldShowMilestone5Upsell } from '../../lib/analytics/milestones';
-import { canGenerateKwitansi } from '../../lib/entitlement';
+import {
+  canCreateEstimation,
+  canGenerateKwitansi,
+  FREE_ESTIMATION_LIMIT,
+} from '../../lib/entitlement';
 import {
   loadWhatsAppTemplate,
   defaultWhatsAppTemplateConfig,
@@ -47,6 +51,7 @@ import {
   estimationToFormDraft,
   generateEstimationCode,
   loadEstimation,
+  loadEstimations,
   newEstimationDraft,
   updateEstimation,
   updateEstimationStatus,
@@ -334,6 +339,17 @@ export default function EstimatorForm() {
       let images: EstimationImageDraft[] = draft.images;
 
       if (isNew) {
+        const existing = await loadEstimations(tenant.id);
+        if (!canCreateEstimation(entitlement, existing.length)) {
+          showToast(
+            `Kuota gratis ${FREE_ESTIMATION_LIMIT} estimasi habis. Upgrade untuk lanjut.`,
+            'error',
+          );
+          setUpgradeTrigger('estimator_paywall');
+          setUpgradeFeatureName(`Kuota gratis ${FREE_ESTIMATION_LIMIT} estimasi habis`);
+          setUpgradeOpen(true);
+          return;
+        }
         const created = await createEstimation(tenant.id, user.id, draft);
         const itemCount = draft.items.filter(i => i.name.trim()).length;
         const totalAmount = calcEstimationSummary(

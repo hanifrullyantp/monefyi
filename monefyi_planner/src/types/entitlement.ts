@@ -50,6 +50,8 @@ export interface EntitlementSnapshot {
   remainingProjectSlots: number;
   maxMembers: number;
   currentMembers: number;
+  /** null = unlimited; free trial = 3 */
+  maxEstimations: number | null;
   estimatorCreditAvailable: boolean;
   estimatorCreditAmount: number;
   estimatorVariant: 'standard' | 'pro' | null;

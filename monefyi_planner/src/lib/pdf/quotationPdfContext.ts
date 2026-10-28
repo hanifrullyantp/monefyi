@@ -164,7 +164,10 @@ export async function buildQuotationPdfContext(
     images,
     colors: { primary, secondary, accent: settings.accent_color || '#10b981' },
     footerText: settings.footer_text || 'Terima kasih atas kepercayaan Anda',
-    watermarkText: (settings.watermark_text || '').trim(),
+    // Free / tanpa logo custom: watermark Estimator di footer PDF (bukan di header brand user)
+    watermarkText:
+      (settings.watermark_text || '').trim() ||
+      (!settings.logo_url ? 'Dibuat dengan Estimator · estimator.monefyi.com' : ''),
     options: resolved,
   };
 }

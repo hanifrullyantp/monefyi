@@ -4,10 +4,12 @@ import {
   buildFullAccessEntitlement,
   buildPreviewEntitlement,
   canAccessPlannerNavModule,
+  canCreateEstimation,
   canGenerateKwitansi,
   computeEstimatorProCheckoutAmount,
   ESTIMATOR_PRO_PRICE_IDR,
   ESTIMATOR_UPGRADE_DELTA_IDR,
+  FREE_ESTIMATION_LIMIT,
   isActiveProjectStatus,
   isEstimatorProUpgrade,
   mapLegacyOrgPlan,
@@ -25,7 +27,7 @@ describe('entitlement - mapLegacyOrgPlan', () => {
 });
 
 describe('entitlement - buildEntitlementSnapshot', () => {
-  it('free tier blocks estimator and projects', () => {
+  it('free tier allows limited estimator trial, blocks projects', () => {
     const snap = buildEntitlementSnapshot({
       subscription: null,
       activeProjectCount: 0,
@@ -33,22 +35,23 @@ describe('entitlement - buildEntitlementSnapshot', () => {
       hasEstimations: false,
     });
     expect(snap.tier).toBe('free');
-    expect(snap.canAccessEstimator).toBe(false);
+    expect(snap.canAccessEstimator).toBe(true);
+    expect(snap.maxEstimations).toBe(FREE_ESTIMATION_LIMIT);
+    expect(canCreateEstimation(snap, 0)).toBe(true);
+    expect(canCreateEstimation(snap, FREE_ESTIMATION_LIMIT)).toBe(false);
     expect(snap.canCreateProject).toBe(false);
     expect(snap.canAccessFinance).toBe(false);
   });
 
-  it('grandfather org with estimations to estimator tier', () => {
+  it('keeps free trial even if user already has estimations (no paid plan)', () => {
     const snap = buildEntitlementSnapshot({
       subscription: null,
       activeProjectCount: 0,
       memberCount: 1,
       hasEstimations: true,
     });
-    expect(snap.tier).toBe('estimator');
-    expect(snap.canAccessEstimator).toBe(true);
-    expect(snap.maxActiveProjects).toBe(1);
-    expect(snap.canCreateProject).toBe(true);
+    expect(snap.tier).toBe('free');
+    expect(snap.maxEstimations).toBe(FREE_ESTIMATION_LIMIT);
   });
 
   it('estimator tier blocks project when slot full', () => {
@@ -189,10 +192,11 @@ describe('entitlement - buildFullAccessEntitlement', () => {
 });
 
 describe('entitlement - buildPreviewEntitlement', () => {
-  it('free blocks estimator and finance', () => {
+  it('free allows limited estimator trial, blocks finance', () => {
     const snap = buildPreviewEntitlement('free', 0, 1);
     expect(snap.isFree).toBe(true);
-    expect(snap.canAccessEstimator).toBe(false);
+    expect(snap.canAccessEstimator).toBe(true);
+    expect(snap.maxEstimations).toBe(FREE_ESTIMATION_LIMIT);
     expect(snap.canAccessFinance).toBe(false);
     expect(snap.canCreateProject).toBe(false);
   });
@@ -238,9 +242,10 @@ describe('entitlement - canAccessPlannerNavModule', () => {
     expect(canAccessPlannerNavModule(pro, 'finance')).toBe(true);
   });
 
-  it('free blocks estimator nav', () => {
+  it('free allows estimator nav (limited trial)', () => {
     const free = buildPreviewEntitlement('free', 0, 1);
-    expect(canAccessPlannerNavModule(free, 'estimator')).toBe(false);
+    expect(canAccessPlannerNavModule(free, 'estimator')).toBe(true);
     expect(canAccessPlannerNavModule(free, 'home')).toBe(true);
+    expect(canAccessPlannerNavModule(free, 'finance')).toBe(false);
   });
 });

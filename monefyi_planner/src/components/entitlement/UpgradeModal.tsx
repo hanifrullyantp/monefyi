@@ -2,7 +2,15 @@ import { useEffect } from 'react';
 import { Lock, Rocket, X } from 'lucide-react';
 import { redirectToCheckout } from '../../lib/checkout';
 import { analytics } from '../../lib/analytics/events';
-import { ESTIMATOR_PRO_PRICE_IDR, PRO_PRICE_MONTHLY_IDR, computeEstimatorProCheckoutAmount, isAdminFullAccess, isEstimatorProUpgrade } from '../../lib/entitlement';
+import {
+  ESTIMATOR_PRICE_IDR,
+  ESTIMATOR_PRO_PRICE_IDR,
+  FREE_ESTIMATION_LIMIT,
+  PRO_PRICE_MONTHLY_IDR,
+  computeEstimatorProCheckoutAmount,
+  isAdminFullAccess,
+  isEstimatorProUpgrade,
+} from '../../lib/entitlement';
 import { useAppStore } from '../../store/appStore';
 import { useEntitlement } from '../../hooks/useEntitlement';
 import type { UpgradeModalTrigger } from '../../types/entitlement';
@@ -88,7 +96,7 @@ export default function UpgradeModal({
             {trigger === 'pro_feature' && 'Fitur Planner Pro'}
             {trigger === 'estimator_pro_feature' && 'Estimator Pro'}
             {trigger === 'estimation_accepted' && 'Penawaran diterima!'}
-            {trigger === 'estimator_paywall' && 'Akses Estimator'}
+            {trigger === 'estimator_paywall' && 'Upgrade Estimator'}
             {trigger === 'manual' && 'Upgrade paket'}
           </h2>
           <button type="button" onClick={handleClose} className="p-2 rounded-lg hover:bg-slate-100" aria-label="Tutup">
@@ -189,7 +197,19 @@ export default function UpgradeModal({
             </>
           )}
 
-          {(trigger === 'estimator_paywall' || trigger === 'manual') && (
+          {trigger === 'estimator_paywall' && (
+            <>
+              <p className="font-semibold text-slate-800">
+                {featureName || `Kuota gratis ${FREE_ESTIMATION_LIMIT} estimasi`}
+              </p>
+              <ul className="text-xs space-y-1 text-slate-600">
+                <li>• Estimasi unlimited</li>
+                <li>• PDF tanpa watermark Estimator</li>
+                <li>• Standard Rp {ESTIMATOR_PRICE_IDR.toLocaleString('id-ID')} · Pro Rp {ESTIMATOR_PRO_PRICE_IDR.toLocaleString('id-ID')}</li>
+              </ul>
+            </>
+          )}
+          {trigger === 'manual' && (
             <p>Upgrade paket untuk membuka fitur Estimator dan alur penawaran profesional.</p>
           )}
         </div>
@@ -200,7 +220,7 @@ export default function UpgradeModal({
           </button>
           {trigger === 'estimator_paywall' ? (
             <button type="button" onClick={buyEstimator} className="px-4 py-2 rounded-xl text-sm font-bold bg-emerald-600 text-white">
-              Beli Estimator
+              Ambil Standard — Rp {ESTIMATOR_PRICE_IDR.toLocaleString('id-ID')}
             </button>
           ) : trigger === 'estimator_pro_feature' ? (
             <button type="button" onClick={upgradeEstimatorPro} className="inline-flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-bold bg-emerald-600 text-white">
