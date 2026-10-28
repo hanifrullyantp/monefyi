@@ -16,7 +16,7 @@ import {
 } from '../services/authService';
 import { useAppStore } from '../store/appStore';
 import { EstimatorLogo } from './EstimatorLogo';
-import { MonefyiLogo } from './MonefyiLogo';
+import { PlannerLogo } from './MonefyiLogo';
 import { applyEstimatorDocumentBrand, isEstimatorBrandContext } from '../lib/estimatorBrand';
 
 export function LoginPage() {
@@ -134,7 +134,7 @@ export function LoginPage() {
             {estimatorBrand ? (
               <EstimatorLogo className="w-10 h-10 rounded-xl object-contain shadow-md" />
             ) : (
-              <MonefyiLogo className="w-10 h-10 rounded-xl object-contain shadow-md" />
+              <PlannerLogo className="w-10 h-10 rounded-xl object-contain shadow-md" />
             )}
             <div>
               <div className="font-black text-slate-900">{loginTitle}</div>

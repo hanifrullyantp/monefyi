@@ -27,6 +27,13 @@ async function main() {
   fs.mkdirSync(brandDir, { recursive: true });
   fs.mkdirSync(spaIcons, { recursive: true });
 
+  for (const name of ["mark.svg", "lockup-light.svg", "lockup-dark.svg"]) {
+    const src = path.join(brandDir, name);
+    if (fs.existsSync(src)) {
+      fs.copyFileSync(src, path.join(spaIcons, name));
+    }
+  }
+
   // Favicons / PWA
   await pngFromSvg(markSvg, 32, path.join(brandDir, "favicon-32.png"));
   await pngFromSvg(markSvg, 180, path.join(brandDir, "apple-touch-icon.png"), {

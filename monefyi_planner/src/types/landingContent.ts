@@ -85,7 +85,7 @@ export const LANDING_BRAND_SECONDARY = '#059669';
 export const DEFAULT_LANDING_CONTENT: LandingContent = {
   version: 1,
   brand: {
-    logoUrl: '/icons/monefyi-logo.png',
+    logoUrl: '/icons/icon-192.png',
     primaryColor: LANDING_BRAND_PRIMARY,
     secondaryColor: LANDING_BRAND_SECONDARY,
     productName: 'Monefyi',

@@ -1,6 +1,13 @@
 /* Monefyi Planner — service worker (offline shell + stale-while-revalidate assets) */
 const CACHE = 'monefyi-planner-v1';
-const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icons/monefyi-logo.png', '/icons/icon-192.svg', '/icons/icon-512.svg'];
+const SHELL = [
+  '/',
+  '/index.html',
+  '/manifest.webmanifest',
+  '/icons/favicon.png',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

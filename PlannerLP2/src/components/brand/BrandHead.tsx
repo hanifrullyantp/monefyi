@@ -48,7 +48,7 @@ function applyBrandToDocument(brand: BrandDefinition, pageTitle?: string) {
 
 /**
  * Applies favicon + theme-color. First paint = Estimator on estimator host.
- * Re-runs when userHint arrives (multi-product → Monefyi).
+ * Re-runs when userHint arrives (Planner product → logo Planner).
  */
 export function BrandHead({ userHint, pageTitle }: Props) {
   useEffect(() => {

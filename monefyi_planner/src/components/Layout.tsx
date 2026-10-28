@@ -14,8 +14,10 @@ import CommandModal from './CommandModal';
 import NotificationPanel from './NotificationPanel';
 import PreviewModeMenu from './layout/PreviewModeMenu';
 import EntitlementPreviewPanel from './layout/EntitlementPreviewPanel';
-import { MonefyiLogo } from './MonefyiLogo';
+import { PlannerLogo } from './MonefyiLogo';
 import { EstimatorLogo } from './EstimatorLogo';
+import { shouldShowEstimatorProductBrand } from '../lib/appProductBrand';
+import { ESTIMATOR_THEME_COLOR } from '../lib/estimatorBrand';
 import ToastHost from './ToastHost';
 import UndoToast from './ui/UndoToast';
 import { loadFinanceVersion } from '../lib/financeVersion';
@@ -84,7 +86,7 @@ export default function Layout({ children }: LayoutProps) {
   const canAccessHr = canAccessManagerFeatures(user?.role, platformRole, user?.email, uiViewMode);
   const isEstimatorShell = location.pathname.startsWith('/app/estimator');
   const showEstimatorBrand =
-    isEstimatorShell || entitlement.isEstimator || estimatorOnly;
+    !adminFullAccess && shouldShowEstimatorProductBrand(entitlement);
 
   useEffect(() => {
     if (entitlementLoading) return;
@@ -319,7 +321,7 @@ export default function Layout({ children }: LayoutProps) {
             {showEstimatorBrand ? (
               <EstimatorLogo className="rounded-xl object-contain shadow-md shrink-0 w-9 h-9" />
             ) : (
-              <MonefyiLogo
+              <PlannerLogo
                 className={`rounded-xl object-contain shadow-md shrink-0 ${
                   navSidebarCollapsed ? 'w-9 h-9' : 'w-9 h-9'
                 }`}
@@ -327,10 +329,9 @@ export default function Layout({ children }: LayoutProps) {
             )}
             {!navSidebarCollapsed && (
               <div className="flex-1 min-w-0">
-                <div className="font-black text-slate-900 text-sm leading-tight">Monefyi</div>
                 <div
-                  className="text-xs font-semibold"
-                  style={{ color: showEstimatorBrand ? '#76b82a' : MONEFYI_BRAND.dark }}
+                  className="font-black text-sm leading-tight"
+                  style={{ color: showEstimatorBrand ? ESTIMATOR_THEME_COLOR : MONEFYI_BRAND.dark }}
                 >
                   {showEstimatorBrand ? 'Estimator' : 'Planner'}
                 </div>
@@ -463,13 +464,12 @@ export default function Layout({ children }: LayoutProps) {
                   {showEstimatorBrand ? (
                     <EstimatorLogo className="w-9 h-9 rounded-xl object-contain" />
                   ) : (
-                    <MonefyiLogo className="w-9 h-9 rounded-xl object-contain" />
+                    <PlannerLogo className="w-9 h-9 rounded-xl object-contain" />
                   )}
                   <div>
-                    <div className="font-black text-slate-900">Monefyi</div>
                     <div
-                      className="text-xs font-semibold"
-                      style={{ color: showEstimatorBrand ? '#76b82a' : undefined }}
+                      className="font-black"
+                      style={{ color: showEstimatorBrand ? ESTIMATOR_THEME_COLOR : undefined }}
                     >
                       {showEstimatorBrand ? 'Estimator' : 'Planner'}
                     </div>
@@ -527,8 +527,14 @@ export default function Layout({ children }: LayoutProps) {
             </div>
             {isEstimatorShell ? (
               <div className="lg:hidden flex items-center gap-2 min-w-0">
-                <EstimatorLogo className="w-7 h-7 rounded-lg object-contain shrink-0" />
-                <span className="font-bold text-slate-900 text-sm truncate">Estimator</span>
+                {showEstimatorBrand ? (
+                  <EstimatorLogo className="w-7 h-7 rounded-lg object-contain shrink-0" />
+                ) : (
+                  <PlannerLogo className="w-7 h-7 rounded-lg object-contain shrink-0" />
+                )}
+                <span className="font-bold text-slate-900 text-sm truncate">
+                  {showEstimatorBrand ? 'Estimator' : 'Planner'}
+                </span>
                 <span
                   className={`w-2 h-2 rounded-full shrink-0 ${sync.color}`}
                   title={sync.text}
@@ -540,10 +546,10 @@ export default function Layout({ children }: LayoutProps) {
                 {showEstimatorBrand ? (
                   <EstimatorLogo className="w-7 h-7 rounded-lg object-contain" />
                 ) : (
-                  <MonefyiLogo className="w-7 h-7 rounded-lg object-contain" />
+                  <PlannerLogo className="w-7 h-7 rounded-lg object-contain" />
                 )}
                 <span className="font-bold text-slate-900 text-sm">
-                  {showEstimatorBrand ? 'Estimator' : 'Monefyi'}
+                  {showEstimatorBrand ? 'Estimator' : 'Planner'}
                 </span>
               </div>
             )}

@@ -1,9 +1,12 @@
 /** Brand assets — Monefyi Estimator (mark E hijau). */
 import { resolveSpaAssetUrl } from './spaAssets';
+import { applyPlannerDocumentBrand } from './plannerBrand';
 
 const V = '2026-10-28';
 
-export const ESTIMATOR_LOGO_SRC = `/icons/estimator/estimator-logo.png?v=${V}`;
+/** Mark E — SVG prioritas; PNG fallback di komponen jika perlu */
+export const ESTIMATOR_LOGO_SRC = `/icons/estimator/mark.svg?v=${V}`;
+export const ESTIMATOR_LOGO_PNG_SRC = `/icons/estimator/estimator-logo.png?v=${V}`;
 export const ESTIMATOR_FAVICON_SRC = `/icons/estimator/favicon.png?v=${V}`;
 export const ESTIMATOR_APPLE_ICON_SRC = `/icons/estimator/icon-180.png?v=${V}`;
 export const ESTIMATOR_ICON_192_SRC = `/icons/estimator/icon-192.png?v=${V}`;
@@ -12,11 +15,11 @@ export const ESTIMATOR_BRAND_NAME = 'Monefyi Estimator';
 /** CTA / theme — brand-600 (AA on white) */
 export const ESTIMATOR_THEME_COLOR = '#157F5F';
 
+/** Host / PWA Estimator — bukan rute SPA (Planner user tetap Planner di /app/estimator). */
 export function isEstimatorBrandContext(): boolean {
   if (typeof window === 'undefined') return false;
-  const { hostname, pathname } = window.location;
-  if (hostname === 'estimator.monefyi.com' || hostname.startsWith('estimator.')) return true;
-  return pathname.startsWith('/app/estimator');
+  const { hostname } = window.location;
+  return hostname === 'estimator.monefyi.com' || hostname.startsWith('estimator.');
 }
 
 export function applyEstimatorDocumentBrand(active: boolean): void {
@@ -36,7 +39,5 @@ export function applyEstimatorDocumentBrand(active: boolean): void {
     return;
   }
 
-  if (icon) icon.href = resolveSpaAssetUrl('/icons/favicon.png?v=2026-08-13-m');
-  if (apple) apple.href = resolveSpaAssetUrl('/icons/icon-180.png?v=2026-08-13-m');
-  if (theme) theme.content = '#74C05A';
+  applyPlannerDocumentBrand();
 }

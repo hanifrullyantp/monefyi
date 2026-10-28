@@ -16,7 +16,7 @@ import EditableText from './landing/EditableText';
 import LandingAdminBar from './landing/LandingAdminBar';
 import LandingSettingsModal from './landing/LandingSettingsModal';
 import { resolveLandingIcon } from './landing/landingIcons';
-import { MonefyiLogo } from './MonefyiLogo';
+import { PlannerLogo } from './MonefyiLogo';
 
 export default function LandingPage() {
   const [searchParams] = useSearchParams();
@@ -131,7 +131,7 @@ export default function LandingPage() {
             {content.brand.logoUrl ? (
               <img src={content.brand.logoUrl} alt="" className="w-8 h-8 rounded-lg object-contain" />
             ) : (
-              <MonefyiLogo className="w-8 h-8 rounded-lg object-contain" />
+              <PlannerLogo className="w-8 h-8 rounded-lg object-contain" />
             )}
             <span className="font-bold text-slate-900 text-lg">
               <EditableText

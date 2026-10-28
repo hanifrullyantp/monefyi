@@ -3,7 +3,7 @@
  * Single source for logos, theme-color, titles.
  */
 
-export type BrandId = "estimator" | "monefyi";
+export type BrandId = "estimator" | "planner";
 
 export type BrandAssetSet = {
   mark: string;
@@ -51,24 +51,24 @@ export const BRANDS: Record<BrandId, BrandDefinition> = {
       ogImage: `/brand/estimator/og-image.png?v=${V}`,
     },
   },
-  monefyi: {
-    id: "monefyi",
-    name: "Monefyi",
-    shortName: "Monefyi",
-    titleSuffix: "Monefyi",
-    themeColor: "#74C05A",
-    backgroundColor: "#030D17",
+  planner: {
+    id: "planner",
+    name: "Monefyi Planner",
+    shortName: "Planner",
+    titleSuffix: "Planner",
+    themeColor: "#059669",
+    backgroundColor: "#0f172a",
     assets: {
-      mark: "/icons/monefyi-logo.png",
-      lockupLight: "/icons/monefyi-logo.png",
-      lockupDark: "/icons/monefyi-logo.png",
-      faviconSvg: "/icons/favicon.png",
-      favicon32: "/icons/icon-32.png",
-      appleTouchIcon: "/icons/icon-180.png",
-      icon192: "/icons/icon-192.png",
-      icon512: "/icons/icon-512.png",
-      iconMaskable512: "/icons/icon-maskable-512.png",
-      ogImage: "/brand/estimator/og-image.png",
+      mark: `/brand/planner/icon-192.png?v=${V}`,
+      lockupLight: `/brand/planner/icon-192.png?v=${V}`,
+      lockupDark: `/brand/planner/icon-192.png?v=${V}`,
+      faviconSvg: `/brand/planner/icon-192.png?v=${V}`,
+      favicon32: `/brand/planner/icon-192.png?v=${V}`,
+      appleTouchIcon: `/brand/planner/icon-192.png?v=${V}`,
+      icon192: `/brand/planner/icon-192.png?v=${V}`,
+      icon512: `/brand/planner/icon-192.png?v=${V}`,
+      iconMaskable512: `/brand/planner/icon-192.png?v=${V}`,
+      ogImage: `/brand/planner/icon-192.png?v=${V}`,
     },
   },
 };
@@ -82,8 +82,7 @@ export type BrandUserHint = {
 
 /**
  * Resolve brand from hostname + optional entitlement.
- * Default on estimator.* = estimator.
- * Multi-product (planner+monefyi or more) → monefyi mark for shared chrome.
+ * Estimator-only → mark E. Punya Planner / Keuangan (monefyi) → logo Planner (bukan Ø).
  */
 export function resolveBrand(
   hint?: BrandUserHint | null,
@@ -98,18 +97,16 @@ export function resolveBrand(
 
   const products = hint?.products ?? [];
   const hasPlanner = products.includes("planner");
-  const hasMonefyi = products.includes("monefyi");
-  const hasStay = products.includes("stay");
-  const productCount = [hasPlanner, hasMonefyi, hasStay].filter(Boolean).length;
+  const hasMonefyiFinance = products.includes("monefyi");
+  const tier = hint?.tier ?? null;
 
-  // Multi-product user → Monefyi umbrella brand
-  if (productCount > 1) return BRANDS.monefyi;
+  if (hasPlanner || hasMonefyiFinance || tier === "pro" || tier === "enterprise") {
+    return BRANDS.planner;
+  }
 
-  // Estimator-only context
   if (onEstimatorHost) return BRANDS.estimator;
-  if (hasPlanner && !hasMonefyi) return BRANDS.estimator;
 
-  return onEstimatorHost ? BRANDS.estimator : BRANDS.monefyi;
+  return BRANDS.estimator;
 }
 
 /** First paint on estimator subdomain always Estimator (no flicker). */
@@ -120,5 +117,5 @@ export function defaultBrandForHost(hostname?: string): BrandDefinition {
   if (host === "estimator.monefyi.com" || host.startsWith("estimator.")) {
     return BRANDS.estimator;
   }
-  return BRANDS.monefyi;
+  return BRANDS.planner;
 }
