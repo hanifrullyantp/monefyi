@@ -56,6 +56,12 @@ export function ownsEstimator(user: User | null): boolean {
   return Boolean(user?.ownedProducts.includes("estimator"));
 }
 
+/** Login + punya Estimator, belum Planner penuh — landing tanpa navbar marketing. */
+export function isEstimatorOnlyUser(user: User | null): boolean {
+  if (!user) return false;
+  return ownsEstimator(user) && !ownsPlanner(user);
+}
+
 export function isEstimatorPro(user: User | null): boolean {
   return user?.estimatorVariant === "pro";
 }

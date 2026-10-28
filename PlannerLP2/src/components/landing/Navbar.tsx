@@ -8,6 +8,7 @@ import { useLandingCta } from "@/lib/hooks/useLandingCta";
 import { useLandingAdmin } from "@/lib/hooks/useLandingAdmin";
 import { useAuthStore } from "@/lib/store/authStore";
 import { plannerAppPath } from "@/lib/config/plannerApp";
+import { isEstimatorOnlyUser } from "@/lib/permissions";
 import { cn } from "@/lib/utils/cn";
 import { Suspense } from "react";
 import { LoginModal } from "./LoginModal";
@@ -16,8 +17,11 @@ import Link from "next/link";
 export function Navbar() {
   const { isAdmin, isEditMode, setEditMode, setAdmin } = useLandingAdmin();
   const logout = useAuthStore((s) => s.logout);
+  const user = useAuthStore((s) => s.user);
   const hydrated = useAuthStore((s) => s.hydrated);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hideNavbarForEstimatorCustomer =
+    hydrated && isAuthenticated && !isAdmin && isEstimatorOnlyUser(user);
   const { content } = useContentStore();
   const { navbar } = content;
   const { label, openLogin } = useLandingCta();
@@ -90,6 +94,14 @@ export function Navbar() {
       {label}
     </button>
   );
+
+  if (hideNavbarForEstimatorCustomer) {
+    return (
+      <Suspense fallback={null}>
+        <LoginModal />
+      </Suspense>
+    );
+  }
 
   return (
     <>
