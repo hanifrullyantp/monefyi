@@ -7,6 +7,7 @@ import { BrandLogo } from "@/components/brand/BrandLogo";
 import { useContentStore } from "@/lib/store/contentStore";
 import { useLandingCta } from "@/lib/hooks/useLandingCta";
 import { useLandingAdmin } from "@/lib/hooks/useLandingAdmin";
+import { useFinishInlineEdit } from "@/lib/hooks/useFinishInlineEdit";
 import { useAuthStore } from "@/lib/store/authStore";
 import { plannerAppPath } from "@/lib/config/plannerApp";
 import { isEstimatorOnlyUser } from "@/lib/permissions";
@@ -18,7 +19,8 @@ import Link from "next/link";
 const DESKTOP_NAV_HREFS = new Set(["#tiga-step", "#fitur", "#harga", "#faq"]);
 
 export function Navbar() {
-  const { isAdmin, isEditMode, setEditMode, setAdmin } = useLandingAdmin();
+  const { isAdmin, setEditMode, setAdmin } = useLandingAdmin();
+  const { isEditMode, toggleEditMode, saving: editSaving } = useFinishInlineEdit();
   const logout = useAuthStore((s) => s.logout);
   const user = useAuthStore((s) => s.user);
   const hydrated = useAuthStore((s) => s.hydrated);
@@ -153,14 +155,16 @@ export function Navbar() {
                 <>
                   <button
                     type="button"
-                    onClick={() => setEditMode(!isEditMode)}
+                    disabled={editSaving}
+                    onClick={() => void toggleEditMode()}
                     className={cn(
                       "lp-btn-nav inline-flex items-center gap-2",
                       isEditMode ? "bg-emerald-600 text-white" : "lp-btn-ghost text-emerald-700",
+                      editSaving && "opacity-70",
                     )}
                   >
                     {isEditMode ? <Save className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
-                    {isEditMode ? "Selesai" : "Inline Edit"}
+                    {editSaving ? "Menyimpan…" : isEditMode ? "Selesai" : "Inline Edit"}
                   </button>
                   <Link
                     href="/admin"
@@ -242,7 +246,7 @@ export function Navbar() {
                       <button
                         type="button"
                         onClick={() => {
-                          setEditMode(!isEditMode);
+                          void toggleEditMode();
                           setIsMobileOpen(false);
                         }}
                         className={cn(

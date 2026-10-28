@@ -31,8 +31,26 @@ export function EditableFeatureField({
   }, [value]);
 
   useEffect(() => {
-    if (!isEditMode) setIsEditing(false);
-  }, [isEditMode]);
+    if (isEditMode) return;
+    if (isEditing && tempValue !== value) {
+      const { features: block } = content;
+      if (featureIndex >= 0 && featureIndex < block.features.length) {
+        const next = [...block.features];
+        next[featureIndex] = { ...next[featureIndex], [field]: tempValue };
+        updateSection("features", { ...block, features: next });
+      }
+    }
+    setIsEditing(false);
+  }, [
+    isEditMode,
+    isEditing,
+    tempValue,
+    value,
+    content,
+    featureIndex,
+    field,
+    updateSection,
+  ]);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {

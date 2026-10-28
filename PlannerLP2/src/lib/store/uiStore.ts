@@ -10,6 +10,7 @@ interface UIStore {
   isEditMode: boolean;
   isLoginModalOpen: boolean;
   pendingCheckoutProduct: LynkProduct | null;
+  saveNotice: string | null;
   setMobileMenuOpen: (open: boolean) => void;
   setAdminSidebarOpen: (open: boolean) => void;
   setActiveSection: (section: string) => void;
@@ -17,6 +18,7 @@ interface UIStore {
   setEditMode: (isEditMode: boolean) => void;
   setLoginModalOpen: (open: boolean) => void;
   setPendingCheckoutProduct: (product: LynkProduct | null) => void;
+  setSaveNotice: (message: string | null) => void;
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -27,6 +29,7 @@ export const useUIStore = create<UIStore>((set) => ({
   isEditMode: false,
   isLoginModalOpen: false,
   pendingCheckoutProduct: null,
+  saveNotice: null,
 
   setMobileMenuOpen: (open) => set({ isMobileMenuOpen: open }),
   setAdminSidebarOpen: (open) => set({ isAdminSidebarOpen: open }),
@@ -35,4 +38,5 @@ export const useUIStore = create<UIStore>((set) => ({
   setEditMode: (isEditMode) => set({ isEditMode }),
   setLoginModalOpen: (open) => set({ isLoginModalOpen: open }),
   setPendingCheckoutProduct: (product) => set({ pendingCheckoutProduct: product }),
+  setSaveNotice: (saveNotice) => set({ saveNotice }),
 }));

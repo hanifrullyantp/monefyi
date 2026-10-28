@@ -35,8 +35,12 @@ export function EditableImage({
   }, [src]);
 
   useEffect(() => {
-    if (!isEditMode) setIsEditing(false);
-  }, [isEditMode]);
+    if (isEditMode) return;
+    if (isEditing && tempSrc !== src) {
+      updateField(section, field, tempSrc);
+    }
+    setIsEditing(false);
+  }, [isEditMode, isEditing, tempSrc, src, section, field, updateField]);
 
   if (!isAdmin || !isEditMode) {
     if (!src) return null;

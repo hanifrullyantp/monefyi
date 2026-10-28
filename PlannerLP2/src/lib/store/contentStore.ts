@@ -7,6 +7,7 @@ import {
   fetchLandingContent,
   mergeSiteContent,
   saveLandingContent,
+  writeCachedContent,
 } from "@/lib/services/landingService";
 
 interface ContentStore {
@@ -46,33 +47,33 @@ export const useContentStore = create<ContentStore>()(
       history: [],
 
       updateContent: (updates) => {
-        set((state) => ({
-          content: { ...state.content, ...updates },
-          isDirty: true,
-          publishError: null,
-        }));
+        set((state) => {
+          const content = { ...state.content, ...updates };
+          writeCachedContent(content);
+          return { content, isDirty: true, publishError: null };
+        });
       },
 
       updateSection: (key, value) => {
-        set((state) => ({
-          content: { ...state.content, [key]: value },
-          isDirty: true,
-          publishError: null,
-        }));
+        set((state) => {
+          const content = { ...state.content, [key]: value };
+          writeCachedContent(content);
+          return { content, isDirty: true, publishError: null };
+        });
       },
 
       updateField: (section, field, value) => {
-        set((state) => ({
-          content: {
+        set((state) => {
+          const content = {
             ...state.content,
             [section]: {
               ...(state.content[section] as object),
               [field]: value,
             },
-          },
-          isDirty: true,
-          publishError: null,
-        }));
+          };
+          writeCachedContent(content);
+          return { content, isDirty: true, publishError: null };
+        });
       },
 
       resetContent: () => {
@@ -106,8 +107,19 @@ export const useContentStore = create<ContentStore>()(
 
       loadFromRemote: async () => {
         try {
+          const { isDirty, content: localContent } = get();
           const remote = await fetchLandingContent();
           if (remote?.fromDatabase) {
+            if (isDirty) {
+              writeCachedContent(localContent);
+              set({
+                isLoaded: true,
+                loadError: null,
+                remoteUpdatedAt: remote.updatedAt,
+                dbSynced: true,
+              });
+              return;
+            }
             set({
               content: mergeSiteContent(remote.content),
               isDirty: false,
@@ -153,11 +165,24 @@ export const useContentStore = create<ContentStore>()(
       name: "monefyi_content_lp3",
       partialize: (state) => ({
         content: state.content,
+        isDirty: state.isDirty,
         lastSaved: state.lastSaved,
         remoteUpdatedAt: state.remoteUpdatedAt,
         dbSynced: state.dbSynced,
         history: state.history,
       }),
+      merge: (persisted, current) => {
+        const saved = persisted as Partial<ContentStore> | undefined;
+        if (!saved?.content) return current;
+        return {
+          ...current,
+          ...saved,
+          content: mergeSiteContent(saved.content),
+          history: (saved.history ?? current.history).map((item) =>
+            mergeSiteContent(item),
+          ),
+        };
+      },
       onRehydrateStorage: () => {
         return () => {
           void useContentStore.getState().loadFromRemote();

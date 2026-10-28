@@ -32,8 +32,12 @@ export function EditableText({
   }, [value]);
 
   useEffect(() => {
-    if (!isEditMode) setIsEditing(false);
-  }, [isEditMode]);
+    if (isEditMode) return;
+    if (isEditing && tempValue !== value) {
+      updateField(section, field, tempValue);
+    }
+    setIsEditing(false);
+  }, [isEditMode, isEditing, tempValue, value, section, field, updateField]);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {

@@ -6,14 +6,17 @@ import { Edit3, LayoutDashboard, LogOut, Save, CloudUpload } from "lucide-react"
 import { useAuthStore } from "@/lib/store/authStore";
 import { usePublishContent } from "@/lib/hooks/usePublishContent";
 import { useLandingAdmin } from "@/lib/hooks/useLandingAdmin";
+import { useFinishInlineEdit } from "@/lib/hooks/useFinishInlineEdit";
+import { useUIStore } from "@/lib/store/uiStore";
 import { cn } from "@/lib/utils/cn";
 
 /** Toolbar admin + inline edit — hanya mobile (< md), di landing page. */
 export function MobileAdminToolbar() {
-  const { isAdmin, isEditMode, setEditMode, setAdmin } = useLandingAdmin();
+  const { isAdmin, setAdmin } = useLandingAdmin();
+  const { isEditMode, toggleEditMode, saving: editSaving, isDirty } = useFinishInlineEdit();
   const hydrated = useAuthStore((s) => s.hydrated);
   const logout = useAuthStore((s) => s.logout);
-  const { publish, isDirty, isSaving } = usePublishContent();
+  const { publish, isSaving } = usePublishContent();
 
   useEffect(() => {
     if (!isAdmin) {
@@ -41,7 +44,7 @@ export function MobileAdminToolbar() {
   const handleLogout = async () => {
     await logout();
     setAdmin(false);
-    setEditMode(false);
+    useUIStore.getState().setEditMode(false);
   };
 
   return (
@@ -58,16 +61,18 @@ export function MobileAdminToolbar() {
       <div className="flex items-center gap-1.5 p-2">
         <button
           type="button"
-          onClick={() => setEditMode(!isEditMode)}
+          disabled={editSaving}
+          onClick={() => void toggleEditMode()}
           className={cn(
             "flex-1 flex items-center justify-center gap-1.5 min-h-[48px] rounded-xl text-[11px] font-bold uppercase tracking-wide transition-all touch-manipulation",
             isEditMode
               ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/30"
               : "bg-slate-800 text-slate-100 ring-1 ring-emerald-500/40",
+            editSaving && "opacity-70",
           )}
         >
           {isEditMode ? <Save className="w-4 h-4" /> : <Edit3 className="w-4 h-4 text-emerald-400" />}
-          {isEditMode ? "Selesai" : "Inline Edit"}
+          {editSaving ? "Menyimpan…" : isEditMode ? "Selesai" : "Inline Edit"}
         </button>
 
         <Link

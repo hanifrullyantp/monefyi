@@ -38,8 +38,16 @@ export function EditableThreeStepText({
   }, [value]);
 
   useEffect(() => {
-    if (!isEditMode) setIsEditing(false);
-  }, [isEditMode]);
+    if (isEditMode) return;
+    if (isEditing && tempValue !== value) {
+      const { threeStep } = content;
+      const steps = threeStep.steps.map((step, i) =>
+        i === stepIndex ? { ...step, [field]: tempValue } : step,
+      );
+      updateSection("threeStep", { ...threeStep, steps });
+    }
+    setIsEditing(false);
+  }, [isEditMode, isEditing, tempValue, value, content, stepIndex, field, updateSection]);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {

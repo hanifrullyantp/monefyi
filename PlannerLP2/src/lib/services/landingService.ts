@@ -74,7 +74,15 @@ export function mergeSiteContent(raw: Partial<SiteContent> | null | undefined): 
       featured: {
         ...defaultContent.testimonial.featured,
         ...(raw.testimonial?.featured || {}),
+        milestones:
+          raw.testimonial?.featured?.milestones?.length
+            ? raw.testimonial.featured.milestones
+            : defaultContent.testimonial.featured.milestones,
       },
+      stats:
+        raw.testimonial?.stats?.length
+          ? raw.testimonial.stats
+          : defaultContent.testimonial.stats,
       // Cerita lain disembunyikan sampai diverifikasi (jangan tarik dummy dari CMS lama)
       others: [],
     },

@@ -32,8 +32,30 @@ export function EditableThreeStepListItem({
   }, [value]);
 
   useEffect(() => {
-    if (!isEditMode) setIsEditing(false);
-  }, [isEditMode]);
+    if (isEditMode) return;
+    if (isEditing && tempValue !== value) {
+      const { threeStep } = content;
+      const steps = threeStep.steps.map((step, i) => {
+        if (i !== stepIndex) return step;
+        const list = [...(step[listField] ?? [])];
+        while (list.length <= itemIndex) list.push("");
+        list[itemIndex] = tempValue;
+        return { ...step, [listField]: list };
+      });
+      updateSection("threeStep", { ...threeStep, steps });
+    }
+    setIsEditing(false);
+  }, [
+    isEditMode,
+    isEditing,
+    tempValue,
+    value,
+    content,
+    stepIndex,
+    listField,
+    itemIndex,
+    updateSection,
+  ]);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {

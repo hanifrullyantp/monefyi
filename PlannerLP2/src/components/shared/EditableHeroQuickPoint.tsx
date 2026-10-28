@@ -31,8 +31,16 @@ export function EditableHeroQuickPoint({
   }, [value, fallback]);
 
   useEffect(() => {
-    if (!isEditMode) setIsEditing(false);
-  }, [isEditMode]);
+    if (isEditMode) return;
+    if (isEditing && tempValue !== (value.trim() || fallback)) {
+      const { hero } = content;
+      const next = [...hero.quickPoints];
+      while (next.length <= index) next.push("");
+      next[index] = tempValue;
+      updateSection("hero", { ...hero, quickPoints: next });
+    }
+    setIsEditing(false);
+  }, [isEditMode, isEditing, tempValue, value, fallback, content, index, updateSection]);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {

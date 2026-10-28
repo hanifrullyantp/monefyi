@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Quote, ArrowRight, CheckCircle2 } from "lucide-react";
 import { useContentStore } from "@/lib/store/contentStore";
 import { Container } from "@/components/shared/Container";
+import { defaultContent } from "@/data/defaultContent";
 
 const FALLBACK_STATS = [
   { value: "1.200+", label: "Users" },
@@ -25,6 +26,10 @@ export function TestimonialSection() {
   const { testimonial } = content;
   const { featured } = testimonial;
   const stats = testimonial.stats.length ? testimonial.stats : FALLBACK_STATS;
+  const milestones =
+    featured.milestones?.length > 0
+      ? featured.milestones
+      : defaultContent.testimonial.featured.milestones;
 
   const scrollTo = (id: string) => {
     const el = document.getElementById(id);
@@ -135,7 +140,7 @@ export function TestimonialSection() {
                   THE TRANSFORMASI
                 </span>
                 <div className="relative space-y-10 before:absolute before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
-                  {featured.milestones.map((m, i) => (
+                  {milestones.map((m, i) => (
                     <div key={`${m.period}-${i}`} className="relative pl-12 group">
                       <div className="absolute left-0 top-0 w-8 h-8 rounded-xl bg-white border-2 border-slate-100 flex items-center justify-center z-10 group-hover:border-emerald-500 group-hover:bg-emerald-50 transition-all">
                         <div className="w-2 h-2 bg-slate-300 rounded-full group-hover:bg-emerald-500 transition-all" />
