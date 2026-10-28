@@ -25,6 +25,8 @@ const badgeColors: Record<string, string> = {
 };
 
 import { EditableText } from "@/components/shared/EditableText";
+import { EditableThreeStepText } from "@/components/shared/EditableThreeStepText";
+import { EditableThreeStepListItem } from "@/components/shared/EditableThreeStepListItem";
 
 export function ThreeStepSection() {
   const { content } = useContentStore();
@@ -72,14 +74,14 @@ export function ThreeStepSection() {
                       )}
                     >
                       <Icon className="w-3.5 h-3.5" />
-                      {step.badge}
+                      <EditableThreeStepText stepIndex={index} field="badge" value={step.badge} />
                     </span>
                   </div>
 
                   {/* Right - Content */}
                   <div className="p-8 md:p-10">
                     <h3 className="text-2xl md:text-3xl font-bold text-slate-900 mb-6">
-                      {step.title}
+                      <EditableThreeStepText stepIndex={index} field="title" value={step.title} />
                     </h3>
 
                     {/* Problem */}
@@ -91,7 +93,12 @@ export function ThreeStepSection() {
                         </span>
                       </div>
                       <p className="text-slate-600 leading-relaxed pl-6">
-                        {step.problem}
+                        <EditableThreeStepText
+                          stepIndex={index}
+                          field="problem"
+                          value={step.problem}
+                          multiline
+                        />
                       </p>
                     </div>
 
@@ -104,7 +111,12 @@ export function ThreeStepSection() {
                         </span>
                       </div>
                       <p className="text-slate-600 leading-relaxed pl-6">
-                        {step.solution}
+                        <EditableThreeStepText
+                          stepIndex={index}
+                          field="solution"
+                          value={step.solution}
+                          multiline
+                        />
                       </p>
                     </div>
 
@@ -112,7 +124,12 @@ export function ThreeStepSection() {
                     {step.exampleBox && (
                       <div className="bg-slate-50 border-l-4 border-emerald-500 rounded-r-xl p-4 my-6">
                         <pre className="font-mono text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
-                          {step.exampleBox}
+                          <EditableThreeStepText
+                            stepIndex={index}
+                            field="exampleBox"
+                            value={step.exampleBox}
+                            multiline
+                          />
                         </pre>
                       </div>
                     )}
@@ -127,7 +144,12 @@ export function ThreeStepSection() {
                           {step.importantPoints.map((pt, i) => (
                             <li key={i} className="flex items-center gap-2 text-sm text-slate-600">
                               <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                              {pt}
+                              <EditableThreeStepListItem
+                                stepIndex={index}
+                                listField="importantPoints"
+                                itemIndex={i}
+                                value={pt}
+                              />
                             </li>
                           ))}
                         </ul>
@@ -145,7 +167,12 @@ export function ThreeStepSection() {
                         {step.results.map((result, i) => (
                           <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
                             <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                            {result}
+                            <EditableThreeStepListItem
+                              stepIndex={index}
+                              listField="results"
+                              itemIndex={i}
+                              value={result}
+                            />
                           </li>
                         ))}
                       </ul>
@@ -156,7 +183,12 @@ export function ThreeStepSection() {
                       <Lightbulb className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
                       <p className="text-sm text-emerald-900">
                         <span className="font-bold">Intinya: </span>
-                        {step.summary}
+                        <EditableThreeStepText
+                          stepIndex={index}
+                          field="summary"
+                          value={step.summary}
+                          multiline
+                        />
                       </p>
                     </div>
                   </div>

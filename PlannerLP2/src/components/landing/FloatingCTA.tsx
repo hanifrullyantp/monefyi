@@ -21,7 +21,7 @@ export function FloatingCTA() {
 
   const hasEstimator = ownsEstimator(user);
   const canShow =
-    hydrated && !isAdmin && !hasEstimator && pastHero && !pricingVisible;
+    hydrated && !isAuthenticated && !isAdmin && !hasEstimator && pastHero && !pricingVisible;
 
   useEffect(() => {
     const heroEl = document.getElementById("hero");

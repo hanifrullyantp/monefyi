@@ -156,17 +156,15 @@ Jika iya, saya jadwalkan survei pekan ini."`,
   },
 
   features: {
-    badge: "FITUR LENGKAP",
-    title: "Didesain Untuk Efisiensi Closing & Proyek",
-    subtitle:
-      "Monefyi Estimator menggabungkan tools closing dan project management dalam satu sistem.",
+    badge: "FITUR INTI",
+    title: "Empat Alat Closing di Satu HP",
+    subtitle: "Estimator, screening WA, PDF penawaran, dan kwitansi — tanpa grid fitur PM yang melebar.",
     features: [
       {
         icon: "Calculator",
         title: "Smart Estimator",
         description:
           "Hitung estimasi harga proyek dalam menit. Berdasarkan kategori, luas, atau custom item.",
-        featured: true,
       },
       {
         icon: "MessageSquare",
@@ -179,61 +177,12 @@ Jika iya, saya jadwalkan survei pekan ini."`,
         title: "PDF Penawaran Profesional",
         description:
           "Export penawaran dengan template PDF + tanda tangan gambar (logo & ttd perusahaan Anda).",
-        featured: true,
-      },
-      {
-        icon: "RefreshCw",
-        title: "Auto Convert Deal",
-        description:
-          "Penawaran yang di-accept otomatis jadi proyek aktif.",
-      },
-      {
-        icon: "GanttChart",
-        title: "Timeline & Milestone",
-        description:
-          "Visualisasi progress proyek dengan Gantt chart sederhana.",
-      },
-      {
-        icon: "CheckSquare",
-        title: "Task Management",
-        description:
-          "Assign tugas ke tim, track deadline, notifikasi otomatis.",
-      },
-      {
-        icon: "TrendingDown",
-        title: "Expense Tracking",
-        description:
-          "Catat semua pengeluaran proyek — tau margin real per proyek.",
-      },
-      {
-        icon: "UserCheck",
-        title: "Client Portal",
-        description:
-          "Roadmap — klien lihat progress proyek (tersedia di paket Planner Pro mendatang).",
       },
       {
         icon: "Receipt",
-        title: "Invoice & Termin",
+        title: "PDF Tagihan & Kwitansi",
         description:
-          "Roadmap — invoice per termin & tracking pembayaran (Planner Pro mendatang).",
-      },
-      {
-        icon: "Users",
-        title: "Team Collaboration",
-        description:
-          "Multi-user, role-based, chat internal per proyek.",
-      },
-      {
-        icon: "BarChart3",
-        title: "Report & Analytics",
-        description:
-          "Dashboard revenue, closing rate, proyek profit/loss.",
-      },
-      {
-        icon: "Smartphone",
-        title: "Mobile Ready",
-        description:
-          "Akses dari HP saat survei atau di lokasi proyek.",
+          "Generator tagihan dan kwitansi dari estimasi — siap kirim ke WA klien.",
       },
     ],
   },
@@ -775,6 +724,7 @@ Jika iya, saya jadwalkan survei pekan ini."`,
     "trustBadges",
     "relatable",
     "threeStep",
+    "features",
     "calculator",
     "testimonial",
     "pricing",
@@ -796,7 +746,7 @@ Jika iya, saya jadwalkan survei pekan ini."`,
     faq: true,
     finalCta: true,
     footer: true,
-    features: false,
+    features: true,
     comparison: false,
   },
 };

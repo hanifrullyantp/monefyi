@@ -58,6 +58,7 @@ export const DEFAULT_SECTION_ORDER: LandingSectionKey[] = [
   "trustBadges",
   "relatable",
   "threeStep",
+  "features",
   "calculator",
   "testimonial",
   "pricing",

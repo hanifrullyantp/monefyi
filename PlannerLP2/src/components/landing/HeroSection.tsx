@@ -186,18 +186,20 @@ export function HeroSection() {
               transition={{ delay: 0.2 }}
               className="mt-6 flex flex-col lg:flex-row gap-3 w-full lg:w-auto max-w-full"
             >
-              <button
-                type="button"
-                onClick={primary}
-                className="lp-btn-hero btn-brand w-full lg:w-auto"
-              >
-                <EditableText
-                  section="hero"
-                  field="ctaPrimary"
-                  value={orFallback(hero.ctaPrimary, copy.ctaPrimary)}
-                />
-                <ArrowRight className="w-4 h-4 shrink-0" />
-              </button>
+              {!(hydrated && isAuthenticated) && (
+                <button
+                  type="button"
+                  onClick={primary}
+                  className="lp-btn-hero btn-brand w-full lg:w-auto"
+                >
+                  <EditableText
+                    section="hero"
+                    field="ctaPrimary"
+                    value={orFallback(hero.ctaPrimary, copy.ctaPrimary)}
+                  />
+                  <ArrowRight className="w-4 h-4 shrink-0" />
+                </button>
+              )}
               <button
                 type="button"
                 onClick={demo}

@@ -68,6 +68,7 @@ export function Navbar() {
   const showAdminLink = Boolean(hydrated && isAuthenticated && isAdmin);
   const desktopNav = navbar.menuItems.filter((item) => DESKTOP_NAV_HREFS.has(item.href));
   const heroCopy = getActiveHeroCopy();
+  const showCobaGratis = !(hydrated && isAuthenticated);
 
   const cobaGratis = () => {
     if (hydrated && isAuthenticated) {
@@ -123,13 +124,15 @@ export function Navbar() {
           </nav>
 
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={cobaGratis}
-              className="lp-btn-nav btn-brand lg:hidden"
-            >
-              {heroCopy.ctaPrimary}
-            </button>
+            {showCobaGratis && (
+              <button
+                type="button"
+                onClick={cobaGratis}
+                className="lp-btn-nav btn-brand lg:hidden"
+              >
+                {heroCopy.ctaPrimary}
+              </button>
+            )}
 
             <div className="hidden lg:flex items-center gap-2">
               {hydrated && isAuthenticated ? (
@@ -141,16 +144,31 @@ export function Navbar() {
                   Masuk
                 </button>
               )}
-              <button type="button" onClick={cobaGratis} className="lp-btn-nav btn-brand">
-                {heroCopy.ctaPrimary}
-              </button>
+              {showCobaGratis && (
+                <button type="button" onClick={cobaGratis} className="lp-btn-nav btn-brand">
+                  {heroCopy.ctaPrimary}
+                </button>
+              )}
               {showAdminLink ? (
-                <Link
-                  href="/admin"
-                  className="lp-btn-nav bg-slate-800 text-white hover:bg-slate-700"
-                >
-                  Admin
-                </Link>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setEditMode(!isEditMode)}
+                    className={cn(
+                      "lp-btn-nav inline-flex items-center gap-2",
+                      isEditMode ? "bg-emerald-600 text-white" : "lp-btn-ghost text-emerald-700",
+                    )}
+                  >
+                    {isEditMode ? <Save className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
+                    {isEditMode ? "Selesai" : "Inline Edit"}
+                  </button>
+                  <Link
+                    href="/admin"
+                    className="lp-btn-nav bg-slate-800 text-white hover:bg-slate-700"
+                  >
+                    Admin
+                  </Link>
+                </>
               ) : null}
             </div>
 
@@ -257,19 +275,21 @@ export function Navbar() {
                 </>
               )}
             </nav>
-            <div className="p-4 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsMobileOpen(false);
-                  cobaGratis();
-                }}
-                className="w-full flex items-center justify-center gap-2 btn-brand lp-btn-hero"
-              >
-                {heroCopy.ctaPrimary}
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
+            {showCobaGratis && (
+              <div className="p-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileOpen(false);
+                    cobaGratis();
+                  }}
+                  className="w-full flex items-center justify-center gap-2 btn-brand lp-btn-hero"
+                >
+                  {heroCopy.ctaPrimary}
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
