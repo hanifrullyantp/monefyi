@@ -1,174 +1,167 @@
 "use client";
+
+import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, CheckCircle2, ArrowDown, PlayCircle, Zap, LayoutDashboard } from "lucide-react";
+import { ArrowDown, PlayCircle, LayoutDashboard } from "lucide-react";
 import { Container } from "@/components/shared/Container";
-import { EditableText } from "@/components/shared/EditableText";
-import { EditableImage } from "@/components/shared/EditableImage";
-import { AnimatedHeadline } from "@/components/landing/AnimatedHeadline";
-import { useContentStore } from "@/lib/store/contentStore";
-import { defaultContent } from "@/data/defaultContent";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { useAuthStore } from "@/lib/store/authStore";
-import { navigateToPlannerApp } from "@/lib/config/plannerApp";
+import { navigateToPlannerApp, plannerAppPath } from "@/lib/config/plannerApp";
+import { trackEvent } from "@/lib/analytics/events";
+
+const HEADLINE = "Kirim Penawaran Sebelum Kamu Pulang Survei";
+const SUB =
+  "Saring calon klien lewat WA, hitung harga langsung di HP, kirim PDF penawaran berlogo kamu sebelum klien sempat pindah ke vendor lain.";
 
 export function HeroSection() {
-  const { content } = useContentStore();
-  const { hero } = content;
   const hydrated = useAuthStore((s) => s.hydrated);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const headlineConfig = hero.headlineAnimated ?? defaultContent.hero.headlineAnimated;
 
-  const scrollToStep = () => {
-    const el = document.getElementById("tiga-step");
+  useEffect(() => {
+    trackEvent("view_hero");
+  }, []);
+
+  const scrollTo = (id: string) => {
+    const el = document.getElementById(id);
     if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 80, behavior: "smooth" });
   };
 
-  const handlePrimaryCta = () => {
+  const primary = () => {
     if (hydrated && isAuthenticated) {
-      navigateToPlannerApp("/app");
+      navigateToPlannerApp("/app/estimator");
       return;
     }
-    scrollToStep();
+    trackEvent("free_signup", { source: "hero" });
+    window.location.href = plannerAppPath("/app/estimator?plan=free");
   };
-
-  const primaryCtaLabel = hydrated && isAuthenticated ? "Masuk" : hero.ctaPrimary;
-  const PrimaryCtaIcon = hydrated && isAuthenticated ? LayoutDashboard : ArrowDown;
 
   return (
     <section id="hero" className="relative overflow-hidden bg-white">
-      <div className="absolute inset-0 mesh-gradient opacity-40 hidden md:block" />
-      <div className="absolute inset-0 dot-pattern opacity-10" />
+      <div className="absolute inset-0 opacity-[0.04]" style={{ background: "var(--brand-gradient)" }} />
+      <Container className="content-max relative z-10">
+        <div className="flex flex-col lg:grid lg:grid-cols-2 gap-10 lg:gap-14 items-center pt-24 pb-12 md:pt-32 md:pb-20">
+          <div className="flex flex-col items-center lg:items-start text-center lg:text-left w-full">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+              <BrandLogo variant="lockup-light" size={36} className="mb-6 mx-auto lg:mx-0" />
+            </motion.div>
 
-      <Container className="relative z-10">
-        <div className="flex flex-col lg:grid lg:grid-cols-2 lg:gap-12 items-center pt-20 pb-10 md:pt-32 md:pb-32">
-
-          <div className="order-1 flex flex-col items-center md:items-start w-full">
             <motion.h1
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 }}
+              className="text-[1.85rem] sm:text-4xl md:text-5xl font-extrabold text-[var(--ink)] leading-[1.15] tracking-tight"
+              style={{ letterSpacing: "-0.02em" }}
+            >
+              {HEADLINE}
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="mt-2 md:mt-0 text-[32px] sm:text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 leading-[1.1] tracking-tight text-center md:text-left"
+              className="mt-4 text-base md:text-lg text-[var(--muted)] max-w-xl"
             >
-              <AnimatedHeadline config={headlineConfig} />
-            </motion.h1>
-          </div>
-
-          <div className="order-2 lg:order-none lg:col-start-2 lg:row-start-1 lg:row-span-4 mt-6 mb-6 lg:mt-0 lg:mb-0 relative">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-emerald-500/10 blur-[100px] rounded-full -z-10 hidden md:block" />
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, rotateY: -10 }}
-              animate={{ opacity: 1, scale: 1, rotateY: 0 }}
-              transition={{ duration: 1, delay: 0.4, type: "spring" }}
-              className="relative"
-            >
-              <div className="glass rounded-[28px] md:rounded-[48px] p-1.5 md:p-4 shadow-2xl border-2 md:border-8 border-white/50 overflow-hidden card-3d">
-                <EditableImage
-                  section="hero"
-                  field="dashboardImage"
-                  src={hero.dashboardImage || ""}
-                  alt="Monefyi Dashboard"
-                  className="w-full h-full rounded-[20px] md:rounded-[36px]"
-                />
-              </div>
-
-              <motion.div
-                animate={{ y: [0, -15, 0] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -top-6 -right-6 hidden lg:block"
-              >
-                <div className="glass rounded-3xl p-6 shadow-premium border-2 border-white/80">
-                  <div className="flex items-center gap-4 mb-4 text-left">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-glow">
-                      <Zap className="w-6 h-6 text-white fill-white" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Efficiency</p>
-                      <p className="text-2xl font-black text-emerald-600">+300%</p>
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full w-[85%] bg-emerald-500 rounded-full" />
-                    </div>
-                    <p className="text-[10px] font-bold text-slate-400">Closing rate boost</p>
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
-          </div>
-
-          <div className="order-3 flex flex-col lg:col-start-1 items-center md:items-start w-full">
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="text-base md:text-lg lg:text-2xl text-slate-600 leading-relaxed max-w-xl font-bold text-center md:text-left"
-            >
-              <EditableText
-                section="hero"
-                field="subheadline"
-                value={hero.subheadline}
-                multiline
-              />
+              {SUB}
             </motion.p>
 
-            <ul className="flex flex-col mt-6 md:mt-8 space-y-3 md:space-y-4 text-slate-700 font-bold w-full max-w-xl">
-              {hero.quickPoints.map((text, i) => (
-                <motion.li
-                  key={i}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.4 + i * 0.1 }}
-                  className="flex items-start gap-3 text-sm sm:text-base md:text-lg group text-left"
-                >
-                  <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 group-hover:bg-emerald-500 transition-all mt-0.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 group-hover:text-white transition-all" />
-                  </div>
-                  <span className="leading-snug">{text}</span>
-                </motion.li>
-              ))}
-            </ul>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.6 }}
-              className="mt-6 md:mt-10 flex flex-col sm:flex-row gap-4 w-full md:w-auto"
-            >
-              <button
-                type="button"
-                onClick={handlePrimaryCta}
-                className="w-full md:w-fit relative overflow-hidden group gradient-premium text-white rounded-2xl px-10 py-5 font-black text-lg shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all active:scale-95 btn-premium flex items-center justify-center gap-3"
-              >
-                <span className="relative z-10">{primaryCtaLabel}</span>
-                <PrimaryCtaIcon
-                  className={`w-6 h-6 relative z-10 transition-transform ${
-                    hydrated && isAuthenticated
-                      ? "group-hover:translate-x-0.5"
-                      : "group-hover:translate-y-1"
-                  }`}
-                />
-              </button>
-
-              <button className="hidden md:flex items-center justify-center gap-3 glass border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 rounded-2xl px-8 py-5 font-bold text-lg transition-all">
-                <PlayCircle className="w-6 h-6" />
-                {hero.ctaSecondary}
-              </button>
-            </motion.div>
-
-            <motion.button
-              onClick={scrollToStep}
+            <motion.ul
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 1, duration: 1 }}
-              className="md:hidden flex flex-col items-center gap-2 mt-8 text-slate-400 font-black text-[10px] tracking-widest"
+              transition={{ delay: 0.15 }}
+              className="mt-5 space-y-2 text-sm text-[var(--ink)] text-left w-full max-w-md"
             >
-              PELAJARI CARANYA
-              <div className="animate-bounce p-2 rounded-full bg-slate-50 border border-slate-100">
-                <ArrowDown size={16} />
-              </div>
-            </motion.button>
+              {[
+                "Balas WA hanya yang budgetnya cocok",
+                "Hitung di lokasi — bukan 2 hari kemudian",
+                "PDF penawaran keluar sebelum kamu pulang",
+              ].map((t) => (
+                <li key={t} className="flex gap-2">
+                  <span className="text-[var(--brand-600)] font-bold">✓</span>
+                  {t}
+                </li>
+              ))}
+            </motion.ul>
+
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="mt-8 flex flex-col sm:flex-row gap-3 w-full sm:w-auto"
+            >
+              <button type="button" onClick={primary} className="btn-brand inline-flex items-center justify-center gap-2 w-full sm:w-auto">
+                {hydrated && isAuthenticated ? (
+                  <>
+                    <LayoutDashboard className="w-4 h-4" /> Masuk ke Estimator
+                  </>
+                ) : (
+                  <>Coba Gratis Sekarang</>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollTo("tiga-step")}
+                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-6 rounded-xl font-bold border-2 border-[var(--surface-alt)] text-[var(--ink)] hover:border-[var(--brand-600)] w-full sm:w-auto"
+              >
+                <PlayCircle className="w-4 h-4 text-[var(--brand-600)]" />
+                Lihat Demo 1 Menit
+              </button>
+            </motion.div>
+            <p className="mt-3 text-xs text-[var(--muted)]">Tanpa kartu. 3 estimasi gratis.</p>
+            <p className="mt-2 text-xs text-[var(--muted)]">
+              Untuk kontraktor · interior · kitchen set · kanopi · furniture custom
+            </p>
           </div>
+
+          {/* Mockup phone — CSS only, no Unsplash */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.25 }}
+            className="w-full max-w-sm mx-auto"
+          >
+            <div className="relative mx-auto w-[260px] md:w-[300px]">
+              <div className="rounded-[2rem] border-[6px] border-[var(--ink)] bg-[var(--surface-dark)] p-3 shadow-2xl">
+                <div className="rounded-[1.25rem] bg-white overflow-hidden min-h-[420px]">
+                  <div className="px-4 py-3 flex items-center gap-2 border-b border-[var(--surface-alt)]">
+                    <BrandLogo variant="mark" size={24} />
+                    <span className="text-xs font-extrabold text-[var(--ink)] tracking-tight">Estimator</span>
+                  </div>
+                  <div className="p-4 space-y-3">
+                    <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">Estimasi kitchen set</p>
+                    <div className="rounded-xl bg-[var(--surface-soft)] p-3 space-y-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-[var(--muted)]">Kabinet bawah</span>
+                        <span className="font-bold text-[var(--ink)]">Rp 8.400.000</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-[var(--muted)]">Top table</span>
+                        <span className="font-bold text-[var(--ink)]">Rp 3.200.000</span>
+                      </div>
+                      <div className="flex justify-between text-xs border-t border-[var(--surface-alt)] pt-2">
+                        <span className="font-bold">Grand total</span>
+                        <span className="font-black text-[var(--brand-600)]">Rp 14.850.000</span>
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-[var(--brand-600)]/30 bg-[var(--surface-soft)] p-3">
+                      <p className="text-[10px] font-bold text-[var(--brand-600)] mb-1">PDF siap kirim</p>
+                      <p className="text-xs text-[var(--ink)] font-semibold">Penawaran_Andi_Kitchen.pdf</p>
+                      <p className="text-[10px] text-[var(--muted)] mt-1">Logo kamu · rincian item · total</p>
+                    </div>
+                    <button type="button" className="w-full btn-brand text-xs py-2.5 rounded-lg" disabled>
+                      Kirim ke WA klien
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => scrollTo("tiga-step")}
+                className="mt-6 mx-auto flex items-center gap-1 text-xs font-bold text-[var(--brand-600)]"
+              >
+                <ArrowDown className="w-4 h-4" /> Cara kerjanya
+              </button>
+            </div>
+          </motion.div>
         </div>
       </Container>
     </section>

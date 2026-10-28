@@ -20,8 +20,10 @@ export function RelatableSection() {
     });
   };
 
+  /** Fase 2: maks 4 kartu masalah */
+  const items = relatable.items.slice(0, 4);
   const count = checked.size;
-  const total = relatable.items.length;
+  const total = items.length;
 
   const getMessage = () => {
     if (count <= 2) return relatable.counterMessages.low;
@@ -59,7 +61,7 @@ export function RelatableSection() {
 
           {/* Checklist Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-            {relatable.items.map((item, i) => {
+            {items.map((item, i) => {
               const isChecked = checked.has(i);
               return (
                 <motion.button

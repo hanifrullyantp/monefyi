@@ -25,10 +25,7 @@ export function FooterSection() {
           {/* About */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-2 font-extrabold text-lg mb-4">
-              <EstimatorLogo className="w-8 h-8 rounded-lg" />
-              <span>
-                Monefyi <span className="text-emerald-400">Estimator</span>
-              </span>
+              <EstimatorLogo variant="lockup-dark" size={28} />
             </div>
             <p className="text-sm text-slate-400 max-w-sm leading-relaxed">
               <EditableText section="footer" field="tagline" value={footer.tagline} multiline />

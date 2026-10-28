@@ -26,16 +26,17 @@ export interface SiteSettings {
 
 export const defaultSettings: SiteSettings = {
   siteName: "Monefyi Estimator",
-  siteDescription: "Sistem All-in-One untuk Pelaku Jasa Proyek",
-  siteUrl: "https://monefyi.com",
-  primaryColor: "#059669",
-  secondaryColor: "#f59e0b",
-  waNumber: "6281234567890",
-  waDefaultMessage: "Halo, saya tertarik dengan Monefyi Estimator. Boleh minta info lebih lanjut?",
+  siteDescription: "Hitung harga & kirim PDF penawaran untuk jasa proyek",
+  siteUrl: "https://estimator.monefyi.com",
+  primaryColor: "#157F5F",
+  secondaryColor: "#21AB7B",
+  /** Isi nomor WA support nyata di admin — float disembunyikan jika kosong/palsu */
+  waNumber: "",
+  waDefaultMessage: "Halo, saya dari landing Estimator. Mau tanya paket Standard/Pro.",
   waFloatEnabled: false,
   liveChatEnabled: false,
-  metaTitle: "Monefyi Estimator — Sistem Closing & Proyek untuk Jasa Proyek",
+  metaTitle: "Kirim Penawaran Sebelum Kamu Pulang Survei - Estimator",
   metaDescription:
-    "Saring lead WA, closing di tempat saat survei, dan kelola proyek sampai selesai. Sistem all-in-one untuk kontraktor, interior designer, kitchen set & furniture custom.",
+    "Saring calon klien lewat WA, hitung harga di HP, kirim PDF penawaran sebelum pulang survei. Untuk kontraktor, interior, kitchen set & furniture custom.",
   maintenanceMode: false,
 };

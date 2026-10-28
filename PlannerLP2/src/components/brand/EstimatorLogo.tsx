@@ -1,17 +1,30 @@
-import { ESTIMATOR_LOGO_SRC } from "@/lib/brand/estimatorBrand";
+"use client";
+
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { cn } from "@/lib/utils/cn";
 
 type Props = {
   className?: string;
   alt?: string;
+  /** mark = ikon saja; lockup = ikon + wordmark */
+  variant?: "mark" | "lockup-light" | "lockup-dark";
+  size?: number;
 };
 
+/** Backward-compatible wrapper → BrandLogo Estimator */
 export function EstimatorLogo({
-  className = "w-8 h-8 object-contain shrink-0",
-  alt = "Monefyi Estimator",
+  className,
+  alt = "Estimator",
+  variant = "lockup-light",
+  size = 32,
 }: Props) {
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={ESTIMATOR_LOGO_SRC} alt={alt} className={cn(className)} />
+    <BrandLogo
+      brand="estimator"
+      variant={variant}
+      size={size}
+      alt={alt}
+      className={cn(className)}
+    />
   );
 }

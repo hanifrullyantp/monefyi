@@ -106,18 +106,10 @@ export function Navbar() {
           <div className="flex items-center justify-between h-16 md:h-20">
             <button
               onClick={() => scrollTo("#hero")}
-              className="flex items-center gap-2 font-extrabold text-lg text-slate-900 tracking-tight"
+              className="flex items-center gap-2 font-extrabold text-lg text-[var(--ink)] tracking-tight min-h-[44px]"
+              aria-label="Estimator — beranda"
             >
-              <EstimatorLogo className="w-8 h-8 rounded-lg" />
-              <span>
-                {navbar.logo.includes("Estimator") ? (
-                  <>
-                    Monefyi <span className="text-emerald-600">Estimator</span>
-                  </>
-                ) : (
-                  navbar.logo
-                )}
-              </span>
+              <EstimatorLogo variant="lockup-light" size={28} />
             </button>
 
             <div className="hidden md:flex items-center gap-1">

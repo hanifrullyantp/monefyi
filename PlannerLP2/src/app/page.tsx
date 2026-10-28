@@ -12,11 +12,17 @@ import { WhatsAppFloat } from "@/components/landing/WhatsAppFloat";
 import { MobileAdminToolbar } from "@/components/landing/MobileAdminToolbar";
 import { EditModeRedirect } from "@/components/landing/EditModeRedirect";
 import EstimatorPwaLaunchRedirect from "@/components/brand/EstimatorPwaLaunchRedirect";
+import { BrandHead } from "@/components/brand/BrandHead";
+import { TrackingScripts } from "@/components/landing/TrackingScripts";
+import { JsonLd } from "@/components/landing/JsonLd";
 
 export default function LandingPage() {
   return (
     <>
       <EstimatorPwaLaunchRedirect />
+      <BrandHead pageTitle="Kirim Penawaran Sebelum Kamu Pulang Survei" />
+      <TrackingScripts />
+      <JsonLd />
       <AuthHydrator />
       <ContentHydrator />
       <LoginRedirect />

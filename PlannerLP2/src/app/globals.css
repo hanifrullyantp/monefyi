@@ -1,10 +1,29 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
+/*
+  Estimator design tokens (Fase 3)
+  Before → After:
+  #76b82a / #10b981 CTA  →  --brand-600 #157F5F (AA ~5:1 on white)
+  navy/amber accents     →  --brand-400 #21AB7B (icons/dark bg only)
+  slate-900 headings     →  --ink #11201B
+*/
 @layer base {
   :root {
-    --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
-    --font-display: 'Inter', system-ui, sans-serif;
+    --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+    --font-display: "Plus Jakarta Sans", system-ui, sans-serif;
+
+    --brand-400: #21ab7b;
+    --brand-600: #157f5f;
+    --brand-700: #0f6b50;
+    --brand-gradient: linear-gradient(135deg, #21ab7b, #157f5f);
+    --ink: #11201b;
+    --muted: #4a5a54;
+    --surface-soft: #f4fbf6;
+    --surface-alt: #eaf1ee;
+    --surface-dark: #0b1a15;
+    --white: #ffffff;
+    --accent-warm: #f59e0b;
+    --danger-soft: #fef2f2;
   }
 
   * {
@@ -19,23 +38,49 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background: #fafafa;
+    background: var(--surface-soft);
+    color: var(--ink);
   }
 
-  /* Premium scrollbar */
   ::-webkit-scrollbar {
     width: 8px;
   }
   ::-webkit-scrollbar-track {
-    background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
+    background: var(--surface-alt);
   }
   ::-webkit-scrollbar-thumb {
-    background: linear-gradient(135deg, #059669, #10b981);
+    background: var(--brand-gradient);
     border-radius: 10px;
-    border: 2px solid #f8fafc;
   }
-  ::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(135deg, #047857, #059669);
+}
+
+@layer components {
+  .btn-brand {
+    background: var(--brand-600);
+    color: var(--white);
+    font-weight: 700;
+    border-radius: 12px;
+    min-height: 44px;
+    padding: 12px 24px;
+    transition: background 0.2s;
+  }
+  .btn-brand:hover {
+    background: var(--brand-700);
+  }
+  .section-pad {
+    padding-top: 4rem;
+    padding-bottom: 4rem;
+  }
+  @media (min-width: 768px) {
+    .section-pad {
+      padding-top: 6rem;
+      padding-bottom: 6rem;
+    }
+  }
+  .content-max {
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
   }
 }
 

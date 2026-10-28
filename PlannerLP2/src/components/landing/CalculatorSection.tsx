@@ -1,310 +1,206 @@
 "use client";
-import { useState, useMemo } from "react";
+
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, TrendingUp, Clock, DollarSign, Target } from "lucide-react";
-import { useContentStore } from "@/lib/store/contentStore";
+import { ArrowRight, TrendingUp, Clock, DollarSign } from "lucide-react";
 import { Container } from "@/components/shared/Container";
 import { cn } from "@/lib/utils/cn";
 import { formatCurrency } from "@/lib/utils/format";
+import { trackEvent, captureUtm } from "@/lib/analytics/events";
+import { useLeadsStore } from "@/lib/store/leadsStore";
+
+function isValidWa(raw: string): boolean {
+  const n = raw.replace(/\D/g, "");
+  return /^(62|08)\d{8,13}$/.test(n) || /^8\d{8,12}$/.test(n);
+}
 
 export function CalculatorSection() {
-  const { content } = useContentStore();
-  const { calculator } = content;
+  const addLead = useLeadsStore((s) => s.addLead);
 
   const [waPerMonth, setWaPerMonth] = useState(50);
   const [surveiCount, setSurveiCount] = useState(20);
   const [dealCount, setDealCount] = useState(4);
-  const [nilaiProyek, setNilaiProyek] = useState(15000000);
+  const [nilaiProyek, setNilaiProyek] = useState(15_000_000);
   const [jamPerSurvei, setJamPerSurvei] = useState(3);
+
+  const [started, setStarted] = useState(false);
+  const [unlocked, setUnlocked] = useState(false);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (started) trackEvent("calc_start");
+  }, [started]);
 
   const results = useMemo(() => {
     const closingRate = waPerMonth > 0 ? (dealCount / waPerMonth) * 100 : 0;
     const surveiSiaSia = Math.max(0, surveiCount - dealCount);
     const waktuTerbuang = surveiSiaSia * jamPerSurvei;
-    const hariTerbuang = (waktuTerbuang / 8).toFixed(1);
-    const potentialLost = waPerMonth - surveiCount;
-    const revenueLostMin = Math.round(potentialLost * 0.15 * nilaiProyek);
-    const revenueLostMax = Math.round(potentialLost * 0.25 * nilaiProyek);
-    const jamHemat = Math.round(surveiSiaSia * jamPerSurvei * 0.6);
-    const revenueExtra = Math.round(
-      dealCount * 2 * nilaiProyek * 0.3
-    );
-
+    const potentialLost = Math.max(0, waPerMonth - surveiCount);
     return {
       closingRate: closingRate.toFixed(1),
       closingRateNum: closingRate,
       waktuTerbuang,
-      hariTerbuang,
-      revenueLostMin,
-      revenueLostMax,
-      jamHemat,
-      revenueExtra,
+      hariTerbuang: (waktuTerbuang / 8).toFixed(1),
+      revenueLostMin: Math.round(potentialLost * 0.15 * nilaiProyek),
+      revenueLostMax: Math.round(potentialLost * 0.25 * nilaiProyek),
+      jamHemat: Math.round(surveiSiaSia * jamPerSurvei * 0.6),
     };
   }, [waPerMonth, surveiCount, dealCount, nilaiProyek, jamPerSurvei]);
 
-  const closingColor =
-    results.closingRateNum < 10
-      ? "text-red-400"
-      : results.closingRateNum < 20
-      ? "text-amber-400"
-      : "text-emerald-400";
+  const unlock = () => {
+    setError("");
+    if (!name.trim()) {
+      setError("Isi nama dulu.");
+      return;
+    }
+    if (!isValidWa(phone)) {
+      setError("Nomor WA harus diawali 08 atau 62.");
+      return;
+    }
+    const utm = captureUtm();
+    addLead({
+      name: name.trim(),
+      phone: phone.trim(),
+      source: "website",
+      status: "new",
+      projectType: "estimator_calc",
+      notes: JSON.stringify({ ...results, ...utm, waPerMonth, surveiCount, dealCount }),
+      tags: ["calculator", "landing"],
+    });
+    trackEvent("lead_submit", { source: "calculator" });
+    trackEvent("calc_complete");
+    setUnlocked(true);
+  };
 
-  const scrollTo = (id: string) => {
-    const el = document.getElementById(id);
+  const scrollToHarga = () => {
+    const el = document.getElementById("harga");
     if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 80, behavior: "smooth" });
   };
 
   return (
-    <section className="py-12 md:py-28 bg-gradient-to-b from-emerald-50 to-white">
-      <Container>
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center max-w-2xl mx-auto mb-12"
-        >
-          <span className="inline-block bg-emerald-100 text-emerald-700 rounded-full px-4 py-1.5 text-xs font-semibold tracking-wider uppercase mb-4">
-            {calculator.badge}
+    <section id="kalkulator" className="section-pad bg-[var(--surface-soft)]">
+      <Container className="content-max">
+        <div className="text-center max-w-2xl mx-auto mb-10">
+          <span className="inline-block bg-[var(--surface-alt)] text-[var(--brand-600)] rounded-full px-4 py-1.5 text-xs font-bold tracking-wider uppercase mb-3">
+            Gratis · 30 detik
           </span>
-          <h2 className="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-4">
-            {calculator.title}
+          <h2 className="text-3xl md:text-4xl font-extrabold text-[var(--ink)] tracking-tight mb-3">
+            Cek Efisiensi Closing Bisnismu
           </h2>
-          <p className="text-lg text-slate-600">{calculator.subtitle}</p>
-        </motion.div>
+          <p className="text-[var(--muted)]">
+            Masukkan data bulan ini. Ringkasan langsung muncul; rekomendasi detail setelah isi nomor WA.
+          </p>
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-          {/* Left - Form */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            className="bg-white rounded-2xl p-8 shadow-lg border border-slate-100"
-          >
-            <h3 className="text-lg font-bold text-slate-800 mb-6">Input Data Anda</h3>
-            <div className="space-y-6">
-              {/* WA per bulan */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Rata-rata WA masuk per bulan
-                </label>
-                <div className="flex items-center gap-4">
-                  <input
-                    type="range"
-                    min={10}
-                    max={500}
-                    value={waPerMonth}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      setWaPerMonth(v);
-                      if (surveiCount > v) setSurveiCount(v);
-                      if (dealCount > surveiCount) setDealCount(surveiCount);
-                    }}
-                    className="flex-1 accent-emerald-600"
-                  />
-                  <div className="flex items-center gap-2 min-w-[80px]">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
+          <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-[var(--surface-alt)]">
+            <h3 className="text-lg font-bold text-[var(--ink)] mb-5">Data kamu</h3>
+            <div className="space-y-5" onFocus={() => setStarted(true)}>
+              {[
+                { label: "WA masuk / bulan", value: waPerMonth, set: setWaPerMonth, min: 10, max: 500, unit: "chat" },
+                { label: "Yang jadi survei", value: surveiCount, set: setSurveiCount, min: 0, max: waPerMonth, unit: "lokasi" },
+                { label: "Yang deal", value: dealCount, set: setDealCount, min: 0, max: surveiCount, unit: "deal" },
+                { label: "Jam per survei", value: jamPerSurvei, set: setJamPerSurvei, min: 1, max: 8, unit: "jam" },
+              ].map((f) => (
+                <div key={f.label}>
+                  <label className="block text-sm font-semibold text-[var(--ink)] mb-2">{f.label}</label>
+                  <div className="flex items-center gap-3">
                     <input
-                      type="number"
-                      value={waPerMonth}
-                      onChange={(e) => setWaPerMonth(Number(e.target.value))}
-                      className="w-16 border border-slate-200 rounded-lg px-2 py-1 text-sm text-center"
+                      type="range"
+                      min={f.min}
+                      max={f.max}
+                      value={f.value}
+                      onChange={(e) => f.set(Number(e.target.value))}
+                      className="flex-1 accent-[var(--brand-600)]"
                     />
-                    <span className="text-sm text-slate-500">chat</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Survei */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Berapa yang jadi survei?
-                </label>
-                <div className="flex items-center gap-4">
-                  <input
-                    type="range"
-                    min={1}
-                    max={waPerMonth}
-                    value={Math.min(surveiCount, waPerMonth)}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      setSurveiCount(v);
-                      if (dealCount > v) setDealCount(v);
-                    }}
-                    className="flex-1 accent-emerald-600"
-                  />
-                  <div className="flex items-center gap-2 min-w-[80px]">
-                    <input
-                      type="number"
-                      value={surveiCount}
-                      onChange={(e) => setSurveiCount(Number(e.target.value))}
-                      className="w-16 border border-slate-200 rounded-lg px-2 py-1 text-sm text-center"
-                    />
-                    <span className="text-sm text-slate-500">survei</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Deal */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Berapa yang jadi deal?
-                </label>
-                <div className="flex items-center gap-4">
-                  <input
-                    type="range"
-                    min={1}
-                    max={surveiCount}
-                    value={Math.min(dealCount, surveiCount)}
-                    onChange={(e) => setDealCount(Number(e.target.value))}
-                    className="flex-1 accent-emerald-600"
-                  />
-                  <div className="flex items-center gap-2 min-w-[80px]">
-                    <input
-                      type="number"
-                      value={dealCount}
-                      onChange={(e) => setDealCount(Number(e.target.value))}
-                      className="w-16 border border-slate-200 rounded-lg px-2 py-1 text-sm text-center"
-                    />
-                    <span className="text-sm text-slate-500">proyek</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Nilai Proyek */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Rata-rata nilai proyek
-                </label>
-                <div className="flex items-center gap-2 border border-slate-200 rounded-xl px-3 py-2">
-                  <span className="text-slate-500 text-sm font-medium">Rp</span>
-                  <input
-                    type="number"
-                    value={nilaiProyek}
-                    onChange={(e) => setNilaiProyek(Number(e.target.value))}
-                    className="flex-1 outline-none text-sm font-semibold text-slate-800"
-                  />
-                </div>
-                <p className="text-xs text-slate-400 mt-1">
-                  = {formatCurrency(nilaiProyek)}
-                </p>
-              </div>
-
-              {/* Jam per survei */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Berapa jam per survei (perjalanan + lokasi)?
-                </label>
-                <div className="flex items-center gap-4">
-                  <input
-                    type="range"
-                    min={1}
-                    max={8}
-                    value={jamPerSurvei}
-                    onChange={(e) => setJamPerSurvei(Number(e.target.value))}
-                    className="flex-1 accent-emerald-600"
-                  />
-                  <div className="flex items-center gap-2 min-w-[80px]">
-                    <span className="text-xl font-bold text-slate-800 w-6 text-center">
-                      {jamPerSurvei}
+                    <span className="text-sm font-bold w-20 text-right">
+                      {f.value} {f.unit}
                     </span>
-                    <span className="text-sm text-slate-500">jam</span>
                   </div>
                 </div>
+              ))}
+              <div>
+                <label className="block text-sm font-semibold text-[var(--ink)] mb-2">Nilai rata-rata proyek (Rp)</label>
+                <input
+                  type="number"
+                  value={nilaiProyek}
+                  onChange={(e) => setNilaiProyek(Number(e.target.value) || 0)}
+                  className="w-full border border-[var(--surface-alt)] rounded-xl px-4 py-3 text-sm min-h-[44px]"
+                />
               </div>
             </div>
-          </motion.div>
+          </div>
 
-          {/* Right - Results */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            className="bg-slate-900 text-white rounded-2xl p-8 shadow-xl"
-          >
-            <h3 className="text-xl font-bold text-emerald-400 mb-6">Hasil Analisis</h3>
-
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              {/* Closing Rate */}
-              <div className="bg-slate-800 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <TrendingUp className="w-4 h-4 text-slate-400" />
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    Closing Rate
-                  </span>
+          <div className="bg-[var(--surface-dark)] text-white rounded-2xl p-6 md:p-8">
+            <h3 className="text-lg font-bold text-[var(--brand-400)] mb-5">Hasil ringkas</h3>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="bg-white/5 rounded-xl p-4">
+                <div className="flex items-center gap-1.5 text-xs text-white/50 mb-1">
+                  <TrendingUp className="w-3.5 h-3.5" /> Closing rate
                 </div>
-                <p className={cn("text-3xl font-extrabold", closingColor)}>
+                <p className={cn("text-2xl font-extrabold", results.closingRateNum < 10 ? "text-red-300" : "text-[var(--brand-400)]")}>
                   {results.closingRate}%
                 </p>
-                <p className="text-xs text-slate-500 mt-1">
-                  {results.closingRateNum < 10 ? "Perlu ditingkatkan" : results.closingRateNum < 20 ? "Cukup baik" : "Sangat baik"}
-                </p>
               </div>
-
-              {/* Waktu Terbuang */}
-              <div className="bg-slate-800 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Clock className="w-4 h-4 text-slate-400" />
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    Waktu Sia-sia
-                  </span>
+              <div className="bg-white/5 rounded-xl p-4">
+                <div className="flex items-center gap-1.5 text-xs text-white/50 mb-1">
+                  <Clock className="w-3.5 h-3.5" /> Waktu sia-sia
                 </div>
-                <p className="text-3xl font-extrabold text-amber-400">
-                  {results.waktuTerbuang}j
+                <p className="text-2xl font-extrabold text-[var(--accent-warm)]">{results.waktuTerbuang}j</p>
+                <p className="text-[10px] text-white/40">≈ {results.hariTerbuang} hari kerja</p>
+              </div>
+            </div>
+
+            {!unlocked ? (
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
+                <p className="text-sm text-white/80 font-semibold">
+                  Buka rincian + rekomendasi — isi nama & WA
                 </p>
-                <p className="text-xs text-slate-500 mt-1">
-                  ={" "}{results.hariTerbuang} hari kerja
-                </p>
+                <input
+                  type="text"
+                  placeholder="Nama"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full rounded-xl px-4 py-3 text-sm text-[var(--ink)] min-h-[44px]"
+                  aria-label="Nama"
+                />
+                <input
+                  type="tel"
+                  placeholder="08xxxxxxxxxx"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full rounded-xl px-4 py-3 text-sm text-[var(--ink)] min-h-[44px]"
+                  aria-label="Nomor WhatsApp"
+                />
+                {error && <p className="text-xs text-red-300" role="alert">{error}</p>}
+                <button type="button" onClick={unlock} className="w-full btn-brand">
+                  Lihat rekomendasi
+                </button>
               </div>
-            </div>
-
-            {/* Revenue Hilang */}
-            <div className="bg-red-900/30 border border-red-800/50 rounded-xl p-4 mb-4">
-              <div className="flex items-center gap-2 mb-1">
-                <DollarSign className="w-4 h-4 text-red-400" />
-                <span className="text-xs font-bold text-red-400 uppercase tracking-wider">
-                  Potensi Revenue Hilang
-                </span>
+            ) : (
+              <div className="space-y-3">
+                <div className="bg-red-900/20 border border-red-800/40 rounded-xl p-4">
+                  <div className="flex items-center gap-1.5 text-xs text-red-300 mb-1">
+                    <DollarSign className="w-3.5 h-3.5" /> Perkiraan peluang hilang*
+                  </div>
+                  <p className="text-lg font-extrabold text-red-200">
+                    {formatCurrency(results.revenueLostMin)} – {formatCurrency(results.revenueLostMax)}/bulan
+                  </p>
+                  <p className="text-[10px] text-white/40 mt-1">*Estimasi kasar dari input kamu, bukan jaminan.</p>
+                </div>
+                <ul className="text-sm text-white/80 space-y-2">
+                  <li>→ Saring lead di WA dulu — hemat sekitar {results.jamHemat} jam/bulan</li>
+                  <li>→ Kirim PDF di lokasi — manfaatkan momen klien masih serius</li>
+                  <li>→ Pakai Estimator gratis 3x, upgrade kalau pas</li>
+                </ul>
+                <button type="button" onClick={scrollToHarga} className="w-full btn-brand inline-flex items-center justify-center gap-2">
+                  Lihat paket <ArrowRight className="w-4 h-4" />
+                </button>
               </div>
-              <p className="text-2xl font-extrabold text-red-300">
-                {formatCurrency(results.revenueLostMin)} – {formatCurrency(results.revenueLostMax)}/bulan
-              </p>
-              <p className="text-xs text-slate-400 mt-1">
-                dari lead yang tidak tersaring baik
-              </p>
-            </div>
-
-            {/* Rekomendasi */}
-            <div className="bg-emerald-900/30 border border-emerald-800/50 rounded-xl p-4 mb-6">
-              <div className="flex items-center gap-2 mb-3">
-                <Target className="w-4 h-4 text-emerald-400" />
-                <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
-                  Rekomendasi
-                </span>
-              </div>
-              <ul className="space-y-2">
-                <li className="text-sm text-slate-300 flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">→</span>
-                  Saring lead di WA → hemat {results.jamHemat} jam/bulan
-                </li>
-                <li className="text-sm text-slate-300 flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">→</span>
-                  Closing saat survei → naikkan closing rate 2-3x
-                </li>
-                <li className="text-sm text-slate-300 flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">→</span>
-                  Potensi tambahan: {formatCurrency(results.revenueExtra)}/bulan
-                </li>
-              </ul>
-            </div>
-
-            <button
-              onClick={() => scrollTo("harga")}
-              className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl py-4 font-bold text-base transition-all"
-            >
-              {calculator.ctaText}
-              <ArrowRight className="w-5 h-5" />
-            </button>
-          </motion.div>
+            )}
+          </div>
         </div>
       </Container>
     </section>

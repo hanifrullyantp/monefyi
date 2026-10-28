@@ -1,18 +1,18 @@
-import type { Metadata } from "next";
-import {
-  ESTIMATOR_APPLE_ICON,
-  ESTIMATOR_FAVICON_32,
-  ESTIMATOR_ICON_192,
-  ESTIMATOR_THEME_COLOR,
-} from "@/lib/brand/estimatorBrand";
+import type { Metadata, Viewport } from "next";
+import { BRANDS } from "@/lib/brand/brand.config";
 import "./globals.css";
 
+const brand = BRANDS.estimator;
+
 export const metadata: Metadata = {
-  title: "Monefyi Estimator — Sistem Closing & Proyek untuk Jasa Proyek",
+  title: {
+    default: "Kirim Penawaran Sebelum Kamu Pulang Survei - Estimator",
+    template: "%s - Estimator",
+  },
   description:
-    "Saring lead WA, closing di tempat saat survei, dan kelola proyek sampai selesai. Sistem all-in-one untuk kontraktor, interior designer, kitchen set & furniture custom.",
+    "Saring calon klien lewat WA, hitung harga langsung di HP, kirim PDF penawaran berlogo kamu sebelum klien pindah ke vendor lain. Untuk kontraktor, interior, kitchen set & furniture custom.",
   keywords:
-    "sistem closing proyek, manajemen proyek kontraktor, interior designer app, kitchen set software, penawaran proyek",
+    "aplikasi estimasi harga proyek, penawaran PDF kontraktor, aplikasi kitchen set, estimasi interior designer, RAB di HP",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
@@ -21,17 +21,31 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: ESTIMATOR_FAVICON_32, sizes: "32x32", type: "image/png" },
-      { url: ESTIMATOR_ICON_192, sizes: "192x192", type: "image/png" },
+      { url: brand.assets.faviconSvg, type: "image/svg+xml" },
+      { url: brand.assets.favicon32, sizes: "32x32", type: "image/png" },
+      { url: brand.assets.icon192, sizes: "192x192", type: "image/png" },
     ],
-    apple: ESTIMATOR_APPLE_ICON,
+    apple: brand.assets.appleTouchIcon,
   },
-  themeColor: ESTIMATOR_THEME_COLOR,
   openGraph: {
-    title: "Monefyi Estimator — Sistem Closing & Proyek",
-    description: "All-in-one sistem untuk pelaku jasa proyek Indonesia",
+    title: "Kirim Penawaran Sebelum Kamu Pulang Survei - Estimator",
+    description:
+      "Hitung harga di lokasi, kirim PDF penawaran profesional sebelum pulang survei.",
     type: "website",
+    images: [{ url: brand.assets.ogImage, width: 1200, height: 630, alt: "Estimator" }],
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Estimator — Penawaran PDF untuk jasa proyek",
+    description: "Dari ukur di lokasi ke PDF penawaran dalam hitungan menit.",
+    images: [brand.assets.ogImage],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: brand.themeColor,
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
@@ -45,12 +59,13 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
           rel="stylesheet"
         />
+        <meta name="apple-mobile-web-app-title" content="Estimator" />
       </head>
       <body
-        style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}
+        className="font-sans antialiased bg-[var(--surface-soft)] text-[var(--ink)]"
         suppressHydrationWarning
       >
         {children}

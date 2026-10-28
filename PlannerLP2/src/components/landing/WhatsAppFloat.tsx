@@ -11,8 +11,14 @@ export function WhatsAppFloat() {
 
   if (!settings.waFloatEnabled) return null;
 
-  const waNumber = settings.waNumber || "6281234567890";
-  const message = settings.waDefaultMessage || "Halo, saya tertarik dengan Monefyi Estimator. Boleh minta info lebih lanjut?";
+  const waNumber = settings.waNumber || "";
+  if (!waNumber || waNumber.includes("xxxx") || waNumber === "6281234567890") {
+    // Jangan tampilkan float dengan nomor palsu
+    return null;
+  }
+  const message =
+    settings.waDefaultMessage ||
+    "Halo, saya dari landing Estimator. Mau tanya paket Standard/Pro.";
 
   return (
     <button

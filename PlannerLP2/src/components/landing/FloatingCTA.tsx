@@ -1,65 +1,64 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { useAuthStore } from "@/lib/store/authStore";
 import { useLandingAdmin } from "@/lib/hooks/useLandingAdmin";
 import { ownsEstimator } from "@/lib/permissions";
-import { useLandingCta } from "@/lib/hooks/useLandingCta";
+import { trackEvent } from "@/lib/analytics/events";
+import { plannerAppPath } from "@/lib/config/plannerApp";
 
-const ESTIMATOR_PRO_PLAN_ID = "estimator-pro";
-
+/** Sticky bottom bar mobile — Coba Gratis setelah lewati hero */
 export function FloatingCTA() {
   const hydrated = useAuthStore((s) => s.hydrated);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
   const isAdmin = useLandingAdmin().isAdmin;
-  const { startCheckout } = useLandingCta();
 
-  const [bonusSectionSeen, setBonusSectionSeen] = useState(false);
+  const [pastHero, setPastHero] = useState(false);
   const [pricingVisible, setPricingVisible] = useState(false);
 
   const hasEstimator = ownsEstimator(user);
   const canShow =
-    hydrated &&
-    !isAdmin &&
-    !hasEstimator &&
-    !pricingVisible &&
-    (isAuthenticated || bonusSectionSeen);
+    hydrated && !isAdmin && !hasEstimator && pastHero && !pricingVisible;
 
   useEffect(() => {
-    const bonusEl = document.getElementById("bonus");
+    const heroEl = document.getElementById("hero");
     const pricingEl = document.getElementById("harga");
 
-    const bonusObserver = bonusEl
+    const heroObs = heroEl
       ? new IntersectionObserver(
-          ([entry]) => {
-            if (entry?.isIntersecting) setBonusSectionSeen(true);
+          ([e]) => {
+            if (e && !e.isIntersecting && e.boundingClientRect.top < 0) setPastHero(true);
+            if (e?.isIntersecting) setPastHero(false);
           },
-          { threshold: 0.25 },
+          { threshold: 0.05 },
         )
       : null;
 
-    const pricingObserver = pricingEl
-      ? new IntersectionObserver(
-          ([entry]) => {
-            setPricingVisible(Boolean(entry?.isIntersecting));
-          },
-          { threshold: 0.15 },
-        )
+    const priceObs = pricingEl
+      ? new IntersectionObserver(([e]) => setPricingVisible(Boolean(e?.isIntersecting)), {
+          threshold: 0.12,
+        })
       : null;
 
-    if (bonusEl) bonusObserver?.observe(bonusEl);
-    if (pricingEl) pricingObserver?.observe(pricingEl);
-
+    if (heroEl) heroObs?.observe(heroEl);
+    if (pricingEl) priceObs?.observe(pricingEl);
     return () => {
-      bonusObserver?.disconnect();
-      pricingObserver?.disconnect();
+      heroObs?.disconnect();
+      priceObs?.disconnect();
     };
   }, []);
 
   const handleClick = () => {
-    void startCheckout(ESTIMATOR_PRO_PLAN_ID);
+    trackEvent("free_signup", { source: "sticky_cta" });
+    if (isAuthenticated) {
+      window.location.href = plannerAppPath("/app/estimator");
+      return;
+    }
+    const el = document.getElementById("harga");
+    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 80, behavior: "smooth" });
   };
 
   return (
@@ -69,17 +68,17 @@ export function FloatingCTA() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
-          transition={{ duration: 0.3 }}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 w-full max-w-md sm:w-auto sm:px-0"
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 px-4 w-full max-w-md md:hidden"
         >
           <button
             type="button"
             onClick={handleClick}
-            className="flex w-full sm:w-auto items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-6 py-3 font-semibold shadow-2xl shadow-emerald-600/40 transition-all text-sm sm:text-base"
+            className="flex w-full items-center justify-center gap-2 btn-brand rounded-full shadow-2xl shadow-[var(--brand-600)]/40 text-sm"
           >
-            Ambil Estimator Lifetime — Rp 199.000
-            <ArrowRight className="w-4 h-4 flex-shrink-0" />
+            Coba Gratis Sekarang
+            <ArrowRight className="w-4 h-4 shrink-0" />
           </button>
+          <p className="text-center text-[10px] text-[var(--muted)] mt-1.5">Tanpa kartu · 3 estimasi gratis</p>
         </motion.div>
       )}
     </AnimatePresence>
