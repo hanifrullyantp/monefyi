@@ -5,7 +5,10 @@ import { motion } from "framer-motion";
 import { ArrowDown, PlayCircle, LayoutDashboard } from "lucide-react";
 import { Container } from "@/components/shared/Container";
 import { BrandLogo } from "@/components/brand/BrandLogo";
+import { EditableImage } from "@/components/shared/EditableImage";
 import { useAuthStore } from "@/lib/store/authStore";
+import { useContentStore } from "@/lib/store/contentStore";
+import { useLandingAdmin } from "@/lib/hooks/useLandingAdmin";
 import { navigateToPlannerApp, plannerAppPath } from "@/lib/config/plannerApp";
 import { trackEvent } from "@/lib/analytics/events";
 
@@ -14,8 +17,12 @@ const SUB =
   "Saring calon klien lewat WA, hitung harga langsung di HP, kirim PDF penawaran berlogo kamu sebelum klien sempat pindah ke vendor lain.";
 
 export function HeroSection() {
+  const { content } = useContentStore();
+  const { hero } = content;
+  const { isAdmin, isEditMode } = useLandingAdmin();
   const hydrated = useAuthStore((s) => s.hydrated);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const showHeroImage = Boolean(hero.dashboardImage) || (isAdmin && isEditMode);
 
   useEffect(() => {
     trackEvent("view_hero");
@@ -118,35 +125,47 @@ export function HeroSection() {
             <div className="relative mx-auto w-full">
               <div className="rounded-[2rem] border-[6px] border-[var(--ink)] bg-[var(--surface-dark)] p-3 shadow-2xl">
                 <div className="rounded-[1.25rem] bg-white overflow-hidden min-h-[420px]">
-                  <div className="px-4 py-3 flex items-center gap-2 border-b border-[var(--surface-alt)]">
-                    <BrandLogo variant="mark" size={24} />
-                    <span className="text-xs font-extrabold text-[var(--ink)] tracking-tight">Estimator</span>
-                  </div>
-                  <div className="p-4 space-y-3">
-                    <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">Estimasi kitchen set</p>
-                    <div className="rounded-xl bg-[var(--surface-soft)] p-3 space-y-2">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-[var(--muted)]">Kabinet bawah</span>
-                        <span className="font-bold text-[var(--ink)]">Rp 8.400.000</span>
+                  {showHeroImage ? (
+                    <EditableImage
+                      section="hero"
+                      field="dashboardImage"
+                      src={hero.dashboardImage || ""}
+                      alt="Preview Estimator di HP"
+                      className="w-full min-h-[420px]"
+                    />
+                  ) : (
+                    <>
+                      <div className="px-4 py-3 flex items-center gap-2 border-b border-[var(--surface-alt)]">
+                        <BrandLogo variant="mark" size={24} />
+                        <span className="text-xs font-extrabold text-[var(--ink)] tracking-tight">Estimator</span>
                       </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-[var(--muted)]">Top table</span>
-                        <span className="font-bold text-[var(--ink)]">Rp 3.200.000</span>
+                      <div className="p-4 space-y-3">
+                        <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">Estimasi kitchen set</p>
+                        <div className="rounded-xl bg-[var(--surface-soft)] p-3 space-y-2">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-[var(--muted)]">Kabinet bawah</span>
+                            <span className="font-bold text-[var(--ink)]">Rp 8.400.000</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-[var(--muted)]">Top table</span>
+                            <span className="font-bold text-[var(--ink)]">Rp 3.200.000</span>
+                          </div>
+                          <div className="flex justify-between text-xs border-t border-[var(--surface-alt)] pt-2">
+                            <span className="font-bold">Grand total</span>
+                            <span className="font-black text-[var(--brand-600)]">Rp 14.850.000</span>
+                          </div>
+                        </div>
+                        <div className="rounded-xl border border-[var(--brand-600)]/30 bg-[var(--surface-soft)] p-3">
+                          <p className="text-[10px] font-bold text-[var(--brand-600)] mb-1">PDF siap kirim</p>
+                          <p className="text-xs text-[var(--ink)] font-semibold">Penawaran_Andi_Kitchen.pdf</p>
+                          <p className="text-[10px] text-[var(--muted)] mt-1">Logo kamu · rincian item · total</p>
+                        </div>
+                        <button type="button" className="w-full btn-brand text-xs py-2.5 rounded-lg" disabled>
+                          Kirim ke WA klien
+                        </button>
                       </div>
-                      <div className="flex justify-between text-xs border-t border-[var(--surface-alt)] pt-2">
-                        <span className="font-bold">Grand total</span>
-                        <span className="font-black text-[var(--brand-600)]">Rp 14.850.000</span>
-                      </div>
-                    </div>
-                    <div className="rounded-xl border border-[var(--brand-600)]/30 bg-[var(--surface-soft)] p-3">
-                      <p className="text-[10px] font-bold text-[var(--brand-600)] mb-1">PDF siap kirim</p>
-                      <p className="text-xs text-[var(--ink)] font-semibold">Penawaran_Andi_Kitchen.pdf</p>
-                      <p className="text-[10px] text-[var(--muted)] mt-1">Logo kamu · rincian item · total</p>
-                    </div>
-                    <button type="button" className="w-full btn-brand text-xs py-2.5 rounded-lg" disabled>
-                      Kirim ke WA klien
-                    </button>
-                  </div>
+                    </>
+                  )}
                 </div>
               </div>
               <button

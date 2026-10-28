@@ -1,8 +1,8 @@
 "use client";
 import { useState } from "react";
-import { Upload, Image as ImageIcon, Trash2, Copy, Search, Link as LinkIcon, Plus } from "lucide-react";
-import { useMediaStore, MediaFile } from "@/lib/store/mediaStore";
-import { cn } from "@/lib/utils/cn";
+import { Upload, Trash2, Copy, Search, Link as LinkIcon, Plus } from "lucide-react";
+import { useMediaStore } from "@/lib/store/mediaStore";
+import { ImageFilePicker } from "@/components/shared/ImageFilePicker";
 
 export default function MediaPage() {
   const { files, addFile, removeFile } = useMediaStore();
@@ -19,16 +19,26 @@ export default function MediaPage() {
 
   const handleAddUrl = () => {
     if (!newUrl) return;
-    const name = newUrl.split('/').pop() || 'image.jpg';
+    const name = newUrl.split("/").pop() || "image.jpg";
     addFile({
       id: Date.now().toString(),
       url: newUrl,
-      name: name,
+      name,
       type: "image/jpeg",
       size: "External",
     });
     setNewUrl("");
     setIsUrlModalOpen(false);
+  };
+
+  const handleUploadPick = (image: { url: string; name: string; type: string; size: string }) => {
+    addFile({
+      id: Date.now().toString(),
+      url: image.url,
+      name: image.name,
+      type: image.type,
+      size: image.size,
+    });
   };
 
   const filtered = files.filter(f => f.name.toLowerCase().includes(search.toLowerCase()));
@@ -47,9 +57,12 @@ export default function MediaPage() {
           >
             <LinkIcon className="w-5 h-5" /> Add from URL
           </button>
-          <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl shadow-emerald-500/20 transition-all active:scale-95">
+          <ImageFilePicker
+            onPick={handleUploadPick}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl shadow-emerald-500/20 transition-all active:scale-95 cursor-pointer"
+          >
             <Upload className="w-5 h-5" /> Upload File
-          </button>
+          </ImageFilePicker>
         </div>
       </div>
 
@@ -89,10 +102,13 @@ export default function MediaPage() {
               </div>
             ))}
             
-            <div className="aspect-square rounded-[32px] border-4 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 hover:border-emerald-300 hover:text-emerald-500 transition-all cursor-pointer group">
+            <ImageFilePicker
+              onPick={handleUploadPick}
+              className="aspect-square rounded-[32px] border-4 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 hover:border-emerald-300 hover:text-emerald-500 transition-all cursor-pointer group"
+            >
               <Plus className="w-8 h-8 mb-2 group-hover:scale-110 transition-transform" />
               <span className="text-xs font-black uppercase tracking-widest">New Media</span>
-            </div>
+            </ImageFilePicker>
          </div>
       </div>
 

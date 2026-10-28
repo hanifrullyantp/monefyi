@@ -6,6 +6,7 @@ import { useMediaStore } from "@/lib/store/mediaStore";
 import { Image as ImageIcon, Check, X, Camera, Plus } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import type { SiteContent } from "@/lib/types/content";
+import { ImageFilePicker } from "@/components/shared/ImageFilePicker";
 
 interface EditableImageProps {
   section: keyof SiteContent;
@@ -24,16 +25,21 @@ export function EditableImage({
 }: EditableImageProps) {
   const { isEditMode, isAdmin } = useLandingAdmin();
   const { updateField } = useContentStore();
-  const { files } = useMediaStore();
+  const { files, addFile } = useMediaStore();
   const [isEditing, setIsEditing] = useState(false);
   const [tempSrc, setTempSrc] = useState(src);
   const [tab, setTab] = useState<"library" | "url">("library");
+
+  useEffect(() => {
+    setTempSrc(src);
+  }, [src]);
 
   useEffect(() => {
     if (!isEditMode) setIsEditing(false);
   }, [isEditMode]);
 
   if (!isAdmin || !isEditMode) {
+    if (!src) return null;
     return <img src={src} alt={alt} className={cn("object-cover", className)} />;
   }
 
@@ -42,9 +48,18 @@ export function EditableImage({
     setIsEditing(false);
   };
 
+  const previewSrc = src || tempSrc;
+
   return (
     <div className={cn("relative group cursor-pointer", className)}>
-      <img src={src} alt={alt} className="w-full h-full object-cover" />
+      {previewSrc ? (
+        <img src={previewSrc} alt={alt} className="w-full h-full object-cover" />
+      ) : (
+        <div className="w-full h-full min-h-[200px] bg-slate-100 flex flex-col items-center justify-center text-slate-400 gap-2">
+          <ImageIcon className="w-10 h-10 opacity-50" />
+          <span className="text-xs font-bold uppercase tracking-wider">Belum ada gambar</span>
+        </div>
+      )}
 
       <div
         className={cn(
@@ -120,10 +135,22 @@ export function EditableImage({
                       )}
                     </div>
                   ))}
-                  <div className="aspect-square rounded-2xl border-4 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 hover:border-emerald-300 hover:text-emerald-500 transition-all cursor-pointer">
+                  <ImageFilePicker
+                    className="aspect-square rounded-2xl border-4 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 hover:border-emerald-300 hover:text-emerald-500 transition-all cursor-pointer"
+                    onPick={(image) => {
+                      addFile({
+                        id: `${Date.now()}`,
+                        url: image.url,
+                        name: image.name,
+                        type: image.type,
+                        size: image.size,
+                      });
+                      setTempSrc(image.url);
+                    }}
+                  >
                     <Plus className="w-6 h-6 mb-2" />
                     <span className="text-[10px] font-black uppercase tracking-widest">Upload</span>
-                  </div>
+                  </ImageFilePicker>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -134,8 +161,12 @@ export function EditableImage({
                     className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
                     placeholder="Masukkan URL gambar (https://...)"
                   />
-                  <div className="aspect-video rounded-[24px] overflow-hidden border border-slate-100 shadow-inner bg-slate-50">
-                    <img src={tempSrc} alt="Preview" className="w-full h-full object-cover opacity-80" />
+                  <div className="aspect-video rounded-[24px] overflow-hidden border border-slate-100 shadow-inner bg-slate-50 flex items-center justify-center">
+                    {tempSrc ? (
+                      <img src={tempSrc} alt="Preview" className="w-full h-full object-cover opacity-80" />
+                    ) : (
+                      <p className="text-xs font-bold text-slate-400 px-4 text-center">Preview muncul setelah URL atau upload</p>
+                    )}
                   </div>
                 </div>
               )}
