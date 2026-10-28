@@ -13,7 +13,7 @@ type DemoMessage = {
   is_demo?: boolean;
 };
 
-export function HeroLiveDemo() {
+export function HeroLiveDemo({ pulseToken = 0 }: { pulseToken?: number }) {
   const [loaded, setLoaded] = useState(false);
   const engagedRef = useRef(false);
 
@@ -36,7 +36,7 @@ export function HeroLiveDemo() {
 
   return (
     <div className="w-full flex justify-center">
-      <PhoneMockup>
+      <PhoneMockup pulseToken={pulseToken}>
         {!loaded && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#f4f6f5] text-sm font-semibold text-slate-500">
             Memuat demo…

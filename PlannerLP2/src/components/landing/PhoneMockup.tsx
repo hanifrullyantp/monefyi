@@ -9,46 +9,87 @@ const NATIVE_H = 844;
 interface PhoneMockupProps {
   children: ReactNode;
   className?: string;
+  pulseToken?: number;
+}
+
+function viewportHeight(): number {
+  return window.visualViewport?.height ?? window.innerHeight;
+}
+
+function cssPx(root: CSSStyleDeclaration, name: string, fallback: number): number {
+  const n = parseFloat(root.getPropertyValue(name));
+  return Number.isFinite(n) ? n : fallback;
 }
 
 /**
  * Frame HP: isi di-render pada viewport native iPhone (390×844)
- * lalu di-scale ke lebar token --phone-mockup-w.
- * Skala hanya pada frame — komposisi UI sama dengan aplikasi mobile.
+ * lalu di-scale. Tinggi frame mengikuti tinggi layar user (minus header),
+ * lebar mengikuti rasio 390:844 dan dibatasi lebar viewport.
  */
-export function PhoneMockup({ children, className }: PhoneMockupProps) {
-  const screenRef = useRef<HTMLDivElement>(null);
+export function PhoneMockup({ children, className, pulseToken = 0 }: PhoneMockupProps) {
+  const frameRef = useRef<HTMLDivElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
+  const [frameW, setFrameW] = useState<number | null>(null);
   const [scale, setScale] = useState(0);
 
   useLayoutEffect(() => {
-    const el = screenRef.current;
-    if (!el) return;
     const update = () => {
-      const w = el.clientWidth;
-      if (w > 0) setScale(w / NATIVE_W);
+      const root = getComputedStyle(document.documentElement);
+      const bezel = cssPx(root, "--phone-bezel", 10);
+      const isLg = window.matchMedia("(min-width: 1024px)").matches;
+      const header = cssPx(
+        root,
+        isLg ? "--header-h-desktop" : "--header-h-mobile",
+        isLg ? 64 : 56,
+      );
+      const maxFrameH = Math.max(200, viewportHeight() - header - 12);
+      const heightBasedW = ((maxFrameH - bezel * 2) * NATIVE_W) / NATIVE_H + bezel * 2;
+      const maxW = window.innerWidth - 16;
+      const width = Math.min(heightBasedW, maxW);
+      setFrameW(width);
+      setScale(Math.max(0.01, (width - bezel * 2) / NATIVE_W));
     };
+
     update();
-    const raf = requestAnimationFrame(update);
-    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(update) : null;
-    ro?.observe(el);
     window.addEventListener("resize", update);
+    window.visualViewport?.addEventListener("resize", update);
     return () => {
-      cancelAnimationFrame(raf);
-      ro?.disconnect();
       window.removeEventListener("resize", update);
+      window.visualViewport?.removeEventListener("resize", update);
     };
   }, []);
 
+  useLayoutEffect(() => {
+    if (!pulseToken) return;
+    const frame = frameRef.current;
+    const glow = glowRef.current;
+    const restart = (el: HTMLElement | null, cls: string) => {
+      if (!el) return;
+      el.classList.remove(cls);
+      void el.offsetWidth;
+      el.classList.add(cls);
+    };
+    restart(frame, "hero-demo-blink-frame");
+    restart(glow, "hero-demo-blink-glow");
+  }, [pulseToken]);
+
   return (
     <div
-      className={cn("relative mx-auto select-none shrink-0", className)}
-      style={{ width: "var(--phone-mockup-w)" }}
+      id="hero-demo"
+      className={cn(
+        "relative mx-auto select-none shrink-0",
+        "scroll-mt-[calc(var(--header-h-mobile)+8px)] lg:scroll-mt-[calc(var(--header-h-desktop)+8px)]",
+        className,
+      )}
+      style={{ width: frameW ?? "var(--phone-mockup-w)" }}
     >
       <div
+        ref={glowRef}
         className="absolute -inset-2 rounded-[2.75rem] bg-gradient-to-b from-slate-400/30 to-slate-900/40 blur-xl opacity-50 -z-10"
         aria-hidden
       />
       <div
+        ref={frameRef}
         className="relative bg-gradient-to-b from-[#3d3d3f] via-[#1c1c1e] to-[#0a0a0b] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.35)]"
         style={{ borderRadius: "2.5rem", padding: "var(--phone-bezel)" }}
       >
@@ -56,7 +97,6 @@ export function PhoneMockup({ children, className }: PhoneMockupProps) {
         <div className="absolute right-0 top-[34%] h-16 w-[3px] rounded-l bg-[#2a2a2c]" aria-hidden />
 
         <div
-          ref={screenRef}
           className="relative overflow-hidden bg-black ring-1 ring-white/10"
           style={{
             borderRadius: "2rem",

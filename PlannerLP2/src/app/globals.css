@@ -344,6 +344,40 @@
     50% { box-shadow: 0 0 60px rgba(239, 68, 68, 0.8), 0 0 100px rgba(239, 68, 68, 0.4); border-color: rgba(239, 68, 68, 1); }
   }
 
+  @keyframes heroDemoShadowBlink {
+    0%,
+    100% {
+      box-shadow: 0 32px 64px -16px rgba(0, 0, 0, 0.35);
+    }
+    50% {
+      box-shadow:
+        0 0 0 6px rgba(33, 171, 123, 0.4),
+        0 18px 48px -8px rgba(21, 127, 95, 0.55),
+        0 40px 80px -12px rgba(21, 127, 95, 0.35);
+    }
+  }
+
+  @keyframes heroDemoGlowBlink {
+    0%,
+    100% {
+      opacity: 0.5;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.08);
+      background: linear-gradient(to bottom, rgba(33, 171, 123, 0.55), rgba(21, 127, 95, 0.4));
+    }
+  }
+
+  .hero-demo-blink-frame {
+    animation: heroDemoShadowBlink 0.5s ease-in-out 2;
+  }
+
+  .hero-demo-blink-glow {
+    animation: heroDemoGlowBlink 0.5s ease-in-out 2;
+  }
+
   .animate-shadow-pulse-red {
     animation: shadowPulseRed 1.5s infinite ease-in-out;
   }
