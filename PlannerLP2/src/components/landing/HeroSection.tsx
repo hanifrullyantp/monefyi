@@ -39,17 +39,13 @@ export function HeroSection() {
     <section id="hero" className="relative overflow-hidden bg-white">
       <div className="absolute inset-0 opacity-[0.04]" style={{ background: "var(--brand-gradient)" }} />
       <Container className="content-max relative z-10">
-        <div className="flex flex-col lg:grid lg:grid-cols-2 gap-10 lg:gap-14 items-center pt-24 pb-12 md:pt-32 md:pb-20">
-          <div className="flex flex-col items-center lg:items-start text-center lg:text-left w-full">
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-              <BrandLogo variant="lockup-light" size={36} className="mb-6 mx-auto lg:mx-0" />
-            </motion.div>
-
+        <div className="flex flex-col gap-8 items-center pt-6 pb-10">
+          <div className="flex flex-col items-center text-center w-full">
             <motion.h1
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05 }}
-              className="text-[1.85rem] sm:text-4xl md:text-5xl font-extrabold text-[var(--ink)] leading-[1.15] tracking-tight"
+              className="text-[1.75rem] font-extrabold text-[var(--ink)] leading-[1.15] tracking-tight"
               style={{ letterSpacing: "-0.02em" }}
             >
               {HEADLINE}
@@ -117,9 +113,9 @@ export function HeroSection() {
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.25 }}
-            className="w-full max-w-sm mx-auto"
+            className="w-full max-w-[240px] mx-auto"
           >
-            <div className="relative mx-auto w-[260px] md:w-[300px]">
+            <div className="relative mx-auto w-full">
               <div className="rounded-[2rem] border-[6px] border-[var(--ink)] bg-[var(--surface-dark)] p-3 shadow-2xl">
                 <div className="rounded-[1.25rem] bg-white overflow-hidden min-h-[420px]">
                   <div className="px-4 py-3 flex items-center gap-2 border-b border-[var(--surface-alt)]">

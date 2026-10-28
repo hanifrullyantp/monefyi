@@ -111,7 +111,7 @@
       max-width: none;
     }
     .lp-canvas .grid {
-      grid-template-columns: 1fr;
+      grid-template-columns: 1fr !important;
     }
     .lp-canvas h1 {
       font-size: 1.75rem !important;
