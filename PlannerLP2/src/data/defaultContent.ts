@@ -347,43 +347,8 @@ Jika iya, saya jadwalkan survei pekan ini."`,
         "Estimator bukan aplikasi. Ini sistem yang bikin balik jadi bos di bisnis sendiri.",
       ctaText: "Rasakan Sistem Ini",
     },
-    others: [
-      {
-        name: "Andi Prasetyo",
-        type: "Interior Designer",
-        storyTitle:
-          "Dari Freelance Sendirian, Sekarang Punya Studio dengan 4 Designer",
-        quote:
-          "Dulu handle 3 proyek udah pusing. Sekarang studio gue handle 15 proyek paralel dengan sistem yang sama. Gak ada yang kelupaan.",
-        pain: "Proyek menumpuk, deadline sering molor",
-        result: "[ISI DATA NYATA] Sistem bantu handle lebih banyak proyek dengan tim",
-        rating: 5,
-      },
-      {
-        name: "Bimo & Sarah",
-        type: "Kitchen Set Custom · Suami Istri",
-        storyTitle:
-          "Dari Ribut Terus Soal Proyek, Sekarang Pembagian Kerja Jelas",
-        quote:
-          "Dulu suami handle produksi, istri handle klien, ujungnya miscom terus. Sekarang semua transparan di dashboard. Ribut hilang, proyek lebih rapi.",
-        pain: "Miscom antara sales & produksi, klien complain terus",
-        result:
-          "[ISI DATA NYATA] Dashboard shared, komunikasi lebih rapi",
-        rating: 5,
-      },
-      {
-        name: "Dedi Kurniawan",
-        type: "Kontraktor Kanopi & Railing",
-        storyTitle:
-          "Penawaran telat 2–3 hari, sekarang bisa keluar di lokasi",
-        quote:
-          "Dulu closing susah karena penawaran gue selalu telat 2-3 hari. Sekarang keluar di tempat. Klien langsung mutusin di lokasi.",
-        pain: "Penawaran lambat, klien sering pindah vendor",
-        result:
-          "[ISI DATA NYATA] Penawaran PDF keluar saat masih di lokasi survei",
-        rating: 5,
-      },
-    ],
+    /** Tampil di LP setelah cerita diverifikasi (admin / admin testimonial) */
+    others: [],
     stats: [],
     closingQuote:
       "Setiap cerita berbeda. Karena setiap bisnis jasa proyek itu unik. Yang sama: semua menemukan sistem kerja yang lebih waras.",

@@ -168,44 +168,47 @@ export function TestimonialSection() {
           </div>
         </motion.div>
 
-        {/* Other Stories */}
-        <h3 className="text-2xl font-bold text-slate-900 text-center mb-8">
-          Cerita Transformasi Lainnya
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-          {others.map((story, i) => (
-            <motion.div
-              key={story.name}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-lg transition-all"
-            >
-              <div className="flex items-start gap-3 mb-4">
-                <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center font-bold flex-shrink-0">
-                  {getInitials(story.name)}
-                </div>
-                <div>
-                  <p className="font-bold text-slate-900 text-sm">{story.name}</p>
-                  <p className="text-xs text-slate-500">{story.type}</p>
-                </div>
-              </div>
-              <h4 className="font-bold text-slate-900 mb-3 text-sm leading-tight">
-                {story.storyTitle}
-              </h4>
-              <p className="text-sm text-slate-600 italic mb-4">&ldquo;{story.quote}&rdquo;</p>
-              <div className="space-y-2">
-                <div className="bg-red-50 border-l-2 border-red-300 pl-3 py-1.5 rounded-r-lg">
-                  <p className="text-xs text-red-700">{story.pain}</p>
-                </div>
-                <div className="bg-emerald-50 border-l-2 border-emerald-400 pl-3 py-1.5 rounded-r-lg">
-                  <p className="text-xs text-emerald-700">{story.result}</p>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+        {others.length > 0 && (
+          <>
+            <h3 className="text-2xl font-bold text-slate-900 text-center mb-8">
+              Cerita Transformasi Lainnya
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+              {others.map((story, i) => (
+                <motion.div
+                  key={story.name}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                  className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-lg transition-all"
+                >
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center font-bold flex-shrink-0">
+                      {getInitials(story.name)}
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-900 text-sm">{story.name}</p>
+                      <p className="text-xs text-slate-500">{story.type}</p>
+                    </div>
+                  </div>
+                  <h4 className="font-bold text-slate-900 mb-3 text-sm leading-tight">
+                    {story.storyTitle}
+                  </h4>
+                  <p className="text-sm text-slate-600 italic mb-4">&ldquo;{story.quote}&rdquo;</p>
+                  <div className="space-y-2">
+                    <div className="bg-red-50 border-l-2 border-red-300 pl-3 py-1.5 rounded-r-lg">
+                      <p className="text-xs text-red-700">{story.pain}</p>
+                    </div>
+                    <div className="bg-emerald-50 border-l-2 border-emerald-400 pl-3 py-1.5 rounded-r-lg">
+                      <p className="text-xs text-emerald-700">{story.result}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </>
+        )}
 
         {/* Closing Quote */}
         <div className="text-center max-w-3xl mx-auto mb-16">
@@ -213,14 +216,21 @@ export function TestimonialSection() {
           <p className="text-slate-400 mt-2 text-sm">{testimonial.closingAttribution}</p>
         </div>
 
-        {/* Share Story CTA */}
-        <div className="bg-emerald-50 rounded-2xl p-8 text-center mt-8">
-          <h4 className="text-xl font-bold text-slate-900 mb-2">Punya Cerita untuk Dibagikan?</h4>
-          <p className="text-slate-600 mb-4">Setiap cerita transformasi menginspirasi orang lain.</p>
-          <button className="inline-flex items-center gap-2 border-2 border-emerald-600 text-emerald-600 hover:bg-emerald-50 rounded-xl px-6 py-3 font-semibold text-sm transition-all">
+        {/* Share Story CTA — grid "lainnya" muncul setelah cerita ditambah via admin */}
+        <div className="bg-[var(--surface-soft)] border border-[var(--surface-alt)] rounded-2xl p-8 md:p-10 text-center mt-8">
+          <h4 className="text-xl font-bold text-[var(--ink)] mb-2">Punya Cerita untuk Dibagikan?</h4>
+          <p className="text-[var(--muted)] mb-4 max-w-md mx-auto">
+            {others.length === 0
+              ? "Cerita transformasi lainnya akan tampil di sini setelah kami verifikasi kiriman Anda."
+              : "Setiap cerita transformasi menginspirasi orang lain."}
+          </p>
+          <a
+            href="mailto:support@monefyi.com?subject=Cerita%20Transformasi%20Estimator&body=Nama%20%2F%20Bisnis%3A%0A%0ACerita%20sebelum%20%26%20sesudah%3A%0A"
+            className="inline-flex items-center gap-2 btn-brand rounded-xl px-6 py-3 text-sm"
+          >
             Kirim Cerita Anda
             <ArrowRight className="w-4 h-4" />
-          </button>
+          </a>
         </div>
       </Container>
     </section>
