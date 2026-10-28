@@ -2,7 +2,9 @@
 
 UPDATE profiles
 SET role = 'admin', plan_type = 'lifetime', updated_at = now()
-WHERE lower(email) = lower('hanif.rullyant@gmail.com');
+WHERE id IN (
+  SELECT id FROM auth.users WHERE lower(email) = lower('hanif.rullyant@gmail.com')
+);
 
 UPDATE user_plans
 SET ai_daily_limit = 999, updated_at = now()
