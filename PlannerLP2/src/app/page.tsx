@@ -5,6 +5,7 @@ import { LoginRedirect } from "@/components/landing/LoginRedirect";
 import { LandingPageSections } from "@/components/landing/LandingPageSections";
 import { ToastNotification } from "@/components/landing/ToastNotification";
 import { FloatingCTA } from "@/components/landing/FloatingCTA";
+import { FreeTrialPopup } from "@/components/landing/FreeTrialPopup";
 import { ScrollProgress } from "@/components/landing/ScrollProgress";
 import { BackToTop } from "@/components/landing/BackToTop";
 import { LiveChatWidget } from "@/components/landing/LiveChatWidget";
@@ -35,6 +36,7 @@ export default function LandingPage() {
       </main>
       <ToastNotification />
       <FloatingCTA />
+      <FreeTrialPopup />
       <BackToTop />
       <WhatsAppFloat />
       <LiveChatWidget />

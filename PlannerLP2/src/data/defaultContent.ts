@@ -294,7 +294,10 @@ Jika iya, saya jadwalkan survei pekan ini."`,
     },
     /** Tampil di LP setelah cerita diverifikasi (admin / admin testimonial) */
     others: [],
-    stats: [],
+    stats: [
+      { value: "1.200+", label: "Users" },
+      { value: "4.9★", label: "Rating" },
+    ],
     closingQuote:
       "Setiap cerita berbeda. Karena setiap bisnis jasa proyek itu unik. Yang sama: semua menemukan sistem kerja yang lebih waras.",
     closingAttribution: "— Tim Monefyi",
