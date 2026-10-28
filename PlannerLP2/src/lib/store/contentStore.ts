@@ -150,7 +150,7 @@ export const useContentStore = create<ContentStore>()(
       },
     }),
     {
-      name: "monefyi_content_lp2",
+      name: "monefyi_content_lp3",
       partialize: (state) => ({
         content: state.content,
         lastSaved: state.lastSaved,

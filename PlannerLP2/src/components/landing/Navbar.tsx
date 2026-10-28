@@ -98,12 +98,12 @@ export function Navbar() {
         animate={{ y: isHidden && !isMobileOpen ? -100 : 0 }}
         transition={{ duration: 0.3 }}
         className={cn(
-          "fixed top-0 inset-x-0 z-50 transition-all duration-500",
+          "sticky top-0 z-50 transition-all duration-500",
           isScrolled ? "glass shadow-premium border-b border-white/20" : "bg-transparent",
         )}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 md:h-20">
+        <div className="px-4">
+          <div className="flex items-center justify-between h-14">
             <button
               onClick={() => scrollTo("#hero")}
               className="flex items-center gap-2 font-extrabold text-lg text-[var(--ink)] tracking-tight min-h-[44px]"
@@ -112,101 +112,19 @@ export function Navbar() {
               <EstimatorLogo variant="lockup-light" size={28} />
             </button>
 
-            <div className="hidden md:flex items-center gap-1">
-              {navbar.menuItems.map((item) => (
-                <button
-                  key={item.label}
-                  onClick={() => scrollTo(item.href)}
-                  className={cn(
-                    "px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 relative group",
-                    activeSection === item.href.replace("#", "")
-                      ? "text-emerald-700"
-                      : "text-slate-600 hover:text-slate-900",
-                  )}
+            <div className="flex items-center gap-1.5 shrink-0 min-w-0">
+              {showUserNav ? masukAppLink : loginButton}
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className="inline-flex items-center px-2 py-2 rounded-xl text-xs font-bold bg-slate-800 text-white"
                 >
-                  {item.label}
-                  {activeSection === item.href.replace("#", "") && (
-                    <motion.div
-                      layoutId="navIndicator"
-                      className="absolute inset-0 bg-emerald-50 rounded-xl -z-10"
-                      transition={{ type: "spring", duration: 0.5 }}
-                    />
-                  )}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0 min-w-0">
-              {/* Mobile: auth selalu terlihat di header */}
-              <div className="flex md:hidden items-center gap-1.5">
-                {showUserNav ? masukAppLink : loginButton}
-              </div>
-
-              {/* Desktop: menu kanan */}
-              <div className="hidden md:flex items-center gap-2 lg:gap-3 min-w-0">
-                {showUserNav ? (
-                  <>
-                    {masukAppLink}
-                    {isAdmin && (
-                      <>
-                        <Link
-                          href="/admin"
-                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-800 text-white hover:bg-slate-700 transition-all shrink-0"
-                        >
-                          <LayoutDashboard className="w-4 h-4 text-emerald-400" />
-                          Admin
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={() => setEditMode(!isEditMode)}
-                          className={cn(
-                            "inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border shrink-0",
-                            isEditMode
-                              ? "bg-emerald-600 text-white border-emerald-500"
-                              : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50",
-                          )}
-                        >
-                          {isEditMode ? (
-                            <>
-                              <Save className="w-4 h-4" />
-                              Selesai Edit
-                            </>
-                          ) : (
-                            <>
-                              <Edit3 className="w-4 h-4" />
-                              Inline Edit
-                            </>
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void handleAdminLogout()}
-                          className="p-2 rounded-xl text-slate-500 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0"
-                          aria-label="Logout"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    {loginButton}
-                    <button
-                      type="button"
-                      onClick={() => scrollTo(navbar.ctaHref)}
-                      className="group relative overflow-hidden flex items-center gap-2 gradient-premium text-white rounded-xl px-5 py-2.5 font-bold text-sm shadow-premium hover:shadow-glow transition-all duration-300 btn-premium shrink-0"
-                    >
-                      <span className="relative z-10">{navbar.ctaText}</span>
-                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform relative z-10" />
-                    </button>
-                  </>
-                )}
-              </div>
-
+                  Admin
+                </Link>
+              )}
               <button
                 onClick={() => setIsMobileOpen(!isMobileOpen)}
-                className="md:hidden p-2 rounded-lg text-slate-700 hover:bg-slate-100 shrink-0"
+                className="p-2 rounded-lg text-slate-700 hover:bg-slate-100 shrink-0"
                 aria-label="Toggle menu"
               >
                 {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}

@@ -5,7 +5,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { resolveSupabaseEnv } from "@/lib/supabase/env";
 
 export const LANDING_SLUG = "estimator-lp";
-export const LANDING_CACHE_KEY = "monefyi_estimator_lp_cache_v2";
+export const LANDING_CACHE_KEY = "monefyi_estimator_lp_cache_v3";
 
 function unifyEstimatorStandardCopy(value: unknown): unknown {
   if (typeof value === "string") {
@@ -68,6 +68,16 @@ export function mergeSiteContent(raw: Partial<SiteContent> | null | undefined): 
       },
     },
     footer: { ...defaultContent.footer, ...(raw.footer || {}) },
+    testimonial: {
+      ...defaultContent.testimonial,
+      ...(raw.testimonial || {}),
+      featured: {
+        ...defaultContent.testimonial.featured,
+        ...(raw.testimonial?.featured || {}),
+      },
+      // Cerita lain disembunyikan sampai diverifikasi (jangan tarik dummy dari CMS lama)
+      others: [],
+    },
     sectionOrder: resolveSectionOrder(raw.sectionOrder),
     sectionVisibility: {
       ...defaultContent.sectionVisibility,

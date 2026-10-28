@@ -18,26 +18,28 @@ import { JsonLd } from "@/components/landing/JsonLd";
 
 export default function LandingPage() {
   return (
-    <>
-      <EstimatorPwaLaunchRedirect />
-      <BrandHead pageTitle="Kirim Penawaran Sebelum Kamu Pulang Survei" />
-      <TrackingScripts />
-      <JsonLd />
-      <AuthHydrator />
-      <ContentHydrator />
-      <LoginRedirect />
-      <EditModeRedirect />
-      <ScrollProgress />
-      <Navbar />
-      <main>
-        <LandingPageSections />
-      </main>
-      <ToastNotification />
-      <FloatingCTA />
-      <BackToTop />
-      <WhatsAppFloat />
-      <LiveChatWidget />
-      <MobileAdminToolbar />
-    </>
+    <div className="lp-shell">
+      <div className="lp-canvas">
+        <EstimatorPwaLaunchRedirect />
+        <BrandHead pageTitle="Kirim Penawaran Sebelum Kamu Pulang Survei" />
+        <TrackingScripts />
+        <JsonLd />
+        <AuthHydrator />
+        <ContentHydrator />
+        <LoginRedirect />
+        <EditModeRedirect />
+        <ScrollProgress />
+        <Navbar />
+        <main>
+          <LandingPageSections />
+        </main>
+        <ToastNotification />
+        <FloatingCTA />
+        <BackToTop />
+        <WhatsAppFloat />
+        <LiveChatWidget />
+        <MobileAdminToolbar />
+      </div>
+    </div>
   );
 }

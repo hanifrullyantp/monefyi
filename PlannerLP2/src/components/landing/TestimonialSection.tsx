@@ -1,25 +1,15 @@
 "use client";
 import { motion } from "framer-motion";
-import { Star, Quote, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Quote, ArrowRight, CheckCircle2 } from "lucide-react";
 import { useContentStore } from "@/lib/store/contentStore";
 import { Container } from "@/components/shared/Container";
-import { AnimatedCounter } from "@/components/shared/AnimatedCounter";
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .slice(0, 2)
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase();
-}
 
 
 
 export function TestimonialSection() {
   const { content } = useContentStore();
   const { testimonial } = content;
-  const { featured, others, stats } = testimonial;
+  const { featured, stats } = testimonial;
 
   const scrollTo = (id: string) => {
     const el = document.getElementById(id);
@@ -27,7 +17,7 @@ export function TestimonialSection() {
   };
 
   return (
-    <section id="testimoni" className="py-14 md:py-32 bg-white relative overflow-hidden">
+    <section id="testimoni" className="py-10 bg-white relative overflow-hidden">
       <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-slate-50 to-transparent" />
       <Container>
         {/* Header */}
@@ -35,15 +25,15 @@ export function TestimonialSection() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center max-w-4xl mx-auto mb-20"
+          className="text-center mx-auto mb-8"
         >
-          <span className="inline-block bg-emerald-100 text-emerald-700 rounded-full px-5 py-2 text-[10px] font-black tracking-[0.2em] uppercase mb-6">
+          <span className="inline-block bg-emerald-100 text-emerald-700 rounded-full px-4 py-1.5 text-[10px] font-black tracking-[0.2em] uppercase mb-4">
             {testimonial.badge}
           </span>
-          <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tight leading-[1.1]">
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-[1.15]">
             {testimonial.title}
           </h2>
-          <p className="mt-6 text-xl text-slate-500 font-bold max-w-3xl mx-auto leading-relaxed italic">
+          <p className="mt-3 text-sm text-slate-500 font-medium leading-relaxed italic">
             &ldquo;{testimonial.subtitle}&rdquo;
           </p>
         </motion.div>
@@ -53,11 +43,11 @@ export function TestimonialSection() {
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="bg-white rounded-[48px] p-8 md:p-16 border-2 border-slate-100 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)] mb-24 relative"
+          className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm mb-8 relative"
         >
            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[100px] rounded-full -mr-32 -mt-32" />
           
-          <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-12 relative z-10">
+          <div className="flex flex-col gap-6 relative z-10">
              {/* Profile Sidebar */}
              <div className="space-y-8">
                 <div className="relative inline-block">
@@ -73,7 +63,7 @@ export function TestimonialSection() {
                    <span className="inline-block text-[10px] font-black bg-emerald-50 text-emerald-600 rounded-full px-3 py-1 mb-2 tracking-widest uppercase">
                     {featured.title}
                   </span>
-                  <h3 className="text-3xl font-black text-slate-900 leading-tight mb-1">{featured.name}</h3>
+                  <h3 className="text-xl font-black text-slate-900 leading-tight mb-1">{featured.name}</h3>
                   <p className="text-slate-400 font-bold text-sm tracking-tight">{featured.info}</p>
                 </div>
 
@@ -93,7 +83,7 @@ export function TestimonialSection() {
              {/* Story Content */}
              <div className="space-y-12">
                 <div>
-                  <h4 className="text-3xl md:text-4xl font-black text-slate-900 mb-6 leading-tight">
+                  <h4 className="text-lg font-black text-slate-900 mb-4 leading-tight">
                     &ldquo;{featured.storyTitle}&rdquo;
                   </h4>
                   
@@ -137,96 +127,44 @@ export function TestimonialSection() {
                     </div>
                   </div>
 
-                  {/* Hidup Baru */}
-                  <div className="mb-12">
-                    <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em] mb-4 block">HIDUP BARU</span>
-                    <p className="text-xl text-slate-600 font-black leading-relaxed">{featured.newLife}</p>
+                  <div className="mb-6">
+                    <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em] mb-3 block">HIDUP BARU</span>
+                    <p className="text-sm text-slate-600 font-semibold leading-relaxed">{featured.newLife}</p>
                   </div>
 
-                  {/* Big Quote */}
-                  <div className="bg-slate-900 text-white rounded-[40px] p-10 md:p-14 relative overflow-hidden shadow-2xl">
-                    <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/20 blur-[80px] -mr-24 -mt-24" />
-                    <Quote className="w-12 h-12 text-emerald-500 mb-8 opacity-50" />
-                    <p className="text-2xl md:text-4xl font-black leading-tight mb-8">
+                  <div className="bg-slate-900 text-white rounded-2xl p-5 relative overflow-hidden">
+                    <Quote className="w-8 h-8 text-emerald-500 mb-3 opacity-50" />
+                    <p className="text-base font-black leading-snug mb-4">
                       &ldquo;{featured.bigQuote}&rdquo;
                     </p>
-                    <div className="flex items-center gap-4">
-                       <div className="w-12 h-1 bg-emerald-500 rounded-full" />
-                       <p className="text-emerald-400 font-black tracking-widest uppercase text-xs">— {featured.name}</p>
-                    </div>
+                    <p className="text-emerald-400 font-bold uppercase text-[10px] tracking-widest">— {featured.name}</p>
                   </div>
 
                   <button
                     onClick={() => scrollTo("harga")}
-                    className="mt-12 group flex items-center gap-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-[24px] px-10 py-5 font-black text-lg shadow-xl shadow-emerald-500/20 transition-all active:scale-95"
+                    className="mt-6 group flex w-full items-center justify-center gap-2 btn-brand rounded-xl text-sm"
                   >
                     {featured.ctaText}
-                    <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+                    <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
              </div>
           </div>
         </motion.div>
 
-        {others.length > 0 && (
-          <>
-            <h3 className="text-2xl font-bold text-slate-900 text-center mb-8">
-              Cerita Transformasi Lainnya
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-              {others.map((story, i) => (
-                <motion.div
-                  key={story.name}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-lg transition-all"
-                >
-                  <div className="flex items-start gap-3 mb-4">
-                    <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center font-bold flex-shrink-0">
-                      {getInitials(story.name)}
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-900 text-sm">{story.name}</p>
-                      <p className="text-xs text-slate-500">{story.type}</p>
-                    </div>
-                  </div>
-                  <h4 className="font-bold text-slate-900 mb-3 text-sm leading-tight">
-                    {story.storyTitle}
-                  </h4>
-                  <p className="text-sm text-slate-600 italic mb-4">&ldquo;{story.quote}&rdquo;</p>
-                  <div className="space-y-2">
-                    <div className="bg-red-50 border-l-2 border-red-300 pl-3 py-1.5 rounded-r-lg">
-                      <p className="text-xs text-red-700">{story.pain}</p>
-                    </div>
-                    <div className="bg-emerald-50 border-l-2 border-emerald-400 pl-3 py-1.5 rounded-r-lg">
-                      <p className="text-xs text-emerald-700">{story.result}</p>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* Closing Quote */}
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <p className="text-xl italic text-slate-600">&ldquo;{testimonial.closingQuote}&rdquo;</p>
-          <p className="text-slate-400 mt-2 text-sm">{testimonial.closingAttribution}</p>
+        <div className="text-center mx-auto mb-8">
+          <p className="text-sm italic text-slate-600">&ldquo;{testimonial.closingQuote}&rdquo;</p>
+          <p className="text-slate-400 mt-1 text-xs">{testimonial.closingAttribution}</p>
         </div>
 
-        {/* Share Story CTA — grid "lainnya" muncul setelah cerita ditambah via admin */}
-        <div className="bg-[var(--surface-soft)] border border-[var(--surface-alt)] rounded-2xl p-8 md:p-10 text-center mt-8">
-          <h4 className="text-xl font-bold text-[var(--ink)] mb-2">Punya Cerita untuk Dibagikan?</h4>
-          <p className="text-[var(--muted)] mb-4 max-w-md mx-auto">
-            {others.length === 0
-              ? "Cerita transformasi lainnya akan tampil di sini setelah kami verifikasi kiriman Anda."
-              : "Setiap cerita transformasi menginspirasi orang lain."}
+        <div className="bg-[var(--surface-soft)] border border-[var(--surface-alt)] rounded-2xl p-5 text-center">
+          <h4 className="text-base font-bold text-[var(--ink)] mb-1">Punya Cerita untuk Dibagikan?</h4>
+          <p className="text-[var(--muted)] mb-3 text-sm">
+            Cerita transformasi lainnya akan tampil di sini setelah kami verifikasi kiriman Anda.
           </p>
           <a
             href="mailto:support@monefyi.com?subject=Cerita%20Transformasi%20Estimator&body=Nama%20%2F%20Bisnis%3A%0A%0ACerita%20sebelum%20%26%20sesudah%3A%0A"
-            className="inline-flex items-center gap-2 btn-brand rounded-xl px-6 py-3 text-sm"
+            className="inline-flex items-center gap-2 btn-brand rounded-xl px-5 py-2.5 text-sm"
           >
             Kirim Cerita Anda
             <ArrowRight className="w-4 h-4" />

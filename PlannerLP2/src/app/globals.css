@@ -82,6 +82,48 @@
     margin-left: auto;
     margin-right: auto;
   }
+
+  /* Desktop: landing sebagai kanvas HP, bukan full page */
+  .lp-shell {
+    min-height: 100vh;
+    background: var(--surface-alt);
+  }
+  .lp-canvas {
+    width: 100%;
+    min-height: 100vh;
+    background: var(--white);
+    position: relative;
+  }
+  @media (min-width: 768px) {
+    .lp-shell {
+      display: flex;
+      justify-content: center;
+      padding: 24px 16px 40px;
+    }
+    .lp-canvas {
+      max-width: 430px;
+      min-height: calc(100vh - 64px);
+      border-radius: 24px;
+      box-shadow: 0 24px 64px -16px rgba(17, 32, 27, 0.18);
+    }
+    .lp-canvas .max-w-7xl,
+    .lp-canvas .content-max {
+      max-width: none;
+    }
+    .lp-canvas .grid {
+      grid-template-columns: 1fr;
+    }
+    .lp-canvas h1 {
+      font-size: 1.75rem !important;
+    }
+    .lp-canvas h2 {
+      font-size: 1.4rem !important;
+    }
+    .lp-canvas section {
+      padding-top: 2.5rem;
+      padding-bottom: 2.5rem;
+    }
+  }
 }
 
 @layer utilities {
