@@ -1,4 +1,6 @@
 import { PRICELIST_TEMPLATES } from '../lib/data/pricelist-templates';
+import { isDemoOrgId } from '../lib/demo/demoMode';
+import { createDemoPricelistItems } from '../lib/demo/demoSeed';
 import { supabase } from '../lib/supabase';
 import {
   calcItemRow,
@@ -48,6 +50,10 @@ export function applyPricelistPricePatch(
 }
 
 export async function loadPricelistItems(orgId: string, activeOnly = true): Promise<PricelistItem[]> {
+  if (isDemoOrgId(orgId)) {
+    const items = createDemoPricelistItems();
+    return activeOnly ? items.filter(i => i.is_active !== false) : items;
+  }
   let q = supabase
     .from('planner_pricelist_items')
     .select('*')
@@ -63,6 +69,9 @@ export async function loadPricelistItems(orgId: string, activeOnly = true): Prom
 export async function createPricelistItem(
   item: Omit<PricelistItem, 'id' | 'created_at' | 'updated_at'>,
 ): Promise<PricelistItem> {
+  if (isDemoOrgId(item.org_id)) {
+    throw new Error('Mode demo — pricelist tidak disimpan ke server');
+  }
   const { data, error } = await supabase
     .from('planner_pricelist_items')
     .insert(item)
@@ -76,6 +85,9 @@ export async function updatePricelistItem(
   id: string,
   patch: Partial<Omit<PricelistItem, 'id' | 'org_id' | 'created_at'>>,
 ): Promise<PricelistItem> {
+  if (id.startsWith('demo-pl-')) {
+    throw new Error('Mode demo — pricelist tidak disimpan ke server');
+  }
   const { data, error } = await supabase
     .from('planner_pricelist_items')
     .update({ ...patch, updated_at: new Date().toISOString() })

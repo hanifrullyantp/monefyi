@@ -85,6 +85,7 @@ export default function Layout({ children }: LayoutProps) {
   const isWorker = showWorkerShell(user?.role, platformRole, user?.email, uiViewMode);
   const canAccessHr = canAccessManagerFeatures(user?.role, platformRole, user?.email, uiViewMode);
   const isEstimatorShell = location.pathname.startsWith('/app/estimator');
+  const hideMobileProductNav = estimatorOnly && isEstimatorShell;
   const showEstimatorBrand =
     !adminFullAccess && shouldShowEstimatorProductBrand(entitlement);
 
@@ -728,7 +729,8 @@ export default function Layout({ children }: LayoutProps) {
           )}
         </div>
 
-        {/* Bottom Navigation — Mobile */}
+        {/* Bottom Navigation — Mobile (Estimator-only: sembunyikan di shell Estimator) */}
+        {!hideMobileProductNav && (
         <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-lg border-t border-slate-100 safe-bottom shrink-0 shadow-[0_-4px_24px_rgba(15,23,42,0.06)]">
           <div className="flex items-center justify-around h-16 px-2">
             {mobileTabs.map((tab) => (
@@ -777,6 +779,7 @@ export default function Layout({ children }: LayoutProps) {
             ))}
           </div>
         </nav>
+        )}
       </div>
 
       {/* Command Modal */}

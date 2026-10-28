@@ -11,6 +11,7 @@ import {
   kwitansiPdfFilename,
 } from '../../../lib/pdf/generateKwitansiPdf';
 import { downloadBlob } from '../../../lib/pdf/pdfMakeSetup';
+import { isDemoEmbedActive } from '../../../lib/demo/demoMode';
 import { loadEstimationProjectPayments, type ProjectIncome } from '../../../services/estimationPaymentService';
 
 type Props = {
@@ -118,6 +119,7 @@ export default function EstimationDocumentPreviewModal({
   if (!open) return null;
 
   const title = TITLES[type];
+  const demoView = isDemoEmbedActive();
 
   const handleDownload = async () => {
     try {
@@ -161,30 +163,48 @@ export default function EstimationDocumentPreviewModal({
         </div>
 
         <div className="px-4 py-3 border-t border-slate-100 flex flex-wrap gap-2 justify-end shrink-0">
-          <button
-            type="button"
-            onClick={() => onEdit(type)}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 hover:bg-slate-50"
-          >
-            <Edit3 className="w-4 h-4" />
-            Edit
-          </button>
-          <button
-            type="button"
-            onClick={() => onSendWhatsApp(type)}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold border border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-          >
-            <MessageCircle className="w-4 h-4" />
-            Kirim WhatsApp
-          </button>
-          <button
-            type="button"
-            onClick={handleDownload}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700"
-          >
-            <Download className="w-4 h-4" />
-            Download
-          </button>
+          {demoView ? (
+            <p className="text-xs text-slate-500 mr-auto self-center">
+              Contoh PDF — watermark demo, tidak untuk diunduh.
+            </p>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => onEdit(type)}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 hover:bg-slate-50"
+              >
+                <Edit3 className="w-4 h-4" />
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={() => onSendWhatsApp(type)}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold border border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+              >
+                <MessageCircle className="w-4 h-4" />
+                Kirim WhatsApp
+              </button>
+              <button
+                type="button"
+                onClick={handleDownload}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700"
+              >
+                <Download className="w-4 h-4" />
+                Download
+              </button>
+            </>
+          )}
+          {demoView && (
+            <button
+              type="button"
+              onClick={() => onSendWhatsApp(type)}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold border border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+            >
+              <MessageCircle className="w-4 h-4" />
+              Kirim WhatsApp
+            </button>
+          )}
         </div>
       </div>
     </div>

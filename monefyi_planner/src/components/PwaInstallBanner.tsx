@@ -5,6 +5,7 @@ import {
   listenForInstallPrompt,
   type BeforeInstallPromptEvent,
 } from '../lib/pwa';
+import { isDemoEmbedActive } from '../lib/demo/demoMode';
 import { isEstimatorBrandContext } from '../lib/estimatorBrand';
 import { EstimatorLogo } from './EstimatorLogo';
 
@@ -25,7 +26,7 @@ export default function PwaInstallBanner() {
     });
   }, [dismissKey]);
 
-  if (hidden || !prompt) return null;
+  if (isDemoEmbedActive() || hidden || !prompt) return null;
 
   const dismiss = () => {
     localStorage.setItem(dismissKey, '1');

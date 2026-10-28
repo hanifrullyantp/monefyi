@@ -4,12 +4,18 @@ import {
 } from 'lucide-react';
 import EstimationDetailBreakdown from './EstimationDetailBreakdown';
 import { formatRupiahFull } from '../../../lib/estimatorFormat';
+import { useLocation } from 'react-router-dom';
+import { useEntitlement } from '../../../hooks/useEntitlement';
+import { isDemoEmbedActive } from '../../../lib/demo/demoMode';
+import { isEstimatorOnlyPlan } from '../../../lib/entitlement';
 import type { EstimationFormDraft, EstimationSummary } from '../../../types/estimator';
 
 type Props = {
   draft: EstimationFormDraft;
   summary: EstimationSummary;
   navSidebarCollapsed: boolean;
+  /** Landing iframe — tanpa offset nav app. */
+  embedMode?: boolean;
   isNew: boolean;
   isReadOnly: boolean;
   saving: boolean;
@@ -62,6 +68,7 @@ export default function EstimationDetailBottomBar({
   draft,
   summary,
   navSidebarCollapsed,
+  embedMode = false,
   isNew,
   isReadOnly,
   saving,
@@ -78,11 +85,19 @@ export default function EstimationDetailBottomBar({
   onWhatsApp,
   onDocument,
 }: Props) {
+  const location = useLocation();
+  const entitlement = useEntitlement();
+  const embed = embedMode || isDemoEmbedActive();
+  const hideAppNav = !embed
+    && !entitlement.loading
+    && isEstimatorOnlyPlan(entitlement)
+    && location.pathname.startsWith('/app/estimator');
+  const bottomClass = embed || hideAppNav ? 'bottom-0' : 'bottom-[5.5rem] lg:bottom-0';
+  const horizontalClass = embed ? 'left-0' : navSidebarCollapsed ? 'lg:left-[4.5rem]' : 'lg:left-64';
+
   return (
     <div
-      className={`fixed left-0 right-0 z-40 pointer-events-none bottom-[5.5rem] lg:bottom-0 ${
-        navSidebarCollapsed ? 'lg:left-[4.5rem]' : 'lg:left-64'
-      }`}
+      className={`fixed left-0 right-0 z-40 pointer-events-none ${bottomClass} ${horizontalClass}`}
     >
       <div className="pointer-events-auto max-w-[100rem] mx-auto px-3 sm:px-4 relative">
         <button

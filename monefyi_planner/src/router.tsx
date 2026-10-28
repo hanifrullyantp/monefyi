@@ -20,6 +20,7 @@ import AdminRoute from './components/AdminRoute';
 import SuperAdmin from './pages/SuperAdmin';
 import PwaInstallBanner from './components/PwaInstallBanner';
 import PaymentReturnHandler from './components/entitlement/PaymentReturnHandler';
+import DemoEmbedPage from './pages/demo/DemoEmbedPage';
 
 export default function AppRouter() {
   return (
@@ -41,6 +42,7 @@ export default function AppRouter() {
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/contact" element={<ContactPage />} />
+        <Route path="/demo-embed" element={<ErrorBoundary componentName="DemoEmbed"><DemoEmbedPage /></ErrorBoundary>} />
         <Route path="/app/*" element={<ProtectedRoute><ErrorBoundary componentName="App"><AppShell /></ErrorBoundary></ProtectedRoute>} />
         <Route path="/admin" element={<AdminRoute><SuperAdmin /></AdminRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />

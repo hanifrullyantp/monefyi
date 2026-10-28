@@ -53,6 +53,7 @@ const nextConfig: NextConfig = {
         destination: `${plannerAppOrigin}/manifest-estimator.webmanifest`,
       },
       { source: "/sw.js", destination: `${plannerAppOrigin}/sw.js` },
+      { source: "/demo-embed", destination: `${plannerAppOrigin}/demo-embed` },
       { source: "/app", destination: `${plannerAppOrigin}/app` },
       { source: "/app/:path*", destination: `${plannerAppOrigin}/app/:path*` },
       { source: "/login", destination: `${plannerAppOrigin}/login` },

@@ -21,6 +21,8 @@ import {
 import { downloadBlob } from '../../../lib/pdf/pdfMakeSetup';
 import { displayOptionsFromDraft } from '../../../types/pdfSettings';
 import type { DocumentType } from './EstimationDocumentMenu';
+import { isDemoEmbedActive } from '../../../lib/demo/demoMode';
+import { trackDemoEvent } from '../../../lib/demo/demoAnalytics';
 import { loadEstimationProjectPayments, type ProjectIncome } from '../../../services/estimationPaymentService';
 
 type Salutation = 'Pak' | 'Bu' | 'Kak' | '';
@@ -131,6 +133,14 @@ export default function EstimationWhatsAppPickerModal({
     }
     setSending(true);
     try {
+      if (isDemoEmbedActive()) {
+        openWhatsAppChat(targetPhone, message);
+        trackDemoEvent('demo_wa_click', { preset });
+        onToast('Membuka WhatsApp (demo — tanpa lampiran PDF)', 'success');
+        onShared?.();
+        onClose();
+        return;
+      }
       if (attachFile && attachDocument === 'invoice') {
         const blob = await generateInvoicePdfBlob(draft, settings, displayOptionsFromDraft(draft), projectPayments);
         const filename = invoicePdfFilename(draft);
@@ -221,7 +231,7 @@ export default function EstimationWhatsAppPickerModal({
             ))}
           </div>
 
-          {(attachment !== 'none' || attachDocument === 'invoice') && (
+          {!isDemoEmbedActive() && (attachment !== 'none' || attachDocument === 'invoice') && (
             <label className="flex items-center gap-2 text-sm text-slate-600">
               <input
                 type="checkbox"

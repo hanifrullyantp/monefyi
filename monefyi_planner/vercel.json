@@ -19,6 +19,15 @@
       ]
     },
     {
+      "source": "/demo-embed",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self' https://estimator.monefyi.com https://planner.monefyi.com https://*.vercel.app http://localhost:* http://127.0.0.1:*"
+        }
+      ]
+    },
+    {
       "source": "/manifest.webmanifest",
       "headers": [
         { "key": "Content-Type", "value": "application/manifest+json" },

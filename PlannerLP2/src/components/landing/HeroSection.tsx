@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowDown, ArrowRight, PlayCircle } from "lucide-react";
 import { Container } from "@/components/shared/Container";
-import { HeroEstimatorDemo } from "@/components/landing/HeroEstimatorDemo";
+import { HeroLiveDemo } from "@/components/landing/HeroLiveDemo";
 import { useAuthStore } from "@/lib/store/authStore";
 import { useLandingCta } from "@/lib/hooks/useLandingCta";
 import { navigateToPlannerApp, plannerAppPath } from "@/lib/config/plannerApp";
@@ -148,7 +148,7 @@ export function HeroSection() {
             <p className="text-[12px] font-semibold text-[var(--muted)] mb-3 text-center max-w-[280px]">
               Demo langsung — scroll & tambah rincian
             </p>
-            <HeroEstimatorDemo />
+            <HeroLiveDemo />
             <button
               type="button"
               onClick={demo}
