@@ -321,6 +321,8 @@ export interface ToastNotification {
   product: string;
   location: string;
   timeAgo: string;
+  /** Hanya tampil di LP jika `live_purchase` (data pembelian nyata). */
+  source?: "live_purchase" | "cms";
 }
 
 export interface ToastConfig {

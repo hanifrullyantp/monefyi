@@ -68,7 +68,7 @@ export function FloatingCTA() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
-          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 px-4 w-full max-w-[430px]"
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 px-4 w-[calc(100%-32px)] max-w-[min(100%,var(--container))]"
         >
           <button
             type="button"

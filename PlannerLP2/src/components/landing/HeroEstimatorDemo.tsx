@@ -87,7 +87,7 @@ export function HeroEstimatorDemo() {
   };
 
   return (
-    <PhoneMockup screenHeight={580}>
+    <PhoneMockup screenHeight={480}>
       <div
         className="relative h-full flex flex-col text-[11px] text-slate-800 overscroll-contain"
         onWheel={(e) => e.stopPropagation()}

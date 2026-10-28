@@ -65,7 +65,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Estimator" />
       </head>
       <body
-        className="font-sans antialiased bg-[var(--surface-soft)] text-[var(--ink)]"
+        className="font-sans antialiased bg-[var(--bg)] text-[var(--ink)]"
         suppressHydrationWarning
       >
         {children}

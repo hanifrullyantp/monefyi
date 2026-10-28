@@ -1,18 +1,21 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, ArrowRight, LogIn, LayoutDashboard, Edit3, Save } from "lucide-react";
-import { EstimatorLogo } from "@/components/brand/EstimatorLogo";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { useContentStore } from "@/lib/store/contentStore";
 import { useLandingCta } from "@/lib/hooks/useLandingCta";
 import { useLandingAdmin } from "@/lib/hooks/useLandingAdmin";
 import { useAuthStore } from "@/lib/store/authStore";
 import { plannerAppPath } from "@/lib/config/plannerApp";
 import { isEstimatorOnlyUser } from "@/lib/permissions";
+import { FREE_PLAN_ENABLED, getActiveHeroCopy } from "@/lib/content/heroCopy";
 import { cn } from "@/lib/utils/cn";
-import { Suspense } from "react";
 import { LoginModal } from "./LoginModal";
 import Link from "next/link";
+
+const DESKTOP_NAV_HREFS = new Set(["#tiga-step", "#fitur", "#harga", "#faq"]);
 
 export function Navbar() {
   const { isAdmin, isEditMode, setEditMode, setAdmin } = useLandingAdmin();
@@ -24,19 +27,13 @@ export function Navbar() {
     hydrated && isAuthenticated && !isAdmin && isEstimatorOnlyUser(user);
   const { content } = useContentStore();
   const { navbar } = content;
-  const { label, openLogin } = useLandingCta();
+  const { openLogin } = useLandingCta();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState("hero");
-  const [isHidden, setIsHidden] = useState(false);
-  const [lastScrollY, setLastScrollY] = useState(0);
 
   const handleScroll = useCallback(() => {
-    const currentY = window.scrollY;
-    setIsScrolled(currentY > 10);
-    setIsHidden(currentY > lastScrollY && currentY > 300);
-    setLastScrollY(currentY);
-  }, [lastScrollY]);
+    setIsScrolled(window.scrollY > 8);
+  }, []);
 
   useEffect(() => {
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -44,11 +41,7 @@ export function Navbar() {
   }, [handleScroll]);
 
   useEffect(() => {
-    if (isMobileOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
+    document.body.style.overflow = isMobileOpen ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
@@ -58,12 +51,12 @@ export function Navbar() {
     const id = href.replace("#", "");
     const el = document.getElementById(id);
     if (el) {
-      const offset = 80;
-      const top = el.getBoundingClientRect().top + window.scrollY - offset;
-      window.scrollTo({ top, behavior: "smooth" });
+      window.scrollTo({
+        top: el.getBoundingClientRect().top + window.scrollY - 72,
+        behavior: "smooth",
+      });
     }
     setIsMobileOpen(false);
-    setActiveSection(id);
   };
 
   const handleAdminLogout = async () => {
@@ -72,28 +65,21 @@ export function Navbar() {
     setEditMode(false);
   };
 
-  const showUserNav = hydrated && isAuthenticated;
+  const showAdminLink = Boolean(hydrated && isAuthenticated && isAdmin);
+  const desktopNav = navbar.menuItems.filter((item) => DESKTOP_NAV_HREFS.has(item.href));
+  const heroCopy = getActiveHeroCopy();
 
-  const masukAppLink = (
-    <a
-      href={plannerAppPath("/app")}
-      className="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-500 transition-all shrink-0"
-    >
-      <LayoutDashboard className="w-4 h-4 shrink-0" />
-      <span>Masuk</span>
-    </a>
-  );
-
-  const loginButton = (
-    <button
-      type="button"
-      onClick={openLogin}
-      className="inline-flex items-center gap-1.5 px-3 py-2 sm:px-5 sm:py-2.5 text-slate-600 hover:text-slate-900 font-bold text-xs sm:text-sm transition-all shrink-0"
-    >
-      <LogIn className="w-4 h-4 shrink-0" />
-      {label}
-    </button>
-  );
+  const cobaGratis = () => {
+    if (hydrated && isAuthenticated) {
+      window.location.href = plannerAppPath("/app/estimator");
+      return;
+    }
+    if (FREE_PLAN_ENABLED) {
+      window.location.href = plannerAppPath("/app/estimator?plan=free");
+      return;
+    }
+    scrollTo("#harga");
+  };
 
   if (hideNavbarForEstimatorCustomer) {
     return (
@@ -105,46 +91,80 @@ export function Navbar() {
 
   return (
     <>
-      <motion.nav
-        initial={{ y: 0 }}
-        animate={{ y: isHidden && !isMobileOpen ? -100 : 0 }}
-        transition={{ duration: 0.3 }}
-        className={cn(
-          "sticky top-0 z-50 transition-all duration-500",
-          isScrolled ? "glass shadow-premium border-b border-white/20" : "bg-transparent",
-        )}
-      >
-        <div className="px-4">
-          <div className="flex items-center justify-between h-14">
+      <header className="lp-bleed sticky top-0 z-50 bg-[var(--bg)]/95 backdrop-blur-md border-b border-transparent transition-colors">
+        <div
+          className={cn(
+            "lp-container flex items-center justify-between gap-4",
+            "h-[var(--header-h-mobile)] lg:h-[var(--header-h-desktop)]",
+            isScrolled && "border-[var(--surface-alt)]",
+          )}
+        >
+          <button
+            type="button"
+            onClick={() => scrollTo("#hero")}
+            className="flex items-center gap-2 min-h-[44px] shrink-0"
+            aria-label="Estimator — beranda"
+          >
+            <BrandLogo variant="mark" size={32} />
+            <span className="text-[18px] font-bold text-[var(--ink)] tracking-tight">Estimator</span>
+          </button>
+
+          <nav className="hidden lg:flex items-center gap-6 flex-1 justify-center min-w-0">
+            {desktopNav.map((item) => (
+              <button
+                key={item.href}
+                type="button"
+                onClick={() => scrollTo(item.href)}
+                className="text-[15px] font-semibold text-[var(--muted)] hover:text-[var(--brand-600)] transition-colors whitespace-nowrap"
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
+
+          <div className="flex items-center gap-2 shrink-0">
             <button
-              onClick={() => scrollTo("#hero")}
-              className="flex items-center gap-2 font-extrabold text-lg text-[var(--ink)] tracking-tight min-h-[44px]"
-              aria-label="Estimator — beranda"
+              type="button"
+              onClick={cobaGratis}
+              className="lp-btn-nav btn-brand lg:hidden"
             >
-              <EstimatorLogo variant="lockup-light" size={28} />
+              {heroCopy.ctaPrimary}
             </button>
 
-            <div className="flex items-center gap-1.5 shrink-0 min-w-0">
-              {showUserNav ? masukAppLink : loginButton}
-              {isAdmin && (
+            <div className="hidden lg:flex items-center gap-2">
+              {hydrated && isAuthenticated ? (
+                <a href={plannerAppPath("/app")} className="lp-btn-nav lp-btn-ghost">
+                  Masuk
+                </a>
+              ) : (
+                <button type="button" onClick={openLogin} className="lp-btn-nav lp-btn-ghost">
+                  Masuk
+                </button>
+              )}
+              <button type="button" onClick={cobaGratis} className="lp-btn-nav btn-brand">
+                {heroCopy.ctaPrimary}
+              </button>
+              {showAdminLink ? (
                 <Link
                   href="/admin"
-                  className="inline-flex items-center px-2 py-2 rounded-xl text-xs font-bold bg-slate-800 text-white"
+                  className="lp-btn-nav bg-slate-800 text-white hover:bg-slate-700"
                 >
                   Admin
                 </Link>
-              )}
-              <button
-                onClick={() => setIsMobileOpen(!isMobileOpen)}
-                className="p-2 rounded-lg text-slate-700 hover:bg-slate-100 shrink-0"
-                aria-label="Toggle menu"
-              >
-                {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </button>
+              ) : null}
             </div>
+
+            <button
+              type="button"
+              onClick={() => setIsMobileOpen(!isMobileOpen)}
+              className="lg:hidden p-2 rounded-lg text-slate-700 hover:bg-slate-100"
+              aria-label="Menu"
+            >
+              {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
-      </motion.nav>
+      </header>
 
       <Suspense fallback={null}>
         <LoginModal />
@@ -157,51 +177,49 @@ export function Navbar() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 z-40 w-full max-w-xs bg-white shadow-2xl flex flex-col"
+            className="fixed inset-y-0 right-0 z-40 w-full max-w-xs bg-white shadow-2xl flex flex-col lg:hidden"
           >
             <div className="flex items-center justify-between p-4 border-b border-slate-100">
               <span className="font-bold text-slate-900">Menu</span>
-              <button
-                onClick={() => setIsMobileOpen(false)}
-                className="p-2 rounded-lg text-slate-500 hover:bg-slate-100"
-              >
+              <button type="button" onClick={() => setIsMobileOpen(false)} className="p-2 rounded-lg hover:bg-slate-100">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <nav className="flex flex-col p-4 gap-1 flex-1">
+            <nav className="flex flex-col p-4 gap-1 flex-1 overflow-y-auto">
               {navbar.menuItems.map((item) => (
                 <button
                   key={item.label}
+                  type="button"
                   onClick={() => scrollTo(item.href)}
-                  className="text-left px-4 py-3 rounded-xl text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 font-medium transition-all"
+                  className="text-left px-4 py-3 rounded-xl text-slate-700 hover:bg-emerald-50 font-medium"
                 >
                   {item.label}
                 </button>
               ))}
-              {!showUserNav && (
+              {!isAuthenticated && (
                 <button
                   type="button"
                   onClick={() => {
                     setIsMobileOpen(false);
                     openLogin();
                   }}
-                  className="text-left px-4 py-3 rounded-xl text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 font-medium transition-all flex items-center gap-2"
+                  className="text-left px-4 py-3 rounded-xl text-slate-700 hover:bg-emerald-50 font-medium flex items-center gap-2"
                 >
                   <LogIn className="w-4 h-4" />
-                  Login
+                  Masuk
                 </button>
               )}
-              {showUserNav && (
+              {hydrated && isAuthenticated && (
                 <>
                   <a
                     href={plannerAppPath("/app")}
                     onClick={() => setIsMobileOpen(false)}
-                    className="text-left px-4 py-3 rounded-xl bg-emerald-600 text-white font-bold transition-all flex items-center gap-2"
+                    className="text-left px-4 py-3 rounded-xl font-bold flex items-center gap-2 lp-btn-ghost"
                   >
                     <LayoutDashboard className="w-4 h-4" />
                     Masuk
                   </a>
-                  {isAdmin && (
+                  {showAdminLink && (
                     <>
                       <button
                         type="button"
@@ -210,10 +228,8 @@ export function Navbar() {
                           setIsMobileOpen(false);
                         }}
                         className={cn(
-                          "text-left px-4 py-3 rounded-xl font-bold transition-all flex items-center gap-2 touch-manipulation",
-                          isEditMode
-                            ? "bg-emerald-600 text-white"
-                            : "text-emerald-700 hover:bg-emerald-50",
+                          "text-left px-4 py-3 rounded-xl font-bold flex items-center gap-2",
+                          isEditMode ? "bg-emerald-600 text-white" : "text-emerald-700 hover:bg-emerald-50",
                         )}
                       >
                         {isEditMode ? <Save className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
@@ -222,9 +238,8 @@ export function Navbar() {
                       <Link
                         href="/admin"
                         onClick={() => setIsMobileOpen(false)}
-                        className="text-left px-4 py-3 rounded-xl text-emerald-700 hover:bg-emerald-50 font-bold transition-all flex items-center gap-2"
+                        className="text-left px-4 py-3 rounded-xl text-emerald-700 font-bold"
                       >
-                        <LayoutDashboard className="w-4 h-4" />
                         Admin Panel
                       </Link>
                       <button
@@ -233,7 +248,7 @@ export function Navbar() {
                           setIsMobileOpen(false);
                           void handleAdminLogout();
                         }}
-                        className="text-left px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 font-medium transition-all"
+                        className="text-left px-4 py-3 rounded-xl text-red-600"
                       >
                         Logout
                       </button>
@@ -245,10 +260,13 @@ export function Navbar() {
             <div className="p-4 border-t border-slate-100">
               <button
                 type="button"
-                onClick={() => scrollTo(navbar.ctaHref)}
-                className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white rounded-xl px-6 py-3.5 font-semibold shadow-lg"
+                onClick={() => {
+                  setIsMobileOpen(false);
+                  cobaGratis();
+                }}
+                className="w-full flex items-center justify-center gap-2 btn-brand lp-btn-hero"
               >
-                {navbar.ctaText}
+                {heroCopy.ctaPrimary}
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -258,8 +276,9 @@ export function Navbar() {
 
       {isMobileOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/20 backdrop-blur-sm"
+          className="fixed inset-0 z-30 bg-black/20 backdrop-blur-sm lg:hidden"
           onClick={() => setIsMobileOpen(false)}
+          aria-hidden
         />
       )}
     </>

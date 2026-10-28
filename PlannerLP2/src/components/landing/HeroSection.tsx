@@ -2,24 +2,28 @@
 
 import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowDown, PlayCircle, LayoutDashboard } from "lucide-react";
+import { ArrowDown, ArrowRight, PlayCircle } from "lucide-react";
 import { Container } from "@/components/shared/Container";
 import { HeroEstimatorDemo } from "@/components/landing/HeroEstimatorDemo";
 import { useAuthStore } from "@/lib/store/authStore";
+import { useLandingCta } from "@/lib/hooks/useLandingCta";
 import { navigateToPlannerApp, plannerAppPath } from "@/lib/config/plannerApp";
 import { trackEvent } from "@/lib/analytics/events";
-
-const HEADLINE = "Kirim Penawaran Sebelum Kamu Pulang Survei";
-const SUB =
-  "Saring calon klien lewat WA, hitung harga langsung di HP, kirim PDF penawaran berlogo kamu sebelum klien sempat pindah ke vendor lain.";
+import {
+  FREE_PLAN_ENABLED,
+  getActiveHeroCopy,
+  heroMicrocopy,
+} from "@/lib/content/heroCopy";
 
 export function HeroSection() {
+  const copy = getActiveHeroCopy();
   const hydrated = useAuthStore((s) => s.hydrated);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const { openLogin } = useLandingCta();
 
   useEffect(() => {
-    trackEvent("view_hero");
-  }, []);
+    trackEvent("view_hero", { variant_id: copy.id });
+  }, [copy.id]);
 
   const scrollTo = (id: string) => {
     const el = document.getElementById(id);
@@ -27,52 +31,73 @@ export function HeroSection() {
   };
 
   const primary = () => {
+    trackEvent("hero_cta_primary_click", { variant_id: copy.id, source: "hero" });
     if (hydrated && isAuthenticated) {
       navigateToPlannerApp("/app/estimator");
       return;
     }
-    trackEvent("free_signup", { source: "hero" });
-    window.location.href = plannerAppPath("/app/estimator?plan=free");
+    if (FREE_PLAN_ENABLED) {
+      trackEvent("free_signup", { source: "hero", variant_id: copy.id });
+      window.location.href = plannerAppPath("/app/estimator?plan=free");
+      return;
+    }
+    scrollTo("harga");
+  };
+
+  const demo = () => {
+    trackEvent("hero_cta_demo_click", { variant_id: copy.id });
+    scrollTo("tiga-step");
+  };
+
+  const login = () => {
+    trackEvent("hero_login_link_click", { variant_id: copy.id });
+    openLogin();
   };
 
   return (
-    <section id="hero" className="relative overflow-hidden bg-white">
-      <div className="absolute inset-0 opacity-[0.04]" style={{ background: "var(--brand-gradient)" }} />
-      <Container className="content-max relative z-10">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:gap-12 xl:gap-16 pt-6 pb-10 lg:pt-10 lg:pb-14">
-          <div className="flex flex-col items-center lg:items-start text-center lg:text-left w-full lg:flex-1">
+    <section id="hero" className="lp-bleed relative overflow-visible bg-white">
+      <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ background: "var(--brand-gradient)" }} />
+      <Container className="relative z-10 pt-6 pb-10 lg:pt-12 lg:pb-16">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,55%)_minmax(0,40%)] gap-8 lg:gap-10 items-center">
+          <div className="flex flex-col items-center lg:items-start text-center lg:text-left min-w-0">
+            <p className="inline-flex items-center rounded-full bg-[var(--surface-soft)] border border-[var(--surface-alt)] px-3 py-1 text-[13px] font-semibold text-[var(--ink)] mb-3">
+              {copy.eyebrow}
+            </p>
+
             <motion.h1
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05 }}
-              className="text-[1.75rem] md:text-4xl lg:text-[2.5rem] font-extrabold text-[var(--ink)] leading-[1.15] tracking-tight"
-              style={{ letterSpacing: "-0.02em" }}
+              className="font-extrabold text-[var(--ink)] tracking-tight"
+              style={{
+                fontSize: "var(--text-headline)",
+                lineHeight: 1.1,
+                letterSpacing: "-0.02em",
+              }}
             >
-              {HEADLINE}
+              {copy.headline}
             </motion.h1>
 
             <motion.p
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="mt-4 text-base md:text-lg text-[var(--muted)] max-w-xl"
+              className="mt-3 text-[var(--muted)] text-[17px] md:text-[18px] leading-snug max-w-xl"
             >
-              {SUB}
+              {copy.subheadline}
             </motion.p>
 
             <motion.ul
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.15 }}
-              className="mt-5 space-y-2 text-sm text-[var(--ink)] text-left w-full max-w-md"
+              className="mt-4 grid gap-2 text-[15px] md:text-[16px] text-[var(--ink)] text-left w-full max-w-md"
             >
-              {[
-                "Balas WA hanya yang budgetnya cocok",
-                "Hitung di lokasi — bukan 2 hari kemudian",
-                "PDF penawaran keluar sebelum kamu pulang",
-              ].map((t) => (
-                <li key={t} className="flex gap-2">
-                  <span className="text-[var(--brand-600)] font-bold">✓</span>
+              {copy.points.map((t) => (
+                <li key={t} className="flex gap-2 leading-snug">
+                  <span className="text-[var(--brand-400)] font-bold shrink-0" aria-hidden>
+                    ✓
+                  </span>
                   {t}
                 </li>
               ))}
@@ -82,49 +107,52 @@ export function HeroSection() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="mt-8 flex flex-col sm:flex-row gap-3 w-full sm:w-auto"
+              className="mt-6 flex flex-col lg:flex-row gap-3 w-full lg:w-auto max-w-full"
             >
-              <button type="button" onClick={primary} className="btn-brand inline-flex items-center justify-center gap-2 w-full sm:w-auto">
-                {hydrated && isAuthenticated ? (
-                  <>
-                    <LayoutDashboard className="w-4 h-4" /> Masuk ke Estimator
-                  </>
-                ) : (
-                  <>Coba Gratis Sekarang</>
-                )}
+              <button
+                type="button"
+                onClick={primary}
+                className="lp-btn-hero btn-brand w-full lg:w-auto"
+              >
+                {copy.ctaPrimary}
+                <ArrowRight className="w-4 h-4 shrink-0" />
               </button>
               <button
                 type="button"
-                onClick={() => scrollTo("tiga-step")}
-                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-6 rounded-xl font-bold border-2 border-[var(--surface-alt)] text-[var(--ink)] hover:border-[var(--brand-600)] w-full sm:w-auto"
+                onClick={demo}
+                className="lp-btn-hero border-2 border-[var(--surface-alt)] text-[var(--ink)] hover:border-[var(--brand-600)] w-full lg:w-auto bg-white"
               >
-                <PlayCircle className="w-4 h-4 text-[var(--brand-600)]" />
-                Lihat Demo 1 Menit
+                <PlayCircle className="w-4 h-4 text-[var(--brand-600)] shrink-0" />
+                {copy.ctaSecondary}
               </button>
             </motion.div>
-            <p className="mt-3 text-xs text-[var(--muted)]">Tanpa kartu. 3 estimasi gratis.</p>
-            <p className="mt-2 text-xs text-[var(--muted)]">
-              Untuk kontraktor · interior · kitchen set · kanopi · furniture custom
-            </p>
-            <p className="mt-4 text-[11px] font-semibold text-[var(--brand-600)] lg:hidden">
-              ↑ Coba scroll & tambah rincian di demo HP
-            </p>
+
+            {!isAuthenticated && (
+              <button
+                type="button"
+                onClick={login}
+                className="mt-3 text-[14px] font-semibold text-[var(--brand-600)] hover:underline"
+              >
+                {copy.loginLink}
+              </button>
+            )}
+            <p className="mt-2 text-[14px] text-[var(--muted)]">{heroMicrocopy()}</p>
           </div>
 
           <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
+            initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.25 }}
-            className="w-full lg:flex-1 flex flex-col items-center mt-8 lg:mt-0"
+            className="flex flex-col items-center min-w-0 overflow-visible"
           >
-            <p className="hidden lg:block text-xs font-bold text-[var(--muted)] uppercase tracking-wider mb-4">
+            <p className="text-[12px] font-semibold text-[var(--muted)] mb-3 text-center max-w-[280px]">
               Demo langsung — scroll & tambah rincian
             </p>
             <HeroEstimatorDemo />
             <button
               type="button"
-              onClick={() => scrollTo("tiga-step")}
-              className="mt-6 flex items-center gap-1 text-xs font-bold text-[var(--brand-600)]"
+              onClick={demo}
+              className="mt-5 flex items-center gap-1 text-xs font-bold text-[var(--brand-600)]"
             >
               <ArrowDown className="w-4 h-4" /> Cara kerjanya
             </button>

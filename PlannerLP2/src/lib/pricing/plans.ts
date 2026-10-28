@@ -3,6 +3,9 @@
  * Semua UI (cards, FAQ, CTA, urgency) harus baca dari sini.
  */
 
+/** Satu flag untuk klaim “3 estimasi gratis” di hero/header. */
+export { FREE_PLAN_ENABLED } from "@/lib/content/heroCopy";
+
 export type EstimatorPlanId = "free" | "estimator-standard" | "estimator-pro";
 
 export type EstimatorPlan = {

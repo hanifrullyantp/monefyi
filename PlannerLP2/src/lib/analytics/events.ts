@@ -5,6 +5,9 @@
 
 export type FunnelEvent =
   | "view_hero"
+  | "hero_cta_primary_click"
+  | "hero_cta_demo_click"
+  | "hero_login_link_click"
   | "calc_start"
   | "calc_complete"
   | "lead_submit"

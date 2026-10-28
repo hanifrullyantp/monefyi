@@ -15,31 +15,30 @@ import EstimatorPwaLaunchRedirect from "@/components/brand/EstimatorPwaLaunchRed
 import { BrandHead } from "@/components/brand/BrandHead";
 import { TrackingScripts } from "@/components/landing/TrackingScripts";
 import { JsonLd } from "@/components/landing/JsonLd";
+import { PublicLandingRoot } from "@/components/landing/PublicLandingRoot";
 
 export default function LandingPage() {
   return (
-    <div className="lp-shell">
-      <div className="lp-canvas">
-        <EstimatorPwaLaunchRedirect />
-        <BrandHead pageTitle="Kirim Penawaran Sebelum Kamu Pulang Survei" />
-        <TrackingScripts />
-        <JsonLd />
-        <AuthHydrator />
-        <ContentHydrator />
-        <LoginRedirect />
-        <EditModeRedirect />
-        <ScrollProgress />
-        <Navbar />
-        <main>
-          <LandingPageSections />
-        </main>
-        <ToastNotification />
-        <FloatingCTA />
-        <BackToTop />
-        <WhatsAppFloat />
-        <LiveChatWidget />
-        <MobileAdminToolbar />
-      </div>
-    </div>
+    <PublicLandingRoot>
+      <EstimatorPwaLaunchRedirect />
+      <BrandHead pageTitle="Kirim Penawaran Sebelum Kamu Pulang Survei" />
+      <TrackingScripts />
+      <JsonLd />
+      <AuthHydrator />
+      <ContentHydrator />
+      <LoginRedirect />
+      <EditModeRedirect />
+      <ScrollProgress />
+      <Navbar />
+      <main>
+        <LandingPageSections />
+      </main>
+      <ToastNotification />
+      <FloatingCTA />
+      <BackToTop />
+      <WhatsAppFloat />
+      <LiveChatWidget />
+      <MobileAdminToolbar />
+    </PublicLandingRoot>
   );
 }
