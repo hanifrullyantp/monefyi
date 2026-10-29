@@ -20,7 +20,10 @@ export type FunnelEvent =
   | "upgrade_modal_view"
   | "checkout_start"
   | "purchase"
-  | "refund_request";
+  | "refund_request"
+  | "comparison_view"
+  | "comparison_expand"
+  | "comparison_cta_click";
 
 type EventParams = Record<string, string | number | boolean | undefined>;
 
