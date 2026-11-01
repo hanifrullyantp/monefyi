@@ -43,10 +43,11 @@ export function FeaturesSection() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 max-w-5xl mx-auto">
           {visible.map((feature, i) => {
             const Icon = iconMap[feature.icon] || Calculator;
-            const featureIndex = features.features.findIndex(
-              (f) => f.title === feature.title || f.title === CORE_FEATURE_TITLES[i],
-            );
-            const idx = featureIndex >= 0 ? featureIndex : i;
+            const featureIndex = features.features.indexOf(feature);
+            const idx =
+              featureIndex >= 0
+                ? featureIndex
+                : features.features.findIndex((f) => f.icon === feature.icon);
 
             return (
               <motion.div

@@ -10,16 +10,17 @@ export const CORE_FEATURE_TITLES = [
 ] as const;
 
 export function pickCoreFeatures(items: FeatureItem[]): FeatureItem[] {
-  const byTitle = new Map(items.map((f) => [f.title, f]));
-  const picked = CORE_FEATURE_TITLES.map((title) => byTitle.get(title)).filter(
-    (f): f is FeatureItem => Boolean(f),
+  const defaults = defaultContent.features.features.filter((feature) =>
+    CORE_FEATURE_TITLES.includes(feature.title as (typeof CORE_FEATURE_TITLES)[number]),
   );
-  if (picked.length === CORE_FEATURE_TITLES.length) return picked;
-  const defaults = defaultContent.features.features.filter((f) =>
-    CORE_FEATURE_TITLES.includes(f.title as (typeof CORE_FEATURE_TITLES)[number]),
-  );
-  const defaultMap = new Map(defaults.map((f) => [f.title, f]));
-  return CORE_FEATURE_TITLES.map(
-    (title) => byTitle.get(title) ?? defaultMap.get(title),
-  ).filter((f): f is FeatureItem => Boolean(f));
+  const byTitle = new Map(items.map((feature) => [feature.title, feature]));
+
+  return CORE_FEATURE_TITLES.map((title) => {
+    const defaultFeature = defaults.find((feature) => feature.title === title);
+    return (
+      byTitle.get(title) ??
+      items.find((feature) => feature.icon === defaultFeature?.icon) ??
+      defaultFeature
+    );
+  }).filter((feature): feature is FeatureItem => Boolean(feature));
 }
