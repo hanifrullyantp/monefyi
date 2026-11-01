@@ -6,11 +6,6 @@ import { useContentStore } from "@/lib/store/contentStore";
 import { Container } from "@/components/shared/Container";
 import { defaultContent } from "@/data/defaultContent";
 
-const FALLBACK_STATS = [
-  { value: "1.200+", label: "Users" },
-  { value: "4.9★", label: "Rating" },
-];
-
 function getInitials(name: string) {
   return name
     .split(" ")
@@ -25,7 +20,6 @@ export function TestimonialSection() {
   const { content } = useContentStore();
   const { testimonial } = content;
   const { featured } = testimonial;
-  const stats = testimonial.stats.length ? testimonial.stats : FALLBACK_STATS;
   const milestones =
     featured.milestones?.length > 0
       ? featured.milestones
@@ -84,21 +78,6 @@ export function TestimonialSection() {
                 <p className="text-[var(--muted)] font-semibold text-sm">{featured.info}</p>
               </div>
 
-              <div className="w-full pt-5 border-t border-[var(--surface-alt)]">
-                <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] mb-3">
-                  Monefyi Global Impact
-                </p>
-                <div className="grid grid-cols-2 gap-4">
-                  {stats.slice(0, 2).map((s) => (
-                    <div key={s.label}>
-                      <p className="text-2xl font-extrabold text-[var(--ink)]">{s.value}</p>
-                      <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest">
-                        {s.label}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </aside>
 
             {/* Cerita — kanan di desktop */}
