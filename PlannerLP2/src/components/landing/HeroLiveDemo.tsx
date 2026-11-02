@@ -23,10 +23,6 @@ export function HeroLiveDemo({ pulseToken = 0 }: { pulseToken?: number }) {
   useEffect(() => {
     const target = demoRef.current;
     if (!target) return;
-    if (!("IntersectionObserver" in window)) {
-      setShouldLoad(true);
-      return;
-    }
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -84,7 +80,6 @@ export function HeroLiveDemo({ pulseToken = 0 }: { pulseToken?: number }) {
             width={390}
             height={844}
             loading="eager"
-            fetchPriority="high"
             className={`block border-0 transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
             style={{ width: 390, height: 844 }}
             onLoad={() => setLoaded(true)}

@@ -14,12 +14,14 @@ import { useLandingCta } from "@/lib/hooks/useLandingCta";
 
 const STORAGE_KEY = "estimator_free_trial_popup_v1";
 const SUPPRESS_MS = 24 * 60 * 60 * 1000;
+const FREE_TRIAL_UNLOCK_MS = 30 * 60 * 1000;
 
 type Trigger = "exit_intent" | "back_button" | "idle";
 
 type StoredState = {
   dismissedAt?: number;
   convertedAt?: number;
+  freeTrialAt?: number;
 };
 
 function readStore(): StoredState {
@@ -43,6 +45,7 @@ function writeStore(patch: StoredState) {
 function isSuppressed(): boolean {
   const state = readStore();
   if (state.convertedAt) return true;
+  if (state.freeTrialAt && Date.now() - state.freeTrialAt < FREE_TRIAL_UNLOCK_MS) return true;
   return Boolean(state.dismissedAt && Date.now() - state.dismissedAt < SUPPRESS_MS);
 }
 
@@ -89,20 +92,19 @@ export function FreeTrialPopup() {
   }, [trigger]);
 
   const tryFreeApp = () => {
-    writeStore({ convertedAt: Date.now() });
+    writeStore({ freeTrialAt: Date.now() });
     trackEvent("free_trial_popup_cta", { source: trigger ?? "unknown" });
     trackEvent("free_signup", { source: `popup_${trigger ?? "unknown"}` });
     window.location.href = plannerAppPath("/app/estimator?plan=free");
   };
 
   const buyStandard = () => {
-    writeStore({ convertedAt: Date.now() });
     trackEvent("free_trial_popup_cta", { source: `purchase_${trigger ?? "unknown"}` });
     void startCheckout("estimator-standard");
   };
 
   useEffect(() => {
-    if (!eligible) return;
+    if (!eligible || open) return;
 
     const onMouseOut = (event: MouseEvent) => {
       if (event.clientY > 12 || event.relatedTarget != null) return;
@@ -122,7 +124,8 @@ export function FreeTrialPopup() {
       }
     };
 
-    window.history.pushState({ relinkPrompt: true }, "", window.location.href);
+    const previousHistoryState = window.history.state;
+    window.history.pushState({ ...previousHistoryState, relinkPrompt: true }, "", window.location.href);
     window.addEventListener("popstate", onBack);
     document.addEventListener("mouseout", onMouseOut);
     ["pointerdown", "keydown", "touchstart", "scroll"].forEach((eventName) => {
@@ -138,7 +141,7 @@ export function FreeTrialPopup() {
       });
       if (idleTimerRef.current !== null) window.clearTimeout(idleTimerRef.current);
     };
-  }, [config.idleMinutes, eligible, tryOpen]);
+  }, [config.idleMinutes, eligible, open, tryOpen]);
 
   useEffect(() => {
     if (!open) return;

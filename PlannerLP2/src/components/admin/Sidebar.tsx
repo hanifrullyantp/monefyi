@@ -38,6 +38,7 @@ const navItems = [
   { href: "/admin/kontak", icon: Phone, label: "Kontak & Sosial" },
   { href: "/admin/seo", icon: Search, label: "SEO & Tracking" },
   { href: "/admin/toast", icon: Bell, label: "Toast Notifikasi" },
+  { href: "/admin/relink-popup", icon: Sparkles, label: "Popup Relink" },
   { href: "/admin/faq", icon: HelpCircle, label: "FAQ Editor" },
   { href: "/admin/footer", icon: FileText, label: "Footer & Privasi" },
   { href: "/admin/konten", icon: PanelLeftOpen, label: "Konten Visual" },

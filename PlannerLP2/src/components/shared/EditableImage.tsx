@@ -44,7 +44,7 @@ export function EditableImage({
 
   if (!isAdmin || !isEditMode) {
     if (!src) return null;
-    return <img src={src} alt={alt} className={cn("object-cover", className)} />;
+    return <img src={src} alt={alt} loading="lazy" decoding="async" className={cn("object-cover", className)} />;
   }
 
   const handleSave = () => {
@@ -57,7 +57,7 @@ export function EditableImage({
   return (
     <div className={cn("relative group cursor-pointer", className)}>
       {previewSrc ? (
-        <img src={previewSrc} alt={alt} className="w-full h-full object-cover" />
+        <img src={previewSrc} alt={alt} loading="lazy" decoding="async" className="w-full h-full object-cover" />
       ) : (
         <div className="w-full h-full min-h-[200px] bg-slate-100 flex flex-col items-center justify-center text-slate-400 gap-2">
           <ImageIcon className="w-10 h-10 opacity-50" />
@@ -131,7 +131,7 @@ export function EditableImage({
                         tempSrc === file.url ? "border-emerald-500 shadow-glow" : "border-transparent hover:border-slate-200"
                       )}
                     >
-                      <img src={file.url} alt={file.name} className="w-full h-full object-cover" />
+                      <img src={file.url} alt={file.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                       {tempSrc === file.url && (
                         <div className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center">
                           <Check className="w-8 h-8 text-white drop-shadow-lg" />
@@ -167,7 +167,7 @@ export function EditableImage({
                   />
                   <div className="aspect-video rounded-[24px] overflow-hidden border border-slate-100 shadow-inner bg-slate-50 flex items-center justify-center">
                     {tempSrc ? (
-                      <img src={tempSrc} alt="Preview" className="w-full h-full object-cover opacity-80" />
+                      <img src={tempSrc} alt="Preview" loading="lazy" decoding="async" className="w-full h-full object-cover opacity-80" />
                     ) : (
                       <p className="text-xs font-bold text-slate-400 px-4 text-center">Preview muncul setelah URL atau upload</p>
                     )}
