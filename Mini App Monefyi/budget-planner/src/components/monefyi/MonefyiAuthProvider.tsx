@@ -38,7 +38,11 @@ async function resolveAuthState(): Promise<{
 }> {
   const session = await getMonefyiSession();
   if (!session) return { session: null, hasProduct: false };
-  const hasProduct = await userHasProduct('monefyi');
+  const [hasMonefyi, hasPlanner] = await Promise.all([
+    userHasProduct('monefyi'),
+    userHasProduct('planner'),
+  ]);
+  const hasProduct = hasMonefyi || hasPlanner;
   return { session, hasProduct };
 }
 

@@ -13,11 +13,9 @@ import { FooterSection } from "@/components/landing/FooterSection";
 import { FeaturesSection } from "@/components/landing/FeaturesSection";
 import { ComparisonSection } from "@/components/landing/ComparisonSection";
 import { FreeToolsSection } from "@/components/landing/FreeToolsSection";
+import { UrgencySection } from "@/components/landing/UrgencySection";
 
-/**
- * Fase 2 order — one message per section.
- * Urgency/scarcity & irrelevant freeTools removed from default order.
- */
+/** Landing sections are configurable through CMS and default to the full conversion flow. */
 export const LANDING_SECTIONS = [
   { key: "hero", label: "Hero", desc: "Headline + CTA" },
   { key: "trustBadges", label: "Kepercayaan", desc: "Bukti sosial & garansi singkat" },
@@ -26,6 +24,7 @@ export const LANDING_SECTIONS = [
   { key: "calculator", label: "Kalkulator", desc: "Cek efisiensi closing" },
   { key: "testimonial", label: "Testimoni", desc: "Cerita pengguna" },
   { key: "freeTools", label: "Bonus Tools", desc: "Bonus aplikasi gratis" },
+  { key: "urgency", label: "Promo Launch", desc: "Harga launch dan bonus terbatas" },
   { key: "pricing", label: "Harga", desc: "Gratis / Standard / Pro" },
   { key: "guarantee", label: "Garansi", desc: "7 hari uang kembali" },
   { key: "faq", label: "FAQ", desc: "Keberatan nyata" },
@@ -46,6 +45,7 @@ const SECTION_COMPONENTS: Record<LandingSectionKey, ComponentType> = {
   calculator: CalculatorSection,
   testimonial: TestimonialSection,
   freeTools: FreeToolsSection,
+  urgency: UrgencySection,
   pricing: PricingSection,
   guarantee: GuaranteeSection,
   faq: FAQSection,
@@ -66,6 +66,7 @@ export const DEFAULT_SECTION_ORDER: LandingSectionKey[] = [
   "calculator",
   "testimonial",
   "freeTools",
+  "urgency",
   "pricing",
   "faq",
   "finalCta",

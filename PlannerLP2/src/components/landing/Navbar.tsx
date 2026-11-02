@@ -10,7 +10,7 @@ import { useLandingAdmin } from "@/lib/hooks/useLandingAdmin";
 import { useFinishInlineEdit } from "@/lib/hooks/useFinishInlineEdit";
 import { useAuthStore } from "@/lib/store/authStore";
 import { plannerAppPath } from "@/lib/config/plannerApp";
-import { isEstimatorOnlyUser } from "@/lib/permissions";
+import { canClaimBonusApps, isEstimatorOnlyUser } from "@/lib/permissions";
 import { FREE_PLAN_ENABLED, getActiveHeroCopy } from "@/lib/content/heroCopy";
 import { cn } from "@/lib/utils/cn";
 import { LoginModal } from "./LoginModal";
@@ -68,6 +68,7 @@ export function Navbar() {
   };
 
   const showAdminLink = Boolean(hydrated && isAuthenticated && isAdmin);
+  const showBonusLink = Boolean(hydrated && isAuthenticated && canClaimBonusApps(user));
   const desktopNav = navbar.menuItems.filter((item) => DESKTOP_NAV_HREFS.has(item.href));
   const heroCopy = getActiveHeroCopy();
   const showCobaGratis = !(hydrated && isAuthenticated);
@@ -86,9 +87,22 @@ export function Navbar() {
 
   if (hideNavbarForEstimatorCustomer) {
     return (
-      <Suspense fallback={null}>
-        <LoginModal />
-      </Suspense>
+      <>
+        <div className="lp-bleed sticky top-0 z-50 border-b border-emerald-100 bg-white/95 backdrop-blur-md">
+          <div className="lp-container flex h-[var(--header-h-mobile)] items-center justify-between gap-3 lg:h-[var(--header-h-desktop)]">
+            <button type="button" onClick={() => scrollTo("#hero")} className="flex min-h-[44px] items-center gap-2" aria-label="Estimator — beranda">
+              <BrandLogo variant="mark" size={32} />
+              <span className="text-[18px] font-bold tracking-tight text-[var(--ink)]">Estimator</span>
+            </button>
+            <Link href="/bonus" className="lp-btn-nav inline-flex items-center gap-2 rounded-xl bg-amber-400 px-4 py-2 font-bold text-slate-950 hover:bg-amber-300">
+              Klaim Bonus <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+        <Suspense fallback={null}>
+          <LoginModal />
+        </Suspense>
+      </>
     );
   }
 
@@ -137,6 +151,11 @@ export function Navbar() {
             )}
 
             <div className="hidden lg:flex items-center gap-2">
+              {showBonusLink && (
+                <Link href="/bonus" className="lp-btn-nav bg-amber-400 text-slate-950 hover:bg-amber-300">
+                  Klaim Bonus
+                </Link>
+              )}
               {hydrated && isAuthenticated ? (
                 <a href={plannerAppPath("/app")} className="lp-btn-nav lp-btn-ghost">
                   Masuk
@@ -233,6 +252,15 @@ export function Navbar() {
               )}
               {hydrated && isAuthenticated && (
                 <>
+                  {showBonusLink && (
+                    <Link
+                      href="/bonus"
+                      onClick={() => setIsMobileOpen(false)}
+                      className="text-left px-4 py-3 rounded-xl font-bold flex items-center gap-2 bg-amber-100 text-amber-900"
+                    >
+                      <ArrowRight className="w-4 h-4" /> Klaim Bonus
+                    </Link>
+                  )}
                   <a
                     href={plannerAppPath("/app")}
                     onClick={() => setIsMobileOpen(false)}

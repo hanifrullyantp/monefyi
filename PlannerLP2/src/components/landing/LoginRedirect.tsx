@@ -34,6 +34,11 @@ function LoginRedirectInner() {
       }
     }
 
+    if (isAuthenticated && next === "/bonus") {
+      router.replace("/bonus");
+      return;
+    }
+
     if (isAuthenticated && next.startsWith("/app")) {
       navigateToPlannerApp(next);
     }

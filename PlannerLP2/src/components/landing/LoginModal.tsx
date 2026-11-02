@@ -19,6 +19,7 @@ import { lynkProductLabel } from "@/lib/checkout/products";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { EstimatorLogo } from "@/components/brand/EstimatorLogo";
 import { navigateToPlannerApp } from "@/lib/config/plannerApp";
+import { canClaimBonusApps } from "@/lib/permissions";
 
 type AuthMode = "login" | "signup" | "forgot";
 
@@ -238,6 +239,18 @@ export function LoginModal() {
                   <LayoutDashboard className="w-5 h-5" />
                   Masuk
                 </button>
+                {canClaimBonusApps(loggedInUser) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginModalOpen(false);
+                      router.push("/bonus");
+                    }}
+                    className="w-full rounded-2xl py-3.5 font-bold text-sm border-2 border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 transition-all flex items-center justify-center gap-2"
+                  >
+                    Klaim Bonus Aplikasi
+                  </button>
+                )}
                 {loggedInUser.isAdmin && (
                   <button
                     type="button"

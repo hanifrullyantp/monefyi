@@ -17,6 +17,7 @@ import {
 import { useContentStore } from "@/lib/store/contentStore";
 import { Container } from "@/components/shared/Container";
 import { EditableText } from "@/components/shared/EditableText";
+import Link from "next/link";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Calculator,
@@ -142,10 +143,10 @@ export function FreeToolsSection() {
                 <EditableText section="freeTools" field="note" value={freeTools.note} />
               </p>
             </div>
-            <button className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl px-6 py-3 font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-600/20 transition-all active:scale-95">
+            <Link href="/bonus" className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl px-6 py-3 font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-600/20 transition-all active:scale-95">
               Klaim Semua Bonus
               <ArrowRight className="w-4 h-4" />
-            </button>
+            </Link>
           </div>
         </motion.div>
       </Container>

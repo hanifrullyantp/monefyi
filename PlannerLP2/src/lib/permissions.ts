@@ -56,6 +56,11 @@ export function ownsEstimator(user: User | null): boolean {
   return Boolean(user?.ownedProducts.includes("estimator"));
 }
 
+/** Bonus apps included with a paid Estimator or Planner purchase. */
+export function canClaimBonusApps(user: User | null): boolean {
+  return ownsEstimator(user) || ownsPlanner(user);
+}
+
 /** Login + punya Estimator, belum Planner penuh — landing tanpa navbar marketing. */
 export function isEstimatorOnlyUser(user: User | null): boolean {
   if (!user) return false;
