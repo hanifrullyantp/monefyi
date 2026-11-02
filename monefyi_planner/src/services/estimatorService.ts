@@ -109,6 +109,26 @@ export async function loadEstimations(
   return rows;
 }
 
+export async function countLifetimeEstimations(orgId: string): Promise<number> {
+  const { data, error } = await supabase
+    .from('planner_estimation_usage')
+    .select('created_count')
+    .eq('org_id', orgId)
+    .maybeSingle();
+  if (error) {
+    if (error.code === '42P01' || error.message.includes('does not exist')) {
+      const { count, error: countError } = await supabase
+        .from('planner_estimations')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', orgId);
+      if (countError) throw new Error(countError.message);
+      return count ?? 0;
+    }
+    throw new Error(error.message);
+  }
+  return Number(data?.created_count ?? 0);
+}
+
 export async function countEstimationsInLast30Days(orgId: string): Promise<{
   count: number;
   totalAmount: number;

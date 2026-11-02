@@ -55,10 +55,11 @@ export default function RupiahInput({
       inputMode="numeric"
       value={shown}
       title={title || (value > 0 ? displayValue(value) : undefined)}
-      onFocus={() => {
+      onFocus={e => {
+        e.currentTarget.select();
         setFocused(true);
         setText(displayValue(value));
-      }}
+      }
       onBlur={() => {
         setFocused(false);
         commit(text);

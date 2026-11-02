@@ -46,6 +46,7 @@ import { displayOptionsFromDraft, type PdfSettings } from '../../types/pdfSettin
 import {
   createEstimation,
   countEstimationsInLast30Days,
+  countLifetimeEstimations,
   deleteEstimation,
   duplicateEstimation,
   estimationToFormDraft,
@@ -78,6 +79,7 @@ export default function EstimatorForm() {
 
   const [draft, setDraft] = useState<EstimationFormDraft | null>(null);
   const [loading, setLoading] = useState(true);
+  const draftStorageKey = tenant?.id && user?.id ? `monefyi-estimator-draft:${tenant.id}:${user.id}:${id || 'new'}` : null;
   const [saving, setSaving] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const draftRef = useRef<EstimationFormDraft | null>(null);
@@ -168,6 +170,8 @@ export default function EstimatorForm() {
     }
   }, [tenant?.id, user?.id, isNew, id, patch, getSavedNamedItemCount, setSavedSnapshot]);
 
+  const saveHandlerRef = useRef<() => Promise<void>>(async () => {});
+
   const autoSave = useAutoSave<EstimationFormDraft>({
     debounceMs: 1200,
     onSave: persistDraft,
@@ -176,14 +180,63 @@ export default function EstimatorForm() {
 
   const { schedule: scheduleAutoSave, discard: discardAutoSave } = autoSave;
 
+  useEffect(() => {
+    if (!draftStorageKey || !draft || loading || draft.status === 'converted') return;
+    try {
+      localStorage.setItem(draftStorageKey, JSON.stringify({ savedAt: Date.now(), draft }));
+    } catch (error) {
+      console.error('Draft lokal gagal disimpan:', error);
+    }
+  }, [draftStorageKey, draft, loading]);
+
+  useEffect(() => {
+    if (!draftStorageKey || !isNew) return;
+    try {
+      const raw = localStorage.getItem(draftStorageKey);
+      if (!raw) return;
+      const recovered = JSON.parse(raw) as { draft?: EstimationFormDraft };
+      if (recovered.draft?.code) setDraft(recovered.draft);
+    } catch (error) {
+      console.error('Draft lokal gagal dipulihkan:', error);
+    }
+  }, [draftStorageKey, isNew]);
+
+  useEffect(() => {
+    if (!draftStorageKey || isNew || !id || !draft || loading || !isDirty(draft)) return;
+    const persistOnExit = () => {
+      const latest = draftRef.current;
+      if (!latest) return;
+      try {
+        localStorage.setItem(draftStorageKey, JSON.stringify({ savedAt: Date.now(), draft: latest }));
+      } catch (error) {
+        console.error('Draft lokal gagal disimpan saat keluar:', error);
+      }
+      void updateEstimation(id, latest).catch(error => console.error('Simpan otomatis saat keluar gagal:', error));
+    };
+    window.addEventListener('pagehide', persistOnExit);
+    return () => window.removeEventListener('pagehide', persistOnExit);
+  }, [draftStorageKey, isNew, id, draft, loading, isDirty]);
+
   const handleBeforeLeaveList = useCallback(() => {
     discardAutoSave();
   }, [discardAutoSave]);
 
   const goBackToList = useCallback(() => {
-    handleBeforeLeaveList();
-    navigate('/app/estimator', { replace: true });
-  }, [handleBeforeLeaveList, navigate]);
+    if (!draftRef.current || !isDirty(draftRef.current)) {
+      handleBeforeLeaveList();
+      navigate('/app/estimator', { replace: true });
+      return;
+    }
+    const shouldSave = window.confirm('Ada perubahan belum disimpan. OK = simpan sebelum kembali; Batal = buang perubahan dan kembali.');
+    if (shouldSave) {
+      void saveHandlerRef.current().then(saved => {
+        if (saved) navigate('/app/estimator', { replace: true });
+      });
+    } else {
+      discardAutoSave();
+      navigate('/app/estimator', { replace: true });
+    }
+  }, [handleBeforeLeaveList, isDirty, navigate, discardAutoSave]);
 
   useEffect(() => {
     if (!draft || isNew || isReadOnly || loading) return;
@@ -339,8 +392,8 @@ export default function EstimatorForm() {
       let images: EstimationImageDraft[] = draft.images;
 
       if (isNew) {
-        const existing = await loadEstimations(tenant.id);
-        if (!canCreateEstimation(entitlement, existing.length)) {
+        const lifetimeCount = await countLifetimeEstimations(tenant.id);
+        if (!canCreateEstimation(entitlement, lifetimeCount)) {
           showToast(
             `Kuota gratis ${FREE_ESTIMATION_LIMIT} estimasi habis. Upgrade untuk lanjut.`,
             'error',

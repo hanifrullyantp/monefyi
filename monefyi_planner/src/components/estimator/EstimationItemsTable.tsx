@@ -58,7 +58,7 @@ export default function EstimationItemsTable({
   const [smartOpen, setSmartOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(() => new Set());
-  const [bulkUnit, setBulkUnit] = useState('');
+  const [globalQty, setGlobalQty] = useState('');
   const showToast = useUiStore(s => s.showToast);
   const cellRefs = useRef<Map<string, HTMLInputElement | HTMLSelectElement>>(new Map());
 
@@ -119,9 +119,18 @@ export default function EstimationItemsTable({
     onChange(items.filter((_, i) => i !== index));
   };
 
-  const applyBulkUnit = (unit: string) => {
-    if (readOnly || !unit) return;
-    onChange(items.map(item => ({ ...item, unit })));
+  const applyGlobalQty = (raw: string) => {
+    setGlobalQty(raw);
+    if (readOnly || raw.trim() === '') return;
+    const qty = Number(raw);
+    if (!Number.isFinite(qty) || qty < 0) return;
+    onChange(items.map(item => {
+      const merged = { ...item, qty };
+      const calc = calcItemRow(merged, 'qty');
+      const row = { ...merged, ...calc };
+      row.total_profit = effectiveItemSelling(row) - (Number(row.total_hpp) || 0);
+      return row;
+    }));
   };
 
   const toggleRowExpanded = (index: number) => {
@@ -132,8 +141,6 @@ export default function EstimationItemsTable({
       return next;
     });
   };
-
-  const bulkUnitValue = bulkUnit || items[0]?.unit || 'pcs';
 
   const shouldShowGroupHeader = (group: EstimationItemGroup) =>
     group.indices.length > 1 ||
@@ -232,17 +239,13 @@ export default function EstimationItemsTable({
           <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide shrink-0">Rincian Produk</h3>
           {!readOnly && items.length > 0 && (
             <label className="flex items-center gap-1.5 text-[10px] text-slate-500 shrink-0">
-              <span className="whitespace-nowrap">Satuan semua</span>
-              <select
-                value={bulkUnitValue}
-                onChange={e => {
-                  setBulkUnit(e.target.value);
-                  applyBulkUnit(e.target.value);
-                }}
-                className="px-1.5 py-1 text-xs border border-slate-200 rounded-lg bg-white min-w-0"
-              >
-                {COMMON_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-              </select>
+              <span className="whitespace-nowrap">Ukuran global</span>
+              <QtyInput
+                value={globalQty === '' ? (items[0]?.qty ?? 1) : Number(globalQty)}
+                onChange={v => applyGlobalQty(String(v))}
+                placeholder="Qty"
+                className="w-16 px-1.5 py-1 text-xs border border-slate-200 rounded-lg bg-white text-right"
+              />
             </label>
           )}
         </div>
@@ -256,17 +259,13 @@ export default function EstimationItemsTable({
             </div>
             {!readOnly && items.length > 0 && (
               <label className="flex items-center gap-1.5 text-xs text-slate-500">
-                <span className="whitespace-nowrap font-semibold">Satuan semua</span>
-                <select
-                  value={bulkUnitValue}
-                  onChange={e => {
-                    setBulkUnit(e.target.value);
-                    applyBulkUnit(e.target.value);
-                  }}
-                  className="px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white"
-                >
-                  {COMMON_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-                </select>
+                <span className="whitespace-nowrap font-semibold">Ukuran global</span>
+                <QtyInput
+                  value={globalQty === '' ? (items[0]?.qty ?? 1) : Number(globalQty)}
+                  onChange={v => applyGlobalQty(String(v))}
+                  placeholder="Qty"
+                  className="w-20 px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white text-right"
+                />
               </label>
             )}
           </div>

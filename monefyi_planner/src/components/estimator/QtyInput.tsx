@@ -60,7 +60,8 @@ export default function QtyInput({
       value={shown}
       title={title || (value > 0 ? displayValue(value) : undefined)}
       placeholder={placeholder}
-      onFocus={() => {
+      onFocus={e => {
+        e.currentTarget.select();
         setFocused(true);
         setText(displayValue(value));
       }}
