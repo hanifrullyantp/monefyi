@@ -30,9 +30,9 @@ export function UrgencySection() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="relative mx-auto max-w-5xl overflow-hidden rounded-[36px] border-4 border-rose-300 bg-white px-5 py-10 text-center shadow-[0_0_32px_rgba(244,63,94,0.18)] md:px-12 md:py-16"
+          className="relative mx-auto max-w-5xl overflow-hidden rounded-[36px] border-4 border-emerald-300 bg-white px-5 py-10 text-center shadow-[0_0_32px_rgba(16,185,129,0.18)] md:px-12 md:py-16"
         >
-          <span className="inline-flex rounded-full bg-rose-100 px-5 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-rose-600">
+          <span className="inline-flex rounded-full bg-emerald-100 px-5 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-700">
             <EditableText section="urgency" field="badge" value={urgency.badge} />
           </span>
           <h2 className="mx-auto mt-7 max-w-3xl text-4xl font-black uppercase leading-tight tracking-tight text-slate-900 md:text-6xl">
@@ -41,13 +41,20 @@ export function UrgencySection() {
           <p className="mt-5 text-base font-semibold leading-relaxed text-slate-600 md:text-lg">
             <EditableText section="urgency" field="narrative" value={urgency.narrative} multiline />
           </p>
-          <p className="mt-3 text-xs font-black uppercase tracking-[0.2em] text-slate-500 md:text-sm">
+          <p className="mt-3 text-xs font-black uppercase tracking-[0.2em] text-emerald-700 md:text-sm">
             <EditableText section="urgency" field="subtitle" value={urgency.subtitle} multiline />
           </p>
 
           {(isAdmin && isEditMode) ? (
             <div className="mx-auto mt-10 max-w-3xl rounded-[30px] border-2 border-dashed border-slate-400 bg-slate-900 p-6 text-left text-white shadow-xl">
               <p className="mb-4 text-xs font-bold uppercase tracking-wider text-emerald-300">Konten promo — edit semua field</p>
+              <div className="mb-5 rounded-2xl border border-emerald-400/40 bg-emerald-950/40 p-4">
+                <p className="mb-3 text-xs font-bold uppercase tracking-wider text-emerald-200">Progress slot promo</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="text-xs font-semibold text-slate-300">Total slot<input type="number" min={1} value={urgency.totalSlots} onChange={(event) => useContentStore.getState().updateField("urgency", "totalSlots", Math.max(1, Number(event.target.value)))} className="mt-1 block w-full rounded-lg border border-emerald-300/40 bg-slate-800 px-3 py-2 text-base text-white" /></label>
+                  <label className="text-xs font-semibold text-slate-300">Slot terpakai<input type="number" min={0} value={urgency.usedSlots} onChange={(event) => useContentStore.getState().updateField("urgency", "usedSlots", Math.max(0, Number(event.target.value)))} className="mt-1 block w-full rounded-lg border border-emerald-300/40 bg-slate-800 px-3 py-2 text-base text-white" /></label>
+                </div>
+              </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="text-xs font-semibold text-slate-300">Harga coret<EditableText section="urgency" field="normalPrice" value={urgency.normalPrice} className="mt-1 block text-base" /></label>
                 <label className="text-xs font-semibold text-slate-300">Harga Standard<EditableText section="urgency" field="launchPrice" value={urgency.launchPrice} className="mt-1 block text-base" /></label>
@@ -66,8 +73,24 @@ export function UrgencySection() {
             </div>
           ) : (
           <div className="mx-auto mt-10 max-w-3xl overflow-hidden rounded-[30px] bg-slate-900 text-white shadow-xl">
-            <div className="h-1.5 bg-gradient-to-r from-rose-500 via-fuchsia-500 to-rose-500" />
+            <div className="h-1.5 bg-gradient-to-r from-emerald-500 via-lime-400 to-emerald-500" />
             <div className="px-6 py-8 md:px-12 md:py-10">
+              <div className="mx-auto mb-7 max-w-xl rounded-2xl border border-emerald-400/30 bg-emerald-950/50 p-4 text-left">
+                <div className="mb-2 flex items-center justify-between gap-3 text-xs font-bold uppercase tracking-wider text-emerald-100">
+                  <span>Slot promo terbatas</span>
+                  <span>{urgency.usedSlots} / {urgency.totalSlots} terpakai</span>
+                </div>
+                <div
+                  className="h-3 overflow-hidden rounded-full bg-white/15"
+                  role="progressbar"
+                  aria-label="Slot promo terpakai"
+                  aria-valuemin={0}
+                  aria-valuemax={urgency.totalSlots}
+                  aria-valuenow={Math.min(urgency.usedSlots, urgency.totalSlots)}
+                >
+                  <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-lime-300 transition-all" style={{ width: `${urgency.totalSlots > 0 ? Math.min(100, (urgency.usedSlots / urgency.totalSlots) * 100) : 0}%` }} />
+                </div>
+              </div>
               <p className="text-xs font-black uppercase tracking-[0.35em] text-emerald-300">
                 <EditableText section="urgency" field="productTitle" value={urgency.productTitle} />
               </p>
@@ -90,7 +113,7 @@ export function UrgencySection() {
               <button
                 type="button"
                 onClick={claimOffer}
-                className="mt-8 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-rose-600 to-pink-600 px-6 py-4 text-base font-black text-white shadow-lg transition hover:brightness-110 sm:w-auto sm:min-w-72"
+                className="mt-8 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-500 px-6 py-4 text-base font-black text-white shadow-lg shadow-emerald-600/25 transition hover:brightness-110 sm:w-auto sm:min-w-72"
               >
                 <Sparkles className="h-5 w-5 shrink-0" />
                 <EditableText section="urgency" field="ctaText" value={urgency.ctaText} />

@@ -454,9 +454,9 @@ Jika iya, saya jadwalkan survei pekan ini."`,
   },
 
   urgency: {
-    badge: "PENAWARAN ESTIMATOR STANDARD",
-    title: "MULAI LEBIH RAPI, CUKUP BAYAR SEKALI",
-    subtitle: "Dapatkan Estimator Standard seharga Rp 99.000 — tanpa langganan bulanan.",
+    badge: "BONUS HARI INI!!!",
+    title: "JANGAN SAMPAI MENYESAL",
+    subtitle: "HANYA UNTUK 20 ORANG TERCEPAT SAJA",
     totalSlots: 20,
     usedSlots: 0,
     normalPrice: "Rp 399.000",

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Check, X, Star } from "lucide-react";
+import { Check, X, Star, Plus, Trash2 } from "lucide-react";
 import { Container } from "@/components/shared/Container";
 import { EditableText } from "@/components/shared/EditableText";
 import { useContentStore } from "@/lib/store/contentStore";
@@ -50,7 +50,7 @@ export function PricingSection() {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-3 gap-6 items-stretch mb-8">
           {pricing.cards.map((card, index) => (
             <PricingPlanCard key={card.id} card={card} index={index} onCta={onCta} />
           ))}
@@ -157,9 +157,31 @@ function PricingPlanCard({
         {isAdmin && isEditMode && card.features.map((feature, featureIndex) => (
           <li key={`${card.id}-edit-feature-${featureIndex}`} className="flex items-start gap-2 text-xs text-white/80">
             <Check className="w-4 h-4 mt-0.5 shrink-0 text-emerald-300" />
-            <EditableText section="pricing" field={`${cardPath}.features.${featureIndex}.text`} value={feature.text} multiline />
+            <span className="min-w-0 flex-1"><EditableText section="pricing" field={`${cardPath}.features.${featureIndex}.text`} value={feature.text} multiline /></span>
+            <button
+              type="button"
+              aria-label={`Hapus fitur ${feature.text}`}
+              onClick={() => {
+                const features = card.features.filter((_, currentIndex) => currentIndex !== featureIndex);
+                useContentStore.getState().updateField("pricing", `${cardPath}.features`, features);
+              }}
+              className="ml-auto shrink-0 rounded p-1 text-rose-300 hover:bg-rose-500/20"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
           </li>
         ))}
+        {isAdmin && isEditMode && (
+          <li>
+            <button
+              type="button"
+              onClick={() => useContentStore.getState().updateField("pricing", `${cardPath}.features`, [...card.features, { text: "Fitur baru", included: true }])}
+              className="inline-flex items-center gap-2 rounded-lg border border-dashed border-emerald-400/60 px-3 py-2 text-xs font-bold text-emerald-300 hover:bg-emerald-500/10"
+            >
+              <Plus className="h-3.5 w-3.5" /> Tambah Fitur
+            </button>
+          </li>
+        )}
       </ul>
 
       <details className={cn("mb-4 text-sm", highlighted ? "text-[var(--muted)]" : "text-white/60")}>
