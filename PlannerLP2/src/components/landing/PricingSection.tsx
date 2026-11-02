@@ -3,27 +3,31 @@
 import { motion } from "framer-motion";
 import { Check, X, Star } from "lucide-react";
 import { Container } from "@/components/shared/Container";
+import { EditableText } from "@/components/shared/EditableText";
+import { useContentStore } from "@/lib/store/contentStore";
 import { cn } from "@/lib/utils/cn";
 import { useLandingCta } from "@/lib/hooks/useLandingCta";
-import {
-  ESTIMATOR_PLANS,
-  PRICING_FOOTNOTE,
-  formatIdr,
-  type EstimatorPlanId,
-} from "@/lib/pricing/plans";
+import { useLandingAdmin } from "@/lib/hooks/useLandingAdmin";
 import { trackEvent } from "@/lib/analytics/events";
 import { plannerAppPath } from "@/lib/config/plannerApp";
+import type { PricingCard } from "@/lib/types/content";
 
 export function PricingSection() {
+  const { content } = useContentStore();
+  const { pricing } = content;
   const { startCheckout } = useLandingCta();
+  const { isAdmin, isEditMode } = useLandingAdmin();
 
-  const onCta = (planId: EstimatorPlanId) => {
+  const onCta = (planId: string) => {
+    if (isAdmin && isEditMode) return;
     trackEvent("checkout_start", { plan: planId });
     if (planId === "free") {
       window.location.href = plannerAppPath("/app/estimator?plan=free");
       return;
     }
-    void startCheckout(planId);
+    if (planId === "estimator-standard" || planId === "estimator-pro") {
+      void startCheckout(planId);
+    }
   };
 
   return (
@@ -36,112 +40,158 @@ export function PricingSection() {
           className="text-center max-w-2xl mx-auto mb-12"
         >
           <span className="inline-block bg-[var(--accent-warm)] text-[var(--ink)] rounded-full px-4 py-1.5 text-xs font-bold tracking-wider uppercase mb-4">
-            Paket
+            <EditableText section="pricing" field="badge" value={pricing.badge} />
           </span>
           <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-3">
-            Pilih paket yang cocok buat bisnismu
+            <EditableText section="pricing" field="title" value={pricing.title} />
           </h2>
           <p className="text-[var(--brand-400)] text-base md:text-lg">
-            Sekali bayar. Tanpa langganan bulanan. Mulai gratis kalau mau coba dulu.
+            <EditableText section="pricing" field="subtitle" value={pricing.subtitle} multiline />
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch mb-8">
-          {ESTIMATOR_PLANS.map((plan, i) => (
-            <motion.div
-              key={plan.id}
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.08 }}
-              className={cn(
-                "rounded-2xl p-6 md:p-8 flex flex-col relative",
-                plan.highlighted
-                  ? "bg-white text-[var(--ink)] border-2 border-[var(--brand-600)] shadow-2xl md:-translate-y-2"
-                  : "bg-white/5 border border-white/10 text-white",
-              )}
-            >
-              {plan.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="inline-flex items-center gap-1 bg-[var(--accent-warm)] text-[var(--ink)] px-4 py-1.5 rounded-full text-xs font-bold shadow">
-                    <Star className="w-3.5 h-3.5 fill-current" />
-                    {plan.badge}
-                  </span>
-                </div>
-              )}
-
-              {!plan.popular && (
-                <span
-                  className={cn(
-                    "inline-block text-[10px] font-bold rounded-full px-3 py-1 mb-3 w-fit",
-                    plan.highlighted ? "bg-[var(--surface-alt)] text-[var(--muted)]" : "bg-white/10 text-[var(--brand-400)]",
-                  )}
-                >
-                  {plan.badge}
-                </span>
-              )}
-
-              {plan.popular && <div className="h-4" />}
-
-              <h3 className="text-xl font-extrabold mb-1">{plan.title}</h3>
-              <p className={cn("text-sm mb-4", plan.highlighted ? "text-[var(--muted)]" : "text-white/70")}>
-                {plan.fitFor}
-              </p>
-
-              <div className="mb-2">
-                <span className="text-3xl md:text-4xl font-black tracking-tight">
-                  {formatIdr(plan.priceIdr)}
-                </span>
-                <span className={cn("block text-xs mt-1 font-semibold", plan.highlighted ? "text-[var(--muted)]" : "text-white/50")}>
-                  {plan.pricePeriod} · {plan.priceNote}
-                </span>
-              </div>
-
-              <ul className="space-y-2 my-6 flex-1">
-                {plan.whyChoose.map((w) => (
-                  <li key={w} className="flex items-start gap-2 text-sm font-medium">
-                    <Check className={cn("w-4 h-4 mt-0.5 shrink-0", plan.highlighted ? "text-[var(--brand-600)]" : "text-[var(--brand-400)]")} />
-                    {w}
-                  </li>
-                ))}
-              </ul>
-
-              <details className={cn("mb-4 text-sm", plan.highlighted ? "text-[var(--muted)]" : "text-white/60")}>
-                <summary className="cursor-pointer font-semibold list-none underline-offset-2 hover:underline">
-                  Lihat semua fitur
-                </summary>
-                <ul className="mt-3 space-y-2">
-                  {plan.features.map((f) => (
-                    <li key={f.text} className="flex items-start gap-2">
-                      {f.included ? (
-                        <Check className="w-4 h-4 mt-0.5 text-[var(--brand-600)] shrink-0" />
-                      ) : (
-                        <X className="w-4 h-4 mt-0.5 text-slate-400 shrink-0" />
-                      )}
-                      <span className={!f.included ? "opacity-50" : ""}>{f.text}</span>
-                    </li>
-                  ))}
-                </ul>
-              </details>
-
-              <button
-                type="button"
-                onClick={() => onCta(plan.id)}
-                className={cn(
-                  "w-full min-h-[48px] rounded-xl font-bold text-sm md:text-base transition-colors",
-                  plan.highlighted
-                    ? "btn-brand"
-                    : "bg-white/10 hover:bg-white/20 text-white border border-white/20",
-                )}
-              >
-                {plan.ctaText}
-              </button>
-            </motion.div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch mb-8">
+          {pricing.cards.map((card, index) => (
+            <PricingPlanCard key={card.id} card={card} index={index} onCta={onCta} />
           ))}
         </div>
 
-        <p className="text-center text-xs text-white/50 max-w-xl mx-auto">{PRICING_FOOTNOTE}</p>
+        <p className="text-center text-xs text-white/50 max-w-xl mx-auto">
+          <EditableText section="pricing" field="footnote" value={pricing.footnote} multiline />
+        </p>
       </Container>
     </section>
+  );
+}
+
+function PricingPlanCard({
+  card,
+  index,
+  onCta,
+}: {
+  card: PricingCard;
+  index: number;
+  onCta: (planId: string) => void;
+}) {
+  const { isAdmin, isEditMode } = useLandingAdmin();
+  const cardPath = `cards.${index}`;
+  const isFree = card.id === "free";
+  const highlighted = card.highlighted;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: index * 0.08 }}
+      className={cn(
+        "rounded-2xl p-6 md:p-8 flex flex-col relative",
+        highlighted
+          ? "bg-white text-[var(--ink)] border-2 border-[var(--brand-600)] shadow-2xl md:-translate-y-2"
+          : "bg-white/5 border border-white/10 text-white",
+      )}
+    >
+      {isAdmin && isEditMode && (
+        <div className="mb-4 rounded-xl border border-dashed border-emerald-400 bg-emerald-50/10 p-3 text-xs text-white">
+          <p className="mb-2 font-bold uppercase tracking-wide text-emerald-300">Edit paket</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <label>Badge<EditableText section="pricing" field={`${cardPath}.badge`} value={card.badge} className="mt-1 block text-sm" /></label>
+            <label>Judul<EditableText section="pricing" field={`${cardPath}.title`} value={card.title} className="mt-1 block text-sm" /></label>
+            <label className="sm:col-span-2">Deskripsi<EditableText section="pricing" field={`${cardPath}.subtitle`} value={card.subtitle} className="mt-1 block text-sm" multiline /></label>
+            <label>Harga coret<EditableText section="pricing" field={`${cardPath}.originalPrice`} value={card.originalPrice ?? ""} className="mt-1 block text-sm" /></label>
+            <label>Harga jual<EditableText section="pricing" field={`${cardPath}.price`} value={card.price} className="mt-1 block text-sm" /></label>
+            <label>Periode<EditableText section="pricing" field={`${cardPath}.pricePeriod`} value={card.pricePeriod} className="mt-1 block text-sm" /></label>
+            <label>Catatan harga<EditableText section="pricing" field={`${cardPath}.priceNote`} value={card.priceNote ?? ""} className="mt-1 block text-sm" /></label>
+            <label className="sm:col-span-2">Badge hemat<EditableText section="pricing" field={`${cardPath}.savingsBadge`} value={card.savingsBadge ?? ""} className="mt-1 block text-sm" /></label>
+                <label className="sm:col-span-2">Teks tombol<EditableText section="pricing" field={`${cardPath}.ctaText`} value={card.ctaText} className="mt-1 block text-sm" /></label>
+                <label>Badge populer
+                  <button type="button" onClick={() => useContentStore.getState().updateField("pricing", `${cardPath}.highlighted`, !card.highlighted)} className="mt-1 block rounded-md bg-white/10 px-2 py-1 text-sm">{card.highlighted ? "Ya" : "Tidak"}</button>
+                </label>
+          </div>
+        </div>
+      )}
+      {card.badge && (
+        <div className={cn(
+          "inline-flex items-center gap-1 rounded-full px-4 py-1.5 text-xs font-bold shadow w-fit mb-4",
+          highlighted ? "bg-[var(--accent-warm)] text-[var(--ink)]" : "bg-white/10 text-[var(--brand-400)]",
+        )}>
+          {highlighted && <Star className="w-3.5 h-3.5 fill-current" />}
+          <EditableText section="pricing" field={`${cardPath}.badge`} value={card.badge} />
+        </div>
+      )}
+
+      <h3 className="text-xl font-extrabold mb-1">
+        <EditableText section="pricing" field={`${cardPath}.title`} value={card.title} />
+      </h3>
+      <p className={cn("text-sm mb-4", highlighted ? "text-[var(--muted)]" : "text-white/70")}>
+        <EditableText section="pricing" field={`${cardPath}.subtitle`} value={card.subtitle} multiline />
+      </p>
+
+      <div className="mb-2">
+        {card.originalPrice && (
+          <p className={cn("text-sm font-semibold line-through", highlighted ? "text-slate-400" : "text-white/50")}>
+            <EditableText section="pricing" field={`${cardPath}.originalPrice`} value={card.originalPrice} />
+          </p>
+        )}
+        <span className="text-3xl md:text-4xl font-black tracking-tight">
+          <EditableText section="pricing" field={`${cardPath}.price`} value={card.price} />
+        </span>
+        <span className={cn("block text-xs mt-1 font-semibold", highlighted ? "text-[var(--muted)]" : "text-white/50")}>
+          <EditableText section="pricing" field={`${cardPath}.pricePeriod`} value={card.pricePeriod} />
+          {card.priceNote && <> · <EditableText section="pricing" field={`${cardPath}.priceNote`} value={card.priceNote} /></>}
+        </span>
+        {card.savingsBadge && (
+          <span className="inline-block mt-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">
+            <EditableText section="pricing" field={`${cardPath}.savingsBadge`} value={card.savingsBadge} />
+          </span>
+        )}
+      </div>
+
+      <ul className="space-y-2 my-6 flex-1">
+        {card.whyChoose.map((item, itemIndex) => (
+          <li key={`${card.id}-why-${itemIndex}`} className="flex items-start gap-2 text-sm font-medium">
+            <Check className={cn("w-4 h-4 mt-0.5 shrink-0", highlighted ? "text-[var(--brand-600)]" : "text-[var(--brand-400)]")} />
+            <EditableText section="pricing" field={`${cardPath}.whyChoose.${itemIndex}`} value={item} multiline />
+          </li>
+        ))}
+        {isAdmin && isEditMode && card.features.map((feature, featureIndex) => (
+          <li key={`${card.id}-edit-feature-${featureIndex}`} className="flex items-start gap-2 text-xs text-white/80">
+            <Check className="w-4 h-4 mt-0.5 shrink-0 text-emerald-300" />
+            <EditableText section="pricing" field={`${cardPath}.features.${featureIndex}.text`} value={feature.text} multiline />
+          </li>
+        ))}
+      </ul>
+
+      <details className={cn("mb-4 text-sm", highlighted ? "text-[var(--muted)]" : "text-white/60")}>
+        <summary className="cursor-pointer font-semibold list-none underline-offset-2 hover:underline">Lihat semua fitur</summary>
+        <ul className="mt-3 space-y-2">
+          {card.features.map((feature, featureIndex) => (
+            <li key={`${card.id}-feature-${featureIndex}`} className="flex items-start gap-2">
+              {feature.included ? (
+                <Check className="w-4 h-4 mt-0.5 text-[var(--brand-600)] shrink-0" />
+              ) : (
+                <X className="w-4 h-4 mt-0.5 text-slate-400 shrink-0" />
+              )}
+              <span className={!feature.included ? "opacity-50" : ""}>
+                <EditableText section="pricing" field={`${cardPath}.features.${featureIndex}.text`} value={feature.text} multiline />
+              </span>
+            </li>
+          ))}
+        </ul>
+      </details>
+
+      <button
+        type="button"
+        onClick={() => onCta(isFree ? "free" : card.id)}
+        className={cn(
+          "w-full min-h-[48px] rounded-xl font-bold text-sm md:text-base transition-colors",
+          highlighted ? "btn-brand" : "bg-white/10 hover:bg-white/20 text-white border border-white/20",
+        )}
+      >
+        {isAdmin && isEditMode ? card.ctaText : (
+          <EditableText section="pricing" field={`${cardPath}.ctaText`} value={card.ctaText} />
+        )}
+      </button>
+    </motion.div>
   );
 }

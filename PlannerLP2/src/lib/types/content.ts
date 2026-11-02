@@ -208,6 +208,12 @@ export interface UrgencyContent {
   launchPrice: string;
   bonusText: string;
   limitedBadge: string;
+  narrative: string;
+  productSummary: string;
+  ctaText: string;
+  accessText: string;
+  bonusAccessText: string;
+  productTitle: string;
 }
 
 export interface PricingFeature {
@@ -257,6 +263,7 @@ export interface PricingContent {
   badge: string;
   title: string;
   subtitle: string;
+  footnote: string;
   cards: PricingCard[];
   comparisonRows: ComparisonTableRow[];
   recommendations: PricingRecommendation[];

@@ -59,9 +59,24 @@ export function mergeSiteContent(raw: Partial<SiteContent> | null | undefined): 
             : defaultContent.hero.headlineAnimated.rotatingWords,
       },
     },
+    urgency: {
+      ...defaultContent.urgency,
+      ...(raw.urgency || {}),
+    },
     pricing: {
       ...defaultContent.pricing,
       ...(raw.pricing || {}),
+      cards: raw.pricing?.cards?.length
+        ? [
+            ...defaultContent.pricing.cards.map((defaultCard) => ({
+              ...defaultCard,
+              ...raw.pricing?.cards?.find((card) => card.id === defaultCard.id),
+            })),
+            ...raw.pricing.cards.filter(
+              (card) => !defaultContent.pricing.cards.some((defaultCard) => defaultCard.id === card.id),
+            ),
+          ]
+        : defaultContent.pricing.cards,
       lynkCheckoutUrls: {
         ...defaultContent.pricing.lynkCheckoutUrls,
         ...(raw.pricing?.lynkCheckoutUrls || {}),

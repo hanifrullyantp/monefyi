@@ -64,13 +64,29 @@ export const useContentStore = create<ContentStore>()(
 
       updateField: (section, field, value) => {
         set((state) => {
-          const content = {
-            ...state.content,
-            [section]: {
-              ...(state.content[section] as object),
-              [field]: value,
-            },
-          };
+          const path = field.split(".").filter(Boolean);
+          const currentSection = state.content[section] as Record<string, unknown>;
+          const updatedSection = structuredClone(currentSection);
+          let target: Record<string, unknown> | unknown[] = updatedSection;
+
+          for (const segment of path.slice(0, -1)) {
+            const key: string | number = Array.isArray(target) && /^\d+$/.test(segment)
+              ? Number(segment)
+              : segment;
+            const next = (target as Record<string | number, unknown>)[key];
+            if (!next || typeof next !== "object") break;
+            target = next as Record<string, unknown> | unknown[];
+          }
+
+          const finalSegment = path.at(-1);
+          if (finalSegment !== undefined) {
+            const key: string | number = Array.isArray(target) && /^\d+$/.test(finalSegment)
+              ? Number(finalSegment)
+              : finalSegment;
+            (target as Record<string | number, unknown>)[key] = value;
+          }
+
+          const content = { ...state.content, [section]: updatedSection } as SiteContent;
           writeCachedContent(content);
           return { content, isDirty: true, publishError: null };
         });
