@@ -2,24 +2,20 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, Sparkles, X } from "lucide-react";
+import { ArrowRight, ShoppingCart, Sparkles, X } from "lucide-react";
 import { useAuthStore } from "@/lib/store/authStore";
 import { useLandingAdmin } from "@/lib/hooks/useLandingAdmin";
 import { useUIStore } from "@/lib/store/uiStore";
 import { ownsEstimator } from "@/lib/permissions";
 import { trackEvent } from "@/lib/analytics/events";
 import { plannerAppPath } from "@/lib/config/plannerApp";
+import { useContentStore } from "@/lib/store/contentStore";
+import { useLandingCta } from "@/lib/hooks/useLandingCta";
 
 const STORAGE_KEY = "estimator_free_trial_popup_v1";
-const MIN_ENGAGE_MS = 8_000;
-const IDLE_MS = 45_000;
 const SUPPRESS_MS = 24 * 60 * 60 * 1000;
 
-type Trigger =
-  | "exit_intent"
-  | "return_to_page"
-  | "scroll_bottom"
-  | "idle_engaged";
+type Trigger = "exit_intent" | "back_button" | "idle";
 
 type StoredState = {
   dismissedAt?: number;
@@ -38,41 +34,35 @@ function readStore(): StoredState {
 
 function writeStore(patch: StoredState) {
   try {
-    const next = { ...readStore(), ...patch };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...readStore(), ...patch }));
   } catch {
-    /* ignore */
+    // Storage may be unavailable in private browsing; popup still works for this visit.
   }
 }
 
 function isSuppressed(): boolean {
-  const s = readStore();
-  if (s.convertedAt) return true;
-  if (s.dismissedAt && Date.now() - s.dismissedAt < SUPPRESS_MS) return true;
-  return false;
+  const state = readStore();
+  if (state.convertedAt) return true;
+  return Boolean(state.dismissedAt && Date.now() - state.dismissedAt < SUPPRESS_MS);
 }
 
-/**
- * Popup retensi: dorong coba gratis Estimator tanpa menyebut kuota.
- * Trigger: exit intent, kembali ke tab, scroll bawah, idle setelah membaca.
- */
+/** Popup relink: tawarkan akses gratis dan checkout Standard saat pengunjung hendak pergi. */
 export function FreeTrialPopup() {
   const hydrated = useAuthStore((s) => s.hydrated);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
   const { isAdmin, isEditMode } = useLandingAdmin();
   const isLoginModalOpen = useUIStore((s) => s.isLoginModalOpen);
+  const config = useContentStore((s) => s.content.relinkPopup);
+  const { startCheckout } = useLandingCta();
 
   const [open, setOpen] = useState(false);
   const [trigger, setTrigger] = useState<Trigger | null>(null);
-
   const shownRef = useRef(false);
-  const engagedAt = useRef(0);
-  const leftTabRef = useRef(false);
-  const scrolledRef = useRef(0);
-  const idleTimer = useRef<number | null>(null);
+  const idleTimerRef = useRef<number | null>(null);
 
   const eligible =
+    config.enabled &&
     hydrated &&
     !isAuthenticated &&
     !isAdmin &&
@@ -82,17 +72,14 @@ export function FreeTrialPopup() {
 
   const tryOpen = useCallback(
     (reason: Trigger) => {
-      if (!eligible || shownRef.current || open) return;
-      if (typeof window === "undefined") return;
-      if (isSuppressed()) return;
-      if (Date.now() - engagedAt.current < MIN_ENGAGE_MS) return;
-
+      if (!eligible || shownRef.current || isSuppressed()) return false;
       shownRef.current = true;
       setTrigger(reason);
       setOpen(true);
       trackEvent("free_trial_popup_view", { source: reason });
+      return true;
     },
-    [eligible, open],
+    [eligible],
   );
 
   const dismiss = useCallback(() => {
@@ -101,83 +88,69 @@ export function FreeTrialPopup() {
     trackEvent("free_trial_popup_dismiss", { source: trigger ?? "unknown" });
   }, [trigger]);
 
-  const cta = () => {
+  const tryFreeApp = () => {
     writeStore({ convertedAt: Date.now() });
     trackEvent("free_trial_popup_cta", { source: trigger ?? "unknown" });
     trackEvent("free_signup", { source: `popup_${trigger ?? "unknown"}` });
     window.location.href = plannerAppPath("/app/estimator?plan=free");
   };
 
+  const buyStandard = () => {
+    writeStore({ convertedAt: Date.now() });
+    trackEvent("free_trial_popup_cta", { source: `purchase_${trigger ?? "unknown"}` });
+    void startCheckout("estimator-standard");
+  };
+
   useEffect(() => {
     if (!eligible) return;
-    engagedAt.current = Date.now();
 
-    const onMouseOut = (e: MouseEvent) => {
-      if (e.clientY > 12) return;
-      if (e.relatedTarget != null) return;
+    const onMouseOut = (event: MouseEvent) => {
+      if (event.clientY > 12 || event.relatedTarget != null) return;
       tryOpen("exit_intent");
     };
 
-    const onVisibility = () => {
-      if (document.visibilityState === "hidden") {
-        leftTabRef.current = true;
-        return;
+    const armIdleTimer = () => {
+      if (idleTimerRef.current !== null) window.clearTimeout(idleTimerRef.current);
+      const minutes = Math.max(1, Math.min(120, Number(config.idleMinutes) || 10));
+      idleTimerRef.current = window.setTimeout(() => tryOpen("idle"), minutes * 60_000);
+    };
+
+    const onBack = () => {
+      if (tryOpen("back_button")) {
+        // Restore an entry so the first back action opens the relink prompt, not a new page.
+        window.history.pushState({ relinkPrompt: true }, "", window.location.href);
       }
-      if (leftTabRef.current && document.visibilityState === "visible") {
-        leftTabRef.current = false;
-        window.setTimeout(() => tryOpen("return_to_page"), 400);
-      }
     };
 
-    const onScroll = () => {
-      const doc = document.documentElement;
-      const max = doc.scrollHeight - window.innerHeight;
-      if (max <= 0) return;
-      const pct = (window.scrollY / max) * 100;
-      scrolledRef.current = Math.max(scrolledRef.current, pct);
-      if (pct >= 88) tryOpen("scroll_bottom");
-      bumpIdle();
-    };
-
-    const bumpIdle = () => {
-      if (idleTimer.current) window.clearTimeout(idleTimer.current);
-      idleTimer.current = window.setTimeout(() => {
-        if (scrolledRef.current >= 18) tryOpen("idle_engaged");
-      }, IDLE_MS);
-    };
-
-    const onPageShow = (e: PageTransitionEvent) => {
-      if (e.persisted) window.setTimeout(() => tryOpen("return_to_page"), 300);
-    };
-
+    window.history.pushState({ relinkPrompt: true }, "", window.location.href);
+    window.addEventListener("popstate", onBack);
     document.addEventListener("mouseout", onMouseOut);
-    document.addEventListener("visibilitychange", onVisibility);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("pageshow", onPageShow);
-    window.addEventListener("pointerdown", bumpIdle, { passive: true });
-    bumpIdle();
+    ["pointerdown", "keydown", "touchstart", "scroll"].forEach((eventName) => {
+      window.addEventListener(eventName, armIdleTimer, { passive: true });
+    });
+    armIdleTimer();
 
     return () => {
+      window.removeEventListener("popstate", onBack);
       document.removeEventListener("mouseout", onMouseOut);
-      document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("pageshow", onPageShow);
-      window.removeEventListener("pointerdown", bumpIdle);
-      if (idleTimer.current) window.clearTimeout(idleTimer.current);
+      ["pointerdown", "keydown", "touchstart", "scroll"].forEach((eventName) => {
+        window.removeEventListener(eventName, armIdleTimer);
+      });
+      if (idleTimerRef.current !== null) window.clearTimeout(idleTimerRef.current);
     };
-  }, [eligible, tryOpen]);
+  }, [config.idleMinutes, eligible, tryOpen]);
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") dismiss();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") dismiss();
     };
     window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
+    const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      document.body.style.overflow = previousOverflow;
     };
   }, [open, dismiss]);
 
@@ -199,59 +172,48 @@ export function FreeTrialPopup() {
             aria-label="Tutup"
             onClick={dismiss}
           />
-
           <motion.div
             initial={{ opacity: 0, y: 28, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.98 }}
             transition={{ type: "spring", stiffness: 320, damping: 28 }}
-            className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl border border-[var(--surface-alt)] overflow-hidden"
+            className="relative w-full max-w-md overflow-hidden rounded-2xl border border-[var(--surface-alt)] bg-white shadow-2xl"
           >
-            <div
-              className="h-1.5 w-full"
-              style={{ background: "var(--brand-gradient)" }}
-              aria-hidden
-            />
-
+            <div className="h-1.5 w-full" style={{ background: "var(--brand-gradient)" }} aria-hidden />
             <button
               type="button"
               onClick={dismiss}
-              className="absolute top-3 right-3 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl text-[var(--muted)] hover:bg-[var(--surface-soft)]"
+              className="absolute right-3 top-3 inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-[var(--muted)] hover:bg-[var(--surface-soft)]"
               aria-label="Tutup popup"
             >
-              <X className="w-5 h-5" />
+              <X className="h-5 w-5" />
             </button>
-
             <div className="p-6 pt-5">
-              <div className="inline-flex items-center gap-2 rounded-full bg-[var(--surface-soft)] border border-[var(--surface-alt)] px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-[var(--brand-600)] mb-4">
-                <Sparkles className="w-3.5 h-3.5" />
-                Coba gratis
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--surface-alt)] bg-[var(--surface-soft)] px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-[var(--brand-600)]">
+                <Sparkles className="h-3.5 w-3.5" /> Coba gratis
               </div>
-
-              <h2
-                id="free-trial-title"
-                className="text-xl md:text-2xl font-extrabold text-[var(--ink)] tracking-tight leading-snug pr-8"
-              >
-                Belum siap bayar? Coba Estimator dulu.
+              <h2 id="free-trial-title" className="pr-8 text-xl font-extrabold leading-snug tracking-tight text-[var(--ink)] md:text-2xl">
+                {config.title}
               </h2>
-              <p className="mt-3 text-[15px] text-[var(--muted)] leading-relaxed">
-                Hitung harga di HP, lihat hasilnya, lalu kirim PDF — tanpa kartu kredit.
-                Kalau cocok, baru upgrade.
-              </p>
-
+              <p className="mt-3 text-[15px] leading-relaxed text-[var(--muted)]">{config.body}</p>
               <button
                 type="button"
-                onClick={cta}
-                className="mt-6 w-full btn-brand inline-flex items-center justify-center gap-2 min-h-[48px] text-base"
+                onClick={tryFreeApp}
+                className="btn-brand mt-6 inline-flex min-h-[48px] w-full items-center justify-center gap-2 text-base"
               >
-                Coba Gratis Sekarang
-                <ArrowRight className="w-4 h-4" />
+                {config.freeCtaText}<ArrowRight className="h-4 w-4" />
               </button>
-
+              <button
+                type="button"
+                onClick={buyStandard}
+                className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-extrabold text-amber-950 transition hover:bg-amber-100"
+              >
+                <ShoppingCart className="h-4 w-4" />{config.purchaseCtaText}
+              </button>
               <button
                 type="button"
                 onClick={dismiss}
-                className="mt-3 w-full text-sm font-semibold text-[var(--muted)] hover:text-[var(--ink)] min-h-[44px]"
+                className="mt-2 min-h-[44px] w-full text-sm font-semibold text-[var(--muted)] hover:text-[var(--ink)]"
               >
                 Nanti saja
               </button>

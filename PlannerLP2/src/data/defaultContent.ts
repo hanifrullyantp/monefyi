@@ -722,6 +722,15 @@ Jika iya, saya jadwalkan survei pekan ini."`,
     notifications: [],
   },
 
+  relinkPopup: {
+    enabled: true,
+    idleMinutes: 10,
+    title: "Coba Estimator gratis dulu",
+    body: "Belum siap membeli? Coba aplikasi gratis untuk membuat estimasi dan melihat alurnya. Jika cocok, lanjutkan ke paket Standard seharga Rp 99.000.",
+    freeCtaText: "Coba Aplikasi Gratis",
+    purchaseCtaText: "Beli Standard — Rp 99.000",
+  },
+
   sectionOrder: [
     "hero",
     "trustBadges",

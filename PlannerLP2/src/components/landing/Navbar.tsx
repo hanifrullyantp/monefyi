@@ -94,9 +94,16 @@ export function Navbar() {
               <BrandLogo variant="mark" size={32} />
               <span className="text-[18px] font-bold tracking-tight text-[var(--ink)]">Estimator</span>
             </button>
-            <Link href="/bonus" className="lp-btn-nav inline-flex items-center gap-2 rounded-xl bg-amber-400 px-4 py-2 font-bold text-slate-950 hover:bg-amber-300">
-              Klaim Bonus <ArrowRight className="h-4 w-4" />
-            </Link>
+            <div className="flex items-center gap-2">
+              <a href={plannerAppPath("/app")} className="lp-btn-nav inline-flex items-center rounded-xl bg-emerald-600 px-4 py-2 font-bold text-white hover:bg-emerald-700">
+                Masuk ke Aplikasi
+              </a>
+              {showBonusLink && (
+                <Link href="/bonus" className="lp-btn-nav inline-flex items-center gap-2 rounded-xl bg-amber-400 px-4 py-2 font-bold text-slate-950 hover:bg-amber-300">
+                  Klaim Bonus <ArrowRight className="h-4 w-4" />
+                </Link>
+              )}
+            </div>
           </div>
         </div>
         <Suspense fallback={null}>
@@ -151,19 +158,19 @@ export function Navbar() {
             )}
 
             <div className="hidden lg:flex items-center gap-2">
-              {showBonusLink && (
-                <Link href="/bonus" className="lp-btn-nav bg-amber-400 text-slate-950 hover:bg-amber-300">
-                  Klaim Bonus
-                </Link>
-              )}
               {hydrated && isAuthenticated ? (
                 <a href={plannerAppPath("/app")} className="lp-btn-nav lp-btn-ghost">
-                  Masuk
+                  Masuk ke Aplikasi
                 </a>
               ) : (
                 <button type="button" onClick={openLogin} className="lp-btn-nav lp-btn-ghost">
                   Masuk
                 </button>
+              )}
+              {showBonusLink && (
+                <Link href="/bonus" className="lp-btn-nav bg-amber-400 text-slate-950 hover:bg-amber-300">
+                  Klaim Bonus
+                </Link>
               )}
               {showCobaGratis && (
                 <button type="button" onClick={cobaGratis} className="lp-btn-nav btn-brand">
@@ -267,7 +274,7 @@ export function Navbar() {
                     className="text-left px-4 py-3 rounded-xl font-bold flex items-center gap-2 lp-btn-ghost"
                   >
                     <LayoutDashboard className="w-4 h-4" />
-                    Masuk
+                    Masuk ke Aplikasi
                   </a>
                   {showAdminLink && (
                     <>

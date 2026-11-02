@@ -1,19 +1,21 @@
 import type { ComponentType } from "react";
+import dynamic from "next/dynamic";
 import { HeroSection } from "@/components/landing/HeroSection";
-import { TrustBadges } from "@/components/landing/TrustBadges";
-import { RelatableSection } from "@/components/landing/RelatableSection";
-import { ThreeStepSection } from "@/components/landing/ThreeStepSection";
-import { CalculatorSection } from "@/components/landing/CalculatorSection";
-import { TestimonialSection } from "@/components/landing/TestimonialSection";
-import { PricingSection } from "@/components/landing/PricingSection";
-import { GuaranteeSection } from "@/components/landing/GuaranteeSection";
-import { FAQSection } from "@/components/landing/FAQSection";
-import { FinalCTASection } from "@/components/landing/FinalCTASection";
-import { FooterSection } from "@/components/landing/FooterSection";
-import { FeaturesSection } from "@/components/landing/FeaturesSection";
-import { ComparisonSection } from "@/components/landing/ComparisonSection";
-import { FreeToolsSection } from "@/components/landing/FreeToolsSection";
-import { UrgencySection } from "@/components/landing/UrgencySection";
+
+const TrustBadges = dynamic(() => import("@/components/landing/TrustBadges").then((m) => m.TrustBadges));
+const RelatableSection = dynamic(() => import("@/components/landing/RelatableSection").then((m) => m.RelatableSection));
+const ThreeStepSection = dynamic(() => import("@/components/landing/ThreeStepSection").then((m) => m.ThreeStepSection));
+const CalculatorSection = dynamic(() => import("@/components/landing/CalculatorSection").then((m) => m.CalculatorSection));
+const TestimonialSection = dynamic(() => import("@/components/landing/TestimonialSection").then((m) => m.TestimonialSection));
+const PricingSection = dynamic(() => import("@/components/landing/PricingSection").then((m) => m.PricingSection));
+const GuaranteeSection = dynamic(() => import("@/components/landing/GuaranteeSection").then((m) => m.GuaranteeSection));
+const FAQSection = dynamic(() => import("@/components/landing/FAQSection").then((m) => m.FAQSection));
+const FinalCTASection = dynamic(() => import("@/components/landing/FinalCTASection").then((m) => m.FinalCTASection));
+const FooterSection = dynamic(() => import("@/components/landing/FooterSection").then((m) => m.FooterSection));
+const FeaturesSection = dynamic(() => import("@/components/landing/FeaturesSection").then((m) => m.FeaturesSection));
+const ComparisonSection = dynamic(() => import("@/components/landing/ComparisonSection").then((m) => m.ComparisonSection));
+const FreeToolsSection = dynamic(() => import("@/components/landing/FreeToolsSection").then((m) => m.FreeToolsSection));
+const UrgencySection = dynamic(() => import("@/components/landing/UrgencySection").then((m) => m.UrgencySection));
 
 /** Landing sections are configurable through CMS and default to the full conversion flow. */
 export const LANDING_SECTIONS = [
@@ -78,12 +80,18 @@ export function resolveSectionOrder(savedOrder: string[] | undefined): LandingSe
   const base = savedOrder?.length
     ? savedOrder.filter((k): k is LandingSectionKey => known.has(k as LandingSectionKey))
     : [];
-  if (!base.length) return [...DEFAULT_SECTION_ORDER];
-  const merged = [...base];
+  const merged = base.length ? [...base] : [...DEFAULT_SECTION_ORDER];
   for (const key of DEFAULT_SECTION_ORDER) {
     if (!merged.includes(key)) merged.push(key);
   }
-  return merged;
+
+  // Keep the bonus and launch-promo sections immediately before pricing,
+  // including when an older custom section order was saved in the CMS.
+  const beforePricing: LandingSectionKey[] = ["freeTools", "urgency"];
+  const orderWithoutPromo = merged.filter((key) => !beforePricing.includes(key));
+  const pricingIndex = orderWithoutPromo.indexOf("pricing");
+  orderWithoutPromo.splice(pricingIndex < 0 ? orderWithoutPromo.length : pricingIndex, 0, ...beforePricing);
+  return orderWithoutPromo;
 }
 
 export function getSectionComponent(key: string): ComponentType | null {

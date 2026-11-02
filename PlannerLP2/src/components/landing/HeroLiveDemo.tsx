@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { PhoneMockup } from "@/components/landing/PhoneMockup";
 import { plannerAppPath } from "@/lib/config/plannerApp";
 import { trackEvent } from "@/lib/analytics/events";
@@ -15,7 +16,29 @@ type DemoMessage = {
 
 export function HeroLiveDemo({ pulseToken = 0 }: { pulseToken?: number }) {
   const [loaded, setLoaded] = useState(false);
+  const [shouldLoad, setShouldLoad] = useState(false);
   const engagedRef = useRef(false);
+  const demoRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const target = demoRef.current;
+    if (!target) return;
+    if (!("IntersectionObserver" in window)) {
+      setShouldLoad(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShouldLoad(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "350px 0px" },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const onMessage = (ev: MessageEvent) => {
@@ -35,23 +58,39 @@ export function HeroLiveDemo({ pulseToken = 0 }: { pulseToken?: number }) {
   }, []);
 
   return (
-    <div className="w-full flex justify-center">
+    <div ref={demoRef} className="w-full flex justify-center">
       <PhoneMockup pulseToken={pulseToken}>
         {!loaded && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#f4f6f5] text-sm font-semibold text-slate-500">
-            Memuat demo…
+          <div className="absolute inset-0 z-[1] bg-[#f4f6f5]">
+            <Image
+              src="/brand/estimator/demo-preview.png"
+              alt="Pratinjau aplikasi Monefyi Estimator"
+              fill
+              priority
+              sizes="390px"
+              className="object-cover"
+            />
+            {shouldLoad && (
+              <span className="absolute bottom-10 left-1/2 -translate-x-1/2 rounded-full bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-600 shadow">
+                Memuat demo interaktif…
+              </span>
+            )}
           </div>
         )}
-        <iframe
-          title="Demo Estimator Monefyi"
-          src={DEMO_SRC()}
-          width={390}
-          height={844}
-          className={`block border-0 transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
-          style={{ width: 390, height: 844 }}
-          onLoad={() => setLoaded(true)}
-          allow="clipboard-write"
-        />
+        {shouldLoad && (
+          <iframe
+            title="Demo Estimator Monefyi"
+            src={DEMO_SRC()}
+            width={390}
+            height={844}
+            loading="eager"
+            fetchPriority="high"
+            className={`block border-0 transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
+            style={{ width: 390, height: 844 }}
+            onLoad={() => setLoaded(true)}
+            allow="clipboard-write"
+          />
+        )}
       </PhoneMockup>
     </div>
   );

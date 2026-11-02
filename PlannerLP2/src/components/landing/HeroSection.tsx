@@ -10,7 +10,9 @@ import { AnimatedHeadline } from "@/components/landing/AnimatedHeadline";
 import { HeroLiveDemo } from "@/components/landing/HeroLiveDemo";
 import { useContentStore } from "@/lib/store/contentStore";
 import { useAuthStore } from "@/lib/store/authStore";
+import { canClaimBonusApps } from "@/lib/permissions";
 import { useLandingCta } from "@/lib/hooks/useLandingCta";
+import Link from "next/link";
 import { navigateToPlannerApp, plannerAppPath } from "@/lib/config/plannerApp";
 import { trackEvent } from "@/lib/analytics/events";
 import { defaultContent } from "@/data/defaultContent";
@@ -33,6 +35,8 @@ export function HeroSection() {
 
   const hydrated = useAuthStore((s) => s.hydrated);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
+  const canClaimBonus = Boolean(hydrated && isAuthenticated && canClaimBonusApps(user));
   const { openLogin } = useLandingCta();
   const [demoPulse, setDemoPulse] = useState(0);
   const pulseLock = useRef(false);
@@ -186,32 +190,51 @@ export function HeroSection() {
               transition={{ delay: 0.2 }}
               className="mt-6 flex flex-col lg:flex-row gap-3 w-full lg:w-auto max-w-full"
             >
-              {!(hydrated && isAuthenticated) && (
-                <button
-                  type="button"
-                  onClick={primary}
-                  className="lp-btn-hero btn-brand w-full lg:w-auto"
-                >
-                  <EditableText
-                    section="hero"
-                    field="ctaPrimary"
-                    value={orFallback(hero.ctaPrimary, copy.ctaPrimary)}
-                  />
-                  <ArrowRight className="w-4 h-4 shrink-0" />
-                </button>
+              {hydrated && isAuthenticated ? (
+                <>
+                  <a
+                    href={plannerAppPath("/app")}
+                    className="lp-btn-hero btn-brand w-full lg:w-auto"
+                  >
+                    <ArrowRight className="w-4 h-4 shrink-0" /> Masuk ke Aplikasi
+                  </a>
+                  {canClaimBonus && (
+                    <Link
+                      href="/bonus"
+                      className="lp-btn-hero border-2 border-amber-300 bg-amber-50 text-amber-900 hover:border-amber-500 w-full lg:w-auto"
+                    >
+                      <ArrowRight className="w-4 h-4 shrink-0" /> Klaim Bonus
+                    </Link>
+                  )}
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={primary}
+                    className="lp-btn-hero btn-brand w-full lg:w-auto"
+                  >
+                    <EditableText
+                      section="hero"
+                      field="ctaPrimary"
+                      value={orFallback(hero.ctaPrimary, copy.ctaPrimary)}
+                    />
+                    <ArrowRight className="w-4 h-4 shrink-0" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={demo}
+                    className="lp-btn-hero border-2 border-[var(--surface-alt)] text-[var(--ink)] hover:border-[var(--brand-600)] w-full lg:w-auto bg-white"
+                  >
+                    <PlayCircle className="w-4 h-4 text-[var(--brand-600)] shrink-0" />
+                    <EditableText
+                      section="hero"
+                      field="ctaSecondary"
+                      value={orFallback(hero.ctaSecondary, copy.ctaSecondary)}
+                    />
+                  </button>
+                </>
               )}
-              <button
-                type="button"
-                onClick={demo}
-                className="lp-btn-hero border-2 border-[var(--surface-alt)] text-[var(--ink)] hover:border-[var(--brand-600)] w-full lg:w-auto bg-white"
-              >
-                <PlayCircle className="w-4 h-4 text-[var(--brand-600)] shrink-0" />
-                <EditableText
-                  section="hero"
-                  field="ctaSecondary"
-                  value={orFallback(hero.ctaSecondary, copy.ctaSecondary)}
-                />
-              </button>
             </motion.div>
 
             {!isAuthenticated && (

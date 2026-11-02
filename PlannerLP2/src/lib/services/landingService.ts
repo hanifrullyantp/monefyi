@@ -68,6 +68,7 @@ export function mergeSiteContent(raw: Partial<SiteContent> | null | undefined): 
       },
     },
     footer: { ...defaultContent.footer, ...(raw.footer || {}) },
+    relinkPopup: { ...defaultContent.relinkPopup, ...(raw.relinkPopup || {}) },
     testimonial: {
       ...defaultContent.testimonial,
       ...(raw.testimonial || {}),

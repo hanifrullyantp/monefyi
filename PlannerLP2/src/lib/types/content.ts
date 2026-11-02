@@ -353,6 +353,14 @@ export interface SiteContent {
   finalCta: FinalCTAContent;
   footer: FooterContent;
   toast: ToastConfig;
+  relinkPopup: {
+    enabled: boolean;
+    idleMinutes: number;
+    title: string;
+    body: string;
+    freeCtaText: string;
+    purchaseCtaText: string;
+  };
   sectionOrder: string[];
   sectionVisibility: Record<string, boolean>;
 }
