@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Check, X, Star, Plus, Trash2 } from "lucide-react";
 import { Container } from "@/components/shared/Container";
@@ -12,20 +13,35 @@ import { trackEvent } from "@/lib/analytics/events";
 import { plannerAppPath } from "@/lib/config/plannerApp";
 import type { PricingCard } from "@/lib/types/content";
 
+function useMdUp() {
+  const [mdUp, setMdUp] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const update = () => setMdUp(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+  return mdUp;
+}
+
 export function PricingSection() {
   const { content } = useContentStore();
   const { pricing } = content;
   const { startCheckout } = useLandingCta();
   const { isAdmin, isEditMode } = useLandingAdmin();
+  const isMdUp = useMdUp();
+  const [desktopFeaturesOpen, setDesktopFeaturesOpen] = useState(false);
 
   const onCta = (planId: string) => {
     if (isAdmin && isEditMode) return;
-    trackEvent("checkout_start", { plan: planId });
     if (planId === "free") {
+      trackEvent("free_signup", { source: "pricing_free" });
       window.location.href = plannerAppPath("/app/estimator?plan=free");
       return;
     }
     if (planId === "estimator-standard" || planId === "estimator-pro") {
+      trackEvent("checkout_start", { plan: planId });
       void startCheckout(planId);
     }
   };
@@ -52,7 +68,15 @@ export function PricingSection() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-3 gap-6 items-stretch mb-8">
           {pricing.cards.map((card, index) => (
-            <PricingPlanCard key={card.id} card={card} index={index} onCta={onCta} />
+            <PricingPlanCard
+              key={card.id}
+              card={card}
+              index={index}
+              onCta={onCta}
+              syncFeaturesOnDesktop={isMdUp}
+              desktopFeaturesOpen={desktopFeaturesOpen}
+              onDesktopFeaturesToggle={() => setDesktopFeaturesOpen((open) => !open)}
+            />
           ))}
         </div>
 
@@ -68,15 +92,23 @@ function PricingPlanCard({
   card,
   index,
   onCta,
+  syncFeaturesOnDesktop,
+  desktopFeaturesOpen,
+  onDesktopFeaturesToggle,
 }: {
   card: PricingCard;
   index: number;
   onCta: (planId: string) => void;
+  syncFeaturesOnDesktop: boolean;
+  desktopFeaturesOpen: boolean;
+  onDesktopFeaturesToggle: () => void;
 }) {
   const { isAdmin, isEditMode } = useLandingAdmin();
   const cardPath = `cards.${index}`;
   const isFree = card.id === "free";
   const highlighted = card.highlighted;
+  const [mobileFeaturesOpen, setMobileFeaturesOpen] = useState(false);
+  const featuresOpen = syncFeaturesOnDesktop ? desktopFeaturesOpen : mobileFeaturesOpen;
 
   return (
     <motion.div
@@ -92,8 +124,17 @@ function PricingPlanCard({
       )}
     >
       {isAdmin && isEditMode && (
-        <div className="mb-4 rounded-xl border border-dashed border-emerald-400 bg-emerald-50/10 p-3 text-xs text-white">
-          <p className="mb-2 font-bold uppercase tracking-wide text-emerald-300">Edit paket</p>
+        <div
+          className={cn(
+            "mb-4 rounded-xl border border-dashed p-3 text-xs",
+            highlighted
+              ? "border-emerald-500 bg-slate-50 text-slate-800"
+              : "border-emerald-400 bg-slate-900/80 text-slate-100",
+          )}
+        >
+          <p className={cn("mb-2 font-bold uppercase tracking-wide", highlighted ? "text-emerald-700" : "text-emerald-300")}>
+            Edit paket
+          </p>
           <div className="grid gap-2 sm:grid-cols-2">
             <label>Badge<EditableText section="pricing" field={`${cardPath}.badge`} value={card.badge} className="mt-1 block text-sm" /></label>
             <label>Judul<EditableText section="pricing" field={`${cardPath}.title`} value={card.title} className="mt-1 block text-sm" /></label>
@@ -184,8 +225,24 @@ function PricingPlanCard({
         )}
       </ul>
 
-      <details className={cn("mb-4 text-sm", highlighted ? "text-[var(--muted)]" : "text-white/60")}>
-        <summary className="cursor-pointer font-semibold list-none underline-offset-2 hover:underline">Lihat semua fitur</summary>
+      <details
+        open={featuresOpen}
+        onToggle={(e) => {
+          if (syncFeaturesOnDesktop) return;
+          setMobileFeaturesOpen(e.currentTarget.open);
+        }}
+        className={cn("mb-4 text-sm", highlighted ? "text-[var(--muted)]" : "text-white/60")}
+      >
+        <summary
+          className="cursor-pointer font-semibold list-none underline-offset-2 hover:underline [&::-webkit-details-marker]:hidden"
+          onClick={(e) => {
+            if (!syncFeaturesOnDesktop) return;
+            e.preventDefault();
+            onDesktopFeaturesToggle();
+          }}
+        >
+          Lihat semua fitur
+        </summary>
         <ul className="mt-3 space-y-2">
           {card.features.map((feature, featureIndex) => (
             <li key={`${card.id}-feature-${featureIndex}`} className="flex items-start gap-2">
@@ -194,7 +251,7 @@ function PricingPlanCard({
               ) : (
                 <X className="w-4 h-4 mt-0.5 text-slate-400 shrink-0" />
               )}
-              <span className={!feature.included ? "opacity-50" : ""}>
+              <span className={cn(!feature.included && "line-through opacity-60")}>
                 <EditableText section="pricing" field={`${cardPath}.features.${featureIndex}.text`} value={feature.text} multiline />
               </span>
             </li>

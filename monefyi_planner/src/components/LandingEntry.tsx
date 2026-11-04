@@ -1,12 +1,11 @@
 import { useEffect } from 'react';
-import LandingPage from './LandingPage';
+import { Navigate } from 'react-router-dom';
+import { isEstimatorBrandContext } from '../lib/estimatorBrand';
+import { estimatorAppEntryPath } from '../lib/pwaBrand';
 
 const LP2_DEV_URL = (import.meta.env.VITE_PLANNER_LP2_DEV_URL as string | undefined)?.replace(/\/$/, '');
 
-/**
- * Production root = PlannerLP2 (Vercel). SPA standalone di localhost menampilkan landing lama
- * kecuali VITE_PLANNER_LP2_DEV_URL di-set → redirect ke Next.js dev server.
- */
+/** Root `/` — marketing ada di PlannerLP2; SPA hanya redirect ke login/app. */
 export default function LandingEntry() {
   const useLp2Redirect = import.meta.env.DEV && Boolean(LP2_DEV_URL);
 
@@ -28,5 +27,6 @@ export default function LandingEntry() {
     );
   }
 
-  return <LandingPage />;
+  const next = isEstimatorBrandContext() ? estimatorAppEntryPath() : '/app';
+  return <Navigate to={`/login?next=${encodeURIComponent(next)}`} replace />;
 }

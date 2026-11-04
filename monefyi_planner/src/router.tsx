@@ -45,7 +45,7 @@ export default function AppRouter() {
         <Route path="/demo-embed" element={<ErrorBoundary componentName="DemoEmbed"><DemoEmbedPage /></ErrorBoundary>} />
         <Route path="/app/*" element={<ProtectedRoute><ErrorBoundary componentName="App"><AppShell /></ErrorBoundary></ProtectedRoute>} />
         <Route path="/admin" element={<AdminRoute><SuperAdmin /></AdminRoute>} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
       </AuthBootstrap>
     </BrowserRouter>

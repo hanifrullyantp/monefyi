@@ -120,6 +120,11 @@ export function canGenerateKwitansi(snapshot: EntitlementSnapshot): boolean {
   );
 }
 
+/** Generator Surat Perjanjian Kerja (MoU) — khusus Estimator Pro / Pro / Enterprise. */
+export function canGenerateContract(snapshot: EntitlementSnapshot): boolean {
+  return canGenerateKwitansi(snapshot);
+}
+
 /** Logo, gambar tanda tangan, dan cap perusahaan. */
 export function canUseCustomBranding(snapshot: EntitlementSnapshot): boolean {
   return canGenerateKwitansi(snapshot);

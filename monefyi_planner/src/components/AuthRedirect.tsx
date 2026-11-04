@@ -22,11 +22,7 @@ export default function AuthRedirect() {
   initEstimatorPwaDocument();
 
   if (isAuthenticated) {
-    const onLanding = location.pathname === '/';
-    const isAdmin = isPlatformAdmin(platformRole, user?.email);
-    if (onLanding && isAdmin) return null;
-
-    if (!hasMembership && !isAdmin) {
+    if (!hasMembership && !isPlatformAdmin(platformRole, user?.email)) {
       if (MEMBERSHIP_SETUP_PATHS.some(path => location.pathname.startsWith(path))) {
         return null;
       }

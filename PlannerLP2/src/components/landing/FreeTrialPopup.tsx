@@ -10,7 +10,7 @@ import { ownsEstimator } from "@/lib/permissions";
 import { trackEvent } from "@/lib/analytics/events";
 import { plannerAppPath } from "@/lib/config/plannerApp";
 import { useContentStore } from "@/lib/store/contentStore";
-import { useLandingCta } from "@/lib/hooks/useLandingCta";
+import { scrollToPricingSection } from "@/lib/hooks/useLandingCta";
 
 const STORAGE_KEY = "estimator_free_trial_popup_v1";
 const SUPPRESS_MS = 24 * 60 * 60 * 1000;
@@ -57,7 +57,6 @@ export function FreeTrialPopup() {
   const { isAdmin, isEditMode } = useLandingAdmin();
   const isLoginModalOpen = useUIStore((s) => s.isLoginModalOpen);
   const config = useContentStore((s) => s.content.relinkPopup);
-  const { startCheckout } = useLandingCta();
 
   const [open, setOpen] = useState(false);
   const [trigger, setTrigger] = useState<Trigger | null>(null);
@@ -100,7 +99,8 @@ export function FreeTrialPopup() {
 
   const buyStandard = () => {
     trackEvent("free_trial_popup_cta", { source: `purchase_${trigger ?? "unknown"}` });
-    void startCheckout("estimator-standard");
+    dismiss();
+    scrollToPricingSection();
   };
 
   useEffect(() => {

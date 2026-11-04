@@ -54,6 +54,7 @@ export const ESTIMATOR_PLANS: EstimatorPlan[] = [
       { text: "Custom logo & tanda tangan", included: false },
       { text: "Riwayat penawaran", included: false },
       { text: "Kustom pricelist", included: false },
+      { text: "Surat perjanjian kerja (PKWT/PKB)", included: false },
     ],
   },
   {
@@ -84,6 +85,7 @@ export const ESTIMATOR_PLANS: EstimatorPlan[] = [
       { text: "Tanda tangan di PDF", included: false },
       { text: "Generator kwitansi", included: false },
       { text: "Support WA prioritas", included: false },
+      { text: "Surat perjanjian kerja (PKWT/PKB)", included: false },
     ],
   },
   {
@@ -113,6 +115,7 @@ export const ESTIMATOR_PLANS: EstimatorPlan[] = [
       { text: "Simpan riwayat penawaran", included: true },
       { text: "Kustom pricelist material", included: true },
       { text: "Support WhatsApp prioritas", included: true },
+      { text: "Surat perjanjian kerja (PKWT/PKB)", included: true },
     ],
   },
 ];

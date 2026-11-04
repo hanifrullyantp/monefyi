@@ -325,7 +325,7 @@ export default function EstimationDocumentMenu({
                 gradient="from-amber-500 to-orange-700"
                 shadow="shadow-amber-600/30"
                 icon={<FileSignature className="w-6 h-6 text-white" />}
-                badge="Baru"
+                badge="Pro"
                 onClick={() => {
                   onOpenContract();
                   onClose();

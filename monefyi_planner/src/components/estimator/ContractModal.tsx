@@ -533,3 +533,4 @@ function DesignThumb({ design, accent }: { design: string; accent: string }) {
     </div>
   );
 }
+

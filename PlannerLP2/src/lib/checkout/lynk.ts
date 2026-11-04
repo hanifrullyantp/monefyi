@@ -54,6 +54,9 @@ export function buildLynkCheckoutUrl(
   if (product === "estimator_standard" && params.checkoutAmount != null) {
     url.searchParams.set("amount", String(params.checkoutAmount));
   }
+  if (product === "estimator_pro") {
+    url.searchParams.set("amount", String(params.checkoutAmount ?? 199_000));
+  }
   return url.toString();
 }
 

@@ -5,22 +5,17 @@ import { Check, Clock3, Gift, Sparkles } from "lucide-react";
 import { useContentStore } from "@/lib/store/contentStore";
 import { Container } from "@/components/shared/Container";
 import { EditableText } from "@/components/shared/EditableText";
-import { useLandingCta } from "@/lib/hooks/useLandingCta";
+import { scrollToPricingSection } from "@/lib/hooks/useLandingCta";
 import { useLandingAdmin } from "@/lib/hooks/useLandingAdmin";
 
 export function UrgencySection() {
   const { content } = useContentStore();
   const { urgency } = content;
-  const { isAuthenticated, startCheckout } = useLandingCta();
   const { isAdmin, isEditMode } = useLandingAdmin();
 
   const claimOffer = () => {
     if (isAdmin && isEditMode) return;
-    if (isAuthenticated) {
-      void startCheckout("estimator-standard");
-      return;
-    }
-    document.getElementById("harga")?.scrollIntoView({ behavior: "smooth" });
+    scrollToPricingSection();
   };
 
   return (

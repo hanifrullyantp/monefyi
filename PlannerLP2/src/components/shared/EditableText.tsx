@@ -125,9 +125,10 @@ export function EditableText({
             }}
             className={cn(
               "cursor-pointer transition-all rounded-md px-1 -mx-1 touch-manipulation",
-              "ring-2 ring-dashed ring-emerald-400/80 bg-emerald-50/50",
+              "text-slate-900",
+              "ring-2 ring-dashed ring-emerald-400/80 bg-emerald-50/90",
               "active:bg-emerald-100 active:ring-emerald-500",
-              "md:ring-0 md:bg-transparent md:hover:bg-emerald-50 md:hover:ring-2 md:hover:ring-emerald-200",
+              "md:ring-0 md:bg-emerald-50/80 md:hover:bg-emerald-50 md:hover:ring-2 md:hover:ring-emerald-200",
             )}
           >
             {value}

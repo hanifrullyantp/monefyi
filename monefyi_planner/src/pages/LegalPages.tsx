@@ -4,13 +4,15 @@ import { ArrowLeft, ShieldCheck, Loader2 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { submitPlannerRefundRequest, REFUND_WINDOW_DAYS } from '../services/refundService';
 import { useUiStore } from '../store/uiStore';
+import { publicAppHomePath } from '../lib/publicEntry';
 
 function LegalShell({ title, children }: { title: string; children: React.ReactNode }) {
+  const isAuthenticated = useAppStore(s => s.isAuthenticated);
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-2xl mx-auto p-6">
-        <Link to="/" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 mb-6">
-          <ArrowLeft className="w-4 h-4" /> Beranda
+        <Link to={publicAppHomePath(isAuthenticated)} className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 mb-6">
+          <ArrowLeft className="w-4 h-4" /> Kembali ke app
         </Link>
         <h1 className="text-2xl font-black text-slate-900 mb-4">{title}</h1>
         <div className="bg-white rounded-2xl border p-6 text-sm text-slate-600 leading-relaxed space-y-4">{children}</div>

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Users, Building2, Settings, LayoutDashboard, Loader2, RefreshCw,
-  Plus, Trash2, Save, ArrowLeft, Search, Pencil, Activity, AlertTriangle, Archive, RotateCcw,
+  Plus, Trash2, Save, ArrowLeft, Search, Activity, AlertTriangle, Archive, RotateCcw,
   CreditCard,
   ShieldCheck,
 } from 'lucide-react';
@@ -227,13 +227,6 @@ export default function SuperAdmin() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            to="/?edit=1"
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold"
-          >
-            <Pencil className="w-4 h-4" />
-            Edit landing
-          </Link>
           <button type="button" onClick={() => { if (tab === 'users') loadUsers(); else if (tab === 'organizations') loadOrganizations(); else if (tab === 'company-types') loadTypes(); else if (tab === 'monitoring') loadMonitoring(); else if (tab === 'archives') loadArchives(); else loadOverview(); }} className="p-2 hover:bg-white/10 rounded-lg">
             <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
           </button>

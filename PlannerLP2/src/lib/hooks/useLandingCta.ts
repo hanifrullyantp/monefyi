@@ -10,8 +10,11 @@ import {
   type PlannerLockedFeature,
 } from "@/lib/permissions";
 import type { User } from "@/lib/store/authStore";
-import { planIdToLynkProduct } from "@/lib/checkout/products";
+import { lynkProductLabel, planIdToLynkProduct, type LynkProduct } from "@/lib/checkout/products";
 import { redirectToPlannerCheckout } from "@/lib/checkout/plannerCheckout";
+import { resolveLynkBaseUrl } from "@/lib/checkout/lynk";
+import { resolvePaymentProvider } from "@/lib/checkout/paymentProvider";
+import { scrollToPricingSection } from "@/lib/navigation/scrollToPricing";
 import {
   loadEstimatorLaunchPromoStatus,
   resolveStandardCheckoutAmount,
@@ -58,17 +61,39 @@ export function useLandingCta() {
 
   const startCheckout = async (planId: string) => {
     const product = planIdToLynkProduct(planId);
-    if (!product) return;
-    const params = await checkoutParams();
-    const checkoutAmount =
-      product === "estimator_standard"
-        ? resolveStandardCheckoutAmount(await loadEstimatorLaunchPromoStatus())
-        : undefined;
-    await redirectToPlannerCheckout(
-      product,
-      { ...params, checkoutAmount },
-      { lynkUrlOverrides: lynkOverrides, paymentProvider, checkoutAmount },
-    );
+    if (!product) {
+      window.alert("Paket tidak dikenali. Pilih Standard atau Pro di halaman harga.");
+      return;
+    }
+
+    const provider = resolvePaymentProvider(paymentProvider);
+    if (provider === "lynk") {
+      const base = resolveLynkBaseUrl(product, lynkOverrides);
+      if (!base) {
+        window.alert(
+          `Link checkout Lynk untuk ${lynkProductLabel(product)} belum tersedia. Hubungi admin — set URL di Admin → Pricing atau variabel env Lynk.`,
+        );
+        return;
+      }
+    }
+
+    try {
+      const params = await checkoutParams();
+      const checkoutAmount =
+        product === "estimator_standard"
+          ? resolveStandardCheckoutAmount(await loadEstimatorLaunchPromoStatus())
+          : product === "estimator_pro"
+            ? 199_000
+            : undefined;
+      await redirectToPlannerCheckout(
+        product,
+        { ...params, checkoutAmount },
+        { lynkUrlOverrides: lynkOverrides, paymentProvider, checkoutAmount },
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Checkout gagal.";
+      window.alert(msg);
+    }
   };
 
   const startPlannerProCheckout = async () => {
@@ -100,6 +125,8 @@ export function useLandingCta() {
     openLogin: () => setLoginModalOpen(true),
   };
 }
+
+export { scrollToPricingSection };
 
 export function openUpsell(_message?: string) {
   useUIStore.getState().setLoginModalOpen(true);
