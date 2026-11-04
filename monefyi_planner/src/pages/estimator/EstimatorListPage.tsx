@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
@@ -19,6 +19,8 @@ import EstimatorListOptionsSheet from '../../components/estimator/list/Estimator
 import EstimatorStatusPickerSheet from '../../components/estimator/list/EstimatorStatusPickerSheet';
 import EstimatorBulkStatusPickerSheet from '../../components/estimator/list/EstimatorBulkStatusPickerSheet';
 import EstimatorListBulkActionBar from '../../components/estimator/list/EstimatorListBulkActionBar';
+import EstimatorArchiveConfirmDialog from '../../components/estimator/list/EstimatorArchiveConfirmDialog';
+import EstimatorListExpandBar from '../../components/estimator/list/EstimatorListExpandBar';
 import EstimationListCard from '../../components/estimator/list/EstimationListCard';
 import EstimationListSkeleton from '../../components/estimator/list/EstimationListSkeleton';
 import EstimatorListEmpty from '../../components/estimator/list/EstimatorListEmpty';
@@ -196,6 +198,10 @@ export default function EstimatorListPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkStatusOpen, setBulkStatusOpen] = useState(false);
+  const [archiveConfirmCount, setArchiveConfirmCount] = useState(0);
+  const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
+  const archiveConfirmRunner = useRef<(() => Promise<void>) | null>(null);
+  const [listSectionOpen, setListSectionOpen] = useState(true);
 
   const setListView = (mode: EstimationListViewMode) => {
     setListViewMode(mode);
@@ -521,38 +527,64 @@ export default function EstimatorListPage() {
     }
   };
 
-  const handleArchive = async (est: Estimation) => {
+  const openArchiveConfirm = (count: number, run: () => Promise<void>) => {
+    archiveConfirmRunner.current = run;
+    setArchiveConfirmCount(count);
+    setArchiveConfirmOpen(true);
+  };
+
+  const closeArchiveConfirm = () => {
+    if (bulkBusy || archiveBusy) return;
+    setArchiveConfirmOpen(false);
+    archiveConfirmRunner.current = null;
+  };
+
+  const confirmArchive = () => {
+    const run = archiveConfirmRunner.current;
+    if (!run) {
+      closeArchiveConfirm();
+      return;
+    }
+    setArchiveConfirmOpen(false);
+    void run().finally(() => {
+      archiveConfirmRunner.current = null;
+    });
+  };
+
+  const handleArchive = (est: Estimation) => {
     if (isEstimationArchived(est.status)) return;
-    if (!window.confirm(`Arsipkan "${est.title || 'estimasi ini'}"? Estimasi disembunyikan dari daftar dan hanya tampil di filter Arsip.`)) return;
-    await handleStatusChange(est.id, 'rejected');
+    openArchiveConfirm(1, async () => {
+      await handleStatusChange(est.id, 'rejected');
+    });
   };
 
   const bulkSelectedEstimations = useCallback(() => {
     return rows.filter(r => selectedIds.has(r.id) && normalizeEstimationStatus(r.status) !== 'converted');
   }, [rows, selectedIds]);
 
-  const handleBulkArchive = async () => {
+  const handleBulkArchive = () => {
     const targets = bulkSelectedEstimations().filter(r => !isEstimationArchived(r.status));
     if (targets.length === 0) {
       showToast('Tidak ada estimasi yang bisa diarsipkan', 'info');
       return;
     }
-    if (!window.confirm(`Arsipkan ${targets.length} estimasi terpilih?`)) return;
-    setBulkBusy(true);
-    try {
-      for (const est of targets) {
-        await updateEstimationStatus(est.id, 'rejected');
+    openArchiveConfirm(targets.length, async () => {
+      setBulkBusy(true);
+      try {
+        for (const est of targets) {
+          await updateEstimationStatus(est.id, 'rejected');
+        }
+        showToast(`${targets.length} estimasi diarsipkan`, 'success');
+        setSelectedIds(new Set());
+        setSelectionMode(false);
+        void load();
+      } catch (e) {
+        showToast(e instanceof Error ? e.message : 'Gagal mengarsipkan', 'error');
+        void load();
+      } finally {
+        setBulkBusy(false);
       }
-      showToast(`${targets.length} estimasi diarsipkan`, 'success');
-      setSelectedIds(new Set());
-      setSelectionMode(false);
-      void load();
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Gagal mengarsipkan', 'error');
-      void load();
-    } finally {
-      setBulkBusy(false);
-    }
+    });
   };
 
   const handleBulkStatusPick = async (next: EstimationWorkflowStatus | 'rejected') => {
@@ -578,23 +610,24 @@ export default function EstimatorListPage() {
     }
   };
 
-  const handleArchiveStale = async () => {
+  const handleArchiveStale = () => {
     const stale = rows.filter(r => isEstimationStale(r));
     if (stale.length === 0) return;
-    if (!window.confirm(`Arsipkan ${stale.length} estimasi mandek? Estimasi disembunyikan dari daftar dan hanya tampil di filter Arsip.`)) return;
-    setArchiveBusy(true);
-    try {
-      for (const est of stale) {
-        await updateEstimationStatus(est.id, 'rejected');
+    openArchiveConfirm(stale.length, async () => {
+      setArchiveBusy(true);
+      try {
+        for (const est of stale) {
+          await updateEstimationStatus(est.id, 'rejected');
+        }
+        showToast(`${stale.length} estimasi diarsipkan`, 'success');
+        void load();
+      } catch (e) {
+        showToast(e instanceof Error ? e.message : 'Gagal mengarsipkan', 'error');
+        void load();
+      } finally {
+        setArchiveBusy(false);
       }
-      showToast(`${stale.length} estimasi diarsipkan`, 'success');
-      void load();
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Gagal mengarsipkan', 'error');
-      void load();
-    } finally {
-      setArchiveBusy(false);
-    }
+    });
   };
 
   const handleConverted = async (summary: { projectId: string; projectName: string }) => {
@@ -639,7 +672,6 @@ export default function EstimatorListPage() {
 
   const quotaUsed = lifetimeCount ?? listStats.total;
   const visibleRows = sortedRows.slice(0, visibleCount);
-  const remainingCount = Math.max(0, sortedRows.length - visibleRows.length);
   const statusPickerEst = rows.find(r => r.id === statusPickerId) ?? null;
 
   const goNew = () => {
@@ -729,7 +761,25 @@ export default function EstimatorListPage() {
         selectionMode={selectionMode}
         onToggleSelectionMode={toggleSelectionMode}
         selectionModeDisabled={listViewMode === 'kanban'}
+        listSectionOpen={listSectionOpen}
+        onToggleListSection={
+          listViewMode === 'kanban' || sortedRows.length === 0
+            ? undefined
+            : () => setListSectionOpen(v => !v)
+        }
       />
+
+      {!loading && sortedRows.length > 0 && listViewMode !== 'kanban' && !listSectionOpen && (
+        <div className="pb-2">
+          <EstimatorListExpandBar
+            totalCount={sortedRows.length}
+            visibleCount={0}
+            collapsed
+            pageSize={ESTIMATOR_LIST_PAGE_SIZE}
+            onToggleCollapsed={() => setListSectionOpen(true)}
+          />
+        </div>
+      )}
 
       {loading ? (
         <EstimationListSkeleton />
@@ -748,18 +798,16 @@ export default function EstimatorListPage() {
             statusUpdatingId={statusUpdatingId}
           />
         </div>
-      ) : groupMode === 'none' ? (
+      ) : !listSectionOpen ? null : groupMode === 'none' ? (
         <div className="px-4 space-y-2">
           {visibleRows.map(est => renderCard(est))}
-          {remainingCount > 0 && (
-            <button
-              type="button"
-              onClick={() => setVisibleCount(sortedRows.length)}
-              className="w-full min-h-11 text-sm font-bold text-emerald-700"
-            >
-              Tampilkan {remainingCount} lainnya
-            </button>
-          )}
+          <EstimatorListExpandBar
+            totalCount={sortedRows.length}
+            visibleCount={visibleRows.length}
+            pageSize={ESTIMATOR_LIST_PAGE_SIZE}
+            onShowAll={() => setVisibleCount(sortedRows.length)}
+            onShowLess={() => setVisibleCount(ESTIMATOR_LIST_PAGE_SIZE)}
+          />
         </div>
       ) : (
         <div className="px-4 space-y-4">
@@ -776,6 +824,12 @@ export default function EstimatorListPage() {
               </div>
             </div>
           ))}
+          <EstimatorListExpandBar
+            totalCount={sortedRows.length}
+            visibleCount={sortedRows.length}
+            pageSize={ESTIMATOR_LIST_PAGE_SIZE}
+            onShowLess={() => setListSectionOpen(false)}
+          />
         </div>
       )}
 
@@ -816,6 +870,14 @@ export default function EstimatorListPage() {
           onChangeStatus={() => setBulkStatusOpen(true)}
         />
       )}
+
+      <EstimatorArchiveConfirmDialog
+        open={archiveConfirmOpen}
+        count={archiveConfirmCount}
+        busy={bulkBusy || archiveBusy}
+        onCancel={closeArchiveConfirm}
+        onConfirm={confirmArchive}
+      />
 
       <EstimatorBulkStatusPickerSheet
         open={bulkStatusOpen}

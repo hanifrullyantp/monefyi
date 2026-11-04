@@ -1,5 +1,5 @@
 import convertTerbilang from 'terbilang-ts';
-import { formatDateId, formatRupiahFull } from '../estimatorFormat';
+import { formatDateId, formatRupiahForPdf } from '../estimatorFormat';
 import { urlToDataUri } from './pdfImageUtils';
 import type { NormalizedProjectView } from '../migration/project-normalize';
 import type { Project } from '../../store/appStore';
@@ -51,7 +51,7 @@ export interface ProformaPdfContext {
 }
 
 function rp(n: number): string {
-  return formatRupiahFull(n);
+  return formatRupiahForPdf(n);
 }
 
 function buildInvoiceNumber(project: Project): string {

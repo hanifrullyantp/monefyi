@@ -1,5 +1,5 @@
 import { calcEstimationSummary, countedEstimationItems, summaryOptsFromDraft } from '../estimatorCalc';
-import { formatDateId, formatRupiahFull } from '../estimatorFormat';
+import { formatDateId, formatRupiahForPdf } from '../estimatorFormat';
 import { buildEstimationBillingSnapshot } from '../estimationBillingSchedule';
 import { normalizePdfTemplate, type EstimationFormDraft, type PdfTemplate } from '../../types/estimator';
 import type { PdfDisplayOptions, PdfSettings } from '../../types/pdfSettings';
@@ -88,11 +88,11 @@ export async function buildInvoicePdfContext(
 
   const installments: InvoiceInstallmentRow[] = snapshot.milestones.map(m => ({
     label: m.label,
-    amount: formatRupiahFull(m.amount),
+    amount: formatRupiahForPdf(m.amount),
     amountRaw: m.amount,
-    paidAmount: formatRupiahFull(m.paidAmount),
+    paidAmount: formatRupiahForPdf(m.paidAmount),
     paidAmountRaw: m.paidAmount,
-    dueAmount: formatRupiahFull(m.dueAmount),
+    dueAmount: formatRupiahForPdf(m.dueAmount),
     dueAmountRaw: m.dueAmount,
     plannedPct: m.pct,
     status: m.status,
@@ -110,9 +110,9 @@ export async function buildInvoicePdfContext(
     invoiceNumber: buildInvoiceNumber(draft.code),
     paymentStatus,
     paymentStatusLabel: STATUS_LABEL[paymentStatus],
-    amountPaid: formatRupiahFull(snapshot.totalReceived),
+    amountPaid: formatRupiahForPdf(snapshot.totalReceived),
     amountPaidRaw: snapshot.totalReceived,
-    amountRemaining: formatRupiahFull(snapshot.remaining),
+    amountRemaining: formatRupiahForPdf(snapshot.remaining),
     amountRemainingRaw: snapshot.remaining,
     progressPct: snapshot.progressPct,
     installments,

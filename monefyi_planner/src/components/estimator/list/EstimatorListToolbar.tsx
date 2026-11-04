@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowUpDown, ListChecks, ListFilter, Search, X } from 'lucide-react';
+import { ArrowUpDown, ChevronDown, ListChecks, ListFilter, Search, X } from 'lucide-react';
 
 type Props = {
   title: string;
@@ -19,6 +19,8 @@ type Props = {
   selectionMode?: boolean;
   onToggleSelectionMode?: () => void;
   selectionModeDisabled?: boolean;
+  listSectionOpen?: boolean;
+  onToggleListSection?: () => void;
 };
 
 function IconBtn({
@@ -70,6 +72,8 @@ export default function EstimatorListToolbar({
   selectionMode = false,
   onToggleSelectionMode,
   selectionModeDisabled = false,
+  listSectionOpen = true,
+  onToggleListSection,
 }: Props) {
   const checklistBtn = onToggleSelectionMode ? (
     <IconBtn
@@ -108,8 +112,21 @@ export default function EstimatorListToolbar({
           </div>
         ) : (
           <>
-            <div className="flex-1 min-w-0 flex items-center gap-1.5">
-              <h2 className="text-sm font-semibold text-slate-800 truncate">
+            <div className="flex-1 min-w-0 flex items-center gap-0.5">
+              {onToggleListSection && !searchOpen && (
+                <button
+                  type="button"
+                  onClick={onToggleListSection}
+                  aria-expanded={listSectionOpen}
+                  aria-label={listSectionOpen ? 'Sembunyikan daftar estimasi' : 'Tampilkan daftar estimasi'}
+                  className="inline-flex items-center justify-center min-h-11 min-w-11 shrink-0 rounded-full text-emerald-700 hover:bg-emerald-50 active:scale-95"
+                >
+                  <ChevronDown
+                    className={`w-5 h-5 transition-transform duration-200 ${listSectionOpen ? 'rotate-180' : ''}`}
+                  />
+                </button>
+              )}
+              <h2 className="text-sm font-semibold text-slate-800 truncate min-w-0">
                 {title}
                 <span className="text-slate-400 font-medium"> · {count}</span>
               </h2>

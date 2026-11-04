@@ -1,6 +1,6 @@
 import convertTerbilang from 'terbilang-ts';
 import { calcEstimationSummary, countedEstimationItems, summaryOptsFromDraft } from '../estimatorCalc';
-import { formatDateId, formatRupiahFull } from '../estimatorFormat';
+import { formatDateId, formatRupiahForPdf } from '../estimatorFormat';
 import { urlToDataUri } from './pdfImageUtils';
 import type { EstimationFormDraft } from '../../types/estimator';
 import type { PdfDisplayOptions, PdfSettings } from '../../types/pdfSettings';
@@ -50,7 +50,7 @@ export interface KwitansiPdfContext {
 }
 
 function rp(n: number): string {
-  return formatRupiahFull(n);
+  return formatRupiahForPdf(n);
 }
 
 export function buildKwitansiNumber(code: string, date = new Date()): string {

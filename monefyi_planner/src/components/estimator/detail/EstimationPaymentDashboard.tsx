@@ -1,4 +1,4 @@
-import { CalendarClock, ChevronRight, CircleDollarSign, MessageCircle, TrendingUp, Wallet } from 'lucide-react';
+import { Banknote, CalendarClock, ChevronRight, MessageCircle, TrendingUp, Wallet } from 'lucide-react';
 import { formatRupiahFull } from '../../../lib/estimatorFormat';
 import type { BillingMilestone, EstimationBillingSnapshot } from '../../../lib/estimationBillingSchedule';
 
@@ -104,7 +104,7 @@ export default function EstimationPaymentDashboard({
                   disabled={m.status === 'paid'}
                   className="w-full flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-2.5 py-2 text-left hover:border-emerald-200 hover:bg-emerald-50/40 transition-colors disabled:opacity-60 disabled:pointer-events-none"
                 >
-                  <CircleDollarSign className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
+                  <Banknote className="w-3.5 h-3.5 shrink-0 text-emerald-600" aria-hidden />
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-semibold text-slate-800 truncate">{m.label}</p>
                     <p className="text-[10px] text-slate-500 tabular-nums">

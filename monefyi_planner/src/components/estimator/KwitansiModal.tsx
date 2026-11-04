@@ -20,6 +20,7 @@ import {
   type IncomeCategory,
 } from '../../services/estimationPaymentService';
 import type { ProjectIncome } from '../../services/incomeService';
+import PdfBlobCanvasViewer from './detail/PdfBlobCanvasViewer';
 
 type Props = {
   open: boolean;
@@ -59,7 +60,7 @@ export default function KwitansiModal({
   const [description, setDescription] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [syncToProject, setSyncToProject] = useState(true);
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -122,14 +123,10 @@ export default function KwitansiModal({
 
   useEffect(() => {
     if (!open || amount <= 0) {
-      setBlobUrl(prev => {
-        if (prev) URL.revokeObjectURL(prev);
-        return null;
-      });
+      setPdfBlob(null);
       return;
     }
 
-    let url: string | null = null;
     let cancelled = false;
 
     const load = async () => {
@@ -138,11 +135,7 @@ export default function KwitansiModal({
       try {
         const blob = await generateKwitansiPdfBlob(buildInput());
         if (cancelled) return;
-        url = URL.createObjectURL(blob);
-        setBlobUrl(prev => {
-          if (prev) URL.revokeObjectURL(prev);
-          return url;
-        });
+        setPdfBlob(blob);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Gagal membuat PDF');
       } finally {
@@ -154,7 +147,6 @@ export default function KwitansiModal({
     return () => {
       cancelled = true;
       clearTimeout(timer);
-      if (url) URL.revokeObjectURL(url);
     };
   }, [open, buildInput, amount]);
 
@@ -341,12 +333,8 @@ export default function KwitansiModal({
                 Isi nominal untuk preview kwitansi
               </div>
             )}
-            {blobUrl && !error && amount > 0 && (
-              <iframe
-                title={kwitansiPdfFilename(draft)}
-                src={blobUrl}
-                className="w-full h-full min-h-[240px] lg:min-h-0 border-0"
-              />
+            {pdfBlob && !error && amount > 0 && !loading && (
+              <PdfBlobCanvasViewer blob={pdfBlob} title={kwitansiPdfFilename(draft)} />
             )}
           </div>
         </div>

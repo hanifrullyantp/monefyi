@@ -30,6 +30,13 @@ export function formatRupiahFull(n: number): string {
   }).format(n);
 }
 
+/** Rupiah untuk PDF (pdfmake/Roboto) — hanya ASCII "Rp" + angka, hindari simbol currency Intl. */
+export function formatRupiahForPdf(n: number): string {
+  if (!Number.isFinite(n)) return 'Rp 0';
+  const sign = n < 0 ? '-' : '';
+  return `${sign}Rp ${formatNumberId(Math.abs(n))}`;
+}
+
 /** Ringkas: Rp 45jt, Rp 850rb */
 export function formatRupiahCompact(n: number): string {
   if (!Number.isFinite(n) || n <= 0) return 'Rp 0';

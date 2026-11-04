@@ -1,6 +1,6 @@
 import convertTerbilang from 'terbilang-ts';
 import { calcEstimationSummary, countedEstimationItems, effectiveItemSelling, summaryOptsFromDraft } from '../estimatorCalc';
-import { formatDateId, formatRupiahFull } from '../estimatorFormat';
+import { formatDateId, formatRupiahForPdf } from '../estimatorFormat';
 import { urlToDataUri, fileToDataUri } from './pdfImageUtils';
 import { normalizePdfTemplate, type EstimationFormDraft, type PdfTemplate } from '../../types/estimator';
 import {
@@ -68,7 +68,7 @@ function addDays(days: number): Date {
 }
 
 function rp(n: number): string {
-  return formatRupiahFull(n);
+  return formatRupiahForPdf(n);
 }
 
 export async function buildQuotationPdfContext(

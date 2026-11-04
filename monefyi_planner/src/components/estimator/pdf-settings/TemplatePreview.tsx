@@ -10,6 +10,7 @@ import { downloadBlob } from '../../../lib/pdf/pdfMakeSetup';
 import { useEntitlement } from '../../../hooks/useEntitlement';
 import { pdfPlanPolicyFromEntitlement } from '../../../lib/pdf/pdfPlanPolicy';
 import type { PreviewDisplayToggles } from './TemplateCustomizer';
+import PdfBlobCanvasViewer from '../detail/PdfBlobCanvasViewer';
 
 type Kind = 'quotation' | 'invoice';
 
@@ -35,12 +36,11 @@ export default function TemplatePreview({ kind, template, settings, display }: P
     () => pdfPlanPolicyFromEntitlement(entitlement),
     [entitlement.isFree, entitlement.isEstimatorPro, entitlement.isPro, entitlement.isEnterprise],
   );
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    let url: string | null = null;
     let cancelled = false;
     const run = async () => {
       setLoading(true);
@@ -59,8 +59,7 @@ export default function TemplatePreview({ kind, template, settings, display }: P
           ? await generateQuotationPdfBlob(draft, merged, opts, policy)
           : await generateInvoicePdfBlob(draft, merged, opts, [], policy);
         if (cancelled) return;
-        url = URL.createObjectURL(blob);
-        setBlobUrl(url);
+        setPdfBlob(blob);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Gagal membuat preview');
       } finally {
@@ -70,7 +69,6 @@ export default function TemplatePreview({ kind, template, settings, display }: P
     void run();
     return () => {
       cancelled = true;
-      if (url) URL.revokeObjectURL(url);
     };
   }, [kind, template, settings, display, policy]);
 
@@ -117,8 +115,8 @@ export default function TemplatePreview({ kind, template, settings, display }: P
             {error}
           </div>
         )}
-        {blobUrl && !loading && (
-          <iframe src={blobUrl} title="PDF preview" className="w-full h-full border-0" />
+        {pdfBlob && !loading && !error && (
+          <PdfBlobCanvasViewer blob={pdfBlob} title={kind === 'quotation' ? 'Preview penawaran' : 'Preview invoice'} />
         )}
       </div>
     </div>

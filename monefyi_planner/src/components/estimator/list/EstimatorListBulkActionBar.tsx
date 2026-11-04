@@ -24,7 +24,7 @@ export default function EstimatorListBulkActionBar({
   return (
     <div className="fixed left-0 right-0 z-40 bottom-[5.5rem] lg:bottom-4 px-3 pointer-events-none">
       <div
-        className="pointer-events-auto max-w-6xl mx-auto rounded-2xl border border-emerald-200 bg-white shadow-xl px-3 py-2.5 flex flex-wrap items-center gap-2"
+        className="pointer-events-auto max-w-6xl mx-auto rounded-2xl border border-emerald-200 bg-white shadow-xl px-3 py-2.5 flex flex-nowrap items-center gap-2 overflow-x-auto"
         role="toolbar"
         aria-label="Aksi massal estimasi"
       >
@@ -52,19 +52,19 @@ export default function EstimatorListBulkActionBar({
           type="button"
           onClick={onChangeStatus}
           disabled={busy || selectedCount === 0}
-          className="inline-flex items-center gap-1.5 min-h-11 px-3 rounded-full text-xs font-bold border border-slate-200 text-slate-800 hover:bg-slate-50 disabled:opacity-45"
+          aria-label="Ubah status massal"
+          className="inline-flex items-center justify-center min-h-11 min-w-11 rounded-full border border-slate-200 text-slate-800 hover:bg-slate-50 disabled:opacity-45 shrink-0"
         >
-          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-          Ubah status
+          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
         </button>
         <button
           type="button"
           onClick={onArchive}
           disabled={busy || selectedCount === 0}
-          className="inline-flex items-center gap-1.5 min-h-11 px-3 rounded-full text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-45"
+          aria-label="Arsipkan terpilih"
+          className="inline-flex items-center justify-center min-h-11 min-w-11 rounded-full bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-45 shrink-0"
         >
-          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Archive className="w-3.5 h-3.5" />}
-          Arsipkan
+          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
         </button>
       </div>
     </div>
