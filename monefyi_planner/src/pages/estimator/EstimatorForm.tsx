@@ -25,6 +25,7 @@ import EstimationAdjustmentsPanel from '../../components/estimator/EstimationAdj
 import EstimationImageSlots from '../../components/estimator/EstimationImageSlots';
 import PdfDesignCustomizer from '../../components/estimator/PdfDesignCustomizer';
 import KwitansiModal from '../../components/estimator/KwitansiModal';
+import ContractModal from '../../components/estimator/ContractModal';
 import EstimationPaymentPanel from '../../components/estimator/EstimationPaymentPanel';
 import MarkAsSentPrompt from '../../components/estimator/MarkAsSentPrompt';
 import UpgradeModal from '../../components/entitlement/UpgradeModal';
@@ -112,6 +113,7 @@ export default function EstimatorForm() {
   const [waAttachDocument, setWaAttachDocument] = useState<DocumentType | null>(null);
   const [waTagihMilestone, setWaTagihMilestone] = useState<BillingMilestone | null>(null);
   const [kwitansiOpen, setKwitansiOpen] = useState(false);
+  const [contractOpen, setContractOpen] = useState(false);
   const [kwitansiLinkedIncome, setKwitansiLinkedIncome] = useState<ProjectIncome | null>(null);
   const [paymentsRefreshKey, setPaymentsRefreshKey] = useState(0);
   const [pdfSettings, setPdfSettings] = useState<PdfSettings | null>(null);
@@ -1115,7 +1117,21 @@ export default function EstimatorForm() {
         userId={user?.id}
         isReadOnly={isReadOnly}
         onPaymentsChanged={() => setPaymentsRefreshKey(k => k + 1)}
+        onOpenContract={() => {
+          if (pdfSettings) setContractOpen(true);
+          else showToast('Pengaturan PDF belum siap, coba lagi sebentar', 'error');
+        }}
       />
+
+      {contractOpen && pdfSettings && (
+        <ContractModal
+          open={contractOpen}
+          draft={draft}
+          settings={pdfSettings}
+          onClose={() => setContractOpen(false)}
+          onToast={(msg, type) => showToast(msg, type)}
+        />
+      )}
 
       {documentPreviewOpen && pdfSettings && (
         <EstimationDocumentPreviewModal

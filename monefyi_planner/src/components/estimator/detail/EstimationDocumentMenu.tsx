@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
-  BadgeCheck, ChevronLeft, FileText, Loader2, Plus, Receipt, Sparkles,
+  BadgeCheck, ChevronLeft, FileSignature, FileText, Loader2, Plus, Receipt, Sparkles,
 } from 'lucide-react';
 import { buildKwitansiPreviewChoices, type KwitansiPreviewChoice } from '../../../lib/kwitansiPreviewChoice';
 import { formatRupiahFull } from '../../../lib/estimatorFormat';
@@ -39,6 +39,8 @@ type Props = {
   userId?: string;
   isReadOnly?: boolean;
   onPaymentsChanged?: () => void;
+  /** Buka generator Surat Perjanjian Kerja. Tile disembunyikan bila tidak diisi. */
+  onOpenContract?: () => void;
 };
 
 const CATEGORY_LABELS: Record<IncomeCategory, string> = {
@@ -71,6 +73,7 @@ export default function EstimationDocumentMenu({
   userId,
   isReadOnly,
   onPaymentsChanged,
+  onOpenContract,
 }: Props) {
   const [projectPayments, setProjectPayments] = useState<ProjectIncome[]>([]);
   const [kwitansiPickerOpen, setKwitansiPickerOpen] = useState(false);
@@ -315,6 +318,20 @@ export default function EstimationDocumentMenu({
               badge="Pro"
               onClick={() => setKwitansiPickerOpen(true)}
             />
+            {onOpenContract && (
+              <DocumentTile
+                title="Surat Perjanjian"
+                subtitle="MoU kerja dengan klien, template siap edit"
+                gradient="from-amber-500 to-orange-700"
+                shadow="shadow-amber-600/30"
+                icon={<FileSignature className="w-6 h-6 text-white" />}
+                badge="Baru"
+                onClick={() => {
+                  onOpenContract();
+                  onClose();
+                }}
+              />
+            )}
           </div>
         </div>
 
