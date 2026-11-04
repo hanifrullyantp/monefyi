@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build:bonus-mini": "bash scripts/build-bonus-mini.sh",
+    "build": "npm run build:bonus-mini && next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"

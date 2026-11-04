@@ -1,8 +1,10 @@
 import type { LucideIcon } from "lucide-react";
 import { Calculator, PieChart, Wallet, Banknote } from "lucide-react";
 
-const BASE =
-  (process.env.NEXT_PUBLIC_BONUS_APPS_BASE_URL || "https://monefyi.com/bonus").replace(/\/$/, "");
+/** Override penuh (mis. deploy terpisah di subdomain); kosong = embed same-origin */
+const EXTERNAL_BASE = process.env.NEXT_PUBLIC_BONUS_APPS_BASE_URL?.replace(/\/$/, "");
+
+const EMBED_PREFIX = "/bonus/mini";
 
 export type BonusAppId = "budget" | "debt-free" | "bagi-hasil" | "salary";
 
@@ -16,7 +18,7 @@ export type BonusAppDef = {
   color: "emerald" | "violet" | "blue" | "amber";
 };
 
-/** Selaras folder `Mini App Monefyi/` + deploy path /bonus/{slug}/ */
+/** Selaras `PlannerLP2/public/bonus/mini/{slug}/` dari script build-bonus-mini.sh */
 export const BONUS_APPS: BonusAppDef[] = [
   {
     id: "budget",
@@ -56,6 +58,17 @@ export const BONUS_APPS: BonusAppDef[] = [
   },
 ];
 
+/** Halaman utama (hindari redirect server di static export). */
+const EMBED_ENTRY: Partial<Record<BonusAppId, string>> = {
+  budget: "budget-planner",
+  "bagi-hasil": "kalkulator-bagi-hasil",
+};
+
 export function bonusAppUrl(app: BonusAppDef): string {
-  return `${BASE}/${app.path}/`;
+  const entry = EMBED_ENTRY[app.id];
+  const segment = entry ? `${app.path}/${entry}` : app.path;
+  if (EXTERNAL_BASE) {
+    return `${EXTERNAL_BASE}/${segment}/`;
+  }
+  return `${EMBED_PREFIX}/${segment}/`;
 }
