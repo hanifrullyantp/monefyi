@@ -893,132 +893,132 @@ export default function EstimatorForm() {
             isReadOnly={isReadOnly}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          <section className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 md:col-span-2 xl:col-span-2">
-            <h3 className="text-xs font-bold text-slate-500 uppercase">Informasi Customer & Proyek</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Kode">
-                <input
-                  value={draft.code}
-                  onChange={e => patch({ code: e.target.value })}
-                  disabled={isReadOnly}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-mono disabled:bg-slate-50"
-                />
-              </Field>
-              <Field label="Proyek (opsional)">
-                <select
-                  value={draft.project_id || ''}
-                  onChange={e => patch({ project_id: e.target.value || null })}
-                  disabled={isReadOnly}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm disabled:bg-slate-50"
-                >
-                  <option value="">— Tidak terhubung —</option>
-                  {projects.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Customer">
-                <input
-                  value={draft.customer_name}
-                  onChange={e => patch({ customer_name: e.target.value })}
-                  disabled={isReadOnly}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm disabled:bg-slate-50"
-                />
-              </Field>
-              <Field label="Telepon">
-                <input
-                  value={draft.customer_phone}
-                  onChange={e => patch({ customer_phone: e.target.value })}
-                  placeholder="+62..."
-                  disabled={isReadOnly}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm disabled:bg-slate-50"
-                />
-              </Field>
-            </div>
-            <Field label="Alamat">
-              <textarea
-                value={draft.customer_address}
-                onChange={e => patch({ customer_address: e.target.value })}
-                rows={2}
-                disabled={isReadOnly}
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm resize-none disabled:bg-slate-50"
-              />
-            </Field>
-            <Field label={`Masa berlaku (${draft.validity_days} hari)`}>
-              <input
-                type="range"
-                min={7}
-                max={30}
-                step={7}
-                value={draft.validity_days}
-                onChange={e => patch({ validity_days: Number(e.target.value) })}
-                disabled={isReadOnly}
-                className="w-full disabled:opacity-60"
-              />
-              <div className="flex justify-between text-[10px] text-slate-600">
-                <span>7 hari</span>
-                <span>14 hari</span>
-                <span>21 hari</span>
-                <span>30 hari</span>
-              </div>
-            </Field>
-          </section>
-
-          <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setAdvancedOpen(v => !v)}
-              className="w-full flex items-center justify-between px-4 py-3 text-sm font-bold text-slate-700"
-            >
-              Overhead, Diskon & PPN
-              <span className="text-slate-600">{advancedOpen ? '▲' : '▼'}</span>
-            </button>
-            {advancedOpen && (
-              <div className="px-4 pb-4 space-y-4 border-t border-slate-100 pt-3">
-                <Field label={`Overhead (${draft.overhead_pct}%)`}>
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={draft.overhead_pct}
-                    onChange={e => patch({ overhead_pct: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
-                  />
-                </Field>
-                <Field label={`Diskon total (${draft.discount_pct}%)`}>
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={draft.discount_pct}
-                    onChange={e => patch({ discount_pct: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
-                  />
-                </Field>
-                <Field label="Diskon total (nominal Rp)">
-                  <RupiahInput
-                    value={draft.discount_amount}
-                    onChange={v => patch({ discount_amount: v })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
-                  />
-                </Field>
-                <EstimationAdjustmentsPanel
-                  adjustments={draft.adjustments}
-                  onChange={adjustments => patch({ adjustments })}
-                />
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-600">PPN 11%</span>
-                  <button
-                    type="button"
-                    onClick={() => patch({ tax_pct: draft.tax_pct > 0 ? 0 : 11 })}
-                    className={`w-10 h-6 rounded-full transition-colors ${draft.tax_pct > 0 ? 'bg-emerald-600' : 'bg-slate-200'}`}
-                  >
-                    <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform mx-1 ${draft.tax_pct > 0 ? 'translate-x-4' : ''}`} />
-                  </button>
+              <section className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 md:col-span-2 xl:col-span-2">
+                <h3 className="text-xs font-bold text-slate-500 uppercase">Informasi Customer & Proyek</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Field label="Kode">
+                    <input
+                      value={draft.code}
+                      onChange={e => patch({ code: e.target.value })}
+                      disabled={isReadOnly}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-mono disabled:bg-slate-50"
+                    />
+                  </Field>
+                  <Field label="Proyek (opsional)">
+                    <select
+                      value={draft.project_id || ''}
+                      onChange={e => patch({ project_id: e.target.value || null })}
+                      disabled={isReadOnly}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm disabled:bg-slate-50"
+                    >
+                      <option value="">— Tidak terhubung —</option>
+                      {projects.map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Customer">
+                    <input
+                      value={draft.customer_name}
+                      onChange={e => patch({ customer_name: e.target.value })}
+                      disabled={isReadOnly}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm disabled:bg-slate-50"
+                    />
+                  </Field>
+                  <Field label="Telepon">
+                    <input
+                      value={draft.customer_phone}
+                      onChange={e => patch({ customer_phone: e.target.value })}
+                      placeholder="+62..."
+                      disabled={isReadOnly}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm disabled:bg-slate-50"
+                    />
+                  </Field>
                 </div>
-              </div>
-            )}
-          </section>
+                <Field label="Alamat">
+                  <textarea
+                    value={draft.customer_address}
+                    onChange={e => patch({ customer_address: e.target.value })}
+                    rows={2}
+                    disabled={isReadOnly}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm resize-none disabled:bg-slate-50"
+                  />
+                </Field>
+                <Field label={`Masa berlaku (${draft.validity_days} hari)`}>
+                  <input
+                    type="range"
+                    min={7}
+                    max={30}
+                    step={7}
+                    value={draft.validity_days}
+                    onChange={e => patch({ validity_days: Number(e.target.value) })}
+                    disabled={isReadOnly}
+                    className="w-full disabled:opacity-60"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-600">
+                    <span>7 hari</span>
+                    <span>14 hari</span>
+                    <span>21 hari</span>
+                    <span>30 hari</span>
+                  </div>
+                </Field>
+              </section>
+
+              <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setAdvancedOpen(v => !v)}
+                  className="w-full flex items-center justify-between px-4 py-3 text-sm font-bold text-slate-700"
+                >
+                  Overhead, Diskon & PPN
+                  <span className="text-slate-600">{advancedOpen ? '▲' : '▼'}</span>
+                </button>
+                {advancedOpen && (
+                  <div className="px-4 pb-4 space-y-4 border-t border-slate-100 pt-3">
+                    <Field label={`Overhead (${draft.overhead_pct}%)`}>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={draft.overhead_pct}
+                        onChange={e => patch({ overhead_pct: Number(e.target.value) })}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                      />
+                    </Field>
+                    <Field label={`Diskon total (${draft.discount_pct}%)`}>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={draft.discount_pct}
+                        onChange={e => patch({ discount_pct: Number(e.target.value) })}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                      />
+                    </Field>
+                    <Field label="Diskon total (nominal Rp)">
+                      <RupiahInput
+                        value={draft.discount_amount}
+                        onChange={v => patch({ discount_amount: v })}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                      />
+                    </Field>
+                    <EstimationAdjustmentsPanel
+                      adjustments={draft.adjustments}
+                      onChange={adjustments => patch({ adjustments })}
+                    />
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-600">PPN 11%</span>
+                      <button
+                        type="button"
+                        onClick={() => patch({ tax_pct: draft.tax_pct > 0 ? 0 : 11 })}
+                        className={`w-10 h-6 rounded-full transition-colors ${draft.tax_pct > 0 ? 'bg-emerald-600' : 'bg-slate-200'}`}
+                      >
+                        <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform mx-1 ${draft.tax_pct > 0 ? 'translate-x-4' : ''}`} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </section>
             </div>
           </EstimationDetailProjectCard>
         </div>

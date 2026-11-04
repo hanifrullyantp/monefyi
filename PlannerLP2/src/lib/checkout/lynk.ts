@@ -1,5 +1,6 @@
 import { plannerAppPath, plannerPaymentReturnPath } from "@/lib/config/plannerApp";
 import type { LynkProduct } from "./products";
+import { mergeLynkCheckoutUrlOverrides } from "./lynkDefaults";
 
 export interface LynkCheckoutParams {
   orgId?: string;
@@ -21,8 +22,9 @@ export function resolveLynkBaseUrl(
   product: LynkProduct,
   overrides?: Partial<Record<LynkProduct, string>>,
 ): string {
-  const fromOverride = overrides?.[product]?.trim();
-  if (fromOverride) return fromOverride;
+  const merged = mergeLynkCheckoutUrlOverrides(overrides);
+  const fromMerged = merged[product]?.trim();
+  if (fromMerged) return fromMerged;
 
   const envKey = ENV_KEYS[product];
   const fromEnv = process.env[envKey]?.trim();

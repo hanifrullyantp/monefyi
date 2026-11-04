@@ -11,9 +11,8 @@ import {
 } from "@/lib/permissions";
 import type { User } from "@/lib/store/authStore";
 import { lynkProductLabel, planIdToLynkProduct, type LynkProduct } from "@/lib/checkout/products";
-import { redirectToPlannerCheckout } from "@/lib/checkout/plannerCheckout";
-import { resolveLynkBaseUrl } from "@/lib/checkout/lynk";
-import { resolvePaymentProvider } from "@/lib/checkout/paymentProvider";
+import { buildLynkCheckoutUrl, resolveLynkBaseUrl } from "@/lib/checkout/lynk";
+import { mergeLynkCheckoutUrlOverrides } from "@/lib/checkout/lynkDefaults";
 import { scrollToPricingSection } from "@/lib/navigation/scrollToPricing";
 import {
   loadEstimatorLaunchPromoStatus,
@@ -38,8 +37,7 @@ export function useLandingCta() {
     void hydrate();
   }, [hydrate]);
 
-  const lynkOverrides = content.pricing.lynkCheckoutUrls;
-  const paymentProvider = content.pricing.plannerPaymentProvider;
+  const lynkOverrides = mergeLynkCheckoutUrlOverrides(content.pricing.lynkCheckoutUrls);
 
   const checkoutParams = async (returnUrl?: string) => {
     if (!isAuthenticated || !user) {
@@ -66,15 +64,12 @@ export function useLandingCta() {
       return;
     }
 
-    const provider = resolvePaymentProvider(paymentProvider);
-    if (provider === "lynk") {
-      const base = resolveLynkBaseUrl(product, lynkOverrides);
-      if (!base) {
-        window.alert(
-          `Link checkout Lynk untuk ${lynkProductLabel(product)} belum tersedia. Hubungi admin — set URL di Admin → Pricing atau variabel env Lynk.`,
-        );
-        return;
-      }
+    const base = resolveLynkBaseUrl(product, lynkOverrides);
+    if (!base) {
+      window.alert(
+        `Link checkout Lynk untuk ${lynkProductLabel(product)} belum tersedia. Hubungi admin — set URL di Admin → Pricing.`,
+      );
+      return;
     }
 
     try {
@@ -85,10 +80,8 @@ export function useLandingCta() {
           : product === "estimator_pro"
             ? 199_000
             : undefined;
-      await redirectToPlannerCheckout(
-        product,
-        { ...params, checkoutAmount },
-        { lynkUrlOverrides: lynkOverrides, paymentProvider, checkoutAmount },
+      window.location.assign(
+        buildLynkCheckoutUrl(product, { ...params, checkoutAmount }, lynkOverrides),
       );
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Checkout gagal.";
@@ -97,11 +90,14 @@ export function useLandingCta() {
   };
 
   const startPlannerProCheckout = async () => {
-    await redirectToPlannerCheckout(
-      "planner_pro",
-      await checkoutParams(plannerPaymentReturnPath("app")),
-      { lynkUrlOverrides: lynkOverrides, paymentProvider },
-    );
+    const product = "planner_pro" as const;
+    const base = resolveLynkBaseUrl(product, lynkOverrides);
+    if (!base) {
+      window.alert("Link Lynk Planner Pro belum dikonfigurasi.");
+      return;
+    }
+    const params = await checkoutParams(plannerPaymentReturnPath("app"));
+    window.location.assign(buildLynkCheckoutUrl(product, params, lynkOverrides));
   };
 
   const label = !isAuthenticated ? "Login" : "Masuk";

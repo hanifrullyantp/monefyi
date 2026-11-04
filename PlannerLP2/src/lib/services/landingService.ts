@@ -79,7 +79,11 @@ export function mergeSiteContent(raw: Partial<SiteContent> | null | undefined): 
         : defaultContent.pricing.cards,
       lynkCheckoutUrls: {
         ...defaultContent.pricing.lynkCheckoutUrls,
-        ...(raw.pricing?.lynkCheckoutUrls || {}),
+        ...Object.fromEntries(
+          Object.entries(raw.pricing?.lynkCheckoutUrls || {}).filter(
+            ([, url]) => String(url ?? "").trim().length > 0,
+          ),
+        ),
       },
     },
     footer: { ...defaultContent.footer, ...(raw.footer || {}) },

@@ -89,15 +89,6 @@ export function HeroSection() {
 
   const primary = () => {
     trackEvent("hero_cta_primary_click", { variant_id: copy.id, source: "hero" });
-    if (hydrated && isAuthenticated) {
-      navigateToPlannerApp("/app/estimator");
-      return;
-    }
-    if (FREE_PLAN_ENABLED) {
-      trackEvent("free_signup", { source: "hero", variant_id: copy.id });
-      window.location.href = plannerAppPath("/app/estimator?plan=free");
-      return;
-    }
     scrollTo("harga");
   };
 

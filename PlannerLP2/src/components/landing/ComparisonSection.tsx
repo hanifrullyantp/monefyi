@@ -14,10 +14,6 @@ import {
 } from "@/lib/content/comparison.config";
 import { trackEvent } from "@/lib/analytics/events";
 import { getActiveHeroCopy } from "@/lib/content/heroCopy";
-import { FREE_PLAN_ENABLED } from "@/lib/content/heroCopy";
-import { useAuthStore } from "@/lib/store/authStore";
-import { navigateToPlannerApp, plannerAppPath } from "@/lib/config/plannerApp";
-
 function variantId(): string {
   try {
     return getActiveHeroCopy().id;
@@ -123,8 +119,6 @@ export function ComparisonSection() {
   const viewedRef = useRef(false);
   const [expanded, setExpanded] = useState(false);
   const reducedMotion = useReducedMotion();
-  const hydrated = useAuthStore((s) => s.hydrated);
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const primary = getPrimaryComparisonRows();
   const secondary = getSecondaryComparisonRows();
@@ -159,18 +153,8 @@ export function ComparisonSection() {
 
   const handleCta = useCallback(() => {
     trackEvent("comparison_cta_click", { variant_id: variantId() });
-    if (hydrated && isAuthenticated) {
-      navigateToPlannerApp("/app/estimator");
-      return;
-    }
-    if (FREE_PLAN_ENABLED) {
-      trackEvent("free_signup", { source: "comparison", variant_id: variantId() });
-      window.location.href = plannerAppPath("/app/estimator?plan=free");
-      return;
-    }
-    const pricing = document.getElementById("harga");
-    pricing?.scrollIntoView({ behavior: "smooth" });
-  }, [hydrated, isAuthenticated]);
+    document.getElementById("harga")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
 
   const rowMotion = (i: number) =>
     reducedMotion

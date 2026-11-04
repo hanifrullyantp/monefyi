@@ -11,7 +11,7 @@ import { useFinishInlineEdit } from "@/lib/hooks/useFinishInlineEdit";
 import { useAuthStore } from "@/lib/store/authStore";
 import { plannerAppPath } from "@/lib/config/plannerApp";
 import { canClaimBonusApps, isEstimatorOnlyUser } from "@/lib/permissions";
-import { FREE_PLAN_ENABLED, getActiveHeroCopy } from "@/lib/content/heroCopy";
+import { getActiveHeroCopy } from "@/lib/content/heroCopy";
 import { cn } from "@/lib/utils/cn";
 import { LoginModal } from "./LoginModal";
 import Link from "next/link";
@@ -74,14 +74,6 @@ export function Navbar() {
   const showCobaGratis = !(hydrated && isAuthenticated);
 
   const cobaGratis = () => {
-    if (hydrated && isAuthenticated) {
-      window.location.href = plannerAppPath("/app/estimator");
-      return;
-    }
-    if (FREE_PLAN_ENABLED) {
-      window.location.href = plannerAppPath("/app/estimator?plan=free");
-      return;
-    }
     scrollTo("#harga");
   };
 

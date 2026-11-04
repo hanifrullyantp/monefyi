@@ -7,7 +7,6 @@ import { useAuthStore } from "@/lib/store/authStore";
 import { useLandingAdmin } from "@/lib/hooks/useLandingAdmin";
 import { ownsEstimator } from "@/lib/permissions";
 import { trackEvent } from "@/lib/analytics/events";
-import { plannerAppPath } from "@/lib/config/plannerApp";
 
 /** Sticky bottom bar mobile — Coba Gratis setelah lewati hero */
 export function FloatingCTA() {
@@ -52,11 +51,7 @@ export function FloatingCTA() {
   }, []);
 
   const handleClick = () => {
-    trackEvent("free_signup", { source: "sticky_cta" });
-    if (isAuthenticated) {
-      window.location.href = plannerAppPath("/app/estimator");
-      return;
-    }
+    trackEvent("hero_cta_primary_click", { source: "sticky_cta" });
     const el = document.getElementById("harga");
     if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 80, behavior: "smooth" });
   };
