@@ -42,9 +42,10 @@ export function PhoneMockup({ children, className, pulseToken = 0 }: PhoneMockup
         isLg ? "--header-h-desktop" : "--header-h-mobile",
         isLg ? 64 : 56,
       );
-      const maxFrameH = Math.max(200, viewportHeight() - header - 12);
+      const reserve = isLg ? 140 : 12;
+      const maxFrameH = Math.max(200, viewportHeight() - header - reserve);
       const heightBasedW = ((maxFrameH - bezel * 2) * NATIVE_W) / NATIVE_H + bezel * 2;
-      const maxW = window.innerWidth - 16;
+      const maxW = isLg ? Math.min(window.innerWidth - 16, 360) : window.innerWidth - 16;
       const width = Math.min(heightBasedW, maxW);
       setFrameW(width);
       setScale(Math.max(0.01, (width - bezel * 2) / NATIVE_W));

@@ -11,7 +11,7 @@ type TapAnchor = { x: number; y: number };
 
 const TOTAL_START = 63_145_000;
 const TOTAL_END = 86_055_000;
-const PROGRESS_PCT = 25;
+const PROGRESS_PCT = 50;
 
 const STEPS = [
   "Semua estimasi terpantau dalam satu layar",
@@ -249,7 +249,7 @@ export function HeroEstimatorDemoAnimation({ pulseToken = 0 }: HeroEstimatorDemo
               <div className="hed-dash-hero">
                 <p className="hed-lbl">Estimasi baru · 30 hari</p>
                 <div className="hed-big">
-                  1 <small>dari 4 total</small>
+                  3 <small>dari 6 total</small>
                 </div>
                 <div className="hed-bar">
                   <i style={{ width: `${PROGRESS_PCT}%` }} />
@@ -265,13 +265,13 @@ export function HeroEstimatorDemoAnimation({ pulseToken = 0 }: HeroEstimatorDemo
                 </div>
                 <div className="hed-mini hed-purple">
                   <p className="hed-lbl">Leads</p>
-                  <div className="hed-big2">0</div>
+                  <div className="hed-big2">2</div>
                   <div>project</div>
-                  <b>Rp 0</b>
+                  <b>Rp 90 jt</b>
                 </div>
               </div>
               <div className="hed-sec">
-                <span>Total 4 estimasi</span>
+                <span>Total 6 estimasi · Rp 408 jt</span>
               </div>
               <ListCard
                 bar="#10b981"
@@ -279,6 +279,8 @@ export function HeroEstimatorDemoAnimation({ pulseToken = 0 }: HeroEstimatorDemo
                 sub="Novia · Update hari ini"
                 value="Rp 33 jt"
                 profit="Rp 12 jt"
+                pill="Leads"
+                pillVariant="leads"
               />
               <ListCard
                 bar="#10b981"
@@ -296,6 +298,31 @@ export function HeroEstimatorDemoAnimation({ pulseToken = 0 }: HeroEstimatorDemo
                 value="Rp 63 jt"
                 profit="Rp 29 jt"
                 pill="Active"
+              />
+              <ListCard
+                bar="#10b981"
+                title="Interior Kamar BSD"
+                sub="Pak Hendra · Update 2 hari lalu"
+                value="Rp 85 jt"
+                profit="Rp 34 jt"
+                pill="Active"
+              />
+              <ListCard
+                bar="#10b981"
+                title="Renovasi Ruko Serpong"
+                sub="Koh Benny · Update 3 hari lalu"
+                value="Rp 125 jt"
+                profit="Rp 48 jt"
+                pill="Active"
+              />
+              <ListCard
+                bar="#a855f7"
+                title="Kanopi & Fasad Bintaro"
+                sub="Bu Rina · Update 4 hari lalu"
+                value="Rp 57 jt"
+                profit="Rp 21 jt"
+                pill="Leads"
+                pillVariant="leads"
               />
             </div>
           </div>
@@ -322,8 +349,8 @@ export function HeroEstimatorDemoAnimation({ pulseToken = 0 }: HeroEstimatorDemo
                   + Tambah
                 </span>
               </div>
-              <ProductRow name="Backsplash" meta="7,9 m × Rp 500.000" price="Rp 3.950.000" />
-              <ProductRow name="Kabinet Atas" meta="7,9 m × Rp 2.900.000" price="Rp 22.910.000" />
+              <ProductRow name="Backsplash HPL" meta="7,9 m × Rp 500.000" price="Rp 3.950.000" />
+              <ProductRow name="Kabinet Atas Full Plafon" meta="7,9 m × Rp 2.900.000" price="Rp 22.910.000" />
               <ProductRow
                 id="hed-new-item"
                 className="hed-nitem"
@@ -331,6 +358,10 @@ export function HeroEstimatorDemoAnimation({ pulseToken = 0 }: HeroEstimatorDemo
                 meta="7,9 m × Rp 2.900.000"
                 price="Rp 22.910.000"
               />
+              <ProductRow name="Top Table Granit Nero" meta="5,2 m × Rp 2.400.000" price="Rp 12.480.000" />
+              <ProductRow name="Meja Island & Minibar" meta="3,0 m × Rp 4.200.000" price="Rp 12.600.000" />
+              <ProductRow name="Aksesoris Rak & Engsel Slowmo" meta="1 paket × Rp 6.805.000" price="Rp 6.805.000" />
+              <ProductRow name="Instalasi LED Strip & Cooker Hood" meta="1 paket × Rp 4.400.000" price="Rp 4.400.000" />
             </div>
             <div className="hed-tot">
               <div>
@@ -372,22 +403,33 @@ export function HeroEstimatorDemoAnimation({ pulseToken = 0 }: HeroEstimatorDemo
                   </div>
                   <div className="hed-gc">
                     <b>Videotron</b>
-                    Kelompok custom · 1 item
+                    Kelompok custom · 3 item
+                  </div>
+                  <div className="hed-gc">
+                    <b>Backdrop TV</b>
+                    Interior ruang · 6 item
+                  </div>
+                  <div className="hed-gc">
+                    <b>Renovasi</b>
+                    Sipil &amp; plafon · 12 item
                   </div>
                 </div>
               </div>
               <div className="hed-pane" id="hed-p-items">
                 <div className="hed-ph">← Kitchen Set</div>
                 <div className="hed-search">Cari item...</div>
-                <PricelistRow name="Backsplash" meta="Borongan · m · Rp 500.000" />
-                <PricelistRow name="Kabinet Atas" meta="Borongan · m · Rp 2.900.000" checked />
+                <PricelistRow name="Backsplash HPL" meta="Borongan · m · Rp 500.000" checked />
+                <PricelistRow name="Kabinet Atas Full Plafon" meta="Borongan · m · Rp 2.900.000" checked />
                 <PricelistRow
                   id="hed-cb-bawah-row"
                   name="Kabinet Bawah"
                   meta="Borongan · m · Rp 2.900.000"
                   cbId="hed-cb-bawah"
                 />
-                <PricelistRow name="Lemari Elektronik" meta="Borongan · m · Rp 2.900.000" />
+                <PricelistRow name="Top Table Granit Nero" meta="Borongan · m · Rp 2.400.000" checked />
+                <PricelistRow name="Meja Island & Minibar" meta="Borongan · m · Rp 4.200.000" checked />
+                <PricelistRow name="Aksesoris Rak & Engsel Slowmo" meta="Paket · set · Rp 6.805.000" checked />
+                <PricelistRow name="Instalasi LED Strip & Cooker Hood" meta="Paket · set · Rp 4.400.000" checked />
               </div>
             </div>
             <div className="hed-sfoot">
@@ -458,6 +500,7 @@ function ListCard({
   value,
   profit,
   pill,
+  pillVariant = "active",
 }: {
   id?: string;
   bar: string;
@@ -466,6 +509,7 @@ function ListCard({
   value: string;
   profit: string;
   pill?: string;
+  pillVariant?: "active" | "leads";
 }) {
   return (
     <div className="hed-item" id={id}>
@@ -474,7 +518,7 @@ function ListCard({
         <div className="min-w-0 flex-1 pl-2">
           <div className="hed-nm">
             {title}
-            {pill ? <span className="hed-pill active">{pill}</span> : null}
+            {pill ? <span className={`hed-pill ${pillVariant}`}>{pill}</span> : null}
           </div>
           <div className="hed-sub">{sub}</div>
         </div>
