@@ -3,6 +3,8 @@ import { Search, SlidersHorizontal, X } from 'lucide-react';
 type Props = {
   search: string;
   onSearchChange: (value: string) => void;
+  onSearchFocus?: () => void;
+  onSearchBlur?: () => void;
   onOpenOptions: () => void;
   activeFilterLabel?: string | null;
   onClearFilter?: () => void;
@@ -11,6 +13,8 @@ type Props = {
 export default function EstimatorListToolbar({
   search,
   onSearchChange,
+  onSearchFocus,
+  onSearchBlur,
   onOpenOptions,
   activeFilterLabel,
   onClearFilter,
@@ -22,6 +26,8 @@ export default function EstimatorListToolbar({
           <Search size={16} className="text-slate-400 shrink-0" aria-hidden />
           <input
             value={search}
+            onFocus={onSearchFocus}
+            onBlur={onSearchBlur}
             onChange={e => onSearchChange(e.target.value)}
             placeholder="Cari estimasi..."
             className="bg-transparent outline-none flex-1 text-sm text-slate-900 placeholder:text-slate-400 min-w-0"

@@ -6,6 +6,7 @@ import { applyProgressTagHints } from './commandTags';
 import type { TaggableEntity } from './commandTags';
 import { lookupMemory, lookupFuzzyMemory } from '../services/commandMemoryService';
 import { looksLikeLeadForm, parseLeadForm } from './leadFormParser';
+import { storedAmountConflicts } from '../../../packages/domain/src/validation';
 
 export type PipelineSource = 'memory' | 'rule' | 'fuzzy' | 'ai' | 'fallback';
 
@@ -78,10 +79,11 @@ export async function runNeverFailPipeline(
   if (context.orgId) {
     try {
       const match = await lookupMemory(context.orgId, preprocessed.parseText);
-      if (match) {
+      const remembered = match ? finalizeParams(match.params) : null;
+      if (match && remembered && !storedAmountConflicts(preprocessed.parseText, remembered)) {
         const applied = applyTagHints(preprocessed, {
           intent: match.intent,
-          params: finalizeParams(match.params),
+          params: remembered,
           confidence: 0.95,
         });
         return {
@@ -168,10 +170,11 @@ export async function runNeverFailPipeline(
   if (context.orgId) {
     try {
       const fuzzy = await lookupFuzzyMemory(context.orgId, preprocessed.parseText);
-      if (fuzzy) {
+      const remembered = fuzzy ? finalizeParams(fuzzy.params) : null;
+      if (fuzzy && remembered && !storedAmountConflicts(preprocessed.parseText, remembered)) {
         const applied = applyTagHints(preprocessed, {
           intent: fuzzy.intent,
-          params: finalizeParams(fuzzy.params),
+          params: remembered,
           confidence: fuzzy.confidence,
         });
         return {

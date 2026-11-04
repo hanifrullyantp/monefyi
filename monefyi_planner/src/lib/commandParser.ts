@@ -1,4 +1,5 @@
-import { parseNumberFromText } from './adapters';
+import { firstRupiah, parseCostCommand } from '../../../packages/domain/src/money';
+import { storedAmountConflicts } from '../../../packages/domain/src/validation';
 import { finalizeParams } from './commandNormalize';
 
 export type ParseSource = 'memory' | 'rule' | 'ai' | 'fuzzy' | 'fallback';
@@ -26,27 +27,10 @@ function getParsingRules() {
         /(?:beli|bayar|byr|catat)\s+(.+?)\s+(\d[\d.,]*)\s*(?:sak|kg|m3|kubik|btg|buah|unit|ls|pcs)\s+(?:rp\.?\s*)?(\d[\d.,]*)/i,
       ],
       confidence: 0.85,
-      extract: (match: RegExpMatchArray, input: string) => {
-        const item = match[1]?.trim();
-        let qty: number | null = null;
-        let unitPrice: number | null = null;
-        let total = 0;
-
-        if (match[3]) {
-          qty = parseNumberFromText(match[2]);
-          unitPrice = parseNumberFromText(match[3]);
-          if (/ribu|rb|k/i.test(input)) unitPrice *= 1000;
-          total = qty * unitPrice;
-        } else {
-          total = parseNumberFromText(match[2]);
-          if (/juta|jt/i.test(input)) total *= 1_000_000;
-          else if (/ribu|rb|k/i.test(input)) total *= 1000;
-        }
-
-        const projectMatch = input.match(/(?:project|proyek|prj)\s+(.+?)(?:\s*$)/i);
-        const projectName = projectMatch ? projectMatch[1].trim() : null;
-
-        return { item, qty, unitPrice, total, projectName };
+      extract: (_match: RegExpMatchArray, input: string) => {
+        const parsed = parseCostCommand(input);
+        if (!parsed) return { item: '', total: 0, needsReview: true };
+        return parsed;
       },
     },
     {
@@ -58,20 +42,25 @@ function getParsingRules() {
       confidence: 0.82,
       extract: (match: RegExpMatchArray, input: string) => {
         let category = 'other';
-        let amountStr = match[1];
         let projectName = match[2]?.trim() || null;
         if (['dp', 'termin', 'pelunasan', 'retensi'].includes(String(match[1]).toLowerCase())) {
           category = String(match[1]).toLowerCase();
-          amountStr = match[2];
           projectName = match[3]?.trim() || null;
         } else {
           const catMatch = input.match(/\b(dp|termin|pelunasan|retensi)\b/i);
           if (catMatch) category = catMatch[1].toLowerCase();
         }
-        let total = parseNumberFromText(amountStr);
-        if (/juta|jt/i.test(input)) total *= 1_000_000;
-        else if (/ribu|rb|k/i.test(input)) total *= 1000;
-        return { total, amount: total, category, projectName, item: `Penerimaan ${category}`, description: `Penerimaan ${category}` };
+        const money = firstRupiah(input);
+        const total = money.ok ? money.amount : 0;
+        return {
+          total,
+          amount: total,
+          category,
+          projectName,
+          item: `Penerimaan ${category}`,
+          description: `Penerimaan ${category}`,
+          needsReview: !money.ok || money.needsReview,
+        };
       },
     },
     {
@@ -136,6 +125,17 @@ function getParsingRules() {
 }
 
 export function parseCommand(input: string): ParsedCommand {
+  const cost = parseCostCommand(input);
+  if (cost?.item) {
+    return {
+      intent: 'record_cost',
+      params: { ...cost },
+      confidence: cost.needsReview ? 0.62 : 0.85,
+      raw: input,
+      source: 'rule',
+    };
+  }
+
   const lower = input.toLowerCase().trim();
   const rules = getParsingRules();
 
@@ -143,10 +143,12 @@ export function parseCommand(input: string): ParsedCommand {
     for (const pattern of rule.patterns) {
       const match = lower.match(pattern) || input.match(pattern);
       if (match) {
+        const params = rule.extract(match, input);
+        const needsReview = Boolean((params as { needsReview?: boolean }).needsReview);
         return {
           intent: rule.intent,
-          params: rule.extract(match, input),
-          confidence: rule.confidence,
+          params,
+          confidence: needsReview ? Math.min(rule.confidence, 0.62) : rule.confidence,
           raw: input,
           source: 'rule',
         };
@@ -246,10 +248,11 @@ export async function runCommandPipeline(
     try {
       const { lookupMemory } = await import('../services/commandMemoryService');
       const match = await lookupMemory(context.orgId, input);
-      if (match) {
+      const remembered = match ? finalizeParams(match.params) : null;
+      if (match && remembered && !storedAmountConflicts(input, remembered)) {
         return {
           intent: match.intent,
-          params: finalizeParams(match.params),
+          params: remembered,
           confidence: 0.95,
           raw: input,
           source: 'memory',

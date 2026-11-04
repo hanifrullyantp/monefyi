@@ -13,20 +13,15 @@ export interface RapActualAgg {
   lastCostId?: string;
 }
 
+/** Membaca total_spent yang dihitung trigger. Klien tidak menulis kolom turunan. */
 export async function recalculateProjectSpent(projectId: string) {
-  const { data: costs, error } = await supabase
-    .from('planner_cost_realizations')
-    .select('total_amount')
-    .eq('project_id', projectId);
-  if (error) throw new Error(error.message);
-
-  const totalSpent = (costs || []).reduce((s, c) => s + (Number(c.total_amount) || 0), 0);
-  const { error: updErr } = await supabase
+  const { data, error } = await supabase
     .from('planner_projects')
-    .update({ total_spent: totalSpent })
-    .eq('id', projectId);
-  assertNoDbError(updErr);
-  return totalSpent;
+    .select('total_spent')
+    .eq('id', projectId)
+    .single();
+  if (error) throw new Error(error.message);
+  return Number(data?.total_spent) || 0;
 }
 
 export async function deleteAllCosts(projectId: string) {

@@ -1,3 +1,5 @@
+import { parseRupiah } from '../../../packages/domain/src/money';
+
 /**
  * Command normalization + signature/slot extraction for the learning memory.
  *
@@ -52,7 +54,8 @@ const KEYWORDS = new Set([
 
 const UNITS = new Set([
   'sak', 'kg', 'm3', 'm³', 'kubik', 'btg', 'batang', 'buah', 'unit', 'ls',
-  'lot', 'pcs', 'lembar', 'lbr', 'roll', 'meter', 'mtr', 'orang', 'org', 'm2',
+  'lot', 'pcs', 'lembar', 'lbr', 'roll', 'meter', 'mtr', 'orang', 'org', 'm2', 'm²',
+  'kaleng', 'ember', 'galon', 'dus', 'set', 'titik', 'hari',
 ]);
 
 const PREPOSITIONS = new Set(['di', 'ke', 'untuk', 'proyek', 'dari', 'dengan', 'pada']);
@@ -134,14 +137,17 @@ export function buildSlots(raw: string): CommandSlots {
     const tok = tokens[i];
 
     if (startsNumeric(tok)) {
-      const val = parseAmountToken(tok);
+      const next = tokens[i + 1];
+      const phrase = next && MULTIPLIERS[next] !== undefined ? `${tok} ${next}` : tok;
+      const parsed = parseRupiah(phrase);
+      const val = parsed.ok ? parsed.amount : parseAmountToken(tok);
       if (val !== null) {
         flushText();
-        let value = val;
-        const next = tokens[i + 1];
-        if (next && MULTIPLIERS[next] !== undefined) {
-          value *= MULTIPLIERS[next];
-          i++;
+        const value = val;
+        if (parsed.ok && phrase !== tok) i++;
+        else if (!parsed.ok) {
+          const legacyNext = tokens[i + 1];
+          if (legacyNext && MULTIPLIERS[legacyNext] !== undefined) i++;
         }
         const afterNum = tokens[i + 1];
         if (afterNum && MARKER_WORDS.has(afterNum)) i++;

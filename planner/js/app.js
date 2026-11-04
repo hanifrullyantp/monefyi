@@ -749,7 +749,6 @@
   async function updateProjectBudget(total) {
     if (!STATE.currentProject) return;
     STATE.currentProject.total_budget = total;
-    await sb.from("planner_projects").update({ total_budget: total }).eq("id", STATE.currentProject.id);
   }
 
   window.toggleRapCategory = function (type) {
@@ -914,7 +913,6 @@
       ? STATE.workItems.reduce((s, wi) => s + (wi.weight || 0) * (wi.progress_pct || 0), 0) / totalWeight
       : STATE.workItems.reduce((s, wi) => s + (wi.progress_pct || 0), 0) / STATE.workItems.length;
     STATE.currentProject.progress_pct = weightedProgress;
-    await sb.from("planner_projects").update({ progress_pct: weightedProgress }).eq("id", STATE.currentProject.id);
   }
 
   /* ============================================================
@@ -976,7 +974,6 @@
   async function updateProjectSpent(total) {
     if (!STATE.currentProject) return;
     STATE.currentProject.total_spent = total;
-    await sb.from("planner_projects").update({ total_spent: total }).eq("id", STATE.currentProject.id);
   }
 
   function renderDailyLogs() {
@@ -1607,6 +1604,17 @@
      RULE-BASED PARSER (Layer 1)
      ============================================================ */
   function parseCommand(input) {
+    if (window.PlannerMoney && window.PlannerMoney.parseCostCommand) {
+      const cost = window.PlannerMoney.parseCostCommand(input);
+      if (cost && cost.item) {
+        return {
+          intent: "record_cost",
+          params: cost,
+          confidence: cost.needsReview ? 0.62 : 0.85,
+          raw: input,
+        };
+      }
+    }
     const lower = input.toLowerCase().trim();
     const rules = getParsingRules();
 
@@ -1638,27 +1646,11 @@
           /(?:beli|bayar|byr)\s+(.+?)\s+(\d[\d.,]*)\s*(?:sak|kg|m3|kubik|btg|buah|unit|ls|pcs)\s+(?:rp\.?\s*)?(\d[\d.,]*)/i,
         ],
         confidence: 0.85,
-        extract: (match, input) => {
-          let item = match[1]?.trim();
-          let qty = null, unitPrice = null, total = 0;
-
-          if (match[3]) {
-            qty = parseNumberFromText(match[2]);
-            unitPrice = parseNumberFromText(match[3]);
-            if (input.toLowerCase().includes("ribu") || input.toLowerCase().includes("rb") || input.toLowerCase().includes("k")) {
-              unitPrice *= 1000;
-            }
-            total = qty * unitPrice;
-          } else {
-            total = parseNumberFromText(match[2]);
-            if (input.toLowerCase().includes("juta") || input.toLowerCase().includes("jt")) total *= 1000000;
-            else if (input.toLowerCase().includes("ribu") || input.toLowerCase().includes("rb") || input.toLowerCase().includes("k")) total *= 1000;
+        extract: (_match, input) => {
+          if (window.PlannerMoney && window.PlannerMoney.parseCostCommand) {
+            return window.PlannerMoney.parseCostCommand(input);
           }
-
-          const projectMatch = input.match(/(?:project|proyek|prj)\s+(.+?)(?:\s*$)/i);
-          const projectName = projectMatch ? projectMatch[1].trim() : null;
-
-          return { item, qty, unitPrice, total, projectName };
+          return { item: "", qty: null, unitPrice: null, total: 0, needsReview: true };
         },
       },
       {
@@ -1736,7 +1728,23 @@
   /* ============================================================
      INTENT EXECUTION
      ============================================================ */
-  async function executeIntent(result) {
+  async function executeIntent(result, options) {
+    const commit = !!(options && options.commit);
+    const writesMoney = result.intent === "record_cost" || result.intent === "update_progress" || result.intent === "add_worker_log";
+    if (writesMoney && !commit) {
+      STATE.smartButton.pending = result;
+      const total = result.params && result.params.total;
+      const review = result.params && result.params.needsReview;
+      showSmartOutput({
+        success: true,
+        needsConfirm: true,
+        message: review ? "Periksa nominal sebelum disimpan" : "Simpan perintah ini?",
+        details: result.intent === "record_cost"
+          ? (result.params.item || "Biaya") + (total ? " · " + formatCurrency(total) : "")
+          : (result.params.workItem || result.params.workers || result.raw || ""),
+      });
+      return;
+    }
     const { intent, params } = result;
     let project = STATE.currentProject;
 
@@ -1964,15 +1972,27 @@
     }).eq("raw_input", input).eq("user_id", STATE.user.id);
   }
 
-  window.confirmSmartCommand = function () {
-    document.getElementById("smartOutput").classList.add("hidden");
-    document.getElementById("smartInput").value = "";
-    toast("Dikonfirmasi!");
+  window.confirmSmartCommand = async function () {
+    const pending = STATE.smartButton.pending;
+    if (!pending) {
+      document.getElementById("smartOutput").classList.add("hidden");
+      return;
+    }
+    showLoading(true);
+    try {
+      await executeIntent(pending, { commit: true });
+      STATE.smartButton.pending = null;
+      document.getElementById("smartInput").value = "";
+    } finally {
+      showLoading(false);
+    }
   };
 
   window.rejectSmartCommand = function () {
+    STATE.smartButton.pending = null;
     document.getElementById("smartOutput").classList.add("hidden");
     document.getElementById("smartInput").focus();
+    toast("Dibatalkan. Tidak ada yang disimpan.");
   };
 
   /* ============================================================
@@ -2089,7 +2109,7 @@
      ADMIN
      ============================================================ */
   function checkAdmin() {
-    const isAdmin = CFG.adminEmails.includes(STATE.user.email) || STATE.profile?.role === "admin";
+    const isAdmin = STATE.profile?.role === "admin";
     document.getElementById("adminSection").style.display = isAdmin ? "" : "none";
   }
 
@@ -2123,29 +2143,8 @@
     if (bypassRow) bypassRow.classList.toggle("hidden", view === "forgot");
   };
 
-  window.plannerBypassLogin = async function () {
-    if (!CFG.bypassLoginEnabled) {
-      toast("Bypass login dimatikan di config.");
-      return;
-    }
-    showLoading(true);
-    try {
-      const { error } = await sb.auth.signInWithPassword({
-        email: CFG.bypassEmail,
-        password: CFG.bypassPassword,
-      });
-      if (error) {
-        console.warn("[planner-auth] bypass", error);
-        toast(authUserMessage(error) + " Pastikan migrasi seed auth sudah di-push ke Supabase.");
-        return;
-      }
-      toast("Masuk sebagai demo…");
-    } catch (err) {
-      console.error(err);
-      toast("Bypass gagal: " + (err.message || String(err)));
-    } finally {
-      showLoading(false);
-    }
+  window.plannerBypassLogin = function () {
+    toast("Masuk cepat sudah ditutup. Gunakan email dan kata sandi Anda.");
   };
 
   /* ============================================================
@@ -2171,7 +2170,7 @@
           document.getElementById("pfStartDate").value = todayStr();
           const end = new Date();
           end.setDate(end.getDate() + 30);
-          document.getElementById("pfEndDate").value = end.toISOString().split("T")[0];
+          document.getElementById("pfEndDate").value = todayStr(end);
         }
       }
       if (id === "rapItemFormSheet" && !document.getElementById("riId").value) {
@@ -2252,8 +2251,18 @@
     return Math.max(0, Math.ceil((b - a) / 86400000) + 1);
   }
 
-  function todayStr() {
-    return new Date().toISOString().split("T")[0];
+  function todayStr(now) {
+    const tz = (STATE.org && STATE.org.timezone) || "Asia/Jakarta";
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(now || new Date());
+    const year = parts.find((part) => part.type === "year").value;
+    const month = parts.find((part) => part.type === "month").value;
+    const day = parts.find((part) => part.type === "day").value;
+    return year + "-" + month + "-" + day;
   }
 
   function timeAgo(dateStr) {

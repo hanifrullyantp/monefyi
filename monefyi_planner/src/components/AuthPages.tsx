@@ -14,6 +14,7 @@ import {
   signUpWithPassword,
   resetPasswordForEmail,
 } from '../services/authService';
+import { setActiveOrgTimeZone } from '../lib/adapters';
 import { useAppStore } from '../store/appStore';
 import { EstimatorLogo } from './EstimatorLogo';
 import { PlannerLogo } from './MonefyiLogo';
@@ -52,6 +53,7 @@ export function LoginPage() {
       worker: { id: 'demo-u-3', name: 'Ahmad Rizky', email: 'demo@local', role: 'worker' as const, tenant_id: 'demo' },
     };
     setUser(users[role]);
+    setActiveOrgTimeZone('Asia/Jakarta');
     setTenant({
       id: 'demo',
       name: 'CV Buana Konstruksi (Demo)',

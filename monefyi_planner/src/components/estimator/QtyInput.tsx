@@ -1,4 +1,4 @@
-import { useEffect, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { formatNumberId, parseNumberId } from '../../lib/estimatorFormat';
 
 interface Props {
@@ -30,6 +30,16 @@ export default function QtyInput({
 }: Props) {
   const [focused, setFocused] = useState(false);
   const [text, setText] = useState('');
+  const localRef = useRef<HTMLInputElement | null>(null);
+
+  const assignRef = (el: HTMLInputElement | null) => {
+    localRef.current = el;
+    inputRef?.(el);
+  };
+
+  useEffect(() => {
+    if (focused) localRef.current?.select();
+  }, [focused]);
 
   useEffect(() => {
     if (!focused) setText(displayValue(value));
@@ -54,14 +64,14 @@ export default function QtyInput({
 
   return (
     <input
-      ref={inputRef}
+      ref={assignRef}
       type="text"
       inputMode="decimal"
       value={shown}
       title={title || (value > 0 ? displayValue(value) : undefined)}
       placeholder={placeholder}
-      onFocus={e => {
-        e.currentTarget.select();
+      onMouseUp={e => e.preventDefault()}
+      onFocus={() => {
         setFocused(true);
         setText(displayValue(value));
       }}

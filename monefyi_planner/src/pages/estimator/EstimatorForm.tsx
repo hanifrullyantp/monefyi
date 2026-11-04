@@ -18,6 +18,7 @@ import { useEstimationDraftHistory } from '../../hooks/useEstimationDraftHistory
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
 import EstimationItemsTable from '../../components/estimator/EstimationItemsTable';
+import RupiahInput from '../../components/estimator/RupiahInput';
 import EstimationAdjustmentsPanel from '../../components/estimator/EstimationAdjustmentsPanel';
 import EstimationImageSlots from '../../components/estimator/EstimationImageSlots';
 import PdfDesignCustomizer from '../../components/estimator/PdfDesignCustomizer';
@@ -52,7 +53,6 @@ import {
   estimationToFormDraft,
   generateEstimationCode,
   loadEstimation,
-  loadEstimations,
   newEstimationDraft,
   updateEstimation,
   updateEstimationStatus,
@@ -66,6 +66,13 @@ import { ESTIMATION_STATUS_LABEL } from '../../lib/estimatorFormat';
 import type { EstimationImageDraft, EstimationStatus, Estimation } from '../../types/estimator';
 import { calcEstimationSummary, countedEstimationItems, summaryOptsFromDraft } from '../../lib/estimatorCalc';
 import type { EstimationFormDraft } from '../../types/estimator';
+import {
+  clearEstimationDraft,
+  draftHasContent,
+  estimationDraftKey,
+  readEstimationDraft,
+  writeEstimationDraft,
+} from '../../lib/estimationDraftStore';
 import { resolveEstimationProjectId } from '../../lib/estimationProjectLink';
 import type { ProjectIncome } from '../../services/incomeService';
 
@@ -79,7 +86,9 @@ export default function EstimatorForm() {
 
   const [draft, setDraft] = useState<EstimationFormDraft | null>(null);
   const [loading, setLoading] = useState(true);
-  const draftStorageKey = tenant?.id && user?.id ? `monefyi-estimator-draft:${tenant.id}:${user.id}:${id || 'new'}` : null;
+  const draftStorageKey = tenant?.id && user?.id
+    ? estimationDraftKey(tenant.id, user.id, id || 'new')
+    : null;
   const [saving, setSaving] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const draftRef = useRef<EstimationFormDraft | null>(null);
@@ -164,13 +173,14 @@ export default function EstimatorForm() {
     }
     const saved = { ...payload, images };
     await updateEstimation(id, saved);
+    if (draftStorageKey) clearEstimationDraft(draftStorageKey);
     setSavedSnapshot(saved);
     if (hadPendingUploads) {
       patch({ images }, { skipHistory: true });
     }
-  }, [tenant?.id, user?.id, isNew, id, patch, getSavedNamedItemCount, setSavedSnapshot]);
+  }, [tenant?.id, user?.id, isNew, id, patch, getSavedNamedItemCount, setSavedSnapshot, draftStorageKey]);
 
-  const saveHandlerRef = useRef<() => Promise<void>>(async () => {});
+  const saveHandlerRef = useRef<() => Promise<boolean>>(async () => false);
 
   const autoSave = useAutoSave<EstimationFormDraft>({
     debounceMs: 1200,
@@ -182,40 +192,34 @@ export default function EstimatorForm() {
 
   useEffect(() => {
     if (!draftStorageKey || !draft || loading || draft.status === 'converted') return;
+    if (!isDirty(draft) || (isNew && !draftHasContent(draft))) return;
     try {
-      localStorage.setItem(draftStorageKey, JSON.stringify({ savedAt: Date.now(), draft }));
+      writeEstimationDraft(draftStorageKey, draft, false);
     } catch (error) {
       console.error('Draft lokal gagal disimpan:', error);
     }
-  }, [draftStorageKey, draft, loading]);
+  }, [draftStorageKey, draft, loading, isDirty, isNew]);
 
   useEffect(() => {
-    if (!draftStorageKey || !isNew) return;
-    try {
-      const raw = localStorage.getItem(draftStorageKey);
-      if (!raw) return;
-      const recovered = JSON.parse(raw) as { draft?: EstimationFormDraft };
-      if (recovered.draft?.code) setDraft(recovered.draft);
-    } catch (error) {
-      console.error('Draft lokal gagal dipulihkan:', error);
-    }
-  }, [draftStorageKey, isNew]);
-
-  useEffect(() => {
-    if (!draftStorageKey || isNew || !id || !draft || loading || !isDirty(draft)) return;
+    if (!draftStorageKey) return;
     const persistOnExit = () => {
       const latest = draftRef.current;
-      if (!latest) return;
+      if (!latest || latest.status === 'converted' || !isDirty(latest)) return;
+      if (isNew && !draftHasContent(latest)) return;
       try {
-        localStorage.setItem(draftStorageKey, JSON.stringify({ savedAt: Date.now(), draft: latest }));
+        writeEstimationDraft(draftStorageKey, latest, true);
       } catch (error) {
         console.error('Draft lokal gagal disimpan saat keluar:', error);
       }
-      void updateEstimation(id, latest).catch(error => console.error('Simpan otomatis saat keluar gagal:', error));
+      if (!isNew && id) {
+        void updateEstimation(id, latest).catch(error => {
+          console.error('Simpan otomatis saat keluar gagal:', error);
+        });
+      }
     };
     window.addEventListener('pagehide', persistOnExit);
     return () => window.removeEventListener('pagehide', persistOnExit);
-  }, [draftStorageKey, isNew, id, draft, loading, isDirty]);
+  }, [draftStorageKey, isDirty, isNew, id]);
 
   const handleBeforeLeaveList = useCallback(() => {
     discardAutoSave();
@@ -230,13 +234,16 @@ export default function EstimatorForm() {
     const shouldSave = window.confirm('Ada perubahan belum disimpan. OK = simpan sebelum kembali; Batal = buang perubahan dan kembali.');
     if (shouldSave) {
       void saveHandlerRef.current().then(saved => {
-        if (saved) navigate('/app/estimator', { replace: true });
+        if (!saved) return;
+        if (draftStorageKey) clearEstimationDraft(draftStorageKey);
+        navigate('/app/estimator', { replace: true });
       });
     } else {
       discardAutoSave();
+      if (draftStorageKey) clearEstimationDraft(draftStorageKey);
       navigate('/app/estimator', { replace: true });
     }
-  }, [handleBeforeLeaveList, isDirty, navigate, discardAutoSave]);
+  }, [handleBeforeLeaveList, isDirty, navigate, discardAutoSave, draftStorageKey]);
 
   useEffect(() => {
     if (!draft || isNew || isReadOnly || loading) return;
@@ -262,13 +269,30 @@ export default function EstimatorForm() {
 
         if (isNew) {
           const code = await generateEstimationCode(tenant.id);
-          setDraft({
+          const freshDraft = {
             ...newEstimationDraft(code, Number(settings.default_dp_pct) || 50, settings.default_billing_milestones),
             pdf_template: settings.default_pdf_template,
             pdf_invoice_template: settings.default_invoice_template || settings.default_pdf_template,
             pdf_primary_color: settings.primary_color,
             pdf_secondary_color: settings.secondary_color,
-          });
+          };
+          const stored = draftStorageKey ? readEstimationDraft(draftStorageKey) : null;
+          if (stored && draftHasContent(stored.draft)) {
+            if (stored.promoteOnReturn && stored.draft.title.trim() && user?.id) {
+              try {
+                const created = await createEstimation(tenant.id, user.id, stored.draft);
+                if (draftStorageKey) clearEstimationDraft(draftStorageKey);
+                if (!cancelled) navigate(`/app/estimator/${created.id}`, { replace: true });
+                return;
+              } catch (error) {
+                console.error('Promosi draft baru gagal:', error);
+                showToast('Draft tersimpan, tetapi belum bisa dijadikan estimasi', 'error');
+              }
+            }
+            setDraft(stored.draft);
+          } else {
+            setDraft(freshDraft);
+          }
         } else {
           const est = await loadEstimation(id);
           if (!est) {
@@ -285,9 +309,37 @@ export default function EstimatorForm() {
             pdf_template: est.pdf_template || settings.default_pdf_template,
             pdf_invoice_template: est.pdf_invoice_template || settings.default_invoice_template || settings.default_pdf_template,
           };
-          setDraft(loadedDraft);
-          draftHistory.resetHistory();
-          draftHistory.setSavedSnapshot(loadedDraft);
+          const stored = draftStorageKey ? readEstimationDraft(draftStorageKey) : null;
+          const serverUpdatedAt = new Date(est.updated_at || 0).getTime();
+          const shouldPromote = Boolean(
+            stored
+            && stored.promoteOnReturn
+            && stored.savedAt > serverUpdatedAt
+            && draftHasContent(stored.draft),
+          );
+          if (shouldPromote && stored) {
+            try {
+              await updateEstimation(id, stored.draft);
+              if (draftStorageKey) clearEstimationDraft(draftStorageKey);
+              setDraft(stored.draft);
+              draftHistory.resetHistory();
+              draftHistory.setSavedSnapshot(stored.draft);
+              showToast('Perubahan terakhir disimpan otomatis', 'success');
+            } catch (error) {
+              console.error('Promosi draft gagal:', error);
+              setDraft(stored.draft);
+              draftHistory.resetHistory();
+              draftHistory.setSavedSnapshot(loadedDraft);
+              showToast('Draft lokal dipulihkan. Simpan manual untuk mengunci perubahan.', 'error');
+            }
+          } else {
+            if (stored && stored.savedAt <= serverUpdatedAt && draftStorageKey) {
+              clearEstimationDraft(draftStorageKey);
+            }
+            setDraft(stored && stored.savedAt > serverUpdatedAt ? stored.draft : loadedDraft);
+            draftHistory.resetHistory();
+            draftHistory.setSavedSnapshot(loadedDraft);
+          }
           setStatusMeta({
             created_at: est.created_at,
             wa_at: est.wa_at ?? null,
@@ -322,7 +374,7 @@ export default function EstimatorForm() {
       cancelled = true;
       discardAutoSave();
     };
-  }, [tenant?.id, id, isNew, navigate, showToast, discardAutoSave]);
+  }, [tenant?.id, user?.id, id, isNew, navigate, showToast, discardAutoSave, draftStorageKey]);
 
   const estimationProjectName = useMemo(() => {
     if (!draft) return '';
@@ -351,7 +403,7 @@ export default function EstimatorForm() {
 
   const showSaveActions = !isReadOnly && (
     isNew
-    || isDirty(draft)
+    || (draft ? isDirty(draft) : false)
     || draftHistory.canUndo
     || draftHistory.canRedo
     || autoSave.status === 'pending'
@@ -373,18 +425,19 @@ export default function EstimatorForm() {
     if (!restored) return;
     setDraft(restored);
     autoSave.discard();
+    if (draftStorageKey) clearEstimationDraft(draftStorageKey);
     showToast('Perubahan dibatalkan', 'success');
   };
 
-  const handleSave = async () => {
-    if (!draft || !tenant?.id || !user?.id) return;
+  const handleSave = async (): Promise<boolean> => {
+    if (!draft || !tenant?.id || !user?.id) return false;
     if (isReadOnly) {
       showToast('Estimasi sudah menjadi proyek dan tidak bisa diedit', 'error');
-      return;
+      return false;
     }
     if (!draft.title.trim()) {
       showToast('Judul estimasi wajib diisi', 'error');
-      return;
+      return false;
     }
 
     setSaving(true);
@@ -401,7 +454,7 @@ export default function EstimatorForm() {
           setUpgradeTrigger('estimator_paywall');
           setUpgradeFeatureName(`Kuota gratis ${FREE_ESTIMATION_LIMIT} estimasi habis`);
           setUpgradeOpen(true);
-          return;
+          return false;
         }
         const created = await createEstimation(tenant.id, user.id, draft);
         const itemCount = draft.items.filter(i => i.name.trim()).length;
@@ -421,6 +474,7 @@ export default function EstimatorForm() {
           images = await uploadPendingImages(tenant.id, created.id, images);
           await updateEstimation(created.id, { ...draft, images });
         }
+        if (draftStorageKey) clearEstimationDraft(draftStorageKey);
         showToast('Estimasi disimpan', 'success');
         navigate(`/app/estimator/${created.id}`, { replace: true });
 
@@ -450,21 +504,25 @@ export default function EstimatorForm() {
         patch({ images }, { skipHistory: true });
         draftHistory.setSavedSnapshot(saved);
         autoSave.discard();
+        if (draftStorageKey) clearEstimationDraft(draftStorageKey);
         showToast('Perubahan disimpan', 'success');
       }
+      return true;
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal menyimpan', 'error');
+      return false;
     } finally {
       setSaving(false);
     }
   };
+  saveHandlerRef.current = handleSave;
 
   const requireSaved = (): boolean => {
     if (isNew) {
       showToast('Simpan draft terlebih dahulu sebelum generate PDF', 'error');
       return false;
     }
-    if (!draft.title.trim()) {
+    if (!draft?.title.trim()) {
       showToast('Judul estimasi wajib diisi', 'error');
       return false;
     }
@@ -472,7 +530,7 @@ export default function EstimatorForm() {
   };
 
   const scheduleSentPrompt = useCallback(() => {
-    if (draft?.status !== 'wa' && draft?.status !== 'draft') return;
+    if (draft?.status !== 'wa') return;
     window.setTimeout(() => setSentPromptOpen(true), 500);
   }, [draft?.status]);
 
@@ -696,6 +754,14 @@ export default function EstimatorForm() {
   const handleDuplicate = async () => {
     if (!tenant?.id || !user?.id || isNew || !id) return;
     try {
+      const lifetimeCount = await countLifetimeEstimations(tenant.id);
+      if (!canCreateEstimation(entitlement, lifetimeCount)) {
+        showToast(`Kuota gratis ${FREE_ESTIMATION_LIMIT} estimasi habis. Upgrade untuk lanjut.`, 'error');
+        setUpgradeTrigger('estimator_paywall');
+        setUpgradeFeatureName(`Kuota gratis ${FREE_ESTIMATION_LIMIT} estimasi habis`);
+        setUpgradeOpen(true);
+        return;
+      }
       const copy = await duplicateEstimation(id, tenant.id, user.id);
       showToast('Estimasi diduplikasi', 'success');
       navigate(`/app/estimator/${copy.id}`);

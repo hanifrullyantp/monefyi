@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { runNeverFailPipeline } from './commandPipeline';
+import { lookupFuzzyMemory, lookupMemory } from '../services/commandMemoryService';
 
 vi.mock('../services/commandMemoryService', () => ({
   lookupMemory: vi.fn().mockResolvedValue(null),
@@ -29,6 +30,8 @@ Duit keluar :
 describe('runNeverFailPipeline', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(lookupMemory).mockResolvedValue(null);
+    vi.mocked(lookupFuzzyMemory).mockResolvedValue(null);
   });
 
   it('always returns a usable intent for gibberish input', async () => {
@@ -52,5 +55,38 @@ describe('runNeverFailPipeline', () => {
     expect(result.intent).toBe('record_cost');
     expect(result.source).toBe('rule');
     expect(result.confidence).toBeGreaterThanOrEqual(0.75);
+    expect(result.params.total).toBe(650_000);
+  });
+
+  it('memori 650 juta tidak mengalahkan parser semen', async () => {
+    vi.mocked(lookupMemory).mockResolvedValueOnce({
+      intent: 'record_cost',
+      params: { item: 'semen', qty: 10, unitPrice: 65_000_000, total: 650_000_000 },
+      signature: 'beli {text0} {n0} sak {n1}',
+      source: 'ai',
+      hitCount: 4,
+      accuracyScore: 1,
+      memoryId: 'mem-salah',
+    });
+    const result = await runNeverFailPipeline('beli semen 10 sak 65000', { orgId: 'org-1' }, []);
+    expect(result.source).toBe('rule');
+    expect(result.params.total).toBe(650_000);
+    expect(result.memoryId).toBeUndefined();
+  });
+
+  it('memori yang nominalnya sama tetap dipakai', async () => {
+    vi.mocked(lookupMemory).mockResolvedValueOnce({
+      intent: 'record_cost',
+      params: { item: 'semen', qty: 10, unitPrice: 65_000, total: 650_000 },
+      signature: 'beli {text0} {n0} sak {n1}',
+      source: 'user',
+      hitCount: 2,
+      accuracyScore: 1,
+      memoryId: 'mem-benar',
+    });
+    const result = await runNeverFailPipeline('beli semen 10 sak 65000', { orgId: 'org-1' }, []);
+    expect(result.source).toBe('memory');
+    expect(result.params.total).toBe(650_000);
+    expect(result.memoryId).toBe('mem-benar');
   });
 });

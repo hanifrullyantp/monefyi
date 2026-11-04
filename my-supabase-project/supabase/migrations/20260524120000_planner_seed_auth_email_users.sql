@@ -1,8 +1,8 @@
 -- Monefyi Planner — seed / repair email+password auth users (GoTrue).
 -- Fixes common 400 on /token when auth.users exists without auth.identities (email).
 --
--- After apply: use "Masuk cepat" in the app (planner-bypass@monefyi.app) or
--- hanif.rullyant@gmail.com / 88888888 — then rotate passwords in Dashboard.
+-- Identitas email saja. Kata sandi tidak disimpan di repo.
+-- Akun yang sudah ada tidak ditimpa kata sandinya.
 --
 -- Requires: pgcrypto (enabled by default on Supabase).
 
@@ -14,7 +14,7 @@ DECLARE
   demo_uid   uuid := 'a1111111-2222-4333-8444-555555555501'::uuid;
   hanif_uid  uuid := 'a1111111-2222-4333-8444-555555555502'::uuid;
 BEGIN
-  -- Demo account (matches planner/js/config.js bypassEmail / bypassPassword)
+  -- Akun demo tanpa kata sandi yang diketahui. Login lewat undangan atau reset di dashboard.
   IF NOT EXISTS (SELECT 1 FROM auth.users WHERE lower(email::text) = lower('planner-bypass@monefyi.app')) THEN
     INSERT INTO auth.users (
       instance_id,
@@ -40,7 +40,7 @@ BEGIN
       'authenticated',
       'authenticated',
       'planner-bypass@monefyi.app',
-      crypt('PlannerBypass2026!', gen_salt('bf')),
+      crypt(encode(extensions.gen_random_bytes(24), 'hex'), gen_salt('bf')),
       now(),
       now(),
       now(),
@@ -55,7 +55,6 @@ BEGIN
     );
   ELSE
     UPDATE auth.users SET
-      encrypted_password = crypt('PlannerBypass2026!', gen_salt('bf')),
       email_confirmed_at = coalesce(email_confirmed_at, now()),
       updated_at = now()
     WHERE lower(email::text) = lower('planner-bypass@monefyi.app');
@@ -87,7 +86,7 @@ BEGIN
       WHERE i.user_id = u.id AND i.provider = 'email'
     );
 
-  -- Admin / primary account (requested initial password; rotate after login)
+  -- Akun awal tanpa kata sandi yang diketahui. Atur lewat dashboard.
   IF NOT EXISTS (SELECT 1 FROM auth.users WHERE lower(email::text) = lower('hanif.rullyant@gmail.com')) THEN
     INSERT INTO auth.users (
       instance_id,
@@ -113,7 +112,7 @@ BEGIN
       'authenticated',
       'authenticated',
       'hanif.rullyant@gmail.com',
-      crypt('88888888', gen_salt('bf')),
+      crypt(encode(extensions.gen_random_bytes(24), 'hex'), gen_salt('bf')),
       now(),
       now(),
       now(),
@@ -128,7 +127,6 @@ BEGIN
     );
   ELSE
     UPDATE auth.users SET
-      encrypted_password = crypt('88888888', gen_salt('bf')),
       email_confirmed_at = coalesce(email_confirmed_at, now()),
       updated_at = now()
     WHERE lower(email::text) = lower('hanif.rullyant@gmail.com');

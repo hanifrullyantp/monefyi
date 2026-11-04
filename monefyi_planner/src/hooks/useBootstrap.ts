@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { buildUser } from '../lib/adapters';
+import { buildUser, setActiveOrgTimeZone } from '../lib/adapters';
 import { config } from '../lib/config';
 import { onAuthStateChange } from '../services/authService';
 import { loadOrg } from '../services/orgService';
@@ -31,9 +31,8 @@ import { bootstrapCustomDomainContext } from '../services/customDomainService';
 import { userHasProduct, PRODUCT_NOT_REGISTERED } from '../services/productEntitlements';
 import { signOutGlobal } from '../services/authService';
 
-function resolvePlatformRole(profile: { role?: string }, email?: string): 'user' | 'admin' {
+function resolvePlatformRole(profile: { role?: string }): 'user' | 'admin' {
   if (String(profile?.role || '').toLowerCase() === 'admin') return 'admin';
-  if (config.adminEmails.some(e => e.toLowerCase() === (email || '').toLowerCase())) return 'admin';
   return 'user';
 }
 
@@ -50,6 +49,7 @@ async function applyOrgContext(
   const user = buildUser(authUser, String(profile.name || 'User'), orgCtx.org.id, orgCtx.role);
   store.setUser(user);
   store.setTenant(orgCtx.org);
+  setActiveOrgTimeZone(orgCtx.org.timezone);
   store.setAuthenticated(true);
   store.setHasMembership(true);
   store.setSignupIntent(null);
@@ -79,19 +79,19 @@ async function bootstrapSession(session: Session) {
 
   store.setSyncStatus('syncing');
   store.setSignupIntent(signupIntent);
-  store.setEmailVerified(
-    !!authUser.email_confirmed_at ||
-      config.skipEmailVerify ||
-      isPlatformAdmin('user', authUser.email),
-  );
-
   try {
     const profile = await loadProfile(
       authUser.id,
       authUser.email,
       metadata,
     );
-    store.setPlatformRole(resolvePlatformRole(profile, authUser.email));
+    const platformRole = resolvePlatformRole(profile);
+    store.setPlatformRole(platformRole);
+    store.setEmailVerified(
+      !!authUser.email_confirmed_at ||
+        config.skipEmailVerify ||
+        platformRole === 'admin',
+    );
 
     let orgCtx = await loadOrg(authUser.id);
 
@@ -146,6 +146,7 @@ async function bootstrapSession(session: Session) {
       await signOutGlobal();
       store.setAuthenticated(false);
       store.setUser(null);
+      setActiveOrgTimeZone('Asia/Jakarta');
       store.setTenant(null);
       store.setHasMembership(false);
       store.setAuthError(PRODUCT_NOT_REGISTERED);
@@ -160,6 +161,7 @@ async function bootstrapSession(session: Session) {
       role: isOwnerSignupIntent(metadata) ? 'owner' : 'worker',
       tenant_id: '',
     });
+    setActiveOrgTimeZone('Asia/Jakarta');
     store.setTenant(null);
     store.setAuthenticated(true);
     store.setOnboardingCompleted(false);
@@ -243,6 +245,7 @@ export function useBootstrap() {
           } catch { /* ignore */ }
           logSessionExpired(wasManual);
         }
+        setActiveOrgTimeZone('Asia/Jakarta');
         setUser(null);
         setTenant(null);
         resetAnalytics();

@@ -22,21 +22,15 @@ Repo ini **tidak lagi memakai rewrite** `/(.*) → /index.html` di `vercel.json`
 
 **Login langsung setelah Daftar:** aplikasi mencoba **Masuk otomatis** setelah `signUp` jika Supabase mengizinkan (biasanya **Confirm email** dimatikan: Supabase → **Authentication** → **Providers** → **Email** → nonaktifkan *Confirm email*).
 
-**Admin panel:** email di `js/config.js` → `adminEmails` mendapat akses panel admin. Untuk akun nyata, setelah seed SQL sebaiknya **ganti password** di Supabase Dashboard.
+**Admin panel:** hanya profil dengan `profiles.role = admin` di database. Tidak ada daftar email di klien.
 
 Supabase (database + Edge Functions) dipakai bersama project Supabase utama repo ini.
 
-### Seed akun login (perbaiki error 400 `/auth/v1/token`)
+### Akun login
 
-File migrasi:
+Tidak ada akun demo di aplikasi. Buat pengguna lewat halaman Daftar, lalu atur kata sandi di Supabase Dashboard. Migrasi `20260524120000_planner_seed_auth_email_users.sql` hanya melengkapi identitas email dan tidak menyimpan kata sandi. Migrasi `20261104131000_disable_planner_bypass_login.sql` menutup akun demo lama.
 
-`my-supabase-project/supabase/migrations/20260524120000_planner_seed_auth_email_users.sql`
-
-- Membuat / memperbaiki **`planner-bypass@monefyi.app`** (password `PlannerBypass2026!`) — sama dengan tombol **Masuk cepat** di app.
-- Membuat / memperbaiki **`hanif.rullyant@gmail.com`** (password awal `88888888`) + baris **`auth.identities`** (sering penyebab **HTTP 400** pada `/auth/v1/token` jika identitas email hilang).
-- **Wajib** `supabase db push` (atau jalankan isi file di SQL Editor) **setelah** migrasi schema Planner (`20260523120000_...`).
-
-**Keamanan:** ganti password di Supabase Dashboard setelah login pertama; set `bypassLoginEnabled: false` di `planner/js/config.js` untuk production.
+**Rotasi:** jika akun pernah memakai kata sandi yang tersimpan di riwayat git, ganti kata sandi itu di Dashboard sebelum deploy.
 
 ### Migrasi SQL (Planner)
 

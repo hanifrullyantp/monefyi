@@ -30,9 +30,17 @@ DECLARE
   v_tier TEXT;
   v_count INTEGER;
 BEGIN
-  SELECT tier INTO v_tier
-  FROM public.planner_org_subscriptions
-  WHERE org_id = NEW.org_id;
+  SELECT COALESCE(s.tier, CASE o.plan_type
+    WHEN 'starter' THEN 'estimator'
+    WHEN 'pro' THEN 'pro'
+    WHEN 'pro_plus' THEN 'pro'
+    WHEN 'enterprise' THEN 'enterprise'
+    ELSE 'free'
+  END)
+  INTO v_tier
+  FROM public.planner_organizations o
+  LEFT JOIN public.planner_org_subscriptions s ON s.org_id = o.id
+  WHERE o.id = NEW.org_id;
   v_tier := COALESCE(v_tier, 'free');
 
   INSERT INTO public.planner_estimation_usage (org_id, created_count)

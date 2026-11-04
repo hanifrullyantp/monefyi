@@ -55,15 +55,20 @@ export interface UserAccountInfo {
   active_orgs: number;
 }
 
-export function isPlatformAdmin(platformRole: string, email?: string) {
-  if (platformRole === 'admin') return true;
-  return config.adminEmails.some(e => e.toLowerCase() === (email || '').toLowerCase());
+export function isPlatformAdmin(platformRole: string, _email?: string) {
+  return platformRole === 'admin';
 }
 
-/** Cek sesi auth saat ini (email allowlist) — untuk bypass kuota di service. */
+/** Peran admin hanya dari kolom profiles.role, bukan daftar email di klien. */
 export async function currentSessionIsPlatformAdmin(): Promise<boolean> {
   const { data } = await supabase.auth.getUser();
-  return isPlatformAdmin('user', data.user?.email);
+  if (!data.user) return false;
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', data.user.id)
+    .maybeSingle();
+  return String(profile?.role || '').toLowerCase() === 'admin';
 }
 
 export async function fetchAdminUsers(params?: {

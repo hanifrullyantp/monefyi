@@ -1,35 +1,12 @@
 import type { Project } from '../store/appStore';
 import type { WorkItem } from '../services/workItemService';
+import {
+  daysUntil,
+  schedulePlanProgress,
+  weightedActualProgress,
+} from '../../../packages/domain/src/progress';
 
-const DAY_MS = 86400000;
-
-/**
- * Progress rencana berdasarkan posisi hari ini di antara start–end (0–100).
- */
-export function schedulePlanProgress(start: string, end: string, asOf = new Date()): number {
-  const startMs = new Date(`${start.slice(0, 10)}T00:00:00`).getTime();
-  const endMs = new Date(`${end.slice(0, 10)}T00:00:00`).getTime();
-  const now = asOf.getTime();
-  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) return 0;
-  if (now <= startMs) return 0;
-  if (now >= endMs) return 100;
-  return Math.round(((now - startMs) / (endMs - startMs)) * 100);
-}
-
-/** Rata-rata tertimbang progress_pct dari work items. */
-export function weightedActualProgress(
-  items: Array<{ progress_pct?: string | number | null; weight?: string | number | null }>,
-): number {
-  if (!items.length) return 0;
-  let totalWeight = 0;
-  let sum = 0;
-  for (const wi of items) {
-    const w = Number(wi.weight) > 0 ? Number(wi.weight) : 1;
-    totalWeight += w;
-    sum += (Number(wi.progress_pct) || 0) * w;
-  }
-  return Math.round(sum / totalWeight);
-}
+export { schedulePlanProgress, weightedActualProgress };
 
 export type ProgressSummary = {
   plan: number;
@@ -55,9 +32,7 @@ export function computeProgressSummary(project: Project, workItems: WorkItem[]):
     if (pct >= 100) return false;
     return schedulePlanProgress(w.planned_start, w.planned_end) >= 100;
   }).length;
-  const daysLeft = Math.ceil(
-    (new Date(`${project.end_date.slice(0, 10)}T00:00:00`).getTime() - Date.now()) / DAY_MS,
-  );
+  const daysLeft = daysUntil(project.end_date);
   return {
     plan,
     actual,

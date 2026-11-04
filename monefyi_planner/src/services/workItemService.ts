@@ -52,18 +52,13 @@ export async function loadWorkItemsForOrg(orgId: string): Promise<WorkItem[]> {
   return (data || []) as WorkItem[];
 }
 
+/** Membaca progress_pct yang dihitung trigger dari item pekerjaan. */
 export async function updateProjectProgressFromWorkItems(projectId: string) {
-  const items = await loadWorkItems(projectId);
-  if (!items.length) return;
-  let totalWeight = 0;
-  let sum = 0;
-  for (const wi of items) {
-    const w = Number(wi.weight) > 0 ? Number(wi.weight) : 1;
-    totalWeight += w;
-    sum += (Number(wi.progress_pct) || 0) * w;
-  }
-  const avg = Math.round(sum / totalWeight);
-  const { error } = await supabase.from('planner_projects').update({ progress_pct: avg }).eq('id', projectId);
+  const { data, error } = await supabase
+    .from('planner_projects')
+    .select('progress_pct')
+    .eq('id', projectId)
+    .single();
   assertNoDbError(error);
-  return avg;
+  return Number(data?.progress_pct) || 0;
 }

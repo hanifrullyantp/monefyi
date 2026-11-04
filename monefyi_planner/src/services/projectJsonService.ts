@@ -13,8 +13,6 @@ import { loadProjectTransfers } from './projectTransferService';
 import type { ProjectIncome } from './incomeService';
 import type { ProjectTransfer } from './projectTransferService';
 import { supabase } from '../lib/supabase';
-import { assertNoDbError } from '../lib/supabaseErrors';
-
 export const PROJECT_JSON_VERSION = '1.0';
 
 export type ProjectJsonMode = 'merge' | 'replace';
@@ -433,11 +431,6 @@ async function upsertRealisasi(
     }
   }
 
-  // Recalculate total_spent
-  const costs = await loadCostRealizations(projectId);
-  const totalSpent = costs.reduce((s, c) => s + (Number(c.total_amount) || 0), 0);
-  const { error: updErr } = await supabase.from('planner_projects').update({ total_spent: totalSpent }).eq('id', projectId);
-  assertNoDbError(updErr);
 }
 
 async function upsertWorkItems(projectId: string, items: WorkItemJsonItem[], mode: ProjectJsonMode) {

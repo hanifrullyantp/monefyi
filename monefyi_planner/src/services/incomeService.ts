@@ -1,5 +1,4 @@
 import { supabase } from '../lib/supabase';
-import { assertNoDbError } from '../lib/supabaseErrors';
 
 export type IncomeCategory = 'dp' | 'termin' | 'pelunasan' | 'retensi' | 'other';
 export type IncomeStatus = 'received' | 'pending' | 'cancelled';
@@ -24,19 +23,12 @@ export interface ProjectIncome {
 
 async function recalcTotalReceived(projectId: string) {
   const { data, error } = await supabase
-    .from('planner_project_incomes')
-    .select('amount')
-    .eq('project_id', projectId)
-    .eq('status', 'received');
-  if (error) throw new Error(error.message);
-
-  const total = (data || []).reduce((s, r) => s + (Number(r.amount) || 0), 0);
-  const { error: updErr } = await supabase
     .from('planner_projects')
-    .update({ total_received: total, updated_at: new Date().toISOString() })
-    .eq('id', projectId);
-  assertNoDbError(updErr);
-  return total;
+    .select('total_received')
+    .eq('id', projectId)
+    .single();
+  if (error) throw new Error(error.message);
+  return Number(data?.total_received) || 0;
 }
 
 export async function loadProjectIncomes(projectId: string): Promise<ProjectIncome[]> {

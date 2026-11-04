@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Plus, Trash2, Sparkles, List, ChevronDown } from 'lucide-react';
 import { calcEstimationSummary, calcItemRow, countedEstimationItems, effectiveItemSelling, emptyItem, sellingFromHpp, syncEstimationItemPricesList, estimationItemsNeedPriceSync, type ItemPriceEdit } from '../../lib/estimatorCalc';
-import { formatRupiahFull } from '../../lib/estimatorFormat';
+import { formatRupiahFull, parseNumberId } from '../../lib/estimatorFormat';
 import {
   getEstimationItemProductGroup,
   groupEstimationItemsByProduct,
@@ -19,6 +19,39 @@ import QtyInput from './QtyInput';
 import SmartInputModal from './SmartInputModal';
 import PricelistPickerModal from './PricelistPickerModal';
 import { useUiStore } from '../../store/uiStore';
+
+function GlobalQtyField({
+  className,
+  onApply,
+}: {
+  className: string;
+  onApply: (qty: number) => void;
+}) {
+  const [text, setText] = useState('');
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={text}
+      placeholder="Qty"
+      aria-label="Ukuran global"
+      onMouseUp={e => e.preventDefault()}
+      onFocus={e => e.currentTarget.select()}
+      onChange={e => {
+        const raw = e.target.value;
+        setText(raw);
+        if (!raw.trim() || !/^[\d.,]+$/.test(raw.trim())) return;
+        const qty = parseNumberId(raw);
+        if (Number.isFinite(qty) && qty >= 0) onApply(qty);
+      }}
+      className={className}
+    />
+  );
+}
+
+function selectNumericField(event: { currentTarget: HTMLInputElement }) {
+  event.currentTarget.select();
+}
 
 type EditableField = 'name' | 'qty' | 'selling' | 'margin' | 'hpp';
 
@@ -58,7 +91,6 @@ export default function EstimationItemsTable({
   const [smartOpen, setSmartOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(() => new Set());
-  const [globalQty, setGlobalQty] = useState('');
   const showToast = useUiStore(s => s.showToast);
   const cellRefs = useRef<Map<string, HTMLInputElement | HTMLSelectElement>>(new Map());
 
@@ -119,11 +151,8 @@ export default function EstimationItemsTable({
     onChange(items.filter((_, i) => i !== index));
   };
 
-  const applyGlobalQty = (raw: string) => {
-    setGlobalQty(raw);
-    if (readOnly || raw.trim() === '') return;
-    const qty = Number(raw);
-    if (!Number.isFinite(qty) || qty < 0) return;
+  const applyGlobalQty = (qty: number) => {
+    if (readOnly || !Number.isFinite(qty) || qty < 0) return;
     onChange(items.map(item => {
       const merged = { ...item, qty };
       const calc = calcItemRow(merged, 'qty');
@@ -240,10 +269,8 @@ export default function EstimationItemsTable({
           {!readOnly && items.length > 0 && (
             <label className="flex items-center gap-1.5 text-[10px] text-slate-500 shrink-0">
               <span className="whitespace-nowrap">Ukuran global</span>
-              <QtyInput
-                value={globalQty === '' ? (items[0]?.qty ?? 1) : Number(globalQty)}
-                onChange={v => applyGlobalQty(String(v))}
-                placeholder="Qty"
+              <GlobalQtyField
+                onApply={applyGlobalQty}
                 className="w-16 px-1.5 py-1 text-xs border border-slate-200 rounded-lg bg-white text-right"
               />
             </label>
@@ -260,10 +287,8 @@ export default function EstimationItemsTable({
             {!readOnly && items.length > 0 && (
               <label className="flex items-center gap-1.5 text-xs text-slate-500">
                 <span className="whitespace-nowrap font-semibold">Ukuran global</span>
-                <QtyInput
-                  value={globalQty === '' ? (items[0]?.qty ?? 1) : Number(globalQty)}
-                  onChange={v => applyGlobalQty(String(v))}
-                  placeholder="Qty"
+                <GlobalQtyField
+                  onApply={applyGlobalQty}
                   className="w-20 px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white text-right"
                 />
               </label>
@@ -426,6 +451,8 @@ export default function EstimationItemsTable({
                         max={100}
                         step="0.1"
                         value={item.margin_pct}
+                        onMouseUp={e => e.preventDefault()}
+                        onFocus={selectNumericField}
                         onChange={e => updateItem(idx, { margin_pct: Number(e.target.value) }, 'margin')}
                         className="mt-0.5 w-full px-1.5 py-1 border border-slate-200 rounded-lg text-right text-xs tabular-nums"
                       />
@@ -456,6 +483,8 @@ export default function EstimationItemsTable({
                         step="0.1"
                         value={item.item_discount_pct || ''}
                         disabled={item.is_bonus}
+                        onMouseUp={e => e.preventDefault()}
+                        onFocus={selectNumericField}
                         onChange={e => updateItem(idx, { item_discount_pct: Number(e.target.value) }, 'qty')}
                         className="mt-0.5 w-full px-1.5 py-1 border border-slate-200 rounded-lg text-right text-xs disabled:bg-slate-50"
                         placeholder="0"
@@ -638,6 +667,8 @@ export default function EstimationItemsTable({
                             max={100}
                             step="0.1"
                             value={item.margin_pct}
+                            onMouseUp={e => e.preventDefault()}
+                            onFocus={selectNumericField}
                             onChange={e => updateItem(idx, { margin_pct: Number(e.target.value) }, 'margin')}
                             onBlur={() => updateItem(idx, { margin_pct: item.margin_pct }, 'margin')}
                             onKeyDown={e => handleKeyDown(e, idx, 'margin', fields)}
@@ -671,6 +702,8 @@ export default function EstimationItemsTable({
                             max={100}
                             step="0.1"
                             value={item.item_discount_pct || ''}
+                            onMouseUp={e => e.preventDefault()}
+                            onFocus={selectNumericField}
                             onChange={e => updateItem(idx, { item_discount_pct: Number(e.target.value) }, 'qty')}
                             disabled={item.is_bonus}
                             className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-right tabular-nums focus:border-emerald-400 outline-none text-slate-900 disabled:bg-slate-50 disabled:text-slate-400"

@@ -36,6 +36,7 @@ import {
 } from '../../lib/estimationListView';
 import { getEstimationListStats } from '../../lib/estimatorListStats';
 import {
+  countLifetimeEstimations,
   deleteEstimation,
   duplicateEstimation,
   estimationToFormDraft,
@@ -58,7 +59,7 @@ import {
 } from '../../lib/entitlement';
 import { useEntitlement } from '../../hooks/useEntitlement';
 import { analytics } from '../../lib/analytics/events';
-import { ESTIMATION_STATUS_LABEL } from '../../lib/estimatorFormat';
+import { ESTIMATION_STATUS_LABEL, formatRupiahCompact } from '../../lib/estimatorFormat';
 import type { EstimationFormDraft } from '../../types/estimator';
 import type { PdfSettings } from '../../types/pdfSettings';
 import type { WhatsAppTemplateConfig } from '../../lib/whatsappQuotationMessage';
@@ -96,6 +97,29 @@ const GROUP_OPTIONS: Array<{ value: EstimationGroupMode; label: string }> = [
   { value: 'client', label: 'Kelompok klien' },
 ];
 
+function EstimationSearchRow({
+  estimation,
+  onOpen,
+}: {
+  estimation: Estimation;
+  onOpen: () => void;
+}) {
+  const status = normalizeEstimationStatus(estimation.status);
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="w-full grid grid-cols-[5.5rem_minmax(0,1fr)_auto] sm:grid-cols-[6.5rem_minmax(0,1.4fr)_minmax(0,0.8fr)_6.5rem_7rem] items-center gap-2 px-3 py-2 bg-white border-b border-slate-100 text-left hover:bg-emerald-50"
+    >
+      <span className="font-mono text-[11px] font-semibold text-emerald-700 truncate">{estimation.code}</span>
+      <span className="text-sm font-semibold text-slate-900 truncate">{estimation.title || 'Tanpa judul'}</span>
+      <span className="hidden sm:block text-xs text-slate-500 truncate">{estimation.customer_name || '—'}</span>
+      <span className="hidden sm:block text-[11px] font-semibold text-slate-600 truncate">{ESTIMATION_STATUS_LABEL[status]}</span>
+      <span className="text-xs font-bold text-slate-900 tabular-nums text-right">{formatRupiahCompact(Number(estimation.total_selling_price))}</span>
+    </button>
+  );
+}
+
 function sortRows(rows: Estimation[], key: SortKey): Estimation[] {
   const copy = [...rows];
   switch (key) {
@@ -127,7 +151,9 @@ export default function EstimatorListPage() {
   const [rows, setRows] = useState<Estimation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [lifetimeCount, setLifetimeCount] = useState<number | null>(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'' | EstimationStatus>('');
   const [pipelineTab, setPipelineTab] = useState<PipelineTabId>('all');
@@ -181,6 +207,13 @@ export default function EstimatorListPage() {
   }, [tenant?.id, debouncedSearch, showToast]);
 
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    if (!tenant?.id) return;
+    void countLifetimeEstimations(tenant.id)
+      .then(setLifetimeCount)
+      .catch(error => console.error('Kuota estimasi gagal dimuat:', error));
+  }, [tenant?.id, rows]);
 
   useEffect(() => {
     if (!tenant?.id || !user?.id || loading || onboardingChecked) return;
@@ -254,6 +287,13 @@ export default function EstimatorListPage() {
   const handleDuplicate = async (id: string) => {
     if (!tenant?.id || !user?.id) return;
     try {
+      const used = lifetimeCount ?? await countLifetimeEstimations(tenant.id);
+      if (!canCreateEstimation(entitlement, used)) {
+        setUpgradeTrigger('estimator_paywall');
+        setUpgradeFeatureName(`Kuota gratis ${FREE_ESTIMATION_LIMIT} estimasi habis`);
+        setUpgradeOpen(true);
+        return;
+      }
       const copy = await duplicateEstimation(id, tenant.id, user.id);
       showToast('Estimasi diduplikasi', 'success');
       navigate(`/app/estimator/${copy.id}`);
@@ -391,8 +431,11 @@ export default function EstimatorListPage() {
     />
   );
 
+  const quotaUsed = lifetimeCount ?? listStats.total;
+  const compactSearch = searchFocused || searchInput.trim().length > 0;
+
   const goNew = () => {
-    if (!canCreateEstimation(entitlement, listStats.total)) {
+    if (!canCreateEstimation(entitlement, quotaUsed)) {
       setUpgradeTrigger('estimator_paywall');
       setUpgradeFeatureName(`Kuota gratis ${FREE_ESTIMATION_LIMIT} estimasi habis`);
       setUpgradeOpen(true);
@@ -403,7 +446,7 @@ export default function EstimatorListPage() {
 
   const freeRemaining =
     entitlement.isFree && entitlement.maxEstimations != null
-      ? Math.max(0, entitlement.maxEstimations - listStats.total)
+      ? Math.max(0, entitlement.maxEstimations - quotaUsed)
       : null;
 
   return (
@@ -426,7 +469,7 @@ export default function EstimatorListPage() {
             Paket gratis · {freeRemaining} dari {FREE_ESTIMATION_LIMIT} estimasi tersisa
           </p>
           <p className="text-xs text-amber-800 mt-0.5">
-            PDF berwatermark Estimator. Upgrade ke Standard untuk unlimited + tanpa watermark.
+            Kuota dihitung seumur hidup. Menghapus estimasi tidak mengembalikan jatah. Upgrade ke Standard untuk unlimited.
           </p>
           <button
             type="button"
@@ -480,6 +523,8 @@ export default function EstimatorListPage() {
       <EstimatorListToolbar
         search={searchInput}
         onSearchChange={setSearchInput}
+        onSearchFocus={() => setSearchFocused(true)}
+        onSearchBlur={() => setSearchFocused(false)}
         onOpenOptions={() => setOptionsOpen(true)}
         activeFilterLabel={activeSecondaryFilterLabel}
         onClearFilter={() => setStatusFilter('')}
@@ -491,6 +536,8 @@ export default function EstimatorListPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             value={searchInput}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
             onChange={e => setSearchInput(e.target.value)}
             placeholder="Cari kode, judul, klien..."
             className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-emerald-400 outline-none"
@@ -541,7 +588,17 @@ export default function EstimatorListPage() {
         <EstimatorListEmpty onCreate={goNew} />
       ) : (
         <div className="space-y-4">
-          {listViewMode === 'kanban' ? (
+          {compactSearch ? (
+            <div className="mx-4 lg:mx-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
+              {sortedRows.map(est => (
+                <EstimationSearchRow
+                  key={est.id}
+                  estimation={est}
+                  onOpen={() => navigate(`/app/estimator/${est.id}`)}
+                />
+              ))}
+            </div>
+          ) : listViewMode === 'kanban' ? (
             <div className="px-4 lg:px-0">
               <EstimationKanbanView
                 rows={kanbanRows}

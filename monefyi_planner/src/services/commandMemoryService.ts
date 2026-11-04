@@ -7,6 +7,7 @@ import {
   type ParamsTemplate,
 } from '../lib/commandNormalize';
 import { combinedSimilarity } from '../lib/textSimilarity';
+import { canMemorizeCommand, storedAmountConflicts } from '../../../packages/domain/src/validation';
 
 export interface CommandMemory {
   id: string;
@@ -74,6 +75,7 @@ export async function lookupFuzzyMemory(
   const params = slots.signature
     ? applyTemplate(best.mem.params_template || {}, slots)
     : (best.mem.params_template as Record<string, unknown>);
+  if (storedAmountConflicts(rawInput, params)) return null;
 
   const accuracy = Number(best.mem.accuracy_score) || 0.75;
   const confidence = Math.min(0.92, accuracy * best.similarity * 0.85);
@@ -114,9 +116,11 @@ export async function lookupMemory(
   if (error || !data) return null;
 
   const mem = data as CommandMemory;
+  const params = applyTemplate(mem.params_template || {}, slots);
+  if (storedAmountConflicts(rawInput, params)) return null;
   return {
     intent: mem.intent,
-    params: applyTemplate(mem.params_template || {}, slots),
+    params,
     signature: mem.signature,
     source: mem.source,
     hitCount: mem.hit_count,
@@ -139,6 +143,7 @@ export async function recordCorrection(entry: {
 }): Promise<void> {
   const { orgId, userId, rawInput, intent, params, source } = entry;
   if (!orgId || !intent || intent === 'unknown') return;
+  if (!canMemorizeCommand(rawInput, params, source)) return;
 
   const slots = buildSlots(rawInput);
   if (!slots.signature) return;

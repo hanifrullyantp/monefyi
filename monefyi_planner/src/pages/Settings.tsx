@@ -5,6 +5,7 @@ import { User, Globe, LogOut, Edit3, Check, Building2, Bell, Shield,
   Info, RefreshCw, Loader2, ChevronRight, Lock, Users, Wifi, WifiOff, Sparkles, Wallet,
   CreditCard, FlaskConical,
 } from 'lucide-react';
+import { setActiveOrgTimeZone } from '../lib/adapters';
 import { useAppStore } from '../store/appStore';
 import { showToast, useUiStore } from '../store/uiStore';
 import { updateProfileName, loadProfileWithSettings, updateProfileSettings } from '../services/profileService';
@@ -263,6 +264,7 @@ export default function Settings() {
         },
       });
 
+      setActiveOrgTimeZone(timezone);
       setTenant({
         ...tenant,
         name: orgName.trim(),

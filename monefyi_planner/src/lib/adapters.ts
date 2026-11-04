@@ -1,4 +1,5 @@
 import type { Notification, Project, Tenant, User, UserRole } from '../store/appStore';
+import { orgToday } from '../../../packages/domain/src/money';
 import { computeFinanceReportMonth, monthPickerToReportDate } from './financeReportMonth';
 import { parseWorkHours } from '../utils/workHours';
 import { schedulePlanProgress } from './progressMetrics';
@@ -283,7 +284,6 @@ export function fromProjectUpdate(data: Partial<Project>): Partial<DbProject> {
   if (data.start_date !== undefined) update.planned_start = data.start_date;
   if (data.end_date !== undefined) update.planned_end = data.end_date;
   if (data.status !== undefined) update.status = UI_TO_DB_STATUS[data.status];
-  if (data.progress_percentage !== undefined) update.progress_pct = data.progress_percentage;
   if (data.total_budget_planned !== undefined) update.total_budget = data.total_budget_planned;
   if (data.contract_value !== undefined) {
     update.settings = {
@@ -353,8 +353,15 @@ export function buildUser(
   };
 }
 
-export function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+let activeOrgTimeZone = 'Asia/Jakarta';
+
+/** Dipanggil saat organisasi aktif berubah, supaya tanggal mengikuti zona organisasi. */
+export function setActiveOrgTimeZone(timeZone?: string | null): void {
+  activeOrgTimeZone = timeZone || 'Asia/Jakarta';
+}
+
+export function todayStr(timeZone?: string): string {
+  return orgToday(timeZone || activeOrgTimeZone);
 }
 
 export function parseNumberFromText(str: string | undefined): number {
