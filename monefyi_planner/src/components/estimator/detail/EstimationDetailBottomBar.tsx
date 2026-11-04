@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import {
-  ChevronUp, Loader2, Redo2, RotateCcw, Save, Undo2,
+  ChevronUp, FileText, Loader2, MessageCircle, Redo2, RotateCcw, Save, Undo2,
 } from 'lucide-react';
 import EstimationDetailBreakdown from './EstimationDetailBreakdown';
 import { formatRupiahFull } from '../../../lib/estimatorFormat';
@@ -156,22 +156,12 @@ export default function EstimationDetailBottomBar({
                 {formatRupiahFull(summary.grandTotal)}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={onDocument}
-              disabled={isNew}
-              className="inline-flex items-center justify-center min-h-11 px-3 rounded-full border border-white/70 text-white text-sm font-bold disabled:opacity-40"
-            >
-              Pratinjau
-            </button>
-            <button
-              type="button"
-              onClick={onWhatsApp}
-              disabled={isNew}
-              className="inline-flex items-center justify-center min-h-11 px-3 rounded-full bg-white text-emerald-800 text-sm font-bold disabled:opacity-40"
-            >
-              Kirim WA
-            </button>
+            <IconBtn label="Pratinjau dokumen" onClick={onDocument} disabled={isNew}>
+              <FileText className="w-4 h-4" />
+            </IconBtn>
+            <IconBtn label="Kirim WhatsApp" onClick={onWhatsApp} disabled={isNew}>
+              <MessageCircle className="w-4 h-4" />
+            </IconBtn>
           </div>
         </div>
       </div>

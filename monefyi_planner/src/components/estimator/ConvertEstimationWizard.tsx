@@ -23,7 +23,8 @@ import UpgradeModal from '../entitlement/UpgradeModal';
 import { useAppStore } from '../../store/appStore';
 import { analytics } from '../../lib/analytics/events';
 import { useEntitlement } from '../../hooks/useEntitlement';
-import type { Estimation, EstimationItem } from '../../types/estimator';
+import { estimationItemDisplayName } from '../../lib/estimatorItemDisplayName';
+import type { Estimation, EstimationItem, EstimationItemDraft } from '../../types/estimator';
 
 type WizardStep = 1 | 2 | 'success';
 
@@ -43,11 +44,30 @@ function itemLineTotal(item: EstimationItem): number {
   return Number(item.qty) * Number(item.hpp_per_unit);
 }
 
-function itemDisplayName(item: EstimationItem): string {
-  const sep = ' — ';
-  const idx = item.name.indexOf(sep);
-  if (idx >= 0) return item.name.slice(0, idx).trim();
-  return item.name;
+function estimationItemToDraft(item: EstimationItem): EstimationItemDraft {
+  const draft: EstimationItemDraft = {
+    id: item.id,
+    pricelist_item_id: item.pricelist_item_id,
+    name: item.name,
+    category: item.category || 'material',
+    unit: item.unit,
+    qty: Number(item.qty),
+    hpp_per_unit: Number(item.hpp_per_unit),
+    margin_pct: Number(item.margin_pct),
+    selling_price_per_unit: Number(item.selling_price_per_unit),
+    item_discount_pct: Number(item.item_discount_pct),
+    item_discount_amount: Number(item.item_discount_amount),
+    is_bonus: Boolean(item.is_bonus),
+    included: item.included !== false,
+    total_hpp: Number(item.total_hpp),
+    total_selling: Number(item.total_selling),
+    total_profit: Number(item.total_profit),
+    sort_order: item.sort_order,
+    notes: item.notes || '',
+  };
+  const group = getEstimationItemProductGroup(draft);
+  if (group) draft.product_group = group;
+  return draft;
 }
 
 export default function ConvertEstimationWizard({
@@ -86,34 +106,7 @@ export default function ConvertEstimationWizard({
   );
 
   const draftItems = useMemo(
-    () =>
-      namedItems.map(item => ({
-        id: item.id,
-        name: item.name,
-        product_group: getEstimationItemProductGroup({
-          name: item.name,
-          category: item.category || '',
-          unit: item.unit,
-          qty: Number(item.qty),
-          hpp_per_unit: Number(item.hpp_per_unit),
-          margin_pct: 0,
-          selling_price_per_unit: 0,
-          item_discount_pct: 0,
-          item_discount_amount: 0,
-          is_bonus: Boolean(item.is_bonus),
-          included: item.included !== false,
-          total_hpp: 0,
-          total_selling: 0,
-          total_profit: 0,
-          sort_order: item.sort_order,
-          notes: item.notes || '',
-        }),
-        qty: item.qty,
-        unit: item.unit,
-        hpp_per_unit: item.hpp_per_unit,
-        included: item.included,
-        is_bonus: item.is_bonus,
-      })),
+    () => namedItems.map(estimationItemToDraft),
     [namedItems],
   );
 
@@ -265,7 +258,7 @@ export default function ConvertEstimationWizard({
         />
         <div className="flex-1 min-w-0">
           <div className="font-semibold text-sm text-slate-800">
-            {itemDisplayName(item)} — {item.qty} {item.unit}
+            {estimationItemDisplayName(item)} — {item.qty} {item.unit}
           </div>
           <div className="text-xs text-slate-500 mt-0.5">
             HPP: {formatRupiahFull(Number(item.hpp_per_unit))}/{item.unit}

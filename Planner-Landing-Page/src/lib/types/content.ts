@@ -257,7 +257,14 @@ export interface PricingContent {
   subtitle: string;
   plans: PricingPlan[];
   trustLine: string;
+  /** lynk (default) | mayar — bisa override env NEXT_PUBLIC_PLANNER_PAYMENT_PROVIDER */
+  plannerPaymentProvider?: "lynk" | "mayar";
   lynkCheckoutUrls?: {
+    estimator_standard?: string;
+    estimator_pro?: string;
+    planner_pro?: string;
+  };
+  mayarCheckoutUrls?: {
     estimator_standard?: string;
     estimator_pro?: string;
     planner_pro?: string;

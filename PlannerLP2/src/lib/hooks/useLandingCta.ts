@@ -11,7 +11,7 @@ import {
 } from "@/lib/permissions";
 import type { User } from "@/lib/store/authStore";
 import { planIdToLynkProduct } from "@/lib/checkout/products";
-import { buildLynkCheckoutUrl, redirectToLynkCheckout } from "@/lib/checkout/lynk";
+import { redirectToPlannerCheckout } from "@/lib/checkout/plannerCheckout";
 import {
   loadEstimatorLaunchPromoStatus,
   resolveStandardCheckoutAmount,
@@ -36,6 +36,7 @@ export function useLandingCta() {
   }, [hydrate]);
 
   const lynkOverrides = content.pricing.lynkCheckoutUrls;
+  const paymentProvider = content.pricing.plannerPaymentProvider;
 
   const checkoutParams = async (returnUrl?: string) => {
     if (!isAuthenticated || !user) {
@@ -59,23 +60,22 @@ export function useLandingCta() {
     const product = planIdToLynkProduct(planId);
     if (!product) return;
     const params = await checkoutParams();
-    if (product === "estimator_standard") {
-      const promo = await loadEstimatorLaunchPromoStatus();
-      window.location.href = buildLynkCheckoutUrl(
-        product,
-        { ...params, checkoutAmount: resolveStandardCheckoutAmount(promo) },
-        lynkOverrides,
-      );
-      return;
-    }
-    redirectToLynkCheckout(product, params, lynkOverrides);
+    const checkoutAmount =
+      product === "estimator_standard"
+        ? resolveStandardCheckoutAmount(await loadEstimatorLaunchPromoStatus())
+        : undefined;
+    await redirectToPlannerCheckout(
+      product,
+      { ...params, checkoutAmount },
+      { lynkUrlOverrides: lynkOverrides, paymentProvider, checkoutAmount },
+    );
   };
 
   const startPlannerProCheckout = async () => {
-    redirectToLynkCheckout(
+    await redirectToPlannerCheckout(
       "planner_pro",
       await checkoutParams(plannerPaymentReturnPath("app")),
-      lynkOverrides,
+      { lynkUrlOverrides: lynkOverrides, paymentProvider },
     );
   };
 

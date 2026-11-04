@@ -5,6 +5,9 @@ import {
 } from './entitlement';
 import { resolveEstimatorStandardCheckoutAmount } from './estimatorLaunchPromo';
 import { loadEstimatorLaunchPromoStatus } from '../services/launchPromoService';
+import { config } from './config';
+import { resolvePaymentProvider } from './paymentProvider';
+import { supabase } from './supabase';
 
 export type CheckoutProduct = 'estimator_standard' | 'estimator_pro' | 'planner_pro' | 'estimator' | 'pro' | 'enterprise';
 
@@ -94,13 +97,12 @@ export function redirectToCheckout(
   void redirectToCheckoutAsync(product, options);
 }
 
-/** Resolves launch promo price for Standard, then redirects to Lynk. */
-export async function redirectToCheckoutAsync(
+async function resolveCheckoutOptions(
   product: CheckoutProduct,
   options: CheckoutRedirectOptions,
-): Promise<void> {
+): Promise<CheckoutRedirectOptions> {
   const lynkProduct = normalizeCheckoutProduct(product);
-  let opts = { ...options };
+  const opts = { ...options };
   if (lynkProduct === 'estimator_standard' && opts.checkoutAmount == null) {
     try {
       const promo = await loadEstimatorLaunchPromoStatus();
@@ -108,6 +110,48 @@ export async function redirectToCheckoutAsync(
     } catch {
       opts.checkoutAmount = ESTIMATOR_PRICE_IDR;
     }
+  }
+  return opts;
+}
+
+async function redirectViaMayarCheckout(
+  product: CheckoutProduct,
+  options: CheckoutRedirectOptions,
+): Promise<void> {
+  const lynkProduct = normalizeCheckoutProduct(product);
+  const { data, error } = await supabase.functions.invoke(config.fnPlannerCheckout, {
+    body: {
+      provider: 'mayar',
+      product: lynkProduct,
+      orgId: options.orgId,
+      userId: options.userId,
+      email: options.email,
+      returnUrl: options.returnUrl,
+      checkoutAmount: options.checkoutAmount,
+      upgradeFrom: options.upgradeFrom,
+      creditAmount: options.creditAmount,
+    },
+  });
+
+  if (error) {
+    throw new Error(error.message || 'Checkout Mayar gagal');
+  }
+  const redirectUrl = String((data as { redirectUrl?: string })?.redirectUrl ?? '').trim();
+  if (!redirectUrl) {
+    throw new Error(String((data as { error?: string })?.error ?? 'URL checkout Mayar kosong'));
+  }
+  window.location.href = redirectUrl;
+}
+
+/** Resolves launch promo price, then redirects to Lynk or Mayar. */
+export async function redirectToCheckoutAsync(
+  product: CheckoutProduct,
+  options: CheckoutRedirectOptions,
+): Promise<void> {
+  const opts = await resolveCheckoutOptions(product, options);
+  if (resolvePaymentProvider() === 'mayar') {
+    await redirectViaMayarCheckout(product, opts);
+    return;
   }
   window.location.href = buildCheckoutUrl(product, opts);
 }

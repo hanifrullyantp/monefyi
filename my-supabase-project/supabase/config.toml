@@ -421,6 +421,18 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/planner-lynk-webhook/deno.json"
 entrypoint = "./functions/planner-lynk-webhook/index.ts"
+
+[functions.planner-mayar-webhook]
+enabled = true
+verify_jwt = false
+import_map = "./functions/planner-mayar-webhook/deno.json"
+entrypoint = "./functions/planner-mayar-webhook/index.ts"
+
+[functions.planner-checkout]
+enabled = true
+verify_jwt = false
+import_map = "./functions/planner-checkout/deno.json"
+entrypoint = "./functions/planner-checkout/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/lynk-webhook/*.html" ]

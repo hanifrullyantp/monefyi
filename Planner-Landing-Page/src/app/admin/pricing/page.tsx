@@ -84,6 +84,27 @@ export default function PricingPage() {
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6 space-y-4">
+        <h3 className="font-bold text-slate-900">Gateway Pembayaran</h3>
+        <p className="text-sm text-slate-500">
+          Pilih Lynk atau Mayar. Env <code className="text-xs">NEXT_PUBLIC_PLANNER_PAYMENT_PROVIDER</code>{" "}
+          meng-override pilihan CMS saat deploy.
+        </p>
+        <select
+          value={pricing.plannerPaymentProvider ?? "lynk"}
+          onChange={(e) =>
+            setPricing({
+              ...pricing,
+              plannerPaymentProvider: e.target.value as "lynk" | "mayar",
+            })
+          }
+          className="w-full max-w-xs px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        >
+          <option value="lynk">Lynk.id (default)</option>
+          <option value="mayar">Mayar</option>
+        </select>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6 space-y-4">
         <h3 className="font-bold text-slate-900">Lynk.id Checkout URLs</h3>
         <p className="text-sm text-slate-500">
           Direct checkout store Planner. Kosongkan untuk pakai env Vercel.

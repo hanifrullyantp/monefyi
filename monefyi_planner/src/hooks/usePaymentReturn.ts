@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cleanPaymentQueryFromUrl, readPaymentReturnStatus } from '../lib/checkout';
+import { resolvePaymentProvider } from '../lib/paymentProvider';
 import { analytics } from '../lib/analytics/events';
 import { invalidateEntitlementCache } from '../hooks/useEntitlement';
 
@@ -23,10 +24,11 @@ export function usePaymentReturn() {
       const product = window.location.pathname.includes('/finance')
         ? 'pro'
         : 'estimator';
+      const paymentProvider = resolvePaymentProvider();
       if (product === 'pro') {
-        analytics.proPurchased({});
+        analytics.proPurchased({ paymentProvider });
       } else {
-        analytics.estimatorPurchased({ product: 'estimator' });
+        analytics.estimatorPurchased({ product: 'estimator', paymentProvider });
       }
       setModal({ kind: 'success', product });
     } else {

@@ -11,7 +11,8 @@
 #   20260809250000_household_shared_visibility.sql
 #
 # Usage:
-#   export SUPABASE_ACCESS_TOKEN="sbp_..."
+#   export SUPABASE_ACCESS_TOKEN
+export SUPABASE_YES=1="sbp_..."
 #   export SUPABASE_PROJECT_REF="your-project-ref"
 #   ./scripts/deploy-growth-migrations.sh
 
@@ -33,6 +34,7 @@ if [[ -z "${SUPABASE_ACCESS_TOKEN:-}" ]]; then
 fi
 
 export SUPABASE_ACCESS_TOKEN
+export SUPABASE_YES=1
 
 if [[ -n "${SUPABASE_PROJECT_REF:-}" ]]; then
   echo "==> Linking $SUPABASE_PROJECT_REF"
@@ -60,6 +62,6 @@ do
 done
 
 echo "==> Pushing migrations..."
-npx --yes supabase@latest db push --include-all --yes
+npx --yes supabase@latest db push --remote --include-all --yes
 
 echo "==> Growth migrations applied."

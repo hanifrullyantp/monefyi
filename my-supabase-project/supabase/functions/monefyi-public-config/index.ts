@@ -59,6 +59,7 @@ serve(async (req) => {
       checkout_lifetime_url: appConfig?.checkout_lifetime_url ?? "",
       checkout_monthly_url: appConfig?.checkout_monthly_url ?? "",
       checkout_couple_url: platform.checkout_couple_url ?? "",
+      planner_payment_provider: platform.planner_payment_provider ?? "lynk",
     };
 
     let landing: Record<string, unknown> = {};

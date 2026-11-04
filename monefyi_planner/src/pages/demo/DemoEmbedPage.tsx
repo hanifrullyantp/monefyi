@@ -7,6 +7,7 @@ import EstimationWhatsAppPickerModal from '../../components/estimator/detail/Est
 import EstimationDocumentMenu from '../../components/estimator/detail/EstimationDocumentMenu';
 import EstimationDocumentPreviewModal from '../../components/estimator/detail/EstimationDocumentPreviewModal';
 import type { DocumentType } from '../../components/estimator/detail/EstimationDocumentMenu';
+import type { KwitansiPreviewChoice } from '../../lib/kwitansiPreviewChoice';
 import type { WhatsAppEstimationPreset } from '../../lib/whatsappEstimationPresets';
 import EstimationItemsTable from '../../components/estimator/EstimationItemsTable';
 import EstimationAdjustmentsPanel from '../../components/estimator/EstimationAdjustmentsPanel';
@@ -43,6 +44,7 @@ export default function DemoEmbedPage() {
   const [documentMenuOpen, setDocumentMenuOpen] = useState(false);
   const [documentPreviewOpen, setDocumentPreviewOpen] = useState(false);
   const [documentPreviewType, setDocumentPreviewType] = useState<DocumentType>('penawaran');
+  const [kwitansiPreviewChoice, setKwitansiPreviewChoice] = useState<KwitansiPreviewChoice | null>(null);
   const [waPickerOpen, setWaPickerOpen] = useState(false);
   const [waInitialPreset, setWaInitialPreset] = useState<WhatsAppEstimationPreset>('follow_up');
   const firstInteractionSent = useRef(false);
@@ -126,10 +128,17 @@ export default function DemoEmbedPage() {
     setWaPickerOpen(true);
   };
 
-  const handleSelectDocument = (type: DocumentType) => {
+  const handleSelectDocument = (type: DocumentType, kwitansi?: KwitansiPreviewChoice) => {
     markInteraction('demo_pdf_view');
     setDocumentPreviewType(type);
+    setKwitansiPreviewChoice(type === 'kwitansi' ? (kwitansi ?? null) : null);
     setDocumentPreviewOpen(true);
+  };
+
+  const handleDocumentPreviewBack = () => {
+    setDocumentPreviewOpen(false);
+    setKwitansiPreviewChoice(null);
+    setDocumentMenuOpen(true);
   };
 
   const demoToast = () => showToast('Daftar gratis untuk fitur penuh', 'info');
@@ -296,13 +305,20 @@ export default function DemoEmbedPage() {
           type={documentPreviewType}
           draft={draft}
           settings={pdfSettings}
-          onClose={() => setDocumentPreviewOpen(false)}
+          kwitansiChoice={kwitansiPreviewChoice}
+          onClose={() => {
+            setDocumentPreviewOpen(false);
+            setKwitansiPreviewChoice(null);
+          }}
+          onBack={handleDocumentPreviewBack}
           onEdit={() => {
             setDocumentPreviewOpen(false);
+            setKwitansiPreviewChoice(null);
             demoToast();
           }}
           onSendWhatsApp={() => {
             setDocumentPreviewOpen(false);
+            setKwitansiPreviewChoice(null);
             handleShareWhatsApp('penawaran');
           }}
         />

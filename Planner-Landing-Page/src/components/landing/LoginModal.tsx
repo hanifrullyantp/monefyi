@@ -18,9 +18,10 @@ import {
   signUpWithPassword,
 } from "@/lib/services/authService";
 import { ensureOwnerOrg } from "@/lib/services/orgService";
-import { redirectToLynkCheckout } from "@/lib/checkout/lynk";
+import { redirectToPlannerCheckout } from "@/lib/checkout/plannerCheckout";
 import { lynkProductLabel } from "@/lib/checkout/products";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { useContentStore } from "@/lib/store/contentStore";
 
 type AuthMode = "login" | "signup" | "forgot";
 
@@ -30,6 +31,7 @@ export function LoginModal() {
   const login = useAuthStore((s) => s.login);
   const refreshUser = useAuthStore((s) => s.refreshUser);
   const setIsAdmin = useUiStore((s) => s.setIsAdmin);
+  const { content } = useContentStore();
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -61,11 +63,14 @@ export function LoginModal() {
     await refreshUser();
     setLoginModalOpen(false);
     setPendingCheckoutProduct(null);
-    redirectToLynkCheckout(pendingCheckoutProduct, {
-      orgId,
-      userId,
-      email: userEmail,
-    });
+    await redirectToPlannerCheckout(
+      pendingCheckoutProduct,
+      { orgId, userId, email: userEmail },
+      {
+        lynkUrlOverrides: content.pricing.lynkCheckoutUrls,
+        paymentProvider: content.pricing.plannerPaymentProvider,
+      },
+    );
     return true;
   };
 

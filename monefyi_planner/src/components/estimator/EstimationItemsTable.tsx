@@ -19,6 +19,7 @@ import QtyInput from './QtyInput';
 import SmartInputModal from './SmartInputModal';
 import PricelistPickerModal from './PricelistPickerModal';
 import { useUiStore } from '../../store/uiStore';
+import { estimationItemDisplayName, uniquifyItemName } from '../../lib/estimatorItemDisplayName';
 
 function GlobalQtyField({
   className,
@@ -230,13 +231,16 @@ export default function EstimationItemsTable({
   };
 
   const handleSmartConfirm = (parsed: ParsedEstimationItem[]) => {
-    const newItems = parsed.map((p, i) => {
-      const base = emptyItem(items.length + i);
+    let acc = [...items];
+    const newItems: EstimationItemDraft[] = [];
+    for (const p of parsed) {
+      const base = emptyItem(acc.length);
       const selling = p.selling_price_per_unit || (p.hpp_per_unit > 0 ? sellingFromHpp(p.hpp_per_unit, p.margin_pct) : 0);
+      const displayName = uniquifyItemName(acc, p.name);
       const draft: EstimationItemDraft = {
         ...base,
         pricelist_item_id: p.pricelist_item_id || null,
-        name: p.name,
+        name: displayName,
         category: 'material',
         unit: p.unit,
         qty: p.qty,
@@ -245,14 +249,21 @@ export default function EstimationItemsTable({
         selling_price_per_unit: selling,
       };
       const anchor: ItemPriceEdit = p.selling_price_per_unit ? 'selling' : p.hpp_per_unit > 0 ? 'margin' : 'selling';
-      return { ...draft, ...calcItemRow(draft, anchor) };
-    });
+      const row = { ...draft, ...calcItemRow(draft, anchor) };
+      newItems.push(row);
+      acc.push(row);
+    }
     onChange([...items, ...newItems]);
   };
 
   const handlePricelistSelect = (picked: PricelistItem[]) => {
-    const newItems = picked.map((p, i) => pricelistToEstimationItem(p, items.length + i));
-    onChange([...items, ...newItems]);
+    let acc = [...items];
+    for (const p of picked) {
+      const row = pricelistToEstimationItem(p, acc.length);
+      row.name = uniquifyItemName(acc, row.name);
+      acc.push(row);
+    }
+    onChange(acc);
   };
 
   const fields: EditableField[] = ['name', 'qty', 'selling', 'margin', 'hpp'];
@@ -401,7 +412,7 @@ export default function EstimationItemsTable({
             const netSelling = effectiveItemSelling(item);
             const rowMuted = item.name.trim() && item.included === false;
             const rowExpanded = expandedIndex === idx;
-            const itemName = item.name.trim() || 'item';
+            const itemName = estimationItemDisplayName(item) || 'item';
             return (
               <div
                 key={idx}
@@ -420,14 +431,7 @@ export default function EstimationItemsTable({
                     />
                   </label>
                   <div className="flex-1 min-w-0 py-2 pr-1">
-                    <textarea
-                      value={item.name}
-                      onChange={e => updateItem(idx, { name: e.target.value })}
-                      placeholder="Nama item"
-                      aria-label="Nama item"
-                      rows={2}
-                      className="w-full font-semibold text-sm text-slate-900 bg-transparent border-0 outline-none resize-none leading-snug"
-                    />
+                    <p className="font-semibold text-sm text-slate-900 leading-snug break-words">{itemName}</p>
                     <p className="mt-0.5 text-[11px] text-slate-500 break-words">
                       {item.qty} {item.unit} × {formatRupiahFull(item.selling_price_per_unit)}
                     </p>
@@ -455,6 +459,15 @@ export default function EstimationItemsTable({
                 >
                   <div className="overflow-hidden">
                     <div className="px-3 pb-3 pt-1 border-t border-[#E5EAE8] space-y-3">
+                      <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                        Nama item
+                        <input
+                          value={item.name}
+                          onChange={e => updateItem(idx, { name: e.target.value })}
+                          placeholder="Nama item"
+                          className="mt-1 w-full min-h-11 px-3 border border-[#E5EAE8] rounded-xl text-sm font-semibold text-slate-900 focus:border-emerald-400 outline-none"
+                        />
+                      </label>
                       <div className="grid grid-cols-3 gap-2">
                         <label className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
                           Ukuran

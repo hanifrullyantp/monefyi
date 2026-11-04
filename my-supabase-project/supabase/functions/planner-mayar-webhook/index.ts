@@ -1,0 +1,62 @@
+// Supabase Edge Function: planner-mayar-webhook
+// Mayar.id — Estimator Standard/Pro + Planner Pro
+
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
+import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
+import { processPlannerMayarPurchase } from "../_shared/plannerMayarPayment.ts";
+
+const jsonHeaders = { "Content-Type": "application/json" };
+
+function pickEnv(name: string, fallback = "") {
+  return (Deno.env.get(name) ?? fallback).trim();
+}
+
+serve(async (req) => {
+  const corsResponse = handleCorsPreflightRequest(req);
+  if (corsResponse) return corsResponse;
+  const corsHeaders = {
+    ...getCorsHeaders(req),
+    "Access-Control-Allow-Headers": "content-type, authorization, x-client-info, apikey",
+  };
+
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { ...corsHeaders, ...jsonHeaders },
+    });
+  }
+
+  const payload = await req.json().catch(() => null);
+  if (!payload || typeof payload !== "object") {
+    return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+      status: 400,
+      headers: { ...corsHeaders, ...jsonHeaders },
+    });
+  }
+
+  const SUPABASE_URL = pickEnv("SUPABASE_URL");
+  const SERVICE_ROLE = pickEnv("SUPABASE_SERVICE_ROLE_KEY");
+  if (!SUPABASE_URL || !SERVICE_ROLE) {
+    return new Response(JSON.stringify({ error: "Missing Supabase env" }), {
+      status: 500,
+      headers: { ...corsHeaders, ...jsonHeaders },
+    });
+  }
+
+  try {
+    const supa = createClient(SUPABASE_URL, SERVICE_ROLE);
+    const result = await processPlannerMayarPurchase(supa, payload as Record<string, unknown>);
+    return new Response(JSON.stringify(result.body), {
+      status: result.status,
+      headers: { ...corsHeaders, ...jsonHeaders },
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    console.error("planner-mayar-webhook:", msg);
+    return new Response(JSON.stringify({ error: msg }), {
+      status: 500,
+      headers: { ...corsHeaders, ...jsonHeaders },
+    });
+  }
+});

@@ -9,6 +9,7 @@ interface Props {
   inputRef?: (el: HTMLInputElement | null) => void;
   title?: string;
   min?: number;
+  disabled?: boolean;
 }
 
 function displayValue(n: number): string {
@@ -23,6 +24,7 @@ export default function RupiahInput({
   inputRef,
   title,
   min = 0,
+  disabled = false,
 }: Props) {
   const [focused, setFocused] = useState(false);
   const [text, setText] = useState('');
@@ -76,7 +78,8 @@ export default function RupiahInput({
       }}
       onChange={e => setText(e.target.value)}
       onKeyDown={handleKeyDown}
-      className={`${className} min-w-[11rem] text-slate-900 placeholder:text-slate-600`}
+      disabled={disabled}
+      className={`${className} min-w-[11rem] text-slate-900 placeholder:text-slate-600 disabled:bg-slate-50 disabled:text-slate-500 disabled:pointer-events-none`}
       style={{ width: `${charWidth}ch`, maxWidth: '100%' }}
       placeholder="0"
     />

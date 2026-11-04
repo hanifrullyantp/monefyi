@@ -5,7 +5,8 @@
 #   - SUPABASE_PROJECT_REF (Settings → General → Reference ID), or rely on existing link
 #
 # Usage (from repo root):
-#   export SUPABASE_ACCESS_TOKEN="sbp_YOUR_TOKEN"
+#   export SUPABASE_ACCESS_TOKEN
+export SUPABASE_YES=1="sbp_YOUR_TOKEN"
 #   export SUPABASE_PROJECT_REF="zzwqfmdyncxbolestkqp"
 #   ./scripts/deploy-planner-supabase.sh
 #
@@ -33,6 +34,7 @@ if [[ -z "${SUPABASE_ACCESS_TOKEN:-}" ]]; then
 fi
 
 export SUPABASE_ACCESS_TOKEN
+export SUPABASE_YES=1
 
 if [[ -n "${SUPABASE_PROJECT_REF:-}" ]]; then
   echo "==> Linking project $SUPABASE_PROJECT_REF..."
@@ -41,7 +43,7 @@ fi
 
 if [[ "${SKIP_DB_PUSH:-}" != "1" ]]; then
   echo "==> Pushing database migrations..."
-  npx --yes supabase@latest db push --remote --yes
+  npx --yes supabase@latest db push --remote --include-all --yes
   if [[ "${SKIP_RLS_SMOKE:-}" != "1" ]]; then
     echo "==> Running RLS smoke test..."
     "$ROOT/scripts/rls-smoke-test.sh" || {
@@ -76,6 +78,8 @@ PLANNER_FUNCTIONS=(
   planner-resolve-domain
   planner-direct-create-member
   planner-lynk-webhook
+  planner-mayar-webhook
+  planner-checkout
   lynk-webhook
   monefyi-admin-users
   monefyi-admin-update-user
@@ -91,6 +95,8 @@ NO_VERIFY_JWT_FUNCTIONS=(
   monefyi-landing-config
   planner-resolve-domain
   planner-lynk-webhook
+  planner-mayar-webhook
+  planner-checkout
   lynk-webhook
 )
 

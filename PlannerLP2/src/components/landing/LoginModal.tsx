@@ -14,7 +14,7 @@ import {
   signUpWithPassword,
 } from "@/lib/services/authService";
 import { ensureOwnerOrg } from "@/lib/services/orgService";
-import { redirectToLynkCheckout } from "@/lib/checkout/lynk";
+import { redirectToPlannerCheckout } from "@/lib/checkout/plannerCheckout";
 import { lynkProductLabel } from "@/lib/checkout/products";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { EstimatorLogo } from "@/components/brand/EstimatorLogo";
@@ -96,10 +96,13 @@ export function LoginModal() {
     await refreshUser();
     setLoginModalOpen(false);
     setPendingCheckoutProduct(null);
-    redirectToLynkCheckout(
+    await redirectToPlannerCheckout(
       pendingCheckoutProduct,
       { orgId, userId, email: userEmail },
-      content.pricing.lynkCheckoutUrls,
+      {
+        lynkUrlOverrides: content.pricing.lynkCheckoutUrls,
+        paymentProvider: content.pricing.plannerPaymentProvider,
+      },
     );
     return true;
   };

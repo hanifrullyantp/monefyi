@@ -2,7 +2,8 @@
 # Push Product-Marketing Sync migrations (Sprint 1–6) to linked Supabase project.
 #
 # Usage:
-#   export SUPABASE_ACCESS_TOKEN="sbp_..."
+#   export SUPABASE_ACCESS_TOKEN
+export SUPABASE_YES=1="sbp_..."
 #   export SUPABASE_PROJECT_REF="your-project-ref"
 #   ./scripts/deploy-monefyi-product-marketing.sh
 #
@@ -26,6 +27,7 @@ if [[ -z "${SUPABASE_ACCESS_TOKEN:-}" ]]; then
 fi
 
 export SUPABASE_ACCESS_TOKEN
+export SUPABASE_YES=1
 
 if [[ -n "${SUPABASE_PROJECT_REF:-}" ]]; then
   echo "==> Linking $SUPABASE_PROJECT_REF"
@@ -33,10 +35,10 @@ if [[ -n "${SUPABASE_PROJECT_REF:-}" ]]; then
 fi
 
 echo "==> Pushing migrations (include-all for out-of-order timestamps)..."
-npx --yes supabase@latest db push --include-all --yes
+npx --yes supabase@latest db push --remote --include-all --yes
 
 echo "==> Verify feature_flags seed"
-npx --yes supabase@latest db query --linked \
+npx --yes supabase@latest db query --remote --read-only \
   "SELECT key, enabled, rollout_pct, status FROM public.feature_flags ORDER BY key;"
 
 echo ""

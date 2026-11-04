@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Download, Edit3, Loader2, MessageCircle, X } from 'lucide-react';
+import { ArrowLeft, Download, Edit3, Loader2, MessageCircle, X } from 'lucide-react';
 import type { EstimationFormDraft } from '../../../types/estimator';
 import { displayOptionsFromDraft, type PdfSettings } from '../../../types/pdfSettings';
 import type { DocumentType } from './EstimationDocumentMenu';
@@ -16,6 +16,9 @@ import { loadEstimationProjectPayments, type ProjectIncome } from '../../../serv
 import { useEntitlement } from '../../../hooks/useEntitlement';
 import { canGenerateKwitansi } from '../../../lib/entitlement';
 import { pdfPlanPolicyFromEntitlement, type PdfPlanPolicy } from '../../../lib/pdf/pdfPlanPolicy';
+import type { KwitansiPreviewChoice } from '../../../lib/kwitansiPreviewChoice';
+import { formatRupiahFull, parseNumberId } from '../../../lib/estimatorFormat';
+import PdfBlobCanvasViewer from './PdfBlobCanvasViewer';
 
 type Props = {
   open: boolean;
@@ -24,7 +27,9 @@ type Props = {
   settings: PdfSettings;
   projectName?: string | null;
   projectId?: string | null;
+  kwitansiChoice?: KwitansiPreviewChoice | null;
   onClose: () => void;
+  onBack: () => void;
   onEdit: (type: DocumentType) => void;
   onSendWhatsApp: (type: DocumentType) => void;
 };
@@ -41,11 +46,20 @@ async function buildBlob(
   settings: PdfSettings,
   projectPayments: ProjectIncome[] = [],
   policy?: PdfPlanPolicy,
+  kwitansiChoice?: KwitansiPreviewChoice | null,
+  kwitansiAmountOverride?: number,
 ): Promise<Blob> {
   const opts = displayOptionsFromDraft(draft);
   if (type === 'penawaran') return generateQuotationPdfBlob(draft, settings, opts, policy);
   if (type === 'invoice') return generateInvoicePdfBlob(draft, settings, opts, projectPayments, policy);
-  return generateKwitansiPdfBlob(buildKwitansiPdfInputFromDraft(draft, settings));
+  const partial = kwitansiChoice
+    ? {
+        category: kwitansiChoice.category,
+        amount: kwitansiAmountOverride ?? kwitansiChoice.amount,
+        description: kwitansiChoice.description,
+      }
+    : undefined;
+  return generateKwitansiPdfBlob(buildKwitansiPdfInputFromDraft(draft, settings, partial));
 }
 
 function filenameFor(
@@ -65,7 +79,9 @@ export default function EstimationDocumentPreviewModal({
   settings,
   projectName,
   projectId,
+  kwitansiChoice,
   onClose,
+  onBack,
   onEdit,
   onSendWhatsApp,
 }: Props) {
@@ -75,10 +91,20 @@ export default function EstimationDocumentPreviewModal({
     [entitlement.isFree, entitlement.isEstimatorPro, entitlement.isPro, entitlement.isEnterprise],
   );
   const kwitansiLocked = type === 'kwitansi' && !canGenerateKwitansi(entitlement);
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [projectPayments, setProjectPayments] = useState<ProjectIncome[]>([]);
+  const [customAmountInput, setCustomAmountInput] = useState('');
+  const [customAmount, setCustomAmount] = useState(0);
+
+  const showCustomAmount = type === 'kwitansi' && Boolean(kwitansiChoice?.customAmount);
+
+  useEffect(() => {
+    if (!open || !showCustomAmount || !kwitansiChoice) return;
+    setCustomAmount(kwitansiChoice.amount);
+    setCustomAmountInput(formatRupiahFull(kwitansiChoice.amount).replace('Rp', '').trim());
+  }, [open, showCustomAmount, kwitansiChoice]);
 
   useEffect(() => {
     if (!open) return;
@@ -99,19 +125,34 @@ export default function EstimationDocumentPreviewModal({
     return () => { cancelled = true; };
   }, [open, projectId]);
 
+  const effectiveKwitansiAmount = showCustomAmount ? customAmount : kwitansiChoice?.amount;
+
   useEffect(() => {
     if (!open || kwitansiLocked) return;
-    let url: string | null = null;
+    if (showCustomAmount && customAmount <= 0) {
+      setPdfBlob(null);
+      setLoading(false);
+      setError('');
+      return;
+    }
+
     let cancelled = false;
 
     const load = async () => {
       setLoading(true);
       setError('');
       try {
-        const blob = await buildBlob(type, draft, settings, projectPayments, policy);
+        const blob = await buildBlob(
+          type,
+          draft,
+          settings,
+          projectPayments,
+          policy,
+          kwitansiChoice,
+          effectiveKwitansiAmount,
+        );
         if (cancelled) return;
-        url = URL.createObjectURL(blob);
-        setBlobUrl(url);
+        setPdfBlob(blob);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Gagal membuat PDF');
       } finally {
@@ -122,9 +163,20 @@ export default function EstimationDocumentPreviewModal({
     void load();
     return () => {
       cancelled = true;
-      if (url) URL.revokeObjectURL(url);
     };
-  }, [open, type, draft, settings, projectPayments, policy, kwitansiLocked]);
+  }, [
+    open,
+    type,
+    draft,
+    settings,
+    projectPayments,
+    policy,
+    kwitansiLocked,
+    kwitansiChoice,
+    effectiveKwitansiAmount,
+    showCustomAmount,
+    customAmount,
+  ]);
 
   if (!open) return null;
 
@@ -134,7 +186,15 @@ export default function EstimationDocumentPreviewModal({
   const handleDownload = async () => {
     try {
       if (kwitansiLocked) return;
-      const blob = await buildBlob(type, draft, settings, projectPayments, policy);
+      const blob = await buildBlob(
+        type,
+        draft,
+        settings,
+        projectPayments,
+        policy,
+        kwitansiChoice,
+        effectiveKwitansiAmount,
+      );
       downloadBlob(blob, filenameFor(type, draft, projectName));
     } catch {
       /* ignore */
@@ -147,15 +207,43 @@ export default function EstimationDocumentPreviewModal({
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="bg-white w-full max-w-4xl h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0">
-          <div>
-            <h2 className="font-bold text-slate-900">{title}</h2>
-            <p className="text-xs text-slate-500">{draft.code}</p>
+        <div className="flex items-center gap-2 px-3 sm:px-4 py-3 border-b border-slate-100 shrink-0">
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-slate-100 text-sm font-semibold text-emerald-700 shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Kembali
+          </button>
+          <div className="flex-1 min-w-0 text-center sm:text-left">
+            <h2 className="font-bold text-slate-900 truncate">{title}</h2>
+            <p className="text-xs text-slate-500 truncate">
+              {draft.code}
+              {kwitansiChoice && !kwitansiChoice.customAmount ? ` · ${kwitansiChoice.label}` : ''}
+            </p>
           </div>
-          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100">
+          <button type="button" onClick={onClose} aria-label="Tutup" className="p-2 rounded-lg hover:bg-slate-100 shrink-0">
             <X className="w-5 h-5 text-slate-500" />
           </button>
         </div>
+
+        {showCustomAmount && (
+          <div className="px-4 py-2 border-b border-slate-100 bg-slate-50 shrink-0">
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Nominal kustom</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={customAmountInput}
+              onChange={e => {
+                setCustomAmountInput(e.target.value);
+                setCustomAmount(Math.max(0, parseNumberId(e.target.value)));
+              }}
+              className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white"
+              placeholder="Rp …"
+            />
+          </div>
+        )}
 
         <div className="flex-1 min-h-0 bg-slate-100 relative">
           {kwitansiLocked ? (
@@ -172,8 +260,13 @@ export default function EstimationDocumentPreviewModal({
               {error}
             </div>
           )}
-          {blobUrl && !loading && (
-            <iframe src={blobUrl} title={title} className="w-full h-full border-0" />
+          {pdfBlob && !loading && !error && (
+            <PdfBlobCanvasViewer blob={pdfBlob} title={title} />
+          )}
+          {showCustomAmount && customAmount <= 0 && !loading && (
+            <div className="absolute inset-0 flex items-center justify-center p-4 text-sm text-slate-500">
+              Masukkan nominal lebih dari 0 untuk preview.
+            </div>
           )}
         </div>
 

@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
-  BadgeCheck, FileText, Loader2, Plus, Receipt, Sparkles,
+  BadgeCheck, ChevronLeft, FileText, Loader2, Plus, Receipt, Sparkles,
 } from 'lucide-react';
+import { buildKwitansiPreviewChoices, type KwitansiPreviewChoice } from '../../../lib/kwitansiPreviewChoice';
+import { formatRupiahFull } from '../../../lib/estimatorFormat';
 import BottomSheet from '../../ui/BottomSheet';
 import EstimationPaymentDashboard from './EstimationPaymentDashboard';
+import EstimationQuoteAnalysisPanel from './EstimationQuoteAnalysisPanel';
 import EstimationBillingScheduleEditor from './EstimationBillingScheduleEditor';
 import { buildEstimationBillingSnapshot, type BillingMilestone } from '../../../lib/estimationBillingSchedule';
 import { newLocalPayment } from '../../../lib/estimationBillingConfig';
@@ -23,7 +26,7 @@ export type DocumentType = 'penawaran' | 'invoice' | 'kwitansi';
 type Props = {
   open: boolean;
   onClose: () => void;
-  onSelect: (type: DocumentType) => void;
+  onSelect: (type: DocumentType, kwitansi?: KwitansiPreviewChoice) => void;
   draft: EstimationFormDraft;
   summary: EstimationSummary;
   billingConfig: EstimationBillingConfig;
@@ -70,6 +73,7 @@ export default function EstimationDocumentMenu({
   onPaymentsChanged,
 }: Props) {
   const [projectPayments, setProjectPayments] = useState<ProjectIncome[]>([]);
+  const [kwitansiPickerOpen, setKwitansiPickerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -99,6 +103,7 @@ export default function EstimationDocumentMenu({
   useEffect(() => {
     if (!open) return;
     setShowForm(false);
+    setKwitansiPickerOpen(false);
     void reload();
   }, [open, reload]);
 
@@ -175,8 +180,13 @@ export default function EstimationDocumentMenu({
     }
   };
 
-  const handleSelect = (type: DocumentType) => {
-    onSelect(type);
+  const kwitansiChoices = useMemo(
+    () => buildKwitansiPreviewChoices(draft, snapshot.milestones, snapshot.contractTotal),
+    [draft, snapshot.milestones, snapshot.contractTotal],
+  );
+
+  const handleSelect = (type: DocumentType, kwitansi?: KwitansiPreviewChoice) => {
+    onSelect(type, kwitansi);
     onClose();
   };
 
@@ -193,12 +203,15 @@ export default function EstimationDocumentMenu({
             <Loader2 className="w-7 h-7 animate-spin text-emerald-600" />
           </div>
         ) : (
-          <EstimationPaymentDashboard
-            snapshot={snapshot}
-            projectName={projectName}
-            linkedToProject={Boolean(projectId)}
-            onMilestoneClick={handleTagih}
-          />
+          <>
+            <EstimationPaymentDashboard
+              snapshot={snapshot}
+              projectName={projectName}
+              linkedToProject={Boolean(projectId)}
+              onMilestoneClick={handleTagih}
+            />
+            <EstimationQuoteAnalysisPanel summary={summary} />
+          </>
         )}
 
         {!isReadOnly && (
@@ -300,10 +313,47 @@ export default function EstimationDocumentMenu({
               shadow="shadow-emerald-600/30"
               icon={<Receipt className="w-6 h-6 text-white" />}
               badge="Pro"
-              onClick={() => handleSelect('kwitansi')}
+              onClick={() => setKwitansiPickerOpen(true)}
             />
           </div>
         </div>
+
+        {kwitansiPickerOpen && (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-3 space-y-2">
+            <button
+              type="button"
+              onClick={() => setKwitansiPickerOpen(false)}
+              className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-800"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Kembali ke dokumen
+            </button>
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-600 px-0.5">
+              Bukti pembayaran untuk kwitansi
+            </p>
+            <ul className="space-y-2 max-h-52 overflow-y-auto">
+              {kwitansiChoices.map(choice => (
+                <li key={choice.id}>
+                  <button
+                    type="button"
+                    onClick={() => handleSelect('kwitansi', choice)}
+                    className="w-full flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left hover:border-emerald-300 hover:bg-emerald-50/80 transition-colors"
+                  >
+                    <span className="text-sm font-semibold text-slate-800">{choice.label}</span>
+                    {!choice.customAmount && (
+                      <span className="text-xs font-bold text-emerald-700 tabular-nums shrink-0">
+                        {formatRupiahFull(choice.amount)}
+                      </span>
+                    )}
+                    {choice.customAmount && (
+                      <span className="text-[10px] font-bold uppercase text-slate-500">Atur nominal</span>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {allPayments.length > 0 && (
           <div className="rounded-2xl border border-slate-200 overflow-hidden">

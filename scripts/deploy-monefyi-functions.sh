@@ -18,6 +18,7 @@ if [[ -z "${SUPABASE_ACCESS_TOKEN:-}" ]]; then
 fi
 
 export SUPABASE_ACCESS_TOKEN
+export SUPABASE_YES=1
 
 if [[ -n "${SUPABASE_PROJECT_REF:-}" ]]; then
   echo "==> Linking $SUPABASE_PROJECT_REF"

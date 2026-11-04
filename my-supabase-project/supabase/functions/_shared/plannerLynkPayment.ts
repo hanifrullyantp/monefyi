@@ -119,7 +119,7 @@ export function looksLikePlannerLynkPurchase(payload: Record<string, unknown>): 
   return ESTIMATOR_SKU.some((sku) => blob.includes(sku));
 }
 
-function mapProductFromPayload(
+export function mapProductFromPayload(
   item: Record<string, unknown>,
   custom: Record<string, string>,
   amount: number,
@@ -316,59 +316,44 @@ async function sendPurchaseConfirmation(params: {
   return emailRes;
 }
 
-/** Aktifkan paket Estimator/Planner + kirim email konfirmasi (termasuk replay duplicate). */
-export async function processPlannerLynkPurchase(
+export type PlannerPaymentProvider = "lynk" | "mayar";
+
+export type PlannerPurchaseActivationInput = {
+  paymentProvider: PlannerPaymentProvider;
+  payload: Record<string, unknown>;
+  messageId: string;
+  refId: string;
+  customerEmail: string;
+  customerName: string;
+  customerPhone: string;
+  custom: Record<string, string>;
+  item: Record<string, unknown>;
+  qty: number;
+  amount: number;
+  idempotencyTable: "lynk_webhook_events" | "mayar_webhook_events";
+};
+
+/** Aktivasi subscription + email setelah pembayaran sukses (Lynk / Mayar). */
+export async function processPlannerPurchaseActivation(
   supa: SupabaseClient,
-  payload: Record<string, unknown>,
+  input: PlannerPurchaseActivationInput,
 ): Promise<PlannerLynkResult> {
-  try {
-    return await processPlannerLynkPurchaseInner(supa, payload);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Unknown error";
-    console.error("processPlannerLynkPurchase:", msg);
-    return { status: 500, body: { error: msg } };
-  }
-}
+  const {
+    paymentProvider,
+    payload,
+    messageId,
+    refId,
+    customerEmail,
+    customerName,
+    customerPhone,
+    custom,
+    item,
+    qty,
+    amount,
+    idempotencyTable,
+  } = input;
 
-async function processPlannerLynkPurchaseInner(
-  supa: SupabaseClient,
-  payload: Record<string, unknown>,
-): Promise<PlannerLynkResult> {
-  if (!isLynkPaymentSuccess(payload)) {
-    return { status: 200, body: { ok: true, ignored: true, reason: "not a successful payment" } };
-  }
-
-  const data = (payload.data && typeof payload.data === "object")
-    ? payload.data as Record<string, unknown>
-    : payload;
-  const messageId = String(data.message_id || payload.message_id || "");
-  const messageData = unwrapLynkMessageData(payload);
-  const custom = extractLynkCustomFields(messageData);
-  const customerEmail = customerEmailFrom(messageData, custom);
-  const customerName = sanitizeText(
-    (messageData.customer as Record<string, unknown> | undefined)?.name
-      ?? messageData.customer_name
-      ?? custom.customer_name
-      ?? "",
-    120,
-  );
-  const customerPhone = sanitizeText(
-    String((messageData.customer as Record<string, unknown> | undefined)?.phone
-      ?? messageData.customer_phone
-      ?? ""),
-    40,
-  );
-
-  if (!customerEmail.includes("@")) {
-    return { status: 400, body: { error: "Missing customer email" } };
-  }
-
-  const item = ((messageData.items as unknown[])?.[0] || {}) as Record<string, unknown>;
-  const qty = parseQty(item);
-  const totals = (messageData.totals || {}) as Record<string, unknown>;
-  const amount = Number(totals.customerPay ?? totals.grandTotal ?? totals.totalPrice ?? 0) || 0;
   const mapped = mapProductFromPayload(item, custom, amount);
-  const refId = String(messageData.refId || messageData.ref_id || "");
   const isEstimatorPurchase = mapped.tier === "estimator";
   const plannerSiteUrl = pickEnv("APP_URL", "https://planner.monefyi.com").replace(/\/$/, "");
   const estimatorSiteUrl = pickEnv("ESTIMATOR_SITE_URL", "https://estimator.monefyi.com").replace(/\/$/, "");
@@ -378,7 +363,7 @@ async function processPlannerLynkPurchaseInner(
 
   let alreadyProcessed = false;
   try {
-    const { error } = await supa.from("lynk_webhook_events").insert({
+    const { error } = await supa.from(idempotencyTable).insert({
       message_id: messageId || null,
       ref_id: refId || null,
       email: customerEmail,
@@ -449,8 +434,9 @@ async function processPlannerLynkPurchaseInner(
       expiresLabel = toDateOnlyISO(newExpires);
     }
 
+    const paymentRefKey = paymentProvider === "mayar" ? "mayar_ref" : "lynk_ref";
     const metadata = {
-      lynk_ref: refId,
+      [paymentRefKey]: refId,
       product: mapped.product,
       item_title: String(item?.title || ""),
       qty,
@@ -461,7 +447,7 @@ async function processPlannerLynkPurchaseInner(
     const { error: actErr } = await supa.rpc("activate_subscription", {
       p_org_id: orgId,
       p_tier: mapped.tier,
-      p_payment_provider: "lynk",
+      p_payment_provider: paymentProvider,
       p_external_payment_id: refId || messageId,
       p_amount: amount,
       p_expires_at: expiresAt,
@@ -488,9 +474,21 @@ async function processPlannerLynkPurchaseInner(
         user_id: userId,
         product: mapped.product,
         plan_type: mapped.tier,
+        payment_provider: paymentProvider,
       });
     } catch (e) {
       console.warn("lynk_orders insert:", (e as Error).message);
+    }
+
+    if (paymentProvider === "mayar" && refId) {
+      try {
+        await supa.from("planner_checkout_sessions")
+          .update({ status: "paid", updated_at: new Date().toISOString() })
+          .eq("provider", "mayar")
+          .eq("external_id", refId);
+      } catch {
+        /* non-blocking */
+      }
     }
   }
 
@@ -516,7 +514,7 @@ async function processPlannerLynkPurchaseInner(
 
   const requireEmail = pickEnv("REQUIRE_PURCHASE_EMAIL", "true").toLowerCase() === "true";
   if (!emailRes.ok && requireEmail && !emailRes.skipped) {
-    console.error("purchase email failed (Lynk will retry):", emailRes.reason);
+    console.error("purchase email failed (webhook will retry):", emailRes.reason);
     return {
       status: 502,
       body: {
@@ -549,4 +547,73 @@ async function processPlannerLynkPurchaseInner(
       },
     },
   };
+}
+
+/** Aktifkan paket Estimator/Planner + kirim email konfirmasi (termasuk replay duplicate). */
+export async function processPlannerLynkPurchase(
+  supa: SupabaseClient,
+  payload: Record<string, unknown>,
+): Promise<PlannerLynkResult> {
+  try {
+    return await processPlannerLynkPurchaseInner(supa, payload);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    console.error("processPlannerLynkPurchase:", msg);
+    return { status: 500, body: { error: msg } };
+  }
+}
+
+async function processPlannerLynkPurchaseInner(
+  supa: SupabaseClient,
+  payload: Record<string, unknown>,
+): Promise<PlannerLynkResult> {
+  if (!isLynkPaymentSuccess(payload)) {
+    return { status: 200, body: { ok: true, ignored: true, reason: "not a successful payment" } };
+  }
+
+  const data = (payload.data && typeof payload.data === "object")
+    ? payload.data as Record<string, unknown>
+    : payload;
+  const messageId = String(data.message_id || payload.message_id || "");
+  const messageData = unwrapLynkMessageData(payload);
+  const custom = extractLynkCustomFields(messageData);
+  const customerEmail = customerEmailFrom(messageData, custom);
+  const customerName = sanitizeText(
+    (messageData.customer as Record<string, unknown> | undefined)?.name
+      ?? messageData.customer_name
+      ?? custom.customer_name
+      ?? "",
+    120,
+  );
+  const customerPhone = sanitizeText(
+    String((messageData.customer as Record<string, unknown> | undefined)?.phone
+      ?? messageData.customer_phone
+      ?? ""),
+    40,
+  );
+
+  if (!customerEmail.includes("@")) {
+    return { status: 400, body: { error: "Missing customer email" } };
+  }
+
+  const item = ((messageData.items as unknown[])?.[0] || {}) as Record<string, unknown>;
+  const qty = parseQty(item);
+  const totals = (messageData.totals || {}) as Record<string, unknown>;
+  const amount = Number(totals.customerPay ?? totals.grandTotal ?? totals.totalPrice ?? 0) || 0;
+  const refId = String(messageData.refId || messageData.ref_id || "");
+
+  return processPlannerPurchaseActivation(supa, {
+    paymentProvider: "lynk",
+    payload,
+    messageId,
+    refId,
+    customerEmail,
+    customerName,
+    customerPhone,
+    custom,
+    item,
+    qty,
+    amount,
+    idempotencyTable: "lynk_webhook_events",
+  });
 }

@@ -268,7 +268,13 @@ export interface PricingContent {
   comparisonRows: ComparisonTableRow[];
   recommendations: PricingRecommendation[];
   miniQuestions: { question: string; answer: string }[];
+  plannerPaymentProvider?: "lynk" | "mayar";
   lynkCheckoutUrls?: {
+    estimator_standard?: string;
+    estimator_pro?: string;
+    planner_pro?: string;
+  };
+  mayarCheckoutUrls?: {
     estimator_standard?: string;
     estimator_pro?: string;
     planner_pro?: string;

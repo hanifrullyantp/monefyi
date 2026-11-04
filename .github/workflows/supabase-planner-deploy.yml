@@ -105,10 +105,12 @@ jobs:
             planner-try-domain-join \
             planner-direct-create-member \
             planner-lynk-webhook \
+            planner-mayar-webhook \
+            planner-checkout \
             lynk-webhook
           do
             echo "Deploying $fn..."
-            if [ "$fn" = "planner-lynk-webhook" ] || [ "$fn" = "lynk-webhook" ]; then
+            if [ "$fn" = "planner-lynk-webhook" ] || [ "$fn" = "planner-mayar-webhook" ] || [ "$fn" = "planner-checkout" ] || [ "$fn" = "lynk-webhook" ]; then
               supabase functions deploy "$fn" --no-verify-jwt
             else
               supabase functions deploy "$fn"

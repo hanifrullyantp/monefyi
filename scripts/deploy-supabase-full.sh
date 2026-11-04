@@ -17,11 +17,15 @@ if [[ -z "${SUPABASE_ACCESS_TOKEN:-}" ]]; then
 fi
 
 export SUPABASE_ACCESS_TOKEN
+export SUPABASE_YES=1
 
-echo "==> 1/4 Migrations + edge functions"
+echo "==> 1/5 Migrations + edge functions (Finance + admin)"
 ./scripts/deploy-all.sh
 
-echo "==> 2/4 Secrets"
+echo "==> 2/5 Planner migrations + edge functions"
+SKIP_RLS_SMOKE="${SKIP_RLS_SMOKE:-1}" SKIP_EDGE_SMOKE="${SKIP_EDGE_SMOKE:-1}" ./scripts/deploy-planner-supabase.sh
+
+echo "==> 3/5 Secrets"
 if [[ -z "${CRON_SECRET:-}" ]]; then
   CRON_SECRET=$(openssl rand -hex 32)
   echo "    Setting CRON_SECRET (new) + REFUND_AUTO_LYNK_ENABLED=false"
@@ -29,22 +33,26 @@ if [[ -z "${CRON_SECRET:-}" ]]; then
   npx --yes supabase@latest secrets set \
     CRON_SECRET="$CRON_SECRET" \
     REFUND_AUTO_LYNK_ENABLED=false \
+    PLANNER_PAYMENT_PROVIDER=lynk \
     APP_URL="${APP_URL:-https://monefyi.com/app}"
   cd ..
   export CRON_SECRET
 else
   echo "    CRON_SECRET from env — skipping regenerate"
   cd my-supabase-project
-  npx --yes supabase@latest secrets set REFUND_AUTO_LYNK_ENABLED=false APP_URL="${APP_URL:-https://monefyi.com/app}"
+  npx --yes supabase@latest secrets set \
+    REFUND_AUTO_LYNK_ENABLED=false \
+    PLANNER_PAYMENT_PROVIDER=lynk \
+    APP_URL="${APP_URL:-https://monefyi.com/app}"
   cd ..
 fi
 
-echo "==> 3/4 pg_cron schedules"
+echo "==> 4/5 pg_cron schedules"
 ./scripts/apply-compliance-crons.sh
 
-echo "==> 4/4 Verify tables"
+echo "==> 5/5 Verify tables"
 cd my-supabase-project
-npx --yes supabase@latest db query --linked \
+npx --yes supabase@latest db query --remote --read-only \
   "SELECT COUNT(*) AS flags FROM feature_flags WHERE status='active';" 2>&1 | tail -5
 
 echo ""

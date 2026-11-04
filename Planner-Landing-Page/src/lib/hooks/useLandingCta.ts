@@ -12,7 +12,7 @@ import {
 } from "@/lib/permissions";
 import type { User } from "@/lib/store/authStore";
 import { planIdToLynkProduct } from "@/lib/checkout/products";
-import { redirectToLynkCheckout } from "@/lib/checkout/lynk";
+import { redirectToPlannerCheckout } from "@/lib/checkout/plannerCheckout";
 import { ensureOwnerOrg } from "@/lib/services/orgService";
 import { useContentStore } from "@/lib/store/contentStore";
 
@@ -33,6 +33,7 @@ export function useLandingCta() {
   }, [hydrate]);
 
   const lynkOverrides = content.pricing.lynkCheckoutUrls;
+  const paymentProvider = content.pricing.plannerPaymentProvider;
 
   const checkoutParams = async (returnUrl?: string) => {
     if (!isAuthenticated || !user) {
@@ -55,14 +56,17 @@ export function useLandingCta() {
   const startCheckout = async (planId: string) => {
     const product = planIdToLynkProduct(planId);
     if (!product) return;
-    redirectToLynkCheckout(product, await checkoutParams(), lynkOverrides);
+    await redirectToPlannerCheckout(product, await checkoutParams(), {
+      lynkUrlOverrides: lynkOverrides,
+      paymentProvider,
+    });
   };
 
   const startPlannerProCheckout = async () => {
-    redirectToLynkCheckout(
+    await redirectToPlannerCheckout(
       "planner_pro",
       await checkoutParams(plannerPaymentReturnPath("app")),
-      lynkOverrides,
+      { lynkUrlOverrides: lynkOverrides, paymentProvider },
     );
   };
 

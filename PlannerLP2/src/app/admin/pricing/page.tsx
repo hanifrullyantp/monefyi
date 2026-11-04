@@ -8,11 +8,19 @@ export default function PricingAdminPage() {
   const { content, updateSection, publishContent } = useContentStore();
   const [cards, setCards] = useState<PricingCard[]>(content.pricing.cards);
   const [lynkUrls, setLynkUrls] = useState(content.pricing.lynkCheckoutUrls ?? {});
+  const [paymentProvider, setPaymentProvider] = useState<"lynk" | "mayar">(
+    content.pricing.plannerPaymentProvider ?? "lynk",
+  );
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
   const save = async () => {
-    updateSection("pricing", { ...content.pricing, cards, lynkCheckoutUrls: lynkUrls });
+    updateSection("pricing", {
+      ...content.pricing,
+      cards,
+      lynkCheckoutUrls: lynkUrls,
+      plannerPaymentProvider: paymentProvider,
+    });
     await publishContent();
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -121,6 +129,18 @@ export default function PricingAdminPage() {
             )}
           </div>
         ))}
+      </div>
+
+      <div className="mt-8 bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+        <h2 className="text-lg font-bold text-slate-900">Gateway Pembayaran</h2>
+        <select
+          value={paymentProvider}
+          onChange={(e) => setPaymentProvider(e.target.value as "lynk" | "mayar")}
+          className="w-full max-w-xs border border-slate-200 rounded-xl px-3 py-2 text-sm"
+        >
+          <option value="lynk">Lynk.id</option>
+          <option value="mayar">Mayar</option>
+        </select>
       </div>
 
       <div className="mt-8 bg-white rounded-2xl border border-slate-200 p-6 space-y-4">

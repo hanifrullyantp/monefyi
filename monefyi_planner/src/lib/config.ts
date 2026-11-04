@@ -28,6 +28,7 @@ export const config = {
   fnAdminPlatformStats: 'monefyi-admin-platform-stats',
   fnAdminCompanyTypes: 'monefyi-admin-company-types',
   fnUserAccount: 'monefyi-user-account',
+  fnPlannerCheckout: 'planner-checkout',
   appEnv:
     (import.meta.env.VITE_APP_ENV as string) ||
     (import.meta.env.VERCEL_ENV as string) ||

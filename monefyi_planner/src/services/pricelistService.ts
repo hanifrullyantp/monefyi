@@ -258,7 +258,7 @@ export function pricelistToDraftRow(item: PricelistItem) {
   return {
     pricelist_item_id: item.id,
     product_group: item.product?.trim() || '',
-    name: item.product ? `${item.name} — ${item.product}` : item.name,
+    name: item.name.trim(),
     category: item.category || 'material',
     unit: item.unit,
     qty: 1,
