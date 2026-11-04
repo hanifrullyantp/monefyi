@@ -15,6 +15,7 @@ import {
   updateProjectProgressFromWorkItems,
   type WorkItem,
 } from '../../../services/workItemService';
+import { updateProject as updateProjectApi } from '../../../services/projectService';
 import { createDailyLog, loadDailyLogs, type DailyLog } from '../../../services/dailyLogService';
 import {
   buildSCurveFromWorkItems,
@@ -74,7 +75,7 @@ export default function TabV2Progress({
   const [savingId, setSavingId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
-  const [logForm, setLogForm] = useState({ description: '', progress: '' });
+  const [logForm, setLogForm] = useState({ workItemId: '', description: '', progress: '' });
   const [logSaving, setLogSaving] = useState(false);
 
   const summary = useMemo(() => computeProgressSummary(project, workItems), [project, workItems]);
@@ -161,19 +162,47 @@ export default function TabV2Progress({
       showToast('Deskripsi laporan wajib diisi', 'error');
       return;
     }
+    const increment = logForm.progress ? Number(logForm.progress) : 0;
     setLogSaving(true);
     try {
+      const targetWi = logForm.workItemId
+        ? workItems.find(w => w.id === logForm.workItemId)
+        : undefined;
+      const logDesc = targetWi
+        ? `[${targetWi.name}] ${logForm.description.trim()}`
+        : logForm.description.trim();
+
       await createDailyLog({
         project_id: project.id,
         date: new Date().toISOString().slice(0, 10),
-        description: logForm.description.trim(),
-        progress_increment: logForm.progress ? Number(logForm.progress) : 0,
+        description: logDesc,
+        progress_increment: increment,
         recorded_by: userId,
       });
-      setLogForm({ description: '', progress: '' });
+
+      if (increment > 0) {
+        if (targetWi) {
+          const nextPct = clampPct((Number(targetWi.progress_pct) || 0) + increment);
+          await updateWorkItem(targetWi.id, {
+            progress_pct: nextPct,
+            status: nextPct >= 100 ? 'completed' : nextPct > 0 ? 'in_progress' : 'pending',
+          });
+          await syncProjectProgress();
+        } else if (workItems.length === 0) {
+          const nextPct = clampPct((Number(project.progress_percentage) || 0) + increment);
+          await updateProjectApi(project.id, { progress_percentage: nextPct });
+          updateProject(project.id, { progress_percentage: nextPct });
+          await onRefresh();
+        }
+      }
+
+      setLogForm({ workItemId: '', description: '', progress: '' });
       setLogOpen(false);
       await reloadLogs();
-      showToast('Laporan progress tercatat', 'success');
+      showToast(
+        increment > 0 ? `Laporan & progres (+${increment}%) tercatat` : 'Laporan harian tercatat',
+        'success',
+      );
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal menyimpan laporan', 'error');
     } finally {
@@ -262,7 +291,21 @@ export default function TabV2Progress({
 
       {logOpen && canManage && (
         <div className="bg-white rounded-2xl border border-slate-100 p-4 space-y-3 shadow-sm">
-          <h4 className="font-bold text-sm text-slate-800">Laporan Harian</h4>
+          <h4 className="font-bold text-sm text-slate-800">Laporan Harian & Update Progress</h4>
+          {workItems.length > 0 && (
+            <select
+              value={logForm.workItemId}
+              onChange={e => setLogForm(f => ({ ...f, workItemId: e.target.value }))}
+              className="w-full px-3 py-2 rounded-xl border text-sm bg-white"
+            >
+              <option value="">— Pilih Item Pekerjaan untuk Update % (Opsional) —</option>
+              {workItems.map(wi => (
+                <option key={wi.id} value={wi.id}>
+                  {wi.name} (Saat ini: {Number(wi.progress_pct) || 0}%)
+                </option>
+              ))}
+            </select>
+          )}
           <textarea
             value={logForm.description}
             onChange={e => setLogForm(f => ({ ...f, description: e.target.value }))}
@@ -270,7 +313,7 @@ export default function TabV2Progress({
             rows={2}
             className="w-full px-3 py-2 rounded-xl border text-sm"
           />
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <input
               type="number"
               min={0}
@@ -278,7 +321,7 @@ export default function TabV2Progress({
               value={logForm.progress}
               onChange={e => setLogForm(f => ({ ...f, progress: e.target.value }))}
               placeholder="Progress +% (opsional)"
-              className="w-32 px-3 py-2 rounded-xl border text-sm"
+              className="w-40 px-3 py-2 rounded-xl border text-sm"
             />
             <button type="button" onClick={handleLogProgress} disabled={logSaving} className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-50">
               {logSaving ? 'Menyimpan...' : 'Simpan Laporan'}

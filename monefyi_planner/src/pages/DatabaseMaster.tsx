@@ -10,6 +10,7 @@ import { loadRppMaster } from '../services/rpp/masterLoader';
 import { createMaterial, deleteMaterial, type MaterialInput } from '../services/rpp/materialService';
 import { createWorker, deleteWorker, type WorkerInput } from '../services/rpp/workerService';
 import { upsertJobTemplates, upsertDatabaseMeta } from '../services/rpp/templateService';
+import { loadPricelistItems, createPricelistItem, calcPricelistSelling } from '../services/pricelistService';
 import type { DatabaseMeta, JobTemplate, RppMaterial, RppWorker } from '../types/rpp';
 import { formatRupiah } from '../utils/projectUi';
 import MaterialAutosuggest from '../components/migration/MaterialAutosuggest';
@@ -41,6 +42,7 @@ export default function DatabaseMaster() {
   const [matForm, setMatForm] = useState<MaterialInput>({ name: '', category: 'Umum', unit: 'Pcs', price: 0 });
   const [workerForm, setWorkerForm] = useState<WorkerInput>({ name: '', level: 'Terampil', rate: 0 });
   const [saving, setSaving] = useState(false);
+  const [syncingPricelist, setSyncingPricelist] = useState(false);
   const [rapTemplate, setRapTemplate] = useState<JobTemplate | null>(null);
 
   const reload = useCallback(async () => {
@@ -87,6 +89,96 @@ export default function DatabaseMaster() {
       showToast(e instanceof Error ? e.message : 'Gagal simpan', 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const syncWithEstimatorPricelist = async () => {
+    if (!orgId || syncingPricelist) return;
+    setSyncingPricelist(true);
+    try {
+      const [master, plItems] = await Promise.all([
+        loadRppMaster(orgId),
+        loadPricelistItems(orgId, false),
+      ]);
+      const matNames = new Set(master.materials.map(m => m.name.trim().toLowerCase()));
+      const workerNames = new Set(master.workers.map(w => w.name.trim().toLowerCase()));
+      const plNames = new Set(plItems.map(p => p.name.trim().toLowerCase()));
+
+      let importedToMaster = 0;
+      let exportedToPricelist = 0;
+
+      for (const pl of plItems) {
+        const key = pl.name.trim().toLowerCase();
+        if (!key) continue;
+        if (pl.category === 'material' && !matNames.has(key)) {
+          await createMaterial(orgId, {
+            name: pl.name.trim(),
+            category: 'Pricelist',
+            unit: pl.unit || 'Pcs',
+            price: Number(pl.base_cost) || Number(pl.selling_price) || 0,
+          });
+          matNames.add(key);
+          importedToMaster++;
+        } else if (pl.category === 'upah' && !workerNames.has(key)) {
+          await createWorker(orgId, {
+            name: pl.name.trim(),
+            level: 'Terampil',
+            rate: Number(pl.base_cost) || Number(pl.selling_price) || 0,
+          });
+          workerNames.add(key);
+          importedToMaster++;
+        }
+      }
+
+      for (const m of master.materials) {
+        const key = m.name.trim().toLowerCase();
+        if (!key || plNames.has(key)) continue;
+        const baseCost = Number(m.price) || 0;
+        await createPricelistItem({
+          org_id: orgId,
+          name: m.name.trim(),
+          category: 'material',
+          unit: m.unit || 'pcs',
+          base_cost: baseCost,
+          default_margin_pct: 20,
+          selling_price: calcPricelistSelling(baseCost, 20),
+          supplier: m.vendor || null,
+          notes: null,
+          is_active: true,
+        });
+        plNames.add(key);
+        exportedToPricelist++;
+      }
+
+      for (const w of master.workers) {
+        const key = w.name.trim().toLowerCase();
+        if (!key || plNames.has(key)) continue;
+        const baseCost = Number(w.rate) || 0;
+        await createPricelistItem({
+          org_id: orgId,
+          name: w.name.trim(),
+          category: 'upah',
+          unit: 'hari',
+          base_cost: baseCost,
+          default_margin_pct: 20,
+          selling_price: calcPricelistSelling(baseCost, 20),
+          supplier: null,
+          notes: w.level || null,
+          is_active: true,
+        });
+        plNames.add(key);
+        exportedToPricelist++;
+      }
+
+      await reload();
+      showToast(
+        `Sinkron selesai: +${importedToMaster} ke Master, +${exportedToPricelist} ke Pricelist Estimator`,
+        'success',
+      );
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal sinkronisasi pricelist', 'error');
+    } finally {
+      setSyncingPricelist(false);
     }
   };
 
@@ -150,14 +242,25 @@ export default function DatabaseMaster() {
             <p className="text-sm text-slate-500">Master data material, tenaga, alat, vendor, klien & template</p>
           </div>
         </div>
-        <div className="relative w-full sm:w-52">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Cari..."
-            className="w-full pl-9 pr-3 py-2 rounded-xl border text-sm"
-          />
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={syncWithEstimatorPricelist}
+            disabled={syncingPricelist}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold hover:bg-emerald-100 disabled:opacity-50"
+          >
+            {syncingPricelist ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+            {syncingPricelist ? 'Menyinkronkan...' : 'Sinkron Pricelist Estimator'}
+          </button>
+          <div className="relative flex-1 sm:w-52">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Cari..."
+              className="w-full pl-9 pr-3 py-2 rounded-xl border text-sm"
+            />
+          </div>
         </div>
       </div>
 

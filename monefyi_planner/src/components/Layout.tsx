@@ -105,10 +105,10 @@ export default function Layout({ children }: LayoutProps) {
     ]
     : [
       { id: 'home', label: 'Home', icon: Home },
-      { id: 'estimator', label: 'Estimator', icon: Receipt },
+      { id: 'projects', label: 'Proyek', icon: FolderOpen },
       { id: 'command', label: '✦', icon: Sparkles, special: true },
+      { id: 'estimator', label: 'Estimator', icon: Receipt },
       { id: 'finance', label: 'Finance', icon: Wallet },
-      ...(canAccessHr ? [{ id: 'hr', label: 'HR', icon: Users }] : []),
     ];
 
   const workerTabs = [

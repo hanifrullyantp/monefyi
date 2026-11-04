@@ -1,12 +1,13 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { X, Plus, ArrowLeftRight } from 'lucide-react';
 import ProjectIncomePanel from '../ProjectIncomePanel';
 import ProjectTransferPanel from '../ProjectTransferPanel';
 import ProjectReceivablePanel from '../ProjectReceivablePanel';
 import ProjectPayablePanel from '../ProjectPayablePanel';
 import { createCostRealization } from '../../../services/costService';
+import { loadRapItems, type RapItem } from '../../../services/rapService';
 import { todayStr } from '../../../lib/adapters';
-import { parseMoneyInput } from '../../../utils/projectUi';
+import { formatRupiah, parseMoneyInput } from '../../../utils/projectUi';
 import { showToast } from '../../../store/uiStore';
 import { useAppStore, type Project } from '../../../store/appStore';
 
@@ -114,12 +115,41 @@ function QuickCostForm({
   onSaved: () => void | Promise<void>;
 }) {
   const [saving, setSaving] = useState(false);
+  const [rapItems, setRapItems] = useState<RapItem[]>([]);
   const [form, setForm] = useState({
     date: todayStr(),
+    rapItemId: '',
+    costKind: 'material' as 'material' | 'labor',
     description: '',
+    quantity: '1',
     amount: '',
     supplier: '',
   });
+
+  useEffect(() => {
+    void loadRapItems(projectId)
+      .then(setRapItems)
+      .catch(() => setRapItems([]));
+  }, [projectId]);
+
+  const handleSelectRap = (rapId: string) => {
+    const selected = rapItems.find(r => r.id === rapId);
+    if (!selected) {
+      setForm(f => ({ ...f, rapItemId: '' }));
+      return;
+    }
+    const qty = Number(form.quantity) > 0 ? Number(form.quantity) : Number(selected.quantity) || 1;
+    const unitPrice = Number(selected.unit_price) || 0;
+    setForm(f => ({
+      ...f,
+      rapItemId: rapId,
+      costKind: selected.type === 'labor' ? 'labor' : 'material',
+      description: f.description.trim() || `Realisasi: ${selected.name}`,
+      quantity: String(qty),
+      amount: unitPrice > 0 ? String(Math.round(qty * unitPrice)) : f.amount,
+      supplier: f.supplier.trim() || selected.supplier || '',
+    }));
+  };
 
   const handleSubmit = async () => {
     const amount = parseMoneyInput(form.amount);
@@ -127,24 +157,32 @@ function QuickCostForm({
       showToast('Nominal harus lebih dari 0', 'error');
       return;
     }
-    if (!form.description.trim()) {
+    const rawDesc = form.description.trim();
+    if (!rawDesc) {
       showToast('Keterangan wajib diisi', 'error');
       return;
     }
+    const qty = Math.max(0.01, Number(form.quantity) || 1);
+    const unitPrice = Math.round(amount / qty);
+    const description =
+      !form.rapItemId && form.costKind === 'labor' && !/\b(upah|tukang|gaji|mandor|pekerja|borongan|jasa)\b/i.test(rawDesc)
+        ? `Upah Tukang: ${rawDesc}`
+        : rawDesc;
+
     setSaving(true);
     try {
       await createCostRealization({
         project_id: projectId,
         date: form.date,
-        description: form.description.trim(),
-        quantity: 1,
-        unit_price: amount,
+        description,
+        quantity: qty,
+        unit_price: unitPrice,
         total_amount: amount,
         supplier: form.supplier.trim() || null,
-        rap_item_id: null,
+        rap_item_id: form.rapItemId || null,
         recorded_by: userId,
       });
-      showToast('Biaya tercatat', 'success');
+      showToast('Biaya proyek tercatat', 'success');
       await onSaved();
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal simpan', 'error');
@@ -155,17 +193,52 @@ function QuickCostForm({
 
   return (
     <div className="space-y-3">
-      <Field label="Tanggal">
-        <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className="w-full px-3 py-2 rounded-xl border text-sm" />
-      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Tanggal">
+          <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className="w-full px-3 py-2 rounded-xl border text-sm" />
+        </Field>
+        <Field label="Jenis Biaya">
+          <select
+            value={form.costKind}
+            onChange={e => setForm(f => ({ ...f, costKind: e.target.value as 'material' | 'labor' }))}
+            className="w-full px-3 py-2 rounded-xl border text-sm bg-white"
+          >
+            <option value="material">Bahan / Material / Alat</option>
+            <option value="labor">Upah Tukang / Jasa</option>
+          </select>
+        </Field>
+      </div>
+      {rapItems.length > 0 && (
+        <Field label="Pos Item RAP (Disarankan)">
+          <select
+            value={form.rapItemId}
+            onChange={e => handleSelectRap(e.target.value)}
+            className="w-full px-3 py-2 rounded-xl border text-sm bg-white"
+          >
+            <option value="">— Tanpa Pos RAP Spesifik (Biaya Umum) —</option>
+            {rapItems.map(item => (
+              <option key={item.id} value={item.id}>
+                {item.name} ({item.quantity} {item.unit} × {formatRupiah(Number(item.unit_price) || 0)})
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
       <Field label="Keterangan">
-        <input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="w-full px-3 py-2 rounded-xl border text-sm" placeholder="Contoh: Beli semen" />
+        <input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="w-full px-3 py-2 rounded-xl border text-sm" placeholder="Contoh: Beli semen 10 sak / Upah harian tukang" />
       </Field>
-      <Field label="Nominal (Rp)">
-        <input value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} className="w-full px-3 py-2 rounded-xl border text-sm" placeholder="500000" />
-      </Field>
-      <Field label="Supplier (opsional)">
-        <input value={form.supplier} onChange={e => setForm(f => ({ ...f, supplier: e.target.value }))} className="w-full px-3 py-2 rounded-xl border text-sm" />
+      <div className="grid grid-cols-3 gap-3">
+        <Field label="Qty">
+          <input type="number" min="0.01" step="any" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} className="w-full px-3 py-2 rounded-xl border text-sm" placeholder="1" />
+        </Field>
+        <div className="col-span-2">
+          <Field label="Total Nominal (Rp)">
+            <input value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} className="w-full px-3 py-2 rounded-xl border text-sm" placeholder="500000" />
+          </Field>
+        </div>
+      </div>
+      <Field label="Supplier / Penerima (opsional)">
+        <input value={form.supplier} onChange={e => setForm(f => ({ ...f, supplier: e.target.value }))} className="w-full px-3 py-2 rounded-xl border text-sm" placeholder="Contoh: TB Sinar Jaya / Mandor Budi" />
       </Field>
       <button
         type="button"
@@ -173,7 +246,7 @@ function QuickCostForm({
         disabled={!canManage || saving}
         className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm disabled:opacity-50"
       >
-        {saving ? 'Menyimpan...' : 'Simpan Biaya'}
+        {saving ? 'Menyimpan...' : 'Simpan Biaya Proyek'}
       </button>
     </div>
   );

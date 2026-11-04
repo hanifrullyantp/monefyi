@@ -271,9 +271,12 @@ export async function executeIntent(
         return { success: false, message: 'Perintah ini untuk proyek lain. Siapkan ulang.' };
       }
       const locked = committed.cost;
+      const rapItems = await loadRapItems(project.id).catch(() => []);
+      const rapMatch = fuzzyMatchRapItem(locked.item, rapItems);
 
       await createCostRealization({
         project_id: project.id,
+        rap_item_id: rapMatch?.id ?? null,
         date: locked.entryDate,
         description: locked.item,
         quantity: locked.qty,

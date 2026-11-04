@@ -60,6 +60,12 @@ export default function TabV2Overview({
     const row = rapByPlannerId.get(rapId);
     if (!row) return;
     const isRealized = item.qtyActual > 0 || item.checked;
+    if (
+      isRealized &&
+      !window.confirm(`Batalkan realisasi untuk "${row.name}"? Catatan biaya terkait akan dibatalkan.`)
+    ) {
+      return;
+    }
     setToggleBusy(rapId);
     try {
       await setRapItemRealization({
@@ -329,12 +335,15 @@ export default function TabV2Overview({
           time: 'time' in tx ? tx.time : undefined,
         }))}
         onViewAll={() => onSwitchTab?.('keuangan')}
+        onAdd={canManage ? () => setModal('income') : undefined}
+        onAddExpense={canManage ? () => setModal('cost') : undefined}
       />
 
       <BottomActionBar
         actions={[
           { label: 'Edit Project', icon: <Pencil className="w-4 h-4" />, onClick: () => onEditProject?.() },
-          { label: 'Tambah Transaksi', icon: <Plus className="w-4 h-4" />, onClick: () => setModal('income'), variant: 'primary' },
+          { label: '+ Pengeluaran', icon: <Plus className="w-4 h-4" />, onClick: () => setModal('cost') },
+          { label: '+ Dana Masuk', icon: <Plus className="w-4 h-4" />, onClick: () => setModal('income'), variant: 'primary' },
         ]}
       />
 

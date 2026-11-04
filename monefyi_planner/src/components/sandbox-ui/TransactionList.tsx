@@ -15,27 +15,33 @@ type Props = {
   limit?: number;
   onViewAll?: () => void;
   onAdd?: () => void;
+  onAddExpense?: () => void;
   title?: string;
 };
 
 export default function TransactionList({
-  transactions, limit, onViewAll, onAdd, title = 'Riwayat Transaksi',
+  transactions, limit, onViewAll, onAdd, onAddExpense, title = 'Riwayat Transaksi',
 }: Props) {
   const list = limit ? transactions.slice(0, limit) : transactions;
 
   return (
     <div className="surface-card overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-4">
+      <div className="flex items-center justify-between px-5 py-4 flex-wrap gap-2">
         <h3 className="font-bold text-slate-800 text-sm">{title}</h3>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           {onViewAll && (
             <button type="button" onClick={onViewAll} className="text-xs font-bold text-emerald-600">
               Lihat Semua
             </button>
           )}
+          {onAddExpense && (
+            <button type="button" onClick={onAddExpense} className="text-xs font-bold px-2.5 py-1 border border-rose-200 bg-rose-50/70 rounded-lg text-rose-700 hover:bg-rose-100">
+              + Pengeluaran
+            </button>
+          )}
           {onAdd && (
-            <button type="button" onClick={onAdd} className="text-xs font-bold px-2 py-1 border rounded-lg text-slate-600">
-              + Tambah
+            <button type="button" onClick={onAdd} className="text-xs font-bold px-2.5 py-1 border border-emerald-200 bg-emerald-50/70 rounded-lg text-emerald-700 hover:bg-emerald-100">
+              {onAddExpense ? '+ Dana Masuk' : '+ Tambah'}
             </button>
           )}
         </div>

@@ -479,3 +479,9 @@ enabled = true
 verify_jwt = true
 import_map = "./functions/planner-flow/deno.json"
 entrypoint = "./functions/planner-flow/index.ts"
+
+[functions.planner-agent-run]
+enabled = true
+verify_jwt = true
+import_map = "./functions/planner-agent-run/deno.json"
+entrypoint = "./functions/planner-agent-run/index.ts"

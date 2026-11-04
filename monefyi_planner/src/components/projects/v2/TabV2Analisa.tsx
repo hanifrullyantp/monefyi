@@ -16,10 +16,26 @@ export default function TabV2Analisa({ projectId, normalized }: Props) {
   const [result, setResult] = useState<AnalyzeResult | null>(null);
   const [error, setError] = useState('');
   const p = normalized.project;
-  const healthScore = result?.evm
-    ? Math.min(100, Math.round((result.evm.cpi + result.evm.spi) / 2 * 100))
-    : 72;
   const rapPct = p.rap.totalRAP > 0 ? (p.rap.realisasi / p.rap.totalRAP) * 100 : 0;
+  const isCashDeficit = p.saldo < 0;
+  const isOverBudget = p.rap.totalRAP > 0 && p.rap.realisasi > p.rap.totalRAP;
+  const isNearBudget = !isOverBudget && p.rap.totalRAP > 0 && rapPct >= 85;
+  const dev = p.progress.deviation;
+  const isBehindSchedule = p.progress.actual < 100 && dev < -5;
+
+  const computedScore = (() => {
+    let score = 85;
+    if (isCashDeficit) score -= 25;
+    if (isOverBudget) score -= Math.min(25, Math.round(rapPct - 100));
+    else if (isNearBudget) score -= 8;
+    if (isBehindSchedule) score -= Math.min(25, Math.round(Math.abs(dev) * 0.6));
+    else if (dev >= 0) score += 5;
+    return Math.max(15, Math.min(100, score));
+  })();
+
+  const healthScore = result?.evm
+    ? Math.min(100, Math.max(10, Math.round(((result.evm.cpi + result.evm.spi) / 2) * 100)))
+    : computedScore;
 
   useEffect(() => {
     let cancelled = false;
@@ -60,30 +76,107 @@ export default function TabV2Analisa({ projectId, normalized }: Props) {
           </div>
         </div>
         <div className="flex flex-wrap gap-2 justify-center">
-          <Badge icon={CheckCircle2} color="emerald" label="Keuangan: Baik" />
-          <Badge icon={AlertTriangle} color="amber" label="Progress: Terlambat" />
-          {rapPct > 100 && <Badge icon={AlertOctagon} color="rose" label="Material: Over Budget" />}
+          {isCashDeficit ? (
+            <Badge icon={AlertOctagon} color="rose" label="Keuangan: Defisit Kas" />
+          ) : isOverBudget ? (
+            <Badge icon={AlertOctagon} color="rose" label="Keuangan: Over Budget" />
+          ) : isNearBudget ? (
+            <Badge icon={AlertTriangle} color="amber" label="Keuangan: Mendekati Batas RAP" />
+          ) : (
+            <Badge icon={CheckCircle2} color="emerald" label="Keuangan: Sehat" />
+          )}
+
+          {p.progress.actual >= 100 ? (
+            <Badge icon={CheckCircle2} color="emerald" label="Progress: Selesai 100%" />
+          ) : isBehindSchedule ? (
+            <Badge icon={AlertTriangle} color="amber" label={`Progress: Terlambat (${dev}%)`} />
+          ) : dev > 5 ? (
+            <Badge icon={CheckCircle2} color="emerald" label={`Progress: Lebih Cepat (+${dev}%)`} />
+          ) : (
+            <Badge icon={CheckCircle2} color="emerald" label="Progress: Sesuai Jadwal" />
+          )}
+
+          {rapPct > 100 && <Badge icon={AlertOctagon} color="rose" label="RAP: Over Budget" />}
         </div>
       </div>
 
       <Section title="Analisa Keuangan" icon={Wallet}>
-        <AlertCard variant="success" icon={CheckCircle2} title="Cashflow Positif"
-          desc={`Saldo ${formatRupiah(p.saldo)} dalam kondisi sehat untuk operasional`} />
-        {rapPct > 100 && (
-          <AlertCard variant="warning" icon={AlertTriangle} title={`Material Over Budget ${(rapPct - 100).toFixed(0)}%`}
-            desc={`Total realisasi ${formatRupiah(p.rap.realisasi)} vs RAP ${formatRupiah(p.rap.totalRAP)}`} />
+        {isCashDeficit ? (
+          <AlertCard
+            variant="danger"
+            icon={AlertOctagon}
+            title="Defisit Kas Operasional Proyek"
+            desc={`Pengeluaran (${formatRupiah(p.rap.realisasi)}) melebihi dana masuk (${formatRupiah(normalized.totalPemasukan)}) sebesar ${formatRupiah(Math.abs(p.saldo))}. Segera ajukan penagihan termin ke klien.`}
+          />
+        ) : p.saldo === 0 && normalized.totalPemasukan === 0 ? (
+          <AlertCard
+            variant="info"
+            icon={Info}
+            title="Belum Ada Dana Masuk"
+            desc="Proyek belum mencatat penerimaan DP atau termin dari klien."
+          />
+        ) : (
+          <AlertCard
+            variant="success"
+            icon={CheckCircle2}
+            title="Cashflow Proyek Positif"
+            desc={`Saldo kas proyek ${formatRupiah(p.saldo)} tersedia dan sehat untuk operasional lapangan.`}
+          />
         )}
+        {rapPct > 100 ? (
+          <AlertCard
+            variant="danger"
+            icon={AlertOctagon}
+            title={`Realisasi Melebihi RAP +${(rapPct - 100).toFixed(0)}%`}
+            desc={`Total realisasi ${formatRupiah(p.rap.realisasi)} telah melampaui plafon RAP ${formatRupiah(p.rap.totalRAP)}.`}
+          />
+        ) : isNearBudget ? (
+          <AlertCard
+            variant="warning"
+            icon={AlertTriangle}
+            title={`Serapan Anggaran RAP Mencapai ${rapPct.toFixed(0)}%`}
+            desc={`Realisasi ${formatRupiah(p.rap.realisasi)} dari total RAP ${formatRupiah(p.rap.totalRAP)}. Kendalikan sisa belanja.`}
+          />
+        ) : null}
         {normalized.hutangItems.length > 0 && (
-          <AlertCard variant="danger" icon={AlertOctagon} title="Hutang Jatuh Tempo"
-            desc={`${normalized.hutangItems[0].name} ${formatRupiah(normalized.hutangItems[0].amount)}`} />
+          <AlertCard
+            variant="danger"
+            icon={AlertOctagon}
+            title="Kewajiban / Hutang Proyek Aktif"
+            desc={`${normalized.hutangItems[0].name} sebesar ${formatRupiah(normalized.hutangItems[0].amount)}`}
+          />
         )}
       </Section>
 
       <Section title="Analisa Progress" icon={Activity}>
-        <AlertCard variant="warning" icon={AlertTriangle} title={`Keterlambatan ${p.progress.deviation}%`}
-          desc="Beberapa pekerjaan di bawah target rencana. Pertimbangkan percepatan." />
-        <AlertCard variant="success" icon={CheckCircle2} title={`${normalized.checkedCount}/${normalized.totalWorkItems} Item Terealisasi`}
-          desc="Item dengan realisasi tercatat dalam RAP" />
+        {p.progress.actual >= 100 ? (
+          <AlertCard
+            variant="success"
+            icon={CheckCircle2}
+            title="Pekerjaan Fisik Selesai 100%"
+            desc="Seluruh bobot pekerjaan telah selesai. Pastikan berita acara serah terima (BAST) dan pelunasan termin selesai."
+          />
+        ) : isBehindSchedule ? (
+          <AlertCard
+            variant="warning"
+            icon={AlertTriangle}
+            title={`Deviasi Jadwal ${dev}% (Realisasi ${p.progress.actual}% vs Rencana ${p.progress.plan}%)`}
+            desc="Beberapa item pekerjaan berada di bawah target jadwal rencana. Pertimbangkan lembur atau penambahan tukang."
+          />
+        ) : (
+          <AlertCard
+            variant="success"
+            icon={CheckCircle2}
+            title={`Progres Sesuai Target (Realisasi ${p.progress.actual}% vs Rencana ${p.progress.plan}%)`}
+            desc="Eksekusi pekerjaan lapangan berjalan on-track terhadap jadwal proyek."
+          />
+        )}
+        <AlertCard
+          variant="info"
+          icon={CheckCircle2}
+          title={`${normalized.checkedCount}/${normalized.totalWorkItems} Pos RAP Memiliki Realisasi`}
+          desc="Jumlah item anggaran RAP yang sudah memiliki catatan pengeluaran aktual."
+        />
       </Section>
 
       {result?.recommendations?.map((rec, i) => (

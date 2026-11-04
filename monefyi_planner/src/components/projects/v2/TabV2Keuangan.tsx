@@ -187,7 +187,6 @@ export default function TabV2Keuangan({
           iconBg="bg-blue-50"
           iconColor="text-blue-600"
           onClick={() => setPopup('pembayaran')}
-          sparkData={[40, 55, 45, 70, 60, 80, 85]}
           barPct={realisasiVsPemasukan}
           barLabel={formatRupiah(normalized.totalRealisasi)}
           subLabel={`Sisa ${formatRupiah(normalized.totalPemasukan - normalized.totalRealisasi)}`}
@@ -199,7 +198,6 @@ export default function TabV2Keuangan({
           iconBg="bg-emerald-50"
           iconColor="text-emerald-600"
           onClick={() => setPopup('laba')}
-          sparkData={[30, 35, 42, 38, 45, 52, 58]}
           barPct={Number(marginPct)}
           barLabel={formatRupiah(p.rap?.estLaba || 0)}
           barVariant="success"
@@ -257,7 +255,8 @@ export default function TabV2Keuangan({
           time: 'time' in tx ? tx.time : undefined,
         }))}
         title="Semua Transaksi"
-        onAdd={() => setModal('income')}
+        onAdd={canManage ? () => setModal('income') : undefined}
+        onAddExpense={canManage ? () => setModal('cost') : undefined}
       />
 
       <BottomActionBar
@@ -269,7 +268,8 @@ export default function TabV2Keuangan({
             onClick: openProforma,
             disabled: pdfLoading || p.contractValue <= 0,
           },
-          { label: 'Tambah Transaksi', icon: <Plus className="w-4 h-4" />, onClick: () => setModal('income') },
+          { label: '+ Pengeluaran', icon: <Plus className="w-4 h-4" />, onClick: () => setModal('cost') },
+          { label: '+ Dana Masuk', icon: <Plus className="w-4 h-4" />, onClick: () => setModal('income') },
           { label: 'Transfer', icon: <ArrowLeftRight className="w-4 h-4" />, onClick: () => setModal('transfer'), variant: 'primary' },
         ]}
       />

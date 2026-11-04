@@ -176,22 +176,61 @@ function rapStatus(qtyPlan: number, qtyActual: number, total: number, rapTotal: 
   return 'ok';
 }
 
-function buildActualByRapId(costs: PlannerCostRow[]): Map<string, RapActualAgg> {
-  const map = new Map<string, RapActualAgg>();
+const LABOR_DESC_RE = /\b(upah|tukang|gaji|mandor|pekerja|borongan|jasa|lembur|kuli)\b/i;
+
+function buildActualByRapId(
+  costs: PlannerCostRow[],
+  rapItems: PlannerRapRow[],
+): {
+  byRapId: Map<string, RapActualAgg>;
+  unlinkedMaterialActual: number;
+  unlinkedLaborActual: number;
+} {
+  const byRapId = new Map<string, RapActualAgg>();
+  const rapIds = new Set(rapItems.map(r => r.id));
+  let unlinkedMaterialActual = 0;
+  let unlinkedLaborActual = 0;
+
   for (const cost of costs) {
-    if (!cost.rap_item_id) continue;
-    const agg = map.get(cost.rap_item_id) || { qty: 0, amount: 0 };
     const amount = num(cost.total_amount);
-    let qty = num(cost.quantity);
-    if (qty <= 0 && amount > 0) {
-      const unitPrice = num(cost.unit_price);
-      qty = unitPrice > 0 ? amount / unitPrice : 1;
+    let targetRapId = cost.rap_item_id && rapIds.has(cost.rap_item_id) ? cost.rap_item_id : null;
+
+    if (!targetRapId && cost.description && rapItems.length > 0) {
+      const cleanDesc = cost.description
+        .replace(/^(realisasi|import|biaya)\s*:\s*/i, '')
+        .trim()
+        .toLowerCase();
+      if (cleanDesc) {
+        const matched =
+          rapItems.find(r => r.name.trim().toLowerCase() === cleanDesc) ||
+          rapItems.find(
+            r =>
+              cleanDesc.includes(r.name.trim().toLowerCase()) ||
+              r.name.trim().toLowerCase().includes(cleanDesc),
+          );
+        if (matched) targetRapId = matched.id;
+      }
     }
-    agg.qty += qty;
-    agg.amount += amount;
-    map.set(cost.rap_item_id, agg);
+
+    if (targetRapId) {
+      const agg = byRapId.get(targetRapId) || { qty: 0, amount: 0 };
+      let qty = num(cost.quantity);
+      if (qty <= 0 && amount > 0) {
+        const unitPrice = num(cost.unit_price);
+        qty = unitPrice > 0 ? amount / unitPrice : 1;
+      }
+      agg.qty += qty;
+      agg.amount += amount;
+      byRapId.set(targetRapId, agg);
+    } else if (amount > 0) {
+      if (LABOR_DESC_RE.test(cost.description || '')) {
+        unlinkedLaborActual += amount;
+      } else {
+        unlinkedMaterialActual += amount;
+      }
+    }
   }
-  return map;
+  return { byRapId, unlinkedMaterialActual, unlinkedLaborActual };
 }
 
 function mapRapItem(row: PlannerRapRow, idx: number, actualByRapId: Map<string, RapActualAgg>): MappedRapItem {
@@ -235,20 +274,23 @@ export function mapPlannerProject(input: {
   const spent = num(p.total_spent);
   const received = num(p.total_received);
   const progress = num(p.progress_pct);
-  const actualByRapId = buildActualByRapId(input.costs);
+  const { byRapId: actualByRapId, unlinkedMaterialActual, unlinkedLaborActual } = buildActualByRapId(
+    input.costs,
+    input.rapItems,
+  );
 
   const materials = input.rapItems
-    .filter(r => r.type === 'material')
+    .filter(r => r.type === 'material' || r.type === 'equipment')
     .map((r, idx) => mapRapItem(r, idx, actualByRapId));
   const workers = input.rapItems
-    .filter(r => r.type === 'labor')
+    .filter(r => r.type !== 'material' && r.type !== 'equipment')
     .map((r, idx) => mapRapItem(r, idx, actualByRapId));
 
   const totalRap = [...materials, ...workers].reduce((s, item) => s + item.rapTotal, 0);
   const bahanPlan = materials.reduce((s, item) => s + item.rapTotal, 0);
   const tukangPlan = workers.reduce((s, item) => s + item.rapTotal, 0);
-  const bahanActual = materials.reduce((s, item) => s + item.total, 0);
-  const tukangActual = workers.reduce((s, item) => s + item.total, 0);
+  const bahanActual = materials.reduce((s, item) => s + item.total, 0) + unlinkedMaterialActual;
+  const tukangActual = workers.reduce((s, item) => s + item.total, 0) + unlinkedLaborActual;
 
   const payments = input.incomes
     .filter(i => i.status === 'received')
@@ -296,7 +338,9 @@ export function mapPlannerProject(input: {
     ? weightedActualProgress(input.workItems)
     : progress;
   const progressDeviation = actualProgress - planProgress;
-  const estLaba = Math.max(0, contractValue - spent);
+  const effectiveProjectedCost =
+    totalRap > 0 && totalRap < contractValue ? Math.max(totalRap, spent) : spent;
+  const estLaba = Math.max(0, contractValue - effectiveProjectedCost);
   const useLedgerHutang = Array.isArray(input.payables);
   const useLedgerPiutang = Array.isArray(input.receivables);
   const piutang = useLedgerPiutang

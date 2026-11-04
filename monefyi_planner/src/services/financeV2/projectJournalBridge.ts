@@ -82,6 +82,56 @@ export async function postProjectExpenseJournal(input: {
 }
 
 /**
+ * Reverse an existing journal entry by posting an equal-and-opposite 'reversal' entry.
+ * Idempotent per original journalEntryId because planner_post_journal deduplicates (org_id, 'reversal', journalEntryId).
+ */
+export async function reverseProjectJournal(
+  journalEntryId: string | null | undefined,
+  reason?: string,
+): Promise<string | null> {
+  if (!journalEntryId) return null;
+
+  const { data: original, error: entryErr } = await supabase
+    .from('planner_journal_entries')
+    .select('id, org_id, entry_date, description, created_by')
+    .eq('id', journalEntryId)
+    .maybeSingle();
+
+  if (entryErr || !original) return null;
+
+  const { data: lines, error: linesErr } = await supabase
+    .from('planner_journal_lines')
+    .select('account_id, debit, credit, notes')
+    .eq('journal_id', journalEntryId);
+
+  if (linesErr || !lines || lines.length === 0) return null;
+
+  const reversedLines = lines
+    .map((line) => ({
+      accountId: line.account_id as string,
+      debit: Number(line.credit) || 0,
+      credit: Number(line.debit) || 0,
+      notes: line.notes ? `Pembalik: ${line.notes}` : 'Jurnal pembalik otomatis',
+    }))
+    .filter((l) => l.debit > 0 || l.credit > 0);
+
+  if (reversedLines.length < 2) return null;
+
+  const reversal = await createJournalEntry({
+    orgId: original.org_id as string,
+    entryDate: new Date().toISOString().slice(0, 10),
+    description: reason || `Jurnal pembalik: ${(original.description as string) || journalEntryId}`,
+    referenceType: 'reversal',
+    referenceId: journalEntryId,
+    createdBy: (original.created_by as string) || undefined,
+    lines: reversedLines,
+  });
+
+  return reversal.id;
+}
+
+
+/**
  * Idempotent backfill for historical incomes/costs without journal_entry_id.
  */
 export async function backfillProjectJournalsForOrg(orgId: string, createdBy?: string): Promise<{

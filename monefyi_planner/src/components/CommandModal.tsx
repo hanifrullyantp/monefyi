@@ -85,7 +85,51 @@ const FIELD_LABELS: Record<string, string> = {
 const NUMBER_FIELDS = new Set(['qty', 'unitPrice', 'total', 'progress', 'workers', 'amount']);
 
 // Fields that are derived/handled elsewhere and should not be free-text inputs.
-const HIDDEN_FIELDS = new Set(['projectName', 'products', 'qty', 'unit']);
+const HIDDEN_FIELDS = new Set(['projectName', 'products', 'prepareToken', 'idempotencyKey']);
+
+function defaultFieldsForIntent(
+  intent: string,
+  existing: Record<string, string | number> = {},
+): Record<string, string | number> {
+  switch (intent) {
+    case 'record_cost':
+      return {
+        item: existing.item ?? '',
+        qty: existing.qty ?? 1,
+        unit: existing.unit ?? 'pcs',
+        unitPrice: existing.unitPrice ?? '',
+        total: existing.total ?? '',
+      };
+    case 'record_income':
+      return {
+        amount: existing.amount ?? existing.total ?? '',
+        category: existing.category ?? 'termin',
+        description: existing.description ?? existing.item ?? '',
+      };
+    case 'update_progress':
+      return {
+        workItem: existing.workItem ?? '',
+        progress: existing.progress ?? '',
+        notes: existing.notes ?? '',
+      };
+    case 'add_project':
+      return {
+        name: existing.name ?? '',
+        client: existing.client ?? '',
+        budget: existing.budget ?? existing.total ?? '',
+      };
+    case 'record_transfer':
+      return {
+        amount: existing.amount ?? existing.total ?? '',
+        source: existing.source ?? '',
+        target: existing.target ?? '',
+      };
+    default:
+      return Object.keys(existing).length > 0
+        ? existing
+        : { item: '', qty: 1, unit: 'pcs', unitPrice: '', total: '' };
+  }
+}
 
 const STAGE_ORDER: Record<PipelineStage, number> = { memory: 1, rule: 2, fuzzy: 3, ai: 4 };
 
@@ -437,10 +481,10 @@ export default function CommandModal() {
   const openManualForm = () => {
     setForm({
       intent: 'record_cost',
-      data: {},
+      data: defaultFieldsForIntent('record_cost'),
       projectName: activeProject?.name || '',
     });
-    setOrigParse({ intent: 'unknown', params: {}, confidence: 0, raw: input, source: 'ai' });
+    setOrigParse({ intent: 'record_cost', params: {}, confidence: 1, raw: input, source: 'fallback' });
     setEdited(true);
     setStage('confirm');
   };
@@ -533,34 +577,14 @@ export default function CommandModal() {
         ) {
           await reinforceMemory(origParse.memoryId, origParse.memoryHitCount ?? 0).catch(() => {});
         }
-        if (form.intent === 'record_cost_batch') {
-          if (batchResult?.resolutions?.length) {
-            for (const { mentionedName, resolution } of batchResult.resolutions) {
-              await learnFromProjectResolution(
-                mentionedName,
-                resolution,
-                tenant.id,
-                user.id,
-              ).catch(() => {});
-            }
-          }
-          const batchSeeds = [
-            { rawInput: 'duit keluar', params: { items: [] } },
-            { rawInput: 'duit keluar :', params: { items: [] } },
-            {
-              rawInput: '- 63.500 belanja ferum (indra)',
-              params: { items: [{ date: '2026-06-05', total: 63500, item: 'belanja ferum', supplier: 'indra' }] },
-            },
-          ];
-          for (const seed of batchSeeds) {
-            await recordCorrection({
-              orgId: tenant.id,
-              userId: user.id,
-              rawInput: seed.rawInput,
-              intent: 'record_cost_batch',
-              params: seed.params,
-              source: 'user',
-            }).catch(() => {});
+        if (form.intent === 'record_cost_batch' && batchResult?.resolutions?.length) {
+          for (const { mentionedName, resolution } of batchResult.resolutions) {
+            await learnFromProjectResolution(
+              mentionedName,
+              resolution,
+              tenant.id,
+              user.id,
+            ).catch(() => {});
           }
         }
       }
@@ -952,7 +976,15 @@ export default function CommandModal() {
                     <span className="text-xs text-slate-500">Jenis Perintah</span>
                     <select
                       value={form.intent}
-                      onChange={e => { setForm(p => ({ ...p, intent: e.target.value })); setEdited(true); }}
+                      onChange={e => {
+                        const nextIntent = e.target.value;
+                        setForm(p => ({
+                          ...p,
+                          intent: nextIntent,
+                          data: defaultFieldsForIntent(nextIntent, p.data),
+                        }));
+                        setEdited(true);
+                      }}
                       className="text-sm font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg px-2 py-1 focus:border-emerald-400 outline-none"
                     >
                       {!INTENT_OPTIONS.some(o => o.value === form.intent) && form.intent && (

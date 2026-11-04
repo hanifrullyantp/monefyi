@@ -7,6 +7,7 @@ import { useAppStore } from '../store/appStore';
 import { getProjectStats } from '../services/projectService';
 import { aggregateNetCashflow } from '../services/projectFinanceService';
 import DashboardInteractiveCards from '../components/dashboard/DashboardInteractiveCards';
+import AgentHomePanel from '../components/dashboard/AgentHomePanel';
 import DashboardProjectList from '../components/dashboard/DashboardProjectList';
 import { loadRecentLogs } from '../services/dailyLogService';
 import { analyzeProject } from '../services/analyzeService';
@@ -35,7 +36,9 @@ export default function Dashboard({ onOpenProject }: { onOpenProject?: (id: stri
   const [cashflowData, setCashflowData] = useState<{ date: string; inflow: number; outflow: number; net: number }[]>([]);
   const [recentLogs, setRecentLogs] = useState<Array<{ description: string; date: string }>>([]);
   const [recommendations, setRecommendations] = useState<AnalyzeResult['recommendations']>([]);
+  const [aiLoading, setAiLoading] = useState(false);
   const [stats, setStats] = useState({ atRisk: 0, avgProgress: 0 });
+  const firstActive = projects.find(p => p.status === 'active') || projects[0];
 
   useEffect(() => {
     if (!tenant?.id) return;
@@ -44,13 +47,20 @@ export default function Dashboard({ onOpenProject }: { onOpenProject?: (id: stri
     loadRecentLogs(tenant.id).then(logs =>
       setRecentLogs(logs.map(l => ({ description: l.description, date: l.date }))),
     ).catch(console.error);
-    const firstActive = projects.find(p => p.status === 'active') || projects[0];
-    if (firstActive) {
-      analyzeProject(firstActive.id).then(r => {
-        if (r?.recommendations) setRecommendations(r.recommendations.slice(0, 3));
-      }).catch(console.error);
-    }
   }, [tenant?.id, projects.length]);
+
+  const handleLoadAiRecommendations = async () => {
+    if (!firstActive || aiLoading) return;
+    setAiLoading(true);
+    try {
+      const r = await analyzeProject(firstActive.id);
+      if (r?.recommendations) setRecommendations(r.recommendations.slice(0, 3));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const onTrack = projects.filter(p => p.health_status === 'on_track').length;
   const atRisk = projects.filter(p => p.health_status === 'at_risk').length;
@@ -87,6 +97,7 @@ export default function Dashboard({ onOpenProject }: { onOpenProject?: (id: stri
       </motion.div>
 
       <DashboardInteractiveCards onOpenProject={onOpenProject} />
+      {tenant?.id && <AgentHomePanel orgId={tenant.id} />}
 
       <div className="flex flex-wrap gap-1.5 text-[11px]">
         <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">On track {onTrack}</span>
@@ -143,39 +154,59 @@ export default function Dashboard({ onOpenProject }: { onOpenProject?: (id: stri
         </section>
       </div>
 
-      {recommendations.length > 0 && (
-        <section>
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="w-4 h-4 text-emerald-600" />
-            <h2 className="font-bold text-slate-800 text-sm">Rekomendasi AI</h2>
-          </div>
-          <div className="space-y-2">
-            {recommendations.map((rec, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className={`bg-white rounded-xl border p-3 text-sm ${
-                  rec.severity === 'critical' ? 'border-rose-200' : rec.severity === 'high' ? 'border-amber-200' : 'border-slate-100'
-                }`}
+      {firstActive && (
+        <section className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-emerald-600" />
+              <h2 className="font-bold text-slate-800 text-sm">
+                Rekomendasi AI ({firstActive.name})
+              </h2>
+            </div>
+            {recommendations.length === 0 && (
+              <button
+                type="button"
+                onClick={handleLoadAiRecommendations}
+                disabled={aiLoading}
+                className="text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
               >
-                <button type="button" className="w-full text-left" onClick={() => setExpandedRec(expandedRec === i ? null : i)}>
-                  <div className="flex items-start gap-2">
-                    <span>{priorityIcon[rec.severity] || '💡'}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-bold text-slate-900 text-xs">{rec.title}</div>
-                      <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{rec.message}</p>
-                      {expandedRec === i && rec.action && (
-                        <p className="text-xs text-emerald-600 font-medium mt-1">→ {rec.action}</p>
-                      )}
-                    </div>
-                    <ChevronRight className={`w-4 h-4 text-slate-500 shrink-0 transition-transform ${expandedRec === i ? 'rotate-90' : ''}`} />
-                  </div>
-                </button>
-              </motion.div>
-            ))}
+                {aiLoading ? 'Menganalisa...' : 'Jalankan Analisa AI'}
+              </button>
+            )}
           </div>
+          {recommendations.length === 0 ? (
+            <p className="text-xs text-slate-500">
+              Klik &ldquo;Jalankan Analisa AI&rdquo; untuk mendapatkan rekomendasi efisiensi biaya & jadwal pada proyek aktif.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {recommendations.map((rec, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className={`bg-slate-50/70 rounded-xl border p-3 text-sm ${
+                    rec.severity === 'critical' ? 'border-rose-200' : rec.severity === 'high' ? 'border-amber-200' : 'border-slate-100'
+                  }`}
+                >
+                  <button type="button" className="w-full text-left" onClick={() => setExpandedRec(expandedRec === i ? null : i)}>
+                    <div className="flex items-start gap-2">
+                      <span>{priorityIcon[rec.severity] || '💡'}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-slate-900 text-xs">{rec.title}</div>
+                        <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{rec.message}</p>
+                        {expandedRec === i && rec.action && (
+                          <p className="text-xs text-emerald-600 font-medium mt-1">→ {rec.action}</p>
+                        )}
+                      </div>
+                      <ChevronRight className={`w-4 h-4 text-slate-500 shrink-0 transition-transform ${expandedRec === i ? 'rotate-90' : ''}`} />
+                    </div>
+                  </button>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </section>
       )}
     </div>

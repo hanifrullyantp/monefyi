@@ -25,9 +25,29 @@ export async function recalculateProjectSpent(projectId: string) {
 }
 
 export async function deleteAllCosts(projectId: string) {
+  const { data: existing } = await supabase
+    .from('planner_cost_realizations')
+    .select('journal_entry_id, description')
+    .eq('project_id', projectId)
+    .not('journal_entry_id', 'is', null);
+
   const { error } = await supabase.from('planner_cost_realizations').delete().eq('project_id', projectId);
   if (error) throw new Error(error.message);
   await recalculateProjectSpent(projectId);
+
+  if (existing && existing.length > 0) {
+    try {
+      const { reverseProjectJournal } = await import('./financeV2/projectJournalBridge');
+      for (const row of existing) {
+        await reverseProjectJournal(
+          row.journal_entry_id as string | null,
+          `Batal biaya proyek: ${(row.description as string) || ''}`.trim(),
+        );
+      }
+    } catch (e) {
+      console.error('Journal reversal on deleteAllCosts failed:', e);
+    }
+  }
 }
 
 export async function loadCostRealizations(projectId: string): Promise<CostRealization[]> {
@@ -101,13 +121,38 @@ export async function createCostRealization(
 }
 
 export async function deleteCostRealization(id: string, projectId: string) {
+  const { data: existing } = await supabase
+    .from('planner_cost_realizations')
+    .select('journal_entry_id, description')
+    .eq('id', id)
+    .maybeSingle();
+
   const { error } = await supabase.from('planner_cost_realizations').delete().eq('id', id);
   if (error) throw new Error(error.message);
 
   await recalculateProjectSpent(projectId);
+
+  if (existing?.journal_entry_id) {
+    try {
+      const { reverseProjectJournal } = await import('./financeV2/projectJournalBridge');
+      await reverseProjectJournal(
+        existing.journal_entry_id as string,
+        `Batal biaya proyek: ${(existing.description as string) || ''}`.trim(),
+      );
+    } catch (e) {
+      console.error('Journal reversal on deleteCostRealization failed:', e);
+    }
+  }
 }
 
 export async function deleteCostsByRapItemId(projectId: string, rapItemId: string) {
+  const { data: existing } = await supabase
+    .from('planner_cost_realizations')
+    .select('journal_entry_id, description')
+    .eq('project_id', projectId)
+    .eq('rap_item_id', rapItemId)
+    .not('journal_entry_id', 'is', null);
+
   const { error } = await supabase
     .from('planner_cost_realizations')
     .delete()
@@ -115,6 +160,20 @@ export async function deleteCostsByRapItemId(projectId: string, rapItemId: strin
     .eq('rap_item_id', rapItemId);
   if (error) throw new Error(error.message);
   await recalculateProjectSpent(projectId);
+
+  if (existing && existing.length > 0) {
+    try {
+      const { reverseProjectJournal } = await import('./financeV2/projectJournalBridge');
+      for (const row of existing) {
+        await reverseProjectJournal(
+          row.journal_entry_id as string | null,
+          `Batal realisasi RAP: ${(row.description as string) || ''}`.trim(),
+        );
+      }
+    } catch (e) {
+      console.error('Journal reversal on deleteCostsByRapItemId failed:', e);
+    }
+  }
 }
 
 /** Toggle checklist realisasi: satu baris konsolidasi per item RAP. */

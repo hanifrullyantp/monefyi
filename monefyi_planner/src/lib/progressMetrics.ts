@@ -54,11 +54,13 @@ export type SCurvePoint = { label: string; planned: number; actual: number };
 /** Kumulatif S-curve dari work items (urut planned_end). */
 export function buildSCurveFromWorkItems(project: Project, workItems: WorkItem[]): SCurvePoint[] {
   if (!workItems.length) {
-    return [{
-      label: 'Sekarang',
-      planned: schedulePlanProgress(project.start_date, project.end_date),
-      actual: Math.round(project.progress_percentage || 0),
-    }];
+    const planNow = schedulePlanProgress(project.start_date, project.end_date);
+    const actualNow = Math.round(project.progress_percentage || 0);
+    return [
+      { label: 'Mulai', planned: 0, actual: 0 },
+      { label: 'Sekarang', planned: planNow, actual: actualNow },
+      { label: 'Target Akhir', planned: 100, actual: actualNow },
+    ];
   }
 
   const sorted = [...workItems].sort((a, b) =>
@@ -70,9 +72,12 @@ export function buildSCurveFromWorkItems(project: Project, workItems: WorkItem[]
   let cumActual = 0;
   return sorted.map(wi => {
     const w = Number(wi.weight) > 0 ? Number(wi.weight) : 1;
-    cumPlanned += (schedulePlanProgress(wi.planned_start, wi.planned_end) * w) / totalWeight;
+    // Pada titik milestone selesai tiap item (planned_end), target kumulatif item tersebut adalah 100% dari bobotnya
+    cumPlanned += (100 * w) / totalWeight;
     cumActual += ((Number(wi.progress_pct) || 0) * w) / totalWeight;
-    const label = wi.name.length > 14 ? `${wi.name.slice(0, 14)}…` : wi.name;
+    const endShort = (wi.planned_end || '').slice(5, 10);
+    const baseName = wi.name.length > 12 ? `${wi.name.slice(0, 12)}…` : wi.name;
+    const label = endShort ? `${baseName} (${endShort})` : baseName;
     return {
       label,
       planned: Math.min(100, Math.round(cumPlanned)),

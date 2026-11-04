@@ -46,9 +46,9 @@ function lastSeenLabel(iso?: string) {
 
 function roleBadge(role: string) {
   const map: Record<string, string> = {
-    owner: 'bg-emerald-100 text-emerald-700',
-    manager: 'bg-emerald-100 text-emerald-700',
-    worker: 'bg-emerald-100 text-emerald-700',
+    owner: 'bg-emerald-100 text-emerald-800',
+    manager: 'bg-blue-100 text-blue-700',
+    worker: 'bg-amber-100 text-amber-800',
   };
   return map[role] || 'bg-slate-100 text-slate-600';
 }

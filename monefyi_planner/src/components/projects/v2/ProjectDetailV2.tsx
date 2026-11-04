@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 import type { Project } from '../../../store/appStore';
 import { useAppStore } from '../../../store/appStore';
 import { useShellStore } from '../../../store/shellStore';
-import { updateProject as updateProjectApi, getProject } from '../../../services/projectService';
+import { updateProject as updateProjectApi, getProject, archiveProject } from '../../../services/projectService';
 import { showToast } from '../../../store/uiStore';
 import { loadRapItems } from '../../../services/rapService';
 import { loadWorkItems } from '../../../services/workItemService';
@@ -50,7 +50,7 @@ type Props = {
 
 export default function ProjectDetailV2({ project: initialProject, onClose }: Props) {
   const navigate = useNavigate();
-  const { user, tenant, updateProject } = useAppStore();
+  const { user, tenant, updateProject, deleteProject } = useAppStore();
   const { setShellMeta, clearShellMeta } = useShellStore();
   const [project, setProject] = useState(initialProject);
   const [tab, setTab] = useState<TabId>('overview');
@@ -146,22 +146,26 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
           weight: w.weight,
           status: w.status,
         })),
-        payables: pays.map(p => ({
-          id: p.id,
-          creditor_name: p.creditor_name,
-          amount: p.amount,
-          paid_amount: p.paid_amount,
-          due_date: p.due_date,
-          status: p.status,
-        })),
-        receivables: recs.map(r => ({
-          id: r.id,
-          debtor_name: r.debtor_name,
-          amount: r.amount,
-          paid_amount: r.paid_amount,
-          due_date: r.due_date,
-          status: r.status,
-        })),
+        payables: pays.length > 0
+          ? pays.map(p => ({
+              id: p.id,
+              creditor_name: p.creditor_name,
+              amount: p.amount,
+              paid_amount: p.paid_amount,
+              due_date: p.due_date,
+              status: p.status,
+            }))
+          : undefined,
+        receivables: recs.length > 0
+          ? recs.map(r => ({
+              id: r.id,
+              debtor_name: r.debtor_name,
+              amount: r.amount,
+              paid_amount: r.paid_amount,
+              due_date: r.due_date,
+              status: r.status,
+            }))
+          : undefined,
       });
       setMapped(view);
     } finally {
@@ -184,7 +188,9 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
 
   const normalized = mapped ? normalizeProjectView(mapped) : null;
   const balanceCheck = mapped ? validateProjectBalance(mapped) : null;
-  const keuanganBadge = rapItems.length > 0 ? rapItems.length : undefined;
+  const keuanganBadge =
+    balanceCheck && !balanceCheck.isBalanced ? Math.max(1, balanceCheck.issues.length) : undefined;
+  const rapBadge = rapItems.length > 0 ? rapItems.length : undefined;
   const progressSummary = useMemo(
     () => computeProgressSummary(project, workItems),
     [project, workItems],
@@ -197,6 +203,14 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
     updateProject(project.id, updated);
     showToast('Detail proyek disimpan', 'success');
     await reload();
+  };
+
+  const handleArchiveProject = async () => {
+    if (!user?.id) return;
+    await archiveProject(project.id, user.id);
+    deleteProject(project.id);
+    showToast('Proyek diarsipkan', 'success');
+    onClose();
   };
 
   const openEdit = () => setEditOpen(true);
@@ -313,7 +327,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
           <button type="button" onClick={openEdit} className="p-2 hover:bg-slate-100 rounded-xl" aria-label="Edit proyek" title="Edit proyek">
             <Pencil className="w-5 h-5 text-slate-500" />
           </button>
-          <button type="button" className="p-2 hover:bg-slate-100 rounded-xl" aria-label="Menu">
+          <button type="button" onClick={openEdit} className="p-2 hover:bg-slate-100 rounded-xl" aria-label="Pengaturan Proyek" title="Pengaturan & Arsip Proyek">
             <MoreVertical className="w-5 h-5 text-slate-500" />
           </button>
         </div>
@@ -344,6 +358,11 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
             {t.id === 'keuangan' && keuanganBadge != null && keuanganBadge > 0 && (
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600">
                 {keuanganBadge}
+              </span>
+            )}
+            {t.id === 'rap' && rapBadge != null && rapBadge > 0 && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                {rapBadge}
               </span>
             )}
             {t.id === 'progress' && progressBadge != null && progressBadge > 0 && (
@@ -436,10 +455,10 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
       {editOpen && (
         <ProjectEditModal
           project={project}
-          canArchive={false}
+          canArchive={user?.role === 'owner' || user?.role === 'manager'}
           onClose={() => setEditOpen(false)}
           onSave={handleSaveProject}
-          onArchive={async () => {}}
+          onArchive={handleArchiveProject}
         />
       )}
     </div>

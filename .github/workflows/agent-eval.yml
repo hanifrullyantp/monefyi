@@ -1,0 +1,29 @@
+name: Agent eval gate
+
+on:
+  pull_request:
+  push:
+    paths:
+      - "agent-core/**"
+      - "evals/**"
+      - "packages/domain/**"
+      - "monefyi_planner/src/lib/agentEval.test.ts"
+      - ".github/workflows/agent-eval.yml"
+
+jobs:
+  rendah:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: monefyi_planner
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: monefyi_planner/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Gerbang tier rendah
+        run: npx vitest run src/lib/agentEval.test.ts src/lib/agentRuntime.test.ts

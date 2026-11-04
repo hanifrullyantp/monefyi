@@ -60,6 +60,7 @@ PLANNER_FUNCTIONS=(
   planner-analyze
   planner-parse-command
   planner-flow
+  planner-agent-run
   planner-create-owner-org
   planner-validate-invitation
   planner-create-invitation

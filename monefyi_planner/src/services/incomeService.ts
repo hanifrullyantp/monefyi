@@ -132,9 +132,27 @@ export async function deleteProjectIncome(
   id: string,
   projectId: string,
 ) {
+  const { data: existing } = await supabase
+    .from('planner_project_incomes')
+    .select('journal_entry_id, description, category')
+    .eq('id', id)
+    .maybeSingle();
+
   const { error } = await supabase.from('planner_project_incomes').delete().eq('id', id);
   if (error) throw new Error(error.message);
   await recalcTotalReceived(projectId);
+
+  if (existing?.journal_entry_id) {
+    try {
+      const { reverseProjectJournal } = await import('./financeV2/projectJournalBridge');
+      await reverseProjectJournal(
+        existing.journal_entry_id as string,
+        `Batal pemasukan proyek: ${(existing.description as string) || (existing.category as string) || ''}`.trim(),
+      );
+    } catch (e) {
+      console.error('Journal reversal on deleteProjectIncome failed:', e);
+    }
+  }
 }
 
 export { recalcTotalReceived };

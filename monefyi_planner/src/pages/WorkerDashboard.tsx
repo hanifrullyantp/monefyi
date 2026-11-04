@@ -57,6 +57,7 @@ export default function WorkerDashboard() {
   const [attendanceSettings, setAttendanceSettings] = useState<AttendanceSettings | null>(null);
   const [partialDays, setPartialDays] = useState<ReturnType<typeof getPartialDays>>([]);
   const [monthDaysPresent, setMonthDaysPresent] = useState(0);
+  const [chosenProjectId, setChosenProjectId] = useState<string>('');
 
   const workerTab = (['home', 'attendance', 'payroll', 'todos'] as const).includes(
     activeTab as 'home' | 'attendance' | 'payroll' | 'todos',
@@ -118,11 +119,17 @@ export default function WorkerDashboard() {
     }
   }, [refreshStatus, loadTasks, tenant?.id]);
 
-  const activeTasks = workItems.filter(wi => (Number(wi.progress_pct) || 0) < 100);
-  const doneTasks = workItems.filter(wi => (Number(wi.progress_pct) || 0) >= 100);
   const projectName = (projectId: string) => projects.find(p => p.id === projectId)?.name || 'Proyek';
-  const defaultProject = projects[0];
+  const defaultProject =
+    projects.find(p => p.id === chosenProjectId) ||
+    projects.find(p => p.status === 'active') ||
+    projects[0];
   const defaultProjectName = defaultProject?.name;
+  const scopedWorkItems = chosenProjectId
+    ? workItems.filter(wi => wi.project_id === chosenProjectId)
+    : workItems;
+  const activeTasks = scopedWorkItems.filter(wi => (Number(wi.progress_pct) || 0) < 100);
+  const doneTasks = scopedWorkItems.filter(wi => (Number(wi.progress_pct) || 0) >= 100);
 
   const handleCheckIn = async () => {
     if (!user?.id || !tenant?.id) return;
@@ -275,6 +282,20 @@ export default function WorkerDashboard() {
 
       {workerTab === 'home' && (
         <div className="space-y-4">
+          {projects.length > 1 && (
+            <div className="bg-white border rounded-xl p-3 flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-slate-600">Lokasi Proyek Hari Ini</span>
+              <select
+                value={defaultProject?.id || ''}
+                onChange={e => setChosenProjectId(e.target.value)}
+                className="text-xs font-semibold border rounded-lg px-2.5 py-1.5 bg-slate-50 text-slate-800 max-w-[60%]"
+              >
+                {projects.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <WorkerWorkTimer
             checkedIn={status.checkedIn}
             checkInAtIso={status.checkInAtIso}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -175,7 +175,9 @@ describe('repo tidak menyimpan kata sandi bypass', () => {
 
   it('tidak memuat kata sandi yang pernah di-hardcode', () => {
     for (const file of files) {
-      const text = readFileSync(resolve(root, file), 'utf8');
+      const p = resolve(root, file);
+      if (!existsSync(p)) continue;
+      const text = readFileSync(p, 'utf8');
       expect(text, file).not.toMatch(/PlannerBypass2026/);
       expect(text, file).not.toMatch(/bypassPassword/);
       expect(text, file).not.toMatch(/88888888/);

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Loader2, FileSpreadsheet, Download, Upload, Table2, List, CheckSquare, Trash2,
@@ -91,6 +91,7 @@ export default function ProjectDetail({ project: initialProject, onClose }: Proj
   const isDesktop = useIsDesktop();
   const [rapView, setRapView] = useState<'spreadsheet' | 'list' | 'checklist'>('checklist');
   const [amountDrafts, setAmountDrafts] = useState<Record<string, string>>({});
+  const [toggleRealizationBusy, setToggleRealizationBusy] = useState<string | null>(null);
   const [materialSuggestions, setMaterialSuggestions] = useState<string[]>([]);
 
   useEffect(() => {
