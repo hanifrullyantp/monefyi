@@ -5,6 +5,8 @@ import {
 } from 'lucide-react';
 import type { EstimationFormDraft } from '../../types/estimator';
 import type { PdfSettings } from '../../types/pdfSettings';
+import { useEntitlement } from '../../hooks/useEntitlement';
+import { canGenerateContract } from '../../lib/entitlement';
 import {
   CONTRACT_PLACEHOLDERS,
   CONTRACT_TEMPLATES,
@@ -97,6 +99,8 @@ function Section({ title, children, defaultOpen = true }: { title: string; child
 }
 
 export default function ContractModal({ open, draft, settings, onClose, onToast }: Props) {
+  const entitlement = useEntitlement();
+  const isAllowed = canGenerateContract(entitlement);
   const [templateId, setTemplateId] = useState(CONTRACT_TEMPLATES[0].id);
   const [fields, setFields] = useState<ContractFields | null>(null);
   const [clausesByTemplate, setClausesByTemplate] = useState<Record<string, ContractClause[]>>({});
@@ -209,6 +213,10 @@ export default function ContractModal({ open, draft, settings, onClose, onToast 
   if (!open || !fields || !input) return null;
 
   const handleDownload = async () => {
+    if (!isAllowed) {
+      onToast?.('Fitur ini khusus untuk Estimator Pro', 'error');
+      return;
+    }
     try {
       await downloadContractPdf(input);
       onToast?.('Surat perjanjian diunduh', 'success');

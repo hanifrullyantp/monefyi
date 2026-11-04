@@ -35,6 +35,7 @@ import { analytics } from '../../lib/analytics/events';
 import { shouldShowMilestone5Upsell } from '../../lib/analytics/milestones';
 import {
   canCreateEstimation,
+  canGenerateContract,
   canGenerateKwitansi,
   FREE_ESTIMATION_LIMIT,
 } from '../../lib/entitlement';
@@ -725,6 +726,26 @@ export default function EstimatorForm() {
     }
   };
 
+  const handleOpenContract = async () => {
+    if (!requireSaved() || !tenant?.id) return;
+    if (!canGenerateContract(entitlement)) {
+      setUpgradeFeatureName('Generator Surat Perjanjian Pro');
+      setUpgradeTrigger('estimator_pro_feature');
+      setUpgradeOpen(true);
+      return;
+    }
+    setPdfLoading(true);
+    try {
+      const settings = pdfSettings ?? await loadPdfSettings(tenant.id, tenant.name);
+      if (!pdfSettings) setPdfSettings(settings);
+      setContractOpen(true);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal memuat pengaturan PDF', 'error');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
   const handleOpenConvert = async () => {
     if (isNew || !id) {
       showToast('Simpan estimasi terlebih dahulu', 'error');
@@ -1117,10 +1138,7 @@ export default function EstimatorForm() {
         userId={user?.id}
         isReadOnly={isReadOnly}
         onPaymentsChanged={() => setPaymentsRefreshKey(k => k + 1)}
-        onOpenContract={() => {
-          if (pdfSettings) setContractOpen(true);
-          else showToast('Pengaturan PDF belum siap, coba lagi sebentar', 'error');
-        }}
+        onOpenContract={handleOpenContract}
       />
 
       {contractOpen && pdfSettings && (

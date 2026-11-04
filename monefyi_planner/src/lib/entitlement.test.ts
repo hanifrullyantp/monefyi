@@ -5,6 +5,7 @@ import {
   buildPreviewEntitlement,
   canAccessPlannerNavModule,
   canCreateEstimation,
+  canGenerateContract,
   canGenerateKwitansi,
   canUseCustomBranding,
   computeEstimatorProCheckoutAmount,
@@ -122,6 +123,9 @@ describe('entitlement - canGenerateKwitansi', () => {
     expect(canGenerateKwitansi(estimatorPro)).toBe(true);
     expect(canGenerateKwitansi(pro)).toBe(true);
     expect(canGenerateKwitansi(standard)).toBe(false);
+    expect(canGenerateContract(estimatorPro)).toBe(true);
+    expect(canGenerateContract(pro)).toBe(true);
+    expect(canGenerateContract(standard)).toBe(false);
     expect(canUseCustomBranding(estimatorPro)).toBe(true);
     expect(canUseCustomBranding(standard)).toBe(false);
   });
