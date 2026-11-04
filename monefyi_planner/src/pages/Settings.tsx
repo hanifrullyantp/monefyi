@@ -364,6 +364,9 @@ export default function Settings() {
               Buka Super Admin →
             </Link>
           )}
+          <Link to="/app/uji-agen" className="inline-flex mt-2 text-sm font-semibold text-emerald-600 hover:underline">
+            Uji agen →
+          </Link>
         </div>
         <button type="button" onClick={load} className="p-2.5 border border-slate-200 rounded-xl hover:bg-slate-50 self-start" aria-label="Refresh">
           <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />

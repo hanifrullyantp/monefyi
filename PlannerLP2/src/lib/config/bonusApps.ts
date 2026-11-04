@@ -1,10 +1,26 @@
 import type { LucideIcon } from "lucide-react";
 import { Calculator, PieChart, Wallet, Banknote } from "lucide-react";
 
-/** Override penuh (mis. deploy terpisah di subdomain); kosong = embed same-origin */
-const EXTERNAL_BASE = process.env.NEXT_PUBLIC_BONUS_APPS_BASE_URL?.replace(/\/$/, "");
-
 const EMBED_PREFIX = "/bonus/mini";
+
+/** Prefix deploy terpisah (CDN/subdomain). Abaikan legacy `monefyi.com/bonus` — tidak pernah di-host. */
+function resolveExternalBonusBase(): string | undefined {
+  const raw = process.env.NEXT_PUBLIC_BONUS_APPS_BASE_URL?.trim().replace(/\/$/, "");
+  if (!raw) return undefined;
+  try {
+    const url = new URL(raw.startsWith("http") ? raw : `https://${raw}`);
+    const host = url.hostname.toLowerCase();
+    const path = url.pathname.replace(/\/$/, "") || "";
+    const isLegacyMarketingBonus =
+      (host === "monefyi.com" || host === "www.monefyi.com") && (path === "" || path === "/bonus");
+    if (isLegacyMarketingBonus) return undefined;
+    return raw.replace(/\/$/, "");
+  } catch {
+    return undefined;
+  }
+}
+
+const EXTERNAL_BASE = resolveExternalBonusBase();
 
 export type BonusAppId = "budget" | "debt-free" | "bagi-hasil" | "salary";
 

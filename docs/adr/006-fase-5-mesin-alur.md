@@ -1,6 +1,6 @@
 # ADR 006 — Fase 5: SOP dan mesin alur
 
-- Status: diterapkan di kode. Belum dideploy.
+- Status: diterapkan dan dideploy ke project Planner
 - Tanggal: 2026-11-04
 
 ## Keputusan
@@ -19,4 +19,4 @@ Baris `planner_flow_runs` bukan izin menulis uang. Jurnal tetap lewat RLS.
 
 ## Deploy
 
-Token yang ada belum bisa melihat project Planner, jadi migrasi dan function ini belum didorong.
+Migrasi fase 5 dan function `planner-flow` sudah didorong ke project Planner pada 2026-11-04.

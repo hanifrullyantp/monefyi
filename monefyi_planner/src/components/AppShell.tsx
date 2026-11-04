@@ -18,6 +18,7 @@ import { showWorkerShell, canAccessManagerFeatures } from '../utils/platformUi';
 import { useEntitlement } from '../hooks/useEntitlement';
 import { isAdminFullAccess, isEstimatorOnlyPlan } from '../lib/entitlement';
 import PlannerModuleGuard from './entitlement/PlannerModuleGuard';
+import AgentTrialPage from '../pages/AgentTrialPage';
 
 function AppContent() {
   const { id: projectIdParam } = useParams();
@@ -192,6 +193,7 @@ export default function AppShell() {
         <Route path="database" element={<DatabaseShell />} />
         <Route path="estimator/*" element={<EstimatorShell />} />
         <Route path="finance-v2/*" element={<FinanceV2Shell />} />
+        <Route path="uji-agen" element={<Layout><AgentTrialPage /></Layout>} />
       </Routes>
   );
 }

@@ -2,6 +2,11 @@
 # Build 4 bonus mini apps (static) → PlannerLP2/public/bonus/mini/{slug}/
 set -euo pipefail
 
+if [[ "${SKIP_BONUS_MINI:-}" == "1" ]]; then
+  echo "SKIP_BONUS_MINI=1 — lewati build mini app bonus"
+  exit 0
+fi
+
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 MINI="$ROOT/Mini App Monefyi"
 OUT_ROOT="$ROOT/PlannerLP2/public/bonus/mini"

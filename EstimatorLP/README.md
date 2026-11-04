@@ -15,6 +15,9 @@ Domain khusus pelanggan **Monefyi Estimator**. Kode landing sama dengan [`Planne
 | `NEXT_PUBLIC_LYNK_ESTIMATOR_PRO` | `http://lynk.id/asfin-ai/qynky6065k37/checkout` |
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://zzwqfmdyncxbolestkqp.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | *(anon key dari Supabase dashboard)* |
+| Bonus mini apps | **Jangan** set `NEXT_PUBLIC_BONUS_APPS_BASE_URL` ke `monefyi.com/bonus` (404). Embed otomatis di `/bonus/mini/{slug}/` setelah `npm run build`. |
+
+**Vercel:** hapus env `NEXT_PUBLIC_BONUS_APPS_BASE_URL` jika masih mengarah ke `https://monefyi.com/bonus`.
 
 ## GitHub Actions
 

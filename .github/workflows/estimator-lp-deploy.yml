@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "PlannerLP2/**"
+      - "Mini App Monefyi/**"
       - "EstimatorLP/**"
       - ".github/workflows/estimator-lp-deploy.yml"
   workflow_dispatch:
@@ -29,10 +30,13 @@ jobs:
         working-directory: PlannerLP2
         run: npm run typecheck
 
-      - name: Build
+      - name: Vercel production build (includes bonus mini → public/bonus/mini)
         working-directory: PlannerLP2
-        run: npm run build
+        run: npx vercel build --prod --yes --token "$VERCEL_TOKEN"
         env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_ESTIMATOR_LP_PROJECT_ID }}
           ADMIN_PASSWORD: ci-build-only
           ESTIMATOR_STANDALONE: "true"
           PLANNER_APP_ORIGIN: https://monefyi-planner.vercel.app
@@ -73,7 +77,8 @@ jobs:
 
       - name: Deploy to Vercel (estimator.monefyi.com)
         if: github.ref == 'refs/heads/main'
-        run: npx vercel deploy --prod --yes --token "$VERCEL_TOKEN"
+        working-directory: PlannerLP2
+        run: npx vercel deploy --prebuilt --prod --yes --token "$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
