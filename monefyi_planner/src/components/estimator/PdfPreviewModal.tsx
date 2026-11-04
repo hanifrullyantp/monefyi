@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Download, Loader2 } from 'lucide-react';
 import type { EstimationFormDraft } from '../../types/estimator';
@@ -6,6 +6,8 @@ import type { PdfSettings } from '../../types/pdfSettings';
 import { displayOptionsFromDraft } from '../../types/pdfSettings';
 import { generateQuotationPdfBlob, quotationPdfFilename } from '../../lib/pdf/generateQuotationPdf';
 import { downloadBlob } from '../../lib/pdf/pdfMakeSetup';
+import { useEntitlement } from '../../hooks/useEntitlement';
+import { pdfPlanPolicyFromEntitlement } from '../../lib/pdf/pdfPlanPolicy';
 
 interface Props {
   draft: EstimationFormDraft;
@@ -15,6 +17,11 @@ interface Props {
 }
 
 export default function PdfPreviewModal({ draft, settings, projectName, onClose }: Props) {
+  const entitlement = useEntitlement();
+  const policy = useMemo(
+    () => pdfPlanPolicyFromEntitlement(entitlement),
+    [entitlement.isFree, entitlement.isEstimatorPro, entitlement.isPro, entitlement.isEnterprise],
+  );
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -27,7 +34,7 @@ export default function PdfPreviewModal({ draft, settings, projectName, onClose 
       setLoading(true);
       setError('');
       try {
-        const blob = await generateQuotationPdfBlob(draft, settings, displayOptionsFromDraft(draft));
+        const blob = await generateQuotationPdfBlob(draft, settings, displayOptionsFromDraft(draft), policy);
         if (cancelled) return;
         url = URL.createObjectURL(blob);
         setBlobUrl(url);
@@ -43,11 +50,11 @@ export default function PdfPreviewModal({ draft, settings, projectName, onClose 
       cancelled = true;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [draft, settings]);
+  }, [draft, settings, policy]);
 
   const handleDownload = async () => {
     try {
-      const blob = await generateQuotationPdfBlob(draft, settings, displayOptionsFromDraft(draft));
+      const blob = await generateQuotationPdfBlob(draft, settings, displayOptionsFromDraft(draft), policy);
       downloadBlob(blob, quotationPdfFilename(draft, projectName));
     } catch {
       // ignore

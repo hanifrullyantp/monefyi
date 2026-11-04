@@ -1,5 +1,6 @@
 import { formatCurrency, todayStr } from './adapters';
 import type { ParsedCommand } from './commandParser';
+import { commitRecordCost, prepareRecordCost } from '../../../agent-core/src/prepare';
 import { createCostRealization } from '../services/costService';
 import { loadRapItems, type RapItem } from '../services/rapService';
 import type { ParsedCostLine } from './costParser';
@@ -238,24 +239,53 @@ export async function executeIntent(
           details: 'Buka proyek terlebih dahulu atau sebutkan nama proyek.',
         };
       }
-      const total = Number(params.total) || 0;
-      const qty = params.qty != null ? Number(params.qty) : null;
-      const unitPrice = params.unitPrice != null ? Number(params.unitPrice) : null;
+      const now = Date.now();
+      const committed = params.prepareToken
+        ? commitRecordCost({
+          prepareToken: String(params.prepareToken),
+          idempotencyKey: String(params.idempotencyKey || ''),
+          now,
+        })
+        : (() => {
+          const prepared = prepareRecordCost({
+            projectId: project.id,
+            item: String(params.item || 'Pembelian'),
+            total: Number(params.total) || 0,
+            qty: params.qty != null ? Number(params.qty) : null,
+            unit: params.unit ? String(params.unit) : null,
+            unitPrice: params.unitPrice != null ? Number(params.unitPrice) : null,
+            entryDate: todayStr(),
+            now,
+          });
+          if (!prepared.ok) return prepared;
+          return commitRecordCost({
+            prepareToken: prepared.token,
+            idempotencyKey: `ui-${prepared.expiresAt}`,
+            now,
+          });
+        })();
+      if (!committed.ok) {
+        return { success: false, message: committed.error.fix_hint };
+      }
+      if (committed.cost.projectId !== project.id) {
+        return { success: false, message: 'Perintah ini untuk proyek lain. Siapkan ulang.' };
+      }
+      const locked = committed.cost;
 
       await createCostRealization({
         project_id: project.id,
-        date: todayStr(),
-        description: String(params.item || 'Pembelian'),
-        quantity: qty,
-        unit_price: unitPrice,
-        total_amount: total,
+        date: locked.entryDate,
+        description: locked.item,
+        quantity: locked.qty,
+        unit_price: locked.unitPrice,
+        total_amount: locked.total,
         recorded_by: ctx.userId,
       });
 
       const detail =
-        qty && unitPrice
-          ? `${params.item} ${qty} × ${formatCurrency(unitPrice)} = ${formatCurrency(total)}`
-          : `${params.item} = ${formatCurrency(total)}`;
+        locked.qty && locked.unitPrice
+          ? `${locked.item} ${locked.qty} × ${formatCurrency(locked.unitPrice)} = ${formatCurrency(locked.total)}`
+          : `${locked.item} = ${formatCurrency(locked.total)}`;
 
       await ctx.onRefreshProjects();
       return {

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, List, Rocket, Save } from 'lucide-react';
 import { redirectToCheckout } from '../../lib/checkout';
 import {
+  canUseCustomBranding,
   computeEstimatorProCheckoutAmount,
   isAdminFullAccess,
   isEstimatorProUpgrade,
@@ -36,6 +37,7 @@ export default function EstimatorSettings() {
   const entitlement = useEntitlement();
   const showProUpgrade = !isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode)
     && isEstimatorProUpgrade(entitlement);
+  const allowBranding = canUseCustomBranding(entitlement);
   const proUpgradeAmount = computeEstimatorProCheckoutAmount(entitlement);
   const [settings, setSettings] = useState<PdfSettings | null>(null);
   const [waTemplate, setWaTemplate] = useState<WhatsAppTemplateConfig>(defaultWhatsAppTemplateConfig());
@@ -238,7 +240,7 @@ export default function EstimatorSettings() {
             <Field label="Email" value={settings.email || ''} onChange={v => patch({ email: v })} />
           </div>
           <Field label="Website" value={settings.website || ''} onChange={v => patch({ website: v })} />
-          {tenant?.id && (
+          {tenant?.id && allowBranding && (
             <LogoUpload
               orgId={tenant.id}
               kind="logo"
@@ -247,6 +249,9 @@ export default function EstimatorSettings() {
               onChange={url => patch({ logo_url: url })}
               onError={msg => showToast(msg, 'error')}
             />
+          )}
+          {tenant?.id && !allowBranding && (
+            <p className="text-xs text-slate-500">Logo perusahaan tersedia di Estimator Pro.</p>
           )}
         </Section>
 
@@ -257,7 +262,10 @@ export default function EstimatorSettings() {
         </Section>
 
         <Section title="Tanda Tangan & Cap">
-          {tenant?.id && (
+          {!allowBranding && (
+            <p className="text-xs text-slate-500">Gambar tanda tangan dan cap tersedia di Estimator Pro. PDF paket Gratis tetap berwatermark.</p>
+          )}
+          {tenant?.id && allowBranding && (
             <LogoUpload
               orgId={tenant.id}
               kind="signature"
@@ -272,7 +280,7 @@ export default function EstimatorSettings() {
             <Field label="Nama" value={settings.signature_name || ''} onChange={v => patch({ signature_name: v })} />
             <Field label="Jabatan" value={settings.signature_title || ''} onChange={v => patch({ signature_title: v })} />
           </div>
-          {tenant?.id && (
+          {tenant?.id && allowBranding && (
             <LogoUpload
               orgId={tenant.id}
               kind="stamp"

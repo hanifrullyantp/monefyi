@@ -1,0 +1,64 @@
+[
+  {
+    "tool": "find_project",
+    "name": "ambigu",
+    "input": {
+      "query": "Bu Ana"
+    },
+    "output": {
+      "status": "needs_choice",
+      "candidates": [
+        {
+          "id": "p-ruko",
+          "label": "Ruko Bu Ana",
+          "score": 0.78
+        },
+        {
+          "id": "p-rumah",
+          "label": "Rumah Bu Ana",
+          "score": 0.78
+        }
+      ]
+    }
+  },
+  {
+    "tool": "find_project",
+    "name": "tepat",
+    "input": {
+      "query": "Rumah Bu Ana"
+    },
+    "output": {
+      "status": "chosen",
+      "id": "p-rumah",
+      "label": "Rumah Bu Ana",
+      "score": 1
+    }
+  },
+  {
+    "tool": "prepare_record_cost",
+    "name": "semen",
+    "input": {
+      "project_id": "p-rumah",
+      "item": "semen",
+      "total": 650000,
+      "entry_date": "2026-11-04"
+    },
+    "output": {
+      "ok": true,
+      "impact": "semen 650000 pada 2026-11-04",
+      "total": 650000
+    }
+  },
+  {
+    "tool": "commit_record_cost",
+    "name": "tanpa nominal",
+    "input": {
+      "prepare_token": "{\"projectId\":\"p-rumah\",\"item\":\"semen\",\"total\":650000,\"qty\":10,\"unit\":\"sak\",\"unitPrice\":65000,\"entryDate\":\"2026-11-04\",\"expiresAt\":1793754600000}.b0d9fc4",
+      "idempotency_key": "key-1"
+    },
+    "output": {
+      "ok": true,
+      "total": 650000
+    }
+  }
+]

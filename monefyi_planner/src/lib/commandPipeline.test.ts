@@ -56,6 +56,7 @@ describe('runNeverFailPipeline', () => {
     expect(result.source).toBe('rule');
     expect(result.confidence).toBeGreaterThanOrEqual(0.75);
     expect(result.params.total).toBe(650_000);
+    expect(result.sop).toBe('catat_biaya');
   });
 
   it('memori 650 juta tidak mengalahkan parser semen', async () => {

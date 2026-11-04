@@ -1,0 +1,69 @@
+id: bayar_hutang_pihak
+version: 1
+domain: keuangan
+timeout_minutes: 30
+triggers:
+  intent: pay_payable
+  examples:
+    - bayar hutang toko bangunan
+    - lunasi supplier semen
+prerequisites:
+  - pihak_dikenal
+parameters:
+  - key: batas_bayar_rupiah
+    type: integer
+    min: 0
+    max: 100000000000
+    required: true
+    default: 5000000
+steps:
+  - id: cari_pihak
+    tools:
+      - find_party
+    min_role: manager
+    approval: false
+    terminal: false
+    on_success: cari_dompet
+    on_needs_choice: cari_pihak
+    on_invalid: cari_pihak
+    on_conflict: cari_pihak
+  - id: cari_dompet
+    tools:
+      - find_wallet
+    min_role: manager
+    approval: false
+    terminal: false
+    on_success: siapkan_bayar
+    on_needs_choice: cari_dompet
+    on_invalid: cari_dompet
+    on_conflict: cari_dompet
+  - id: siapkan_bayar
+    tools:
+      - prepare_debt_payment
+    min_role: manager
+    approval: false
+    terminal: false
+    on_success: simpan_bayar
+    on_needs_choice: siapkan_bayar
+    on_invalid: siapkan_bayar
+    on_conflict: siapkan_bayar
+  - id: simpan_bayar
+    tools:
+      - commit_debt_payment
+    min_role: manager
+    approval: true
+    terminal: false
+    on_success: selesai
+    on_needs_choice: simpan_bayar
+    on_invalid: simpan_bayar
+    on_conflict: simpan_bayar
+  - id: selesai
+    tools: []
+    min_role: manager
+    approval: false
+    terminal: true
+postconditions:
+  - hutang_berkurang
+escalation:
+  after_invalid: 2
+  to: pemilik

@@ -29,7 +29,10 @@ export type JournalReferenceType =
   | 'payroll_disbursement'
   | 'bon_disbursement'
   | 'payroll_accrual'
-  | 'period_close';
+  | 'period_close'
+  | 'reversal'
+  | 'payable_payment'
+  | 'receivable_receipt';
 
 export interface FinanceAccount {
   id: string;
@@ -73,6 +76,8 @@ export interface JournalLineInput {
   debit: number;
   credit: number;
   notes?: string;
+  partyId?: string;
+  projectId?: string;
 }
 
 export interface CreateJournalInput {

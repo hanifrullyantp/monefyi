@@ -49,7 +49,7 @@ export const ESTIMATOR_PLANS: EstimatorPlan[] = [
     ],
     features: [
       { text: "Estimator harga proyek", included: true },
-      { text: "3 estimasi / akun", included: true },
+      { text: "3 estimasi / organisasi, seumur hidup", included: true },
       { text: "PDF penawaran (watermark)", included: true },
       { text: "Custom logo & tanda tangan", included: false },
       { text: "Riwayat penawaran", included: false },

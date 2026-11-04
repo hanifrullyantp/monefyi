@@ -462,3 +462,9 @@ enabled = true
 verify_jwt = true
 import_map = "./functions/planner-parse-command/deno.json"
 entrypoint = "./functions/planner-parse-command/index.ts"
+
+[functions.planner-flow]
+enabled = true
+verify_jwt = true
+import_map = "./functions/planner-flow/deno.json"
+entrypoint = "./functions/planner-flow/index.ts"

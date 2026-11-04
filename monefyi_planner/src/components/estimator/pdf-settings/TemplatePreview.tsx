@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
 import type { PdfTemplate } from '../../../types/estimator';
 import type { PdfSettings } from '../../../types/pdfSettings';
@@ -7,6 +7,8 @@ import { previewEstimationDraft, previewPdfSettings } from '../../../lib/pdf/pdf
 import { generateQuotationPdfBlob, quotationPdfFilename } from '../../../lib/pdf/generateQuotationPdf';
 import { generateInvoicePdfBlob, invoicePdfFilename } from '../../../lib/pdf/generateInvoicePdf';
 import { downloadBlob } from '../../../lib/pdf/pdfMakeSetup';
+import { useEntitlement } from '../../../hooks/useEntitlement';
+import { pdfPlanPolicyFromEntitlement } from '../../../lib/pdf/pdfPlanPolicy';
 import type { PreviewDisplayToggles } from './TemplateCustomizer';
 
 type Kind = 'quotation' | 'invoice';
@@ -28,6 +30,11 @@ function applyDisplay(draft: ReturnType<typeof previewEstimationDraft>, display?
 }
 
 export default function TemplatePreview({ kind, template, settings, display }: Props) {
+  const entitlement = useEntitlement();
+  const policy = useMemo(
+    () => pdfPlanPolicyFromEntitlement(entitlement),
+    [entitlement.isFree, entitlement.isEstimatorPro, entitlement.isPro, entitlement.isEnterprise],
+  );
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -49,8 +56,8 @@ export default function TemplatePreview({ kind, template, settings, display }: P
         draft.pdf_secondary_color = merged.secondary_color;
         const opts = displayOptionsFromDraft(draft);
         const blob = kind === 'quotation'
-          ? await generateQuotationPdfBlob(draft, merged, opts)
-          : await generateInvoicePdfBlob(draft, merged, opts);
+          ? await generateQuotationPdfBlob(draft, merged, opts, policy)
+          : await generateInvoicePdfBlob(draft, merged, opts, [], policy);
         if (cancelled) return;
         url = URL.createObjectURL(blob);
         setBlobUrl(url);
@@ -65,7 +72,7 @@ export default function TemplatePreview({ kind, template, settings, display }: P
       cancelled = true;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [kind, template, settings, display]);
+  }, [kind, template, settings, display, policy]);
 
   const handleDownload = async () => {
     try {
@@ -75,8 +82,8 @@ export default function TemplatePreview({ kind, template, settings, display }: P
       const merged = previewPdfSettings(settings);
       const opts = displayOptionsFromDraft(draft);
       const blob = kind === 'quotation'
-        ? await generateQuotationPdfBlob(draft, merged, opts)
-        : await generateInvoicePdfBlob(draft, merged, opts);
+        ? await generateQuotationPdfBlob(draft, merged, opts, policy)
+        : await generateInvoicePdfBlob(draft, merged, opts, [], policy);
       downloadBlob(
         blob,
         kind === 'quotation' ? quotationPdfFilename(draft) : invoicePdfFilename(draft),

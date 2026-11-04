@@ -1,0 +1,69 @@
+id: rekonsiliasi_kas
+version: 1
+domain: keuangan
+timeout_minutes: 30
+triggers:
+  intent: reconcile_cash
+  examples:
+    - cocokkan kas toko hari ini
+    - rekonsiliasi dompet proyek
+prerequisites:
+  - dompet_disebut
+parameters:
+  - key: selisih_maks_rupiah
+    type: integer
+    min: 0
+    max: 1000000000
+    required: true
+    default: 100000
+steps:
+  - id: cari_dompet
+    tools:
+      - find_wallet
+    min_role: manager
+    approval: false
+    terminal: false
+    on_success: lihat_saldo
+    on_needs_choice: cari_dompet
+    on_invalid: cari_dompet
+    on_conflict: cari_dompet
+  - id: lihat_saldo
+    tools:
+      - get_cash_position
+    min_role: manager
+    approval: false
+    terminal: false
+    on_success: siapkan_rekonsiliasi
+    on_needs_choice: lihat_saldo
+    on_invalid: lihat_saldo
+    on_conflict: lihat_saldo
+  - id: siapkan_rekonsiliasi
+    tools:
+      - prepare_cash_reconcile
+    min_role: manager
+    approval: false
+    terminal: false
+    on_success: simpan_rekonsiliasi
+    on_needs_choice: siapkan_rekonsiliasi
+    on_invalid: siapkan_rekonsiliasi
+    on_conflict: siapkan_rekonsiliasi
+  - id: simpan_rekonsiliasi
+    tools:
+      - commit_cash_reconcile
+    min_role: manager
+    approval: true
+    terminal: false
+    on_success: selesai
+    on_needs_choice: simpan_rekonsiliasi
+    on_invalid: simpan_rekonsiliasi
+    on_conflict: simpan_rekonsiliasi
+  - id: selesai
+    tools: []
+    min_role: manager
+    approval: false
+    terminal: true
+postconditions:
+  - kas_direkonsiliasi
+escalation:
+  after_invalid: 2
+  to: pemilik

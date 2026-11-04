@@ -1,6 +1,7 @@
 import type { EstimationFormDraft } from '../../types/estimator';
 import type { PdfDisplayOptions, PdfSettings } from '../../types/pdfSettings';
 import { buildQuotationPdfContext } from './quotationPdfContext';
+import type { PdfPlanPolicy } from './pdfPlanPolicy';
 import { buildDocumentDefinition } from './quotationPdfTemplates';
 import { initPdfMake, pdfToBlob, downloadBlob } from './pdfMakeSetup';
 
@@ -18,8 +19,9 @@ export async function generateQuotationPdfBlob(
   draft: EstimationFormDraft,
   settings: PdfSettings,
   options: PdfDisplayOptions,
+  policy?: PdfPlanPolicy,
 ): Promise<Blob> {
-  const ctx = await buildQuotationPdfContext(draft, settings, options);
+  const ctx = await buildQuotationPdfContext(draft, settings, options, policy);
   const docDef = buildDocumentDefinition(ctx);
   const pdfMake = initPdfMake();
   const pdf = pdfMake.createPdf(docDef);
@@ -31,7 +33,8 @@ export async function downloadQuotationPdf(
   settings: PdfSettings,
   options: PdfDisplayOptions,
   projectName?: string | null,
+  policy?: PdfPlanPolicy,
 ): Promise<void> {
-  const blob = await generateQuotationPdfBlob(draft, settings, options);
+  const blob = await generateQuotationPdfBlob(draft, settings, options, policy);
   downloadBlob(blob, quotationPdfFilename(draft, projectName));
 }

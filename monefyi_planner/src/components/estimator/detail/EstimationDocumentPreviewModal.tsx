@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Download, Edit3, Loader2, MessageCircle, X } from 'lucide-react';
 import type { EstimationFormDraft } from '../../../types/estimator';
 import { displayOptionsFromDraft, type PdfSettings } from '../../../types/pdfSettings';
@@ -13,6 +13,9 @@ import {
 import { downloadBlob } from '../../../lib/pdf/pdfMakeSetup';
 import { isDemoEmbedActive } from '../../../lib/demo/demoMode';
 import { loadEstimationProjectPayments, type ProjectIncome } from '../../../services/estimationPaymentService';
+import { useEntitlement } from '../../../hooks/useEntitlement';
+import { canGenerateKwitansi } from '../../../lib/entitlement';
+import { pdfPlanPolicyFromEntitlement, type PdfPlanPolicy } from '../../../lib/pdf/pdfPlanPolicy';
 
 type Props = {
   open: boolean;
@@ -37,10 +40,11 @@ async function buildBlob(
   draft: EstimationFormDraft,
   settings: PdfSettings,
   projectPayments: ProjectIncome[] = [],
+  policy?: PdfPlanPolicy,
 ): Promise<Blob> {
   const opts = displayOptionsFromDraft(draft);
-  if (type === 'penawaran') return generateQuotationPdfBlob(draft, settings, opts);
-  if (type === 'invoice') return generateInvoicePdfBlob(draft, settings, opts, projectPayments);
+  if (type === 'penawaran') return generateQuotationPdfBlob(draft, settings, opts, policy);
+  if (type === 'invoice') return generateInvoicePdfBlob(draft, settings, opts, projectPayments, policy);
   return generateKwitansiPdfBlob(buildKwitansiPdfInputFromDraft(draft, settings));
 }
 
@@ -65,6 +69,12 @@ export default function EstimationDocumentPreviewModal({
   onEdit,
   onSendWhatsApp,
 }: Props) {
+  const entitlement = useEntitlement();
+  const policy = useMemo(
+    () => pdfPlanPolicyFromEntitlement(entitlement),
+    [entitlement.isFree, entitlement.isEstimatorPro, entitlement.isPro, entitlement.isEnterprise],
+  );
+  const kwitansiLocked = type === 'kwitansi' && !canGenerateKwitansi(entitlement);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -90,7 +100,7 @@ export default function EstimationDocumentPreviewModal({
   }, [open, projectId]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || kwitansiLocked) return;
     let url: string | null = null;
     let cancelled = false;
 
@@ -98,7 +108,7 @@ export default function EstimationDocumentPreviewModal({
       setLoading(true);
       setError('');
       try {
-        const blob = await buildBlob(type, draft, settings, projectPayments);
+        const blob = await buildBlob(type, draft, settings, projectPayments, policy);
         if (cancelled) return;
         url = URL.createObjectURL(blob);
         setBlobUrl(url);
@@ -114,7 +124,7 @@ export default function EstimationDocumentPreviewModal({
       cancelled = true;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [open, type, draft, settings, projectPayments]);
+  }, [open, type, draft, settings, projectPayments, policy, kwitansiLocked]);
 
   if (!open) return null;
 
@@ -123,7 +133,8 @@ export default function EstimationDocumentPreviewModal({
 
   const handleDownload = async () => {
     try {
-      const blob = await buildBlob(type, draft, settings, projectPayments);
+      if (kwitansiLocked) return;
+      const blob = await buildBlob(type, draft, settings, projectPayments, policy);
       downloadBlob(blob, filenameFor(type, draft, projectName));
     } catch {
       /* ignore */
@@ -147,7 +158,11 @@ export default function EstimationDocumentPreviewModal({
         </div>
 
         <div className="flex-1 min-h-0 bg-slate-100 relative">
-          {loading && (
+          {kwitansiLocked ? (
+            <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-slate-600">
+              Generator kwitansi tersedia di Estimator Pro, Planner Pro, dan Enterprise.
+            </div>
+          ) : loading && (
             <div className="absolute inset-0 flex items-center justify-center">
               <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
             </div>

@@ -6,6 +6,7 @@ import {
   canAccessPlannerNavModule,
   canCreateEstimation,
   canGenerateKwitansi,
+  canUseCustomBranding,
   computeEstimatorProCheckoutAmount,
   ESTIMATOR_PRO_PRICE_IDR,
   ESTIMATOR_UPGRADE_DELTA_IDR,
@@ -121,6 +122,8 @@ describe('entitlement - canGenerateKwitansi', () => {
     expect(canGenerateKwitansi(estimatorPro)).toBe(true);
     expect(canGenerateKwitansi(pro)).toBe(true);
     expect(canGenerateKwitansi(standard)).toBe(false);
+    expect(canUseCustomBranding(estimatorPro)).toBe(true);
+    expect(canUseCustomBranding(standard)).toBe(false);
   });
 });
 

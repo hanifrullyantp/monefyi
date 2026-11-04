@@ -1,0 +1,69 @@
+id: update_progres_pekerjaan
+version: 1
+domain: proyek
+timeout_minutes: 30
+triggers:
+  intent: update_progress
+  examples:
+    - progres pasang keramik 40 persen
+    - pekerjaan atap selesai
+prerequisites:
+  - pekerjaan_disebut
+parameters:
+  - key: progres_maks
+    type: integer
+    min: 0
+    max: 100
+    required: true
+    default: 100
+steps:
+  - id: cari_proyek
+    tools:
+      - find_project
+    min_role: worker
+    approval: false
+    terminal: false
+    on_success: cari_pekerjaan
+    on_needs_choice: cari_proyek
+    on_invalid: cari_proyek
+    on_conflict: cari_proyek
+  - id: cari_pekerjaan
+    tools:
+      - find_work_item
+    min_role: worker
+    approval: false
+    terminal: false
+    on_success: siapkan_progres
+    on_needs_choice: cari_pekerjaan
+    on_invalid: cari_pekerjaan
+    on_conflict: cari_pekerjaan
+  - id: siapkan_progres
+    tools:
+      - prepare_progress_update
+    min_role: worker
+    approval: false
+    terminal: false
+    on_success: simpan_progres
+    on_needs_choice: siapkan_progres
+    on_invalid: siapkan_progres
+    on_conflict: siapkan_progres
+  - id: simpan_progres
+    tools:
+      - commit_progress_update
+    min_role: worker
+    approval: true
+    terminal: false
+    on_success: selesai
+    on_needs_choice: simpan_progres
+    on_invalid: simpan_progres
+    on_conflict: simpan_progres
+  - id: selesai
+    tools: []
+    min_role: worker
+    approval: false
+    terminal: true
+postconditions:
+  - progres_tercatat
+escalation:
+  after_invalid: 2
+  to: pemilik

@@ -24,6 +24,9 @@ import type { DocumentType } from './EstimationDocumentMenu';
 import { isDemoEmbedActive } from '../../../lib/demo/demoMode';
 import { trackDemoEvent } from '../../../lib/demo/demoAnalytics';
 import { loadEstimationProjectPayments, type ProjectIncome } from '../../../services/estimationPaymentService';
+import { useEntitlement } from '../../../hooks/useEntitlement';
+import { canGenerateKwitansi } from '../../../lib/entitlement';
+import { pdfPlanPolicyFromEntitlement } from '../../../lib/pdf/pdfPlanPolicy';
 
 type Salutation = 'Pak' | 'Bu' | 'Kak' | '';
 
@@ -60,6 +63,8 @@ export default function EstimationWhatsAppPickerModal({
   onToast,
   onShared,
 }: Props) {
+  const entitlement = useEntitlement();
+  const policy = pdfPlanPolicyFromEntitlement(entitlement);
   const [preset, setPreset] = useState<WhatsAppEstimationPreset>(initialPreset || 'follow_up');
   const [salutation, setSalutation] = useState<Salutation>(
     (templateConfig.defaultSalutation as Salutation) || 'Pak',
@@ -142,7 +147,7 @@ export default function EstimationWhatsAppPickerModal({
         return;
       }
       if (attachFile && attachDocument === 'invoice') {
-        const blob = await generateInvoicePdfBlob(draft, settings, displayOptionsFromDraft(draft), projectPayments);
+        const blob = await generateInvoicePdfBlob(draft, settings, displayOptionsFromDraft(draft), projectPayments, policy);
         const filename = invoicePdfFilename(draft);
         const file = new File([blob], filename, { type: 'application/pdf' });
         if (typeof navigator !== 'undefined' && navigator.canShare?.({ files: [file] })) {
@@ -156,7 +161,7 @@ export default function EstimationWhatsAppPickerModal({
         }
         analytics.estimationWaShared({ estimationId, shareType: 'pdf' });
       } else if (attachFile && attachment === 'pdf') {
-        const blob = await generateQuotationPdfBlob(draft, settings, displayOptionsFromDraft(draft));
+        const blob = await generateQuotationPdfBlob(draft, settings, displayOptionsFromDraft(draft), policy);
         const filename = quotationPdfFilename(draft, projectName);
         const file = new File([blob], filename, { type: 'application/pdf' });
         if (typeof navigator !== 'undefined' && navigator.canShare?.({ files: [file] })) {
@@ -170,6 +175,10 @@ export default function EstimationWhatsAppPickerModal({
         }
         analytics.estimationWaShared({ estimationId, shareType: 'pdf' });
       } else if (attachFile && attachment === 'kwitansi') {
+        if (!canGenerateKwitansi(entitlement)) {
+          onToast('Generator kwitansi hanya untuk Estimator Pro, Planner Pro, dan Enterprise.', 'error');
+          return;
+        }
         const blob = await generateKwitansiPdfBlob(buildKwitansiPdfInputFromDraft(draft, settings));
         const filename = kwitansiPdfFilename(draft);
         const file = new File([blob], filename, { type: 'application/pdf' });

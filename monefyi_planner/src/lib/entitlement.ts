@@ -105,6 +105,11 @@ export function canGenerateKwitansi(snapshot: EntitlementSnapshot): boolean {
   );
 }
 
+/** Logo, gambar tanda tangan, dan cap perusahaan. */
+export function canUseCustomBranding(snapshot: EntitlementSnapshot): boolean {
+  return canGenerateKwitansi(snapshot);
+}
+
 /** Harga checkout Estimator Pro: selisih upgrade jika sudah punya Basic. */
 export function computeEstimatorProCheckoutAmount(snapshot: EntitlementSnapshot): number {
   if (snapshot.isEstimator && snapshot.estimatorVariant === 'standard' && !snapshot.isEstimatorPro) {

@@ -1,0 +1,69 @@
+id: terima_uang_klien
+version: 1
+domain: keuangan_proyek
+timeout_minutes: 30
+triggers:
+  intent: receive_client_money
+  examples:
+    - terima DP klien rumah
+    - catat pelunasan klien
+prerequisites:
+  - proyek_dan_klien_disebut
+parameters:
+  - key: dp_minimum_persen
+    type: integer
+    min: 0
+    max: 100
+    required: true
+    default: 30
+steps:
+  - id: cari_proyek
+    tools:
+      - find_project
+    min_role: manager
+    approval: false
+    terminal: false
+    on_success: cari_klien
+    on_needs_choice: cari_proyek
+    on_invalid: cari_proyek
+    on_conflict: cari_proyek
+  - id: cari_klien
+    tools:
+      - find_party
+    min_role: manager
+    approval: false
+    terminal: false
+    on_success: siapkan_terima
+    on_needs_choice: cari_klien
+    on_invalid: cari_klien
+    on_conflict: cari_klien
+  - id: siapkan_terima
+    tools:
+      - prepare_client_receipt
+    min_role: manager
+    approval: false
+    terminal: false
+    on_success: simpan_terima
+    on_needs_choice: siapkan_terima
+    on_invalid: siapkan_terima
+    on_conflict: siapkan_terima
+  - id: simpan_terima
+    tools:
+      - commit_client_receipt
+    min_role: manager
+    approval: true
+    terminal: false
+    on_success: selesai
+    on_needs_choice: simpan_terima
+    on_invalid: simpan_terima
+    on_conflict: simpan_terima
+  - id: selesai
+    tools: []
+    min_role: manager
+    approval: false
+    terminal: true
+postconditions:
+  - uang_masuk_tercatat
+escalation:
+  after_invalid: 2
+  to: pemilik

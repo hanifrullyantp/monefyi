@@ -5,6 +5,7 @@ import { normalizePdfTemplate, type EstimationFormDraft, type PdfTemplate } from
 import type { PdfDisplayOptions, PdfSettings } from '../../types/pdfSettings';
 import type { ProjectIncome } from '../../services/estimationPaymentService';
 import { buildQuotationPdfContext, type QuotationPdfContext } from './quotationPdfContext';
+import type { PdfPlanPolicy } from './pdfPlanPolicy';
 
 export type InvoicePaymentStatus = 'paid' | 'partial' | 'pending';
 
@@ -67,11 +68,13 @@ export async function buildInvoicePdfContext(
   settings: PdfSettings,
   options: PdfDisplayOptions,
   projectPayments: ProjectIncome[] = [],
+  policy?: PdfPlanPolicy,
 ): Promise<InvoicePdfContext> {
   const quotation = await buildQuotationPdfContext(
     { ...draft, pdf_template: normalizePdfTemplate(draft.pdf_invoice_template || draft.pdf_template) },
     settings,
     options,
+    policy,
   );
 
   const items = countedEstimationItems(draft.items);

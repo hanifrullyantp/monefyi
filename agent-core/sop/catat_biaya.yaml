@@ -1,0 +1,60 @@
+id: catat_biaya
+version: 1
+domain: keuangan_proyek
+timeout_minutes: 30
+triggers:
+  intent: record_cost
+  examples:
+    - beli semen 10 sak 65000
+    - bayar tukang 1500000
+prerequisites:
+  - proyek_disebut
+parameters:
+  - key: ambang_konfirmasi_rupiah
+    type: integer
+    min: 0
+    max: 100000000000
+    required: true
+    default: 1000000
+steps:
+  - id: cari_proyek
+    tools:
+      - find_project
+    min_role: worker
+    approval: false
+    terminal: false
+    on_success: siapkan_biaya
+    on_needs_choice: cari_proyek
+    on_invalid: cari_proyek
+    on_conflict: cari_proyek
+  - id: siapkan_biaya
+    tools:
+      - prepare_record_cost
+    min_role: worker
+    approval: false
+    terminal: false
+    on_success: simpan_biaya
+    on_needs_choice: siapkan_biaya
+    on_invalid: siapkan_biaya
+    on_conflict: siapkan_biaya
+  - id: simpan_biaya
+    tools:
+      - commit_record_cost
+    min_role: worker
+    approval: true
+    terminal: false
+    on_success: selesai
+    on_needs_choice: simpan_biaya
+    on_invalid: simpan_biaya
+    on_conflict: simpan_biaya
+  - id: selesai
+    tools: []
+    min_role: worker
+    approval: false
+    terminal: true
+postconditions:
+  - biaya_tercatat
+  - nominal_sama_dengan_token
+escalation:
+  after_invalid: 2
+  to: pemilik

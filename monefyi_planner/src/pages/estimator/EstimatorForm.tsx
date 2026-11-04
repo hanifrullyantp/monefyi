@@ -35,6 +35,7 @@ import {
   canGenerateKwitansi,
   FREE_ESTIMATION_LIMIT,
 } from '../../lib/entitlement';
+import { pdfPlanPolicyFromEntitlement } from '../../lib/pdf/pdfPlanPolicy';
 import {
   loadWhatsAppTemplate,
   defaultWhatsAppTemplateConfig,
@@ -616,6 +617,7 @@ export default function EstimatorForm() {
         pdfSettings,
         displayOptionsFromDraft(draft),
         estimationProjectName,
+        pdfPlanPolicyFromEntitlement(entitlement),
       );
       analytics.estimationPdfDownloaded({
         estimationId: id,
@@ -669,6 +671,12 @@ export default function EstimatorForm() {
   const handleDocumentWhatsApp = (type: DocumentType) => {
     setDocumentPreviewOpen(false);
     if (!requireSaved()) return;
+    if (type === 'kwitansi' && !canGenerateKwitansi(entitlement)) {
+      setUpgradeFeatureName('Generator Kwitansi Pro');
+      setUpgradeTrigger('estimator_pro_feature');
+      setUpgradeOpen(true);
+      return;
+    }
     setWaAttachDocument(type);
     setWaTagihMilestone(null);
     setWaInitialPreset(type === 'penawaran' ? 'penawaran' : 'penagihan');

@@ -7,6 +7,7 @@ import type { TaggableEntity } from './commandTags';
 import { lookupMemory, lookupFuzzyMemory } from '../services/commandMemoryService';
 import { looksLikeLeadForm, parseLeadForm } from './leadFormParser';
 import { storedAmountConflicts } from '../../../packages/domain/src/validation';
+import { sopForIntent } from '../../../agent-core/src/sop';
 
 export type PipelineSource = 'memory' | 'rule' | 'fuzzy' | 'ai' | 'fallback';
 
@@ -24,6 +25,7 @@ export interface PipelineResult {
   memoryHitCount?: number;
   provider?: string;
   preprocessed: PreprocessedInput;
+  sop?: 'catat_biaya';
 }
 
 function createEmergencyFallback(
@@ -62,6 +64,11 @@ function applyTagHints(
   return boosted;
 }
 
+function withSop(result: PipelineResult): PipelineResult {
+  const sop = sopForIntent(result.intent);
+  return sop ? { ...result, sop } : result;
+}
+
 /**
  * Never-fail parsing pipeline: memory → rules/batch → fuzzy memory → AI/fallback.
  * Always returns a result suitable for the confirmation UI.
@@ -86,7 +93,7 @@ export async function runNeverFailPipeline(
           params: remembered,
           confidence: 0.95,
         });
-        return {
+        return withSop({
           ...applied,
           raw: rawInput,
           source: 'memory',
@@ -94,7 +101,7 @@ export async function runNeverFailPipeline(
           memoryId: match.memoryId,
           memoryHitCount: match.hitCount,
           preprocessed,
-        };
+        });
       }
     } catch (e) {
       console.warn('Memory lookup failed:', e);
@@ -111,7 +118,7 @@ export async function runNeverFailPipeline(
   if (leadSource) {
     const lead = parseLeadForm(leadSource, context.leadTargetHint);
     if (lead) {
-      return {
+      return withSop({
         intent: 'create_lead',
         params: lead,
         confidence: 0.93,
@@ -123,13 +130,13 @@ export async function runNeverFailPipeline(
             ? 'Form lead terdeteksi — akan dibuat proyek baru.'
             : 'Form lead terdeteksi — akan dibuat estimasi baru.',
         preprocessed,
-      };
+      });
     }
   }
 
   const batchFromRaw = parseCostText(preprocessed.original);
   if (batchFromRaw.length > 0) {
-    return {
+    return withSop({
       intent: 'record_cost_batch',
       params: { items: batchFromRaw },
       confidence: 0.9,
@@ -137,12 +144,12 @@ export async function runNeverFailPipeline(
       source: 'rule',
       layer: 2,
       preprocessed,
-    };
+    });
   }
 
   const batchFromClean = parseCostText(preprocessed.parseText);
   if (batchFromClean.length > 0) {
-    return {
+    return withSop({
       intent: 'record_cost_batch',
       params: { items: batchFromClean },
       confidence: 0.9,
@@ -150,19 +157,19 @@ export async function runNeverFailPipeline(
       source: 'rule',
       layer: 2,
       preprocessed,
-    };
+    });
   }
 
   const ruleResult = parseCommand(preprocessed.parseText);
   if (ruleResult.intent !== 'unknown' && ruleResult.confidence >= 0.75) {
     const applied = applyTagHints(preprocessed, ruleResult);
-    return {
+    return withSop({
       ...applied,
       raw: rawInput,
       source: 'rule',
       layer: 2,
       preprocessed,
-    };
+    });
   }
 
   // Layer 3 — fuzzy memory
@@ -177,7 +184,7 @@ export async function runNeverFailPipeline(
           params: remembered,
           confidence: fuzzy.confidence,
         });
-        return {
+        return withSop({
           ...applied,
           raw: rawInput,
           source: 'fuzzy',
@@ -185,7 +192,7 @@ export async function runNeverFailPipeline(
           memoryId: fuzzy.memoryId,
           reasoning: `Mirip perintah yang sering dipakai tim (${Math.round(fuzzy.similarity * 100)}% cocok).`,
           preprocessed,
-        };
+        });
       }
     } catch (e) {
       console.warn('Fuzzy memory lookup failed:', e);
@@ -198,7 +205,7 @@ export async function runNeverFailPipeline(
 
   if (aiResult && aiResult.intent !== 'unknown') {
     const applied = applyTagHints(preprocessed, aiResult);
-    return {
+    return withSop({
       ...applied,
       raw: rawInput,
       source: 'ai',
@@ -207,7 +214,7 @@ export async function runNeverFailPipeline(
       memoryId: aiResult.memoryId,
       provider: aiResult.provider,
       preprocessed,
-    };
+    });
   }
 
   // Use weak rule match if any
@@ -216,19 +223,19 @@ export async function runNeverFailPipeline(
       ...ruleResult,
       confidence: Math.max(ruleResult.confidence, 0.45),
     });
-    return {
+    return withSop({
       ...applied,
       raw: rawInput,
       source: 'rule',
       layer: 2,
       reasoning: 'Interpretasi aturan dengan confidence rendah — mohon koreksi sebelum catat.',
       preprocessed,
-    };
+    });
   }
 
-  return createEmergencyFallback(
+  return withSop(createEmergencyFallback(
     rawInput,
     preprocessed,
     aiResult?.reasoning,
-  );
+  ));
 }

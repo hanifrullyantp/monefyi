@@ -1,0 +1,59 @@
+id: buat_proyek_dari_template
+version: 1
+domain: proyek
+timeout_minutes: 30
+triggers:
+  intent: create_project_from_template
+  examples:
+    - buat proyek dari template rumah
+    - duplikasi pola proyek ruko
+prerequisites:
+  - template_disetujui
+parameters:
+  - key: anggaran_maks_rupiah
+    type: integer
+    min: 0
+    max: 100000000000
+    required: true
+    default: 5000000000
+steps:
+  - id: cari_template
+    tools:
+      - find_project_template
+    min_role: manager
+    approval: false
+    terminal: false
+    on_success: siapkan_proyek
+    on_needs_choice: cari_template
+    on_invalid: cari_template
+    on_conflict: cari_template
+  - id: siapkan_proyek
+    tools:
+      - prepare_project_from_template
+    min_role: manager
+    approval: false
+    terminal: false
+    on_success: simpan_proyek
+    on_needs_choice: siapkan_proyek
+    on_invalid: siapkan_proyek
+    on_conflict: siapkan_proyek
+  - id: simpan_proyek
+    tools:
+      - commit_project_from_template
+    min_role: manager
+    approval: true
+    terminal: false
+    on_success: selesai
+    on_needs_choice: simpan_proyek
+    on_invalid: simpan_proyek
+    on_conflict: simpan_proyek
+  - id: selesai
+    tools: []
+    min_role: manager
+    approval: false
+    terminal: true
+postconditions:
+  - proyek_terbuat
+escalation:
+  after_invalid: 2
+  to: pemilik

@@ -1,0 +1,189 @@
+[
+  {
+    "name": "find_project",
+    "description": "Cari proyek. Mengembalikan paling banyak 5 kandidat beserta skor, atau needs_choice.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Nama proyek yang disebut pengguna."
+        }
+      },
+      "required": [
+        "query"
+      ]
+    }
+  },
+  {
+    "name": "find_party",
+    "description": "Cari pihak (supplier atau pelanggan) di organisasi. Tidak mengarang id.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Nama pihak."
+        }
+      },
+      "required": [
+        "query"
+      ]
+    }
+  },
+  {
+    "name": "find_wallet",
+    "description": "Cari dompet kas, termasuk kas proyek.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Nama dompet."
+        },
+        "project_id": {
+          "type": "string",
+          "description": "Id proyek dari find_project."
+        }
+      },
+      "required": [
+        "query"
+      ]
+    }
+  },
+  {
+    "name": "get_project_cash",
+    "description": "Saldo kas satu proyek dari buku besar.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "project_id": {
+          "type": "string",
+          "description": "Id proyek dari find_project."
+        }
+      },
+      "required": [
+        "project_id"
+      ]
+    }
+  },
+  {
+    "name": "get_party_debt",
+    "description": "Hutang satu pihak, bisa dipecah per proyek.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "party_id": {
+          "type": "string",
+          "description": "Id pihak dari find_party."
+        },
+        "project_id": {
+          "type": "string",
+          "description": "Batasi ke satu proyek."
+        }
+      },
+      "required": [
+        "party_id"
+      ]
+    }
+  },
+  {
+    "name": "prepare_record_cost",
+    "description": "Kunci nominal dan tanggal biaya selama 10 menit. Belum menulis database.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "project_id": {
+          "type": "string",
+          "description": "Id proyek dari find_project."
+        },
+        "item": {
+          "type": "string",
+          "description": "Nama barang atau pekerjaan."
+        },
+        "total": {
+          "type": "integer",
+          "description": "Total rupiah bulat."
+        },
+        "qty": {
+          "type": "integer",
+          "description": "Jumlah, jika ada."
+        },
+        "unit": {
+          "type": "string",
+          "description": "Satuan tertutup dari daftar satuan biaya."
+        },
+        "entry_date": {
+          "type": "string",
+          "description": "Tanggal YYYY-MM-DD di zona organisasi."
+        }
+      },
+      "required": [
+        "project_id",
+        "item",
+        "total",
+        "entry_date"
+      ]
+    }
+  },
+  {
+    "name": "commit_record_cost",
+    "description": "Simpan biaya yang sudah disiapkan. Nominal dan tanggal tidak dikirim lagi.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "prepare_token": {
+          "type": "string",
+          "description": "Token dari prepare_record_cost."
+        },
+        "idempotency_key": {
+          "type": "string",
+          "description": "Kunci yang sama saat mencoba ulang."
+        }
+      },
+      "required": [
+        "prepare_token",
+        "idempotency_key"
+      ]
+    }
+  },
+  {
+    "name": "propose_notification",
+    "description": "Usulkan pemberitahuan. Belum mengirim.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "project_id": {
+          "type": "string",
+          "description": "Id proyek dari find_project."
+        },
+        "audience": {
+          "type": "string",
+          "description": "Penerima.",
+          "enum": [
+            "owner",
+            "manager",
+            "project_workers"
+          ]
+        },
+        "message_id": {
+          "type": "string",
+          "description": "Kode pesan, bukan kalimat bebas."
+        }
+      },
+      "required": [
+        "project_id",
+        "audience",
+        "message_id"
+      ]
+    }
+  }
+]

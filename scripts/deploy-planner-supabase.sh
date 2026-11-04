@@ -57,6 +57,7 @@ PLANNER_FUNCTIONS=(
   auth-send-email
   planner-analyze
   planner-parse-command
+  planner-flow
   planner-create-owner-org
   planner-validate-invitation
   planner-create-invitation

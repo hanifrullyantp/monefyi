@@ -1,0 +1,49 @@
+id: tinjau_proyek_berisiko
+version: 1
+domain: proyek
+timeout_minutes: 30
+triggers:
+  intent: review_risky_project
+  examples:
+    - proyek mana yang telat
+    - tinjau proyek berisiko
+prerequisites:
+  - ada_proyek_aktif
+parameters:
+  - key: spi_minimum_persen
+    type: integer
+    min: 0
+    max: 100
+    required: true
+    default: 90
+steps:
+  - id: cari_proyek
+    tools:
+      - find_project
+    min_role: worker
+    approval: false
+    terminal: false
+    on_success: hitung
+    on_needs_choice: cari_proyek
+    on_invalid: cari_proyek
+    on_conflict: cari_proyek
+  - id: hitung
+    tools:
+      - get_evm
+    min_role: worker
+    approval: false
+    terminal: false
+    on_success: selesai
+    on_needs_choice: hitung
+    on_invalid: hitung
+    on_conflict: hitung
+  - id: selesai
+    tools: []
+    min_role: worker
+    approval: false
+    terminal: true
+postconditions:
+  - tinjauan_terbaca
+escalation:
+  after_invalid: 2
+  to: pemilik

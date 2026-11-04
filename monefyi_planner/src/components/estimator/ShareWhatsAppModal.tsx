@@ -7,6 +7,8 @@ import { buildWhatsAppQuotationMessage, openWhatsAppChat } from '../../lib/whats
 import { analytics } from '../../lib/analytics/events';
 import { generateQuotationPdfBlob, quotationPdfFilename } from '../../lib/pdf/generateQuotationPdf';
 import { downloadBlob } from '../../lib/pdf/pdfMakeSetup';
+import { useEntitlement } from '../../hooks/useEntitlement';
+import { pdfPlanPolicyFromEntitlement } from '../../lib/pdf/pdfPlanPolicy';
 
 type ShareMode = 'text' | 'pdf';
 type Salutation = 'Pak' | 'Bu' | 'Kak' | '';
@@ -34,6 +36,7 @@ export default function ShareWhatsAppModal({
   onToast,
   onShared,
 }: Props) {
+  const policy = pdfPlanPolicyFromEntitlement(useEntitlement());
   const [mode, setMode] = useState<ShareMode>('text');
   const [salutation, setSalutation] = useState<Salutation>(
     (templateConfig.defaultSalutation as Salutation) || 'Pak',
@@ -97,7 +100,7 @@ export default function ShareWhatsAppModal({
           showImages: draft.pdf_show_images,
           showBank: draft.pdf_show_bank,
           showSignature: draft.pdf_show_signature,
-        });
+        }, policy);
         const filename = quotationPdfFilename(draft, projectName);
         const file = new File([blob], filename, { type: 'application/pdf' });
 

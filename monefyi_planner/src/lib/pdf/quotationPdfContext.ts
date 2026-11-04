@@ -10,6 +10,7 @@ import {
   type ResolvedPdfDisplayOptions,
 } from '../../types/pdfSettings';
 import type { Content } from 'pdfmake/interfaces';
+import { FREE_ESTIMATOR_WATERMARK, type PdfPlanPolicy } from './pdfPlanPolicy';
 
 export interface QuotationPdfImage {
   dataUri: string;
@@ -74,6 +75,7 @@ export async function buildQuotationPdfContext(
   draft: EstimationFormDraft,
   settings: PdfSettings,
   options: PdfDisplayOptions,
+  policy?: PdfPlanPolicy,
 ): Promise<QuotationPdfContext> {
   const resolved = resolvePdfDisplayOptions(options);
   const items = countedEstimationItems(draft.items);
@@ -95,11 +97,14 @@ export async function buildQuotationPdfContext(
     }
   }
 
-  const logoDataUri = settings.logo_url && resolved.showLogo ? await urlToDataUri(settings.logo_url) : null;
-  const signatureDataUri = settings.signature_url && resolved.showSignature
+  const allowBranding = policy?.allowCustomBranding !== false;
+  const logoDataUri = allowBranding && settings.logo_url && resolved.showLogo
+    ? await urlToDataUri(settings.logo_url)
+    : null;
+  const signatureDataUri = allowBranding && settings.signature_url && resolved.showSignature
     ? await urlToDataUri(settings.signature_url)
     : null;
-  const stampDataUri = settings.stamp_url && resolved.showStamp
+  const stampDataUri = allowBranding && settings.stamp_url && resolved.showStamp
     ? await urlToDataUri(settings.stamp_url)
     : null;
 
@@ -164,10 +169,9 @@ export async function buildQuotationPdfContext(
     images,
     colors: { primary, secondary, accent: settings.accent_color || '#10b981' },
     footerText: settings.footer_text || 'Terima kasih atas kepercayaan Anda',
-    // Free / tanpa logo custom: watermark Estimator di footer PDF (bukan di header brand user)
-    watermarkText:
-      (settings.watermark_text || '').trim() ||
-      (!settings.logo_url ? 'Dibuat dengan Estimator · estimator.monefyi.com' : ''),
+    watermarkText: policy?.forceWatermark
+      ? FREE_ESTIMATOR_WATERMARK
+      : (settings.watermark_text || '').trim(),
     options: resolved,
   };
 }

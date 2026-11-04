@@ -2,6 +2,7 @@ import type { EstimationFormDraft } from '../../types/estimator';
 import type { PdfDisplayOptions, PdfSettings } from '../../types/pdfSettings';
 import type { ProjectIncome } from '../../services/estimationPaymentService';
 import { buildInvoicePdfContext } from './invoicePdfContext';
+import type { PdfPlanPolicy } from './pdfPlanPolicy';
 import { buildInvoiceDoc } from './templates';
 import { initPdfMake, pdfToBlob, downloadBlob } from './pdfMakeSetup';
 
@@ -19,8 +20,9 @@ export async function generateInvoicePdfBlob(
   settings: PdfSettings,
   options: PdfDisplayOptions,
   projectPayments: ProjectIncome[] = [],
+  policy?: PdfPlanPolicy,
 ): Promise<Blob> {
-  const ctx = await buildInvoicePdfContext(draft, settings, options, projectPayments);
+  const ctx = await buildInvoicePdfContext(draft, settings, options, projectPayments, policy);
   const docDef = buildInvoiceDoc(ctx);
   const pdfMake = initPdfMake();
   const pdf = pdfMake.createPdf(docDef);
@@ -32,7 +34,8 @@ export async function downloadInvoicePdf(
   settings: PdfSettings,
   options: PdfDisplayOptions,
   projectPayments: ProjectIncome[] = [],
+  policy?: PdfPlanPolicy,
 ): Promise<void> {
-  const blob = await generateInvoicePdfBlob(draft, settings, options, projectPayments);
+  const blob = await generateInvoicePdfBlob(draft, settings, options, projectPayments, policy);
   downloadBlob(blob, invoicePdfFilename(draft));
 }

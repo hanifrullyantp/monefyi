@@ -1,0 +1,69 @@
+id: pinjam_internal
+version: 1
+domain: keuangan
+timeout_minutes: 30
+triggers:
+  intent: internal_loan
+  examples:
+    - pinjam kas proyek untuk operasional
+    - transfer internal antar dompet
+prerequisites:
+  - bukan_biaya_proyek
+parameters:
+  - key: batas_pinjaman_rupiah
+    type: integer
+    min: 0
+    max: 100000000000
+    required: true
+    default: 20000000
+steps:
+  - id: cari_asal
+    tools:
+      - find_wallet
+    min_role: manager
+    approval: false
+    terminal: false
+    on_success: cari_tujuan
+    on_needs_choice: cari_asal
+    on_invalid: cari_asal
+    on_conflict: cari_asal
+  - id: cari_tujuan
+    tools:
+      - find_wallet
+    min_role: manager
+    approval: false
+    terminal: false
+    on_success: siapkan_pinjam
+    on_needs_choice: cari_tujuan
+    on_invalid: cari_tujuan
+    on_conflict: cari_tujuan
+  - id: siapkan_pinjam
+    tools:
+      - prepare_internal_loan
+    min_role: manager
+    approval: false
+    terminal: false
+    on_success: simpan_pinjam
+    on_needs_choice: siapkan_pinjam
+    on_invalid: siapkan_pinjam
+    on_conflict: siapkan_pinjam
+  - id: simpan_pinjam
+    tools:
+      - commit_internal_loan
+    min_role: manager
+    approval: true
+    terminal: false
+    on_success: selesai
+    on_needs_choice: simpan_pinjam
+    on_invalid: simpan_pinjam
+    on_conflict: simpan_pinjam
+  - id: selesai
+    tools: []
+    min_role: manager
+    approval: false
+    terminal: true
+postconditions:
+  - pinjaman_internal_tercatat
+escalation:
+  after_invalid: 2
+  to: pemilik

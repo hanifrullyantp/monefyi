@@ -4,6 +4,7 @@ import { invoiceStatusFromAmounts, buildInvoiceNumber, buildInvoicePdfContext } 
 import { previewEstimationDraft, previewPdfSettings } from './pdfTemplatePreviewData';
 import { buildQuotationDoc, buildInvoiceDoc } from './templates';
 import { buildQuotationPdfContext } from './quotationPdfContext';
+import { FREE_ESTIMATOR_WATERMARK } from './pdfPlanPolicy';
 import { displayOptionsFromDraft } from '../../types/pdfSettings';
 import { defaultPdfSettings } from '../../services/pdfSettingsService';
 import { generateQuotationPdfBlob } from './generateQuotationPdf';
@@ -52,6 +53,14 @@ describe('quotationPdfContext - potongan tagihan', () => {
     expect(ctx.billingDiscountLabel).toMatch(/1\.000\.000/);
     expect(ctx.bonusNote).toBe('Gratis 1 bulan garansi');
     expect(ctx.grandTotal).toMatch(/Rp/);
+    expect(ctx.watermarkText).toBe('');
+    const branded = previewPdfSettings({ ...settings, logo_url: 'https://example.com/logo.png', watermark_text: null });
+    const freeCtx = await buildQuotationPdfContext(draft, branded, displayOptionsFromDraft(draft), {
+      forceWatermark: true,
+      allowCustomBranding: false,
+    });
+    expect(freeCtx.watermarkText).toBe(FREE_ESTIMATOR_WATERMARK);
+    expect(freeCtx.logoDataUri).toBeNull();
     expect(ctx.grandTotal).not.toEqual(
       (await buildQuotationPdfContext(
         { ...draft, billing_config: { ...draft.billing_config, billing_discount_amount: 0, billing_bonus_note: '' } },

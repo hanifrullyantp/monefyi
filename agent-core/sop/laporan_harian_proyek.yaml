@@ -1,0 +1,59 @@
+id: laporan_harian_proyek
+version: 1
+domain: proyek
+timeout_minutes: 30
+triggers:
+  intent: daily_log
+  examples:
+    - laporan hari ini pasang bata
+    - catat cuaca hujan pekerjaan berhenti
+prerequisites:
+  - proyek_terbuka
+parameters:
+  - key: panjang_catatan_maks
+    type: integer
+    min: 20
+    max: 2000
+    required: true
+    default: 500
+steps:
+  - id: cari_proyek
+    tools:
+      - find_project
+    min_role: worker
+    approval: false
+    terminal: false
+    on_success: siapkan_laporan
+    on_needs_choice: cari_proyek
+    on_invalid: cari_proyek
+    on_conflict: cari_proyek
+  - id: siapkan_laporan
+    tools:
+      - prepare_daily_log
+    min_role: worker
+    approval: false
+    terminal: false
+    on_success: simpan_laporan
+    on_needs_choice: siapkan_laporan
+    on_invalid: siapkan_laporan
+    on_conflict: siapkan_laporan
+  - id: simpan_laporan
+    tools:
+      - commit_daily_log
+    min_role: worker
+    approval: true
+    terminal: false
+    on_success: selesai
+    on_needs_choice: simpan_laporan
+    on_invalid: simpan_laporan
+    on_conflict: simpan_laporan
+  - id: selesai
+    tools: []
+    min_role: worker
+    approval: false
+    terminal: true
+postconditions:
+  - laporan_tersimpan
+escalation:
+  after_invalid: 2
+  to: pemilik
