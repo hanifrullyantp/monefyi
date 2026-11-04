@@ -1,9 +1,5 @@
 import { daysSinceIso, formatRupiahCompact } from './estimatorFormat';
-import {
-  PIPELINE_SUMMARY_CLOSING_STATUSES,
-  PIPELINE_SUMMARY_SURVEI_STATUSES,
-  normalizeEstimationStatus,
-} from './estimationStatus';
+import { normalizeEstimationStatus } from './estimationStatus';
 import { ESTIMATOR_RECENCY_THRESHOLDS } from './estimatorListThresholds';
 import type { Estimation, EstimationStatus } from '../types/estimator';
 
@@ -12,20 +8,19 @@ export type DashboardListFilter = 'all' | 'active' | 'lead' | 'stale';
 export type RecencyTone = 'fresh' | 'aging' | 'stale';
 export type DashboardPill = 'terbaru' | 'active' | 'lead' | null;
 
-/**
- * Active = bucket "Proyek Berjalan" yang sudah ada:
- * closing, proses, finishing, selesai.
- */
+/** Active di kartu dashboard: closing sampai selesai. */
 export const DASHBOARD_ACTIVE_STATUSES: EstimationStatus[] = [
-  ...PIPELINE_SUMMARY_CLOSING_STATUSES,
+  'closing',
+  'proses',
+  'finishing',
+  'selesai',
 ];
 
-/**
- * Lead = Lead Baru (wa) + Penawaran (survei, penawaran).
- */
+/** Lead di kartu dashboard: masih di pipeline penjualan. */
 export const DASHBOARD_LEAD_STATUSES: EstimationStatus[] = [
   'wa',
-  ...PIPELINE_SUMMARY_SURVEI_STATUSES,
+  'survei',
+  'penawaran',
 ];
 
 export type EstimatorDashboardStats = {

@@ -8,6 +8,7 @@ import {
   getDashboardBucket,
   getEstimatorDashboardStats,
   isEstimationArchived,
+  matchesDashboardFilter,
   isEstimationStale,
   recencyToneFromDays,
   sortEstimationsForDashboard,
@@ -36,7 +37,7 @@ function daysAgo(days: number): string {
 }
 
 describe('estimatorListDashboard - status mapping - Active/Lead/Arsip', () => {
-  it('maps closing pipeline to Active and wa/survei/penawaran to Lead', () => {
+  it('maps closing/proses/finishing/selesai to Active and wa/survei/penawaran to Lead', () => {
     expect(getDashboardBucket('closing')).toBe('active');
     expect(getDashboardBucket('proses')).toBe('active');
     expect(getDashboardBucket('finishing')).toBe('active');
@@ -52,6 +53,13 @@ describe('estimatorListDashboard - status mapping - Active/Lead/Arsip', () => {
     expect(isEstimationArchived('rejected')).toBe(true);
     expect(isEstimationArchived('converted')).toBe(true);
     expect(isEstimationArchived('wa')).toBe(false);
+  });
+
+  it('hides archived rows from the default list filter', () => {
+    const open = row({ id: '1', status: 'wa' });
+    const archived = row({ id: '2', status: 'rejected' });
+    expect(matchesDashboardFilter(open, 'all')).toBe(true);
+    expect(matchesDashboardFilter(archived, 'all')).toBe(false);
   });
 });
 
@@ -98,7 +106,7 @@ describe('estimatorListDashboard - getEstimatorDashboardStats - client aggregate
   it('counts new/open/active/lead/stale from loaded rows', () => {
     const rows = [
       row({ id: '1', status: 'wa', created_at: daysAgo(5), updated_at: daysAgo(5), total_selling_price: 10_000_000 }),
-      row({ id: '2', status: 'closing', created_at: daysAgo(10), updated_at: daysAgo(10), total_selling_price: 76_000_000 }),
+      row({ id: '2', status: 'proses', created_at: daysAgo(10), updated_at: daysAgo(10), total_selling_price: 76_000_000 }),
       row({ id: '3', status: 'penawaran', created_at: daysAgo(40), updated_at: daysAgo(70), total_selling_price: 20_000_000 }),
       row({ id: '4', status: 'rejected', created_at: daysAgo(2), updated_at: daysAgo(2), total_selling_price: 99_000_000 }),
     ];
@@ -116,7 +124,7 @@ describe('estimatorListDashboard - getEstimatorDashboardStats - client aggregate
 describe('estimatorListDashboard - sortEstimationsForDashboard - newest then Active then rest', () => {
   it('pins newest created first, then Active, then remaining by created_at', () => {
     const newestLead = row({ id: 'new', status: 'wa', created_at: daysAgo(1), title: 'Newest' });
-    const olderActive = row({ id: 'a1', status: 'closing', created_at: daysAgo(20) });
+    const olderActive = row({ id: 'a1', status: 'finishing', created_at: daysAgo(20) });
     const newerActive = row({ id: 'a2', status: 'proses', created_at: daysAgo(8) });
     const olderLead = row({ id: 'l1', status: 'penawaran', created_at: daysAgo(12) });
 

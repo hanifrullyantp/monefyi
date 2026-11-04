@@ -469,14 +469,14 @@ export default function EstimatorListPage() {
 
   const handleArchive = async (est: Estimation) => {
     if (isEstimationArchived(est.status)) return;
-    if (!window.confirm(`Arsipkan "${est.title || 'estimasi ini'}"? Estimasi akan pindah ke arsip.`)) return;
+    if (!window.confirm(`Arsipkan "${est.title || 'estimasi ini'}"? Estimasi disembunyikan dari daftar dan hanya tampil di filter Arsip.`)) return;
     await handleStatusChange(est.id, 'rejected');
   };
 
   const handleArchiveStale = async () => {
     const stale = rows.filter(r => isEstimationStale(r));
     if (stale.length === 0) return;
-    if (!window.confirm(`Arsipkan ${stale.length} estimasi mandek? Estimasi akan pindah ke arsip.`)) return;
+    if (!window.confirm(`Arsipkan ${stale.length} estimasi mandek? Estimasi disembunyikan dari daftar dan hanya tampil di filter Arsip.`)) return;
     setArchiveBusy(true);
     try {
       for (const est of stale) {
