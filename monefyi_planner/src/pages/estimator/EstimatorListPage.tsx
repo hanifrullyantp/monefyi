@@ -17,6 +17,8 @@ import EstimatorListDashboard from '../../components/estimator/list/EstimatorLis
 import EstimatorListToolbar from '../../components/estimator/list/EstimatorListToolbar';
 import EstimatorListOptionsSheet from '../../components/estimator/list/EstimatorListOptionsSheet';
 import EstimatorStatusPickerSheet from '../../components/estimator/list/EstimatorStatusPickerSheet';
+import EstimatorBulkStatusPickerSheet from '../../components/estimator/list/EstimatorBulkStatusPickerSheet';
+import EstimatorListBulkActionBar from '../../components/estimator/list/EstimatorListBulkActionBar';
 import EstimationListCard from '../../components/estimator/list/EstimationListCard';
 import EstimationListSkeleton from '../../components/estimator/list/EstimationListSkeleton';
 import EstimatorListEmpty from '../../components/estimator/list/EstimatorListEmpty';
@@ -190,6 +192,10 @@ export default function EstimatorListPage() {
   const [upgradeFeatureName, setUpgradeFeatureName] = useState('Generator Kwitansi Pro');
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
   const [archiveBusy, setArchiveBusy] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkStatusOpen, setBulkStatusOpen] = useState(false);
 
   const setListView = (mode: EstimationListViewMode) => {
     setListViewMode(mode);
@@ -313,6 +319,54 @@ export default function EstimatorListPage() {
     setVisibleCount(ESTIMATOR_LIST_PAGE_SIZE);
     setExpandedId(null);
   }, [dashboardFilter, statusFilter, pipelineTab, debouncedSearch, sortKey, groupMode]);
+
+  useEffect(() => {
+    if (listViewMode === 'kanban' && selectionMode) {
+      setSelectionMode(false);
+      setSelectedIds(new Set());
+    }
+  }, [listViewMode, selectionMode]);
+
+  const selectableRows = useMemo(
+    () => sortedRows.filter(r => normalizeEstimationStatus(r.status) !== 'converted'),
+    [sortedRows],
+  );
+
+  const selectedCount = useMemo(
+    () => selectableRows.filter(r => selectedIds.has(r.id)).length,
+    [selectableRows, selectedIds],
+  );
+
+  const toggleSelectionMode = () => {
+    if (listViewMode === 'kanban') {
+      showToast('Checklist hanya di tampilan list', 'info');
+      return;
+    }
+    setSelectionMode(prev => {
+      if (prev) setSelectedIds(new Set());
+      return !prev;
+    });
+    setExpandedId(null);
+  };
+
+  const toggleRowSelected = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSelectAllVisible = () => {
+    const allIds = selectableRows.map(r => r.id);
+    const allSelected = allIds.length > 0 && allIds.every(id => selectedIds.has(id));
+    if (allSelected) {
+      setSelectedIds(new Set());
+      return;
+    }
+    setSelectedIds(new Set(allIds));
+  };
 
   const clearListFilter = () => {
     setDashboardFilter('all');
@@ -473,6 +527,57 @@ export default function EstimatorListPage() {
     await handleStatusChange(est.id, 'rejected');
   };
 
+  const bulkSelectedEstimations = useCallback(() => {
+    return rows.filter(r => selectedIds.has(r.id) && normalizeEstimationStatus(r.status) !== 'converted');
+  }, [rows, selectedIds]);
+
+  const handleBulkArchive = async () => {
+    const targets = bulkSelectedEstimations().filter(r => !isEstimationArchived(r.status));
+    if (targets.length === 0) {
+      showToast('Tidak ada estimasi yang bisa diarsipkan', 'info');
+      return;
+    }
+    if (!window.confirm(`Arsipkan ${targets.length} estimasi terpilih?`)) return;
+    setBulkBusy(true);
+    try {
+      for (const est of targets) {
+        await updateEstimationStatus(est.id, 'rejected');
+      }
+      showToast(`${targets.length} estimasi diarsipkan`, 'success');
+      setSelectedIds(new Set());
+      setSelectionMode(false);
+      void load();
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal mengarsipkan', 'error');
+      void load();
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const handleBulkStatusPick = async (next: EstimationWorkflowStatus | 'rejected') => {
+    const targets = bulkSelectedEstimations();
+    if (targets.length === 0) return;
+    setBulkBusy(true);
+    setBulkStatusOpen(false);
+    try {
+      for (const est of targets) {
+        const prev = normalizeEstimationStatus(est.status);
+        if (prev === next || prev === 'converted') continue;
+        await updateEstimationStatus(est.id, next);
+      }
+      showToast(`Status ${targets.length} estimasi diubah ke ${ESTIMATION_STATUS_LABEL[next]}`, 'success');
+      setSelectedIds(new Set());
+      setSelectionMode(false);
+      void load();
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal mengubah status', 'error');
+      void load();
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   const handleArchiveStale = async () => {
     const stale = rows.filter(r => isEstimationStale(r));
     if (stale.length === 0) return;
@@ -510,9 +615,12 @@ export default function EstimatorListPage() {
       key={est.id}
       estimation={est}
       newestId={newestId}
-      expanded={expandedId === est.id}
+      expanded={!selectionMode && expandedId === est.id}
       onToggleExpand={() => setExpandedId(prev => (prev === est.id ? null : est.id))}
       onOpen={() => navigate(`/app/estimator/${est.id}`)}
+      selectionMode={selectionMode}
+      selected={selectedIds.has(est.id)}
+      onToggleSelect={() => toggleRowSelected(est.id)}
       onDuplicate={() => handleDuplicate(est.id)}
       onDelete={() => handleDelete(est.id, est.title)}
       onConvert={() => handleConvert(est.id)}
@@ -618,6 +726,9 @@ export default function EstimatorListPage() {
         staleArchiveCount={dashboardFilter === 'stale' ? dashboardStats.staleCount : 0}
         onArchiveStale={() => { void handleArchiveStale(); }}
         archiveStaleBusy={archiveBusy}
+        selectionMode={selectionMode}
+        onToggleSelectionMode={toggleSelectionMode}
+        selectionModeDisabled={listViewMode === 'kanban'}
       />
 
       {loading ? (
@@ -689,6 +800,29 @@ export default function EstimatorListPage() {
         onRefresh={() => void load()}
         onOpenPricelist={() => navigate('/app/estimator/pricelist')}
         onOpenSettings={() => navigate('/app/estimator/settings')}
+      />
+
+      {selectionMode && (
+        <EstimatorListBulkActionBar
+          selectedCount={selectedCount}
+          selectableCount={selectableRows.length}
+          busy={bulkBusy}
+          onCancel={() => {
+            setSelectionMode(false);
+            setSelectedIds(new Set());
+          }}
+          onSelectAll={handleSelectAllVisible}
+          onArchive={() => { void handleBulkArchive(); }}
+          onChangeStatus={() => setBulkStatusOpen(true)}
+        />
+      )}
+
+      <EstimatorBulkStatusPickerSheet
+        open={bulkStatusOpen}
+        count={selectedCount}
+        busy={bulkBusy}
+        onClose={() => setBulkStatusOpen(false)}
+        onPick={next => { void handleBulkStatusPick(next); }}
       />
 
       <EstimatorStatusPickerSheet

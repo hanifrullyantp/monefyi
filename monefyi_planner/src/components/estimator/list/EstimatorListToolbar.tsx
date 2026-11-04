@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowUpDown, ListFilter, Search, X } from 'lucide-react';
+import { ArrowUpDown, ListChecks, ListFilter, Search, X } from 'lucide-react';
 
 type Props = {
   title: string;
@@ -16,23 +16,36 @@ type Props = {
   staleArchiveCount?: number;
   onArchiveStale?: () => void;
   archiveStaleBusy?: boolean;
+  selectionMode?: boolean;
+  onToggleSelectionMode?: () => void;
+  selectionModeDisabled?: boolean;
 };
 
 function IconBtn({
   label,
   onClick,
+  disabled,
+  active,
   children,
 }: {
   label: string;
   onClick: () => void;
+  disabled?: boolean;
+  active?: boolean;
   children: ReactNode;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       aria-label={label}
-      className="inline-flex items-center justify-center min-h-11 min-w-11 rounded-full bg-white border border-[#E5EAE8] text-slate-600 active:scale-95 transition-transform shrink-0"
+      aria-pressed={active}
+      className={`inline-flex items-center justify-center min-h-11 min-w-11 rounded-full border active:scale-95 transition-transform shrink-0 disabled:opacity-40 ${
+        active
+          ? 'bg-emerald-600 border-emerald-600 text-white'
+          : 'bg-white border-[#E5EAE8] text-slate-600'
+      }`}
     >
       {children}
     </button>
@@ -54,7 +67,21 @@ export default function EstimatorListToolbar({
   staleArchiveCount = 0,
   onArchiveStale,
   archiveStaleBusy = false,
+  selectionMode = false,
+  onToggleSelectionMode,
+  selectionModeDisabled = false,
 }: Props) {
+  const checklistBtn = onToggleSelectionMode ? (
+    <IconBtn
+      label={selectionMode ? 'Keluar checklist' : 'Mode checklist'}
+      onClick={onToggleSelectionMode}
+      disabled={selectionModeDisabled}
+      active={selectionMode}
+    >
+      <ListChecks size={16} />
+    </IconBtn>
+  ) : null;
+
   return (
     <div className="px-4 pt-4 pb-2 space-y-2">
       <div className="flex items-center gap-2 min-h-11">
@@ -69,6 +96,7 @@ export default function EstimatorListToolbar({
               className="bg-transparent outline-none flex-1 text-sm text-slate-900 placeholder:text-slate-400 min-w-0"
               aria-label="Cari estimasi"
             />
+            {checklistBtn}
             <button
               type="button"
               onClick={onSearchClose}
@@ -99,6 +127,7 @@ export default function EstimatorListToolbar({
             <IconBtn label="Cari estimasi" onClick={onSearchOpen}>
               <Search size={16} />
             </IconBtn>
+            {checklistBtn}
             <IconBtn label="Filter estimasi" onClick={onOpenFilter}>
               <ListFilter size={16} />
             </IconBtn>

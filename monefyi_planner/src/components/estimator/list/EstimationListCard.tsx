@@ -31,6 +31,9 @@ type Props = {
   archiveBusy?: boolean;
   archiveDisabled?: boolean;
   statusDisabled?: boolean;
+  selectionMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 };
 
 const PILL_CLASS: Record<Exclude<DashboardPill, null>, string> = {
@@ -87,6 +90,9 @@ export default function EstimationListCard({
   archiveBusy = false,
   archiveDisabled = false,
   statusDisabled = false,
+  selectionMode = false,
+  selected = false,
+  onToggleSelect,
 }: Props) {
   const status = normalizeEstimationStatus(est.status);
   const isConverted = status === 'converted';
@@ -97,15 +103,42 @@ export default function EstimationListCard({
   const pill = dashboardPillForRow(est, newestId);
   const client = est.customer_name?.trim() || 'Tanpa klien';
 
+  const handlePrimaryClick = () => {
+    if (selectionMode && onToggleSelect) {
+      onToggleSelect();
+      return;
+    }
+    onOpen();
+  };
+
   return (
-    <article className="bg-white rounded-[14px] border border-[#E5EAE8] overflow-hidden">
+    <article
+      className={`bg-white rounded-[14px] border overflow-hidden ${
+        selectionMode && selected ? 'border-emerald-400 ring-1 ring-emerald-200' : 'border-[#E5EAE8]'
+      }`}
+    >
       <div className="flex items-stretch">
+        {selectionMode && (
+          <label
+            className="shrink-0 flex items-center justify-center min-w-12 px-1"
+            onClick={stop}
+          >
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={() => onToggleSelect?.()}
+              disabled={statusDisabled}
+              className="w-5 h-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 disabled:opacity-40"
+              aria-label={`Pilih ${est.title || est.code}`}
+            />
+          </label>
+        )}
         <div className={`w-1 shrink-0 ${TONE_BAR[tone]}`} aria-hidden />
         <div
           role="button"
           tabIndex={0}
-          onClick={onOpen}
-          onKeyDown={e => cardKeyDown(e, onOpen)}
+          onClick={handlePrimaryClick}
+          onKeyDown={e => cardKeyDown(e, handlePrimaryClick)}
           className="flex-1 min-w-0 min-h-11 px-3 py-3 text-left cursor-pointer"
         >
           <div className="flex items-start justify-between gap-2">
@@ -134,10 +167,18 @@ export default function EstimationListCard({
           type="button"
           onClick={e => {
             stop(e);
+            if (selectionMode) {
+              onToggleSelect?.();
+              return;
+            }
             onToggleExpand();
           }}
           aria-expanded={expanded}
-          aria-label={expanded ? 'Tutup detail estimasi' : 'Buka detail estimasi'}
+          aria-label={
+            selectionMode
+              ? (selected ? 'Batalkan pilihan' : 'Pilih estimasi')
+              : (expanded ? 'Tutup detail estimasi' : 'Buka detail estimasi')
+          }
           className="shrink-0 inline-flex items-center justify-center min-h-11 min-w-11 text-slate-400"
         >
           <ChevronDown
