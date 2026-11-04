@@ -460,7 +460,7 @@ Jika iya, saya jadwalkan survei pekan ini."`,
     subtitle: "100 ORGANISASI PERTAMA — HARGA LAUNCH",
     totalSlots: 100,
     usedSlots: 0,
-    normalPrice: "Rp 99.000",
+    normalPrice: "Rp 93.000",
     launchPrice: "Rp 93.000",
     bonusText: "Akses selamanya · estimasi unlimited · PDF penawaran standar",
     limitedBadge: "Harga sekali bayar · Tanpa biaya bulanan",
@@ -588,7 +588,7 @@ Jika iya, saya jadwalkan survei pekan ini."`,
     miniQuestions: [
       {
         question: "Bisa upgrade dari Standard ke Pro?",
-        answer: "Ya. Dari menu Upgrade di aplikasi, bayar selisih ke Rp 199.000 (mis. Rp 106.000 jika Standard dibeli promo Rp 93.000, atau Rp 100.000 jika harga normal Rp 99.000).",
+        answer: "Ya. Dari menu Upgrade di aplikasi, bayar selisih ke Rp 199.000 (mis. Rp 106.000 jika Anda sudah punya Standard Rp 93.000).",
       },
       {
         question: "Apakah database material bisa saya ubah sendiri?",

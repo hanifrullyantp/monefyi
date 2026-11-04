@@ -76,7 +76,7 @@ export const HERO_VARIANTS: Record<HeroVariantId, HeroVariantCopy> = {
     id: "H0",
     eyebrow: "Untuk kontraktor, interior & kitchen set",
     headline: 'Bisa Buat Estimasi Project Dalam 1 Menit, Mau?',
-    subheadline: "Coba gratis 3 estimasi. Standard Rp 99.000 · Pro Rp 199.000 — sekali bayar.",
+    subheadline: "Coba gratis 3 estimasi. Standard Rp 93.000 · Pro Rp 199.000 — sekali bayar.",
     points: [
       "Saring calon klien di WA, survei hanya yang serius",
       "Harga muncul dalam 1 menit, tanpa kalkulator",

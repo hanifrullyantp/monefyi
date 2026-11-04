@@ -258,17 +258,22 @@
     'Kirim template penawaran ke WhatsApp customer dengan sekali klik'
   ];
 
-  function pos(el){
+  function pos(el, ax, ay){
+    ax=ax==null?0.5:ax; ay=ay==null?0.5:ay;
     const s=stage.getBoundingClientRect(), r=el.getBoundingClientRect();
-    return {x:r.left-s.left+r.width/2, y:r.top-s.top+r.height/2};
+    if(s.width<=0||s.height<=0) return {x:0,y:0};
+    const sx=stage.offsetWidth/s.width, sy=stage.offsetHeight/s.height;
+    return {x:(r.left-s.left+r.width*ax)*sx, y:(r.top-s.top+r.height*ay)*sy};
   }
-  async function move(el,ms=750){
-    const p=pos(el);
+  async function move(el,ms,ax,ay){
+    ms=ms==null?750:ms;
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    const p=pos(el,ax,ay);
     cur.style.left=p.x+'px'; cur.style.top=p.y+'px';
     await wait(ms+80);
   }
-  async function tap(el){
-    await move(el);
+  async function tap(el,ax,ay){
+    await move(el,750,ax,ay);
     cur.classList.add('press'); el.classList.add('pulse');
     await wait(160);
     cur.classList.remove('press');
@@ -313,8 +318,8 @@
       reset(); await wait(900);
       caption(0); await wait(2200);
 
-      await tap(q('#card-paris'));
-      show('s-detail'); caption(1); await wait(1900);
+      await tap(q('#card-paris'),0.55,0.55);
+      show('s-detail'); await wait(480); caption(1); await wait(1900);
 
       await tap(q('#btn-tambah'));
       sheet(true); await wait(650);
@@ -322,7 +327,7 @@
       await tap(q('#grp-kitchen'));
       pane('p-items'); caption(2); await wait(900);
 
-      await tap(q('#cb-bawah-row'));
+      await tap(q('#cb-bawah'),0.5,0.5);
       q('#cb-bawah').classList.add('on');
       q('#cb-bawah-row').classList.add('hl');
       const b=q('#btn-add'); b.textContent='Tambah ke estimasi (1)'; b.classList.add('on');

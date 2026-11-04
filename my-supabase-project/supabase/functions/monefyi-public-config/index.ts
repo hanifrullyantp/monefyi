@@ -41,7 +41,7 @@ serve(async (req) => {
       remaining: 100,
       promoActive: true,
       promoPrice: 93000,
-      listPrice: 99000,
+      listPrice: 93000,
     };
     try {
       const { data: promoRaw } = await sb.rpc("get_estimator_standard_launch_promo");

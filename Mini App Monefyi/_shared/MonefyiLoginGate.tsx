@@ -67,8 +67,8 @@ export function MonefyiLoginGate({ appName, children }: MonefyiLoginGateProps) {
               </div>
               <p className="text-sm text-slate-400 leading-relaxed">
                 Email Anda sudah login, tapi belum punya akses produk Monefyi.
-                Daftar trial gratis atau ambil paket Lifetime untuk membuka semua
-                bonus apps Lite.
+                Daftar trial gratis, beli Estimator Standard, atau paket Lifetime untuk
+                membuka bonus apps Lite.
               </p>
               <div className="flex flex-col gap-2">
                 <a

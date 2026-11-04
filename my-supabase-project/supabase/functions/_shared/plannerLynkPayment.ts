@@ -166,7 +166,7 @@ export function mapProductFromPayload(
   }
 
   const promoPrice = Number(pickEnv("ESTIMATOR_LAUNCH_PROMO_PRICE", "93000")) || 93000;
-  const stdPrice = Number(pickEnv("ESTIMATOR_STANDARD_PRICE", "99000")) || 99000;
+  const stdPrice = Number(pickEnv("ESTIMATOR_STANDARD_PRICE", "93000")) || 93000;
   const proPrice = Number(pickEnv("ESTIMATOR_PRO_PRICE", "199000")) || 199000;
   if (amount === promoPrice || amount === stdPrice) {
     return { product: "estimator_standard", tier: "estimator", variant: "standard", label: "Monefyi Estimator Standard" };

@@ -1,5 +1,6 @@
-import { Sparkles, X } from 'lucide-react';
+import { Gift, Sparkles, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { bonusAppsHubUrl } from '../../lib/bonusAppsHub';
 
 const STORAGE_KEY = 'monefyi:post-purchase-banner';
 
@@ -63,6 +64,13 @@ export default function PostPurchaseBanner({ product, onDismiss }: Props) {
             >
               Setup Pricelist
             </button>
+            <a
+              href={bonusAppsHubUrl()}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-200 text-amber-900 bg-amber-50 hover:bg-amber-100"
+            >
+              <Gift className="w-3.5 h-3.5" aria-hidden />
+              Bonus apps
+            </a>
             <button
               type="button"
               onClick={() => navigate('/app/estimator/new')}

@@ -19,12 +19,29 @@ export async function signOutMonefyi() {
 }
 
 export async function userHasProduct(product: MonefyiProduct = 'monefyi'): Promise<boolean> {
+  if (product === 'monefyi') {
+    return userHasBonusAppAccess();
+  }
   const { data, error } = await getSupabase().rpc('user_has_product', {
     p_product: product,
   });
   if (error) {
     console.error('user_has_product', error.message);
     return false;
+  }
+  return data === true;
+}
+
+/** Pembeli Lifetime monefyi atau Estimator/Planner berbayar — gate mini app bonus Lite. */
+export async function userHasBonusAppAccess(): Promise<boolean> {
+  const { data, error } = await getSupabase().rpc('user_has_bonus_app_access');
+  if (error) {
+    console.error('user_has_bonus_app_access', error.message);
+    const { data: legacy, error: legacyErr } = await getSupabase().rpc('user_has_product', {
+      p_product: 'monefyi',
+    });
+    if (legacyErr) return false;
+    return legacy === true;
   }
   return data === true;
 }

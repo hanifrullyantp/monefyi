@@ -6,6 +6,9 @@
 export const MONEFYI_APP_URL = 'https://monefyi.com/app/';
 export const MONEFYI_HOME_URL = 'https://monefyi.com';
 export const MONEFYI_TRIAL_URL = 'https://monefyi.com/#pricing';
+/** Etalase bonus (Planner LP / estimator domain). */
+export const MONEFYI_BONUS_HUB_URL =
+  process.env.NEXT_PUBLIC_MONEFYI_BONUS_HUB_URL || 'https://estimator.monefyi.com/bonus';
 
 export function getSupabaseConfig() {
   return {

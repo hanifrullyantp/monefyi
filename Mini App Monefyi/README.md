@@ -46,12 +46,30 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 Default fallback = sama dengan `app/js/config.js`.
 
+## Deploy path (production)
+
+| App | Folder | `NEXT_PUBLIC_BASE_PATH` | URL contoh |
+|-----|--------|-------------------------|------------|
+| Budget Planner | `budget-planner/` | `/bonus/budget` | `https://monefyi.com/bonus/budget/` |
+| Debt Free | `debt-free-planner/` | `/bonus/debt-free` | … |
+| Bagi Hasil | `Bagi Hasil/` | `/bonus/bagi-hasil` | … |
+| Kalkulator Gaji | `Kalkulator Gaji/` | `/bonus/salary` | … |
+
+Etalase pembeli Estimator/Planner: `https://estimator.monefyi.com/bonus` (PlannerLP2).
+
+## Akses (auth)
+
+Login Supabase sama dengan aplikasi Estimator. Gate mini app memakai RPC `user_has_bonus_app_access` (pembeli **Estimator berbayar**, **Planner**, atau **Lifetime monefyi**).
+
 ## Dev
 
 ```bash
+./scripts/sync-monefyi-shared.sh   # setelah edit _shared/
 cd "Mini App Monefyi/Kalkulator Gaji"  # atau app lain
 npm install
 npm run dev
 ```
 
-Buka app → layar login Monefyi → masuk dengan email/password akun yang sudah punya entitlement `monefyi` (trial atau Lifetime).
+Untuk dev lokal tanpa basePath, set `NEXT_PUBLIC_BASE_PATH=` kosong di `.env.local`.
+
+Buka app → login → akun dengan org Estimator **sudah bayar** atau entitlement `monefyi`.

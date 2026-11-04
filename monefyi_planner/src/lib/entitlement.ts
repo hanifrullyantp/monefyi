@@ -1,8 +1,8 @@
 import type { EntitlementSnapshot, EntitlementPreviewMode, OrgSubscriptionRow, SubscriptionTier } from '../types/entitlement';
 import { isPlatformAdmin } from '../services/adminService';
 
-/** Harga normal Standard setelah kuota promo habis. */
-export const ESTIMATOR_LIST_PRICE_IDR = 99_000;
+/** Harga Standard (checkout & upgrade credit). */
+export const ESTIMATOR_LIST_PRICE_IDR = 93_000;
 /** Launch: 100 org pertama. */
 export const ESTIMATOR_LAUNCH_PROMO_PRICE_IDR = 93_000;
 export const ESTIMATOR_LAUNCH_PROMO_ORG_LIMIT = 100;

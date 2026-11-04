@@ -4,7 +4,10 @@ import { useEffect, useRef } from "react";
 import { ChevronLeft, FileText, MessageCircle } from "lucide-react";
 import { PhoneMockup } from "@/components/landing/PhoneMockup";
 import { trackEvent } from "@/lib/analytics/events";
+import { afterLayoutPaint, tapPointInStage } from "@/lib/landing/heroDemoCursor";
 import "@/styles/hero-estimator-demo.css";
+
+type TapAnchor = { x: number; y: number };
 
 const TOTAL_START = 63_145_000;
 const TOTAL_END = 86_055_000;
@@ -42,25 +45,20 @@ export function HeroEstimatorDemoAnimation({ pulseToken = 0 }: HeroEstimatorDemo
     const stage = q(".hed-scroll");
     if (!stage) return;
 
-    const pos = (el: HTMLElement) => {
-      const s = stage.getBoundingClientRect();
-      const r = el.getBoundingClientRect();
-      return { x: r.left - s.left + r.width / 2, y: r.top - s.top + r.height / 2 };
-    };
-
     const cur = q("#hed-cursor");
     let cancelled = false;
 
-    const move = async (el: HTMLElement, ms = 750) => {
+    const move = async (el: HTMLElement, ms = 750, anchor: TapAnchor = { x: 0.5, y: 0.5 }) => {
       if (!cur) return;
-      const p = pos(el);
+      await afterLayoutPaint();
+      const p = tapPointInStage(stage, el, anchor);
       cur.style.left = `${p.x}px`;
       cur.style.top = `${p.y}px`;
       await wait(ms + 80);
     };
 
-    const tap = async (el: HTMLElement) => {
-      await move(el);
+    const tap = async (el: HTMLElement, anchor?: TapAnchor) => {
+      await move(el, 750, anchor);
       cur?.classList.add("press");
       el.classList.add("hed-pulse");
       await wait(160);
@@ -152,8 +150,9 @@ export function HeroEstimatorDemoAnimation({ pulseToken = 0 }: HeroEstimatorDemo
         await wait(2200);
 
         const card = q("#hed-card-paris");
-        if (card) await tap(card);
+        if (card) await tap(card, { x: 0.55, y: 0.55 });
         show("hed-s-detail");
+        await wait(480);
         caption(1);
         await wait(1900);
 
@@ -168,9 +167,10 @@ export function HeroEstimatorDemoAnimation({ pulseToken = 0 }: HeroEstimatorDemo
         caption(2);
         await wait(900);
 
+        const cbBawah = q("#hed-cb-bawah");
         const row = q("#hed-cb-bawah-row");
-        if (row) await tap(row);
-        q("#hed-cb-bawah")?.classList.add("on");
+        if (cbBawah) await tap(cbBawah, { x: 0.5, y: 0.5 });
+        cbBawah?.classList.add("on");
         row?.classList.add("hl");
         const addBtn = q("#hed-btn-add");
         if (addBtn) {

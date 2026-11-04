@@ -12,7 +12,7 @@ describe('estimatorLaunchPromo', () => {
       limit: 100,
       promoActive: true,
       promoPrice: 93000,
-      listPrice: 99000,
+      listPrice: 93000,
     });
     expect(resolveEstimatorStandardCheckoutAmount(active)).toBe(93000);
 
@@ -21,9 +21,9 @@ describe('estimatorLaunchPromo', () => {
       limit: 100,
       promoActive: false,
       promoPrice: 93000,
-      listPrice: 99000,
+      listPrice: 93000,
     });
-    expect(resolveEstimatorStandardCheckoutAmount(exhausted)).toBe(99000);
+    expect(resolveEstimatorStandardCheckoutAmount(exhausted)).toBe(93000);
   });
 
   it('warns admin when remaining slots are low', () => {
@@ -32,7 +32,7 @@ describe('estimatorLaunchPromo', () => {
       limit: 100,
       promoActive: true,
       promoPrice: 93000,
-      listPrice: 99000,
+      listPrice: 93000,
     });
     expect(status?.remaining).toBe(14);
     expect(launchPromoAdminSeverity(status!)).toBe('info');

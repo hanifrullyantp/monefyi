@@ -68,7 +68,7 @@ export default function RelinkPopupAdminPage() {
           ["title", "Judul popup"],
           ["body", "Deskripsi"],
           ["freeCtaText", "Teks tombol coba gratis"],
-          ["purchaseCtaText", "Teks tombol beli (Standard Rp 99.000)"],
+          ["purchaseCtaText", "Teks tombol beli (Standard Rp 93.000)"],
         ] as const).map(([field, label]) => (
           <label key={field} className="block">
             <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">{label}</span>

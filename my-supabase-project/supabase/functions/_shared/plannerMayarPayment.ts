@@ -224,7 +224,7 @@ export function resolveMayarCheckoutAmount(
   amountOverride?: number,
 ): number {
   if (amountOverride != null && amountOverride > 0) return amountOverride;
-  const std = Number(pickEnv("ESTIMATOR_STANDARD_PRICE", "99000")) || 99000;
+  const std = Number(pickEnv("ESTIMATOR_STANDARD_PRICE", "93000")) || 93000;
   const pro = Number(pickEnv("ESTIMATOR_PRO_PRICE", "199000")) || 199000;
   const planner = Number(pickEnv("PLANNER_PRO_MONTHLY_PRICE", "199000")) || 199000;
   if (product === "estimator_standard") return std;

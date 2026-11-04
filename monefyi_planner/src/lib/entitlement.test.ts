@@ -135,7 +135,7 @@ describe('entitlement - estimator pro upgrade pricing', () => {
       tier: 'estimator',
       payment_provider: null,
       external_payment_id: null,
-      amount_paid: 99000,
+      amount_paid: 93000,
       currency: 'IDR',
       purchased_at: null,
       activated_at: null,
