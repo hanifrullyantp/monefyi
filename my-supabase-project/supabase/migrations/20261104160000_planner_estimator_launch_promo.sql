@@ -1,0 +1,133 @@
+-- Launch promo: first 100 orgs Estimator Standard at Rp 93.000 (then Rp 99.000)
+
+CREATE OR REPLACE FUNCTION public.get_estimator_standard_launch_promo()
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  used int;
+  lim int := 100;
+  promo int := 93000;
+  listp int := 99000;
+BEGIN
+  SELECT count(*)::int INTO used
+  FROM (
+    SELECT DISTINCT org_id
+    FROM lynk_orders
+    WHERE product = 'estimator_standard'
+      AND org_id IS NOT NULL
+  ) distinct_orgs;
+
+  RETURN jsonb_build_object(
+    'used', used,
+    'limit', lim,
+    'remaining', greatest(0, lim - used),
+    'promoActive', used < lim,
+    'promoPrice', promo,
+    'listPrice', listp
+  );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_estimator_standard_launch_promo() TO anon, authenticated;
+
+-- Persist actual Standard purchase amount for Pro upgrade delta + Planner credit
+CREATE OR REPLACE FUNCTION public.activate_subscription(
+  p_org_id UUID,
+  p_tier TEXT,
+  p_payment_provider TEXT,
+  p_external_payment_id TEXT,
+  p_amount BIGINT,
+  p_expires_at TIMESTAMPTZ DEFAULT NULL,
+  p_estimator_variant TEXT DEFAULT NULL,
+  p_metadata JSONB DEFAULT '{}'::jsonb
+)
+RETURNS planner_org_subscriptions
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_row planner_org_subscriptions;
+  v_had_credit BOOLEAN := false;
+  v_variant TEXT;
+BEGIN
+  IF p_tier NOT IN ('free', 'estimator', 'pro', 'enterprise') THEN
+    RAISE EXCEPTION 'Tier tidak valid';
+  END IF;
+
+  v_variant := CASE
+    WHEN p_estimator_variant IN ('standard', 'pro') THEN p_estimator_variant
+    ELSE NULL
+  END;
+
+  SELECT estimator_credit_available INTO v_had_credit
+  FROM planner_org_subscriptions
+  WHERE org_id = p_org_id;
+
+  INSERT INTO planner_org_subscriptions (
+    org_id,
+    tier,
+    payment_provider,
+    external_payment_id,
+    amount_paid,
+    purchased_at,
+    activated_at,
+    expires_at,
+    estimator_variant,
+    metadata,
+    estimator_credit_amount,
+    estimator_credit_used_at
+  ) VALUES (
+    p_org_id,
+    p_tier,
+    p_payment_provider,
+    p_external_payment_id,
+    p_amount,
+    now(),
+    now(),
+    p_expires_at,
+    v_variant,
+    COALESCE(p_metadata, '{}'::jsonb),
+    CASE WHEN p_tier = 'estimator' AND p_amount > 0 THEN p_amount ELSE 99000 END,
+    CASE
+      WHEN p_tier IN ('pro', 'enterprise') AND COALESCE(v_had_credit, false) THEN now()
+      ELSE NULL
+    END
+  )
+  ON CONFLICT (org_id) DO UPDATE SET
+    tier = EXCLUDED.tier,
+    payment_provider = EXCLUDED.payment_provider,
+    external_payment_id = EXCLUDED.external_payment_id,
+    amount_paid = EXCLUDED.amount_paid,
+    purchased_at = EXCLUDED.purchased_at,
+    activated_at = EXCLUDED.activated_at,
+    expires_at = EXCLUDED.expires_at,
+    estimator_variant = COALESCE(EXCLUDED.estimator_variant, planner_org_subscriptions.estimator_variant),
+    metadata = planner_org_subscriptions.metadata || EXCLUDED.metadata,
+    estimator_credit_amount = CASE
+      WHEN EXCLUDED.tier = 'estimator' AND EXCLUDED.amount_paid > 0 THEN EXCLUDED.amount_paid
+      ELSE planner_org_subscriptions.estimator_credit_amount
+    END,
+    estimator_credit_available = CASE
+      WHEN EXCLUDED.tier = 'estimator' THEN true
+      WHEN EXCLUDED.tier IN ('pro', 'enterprise') THEN false
+      ELSE planner_org_subscriptions.estimator_credit_available
+    END,
+    estimator_credit_used_at = CASE
+      WHEN EXCLUDED.tier IN ('pro', 'enterprise')
+        AND planner_org_subscriptions.estimator_credit_available
+      THEN COALESCE(planner_org_subscriptions.estimator_credit_used_at, now())
+      ELSE planner_org_subscriptions.estimator_credit_used_at
+    END,
+    updated_at = now()
+  RETURNING * INTO v_row;
+
+  RETURN v_row;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.activate_subscription(UUID, TEXT, TEXT, TEXT, BIGINT, TIMESTAMPTZ, TEXT, JSONB) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.activate_subscription(UUID, TEXT, TEXT, TEXT, BIGINT, TIMESTAMPTZ, TEXT, JSONB) TO service_role;

@@ -19,6 +19,7 @@ import { EstimatorLogo } from './EstimatorLogo';
 import { shouldShowEstimatorProductBrand } from '../lib/appProductBrand';
 import { ESTIMATOR_THEME_COLOR } from '../lib/estimatorBrand';
 import ToastHost from './ToastHost';
+import EstimatorLaunchPromoAdminModal from './admin/EstimatorLaunchPromoAdminModal';
 import UndoToast from './ui/UndoToast';
 import { loadFinanceVersion } from '../lib/financeVersion';
 import { loadMigrationFlags } from '../lib/migrationFlags';
@@ -792,6 +793,7 @@ export default function Layout({ children }: LayoutProps) {
         {commandModalOpen && <CommandModal />}
       </AnimatePresence>
       <ToastHost />
+      <EstimatorLaunchPromoAdminModal />
       <UndoToast />
       <UpgradeModal
         open={upgradeOpen}

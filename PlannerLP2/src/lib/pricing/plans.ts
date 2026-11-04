@@ -61,14 +61,14 @@ export const ESTIMATOR_PLANS: EstimatorPlan[] = [
     lynkProduct: "estimator_standard",
     title: "Estimator Standard",
     subtitle: "Hitung harga cepat & akurat tanpa batas",
-    priceIdr: 99_000,
-    originalPriceIdr: null,
+    priceIdr: 93_000,
+    originalPriceIdr: 99_000,
     pricePeriod: "Sekali bayar",
-    priceNote: "Akses selamanya",
+    priceNote: "100 org pertama · Akses selamanya",
     highlighted: true,
     popular: true,
     badge: "PALING POPULER",
-    ctaText: "Ambil Standard — Rp 99.000",
+    ctaText: "Ambil Standard — Rp 93.000",
     fitFor: "Freelancer & perorangan yang butuh hitung cepat",
     whyChoose: [
       "Estimasi unlimited",
@@ -95,7 +95,7 @@ export const ESTIMATOR_PLANS: EstimatorPlan[] = [
     priceIdr: 199_000,
     originalPriceIdr: null,
     pricePeriod: "Sekali bayar",
-    priceNote: "Akses selamanya · Upgrade dari Standard bayar selisih Rp 100.000",
+    priceNote: "Akses selamanya · Upgrade dari Standard = selisih ke Rp 199.000",
     highlighted: false,
     ctaText: "Ambil Pro — Rp 199.000",
     fitFor: "Kontraktor yang ingin penawaran berlogo sendiri",
@@ -117,7 +117,10 @@ export const ESTIMATOR_PLANS: EstimatorPlan[] = [
   },
 ];
 
-export const UPGRADE_DELTA_IDR = 100_000;
+export const UPGRADE_DELTA_FROM_LIST_IDR = 100_000;
+export const UPGRADE_DELTA_FROM_PROMO_IDR = 106_000;
+/** @deprecated use UPGRADE_DELTA_FROM_LIST_IDR */
+export const UPGRADE_DELTA_IDR = UPGRADE_DELTA_FROM_LIST_IDR;
 
 export function formatIdr(amount: number): string {
   if (amount <= 0) return "Gratis";

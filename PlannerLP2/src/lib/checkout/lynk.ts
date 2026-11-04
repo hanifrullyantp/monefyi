@@ -6,6 +6,8 @@ export interface LynkCheckoutParams {
   userId?: string;
   email?: string;
   returnUrl?: string;
+  /** Tagihan Lynk (IDR); wajib untuk Standard saat promo aktif/nonaktif. */
+  checkoutAmount?: number;
 }
 
 const ENV_KEYS: Record<LynkProduct, string> = {
@@ -49,6 +51,9 @@ export function buildLynkCheckoutUrl(
   if (params.orgId) url.searchParams.set("org_id", params.orgId);
   if (params.userId) url.searchParams.set("user_id", params.userId);
   if (params.email) url.searchParams.set("customer_email", params.email);
+  if (product === "estimator_standard" && params.checkoutAmount != null) {
+    url.searchParams.set("amount", String(params.checkoutAmount));
+  }
   return url.toString();
 }
 

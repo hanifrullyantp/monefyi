@@ -3,6 +3,8 @@ import {
   ESTIMATOR_PRO_PRICE_IDR,
   PRO_PRICE_MONTHLY_IDR,
 } from './entitlement';
+import { resolveEstimatorStandardCheckoutAmount } from './estimatorLaunchPromo';
+import { loadEstimatorLaunchPromoStatus } from '../services/launchPromoService';
 
 export type CheckoutProduct = 'estimator_standard' | 'estimator_pro' | 'planner_pro' | 'estimator' | 'pro' | 'enterprise';
 
@@ -89,7 +91,25 @@ export function redirectToCheckout(
   product: CheckoutProduct,
   options: CheckoutRedirectOptions,
 ): void {
-  window.location.href = buildCheckoutUrl(product, options);
+  void redirectToCheckoutAsync(product, options);
+}
+
+/** Resolves launch promo price for Standard, then redirects to Lynk. */
+export async function redirectToCheckoutAsync(
+  product: CheckoutProduct,
+  options: CheckoutRedirectOptions,
+): Promise<void> {
+  const lynkProduct = normalizeCheckoutProduct(product);
+  let opts = { ...options };
+  if (lynkProduct === 'estimator_standard' && opts.checkoutAmount == null) {
+    try {
+      const promo = await loadEstimatorLaunchPromoStatus();
+      opts.checkoutAmount = resolveEstimatorStandardCheckoutAmount(promo);
+    } catch {
+      opts.checkoutAmount = ESTIMATOR_PRICE_IDR;
+    }
+  }
+  window.location.href = buildCheckoutUrl(product, opts);
 }
 
 export function cleanPaymentQueryFromUrl(): void {

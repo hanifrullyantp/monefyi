@@ -11,7 +11,11 @@ import {
 } from "@/lib/permissions";
 import type { User } from "@/lib/store/authStore";
 import { planIdToLynkProduct } from "@/lib/checkout/products";
-import { redirectToLynkCheckout } from "@/lib/checkout/lynk";
+import { buildLynkCheckoutUrl, redirectToLynkCheckout } from "@/lib/checkout/lynk";
+import {
+  loadEstimatorLaunchPromoStatus,
+  resolveStandardCheckoutAmount,
+} from "@/lib/services/launchPromoService";
 import { ensureOwnerOrg } from "@/lib/services/orgService";
 import { useContentStore } from "@/lib/store/contentStore";
 
@@ -54,7 +58,17 @@ export function useLandingCta() {
   const startCheckout = async (planId: string) => {
     const product = planIdToLynkProduct(planId);
     if (!product) return;
-    redirectToLynkCheckout(product, await checkoutParams(), lynkOverrides);
+    const params = await checkoutParams();
+    if (product === "estimator_standard") {
+      const promo = await loadEstimatorLaunchPromoStatus();
+      window.location.href = buildLynkCheckoutUrl(
+        product,
+        { ...params, checkoutAmount: resolveStandardCheckoutAmount(promo) },
+        lynkOverrides,
+      );
+      return;
+    }
+    redirectToLynkCheckout(product, params, lynkOverrides);
   };
 
   const startPlannerProCheckout = async () => {

@@ -154,9 +154,38 @@ describe('entitlement - estimator pro upgrade pricing', () => {
     memberCount: 1,
   });
 
-  it('charges delta for Basic → Pro upgrade', () => {
+  it('charges delta for Basic → Pro upgrade (list price)', () => {
     expect(isEstimatorProUpgrade(standardEstimator)).toBe(true);
     expect(computeEstimatorProCheckoutAmount(standardEstimator)).toBe(ESTIMATOR_UPGRADE_DELTA_IDR);
+  });
+
+  it('charges delta from actual Standard purchase (promo 93rb)', () => {
+    const snap = buildEntitlementSnapshot({
+      subscription: {
+        id: 's1',
+        org_id: 'o1',
+        tier: 'estimator',
+        payment_provider: 'lynk',
+        external_payment_id: 'x',
+        amount_paid: 93_000,
+        currency: 'IDR',
+        purchased_at: null,
+        activated_at: null,
+        expires_at: null,
+        estimator_credit_available: true,
+        estimator_credit_used_at: null,
+        estimator_credit_amount: 93_000,
+        max_active_projects: 1,
+        max_members: 1,
+        metadata: null,
+        estimator_variant: 'standard',
+        created_at: '',
+        updated_at: '',
+      },
+      activeProjectCount: 0,
+      memberCount: 1,
+    });
+    expect(computeEstimatorProCheckoutAmount(snap)).toBe(106_000);
   });
 
   it('charges full price for new Estimator Pro buyers', () => {

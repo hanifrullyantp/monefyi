@@ -130,14 +130,18 @@ function mapProductFromPayload(
   label: string;
   isUpgrade?: boolean;
 } {
-  const upgradeDelta = Number(pickEnv("ESTIMATOR_UPGRADE_DELTA", "100000")) || 100000;
+  const upgradeDeltaList = Number(pickEnv("ESTIMATOR_UPGRADE_DELTA", "100000")) || 100000;
+  const upgradeDeltaPromo = Number(pickEnv("ESTIMATOR_UPGRADE_DELTA_FROM_PROMO", "106000")) || 106000;
   const upgradeFrom = (custom.upgrade_from || custom.upgradeFrom || "").toLowerCase().replace(/-/g, "_");
   const explicit = (custom.product || custom.plan || "").toLowerCase().replace(/-/g, "_");
 
   if (explicit === "estimator_pro" && upgradeFrom === "estimator_standard") {
     return { product: "estimator_pro", tier: "estimator", variant: "pro", label: "Upgrade Estimator Pro", isUpgrade: true };
   }
-  if (amount === upgradeDelta && (explicit === "estimator_pro" || upgradeFrom === "estimator_standard")) {
+  if (
+    (amount === upgradeDeltaList || amount === upgradeDeltaPromo)
+    && (explicit === "estimator_pro" || upgradeFrom === "estimator_standard")
+  ) {
     return { product: "estimator_pro", tier: "estimator", variant: "pro", label: "Upgrade Estimator Pro", isUpgrade: true };
   }
   if (explicit === "estimator_standard") {
@@ -161,9 +165,10 @@ function mapProductFromPayload(
     return { product: "estimator_standard", tier: "estimator", variant: "standard", label: "Monefyi Estimator Standard" };
   }
 
+  const promoPrice = Number(pickEnv("ESTIMATOR_LAUNCH_PROMO_PRICE", "93000")) || 93000;
   const stdPrice = Number(pickEnv("ESTIMATOR_STANDARD_PRICE", "99000")) || 99000;
   const proPrice = Number(pickEnv("ESTIMATOR_PRO_PRICE", "199000")) || 199000;
-  if (amount === stdPrice) {
+  if (amount === promoPrice || amount === stdPrice) {
     return { product: "estimator_standard", tier: "estimator", variant: "standard", label: "Monefyi Estimator Standard" };
   }
   if (amount === proPrice) {

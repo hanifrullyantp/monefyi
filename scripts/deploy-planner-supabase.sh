@@ -41,7 +41,7 @@ fi
 
 if [[ "${SKIP_DB_PUSH:-}" != "1" ]]; then
   echo "==> Pushing database migrations..."
-  npx --yes supabase@latest db push
+  npx --yes supabase@latest db push --remote --yes
   if [[ "${SKIP_RLS_SMOKE:-}" != "1" ]]; then
     echo "==> Running RLS smoke test..."
     "$ROOT/scripts/rls-smoke-test.sh" || {
@@ -105,9 +105,9 @@ for fn in "${PLANNER_FUNCTIONS[@]}"; do
     fi
   done
   if [[ "$no_verify" == "1" ]]; then
-    npx --yes supabase@latest functions deploy "$fn" --no-verify-jwt
+    npx --yes supabase@latest functions deploy "$fn" --no-verify-jwt --yes
   else
-    npx --yes supabase@latest functions deploy "$fn"
+    npx --yes supabase@latest functions deploy "$fn" --yes
   fi
 done
 

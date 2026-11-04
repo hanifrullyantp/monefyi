@@ -35,9 +35,25 @@ serve(async (req) => {
     const { data: appConfig } = await sb.from("app_config").select("*").eq("id", "global").maybeSingle();
     const platform = (appConfig?.platform_settings as Record<string, unknown>) || {};
 
+    let estimatorLaunchPromo: Record<string, unknown> = {
+      used: 0,
+      limit: 100,
+      remaining: 100,
+      promoActive: true,
+      promoPrice: 93000,
+      listPrice: 99000,
+    };
+    try {
+      const { data: promoRaw } = await sb.rpc("get_estimator_standard_launch_promo");
+      if (promoRaw && typeof promoRaw === "object") {
+        estimatorLaunchPromo = promoRaw as Record<string, unknown>;
+      }
+    } catch { /* RPC may not exist on older DB */ }
+
     const pricing = {
       trial_days: platform.trial_days ?? 7,
       lifetime_price: platform.lifetime_price_display ?? "Rp 99.000",
+      estimator_launch_promo: estimatorLaunchPromo,
       couple_bump_price: platform.couple_bump_price ?? "Rp 48.000",
       pro_yearly_price: platform.pro_yearly_price ?? "Rp 250.000",
       checkout_lifetime_url: appConfig?.checkout_lifetime_url ?? "",

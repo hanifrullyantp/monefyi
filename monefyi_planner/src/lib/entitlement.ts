@@ -1,9 +1,20 @@
 import type { EntitlementSnapshot, EntitlementPreviewMode, OrgSubscriptionRow, SubscriptionTier } from '../types/entitlement';
 import { isPlatformAdmin } from '../services/adminService';
 
-export const ESTIMATOR_PRICE_IDR = 99_000;
+/** Harga normal Standard setelah kuota promo habis. */
+export const ESTIMATOR_LIST_PRICE_IDR = 99_000;
+/** Launch: 100 org pertama. */
+export const ESTIMATOR_LAUNCH_PROMO_PRICE_IDR = 93_000;
+export const ESTIMATOR_LAUNCH_PROMO_ORG_LIMIT = 100;
+/** Default tampilan/checkout sebelum fetch status promo. */
+export const ESTIMATOR_PRICE_IDR = ESTIMATOR_LAUNCH_PROMO_PRICE_IDR;
 export const ESTIMATOR_PRO_PRICE_IDR = 199_000;
-export const ESTIMATOR_UPGRADE_DELTA_IDR = ESTIMATOR_PRO_PRICE_IDR - ESTIMATOR_PRICE_IDR;
+export const ESTIMATOR_UPGRADE_DELTA_FROM_LIST_IDR =
+  ESTIMATOR_PRO_PRICE_IDR - ESTIMATOR_LIST_PRICE_IDR;
+export const ESTIMATOR_UPGRADE_DELTA_FROM_PROMO_IDR =
+  ESTIMATOR_PRO_PRICE_IDR - ESTIMATOR_LAUNCH_PROMO_PRICE_IDR;
+/** Legacy alias (selisih dari harga normal). */
+export const ESTIMATOR_UPGRADE_DELTA_IDR = ESTIMATOR_UPGRADE_DELTA_FROM_LIST_IDR;
 export const PRO_PRICE_MONTHLY_IDR = 199_000;
 /** Gratis trial — PDF berwatermark Estimator */
 export const FREE_ESTIMATION_LIMIT = 3;
@@ -74,7 +85,11 @@ export function buildEntitlementSnapshot(input: {
     currentMembers: input.memberCount,
     maxEstimations,
     estimatorCreditAvailable: Boolean(input.subscription?.estimator_credit_available),
-    estimatorCreditAmount: Number(input.subscription?.estimator_credit_amount ?? ESTIMATOR_PRICE_IDR),
+    estimatorCreditAmount: Number(
+      input.subscription?.amount_paid
+        ?? input.subscription?.estimator_credit_amount
+        ?? ESTIMATOR_LIST_PRICE_IDR,
+    ),
     estimatorVariant,
     isEstimatorPro,
     isFree: tier === 'free',
@@ -113,7 +128,10 @@ export function canUseCustomBranding(snapshot: EntitlementSnapshot): boolean {
 /** Harga checkout Estimator Pro: selisih upgrade jika sudah punya Basic. */
 export function computeEstimatorProCheckoutAmount(snapshot: EntitlementSnapshot): number {
   if (snapshot.isEstimator && snapshot.estimatorVariant === 'standard' && !snapshot.isEstimatorPro) {
-    return ESTIMATOR_UPGRADE_DELTA_IDR;
+    const paid = snapshot.estimatorCreditAmount > 0
+      ? snapshot.estimatorCreditAmount
+      : ESTIMATOR_LIST_PRICE_IDR;
+    return Math.max(0, ESTIMATOR_PRO_PRICE_IDR - paid);
   }
   return ESTIMATOR_PRO_PRICE_IDR;
 }
