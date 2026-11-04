@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Home, FolderOpen, Wallet, Settings, Bell, Menu, X,
+  Home, FolderOpen, Wallet, Settings, Bell, Menu, X, ArrowLeft,
   Sparkles, Wifi, WifiOff, Clock, Users, Receipt,
   BarChart3, Shield, ChevronRight, Database, PanelRightClose, PanelRight, Lock, User,
 } from 'lucide-react';
@@ -298,7 +298,16 @@ export default function Layout({ children }: LayoutProps) {
     || location.pathname.startsWith('/app/finance-v2')
     || location.pathname.startsWith('/app/database');
 
-  const { breadcrumb, projectId: shellProjectId, hideRightPanel, onOpenRap, onOpenProgress } = useShellStore();
+  const {
+    breadcrumb,
+    projectId: shellProjectId,
+    hideRightPanel,
+    onOpenRap,
+    onOpenProgress,
+    estimatorCode,
+    onEstimatorBack,
+  } = useShellStore();
+  const isEstimatorDetail = /^\/app\/estimator\/(?!pricelist(?:\/|$)|settings(?:\/|$)).+/.test(location.pathname);
 
   const headerTitle = (() => {
     if (breadcrumb.length > 0) {
@@ -540,19 +549,38 @@ export default function Layout({ children }: LayoutProps) {
           isEstimatorShell ? 'lg:hidden bg-white/80 backdrop-blur-md border-b border-slate-100' : ''
         }`}>
           <div className="flex items-center gap-2 min-w-0">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="inline-flex items-center justify-center min-h-11 min-w-11 rounded-lg hover:bg-slate-100 lg:hidden transition-colors active:scale-95"
-              aria-label="Buka menu"
-            >
-              <Menu className="w-5 h-5 text-slate-600" />
-            </button>
+            {isEstimatorDetail ? (
+              <button
+                type="button"
+                onClick={() => onEstimatorBack?.() ?? navigate('/app/estimator')}
+                className="inline-flex items-center justify-center min-h-11 min-w-11 rounded-lg hover:bg-slate-100 lg:hidden transition-colors active:scale-95"
+                aria-label="Kembali ke daftar estimasi"
+              >
+                <ArrowLeft className="w-5 h-5 text-slate-600" />
+              </button>
+            ) : (
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="inline-flex items-center justify-center min-h-11 min-w-11 rounded-lg hover:bg-slate-100 lg:hidden transition-colors active:scale-95"
+                aria-label="Buka menu"
+              >
+                <Menu className="w-5 h-5 text-slate-600" />
+              </button>
+            )}
             <div className="hidden lg:block">
               <div className="text-sm font-semibold capitalize flex items-center flex-wrap gap-0.5">
                 {headerTitle}
               </div>
             </div>
-            {isEstimatorShell ? (
+            {isEstimatorDetail ? (
+              <div className="lg:hidden min-w-0">
+                {estimatorCode && (
+                  <span className="inline-flex items-center min-h-8 px-2.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold font-mono truncate max-w-[11rem]">
+                    {estimatorCode}
+                  </span>
+                )}
+              </div>
+            ) : isEstimatorShell ? (
               <div className="lg:hidden flex items-center gap-2 min-w-0">
                 {showEstimatorBrand ? (
                   <EstimatorLogo className="w-7 h-7 rounded-lg object-contain shrink-0" />

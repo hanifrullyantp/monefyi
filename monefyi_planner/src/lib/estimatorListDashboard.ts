@@ -1,4 +1,4 @@
-import { daysSinceIso, formatRupiahCompact } from './estimatorFormat';
+import { daysSinceIso, ESTIMATION_STATUS_LABEL, formatRupiahCompact } from './estimatorFormat';
 import { normalizeEstimationStatus } from './estimationStatus';
 import { ESTIMATOR_RECENCY_THRESHOLDS } from './estimatorListThresholds';
 import type { Estimation, EstimationStatus } from '../types/estimator';
@@ -8,12 +8,17 @@ export type DashboardListFilter = 'all' | 'active' | 'lead' | 'stale';
 export type RecencyTone = 'fresh' | 'aging' | 'stale';
 export type DashboardPill = 'terbaru' | 'active' | 'lead' | null;
 
-/** Active di kartu dashboard: closing sampai selesai. */
+/** Active di kartu dashboard: closing sampai finishing (selesai → arsip). */
 export const DASHBOARD_ACTIVE_STATUSES: EstimationStatus[] = [
   'closing',
   'proses',
   'finishing',
+];
+
+/** Arsip outcome: pekerjaan selesai atau ditolak (converted tetap arsip terpisah). */
+export const DASHBOARD_ARCHIVE_OUTCOME_STATUSES: EstimationStatus[] = [
   'selesai',
+  'rejected',
 ];
 
 /** Lead di kartu dashboard: masih di pipeline penjualan. */
@@ -48,7 +53,10 @@ function updatedAtMs(est: Pick<Estimation, 'updated_at' | 'created_at'>): number
 
 export function isEstimationArchived(status: EstimationStatus | string): boolean {
   const normalized = normalizeEstimationStatus(status);
-  return normalized === 'rejected' || normalized === 'converted';
+  return (
+    normalized === 'converted'
+    || DASHBOARD_ARCHIVE_OUTCOME_STATUSES.includes(normalized)
+  );
 }
 
 export function isDashboardActive(status: EstimationStatus | string): boolean {
@@ -214,3 +222,11 @@ export const DASHBOARD_FILTER_LABEL: Record<DashboardListFilter, string> = {
   lead: 'Leads',
   stale: 'Mandek',
 };
+
+/** Label pill yang sama di beranda dan halaman detail. */
+export function dashboardStatusLabel(status: EstimationStatus | string): 'Active' | 'Lead' | 'Arsip' | string {
+  if (isEstimationArchived(status)) return 'Arsip';
+  if (isDashboardActive(status)) return 'Active';
+  if (isDashboardLead(status)) return 'Lead';
+  return ESTIMATION_STATUS_LABEL[normalizeEstimationStatus(status)] || status;
+}

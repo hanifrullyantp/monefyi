@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { ChevronDown, RotateCcw } from 'lucide-react';
+import { RotateCcw } from 'lucide-react';
 import EstimationDetailHeaderCard from '../../components/estimator/detail/EstimationDetailHeaderCard';
 import EstimationDetailBottomBar from '../../components/estimator/detail/EstimationDetailBottomBar';
+import EstimationDetailProjectCard from '../../components/estimator/detail/EstimationDetailProjectCard';
 import EstimationWhatsAppPickerModal from '../../components/estimator/detail/EstimationWhatsAppPickerModal';
 import EstimationDocumentMenu from '../../components/estimator/detail/EstimationDocumentMenu';
 import EstimationDocumentPreviewModal from '../../components/estimator/detail/EstimationDocumentPreviewModal';
@@ -44,15 +45,10 @@ export default function DemoEmbedPage() {
   const [documentPreviewType, setDocumentPreviewType] = useState<DocumentType>('penawaran');
   const [waPickerOpen, setWaPickerOpen] = useState(false);
   const [waInitialPreset, setWaInitialPreset] = useState<WhatsAppEstimationPreset>('follow_up');
-  const addItemRef = useRef<(() => void) | null>(null);
   const firstInteractionSent = useRef(false);
   const draftHistory = useEstimationDraftHistory();
   const { summary, countedItemCount } = useEstimationSummary(draft);
   const waTemplate = defaultWhatsAppTemplateConfig();
-
-  const registerAddItem = useCallback((fn: () => void) => {
-    addItemRef.current = fn;
-  }, []);
 
   const resetDemo = useCallback(() => {
     const fresh = createDemoEstimationDraft();
@@ -139,7 +135,7 @@ export default function DemoEmbedPage() {
   const demoToast = () => showToast('Daftar gratis untuk fitur penuh', 'info');
 
   return (
-    <div className="h-[844px] w-[390px] bg-[#f4f6f5] pb-28 overflow-y-auto overflow-x-hidden">
+    <div className="h-[844px] w-[390px] bg-[#F4F7F5] pb-28 overflow-y-auto overflow-x-hidden">
       <div className="sticky top-0 z-30 pt-8">
         <div className="mx-3 mb-2 flex items-center justify-between gap-2 px-3 py-1.5 rounded-full bg-emerald-950/90 text-white text-[11px] backdrop-blur-md shadow-sm">
           <span className="font-semibold truncate">Demo interaktif</span>
@@ -165,10 +161,6 @@ export default function DemoEmbedPage() {
           onTitleChange={title => patch({ title }, { track: 'demo_item_edited' })}
           onClientNameChange={name => patch({ customer_name: name }, { track: 'demo_item_edited' })}
           onStatusTransition={applyStatusTransition}
-          onAddItem={() => {
-            markInteraction('demo_item_added');
-            addItemRef.current?.();
-          }}
           onConvert={demoToast}
           onDuplicate={demoToast}
           onDelete={demoToast}
@@ -178,19 +170,15 @@ export default function DemoEmbedPage() {
           autoSaveStatus="saved"
         />
 
-        <button
-          type="button"
-          onClick={() => {
+        <EstimationDetailProjectCard
+          open={detailOpen}
+          onToggle={() => {
             markInteraction('demo_detail_opened');
             setDetailOpen(v => !v);
           }}
-          className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          draft={draft}
+          isReadOnly={false}
         >
-          <ChevronDown className={`w-4 h-4 transition-transform ${detailOpen ? 'rotate-180' : ''}`} />
-          Detail Project
-        </button>
-
-        {detailOpen && (
           <div className="grid grid-cols-1 gap-3">
             <section className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
               <h3 className="text-xs font-bold text-slate-500 uppercase">Informasi Customer</h3>
@@ -247,7 +235,7 @@ export default function DemoEmbedPage() {
               )}
             </section>
           </div>
-        )}
+        </EstimationDetailProjectCard>
 
         <EstimationItemsTable
           orgId={DEMO_ORG_ID}
@@ -262,7 +250,6 @@ export default function DemoEmbedPage() {
           billingDiscountAmount={draft.billing_config.billing_discount_amount}
           billingBonusNote={draft.billing_config.billing_bonus_note}
           onChange={items => patch({ items }, { track: 'demo_item_edited' })}
-          onRegisterAddItem={registerAddItem}
         />
       </div>
 

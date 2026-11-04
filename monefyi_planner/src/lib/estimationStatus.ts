@@ -78,10 +78,10 @@ export function isStatusReadOnly(status: EstimationStatus): boolean {
 export function isStatusTransitionAllowed(from: EstimationStatus, to: EstimationStatus): boolean {
   if (from === 'converted' || to === 'converted') return false;
   if (isWorkflowStatus(to)) {
-    return from !== 'converted';
+    return true;
   }
   if (to === 'rejected') {
-    return from !== 'converted';
+    return true;
   }
   return false;
 }
@@ -202,12 +202,11 @@ export type PipelineSummaryBucket = 'wa' | 'survei' | 'closing';
 /** Survei + penawaran → kartu Survei. */
 export const PIPELINE_SUMMARY_SURVEI_STATUSES: EstimationStatus[] = ['survei', 'penawaran'];
 
-/** Closing hingga selesai → kartu Closing. */
+/** Closing hingga finishing → kartu Closing (selesai → arsip). */
 export const PIPELINE_SUMMARY_CLOSING_STATUSES: EstimationStatus[] = [
   'closing',
   'proses',
   'finishing',
-  'selesai',
 ];
 
 /**

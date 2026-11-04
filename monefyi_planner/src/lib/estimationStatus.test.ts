@@ -70,7 +70,7 @@ describe('estimationStatus - buildStatusHistory - ordered rows', () => {
 });
 
 describe('estimationStatus - countEstimationsByPipelineSummary - grouped cards', () => {
-  it('groups survei+penawaran, closing stages, excludes rejected', () => {
+  it('groups survei+penawaran, closing stages, excludes arsip (selesai/rejected/converted)', () => {
     const counts = countEstimationsByPipelineSummary([
       { status: 'wa' },
       { status: 'survei' },
@@ -85,7 +85,7 @@ describe('estimationStatus - countEstimationsByPipelineSummary - grouped cards',
     ]);
     expect(counts.wa).toBe(1);
     expect(counts.survei).toBe(3);
-    expect(counts.closing).toBe(4);
+    expect(counts.closing).toBe(3);
   });
 
   it('matches pipeline filter bucket', () => {
@@ -93,6 +93,7 @@ describe('estimationStatus - countEstimationsByPipelineSummary - grouped cards',
     expect(matchesPipelineSummaryFilter('finishing', 'closing')).toBe(true);
     expect(matchesPipelineSummaryFilter('rejected', 'survei')).toBe(false);
     expect(getPipelineSummaryBucket('rejected')).toBeNull();
+    expect(getPipelineSummaryBucket('selesai')).toBeNull();
   });
 });
 

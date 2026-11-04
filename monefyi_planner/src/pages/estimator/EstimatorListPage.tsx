@@ -264,7 +264,7 @@ export default function EstimatorListPage() {
   const kanbanRows = useMemo(
     () => sortedRows.filter(r => {
       const s = normalizeEstimationStatus(r.status);
-      return s !== 'rejected' && s !== 'converted';
+      return !isEstimationArchived(s);
     }),
     [sortedRows],
   );

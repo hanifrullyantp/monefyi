@@ -90,7 +90,8 @@ export default function EstimationItemsTable({
 }: Props) {
   const [smartOpen, setSmartOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [expandedRows, setExpandedRows] = useState<Set<number>>(() => new Set());
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [equalizeOpen, setEqualizeOpen] = useState(false);
   const showToast = useUiStore(s => s.showToast);
   const cellRefs = useRef<Map<string, HTMLInputElement | HTMLSelectElement>>(new Map());
 
@@ -148,7 +149,14 @@ export default function EstimationItemsTable({
   }, [onRegisterAddItem, openPricelistPicker]);
   const removeRow = (index: number) => {
     if (readOnly) return;
+    const label = items[index]?.name?.trim() || 'item ini';
+    if (!window.confirm(`Hapus ${label}?`)) return;
     onChange(items.filter((_, i) => i !== index));
+    setExpandedIndex(prev => {
+      if (prev == null) return prev;
+      if (prev === index) return null;
+      return prev > index ? prev - 1 : prev;
+    });
   };
 
   const applyGlobalQty = (qty: number) => {
@@ -163,12 +171,7 @@ export default function EstimationItemsTable({
   };
 
   const toggleRowExpanded = (index: number) => {
-    setExpandedRows(prev => {
-      const next = new Set(prev);
-      if (next.has(index)) next.delete(index);
-      else next.add(index);
-      return next;
-    });
+    setExpandedIndex(prev => (prev === index ? null : index));
   };
 
   const shouldShowGroupHeader = (group: EstimationItemGroup) =>
@@ -263,17 +266,40 @@ export default function EstimationItemsTable({
 
   return (
     <>
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden max-w-full">
-        <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/50 md:hidden flex items-center justify-between gap-2">
-          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide shrink-0">Rincian Produk</h3>
+      <div className="bg-white border border-[#E5EAE8] rounded-2xl shadow-sm overflow-hidden max-w-full">
+        <div className="px-4 py-2.5 border-b border-[#E5EAE8] bg-white md:hidden space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Rincian Produk</h3>
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={openPricelistPicker}
+                className="inline-flex items-center justify-center gap-1 min-h-11 px-3 rounded-full bg-emerald-600 text-white text-sm font-bold active:scale-95"
+              >
+                <Plus className="w-4 h-4" aria-hidden />
+                Tambah
+              </button>
+            )}
+          </div>
           {!readOnly && items.length > 0 && (
-            <label className="flex items-center gap-1.5 text-[10px] text-slate-500 shrink-0">
-              <span className="whitespace-nowrap">Ukuran global</span>
-              <GlobalQtyField
-                onApply={applyGlobalQty}
-                className="w-16 px-1.5 py-1 text-xs border border-slate-200 rounded-lg bg-white text-right"
-              />
-            </label>
+            <div>
+              <button
+                type="button"
+                onClick={() => setEqualizeOpen(v => !v)}
+                className="inline-flex items-center min-h-11 text-xs font-bold text-emerald-700"
+              >
+                Samakan ukuran semua item
+              </button>
+              {equalizeOpen && (
+                <label className="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                  <span id="equalize-qty-label">Ukuran</span>
+                  <GlobalQtyField
+                    onApply={applyGlobalQty}
+                    className="w-24 min-h-11 px-2 border border-[#E5EAE8] rounded-xl bg-white text-right"
+                  />
+                </label>
+              )}
+            </div>
           )}
         </div>
 
@@ -333,7 +359,7 @@ export default function EstimationItemsTable({
         {items.length === 0 ? (
           <div className="p-8 md:p-10 text-center space-y-4">
             <p className="text-sm font-semibold text-slate-700">Belum ada item</p>
-            <p className="text-xs text-slate-500 md:hidden">Tap <strong>Tambah Rincian</strong> di kartu atas untuk pilih dari pricelist</p>
+            <p className="text-xs text-slate-500 md:hidden">Ketuk <strong>+ Tambah</strong> untuk pilih dari pricelist</p>
             {!readOnly && (
               <div className="hidden md:grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto">
               {ENABLE_ESTIMATOR_SMART_INPUT && (
@@ -374,145 +400,177 @@ export default function EstimationItemsTable({
           {items.map((item, idx) => {
             const netSelling = effectiveItemSelling(item);
             const rowMuted = item.name.trim() && item.included === false;
-            const rowExpanded = expandedRows.has(idx);
+            const rowExpanded = expandedIndex === idx;
+            const itemName = item.name.trim() || 'item';
             return (
               <div
                 key={idx}
-                className={`rounded-xl border p-2.5 max-w-full overflow-hidden ${
-                  rowMuted ? 'border-slate-200 bg-slate-50/80 opacity-80' : 'border-slate-200 bg-white'
+                className={`rounded-[14px] border overflow-hidden ${
+                  rowMuted ? 'border-[#E5EAE8] bg-slate-50/80 opacity-80' : 'border-[#E5EAE8] bg-white'
                 }`}
               >
-                <div className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto_auto] gap-1.5 items-start min-w-0">
-                  <input
-                    type="checkbox"
-                    checked={item.included !== false}
-                    onChange={e => updateItem(idx, { included: e.target.checked }, 'qty')}
-                    className="w-4 h-4 mt-0.5 rounded border-slate-300 text-emerald-600 shrink-0"
-                    title="Masuk total"
-                  />
-                  <input
-                    value={item.name}
-                    onChange={e => updateItem(idx, { name: e.target.value })}
-                    placeholder="Nama item"
-                    className="min-w-0 w-full font-semibold text-sm text-slate-900 bg-transparent border-0 outline-none truncate"
-                  />
-                  <div className="text-xs font-black text-slate-900 tabular-nums shrink-0 max-w-[5.5rem] truncate text-right">
-                    {formatRupiahFull(netSelling)}
+                <div className="flex items-start gap-1 px-1 py-1">
+                  <label className="inline-flex items-center justify-center min-h-12 min-w-12 shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={item.included !== false}
+                      onChange={e => updateItem(idx, { included: e.target.checked }, 'qty')}
+                      className="w-5 h-5 rounded border-slate-300 text-emerald-600"
+                      aria-label={`Sertakan ${itemName} di penawaran`}
+                    />
+                  </label>
+                  <div className="flex-1 min-w-0 py-2 pr-1">
+                    <textarea
+                      value={item.name}
+                      onChange={e => updateItem(idx, { name: e.target.value })}
+                      placeholder="Nama item"
+                      aria-label="Nama item"
+                      rows={2}
+                      className="w-full font-semibold text-sm text-slate-900 bg-transparent border-0 outline-none resize-none leading-snug"
+                    />
+                    <p className="mt-0.5 text-[11px] text-slate-500 break-words">
+                      {item.qty} {item.unit} × {formatRupiahFull(item.selling_price_per_unit)}
+                    </p>
                   </div>
-                  {!readOnly && (
-                    <button
-                      type="button"
-                      onClick={() => removeRow(idx)}
-                      className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 shrink-0"
-                      aria-label="Hapus item"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
+                  <div className="pt-2 pr-0.5 text-right shrink-0">
+                    <p className="text-sm font-bold text-slate-900 tabular-nums">{formatRupiahFull(netSelling)}</p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => toggleRowExpanded(idx)}
-                    className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 shrink-0"
+                    className="inline-flex items-center justify-center min-h-11 min-w-11 text-slate-400 shrink-0"
                     aria-expanded={rowExpanded}
                     aria-label={rowExpanded ? 'Tutup detail item' : 'Buka detail item'}
                   >
-                    <ChevronDown className={`w-4 h-4 transition-transform ${rowExpanded ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`w-5 h-5 transition-transform duration-200 ${rowExpanded ? 'rotate-180' : ''}`} />
                   </button>
                 </div>
 
-                <div className="grid grid-cols-[3.25rem_2.75rem_minmax(0,1fr)] gap-1.5 items-center mt-2 pl-5 min-w-0">
-                  <QtyInput
-                    value={item.qty}
-                    onChange={v => updateItem(idx, { qty: v }, 'qty')}
-                    className="w-full px-1.5 py-1 border border-slate-200 rounded-lg text-right text-xs tabular-nums focus:border-emerald-400 outline-none"
-                  />
-                  <select
-                    value={item.unit}
-                    onChange={e => updateItem(idx, { unit: e.target.value })}
-                    className="w-full px-0.5 py-1 text-[11px] border border-slate-200 rounded-lg bg-white min-w-0"
-                  >
-                    {COMMON_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-                  </select>
-                  <RupiahInput
-                    value={item.selling_price_per_unit}
-                    onChange={v => updateItem(idx, { selling_price_per_unit: v }, 'selling')}
-                    title="Jual / unit"
-                    className="min-w-0 w-full px-1.5 py-1 border border-emerald-200 bg-emerald-50/50 rounded-lg text-right text-[11px] font-semibold tabular-nums focus:border-emerald-400 outline-none"
-                  />
-                </div>
+                <div
+                  className={`grid transition-[grid-template-rows] duration-200 ${
+                    rowExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                  }`}
+                  inert={rowExpanded ? undefined : true}
+                  aria-hidden={!rowExpanded}
+                >
+                  <div className="overflow-hidden">
+                    <div className="px-3 pb-3 pt-1 border-t border-[#E5EAE8] space-y-3">
+                      <div className="grid grid-cols-3 gap-2">
+                        <label className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                          Ukuran
+                          <QtyInput
+                            value={item.qty}
+                            onChange={v => updateItem(idx, { qty: v }, 'qty')}
+                            className="mt-1 w-full min-h-11 px-2 border border-[#E5EAE8] rounded-xl text-right text-sm tabular-nums focus:border-emerald-400 outline-none"
+                          />
+                        </label>
+                        <label className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                          Satuan
+                          <select
+                            value={item.unit}
+                            onChange={e => updateItem(idx, { unit: e.target.value })}
+                            className="mt-1 w-full min-h-11 px-1 border border-[#E5EAE8] rounded-xl bg-white text-sm"
+                          >
+                            {!COMMON_UNITS.includes(item.unit) && (
+                              <option value={item.unit}>{item.unit}</option>
+                            )}
+                            {COMMON_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                          </select>
+                        </label>
+                        <label className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                          Harga per satuan (Rp)
+                          <RupiahInput
+                            value={item.selling_price_per_unit}
+                            onChange={v => updateItem(idx, { selling_price_per_unit: v }, 'selling')}
+                            className="mt-1 w-full min-h-11 px-2 border border-[#E5EAE8] rounded-xl text-right text-sm font-semibold tabular-nums focus:border-emerald-400 outline-none"
+                          />
+                        </label>
+                      </div>
 
-                {rowExpanded && (
-                  <div className="mt-2 pt-2 pl-5 border-t border-slate-100 grid grid-cols-2 gap-2 min-w-0">
-                    <label className="text-[10px] text-slate-500">
-                      Margin %
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        step="0.1"
-                        value={item.margin_pct}
-                        onMouseUp={e => e.preventDefault()}
-                        onFocus={selectNumericField}
-                        onChange={e => updateItem(idx, { margin_pct: Number(e.target.value) }, 'margin')}
-                        className="mt-0.5 w-full px-1.5 py-1 border border-slate-200 rounded-lg text-right text-xs tabular-nums"
-                      />
-                    </label>
-                    <label className="text-[10px] text-slate-500">
-                      HPP / unit
-                      <RupiahInput
-                        value={item.hpp_per_unit}
-                        onChange={v => updateItem(idx, { hpp_per_unit: v }, 'hpp')}
-                        className="mt-0.5 w-full px-1.5 py-1 border border-slate-200 rounded-lg text-right text-xs tabular-nums"
-                      />
-                    </label>
-                    <label className="text-[10px] text-slate-500 flex items-center gap-2 col-span-2">
-                      <input
-                        type="checkbox"
-                        checked={item.is_bonus}
-                        onChange={e => updateItem(idx, { is_bonus: e.target.checked }, 'qty')}
-                        className="rounded border-slate-300 text-emerald-600"
-                      />
-                      Item bonus (gratis)
-                    </label>
-                    <label className="text-[10px] text-slate-500">
-                      Disk. %
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        step="0.1"
-                        value={item.item_discount_pct || ''}
-                        disabled={item.is_bonus}
-                        onMouseUp={e => e.preventDefault()}
-                        onFocus={selectNumericField}
-                        onChange={e => updateItem(idx, { item_discount_pct: Number(e.target.value) }, 'qty')}
-                        className="mt-0.5 w-full px-1.5 py-1 border border-slate-200 rounded-lg text-right text-xs disabled:bg-slate-50"
-                        placeholder="0"
-                      />
-                    </label>
-                    <label className="text-[10px] text-slate-500">
-                      Disk. Rp
-                      <RupiahInput
-                        value={item.item_discount_amount}
-                        onChange={v => updateItem(idx, { item_discount_amount: v }, 'qty')}
-                        className="mt-0.5 w-full px-1.5 py-1 border border-slate-200 rounded-lg text-right text-xs"
-                        min={0}
-                      />
-                    </label>
-                    <label className="text-[10px] text-slate-500 col-span-2">
-                      Kategori
-                      <select
-                        value={item.category}
-                        onChange={e => updateItem(idx, { category: e.target.value })}
-                        className="mt-0.5 w-full px-1.5 py-1 text-xs border border-slate-200 rounded-lg bg-white"
-                      >
-                        {PRICELIST_CATEGORIES.map(c => (
-                          <option key={c.value} value={c.value}>{c.label}</option>
-                        ))}
-                      </select>
-                    </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <label className="text-[10px] text-slate-500">
+                          Margin %
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            step="0.1"
+                            value={item.margin_pct}
+                            onMouseUp={e => e.preventDefault()}
+                            onFocus={selectNumericField}
+                            onChange={e => updateItem(idx, { margin_pct: Number(e.target.value) }, 'margin')}
+                            className="mt-0.5 w-full min-h-11 px-2 border border-[#E5EAE8] rounded-xl text-right text-sm tabular-nums"
+                          />
+                        </label>
+                        <label className="text-[10px] text-slate-500">
+                          HPP / unit
+                          <RupiahInput
+                            value={item.hpp_per_unit}
+                            onChange={v => updateItem(idx, { hpp_per_unit: v }, 'hpp')}
+                            className="mt-0.5 w-full min-h-11 px-2 border border-[#E5EAE8] rounded-xl text-right text-sm tabular-nums"
+                          />
+                        </label>
+                        <label className="text-[10px] text-slate-500 flex items-center gap-2 col-span-2 min-h-11">
+                          <input
+                            type="checkbox"
+                            checked={item.is_bonus}
+                            onChange={e => updateItem(idx, { is_bonus: e.target.checked }, 'qty')}
+                            className="rounded border-slate-300 text-emerald-600"
+                          />
+                          Item bonus (gratis)
+                        </label>
+                        <label className="text-[10px] text-slate-500">
+                          Disk. %
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            step="0.1"
+                            value={item.item_discount_pct || ''}
+                            disabled={item.is_bonus}
+                            onMouseUp={e => e.preventDefault()}
+                            onFocus={selectNumericField}
+                            onChange={e => updateItem(idx, { item_discount_pct: Number(e.target.value) }, 'qty')}
+                            className="mt-0.5 w-full min-h-11 px-2 border border-[#E5EAE8] rounded-xl text-right text-sm disabled:bg-slate-50"
+                            placeholder="0"
+                          />
+                        </label>
+                        <label className="text-[10px] text-slate-500">
+                          Disk. Rp
+                          <RupiahInput
+                            value={item.item_discount_amount}
+                            onChange={v => updateItem(idx, { item_discount_amount: v }, 'qty')}
+                            className="mt-0.5 w-full min-h-11 px-2 border border-[#E5EAE8] rounded-xl text-right text-sm"
+                            min={0}
+                          />
+                        </label>
+                        <label className="text-[10px] text-slate-500 col-span-2">
+                          Kategori
+                          <select
+                            value={item.category}
+                            onChange={e => updateItem(idx, { category: e.target.value })}
+                            className="mt-0.5 w-full min-h-11 px-2 text-sm border border-[#E5EAE8] rounded-xl bg-white"
+                          >
+                            {PRICELIST_CATEGORIES.map(c => (
+                              <option key={c.value} value={c.value}>{c.label}</option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+
+                      {!readOnly && (
+                        <button
+                          type="button"
+                          onClick={() => removeRow(idx)}
+                          className="inline-flex items-center justify-center gap-1.5 min-h-11 text-sm font-bold text-rose-600"
+                        >
+                          <Trash2 className="w-4 h-4" aria-hidden />
+                          Hapus item
+                        </button>
+                      )}
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             );
           })}

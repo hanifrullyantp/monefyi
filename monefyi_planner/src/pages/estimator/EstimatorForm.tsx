@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronDown, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import EstimationDetailHeaderCard from '../../components/estimator/detail/EstimationDetailHeaderCard';
 import EstimationDetailBottomBar from '../../components/estimator/detail/EstimationDetailBottomBar';
 import EstimationWhatsAppPickerModal from '../../components/estimator/detail/EstimationWhatsAppPickerModal';
@@ -9,8 +9,9 @@ import EstimationDocumentPreviewModal from '../../components/estimator/detail/Es
 import type { DocumentType } from '../../components/estimator/detail/EstimationDocumentMenu';
 import type { WhatsAppEstimationPreset } from '../../lib/whatsappEstimationPresets';
 import type { BillingMilestone } from '../../lib/estimationBillingSchedule';
-import EstimatorBreadcrumb from '../../components/estimator/EstimatorBreadcrumb';
+import EstimationDetailProjectCard from '../../components/estimator/detail/EstimationDetailProjectCard';
 import EstimationStatusHistory from '../../components/estimator/EstimationStatusHistory';
+import { useShellStore } from '../../store/shellStore';
 import ConvertEstimationWizard from '../../components/estimator/ConvertEstimationWizard';
 import { useAutoSave } from '../../hooks/useAutoSave';
 import { useEstimationSummary } from '../../hooks/useEstimationSummary';
@@ -82,6 +83,7 @@ export default function EstimatorForm() {
   const isNew = !id || id === 'new';
   const navigate = useNavigate();
   const { tenant, user, projects, addProject } = useAppStore();
+  const setShellMeta = useShellStore(s => s.setShellMeta);
   const showToast = useUiStore(s => s.showToast);
   const navSidebarCollapsed = useAppStore(s => s.navSidebarCollapsed);
 
@@ -245,6 +247,14 @@ export default function EstimatorForm() {
       navigate('/app/estimator', { replace: true });
     }
   }, [handleBeforeLeaveList, isDirty, navigate, discardAutoSave, draftStorageKey]);
+
+  useEffect(() => {
+    setShellMeta({
+      estimatorCode: draft?.code || null,
+      onEstimatorBack: goBackToList,
+    });
+    return () => setShellMeta({ estimatorCode: null, onEstimatorBack: null });
+  }, [draft?.code, goBackToList, setShellMeta]);
 
   useEffect(() => {
     if (!draft || isNew || isReadOnly || loading) return;
@@ -799,12 +809,7 @@ export default function EstimatorForm() {
   }
 
   return (
-    <div className="w-full max-w-[100rem] mx-auto px-3 sm:px-5 py-4 pb-52 lg:pb-32 overflow-x-hidden">
-      <EstimatorBreadcrumb
-        items={[{ label: isNew ? 'Baru' : draft.code }]}
-        onBack={goBackToList}
-      />
-
+    <div className="w-full max-w-[100rem] mx-auto px-3 sm:px-5 py-4 pb-52 lg:pb-32 overflow-x-hidden bg-[#F4F7F5] min-h-full">
       {isReadOnly && convertedProjectId && (
         <button
           type="button"
@@ -830,8 +835,7 @@ export default function EstimatorForm() {
           statusChanging={statusChanging}
           onTitleChange={title => patch({ title })}
           onClientNameChange={name => patch({ customer_name: name })}
-          onStatusTransition={applyStatusTransition}
-          onAddItem={() => addItemRef.current?.()}
+          onStatusTransition={next => { void applyStatusTransition(next, { skipConfirm: true }); }}
           onConvert={handleOpenConvert}
           onDuplicate={handleDuplicate}
           onDelete={handleDelete}
@@ -840,6 +844,7 @@ export default function EstimatorForm() {
           linkedProjectName={linkedProjectName}
           sentAt={statusMeta?.sent_at}
           updatedAt={updatedAt}
+          waAt={statusMeta?.wa_at}
           userId={user?.id}
           autoSaveStatus={autoSave.status}
           onRetryAutoSave={() => draftRef.current && autoSave.flush()}
@@ -847,23 +852,15 @@ export default function EstimatorForm() {
       )}
 
       {draft && (
-        <button
-          type="button"
-          id="estimation-client-tab"
-          onClick={() => setDetailOpen(v => !v)}
-          className="mb-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all duration-200 active:scale-95"
-        >
-          <ChevronDown
-            className={`w-4 h-4 shrink-0 transition-transform duration-200 ${detailOpen ? 'rotate-180' : ''}`}
-            aria-hidden
-          />
-          Detail Project
-        </button>
-      )}
-
-      {/* Panel detail — collapsible, di atas tabel tapi tidak di samping */}
-      {detailOpen && (
-        <div className="mb-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="mt-3 mb-4" id="estimation-client-tab">
+          <EstimationDetailProjectCard
+            open={detailOpen}
+            onToggle={() => setDetailOpen(v => !v)}
+            draft={draft}
+            updatedAt={updatedAt}
+            isReadOnly={isReadOnly}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           <section className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 md:col-span-2 xl:col-span-2">
             <h3 className="text-xs font-bold text-slate-500 uppercase">Informasi Customer & Proyek</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -990,6 +987,8 @@ export default function EstimatorForm() {
               </div>
             )}
           </section>
+            </div>
+          </EstimationDetailProjectCard>
         </div>
       )}
 

@@ -5,6 +5,7 @@ import {
   estimationMarginPct,
   estimationSourceLabel,
   formatUpdateAgeLabel,
+  dashboardStatusLabel,
   getDashboardBucket,
   getEstimatorDashboardStats,
   isEstimationArchived,
@@ -37,29 +38,37 @@ function daysAgo(days: number): string {
 }
 
 describe('estimatorListDashboard - status mapping - Active/Lead/Arsip', () => {
-  it('maps closing/proses/finishing/selesai to Active and wa/survei/penawaran to Lead', () => {
+  it('maps closing/proses/finishing to Active, wa/survei/penawaran to Lead, selesai/rejected to arsip', () => {
     expect(getDashboardBucket('closing')).toBe('active');
     expect(getDashboardBucket('proses')).toBe('active');
     expect(getDashboardBucket('finishing')).toBe('active');
-    expect(getDashboardBucket('selesai')).toBe('active');
+    expect(getDashboardBucket('selesai')).toBeNull();
     expect(getDashboardBucket('wa')).toBe('lead');
     expect(getDashboardBucket('survei')).toBe('lead');
     expect(getDashboardBucket('penawaran')).toBe('lead');
     expect(getDashboardBucket('rejected')).toBeNull();
     expect(getDashboardBucket('converted')).toBeNull();
+    expect(dashboardStatusLabel('penawaran')).toBe('Lead');
+    expect(dashboardStatusLabel('closing')).toBe('Active');
+    expect(dashboardStatusLabel('selesai')).toBe('Arsip');
+    expect(dashboardStatusLabel('rejected')).toBe('Arsip');
   });
 
-  it('treats rejected and converted as archived', () => {
+  it('treats selesai, rejected, and converted as archived', () => {
+    expect(isEstimationArchived('selesai')).toBe(true);
     expect(isEstimationArchived('rejected')).toBe(true);
     expect(isEstimationArchived('converted')).toBe(true);
     expect(isEstimationArchived('wa')).toBe(false);
+    expect(isEstimationArchived('finishing')).toBe(false);
   });
 
   it('hides archived rows from the default list filter', () => {
     const open = row({ id: '1', status: 'wa' });
-    const archived = row({ id: '2', status: 'rejected' });
+    const rejected = row({ id: '2', status: 'rejected' });
+    const selesai = row({ id: '3', status: 'selesai' });
     expect(matchesDashboardFilter(open, 'all')).toBe(true);
-    expect(matchesDashboardFilter(archived, 'all')).toBe(false);
+    expect(matchesDashboardFilter(rejected, 'all')).toBe(false);
+    expect(matchesDashboardFilter(selesai, 'all')).toBe(false);
   });
 });
 

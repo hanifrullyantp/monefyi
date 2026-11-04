@@ -8,6 +8,7 @@ type Props = {
   onDuplicate: () => void;
   onDelete: () => void;
   disabled?: boolean;
+  variant?: 'default' | 'onDark';
 };
 
 export default function EstimatorActionsMenu({
@@ -17,6 +18,7 @@ export default function EstimatorActionsMenu({
   onDuplicate,
   onDelete,
   disabled = false,
+  variant = 'default',
 }: Props) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -40,7 +42,11 @@ export default function EstimatorActionsMenu({
         type="button"
         disabled={disabled}
         onClick={() => setOpen(v => !v)}
-        className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+        className={`inline-flex items-center justify-center min-h-11 min-w-11 rounded-xl disabled:opacity-60 ${
+          variant === 'onDark'
+            ? 'text-white hover:bg-white/15'
+            : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
+        }`}
         aria-label="Menu aksi"
         aria-haspopup="menu"
         aria-expanded={open}

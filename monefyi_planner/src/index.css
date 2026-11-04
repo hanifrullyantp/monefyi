@@ -194,7 +194,22 @@ select:-webkit-autofill {
   caret-color: #0f172a;
 }
 
-/* Explicit dark-surface fields (e.g. EditableTable) keep light text via Tailwind dark:text-* */
+/* Dark-surface fields (kartu ringkasan estimasi) — kalahkan warna input global. */
+input.on-dark-field,
+textarea.on-dark-field {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff;
+}
+input.on-dark-field::placeholder,
+textarea.on-dark-field::placeholder {
+  color: rgba(209, 250, 229, 0.55) !important;
+}
+input.on-dark-field-muted {
+  color: #d1fae5 !important;
+  -webkit-text-fill-color: #d1fae5 !important;
+  caret-color: #ffffff;
+}
 
 /* PWA standalone — safe area for notched phones */
 @media (display-mode: standalone) {
