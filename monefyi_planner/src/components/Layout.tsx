@@ -273,6 +273,12 @@ export default function Layout({ children }: LayoutProps) {
       icon: <User className="w-4 h-4 shrink-0" />,
       onClick: () => goSettingsTab('profil'),
     },
+    ...(isEstimatorShell ? [{
+      id: 'estimator-settings',
+      label: 'Pengaturan Estimator',
+      icon: <Settings className="w-4 h-4 shrink-0" />,
+      onClick: () => navigate('/app/estimator/settings'),
+    }] : []),
     {
       id: 'settings',
       label: 'Pengaturan',
@@ -492,7 +498,7 @@ export default function Layout({ children }: LayoutProps) {
                   <button
                     key={item.id}
                     onClick={() => handleNav(item.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${
+                    className={`w-full min-h-11 flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${
                       isTabActive(item.id)
                         ? 'bg-org-soft text-org-dark'
                         : 'text-slate-600 hover:bg-slate-50'
@@ -505,6 +511,19 @@ export default function Layout({ children }: LayoutProps) {
                     )}
                   </button>
                 ))}
+                {isEstimatorShell && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigate('/app/estimator/settings');
+                      setSidebarOpen(false);
+                    }}
+                    className="w-full min-h-11 flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50"
+                  >
+                    <Settings className="w-5 h-5" />
+                    Pengaturan Estimator
+                  </button>
+                )}
               </nav>
 
               {isSuperAdmin && <EntitlementPreviewPanel />}
@@ -523,7 +542,8 @@ export default function Layout({ children }: LayoutProps) {
           <div className="flex items-center gap-2 min-w-0">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-lg hover:bg-slate-100 lg:hidden transition-colors active:scale-95"
+              className="inline-flex items-center justify-center min-h-11 min-w-11 rounded-lg hover:bg-slate-100 lg:hidden transition-colors active:scale-95"
+              aria-label="Buka menu"
             >
               <Menu className="w-5 h-5 text-slate-600" />
             </button>
@@ -568,7 +588,7 @@ export default function Layout({ children }: LayoutProps) {
                 <div className="relative lg:hidden">
                   <button
                     onClick={() => setNotifOpen(!notifOpen)}
-                    className="relative p-2 rounded-xl hover:bg-slate-100 transition-all duration-200 active:scale-95"
+                    className="relative inline-flex items-center justify-center min-h-11 min-w-11 rounded-xl hover:bg-slate-100 transition-all duration-200 active:scale-95"
                     aria-label="Notifikasi"
                   >
                     <Bell className="w-5 h-5 text-slate-600" />

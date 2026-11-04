@@ -32,7 +32,7 @@ export default function UserMenuDropdown({ userName, items }: Props) {
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-1 p-0.5 rounded-full hover:bg-slate-100 transition-all duration-200 active:scale-95"
+        className="flex items-center justify-center gap-1 min-h-11 min-w-11 p-0.5 rounded-full hover:bg-slate-100 transition-all duration-200 active:scale-95"
         aria-label="Menu pengguna"
         aria-expanded={open}
       >

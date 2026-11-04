@@ -1,2 +1,2 @@
-/** EVM untuk Edge Function. Implementasinya satu, di packages/domain. */
-export { computeProjectEvm } from "../../../../packages/domain/src/evm.ts";
+/** Salinan deploy dari packages/domain/src/evm.ts. Bundler menolak impor di luar folder functions. */
+export { computeProjectEvm } from "./domain/evm.ts";

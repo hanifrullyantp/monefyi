@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Search, Settings } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
 import EstimationKanbanView from '../../components/estimator/EstimationKanbanView';
@@ -13,16 +13,20 @@ import PostPurchaseBanner, {
   dismissPostPurchaseBanner,
   readPostPurchaseBanner,
 } from '../../components/entitlement/PostPurchaseBanner';
-import EstimatorListHeader from '../../components/estimator/list/EstimatorListHeader';
+import EstimatorListDashboard from '../../components/estimator/list/EstimatorListDashboard';
 import EstimatorListToolbar from '../../components/estimator/list/EstimatorListToolbar';
 import EstimatorListOptionsSheet from '../../components/estimator/list/EstimatorListOptionsSheet';
-import EstimatorPipelineSegmentedTabs from '../../components/estimator/list/EstimatorPipelineSegmentedTabs';
+import EstimatorStatusPickerSheet from '../../components/estimator/list/EstimatorStatusPickerSheet';
 import EstimationListCard from '../../components/estimator/list/EstimationListCard';
 import EstimationListSkeleton from '../../components/estimator/list/EstimationListSkeleton';
 import EstimatorListEmpty from '../../components/estimator/list/EstimatorListEmpty';
-import { buildPipelineGroups } from '../../components/estimator/EstimationPipelineGroupList';
 import type { PipelineTabId } from '../../components/estimator/EstimationPipelineTabs';
-import { countEstimationsByStatus, normalizeEstimationStatus } from '../../lib/estimationStatus';
+import {
+  PIPELINE_GROUP_META,
+  countEstimationsByStatus,
+  getPipelineSummaryBucket,
+  normalizeEstimationStatus,
+} from '../../lib/estimationStatus';
 import {
   groupEstimationsForList,
   statusSortIndex,
@@ -35,6 +39,16 @@ import {
   type EstimationListViewMode,
 } from '../../lib/estimationListView';
 import { getEstimationListStats } from '../../lib/estimatorListStats';
+import {
+  DASHBOARD_FILTER_LABEL,
+  getEstimatorDashboardStats,
+  isEstimationArchived,
+  isEstimationStale,
+  matchesDashboardFilter,
+  sortEstimationsForDashboard,
+  type DashboardListFilter,
+} from '../../lib/estimatorListDashboard';
+import { ESTIMATOR_LIST_PAGE_SIZE } from '../../lib/estimatorListThresholds';
 import {
   countLifetimeEstimations,
   deleteEstimation,
@@ -59,7 +73,7 @@ import {
 } from '../../lib/entitlement';
 import { useEntitlement } from '../../hooks/useEntitlement';
 import { analytics } from '../../lib/analytics/events';
-import { ESTIMATION_STATUS_LABEL, formatRupiahCompact } from '../../lib/estimatorFormat';
+import { ESTIMATION_STATUS_LABEL } from '../../lib/estimatorFormat';
 import type { EstimationFormDraft } from '../../types/estimator';
 import type { PdfSettings } from '../../types/pdfSettings';
 import type { WhatsAppTemplateConfig } from '../../lib/whatsappQuotationMessage';
@@ -97,30 +111,18 @@ const GROUP_OPTIONS: Array<{ value: EstimationGroupMode; label: string }> = [
   { value: 'client', label: 'Kelompok klien' },
 ];
 
-function EstimationSearchRow({
-  estimation,
-  onOpen,
-}: {
-  estimation: Estimation;
-  onOpen: () => void;
-}) {
-  const status = normalizeEstimationStatus(estimation.status);
+function matchesSearch(est: Estimation, query: string): boolean {
+  const q = query.toLowerCase().trim();
+  if (!q) return true;
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="w-full grid grid-cols-[5.5rem_minmax(0,1fr)_auto] sm:grid-cols-[6.5rem_minmax(0,1.4fr)_minmax(0,0.8fr)_6.5rem_7rem] items-center gap-2 px-3 py-2 bg-white border-b border-slate-100 text-left hover:bg-emerald-50"
-    >
-      <span className="font-mono text-[11px] font-semibold text-emerald-700 truncate">{estimation.code}</span>
-      <span className="text-sm font-semibold text-slate-900 truncate">{estimation.title || 'Tanpa judul'}</span>
-      <span className="hidden sm:block text-xs text-slate-500 truncate">{estimation.customer_name || '—'}</span>
-      <span className="hidden sm:block text-[11px] font-semibold text-slate-600 truncate">{ESTIMATION_STATUS_LABEL[status]}</span>
-      <span className="text-xs font-bold text-slate-900 tabular-nums text-right">{formatRupiahCompact(Number(estimation.total_selling_price))}</span>
-    </button>
+    est.code.toLowerCase().includes(q) ||
+    est.title.toLowerCase().includes(q) ||
+    (est.customer_name || '').toLowerCase().includes(q)
   );
 }
 
 function sortRows(rows: Estimation[], key: SortKey): Estimation[] {
+  if (key === 'newest') return sortEstimationsForDashboard(rows);
   const copy = [...rows];
   switch (key) {
     case 'oldest':
@@ -138,7 +140,7 @@ function sortRows(rows: Estimation[], key: SortKey): Estimation[] {
         return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
       });
     default:
-      return copy.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+      return sortEstimationsForDashboard(copy);
   }
 }
 
@@ -151,15 +153,20 @@ export default function EstimatorListPage() {
   const [rows, setRows] = useState<Estimation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState('');
-  const [searchFocused, setSearchFocused] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [lifetimeCount, setLifetimeCount] = useState<number | null>(null);
-  const [optionsOpen, setOptionsOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetMode, setSheetMode] = useState<'filter' | 'sort'>('filter');
   const [statusFilter, setStatusFilter] = useState<'' | EstimationStatus>('');
   const [pipelineTab, setPipelineTab] = useState<PipelineTabId>('all');
+  const [dashboardFilter, setDashboardFilter] = useState<DashboardListFilter>('all');
   const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [groupMode, setGroupMode] = useState<EstimationGroupMode>('none');
   const [listViewMode, setListViewMode] = useState<EstimationListViewMode>(readEstimationListViewMode);
+  const [visibleCount, setVisibleCount] = useState(ESTIMATOR_LIST_PAGE_SIZE);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [statusPickerId, setStatusPickerId] = useState<string | null>(null);
   const [convertOpen, setConvertOpen] = useState(false);
   const [convertEstimation, setConvertEstimation] = useState<Estimation | null>(null);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
@@ -182,6 +189,7 @@ export default function EstimatorListPage() {
   const [upgradeTrigger, setUpgradeTrigger] = useState<UpgradeModalTrigger>('estimator_pro_feature');
   const [upgradeFeatureName, setUpgradeFeatureName] = useState('Generator Kwitansi Pro');
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
+  const [archiveBusy, setArchiveBusy] = useState(false);
 
   const setListView = (mode: EstimationListViewMode) => {
     setListViewMode(mode);
@@ -197,14 +205,14 @@ export default function EstimatorListPage() {
     if (!tenant?.id) return;
     setLoading(true);
     try {
-      const data = await loadEstimations(tenant.id, { search: debouncedSearch });
+      const data = await loadEstimations(tenant.id);
       setRows(data);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal memuat estimasi', 'error');
     } finally {
       setLoading(false);
     }
-  }, [tenant?.id, debouncedSearch, showToast]);
+  }, [tenant?.id, showToast]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -225,23 +233,33 @@ export default function EstimatorListPage() {
 
   const statusCounts = useMemo(() => countEstimationsByStatus(rows), [rows]);
   const listStats = useMemo(() => getEstimationListStats(rows), [rows]);
+  const dashboardStats = useMemo(() => getEstimatorDashboardStats(rows), [rows]);
+
+  const searchedRows = useMemo(
+    () => rows.filter(r => matchesSearch(r, debouncedSearch)),
+    [rows, debouncedSearch],
+  );
 
   const filteredRows = useMemo(() => {
-    if (!statusFilter) return rows;
-    return rows.filter(r => normalizeEstimationStatus(r.status) === statusFilter);
-  }, [rows, statusFilter]);
+    if (dashboardFilter !== 'all') {
+      return searchedRows.filter(r => matchesDashboardFilter(r, dashboardFilter));
+    }
+    if (statusFilter) {
+      return searchedRows.filter(r => normalizeEstimationStatus(r.status) === statusFilter);
+    }
+    if (pipelineTab === 'archive') {
+      return searchedRows.filter(r => isEstimationArchived(r.status));
+    }
+    if (pipelineTab === 'all') {
+      return searchedRows.filter(r => !isEstimationArchived(r.status));
+    }
+    return searchedRows.filter(r => getPipelineSummaryBucket(r.status) === pipelineTab);
+  }, [searchedRows, dashboardFilter, statusFilter, pipelineTab]);
 
   const sortedRows = useMemo(() => sortRows(filteredRows, sortKey), [filteredRows, sortKey]);
   const groupedRows = useMemo(() => groupEstimationsForList(sortedRows, groupMode), [sortedRows, groupMode]);
-  const pipelineGroups = useMemo(() => buildPipelineGroups(sortedRows), [sortedRows]);
 
-  const archiveRows = useMemo(
-    () => sortedRows.filter(r => {
-      const s = normalizeEstimationStatus(r.status);
-      return s === 'rejected' || s === 'converted';
-    }),
-    [sortedRows],
-  );
+  const newestId = sortedRows[0]?.id ?? null;
 
   const kanbanRows = useMemo(
     () => sortedRows.filter(r => {
@@ -251,6 +269,26 @@ export default function EstimatorListPage() {
     [sortedRows],
   );
 
+  const pipelineCounts = useMemo(() => {
+    const counts: Record<PipelineTabId, number> = {
+      all: 0,
+      wa: 0,
+      survei: 0,
+      closing: 0,
+      archive: 0,
+    };
+    for (const row of rows) {
+      if (isEstimationArchived(row.status)) {
+        counts.archive += 1;
+        continue;
+      }
+      counts.all += 1;
+      const bucket = getPipelineSummaryBucket(row.status);
+      if (bucket) counts[bucket] += 1;
+    }
+    return counts;
+  }, [rows]);
+
   const statusFilterOptions = useMemo(
     () => STATUS_FILTERS.map(f => ({
       ...f,
@@ -259,18 +297,45 @@ export default function EstimatorListPage() {
     [statusCounts],
   );
 
-  const activeSecondaryFilterLabel = statusFilter
-    ? STATUS_FILTERS.find(f => f.value === statusFilter)?.label ?? null
-    : null;
+  const listTitle = (() => {
+    if (dashboardFilter !== 'all') return DASHBOARD_FILTER_LABEL[dashboardFilter];
+    if (statusFilter) return STATUS_FILTERS.find(f => f.value === statusFilter)?.label ?? 'Filter';
+    if (pipelineTab !== 'all') {
+      if (pipelineTab === 'archive') return 'Arsip';
+      return PIPELINE_GROUP_META[pipelineTab].title;
+    }
+    return DASHBOARD_FILTER_LABEL.all;
+  })();
+
+  const hasActiveFilter = dashboardFilter !== 'all' || Boolean(statusFilter) || pipelineTab !== 'all';
+
+  useEffect(() => {
+    setVisibleCount(ESTIMATOR_LIST_PAGE_SIZE);
+    setExpandedId(null);
+  }, [dashboardFilter, statusFilter, pipelineTab, debouncedSearch, sortKey, groupMode]);
+
+  const clearListFilter = () => {
+    setDashboardFilter('all');
+    setStatusFilter('');
+    setPipelineTab('all');
+  };
+
+  const toggleDashboardFilter = (filter: Exclude<DashboardListFilter, 'all'>) => {
+    setDashboardFilter(prev => (prev === filter ? 'all' : filter));
+    setStatusFilter('');
+    setPipelineTab('all');
+  };
 
   const handlePipelineTabChange = (tab: PipelineTabId) => {
     setPipelineTab(tab);
     setStatusFilter('');
+    setDashboardFilter('all');
   };
 
   const handleStatusFilterChange = (value: '' | EstimationStatus) => {
     setStatusFilter(value);
     if (value) setPipelineTab('all');
+    setDashboardFilter('all');
   };
 
   const handleDelete = async (id: string, title: string) => {
@@ -402,6 +467,31 @@ export default function EstimatorListPage() {
     }
   };
 
+  const handleArchive = async (est: Estimation) => {
+    if (isEstimationArchived(est.status)) return;
+    if (!window.confirm(`Arsipkan "${est.title || 'estimasi ini'}"? Estimasi akan pindah ke arsip.`)) return;
+    await handleStatusChange(est.id, 'rejected');
+  };
+
+  const handleArchiveStale = async () => {
+    const stale = rows.filter(r => isEstimationStale(r));
+    if (stale.length === 0) return;
+    if (!window.confirm(`Arsipkan ${stale.length} estimasi mandek? Estimasi akan pindah ke arsip.`)) return;
+    setArchiveBusy(true);
+    try {
+      for (const est of stale) {
+        await updateEstimationStatus(est.id, 'rejected');
+      }
+      showToast(`${stale.length} estimasi diarsipkan`, 'success');
+      void load();
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal mengarsipkan', 'error');
+      void load();
+    } finally {
+      setArchiveBusy(false);
+    }
+  };
+
   const handleConverted = async (summary: { projectId: string; projectName: string }) => {
     showToast('Proyek berhasil dibuat', 'success');
     setConvertOpen(false);
@@ -419,20 +509,30 @@ export default function EstimatorListPage() {
     <EstimationListCard
       key={est.id}
       estimation={est}
+      newestId={newestId}
+      expanded={expandedId === est.id}
+      onToggleExpand={() => setExpandedId(prev => (prev === est.id ? null : est.id))}
       onOpen={() => navigate(`/app/estimator/${est.id}`)}
-      onEdit={() => navigate(`/app/estimator/${est.id}`)}
       onDuplicate={() => handleDuplicate(est.id)}
       onDelete={() => handleDelete(est.id, est.title)}
       onConvert={() => handleConvert(est.id)}
       onShareWhatsApp={() => handleShareWhatsApp(est.id)}
+      onChangeStatus={() => setStatusPickerId(est.id)}
+      onArchive={() => { void handleArchive(est); }}
       onKwitansi={() => handleKwitansi(est.id)}
       waLoading={waLoadingId === est.id}
       kwitansiLoading={kwitansiLoadingId === est.id}
+      statusBusy={statusUpdatingId === est.id}
+      archiveBusy={statusUpdatingId === est.id || archiveBusy}
+      archiveDisabled={isEstimationArchived(est.status)}
+      statusDisabled={normalizeEstimationStatus(est.status) === 'converted'}
     />
   );
 
   const quotaUsed = lifetimeCount ?? listStats.total;
-  const compactSearch = searchFocused || searchInput.trim().length > 0;
+  const visibleRows = sortedRows.slice(0, visibleCount);
+  const remainingCount = Math.max(0, sortedRows.length - visibleRows.length);
+  const statusPickerEst = rows.find(r => r.id === statusPickerId) ?? null;
 
   const goNew = () => {
     if (!canCreateEstimation(entitlement, quotaUsed)) {
@@ -450,9 +550,9 @@ export default function EstimatorListPage() {
       : null;
 
   return (
-    <div className="max-w-6xl mx-auto pb-24 lg:pb-6 lg:p-6">
+    <div className="max-w-6xl mx-auto pb-24 lg:pb-6 min-h-full bg-[#F4F7F5] overflow-x-hidden">
       {postPurchaseProduct && (
-        <div className="px-4 pt-4 lg:px-0 lg:pt-0">
+        <div className="px-4 pt-4 lg:px-0 lg:pt-4">
           <PostPurchaseBanner
             product={postPurchaseProduct}
             onDismiss={() => {
@@ -464,7 +564,7 @@ export default function EstimatorListPage() {
       )}
 
       {entitlement.isFree && freeRemaining != null && (
-        <div className="mx-4 mt-4 lg:mx-0 lg:mt-0 mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+        <div className="mx-4 mt-4 lg:mx-0 lg:mt-4 mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
           <p className="font-semibold">
             Paket gratis · {freeRemaining} dari {FREE_ESTIMATION_LIMIT} estimasi tersisa
           </p>
@@ -485,166 +585,102 @@ export default function EstimatorListPage() {
         </div>
       )}
 
-      {/* Page header — mobile-first */}
-      <div className="lg:hidden">
-        <EstimatorListHeader
-          totalCount={listStats.total}
-          activeOffers={listStats.activeOffers}
+      <div className="pt-4">
+        <EstimatorListDashboard
+          stats={dashboardStats}
+          activeFilter={dashboardFilter}
+          onToggleFilter={toggleDashboardFilter}
           onCreate={goNew}
-          onOpenSettings={() => navigate('/app/estimator/settings')}
         />
       </div>
 
-      {/* Desktop title */}
-      <div className="hidden lg:flex items-center justify-between gap-2 mb-4 px-0">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900">Estimator</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            {listStats.total} estimasi · {listStats.activeOffers} penawaran aktif
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => navigate('/app/estimator/settings')}
-          className="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-emerald-700 transition-colors"
-          aria-label="Pengaturan estimator"
-        >
-          <Settings className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          onClick={goNew}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all duration-200 active:scale-95"
-        >
-          Estimasi Baru
-        </button>
-      </div>
-
       <EstimatorListToolbar
+        title={listTitle}
+        count={sortedRows.length}
         search={searchInput}
+        searchOpen={searchOpen}
+        onSearchOpen={() => setSearchOpen(true)}
+        onSearchClose={() => {
+          setSearchOpen(false);
+          setSearchInput('');
+        }}
         onSearchChange={setSearchInput}
-        onSearchFocus={() => setSearchFocused(true)}
-        onSearchBlur={() => setSearchFocused(false)}
-        onOpenOptions={() => setOptionsOpen(true)}
-        activeFilterLabel={activeSecondaryFilterLabel}
-        onClearFilter={() => setStatusFilter('')}
+        onOpenFilter={() => {
+          setSheetMode('filter');
+          setSheetOpen(true);
+        }}
+        onOpenSort={() => {
+          setSheetMode('sort');
+          setSheetOpen(true);
+        }}
+        activeFilterLabel={hasActiveFilter ? listTitle : null}
+        onClearFilter={clearListFilter}
+        staleArchiveCount={dashboardFilter === 'stale' ? dashboardStats.staleCount : 0}
+        onArchiveStale={() => { void handleArchiveStale(); }}
+        archiveStaleBusy={archiveBusy}
       />
-
-      {/* Desktop filters */}
-      <div className="hidden lg:flex flex-row gap-3 mb-4 px-0">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            value={searchInput}
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setSearchFocused(false)}
-            onChange={e => setSearchInput(e.target.value)}
-            placeholder="Cari kode, judul, klien..."
-            className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-emerald-400 outline-none"
-          />
-        </div>
-        <select
-          value={sortKey}
-          onChange={e => setSortKey(e.target.value as SortKey)}
-          className="appearance-none w-44 pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 bg-white"
-        >
-          {SORT_OPTIONS.map(o => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-        <select
-          value={groupMode}
-          onChange={e => setGroupMode(e.target.value as EstimationGroupMode)}
-          className="appearance-none w-44 pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 bg-white"
-        >
-          {GROUP_OPTIONS.map(g => (
-            <option key={g.value} value={g.value}>{g.label}</option>
-          ))}
-        </select>
-        <select
-          value={statusFilter}
-          onChange={e => handleStatusFilterChange(e.target.value as '' | EstimationStatus)}
-          className="appearance-none w-44 pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 bg-white"
-        >
-          {statusFilterOptions.map(f => (
-            <option key={f.value || 'all'} value={f.value}>{f.label} ({f.count})</option>
-          ))}
-        </select>
-        <select
-          value={listViewMode}
-          onChange={e => setListView(e.target.value as EstimationListViewMode)}
-          className="appearance-none w-40 pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 bg-white"
-          aria-label="Tampilan daftar"
-        >
-          {ESTIMATION_LIST_VIEW_OPTIONS.map(v => (
-            <option key={v.value} value={v.value}>{v.label}</option>
-          ))}
-        </select>
-      </div>
 
       {loading ? (
         <EstimationListSkeleton />
-      ) : sortedRows.length === 0 ? (
+      ) : rows.length === 0 ? (
         <EstimatorListEmpty onCreate={goNew} />
-      ) : (
-        <div className="space-y-4">
-          {compactSearch ? (
-            <div className="mx-4 lg:mx-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
-              {sortedRows.map(est => (
-                <EstimationSearchRow
-                  key={est.id}
-                  estimation={est}
-                  onOpen={() => navigate(`/app/estimator/${est.id}`)}
-                />
-              ))}
-            </div>
-          ) : listViewMode === 'kanban' ? (
-            <div className="px-4 lg:px-0">
-              <EstimationKanbanView
-                rows={kanbanRows}
-                onOpen={est => navigate(`/app/estimator/${est.id}`)}
-                onStatusChange={handleStatusChange}
-                statusUpdatingId={statusUpdatingId}
-              />
-            </div>
-          ) : groupMode === 'none' ? (
-            <EstimatorPipelineSegmentedTabs
-              groups={pipelineGroups}
-              archiveRows={archiveRows}
-              archiveCount={archiveRows.length}
-              activeTab={pipelineTab}
-              onTabChange={handlePipelineTabChange}
-              renderItem={est => renderCard(est)}
-            />
-          ) : (
-            <div className="px-4 lg:px-0 space-y-4">
-              {groupedRows.map(group => (
-                <div key={group.key}>
-                  {group.label && (
-                    <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 px-1">
-                      {group.label}
-                      <span className="text-slate-400 font-semibold normal-case ml-1.5">({group.rows.length})</span>
-                    </h2>
-                  )}
-                  <div className="space-y-3">
-                    {group.rows.map(est => renderCard(est))}
-                  </div>
-                </div>
-              ))}
-            </div>
+      ) : sortedRows.length === 0 ? (
+        <div className="mx-4 text-center py-12 px-4 text-sm text-slate-500 bg-white rounded-[14px] border border-dashed border-[#E5EAE8]">
+          Tidak ada estimasi di filter ini.
+        </div>
+      ) : listViewMode === 'kanban' ? (
+        <div className="px-4">
+          <EstimationKanbanView
+            rows={kanbanRows}
+            onOpen={est => navigate(`/app/estimator/${est.id}`)}
+            onStatusChange={handleStatusChange}
+            statusUpdatingId={statusUpdatingId}
+          />
+        </div>
+      ) : groupMode === 'none' ? (
+        <div className="px-4 space-y-2">
+          {visibleRows.map(est => renderCard(est))}
+          {remainingCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setVisibleCount(sortedRows.length)}
+              className="w-full min-h-11 text-sm font-bold text-emerald-700"
+            >
+              Tampilkan {remainingCount} lainnya
+            </button>
           )}
+        </div>
+      ) : (
+        <div className="px-4 space-y-4">
+          {groupedRows.map(group => (
+            <div key={group.key}>
+              {group.label && (
+                <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 px-1">
+                  {group.label}
+                  <span className="text-slate-400 font-semibold normal-case ml-1.5">({group.rows.length})</span>
+                </h2>
+              )}
+              <div className="space-y-2">
+                {group.rows.map(est => renderCard(est))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
       <EstimatorListOptionsSheet
-        open={optionsOpen}
-        onClose={() => setOptionsOpen(false)}
+        open={sheetOpen}
+        mode={sheetMode}
+        onClose={() => setSheetOpen(false)}
         listViewMode={listViewMode}
         onListViewChange={setListView}
         sortKey={sortKey}
         onSortChange={setSortKey}
         groupMode={groupMode}
         onGroupChange={setGroupMode}
+        pipelineTab={pipelineTab}
+        onPipelineTabChange={handlePipelineTabChange}
+        pipelineCounts={pipelineCounts}
         statusFilter={statusFilter}
         onStatusFilterChange={handleStatusFilterChange}
         statusFilters={statusFilterOptions}
@@ -653,6 +689,19 @@ export default function EstimatorListPage() {
         onRefresh={() => void load()}
         onOpenPricelist={() => navigate('/app/estimator/pricelist')}
         onOpenSettings={() => navigate('/app/estimator/settings')}
+      />
+
+      <EstimatorStatusPickerSheet
+        open={Boolean(statusPickerId)}
+        estimation={statusPickerEst}
+        busy={Boolean(statusUpdatingId)}
+        onClose={() => setStatusPickerId(null)}
+        onPick={next => {
+          if (!statusPickerId) return;
+          const id = statusPickerId;
+          setStatusPickerId(null);
+          void handleStatusChange(id, next);
+        }}
       />
 
       {kwitansiOpen && kwitansiDraft && kwitansiPdfSettings && (

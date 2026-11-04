@@ -1,6 +1,6 @@
 /** Gerbang input Edge Function Planner. Bentuk error datang dari packages/domain. */
 
-import { structuredError, type StructuredError } from "../../../../packages/domain/src/errors.ts";
+import { structuredError, type StructuredError } from "./domain/errors.ts";
 export type { StructuredError };
 
 export type GateOk<T> = { ok: true; value: T };

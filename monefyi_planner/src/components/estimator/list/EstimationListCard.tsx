@@ -1,31 +1,63 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { type KeyboardEvent, type MouseEvent } from 'react';
+import { ChevronDown, Copy, Receipt, Rocket, Trash2 } from 'lucide-react';
 import {
-  Clock, Copy, FileText, MessageCircle, MoreVertical, Pencil, Receipt, Rocket, Trash2, User,
-} from 'lucide-react';
-import EstimationStatusPill from './EstimationStatusPill';
-import {
-  formatRelativeTimeId,
-  formatRupiahCompact,
-  formatRupiahFull,
-} from '../../../lib/estimatorFormat';
-import { formatEstimationClientLine, estimationPdfMetaLabel } from '../../../lib/estimatorClientLine';
+  dashboardPillForRow,
+  estimationMarginPct,
+  estimationSourceLabel,
+  formatUpdateAgeLabel,
+  recencyToneForEstimation,
+  type DashboardPill,
+} from '../../../lib/estimatorListDashboard';
+import { ESTIMATION_STATUS_LABEL, formatRupiahCompact } from '../../../lib/estimatorFormat';
 import { normalizeEstimationStatus } from '../../../lib/estimationStatus';
 import type { Estimation } from '../../../types/estimator';
 
 type Props = {
   estimation: Estimation;
+  newestId?: string | null;
+  expanded: boolean;
+  onToggleExpand: () => void;
   onOpen: () => void;
-  onEdit: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
   onConvert?: () => void;
   onShareWhatsApp?: () => void;
+  onChangeStatus?: () => void;
+  onArchive?: () => void;
   onKwitansi?: () => void;
   waLoading?: boolean;
   kwitansiLoading?: boolean;
+  statusBusy?: boolean;
+  archiveBusy?: boolean;
+  archiveDisabled?: boolean;
+  statusDisabled?: boolean;
 };
 
-function stopCardClick(e: MouseEvent) {
+const PILL_CLASS: Record<Exclude<DashboardPill, null>, string> = {
+  terbaru: 'bg-emerald-50 text-emerald-700',
+  active: 'bg-sky-50 text-sky-700',
+  lead: 'bg-slate-100 text-slate-600',
+};
+
+const PILL_LABEL: Record<Exclude<DashboardPill, null>, string> = {
+  terbaru: 'Terbaru',
+  active: 'Active',
+  lead: 'Lead',
+};
+
+const TONE_BAR: Record<string, string> = {
+  fresh: 'bg-emerald-500',
+  aging: 'bg-amber-400',
+  stale: 'bg-rose-500',
+};
+
+const TONE_TEXT: Record<string, string> = {
+  fresh: 'text-emerald-700',
+  aging: 'text-amber-700',
+  stale: 'text-rose-600',
+};
+
+function stop(e: MouseEvent) {
   e.stopPropagation();
 }
 
@@ -38,175 +70,211 @@ function cardKeyDown(e: KeyboardEvent, onOpen: () => void) {
 
 export default function EstimationListCard({
   estimation: est,
+  newestId = null,
+  expanded,
+  onToggleExpand,
   onOpen,
-  onEdit,
   onDuplicate,
   onDelete,
   onConvert,
   onShareWhatsApp,
+  onChangeStatus,
+  onArchive,
   onKwitansi,
   waLoading = false,
   kwitansiLoading = false,
+  statusBusy = false,
+  archiveBusy = false,
+  archiveDisabled = false,
+  statusDisabled = false,
 }: Props) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
   const status = normalizeEstimationStatus(est.status);
-  const profit = Number(est.total_profit) || 0;
-  const profitNegative = profit < 0;
   const isConverted = status === 'converted';
-  const client = formatEstimationClientLine(est);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const onDoc = (e: Event) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
-    };
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, [menuOpen]);
-
-  const runMenu = (e: MouseEvent, fn: () => void) => {
-    e.stopPropagation();
-    setMenuOpen(false);
-    fn();
-  };
+  const value = Number(est.total_selling_price) || 0;
+  const profit = Number(est.total_profit) || 0;
+  const margin = estimationMarginPct(value, profit);
+  const tone = recencyToneForEstimation(est);
+  const pill = dashboardPillForRow(est, newestId);
+  const client = est.customer_name?.trim() || 'Tanpa klien';
 
   return (
-    <article
-      role="button"
-      tabIndex={0}
-      onClick={onOpen}
-      onKeyDown={e => cardKeyDown(e, onOpen)}
-      className="bg-white rounded-2xl border border-slate-100 hover:border-emerald-200 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-pointer p-5"
-    >
-      {/* Header: kode + status + menu */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xs font-mono font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md shrink-0">
-            {est.code}
-          </span>
-          <EstimationStatusPill status={status} compact />
-        </div>
-        <div ref={menuRef} className="relative shrink-0" onClick={stopCardClick}>
-          <button
-            type="button"
-            onClick={e => {
-              e.stopPropagation();
-              setMenuOpen(v => !v);
-            }}
-            className="h-8 w-8 inline-flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-500 transition-all duration-200 active:scale-95"
-            aria-label="Menu estimasi"
-          >
-            <MoreVertical size={16} />
-          </button>
-          {menuOpen && (
-            <div className="absolute right-0 top-full mt-1 z-40 min-w-[11.5rem] bg-white border border-slate-200 rounded-xl shadow-xl py-1">
-              <MenuRow icon={Pencil} label="Edit" onClick={e => runMenu(e, onEdit)} />
-              <MenuRow icon={Copy} label="Duplikat" onClick={e => runMenu(e, onDuplicate)} />
-              {!isConverted && onConvert && (
-                <MenuRow icon={Rocket} label="Jadikan proyek" onClick={e => runMenu(e, onConvert)} />
-              )}
-              <div className="my-1 border-t border-slate-100" />
-              <MenuRow icon={Trash2} label="Hapus" danger onClick={e => runMenu(e, onDelete)} />
+    <article className="bg-white rounded-[14px] border border-[#E5EAE8] overflow-hidden">
+      <div className="flex items-stretch">
+        <div className={`w-1 shrink-0 ${TONE_BAR[tone]}`} aria-hidden />
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={onOpen}
+          onKeyDown={e => cardKeyDown(e, onOpen)}
+          className="flex-1 min-w-0 min-h-11 px-3 py-3 text-left cursor-pointer"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <h3 className="text-sm font-bold text-slate-900 truncate">{est.title || 'Tanpa judul'}</h3>
+                {pill && (
+                  <span className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${PILL_CLASS[pill]}`}>
+                    {PILL_LABEL[pill]}
+                  </span>
+                )}
+              </div>
+              <p className={`mt-0.5 text-xs truncate ${TONE_TEXT[tone]}`}>
+                {client} · {formatUpdateAgeLabel(est.updated_at)}
+              </p>
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Body: judul + klien */}
-      <div className="mb-4">
-        <h3 className="text-lg font-bold text-slate-900 leading-tight line-clamp-2">{est.title}</h3>
-        {client && (
-          <p className="text-sm text-slate-500 mt-0.5 flex items-center gap-1 min-w-0">
-            <User size={12} className="shrink-0" aria-hidden />
-            <span className="truncate">{client}</span>
-          </p>
-        )}
-      </div>
-
-      {/* Metrics */}
-      <div className="grid grid-cols-2 gap-4 py-3 border-t border-slate-100">
-        <div>
-          <p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wide">Nilai Proyek</p>
-          <p className="text-lg font-bold text-slate-900 mt-1 tabular-nums">
-            {formatRupiahCompact(Number(est.total_selling_price))}
-          </p>
-          <p className="text-[10px] text-slate-400 mt-0.5 hidden sm:block tabular-nums">
-            {formatRupiahFull(Number(est.total_selling_price))}
-          </p>
-        </div>
-        <div>
-          <p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wide">Est. Profit</p>
-          <p className={`text-lg font-bold mt-1 tabular-nums ${profitNegative ? 'text-red-600' : 'text-emerald-600'}`}>
-            {formatRupiahCompact(profit)}
-          </p>
-        </div>
-      </div>
-
-      {/* Footer: meta + quick actions */}
-      <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-        <div className="flex items-center gap-3 text-xs text-slate-400 min-w-0">
-          <span className="flex items-center gap-1 shrink-0">
-            <Clock size={12} aria-hidden />
-            {formatRelativeTimeId(est.updated_at)}
-          </span>
-          <span className="flex items-center gap-1 truncate">
-            <FileText size={12} className="shrink-0" aria-hidden />
-            {estimationPdfMetaLabel(est.status, est.sent_at)}
-          </span>
-        </div>
-        {!isConverted && (
-          <div className="flex items-center gap-1 shrink-0" onClick={stopCardClick}>
-            {onShareWhatsApp && (
-              <button
-                type="button"
-                title="WhatsApp"
-                disabled={waLoading}
-                onClick={e => runMenu(e, onShareWhatsApp)}
-                className="h-8 w-8 inline-flex items-center justify-center rounded-full hover:bg-emerald-50 text-emerald-600 transition-all duration-200 active:scale-95 disabled:opacity-60"
-              >
-                <MessageCircle size={16} />
-              </button>
-            )}
-            {onKwitansi && (
-              <button
-                type="button"
-                title="Kwitansi"
-                disabled={kwitansiLoading}
-                onClick={e => runMenu(e, onKwitansi)}
-                className="h-8 w-8 inline-flex items-center justify-center rounded-full hover:bg-emerald-50 text-emerald-600 transition-all duration-200 active:scale-95 disabled:opacity-60"
-              >
-                <Receipt size={16} />
-              </button>
-            )}
+            <div className="text-right shrink-0">
+              <p className="text-sm font-bold text-slate-900 tabular-nums">{formatRupiahCompact(value)}</p>
+              <p className={`text-xs font-semibold tabular-nums ${profit < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                {formatRupiahCompact(profit)}
+              </p>
+            </div>
           </div>
-        )}
+        </div>
+        <button
+          type="button"
+          onClick={e => {
+            stop(e);
+            onToggleExpand();
+          }}
+          aria-expanded={expanded}
+          aria-label={expanded ? 'Tutup detail estimasi' : 'Buka detail estimasi'}
+          className="shrink-0 inline-flex items-center justify-center min-h-11 min-w-11 text-slate-400"
+        >
+          <ChevronDown
+            className={`w-5 h-5 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+          />
+        </button>
+      </div>
+
+      <div
+        className={`grid transition-[grid-template-rows] duration-200 ease-out ${
+          expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+        }`}
+        inert={expanded ? undefined : true}
+        aria-hidden={!expanded}
+      >
+        <div className="overflow-hidden">
+          <div className="px-3 pb-3 pt-1 border-t border-[#E5EAE8] ml-1" onClick={stop}>
+            <div className="grid grid-cols-3 gap-2 py-3">
+              <Metric label="Nilai proyek" value={formatRupiahCompact(value)} />
+              <Metric
+                label="Est. profit"
+                value={formatRupiahCompact(profit)}
+                valueClass={profit < 0 ? 'text-rose-600' : 'text-emerald-700'}
+              />
+              <Metric label="Margin" value={margin == null ? '—' : `${margin}%`} />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-slate-500">
+              <span className="font-mono text-emerald-700">{est.code}</span>
+              <span className="text-slate-300">·</span>
+              <span>{ESTIMATION_STATUS_LABEL[status] || status}</span>
+              <span className="text-slate-300">·</span>
+              <span>{estimationSourceLabel(est)}</span>
+            </div>
+
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <ActionBtn
+                label="Follow-up WA"
+                onClick={onShareWhatsApp}
+                disabled={!onShareWhatsApp || waLoading || isConverted}
+              />
+              <ActionBtn
+                label="Ubah status"
+                onClick={onChangeStatus}
+                disabled={!onChangeStatus || statusBusy || statusDisabled || isConverted}
+              />
+              <ActionBtn
+                label="Arsipkan"
+                onClick={onArchive}
+                disabled={!onArchive || archiveBusy || archiveDisabled || isConverted}
+              />
+            </div>
+
+            <div className="mt-2 flex items-center justify-end gap-1">
+              {onKwitansi && (
+                <IconAction
+                  label="Kwitansi"
+                  icon={Receipt}
+                  disabled={kwitansiLoading || isConverted}
+                  onClick={onKwitansi}
+                />
+              )}
+              <IconAction label="Duplikat" icon={Copy} onClick={onDuplicate} />
+              {!isConverted && onConvert && (
+                <IconAction label="Jadikan proyek" icon={Rocket} onClick={onConvert} />
+              )}
+              <IconAction label="Hapus estimasi" icon={Trash2} danger onClick={onDelete} />
+            </div>
+          </div>
+        </div>
       </div>
     </article>
   );
 }
 
-function MenuRow({
-  icon: Icon,
+function Metric({
+  label,
+  value,
+  valueClass = 'text-slate-900',
+}: {
+  label: string;
+  value: string;
+  valueClass?: string;
+}) {
+  return (
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{label}</p>
+      <p className={`mt-1 text-sm font-bold tabular-nums ${valueClass}`}>{value}</p>
+    </div>
+  );
+}
+
+function ActionBtn({
   label,
   onClick,
+  disabled,
+}: {
+  label: string;
+  onClick?: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="min-h-11 px-1 rounded-full border border-[#E5EAE8] bg-white text-[11px] font-bold text-slate-700 active:scale-95 disabled:opacity-45 disabled:cursor-not-allowed"
+    >
+      {label}
+    </button>
+  );
+}
+
+function IconAction({
+  label,
+  icon: Icon,
+  onClick,
+  disabled,
   danger,
 }: {
-  icon: typeof Pencil;
   label: string;
-  onClick: (e: MouseEvent) => void;
+  icon: typeof Copy;
+  onClick: () => void;
+  disabled?: boolean;
   danger?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left hover:bg-slate-50 ${
-        danger ? 'text-rose-600' : 'text-slate-700'
+      disabled={disabled}
+      aria-label={label}
+      className={`inline-flex items-center justify-center min-h-11 min-w-11 rounded-full text-slate-500 hover:bg-slate-50 disabled:opacity-45 ${
+        danger ? 'text-rose-600' : ''
       }`}
     >
-      <Icon className="w-4 h-4 shrink-0" />
-      {label}
+      <Icon className="w-4 h-4" />
     </button>
   );
 }

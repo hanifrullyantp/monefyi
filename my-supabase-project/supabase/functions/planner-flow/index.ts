@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { planFlowAction, screenFlowBody, type FlowRun } from "../../../../agent-core/src/flow.ts";
-import { SOP_CATALOG } from "../../../../agent-core/src/sopData.ts";
+import { planFlowAction, screenFlowBody, type FlowRun } from "../_shared/agent/flow.ts";
+import { SOP_CATALOG } from "../_shared/agent/sopData.ts";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 
 serve(async (req) => {

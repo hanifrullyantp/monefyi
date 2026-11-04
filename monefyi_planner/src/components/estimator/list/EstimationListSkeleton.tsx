@@ -1,22 +1,21 @@
 export default function EstimationListSkeleton() {
   return (
-    <div className="px-4 space-y-3">
-      {[1, 2, 3].map(i => (
+    <div className="px-4 space-y-2">
+      {[1, 2, 3, 4].map(i => (
         <div
           key={i}
-          className="bg-white rounded-2xl border border-slate-100 p-5 animate-pulse"
+          className="bg-white rounded-[14px] border border-[#E5EAE8] p-4 animate-pulse"
         >
-          <div className="flex justify-between mb-3">
-            <div className="h-5 w-28 bg-slate-200 rounded-md" />
-            <div className="h-8 w-8 bg-slate-100 rounded-full" />
+          <div className="flex justify-between gap-3">
+            <div className="flex-1 space-y-2">
+              <div className="h-4 w-2/3 bg-slate-200 rounded-md" />
+              <div className="h-3 w-1/2 bg-slate-100 rounded-md" />
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 w-14 bg-slate-200 rounded-md" />
+              <div className="h-3 w-10 bg-slate-100 rounded-md ml-auto" />
+            </div>
           </div>
-          <div className="h-6 w-3/4 bg-slate-200 rounded-md mb-2" />
-          <div className="h-4 w-1/2 bg-slate-100 rounded-md mb-4" />
-          <div className="grid grid-cols-2 gap-4 py-3 border-t border-slate-100">
-            <div className="h-10 bg-slate-100 rounded-lg" />
-            <div className="h-10 bg-slate-100 rounded-lg" />
-          </div>
-          <div className="h-4 w-full bg-slate-100 rounded-md mt-3" />
         </div>
       ))}
     </div>
