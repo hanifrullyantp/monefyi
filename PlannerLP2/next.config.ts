@@ -40,6 +40,12 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     const lp = landingBasePath;
+    const bonusMiniRewrites = [
+      {
+        source: "/bonus/mini/:path((?!.*\\.[a-zA-Z0-9]+$).*)",
+        destination: "/bonus/mini/:path/index.html",
+      },
+    ];
     const spaRewrites = [
       { source: "/icons/:path*", destination: `${plannerAppOrigin}/icons/:path*` },
       {
@@ -69,13 +75,21 @@ const nextConfig: NextConfig = {
       { source: "/contact", destination: `${plannerAppOrigin}/contact` },
     ];
     if (isEstimatorStandalone) {
-      return spaRewrites;
+      return {
+        beforeFiles: bonusMiniRewrites,
+        afterFiles: spaRewrites,
+        fallback: [],
+      };
     }
-    return [
-      { source: lp, destination: `${plannerLandingOrigin}${lp}` },
-      { source: `${lp}/:path*`, destination: `${plannerLandingOrigin}${lp}/:path*` },
-      ...spaRewrites,
-    ];
+    return {
+      beforeFiles: bonusMiniRewrites,
+      afterFiles: [
+        { source: lp, destination: `${plannerLandingOrigin}${lp}` },
+        { source: `${lp}/:path*`, destination: `${plannerLandingOrigin}${lp}/:path*` },
+        ...spaRewrites,
+      ],
+      fallback: [],
+    };
   },
 };
 

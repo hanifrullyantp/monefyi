@@ -34,6 +34,8 @@ export async function loadUserSubscriptionContext(
     };
   }
 
+  const { data: hasBonusAccess } = await supabase.rpc("user_has_bonus_app_access");
+
   const { data: member } = await supabase
     .from("planner_org_members")
     .select("org_id")
@@ -47,7 +49,7 @@ export async function loadUserSubscriptionContext(
       orgId: null,
       subscriptionTier: "free",
       estimatorVariant: null,
-      ownedProducts: [],
+      ownedProducts: hasBonusAccess === true ? ["finance"] : [],
       plannerTrialUses: 0,
     };
   }
@@ -65,6 +67,9 @@ export async function loadUserSubscriptionContext(
     (metaVariant === "pro" || metaVariant === "standard" ? metaVariant : null);
 
   const ownedProducts = mapOwnedProducts(tier);
+  if (hasBonusAccess === true && !ownedProducts.includes("finance")) {
+    ownedProducts.push("finance");
+  }
   const plannerTrialUses =
     tier === "pro" || tier === "enterprise"
       ? 999

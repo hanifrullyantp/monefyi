@@ -2,6 +2,8 @@ import type { Session, User } from '@supabase/supabase-js';
 import type { MonefyiProduct } from './monefyi-config';
 import { getSupabase } from './supabase-client';
 
+const ADMIN_EMAILS = ['admin@asfin.app', 'hanif.rullyant@gmail.com'];
+
 export async function getMonefyiSession(): Promise<Session | null> {
   const { data } = await getSupabase().auth.getSession();
   return data.session;
@@ -32,8 +34,13 @@ export async function userHasProduct(product: MonefyiProduct = 'monefyi'): Promi
   return data === true;
 }
 
-/** Pembeli Lifetime monefyi atau Estimator/Planner berbayar — gate mini app bonus Lite. */
+/** Pembeli Lifetime monefyi atau Estimator/Planner berbayar (atau admin) — gate mini app bonus Lite. */
 export async function userHasBonusAppAccess(): Promise<boolean> {
+  const session = await getMonefyiSession();
+  const email = session?.user?.email?.trim().toLowerCase();
+  if (email && ADMIN_EMAILS.includes(email)) {
+    return true;
+  }
   const { data, error } = await getSupabase().rpc('user_has_bonus_app_access');
   if (error) {
     console.error('user_has_bonus_app_access', error.message);

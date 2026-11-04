@@ -56,9 +56,13 @@ export function ownsEstimator(user: User | null): boolean {
   return Boolean(user?.ownedProducts.includes("estimator"));
 }
 
-/** Bonus apps included with a paid Estimator or Planner purchase. */
+export function ownsFinance(user: User | null): boolean {
+  return Boolean(user?.ownedProducts.includes("finance"));
+}
+
+/** Bonus apps included with a paid Estimator, Planner, or Monefyi Lifetime purchase (or admin). */
 export function canClaimBonusApps(user: User | null): boolean {
-  return ownsEstimator(user) || ownsPlanner(user);
+  return ownsEstimator(user) || ownsPlanner(user) || ownsFinance(user) || Boolean(user?.isAdmin);
 }
 
 /** Login + punya Estimator, belum Planner penuh — landing tanpa navbar marketing. */

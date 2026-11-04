@@ -52,8 +52,8 @@ export default function BonusPage() {
             </div>
             <h1 className="max-w-3xl text-3xl font-black tracking-tight sm:text-5xl">Etalase Aplikasi Bonus</h1>
             <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
-              Empat mini app Lite (Budget, Debt Free, Bagi Hasil, Kalkulator Gaji) untuk pembeli Estimator Standard/Pro
-              atau Planner. Login dengan akun yang sama saat checkout.
+              Koleksi lengkap mini app Lite (Budget Planner, Debt Free, Bagi Hasil, Kalkulator Gaji, Zakat, Cicilan, &amp;
+              Hitung Waris) untuk pembeli Estimator Standard/Pro atau Planner. Login dengan akun yang sama saat checkout.
             </p>
             <div className="mt-6 flex flex-wrap gap-3 text-sm">
               <span className="inline-flex items-center gap-2 rounded-xl bg-white/5 px-4 py-2 text-slate-200">

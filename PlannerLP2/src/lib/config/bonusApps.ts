@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Calculator, PieChart, Wallet, Banknote } from "lucide-react";
+import { Calculator, PieChart, Wallet, Banknote, Landmark, Coins, Scale } from "lucide-react";
 
 const EMBED_PREFIX = "/bonus/mini";
 
@@ -22,7 +22,14 @@ function resolveExternalBonusBase(): string | undefined {
 
 const EXTERNAL_BASE = resolveExternalBonusBase();
 
-export type BonusAppId = "budget" | "debt-free" | "bagi-hasil" | "salary";
+export type BonusAppId =
+  | "budget"
+  | "debt-free"
+  | "bagi-hasil"
+  | "salary"
+  | "cicilan"
+  | "zakat"
+  | "waris";
 
 export type BonusAppDef = {
   id: BonusAppId;
@@ -72,12 +79,40 @@ export const BONUS_APPS: BonusAppDef[] = [
     icon: Banknote,
     color: "amber",
   },
+  {
+    id: "zakat",
+    name: "Kalkulator Zakat",
+    description: "Hitung 7 jenis zakat (Penghasilan, Maal, Emas, Perdagangan, Pertanian, Fitrah) sesuai fatwa MUI.",
+    valueLabel: "Rp 199.000",
+    path: "zakat",
+    icon: Coins,
+    color: "emerald",
+  },
+  {
+    id: "cicilan",
+    name: "Kalkulator Cicilan",
+    description: "Simulasikan angsuran KPR, KKB, KTA dengan jadwal amortisasi & komparator bunga.",
+    valueLabel: "Rp 199.000",
+    path: "cicilan",
+    icon: Landmark,
+    color: "blue",
+  },
+  {
+    id: "waris",
+    name: "Hitung Waris",
+    description: "Hitung pembagian harta warisan (Faraid) secara akurat sesuai syariat Islam.",
+    valueLabel: "Rp 199.000",
+    path: "waris",
+    icon: Scale,
+    color: "violet",
+  },
 ];
 
 /** Halaman utama (hindari redirect server di static export). */
 const EMBED_ENTRY: Partial<Record<BonusAppId, string>> = {
   budget: "budget-planner",
   "bagi-hasil": "kalkulator-bagi-hasil",
+  waris: "hitung-waris",
 };
 
 export function bonusAppUrl(app: BonusAppDef): string {
@@ -86,5 +121,5 @@ export function bonusAppUrl(app: BonusAppDef): string {
   if (EXTERNAL_BASE) {
     return `${EXTERNAL_BASE}/${segment}/`;
   }
-  return `${EMBED_PREFIX}/${segment}/`;
+  return `${EMBED_PREFIX}/${segment}/index.html`;
 }
