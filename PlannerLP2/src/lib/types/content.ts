@@ -27,8 +27,12 @@ export interface HeroHeadlineAnimated {
   lineBreakBeforeSuffix?: boolean;
 }
 
+export type HeroDemoVariant = "animation" | "live_embed";
+
 export interface HeroContent {
   badge: string;
+  /** Kanan hero: animasi alur vs demo iframe live. */
+  heroDemoVariant?: HeroDemoVariant;
   /** @deprecated Gunakan headlineAnimated — fallback jika kosong */
   headline: string;
   headlineHighlight: string;

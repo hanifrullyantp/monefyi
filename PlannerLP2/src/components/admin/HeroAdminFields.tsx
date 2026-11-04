@@ -2,8 +2,9 @@
 
 import { Plus, Trash2 } from "lucide-react";
 import { ANIMATION_OPTIONS } from "@/components/landing/AnimatedHeadline";
-import type { HeroContent, HeadlineAnimationEffect } from "@/lib/types/content";
+import type { HeroContent, HeadlineAnimationEffect, HeroDemoVariant } from "@/lib/types/content";
 import { defaultContent } from "@/data/defaultContent";
+import { HERO_DEMO_VARIANT_LABELS } from "@/lib/config/heroDemo";
 
 interface HeroAdminFieldsProps {
   hero: HeroContent;
@@ -33,8 +34,34 @@ export function HeroAdminFields({ hero, onChange }: HeroAdminFieldsProps) {
     onChange({ ...hero, quickPoints: next });
   };
 
+  const demoVariant: HeroDemoVariant = hero.heroDemoVariant ?? defaultContent.hero.heroDemoVariant ?? "animation";
+
   return (
     <div className="space-y-8 mb-8 pb-8 border-b border-slate-100">
+      <div>
+        <h3 className="font-bold text-slate-900 mb-1">Demo kanan hero</h3>
+        <p className="text-xs text-slate-500 mb-3">
+          Animasi alur (default) atau demo iframe aplikasi (legacy). Env{" "}
+          <code className="text-[10px] bg-slate-100 px-1 rounded">NEXT_PUBLIC_HERO_DEMO_VARIANT</code>{" "}
+          menimpa pilihan ini saat build.
+        </p>
+        <select
+          value={demoVariant}
+          onChange={(e) =>
+            onChange({ ...hero, heroDemoVariant: e.target.value as HeroDemoVariant })
+          }
+          className="w-full max-w-md border border-slate-200 rounded-xl px-3 py-2.5 text-sm"
+        >
+          {(Object.entries(HERO_DEMO_VARIANT_LABELS) as [HeroDemoVariant, string][]).map(
+            ([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ),
+          )}
+        </select>
+      </div>
+
       <div>
         <h3 className="font-bold text-slate-900 mb-1">Headline Animasi</h3>
         <p className="text-xs text-slate-500 mb-4">

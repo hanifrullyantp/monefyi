@@ -1,0 +1,700 @@
+/* Scoped to #hero-estimator-demo — animasi hero landing (selaras Estimator PWA) */
+#hero-estimator-demo {
+  --em: #059669;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #f4f6f5;
+  color: #111827;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;
+}
+
+#hero-estimator-demo * {
+  box-sizing: border-box;
+}
+
+#hero-estimator-demo .hed-scroll {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+#hero-estimator-demo .hed-scr {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(14px);
+  transition: opacity 0.45s, transform 0.45s, visibility 0.45s;
+  display: flex;
+  flex-direction: column;
+  background: #f4f6f5;
+}
+
+#hero-estimator-demo .hed-scr.on {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+
+#hero-estimator-demo .hed-body {
+  flex: 1;
+  padding: 12px 16px 88px;
+  overflow: hidden;
+  position: relative;
+}
+
+#hero-estimator-demo .hed-dash-hero {
+  position: relative;
+  background: linear-gradient(135deg, #064e3b 0%, #047857 52%, #059669 100%);
+  color: #fff;
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: 0 10px 28px rgba(6, 78, 59, 0.22);
+}
+
+#hero-estimator-demo .hed-lbl {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(209, 250, 229, 0.9);
+}
+
+#hero-estimator-demo .hed-big {
+  font-size: 2.75rem;
+  font-weight: 800;
+  margin-top: 8px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+#hero-estimator-demo .hed-big small {
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0.9;
+  margin-left: 6px;
+}
+
+#hero-estimator-demo .hed-bar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  margin-top: 16px;
+  overflow: hidden;
+}
+
+#hero-estimator-demo .hed-bar i {
+  display: block;
+  height: 100%;
+  background: #fff;
+  border-radius: 6px;
+}
+
+#hero-estimator-demo .hed-newbtn {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  background: #fff;
+  color: #065f46;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+#hero-estimator-demo .hed-row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+#hero-estimator-demo .hed-mini {
+  border-radius: 16px;
+  color: #fff;
+  padding: 12px;
+  min-height: 108px;
+  font-size: 12px;
+}
+
+#hero-estimator-demo .hed-mini .hed-big2 {
+  font-size: 26px;
+  font-weight: 800;
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+#hero-estimator-demo .hed-mini b {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+#hero-estimator-demo .hed-blue {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 55%, #2563eb 100%);
+  box-shadow: 0 10px 24px rgba(30, 58, 138, 0.2);
+}
+
+#hero-estimator-demo .hed-purple {
+  background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 55%, #a21caf 100%);
+  box-shadow: 0 10px 24px rgba(76, 29, 149, 0.2);
+}
+
+#hero-estimator-demo .hed-sec {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+#hero-estimator-demo .hed-item {
+  background: #fff;
+  border: 1px solid #e5eae8;
+  border-radius: 14px;
+  padding: 11px 12px;
+  margin-top: 9px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+#hero-estimator-demo .hed-item-bar {
+  width: 4px;
+  align-self: stretch;
+  border-radius: 4px 0 0 4px;
+  margin: -11px 0 -11px -12px;
+  flex: none;
+}
+
+#hero-estimator-demo .hed-item-inner {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  gap: 0;
+}
+
+#hero-estimator-demo .hed-nm {
+  font-weight: 700;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#hero-estimator-demo .hed-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 6px;
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+#hero-estimator-demo .hed-pill.active {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+#hero-estimator-demo .hed-sub {
+  font-size: 11px;
+  color: #047857;
+  margin-top: 3px;
+}
+
+#hero-estimator-demo .hed-pr {
+  text-align: right;
+  font-weight: 800;
+  font-size: 14px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+#hero-estimator-demo .hed-pr small {
+  display: block;
+  color: #059669;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+#hero-estimator-demo .hed-detail-hdr {
+  padding: 8px 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+#hero-estimator-demo .hed-code {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: #047857;
+}
+
+#hero-estimator-demo .hed-dhero {
+  background: linear-gradient(135deg, #064e3b 0%, #065f46 48%, #047857 100%);
+  color: #fff;
+  border-radius: 20px;
+  padding: 14px 16px;
+  box-shadow: 0 10px 28px rgba(6, 78, 59, 0.22);
+}
+
+#hero-estimator-demo .hed-badge {
+  display: inline-block;
+  background: rgba(56, 189, 248, 0.25);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+#hero-estimator-demo .hed-source {
+  font-size: 11px;
+  font-weight: 500;
+  color: #d1fae5;
+  margin-left: 8px;
+}
+
+#hero-estimator-demo .hed-dt {
+  font-size: 22px;
+  font-weight: 800;
+  margin-top: 10px;
+  line-height: 1.15;
+}
+
+#hero-estimator-demo .hed-dsub {
+  font-size: 14px;
+  opacity: 0.9;
+  margin-top: 4px;
+}
+
+#hero-estimator-demo .hed-dmeta {
+  font-size: 12px;
+  color: #d1fae5;
+  margin-top: 10px;
+}
+
+#hero-estimator-demo .hed-addbtn {
+  background: #059669;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 999px;
+}
+
+#hero-estimator-demo .hed-nitem {
+  display: none;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 0.4s, transform 0.4s;
+}
+
+#hero-estimator-demo .hed-nitem.in {
+  opacity: 1;
+  transform: none;
+}
+
+#hero-estimator-demo .hed-tot {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  background: linear-gradient(135deg, #064e3b 0%, #065f46 48%, #047857 100%);
+  color: #fff;
+  border-radius: 20px;
+  padding: 12px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 10px 28px rgba(6, 78, 59, 0.35);
+  z-index: 5;
+}
+
+#hero-estimator-demo .hed-tot .hed-lbl {
+  font-size: 10px;
+  color: #d1fae5;
+}
+
+#hero-estimator-demo #hed-tot-val {
+  font-size: 18px;
+  font-weight: 800;
+  display: block;
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+#hero-estimator-demo .hed-iconbtn {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#hero-estimator-demo .hed-dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+  z-index: 15;
+}
+
+#hero-estimator-demo .hed-dim.on {
+  opacity: 1;
+}
+
+#hero-estimator-demo .hed-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 84%;
+  background: #fff;
+  border-radius: 24px 24px 0 0;
+  transform: translateY(102%);
+  transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.15);
+}
+
+#hero-estimator-demo .hed-sheet.open {
+  transform: none;
+}
+
+#hero-estimator-demo .hed-ph {
+  padding: 16px 16px 8px;
+  font-weight: 800;
+  font-size: 16px;
+}
+
+#hero-estimator-demo .hed-ph small {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+#hero-estimator-demo .hed-search {
+  margin: 0 16px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+#hero-estimator-demo .hed-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 4px 16px;
+}
+
+#hero-estimator-demo .hed-gc {
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 12px;
+  min-height: 100px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+#hero-estimator-demo .hed-gc b {
+  display: block;
+  color: #111827;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+#hero-estimator-demo .hed-gc.hl {
+  border-color: #059669;
+  background: #ecfdf5;
+}
+
+#hero-estimator-demo .hed-crow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+#hero-estimator-demo .hed-crow.hl {
+  background: #ecfdf5;
+}
+
+#hero-estimator-demo .hed-crow .t {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+#hero-estimator-demo .hed-crow .t small {
+  display: block;
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 400;
+  margin-top: 2px;
+}
+
+#hero-estimator-demo .hed-cb {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #cbd5e1;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex: none;
+}
+
+#hero-estimator-demo .hed-cb.on {
+  background: #059669;
+  border-color: #059669;
+}
+
+#hero-estimator-demo .hed-sfoot {
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+#hero-estimator-demo .hed-sfoot span {
+  flex: 1;
+  text-align: center;
+  border-radius: 14px;
+  padding: 13px 6px;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+#hero-estimator-demo .hed-sfoot .no {
+  border: 1px solid #e5e7eb;
+  color: #111827;
+}
+
+#hero-estimator-demo .hed-sfoot .yes {
+  background: #059669;
+  color: #fff;
+  opacity: 0.45;
+}
+
+#hero-estimator-demo .hed-sfoot .yes.on {
+  opacity: 1;
+}
+
+#hero-estimator-demo .hed-wam {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
+  z-index: 60;
+}
+
+#hero-estimator-demo .hed-wam.on {
+  opacity: 1;
+  visibility: visible;
+}
+
+#hero-estimator-demo .hed-wam-card {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 48px;
+  bottom: 10px;
+  background: #fff;
+  border-radius: 22px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: translateY(24px);
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+#hero-estimator-demo .hed-wam.on .hed-wam-card {
+  transform: none;
+}
+
+#hero-estimator-demo .hed-wam-h {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+#hero-estimator-demo .hed-wam-body {
+  flex: 1;
+  padding: 12px 14px;
+  overflow: hidden;
+}
+
+#hero-estimator-demo .hed-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+#hero-estimator-demo .hed-tabs span {
+  text-align: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 8px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #475569;
+}
+
+#hero-estimator-demo .hed-tabs span.on {
+  border-color: #6ee7b7;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+#hero-estimator-demo .hed-chk {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #374151;
+  margin-bottom: 10px;
+}
+
+#hero-estimator-demo .hed-wa-open {
+  position: absolute;
+  inset: 0;
+  background: #128c7e;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  opacity: 0;
+  visibility: hidden;
+  z-index: 70;
+  font-size: 15px;
+}
+
+#hero-estimator-demo .hed-wa-open.on {
+  opacity: 1;
+  visibility: visible;
+}
+
+#hero-estimator-demo #hed-cursor {
+  position: absolute;
+  left: 50%;
+  top: 85%;
+  width: 0;
+  height: 0;
+  z-index: 80;
+  pointer-events: none;
+  transition: left 0.75s cubic-bezier(0.4, 0, 0.2, 1), top 0.75s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#hero-estimator-demo #hed-cursor i {
+  position: absolute;
+  left: -12px;
+  top: -12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.85);
+  border: 2px solid #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s;
+}
+
+#hero-estimator-demo #hed-cursor.press i {
+  transform: scale(0.7);
+}
+
+#hero-estimator-demo .hed-pulse {
+  animation: hed-pl 0.45s ease-out;
+}
+
+@keyframes hed-pl {
+  0% {
+    box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 0 14px rgba(5, 150, 105, 0);
+  }
+}
+
+#hero-estimator-demo .hed-cap-wrap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 4px;
+  z-index: 90;
+  pointer-events: none;
+  padding: 0 12px;
+}
+
+#hero-estimator-demo #hed-cap {
+  min-height: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #065f46;
+  text-align: center;
+  transition: opacity 0.25s;
+  line-height: 1.3;
+}
+
+#hero-estimator-demo .hed-dots {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+#hero-estimator-demo .hed-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a7f3d0;
+}
+
+#hero-estimator-demo .hed-dots i.on {
+  background: #059669;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #hero-estimator-demo * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

@@ -7,7 +7,8 @@ import { Container } from "@/components/shared/Container";
 import { EditableText } from "@/components/shared/EditableText";
 import { EditableHeroQuickPoint } from "@/components/shared/EditableHeroQuickPoint";
 import { AnimatedHeadline } from "@/components/landing/AnimatedHeadline";
-import { HeroLiveDemo } from "@/components/landing/HeroLiveDemo";
+import { HeroDemo } from "@/components/landing/HeroDemo";
+import { resolveHeroDemoVariant } from "@/lib/config/heroDemo";
 import { useContentStore } from "@/lib/store/contentStore";
 import { useAuthStore } from "@/lib/store/authStore";
 import { canClaimBonusApps } from "@/lib/permissions";
@@ -41,6 +42,7 @@ export function HeroSection() {
   const [demoPulse, setDemoPulse] = useState(0);
   const pulseLock = useRef(false);
 
+  const heroDemoVariant = resolveHeroDemoVariant(hero);
   const pointCount = Math.max(
     hero.quickPoints.length,
     copy.points.length,
@@ -256,9 +258,11 @@ export function HeroSection() {
             className="flex flex-col items-center min-w-0 overflow-visible"
           >
             <p className="text-[12px] font-semibold text-[var(--muted)] mb-3 text-center max-w-[min(100%,460px)]">
-              Demo langsung — scroll & tambah rincian
+              {heroDemoVariant === "live_embed"
+                ? "Demo langsung — scroll & tambah rincian"
+                : "Demo alur — dari daftar estimasi hingga kirim WA"}
             </p>
-            <HeroLiveDemo pulseToken={demoPulse} />
+            <HeroDemo pulseToken={demoPulse} />
             <button
               type="button"
               onClick={howItWorks}

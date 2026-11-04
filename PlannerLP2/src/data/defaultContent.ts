@@ -39,6 +39,7 @@ export const defaultContent: SiteContent = {
     ctaSecondary: "Demo 1 Menit",
     trustIndicators: [],
     dashboardImage: "",
+    heroDemoVariant: "animation",
   },
 
   threeStep: {
