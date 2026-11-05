@@ -4,6 +4,7 @@ import { getUserAccount, updateUserAccount, type UserAccountInfo } from '../../s
 import { updatePassword } from '../../services/authService';
 import { validatePassword } from '../../lib/validators';
 import { showToast } from '../../store/uiStore';
+import AIProviderPanel from './AIProviderPanel';
 
 export default function UserAccountPanel() {
   const [account, setAccount] = useState<UserAccountInfo | null>(null);
@@ -156,6 +157,8 @@ export default function UserAccountPanel() {
       <button type="button" onClick={handleSave} disabled={saving} className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-50">
         Simpan Profil Akun
       </button>
+
+      <AIProviderPanel />
 
       <div className="border-t pt-6 space-y-3">
         <h4 className="font-semibold text-slate-800">Ubah Password</h4>

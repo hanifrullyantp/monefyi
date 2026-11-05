@@ -26,6 +26,7 @@ import { recordCorrection, reinforceMemory, loadMemoryExamples } from '../servic
 import { loadAliases } from '../services/commandAliasService';
 import { learnFromProjectResolution } from '../services/projectResolutionLearning';
 import BatchConfirmationView, { type BatchConfirmationResult } from './batch/BatchConfirmationView';
+import ManagerWorkspaceModal from './agent/ManagerWorkspaceModal';
 import { loadWorkItems } from '../services/workItemService';
 import { loadRapItems } from '../services/rapService';
 import { aggregateCostByRapItem } from '../services/costService';
@@ -158,6 +159,13 @@ export default function CommandModal() {
     addProject,
   } = useAppStore();
   const [input, setInput] = useState('');
+  const [managerMode, setManagerMode] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('monefyi_ai_mode') !== 'quick';
+    } catch {
+      return true;
+    }
+  });
   const [stage, setStage] = useState<Stage>('idle');
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -679,6 +687,18 @@ export default function CommandModal() {
     );
   };
 
+  if (managerMode) {
+    return (
+      <ManagerWorkspaceModal
+        onClose={() => setCommandModalOpen(false)}
+        onSwitchToQuick={() => {
+          try { localStorage.setItem('monefyi_ai_mode', 'quick'); } catch { /* ignore */ }
+          setManagerMode(false);
+        }}
+      />
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -703,18 +723,30 @@ export default function CommandModal() {
               <Sparkles className="w-4 h-4 text-white" />
             </div>
             <div>
-              <div className="font-black text-slate-900 text-sm">Monefyi Assistant</div>
+              <div className="font-black text-slate-900 text-sm">Monefyi Assistant (Input Cepat)</div>
               <div className="text-xs text-slate-600">
                 Konteks: <span className="text-emerald-600 font-medium">{activeProject?.name || 'Umum'}</span>
               </div>
             </div>
           </div>
-          <button
-            onClick={() => setCommandModalOpen(false)}
-            className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
-          >
-            <X className="w-5 h-5 text-slate-500" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                try { localStorage.setItem('monefyi_ai_mode', 'manager'); } catch { /* ignore */ }
+                setManagerMode(true);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold hover:bg-emerald-100 transition-colors"
+            >
+              👔 Ruang GM
+            </button>
+            <button
+              onClick={() => setCommandModalOpen(false)}
+              className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
+            >
+              <X className="w-5 h-5 text-slate-500" />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 min-h-0">

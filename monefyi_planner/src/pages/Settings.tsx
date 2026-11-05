@@ -16,6 +16,7 @@ import {
   loadNotificationPrefs, saveNotificationPrefs, type NotificationPrefs,
 } from '../services/settingsPrefsService';
 import UserAccountPanel from '../components/account/UserAccountPanel';
+import AIProviderPanel from '../components/account/AIProviderPanel';
 import BrandIdentityPanel from '../components/branding/BrandIdentityPanel';
 import { syncPdfBrandFromOrg } from '../services/pdfSettingsService';
 import { isPlatformAdmin } from '../services/adminService';
@@ -513,6 +514,10 @@ export default function Settings() {
           {tenant?.id && isSandboxFinance(financeVersion) && (
             <FinanceIntegrationPanel orgId={tenant.id} userId={user?.id} />
           )}
+
+          <div className="bg-white rounded-2xl border border-slate-100 p-6">
+            <AIProviderPanel />
+          </div>
         </div>
       )}
 

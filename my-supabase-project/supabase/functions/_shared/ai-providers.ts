@@ -11,7 +11,7 @@
 // ---------------------------------------------------------------------------
 
 export interface ProviderConfig {
-  id: "groq" | "gemini" | "openai" | "anthropic";
+  id: "openrouter" | "groq" | "gemini" | "openai" | "anthropic";
   model: string;
   apiKey: string;
   endpoint: string;
@@ -276,6 +276,7 @@ function dispatch(
   signal: AbortSignal,
 ): Promise<AIParseResult> {
   switch (p.id) {
+    case "openrouter":
     case "groq":
     case "openai":
       return callOpenAICompat(p, sys, user, signal);
@@ -353,20 +354,44 @@ export async function parseWithAI(opts: ParseWithAIOptions): Promise<ParseWithAI
 
 export interface BuildProvidersOptions {
   geminiKey?: string;
+  openrouterKey?: string;
+  groqKey?: string;
+  openaiKey?: string;
+  anthropicKey?: string;
+  preferredProvider?: "openrouter" | "groq" | "gemini" | "openai" | "anthropic";
+  preferredModel?: string;
 }
 
 /**
  * Returns a sorted provider list populated only with keys that are present.
- * Groq → Gemini → GPT-3.5 → Claude
+ * Supports BYOK keys passed from the client as well as server env keys.
  */
 export function buildProviders(opts: BuildProvidersOptions = {}): ProviderConfig[] {
   const list: ProviderConfig[] = [];
 
-  const groqKey = (Deno.env.get("GROQ_API_KEY") ?? "").trim();
+  const openrouterKey = (opts.openrouterKey ?? Deno.env.get("OPENROUTER_API_KEY") ?? "").trim();
+  if (openrouterKey) {
+    list.push({
+      id: "openrouter",
+      model: opts.preferredProvider === "openrouter" && opts.preferredModel
+        ? opts.preferredModel
+        : "google/gemini-2.0-flash-lite-001",
+      apiKey: openrouterKey,
+      endpoint: "https://openrouter.ai/api/v1/chat/completions",
+      timeout: 8_000,
+      maxTokens: 800,
+      temperature: 0.3,
+      costPer1K: 0.0001,
+    });
+  }
+
+  const groqKey = (opts.groqKey ?? Deno.env.get("GROQ_API_KEY") ?? "").trim();
   if (groqKey) {
     list.push({
       id: "groq",
-      model: "llama-3.1-70b-versatile",
+      model: opts.preferredProvider === "groq" && opts.preferredModel
+        ? opts.preferredModel
+        : "llama-3.3-70b-versatile",
       apiKey: groqKey,
       endpoint: "https://api.groq.com/openai/v1/chat/completions",
       timeout: 5_000,
@@ -378,12 +403,15 @@ export function buildProviders(opts: BuildProvidersOptions = {}): ProviderConfig
 
   const geminiKey = (opts.geminiKey ?? "").trim();
   if (geminiKey) {
+    const gemModel = opts.preferredProvider === "gemini" && opts.preferredModel
+      ? opts.preferredModel
+      : "gemini-2.0-flash";
     list.push({
       id: "gemini",
-      model: "gemini-2.0-flash",
+      model: gemModel,
       apiKey: geminiKey,
       endpoint:
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(gemModel)}:generateContent`,
       timeout: 5_000,
       maxTokens: 500,
       temperature: 0.3,
@@ -391,32 +419,40 @@ export function buildProviders(opts: BuildProvidersOptions = {}): ProviderConfig
     });
   }
 
-  const openaiKey = (Deno.env.get("OPENAI_API_KEY") ?? "").trim();
+  const openaiKey = (opts.openaiKey ?? Deno.env.get("OPENAI_API_KEY") ?? "").trim();
   if (openaiKey) {
     list.push({
       id: "openai",
-      model: "gpt-3.5-turbo",
+      model: opts.preferredProvider === "openai" && opts.preferredModel
+        ? opts.preferredModel
+        : "gpt-4o-mini",
       apiKey: openaiKey,
       endpoint: "https://api.openai.com/v1/chat/completions",
-      timeout: 3_000,
+      timeout: 5_000,
       maxTokens: 500,
       temperature: 0.3,
       costPer1K: 0.0005,
     });
   }
 
-  const anthropicKey = (Deno.env.get("ANTHROPIC_API_KEY") ?? "").trim();
+  const anthropicKey = (opts.anthropicKey ?? Deno.env.get("ANTHROPIC_API_KEY") ?? "").trim();
   if (anthropicKey) {
     list.push({
       id: "anthropic",
-      model: "claude-3-5-sonnet-20241022",
+      model: opts.preferredProvider === "anthropic" && opts.preferredModel
+        ? opts.preferredModel
+        : "claude-3-5-haiku-latest",
       apiKey: anthropicKey,
       endpoint: "https://api.anthropic.com/v1/messages",
-      timeout: 2_000,
+      timeout: 5_000,
       maxTokens: 500,
       temperature: 0.3,
-      costPer1K: 0.003,
+      costPer1K: 0.001,
     });
+  }
+
+  if (opts.preferredProvider) {
+    list.sort((a, b) => (a.id === opts.preferredProvider ? -1 : b.id === opts.preferredProvider ? 1 : 0));
   }
 
   return list;

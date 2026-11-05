@@ -2,19 +2,29 @@ import { formatCurrency, todayStr } from './adapters';
 import type { ParsedCommand } from './commandParser';
 import { commitRecordCost, prepareRecordCost } from '../../../agent-core/src/prepare';
 import { createCostRealization } from '../services/costService';
-import { loadRapItems, type RapItem } from '../services/rapService';
+import { loadRapItems, createRapItem, syncProjectBudgetFromRap, type RapItem } from '../services/rapService';
 import type { ParsedCostLine } from './costParser';
 import { createProjectIncome } from '../services/incomeService';
 import { createDailyLog } from '../services/dailyLogService';
-import { updateWorkItem, loadWorkItems, updateProjectProgressFromWorkItems } from '../services/workItemService';
+import { createWorkItem, updateWorkItem, loadWorkItems, updateProjectProgressFromWorkItems } from '../services/workItemService';
 import { analyzeProject } from '../services/analyzeService';
 import { createOpexRealization, loadOpexCategories } from '../services/financeV2/opexService';
 import type { Project } from '../store/appStore';
 import type { WorkItem } from '../services/workItemService';
 import { buildLeadNotes, parseSizeEstimate, type LeadTarget } from './leadFormParser';
 import { calcItemRow, emptyItem } from './estimatorCalc';
-import { createEstimation, generateEstimationCode, newEstimationDraft } from '../services/estimatorService';
+import { createEstimation, generateEstimationCode, loadEstimation, loadEstimations, newEstimationDraft } from '../services/estimatorService';
+import { convertEstimationToProject } from '../services/estimationConvertService';
 import { createProject } from '../services/projectService';
+import { createProjectTransfer } from '../services/projectTransferService';
+import { createHrMemberQuick } from '../services/createHrMemberQuick';
+import { listMembers } from '../services/memberService';
+import { recordAdminAttendance } from '../services/attendanceService';
+import { generatePayrollForOrg, listBonRequests, reviewBonRequest } from '../services/payrollService';
+import { createTodo } from '../services/todoService';
+import { calcPricelistSelling, createPricelistItem, loadPricelistItems, updatePricelistItem } from '../services/pricelistService';
+import type { PricelistCategory } from '../types/estimator';
+import type { PlannerTodo } from '../types/plannerTodo';
 
 export interface IntentResult {
   success: boolean;
@@ -531,6 +541,348 @@ export async function executeIntent(
         message: `Estimasi ${est.code} dibuat untuk ${customerName}.`,
         details: `${need}${sizeText ? ` · ${sizeText}` : ''}`,
         navigateTo: `/app/estimator/${est.id}`,
+      };
+    }
+
+    case 'add_project': {
+      const name = String(params.name || params.projectName || '').trim();
+      if (!name) {
+        return { success: false, message: 'Nama proyek wajib diisi.' };
+      }
+      const end = new Date();
+      end.setMonth(end.getMonth() + 3);
+      const created = await createProject({
+        org_id: ctx.orgId,
+        created_by: ctx.userId,
+        name,
+        client_name: String(params.client || params.clientName || ''),
+        location: String(params.location || ''),
+        description: String(params.description || ''),
+        start_date: String(params.startDate || todayStr()),
+        end_date: String(params.endDate || end.toISOString().slice(0, 10)),
+        status: 'planning',
+      });
+      await ctx.onRefreshProjects();
+      return {
+        success: true,
+        message: `Proyek "${created.name}" berhasil dibuat!`,
+        details: created.client_name ? `Klien: ${created.client_name}` : undefined,
+        navigateTo: `/app/projects/${created.id}`,
+        refreshProjects: true,
+      };
+    }
+
+    case 'add_rap_item': {
+      if (!project) {
+        return { success: false, message: 'Sebutkan atau buka proyek terlebih dahulu.' };
+      }
+      const name = String(params.name || params.item || '').trim();
+      const qty = Math.max(1, Number(params.qty ?? params.quantity) || 1);
+      const unitPrice = Number(params.unitPrice ?? params.unit_price ?? params.total) || 0;
+      if (!name || unitPrice <= 0) {
+        return { success: false, message: 'Nama item RAP dan harga satuan wajib diisi.' };
+      }
+      const typeRaw = String(params.type || params.category || 'material').toLowerCase();
+      const validTypes = ['material', 'labor', 'equipment', 'subcontract', 'other'];
+      const rapType = validTypes.includes(typeRaw) ? typeRaw : 'material';
+      await createRapItem({
+        project_id: project.id,
+        type: rapType,
+        name,
+        unit: String(params.unit || 'ls'),
+        quantity: qty,
+        unit_price: unitPrice,
+        supplier: params.supplier ? String(params.supplier) : null,
+        notes: params.notes ? String(params.notes) : null,
+        updated_by: ctx.userId,
+      });
+      await syncProjectBudgetFromRap(project.id).catch(() => {});
+      await ctx.onRefreshProjects();
+      return {
+        success: true,
+        message: `Item RAP "${name}" ditambahkan!`,
+        details: `${qty} ${params.unit || 'ls'} × ${formatCurrency(unitPrice)} → ${project.name}`,
+        refreshProjects: true,
+      };
+    }
+
+    case 'add_work_item': {
+      if (!project) {
+        return { success: false, message: 'Sebutkan atau buka proyek terlebih dahulu.' };
+      }
+      const name = String(params.name || params.workItem || '').trim();
+      if (!name) {
+        return { success: false, message: 'Nama item pekerjaan wajib diisi.' };
+      }
+      const start = String(params.plannedStart || params.startDate || todayStr());
+      const defaultEnd = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+      const end = String(params.plannedEnd || params.endDate || defaultEnd);
+      await createWorkItem({
+        project_id: project.id,
+        name,
+        description: params.description ? String(params.description) : null,
+        planned_start: start,
+        planned_end: end,
+        weight: params.weight != null ? Number(params.weight) : 10,
+        progress_pct: Number(params.progress) || 0,
+        status: 'not_started',
+      });
+      await ctx.onRefreshProjects();
+      return {
+        success: true,
+        message: `Pekerjaan "${name}" ditambahkan ke jadwal!`,
+        details: `${start} s/d ${end} → ${project.name}`,
+        refreshProjects: true,
+      };
+    }
+
+    case 'record_transfer': {
+      const amount = Number(params.amount ?? params.total) || 0;
+      if (amount <= 0) {
+        return { success: false, message: 'Nominal transfer harus lebih dari 0.' };
+      }
+      const fromProj = fuzzyMatchProject(String(params.fromProject || ''), ctx.projects) || project;
+      const toProj = fuzzyMatchProject(String(params.toProject || ''), ctx.projects);
+      const transferType = String(params.transferType || params.type || 'loan') === 'repayment' ? 'repayment' : 'loan';
+      if (fromProj && toProj && fromProj.id !== toProj.id) {
+        await createProjectTransfer({
+          org_id: ctx.orgId,
+          source_type: 'project',
+          from_project_id: fromProj.id,
+          to_project_id: toProj.id,
+          amount,
+          type: transferType,
+          date: todayStr(),
+          description: String(params.description || `Transfer ${fromProj.name} → ${toProj.name}`),
+          recorded_by: ctx.userId,
+        });
+        await ctx.onRefreshProjects();
+        return {
+          success: true,
+          message: 'Transfer antar proyek tercatat!',
+          details: `${formatCurrency(amount)}: ${fromProj.name} → ${toProj.name}`,
+          refreshProjects: true,
+        };
+      }
+      const counterparty = String(params.counterparty || params.toProject || params.fromProject || 'Kas Kantor').trim();
+      const targetProj = toProj || fromProj;
+      if (!targetProj) {
+        return { success: false, message: 'Proyek sumber/tujuan transfer tidak ditemukan.' };
+      }
+      await createProjectTransfer({
+        org_id: ctx.orgId,
+        source_type: 'external',
+        from_project_id: transferType === 'repayment' ? targetProj.id : null,
+        to_project_id: transferType === 'loan' ? targetProj.id : null,
+        counterparty_name: counterparty,
+        amount,
+        type: transferType,
+        date: todayStr(),
+        description: String(params.description || `Transfer eksternal (${counterparty})`),
+        recorded_by: ctx.userId,
+      });
+      await ctx.onRefreshProjects();
+      return {
+        success: true,
+        message: 'Mutasi talangan/transfer tercatat!',
+        details: `${formatCurrency(amount)} · ${targetProj.name} ↔ ${counterparty}`,
+        refreshProjects: true,
+      };
+    }
+
+    case 'convert_estimation': {
+      const estRef = String(params.estimation || params.code || params.title || '').trim().toLowerCase();
+      const list = await loadEstimations(ctx.orgId);
+      const found = list.find(
+        e => e.id === estRef || e.code.toLowerCase() === estRef || e.title.toLowerCase().includes(estRef),
+      );
+      if (!found) {
+        return { success: false, message: 'Estimasi yang dimaksud tidak ditemukan.' };
+      }
+      const full = await loadEstimation(found.id);
+      const itemIds = (full?.items || []).map(i => i.id);
+      if (!itemIds.length) {
+        return { success: false, message: `Estimasi ${found.code} belum memiliki item RAB.` };
+      }
+      const end = new Date();
+      end.setMonth(end.getMonth() + 3);
+      const conv = await convertEstimationToProject(
+        found.id,
+        {
+          name: String(params.projectName || found.title),
+          clientName: String(params.clientName || found.customer_name || 'Klien'),
+          clientPhone: String(params.clientPhone || found.customer_phone || '-'),
+          location: String(params.location || found.customer_address || '-'),
+          startDate: todayStr(),
+          endDate: end.toISOString().slice(0, 10),
+          description: `Konversi dari estimasi ${found.code}`,
+        },
+        itemIds,
+      );
+      await ctx.onRefreshProjects();
+      return {
+        success: true,
+        message: `Estimasi ${found.code} dikonversi menjadi proyek aktif!`,
+        details: `${itemIds.length} item RAP & jadwal kerja disinkronkan`,
+        navigateTo: `/app/projects/${conv.projectId}`,
+        refreshProjects: true,
+      };
+    }
+
+    case 'add_employee': {
+      const name = String(params.name || '').trim();
+      if (!name) return { success: false, message: 'Nama karyawan/tukang wajib diisi.' };
+      const roleRaw = String(params.role || 'worker').toLowerCase();
+      const role = (['owner', 'admin', 'manager', 'staff', 'worker'].includes(roleRaw) ? roleRaw : 'worker') as 'worker' | 'staff' | 'manager';
+      const res = await createHrMemberQuick({
+        orgId: ctx.orgId,
+        name,
+        phone: params.phone ? String(params.phone) : undefined,
+        role,
+        canDirectCreate: true,
+      });
+      if (!res.ok && !res.fallbackWorkerId) {
+        return { success: false, message: res.error };
+      }
+      return {
+        success: true,
+        message: `Anggota tim "${name}" ditambahkan oleh HRD!`,
+        details: res.ok ? `Role: ${role}` : res.error,
+        navigateTo: '/app/hr/employees',
+      };
+    }
+
+    case 'record_attendance': {
+      const memberName = String(params.employee || params.name || '').trim().toLowerCase();
+      const members = await listMembers(ctx.orgId);
+      const m = members.find(x => (x.profile?.name || '').toLowerCase().includes(memberName));
+      if (!m) {
+        return { success: false, message: `Karyawan "${params.employee || params.name}" tidak ditemukan di HRD.` };
+      }
+      const attType = String(params.type || 'check_in') === 'check_out' ? 'check_out' : 'check_in';
+      await recordAdminAttendance({
+        org_id: ctx.orgId,
+        user_id: m.user_id,
+        user_name: m.profile?.name,
+        type: attType,
+        recorded_at: new Date().toISOString(),
+        project_id: project?.id,
+        project_name: project?.name,
+        note: params.note ? String(params.note) : 'Dicatat via AI Manager',
+      });
+      return {
+        success: true,
+        message: `Absensi ${attType === 'check_in' ? 'masuk' : 'pulang'} tercatat!`,
+        details: `${m.profile?.name || 'Karyawan'}${project ? ` · ${project.name}` : ''}`,
+      };
+    }
+
+    case 'approve_bon':
+    case 'reject_bon': {
+      const pending = await listBonRequests(ctx.orgId, 'pending');
+      const targetName = String(params.employee || params.bon || '').trim().toLowerCase();
+      const bon = pending.find(
+        b => b.id === targetName || (b.profiles?.name || '').toLowerCase().includes(targetName),
+      ) || pending[0];
+      if (!bon) {
+        return { success: false, message: 'Tidak ada pengajuan kasbon yang menunggu.' };
+      }
+      const status = intent === 'approve_bon' ? 'approved' : 'rejected';
+      await reviewBonRequest(bon.id, status, ctx.userId, params.reason ? String(params.reason) : undefined, {
+        orgId: ctx.orgId,
+        actorId: ctx.userId,
+      });
+      return {
+        success: true,
+        message: `Kasbon ${bon.profiles?.name || ''} ${formatCurrency(bon.amount)} ${status === 'approved' ? 'disetujui' : 'ditolak'}!`,
+      };
+    }
+
+    case 'assign_todo': {
+      if (!project) {
+        return { success: false, message: 'Sebutkan proyek untuk tugas tim ini.' };
+      }
+      const title = String(params.title || params.task || '').trim();
+      if (!title) return { success: false, message: 'Judul tugas wajib diisi.' };
+      const members = await listMembers(ctx.orgId);
+      const assigneeRaw = String(params.assignee || '').trim().toLowerCase();
+      const member = assigneeRaw
+        ? members.find(m => (m.profile?.name || '').toLowerCase().includes(assigneeRaw))
+        : undefined;
+      const prioRaw = String(params.priority || 'medium').toLowerCase();
+      const prio = (['low', 'medium', 'high', 'urgent'].includes(prioRaw) ? prioRaw : 'medium') as PlannerTodo['priority'];
+      await createTodo({
+        org_id: ctx.orgId,
+        project_id: project.id,
+        title,
+        priority: prio,
+        assigned_member_id: member?.id ?? null,
+        assigned_user_id: member?.user_id ?? null,
+        due_date: params.due ? String(params.due).slice(0, 10) : null,
+        created_by: ctx.userId,
+      });
+      return {
+        success: true,
+        message: `Tugas "${title}" didelegasikan!`,
+        details: `${member?.profile?.name ? `Ke: ${member.profile.name} · ` : ''}${project.name}`,
+      };
+    }
+
+    case 'generate_payroll': {
+      const members = await listMembers(ctx.orgId);
+      const rows = await generatePayrollForOrg(
+        ctx.orgId,
+        members.map(m => ({ id: m.id, user_id: m.user_id, role: m.role })),
+      );
+      return {
+        success: true,
+        message: `Rekap draf payroll dibuat untuk ${rows.length} anggota tim!`,
+        navigateTo: '/app/hr/payroll',
+      };
+    }
+
+    case 'upsert_pricelist_item': {
+      const name = String(params.name || params.item || '').trim();
+      const baseCost = Number(params.baseCost ?? params.price ?? params.total) || 0;
+      if (!name || baseCost <= 0) {
+        return { success: false, message: 'Nama material/item dan harga modal wajib diisi.' };
+      }
+      const margin = params.marginPct != null ? Number(params.marginPct) : 20;
+      const selling = calcPricelistSelling(baseCost, margin);
+      const existing = (await loadPricelistItems(ctx.orgId, false)).find(
+        i => i.name.toLowerCase() === name.toLowerCase(),
+      );
+      if (existing) {
+        await updatePricelistItem(existing.id, {
+          base_cost: baseCost,
+          default_margin_pct: margin,
+          selling_price: selling,
+        });
+        return {
+          success: true,
+          message: `Harga master "${name}" diperbarui!`,
+          details: `HPP ${formatCurrency(baseCost)} · Jual ${formatCurrency(selling)}`,
+        };
+      }
+      const cats: PricelistCategory[] = ['material', 'upah', 'alat', 'jasa', 'borongan', 'other'];
+      const catRaw = String(params.category || 'material').toLowerCase() as PricelistCategory;
+      await createPricelistItem({
+        org_id: ctx.orgId,
+        name,
+        product: null,
+        category: cats.includes(catRaw) ? catRaw : 'material',
+        unit: String(params.unit || 'ls'),
+        base_cost: baseCost,
+        default_margin_pct: margin,
+        selling_price: selling,
+        notes: null,
+        is_active: true,
+        created_by: ctx.userId,
+      });
+      return {
+        success: true,
+        message: `Item master "${name}" ditambahkan ke Pricelist!`,
+        details: `HPP ${formatCurrency(baseCost)}/${params.unit || 'ls'}`,
       };
     }
 
