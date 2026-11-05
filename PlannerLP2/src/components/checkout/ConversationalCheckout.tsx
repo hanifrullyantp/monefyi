@@ -42,7 +42,7 @@ export default function ConversationalCheckout({
 }: CheckoutProps) {
   // 1. Content & Admin Stores
   const { content, isDirty, publishContent, isSaving } = useContentStore();
-  const { isAdmin, isEditMode, setEditMode } = useLandingAdmin();
+  const { isEditMode, setEditMode, setAdmin } = useLandingAdmin();
   const co = { ...defaultContent.checkout!, ...(content.checkout || {}) };
 
   // State Management
@@ -138,6 +138,13 @@ export default function ConversationalCheckout({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentStep, fullName, email, whatsapp, paymentData, isEditMode]);
 
+  // Toggle inline edit mode untuk admin
+  const handleToggleEdit = () => {
+    const next = !isEditMode;
+    setEditMode(next);
+    setAdmin(true);
+  };
+
   // 2. Kalkulasi Harga Dinamis
   const basePrice = product === 'standard' ? 99000 : 199000;
   const bumpPrice = product === 'standard' ? 50000 : 99000;
@@ -163,8 +170,8 @@ export default function ConversationalCheckout({
     setErrorMsg('');
 
     if (currentStep === 1) {
-      if (!fullName.trim() || fullName.trim().length < 3) {
-        setErrorMsg('Mohon masukkan nama lengkap Anda (minimal 3 karakter).');
+      if (!fullName.trim() || fullName.trim().length < 2) {
+        setErrorMsg('Mohon masukkan nama lengkap Anda (minimal 2 karakter).');
         return;
       }
     } else if (currentStep === 2) {
@@ -308,74 +315,73 @@ export default function ConversationalCheckout({
   return (
     <div className="min-h-screen bg-[#f8faf9] text-slate-800 flex flex-col justify-between selection:bg-emerald-600 selection:text-white font-sans antialiased">
       {/* ===================================================================== */}
-      {/* ADMIN TOOLBAR KHUSUS CHECKOUT (INLINE EDIT & SAVE) */}
+      {/* TOP BAR INLINE EDIT (SELALU TERSEDIA DI ATAS CHECKOUT PAGE) */}
       {/* ===================================================================== */}
-      {isAdmin && (
-        <div className="bg-slate-900 text-white px-4 py-2.5 border-b border-slate-800 sticky top-0 z-50 shadow-md">
-          <div className="max-w-xl mx-auto flex items-center justify-between gap-3 text-xs flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="font-bold tracking-wide">Admin Checkout</span>
+      <div className="bg-slate-900 text-white px-4 py-2 border-b border-slate-800 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-xl mx-auto flex items-center justify-between gap-2 text-xs flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="font-bold tracking-wide">Checkout Estimator</span>
+          </div>
+
+          {/* Shortcut langkah saat edit mode */}
+          {isEditMode && (
+            <div className="flex items-center gap-1 bg-slate-800 p-0.5 rounded-lg text-[11px]">
+              <span className="text-slate-400 px-1 font-medium">Langkah:</span>
+              {[1, 2, 3, 4, 5].map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => goToStep(st)}
+                  className={`px-2 py-0.5 rounded font-bold transition-colors cursor-pointer ${
+                    currentStep === st
+                      ? 'bg-emerald-500 text-white shadow-xs'
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  {st}
+                </button>
+              ))}
             </div>
+          )}
 
-            {/* Step navigation shortcut for quick inline editing */}
-            {isEditMode && (
-              <div className="flex items-center gap-1 bg-slate-800 p-0.5 rounded-lg text-[11px]">
-                <span className="text-slate-400 px-1.5 font-medium">Langkah:</span>
-                {[1, 2, 3, 4, 5].map((st) => (
-                  <button
-                    key={st}
-                    onClick={() => goToStep(st)}
-                    className={`px-2 py-0.5 rounded font-bold transition-colors ${
-                      currentStep === st
-                        ? 'bg-emerald-500 text-white'
-                        : 'text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    {st}
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleToggleEdit}
+              className={`px-3 py-1 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                isEditMode
+                  ? 'bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-300'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+              }`}
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>{isEditMode ? 'Mode Edit: AKTIF ✏️' : '✏️ Mode Edit Teks'}</span>
+            </button>
 
-            <div className="flex items-center gap-2">
+            {isDirty && (
               <button
                 type="button"
-                onClick={() => setEditMode(!isEditMode)}
-                className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                  isEditMode
-                    ? 'bg-amber-400 text-slate-950 shadow-sm'
-                    : 'bg-slate-800 text-slate-300 hover:text-white'
-                }`}
+                onClick={() => void publishContent()}
+                disabled={isSaving}
+                className="px-3 py-1 rounded-lg font-bold bg-[#065f46] hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-sm disabled:opacity-60 cursor-pointer"
               >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>{isEditMode ? 'Mode Edit: AKTIF' : 'Edit Teks'}</span>
+                <Save className="w-3.5 h-3.5" />
+                <span>{isSaving ? 'Menyimpan...' : 'Simpan 💾'}</span>
               </button>
-
-              {isDirty && (
-                <button
-                  type="button"
-                  onClick={() => void publishContent()}
-                  disabled={isSaving}
-                  className="px-3 py-1.5 rounded-lg font-bold bg-[#065f46] hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-sm disabled:opacity-60 cursor-pointer"
-                >
-                  <Save className="w-3.5 h-3.5" />
-                  <span>{isSaving ? 'Menyimpan...' : 'Simpan'}</span>
-                </button>
-              )}
-            </div>
+            )}
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Top Header Match Identitas UI Estimator */}
-      <header className={`bg-white/95 backdrop-blur-md border-b border-slate-100 ${isAdmin ? '' : 'sticky top-0 z-30'}`}>
+      {/* Header Aplikasi Estimator */}
+      <header className="bg-white/95 backdrop-blur-md border-b border-slate-100">
         <div className="max-w-xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {(currentStep > 1 || paymentData) && (
               <button
                 onClick={handleBack}
-                className="p-2 -ml-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                className="p-2 -ml-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
                 title="Kembali"
               >
                 <ArrowLeft className="w-5 h-5" />
@@ -416,72 +422,77 @@ export default function ConversationalCheckout({
       {/* Main Conversational Container */}
       <main className="flex-1 max-w-xl w-full mx-auto px-4 py-6 flex flex-col justify-center">
         {/* ===================================================================== */}
-        {/* HASIL ISIAN BERJEJER DI ATAS (ANIMASI SLIDE-UP DIAWALI TITIK BESAR HIJAU) */}
+        {/* HASIL ISIAN BERJEJER SATU BARIS (. Nama  . Email  . WhatsApp) */}
+        {/* ANIMASI MELAYANG KE ATAS SETELAH DIISI */}
         {/* ===================================================================== */}
         {!paymentData && (
-          <div className="flex flex-wrap items-center gap-2 min-h-[38px] mb-4">
+          <div className="flex items-center gap-2 sm:gap-3 py-2 px-1 mb-5 overflow-x-auto no-scrollbar border-b border-slate-200/70 min-h-[44px]">
             <AnimatePresence mode="popLayout">
-              {/* Pill Nama Lengkap */}
+              {/* . Nama (Melayang ke atas saat selesai diisi) */}
               {currentStep > 1 && fullName && (
                 <motion.button
-                  key="pill-name"
-                  initial={{ y: 20, opacity: 0, scale: 0.9 }}
+                  key="summary-name"
+                  layout
+                  initial={{ y: 28, opacity: 0, scale: 0.88 }}
                   animate={{ y: 0, opacity: 1, scale: 1 }}
-                  exit={{ y: -10, opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                  exit={{ y: -12, opacity: 0, scale: 0.88 }}
+                  transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
                   onClick={() => goToStep(1)}
-                  className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white border border-emerald-200/80 hover:border-emerald-500 rounded-full text-xs font-bold text-slate-800 shadow-xs hover:bg-emerald-50/50 transition-all cursor-pointer group"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-emerald-50/50 border border-slate-200/90 hover:border-emerald-500 rounded-full text-xs sm:text-sm font-bold text-slate-800 shadow-xs transition-all cursor-pointer shrink-0 group"
                   title="Klik untuk ubah nama"
                 >
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-sm shadow-emerald-500/50 group-hover:scale-125 transition-transform" />
-                  <span className="truncate max-w-[130px]">{fullName}</span>
+                  <span className="truncate max-w-[140px]">{fullName}</span>
                 </motion.button>
               )}
 
-              {/* Pill Email */}
+              {/* . Email (Melayang ke atas saat selesai diisi) */}
               {currentStep > 2 && email && (
                 <motion.button
-                  key="pill-email"
-                  initial={{ y: 20, opacity: 0, scale: 0.9 }}
+                  key="summary-email"
+                  layout
+                  initial={{ y: 28, opacity: 0, scale: 0.88 }}
                   animate={{ y: 0, opacity: 1, scale: 1 }}
-                  exit={{ y: -10, opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                  exit={{ y: -12, opacity: 0, scale: 0.88 }}
+                  transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
                   onClick={() => goToStep(2)}
-                  className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white border border-emerald-200/80 hover:border-emerald-500 rounded-full text-xs font-bold text-slate-800 shadow-xs hover:bg-emerald-50/50 transition-all cursor-pointer group"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-emerald-50/50 border border-slate-200/90 hover:border-emerald-500 rounded-full text-xs sm:text-sm font-bold text-slate-800 shadow-xs transition-all cursor-pointer shrink-0 group"
                   title="Klik untuk ubah email"
                 >
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-sm shadow-emerald-500/50 group-hover:scale-125 transition-transform" />
-                  <span className="truncate max-w-[150px]">{email}</span>
+                  <span className="truncate max-w-[160px]">{email}</span>
                 </motion.button>
               )}
 
-              {/* Pill WhatsApp */}
+              {/* . WhatsApp (Melayang ke atas saat selesai diisi) */}
               {currentStep > 3 && whatsapp && (
                 <motion.button
-                  key="pill-wa"
-                  initial={{ y: 20, opacity: 0, scale: 0.9 }}
+                  key="summary-wa"
+                  layout
+                  initial={{ y: 28, opacity: 0, scale: 0.88 }}
                   animate={{ y: 0, opacity: 1, scale: 1 }}
-                  exit={{ y: -10, opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                  exit={{ y: -12, opacity: 0, scale: 0.88 }}
+                  transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
                   onClick={() => goToStep(3)}
-                  className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white border border-emerald-200/80 hover:border-emerald-500 rounded-full text-xs font-bold text-slate-800 shadow-xs hover:bg-emerald-50/50 transition-all cursor-pointer group"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-emerald-50/50 border border-slate-200/90 hover:border-emerald-500 rounded-full text-xs sm:text-sm font-bold text-slate-800 shadow-xs transition-all cursor-pointer shrink-0 group"
                   title="Klik untuk ubah WhatsApp"
                 >
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-sm shadow-emerald-500/50 group-hover:scale-125 transition-transform" />
-                  <span>+62 {whatsapp}</span>
+                  <span>{whatsapp.startsWith('0') ? whatsapp : `0${whatsapp}`}</span>
                 </motion.button>
               )}
 
-              {/* Pill Order Bump (jika dipilih) */}
+              {/* . Order Bump (jika dipilih) */}
               {currentStep > 4 && takeOrderBump && (
                 <motion.button
-                  key="pill-bump"
-                  initial={{ y: 20, opacity: 0, scale: 0.9 }}
+                  key="summary-bump"
+                  layout
+                  initial={{ y: 28, opacity: 0, scale: 0.88 }}
                   animate={{ y: 0, opacity: 1, scale: 1 }}
-                  exit={{ y: -10, opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                  exit={{ y: -12, opacity: 0, scale: 0.88 }}
+                  transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
                   onClick={() => goToStep(4)}
-                  className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-amber-50 border border-amber-300 hover:border-amber-500 rounded-full text-xs font-bold text-amber-900 shadow-xs transition-all cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-300 hover:border-amber-500 rounded-full text-xs sm:text-sm font-bold text-amber-900 shadow-xs transition-all cursor-pointer shrink-0"
                   title="Klik untuk ubah penawaran"
                 >
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0 shadow-sm shadow-amber-500/50" />
@@ -532,7 +543,7 @@ export default function ConversationalCheckout({
                     </span>
                     <button
                       onClick={copyAmount}
-                      className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+                      className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
                       title="Salin nominal"
                     >
                       <Copy className="w-4 h-4" />

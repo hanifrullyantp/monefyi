@@ -51,6 +51,7 @@ export default function ManagerWorkspaceModal({
   const [configVersion, setConfigVersion] = useState(0);
   const [testingConn, setTestingConn] = useState(false);
   const [connMsg, setConnMsg] = useState('');
+  const [connOk, setConnOk] = useState<boolean | null>(null);
   const ctxRef = useRef<ContextPack | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const config = useMemo(() => loadAIConfig(), [configVersion, showKeyConfig]);
@@ -128,8 +129,10 @@ export default function ManagerWorkspaceModal({
   const runConnectionTest = async () => {
     setTestingConn(true);
     setConnMsg('');
+    setConnOk(null);
     const result = await testAIConnection(config);
     setConnMsg(result.message);
+    setConnOk(result.ok);
     setTestingConn(false);
   };
 
@@ -291,7 +294,7 @@ export default function ManagerWorkspaceModal({
         </div>
 
         {connMsg && (
-          <p className={`px-4 pb-1 text-xs ${connMsg.startsWith('Terhubung') ? 'text-emerald-700' : 'text-rose-600'}`}>{connMsg}</p>
+          <p className={`px-4 pb-1 text-xs ${connOk ? 'text-emerald-700' : 'text-rose-600'}`}>{connMsg}</p>
         )}
         <form className="p-3 border-t flex gap-2 items-center" onSubmit={e => { e.preventDefault(); void send(input); }}>
           <input

@@ -65,7 +65,7 @@ export const useContentStore = create<ContentStore>()(
       updateField: (section, field, value) => {
         set((state) => {
           const path = field.split(".").filter(Boolean);
-          const currentSection = state.content[section] as Record<string, unknown>;
+          const currentSection = (state.content[section] || defaultContent[section] || {}) as Record<string, unknown>;
           const updatedSection = structuredClone(currentSection);
           let target: Record<string, unknown> | unknown[] = updatedSection;
 

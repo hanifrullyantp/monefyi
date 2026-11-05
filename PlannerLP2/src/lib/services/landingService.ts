@@ -87,6 +87,7 @@ export function mergeSiteContent(raw: Partial<SiteContent> | null | undefined): 
       },
     },
     footer: { ...defaultContent.footer, ...(raw.footer || {}) },
+    checkout: { ...defaultContent.checkout, ...(raw.checkout || {}) },
     relinkPopup: { ...defaultContent.relinkPopup, ...(raw.relinkPopup || {}) },
     testimonial: {
       ...defaultContent.testimonial,
