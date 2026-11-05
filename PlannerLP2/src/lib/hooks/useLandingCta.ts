@@ -11,6 +11,7 @@ import {
 } from "@/lib/permissions";
 import type { User } from "@/lib/store/authStore";
 import { lynkProductLabel, planIdToLynkProduct, type LynkProduct } from "@/lib/checkout/products";
+import { resolvePaymentProvider } from "@/lib/checkout/paymentProvider";
 import { buildLynkCheckoutUrl, resolveLynkBaseUrl } from "@/lib/checkout/lynk";
 import { mergeLynkCheckoutUrlOverrides } from "@/lib/checkout/lynkDefaults";
 import { scrollToPricingSection } from "@/lib/navigation/scrollToPricing";
@@ -62,6 +63,13 @@ export function useLandingCta() {
     const product = planIdToLynkProduct(planId);
     if (!product) {
       window.alert("Paket tidak dikenali. Pilih Standard atau Pro di halaman harga.");
+      return;
+    }
+
+    const provider = resolvePaymentProvider();
+    if (provider === "mayar") {
+      const planQuery = planId.includes("pro") ? "pro" : "standard";
+      window.location.assign(`/checkout?plan=${planQuery}`);
       return;
     }
 
