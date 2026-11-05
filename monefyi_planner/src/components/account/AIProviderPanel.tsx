@@ -10,9 +10,12 @@ import {
   type AIConfig,
   type AIProviderId,
 } from '../../services/aiProviderService';
+import { persistAIConfigToAccount } from '../../services/aiConfigSync';
+import { useAppStore } from '../../store/appStore';
 import { showToast } from '../../store/uiStore';
 
 export default function AIProviderPanel() {
+  const userId = useAppStore(s => s.user?.id);
   const [config, setConfig] = useState<AIConfig>(() => loadAIConfig());
   const [testing, setTesting] = useState(false);
   const [testMsg, setTestMsg] = useState<{ ok: boolean; message: string } | null>(null);
@@ -21,13 +24,22 @@ export default function AIProviderPanel() {
   const meta = getProviderMeta(provider);
   const update = (patch: Partial<AIConfig>) => setConfig(c => ({ ...c, ...patch }));
 
-  const save = () => {
+  const save = async () => {
     saveAIConfig(config);
-    showToast('Konfigurasi AI disimpan', 'success');
+    if (userId) {
+      try {
+        await persistAIConfigToAccount(userId, config);
+      } catch {
+        showToast('Tersimpan di perangkat ini; sinkron akun gagal. Coba lagi.', 'error');
+        return;
+      }
+    }
+    showToast(userId ? 'Konfigurasi AI disimpan & disinkron ke akun' : 'Konfigurasi AI disimpan di perangkat ini', 'success');
   };
 
   const test = async () => {
     saveAIConfig(config);
+    if (userId) await persistAIConfigToAccount(userId, config).catch(() => undefined);
     setTesting(true);
     setTestMsg(await testAIConnection(config));
     setTesting(false);
@@ -37,7 +49,7 @@ export default function AIProviderPanel() {
     <div className="space-y-4 border-t pt-6">
       <div>
         <h4 className="font-semibold text-slate-800">AI Manager — Provider & API Key</h4>
-        <p className="text-xs text-slate-500">Key disimpan di browser ini saja dan dipakai langsung ke provider pilihan Anda.</p>
+        <p className="text-xs text-slate-500">Key disimpan ke akun Anda (sinkron antar perangkat) dan dipanggil langsung ke provider.</p>
       </div>
 
       <div className="flex flex-wrap gap-2">

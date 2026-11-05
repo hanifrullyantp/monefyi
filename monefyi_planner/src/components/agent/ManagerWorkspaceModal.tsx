@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Loader2, Send, X, Settings2, Check, Ban, ExternalLink } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
-import { loadAIConfig, getActiveModel, getProviderMeta, hasActiveKey } from '../../services/aiProviderService';
+import { loadAIConfig, getActiveModel, getProviderMeta, hasActiveKey, testAIConnection } from '../../services/aiProviderService';
+import { hydrateAIConfigFromAccount } from '../../services/aiConfigSync';
 import AIProviderPanel from '../account/AIProviderPanel';
 import {
   DIVISIONS,
@@ -48,6 +49,8 @@ export default function ManagerWorkspaceModal({
   const [error, setError] = useState('');
   const [showKeyConfig, setShowKeyConfig] = useState(false);
   const [configVersion, setConfigVersion] = useState(0);
+  const [testingConn, setTestingConn] = useState(false);
+  const [connMsg, setConnMsg] = useState('');
   const ctxRef = useRef<ContextPack | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const config = useMemo(() => loadAIConfig(), [configVersion, showKeyConfig]);
@@ -68,6 +71,11 @@ export default function ManagerWorkspaceModal({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [items, busy]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    void hydrateAIConfigFromAccount(user.id).then(() => setConfigVersion(v => v + 1));
+  }, [user?.id]);
 
   const patchAction = (turnId: string, actionId: string, patch: Partial<AgentAction>) =>
     setItems(cur => cur.map(it =>
@@ -117,6 +125,14 @@ export default function ManagerWorkspaceModal({
   const keyReady = hasActiveKey(config);
   const meta = getProviderMeta(config.activeProvider);
 
+  const runConnectionTest = async () => {
+    setTestingConn(true);
+    setConnMsg('');
+    const result = await testAIConnection(config);
+    setConnMsg(result.message);
+    setTestingConn(false);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -135,6 +151,16 @@ export default function ManagerWorkspaceModal({
               {keyReady ? `${meta.label} · ${getActiveModel(config)} · ${config.executionMode === 'auto' ? 'Auto-pilot' : 'Minta persetujuan'}` : 'API key belum diisi'}
             </p>
           </div>
+          <button
+            type="button"
+            title="Tes koneksi AI"
+            disabled={testingConn || !keyReady}
+            className="text-xs px-2.5 py-1.5 rounded-xl border inline-flex items-center gap-1 font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+            onClick={() => void runConnectionTest()}
+          >
+            {testingConn ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+            Tes AI
+          </button>
           <button
             type="button"
             title="Konfigurasi API Key & Model AI"
@@ -264,13 +290,20 @@ export default function ManagerWorkspaceModal({
           <div ref={bottomRef} />
         </div>
 
-        <form className="p-3 border-t flex gap-2" onSubmit={e => { e.preventDefault(); void send(input); }}>
+        {connMsg && (
+          <p className={`px-4 pb-1 text-xs ${connMsg.startsWith('Terhubung') ? 'text-emerald-700' : 'text-rose-600'}`}>{connMsg}</p>
+        )}
+        <form className="p-3 border-t flex gap-2 items-center" onSubmit={e => { e.preventDefault(); void send(input); }}>
           <input
             value={input}
             onChange={e => setInput(e.target.value)}
             placeholder="Tanya, diskusi, atau perintahkan GM…"
             className="flex-1 px-3 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
+          <button type="button" disabled={testingConn || !keyReady} onClick={() => void runConnectionTest()}
+            className="px-2.5 py-2.5 rounded-xl border text-xs font-semibold text-slate-600 disabled:opacity-50 shrink-0">
+            Tes
+          </button>
           <button type="submit" disabled={busy || !input.trim()} className="px-4 rounded-xl bg-emerald-600 text-white disabled:opacity-50">
             <Send className="w-4 h-4" />
           </button>

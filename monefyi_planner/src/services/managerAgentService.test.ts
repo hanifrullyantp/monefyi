@@ -8,6 +8,7 @@ import {
   saveAIConfig,
   type AIConfig,
 } from './aiProviderService';
+import { mergeCloudAIConfig } from './aiConfigSync';
 import {
   DIVISIONS,
   localSmartManagerTurn,
@@ -107,15 +108,25 @@ describe('Multi-Provider BYOK (aiProviderService)', () => {
     expect(getActiveModel(loaded, 'groq')).toBe('llama-3.1-8b-instant');
   });
 
-  it('memetakan model Gemini yang sudah dihapus ke gemini-3.5-flash-lite', () => {
+  it('mengisi key kosong dari profil cloud saat perangkat baru', () => {
+    const local = { ...loadAIConfig(), keys: {} };
+    const merged = mergeCloudAIConfig(local, {
+      activeProvider: 'gemini',
+      keys: { gemini: 'AIza-cloud-key' },
+    }, null);
+    expect(merged.keys.gemini).toBe('AIza-cloud-key');
+    expect(merged.activeProvider).toBe('gemini');
+  });
+
+  it('memetakan model Gemini yang sudah dihapus ke gemini-2.5-flash', () => {
     saveAIConfig({
       ...loadAIConfig(),
       activeProvider: 'gemini',
       models: { gemini: 'gemini-2.0-flash-lite' },
     });
     const loaded = loadAIConfig();
-    expect(loaded.models.gemini).toBe('gemini-3.5-flash-lite');
-    expect(getActiveModel(loaded, 'gemini')).toBe('gemini-3.5-flash-lite');
+    expect(loaded.models.gemini).toBe('gemini-2.5-flash');
+    expect(getActiveModel(loaded, 'gemini')).toBe('gemini-2.5-flash');
   });
 
   it('extractJson tahan terhadap output model murah yang menyertakan markdown fence atau teks pengantar', () => {

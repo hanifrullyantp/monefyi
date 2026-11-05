@@ -3,6 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { useAuthStore } from '@/lib/store/authStore';
+import { useContentStore } from '@/lib/store/contentStore';
+import { useLandingAdmin } from '@/lib/hooks/useLandingAdmin';
+import { defaultContent } from '@/data/defaultContent';
+import { EditableText } from '@/components/shared/EditableText';
 import {
   ArrowLeft,
   ArrowRight,
@@ -21,7 +25,8 @@ import {
   ExternalLink,
   RefreshCw,
   Clock,
-  Download,
+  Edit3,
+  Save,
 } from 'lucide-react';
 
 export type ProductTier = 'standard' | 'pro';
@@ -35,7 +40,12 @@ export default function ConversationalCheckout({
   initialProduct = 'standard',
   onSuccess,
 }: CheckoutProps) {
-  // 1. State Management
+  // 1. Content & Admin Stores
+  const { content, isDirty, publishContent, isSaving } = useContentStore();
+  const { isAdmin, isEditMode, setEditMode } = useLandingAdmin();
+  const co = { ...defaultContent.checkout!, ...(content.checkout || {}) };
+
+  // State Management
   const [product] = useState<ProductTier>(initialProduct);
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [direction, setDirection] = useState<number>(1);
@@ -76,13 +86,13 @@ export default function ConversationalCheckout({
     }
   }, [authUser]);
 
-  // Auto-focus input saat step berganti
+  // Auto-focus input saat step berganti (jika bukan dalam mode edit admin)
   useEffect(() => {
-    if (currentStep <= 3) {
+    if (currentStep <= 3 && !isEditMode) {
       setTimeout(() => inputRef.current?.focus(), 250);
     }
     setErrorMsg('');
-  }, [currentStep]);
+  }, [currentStep, isEditMode]);
 
   // Countdown Timer saat di layar QRIS
   useEffect(() => {
@@ -116,17 +126,17 @@ export default function ConversationalCheckout({
     return () => clearInterval(checkInterval);
   }, [paymentData, paymentSuccess]);
 
-  // Keyboard navigation: Tekan 'Enter' untuk submit per langkah
+  // Keyboard navigation: Tekan 'Enter' untuk submit per langkah (hanya saat tidak edit mode)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' && currentStep <= 3 && !paymentData) {
+      if (e.key === 'Enter' && currentStep <= 3 && !paymentData && !isEditMode) {
         e.preventDefault();
         handleNext();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentStep, fullName, email, whatsapp, paymentData]);
+  }, [currentStep, fullName, email, whatsapp, paymentData, isEditMode]);
 
   // 2. Kalkulasi Harga Dinamis
   const basePrice = product === 'standard' ? 99000 : 199000;
@@ -191,15 +201,18 @@ export default function ConversationalCheckout({
 
   const goToStep = (stepNumber: number) => {
     if (paymentData) return;
-    if (stepNumber < currentStep) {
-      setErrorMsg('');
-      setDirection(-1);
-      setCurrentStep(stepNumber);
-    }
+    setErrorMsg('');
+    setDirection(stepNumber > currentStep ? 1 : -1);
+    setCurrentStep(stepNumber);
   };
 
   // 4. Submit Order & Tampilkan Native QRIS Screen (No generic Mayar page)
   const handleSubmitOrder = async () => {
+    if (isEditMode) {
+      alert('Nonaktifkan Mode Edit terlebih dahulu untuk melakukan pengujian checkout.');
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMsg('');
 
@@ -209,9 +222,9 @@ export default function ConversationalCheckout({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           product,
-          customerName: fullName.trim(),
+          customerName: fullName.trim() || 'Pelanggan Estimator',
           email: email.trim(),
-          mobile: whatsapp.trim(),
+          mobile: whatsapp.trim() || '081234567890',
           bumpTaken: takeOrderBump,
           amount: finalPrice,
           paymentMethod: 'qris',
@@ -224,7 +237,6 @@ export default function ConversationalCheckout({
         throw new Error(resData?.error || 'Gagal menyiapkan pembayaran Mayar');
       }
 
-      // Jika berhasil, render QRIS langsung di website ini!
       setPaymentData({
         paymentId: resData.paymentId,
         qrImageUrl: resData.qrImageUrl,
@@ -295,8 +307,69 @@ export default function ConversationalCheckout({
 
   return (
     <div className="min-h-screen bg-[#f8faf9] text-slate-800 flex flex-col justify-between selection:bg-emerald-600 selection:text-white font-sans antialiased">
+      {/* ===================================================================== */}
+      {/* ADMIN TOOLBAR KHUSUS CHECKOUT (INLINE EDIT & SAVE) */}
+      {/* ===================================================================== */}
+      {isAdmin && (
+        <div className="bg-slate-900 text-white px-4 py-2.5 border-b border-slate-800 sticky top-0 z-50 shadow-md">
+          <div className="max-w-xl mx-auto flex items-center justify-between gap-3 text-xs flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="font-bold tracking-wide">Admin Checkout</span>
+            </div>
+
+            {/* Step navigation shortcut for quick inline editing */}
+            {isEditMode && (
+              <div className="flex items-center gap-1 bg-slate-800 p-0.5 rounded-lg text-[11px]">
+                <span className="text-slate-400 px-1.5 font-medium">Langkah:</span>
+                {[1, 2, 3, 4, 5].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => goToStep(st)}
+                    className={`px-2 py-0.5 rounded font-bold transition-colors ${
+                      currentStep === st
+                        ? 'bg-emerald-500 text-white'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setEditMode(!isEditMode)}
+                className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  isEditMode
+                    ? 'bg-amber-400 text-slate-950 shadow-sm'
+                    : 'bg-slate-800 text-slate-300 hover:text-white'
+                }`}
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>{isEditMode ? 'Mode Edit: AKTIF' : 'Edit Teks'}</span>
+              </button>
+
+              {isDirty && (
+                <button
+                  type="button"
+                  onClick={() => void publishContent()}
+                  disabled={isSaving}
+                  className="px-3 py-1.5 rounded-lg font-bold bg-[#065f46] hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-sm disabled:opacity-60 cursor-pointer"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>{isSaving ? 'Menyimpan...' : 'Simpan'}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top Header Match Identitas UI Estimator */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-100">
+      <header className={`bg-white/95 backdrop-blur-md border-b border-slate-100 ${isAdmin ? '' : 'sticky top-0 z-30'}`}>
         <div className="max-w-xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {(currentStep > 1 || paymentData) && (
@@ -499,7 +572,7 @@ export default function ConversationalCheckout({
                   <button
                     disabled={isCheckingPayment}
                     onClick={handleManualCheckStatus}
-                    className="w-full py-3.5 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-extrabold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-900/15 disabled:opacity-60 text-sm"
+                    className="w-full py-3.5 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-extrabold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-900/15 disabled:opacity-60 text-sm cursor-pointer"
                   >
                     {isCheckingPayment ? (
                       <>
@@ -529,7 +602,7 @@ export default function ConversationalCheckout({
           </motion.div>
         ) : (
           /* ===================================================================== */
-          /* FORM INTERVIEW CONVERSATIONAL (STEP 1 - STEP 5) */
+          /* FORM INTERVIEW CONVERSATIONAL (STEP 1 - STEP 5) DENGAN INLINE EDIT */
           /* ===================================================================== */
           <AnimatePresence custom={direction} mode="wait">
             {/* STEP 1: NAMA LENGKAP */}
@@ -546,15 +619,15 @@ export default function ConversationalCheckout({
                 <div className="space-y-2">
                   <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 uppercase tracking-wider">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                    Registrasi Lisensi
+                    <EditableText section="checkout" field="step1Badge" value={co.step1Badge} />
                   </span>
                   <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
-                    Siapa nama lengkap Anda?
+                    <EditableText section="checkout" field="step1Title" value={co.step1Title} />
                   </h1>
                   <p className="text-sm text-slate-500 leading-relaxed flex items-start gap-1.5">
                     <HelpCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                     <span>
-                      Nama ini akan didaftarkan sebagai identitas resmi pemilik lisensi di aplikasi <strong>Estimator</strong>.
+                      <EditableText section="checkout" field="step1Help" value={co.step1Help} multiline />
                     </span>
                   </p>
                 </div>
@@ -565,7 +638,7 @@ export default function ConversationalCheckout({
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Contoh: Novia Ramadhani"
+                    placeholder={co.step1Placeholder || "Contoh: Novia Ramadhani"}
                     className="w-full px-5 py-4 text-lg bg-white border-2 border-slate-200 focus:border-[#065f46] rounded-2xl outline-none transition-all shadow-sm focus:shadow-emerald-900/5 placeholder:text-slate-300 font-medium"
                   />
 
@@ -582,7 +655,7 @@ export default function ConversationalCheckout({
                   </p>
                   <button
                     onClick={handleNext}
-                    className="w-full sm:w-auto ml-auto px-7 py-3.5 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-900/15"
+                    className="w-full sm:w-auto ml-auto px-7 py-3.5 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-900/15 cursor-pointer"
                   >
                     Lanjut <ArrowRight className="w-4 h-4" />
                   </button>
@@ -603,15 +676,16 @@ export default function ConversationalCheckout({
               >
                 <div className="space-y-2">
                   <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 uppercase tracking-wider">
-                    <Lock className="w-3.5 h-3.5" /> Akses Lisensi Rahasia
+                    <Lock className="w-3.5 h-3.5" />
+                    <EditableText section="checkout" field="step2Badge" value={co.step2Badge} />
                   </span>
                   <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
-                    Ke mana kami kirimkan akses & lisensi Anda?
+                    <EditableText section="checkout" field="step2Title" value={co.step2Title} />
                   </h1>
                   <p className="text-sm text-slate-500 leading-relaxed flex items-start gap-1.5">
                     <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                     <span>
-                      Privasi 100% aman tanpa spam. Digunakan untuk mengirim link aktivasi, receipt resmi, dan password sementara.
+                      <EditableText section="checkout" field="step2Help" value={co.step2Help} multiline />
                     </span>
                   </p>
                 </div>
@@ -622,7 +696,7 @@ export default function ConversationalCheckout({
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="nama@perusahaan.com"
+                    placeholder={co.step2Placeholder || "nama@perusahaan.com"}
                     className="w-full px-5 py-4 text-lg bg-white border-2 border-slate-200 focus:border-[#065f46] rounded-2xl outline-none transition-all shadow-sm focus:shadow-emerald-900/5 placeholder:text-slate-300 font-medium"
                   />
 
@@ -639,7 +713,7 @@ export default function ConversationalCheckout({
                   </p>
                   <button
                     onClick={handleNext}
-                    className="w-full sm:w-auto ml-auto px-7 py-3.5 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-900/15"
+                    className="w-full sm:w-auto ml-auto px-7 py-3.5 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-900/15 cursor-pointer"
                   >
                     Lanjut <ArrowRight className="w-4 h-4" />
                   </button>
@@ -660,15 +734,16 @@ export default function ConversationalCheckout({
               >
                 <div className="space-y-2">
                   <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 uppercase tracking-wider">
-                    <Zap className="w-3.5 h-3.5" /> Notifikasi WhatsApp Instan
+                    <Zap className="w-3.5 h-3.5" />
+                    <EditableText section="checkout" field="step3Badge" value={co.step3Badge} />
                   </span>
                   <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
-                    Nomor WhatsApp aktif Anda?
+                    <EditableText section="checkout" field="step3Title" value={co.step3Title} />
                   </h1>
                   <p className="text-sm text-slate-500 leading-relaxed flex items-start gap-1.5">
                     <HelpCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                     <span>
-                      Kadang email masuk folder spam. Kami kirimkan notifikasi aktivasi instan ke WhatsApp Anda.
+                      <EditableText section="checkout" field="step3Help" value={co.step3Help} multiline />
                     </span>
                   </p>
                 </div>
@@ -683,7 +758,7 @@ export default function ConversationalCheckout({
                       type="tel"
                       value={whatsapp}
                       onChange={(e) => setWhatsapp(e.target.value.replace(/^0+/, ''))}
-                      placeholder="812-3456-7890"
+                      placeholder={co.step3Placeholder || "812-3456-7890"}
                       className="w-full pl-20 pr-5 py-4 text-lg bg-white border-2 border-slate-200 focus:border-[#065f46] rounded-2xl outline-none transition-all shadow-sm focus:shadow-emerald-900/5 placeholder:text-slate-300 font-medium"
                     />
                   </div>
@@ -701,7 +776,7 @@ export default function ConversationalCheckout({
                   </p>
                   <button
                     onClick={handleNext}
-                    className="w-full sm:w-auto ml-auto px-7 py-3.5 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-900/15"
+                    className="w-full sm:w-auto ml-auto px-7 py-3.5 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-900/15 cursor-pointer"
                   >
                     Lanjut ke Penawaran <ArrowRight className="w-4 h-4" />
                   </button>
@@ -722,24 +797,33 @@ export default function ConversationalCheckout({
               >
                 <div className="space-y-1.5 text-center">
                   <span className="inline-flex items-center gap-1.5 text-xs font-black text-amber-800 bg-amber-100 border border-amber-300 px-3 py-1 rounded-full uppercase tracking-wider">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Penawaran Terbatas Sekali Ini Saja
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                    <EditableText section="checkout" field="bumpBadge" value={co.bumpBadge} />
                   </span>
                   <h1 className="text-2xl sm:text-3xl font-black text-slate-900">
-                    {product === 'standard'
-                      ? 'Upgrade ke Estimator PRO Hemat Rp50.000!'
-                      : 'Beli 1 Akun PRO Lagi untuk Tim — Diskon 50%!'}
+                    {product === 'standard' ? (
+                      <EditableText section="checkout" field="bumpTitleStandard" value={co.bumpTitleStandard} />
+                    ) : (
+                      <EditableText section="checkout" field="bumpTitlePro" value={co.bumpTitlePro} />
+                    )}
                   </h1>
                   <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">
-                    {product === 'standard'
-                      ? 'Harga resmi PRO di landing page Rp199.000. Khusus di layar ini, Anda cukup menambah Rp50.000 saja.'
-                      : 'Harga normal lisensi kedua Rp199.000. Khusus checkout ini, tambahkan 1 lisensi akun ekstra hanya Rp99.000.'}
+                    {product === 'standard' ? (
+                      <EditableText section="checkout" field="bumpSubStandard" value={co.bumpSubStandard} multiline />
+                    ) : (
+                      <EditableText section="checkout" field="bumpSubPro" value={co.bumpSubPro} multiline />
+                    )}
                   </p>
                 </div>
 
                 {/* Order Bump Card Interaktif */}
                 <div
-                  onClick={() => setTakeOrderBump(!takeOrderBump)}
-                  className={`relative cursor-pointer rounded-3xl p-5 sm:p-6 transition-all duration-300 border-2 ${
+                  onClick={() => {
+                    if (!isEditMode) setTakeOrderBump(!takeOrderBump);
+                  }}
+                  className={`relative rounded-3xl p-5 sm:p-6 transition-all duration-300 border-2 ${
+                    isEditMode ? 'cursor-default' : 'cursor-pointer'
+                  } ${
                     takeOrderBump
                       ? 'bg-amber-50/80 border-amber-500 shadow-xl shadow-amber-500/15 ring-2 ring-amber-400/50'
                       : 'bg-white border-dashed border-amber-300 hover:border-amber-400 hover:bg-amber-50/20 shadow-sm'
@@ -773,36 +857,36 @@ export default function ConversationalCheckout({
                         </div>
                       </div>
 
-                      {/* Benefit Points */}
+                      {/* Benefit Points Inline Editable */}
                       <div className="mt-3.5 space-y-2 text-xs sm:text-sm text-slate-700">
                         {product === 'standard' ? (
                           <>
                             <div className="flex items-center gap-2">
                               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                              <span>Export penawaran ke PDF & Excel tanpa watermark</span>
+                              <span><EditableText section="checkout" field="bumpBenefit1Standard" value={co.bumpBenefit1Standard} /></span>
                             </div>
                             <div className="flex items-center gap-2">
                               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                              <span>Buka semua template proyek (Kitchen set, Kanopi, Interior, Sipil)</span>
+                              <span><EditableText section="checkout" field="bumpBenefit2Standard" value={co.bumpBenefit2Standard} /></span>
                             </div>
                             <div className="flex items-center gap-2">
                               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                              <span>Fitur otomatis kirim penawaran rapi via WhatsApp ke klien</span>
+                              <span><EditableText section="checkout" field="bumpBenefit3Standard" value={co.bumpBenefit3Standard} /></span>
                             </div>
                           </>
                         ) : (
                           <>
                             <div className="flex items-center gap-2">
                               <Users className="w-4 h-4 text-blue-600 shrink-0" />
-                              <span>1 Akun terpisah mandiri untuk staf atau estimator lapangan</span>
+                              <span><EditableText section="checkout" field="bumpBenefit1Pro" value={co.bumpBenefit1Pro} /></span>
                             </div>
                             <div className="flex items-center gap-2">
                               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                              <span>Database proyek terpisah & aman tanpa saling tumpuk</span>
+                              <span><EditableText section="checkout" field="bumpBenefit2Pro" value={co.bumpBenefit2Pro} /></span>
                             </div>
                             <div className="flex items-center gap-2">
                               <BadgePercent className="w-4 h-4 text-amber-600 shrink-0" />
-                              <span>Hemat Rp100.000 dibanding membeli lisensi kedua terpisah</span>
+                              <span><EditableText section="checkout" field="bumpBenefit3Pro" value={co.bumpBenefit3Pro} /></span>
                             </div>
                           </>
                         )}
@@ -820,7 +904,7 @@ export default function ConversationalCheckout({
                 <div className="pt-2">
                   <button
                     onClick={handleNext}
-                    className="w-full py-4 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-extrabold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-900/15 text-base"
+                    className="w-full py-4 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-extrabold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-900/15 text-base cursor-pointer"
                   >
                     Lanjut ke Pembayaran ({formatIDR(finalPrice)}) <ArrowRight className="w-4 h-4" />
                   </button>
@@ -841,10 +925,10 @@ export default function ConversationalCheckout({
               >
                 <div className="space-y-1">
                   <h1 className="text-2xl font-extrabold text-slate-900">
-                    Ringkasan & Metode Pembayaran
+                    <EditableText section="checkout" field="step5Title" value={co.step5Title} />
                   </h1>
                   <p className="text-xs sm:text-sm text-slate-500">
-                    Selesaikan pesanan Anda secara instan dengan QRIS resmi.
+                    <EditableText section="checkout" field="step5Subtitle" value={co.step5Subtitle} />
                   </p>
                 </div>
 
@@ -882,6 +966,19 @@ export default function ConversationalCheckout({
                   </div>
                 </div>
 
+                {/* Data Pemesan Singkat */}
+                <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200/80 text-xs text-slate-600 flex justify-between items-center">
+                  <div className="truncate mr-2">
+                    <span className="font-bold text-slate-800">{fullName || 'Nama Anda'}</span> • {email || 'email@anda.com'} • +62 {whatsapp || '812...'}
+                  </div>
+                  <button
+                    onClick={() => goToStep(1)}
+                    className="text-emerald-700 font-bold hover:underline shrink-0 cursor-pointer"
+                  >
+                    Ubah
+                  </button>
+                </div>
+
                 {/* Pilihan Metode Pembayaran — Fokus pada QRIS Native */}
                 <div className="space-y-2.5">
                   <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
@@ -897,8 +994,12 @@ export default function ConversationalCheckout({
                         <QrCode className="w-5 h-5 text-emerald-700" />
                       </div>
                       <div>
-                        <p className="font-bold text-slate-900 text-sm">QRIS (Semua Bank & E-Wallet)</p>
-                        <p className="text-xs text-slate-500">Scan via BCA, Mandiri, BRI, BNI, GoPay, OVO, DANA, ShopeePay</p>
+                        <p className="font-bold text-slate-900 text-sm">
+                          <EditableText section="checkout" field="qrisTitle" value={co.qrisTitle} />
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          <EditableText section="checkout" field="qrisSubtitle" value={co.qrisSubtitle} />
+                        </p>
                       </div>
                     </div>
                     <div className="w-5 h-5 rounded-full border-2 border-[#065f46] bg-[#065f46] flex items-center justify-center">
@@ -927,17 +1028,21 @@ export default function ConversationalCheckout({
                         <span>Menyiapkan Kode QRIS...</span>
                       </div>
                     ) : (
-                      <>Tampilkan QRIS & Bayar ({formatIDR(finalPrice)})</>
+                      <>
+                        <EditableText section="checkout" field="submitButtonText" value={co.submitButtonText} /> ({formatIDR(finalPrice)})
+                      </>
                     )}
                   </button>
 
                   <div className="flex items-center justify-center gap-4 text-xs text-slate-400 font-medium">
                     <span className="flex items-center gap-1">
-                      <Lock className="w-3.5 h-3.5 text-slate-400" /> Pembayaran Aman & Terverifikasi
+                      <Lock className="w-3.5 h-3.5 text-slate-400" />
+                      <EditableText section="checkout" field="securityBadge" value={co.securityBadge} />
                     </span>
                     <span>•</span>
                     <span className="flex items-center gap-1">
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Garansi Akses 100%
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                      <EditableText section="checkout" field="guaranteeBadge" value={co.guaranteeBadge} />
                     </span>
                   </div>
                 </div>
@@ -949,7 +1054,7 @@ export default function ConversationalCheckout({
 
       {/* Footer Minimalis */}
       <footer className="py-4 text-center text-xs text-slate-400 border-t border-slate-100">
-        © {new Date().getFullYear()} Estimator App by Monefyi.
+        © {new Date().getFullYear()} <EditableText section="checkout" field="footerText" value={co.footerText} />
       </footer>
     </div>
   );

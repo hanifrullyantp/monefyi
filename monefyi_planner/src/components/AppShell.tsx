@@ -19,6 +19,7 @@ import { useEntitlement } from '../hooks/useEntitlement';
 import { isAdminFullAccess, isEstimatorOnlyPlan } from '../lib/entitlement';
 import PlannerModuleGuard from './entitlement/PlannerModuleGuard';
 import AgentTrialPage from '../pages/AgentTrialPage';
+import { hydrateAIConfigFromAccount } from '../services/aiConfigSync';
 
 function AppContent() {
   const { id: projectIdParam } = useParams();
@@ -27,6 +28,10 @@ function AppContent() {
   const { user, activeTab, setOnline, setSyncStatus, setSelectedProjectId, setActiveTab, platformRole, uiViewMode, financeVersion, entitlementPreviewMode } = useAppStore();
   const entitlement = useEntitlement();
   const adminFullAccess = isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode);
+
+  useEffect(() => {
+    if (user?.id) void hydrateAIConfigFromAccount(user.id);
+  }, [user?.id]);
 
   useEffect(() => {
     const tab = searchParams.get('tab');

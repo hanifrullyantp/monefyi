@@ -351,6 +351,40 @@ export interface ToastConfig {
   notifications: ToastNotification[];
 }
 
+export interface CheckoutContent {
+  step1Badge: string;
+  step1Title: string;
+  step1Help: string;
+  step1Placeholder: string;
+  step2Badge: string;
+  step2Title: string;
+  step2Help: string;
+  step2Placeholder: string;
+  step3Badge: string;
+  step3Title: string;
+  step3Help: string;
+  step3Placeholder: string;
+  bumpBadge: string;
+  bumpTitleStandard: string;
+  bumpSubStandard: string;
+  bumpTitlePro: string;
+  bumpSubPro: string;
+  bumpBenefit1Standard: string;
+  bumpBenefit2Standard: string;
+  bumpBenefit3Standard: string;
+  bumpBenefit1Pro: string;
+  bumpBenefit2Pro: string;
+  bumpBenefit3Pro: string;
+  step5Title: string;
+  step5Subtitle: string;
+  qrisTitle: string;
+  qrisSubtitle: string;
+  submitButtonText: string;
+  securityBadge: string;
+  guaranteeBadge: string;
+  footerText: string;
+}
+
 export interface SiteContent {
   navbar: NavbarContent;
   hero: HeroContent;
@@ -370,6 +404,7 @@ export interface SiteContent {
   finalCta: FinalCTAContent;
   footer: FooterContent;
   toast: ToastConfig;
+  checkout?: CheckoutContent;
   relinkPopup: {
     enabled: boolean;
     idleMinutes: number;

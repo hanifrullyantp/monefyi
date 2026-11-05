@@ -33,8 +33,8 @@ export const AI_PROVIDERS: AIProviderMeta[] = [
     keyHint: 'AIza...',
     keyUrl: 'https://aistudio.google.com/apikey',
     models: [
-      { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite (murah)', cheap: true },
-      { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', cheap: true },
+      { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (murah)', cheap: true },
+      { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite', cheap: true },
       { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
     ],
   },
@@ -84,7 +84,7 @@ const STORAGE_KEY = 'monefyi_planner_ai_config_v1';
 
 /** Model yang sudah dihapus Google / OpenRouter — dipetakan saat baca konfigurasi. */
 const DEPRECATED_MODEL_ALIASES: Record<string, string> = {
-  'gemini-2.0-flash-lite': 'gemini-3.5-flash-lite',
+  'gemini-2.0-flash-lite': 'gemini-2.5-flash',
   'gemini-2.0-flash': 'gemini-2.5-flash',
   'google/gemini-2.0-flash-lite-001': 'google/gemini-2.5-flash',
   'google/gemini-2.0-flash-lite': 'google/gemini-2.5-flash',
@@ -251,7 +251,13 @@ async function callAnthropic(
   return text;
 }
 
-async function callGemini(
+const GEMINI_MODEL_FALLBACKS = ['gemini-2.5-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-pro'];
+
+function shouldRetryModel(status: number, errText: string): boolean {
+  return status === 503 || status === 404 || /overloaded|unavailable|no longer available|not found/i.test(errText);
+}
+
+async function callGeminiOnce(
   key: string,
   model: string,
   messages: ChatMessage[],
@@ -292,6 +298,33 @@ async function callGemini(
   const text = data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || '').join('');
   if (!text) throw new Error('Respons AI kosong');
   return text;
+}
+
+async function callGemini(
+  key: string,
+  model: string,
+  messages: ChatMessage[],
+  opts: CallOptions,
+): Promise<string> {
+  const tryModels = [model, ...GEMINI_MODEL_FALLBACKS.filter(m => m !== model)];
+  let lastError = 'Gagal menghubungi Gemini';
+  for (const candidate of tryModels) {
+    try {
+      const text = await callGeminiOnce(key, candidate, messages, opts);
+      if (candidate !== model) {
+        // #region agent log
+        fetch('http://127.0.0.1:7456/ingest/64ec47ef-1a63-485e-909c-4ab70260afe3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'735de3'},body:JSON.stringify({sessionId:'735de3',hypothesisId:'F',location:'aiProviderService.ts:callGemini',message:'gemini fallback ok',data:{from:model,to:candidate},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+      }
+      return text;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      lastError = msg;
+      const status = Number(msg.match(/^(\d{3}):/)?.[1] ?? 0);
+      if (!shouldRetryModel(status, msg)) throw e instanceof Error ? e : new Error(msg);
+    }
+  }
+  throw new Error(lastError);
 }
 
 export class MissingAIKeyError extends Error {

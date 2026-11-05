@@ -11,6 +11,7 @@ import { useLandingCta } from "@/lib/hooks/useLandingCta";
 import { useLandingAdmin } from "@/lib/hooks/useLandingAdmin";
 import { trackEvent } from "@/lib/analytics/events";
 import { plannerAppPath } from "@/lib/config/plannerApp";
+import { resolvePaymentProvider } from "@/lib/checkout/paymentProvider";
 import type { PricingCard } from "@/lib/types/content";
 
 function useMdUp() {
@@ -26,12 +27,14 @@ function useMdUp() {
 }
 
 export function PricingSection() {
-  const { content } = useContentStore();
+  const { content, updateField } = useContentStore();
   const { pricing } = content;
   const { startCheckout } = useLandingCta();
   const { isAdmin, isEditMode } = useLandingAdmin();
   const isMdUp = useMdUp();
   const [desktopFeaturesOpen, setDesktopFeaturesOpen] = useState(false);
+
+  const activeProvider = resolvePaymentProvider(pricing.plannerPaymentProvider);
 
   const onCta = (planId: string) => {
     if (isAdmin && isEditMode) return;
@@ -64,6 +67,46 @@ export function PricingSection() {
             <EditableText section="pricing" field="subtitle" value={pricing.subtitle} multiline />
           </p>
         </motion.div>
+
+        {/* Admin Switcher: Lynk vs Mayar */}
+        {isAdmin && (
+          <div className="mb-8 p-3 sm:p-4 rounded-2xl bg-white/5 border border-white/10 max-w-md mx-auto text-center space-y-2.5 shadow-lg">
+            <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-400 uppercase tracking-wider">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Admin: Pilih Payment Provider Halaman Ini</span>
+            </div>
+            <div className="inline-flex p-1 bg-black/40 rounded-xl border border-white/10">
+              <button
+                type="button"
+                onClick={() => updateField("pricing", "plannerPaymentProvider", "lynk")}
+                className={cn(
+                  "px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                  activeProvider === "lynk"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-white/60 hover:text-white"
+                )}
+              >
+                Lynk.id (Lama)
+              </button>
+              <button
+                type="button"
+                onClick={() => updateField("pricing", "plannerPaymentProvider", "mayar")}
+                className={cn(
+                  "px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5",
+                  activeProvider === "mayar"
+                    ? "bg-[#065f46] text-white shadow-sm ring-1 ring-emerald-400/50"
+                    : "text-white/60 hover:text-white"
+                )}
+              >
+                <span>Mayar (Checkout Baru)</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-ping" />
+              </button>
+            </div>
+            <p className="text-[11px] text-white/50">
+              Aktif: <strong className="text-white">{activeProvider === "mayar" ? "Mayar (/checkout interaktif)" : "Lynk.id"}</strong>. Pengunjung yang mengklik tombol harga akan dialihkan ke provider ini.
+            </p>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-3 gap-6 items-stretch mb-8">
           {pricing.cards.map((card, index) => (

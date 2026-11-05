@@ -81,8 +81,11 @@ export function useLandingCta() {
         window.location.search.includes("hanif=1")
       ));
 
-    const provider = resolvePaymentProvider();
-    if (provider === "mayar" || isHanifOrAdmin) {
+    const configuredProvider = content.pricing?.plannerPaymentProvider;
+    const provider = resolvePaymentProvider(configuredProvider);
+    const useMayar = provider === "mayar" || (isHanifOrAdmin && configuredProvider !== "lynk");
+
+    if (useMayar) {
       const planQuery = planId.includes("pro") ? "pro" : "standard";
       window.location.assign(`/checkout?plan=${planQuery}`);
       return;
