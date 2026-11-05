@@ -62,9 +62,11 @@ add_vercel_env() {
     cd "$dir"
     local extra=()
     if [[ "$sensitive" == "1" ]]; then
-      extra=()
+      extra=(--type secret)
     elif [[ "$key" == NEXT_PUBLIC_* || "$key" == VITE_* ]]; then
-      extra=(--visibility plain)
+      extra=(--type config)
+    else
+      extra=(--type secret)
     fi
     printf '%s' "$val" | npx vercel env add "$key" production --force "${extra[@]}" >/dev/null
     echo "  $key → $(basename "$dir")"

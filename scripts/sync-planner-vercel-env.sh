@@ -52,7 +52,9 @@ add_env() {
   [[ -z "$val" ]] && return 0
   local extra=()
   if [[ "$key" == NEXT_PUBLIC_* || "$key" == VITE_* ]]; then
-    extra=(--visibility plain)
+    extra=(--type config)
+  elif [[ "$key" == MAYAR_API_KEY || "$key" == ADMIN_PASSWORD ]]; then
+    extra=(--type secret)
   fi
   printf '%s' "$val" | npx vercel env add "$key" production --force "${extra[@]}" >/dev/null
   echo "  $key"
