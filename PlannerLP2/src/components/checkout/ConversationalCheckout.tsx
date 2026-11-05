@@ -49,6 +49,7 @@ export default function ConversationalCheckout({
   const [product] = useState<ProductTier>(initialProduct);
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [direction, setDirection] = useState<number>(1);
+  const [floatingPill, setFloatingPill] = useState<{ text: string } | null>(null);
 
   // Form Fields
   const [fullName, setFullName] = useState('');
@@ -174,18 +175,25 @@ export default function ConversationalCheckout({
         setErrorMsg('Mohon masukkan nama lengkap Anda (minimal 2 karakter).');
         return;
       }
+      setFloatingPill({ text: fullName.trim() });
+      setTimeout(() => setFloatingPill(null), 650);
     } else if (currentStep === 2) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!email.trim() || !emailRegex.test(email.trim())) {
         setErrorMsg('Format email tidak valid. Contoh: nama@gmail.com');
         return;
       }
+      setFloatingPill({ text: email.trim() });
+      setTimeout(() => setFloatingPill(null), 650);
     } else if (currentStep === 3) {
       const cleanPhone = whatsapp.replace(/[^0-9]/g, '');
       if (cleanPhone.length < 8) {
         setErrorMsg('Nomor WhatsApp minimal 9 digit.');
         return;
       }
+      const phoneDisplay = whatsapp.startsWith('0') ? whatsapp : `0${whatsapp}`;
+      setFloatingPill({ text: phoneDisplay });
+      setTimeout(() => setFloatingPill(null), 650);
     }
 
     if (currentStep < 5) {
@@ -314,36 +322,50 @@ export default function ConversationalCheckout({
 
   return (
     <div className="min-h-screen bg-[#f8faf9] text-slate-800 flex flex-col justify-between selection:bg-emerald-600 selection:text-white font-sans antialiased">
+      {/* Floating Ghost Animation saat data selesai diisi & melayang ke atas */}
+      <AnimatePresence>
+        {floatingPill && (
+          <motion.div
+            initial={{ opacity: 0.95, y: 30, scale: 0.95 }}
+            animate={{ opacity: [0.95, 1, 0], y: [-20, -70, -120], scale: [0.95, 1, 0.9] }}
+            transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+            className="pointer-events-none fixed z-50 left-1/2 -translate-x-1/2 top-1/2 inline-flex items-center gap-2 px-4 py-2 bg-[#065f46] text-white rounded-full font-bold text-sm shadow-2xl border border-emerald-300/50"
+          >
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-300 animate-ping" />
+            <span>{floatingPill.text}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ===================================================================== */}
       {/* TOP BAR INLINE EDIT (SELALU TERSEDIA DI ATAS CHECKOUT PAGE) */}
       {/* ===================================================================== */}
-      <div className="bg-slate-900 text-white px-4 py-2 border-b border-slate-800 sticky top-0 z-50 shadow-sm">
+      <div className="bg-slate-900 text-white px-4 py-2.5 border-b border-slate-800 sticky top-0 z-50 shadow-md">
         <div className="max-w-xl mx-auto flex items-center justify-between gap-2 text-xs flex-wrap">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
             <span className="font-bold tracking-wide">Checkout Estimator</span>
           </div>
 
-          {/* Shortcut langkah saat edit mode */}
-          {isEditMode && (
-            <div className="flex items-center gap-1 bg-slate-800 p-0.5 rounded-lg text-[11px]">
-              <span className="text-slate-400 px-1 font-medium">Langkah:</span>
-              {[1, 2, 3, 4, 5].map((st) => (
-                <button
-                  key={st}
-                  type="button"
-                  onClick={() => goToStep(st)}
-                  className={`px-2 py-0.5 rounded font-bold transition-colors cursor-pointer ${
-                    currentStep === st
-                      ? 'bg-emerald-500 text-white shadow-xs'
-                      : 'text-slate-300 hover:text-white'
-                  }`}
-                >
-                  {st}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Shortcut lompat langkah (Step Jumper) — selalu bisa dipakai untuk edit langsung */}
+          <div className="flex items-center gap-1 bg-slate-800 p-0.5 rounded-lg text-[11px]">
+            <span className="text-slate-400 px-1 font-medium hidden sm:inline">Langkah:</span>
+            {[1, 2, 3, 4, 5].map((st) => (
+              <button
+                key={st}
+                type="button"
+                onClick={() => goToStep(st)}
+                className={`px-2 py-0.5 rounded font-bold transition-colors cursor-pointer ${
+                  currentStep === st
+                    ? 'bg-emerald-500 text-white shadow-xs'
+                    : 'text-slate-300 hover:text-white'
+                }`}
+                title={`Lompat ke langkah ${st}`}
+              >
+                {st}
+              </button>
+            ))}
+          </div>
 
           <div className="flex items-center gap-2">
             <button
@@ -351,7 +373,7 @@ export default function ConversationalCheckout({
               onClick={handleToggleEdit}
               className={`px-3 py-1 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                 isEditMode
-                  ? 'bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-300'
+                  ? 'bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-300 scale-105'
                   : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
               }`}
             >
@@ -364,7 +386,7 @@ export default function ConversationalCheckout({
                 type="button"
                 onClick={() => void publishContent()}
                 disabled={isSaving}
-                className="px-3 py-1 rounded-lg font-bold bg-[#065f46] hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-sm disabled:opacity-60 cursor-pointer"
+                className="px-3 py-1 rounded-lg font-bold bg-[#065f46] hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-sm disabled:opacity-60 cursor-pointer animate-pulse"
               >
                 <Save className="w-3.5 h-3.5" />
                 <span>{isSaving ? 'Menyimpan...' : 'Simpan 💾'}</span>
@@ -373,6 +395,18 @@ export default function ConversationalCheckout({
           </div>
         </div>
       </div>
+
+      {/* Helper Banner saat Mode Edit Aktif */}
+      {isEditMode && (
+        <div className="bg-amber-400 text-slate-950 px-4 py-1.5 text-xs font-semibold border-b border-amber-300 shadow-xs">
+          <div className="max-w-xl mx-auto flex items-center justify-between gap-2">
+            <span className="flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-slate-950 shrink-0" />
+              <span>Mode Edit Aktif: Klik teks bertanda kuning untuk mengubah. Klik nomor langkah [1-5] di atas untuk berpindah halaman.</span>
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Header Aplikasi Estimator */}
       <header className="bg-white/95 backdrop-blur-md border-b border-slate-100">
@@ -423,26 +457,26 @@ export default function ConversationalCheckout({
       <main className="flex-1 max-w-xl w-full mx-auto px-4 py-6 flex flex-col justify-center">
         {/* ===================================================================== */}
         {/* HASIL ISIAN BERJEJER SATU BARIS (. Nama  . Email  . WhatsApp) */}
-        {/* ANIMASI MELAYANG KE ATAS SETELAH DIISI */}
+        {/* SETIAP ITEM DIAWALI TITIK BESAR HIJAU, ANIMASI MELAYANG KE ATAS */}
         {/* ===================================================================== */}
         {!paymentData && (
-          <div className="flex items-center gap-2 sm:gap-3 py-2 px-1 mb-5 overflow-x-auto no-scrollbar border-b border-slate-200/70 min-h-[44px]">
+          <div className="flex items-center gap-3 sm:gap-4 py-2 px-1 mb-6 border-b border-slate-200/80 overflow-x-auto no-scrollbar whitespace-nowrap min-h-[44px]">
             <AnimatePresence mode="popLayout">
               {/* . Nama (Melayang ke atas saat selesai diisi) */}
               {currentStep > 1 && fullName && (
                 <motion.button
                   key="summary-name"
                   layout
-                  initial={{ y: 28, opacity: 0, scale: 0.88 }}
+                  initial={{ y: 35, opacity: 0, scale: 0.85 }}
                   animate={{ y: 0, opacity: 1, scale: 1 }}
-                  exit={{ y: -12, opacity: 0, scale: 0.88 }}
-                  transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
+                  exit={{ y: -15, opacity: 0, scale: 0.85 }}
+                  transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
                   onClick={() => goToStep(1)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-emerald-50/50 border border-slate-200/90 hover:border-emerald-500 rounded-full text-xs sm:text-sm font-bold text-slate-800 shadow-xs transition-all cursor-pointer shrink-0 group"
+                  className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-800 hover:text-emerald-700 transition-colors cursor-pointer shrink-0 group py-1 px-1.5 rounded-lg hover:bg-emerald-50/70"
                   title="Klik untuk ubah nama"
                 >
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-sm shadow-emerald-500/50 group-hover:scale-125 transition-transform" />
-                  <span className="truncate max-w-[140px]">{fullName}</span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-sm shadow-emerald-500/60 group-hover:scale-125 transition-transform" />
+                  <span className="truncate max-w-[150px]">{fullName}</span>
                 </motion.button>
               )}
 
@@ -451,16 +485,16 @@ export default function ConversationalCheckout({
                 <motion.button
                   key="summary-email"
                   layout
-                  initial={{ y: 28, opacity: 0, scale: 0.88 }}
+                  initial={{ y: 35, opacity: 0, scale: 0.85 }}
                   animate={{ y: 0, opacity: 1, scale: 1 }}
-                  exit={{ y: -12, opacity: 0, scale: 0.88 }}
-                  transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
+                  exit={{ y: -15, opacity: 0, scale: 0.85 }}
+                  transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
                   onClick={() => goToStep(2)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-emerald-50/50 border border-slate-200/90 hover:border-emerald-500 rounded-full text-xs sm:text-sm font-bold text-slate-800 shadow-xs transition-all cursor-pointer shrink-0 group"
+                  className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-800 hover:text-emerald-700 transition-colors cursor-pointer shrink-0 group py-1 px-1.5 rounded-lg hover:bg-emerald-50/70"
                   title="Klik untuk ubah email"
                 >
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-sm shadow-emerald-500/50 group-hover:scale-125 transition-transform" />
-                  <span className="truncate max-w-[160px]">{email}</span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-sm shadow-emerald-500/60 group-hover:scale-125 transition-transform" />
+                  <span className="truncate max-w-[180px]">{email}</span>
                 </motion.button>
               )}
 
@@ -469,15 +503,15 @@ export default function ConversationalCheckout({
                 <motion.button
                   key="summary-wa"
                   layout
-                  initial={{ y: 28, opacity: 0, scale: 0.88 }}
+                  initial={{ y: 35, opacity: 0, scale: 0.85 }}
                   animate={{ y: 0, opacity: 1, scale: 1 }}
-                  exit={{ y: -12, opacity: 0, scale: 0.88 }}
-                  transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
+                  exit={{ y: -15, opacity: 0, scale: 0.85 }}
+                  transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
                   onClick={() => goToStep(3)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-emerald-50/50 border border-slate-200/90 hover:border-emerald-500 rounded-full text-xs sm:text-sm font-bold text-slate-800 shadow-xs transition-all cursor-pointer shrink-0 group"
+                  className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-800 hover:text-emerald-700 transition-colors cursor-pointer shrink-0 group py-1 px-1.5 rounded-lg hover:bg-emerald-50/70"
                   title="Klik untuk ubah WhatsApp"
                 >
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-sm shadow-emerald-500/50 group-hover:scale-125 transition-transform" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-sm shadow-emerald-500/60 group-hover:scale-125 transition-transform" />
                   <span>{whatsapp.startsWith('0') ? whatsapp : `0${whatsapp}`}</span>
                 </motion.button>
               )}
@@ -487,15 +521,15 @@ export default function ConversationalCheckout({
                 <motion.button
                   key="summary-bump"
                   layout
-                  initial={{ y: 28, opacity: 0, scale: 0.88 }}
+                  initial={{ y: 35, opacity: 0, scale: 0.85 }}
                   animate={{ y: 0, opacity: 1, scale: 1 }}
-                  exit={{ y: -12, opacity: 0, scale: 0.88 }}
-                  transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
+                  exit={{ y: -15, opacity: 0, scale: 0.85 }}
+                  transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
                   onClick={() => goToStep(4)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-300 hover:border-amber-500 rounded-full text-xs sm:text-sm font-bold text-amber-900 shadow-xs transition-all cursor-pointer shrink-0"
+                  className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-900 hover:text-amber-950 transition-colors cursor-pointer shrink-0 group py-1 px-1.5 rounded-lg hover:bg-amber-100/60"
                   title="Klik untuk ubah penawaran"
                 >
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0 shadow-sm shadow-amber-500/50" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0 shadow-sm shadow-amber-500/60" />
                   <span>{product === 'standard' ? 'Upgrade PRO (+Rp50rb)' : '2 Akun PRO (+Rp99rb)'}</span>
                 </motion.button>
               )}
@@ -1026,12 +1060,23 @@ export default function ConversationalCheckout({
                   </div>
                 )}
 
-                {/* Submit Button */}
+                {/* Submit CTA */}
                 <div className="space-y-3 pt-2">
-                  <button
-                    disabled={isSubmitting}
-                    onClick={handleSubmitOrder}
-                    className="w-full py-4 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-black text-lg rounded-2xl flex items-center justify-center gap-2 transition-all shadow-xl shadow-emerald-900/20 disabled:opacity-60 cursor-pointer"
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      if (!isSubmitting && !isEditMode) handleSubmitOrder();
+                    }}
+                    onKeyDown={(e) => {
+                      if ((e.key === 'Enter' || e.key === ' ') && !isSubmitting && !isEditMode) {
+                        e.preventDefault();
+                        handleSubmitOrder();
+                      }
+                    }}
+                    className={`w-full py-4 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-black text-lg rounded-2xl flex items-center justify-center gap-2 transition-all shadow-xl shadow-emerald-900/20 select-none ${
+                      isSubmitting ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+                    }`}
                   >
                     {isSubmitting ? (
                       <div className="flex items-center gap-2">
@@ -1043,7 +1088,7 @@ export default function ConversationalCheckout({
                         <EditableText section="checkout" field="submitButtonText" value={co.submitButtonText} /> ({formatIDR(finalPrice)})
                       </>
                     )}
-                  </button>
+                  </div>
 
                   <div className="flex items-center justify-center gap-4 text-xs text-slate-400 font-medium">
                     <span className="flex items-center gap-1">

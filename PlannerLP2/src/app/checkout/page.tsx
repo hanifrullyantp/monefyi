@@ -4,7 +4,6 @@ import ConversationalCheckoutClient from './ConversationalCheckoutClient';
 import { AuthHydrator } from '@/components/landing/AuthHydrator';
 import { ContentHydrator } from '@/components/landing/ContentHydrator';
 import { AdminSaveNotice } from '@/components/landing/AdminSaveNotice';
-import { EditModeRedirect } from '@/components/landing/EditModeRedirect';
 
 export const metadata: Metadata = {
   title: 'Checkout Resmi — Estimator',
@@ -25,7 +24,6 @@ export default async function CheckoutPage({
       <AuthHydrator />
       <ContentHydrator />
       <AdminSaveNotice />
-      <EditModeRedirect />
       <Suspense
         fallback={
           <div className="min-h-screen bg-[#f8faf9] flex items-center justify-center">
