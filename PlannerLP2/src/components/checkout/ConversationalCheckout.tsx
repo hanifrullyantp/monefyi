@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useContentStore } from '@/lib/store/contentStore';
+import { useLeadsStore } from '@/lib/store/leadsStore';
 import { useLandingAdmin } from '@/lib/hooks/useLandingAdmin';
 import { defaultContent } from '@/data/defaultContent';
 import { EditableText } from '@/components/shared/EditableText';
@@ -148,9 +149,117 @@ export default function ConversationalCheckout({
   // Validation & Loading
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sessionId, setSessionId] = useState<string>('');
 
   const inputRef = useRef<HTMLInputElement>(null);
   const authUser = useAuthStore((s) => s.user);
+
+  // Inisialisasi sessionId untuk Funnel Analytics & Progressive Lead Sync
+  useEffect(() => {
+    let sid = '';
+    if (typeof window !== 'undefined') {
+      sid = sessionStorage.getItem('monefyi_checkout_session') || '';
+      if (!sid) {
+        sid = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+        sessionStorage.setItem('monefyi_checkout_session', sid);
+      }
+      setSessionId(sid);
+
+      // Kirim event pertama: checkout_landed
+      fetch('/api/analytics/funnel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: sid,
+          event: 'checkout_landed',
+          plan: product,
+        }),
+      }).catch(() => {});
+    }
+  }, [product]);
+
+  // Progressive Sync Helper ke API CRM & Zustand Leads Store
+  const syncLeadProgress = (
+    stepNum: number,
+    statusOverride?: 'new' | 'abandoned_checkout' | 'pending_payment' | 'won'
+  ) => {
+    const activeSid = sessionId || (typeof window !== 'undefined' ? sessionStorage.getItem('monefyi_checkout_session') || '' : '');
+    if (!activeSid) return;
+
+    const leadStatus =
+      statusOverride ||
+      (stepNum >= 3 ? 'abandoned_checkout' : 'new');
+
+    // 1. Simpan ke Backend Supabase & API CRM
+    fetch('/api/crm/lead', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: activeSid,
+        name: fullName.trim(),
+        email: email.trim(),
+        phone: whatsapp.trim(),
+        planTier: product,
+        bumpTaken: takeOrderBump,
+        paymentMethod,
+        amount: finalPrice,
+        checkoutStep: stepNum,
+        status: leadStatus,
+      }),
+    }).catch(() => {});
+
+    // 2. Simpan ke Zustand Store lokal jika data minimal (nama & phone/email) sudah ada
+    if (fullName.trim()) {
+      const leads = useLeadsStore.getState().leads;
+      const existing = leads.find((l) => l.sessionId === activeSid);
+      if (existing) {
+        useLeadsStore.getState().updateLead(existing.id, {
+          name: fullName.trim(),
+          email: email.trim() || existing.email,
+          phone: whatsapp.trim() || existing.phone,
+          status: leadStatus,
+          planTier: product,
+          bumpTaken: takeOrderBump,
+          paymentMethod,
+          amount: finalPrice,
+          checkoutStep: stepNum,
+        });
+      } else if (whatsapp.trim() || email.trim()) {
+        useLeadsStore.getState().addLead({
+          name: fullName.trim(),
+          email: email.trim(),
+          phone: whatsapp.trim() || '-',
+          projectType: `Estimator ${product.toUpperCase()}`,
+          source: 'checkout',
+          status: leadStatus,
+          sessionId: activeSid,
+          checkoutStep: stepNum,
+          planTier: product,
+          bumpTaken: takeOrderBump,
+          paymentMethod,
+          amount: finalPrice,
+        });
+      }
+    }
+  };
+
+  // Funnel Event Tracking Helper
+  const trackFunnelEvent = (event: string, extra?: Record<string, any>) => {
+    const activeSid = sessionId || (typeof window !== 'undefined' ? sessionStorage.getItem('monefyi_checkout_session') || '' : '');
+    if (!activeSid) return;
+    fetch('/api/analytics/funnel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: activeSid,
+        event,
+        plan: product,
+        bumpTaken: takeOrderBump,
+        paymentMethod,
+        metadata: extra,
+      }),
+    }).catch(() => {});
+  };
 
   // Auto-fill jika user / admin sudah terautentikasi (Hanif Rullyant)
   useEffect(() => {
@@ -187,6 +296,8 @@ export default function ConversationalCheckout({
         const data = await res.json();
         if (data?.isPaid) {
           setPaymentSuccess(true);
+          syncLeadProgress(5, 'won');
+          trackFunnelEvent('checkout_completed', { paymentId: paymentData.paymentId, method: paymentMethod });
           clearInterval(checkInterval);
           setTimeout(() => {
             window.location.href = 'https://estimator.monefyi.com/app/estimator?status=activated';
@@ -239,7 +350,7 @@ export default function ConversationalCheckout({
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // 3. Validasi Tiap Langkah
+  // 3. Validasi Tiap Langkah & Progressive Funnel Tracking
   const handleNext = () => {
     setErrorMsg('');
 
@@ -250,6 +361,8 @@ export default function ConversationalCheckout({
       }
       setFloatingPill({ text: fullName.trim() });
       setTimeout(() => setFloatingPill(null), 650);
+      syncLeadProgress(1, 'new');
+      trackFunnelEvent('step1_completed');
     } else if (currentStep === 2) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!email.trim() || !emailRegex.test(email.trim())) {
@@ -258,6 +371,8 @@ export default function ConversationalCheckout({
       }
       setFloatingPill({ text: email.trim() });
       setTimeout(() => setFloatingPill(null), 650);
+      syncLeadProgress(2, 'new');
+      trackFunnelEvent('step2_completed');
     } else if (currentStep === 3) {
       const cleanPhone = whatsapp.replace(/[^0-9]/g, '');
       if (cleanPhone.length < 8) {
@@ -267,6 +382,12 @@ export default function ConversationalCheckout({
       const phoneDisplay = whatsapp.startsWith('0') ? whatsapp : `0${whatsapp}`;
       setFloatingPill({ text: phoneDisplay });
       setTimeout(() => setFloatingPill(null), 650);
+      // Di Step 3 kontak lengkap sudah ada, jika berhenti di sini status abandoned_checkout
+      syncLeadProgress(3, 'abandoned_checkout');
+      trackFunnelEvent('step3_completed');
+    } else if (currentStep === 4) {
+      syncLeadProgress(4, 'abandoned_checkout');
+      trackFunnelEvent('step4_completed', { bumpTaken: takeOrderBump });
     }
 
     if (currentStep < 5) {
@@ -333,6 +454,8 @@ export default function ConversationalCheckout({
           redirectUrl: resData.redirectUrl,
           amount: 0,
         });
+        syncLeadProgress(5, 'won');
+        trackFunnelEvent('checkout_completed', { isFree: true });
         if (onSuccess) onSuccess(resData);
         setTimeout(() => {
           window.location.href = resData.redirectUrl || 'https://estimator.monefyi.com/app/estimator?status=activated&plan=free';
@@ -346,6 +469,13 @@ export default function ConversationalCheckout({
         redirectUrl: resData.redirectUrl,
         amount: resData.amount || finalPrice,
         method: paymentMethod,
+      });
+
+      syncLeadProgress(5, 'pending_payment');
+      trackFunnelEvent('step5_method_selected', {
+        paymentMethod,
+        amount: resData.amount || finalPrice,
+        paymentId: resData.paymentId,
       });
 
       if (onSuccess) {
@@ -367,6 +497,8 @@ export default function ConversationalCheckout({
       const data = await res.json();
       if (data?.isPaid) {
         setPaymentSuccess(true);
+        syncLeadProgress(5, 'won');
+        trackFunnelEvent('checkout_completed', { paymentId: paymentData.paymentId, manual: true });
         setTimeout(() => {
           window.location.href = 'https://estimator.monefyi.com/app/estimator?status=activated';
         }, 2000);
@@ -1008,7 +1140,11 @@ export default function ConversationalCheckout({
                 {/* Order Bump Card Interaktif */}
                 <div
                   onClick={() => {
-                    if (!isEditMode) setTakeOrderBump(!takeOrderBump);
+                    if (!isEditMode) {
+                      const nextBump = !takeOrderBump;
+                      setTakeOrderBump(nextBump);
+                      trackFunnelEvent('step4_bump_toggled', { bumpTaken: nextBump });
+                    }
                   }}
                   className={`relative rounded-3xl p-5 sm:p-6 transition-all duration-300 border-2 ${
                     isEditMode ? 'cursor-default' : 'cursor-pointer'
@@ -1221,7 +1357,10 @@ export default function ConversationalCheckout({
                         return (
                           <div
                             key={pm.id}
-                            onClick={() => setPaymentMethod(pm.id)}
+                            onClick={() => {
+                              setPaymentMethod(pm.id);
+                              trackFunnelEvent('step5_method_selected', { paymentMethod: pm.id });
+                            }}
                             className={`cursor-pointer p-3.5 rounded-2xl border-2 transition-all flex items-center justify-between gap-3 ${
                               isSelected
                                 ? 'border-[#065f46] bg-emerald-50/70 shadow-sm ring-1 ring-emerald-500/25'
