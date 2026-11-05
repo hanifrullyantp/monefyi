@@ -14,6 +14,8 @@ export default function ConversationalCheckoutClient({
   const activePlan: ProductTier =
     planParam?.toLowerCase() === 'pro'
       ? 'pro'
+      : planParam?.toLowerCase() === 'free'
+      ? 'free'
       : planParam?.toLowerCase() === 'standard'
       ? 'standard'
       : initialPlan;

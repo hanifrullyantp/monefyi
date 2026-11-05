@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 interface MayarCheckoutPayload {
-  product: "standard" | "pro";
+  product: "free" | "standard" | "pro";
   customerName: string;
   email: string;
   mobile: string;
@@ -37,6 +37,38 @@ export async function POST(req: NextRequest) {
       : cleanMobile.startsWith("0")
       ? `62${cleanMobile.slice(1)}`
       : `62${cleanMobile}`;
+
+    // JIKA PAKET FREE TANPA ORDER BUMP (TOTAL RP 0)
+    // Kumpulkan data lead & berikan akses instan tanpa invoice bayar
+    if (amount <= 0 || (product === "free" && !bumpTaken)) {
+      try {
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          await supabase.from("leads").insert([
+            {
+              name: customerName.trim(),
+              email: email.trim().toLowerCase(),
+              phone: formattedMobile,
+              plan: "free",
+              source: "conversational_checkout",
+              created_at: new Date().toISOString(),
+            },
+          ]);
+        }
+      } catch (dbErr) {
+        console.warn("Non-fatal: could not log free lead to Supabase", dbErr);
+      }
+
+      return NextResponse.json({
+        ok: true,
+        isFree: true,
+        amount: 0,
+        paymentId: `free_${Date.now()}`,
+        redirectUrl: `https://estimator.monefyi.com/app/estimator?status=activated&plan=free&email=${encodeURIComponent(
+          email.trim().toLowerCase()
+        )}`,
+      });
+    }
 
     const host = req.headers.get("host") || "estimator.monefyi.com";
     const protocol = host.includes("localhost") ? "http" : "https";

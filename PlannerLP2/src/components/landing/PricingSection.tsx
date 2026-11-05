@@ -40,7 +40,7 @@ export function PricingSection() {
     if (isAdmin && isEditMode) return;
     if (planId === "free") {
       trackEvent("free_signup", { source: "pricing_free" });
-      window.location.href = plannerAppPath("/app/estimator?plan=free");
+      window.location.href = "/checkout?plan=free";
       return;
     }
     if (planId === "estimator-standard" || planId === "estimator-pro") {

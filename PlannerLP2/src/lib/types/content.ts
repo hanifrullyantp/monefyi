@@ -365,6 +365,11 @@ export interface CheckoutContent {
   step3Help: string;
   step3Placeholder: string;
   bumpBadge: string;
+  bumpTitleFree?: string;
+  bumpSubFree?: string;
+  bumpBenefit1Free?: string;
+  bumpBenefit2Free?: string;
+  bumpBenefit3Free?: string;
   bumpTitleStandard: string;
   bumpSubStandard: string;
   bumpTitlePro: string;

@@ -17,7 +17,11 @@ export default async function CheckoutPage({
 }) {
   const resolvedParams = await searchParams;
   const initialPlan =
-    resolvedParams?.plan?.toLowerCase() === 'pro' ? 'pro' : 'standard';
+    resolvedParams?.plan?.toLowerCase() === 'pro'
+      ? 'pro'
+      : resolvedParams?.plan?.toLowerCase() === 'free'
+      ? 'free'
+      : 'standard';
 
   return (
     <>

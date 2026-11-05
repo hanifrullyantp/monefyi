@@ -78,18 +78,17 @@ export function HeroSection() {
 
   const focusHeroDemo = () => {
     const el = document.getElementById("hero-demo");
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const offset = headerOffset();
-    const alreadyFramed =
-      rect.top >= offset - 16 && rect.top <= offset + 48 && rect.bottom <= window.innerHeight + 16;
-    el.scrollIntoView({ behavior: alreadyFramed ? "auto" : "smooth", block: "start", inline: "nearest" });
-    window.setTimeout(pulseDemo, alreadyFramed ? 40 : 650);
+    if (!el) {
+      scrollTo("tiga-step");
+      return;
+    }
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(pulseDemo, 200);
   };
 
   const primary = () => {
     trackEvent("hero_cta_primary_click", { variant_id: copy.id, source: "hero" });
-    scrollTo("harga");
+    window.location.href = "/checkout?plan=free";
   };
 
   const demo = () => {

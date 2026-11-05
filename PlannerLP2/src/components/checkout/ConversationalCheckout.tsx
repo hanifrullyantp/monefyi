@@ -29,7 +29,7 @@ import {
   Save,
 } from 'lucide-react';
 
-export type ProductTier = 'standard' | 'pro';
+export type ProductTier = 'free' | 'standard' | 'pro';
 
 interface CheckoutProps {
   initialProduct?: ProductTier;
@@ -147,8 +147,8 @@ export default function ConversationalCheckout({
   };
 
   // 2. Kalkulasi Harga Dinamis
-  const basePrice = product === 'standard' ? 99000 : 199000;
-  const bumpPrice = product === 'standard' ? 50000 : 99000;
+  const basePrice = product === 'free' ? 0 : product === 'standard' ? 99000 : 199000;
+  const bumpPrice = product === 'free' ? 99000 : product === 'standard' ? 50000 : 99000;
   const finalPrice = takeOrderBump ? basePrice + bumpPrice : basePrice;
 
   // Format IDR
@@ -249,7 +249,22 @@ export default function ConversationalCheckout({
       const resData = await response.json();
 
       if (!response.ok || !resData.ok) {
-        throw new Error(resData?.error || 'Gagal menyiapkan pembayaran Mayar');
+        throw new Error(resData?.error || 'Gagal menyiapkan pesanan');
+      }
+
+      if (resData.isFree) {
+        setPaymentSuccess(true);
+        setPaymentData({
+          paymentId: resData.paymentId,
+          qrImageUrl: null,
+          redirectUrl: resData.redirectUrl,
+          amount: 0,
+        });
+        if (onSuccess) onSuccess(resData);
+        setTimeout(() => {
+          window.location.href = resData.redirectUrl || 'https://estimator.monefyi.com/app/estimator?status=activated&plan=free';
+        }, 1800);
+        return;
       }
 
       setPaymentData({
@@ -530,7 +545,13 @@ export default function ConversationalCheckout({
                   title="Klik untuk ubah penawaran"
                 >
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0 shadow-sm shadow-amber-500/60" />
-                  <span>{product === 'standard' ? 'Upgrade PRO (+Rp50rb)' : '2 Akun PRO (+Rp99rb)'}</span>
+                  <span>
+                    {product === 'free'
+                      ? 'Upgrade Standard (+Rp99rb)'
+                      : product === 'standard'
+                      ? 'Upgrade PRO (+Rp50rb)'
+                      : '2 Akun PRO (+Rp99rb)'}
+                  </span>
                 </motion.button>
               )}
             </AnimatePresence>
@@ -553,7 +574,9 @@ export default function ConversationalCheckout({
                 <div className="w-16 h-16 mx-auto rounded-full bg-emerald-100 text-[#065f46] flex items-center justify-center">
                   <Check className="w-9 h-9 stroke-[3]" />
                 </div>
-                <h2 className="text-2xl font-black text-slate-900">Pembayaran Berhasil!</h2>
+                <h2 className="text-2xl font-black text-slate-900">
+                  {paymentData?.amount === 0 ? 'Pendaftaran Berhasil!' : 'Pembayaran Berhasil!'}
+                </h2>
                 <p className="text-sm text-slate-600">
                   Terima kasih, <strong>{fullName}</strong>. Akun Estimator Anda otomatis aktif. Mengalihkan Anda ke aplikasi...
                 </p>
@@ -846,14 +869,18 @@ export default function ConversationalCheckout({
                     <EditableText section="checkout" field="bumpBadge" value={co.bumpBadge} />
                   </span>
                   <h1 className="text-2xl sm:text-3xl font-black text-slate-900">
-                    {product === 'standard' ? (
+                    {product === 'free' ? (
+                      <EditableText section="checkout" field="bumpTitleFree" value={co.bumpTitleFree || "Upgrade Langsung ke Estimator Standard Seumur Hidup?"} />
+                    ) : product === 'standard' ? (
                       <EditableText section="checkout" field="bumpTitleStandard" value={co.bumpTitleStandard} />
                     ) : (
                       <EditableText section="checkout" field="bumpTitlePro" value={co.bumpTitlePro} />
                     )}
                   </h1>
                   <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">
-                    {product === 'standard' ? (
+                    {product === 'free' ? (
+                      <EditableText section="checkout" field="bumpSubFree" value={co.bumpSubFree || "Khusus pendaftaran ini: Buka batas 3 estimasi & dapatkan lisensi seumur hidup hanya Rp99.000 (hemat Rp100.000)!"} multiline />
+                    ) : product === 'standard' ? (
                       <EditableText section="checkout" field="bumpSubStandard" value={co.bumpSubStandard} multiline />
                     ) : (
                       <EditableText section="checkout" field="bumpSubPro" value={co.bumpSubPro} multiline />
@@ -888,7 +915,9 @@ export default function ConversationalCheckout({
                     <div className="flex-1">
                       <div className="flex items-center justify-between flex-wrap gap-2">
                         <span className="font-extrabold text-slate-900 text-base sm:text-lg">
-                          {product === 'standard'
+                          {product === 'free'
+                            ? 'Ya! Ambil Lisensi Standard Seumur Hidup'
+                            : product === 'standard'
                             ? 'Ya! Upgrade ke Estimator PRO'
                             : 'Ya! Tambah 1 Lisensi PRO Ekstra'}
                         </span>
@@ -904,7 +933,22 @@ export default function ConversationalCheckout({
 
                       {/* Benefit Points Inline Editable */}
                       <div className="mt-3.5 space-y-2 text-xs sm:text-sm text-slate-700">
-                        {product === 'standard' ? (
+                        {product === 'free' ? (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                              <span><EditableText section="checkout" field="bumpBenefit1Free" value={co.bumpBenefit1Free || "Buka batas 3 estimasi — hitung estimasi & RAB tanpa batas kuota"} /></span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                              <span><EditableText section="checkout" field="bumpBenefit2Free" value={co.bumpBenefit2Free || "Ekspor PDF penawaran resmi berlogo & bertanda tangan perusahaan"} /></span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                              <span><EditableText section="checkout" field="bumpBenefit3Free" value={co.bumpBenefit3Free || "Lisensi aktif seumur hidup tanpa biaya langganan bulanan"} /></span>
+                            </div>
+                          </>
+                        ) : product === 'standard' ? (
                           <>
                             <div className="flex items-center gap-2">
                               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -951,7 +995,7 @@ export default function ConversationalCheckout({
                     onClick={handleNext}
                     className="w-full py-4 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-extrabold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-900/15 text-base cursor-pointer"
                   >
-                    Lanjut ke Pembayaran ({formatIDR(finalPrice)}) <ArrowRight className="w-4 h-4" />
+                    {finalPrice === 0 ? 'Lanjut ke Aktivasi Gratis' : `Lanjut ke Pembayaran (${formatIDR(finalPrice)})`} <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
               </motion.div>
@@ -981,7 +1025,7 @@ export default function ConversationalCheckout({
                 <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3">
                   <div className="flex justify-between items-center text-sm pb-3 border-b border-slate-100">
                     <span className="font-semibold text-slate-700">
-                      Estimator {product === 'standard' ? 'Standard' : 'PRO'}
+                      Estimator {product === 'free' ? 'Free (Uji Coba 3 Estimasi)' : product === 'standard' ? 'Standard' : 'PRO'}
                     </span>
                     <span className="font-bold text-slate-900">{formatIDR(basePrice)}</span>
                   </div>
@@ -990,7 +1034,11 @@ export default function ConversationalCheckout({
                     <div className="flex justify-between items-center text-sm pb-3 border-b border-slate-100 text-amber-900">
                       <span className="flex items-center gap-1.5 font-semibold">
                         <Sparkles className="w-4 h-4 text-amber-600" />
-                        {product === 'standard' ? 'Upgrade PRO (Promo Khusus)' : 'Ekstra 1 Akun PRO'}
+                        {product === 'free'
+                          ? 'Upgrade Standard (Promo Spesial)'
+                          : product === 'standard'
+                          ? 'Upgrade PRO (Promo Khusus)'
+                          : 'Ekstra 1 Akun PRO'}
                       </span>
                       <span className="font-bold">+{formatIDR(bumpPrice)}</span>
                     </div>
@@ -1002,7 +1050,7 @@ export default function ConversationalCheckout({
                         Total Tagihan
                       </span>
                       <span className="text-2xl font-black text-[#065f46]">
-                        {formatIDR(finalPrice)}
+                        {finalPrice === 0 ? 'Rp 0 (GRATIS)' : formatIDR(finalPrice)}
                       </span>
                     </div>
                     <span className="text-xs font-semibold px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100">
@@ -1024,34 +1072,50 @@ export default function ConversationalCheckout({
                   </button>
                 </div>
 
-                {/* Pilihan Metode Pembayaran — Fokus pada QRIS Native */}
-                <div className="space-y-2.5">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                    Metode Pembayaran
-                  </label>
-
-                  <div
-                    onClick={() => setPaymentMethod('qris')}
-                    className="cursor-pointer p-4 rounded-2xl border-2 border-[#065f46] bg-emerald-50/50 shadow-sm flex items-center justify-between transition-all"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                        <QrCode className="w-5 h-5 text-emerald-700" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-slate-900 text-sm">
-                          <EditableText section="checkout" field="qrisTitle" value={co.qrisTitle} />
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          <EditableText section="checkout" field="qrisSubtitle" value={co.qrisSubtitle} />
-                        </p>
-                      </div>
+                {/* Pilihan Metode Pembayaran: Bebas Bayar untuk Free vs QRIS untuk Berbayar */}
+                {finalPrice === 0 ? (
+                  <div className="p-4 rounded-2xl border-2 border-emerald-300 bg-emerald-50/80 shadow-xs flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-white border border-emerald-200 flex items-center justify-center text-[#065f46] shadow-xs shrink-0">
+                      <CheckCircle2 className="w-6 h-6 text-emerald-600" />
                     </div>
-                    <div className="w-5 h-5 rounded-full border-2 border-[#065f46] bg-[#065f46] flex items-center justify-center">
-                      <div className="w-2 h-2 rounded-full bg-white" />
+                    <div>
+                      <p className="font-extrabold text-slate-900 text-sm">
+                        Akses Gratis 100% — Tanpa Biaya
+                      </p>
+                      <p className="text-xs text-slate-600 mt-0.5">
+                        Link aktivasi dan password dikirimkan otomatis ke WhatsApp & Email Anda tanpa perlu pembayaran.
+                      </p>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                      Metode Pembayaran
+                    </label>
+
+                    <div
+                      onClick={() => setPaymentMethod('qris')}
+                      className="cursor-pointer p-4 rounded-2xl border-2 border-[#065f46] bg-emerald-50/50 shadow-sm flex items-center justify-between transition-all"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
+                          <QrCode className="w-5 h-5 text-emerald-700" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-900 text-sm">
+                            <EditableText section="checkout" field="qrisTitle" value={co.qrisTitle} />
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            <EditableText section="checkout" field="qrisSubtitle" value={co.qrisSubtitle} />
+                          </p>
+                        </div>
+                      </div>
+                      <div className="w-5 h-5 rounded-full border-2 border-[#065f46] bg-[#065f46] flex items-center justify-center">
+                        <div className="w-2 h-2 rounded-full bg-white" />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {errorMsg && (
                   <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-2 text-xs font-semibold text-rose-700">
@@ -1081,8 +1145,10 @@ export default function ConversationalCheckout({
                     {isSubmitting ? (
                       <div className="flex items-center gap-2">
                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>Menyiapkan Kode QRIS...</span>
+                        <span>{finalPrice === 0 ? 'Mendaftarkan Akun Gratis...' : 'Menyiapkan Kode QRIS...'}</span>
                       </div>
+                    ) : finalPrice === 0 ? (
+                      <span>Aktifkan Akun Gratis Saya Sekarang 🚀</span>
                     ) : (
                       <>
                         <EditableText section="checkout" field="submitButtonText" value={co.submitButtonText} /> ({formatIDR(finalPrice)})
