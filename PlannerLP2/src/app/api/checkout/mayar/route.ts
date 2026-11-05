@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
         : "https://api.mayar.id")
     ).replace(/\/$/, "");
 
-    // 1. Coba panggil Mayar API langsung jika MAYAR_API_KEY terkonfigurasi di env Next.js
+    // 1. Coba panggil Mayar API langsung jika MAYAR_API_KEY terkonfigurasi di env
     if (mayarApiKey) {
       const descriptionMeta = {
         app: "estimator",
@@ -72,7 +72,10 @@ export async function POST(req: NextRequest) {
         customer_mobile: formattedMobile,
       };
 
-      const mayarPayload = {
+      // Tentukan payment method — default QRIS agar langsung dapat payload QR
+      const chosenMethod = body.paymentMethod || "qris";
+
+      const mayarPayload: Record<string, unknown> = {
         name: customerName.trim(),
         email: email.trim().toLowerCase(),
         mobile: formattedMobile || "081234567890",
@@ -80,9 +83,7 @@ export async function POST(req: NextRequest) {
         description: `monefyi:${JSON.stringify(descriptionMeta)}`,
         redirectUrl: returnUrl,
         expiredAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        ...(body.paymentMethod && body.paymentMethod !== "qris"
-          ? { paymentMethod: body.paymentMethod }
-          : {}),
+        paymentMethod: chosenMethod,
       };
 
       const response = await fetch(`${mayarApiUrl}/hl/v2/payments/create`, {
@@ -109,26 +110,34 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      const paymentData = json?.data || {};
       const redirectUrl =
-        json?.data?.link || json?.data?.url || json?.link || json?.url;
-      const paymentId = json?.data?.id || json?.id;
+        paymentData.link || paymentData.url || json?.link || json?.url;
+      const paymentId = paymentData.id || json?.id;
 
-      if (!redirectUrl) {
-        return NextResponse.json(
-          { ok: false, error: "Link checkout Mayar tidak ditemukan" },
-          { status: 502 }
-        );
-      }
+      // Ambil qr_string dari paymentDetail Mayar jika ada
+      const qrCodeProps = paymentData?.paymentDetail?.qr_code?.channel_properties;
+      const qrString = qrCodeProps?.qr_string || null;
+      const qrExpiresAt = qrCodeProps?.expires_at || null;
+
+      // Buat URL image QR berkualitas tinggi langsung dari qrString
+      const qrImageUrl = qrString
+        ? `https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=8&data=${encodeURIComponent(qrString)}`
+        : null;
 
       return NextResponse.json({
         ok: true,
         provider: "mayar",
-        redirectUrl,
         paymentId,
+        redirectUrl,
+        qrString,
+        qrImageUrl,
+        qrExpiresAt,
+        amount: Math.round(amount),
       });
     }
 
-    // 2. Alternatif: Panggil Supabase Edge Function planner-checkout (yang memiliki secret MAYAR_API_KEY)
+    // 2. Fallback via Supabase edge function jika API key ada di Supabase secrets
     const supabase = getSupabaseClient();
     if (supabase) {
       const { data, error } = await supabase.functions.invoke(
@@ -155,16 +164,16 @@ export async function POST(req: NextRequest) {
           provider: "mayar",
           redirectUrl: data.redirectUrl,
           paymentId: data.paymentId,
+          amount: Math.round(amount),
         });
       }
     }
 
-    // 3. Fallback jika environment key belum dipasang
     return NextResponse.json(
       {
         ok: false,
         error:
-          "MAYAR_API_KEY belum dikonfigurasi di environment Vercel / Supabase. Hubungi admin.",
+          "MAYAR_API_KEY belum dikonfigurasi di environment Vercel / Supabase.",
       },
       { status: 503 }
     );
@@ -176,3 +185,62 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// GET: Cek status pembayaran real-time dari Mayar
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const paymentId = searchParams.get("id");
+
+    if (!paymentId) {
+      return NextResponse.json(
+        { ok: false, error: "Payment ID required" },
+        { status: 400 }
+      );
+    }
+
+    const mayarApiKey = (
+      process.env.MAYAR_API_KEY ||
+      process.env.MAYAR_API_KEY_SANDBOX ||
+      ""
+    ).trim();
+    const mayarApiUrl = (
+      process.env.MAYAR_API_URL || "https://api.mayar.id"
+    ).replace(/\/$/, "");
+
+    if (!mayarApiKey) {
+      return NextResponse.json(
+        { ok: false, error: "MAYAR_API_KEY not configured" },
+        { status: 503 }
+      );
+    }
+
+    const res = await fetch(`${mayarApiUrl}/hl/v2/payments/${paymentId}`, {
+      headers: {
+        Authorization: `Bearer ${mayarApiKey}`,
+      },
+    });
+
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return NextResponse.json(
+        { ok: false, error: json?.messages || "Failed to check status" },
+        { status: res.status }
+      );
+    }
+
+    const status = String(json?.data?.status ?? "unpaid").toLowerCase();
+    const isPaid = status === "paid" || status === "settled" || status === "success";
+
+    return NextResponse.json({
+      ok: true,
+      status,
+      isPaid,
+      paymentId,
+    });
+  } catch (err: any) {
+    return NextResponse.json(
+      { ok: false, error: err?.message || "Internal server error" },
+      { status: 500 }
+    );
+  }
+}

@@ -13,13 +13,15 @@ import {
   Zap,
   Users,
   QrCode,
-  Building2,
   CheckCircle2,
   AlertCircle,
   HelpCircle,
   BadgePercent,
-  Bell,
-  CheckCheck,
+  Copy,
+  ExternalLink,
+  RefreshCw,
+  Clock,
+  Download,
 } from 'lucide-react';
 
 export type ProductTier = 'standard' | 'pro';
@@ -34,7 +36,7 @@ export default function ConversationalCheckout({
   onSuccess,
 }: CheckoutProps) {
   // 1. State Management
-  const [product, setProduct] = useState<ProductTier>(initialProduct);
+  const [product] = useState<ProductTier>(initialProduct);
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [direction, setDirection] = useState<number>(1);
 
@@ -43,14 +45,27 @@ export default function ConversationalCheckout({
   const [email, setEmail] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [takeOrderBump, setTakeOrderBump] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'qris' | 'va/bca' | 'va/mandiri' | 'va/bni' | 'va/bri'>('qris');
+  const [paymentMethod, setPaymentMethod] = useState<'qris' | 'va'>('qris');
+
+  // Payment Active State (Native QRIS Screen — Tanpa melempar ke Mayar invoice)
+  const [paymentData, setPaymentData] = useState<{
+    paymentId: string;
+    qrImageUrl: string | null;
+    redirectUrl: string | null;
+    amount: number;
+  } | null>(null);
+
+  // Timer & Polling Status
+  const [timeLeft, setTimeLeft] = useState<number>(900); // 15 menit
+  const [isCheckingPayment, setIsCheckingPayment] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [copiedAmount, setCopiedAmount] = useState(false);
 
   // Validation & Loading
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
-
   const authUser = useAuthStore((s) => s.user);
 
   // Auto-fill jika user / admin sudah terautentikasi (Hanif Rullyant)
@@ -69,17 +84,49 @@ export default function ConversationalCheckout({
     setErrorMsg('');
   }, [currentStep]);
 
+  // Countdown Timer saat di layar QRIS
+  useEffect(() => {
+    if (!paymentData || paymentSuccess) return;
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [paymentData, paymentSuccess]);
+
+  // Auto-polling status pembayaran setiap 5 detik saat layar QRIS aktif
+  useEffect(() => {
+    if (!paymentData?.paymentId || paymentSuccess) return;
+
+    const checkInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/checkout/mayar?id=${paymentData.paymentId}`);
+        const data = await res.json();
+        if (data?.isPaid) {
+          setPaymentSuccess(true);
+          clearInterval(checkInterval);
+          setTimeout(() => {
+            window.location.href = 'https://estimator.monefyi.com/app/estimator?status=activated';
+          }, 2500);
+        }
+      } catch {
+        // silent retry
+      }
+    }, 5000);
+
+    return () => clearInterval(checkInterval);
+  }, [paymentData, paymentSuccess]);
+
   // Keyboard navigation: Tekan 'Enter' untuk submit per langkah
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' && currentStep <= 3) {
+      if (e.key === 'Enter' && currentStep <= 3 && !paymentData) {
         e.preventDefault();
         handleNext();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentStep, fullName, email, whatsapp]);
+  }, [currentStep, fullName, email, whatsapp, paymentData]);
 
   // 2. Kalkulasi Harga Dinamis
   const basePrice = product === 'standard' ? 99000 : 199000;
@@ -93,6 +140,12 @@ export default function ConversationalCheckout({
       currency: 'IDR',
       maximumFractionDigits: 0,
     }).format(val);
+  };
+
+  const formatTimer = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
   // 3. Validasi Tiap Langkah
@@ -125,6 +178,10 @@ export default function ConversationalCheckout({
   };
 
   const handleBack = () => {
+    if (paymentData) {
+      setPaymentData(null);
+      return;
+    }
     if (currentStep > 1) {
       setErrorMsg('');
       setDirection(-1);
@@ -132,6 +189,16 @@ export default function ConversationalCheckout({
     }
   };
 
+  const goToStep = (stepNumber: number) => {
+    if (paymentData) return;
+    if (stepNumber < currentStep) {
+      setErrorMsg('');
+      setDirection(-1);
+      setCurrentStep(stepNumber);
+    }
+  };
+
+  // 4. Submit Order & Tampilkan Native QRIS Screen (No generic Mayar page)
   const handleSubmitOrder = async () => {
     setIsSubmitting(true);
     setErrorMsg('');
@@ -147,29 +214,60 @@ export default function ConversationalCheckout({
           mobile: whatsapp.trim(),
           bumpTaken: takeOrderBump,
           amount: finalPrice,
-          paymentMethod: paymentMethod === 'qris' ? undefined : paymentMethod,
+          paymentMethod: 'qris',
         }),
       });
 
       const resData = await response.json();
 
       if (!response.ok || !resData.ok) {
-        throw new Error(resData?.error || 'Gagal menyiapkan halaman pembayaran Mayar');
+        throw new Error(resData?.error || 'Gagal menyiapkan pembayaran Mayar');
       }
 
-      if (resData.redirectUrl) {
-        if (onSuccess) {
-          onSuccess(resData);
-        }
-        // Redirect ke gateway Mayar resmi
-        window.location.href = resData.redirectUrl;
-      } else {
-        throw new Error('URL pembayaran Mayar tidak ditemukan');
+      // Jika berhasil, render QRIS langsung di website ini!
+      setPaymentData({
+        paymentId: resData.paymentId,
+        qrImageUrl: resData.qrImageUrl,
+        redirectUrl: resData.redirectUrl,
+        amount: resData.amount || finalPrice,
+      });
+
+      if (onSuccess) {
+        onSuccess(resData);
       }
     } catch (err: any) {
-      setIsSubmitting(false);
       setErrorMsg(err?.message || 'Terjadi kesalahan sistem, silakan coba lagi.');
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  // Manual Check Payment Status
+  const handleManualCheckStatus = async () => {
+    if (!paymentData?.paymentId) return;
+    setIsCheckingPayment(true);
+    try {
+      const res = await fetch(`/api/checkout/mayar?id=${paymentData.paymentId}`);
+      const data = await res.json();
+      if (data?.isPaid) {
+        setPaymentSuccess(true);
+        setTimeout(() => {
+          window.location.href = 'https://estimator.monefyi.com/app/estimator?status=activated';
+        }, 2000);
+      } else {
+        alert('Pembayaran belum terdeteksi. Silakan selesaikan scan QRIS terlebih dahulu.');
+      }
+    } catch {
+      alert('Gagal mengecek status. Coba beberapa saat lagi.');
+    } finally {
+      setIsCheckingPayment(false);
+    }
+  };
+
+  const copyAmount = () => {
+    navigator.clipboard.writeText(finalPrice.toString());
+    setCopiedAmount(true);
+    setTimeout(() => setCopiedAmount(false), 2000);
   };
 
   // Variasi Animasi Framer Motion
@@ -193,7 +291,7 @@ export default function ConversationalCheckout({
     }),
   };
 
-  const progressPercentage = (currentStep / 5) * 100;
+  const progressPercentage = paymentData ? 100 : (currentStep / 5) * 100;
 
   return (
     <div className="min-h-screen bg-[#f8faf9] text-slate-800 flex flex-col justify-between selection:bg-emerald-600 selection:text-white font-sans antialiased">
@@ -201,7 +299,7 @@ export default function ConversationalCheckout({
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-100">
         <div className="max-w-xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {currentStep > 1 && (
+            {(currentStep > 1 || paymentData) && (
               <button
                 onClick={handleBack}
                 className="p-2 -ml-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
@@ -223,9 +321,9 @@ export default function ConversationalCheckout({
 
           <div className="flex items-center gap-2.5">
             <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200/60 px-2.5 py-1 rounded-full">
-              Langkah {currentStep} dari 5
+              {paymentData ? 'Menunggu Pembayaran' : `Langkah ${currentStep} dari 5`}
             </span>
-            <div className="w-8 h-8 rounded-full bg-[#1e40af] text-white text-xs font-bold flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-[#1e40af] text-white text-xs font-bold flex items-center justify-center shadow-xs">
               h
             </div>
           </div>
@@ -243,486 +341,615 @@ export default function ConversationalCheckout({
       </header>
 
       {/* Main Conversational Container */}
-      <main className="flex-1 max-w-xl w-full mx-auto px-4 py-8 flex flex-col justify-center">
-        <AnimatePresence custom={direction} mode="wait">
-          {/* STEP 1: NAMA LENGKAP */}
-          {currentStep === 1 && (
-            <motion.div
-              key="step-1"
-              custom={direction}
-              variants={slideVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              className="space-y-6"
-            >
-              <div className="space-y-2">
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 uppercase tracking-wider">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                  Registrasi Lisensi
-                </span>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
-                  Siapa nama lengkap Anda?
-                </h1>
-                <p className="text-sm text-slate-500 leading-relaxed flex items-start gap-1.5">
-                  <HelpCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>
-                    Nama ini akan kami daftarkan secara permanen sebagai identitas pemilik lisensi di aplikasi <strong>Estimator</strong>.
-                  </span>
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Contoh: Novia Ramadhani"
-                  className="w-full px-5 py-4 text-lg bg-white border-2 border-slate-200 focus:border-[#065f46] rounded-2xl outline-none transition-all shadow-sm focus:shadow-emerald-900/5 placeholder:text-slate-300 font-medium"
-                />
-
-                {errorMsg && (
-                  <p className="text-xs font-semibold text-rose-600 flex items-center gap-1.5">
-                    <AlertCircle className="w-4 h-4" /> {errorMsg}
-                  </p>
-                )}
-              </div>
-
-              <div className="pt-2 flex items-center justify-between">
-                <p className="text-xs text-slate-400 hidden sm:block">
-                  Tekan <kbd className="px-1.5 py-0.5 bg-slate-100 rounded border border-slate-200 font-semibold text-slate-600">Enter ↵</kbd> untuk lanjut
-                </p>
-                <button
-                  onClick={handleNext}
-                  className="w-full sm:w-auto ml-auto px-7 py-3.5 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-900/15"
+      <main className="flex-1 max-w-xl w-full mx-auto px-4 py-6 flex flex-col justify-center">
+        {/* ===================================================================== */}
+        {/* HASIL ISIAN BERJEJER DI ATAS (ANIMASI SLIDE-UP DIAWALI TITIK BESAR HIJAU) */}
+        {/* ===================================================================== */}
+        {!paymentData && (
+          <div className="flex flex-wrap items-center gap-2 min-h-[38px] mb-4">
+            <AnimatePresence mode="popLayout">
+              {/* Pill Nama Lengkap */}
+              {currentStep > 1 && fullName && (
+                <motion.button
+                  key="pill-name"
+                  initial={{ y: 20, opacity: 0, scale: 0.9 }}
+                  animate={{ y: 0, opacity: 1, scale: 1 }}
+                  exit={{ y: -10, opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                  onClick={() => goToStep(1)}
+                  className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white border border-emerald-200/80 hover:border-emerald-500 rounded-full text-xs font-bold text-slate-800 shadow-xs hover:bg-emerald-50/50 transition-all cursor-pointer group"
+                  title="Klik untuk ubah nama"
                 >
-                  Lanjut <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-          {/* STEP 2: ALAMAT EMAIL */}
-          {currentStep === 2 && (
-            <motion.div
-              key="step-2"
-              custom={direction}
-              variants={slideVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              className="space-y-6"
-            >
-              <div className="space-y-2">
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 uppercase tracking-wider">
-                  <Lock className="w-3.5 h-3.5" /> Akses Lisensi Rahasia
-                </span>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
-                  Ke mana kami kirimkan akses & lisensi Anda?
-                </h1>
-                <p className="text-sm text-slate-500 leading-relaxed flex items-start gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>
-                    Kami menjamin privasi Anda 100%. Digunakan untuk mengirimkan link aktivasi, receipt resmi, dan password sementara.
-                  </span>
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                <input
-                  ref={inputRef}
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="nama@perusahaan.com"
-                  className="w-full px-5 py-4 text-lg bg-white border-2 border-slate-200 focus:border-[#065f46] rounded-2xl outline-none transition-all shadow-sm focus:shadow-emerald-900/5 placeholder:text-slate-300 font-medium"
-                />
-
-                {errorMsg && (
-                  <p className="text-xs font-semibold text-rose-600 flex items-center gap-1.5">
-                    <AlertCircle className="w-4 h-4" /> {errorMsg}
-                  </p>
-                )}
-              </div>
-
-              <div className="pt-2 flex items-center justify-between">
-                <p className="text-xs text-slate-400 hidden sm:block">
-                  Tekan <kbd className="px-1.5 py-0.5 bg-slate-100 rounded border border-slate-200 font-semibold text-slate-600">Enter ↵</kbd>
-                </p>
-                <button
-                  onClick={handleNext}
-                  className="w-full sm:w-auto ml-auto px-7 py-3.5 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-900/15"
-                >
-                  Lanjut <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-          {/* STEP 3: NOMOR WHATSAPP */}
-          {currentStep === 3 && (
-            <motion.div
-              key="step-3"
-              custom={direction}
-              variants={slideVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              className="space-y-6"
-            >
-              <div className="space-y-2">
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 uppercase tracking-wider">
-                  <Zap className="w-3.5 h-3.5" /> Notifikasi WhatsApp Instan
-                </span>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
-                  Nomor WhatsApp aktif Anda?
-                </h1>
-                <p className="text-sm text-slate-500 leading-relaxed flex items-start gap-1.5">
-                  <HelpCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>
-                    Kadang email masuk folder spam. Kami kirimkan link aktivasi instan ke WhatsApp agar Anda bisa langsung menghitung proyek detik ini juga.
-                  </span>
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                <div className="relative flex items-center">
-                  <div className="absolute left-4 font-bold text-slate-500 border-r border-slate-200 pr-3 text-base">
-                    +62
-                  </div>
-                  <input
-                    ref={inputRef}
-                    type="tel"
-                    value={whatsapp}
-                    onChange={(e) => setWhatsapp(e.target.value.replace(/^0+/, ''))}
-                    placeholder="812-3456-7890"
-                    className="w-full pl-20 pr-5 py-4 text-lg bg-white border-2 border-slate-200 focus:border-[#065f46] rounded-2xl outline-none transition-all shadow-sm focus:shadow-emerald-900/5 placeholder:text-slate-300 font-medium"
-                  />
-                </div>
-
-                {errorMsg && (
-                  <p className="text-xs font-semibold text-rose-600 flex items-center gap-1.5">
-                    <AlertCircle className="w-4 h-4" /> {errorMsg}
-                  </p>
-                )}
-              </div>
-
-              <div className="pt-2 flex items-center justify-between">
-                <p className="text-xs text-slate-400 hidden sm:block">
-                  Tekan <kbd className="px-1.5 py-0.5 bg-slate-100 rounded border border-slate-200 font-semibold text-slate-600">Enter ↵</kbd>
-                </p>
-                <button
-                  onClick={handleNext}
-                  className="w-full sm:w-auto ml-auto px-7 py-3.5 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-900/15"
-                >
-                  Lanjut ke Penawaran <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-          {/* STEP 4: DYNAMIC ORDER BUMP */}
-          {currentStep === 4 && (
-            <motion.div
-              key="step-4"
-              custom={direction}
-              variants={slideVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              className="space-y-6"
-            >
-              <div className="space-y-1.5 text-center">
-                <span className="inline-flex items-center gap-1.5 text-xs font-black text-amber-800 bg-amber-100 border border-amber-300 px-3 py-1 rounded-full uppercase tracking-wider">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Penawaran Terbatas Sekali Ini Saja
-                </span>
-                <h1 className="text-2xl sm:text-3xl font-black text-slate-900">
-                  {product === 'standard'
-                    ? 'Upgrade ke Estimator PRO Hemat Rp50.000!'
-                    : 'Beli 1 Akun PRO Lagi untuk Tim — Diskon 50%!'}
-                </h1>
-                <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">
-                  {product === 'standard'
-                    ? 'Harga resmi PRO di landing page Rp199.000. Khusus di layar ini, Anda cukup menambah Rp50.000 saja.'
-                    : 'Harga normal lisensi kedua Rp199.000. Khusus checkout ini, tambahkan 1 lisensi akun ekstra hanya Rp99.000.'}
-                </p>
-              </div>
-
-              {/* Order Bump Card Interaktif */}
-              <div
-                onClick={() => setTakeOrderBump(!takeOrderBump)}
-                className={`relative cursor-pointer rounded-3xl p-5 sm:p-6 transition-all duration-300 border-2 ${
-                  takeOrderBump
-                    ? 'bg-amber-50/80 border-amber-500 shadow-xl shadow-amber-500/15 ring-2 ring-amber-400/50'
-                    : 'bg-white border-dashed border-amber-300 hover:border-amber-400 hover:bg-amber-50/20 shadow-sm'
-                }`}
-              >
-                <div className="flex items-start gap-3.5">
-                  <div
-                    className={`mt-1 w-6 h-6 rounded-lg flex items-center justify-center transition-all ${
-                      takeOrderBump
-                        ? 'bg-amber-500 text-white shadow-sm'
-                        : 'border-2 border-slate-300 bg-white'
-                    }`}
-                  >
-                    {takeOrderBump && <Check className="w-4 h-4 stroke-[3]" />}
-                  </div>
-
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <span className="font-extrabold text-slate-900 text-base sm:text-lg">
-                        {product === 'standard'
-                          ? 'Ya! Upgrade ke Estimator PRO'
-                          : 'Ya! Tambah 1 Lisensi PRO Ekstra'}
-                      </span>
-                      <div className="text-right">
-                        <span className="text-xs text-slate-400 line-through mr-1.5">
-                          Rp199.000
-                        </span>
-                        <span className="text-sm sm:text-base font-extrabold text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-lg">
-                          +{formatIDR(bumpPrice)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Benefit Points */}
-                    <div className="mt-3.5 space-y-2 text-xs sm:text-sm text-slate-700">
-                      {product === 'standard' ? (
-                        <>
-                          <div className="flex items-center gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                            <span>Export penawaran ke PDF & Excel tanpa watermark</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                            <span>Buka semua template proyek (Kitchen set, Kanopi, Interior, Sipil)</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                            <span>Fitur otomatis kirim penawaran rapi via WhatsApp ke klien</span>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="flex items-center gap-2">
-                            <Users className="w-4 h-4 text-blue-600 shrink-0" />
-                            <span>1 Akun terpisah mandiri untuk staf atau estimator lapangan</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                            <span>Database proyek terpisah & aman tanpa saling tumpuk</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <BadgePercent className="w-4 h-4 text-amber-600 shrink-0" />
-                            <span>Hemat Rp100.000 dibanding membeli lisensi kedua terpisah</span>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-amber-200/60 flex items-center justify-between text-xs text-amber-900 font-medium">
-                  <span>💡 Klik kotak ini untuk mengklaim atau membatalkan</span>
-                  <span className="font-bold underline">{takeOrderBump ? 'Terpilih ✔' : 'Belum Ditambahkan'}</span>
-                </div>
-              </div>
-
-              {/* Action Button */}
-              <div className="pt-2">
-                <button
-                  onClick={handleNext}
-                  className="w-full py-4 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-extrabold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-900/15 text-base"
-                >
-                  Lanjut ke Pembayaran ({formatIDR(finalPrice)}) <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-          {/* STEP 5: RINGKASAN & METODE PEMBAYARAN */}
-          {currentStep === 5 && (
-            <motion.div
-              key="step-5"
-              custom={direction}
-              variants={slideVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              className="space-y-6"
-            >
-              <div className="space-y-1">
-                <h1 className="text-2xl font-extrabold text-slate-900">
-                  Ringkasan & Metode Pembayaran
-                </h1>
-                <p className="text-xs sm:text-sm text-slate-500">
-                  Periksa rincian pesanan Anda dan pilih kanal pembayaran instan Mayar.
-                </p>
-              </div>
-
-              {/* Order Summary Box */}
-              <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3">
-                <div className="flex justify-between items-center text-sm pb-3 border-b border-slate-100">
-                  <span className="font-semibold text-slate-700">
-                    Estimator {product === 'standard' ? 'Standard' : 'PRO'}
-                  </span>
-                  <span className="font-bold text-slate-900">{formatIDR(basePrice)}</span>
-                </div>
-
-                {takeOrderBump && (
-                  <div className="flex justify-between items-center text-sm pb-3 border-b border-slate-100 text-amber-900">
-                    <span className="flex items-center gap-1.5 font-semibold">
-                      <Sparkles className="w-4 h-4 text-amber-600" />
-                      {product === 'standard' ? 'Upgrade PRO (Promo Khusus)' : 'Ekstra 1 Akun PRO'}
-                    </span>
-                    <span className="font-bold">+{formatIDR(bumpPrice)}</span>
-                  </div>
-                )}
-
-                <div className="flex justify-between items-center pt-1 text-slate-900">
-                  <div>
-                    <span className="text-xs uppercase tracking-wider text-slate-400 font-bold block">
-                      Total Tagihan
-                    </span>
-                    <span className="text-2xl font-black text-[#065f46]">
-                      {formatIDR(finalPrice)}
-                    </span>
-                  </div>
-                  <span className="text-xs font-semibold px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100">
-                    Aktivasi Otomatis ⚡
-                  </span>
-                </div>
-              </div>
-
-              {/* Data Pemesan Singkat */}
-              <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200/80 text-xs text-slate-600 flex justify-between items-center">
-                <div className="truncate mr-2">
-                  <span className="font-bold text-slate-800">{fullName}</span> • {email} • +62 {whatsapp}
-                </div>
-                <button
-                  onClick={() => {
-                    setDirection(-1);
-                    setCurrentStep(1);
-                  }}
-                  className="text-emerald-700 font-bold hover:underline shrink-0"
-                >
-                  Ubah
-                </button>
-              </div>
-
-              {/* Pilihan Metode Pembayaran */}
-              <div className="space-y-2.5">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                  Pilih Kanal Pembayaran
-                </label>
-
-                {/* QRIS Option */}
-                <div
-                  onClick={() => setPaymentMethod('qris')}
-                  className={`cursor-pointer p-4 rounded-2xl border-2 flex items-center justify-between transition-all ${
-                    paymentMethod === 'qris'
-                      ? 'border-[#065f46] bg-emerald-50/50 shadow-sm'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                      <QrCode className="w-5 h-5 text-emerald-700" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-900 text-sm">QRIS (Semua E-Wallet & Bank)</p>
-                      <p className="text-xs text-slate-500">GoPay, OVO, ShopeePay, DANA, BCA, Livin, dll</p>
-                    </div>
-                  </div>
-                  <div
-                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                      paymentMethod === 'qris'
-                        ? 'border-[#065f46] bg-[#065f46]'
-                        : 'border-slate-300'
-                    }`}
-                  >
-                    {paymentMethod === 'qris' && <div className="w-2 h-2 rounded-full bg-white" />}
-                  </div>
-                </div>
-
-                {/* Virtual Account Grid */}
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { id: 'va/bca', label: 'BCA Virtual Account' },
-                    { id: 'va/mandiri', label: 'Mandiri VA' },
-                    { id: 'va/bni', label: 'BNI Virtual Account' },
-                    { id: 'va/bri', label: 'BRI Virtual Account' },
-                  ].map((va) => (
-                    <div
-                      key={va.id}
-                      onClick={() => setPaymentMethod(va.id as any)}
-                      className={`cursor-pointer p-3 rounded-2xl border-2 flex items-center justify-between transition-all ${
-                        paymentMethod === va.id
-                          ? 'border-[#065f46] bg-emerald-50/50 shadow-sm'
-                          : 'border-slate-200 bg-white hover:border-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4 text-slate-500" />
-                        <span className="font-bold text-xs text-slate-800">{va.label}</span>
-                      </div>
-                      <div
-                        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                          paymentMethod === va.id
-                            ? 'border-[#065f46] bg-[#065f46]'
-                            : 'border-slate-300'
-                        }`}
-                      >
-                        {paymentMethod === va.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {errorMsg && (
-                <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-2 text-xs font-semibold text-rose-700">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{errorMsg}</span>
-                </div>
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-sm shadow-emerald-500/50 group-hover:scale-125 transition-transform" />
+                  <span className="truncate max-w-[130px]">{fullName}</span>
+                </motion.button>
               )}
 
-              {/* Submit Button */}
-              <div className="space-y-3 pt-2">
-                <button
-                  disabled={isSubmitting}
-                  onClick={handleSubmitOrder}
-                  className="w-full py-4 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-black text-lg rounded-2xl flex items-center justify-center gap-2 transition-all shadow-xl shadow-emerald-900/20 disabled:opacity-60"
+              {/* Pill Email */}
+              {currentStep > 2 && email && (
+                <motion.button
+                  key="pill-email"
+                  initial={{ y: 20, opacity: 0, scale: 0.9 }}
+                  animate={{ y: 0, opacity: 1, scale: 1 }}
+                  exit={{ y: -10, opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                  onClick={() => goToStep(2)}
+                  className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white border border-emerald-200/80 hover:border-emerald-500 rounded-full text-xs font-bold text-slate-800 shadow-xs hover:bg-emerald-50/50 transition-all cursor-pointer group"
+                  title="Klik untuk ubah email"
                 >
-                  {isSubmitting ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Menyiapkan Pembayaran...</span>
-                    </div>
-                  ) : (
-                    <>Selesaikan Pembayaran Sekarang ({formatIDR(finalPrice)})</>
-                  )}
-                </button>
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-sm shadow-emerald-500/50 group-hover:scale-125 transition-transform" />
+                  <span className="truncate max-w-[150px]">{email}</span>
+                </motion.button>
+              )}
 
-                <div className="flex items-center justify-center gap-4 text-xs text-slate-400 font-medium">
-                  <span className="flex items-center gap-1">
-                    <Lock className="w-3.5 h-3.5 text-slate-400" /> Pembayaran Aman Mayar
+              {/* Pill WhatsApp */}
+              {currentStep > 3 && whatsapp && (
+                <motion.button
+                  key="pill-wa"
+                  initial={{ y: 20, opacity: 0, scale: 0.9 }}
+                  animate={{ y: 0, opacity: 1, scale: 1 }}
+                  exit={{ y: -10, opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                  onClick={() => goToStep(3)}
+                  className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white border border-emerald-200/80 hover:border-emerald-500 rounded-full text-xs font-bold text-slate-800 shadow-xs hover:bg-emerald-50/50 transition-all cursor-pointer group"
+                  title="Klik untuk ubah WhatsApp"
+                >
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-sm shadow-emerald-500/50 group-hover:scale-125 transition-transform" />
+                  <span>+62 {whatsapp}</span>
+                </motion.button>
+              )}
+
+              {/* Pill Order Bump (jika dipilih) */}
+              {currentStep > 4 && takeOrderBump && (
+                <motion.button
+                  key="pill-bump"
+                  initial={{ y: 20, opacity: 0, scale: 0.9 }}
+                  animate={{ y: 0, opacity: 1, scale: 1 }}
+                  exit={{ y: -10, opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                  onClick={() => goToStep(4)}
+                  className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-amber-50 border border-amber-300 hover:border-amber-500 rounded-full text-xs font-bold text-amber-900 shadow-xs transition-all cursor-pointer"
+                  title="Klik untuk ubah penawaran"
+                >
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0 shadow-sm shadow-amber-500/50" />
+                  <span>{product === 'standard' ? 'Upgrade PRO (+Rp50rb)' : '2 Akun PRO (+Rp99rb)'}</span>
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* ===================================================================== */}
+        {/* LAYAR PEMBAYARAN NATIVE (QRIS IN-APP — TANPA INVOICE BIRU MAYAR) */}
+        {/* ===================================================================== */}
+        {paymentData ? (
+          <motion.div
+            key="payment-screen"
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.35, ease: 'easeOut' }}
+            className="space-y-5"
+          >
+            {paymentSuccess ? (
+              <div className="bg-white rounded-3xl p-8 border border-emerald-200 text-center shadow-lg space-y-4">
+                <div className="w-16 h-16 mx-auto rounded-full bg-emerald-100 text-[#065f46] flex items-center justify-center">
+                  <Check className="w-9 h-9 stroke-[3]" />
+                </div>
+                <h2 className="text-2xl font-black text-slate-900">Pembayaran Berhasil!</h2>
+                <p className="text-sm text-slate-600">
+                  Terima kasih, <strong>{fullName}</strong>. Akun Estimator Anda otomatis aktif. Mengalihkan Anda ke aplikasi...
+                </p>
+                <div className="w-6 h-6 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto" />
+              </div>
+            ) : (
+              <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-sm space-y-6">
+                {/* Header Nominal & Timer */}
+                <div className="text-center space-y-2 border-b border-slate-100 pb-5">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#065f46] bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200/60">
+                    <Clock className="w-3.5 h-3.5" /> Bayar sebelum {formatTimer(timeLeft)}
                   </span>
-                  <span>•</span>
-                  <span className="flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Garansi Akses 100%
+
+                  <p className="text-xs uppercase font-bold tracking-wider text-slate-400">
+                    Total Pembayaran
+                  </p>
+
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-3xl font-black text-[#065f46] tracking-tight">
+                      {formatIDR(paymentData.amount)}
+                    </span>
+                    <button
+                      onClick={copyAmount}
+                      className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+                      title="Salin nominal"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  </div>
+                  {copiedAmount && (
+                    <p className="text-xs text-emerald-600 font-semibold animate-fade-in">
+                      Nominal disalin!
+                    </p>
+                  )}
+                </div>
+
+                {/* Container Gambar QRIS Resmi */}
+                <div className="flex flex-col items-center justify-center space-y-3">
+                  <div className="p-4 bg-white rounded-2xl border-2 border-emerald-100 shadow-md ring-4 ring-emerald-50 flex items-center justify-center">
+                    {paymentData.qrImageUrl ? (
+                      <img
+                        src={paymentData.qrImageUrl}
+                        alt="QRIS Pembayaran Estimator"
+                        className="w-56 h-56 sm:w-64 sm:h-64 object-contain"
+                      />
+                    ) : (
+                      <div className="w-56 h-56 flex flex-col items-center justify-center gap-2 bg-slate-50 rounded-xl text-slate-400">
+                        <QrCode className="w-12 h-12" />
+                        <span className="text-xs">Menyiapkan QRIS...</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <span className="text-[11px] font-semibold text-slate-400 tracking-wider uppercase">
+                    Scan dengan BCA, Mandiri, BRI, BNI, GoPay, OVO, DANA, ShopeePay
                   </span>
                 </div>
+
+                {/* Tombol Aksi */}
+                <div className="space-y-2.5 pt-1">
+                  <button
+                    disabled={isCheckingPayment}
+                    onClick={handleManualCheckStatus}
+                    className="w-full py-3.5 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-extrabold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-900/15 disabled:opacity-60 text-sm"
+                  >
+                    {isCheckingPayment ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" /> Memeriksa Status...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" /> Saya Sudah Bayar (Cek Otomatis)
+                      </>
+                    )}
+                  </button>
+
+                  {/* Fallback ke invoice Mayar jika pembeli ingin buka di tab baru */}
+                  {paymentData.redirectUrl && (
+                    <a
+                      href={paymentData.redirectUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block text-center text-xs text-slate-400 hover:text-emerald-700 py-1 transition-colors"
+                    >
+                      Buka rincian invoice di tab baru <ExternalLink className="w-3 h-3 inline ml-0.5" />
+                    </a>
+                  )}
+                </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </motion.div>
+        ) : (
+          /* ===================================================================== */
+          /* FORM INTERVIEW CONVERSATIONAL (STEP 1 - STEP 5) */
+          /* ===================================================================== */
+          <AnimatePresence custom={direction} mode="wait">
+            {/* STEP 1: NAMA LENGKAP */}
+            {currentStep === 1 && (
+              <motion.div
+                key="step-1"
+                custom={direction}
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                className="space-y-6"
+              >
+                <div className="space-y-2">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 uppercase tracking-wider">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                    Registrasi Lisensi
+                  </span>
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
+                    Siapa nama lengkap Anda?
+                  </h1>
+                  <p className="text-sm text-slate-500 leading-relaxed flex items-start gap-1.5">
+                    <HelpCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span>
+                      Nama ini akan didaftarkan sebagai identitas resmi pemilik lisensi di aplikasi <strong>Estimator</strong>.
+                    </span>
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Contoh: Novia Ramadhani"
+                    className="w-full px-5 py-4 text-lg bg-white border-2 border-slate-200 focus:border-[#065f46] rounded-2xl outline-none transition-all shadow-sm focus:shadow-emerald-900/5 placeholder:text-slate-300 font-medium"
+                  />
+
+                  {errorMsg && (
+                    <p className="text-xs font-semibold text-rose-600 flex items-center gap-1.5">
+                      <AlertCircle className="w-4 h-4" /> {errorMsg}
+                    </p>
+                  )}
+                </div>
+
+                <div className="pt-2 flex items-center justify-between">
+                  <p className="text-xs text-slate-400 hidden sm:block">
+                    Tekan <kbd className="px-1.5 py-0.5 bg-slate-100 rounded border border-slate-200 font-semibold text-slate-600">Enter ↵</kbd>
+                  </p>
+                  <button
+                    onClick={handleNext}
+                    className="w-full sm:w-auto ml-auto px-7 py-3.5 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-900/15"
+                  >
+                    Lanjut <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* STEP 2: ALAMAT EMAIL */}
+            {currentStep === 2 && (
+              <motion.div
+                key="step-2"
+                custom={direction}
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                className="space-y-6"
+              >
+                <div className="space-y-2">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 uppercase tracking-wider">
+                    <Lock className="w-3.5 h-3.5" /> Akses Lisensi Rahasia
+                  </span>
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
+                    Ke mana kami kirimkan akses & lisensi Anda?
+                  </h1>
+                  <p className="text-sm text-slate-500 leading-relaxed flex items-start gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span>
+                      Privasi 100% aman tanpa spam. Digunakan untuk mengirim link aktivasi, receipt resmi, dan password sementara.
+                    </span>
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <input
+                    ref={inputRef}
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="nama@perusahaan.com"
+                    className="w-full px-5 py-4 text-lg bg-white border-2 border-slate-200 focus:border-[#065f46] rounded-2xl outline-none transition-all shadow-sm focus:shadow-emerald-900/5 placeholder:text-slate-300 font-medium"
+                  />
+
+                  {errorMsg && (
+                    <p className="text-xs font-semibold text-rose-600 flex items-center gap-1.5">
+                      <AlertCircle className="w-4 h-4" /> {errorMsg}
+                    </p>
+                  )}
+                </div>
+
+                <div className="pt-2 flex items-center justify-between">
+                  <p className="text-xs text-slate-400 hidden sm:block">
+                    Tekan <kbd className="px-1.5 py-0.5 bg-slate-100 rounded border border-slate-200 font-semibold text-slate-600">Enter ↵</kbd>
+                  </p>
+                  <button
+                    onClick={handleNext}
+                    className="w-full sm:w-auto ml-auto px-7 py-3.5 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-900/15"
+                  >
+                    Lanjut <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* STEP 3: NOMOR WHATSAPP */}
+            {currentStep === 3 && (
+              <motion.div
+                key="step-3"
+                custom={direction}
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                className="space-y-6"
+              >
+                <div className="space-y-2">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 uppercase tracking-wider">
+                    <Zap className="w-3.5 h-3.5" /> Notifikasi WhatsApp Instan
+                  </span>
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
+                    Nomor WhatsApp aktif Anda?
+                  </h1>
+                  <p className="text-sm text-slate-500 leading-relaxed flex items-start gap-1.5">
+                    <HelpCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span>
+                      Kadang email masuk folder spam. Kami kirimkan notifikasi aktivasi instan ke WhatsApp Anda.
+                    </span>
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="relative flex items-center">
+                    <div className="absolute left-4 font-bold text-slate-500 border-r border-slate-200 pr-3 text-base">
+                      +62
+                    </div>
+                    <input
+                      ref={inputRef}
+                      type="tel"
+                      value={whatsapp}
+                      onChange={(e) => setWhatsapp(e.target.value.replace(/^0+/, ''))}
+                      placeholder="812-3456-7890"
+                      className="w-full pl-20 pr-5 py-4 text-lg bg-white border-2 border-slate-200 focus:border-[#065f46] rounded-2xl outline-none transition-all shadow-sm focus:shadow-emerald-900/5 placeholder:text-slate-300 font-medium"
+                    />
+                  </div>
+
+                  {errorMsg && (
+                    <p className="text-xs font-semibold text-rose-600 flex items-center gap-1.5">
+                      <AlertCircle className="w-4 h-4" /> {errorMsg}
+                    </p>
+                  )}
+                </div>
+
+                <div className="pt-2 flex items-center justify-between">
+                  <p className="text-xs text-slate-400 hidden sm:block">
+                    Tekan <kbd className="px-1.5 py-0.5 bg-slate-100 rounded border border-slate-200 font-semibold text-slate-600">Enter ↵</kbd>
+                  </p>
+                  <button
+                    onClick={handleNext}
+                    className="w-full sm:w-auto ml-auto px-7 py-3.5 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-900/15"
+                  >
+                    Lanjut ke Penawaran <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* STEP 4: DYNAMIC ORDER BUMP */}
+            {currentStep === 4 && (
+              <motion.div
+                key="step-4"
+                custom={direction}
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                className="space-y-6"
+              >
+                <div className="space-y-1.5 text-center">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-black text-amber-800 bg-amber-100 border border-amber-300 px-3 py-1 rounded-full uppercase tracking-wider">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Penawaran Terbatas Sekali Ini Saja
+                  </span>
+                  <h1 className="text-2xl sm:text-3xl font-black text-slate-900">
+                    {product === 'standard'
+                      ? 'Upgrade ke Estimator PRO Hemat Rp50.000!'
+                      : 'Beli 1 Akun PRO Lagi untuk Tim — Diskon 50%!'}
+                  </h1>
+                  <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">
+                    {product === 'standard'
+                      ? 'Harga resmi PRO di landing page Rp199.000. Khusus di layar ini, Anda cukup menambah Rp50.000 saja.'
+                      : 'Harga normal lisensi kedua Rp199.000. Khusus checkout ini, tambahkan 1 lisensi akun ekstra hanya Rp99.000.'}
+                  </p>
+                </div>
+
+                {/* Order Bump Card Interaktif */}
+                <div
+                  onClick={() => setTakeOrderBump(!takeOrderBump)}
+                  className={`relative cursor-pointer rounded-3xl p-5 sm:p-6 transition-all duration-300 border-2 ${
+                    takeOrderBump
+                      ? 'bg-amber-50/80 border-amber-500 shadow-xl shadow-amber-500/15 ring-2 ring-amber-400/50'
+                      : 'bg-white border-dashed border-amber-300 hover:border-amber-400 hover:bg-amber-50/20 shadow-sm'
+                  }`}
+                >
+                  <div className="flex items-start gap-3.5">
+                    <div
+                      className={`mt-1 w-6 h-6 rounded-lg flex items-center justify-center transition-all ${
+                        takeOrderBump
+                          ? 'bg-amber-500 text-white shadow-sm'
+                          : 'border-2 border-slate-300 bg-white'
+                      }`}
+                    >
+                      {takeOrderBump && <Check className="w-4 h-4 stroke-[3]" />}
+                    </div>
+
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <span className="font-extrabold text-slate-900 text-base sm:text-lg">
+                          {product === 'standard'
+                            ? 'Ya! Upgrade ke Estimator PRO'
+                            : 'Ya! Tambah 1 Lisensi PRO Ekstra'}
+                        </span>
+                        <div className="text-right">
+                          <span className="text-xs text-slate-400 line-through mr-1.5">
+                            Rp199.000
+                          </span>
+                          <span className="text-sm sm:text-base font-extrabold text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-lg">
+                            +{formatIDR(bumpPrice)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Benefit Points */}
+                      <div className="mt-3.5 space-y-2 text-xs sm:text-sm text-slate-700">
+                        {product === 'standard' ? (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                              <span>Export penawaran ke PDF & Excel tanpa watermark</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                              <span>Buka semua template proyek (Kitchen set, Kanopi, Interior, Sipil)</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                              <span>Fitur otomatis kirim penawaran rapi via WhatsApp ke klien</span>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <Users className="w-4 h-4 text-blue-600 shrink-0" />
+                              <span>1 Akun terpisah mandiri untuk staf atau estimator lapangan</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                              <span>Database proyek terpisah & aman tanpa saling tumpuk</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <BadgePercent className="w-4 h-4 text-amber-600 shrink-0" />
+                              <span>Hemat Rp100.000 dibanding membeli lisensi kedua terpisah</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-amber-200/60 flex items-center justify-between text-xs text-amber-900 font-medium">
+                    <span>💡 Klik kotak ini untuk mengklaim atau membatalkan</span>
+                    <span className="font-bold underline">{takeOrderBump ? 'Terpilih ✔' : 'Belum Ditambahkan'}</span>
+                  </div>
+                </div>
+
+                {/* Action Button */}
+                <div className="pt-2">
+                  <button
+                    onClick={handleNext}
+                    className="w-full py-4 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-extrabold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-900/15 text-base"
+                  >
+                    Lanjut ke Pembayaran ({formatIDR(finalPrice)}) <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* STEP 5: RINGKASAN & METODE PEMBAYARAN */}
+            {currentStep === 5 && (
+              <motion.div
+                key="step-5"
+                custom={direction}
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                className="space-y-6"
+              >
+                <div className="space-y-1">
+                  <h1 className="text-2xl font-extrabold text-slate-900">
+                    Ringkasan & Metode Pembayaran
+                  </h1>
+                  <p className="text-xs sm:text-sm text-slate-500">
+                    Selesaikan pesanan Anda secara instan dengan QRIS resmi.
+                  </p>
+                </div>
+
+                {/* Order Summary Box */}
+                <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3">
+                  <div className="flex justify-between items-center text-sm pb-3 border-b border-slate-100">
+                    <span className="font-semibold text-slate-700">
+                      Estimator {product === 'standard' ? 'Standard' : 'PRO'}
+                    </span>
+                    <span className="font-bold text-slate-900">{formatIDR(basePrice)}</span>
+                  </div>
+
+                  {takeOrderBump && (
+                    <div className="flex justify-between items-center text-sm pb-3 border-b border-slate-100 text-amber-900">
+                      <span className="flex items-center gap-1.5 font-semibold">
+                        <Sparkles className="w-4 h-4 text-amber-600" />
+                        {product === 'standard' ? 'Upgrade PRO (Promo Khusus)' : 'Ekstra 1 Akun PRO'}
+                      </span>
+                      <span className="font-bold">+{formatIDR(bumpPrice)}</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center pt-1 text-slate-900">
+                    <div>
+                      <span className="text-xs uppercase tracking-wider text-slate-400 font-bold block">
+                        Total Tagihan
+                      </span>
+                      <span className="text-2xl font-black text-[#065f46]">
+                        {formatIDR(finalPrice)}
+                      </span>
+                    </div>
+                    <span className="text-xs font-semibold px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100">
+                      Aktivasi Otomatis ⚡
+                    </span>
+                  </div>
+                </div>
+
+                {/* Pilihan Metode Pembayaran — Fokus pada QRIS Native */}
+                <div className="space-y-2.5">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                    Metode Pembayaran
+                  </label>
+
+                  <div
+                    onClick={() => setPaymentMethod('qris')}
+                    className="cursor-pointer p-4 rounded-2xl border-2 border-[#065f46] bg-emerald-50/50 shadow-sm flex items-center justify-between transition-all"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
+                        <QrCode className="w-5 h-5 text-emerald-700" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">QRIS (Semua Bank & E-Wallet)</p>
+                        <p className="text-xs text-slate-500">Scan via BCA, Mandiri, BRI, BNI, GoPay, OVO, DANA, ShopeePay</p>
+                      </div>
+                    </div>
+                    <div className="w-5 h-5 rounded-full border-2 border-[#065f46] bg-[#065f46] flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full bg-white" />
+                    </div>
+                  </div>
+                </div>
+
+                {errorMsg && (
+                  <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-2 text-xs font-semibold text-rose-700">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{errorMsg}</span>
+                  </div>
+                )}
+
+                {/* Submit Button */}
+                <div className="space-y-3 pt-2">
+                  <button
+                    disabled={isSubmitting}
+                    onClick={handleSubmitOrder}
+                    className="w-full py-4 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-black text-lg rounded-2xl flex items-center justify-center gap-2 transition-all shadow-xl shadow-emerald-900/20 disabled:opacity-60 cursor-pointer"
+                  >
+                    {isSubmitting ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Menyiapkan Kode QRIS...</span>
+                      </div>
+                    ) : (
+                      <>Tampilkan QRIS & Bayar ({formatIDR(finalPrice)})</>
+                    )}
+                  </button>
+
+                  <div className="flex items-center justify-center gap-4 text-xs text-slate-400 font-medium">
+                    <span className="flex items-center gap-1">
+                      <Lock className="w-3.5 h-3.5 text-slate-400" /> Pembayaran Aman & Terverifikasi
+                    </span>
+                    <span>•</span>
+                    <span className="flex items-center gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Garansi Akses 100%
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        )}
       </main>
 
       {/* Footer Minimalis */}
       <footer className="py-4 text-center text-xs text-slate-400 border-t border-slate-100">
-        © {new Date().getFullYear()} Estimator App by Monefyi. Terintegrasi Resmi dengan Mayar.
+        © {new Date().getFullYear()} Estimator App by Monefyi.
       </footer>
     </div>
   );
