@@ -20,6 +20,7 @@ import {
 } from "@/lib/services/launchPromoService";
 import { ensureOwnerOrg } from "@/lib/services/orgService";
 import { useContentStore } from "@/lib/store/contentStore";
+import { trackLynkCheckoutIntent } from "@/lib/analytics/metaPixel";
 
 export type LandingCtaVariant = "primary" | "outline" | "dark";
 
@@ -80,6 +81,10 @@ export function useLandingCta() {
           : product === "estimator_pro"
             ? 199_000
             : undefined;
+      trackLynkCheckoutIntent(product, {
+        planId,
+        value: checkoutAmount,
+      });
       window.location.assign(
         buildLynkCheckoutUrl(product, { ...params, checkoutAmount }, lynkOverrides),
       );
@@ -97,6 +102,7 @@ export function useLandingCta() {
       return;
     }
     const params = await checkoutParams(plannerPaymentReturnPath("app"));
+    trackLynkCheckoutIntent(product);
     window.location.assign(buildLynkCheckoutUrl(product, params, lynkOverrides));
   };
 

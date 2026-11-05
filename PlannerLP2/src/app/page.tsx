@@ -16,6 +16,7 @@ import { EditModeRedirect } from "@/components/landing/EditModeRedirect";
 import EstimatorPwaLaunchRedirect from "@/components/brand/EstimatorPwaLaunchRedirect";
 import { BrandHead } from "@/components/brand/BrandHead";
 import { TrackingScripts } from "@/components/landing/TrackingScripts";
+import { MetaPixelNoscript } from "@/components/landing/MetaPixelNoscript";
 import { JsonLd } from "@/components/landing/JsonLd";
 import { PublicLandingRoot } from "@/components/landing/PublicLandingRoot";
 
@@ -25,6 +26,7 @@ export default function LandingPage() {
       <EstimatorPwaLaunchRedirect />
       <BrandHead pageTitle="Kirim Penawaran Sebelum Kamu Pulang Survei" />
       <TrackingScripts />
+      <MetaPixelNoscript />
       <JsonLd />
       <AuthHydrator />
       <ContentHydrator />

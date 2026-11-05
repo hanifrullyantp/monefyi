@@ -28,11 +28,15 @@ function successTools(sop: SopDefinition): string[] {
 }
 
 function begin(sop: SopDefinition, role = 'owner') {
-  return startRun(sop, { id: `${sop.id}-run`, now: NOW, role });
+  const parameters: Record<string, number> = {};
+  for (const param of sop.parameters) {
+    if (param.required && param.defaultValue == null) parameters[param.key] = param.min;
+  }
+  return startRun(sop, { id: `${sop.id}-run`, now: NOW, role, parameters });
 }
 
 describe('katalog SOP', () => {
-  it('sembilan SOP wajib sama dengan berkas YAML', () => {
+  it('SOP wajib sama dengan berkas YAML', () => {
     expect(catalog.map((sop) => sop.id).sort()).toEqual([...REQUIRED_SOPS].sort());
     expect(catalog).toEqual(SOP_CATALOG);
     expect(routeCatatBiaya('beli semen 10 sak 65000')?.sop).toBe('catat_biaya');

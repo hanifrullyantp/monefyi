@@ -2,6 +2,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import type { LynkProduct } from "./products";
 import { buildLynkCheckoutUrl, type LynkCheckoutParams } from "./lynk";
 import { resolvePaymentProvider } from "./paymentProvider";
+import { trackLynkCheckoutIntent } from "@/lib/analytics/metaPixel";
 
 export async function redirectToPlannerCheckout(
   product: LynkProduct,
@@ -48,5 +49,8 @@ export async function redirectToPlannerCheckout(
     return;
   }
 
+  trackLynkCheckoutIntent(product, {
+    value: options?.checkoutAmount ?? params.checkoutAmount,
+  });
   window.location.href = buildLynkCheckoutUrl(product, params, options?.lynkUrlOverrides);
 }

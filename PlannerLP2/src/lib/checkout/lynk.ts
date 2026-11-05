@@ -1,6 +1,7 @@
 import { plannerAppPath, plannerPaymentReturnPath } from "@/lib/config/plannerApp";
 import type { LynkProduct } from "./products";
 import { mergeLynkCheckoutUrlOverrides } from "./lynkDefaults";
+import { trackLynkCheckoutIntent } from "@/lib/analytics/metaPixel";
 
 export interface LynkCheckoutParams {
   orgId?: string;
@@ -67,5 +68,6 @@ export function redirectToLynkCheckout(
   params: LynkCheckoutParams,
   overrides?: Partial<Record<LynkProduct, string>>,
 ): void {
+  trackLynkCheckoutIntent(product, { value: params.checkoutAmount });
   window.location.href = buildLynkCheckoutUrl(product, params, overrides);
 }

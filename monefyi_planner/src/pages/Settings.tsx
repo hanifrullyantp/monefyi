@@ -27,6 +27,7 @@ import MigrationDeveloperPanel from '../components/settings/MigrationDeveloperPa
 import FinanceIntegrationPanel from '../components/finance-v2/FinanceIntegrationPanel';
 import UpgradePlansPanel from '../components/settings/UpgradePlansPanel';
 import CustomDomainPanel from '../components/settings/CustomDomainPanel';
+import TelegramLinkPanel from '../components/settings/TelegramLinkPanel';
 import { formatPlanPriceIdr, planForOrg, type PricingPlan } from '../lib/pricingPlans';
 import { countProjectsCreatedThisMonth, loadPricingPlans } from '../services/pricingPlanService';
 
@@ -694,6 +695,8 @@ export default function Settings() {
               Update Password
             </button>
           </div>
+
+          {tenant?.id && <TelegramLinkPanel orgId={tenant.id} isOwner={isOwner} />}
 
           <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 py-3.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-2xl border border-rose-200 transition-colors">
             <LogOut className="w-4 h-4" /> Keluar dari perangkat ini

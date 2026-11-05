@@ -341,6 +341,109 @@ export const SOP_CATALOG: SopDefinition[] = [
     "escalationTo": "pemilik"
   },
   {
+    "id": "minta_update_progres_lapangan",
+    "version": 1,
+    "domain": "proyek",
+    "timeoutMinutes": 120,
+    "intent": "field_progress",
+    "examples": [
+      "minta update progres lapangan rumah",
+      "tanya progres tahap pasang bata"
+    ],
+    "prerequisites": [
+      "proyek_berjalan",
+      "identitas_telegram_tertaut"
+    ],
+    "parameters": [
+      {
+        "key": "jam_tanya_progres",
+        "type": "integer",
+        "min": 0,
+        "max": 23,
+        "required": true,
+        "defaultValue": null
+      },
+      {
+        "key": "batas_balasan_menit",
+        "type": "integer",
+        "min": 15,
+        "max": 1440,
+        "required": true,
+        "defaultValue": null
+      }
+    ],
+    "steps": [
+      {
+        "id": "tanya_lapangan",
+        "tools": [
+          "send_progress_question"
+        ],
+        "minRole": "manager",
+        "approval": false,
+        "terminal": false,
+        "onSuccess": "terima_jawaban",
+        "onNeedsChoice": "tanya_lapangan",
+        "onInvalid": "tanya_lapangan",
+        "onConflict": "tanya_lapangan"
+      },
+      {
+        "id": "terima_jawaban",
+        "tools": [
+          "receive_field_reply"
+        ],
+        "minRole": "manager",
+        "approval": false,
+        "terminal": false,
+        "onSuccess": "siapkan_progres",
+        "onNeedsChoice": "terima_jawaban",
+        "onInvalid": "terima_jawaban",
+        "onConflict": "terima_jawaban"
+      },
+      {
+        "id": "siapkan_progres",
+        "tools": [
+          "prepare_progress_update"
+        ],
+        "minRole": "manager",
+        "approval": false,
+        "terminal": false,
+        "onSuccess": "simpan_progres",
+        "onNeedsChoice": "siapkan_progres",
+        "onInvalid": "siapkan_progres",
+        "onConflict": "siapkan_progres"
+      },
+      {
+        "id": "simpan_progres",
+        "tools": [
+          "commit_progress_update"
+        ],
+        "minRole": "manager",
+        "approval": true,
+        "terminal": false,
+        "onSuccess": "selesai",
+        "onNeedsChoice": "simpan_progres",
+        "onInvalid": "simpan_progres",
+        "onConflict": "simpan_progres"
+      },
+      {
+        "id": "selesai",
+        "tools": [],
+        "minRole": "manager",
+        "approval": false,
+        "terminal": true,
+        "onSuccess": null,
+        "onNeedsChoice": null,
+        "onInvalid": null,
+        "onConflict": null
+      }
+    ],
+    "postconditions": [
+      "progres_menunggu_konfirmasi"
+    ],
+    "escalationAfter": 2,
+    "escalationTo": "pemilik"
+  },
+  {
     "id": "pinjam_internal",
     "version": 1,
     "domain": "keuangan",

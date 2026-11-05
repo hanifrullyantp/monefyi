@@ -61,6 +61,10 @@ PLANNER_FUNCTIONS=(
   planner-parse-command
   planner-flow
   planner-agent-run
+  tg-webhook
+  tg-dispatch
+  tg-link
+  tg-secret
   planner-create-owner-org
   planner-validate-invitation
   planner-create-invitation
@@ -99,6 +103,8 @@ NO_VERIFY_JWT_FUNCTIONS=(
   planner-mayar-webhook
   planner-checkout
   lynk-webhook
+  tg-webhook
+  tg-dispatch
 )
 
 echo "==> Deploying ${#PLANNER_FUNCTIONS[@]} Edge Functions..."

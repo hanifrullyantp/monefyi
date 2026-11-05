@@ -1,0 +1,74 @@
+id: minta_update_progres_lapangan
+version: 1
+domain: proyek
+timeout_minutes: 120
+triggers:
+  intent: field_progress
+  examples:
+    - minta update progres lapangan rumah
+    - tanya progres tahap pasang bata
+prerequisites:
+  - proyek_berjalan
+  - identitas_telegram_tertaut
+parameters:
+  - key: jam_tanya_progres
+    type: integer
+    min: 0
+    max: 23
+    required: true
+  - key: batas_balasan_menit
+    type: integer
+    min: 15
+    max: 1440
+    required: true
+steps:
+  - id: tanya_lapangan
+    tools:
+      - send_progress_question
+    min_role: manager
+    approval: false
+    terminal: false
+    on_success: terima_jawaban
+    on_needs_choice: tanya_lapangan
+    on_invalid: tanya_lapangan
+    on_conflict: tanya_lapangan
+  - id: terima_jawaban
+    tools:
+      - receive_field_reply
+    min_role: manager
+    approval: false
+    terminal: false
+    on_success: siapkan_progres
+    on_needs_choice: terima_jawaban
+    on_invalid: terima_jawaban
+    on_conflict: terima_jawaban
+  - id: siapkan_progres
+    tools:
+      - prepare_progress_update
+    min_role: manager
+    approval: false
+    terminal: false
+    on_success: simpan_progres
+    on_needs_choice: siapkan_progres
+    on_invalid: siapkan_progres
+    on_conflict: siapkan_progres
+  - id: simpan_progres
+    tools:
+      - commit_progress_update
+    min_role: manager
+    approval: true
+    terminal: false
+    on_success: selesai
+    on_needs_choice: simpan_progres
+    on_invalid: simpan_progres
+    on_conflict: simpan_progres
+  - id: selesai
+    tools: []
+    min_role: manager
+    approval: false
+    terminal: true
+postconditions:
+  - progres_menunggu_konfirmasi
+escalation:
+  after_invalid: 2
+  to: pemilik

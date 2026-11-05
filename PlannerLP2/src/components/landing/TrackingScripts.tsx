@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useSettingsStore } from "@/lib/store/settingsStore";
+import { resolveMetaPixelId } from "@/lib/analytics/metaPixel";
 
 /**
  * Inject GA4 / Meta Pixel / GTM when admin settings have IDs.
@@ -12,7 +13,7 @@ export function TrackingScripts() {
 
   useEffect(() => {
     const ga = settings.googleAnalyticsId?.trim();
-    const fb = settings.fbPixelId?.trim();
+    const fb = resolveMetaPixelId(settings.fbPixelId);
     const gtm = settings.gtmId?.trim();
 
     if (gtm && !document.getElementById("gtm-script")) {

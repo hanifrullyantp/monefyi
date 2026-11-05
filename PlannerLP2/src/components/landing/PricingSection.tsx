@@ -41,7 +41,6 @@ export function PricingSection() {
       return;
     }
     if (planId === "estimator-standard" || planId === "estimator-pro") {
-      trackEvent("checkout_start", { plan: planId });
       void startCheckout(planId);
     }
   };

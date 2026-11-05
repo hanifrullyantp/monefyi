@@ -46,6 +46,7 @@ export const REQUIRED_SOPS = [
   'tinjau_proyek_berisiko',
   'rekonsiliasi_kas',
   'buat_proyek_dari_template',
+  'minta_update_progres_lapangan',
 ] as const;
 
 const ROLES = new Set(['worker', 'manager', 'owner']);

@@ -22,6 +22,8 @@ export const POLICY_BOUNDS: Record<string, { domain: string; min: number; max: n
   anggaran_maks_rupiah: { domain: 'proyek', min: 0, max: 100_000_000_000 },
   batas_diskon_persen: { domain: 'keuangan', min: 0, max: 100 },
   margin_target_persen: { domain: 'keuangan', min: 0, max: 100 },
+  jam_tanya_progres: { domain: 'proyek', min: 0, max: 23 },
+  batas_balasan_menit: { domain: 'proyek', min: 15, max: 1440 },
 };
 
 const LOCK_KEYS = new Set(Object.keys(PLATFORM_LOCKS));
@@ -76,6 +78,7 @@ export type CompanyProfile = {
   notes: ProfileNote[];
   reportAudience: ReportAudience;
   reportMessageId: string;
+  projectLeads: { projectLabel: string; personLabel: string }[];
 };
 
 export type ProfileProposal = {
@@ -109,6 +112,7 @@ export function emptyProfile(): CompanyProfile {
     notes: [],
     reportAudience: 'owner',
     reportMessageId: 'laporan_harian',
+    projectLeads: [],
   };
 }
 

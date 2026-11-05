@@ -1,5 +1,7 @@
 // Tipe data untuk settings aplikasi
 
+import { META_PIXEL_ID } from "@/lib/analytics/metaPixel";
+
 export interface SiteSettings {
   siteName: string;
   siteDescription: string;
@@ -38,5 +40,6 @@ export const defaultSettings: SiteSettings = {
   metaTitle: "Kirim Penawaran Sebelum Kamu Pulang Survei - Estimator",
   metaDescription:
     "Saring calon klien lewat WA, hitung harga di HP, kirim PDF penawaran sebelum pulang survei. Untuk kontraktor, interior, kitchen set & furniture custom.",
+  fbPixelId: META_PIXEL_ID,
   maintenanceMode: false,
 };
