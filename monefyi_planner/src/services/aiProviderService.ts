@@ -20,7 +20,7 @@ export const AI_PROVIDERS: AIProviderMeta[] = [
     keyHint: 'sk-or-...',
     keyUrl: 'https://openrouter.ai/keys',
     models: [
-      { id: 'google/gemini-2.0-flash-lite-001', label: 'Gemini 2.0 Flash Lite (murah)', cheap: true },
+      { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash (murah)', cheap: true },
       { id: 'meta-llama/llama-3.3-70b-instruct', label: 'Llama 3.3 70B', cheap: true },
       { id: 'deepseek/deepseek-chat', label: 'DeepSeek Chat', cheap: true },
       { id: 'qwen/qwen-2.5-72b-instruct', label: 'Qwen 2.5 72B', cheap: true },
@@ -33,7 +33,7 @@ export const AI_PROVIDERS: AIProviderMeta[] = [
     keyHint: 'AIza...',
     keyUrl: 'https://aistudio.google.com/apikey',
     models: [
-      { id: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite (murah)', cheap: true },
+      { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite (murah)', cheap: true },
       { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', cheap: true },
       { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
     ],
@@ -82,6 +82,18 @@ export interface AIConfig {
 
 const STORAGE_KEY = 'monefyi_planner_ai_config_v1';
 
+/** Model yang sudah dihapus Google / OpenRouter — dipetakan saat baca konfigurasi. */
+const DEPRECATED_MODEL_ALIASES: Record<string, string> = {
+  'gemini-2.0-flash-lite': 'gemini-3.5-flash-lite',
+  'gemini-2.0-flash': 'gemini-2.5-flash',
+  'google/gemini-2.0-flash-lite-001': 'google/gemini-2.5-flash',
+  'google/gemini-2.0-flash-lite': 'google/gemini-2.5-flash',
+};
+
+function migrateModelId(modelId: string): string {
+  return DEPRECATED_MODEL_ALIASES[modelId] ?? modelId;
+}
+
 const DEFAULT_CONFIG: AIConfig = {
   activeProvider: 'openrouter',
   keys: {},
@@ -104,11 +116,18 @@ export function loadAIConfig(): AIConfig {
         : memoryFallbackRaw;
     if (!raw) return { ...DEFAULT_CONFIG, keys: {}, models: {} };
     const parsed = JSON.parse(raw) as Partial<AIConfig>;
+    const models = { ...(parsed.models || {}) };
+    for (const [provider, modelId] of Object.entries(models)) {
+      if (typeof modelId === 'string') {
+        const next = migrateModelId(modelId);
+        if (next !== modelId) models[provider as AIProviderId] = next;
+      }
+    }
     return {
       ...DEFAULT_CONFIG,
       ...parsed,
       keys: { ...(parsed.keys || {}) },
-      models: { ...(parsed.models || {}) },
+      models,
     };
   } catch {
     return { ...DEFAULT_CONFIG, keys: {}, models: {} };
@@ -128,7 +147,9 @@ export function saveAIConfig(config: AIConfig): void {
 }
 
 export function getActiveModel(config: AIConfig, provider = config.activeProvider): string {
-  return config.models[provider]?.trim() || getProviderMeta(provider).models[0].id;
+  const stored = config.models[provider]?.trim();
+  const resolved = migrateModelId(stored || getProviderMeta(provider).models[0].id);
+  return resolved;
 }
 
 export function hasActiveKey(config = loadAIConfig()): boolean {
@@ -240,6 +261,9 @@ async function callGemini(
   const contents = messages
     .filter(m => m.role !== 'system')
     .map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
+  // #region agent log
+  fetch('http://127.0.0.1:7456/ingest/64ec47ef-1a63-485e-909c-4ab70260afe3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'735de3'},body:JSON.stringify({sessionId:'735de3',hypothesisId:'A',location:'aiProviderService.ts:callGemini',message:'gemini request',data:{model},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
     {
@@ -257,7 +281,13 @@ async function callGemini(
       }),
     },
   );
-  if (!res.ok) throw new Error(`${res.status}: ${await readError(res)}`);
+  if (!res.ok) {
+    const errText = await readError(res);
+    // #region agent log
+    fetch('http://127.0.0.1:7456/ingest/64ec47ef-1a63-485e-909c-4ab70260afe3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'735de3'},body:JSON.stringify({sessionId:'735de3',hypothesisId:'B',location:'aiProviderService.ts:callGemini',message:'gemini error',data:{model,status:res.status,errPreview:errText.slice(0,120)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    throw new Error(`${res.status}: ${errText}`);
+  }
   const data = await res.json();
   const text = data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || '').join('');
   if (!text) throw new Error('Respons AI kosong');
@@ -281,6 +311,10 @@ export async function callUnifiedAI(
   const key = config.keys[provider]?.trim();
   if (!key) throw new MissingAIKeyError(provider);
   const model = getActiveModel(config, provider);
+  const storedRaw = config.models[provider]?.trim() || '';
+  // #region agent log
+  fetch('http://127.0.0.1:7456/ingest/64ec47ef-1a63-485e-909c-4ab70260afe3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'735de3'},body:JSON.stringify({sessionId:'735de3',hypothesisId:'C',location:'aiProviderService.ts:callUnifiedAI',message:'unified ai call',data:{provider,model,storedRaw,migrated:storedRaw!==model},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   switch (provider) {
     case 'openrouter': return callOpenRouter(key, model, messages, opts);
     case 'groq': return callGroq(key, model, messages, opts);

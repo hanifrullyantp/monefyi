@@ -107,6 +107,17 @@ describe('Multi-Provider BYOK (aiProviderService)', () => {
     expect(getActiveModel(loaded, 'groq')).toBe('llama-3.1-8b-instant');
   });
 
+  it('memetakan model Gemini yang sudah dihapus ke gemini-3.5-flash-lite', () => {
+    saveAIConfig({
+      ...loadAIConfig(),
+      activeProvider: 'gemini',
+      models: { gemini: 'gemini-2.0-flash-lite' },
+    });
+    const loaded = loadAIConfig();
+    expect(loaded.models.gemini).toBe('gemini-3.5-flash-lite');
+    expect(getActiveModel(loaded, 'gemini')).toBe('gemini-3.5-flash-lite');
+  });
+
   it('extractJson tahan terhadap output model murah yang menyertakan markdown fence atau teks pengantar', () => {
     const noisy = `Berikut hasil analisa saya:\n\`\`\`json\n{"reply":"Siap Bos","delegations":[{"division":"finance","note":"Cek kas"}],"actions":[]}\n\`\`\`\nSemoga membantu!`;
     const parsed = extractJson<{ reply: string; delegations: unknown[] }>(noisy);
