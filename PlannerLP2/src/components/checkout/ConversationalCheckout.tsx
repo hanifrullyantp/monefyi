@@ -27,9 +27,81 @@ import {
   Clock,
   Edit3,
   Save,
+  Landmark,
+  CreditCard,
+  Wallet,
 } from 'lucide-react';
 
 export type ProductTier = 'free' | 'standard' | 'pro';
+
+export type PaymentMethodId =
+  | 'qris'
+  | 'bca_va'
+  | 'mandiri_va'
+  | 'bri_va'
+  | 'bni_va'
+  | 'ewallet'
+  | 'credit_card';
+
+export interface PaymentMethodOption {
+  id: PaymentMethodId;
+  name: string;
+  subtitle: string;
+  badge?: string;
+  iconType: 'qris' | 'bank' | 'wallet' | 'card';
+}
+
+export const AVAILABLE_PAYMENT_METHODS: PaymentMethodOption[] = [
+  {
+    id: 'qris',
+    name: 'QRIS (Semua Bank & E-Wallet)',
+    subtitle: 'BCA, Mandiri, BRI, BNI, GoPay, OVO, DANA, ShopeePay',
+    badge: 'Rekomendasi ⚡',
+    iconType: 'qris',
+  },
+  {
+    id: 'bca_va',
+    name: 'BCA Virtual Account',
+    subtitle: 'Transfer via BCA Mobile, KlikBCA, atau ATM BCA',
+    badge: 'Cek Otomatis',
+    iconType: 'bank',
+  },
+  {
+    id: 'mandiri_va',
+    name: 'Mandiri Virtual Account',
+    subtitle: 'Transfer via Livin\' by Mandiri atau ATM Mandiri',
+    badge: 'Cek Otomatis',
+    iconType: 'bank',
+  },
+  {
+    id: 'bri_va',
+    name: 'BRI Virtual Account (BRIVA)',
+    subtitle: 'Transfer via BRImo atau ATM BRI',
+    badge: 'Cek Otomatis',
+    iconType: 'bank',
+  },
+  {
+    id: 'bni_va',
+    name: 'BNI Virtual Account',
+    subtitle: 'Transfer via BNI Mobile Banking atau ATM BNI',
+    badge: 'Cek Otomatis',
+    iconType: 'bank',
+  },
+  {
+    id: 'ewallet',
+    name: 'E-Wallet Instan',
+    subtitle: 'GoPay, OVO, DANA, ShopeePay direct link',
+    badge: 'Instan',
+    iconType: 'wallet',
+  },
+  {
+    id: 'credit_card',
+    name: 'Kartu Kredit / Debit Online',
+    subtitle: 'Visa, Mastercard, JCB (3D Secure Terlindungi)',
+    badge: 'Aman',
+    iconType: 'card',
+  },
+];
 
 interface CheckoutProps {
   initialProduct?: ProductTier;
@@ -56,14 +128,15 @@ export default function ConversationalCheckout({
   const [email, setEmail] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [takeOrderBump, setTakeOrderBump] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'qris' | 'va'>('qris');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>('qris');
 
-  // Payment Active State (Native QRIS Screen — Tanpa melempar ke Mayar invoice)
+  // Payment Active State (Native QRIS / VA Screen)
   const [paymentData, setPaymentData] = useState<{
     paymentId: string;
     qrImageUrl: string | null;
     redirectUrl: string | null;
     amount: number;
+    method?: PaymentMethodId;
   } | null>(null);
 
   // Timer & Polling Status
@@ -242,7 +315,7 @@ export default function ConversationalCheckout({
           mobile: whatsapp.trim() || '081234567890',
           bumpTaken: takeOrderBump,
           amount: finalPrice,
-          paymentMethod: 'qris',
+          paymentMethod,
         }),
       });
 
@@ -272,6 +345,7 @@ export default function ConversationalCheckout({
         qrImageUrl: resData.qrImageUrl,
         redirectUrl: resData.redirectUrl,
         amount: resData.amount || finalPrice,
+        method: paymentMethod,
       });
 
       if (onSuccess) {
@@ -613,27 +687,62 @@ export default function ConversationalCheckout({
                   )}
                 </div>
 
-                {/* Container Gambar QRIS Resmi */}
-                <div className="flex flex-col items-center justify-center space-y-3">
-                  <div className="p-4 bg-white rounded-2xl border-2 border-emerald-100 shadow-md ring-4 ring-emerald-50 flex items-center justify-center">
-                    {paymentData.qrImageUrl ? (
+                {/* Container Gambar QRIS atau Detail Virtual Account */}
+                {paymentData.qrImageUrl ? (
+                  <div className="flex flex-col items-center justify-center space-y-3">
+                    <div className="p-4 bg-white rounded-2xl border-2 border-emerald-100 shadow-md ring-4 ring-emerald-50 flex items-center justify-center">
                       <img
                         src={paymentData.qrImageUrl}
                         alt="QRIS Pembayaran Estimator"
                         className="w-56 h-56 sm:w-64 sm:h-64 object-contain"
                       />
-                    ) : (
-                      <div className="w-56 h-56 flex flex-col items-center justify-center gap-2 bg-slate-50 rounded-xl text-slate-400">
-                        <QrCode className="w-12 h-12" />
-                        <span className="text-xs">Menyiapkan QRIS...</span>
-                      </div>
-                    )}
-                  </div>
+                    </div>
 
-                  <span className="text-[11px] font-semibold text-slate-400 tracking-wider uppercase">
-                    Scan dengan BCA, Mandiri, BRI, BNI, GoPay, OVO, DANA, ShopeePay
-                  </span>
-                </div>
+                    <span className="text-[11px] font-semibold text-slate-400 tracking-wider uppercase">
+                      Scan dengan BCA, Mandiri, BRI, BNI, GoPay, OVO, DANA, ShopeePay
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center space-y-4 py-2">
+                    <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-[#065f46] shadow-xs">
+                      <Landmark className="w-8 h-8" />
+                    </div>
+
+                    <div className="text-center space-y-1">
+                      <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 rounded-full uppercase">
+                        Virtual Account / Transfer
+                      </span>
+                      <h3 className="font-extrabold text-slate-900 text-lg">
+                        {AVAILABLE_PAYMENT_METHODS.find((m) => m.id === paymentData.method)?.name || 'Transfer Bank'}
+                      </h3>
+                      <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                        Klik tombol di bawah untuk melihat rincian nomor pembayaran Anda dan selesaikan transfer.
+                      </p>
+                    </div>
+
+                    {paymentData.redirectUrl && (
+                      <a
+                        href={paymentData.redirectUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-4 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-black rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-900/15 text-sm text-center cursor-pointer"
+                      >
+                        <span>Buka Detail Pembayaran & No. VA</span>
+                        <ExternalLink className="w-4 h-4 ml-0.5" />
+                      </a>
+                    )}
+
+                    <div className="w-full bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs text-slate-600 space-y-1.5 text-left">
+                      <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Cara Pembayaran:</span>
+                      </div>
+                      <p>1. Buka link pembayaran di atas untuk mendapatkan nomor Virtual Account resmi Anda.</p>
+                      <p>2. Salin nomor VA dan lakukan transfer dari m-banking atau ATM bank Anda.</p>
+                      <p>3. Setelah transfer berhasil, sistem otomatis mendeteksi dan mengaktifkan akun Anda.</p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Tombol Aksi */}
                 <div className="space-y-2.5 pt-1">
@@ -653,8 +762,16 @@ export default function ConversationalCheckout({
                     )}
                   </button>
 
+                  <button
+                    type="button"
+                    onClick={() => setPaymentData(null)}
+                    className="w-full py-2.5 text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer text-center"
+                  >
+                    ← Ganti Metode Pembayaran Lain
+                  </button>
+
                   {/* Fallback ke invoice Mayar jika pembeli ingin buka di tab baru */}
-                  {paymentData.redirectUrl && (
+                  {paymentData.redirectUrl && paymentData.qrImageUrl && (
                     <a
                       href={paymentData.redirectUrl}
                       target="_blank"
@@ -1089,30 +1206,75 @@ export default function ConversationalCheckout({
                   </div>
                 ) : (
                   <div className="space-y-2.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                      Metode Pembayaran
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                        Pilihan Metode Pembayaran
+                      </label>
+                      <span className="text-[11px] text-slate-400 font-semibold">
+                        7 Metode Tersedia
+                      </span>
+                    </div>
 
-                    <div
-                      onClick={() => setPaymentMethod('qris')}
-                      className="cursor-pointer p-4 rounded-2xl border-2 border-[#065f46] bg-emerald-50/50 shadow-sm flex items-center justify-between transition-all"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                          <QrCode className="w-5 h-5 text-emerald-700" />
-                        </div>
-                        <div>
-                          <p className="font-bold text-slate-900 text-sm">
-                            <EditableText section="checkout" field="qrisTitle" value={co.qrisTitle} />
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            <EditableText section="checkout" field="qrisSubtitle" value={co.qrisSubtitle} />
-                          </p>
-                        </div>
-                      </div>
-                      <div className="w-5 h-5 rounded-full border-2 border-[#065f46] bg-[#065f46] flex items-center justify-center">
-                        <div className="w-2 h-2 rounded-full bg-white" />
-                      </div>
+                    <div className="space-y-2 max-h-[340px] overflow-y-auto pr-0.5 no-scrollbar">
+                      {AVAILABLE_PAYMENT_METHODS.map((pm) => {
+                        const isSelected = paymentMethod === pm.id;
+                        return (
+                          <div
+                            key={pm.id}
+                            onClick={() => setPaymentMethod(pm.id)}
+                            className={`cursor-pointer p-3.5 rounded-2xl border-2 transition-all flex items-center justify-between gap-3 ${
+                              isSelected
+                                ? 'border-[#065f46] bg-emerald-50/70 shadow-sm ring-1 ring-emerald-500/25'
+                                : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div
+                                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-xs transition-colors ${
+                                  isSelected
+                                    ? 'bg-[#065f46] text-white'
+                                    : 'bg-slate-100 text-slate-600'
+                                }`}
+                              >
+                                {pm.iconType === 'qris' && <QrCode className="w-5 h-5" />}
+                                {pm.iconType === 'bank' && <Landmark className="w-5 h-5" />}
+                                {pm.iconType === 'wallet' && <Wallet className="w-5 h-5" />}
+                                {pm.iconType === 'card' && <CreditCard className="w-5 h-5" />}
+                              </div>
+
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <p className="font-extrabold text-slate-900 text-sm truncate">
+                                    {pm.name}
+                                  </p>
+                                  {pm.badge && (
+                                    <span
+                                      className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                                        pm.id === 'qris'
+                                          ? 'bg-emerald-100 text-[#065f46]'
+                                          : 'bg-slate-100 text-slate-600'
+                                      }`}
+                                    >
+                                      {pm.badge}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-slate-500 truncate">{pm.subtitle}</p>
+                              </div>
+                            </div>
+
+                            <div
+                              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                                isSelected
+                                  ? 'border-[#065f46] bg-[#065f46]'
+                                  : 'border-slate-300 bg-white'
+                              }`}
+                            >
+                              {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -1145,14 +1307,14 @@ export default function ConversationalCheckout({
                     {isSubmitting ? (
                       <div className="flex items-center gap-2">
                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>{finalPrice === 0 ? 'Mendaftarkan Akun Gratis...' : 'Menyiapkan Kode QRIS...'}</span>
+                        <span>{finalPrice === 0 ? 'Mendaftarkan Akun Gratis...' : 'Menyiapkan Pembayaran...'}</span>
                       </div>
                     ) : finalPrice === 0 ? (
                       <span>Aktifkan Akun Gratis Saya Sekarang 🚀</span>
                     ) : (
-                      <>
-                        <EditableText section="checkout" field="submitButtonText" value={co.submitButtonText} /> ({formatIDR(finalPrice)})
-                      </>
+                      <span>
+                        Bayar via {AVAILABLE_PAYMENT_METHODS.find((m) => m.id === paymentMethod)?.name.split(' ')[0] || 'Sekarang'} ({formatIDR(finalPrice)})
+                      </span>
                     )}
                   </div>
 

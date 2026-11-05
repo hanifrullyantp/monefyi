@@ -104,8 +104,9 @@ export async function POST(req: NextRequest) {
         customer_mobile: formattedMobile,
       };
 
-      // Tentukan payment method — default QRIS agar langsung dapat payload QR
-      const chosenMethod = body.paymentMethod || "qris";
+      // Jika QRIS, tentukan paymentMethod "qris" agar Mayar langsung mengembalikan qr_string
+      // Jika Virtual Account atau metode lain, jangan kirim paymentMethod agar Mayar menyiapkan invoice multi-metode
+      const chosenMethod = body.paymentMethod === "qris" ? "qris" : undefined;
 
       const mayarPayload: Record<string, unknown> = {
         name: customerName.trim(),
@@ -115,7 +116,7 @@ export async function POST(req: NextRequest) {
         description: `monefyi:${JSON.stringify(descriptionMeta)}`,
         redirectUrl: returnUrl,
         expiredAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        paymentMethod: chosenMethod,
+        ...(chosenMethod ? { paymentMethod: chosenMethod } : {}),
       };
 
       const response = await fetch(`${mayarApiUrl}/hl/v2/payments/create`, {
