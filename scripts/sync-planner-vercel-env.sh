@@ -13,6 +13,14 @@ if [[ -f "$ROOT/.env.planner-vercel" ]]; then
 fi
 
 # Supabase from local SPA env if not already exported
+LP2_ENV="$ROOT/PlannerLP2/.env.local"
+if [[ -f "$LP2_ENV" ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "$LP2_ENV"
+  set +a
+fi
+
 SPA_ENV="$ROOT/monefyi_planner/.env.local"
 if [[ -f "$SPA_ENV" ]]; then
   while IFS= read -r line || [[ -n "$line" ]]; do
@@ -63,6 +71,9 @@ sync_landing_v1() {
     add_env NEXT_PUBLIC_LYNK_ESTIMATOR_STANDARD "${NEXT_PUBLIC_LYNK_ESTIMATOR_STANDARD:-}"
     add_env NEXT_PUBLIC_LYNK_ESTIMATOR_PRO "${NEXT_PUBLIC_LYNK_ESTIMATOR_PRO:-}"
     add_env NEXT_PUBLIC_LYNK_PLANNER_PRO "${NEXT_PUBLIC_LYNK_PLANNER_PRO:-}"
+    add_env NEXT_PUBLIC_PLANNER_PAYMENT_PROVIDER "${NEXT_PUBLIC_PLANNER_PAYMENT_PROVIDER:-lynk}"
+    add_env MAYAR_API_URL "${MAYAR_API_URL:-https://api.mayar.id}"
+    add_env MAYAR_API_KEY "${MAYAR_API_KEY:-}"
   )
 }
 
@@ -80,6 +91,9 @@ sync_landing_root() {
     add_env NEXT_PUBLIC_LYNK_ESTIMATOR_STANDARD "${NEXT_PUBLIC_LYNK_ESTIMATOR_STANDARD:-}"
     add_env NEXT_PUBLIC_LYNK_ESTIMATOR_PRO "${NEXT_PUBLIC_LYNK_ESTIMATOR_PRO:-}"
     add_env NEXT_PUBLIC_LYNK_PLANNER_PRO "${NEXT_PUBLIC_LYNK_PLANNER_PRO:-}"
+    add_env NEXT_PUBLIC_PLANNER_PAYMENT_PROVIDER "${NEXT_PUBLIC_PLANNER_PAYMENT_PROVIDER:-lynk}"
+    add_env MAYAR_API_URL "${MAYAR_API_URL:-https://api.mayar.id}"
+    add_env MAYAR_API_KEY "${MAYAR_API_KEY:-}"
   )
 }
 
@@ -92,6 +106,7 @@ sync_spa() {
     add_env VITE_LYNK_ESTIMATOR_STANDARD "${NEXT_PUBLIC_LYNK_ESTIMATOR_STANDARD:-http://lynk.id/asfin-ai/16w36xe7z3v1/checkout}"
     add_env VITE_LYNK_ESTIMATOR_PRO "${NEXT_PUBLIC_LYNK_ESTIMATOR_PRO:-http://lynk.id/asfin-ai/qynky6065k37/checkout}"
     add_env VITE_LYNK_PLANNER_PRO "${NEXT_PUBLIC_LYNK_PLANNER_PRO:-}"
+    add_env VITE_PLANNER_PAYMENT_PROVIDER "${NEXT_PUBLIC_PLANNER_PAYMENT_PROVIDER:-lynk}"
   )
 }
 
@@ -106,6 +121,9 @@ sync_estimator_lp() {
     add_env NEXT_PUBLIC_SUPABASE_ANON_KEY "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}"
     add_env NEXT_PUBLIC_LYNK_ESTIMATOR_STANDARD "${NEXT_PUBLIC_LYNK_ESTIMATOR_STANDARD:-http://lynk.id/asfin-ai/16w36xe7z3v1/checkout}"
     add_env NEXT_PUBLIC_LYNK_ESTIMATOR_PRO "${NEXT_PUBLIC_LYNK_ESTIMATOR_PRO:-http://lynk.id/asfin-ai/qynky6065k37/checkout}"
+    add_env NEXT_PUBLIC_PLANNER_PAYMENT_PROVIDER "${NEXT_PUBLIC_PLANNER_PAYMENT_PROVIDER:-lynk}"
+    add_env MAYAR_API_URL "${MAYAR_API_URL:-https://api.mayar.id}"
+    add_env MAYAR_API_KEY "${MAYAR_API_KEY:-}"
   )
 }
 

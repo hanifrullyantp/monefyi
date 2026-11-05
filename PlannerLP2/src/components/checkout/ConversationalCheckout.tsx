@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
+import { useAuthStore } from '@/lib/store/authStore';
 import {
   ArrowLeft,
   ArrowRight,
@@ -49,6 +50,16 @@ export default function ConversationalCheckout({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const authUser = useAuthStore((s) => s.user);
+
+  // Auto-fill jika user / admin sudah terautentikasi (Hanif Rullyant)
+  useEffect(() => {
+    if (authUser) {
+      if (authUser.name && !fullName) setFullName(authUser.name);
+      if (authUser.email && !email) setEmail(authUser.email);
+    }
+  }, [authUser]);
 
   // Auto-focus input saat step berganti
   useEffect(() => {

@@ -32,6 +32,10 @@ Gunakan lokasi di bawah. File **contoh** (`.env.example`) hanya berisi placehold
 | `RESEND_FROM_EMAIL` | Contoh: `Monefyi Estimator <noreply@support.monefyi.com>` |
 | `APP_URL` | Finance: `https://app.monefyi.com` |
 | `ESTIMATOR_SITE_URL` / `ESTIMATOR_APP_URL` | Estimator |
+| `MAYAR_API_KEY` | API key Mayar (hanya server — Edge `planner-checkout`, `planner-mayar-webhook`) |
+| `MAYAR_API_URL` | `https://api.mayar.id` prod atau `https://api.mayar.club` sandbox |
+| `PLANNER_PAYMENT_PROVIDER` | `lynk` (default) atau `mayar` |
+| `MAYAR_CHECKOUT_DEFAULT_MOBILE` | Nomor placeholder checkout (opsional) |
 | `SEND_EMAIL_HOOK_SECRET` | Dari Auth → Hooks (function `auth-send-email`) |
 
 Set via CLI (dari folder `my-supabase-project`, isi nilai asli di terminal Anda):
@@ -40,7 +44,13 @@ Set via CLI (dari folder `my-supabase-project`, isi nilai asli di terminal Anda)
 npx supabase secrets set LYNK_MERCHANT_KEY="..." REQUIRE_PURCHASE_EMAIL=true
 ```
 
-Detail: [`planner/LYNK_WEBHOOK.md`](planner/LYNK_WEBHOOK.md).
+Detail: [`planner/LYNK_WEBHOOK.md`](planner/LYNK_WEBHOOK.md), [`planner/MAYAR_PAYMENT.md`](planner/MAYAR_PAYMENT.md).
+
+Sync Mayar dari `PlannerLP2/.env.local`:
+
+```bash
+chmod +x ./scripts/sync-mayar-env.sh && ./scripts/sync-mayar-env.sh
+```
 
 ---
 
