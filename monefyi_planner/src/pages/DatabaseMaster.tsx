@@ -229,50 +229,59 @@ export default function DatabaseMaster() {
   };
 
   if (!orgId) {
-    return <div className="p-8 text-center text-slate-500">Organisasi belum dipilih.</div>;
+    return (
+      <div className="min-h-screen bg-[#F4F7F5] flex items-center justify-center p-8 text-center text-[#5B6B7A]">
+        Organisasi belum dipilih.
+      </div>
+    );
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Database className="w-7 h-7 text-emerald-600" />
-          <div>
-            <h1 className="text-2xl font-black text-slate-900">Database Master</h1>
-            <p className="text-sm text-slate-500">Master data material, tenaga, alat, vendor, klien & template</p>
+    <div className="min-h-screen bg-[#F4F7F5] pb-24 md:pb-12 text-[#0F172A]">
+      <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
+              <Database className="w-6 h-6 text-[#059669]" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black text-[#0F172A]">Database Master</h1>
+              <p className="text-xs sm:text-sm text-[#5B6B7A]">Master data material, tenaga, alat, vendor, klien & template</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={syncWithEstimatorPricelist}
+              disabled={syncingPricelist}
+              className="min-h-11 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[#059669] text-xs font-bold hover:bg-emerald-100 disabled:opacity-50 transition-colors"
+            >
+              {syncingPricelist ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              {syncingPricelist ? 'Menyinkronkan...' : 'Sinkron Pricelist Estimator'}
+            </button>
+            <div className="relative flex-1 sm:w-56">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Cari data master..."
+                className="w-full h-11 pl-10 pr-3 rounded-xl border border-[#E5EAE8] bg-white text-sm text-[#0F172A] placeholder:text-[#8A99A6] focus:border-[#059669] focus:outline-none"
+              />
+            </div>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          <button
-            type="button"
-            onClick={syncWithEstimatorPricelist}
-            disabled={syncingPricelist}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold hover:bg-emerald-100 disabled:opacity-50"
-          >
-            {syncingPricelist ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-            {syncingPricelist ? 'Menyinkronkan...' : 'Sinkron Pricelist Estimator'}
-          </button>
-          <div className="relative flex-1 sm:w-52">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Cari..."
-              className="w-full pl-9 pr-3 py-2 rounded-xl border text-sm"
-            />
-          </div>
-        </div>
-      </div>
 
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="flex gap-1 overflow-x-auto px-2 pt-2 border-b border-slate-50">
+        {/* Segmented Pill Tabs */}
+        <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
           {TABS.map(t => (
             <button
               key={t.id}
               type="button"
               onClick={() => setTab(t.id)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold whitespace-nowrap border-b-2 ${
-                tab === t.id ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500'
+              className={`min-h-11 flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap border transition-all ${
+                tab === t.id
+                  ? 'bg-[#059669] text-white border-[#059669] shadow-sm'
+                  : 'bg-white text-[#5B6B7A] border-[#E5EAE8] hover:bg-slate-50'
               }`}
             >
               <t.icon className="w-4 h-4" /> {t.label}
@@ -280,134 +289,136 @@ export default function DatabaseMaster() {
           ))}
         </div>
 
-        {loading ? (
-          <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-emerald-600" /></div>
-        ) : (
-          <motion.div key={tab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-5 space-y-4">
-            {tab === 'bahan' && (
-              <>
-                <AddMaterialRow matForm={matForm} setMatForm={setMatForm} materials={materials} onAdd={addMaterial} saving={saving} />
-                <DataTable
-                  headers={['Nama', 'Kategori', 'Satuan', 'Harga', '']}
-                  rows={materials.filter(m => filter(m.name)).map(m => [
-                    m.name,
-                    m.category,
-                    m.unit,
-                    formatRupiah(m.price),
-                    <button key="d" type="button" onClick={async () => { await deleteMaterial(orgId, m.id); await reload(); }} className="text-rose-500 p-1"><Trash2 className="w-4 h-4" /></button>,
-                  ])}
+        <div className="bg-white rounded-[20px] border border-[#E5EAE8] shadow-sm overflow-hidden">
+          {loading ? (
+            <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-[#059669]" /></div>
+          ) : (
+            <motion.div key={tab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 sm:p-6 space-y-5">
+              {tab === 'bahan' && (
+                <>
+                  <AddMaterialRow matForm={matForm} setMatForm={setMatForm} materials={materials} onAdd={addMaterial} saving={saving} />
+                  <DataTable
+                    headers={['Nama', 'Kategori', 'Satuan', 'Harga', '']}
+                    rows={materials.filter(m => filter(m.name)).map(m => [
+                      m.name,
+                      m.category,
+                      m.unit,
+                      formatRupiah(m.price),
+                      <button key="d" type="button" aria-label="Hapus bahan" onClick={async () => { await deleteMaterial(orgId, m.id); await reload(); }} className="min-w-10 min-h-10 inline-flex items-center justify-center text-rose-500 hover:bg-rose-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>,
+                    ])}
+                  />
+                </>
+              )}
+
+              {tab === 'tenaga' && (
+                <>
+                  <div className="grid sm:grid-cols-3 gap-2.5">
+                    <input value={workerForm.name} onChange={e => setWorkerForm(f => ({ ...f, name: e.target.value }))} placeholder="Nama pekerja" className="h-11 px-3.5 rounded-xl border border-[#E5EAE8] text-sm text-[#0F172A] focus:border-[#059669] focus:outline-none" />
+                    <input value={workerForm.level} onChange={e => setWorkerForm(f => ({ ...f, level: e.target.value }))} placeholder="Level (mis. Tukang, Mandor)" className="h-11 px-3.5 rounded-xl border border-[#E5EAE8] text-sm text-[#0F172A] focus:border-[#059669] focus:outline-none" />
+                    <input type="number" value={workerForm.rate || ''} onChange={e => setWorkerForm(f => ({ ...f, rate: Number(e.target.value) }))} placeholder="Rate/hari (Rp)" className="h-11 px-3.5 rounded-xl border border-[#E5EAE8] text-sm text-[#0F172A] focus:border-[#059669] focus:outline-none" />
+                  </div>
+                  <button type="button" onClick={addWorker} disabled={saving} className="min-h-11 flex items-center justify-center gap-2 px-5 py-2.5 bg-[#059669] hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-sm transition-colors">
+                    <Plus className="w-4 h-4" /> Tambah Tenaga
+                  </button>
+                  <div className="grid sm:grid-cols-2 gap-3 pt-2">
+                    {workers.filter(w => filter(w.name)).map(w => (
+                      <div key={w.id} className="flex items-center gap-3 bg-white border border-[#E5EAE8] rounded-2xl p-4 shadow-sm">
+                        <div className="w-11 h-11 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0"><Users className="w-5 h-5 text-amber-700" /></div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-sm text-[#0F172A] truncate">{w.name}</div>
+                          <div className="text-xs text-[#5B6B7A]">{w.level} · {formatRupiah(w.rate)}/hari</div>
+                        </div>
+                        <button type="button" aria-label="Hapus pekerja" onClick={async () => { await deleteWorker(orgId, w.id); await reload(); }} className="min-w-10 min-h-10 inline-flex items-center justify-center text-rose-500 hover:bg-rose-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {tab === 'alat' && (
+                <MetaList
+                  items={(meta.tools || []).filter(t => filter(t.name))}
+                  icon={Wrench}
+                  placeholder="Nama alat"
+                  onAdd={name => addMetaItem('tools', name)}
+                  onRemove={id => removeMetaItem('tools', id)}
+                  renderMeta={t => `${t.type === 'owned' ? 'Milik' : 'Sewa'}${t.condition ? ` · ${t.condition}` : ''}`}
                 />
-              </>
-            )}
+              )}
 
-            {tab === 'tenaga' && (
-              <>
-                <div className="grid sm:grid-cols-3 gap-2">
-                  <input value={workerForm.name} onChange={e => setWorkerForm(f => ({ ...f, name: e.target.value }))} placeholder="Nama pekerja" className="px-3 py-2 rounded-xl border text-sm" />
-                  <input value={workerForm.level} onChange={e => setWorkerForm(f => ({ ...f, level: e.target.value }))} placeholder="Level" className="px-3 py-2 rounded-xl border text-sm" />
-                  <input type="number" value={workerForm.rate || ''} onChange={e => setWorkerForm(f => ({ ...f, rate: Number(e.target.value) }))} placeholder="Rate/hari" className="px-3 py-2 rounded-xl border text-sm" />
-                </div>
-                <button type="button" onClick={addWorker} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold">
-                  <Plus className="w-4 h-4" /> Tambah Tenaga
-                </button>
-                <div className="grid sm:grid-cols-2 gap-3">
-                  {workers.filter(w => filter(w.name)).map(w => (
-                    <div key={w.id} className="flex items-center gap-3 border rounded-xl p-4">
-                      <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center"><Users className="w-5 h-5 text-amber-700" /></div>
-                      <div className="flex-1">
-                        <div className="font-semibold text-sm">{w.name}</div>
-                        <div className="text-xs text-slate-500">{w.level} · {formatRupiah(w.rate)}/hari</div>
-                      </div>
-                      <button type="button" onClick={async () => { await deleteWorker(orgId, w.id); await reload(); }} className="text-rose-500 p-2"><Trash2 className="w-4 h-4" /></button>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
+              {tab === 'vendor' && (
+                <MetaList
+                  items={(meta.vendors || []).filter(v => filter(v.name))}
+                  icon={Store}
+                  placeholder="Nama vendor"
+                  onAdd={name => addMetaItem('vendors', name)}
+                  onRemove={id => removeMetaItem('vendors', id)}
+                  renderMeta={v => v.category || 'Umum'}
+                />
+              )}
 
-            {tab === 'alat' && (
-              <MetaList
-                items={(meta.tools || []).filter(t => filter(t.name))}
-                icon={Wrench}
-                placeholder="Nama alat"
-                onAdd={name => addMetaItem('tools', name)}
-                onRemove={id => removeMetaItem('tools', id)}
-                renderMeta={t => `${t.type === 'owned' ? 'Milik' : 'Sewa'}${t.condition ? ` · ${t.condition}` : ''}`}
-              />
-            )}
+              {tab === 'klien' && (
+                <MetaList
+                  items={(meta.clients || []).filter(c => filter(c.name))}
+                  icon={UserCircle}
+                  placeholder="Nama klien"
+                  onAdd={name => addMetaItem('clients', name)}
+                  onRemove={id => removeMetaItem('clients', id)}
+                  renderMeta={() => 'Klien'}
+                />
+              )}
 
-            {tab === 'vendor' && (
-              <MetaList
-                items={(meta.vendors || []).filter(v => filter(v.name))}
-                icon={Store}
-                placeholder="Nama vendor"
-                onAdd={name => addMetaItem('vendors', name)}
-                onRemove={id => removeMetaItem('vendors', id)}
-                renderMeta={v => v.category || 'Umum'}
-              />
-            )}
-
-            {tab === 'klien' && (
-              <MetaList
-                items={(meta.clients || []).filter(c => filter(c.name))}
-                icon={UserCircle}
-                placeholder="Nama klien"
-                onAdd={name => addMetaItem('clients', name)}
-                onRemove={id => removeMetaItem('clients', id)}
-                renderMeta={() => 'Klien'}
-              />
-            )}
-
-            {tab === 'template' && (
-              <>
-                {['Interior', 'Konstruksi', 'Renovasi'].map(cat => {
-                  const catTemplates = templates.filter(t => t.category === cat && filter(t.name));
-                  if (!catTemplates.length && q) return null;
-                  return (
-                    <div key={cat} className="border rounded-xl overflow-hidden mb-4">
-                      <div className="px-4 py-3 bg-slate-50 font-bold text-sm flex items-center justify-between">
-                        <span>{cat}</span>
-                        <span className="text-xs font-semibold text-slate-500">{catTemplates.length} template</span>
-                      </div>
-                      <div className="divide-y">
-                        {catTemplates.map(t => (
-                          <div key={t.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                            <div>
-                              <div className="font-bold text-sm">{t.name}</div>
-                              <div className="text-xs text-slate-500">Per {t.baseUnit} · {t.materials.length} bahan · {t.workers.length} tenaga</div>
-                              <div className="flex gap-2 mt-1">
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100">Biaya {formatRupiah(t.estCostPerUnit || 0)}/unit</span>
-                                {t.margin != null && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">Margin {t.margin}%</span>}
+              {tab === 'template' && (
+                <>
+                  {['Interior', 'Konstruksi', 'Renovasi'].map(cat => {
+                    const catTemplates = templates.filter(t => t.category === cat && filter(t.name));
+                    if (!catTemplates.length && q) return null;
+                    return (
+                      <div key={cat} className="border border-[#E5EAE8] rounded-2xl overflow-hidden mb-4 shadow-sm">
+                        <div className="px-4 py-3 bg-[#F4F7F5] font-bold text-sm text-[#0F172A] flex items-center justify-between border-b border-[#E5EAE8]">
+                          <span>{cat}</span>
+                          <span className="text-xs font-semibold text-[#5B6B7A]">{catTemplates.length} template</span>
+                        </div>
+                        <div className="divide-y divide-[#E5EAE8] bg-white">
+                          {catTemplates.map(t => (
+                            <div key={t.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                              <div>
+                                <div className="font-bold text-sm text-[#0F172A]">{t.name}</div>
+                                <div className="text-xs text-[#5B6B7A]">Per {t.baseUnit} · {t.materials.length} bahan · {t.workers.length} tenaga</div>
+                                <div className="flex gap-2 mt-2">
+                                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 text-[#5B6B7A] font-medium">Biaya {formatRupiah(t.estCostPerUnit || 0)}/unit</span>
+                                  {t.margin != null && <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#059669] font-medium">Margin {t.margin}%</span>}
+                                </div>
                               </div>
+                              <button
+                                type="button"
+                                onClick={() => setRapTemplate(t)}
+                                className="min-h-11 inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-[#059669] hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shrink-0 transition-colors"
+                              >
+                                <Sparkles className="w-3.5 h-3.5" /> Gunakan
+                              </button>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => setRapTemplate(t)}
-                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold shrink-0"
-                            >
-                              <Sparkles className="w-3.5 h-3.5" /> Gunakan
-                            </button>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-                <button type="button" onClick={async () => { setSaving(true); try { await upsertJobTemplates(orgId, templates); showToast('Template disimpan', 'success'); } finally { setSaving(false); } }} className="flex items-center gap-2 px-4 py-2 border rounded-xl text-sm font-bold">
-                  <Save className="w-4 h-4" /> Simpan Template ke DB
-                </button>
-              </>
-            )}
-          </motion.div>
+                    );
+                  })}
+                  <button type="button" onClick={async () => { setSaving(true); try { await upsertJobTemplates(orgId, templates); showToast('Template disimpan', 'success'); } finally { setSaving(false); } }} className="min-h-11 flex items-center gap-2 px-4 py-2.5 border border-[#E5EAE8] bg-white hover:bg-slate-50 rounded-xl text-sm font-bold text-[#0F172A] transition-colors">
+                    <Save className="w-4 h-4" /> Simpan Template ke DB
+                  </button>
+                </>
+              )}
+            </motion.div>
+          )}
+        </div>
+
+        {rapTemplate && (
+          <GenerateRapFromTemplateModal
+            template={rapTemplate}
+            onClose={() => setRapTemplate(null)}
+          />
         )}
       </div>
-
-      {rapTemplate && (
-        <GenerateRapFromTemplateModal
-          template={rapTemplate}
-          onClose={() => setRapTemplate(null)}
-        />
-      )}
     </div>
   );
 }
@@ -423,7 +434,7 @@ function AddMaterialRow({
 }) {
   return (
     <>
-      <div className="grid sm:grid-cols-4 gap-2">
+      <div className="grid sm:grid-cols-4 gap-2.5">
         <MaterialAutosuggest
           value={matForm.name}
           onChange={name => setMatForm(f => ({ ...f, name }))}
@@ -431,10 +442,10 @@ function AddMaterialRow({
           onSelectMaterial={m => setMatForm(f => ({ ...f, name: m.name, unit: m.unit, price: m.price, category: m.category }))}
           className="sm:col-span-2"
         />
-        <input value={matForm.unit} onChange={e => setMatForm(f => ({ ...f, unit: e.target.value }))} placeholder="Satuan" className="px-3 py-2 rounded-xl border text-sm" />
-        <input type="number" value={matForm.price || ''} onChange={e => setMatForm(f => ({ ...f, price: Number(e.target.value) }))} placeholder="Harga" className="px-3 py-2 rounded-xl border text-sm" />
+        <input value={matForm.unit} onChange={e => setMatForm(f => ({ ...f, unit: e.target.value }))} placeholder="Satuan" className="h-11 px-3.5 rounded-xl border border-[#E5EAE8] bg-white text-sm text-[#0F172A] focus:border-[#059669] focus:outline-none" />
+        <input type="number" value={matForm.price || ''} onChange={e => setMatForm(f => ({ ...f, price: Number(e.target.value) }))} placeholder="Harga (Rp)" className="h-11 px-3.5 rounded-xl border border-[#E5EAE8] bg-white text-sm text-[#0F172A] focus:border-[#059669] focus:outline-none" />
       </div>
-      <button type="button" onClick={onAdd} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-60">
+      <button type="button" onClick={onAdd} disabled={saving} className="min-h-11 flex items-center justify-center gap-2 px-5 py-2.5 bg-[#059669] hover:bg-emerald-700 text-white rounded-xl text-sm font-bold disabled:opacity-60 shadow-sm transition-colors">
         <Plus className="w-4 h-4" /> Tambah Bahan
       </button>
     </>
@@ -443,14 +454,14 @@ function AddMaterialRow({
 
 function DataTable({ headers, rows }: { headers: string[]; rows: ReactNode[][] }) {
   return (
-    <div className="overflow-x-auto rounded-xl border">
+    <div className="overflow-x-auto rounded-xl border border-[#E5EAE8]">
       <table className="w-full text-sm">
-        <thead className="bg-slate-50 text-left text-xs font-bold text-slate-500 uppercase">
+        <thead className="bg-[#F4F7F5] text-left text-xs font-bold text-[#5B6B7A] uppercase">
           <tr>{headers.map(h => <th key={h} className="px-4 py-3">{h}</th>)}</tr>
         </thead>
-        <tbody className="divide-y">
+        <tbody className="divide-y divide-[#E5EAE8] bg-white">
           {rows.map((row, i) => (
-            <tr key={i} className="hover:bg-slate-50/50">{row.map((cell, j) => <td key={j} className="px-4 py-3">{cell}</td>)}</tr>
+            <tr key={i} className="hover:bg-slate-50/50">{row.map((cell, j) => <td key={j} className="px-4 py-3 text-[#0F172A]">{cell}</td>)}</tr>
           ))}
         </tbody>
       </table>
@@ -472,18 +483,18 @@ function MetaList({
   return (
     <>
       <div className="flex gap-2">
-        <input value={name} onChange={e => setName(e.target.value)} placeholder={placeholder} className="flex-1 px-3 py-2 rounded-xl border text-sm" />
-        <button type="button" onClick={() => { onAdd(name); setName(''); }} className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold">Tambah</button>
+        <input value={name} onChange={e => setName(e.target.value)} placeholder={placeholder} className="flex-1 h-11 px-3.5 rounded-xl border border-[#E5EAE8] bg-white text-sm text-[#0F172A] focus:border-[#059669] focus:outline-none" />
+        <button type="button" onClick={() => { onAdd(name); setName(''); }} className="min-h-11 px-5 py-2.5 bg-[#059669] hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-sm transition-colors">Tambah</button>
       </div>
-      <div className="grid sm:grid-cols-2 gap-3">
+      <div className="grid sm:grid-cols-2 gap-3 pt-2">
         {items.map(item => (
-          <div key={item.id} className="flex items-center gap-3 border rounded-xl p-4">
-            <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center"><Icon className="w-5 h-5 text-slate-600" /></div>
+          <div key={item.id} className="flex items-center gap-3 bg-white border border-[#E5EAE8] rounded-2xl p-4 shadow-sm">
+            <div className="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0"><Icon className="w-5 h-5 text-slate-600" /></div>
             <div className="flex-1 min-w-0">
-              <div className="font-semibold text-sm truncate">{item.name}</div>
-              <div className="text-xs text-slate-500">{renderMeta(item)}</div>
+              <div className="font-bold text-sm text-[#0F172A] truncate">{item.name}</div>
+              <div className="text-xs text-[#5B6B7A]">{renderMeta(item)}</div>
             </div>
-            <button type="button" onClick={() => onRemove(item.id)} className="text-rose-500 p-2"><Trash2 className="w-4 h-4" /></button>
+            <button type="button" aria-label="Hapus item" onClick={() => onRemove(item.id)} className="min-w-10 min-h-10 inline-flex items-center justify-center text-rose-500 hover:bg-rose-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
           </div>
         ))}
       </div>

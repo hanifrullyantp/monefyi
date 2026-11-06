@@ -217,27 +217,27 @@ export default function SuperAdmin() {
   const sessionExpiredCount = traces.filter(t => t.event_type === 'session_expired').length;
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-[#F4F7F5] pb-24 text-[#0F172A]">
       <header className="bg-slate-900 text-white px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link to="/app" className="p-2 hover:bg-white/10 rounded-lg"><ArrowLeft className="w-5 h-5" /></Link>
+          <Link to="/app" className="p-2 hover:bg-white/10 rounded-lg min-h-11 min-w-11 flex items-center justify-center"><ArrowLeft className="w-5 h-5" /></Link>
           <div>
             <h1 className="font-black text-lg">Super Admin</h1>
-            <p className="text-xs text-slate-600">Kelola pengguna, jenis perusahaan, dan platform</p>
+            <p className="text-xs text-slate-300">Kelola pengguna, jenis perusahaan, dan platform</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => { if (tab === 'users') loadUsers(); else if (tab === 'organizations') loadOrganizations(); else if (tab === 'company-types') loadTypes(); else if (tab === 'monitoring') loadMonitoring(); else if (tab === 'archives') loadArchives(); else loadOverview(); }} className="p-2 hover:bg-white/10 rounded-lg">
+          <button type="button" onClick={() => { if (tab === 'users') loadUsers(); else if (tab === 'organizations') loadOrganizations(); else if (tab === 'company-types') loadTypes(); else if (tab === 'monitoring') loadMonitoring(); else if (tab === 'archives') loadArchives(); else loadOverview(); }} className="min-h-11 min-w-11 flex items-center justify-center hover:bg-white/10 rounded-lg">
             <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </header>
 
       <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
-        <div className="flex gap-2 overflow-x-auto">
+        <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
           {tabs.map(t => (
             <button key={t.id} type="button" onClick={() => setTab(t.id)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap ${tab === t.id ? 'bg-emerald-600 text-white' : 'bg-white text-slate-600'}`}>
+              className={`min-h-11 flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap border transition-all ${tab === t.id ? 'bg-[#059669] text-white border-[#059669] shadow-sm' : 'bg-white text-[#5B6B7A] border-[#E5EAE8] hover:bg-slate-50'}`}>
               <t.icon className="w-4 h-4" /> {t.label}
             </button>
           ))}

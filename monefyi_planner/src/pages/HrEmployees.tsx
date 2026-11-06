@@ -201,66 +201,71 @@ export default function HrEmployees() {
 
   if (loading && !members.length) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+      <div className="min-h-screen bg-[#F4F7F5] flex items-center justify-center p-8">
+        <Loader2 className="w-8 h-8 animate-spin text-[#059669]" />
       </div>
     );
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black text-slate-900 flex items-center gap-2">
-            <Users className="w-7 h-7 text-emerald-600" /> HR & Karyawan
-          </h1>
-          <p className="text-sm text-slate-500">{tenant?.name} · {members.length} anggota · {workers.length} karyawan lapangan</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={load} className="p-2.5 border border-slate-200 rounded-xl hover:bg-slate-50" aria-label="Refresh">
-            <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-          {canInvite && (
-            <button type="button" onClick={() => setInviteOpen(true)} className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold">
-              <UserPlus className="w-4 h-4" /> Undang Karyawan
+    <div className="min-h-screen bg-[#F4F7F5] pb-24 md:pb-12 text-[#0F172A]">
+      <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-black text-[#0F172A] flex items-center gap-2">
+              <Users className="w-7 h-7 text-[#059669]" /> HR & Karyawan
+            </h1>
+            <p className="text-xs sm:text-sm text-[#5B6B7A]">{tenant?.name} · {members.length} anggota · {workers.length} karyawan lapangan</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={load} className="min-h-11 min-w-11 flex items-center justify-center border border-[#E5EAE8] bg-white rounded-xl hover:bg-slate-50 transition-colors" aria-label="Refresh">
+              <RefreshCw className={`w-4 h-4 text-[#5B6B7A] ${loading ? 'animate-spin' : ''}`} />
             </button>
-          )}
-        </div>
-      </div>
-
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {tabs.filter(t => t.show).map(t => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(t.id)}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap ${tab === t.id ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-slate-600 border border-slate-100'}`}
-          >
-            {t.label}
-            {t.id === 'requests' && requests.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 bg-rose-100 text-rose-700 rounded-full text-xs">{requests.length}</span>
+            {canInvite && (
+              <button type="button" onClick={() => setInviteOpen(true)} className="min-h-11 flex items-center gap-2 px-4 py-2.5 bg-[#059669] hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-sm transition-colors">
+                <UserPlus className="w-4 h-4" /> Undang Karyawan
+              </button>
             )}
-          </button>
-        ))}
-      </div>
+          </div>
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+          {tabs.filter(t => t.show).map(t => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={`min-h-11 flex items-center px-4 py-2 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap border transition-all ${
+                tab === t.id
+                  ? 'bg-[#059669] text-white border-[#059669] shadow-sm'
+                  : 'bg-white text-[#5B6B7A] border-[#E5EAE8] hover:bg-slate-50'
+              }`}
+            >
+              {t.label}
+              {t.id === 'requests' && requests.length > 0 && (
+                <span className="ml-1.5 px-2 py-0.5 bg-rose-500 text-white rounded-full text-[10px] font-bold">{requests.length}</span>
+              )}
+            </button>
+          ))}
+        </div>
 
       {tab === 'overview' && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
             {[
-              { label: 'Total Anggota', value: members.length, icon: Users, color: 'text-emerald-600 bg-emerald-50' },
-              { label: 'Karyawan', value: workers.length, icon: Briefcase, color: 'text-emerald-600 bg-emerald-50' },
-              { label: 'Manager', value: managers.length, icon: UserCheck, color: 'text-emerald-600 bg-emerald-50' },
-              { label: 'Check-in Hari Ini', value: checkedInToday, icon: Clock, color: 'text-amber-600 bg-amber-50' },
-              { label: 'Work Items Aktif', value: workItemCount, icon: CheckCircle2, color: 'text-sky-600 bg-sky-50' },
+              { label: 'Total Anggota', value: members.length, icon: Users, color: 'text-emerald-700 bg-emerald-50' },
+              { label: 'Karyawan', value: workers.length, icon: Briefcase, color: 'text-emerald-700 bg-emerald-50' },
+              { label: 'Manager', value: managers.length, icon: UserCheck, color: 'text-emerald-700 bg-emerald-50' },
+              { label: 'Check-in Hari Ini', value: checkedInToday, icon: Clock, color: 'text-amber-700 bg-amber-50' },
+              { label: 'Work Items Aktif', value: workItemCount, icon: CheckCircle2, color: 'text-sky-700 bg-sky-50' },
             ].map((kpi, i) => (
               <motion.div key={kpi.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                className="bg-white rounded-2xl border border-slate-100 p-4">
+                className="bg-white rounded-2xl border border-[#E5EAE8] p-4 shadow-sm">
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-2 ${kpi.color}`}>
                   <kpi.icon className="w-4 h-4" />
                 </div>
-                <div className="text-2xl font-black text-slate-900">{kpi.value}</div>
-                <div className="text-xs text-slate-500">{kpi.label}</div>
+                <div className="text-2xl font-black text-[#0F172A]">{kpi.value}</div>
+                <div className="text-xs text-[#5B6B7A]">{kpi.label}</div>
               </motion.div>
             ))}
           </div>
@@ -271,14 +276,14 @@ export default function HrEmployees() {
 
           <div className="grid md:grid-cols-2 gap-4">
             {canInvite && undoableActions.length > 0 && (
-              <div className="bg-white rounded-2xl border border-slate-100 p-5 md:col-span-2">
-                <h3 className="font-bold text-slate-800 mb-3 text-sm">Aksi Terakhir (Undo)</h3>
+              <div className="bg-white rounded-2xl border border-[#E5EAE8] p-5 md:col-span-2 shadow-sm">
+                <h3 className="font-bold text-[#0F172A] mb-3 text-sm">Aksi Terakhir (Undo)</h3>
                 <div className="space-y-2">
                   {undoableActions.map(a => (
-                    <div key={a.id} className="flex items-center justify-between gap-2 text-sm border rounded-xl px-3 py-2">
+                    <div key={a.id} className="flex items-center justify-between gap-2 text-sm border border-[#E5EAE8] rounded-xl px-3 py-2 bg-slate-50">
                       <div>
-                        <div className="font-medium">{actionTypeLabel(a.action_type)}</div>
-                        <div className="text-xs text-slate-600">{new Date(a.created_at).toLocaleString('id-ID')}</div>
+                        <div className="font-medium text-[#0F172A]">{actionTypeLabel(a.action_type)}</div>
+                        <div className="text-xs text-[#5B6B7A]">{new Date(a.created_at).toLocaleString('id-ID')}</div>
                       </div>
                       <button
                         type="button"
@@ -291,7 +296,7 @@ export default function HrEmployees() {
                             showToast(e instanceof Error ? e.message : 'Gagal undo', 'error');
                           }
                         }}
-                        className="px-2 py-1 text-xs font-bold text-emerald-600 border border-emerald-200 rounded-lg"
+                        className="px-3 py-1.5 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-lg border border-amber-200"
                       >
                         Undo
                       </button>
@@ -300,18 +305,18 @@ export default function HrEmployees() {
                 </div>
               </div>
             )}
-            <div className="bg-white rounded-2xl border border-slate-100 p-5">
-              <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-emerald-500" /> Absensi Hari Ini
+            <div className="bg-white rounded-2xl border border-[#E5EAE8] p-5 shadow-sm">
+              <h3 className="font-bold text-[#0F172A] mb-3 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-[#059669]" /> Absensi Hari Ini
               </h3>
               {todayAttendance.size === 0 ? (
-                <p className="text-sm text-slate-600">Belum ada check-in hari ini. Karyawan dapat check-in dari aplikasi mobile.</p>
+                <p className="text-sm text-[#5B6B7A]">Belum ada check-in hari ini. Karyawan dapat check-in dari aplikasi mobile.</p>
               ) : (
                 <div className="space-y-2">
                   {[...todayAttendance.entries()].slice(0, 6).map(([uid, info]) => (
-                    <div key={uid} className="flex items-center justify-between text-sm py-2 border-b border-slate-50 last:border-0">
-                      <span className="font-medium">{info.name}</span>
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${info.status === 'in' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                    <div key={uid} className="flex items-center justify-between text-sm py-2 border-b border-[#E5EAE8] last:border-0">
+                      <span className="font-medium text-[#0F172A]">{info.name}</span>
+                      <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${info.status === 'in' ? 'bg-emerald-50 text-[#059669]' : 'bg-slate-100 text-[#5B6B7A]'}`}>
                         {info.status === 'in' ? `Masuk ${info.checkIn}` : info.checkOut ? `Keluar ${info.checkOut}` : '—'}
                       </span>
                     </div>
@@ -320,21 +325,21 @@ export default function HrEmployees() {
               )}
             </div>
 
-            <div className="bg-white rounded-2xl border border-slate-100 p-5">
-              <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
-                <Briefcase className="w-4 h-4 text-emerald-500" /> Laporan Harian Proyek
+            <div className="bg-white rounded-2xl border border-[#E5EAE8] p-5 shadow-sm">
+              <h3 className="font-bold text-[#0F172A] mb-3 flex items-center gap-2">
+                <Briefcase className="w-4 h-4 text-[#059669]" /> Laporan Harian Proyek
               </h3>
               {workerLogs.length === 0 ? (
-                <p className="text-sm text-slate-600">Belum ada log pekerja di proyek. Catat di daily log proyek.</p>
+                <p className="text-sm text-[#5B6B7A]">Belum ada log pekerja di proyek. Catat di daily log proyek.</p>
               ) : (
                 <div className="space-y-2">
                   {workerLogs.slice(0, 5).map(log => (
-                    <div key={log.id} className="text-sm py-2 border-b border-slate-50 last:border-0">
+                    <div key={log.id} className="text-sm py-2 border-b border-[#E5EAE8] last:border-0">
                       <div className="flex justify-between">
-                        <span className="font-medium">{projectNameMap[log.project_id] || 'Proyek'}</span>
-                        <span className="text-xs text-slate-600">{log.date}</span>
+                        <span className="font-medium text-[#0F172A]">{projectNameMap[log.project_id] || 'Proyek'}</span>
+                        <span className="text-xs text-[#5B6B7A]">{log.date}</span>
                       </div>
-                      <div className="text-xs text-slate-500">{log.workers_present} pekerja · {log.work_description?.slice(0, 60) || '—'}</div>
+                      <div className="text-xs text-[#5B6B7A] mt-0.5">{log.workers_present} pekerja · {log.work_description?.slice(0, 60) || '—'}</div>
                     </div>
                   ))}
                 </div>
@@ -358,10 +363,10 @@ export default function HrEmployees() {
         <>
           <div className="flex flex-wrap gap-3">
             <div className="relative flex-1 min-w-[200px] max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari nama..." className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8A99A6]" />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari nama karyawan..." className="w-full h-11 pl-10 pr-4 rounded-xl border border-[#E5EAE8] bg-white text-sm text-[#0F172A] placeholder:text-[#8A99A6] focus:border-[#059669] focus:outline-none" />
             </div>
-            <select value={roleFilter} onChange={e => setRoleFilter(e.target.value as RoleFilter)} className="px-4 py-2 rounded-xl border border-slate-200 text-sm">
+            <select value={roleFilter} onChange={e => setRoleFilter(e.target.value as RoleFilter)} className="h-11 px-4 rounded-xl border border-[#E5EAE8] bg-white text-sm text-[#0F172A] focus:border-[#059669] focus:outline-none">
               <option value="all">Semua role</option>
               <option value="worker">Karyawan</option>
               <option value="manager">Manager</option>
@@ -379,37 +384,37 @@ export default function HrEmployees() {
                   key={m.id}
                   type="button"
                   onClick={() => setSelectedMember(m)}
-                  className="bg-white rounded-2xl border border-slate-100 p-4 hover:border-emerald-200 hover:shadow-md transition-all text-left w-full"
+                  className="bg-white rounded-2xl border border-[#E5EAE8] p-4 hover:border-[#059669] hover:shadow-md transition-all text-left w-full shadow-sm"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-11 h-11 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-lg shrink-0">
+                    <div className="w-11 h-11 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-800 font-bold text-lg shrink-0">
                       {(m.profile?.name || '?')[0]?.toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-bold text-slate-900 truncate">{m.profile?.name || '—'}</div>
-                      <div className="text-xs text-slate-600 truncate">{m.position || m.department || '—'}</div>
+                      <div className="font-bold text-[#0F172A] truncate">{m.profile?.name || '—'}</div>
+                      <div className="text-xs text-[#5B6B7A] truncate">{m.position || m.department || '—'}</div>
                       <div className="flex flex-wrap gap-1.5 mt-2">
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${roleBadge(m.role)}`}>{m.role}</span>
+                        <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full capitalize ${roleBadge(m.role)}`}>{m.role}</span>
                         {att?.status === 'in' && (
-                          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#059669]">
                             Hadir {att.checkIn}
                           </span>
                         )}
                         {(monthAtt?.partialCount ?? 0) > 0 && (
-                          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
                             {monthAtt!.partialCount} hari kurang jam
                           </span>
                         )}
                       </div>
                     </div>
                   </div>
-                  <div className="mt-3 pt-3 border-t border-slate-50 grid grid-cols-2 gap-2 text-xs text-slate-500">
+                  <div className="mt-3 pt-3 border-t border-[#E5EAE8] grid grid-cols-2 gap-2 text-xs text-[#5B6B7A]">
                     <span>Gaji: {formatSalaryLabel(comp)}</span>
                     <span>Absensi: {monthAtt?.daysPresent ?? 0} hari</span>
                   </div>
-                  <div className="mt-2 flex items-center justify-between text-xs text-slate-600">
+                  <div className="mt-2 flex items-center justify-between text-xs text-[#5B6B7A]">
                     <span>Last seen: {lastSeenLabel(m.last_active_at)}</span>
-                    <span className="text-emerald-600 font-semibold">Detail →</span>
+                    <span className="text-[#059669] font-bold">Detail →</span>
                   </div>
                 </button>
               );
@@ -417,11 +422,11 @@ export default function HrEmployees() {
           </div>
 
           {filtered.length === 0 && (
-            <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">
-              <Users className="w-10 h-10 text-slate-500 mx-auto mb-3" />
-              <p className="text-slate-500">Belum ada karyawan.</p>
+            <div className="bg-white rounded-2xl border border-[#E5EAE8] p-12 text-center shadow-sm">
+              <Users className="w-10 h-10 text-[#8A99A6] mx-auto mb-3" />
+              <p className="text-[#5B6B7A]">Belum ada karyawan.</p>
               {canInvite && (
-                <button type="button" onClick={() => setInviteOpen(true)} className="mt-3 text-emerald-600 font-semibold text-sm">
+                <button type="button" onClick={() => setInviteOpen(true)} className="min-h-11 mt-3 text-[#059669] font-bold text-sm hover:underline">
                   Undang karyawan pertama →
                 </button>
               )}
@@ -927,6 +932,7 @@ export default function HrEmployees() {
         onClose={() => setSelectedMember(null)}
         onUpdated={load}
       />
+    </div>
     </div>
   );
 }
