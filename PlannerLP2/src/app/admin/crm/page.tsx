@@ -32,6 +32,8 @@ import {
   Clock,
   RotateCcw,
   FileText,
+  Wallet,
+  TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
@@ -489,16 +491,99 @@ export default function CRMPage() {
   const [selectedLeadForEmail, setSelectedLeadForEmail] = useState<Lead | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Mayar Financial Stats State (Saldo Akun, Lifetime Revenue, Omset Hari Ini)
+  const [mayarStats, setMayarStats] = useState<{
+    activeBalance: number;
+    pendingBalance: number;
+    totalBalance: number;
+    lifetimeRevenue: number;
+    totalPaidOrders: number;
+    todayRevenue: number;
+    pendingRevenue: number;
+    isMayarConnected: boolean;
+    lastUpdated: string | null;
+  }>({
+    activeBalance: 0,
+    pendingBalance: 0,
+    totalBalance: 0,
+    lifetimeRevenue: 0,
+    totalPaidOrders: 0,
+    todayRevenue: 0,
+    pendingRevenue: 0,
+    isMayarConnected: false,
+    lastUpdated: null,
+  });
+  const [isLoadingMayarStats, setIsLoadingMayarStats] = useState(false);
+  const [verifyingLeadId, setVerifyingLeadId] = useState<string | null>(null);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
   };
 
+  // Fetch Mayar Financial Stats & Live Balances
+  const fetchMayarStats = async (verifyPending: boolean = false) => {
+    try {
+      setIsLoadingMayarStats(true);
+      const res = await fetch(`/api/crm/mayar-stats?verifyPending=${verifyPending ? "true" : "false"}`);
+      const data = await res.json();
+      if (data?.ok) {
+        setMayarStats({
+          activeBalance: data.activeBalance || 0,
+          pendingBalance: data.pendingBalance || 0,
+          totalBalance: data.totalBalance || 0,
+          lifetimeRevenue: data.lifetimeRevenue || 0,
+          totalPaidOrders: data.totalPaidOrders || 0,
+          todayRevenue: data.todayRevenue || 0,
+          pendingRevenue: data.pendingRevenue || 0,
+          isMayarConnected: Boolean(data.isMayarConnected),
+          lastUpdated: data.lastUpdated || new Date().toISOString(),
+        });
+
+        if (data.updatedPaidCount && data.updatedPaidCount > 0) {
+          showToast(`⚡ ${data.updatedPaidCount} pembayaran terkonfirmasi lunas dan status diperbarui otomatis!`);
+          syncServerLeads(false);
+        }
+      }
+    } catch (err) {
+      console.warn("Could not fetch Mayar stats:", err);
+    } finally {
+      setIsLoadingMayarStats(false);
+    }
+  };
+
+  // Verifikasi Lead Tunggal Langsung ke Mayar API (Mengatasi kasus Abe)
+  const handleVerifyMayarSingle = async (lead: Lead) => {
+    const payId = lead.paymentId || lead.sessionId;
+    if (!payId) {
+      alert("Lead ini belum memiliki ID Transaksi Mayar.");
+      return;
+    }
+
+    setVerifyingLeadId(lead.id);
+    try {
+      const res = await fetch(`/api/checkout/mayar?id=${payId}`);
+      const data = await res.json();
+      if (data?.isPaid) {
+        updateLeadStatus(lead.id, "won");
+        showToast(`✅ Pembayaran "${lead.name}" terverifikasi LUNAS di Mayar!`);
+        fetchMayarStats(false);
+        syncServerLeads(false);
+      } else {
+        alert(`Status di Mayar: ${data?.status || "Belum Lunas"}. Belum ada konfirmasi pembayaran masuk dari Mayar.`);
+      }
+    } catch {
+      alert("Gagal menghubungi Mayar API. Coba beberapa saat lagi.");
+    } finally {
+      setVerifyingLeadId(null);
+    }
+  };
+
   // Auto-sync leads dari Supabase & Server API saat mount
-  const syncServerLeads = async () => {
+  const syncServerLeads = async (verifyMayar: boolean = false) => {
     try {
       setIsSyncing(true);
-      const res = await fetch("/api/crm/lead");
+      const res = await fetch(`/api/crm/lead${verifyMayar ? "?verifyMayar=true" : ""}`);
       const data = await res.json();
       if (data?.ok && Array.isArray(data.leads)) {
         const store = useLeadsStore.getState();
@@ -550,7 +635,8 @@ export default function CRMPage() {
   };
 
   useEffect(() => {
-    syncServerLeads();
+    syncServerLeads(true);
+    fetchMayarStats(true);
   }, []);
 
   const totalLeadsCount = leads.length;
@@ -832,13 +918,162 @@ export default function CRMPage() {
             <Plus className="w-4 h-4" /> Tambah Lead Manual
           </button>
           <button
-            onClick={syncServerLeads}
+            onClick={() => {
+              syncServerLeads(true);
+              fetchMayarStats(true);
+            }}
+            disabled={isSyncing || isLoadingMayarStats}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all cursor-pointer disabled:opacity-60"
+            title="Sinkronkan saldo Mayar dan verifikasi status pembayaran terbaru"
+          >
+            <RefreshCw className={cn("w-4 h-4", (isSyncing || isLoadingMayarStats) && "animate-spin")} />
+            <span>{isSyncing || isLoadingMayarStats ? "Memverifikasi..." : "⚡ Cek Mayar & Saldo"}</span>
+          </button>
+          <button
+            onClick={() => syncServerLeads(false)}
             disabled={isSyncing}
             className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-3 rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 shadow-sm transition-all cursor-pointer"
           >
             <RefreshCw className={cn("w-4 h-4", isSyncing && "animate-spin text-emerald-600")} />
-            <span>{isSyncing ? "Menyinkron..." : "Refresh Data"}</span>
+            <span>Refresh Data</span>
           </button>
+        </div>
+      </div>
+
+      {/* ===================================================================== */}
+      {/* MAYAR FINANCIAL & REVENUE HUB (SALDO & LIFETIME REVENUE) */}
+      {/* ===================================================================== */}
+      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-[#064e3b] rounded-[32px] p-6 md:p-8 text-white shadow-2xl shadow-emerald-950/20 mb-8 border border-emerald-500/20 relative overflow-hidden">
+        {/* Glow Effects */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 space-y-6">
+          {/* Header Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400">
+                <Wallet className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg md:text-xl font-black tracking-tight">
+                    Mayar Financial & Lifetime Revenue Hub
+                  </h2>
+                  <span
+                    className={cn(
+                      "text-[10px] font-black px-2.5 py-0.5 rounded-full border",
+                      mayarStats.isMayarConnected
+                        ? "bg-emerald-500/20 text-emerald-300 border-emerald-400/40"
+                        : "bg-amber-500/20 text-amber-300 border-amber-400/40"
+                    )}
+                  >
+                    {mayarStats.isMayarConnected ? "🟢 Mayar Live Sync" : "🟡 Database Aggregate"}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  Pantau saldo aktif, pencairan payout, dan total omset penjualan real-time tanpa perlu membuka dashboard Mayar
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <a
+                href="https://dashboard.mayar.id/payouts"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border border-white/15"
+                title="Buka Halaman Penarikan Dana di Mayar"
+              >
+                <span>Tarik Dana (Payout)</span>
+                <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+              </a>
+
+              <button
+                onClick={() => fetchMayarStats(true)}
+                disabled={isLoadingMayarStats}
+                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-lg shadow-emerald-500/30 transition-all cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw className={cn("w-3.5 h-3.5", isLoadingMayarStats && "animate-spin")} />
+                <span>{isLoadingMayarStats ? "Memverifikasi..." : "⚡ Update Saldo & Verifikasi Mayar"}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Metric Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* 1. Saldo Siap Tarik (Active Balance) */}
+            <div className="bg-white/5 backdrop-blur-md rounded-2xl p-5 border border-white/10 hover:border-emerald-400/40 transition-all group">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Saldo Siap Tarik (Active)
+                </span>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              </div>
+              <p className="text-2xl lg:text-3xl font-black text-emerald-400 group-hover:scale-105 transition-transform">
+                {formatCurrency(mayarStats.activeBalance)}
+              </p>
+              <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium mt-2 pt-2 border-t border-white/5">
+                <span>Tersedia untuk Payout</span>
+                <a
+                  href="https://dashboard.mayar.id/payouts"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-emerald-300 font-bold hover:underline inline-flex items-center gap-0.5"
+                >
+                  Tarik <ChevronRight className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+
+            {/* 2. Saldo Tertunda (Pending Balance) */}
+            <div className="bg-white/5 backdrop-blur-md rounded-2xl p-5 border border-white/10 hover:border-amber-400/40 transition-all group">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Saldo Dalam Proses (Pending)
+                </span>
+                <Clock className="w-3.5 h-3.5 text-amber-400" />
+              </div>
+              <p className="text-2xl lg:text-3xl font-black text-amber-300 group-hover:scale-105 transition-transform">
+                {formatCurrency(mayarStats.pendingBalance)}
+              </p>
+              <p className="text-[11px] text-slate-400 font-medium mt-2 pt-2 border-t border-white/5">
+                Clearing settlement bank Mayar
+              </p>
+            </div>
+
+            {/* 3. Lifetime Revenue (Total Omset Kumulatif) */}
+            <div className="bg-white/5 backdrop-blur-md rounded-2xl p-5 border border-white/10 hover:border-blue-400/40 transition-all group">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Lifetime Revenue (Omset)
+                </span>
+                <TrendingUp className="w-3.5 h-3.5 text-blue-400" />
+              </div>
+              <p className="text-2xl lg:text-3xl font-black text-blue-300 group-hover:scale-105 transition-transform">
+                {formatCurrency(mayarStats.lifetimeRevenue)}
+              </p>
+              <p className="text-[11px] text-slate-400 font-medium mt-2 pt-2 border-t border-white/5">
+                {mayarStats.totalPaidOrders} transaksi berhasil dibayar
+              </p>
+            </div>
+
+            {/* 4. Omset Hari Ini (Today's Revenue) */}
+            <div className="bg-white/5 backdrop-blur-md rounded-2xl p-5 border border-white/10 hover:border-purple-400/40 transition-all group">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Omset Hari Ini (24 Jam)
+                </span>
+                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+              </div>
+              <p className="text-2xl lg:text-3xl font-black text-purple-300 group-hover:scale-105 transition-transform">
+                {formatCurrency(mayarStats.todayRevenue)}
+              </p>
+              <p className="text-[11px] text-slate-400 font-medium mt-2 pt-2 border-t border-white/5">
+                {mayarStats.lastUpdated ? `Update: ${new Date(mayarStats.lastUpdated).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })} WIB` : "Real-time"}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1189,6 +1424,21 @@ export default function CRMPage() {
                               </option>
                             ))}
                           </select>
+
+                          {/* Quick 1-Click Mayar Payment Verifier (Kasus Abe) */}
+                          {lead.status === "pending_payment" && (
+                            <button
+                              type="button"
+                              onClick={() => handleVerifyMayarSingle(lead)}
+                              disabled={verifyingLeadId === lead.id}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-emerald-50 text-amber-800 hover:text-emerald-800 border border-amber-200 hover:border-emerald-300 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer disabled:opacity-50 mt-1 shadow-2xs"
+                              title="Cek apakah pembeli sudah membayar di Mayar"
+                            >
+                              <RefreshCw className={cn("w-2.5 h-2.5", verifyingLeadId === lead.id && "animate-spin text-emerald-600")} />
+                              <span>{verifyingLeadId === lead.id ? "Memeriksa..." : "⚡ Cek Status Mayar"}</span>
+                            </button>
+                          )}
+
                           {lead.checkoutStep && (
                             <p className="text-[10px] text-slate-400 font-semibold">
                               Sampai Langkah {lead.checkoutStep}/5
@@ -1366,6 +1616,19 @@ export default function CRMPage() {
                             <span className="text-[10px] text-slate-400">Belum ada email</span>
                           )}
                         </div>
+
+                        {/* 1-Click Mayar Status Verifier */}
+                        {lead.status === "pending_payment" && (
+                          <button
+                            type="button"
+                            onClick={() => handleVerifyMayarSingle(lead)}
+                            disabled={verifyingLeadId === lead.id}
+                            className="w-full py-1.5 bg-amber-50 hover:bg-emerald-50 text-amber-800 hover:text-emerald-800 border border-amber-200 hover:border-emerald-300 rounded-xl text-[10px] font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
+                          >
+                            <RefreshCw className={cn("w-3 h-3", verifyingLeadId === lead.id && "animate-spin text-emerald-600")} />
+                            <span>{verifyingLeadId === lead.id ? "Memeriksa Mayar..." : "⚡ Cek Status Pembayaran Mayar"}</span>
+                          </button>
+                        )}
 
                         <div className="pt-2 flex items-center justify-between gap-2">
                           {lead.phone && lead.phone !== "-" && (

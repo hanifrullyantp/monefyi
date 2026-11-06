@@ -150,10 +150,20 @@ export async function POST(req: NextRequest) {
 }
 
 // GET: Ambil daftar leads dari Supabase orders & memory cache
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const shouldVerifyMayar = req?.nextUrl?.searchParams?.get("verifyMayar") === "true";
     const supabase = getSupabaseClient();
     const leadsMap: Map<string, any> = new Map();
+
+    const mayarApiKey = (
+      process.env.MAYAR_API_KEY ||
+      process.env.MAYAR_API_KEY_SANDBOX ||
+      ""
+    ).trim();
+    const mayarApiUrl = (
+      process.env.MAYAR_API_URL || "https://api.mayar.id"
+    ).replace(/\/$/, "");
 
     // 1. Masukkan memory leads dulu
     for (const [sid, item] of memoryLeads.entries()) {
@@ -173,6 +183,44 @@ export async function GET() {
           for (const r of rows) {
             const raw = r.raw_payload || {};
             const sid = raw.sessionId || r.id;
+            let currentStatus =
+              r.status === "paid"
+                ? "won"
+                : r.status === "pending"
+                ? "pending_payment"
+                : raw.status || "abandoned_checkout";
+
+            // Verifikasi real-time ke Mayar jika status masih pending_payment dan memiliki paymentId
+            if (shouldVerifyMayar && mayarApiKey && raw.paymentId && currentStatus === "pending_payment") {
+              try {
+                const checkRes = await fetch(`${mayarApiUrl}/hl/v2/payments/${raw.paymentId}`, {
+                  headers: { Authorization: `Bearer ${mayarApiKey}` },
+                });
+                if (checkRes.ok) {
+                  const checkJson = await checkRes.json();
+                  const mayarStatus = String(checkJson?.data?.status ?? "unpaid").toLowerCase();
+                  if (mayarStatus === "paid" || mayarStatus === "settled" || mayarStatus === "success") {
+                    currentStatus = "won";
+                    // Update ke database Supabase
+                    await supabase
+                      .from("orders")
+                      .update({
+                        status: "paid",
+                        raw_payload: {
+                          ...raw,
+                          status: "won",
+                          paidAt: new Date().toISOString(),
+                          verifiedViaMayar: true,
+                        },
+                      })
+                      .eq("id", r.id);
+                  }
+                }
+              } catch (chkErr) {
+                console.warn(`Could not verify Mayar status for paymentId ${raw.paymentId}:`, chkErr);
+              }
+            }
+
             leadsMap.set(sid, {
               id: r.id,
               sessionId: sid,
@@ -184,13 +232,8 @@ export async function GET() {
               paymentMethod: raw.paymentMethod || "qris",
               amount: r.grand_total || raw.amount || 0,
               paymentId: raw.paymentId || null,
-              checkoutStep: raw.checkoutStep || (r.status === "paid" ? 5 : 3),
-              status:
-                r.status === "paid"
-                  ? "won"
-                  : r.status === "pending"
-                  ? "pending_payment"
-                  : raw.status || "abandoned_checkout",
+              checkoutStep: raw.checkoutStep || (currentStatus === "won" ? 5 : 3),
+              status: currentStatus,
               emails: Array.isArray(raw.emails) ? raw.emails : [],
               createdAt: r.created_at,
               updatedAt: raw.updatedAt || r.created_at,

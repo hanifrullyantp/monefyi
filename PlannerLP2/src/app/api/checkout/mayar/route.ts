@@ -264,6 +264,41 @@ export async function GET(req: NextRequest) {
     const status = String(json?.data?.status ?? "unpaid").toLowerCase();
     const isPaid = status === "paid" || status === "settled" || status === "success";
 
+    // Jika Mayar mendeteksi lunas, update langsung database Supabase orders
+    if (isPaid) {
+      try {
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          const { data: matched } = await supabase
+            .from("orders")
+            .select("id, status, raw_payload")
+            .contains("raw_payload", { paymentId })
+            .limit(1);
+
+          if (matched && matched.length > 0) {
+            const row = matched[0];
+            const raw = row.raw_payload || {};
+            if (raw.status !== "won" || row.status !== "paid") {
+              await supabase
+                .from("orders")
+                .update({
+                  status: "paid",
+                  raw_payload: {
+                    ...raw,
+                    status: "won",
+                    paidAt: new Date().toISOString(),
+                    verifiedViaMayar: true,
+                  },
+                })
+                .eq("id", row.id);
+            }
+          }
+        }
+      } catch (dbErr) {
+        console.warn("Could not sync verified Mayar payment to Supabase:", dbErr);
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       status,
