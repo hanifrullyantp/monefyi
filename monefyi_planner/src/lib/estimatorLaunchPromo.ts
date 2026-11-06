@@ -15,6 +15,21 @@ export type EstimatorLaunchPromoStatus = {
 
 export const SUPER_ADMIN_LAUNCH_ALERT_EMAIL = 'hanif.rullyant@gmail.com';
 
+/**
+ * Memeriksa apakah pengguna saat ini adalah Super Admin Hanif.
+ * Fitur tertentu seperti 3D Intero Instant Generation dibatasi hanya untuk Super Admin Hanif.
+ */
+export function isSuperAdminHanif(email?: string | null, platformRole?: string | null): boolean {
+  const normEmail = String(email || '').trim().toLowerCase();
+  const normRole = String(platformRole || '').trim().toLowerCase();
+
+  if (normEmail === SUPER_ADMIN_LAUNCH_ALERT_EMAIL) return true;
+  if (normEmail.includes('hanif') && (normRole === 'super_admin' || normRole === 'platform_admin' || normRole === 'admin')) {
+    return true;
+  }
+  return false;
+}
+
 /** Tampilkan popup admin saat sisa slot promo ≤ ambang ini. */
 export const LAUNCH_PROMO_ADMIN_WARN_REMAINING = 15;
 

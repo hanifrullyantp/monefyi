@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Copy, MoreVertical, Rocket, Trash2 } from 'lucide-react';
+import { Box, Copy, MoreVertical, Rocket, Trash2 } from 'lucide-react';
 
 type Props = {
   status: string;
@@ -7,6 +7,8 @@ type Props = {
   onConvert: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  onLaunchIntero3D?: () => void;
+  isSuperAdmin?: boolean;
   disabled?: boolean;
   variant?: 'default' | 'onDark';
 };
@@ -17,6 +19,8 @@ export default function EstimatorActionsMenu({
   onConvert,
   onDuplicate,
   onDelete,
+  onLaunchIntero3D,
+  isSuperAdmin = false,
   disabled = false,
   variant = 'default',
 }: Props) {
@@ -58,6 +62,20 @@ export default function EstimatorActionsMenu({
           role="menu"
           className="absolute right-0 top-full mt-1 z-30 min-w-[12rem] bg-white border border-slate-200 rounded-xl shadow-lg py-1 text-sm"
         >
+          {isSuperAdmin && onLaunchIntero3D && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onLaunchIntero3D();
+              }}
+              className="w-full text-left px-3 py-2.5 flex items-center gap-2 font-bold text-emerald-700 bg-emerald-50/70 hover:bg-emerald-100/80 border-b border-emerald-100 transition-colors"
+            >
+              <Box className="w-4 h-4 shrink-0 text-emerald-600" />
+              <span>Generate 3D Intero</span>
+            </button>
+          )}
           <button
             type="button"
             role="menuitem"

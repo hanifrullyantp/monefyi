@@ -11,6 +11,7 @@ import type { KwitansiPreviewChoice } from '../../lib/kwitansiPreviewChoice';
 import type { WhatsAppEstimationPreset } from '../../lib/whatsappEstimationPresets';
 import type { BillingMilestone } from '../../lib/estimationBillingSchedule';
 import EstimationDetailProjectCard from '../../components/estimator/detail/EstimationDetailProjectCard';
+import Intero3DLaunchModal from '../../components/estimator/Intero3DLaunchModal';
 import EstimationStatusHistory from '../../components/estimator/EstimationStatusHistory';
 import { useShellStore } from '../../store/shellStore';
 import ConvertEstimationWizard from '../../components/estimator/ConvertEstimationWizard';
@@ -68,6 +69,7 @@ import { getProject } from '../../services/projectService';
 import type { EstimationStatusTimestamps } from '../../lib/estimationStatus';
 import type { UpgradeModalTrigger } from '../../types/entitlement';
 import { ESTIMATION_STATUS_LABEL } from '../../lib/estimatorFormat';
+import { isSuperAdminHanif } from '../../lib/estimatorLaunchPromo';
 import type { EstimationImageDraft, EstimationStatus, Estimation } from '../../types/estimator';
 import { calcEstimationSummary, countedEstimationItems, summaryOptsFromDraft } from '../../lib/estimatorCalc';
 import type { EstimationFormDraft } from '../../types/estimator';
@@ -85,10 +87,12 @@ export default function EstimatorForm() {
   const { id } = useParams();
   const isNew = !id || id === 'new';
   const navigate = useNavigate();
-  const { tenant, user, projects, addProject } = useAppStore();
+  const { tenant, user, projects, addProject, platformRole } = useAppStore();
   const setShellMeta = useShellStore(s => s.setShellMeta);
   const showToast = useUiStore(s => s.showToast);
   const navSidebarCollapsed = useAppStore(s => s.navSidebarCollapsed);
+  const isHanif = isSuperAdminHanif(user?.email, platformRole);
+  const [interoModalOpen, setInteroModalOpen] = useState(false);
 
   const [draft, setDraft] = useState<EstimationFormDraft | null>(null);
   const [loading, setLoading] = useState(true);
@@ -880,6 +884,8 @@ export default function EstimatorForm() {
           userId={user?.id}
           autoSaveStatus={autoSave.status}
           onRetryAutoSave={() => draftRef.current && autoSave.flush()}
+          onLaunchIntero3D={() => setInteroModalOpen(true)}
+          isSuperAdmin={isHanif}
         />
       )}
 
@@ -1245,6 +1251,15 @@ export default function EstimatorForm() {
         totalAmount={milestoneTotal}
         onClose={() => setMilestoneOpen(false)}
       />
+
+      {draft && isHanif && (
+        <Intero3DLaunchModal
+          open={interoModalOpen}
+          onClose={() => setInteroModalOpen(false)}
+          draft={draft}
+          items={draft.items}
+        />
+      )}
     </div>
   );
 }

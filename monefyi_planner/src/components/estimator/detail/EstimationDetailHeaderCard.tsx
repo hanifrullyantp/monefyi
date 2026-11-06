@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Box } from 'lucide-react';
 import EstimatorActionsMenu from '../EstimatorActionsMenu';
 import AutoSaveIndicator from '../AutoSaveIndicator';
 import EstimationProjectLinkCoachmark from './EstimationProjectLinkCoachmark';
@@ -39,6 +40,8 @@ type Props = {
   userId?: string;
   autoSaveStatus?: AutoSaveStatus;
   onRetryAutoSave?: () => void;
+  onLaunchIntero3D?: () => void;
+  isSuperAdmin?: boolean;
 };
 
 export default function EstimationDetailHeaderCard({
@@ -61,6 +64,8 @@ export default function EstimationDetailHeaderCard({
   waAt,
   autoSaveStatus,
   onRetryAutoSave,
+  onLaunchIntero3D,
+  isSuperAdmin = false,
 }: Props) {
   const [statusOpen, setStatusOpen] = useState(false);
   const status = normalizeEstimationStatus(draft.status);
@@ -113,7 +118,18 @@ export default function EstimationDetailHeaderCard({
             </div>
           </div>
 
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
+            {isSuperAdmin && onLaunchIntero3D && (
+              <button
+                type="button"
+                onClick={onLaunchIntero3D}
+                title="Buka 3D Instant di 3d.intero.id (Eksklusif Super Admin)"
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-amber-400/20 to-emerald-400/20 hover:from-amber-400/30 hover:to-emerald-400/30 border border-amber-300/40 text-amber-200 hover:text-white rounded-xl text-xs font-black backdrop-blur-md shadow-sm transition-all active:scale-95"
+              >
+                <Box className="w-3.5 h-3.5 text-amber-300" />
+                <span>3D Intero</span>
+              </button>
+            )}
             {!isNew && userId && !linkedProjectId && !isReadOnly && (
               <EstimationProjectLinkCoachmark userId={userId} />
             )}
@@ -124,6 +140,8 @@ export default function EstimationDetailHeaderCard({
                 onConvert={onConvert}
                 onDuplicate={onDuplicate}
                 onDelete={onDelete}
+                onLaunchIntero3D={onLaunchIntero3D}
+                isSuperAdmin={isSuperAdmin}
                 variant="onDark"
               />
             )}
