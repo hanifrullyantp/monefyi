@@ -338,12 +338,12 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
           )}
           {error && <p className="text-sm text-rose-600">{error}</p>}
         </div>
-        <div className="p-6 border-t flex gap-3">
+        <div className="p-6 border-t border-[#E5EAE8] flex gap-3">
           {step > 1 && (
             <button
               type="button"
               onClick={() => setStep(step - 1)}
-              className="px-6 py-3 border rounded-xl text-sm font-bold"
+              className="px-6 min-h-11 border border-[#E5EAE8] rounded-xl text-sm font-bold text-[#5B6B7A] hover:bg-[#F4F7F5]"
             >
               Kembali
             </button>
@@ -352,7 +352,7 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
             type="button"
             onClick={() => (step < 3 ? setStep(step + 1) : handleCreate())}
             disabled={loading}
-            className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-sm font-black disabled:opacity-60"
+            className="flex-1 min-h-11 bg-[#059669] text-white rounded-xl text-sm font-bold disabled:opacity-60 hover:bg-[#047857]"
           >
             {step === 3 ? (loading ? 'Menyimpan...' : 'Buat Proyek') : 'Lanjut'}
           </button>
@@ -954,10 +954,10 @@ export default function Projects({
           <>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h1 className="text-2xl md:text-3xl font-black text-slate-900">
+                <h1 className="text-2xl md:text-3xl font-black text-[#0F172A]">
                   Manajemen Proyek
                 </h1>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-[#5B6B7A] mt-0.5">
                   Monitoring, perencanaan, dan kontrol seluruh proyek.
                 </p>
               </div>
@@ -965,7 +965,7 @@ export default function Projects({
                 <button
                   type="button"
                   onClick={() => setShowCreate(true)}
-                  className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black px-6 py-3 rounded-2xl shadow-xl shadow-emerald-100"
+                  className="flex items-center gap-2 bg-[#059669] hover:bg-[#047857] text-white font-bold h-11 px-5 rounded-xl shadow-sm transition-colors"
                 >
                   <Plus className="w-5 h-5" /> Buat Proyek Baru
                 </button>
@@ -973,57 +973,57 @@ export default function Projects({
             </div>
 
             {projects.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
                 {[
                   {
                     label: 'Total Proyek',
                     value: String(stats.total),
                     icon: FolderOpen,
-                    color: 'text-emerald-600',
+                    color: 'text-[#059669]',
                     progress: null as number | null,
                   },
                   {
                     label: 'Aktif',
                     value: String(stats.active),
                     icon: TrendingUp,
-                    color: 'text-emerald-600',
+                    color: 'text-[#059669]',
                     progress: null,
                   },
                   {
                     label: 'Perlu Perhatian',
                     value: String(stats.atRisk),
                     icon: AlertTriangle,
-                    color: 'text-amber-600',
+                    color: 'text-[#D97706]',
                     progress: null,
                   },
                   {
                     label: 'Total Budget',
                     value: formatRupiah(stats.totalBudget),
                     icon: Sparkles,
-                    color: 'text-emerald-600',
+                    color: 'text-[#059669]',
                     progress: null,
                   },
                   {
                     label: 'Progres Rata-rata',
                     value: `${Math.round(stats.avgProgress)}%`,
                     icon: GanttChart,
-                    color: 'text-emerald-600',
+                    color: 'text-[#059669]',
                     progress: stats.avgProgress,
                   },
                 ].map((s, i) => (
                   <div
                     key={i}
-                    className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm"
+                    className="bg-white rounded-2xl p-4 border border-[#E5EAE8] shadow-sm"
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <s.icon className={`w-4 h-4 ${s.color}`} />
-                      <span className="text-xs text-slate-500 font-medium">{s.label}</span>
+                      <span className="text-xs text-[#5B6B7A] font-bold uppercase tracking-wider">{s.label}</span>
                     </div>
-                    <div className="text-lg font-black text-slate-900 truncate">{s.value}</div>
+                    <div className="text-xl font-black text-[#0F172A] truncate mt-1">{s.value}</div>
                     {s.progress !== null && (
-                      <div className="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="mt-2.5 h-1.5 bg-[#F4F7F5] rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-emerald-500 rounded-full transition-all"
+                          className="h-full bg-[#059669] rounded-full transition-all"
                           style={{ width: `${Math.min(s.progress, 100)}%` }}
                         />
                       </div>
@@ -1036,24 +1036,24 @@ export default function Projects({
         )}
 
         {projectView !== 'timeline' && (
-          <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm space-y-4">
-            <div className="flex flex-col md:flex-row gap-4">
+          <div className="bg-white rounded-2xl p-4 border border-[#E5EAE8] shadow-sm space-y-3.5">
+            <div className="flex flex-col md:flex-row gap-3">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5B6B7A]" />
                 <input
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   placeholder="Cari nama, klien, atau kode..."
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border text-sm"
+                  className="w-full pl-10 pr-4 h-11 rounded-xl border border-[#E5EAE8] text-sm text-[#0F172A] focus:outline-none focus:border-[#059669]"
                 />
               </div>
               <div className="flex gap-2 shrink-0">
                 <div className="relative">
-                  <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 pointer-events-none" />
+                  <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5B6B7A] pointer-events-none" />
                   <select
                     value={sort}
                     onChange={e => setSort(e.target.value as ProjectSort)}
-                    className="pl-9 pr-4 py-3 rounded-xl border text-sm appearance-none bg-white min-w-[140px]"
+                    className="pl-9 pr-4 h-11 rounded-xl border border-[#E5EAE8] text-sm text-[#0F172A] appearance-none bg-white min-w-[140px] focus:outline-none focus:border-[#059669]"
                   >
                     <option value="recent">Terbaru</option>
                     <option value="name">Nama A–Z</option>
@@ -1062,7 +1062,7 @@ export default function Projects({
                     <option value="end_date">Deadline</option>
                   </select>
                 </div>
-                <div className="flex bg-slate-100 p-1 rounded-xl flex-wrap">
+                <div className="flex bg-[#F4F7F5] border border-[#E5EAE8] p-1 rounded-xl flex-wrap">
                   {[
                     { id: 'list' as const, icon: List, label: 'List' },
                     { id: 'kanban' as const, icon: Columns3, label: 'Kanban' },
@@ -1074,10 +1074,10 @@ export default function Projects({
                       type="button"
                       onClick={() => setView(v.id)}
                       title={v.label}
-                      className={`p-2 rounded-lg ${
+                      className={`p-2 min-h-9 min-w-9 rounded-lg transition-colors flex items-center justify-center ${
                         projectView === v.id
-                          ? 'bg-white text-emerald-600 shadow-sm'
-                          : 'text-slate-500'
+                          ? 'bg-white text-[#059669] shadow-xs'
+                          : 'text-[#5B6B7A] hover:text-[#0F172A]'
                       }`}
                       aria-label={v.label}
                     >
@@ -1089,10 +1089,10 @@ export default function Projects({
                       <button
                         type="button"
                         onClick={() => setListLayout('card')}
-                        className={`p-2 rounded-lg ${
+                        className={`p-2 min-h-9 min-w-9 rounded-lg transition-colors flex items-center justify-center ${
                           listLayout === 'card'
-                            ? 'bg-white text-emerald-600 shadow-sm'
-                            : 'text-slate-500'
+                            ? 'bg-white text-[#059669] shadow-xs'
+                            : 'text-[#5B6B7A] hover:text-[#0F172A]'
                         }`}
                         aria-label="Kartu"
                       >
@@ -1101,10 +1101,10 @@ export default function Projects({
                       <button
                         type="button"
                         onClick={() => setListLayout('compact')}
-                        className={`p-2 rounded-lg ${
+                        className={`p-2 min-h-9 min-w-9 rounded-lg transition-colors flex items-center justify-center ${
                           listLayout === 'compact'
-                            ? 'bg-white text-emerald-600 shadow-sm'
-                            : 'text-slate-500'
+                            ? 'bg-white text-[#059669] shadow-xs'
+                            : 'text-[#5B6B7A] hover:text-[#0F172A]'
                         }`}
                         aria-label="Baris"
                       >
@@ -1124,16 +1124,16 @@ export default function Projects({
                     setFilter(f.id);
                     setProjectsListFilter(f.id);
                   }}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap border-2 transition-colors ${
+                  className={`flex items-center gap-2 h-10 px-4 rounded-full text-xs font-bold whitespace-nowrap transition-all active:scale-95 ${
                     filter === f.id
-                      ? 'bg-emerald-600 border-emerald-600 text-white'
-                      : 'bg-white border-slate-100 text-slate-500 hover:border-slate-200'
+                      ? 'bg-[#0F172A] text-white shadow-xs'
+                      : 'bg-white border border-[#E5EAE8] text-[#5B6B7A] hover:bg-slate-50'
                   }`}
                 >
-                  {f.label}{' '}
+                  <span>{f.label}</span>
                   <span
                     className={`px-2 py-0.5 rounded-full text-[10px] ${
-                      filter === f.id ? 'bg-white/20' : 'bg-slate-100'
+                      filter === f.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-[#5B6B7A]'
                     }`}
                   >
                     {f.count}
@@ -1354,31 +1354,31 @@ export default function Projects({
           animate={{ opacity: 1 }}
           onClick={() => openProject(proj)}
           onDoubleClick={() => openProjectDetail(proj)}
-          className="bg-white border rounded-2xl p-4 flex items-center gap-4 hover:shadow-lg cursor-pointer group"
+          className="bg-white border border-[#E5EAE8] rounded-2xl p-4 flex items-center gap-4 hover:shadow-md cursor-pointer group shadow-sm transition-all"
         >
           <div className={`w-1.5 h-14 rounded-full ${health.dot}`} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-mono text-slate-600">{proj.code}</span>
+              <span className="text-[10px] font-mono text-[#5B6B7A]">{proj.code}</span>
               <span
                 className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${health.bg} ${health.color}`}
               >
                 {health.label}
               </span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#F4F7F5] border border-[#E5EAE8] text-[#5B6B7A] font-semibold">
                 {STATUS_LABEL[proj.status]}
               </span>
             </div>
-            <h3 className="font-black text-slate-800 truncate group-hover:text-emerald-600">
+            <h3 className="font-bold text-[#0F172A] truncate group-hover:text-[#059669] text-sm mt-0.5">
               {proj.name}
             </h3>
-            <div className="text-xs text-slate-500">{proj.client_name || '—'}</div>
+            <div className="text-xs text-[#5B6B7A] truncate">{proj.client_name || '—'}</div>
           </div>
           <div className="text-right hidden sm:block">
-            <div className="text-lg font-black">{proj.progress_percentage.toFixed(0)}%</div>
-            <div className="text-[10px] text-slate-600">{formatRupiah(proj.spent_amount)}</div>
+            <div className="text-base font-black text-[#0F172A] tabular-nums">{proj.progress_percentage.toFixed(0)}%</div>
+            <div className="text-[11px] text-[#5B6B7A]">{formatRupiah(proj.spent_amount)}</div>
           </div>
-          <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-emerald-500" />
+          <ChevronRight className="w-5 h-5 text-[#5B6B7A] group-hover:text-[#059669] transition-colors" />
         </motion.div>
       );
     }
@@ -1391,34 +1391,34 @@ export default function Projects({
         transition={{ delay: i * 0.03 }}
         onClick={() => openProject(proj)}
         onDoubleClick={() => openProjectDetail(proj)}
-        className="bg-white border rounded-3xl p-5 hover:shadow-xl hover:border-emerald-100 cursor-pointer group transition-all"
+        className="bg-white border border-[#E5EAE8] rounded-2xl p-5 hover:shadow-md hover:border-[#059669]/40 cursor-pointer group transition-all shadow-sm"
       >
         <div className="flex justify-between gap-3 mb-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
-              <span className="text-[10px] font-mono text-slate-600">{proj.code}</span>
+              <span className="text-[10px] font-mono text-[#5B6B7A]">{proj.code}</span>
               <span
                 className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${health.bg} ${health.color}`}
               >
                 {health.label}
               </span>
             </div>
-            <h3 className="font-black text-slate-900 truncate group-hover:text-emerald-600">
+            <h3 className="font-bold text-[#0F172A] truncate group-hover:text-[#059669] text-base">
               {proj.name}
             </h3>
-            <p className="text-xs text-slate-600 flex items-center gap-1 mt-1 truncate">
-              <MapPin className="w-3 h-3 shrink-0" /> {proj.location || proj.client_name || '—'}
+            <p className="text-xs text-[#5B6B7A] flex items-center gap-1 mt-1 truncate">
+              <MapPin className="w-3.5 h-3.5 shrink-0" /> {proj.location || proj.client_name || '—'}
             </p>
           </div>
-          <FolderOpen className="w-8 h-8 text-emerald-300 group-hover:text-emerald-500 shrink-0" />
+          <FolderOpen className="w-8 h-8 text-emerald-200 group-hover:text-[#059669] shrink-0 transition-colors" />
         </div>
         <div className="space-y-3">
           <div>
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-slate-500">Progress</span>
-              <span className="font-bold">{proj.progress_percentage.toFixed(0)}%</span>
+              <span className="text-[#5B6B7A] font-medium">Progress</span>
+              <span className="font-bold text-[#0F172A] tabular-nums">{proj.progress_percentage.toFixed(0)}%</span>
             </div>
-            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-2 bg-[#F4F7F5] rounded-full overflow-hidden">
               <div
                 className={`h-full ${health.dot} rounded-full`}
                 style={{ width: `${Math.min(proj.progress_percentage, 100)}%` }}
@@ -1427,27 +1427,27 @@ export default function Projects({
           </div>
           <div>
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-slate-500">Budget terpakai</span>
-              <span className="font-bold">{Math.round(budgetPct)}%</span>
+              <span className="text-[#5B6B7A] font-medium">Budget terpakai</span>
+              <span className="font-bold text-[#0F172A] tabular-nums">{Math.round(budgetPct)}%</span>
             </div>
-            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-2 bg-[#F4F7F5] rounded-full overflow-hidden">
               <div
-                className="h-full bg-emerald-500 rounded-full"
+                className="h-full bg-[#059669] rounded-full"
                 style={{ width: `${budgetPct}%` }}
               />
             </div>
-            <div className="flex justify-between text-[10px] text-slate-600 mt-1">
+            <div className="flex justify-between text-[11px] text-[#5B6B7A] mt-1">
               <span>{formatRupiah(proj.spent_amount)}</span>
               <span>{formatRupiah(proj.total_budget_planned)}</span>
             </div>
           </div>
         </div>
-        <div className="mt-4 pt-3 border-t flex justify-between items-center">
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold">
+        <div className="mt-4 pt-3 border-t border-[#E5EAE8] flex justify-between items-center">
+          <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-[#F4F7F5] border border-[#E5EAE8] text-[#5B6B7A] font-semibold">
             {STATUS_LABEL[proj.status]}
           </span>
-          <span className="text-xs text-emerald-600 font-bold flex items-center gap-1">
-            Kelola <ChevronRight className="w-3 h-3" />
+          <span className="text-xs text-[#059669] font-bold flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+            Kelola <ChevronRight className="w-3.5 h-3.5" />
           </span>
         </div>
       </motion.div>

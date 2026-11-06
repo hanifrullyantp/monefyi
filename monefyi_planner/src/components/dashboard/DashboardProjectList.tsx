@@ -30,15 +30,15 @@ export default function DashboardProjectList({
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="font-bold text-slate-700 text-sm uppercase tracking-wide">Daftar Proyek</h2>
-        <button type="button" onClick={onViewAll} className="text-xs font-semibold text-emerald-600 underline">
+        <h2 className="font-bold text-[#0F172A] text-sm uppercase tracking-wide">Daftar Proyek</h2>
+        <button type="button" onClick={onViewAll} className="text-xs font-semibold text-[#059669] hover:underline">
           Lihat Semua →
         </button>
       </div>
 
       <div className="space-y-2">
         {list.length === 0 ? (
-          <p className="text-sm text-slate-600 text-center py-6 bg-white rounded-xl border border-dashed">Belum ada proyek.</p>
+          <p className="text-sm text-[#5B6B7A] text-center py-6 bg-white rounded-2xl border border-dashed border-[#E5EAE8]">Belum ada proyek.</p>
         ) : list.map((proj, i) => {
           const daysLeft = Math.ceil((new Date(proj.end_date).getTime() - Date.now()) / 86400000);
           const budgetPct = proj.total_budget_planned
@@ -54,22 +54,22 @@ export default function DashboardProjectList({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
               onClick={() => onOpenProject?.(proj.id)}
-              className={`w-full text-left bg-white rounded-xl p-4 border border-slate-100 border-l-4 ${healthBorder[proj.health_status]} shadow-sm hover:shadow-md transition-shadow`}
+              className={`w-full text-left bg-white rounded-2xl p-4 border border-[#E5EAE8] border-l-4 ${healthBorder[proj.health_status]} shadow-sm hover:shadow-md transition-shadow active:scale-[0.99]`}
             >
-              <div className="flex items-start gap-2">
+              <div className="flex items-start gap-2.5">
                 <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${hc.dot}`} />
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-slate-900 text-sm truncate">{proj.name}</div>
-                  {proj.client_name && <div className="text-xs text-slate-500 truncate">{proj.client_name}</div>}
-                  <div className="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${proj.progress_percentage}%` }} />
+                  <div className="font-bold text-[#0F172A] text-sm truncate">{proj.name}</div>
+                  {proj.client_name && <div className="text-xs text-[#5B6B7A] truncate mt-0.5">{proj.client_name}</div>}
+                  <div className="mt-2.5 h-1.5 bg-[#F4F7F5] rounded-full overflow-hidden">
+                    <div className="h-full bg-[#059669] rounded-full" style={{ width: `${proj.progress_percentage}%` }} />
                   </div>
-                  <div className="flex gap-3 mt-1.5 text-[10px] text-slate-500">
-                    <span>💰 {Math.round(budgetPct)}%</span>
-                    <span>📅 {daysLeft > 0 ? `${daysLeft} hari lagi` : 'Lewat'}</span>
+                  <div className="flex gap-4 mt-2 text-[11px] text-[#5B6B7A] font-medium">
+                    <span>Budget {Math.round(budgetPct)}%</span>
+                    <span>Deadline: {daysLeft > 0 ? `${daysLeft} hari lagi` : 'Lewat'}</span>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-500 shrink-0" />
+                <ChevronRight className="w-4 h-4 text-[#5B6B7A] shrink-0" />
               </div>
             </motion.button>
           );
@@ -80,7 +80,7 @@ export default function DashboardProjectList({
         <button
           type="button"
           onClick={onCreateProject}
-          className="w-full py-3 border-2 border-dashed border-emerald-200 text-emerald-600 rounded-xl text-sm font-bold flex items-center justify-center gap-2"
+          className="w-full h-11 border-2 border-dashed border-[#A7F3D0] text-[#059669] rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-emerald-50 transition-colors"
         >
           <Plus className="w-4 h-4" /> Buat Proyek Baru
         </button>
@@ -89,9 +89,9 @@ export default function DashboardProjectList({
       <button
         type="button"
         onClick={onViewAll}
-        className="w-full h-12 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-600 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-200/50"
+        className="w-full h-11 rounded-xl bg-[#059669] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm hover:bg-[#047857] transition-colors"
       >
-        <span>📁 Kelola Semua Proyek</span>
+        <span>Kelola Semua Proyek</span>
         <ChevronRight className="w-4 h-4" />
       </button>
     </section>

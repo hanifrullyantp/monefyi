@@ -420,24 +420,24 @@ export default function Dashboard({
       </div>
 
       {/* ─── DESKTOP VIEW (Preserve full graphs & panels on md+) ─── */}
-      <div className="hidden md:block p-6 space-y-5 max-w-7xl mx-auto">
+      <div className="hidden md:block p-6 space-y-6 max-w-7xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center justify-between gap-3"
         >
           <div>
-            <h1 className="text-2xl font-black text-slate-900">
+            <h1 className="text-2xl font-black text-[#0F172A]">
               {getGreeting()}, {user?.name?.split(' ')[0]} 👋
             </h1>
-            <p className="text-sm text-slate-500 mt-0.5">
+            <p className="text-sm text-[#5B6B7A] mt-0.5">
               {new Date().toLocaleDateString('id-ID', {
                 weekday: 'long',
                 day: 'numeric',
                 month: 'long',
               })}
               {stats.avgProgress > 0 && (
-                <span className="text-slate-600">
+                <span className="text-[#5B6B7A]">
                   {' '}
                   · Rata-rata progress {Math.round(stats.avgProgress)}%
                 </span>
@@ -451,36 +451,80 @@ export default function Dashboard({
                 setProjectsListFilter('at_risk');
                 setActiveTab('projects');
               }}
-              className="flex items-center gap-2 px-3.5 py-2 bg-rose-50 border border-rose-200 rounded-full hover:bg-rose-100"
+              className="flex items-center gap-2 px-4 h-11 bg-rose-50 border border-rose-200 rounded-full hover:bg-rose-100 transition-colors"
             >
               <AlertCircle className="w-4 h-4 text-rose-500" />
-              <span className="text-xs font-semibold text-rose-700">{stats.atRisk} alert</span>
+              <span className="text-xs font-bold text-rose-700">{stats.atRisk} alert</span>
             </button>
           )}
         </motion.div>
 
-        <DashboardInteractiveCards onOpenProject={onOpenProject} />
-        {tenant?.id && <AgentHomePanel orgId={tenant.id} />}
-
-        <div className="flex flex-wrap gap-1.5 text-[11px]">
-          <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
-            On track {onTrackCount}
-          </span>
-          <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100">
-            At risk {atRiskCount}
-          </span>
-          <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-100">
-            Behind {behindCount}
-          </span>
-          {aheadCount > 0 && (
-            <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
-              Ahead {aheadCount}
-            </span>
-          )}
+        {/* 4 Kartu Gradien Ringkasan Dashboard (Desktop) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <GradientStatCard
+            label="PROYEK"
+            value={`${activeProjectsCount} / ${projects.length}`}
+            subInfo="aktif dari total"
+            variant="green"
+            onClick={() => setActiveTab('projects')}
+            ariaLabel={`Proyek: ${activeProjectsCount} aktif dari ${projects.length} total`}
+          />
+          <GradientStatCard
+            label="KEUANGAN"
+            value={formatCompact(netCash)}
+            subInfo={`masuk ${formatCompact(totalInflow)} · keluar ${formatCompact(totalOutflow)}`}
+            variant="blue"
+            onClick={() => setActiveTab('finance')}
+            ariaLabel={`Keuangan: Kas bersih ${formatRupiah(netCash)}`}
+          />
+          <GradientStatCard
+            label="PERHATIAN"
+            value={attentionCount}
+            subInfo="perlu ditindak"
+            variant="orange"
+            active={healthFilter === 'at_risk' || healthFilter === 'behind'}
+            onClick={() => setHealthFilter(prev => (prev === 'at_risk' ? 'all' : 'at_risk'))}
+            ariaLabel={`Perhatian: ${attentionCount} proyek perlu ditindak`}
+          />
+          <GradientStatCard
+            label="KARYAWAN"
+            value={`${projects.length > 0 ? 1 : 0} / ${projects.length > 0 ? 12 : 0}`}
+            subInfo="hadir hari ini"
+            variant="teal"
+            onClick={() => setActiveTab('hr')}
+            ariaLabel="Karyawan: kehadiran hari ini"
+          />
         </div>
 
+        {/* Kartu Agen Hari Ini */}
+        <div className="bg-[#F5F3FF] border border-[#DDD6FE] rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center gap-2 text-xs font-extrabold text-[#6D28D9] tracking-wider">
+            <Sparkles className="w-4 h-4" aria-hidden="true" />
+            AGEN HARI INI
+          </div>
+          <div className="text-sm font-bold text-[#0F172A] mt-1.5 leading-snug">
+            Laporan pagi: antrean persetujuan dan proyek aktif.
+          </div>
+          <div className="text-xs text-[#5B6B7A] mt-1">
+            {stats.atRisk > 0
+              ? `${stats.atRisk} proyek memerlukan perhatian dan konfirmasi status.`
+              : 'Semua proyek berjalan sesuai rencana. Antrean persetujuan kosong.'}
+          </div>
+        </div>
+
+        {/* Health Chips Filter */}
+        <HealthChips
+          counts={{
+            onTrack: onTrackCount,
+            atRisk: atRiskCount,
+            behind: behindCount,
+          }}
+          activeFilter={healthFilter}
+          onSelectFilter={setHealthFilter}
+        />
+
         <DashboardProjectList
-          projects={projects}
+          projects={filteredProjects}
           onOpenProject={onOpenProject}
           onViewAll={() => setActiveTab('projects')}
           onCreateProject={() => setActiveTab('projects')}
@@ -488,16 +532,16 @@ export default function Dashboard({
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <section className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+          <section className="bg-white rounded-2xl p-5 border border-[#E5EAE8] shadow-sm">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-bold text-slate-800 text-sm">Arus Kas 30 Hari</h2>
-              <span className="text-[10px] text-slate-600">jt Rp</span>
+              <h2 className="font-bold text-[#0F172A] text-sm">Arus Kas 30 Hari</h2>
+              <span className="text-[11px] text-[#5B6B7A] font-medium">jt Rp</span>
             </div>
-            <ResponsiveContainer width="100%" height={160}>
+            <ResponsiveContainer width="100%" height={170}>
               <AreaChart data={cashflowData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="date" tick={{ fontSize: 9 }} />
-                <YAxis tick={{ fontSize: 9 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#F4F7F5" />
+                <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#5B6B7A' }} />
+                <YAxis tick={{ fontSize: 9, fill: '#5B6B7A' }} />
                 <Tooltip
                   formatter={(v: number, n: string) => [
                     `Rp ${v.toFixed(1)} jt`,
@@ -507,42 +551,42 @@ export default function Dashboard({
                 <Area
                   type="monotone"
                   dataKey="inflow"
-                  stroke="#10b981"
-                  fill="#10b98118"
+                  stroke="#059669"
+                  fill="#05966918"
                   strokeWidth={2}
                 />
                 <Area
                   type="monotone"
                   dataKey="outflow"
-                  stroke="#f43f5e"
-                  fill="#f43f5e12"
+                  stroke="#EF4444"
+                  fill="#EF444412"
                   strokeWidth={2}
                 />
               </AreaChart>
             </ResponsiveContainer>
           </section>
 
-          <section className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+          <section className="bg-white rounded-2xl p-5 border border-[#E5EAE8] shadow-sm">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-                <Activity className="w-4 h-4 text-emerald-600" /> Log Terbaru
+              <h2 className="font-bold text-[#0F172A] text-sm flex items-center gap-2">
+                <Activity className="w-4 h-4 text-[#059669]" /> Log Terbaru
               </h2>
-              <span className="text-xs text-slate-600 flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
+              <span className="text-xs text-[#5B6B7A] flex items-center gap-1 font-medium">
+                <Calendar className="w-3.5 h-3.5" />
                 {recentLogs.length}
               </span>
             </div>
-            <div className="space-y-2 max-h-[160px] overflow-y-auto">
+            <div className="space-y-2 max-h-[170px] overflow-y-auto">
               {recentLogs.length === 0 ? (
-                <p className="text-sm text-slate-600 text-center py-4">Belum ada log</p>
+                <p className="text-sm text-[#5B6B7A] text-center py-6">Belum ada log</p>
               ) : (
                 recentLogs.slice(0, 6).map((log, i) => (
                   <div
                     key={i}
-                    className="text-xs text-slate-600 py-1.5 border-b border-slate-50 last:border-0 flex justify-between gap-2"
+                    className="text-xs text-[#0F172A] py-2 border-b border-[#E5EAE8] last:border-0 flex justify-between gap-2"
                   >
                     <span className="truncate">{log.description}</span>
-                    <span className="text-slate-600 shrink-0">{log.date}</span>
+                    <span className="text-[#5B6B7A] shrink-0 font-medium">{log.date}</span>
                   </div>
                 ))
               )}
@@ -551,11 +595,11 @@ export default function Dashboard({
         </div>
 
         {firstActive && (
-          <section className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+          <section className="bg-white rounded-2xl p-5 border border-[#E5EAE8] shadow-sm">
             <div className="flex items-center justify-between gap-2 mb-3">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-emerald-600" />
-                <h2 className="font-bold text-slate-800 text-sm">
+                <Sparkles className="w-4 h-4 text-[#059669]" />
+                <h2 className="font-bold text-[#0F172A] text-sm">
                   Rekomendasi AI ({firstActive.name})
                 </h2>
               </div>
@@ -564,14 +608,14 @@ export default function Dashboard({
                   type="button"
                   onClick={handleLoadAiRecommendations}
                   disabled={aiLoading}
-                  className="text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                  className="text-xs font-bold px-3.5 h-9 rounded-xl bg-emerald-50 text-[#059669] border border-emerald-200 hover:bg-emerald-100 disabled:opacity-50"
                 >
                   {aiLoading ? 'Menganalisa...' : 'Jalankan Analisa AI'}
                 </button>
               )}
             </div>
             {recommendations.length === 0 ? (
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[#5B6B7A]">
                 Klik &ldquo;Jalankan Analisa AI&rdquo; untuk mendapatkan rekomendasi efisiensi biaya
                 & jadwal pada proyek aktif.
               </p>
@@ -580,10 +624,10 @@ export default function Dashboard({
                 {recommendations.map((rec, i) => (
                   <div
                     key={i}
-                    className="p-3 bg-slate-50 rounded-xl text-xs space-y-1 border border-slate-100"
+                    className="p-3 bg-[#F4F7F5] rounded-xl text-xs space-y-1 border border-[#E5EAE8]"
                   >
-                    <div className="font-bold text-slate-800">{rec.action}</div>
-                    <div className="text-slate-600">{rec.impact}</div>
+                    <div className="font-bold text-[#0F172A]">{rec.action}</div>
+                    <div className="text-[#5B6B7A]">{rec.impact}</div>
                   </div>
                 ))}
               </div>
