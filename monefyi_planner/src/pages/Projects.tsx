@@ -397,6 +397,8 @@ export default function Projects({
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [viewPickerOpen, setViewPickerOpen] = useState(false);
+  const [listSectionOpen, setListSectionOpen] = useState(true);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
   // Group collapses for mobile
   const [planningOpen, setPlanningOpen] = useState(false);
@@ -717,34 +719,7 @@ export default function Projects({
           </button>
         </div>
 
-        {/* Filter Chips: Semua / Aktif / Planning / Lainnya */}
-        <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-none">
-          {filters.map(f => {
-            const isActive = filter === f.id;
-            return (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => {
-                  setFilter(f.id);
-                  setProjectsListFilter(f.id);
-                }}
-                className={`h-10 px-3.5 rounded-full text-xs font-bold flex items-center gap-1.5 whitespace-nowrap transition-all active:scale-95 shrink-0 ${
-                  isActive
-                    ? 'bg-[#0F172A] text-white'
-                    : 'bg-white border border-[#E5EAE8] text-[#334155]'
-                }`}
-              >
-                <span>{f.label}</span>
-                <span className={`text-[11px] ${isActive ? 'text-white/80' : 'text-[#8A99A6]'}`}>
-                  {f.count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Tool Row */}
+        {/* Tool Row matching Gambar 2 (Estimator Toolbar) */}
         <ToolRow
           title={
             filter === 'all'
@@ -756,6 +731,8 @@ export default function Projects({
                   : 'Proyek'
           }
           count={filtered.length}
+          listSectionOpen={listSectionOpen}
+          onToggleListSection={() => setListSectionOpen(v => !v)}
           search={search}
           searchOpen={searchOpen}
           onSearchOpen={() => setSearchOpen(true)}
@@ -768,8 +745,11 @@ export default function Projects({
           showResetFilter={filter !== 'all' || search.length > 0}
           onResetFilter={() => {
             setFilter('all');
+            setProjectsListFilter('all');
             setSearch('');
           }}
+          onOpenFilter={() => setFilterSheetOpen(v => !v)}
+          filterActive={filter !== 'all'}
           sortLabel={sort === 'recent' ? 'Terbaru' : sort}
           onOpenSort={() => {
             setSort(prev => (prev === 'recent' ? 'name' : prev === 'name' ? 'progress' : 'recent'));
@@ -805,133 +785,166 @@ export default function Projects({
           }
         />
 
-        {/* View content switch for mobile */}
-        {projectView === 'kanban' && (
-          <div className="overflow-x-auto py-2">
-            <KanbanView
-              projects={filtered}
-              onOpenProject={openProject}
-              onStatusChange={handleStatusChange}
-            />
-          </div>
-        )}
-
-        {projectView === 'timeline' && (
-          <div className="overflow-x-auto py-2">
-            <GanttPlannerView
-              projects={filtered}
-              projectView={projectView}
-              onSetView={setView}
-              focusProjectId={ganttFocusId}
-              onOpenProject={openProject}
-              onOpenProjectDetail={openProjectDetail}
-            />
-          </div>
-        )}
-
-        {projectView === 'calendar' && (
-          <div className="py-2">
-            <CalendarView projects={filtered} onOpenProject={openProject} />
-          </div>
-        )}
-
-        {projectView === 'grid' && (
-          <div className="grid grid-cols-1 gap-2.5">
-            {filtered.map((proj, idx) => {
-              const budgetPlanned = proj.total_budget_planned || 0;
-              const budgetSpent = proj.spent_amount || 0;
-              const budgetPct = budgetPlanned > 0 ? (budgetSpent / budgetPlanned) * 100 : 0;
+        {/* Filter Chips: Appears when Filter button is pressed */}
+        {filterSheetOpen && (
+          <div className="flex gap-2 overflow-x-auto py-1 scrollbar-none animate-fadeIn">
+            {filters.map(f => {
+              const isActive = filter === f.id;
               return (
-                <div
-                  key={proj.id}
-                  onClick={() => openProject(proj)}
-                  className="bg-white border border-[#E5EAE8] rounded-2xl p-4 space-y-2 cursor-pointer"
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => {
+                    setFilter(f.id);
+                    setProjectsListFilter(f.id);
+                  }}
+                  className={`h-10 px-3.5 rounded-full text-xs font-bold flex items-center gap-1.5 whitespace-nowrap transition-all active:scale-95 shrink-0 ${
+                    isActive
+                      ? 'bg-[#0F172A] text-white shadow-xs'
+                      : 'bg-white border border-[#E5EAE8] text-[#334155] hover:bg-slate-50'
+                  }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-mono font-bold text-[#047857] bg-[#ECFDF5] px-2 py-0.5 rounded">
-                      {proj.code}
-                    </span>
-                    <HealthPill status={proj.health_status} />
-                  </div>
-                  <h3 className="font-bold text-sm text-[#0F172A] truncate">{proj.name}</h3>
-                  <div className="text-xs text-[#5B6B7A]">{proj.client_name || '—'}</div>
-                  <div className="flex justify-between text-xs font-semibold pt-1">
-                    <span>{formatCompact(budgetPlanned)}</span>
-                    <span className="text-[#059669]">{Math.round(proj.progress_percentage)}%</span>
-                  </div>
-                </div>
+                  <span>{f.label}</span>
+                  <span className={`text-[11px] ${isActive ? 'text-white/80' : 'text-[#8A99A6]'}`}>
+                    {f.count}
+                  </span>
+                </button>
               );
             })}
           </div>
         )}
 
-        {/* Default 'list' view: "Aktif · n" with ListCard, Planning & Lainnya expandable */}
-        {projectView === 'list' && (
-          <div className="space-y-3">
-            {/* If 'all' filter is selected, show group "Aktif · n" + collapsible Planning & Lainnya */}
-            {filter === 'all' ? (
-              <>
-                {/* Aktif Group */}
-                <div className="space-y-2">
-                  <div className="text-xs font-extrabold text-[#334155] uppercase tracking-wide">
-                    Aktif · {activeProjects.length}
-                  </div>
-                  {activeProjects.map(proj => renderProjectListCard(proj))}
-                </div>
-
-                {/* Planning Group Collapsible */}
-                {planningProjects.length > 0 && (
-                  <div className="space-y-2">
-                    <button
-                      type="button"
-                      onClick={() => setPlanningOpen(prev => !prev)}
-                      className="w-full h-13 rounded-2xl border border-[#E5EAE8] bg-white flex items-center justify-between px-4 font-extrabold text-sm text-[#0F172A] active:scale-95 transition-transform"
-                    >
-                      <span>Planning · {planningProjects.length}</span>
-                      <ChevronRight
-                        className={`w-5 h-5 text-[#8A99A6] transition-transform ${
-                          planningOpen ? 'rotate-90' : ''
-                        }`}
-                      />
-                    </button>
-                    {planningOpen && (
-                      <div className="space-y-2 pt-1">
-                        {planningProjects.map(proj => renderProjectListCard(proj))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Lainnya Group Collapsible */}
-                {otherProjects.length > 0 && (
-                  <div className="space-y-2">
-                    <button
-                      type="button"
-                      onClick={() => setOtherOpen(prev => !prev)}
-                      className="w-full h-13 rounded-2xl border border-[#E5EAE8] bg-white flex items-center justify-between px-4 font-extrabold text-sm text-[#0F172A] active:scale-95 transition-transform"
-                    >
-                      <span>Lainnya · {otherProjects.length}</span>
-                      <ChevronRight
-                        className={`w-5 h-5 text-[#8A99A6] transition-transform ${
-                          otherOpen ? 'rotate-90' : ''
-                        }`}
-                      />
-                    </button>
-                    {otherOpen && (
-                      <div className="space-y-2 pt-1">
-                        {otherProjects.map(proj => renderProjectListCard(proj))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </>
-            ) : (
-              /* Specific Filter selected: show matching projects */
-              <div className="space-y-2">
-                {filtered.map(proj => renderProjectListCard(proj))}
+        {/* List Section Collapsible via green ChevronDown */}
+        {listSectionOpen && (
+          <>
+            {/* View content switch for mobile */}
+            {projectView === 'kanban' && (
+              <div className="overflow-x-auto py-2">
+                <KanbanView
+                  projects={filtered}
+                  onOpenProject={openProject}
+                  onStatusChange={handleStatusChange}
+                />
               </div>
             )}
-          </div>
+
+            {projectView === 'timeline' && (
+              <div className="overflow-x-auto py-2">
+                <GanttPlannerView
+                  projects={filtered}
+                  projectView={projectView}
+                  onSetView={setView}
+                  focusProjectId={ganttFocusId}
+                  onOpenProject={openProject}
+                  onOpenProjectDetail={openProjectDetail}
+                />
+              </div>
+            )}
+
+            {projectView === 'calendar' && (
+              <div className="py-2">
+                <CalendarView projects={filtered} onOpenProject={openProject} />
+              </div>
+            )}
+
+            {projectView === 'grid' && (
+              <div className="grid grid-cols-1 gap-2.5">
+                {filtered.map((proj) => {
+                  const budgetPlanned = proj.total_budget_planned || 0;
+                  const budgetSpent = proj.spent_amount || 0;
+                  return (
+                    <div
+                      key={proj.id}
+                      onClick={() => openProject(proj)}
+                      className="bg-white border border-[#E5EAE8] rounded-2xl p-4 space-y-2 cursor-pointer active:scale-[0.99] transition-transform"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-mono font-bold text-[#047857] bg-[#ECFDF5] px-2 py-0.5 rounded">
+                          {proj.code}
+                        </span>
+                        <HealthPill status={proj.health_status} />
+                      </div>
+                      <h3 className="font-bold text-sm text-[#0F172A] truncate">{proj.name}</h3>
+                      <div className="text-xs text-[#5B6B7A]">{proj.client_name || '—'}</div>
+                      <div className="flex justify-between text-xs font-semibold pt-1">
+                        <span>{formatCompact(budgetPlanned)}</span>
+                        <span className="text-[#059669]">{Math.round(proj.progress_percentage)}%</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Default 'list' view: "Aktif · n" with ListCard, Planning & Lainnya expandable */}
+            {projectView === 'list' && (
+              <div className="space-y-3">
+                {/* If 'all' filter is selected, show group "Aktif · n" + collapsible Planning & Lainnya */}
+                {filter === 'all' ? (
+                  <>
+                    {/* Aktif Group */}
+                    <div className="space-y-2">
+                      <div className="text-xs font-extrabold text-[#334155] uppercase tracking-wide">
+                        Aktif · {activeProjects.length}
+                      </div>
+                      {activeProjects.map(proj => renderProjectListCard(proj))}
+                    </div>
+
+                    {/* Planning Group Collapsible */}
+                    {planningProjects.length > 0 && (
+                      <div className="space-y-2">
+                        <button
+                          type="button"
+                          onClick={() => setPlanningOpen(prev => !prev)}
+                          className="w-full h-13 rounded-2xl border border-[#E5EAE8] bg-white flex items-center justify-between px-4 font-extrabold text-sm text-[#0F172A] active:scale-95 transition-transform"
+                        >
+                          <span>Planning · {planningProjects.length}</span>
+                          <ChevronRight
+                            className={`w-5 h-5 text-[#8A99A6] transition-transform ${
+                              planningOpen ? 'rotate-90' : ''
+                            }`}
+                          />
+                        </button>
+                        {planningOpen && (
+                          <div className="space-y-2 pt-1">
+                            {planningProjects.map(proj => renderProjectListCard(proj))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Lainnya Group Collapsible */}
+                    {otherProjects.length > 0 && (
+                      <div className="space-y-2">
+                        <button
+                          type="button"
+                          onClick={() => setOtherOpen(prev => !prev)}
+                          className="w-full h-13 rounded-2xl border border-[#E5EAE8] bg-white flex items-center justify-between px-4 font-extrabold text-sm text-[#0F172A] active:scale-95 transition-transform"
+                        >
+                          <span>Lainnya · {otherProjects.length}</span>
+                          <ChevronRight
+                            className={`w-5 h-5 text-[#8A99A6] transition-transform ${
+                              otherOpen ? 'rotate-90' : ''
+                            }`}
+                          />
+                        </button>
+                        {otherOpen && (
+                          <div className="space-y-2 pt-1">
+                            {otherProjects.map(proj => renderProjectListCard(proj))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  /* Specific Filter selected: show matching projects */
+                  <div className="space-y-2">
+                    {filtered.map(proj => renderProjectListCard(proj))}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
 

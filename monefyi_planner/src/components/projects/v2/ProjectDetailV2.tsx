@@ -18,6 +18,7 @@ import {
   MapPin,
   Sparkles,
   X,
+  ChevronDown,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { Project } from '../../../store/appStore';
@@ -93,6 +94,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
   const [rapItems, setRapItems] = useState<Awaited<ReturnType<typeof loadRapItems>>>([]);
   const [workItems, setWorkItems] = useState<Awaited<ReturnType<typeof loadWorkItems>>>([]);
   const [projectLogs, setProjectLogs] = useState<DailyLog[]>([]);
+  const [heroExpanded, setHeroExpanded] = useState(false);
   const [rapActuals, setRapActuals] = useState<Record<string, { qty: number; amount: number }>>({});
   const [rapDraft, setRapDraft] = useState<RapDraftControls | null>(null);
   const [sourceEstimation, setSourceEstimation] = useState<SourceEstimationInfo | null>(null);
@@ -320,20 +322,6 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, [tab, rapDraft?.hasChanges]);
 
-  // AI analysis text for mobile overview
-  const analysisText = useMemo(() => {
-    if (budgetPct >= 100 && progressSummary.actual === 0) {
-      return 'Budget sudah terpakai 100% sementara progres masih 0%. Periksa RAP dan catat progres terbaru.';
-    }
-    if (budgetPct > 100) {
-      return `Realisasi biaya (${budgetPct}%) telah melampaui rencana budget. Evaluasi pengeluaran dan sesuaikan RAP.`;
-    }
-    if (progressSummary.deviation < -10) {
-      return `Progres terlambat ${Math.abs(progressSummary.deviation)}% dari rencana jadwal. Prioritaskan pekerjaan kritis.`;
-    }
-    return 'Proyek berjalan terkendali. Lanjutkan pemantauan realisasi biaya dan log harian berkala.';
-  }, [budgetPct, progressSummary.actual, progressSummary.deviation]);
-
   return (
     <div className="flex flex-col min-h-0 pb-28 md:pb-10">
       {/* ─── MOBILE HEADER (Design Redesign Mobile) ─── */}
@@ -481,50 +469,78 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
             aria-hidden="true"
             className="absolute -right-10 -top-14 w-40 h-40 rounded-full bg-white/10 pointer-events-none"
           />
-          <div className="relative flex items-center gap-2">
-            <HealthPill status={project.health_status} />
-            <StatusPill status={project.status} />
+          <div className="relative flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <HealthPill status={project.health_status} />
+              <StatusPill status={project.status} />
+            </div>
+            <button
+              type="button"
+              onClick={() => setHeroExpanded(v => !v)}
+              aria-label={heroExpanded ? 'Sembunyikan progres & budget' : 'Tampilkan progres & budget'}
+              className="min-h-11 min-w-11 -mr-2 rounded-full flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 active:scale-95 transition-all"
+            >
+              <div className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center">
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${heroExpanded ? 'rotate-180' : ''}`} />
+              </div>
+            </button>
           </div>
 
-          <h2 className="relative text-2xl font-extrabold tracking-tight mt-3 text-white">
+          <h2 className="relative text-2xl font-extrabold tracking-tight mt-2 text-white">
             {project.name}
           </h2>
 
-          <div className="relative text-[13px] text-[#ECFDF5] mt-1 flex items-center gap-1.5 truncate">
-            <MapPin className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">{project.location || project.client_name || '—'}</span>
+          <div className="relative text-[13px] text-[#ECFDF5] mt-1 flex items-center justify-between gap-1.5">
+            <div className="flex items-center gap-1.5 truncate">
+              <MapPin className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">{project.location || project.client_name || '—'}</span>
+            </div>
+            {!heroExpanded && (
+              <span className="text-xs font-bold text-[#A7F3D0] shrink-0">
+                {Math.round(progressSummary.actual)}% · {budgetPct}% budget
+              </span>
+            )}
           </div>
 
-          {/* Progress */}
-          <div className="relative mt-4 flex justify-between text-xs font-bold text-[#D1FAE5]">
-            <span>Progress</span>
-            <span className="text-white">{Math.round(progressSummary.actual)}%</span>
-          </div>
-          <div className="relative h-1.5 rounded-full bg-white/25 mt-1.5 overflow-hidden">
-            <div
-              className="h-full bg-white rounded-full transition-all"
-              style={{ width: `${Math.min(100, Math.round(progressSummary.actual))}%` }}
-            />
-          </div>
+          {/* Expandable Progress & Budget */}
+          {heroExpanded && (
+            <div className="relative pt-3 mt-3 border-t border-white/15 space-y-3">
+              {/* Progress */}
+              <div>
+                <div className="flex justify-between text-xs font-bold text-[#D1FAE5]">
+                  <span>Progress</span>
+                  <span className="text-white">{Math.round(progressSummary.actual)}%</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-white/25 mt-1.5 overflow-hidden">
+                  <div
+                    className="h-full bg-white rounded-full transition-all"
+                    style={{ width: `${Math.min(100, Math.round(progressSummary.actual))}%` }}
+                  />
+                </div>
+              </div>
 
-          {/* Budget Terpakai */}
-          <div className="relative mt-3 flex justify-between text-xs font-bold text-[#D1FAE5]">
-            <span>Budget terpakai</span>
-            <span className="text-white">{budgetPct}%</span>
-          </div>
-          <div className="relative h-1.5 rounded-full bg-white/25 mt-1.5 overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all"
-              style={{
-                width: `${Math.min(100, budgetPct)}%`,
-                backgroundColor: budgetPct > 100 ? '#EF4444' : budgetPct > 90 ? '#FCD34D' : '#10B981',
-              }}
-            />
-          </div>
-          <div className="relative mt-1.5 flex justify-between text-xs text-[#D1FAE5] tabular-nums">
-            <span>{formatCompact(budgetSpent)}</span>
-            <span>{formatCompact(budgetPlanned)}</span>
-          </div>
+              {/* Budget Terpakai */}
+              <div>
+                <div className="flex justify-between text-xs font-bold text-[#D1FAE5]">
+                  <span>Budget terpakai</span>
+                  <span className="text-white">{budgetPct}%</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-white/25 mt-1.5 overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${Math.min(100, budgetPct)}%`,
+                      backgroundColor: budgetPct > 100 ? '#EF4444' : budgetPct > 90 ? '#FCD34D' : '#10B981',
+                    }}
+                  />
+                </div>
+                <div className="mt-1.5 flex justify-between text-xs text-[#D1FAE5] tabular-nums">
+                  <span>{formatCompact(budgetSpent)}</span>
+                  <span>{formatCompact(budgetPlanned)}</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -559,96 +575,19 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
           <div className="text-center py-16 text-slate-500">Memuat...</div>
         ) : (
           <div>
-            {/* If on mobile and in 'overview' tab, show new mobile overview widgets */}
             {tab === 'overview' && (
-              <div className="md:hidden space-y-3 max-w-[420px] mx-auto">
-                {/* Analisa Monefyi Purple Card */}
-                <div className="bg-[#F5F3FF] border border-[#DDD6FE] rounded-2xl p-3.5 space-y-2.5">
-                  <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-[#6D28D9] tracking-[0.06em]">
-                    <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
-                    ANALISA MONEFYI
-                  </div>
-                  <div className="text-[13px] font-semibold text-[#0F172A] leading-snug">
-                    {analysisText}
-                  </div>
-                  <div className="flex gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => trySetTab('rap')}
-                      className="h-11 px-3.5 rounded-xl bg-[#6D28D9] text-white font-bold text-xs flex items-center justify-center active:scale-95 transition-transform"
-                    >
-                      Buka RAP
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => trySetTab('progress')}
-                      className="h-11 px-3.5 rounded-xl border border-[#DDD6FE] bg-white text-[#4C1D95] font-bold text-xs flex items-center justify-center active:scale-95 transition-transform"
-                    >
-                      Update progres
-                    </button>
-                  </div>
-                </div>
-
-                {/* 2 Metrik Cards */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div className="bg-white border border-[#E5EAE8] rounded-2xl p-3 flex flex-col justify-between">
-                    <div className="text-[10px] font-bold text-[#5B6B7A] tracking-[0.05em] uppercase">
-                      NILAI PROYEK
-                    </div>
-                    <div className="text-base font-extrabold text-[#0F172A] mt-1 tabular-nums truncate">
-                      {formatCompact(budgetPlanned)}
-                    </div>
-                  </div>
-                  <div className="bg-white border border-[#E5EAE8] rounded-2xl p-3 flex flex-col justify-between">
-                    <div className="text-[10px] font-bold text-[#5B6B7A] tracking-[0.05em] uppercase">
-                      REALISASI BIAYA
-                    </div>
-                    <div className="text-base font-extrabold text-[#0F172A] mt-1 tabular-nums truncate">
-                      {formatCompact(budgetSpent)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Aktivitas Terbaru Card */}
-                <div className="bg-white border border-[#E5EAE8] rounded-2xl overflow-hidden shadow-xs">
-                  <div className="px-3.5 py-3 text-xs font-extrabold text-[#0F172A] border-b border-[#EDF1EF]">
-                    Aktivitas terbaru
-                  </div>
-                  {projectLogs.length === 0 ? (
-                    <div className="p-5 text-center text-xs text-[#5B6B7A]">
-                      Belum ada log harian untuk proyek ini.
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-[#EDF1EF] p-2 text-xs">
-                      {projectLogs.slice(0, 5).map(log => (
-                        <div key={log.id} className="py-2 px-1 flex justify-between gap-2">
-                          <span className="text-[#0F172A] font-medium truncate">
-                            {log.description}
-                          </span>
-                          <span className="text-[#8A99A6] shrink-0">{log.date}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+              <TabV2Overview
+                normalized={normalized}
+                project={project}
+                orgId={tenant?.id || ''}
+                userId={user?.id || ''}
+                rapItems={rapItems}
+                workItems={workItems}
+                onRefresh={reload}
+                onSwitchTab={tabId => trySetTab(tabId)}
+                onEditProject={openEdit}
+              />
             )}
-
-            {/* Desktop Overview Tab / Other Tabs on both */}
-            <div className={tab === 'overview' ? 'hidden md:block' : ''}>
-              {tab === 'overview' && (
-                <TabV2Overview
-                  normalized={normalized}
-                  project={project}
-                  orgId={tenant?.id || ''}
-                  userId={user?.id || ''}
-                  rapItems={rapItems}
-                  workItems={workItems}
-                  onRefresh={reload}
-                  onSwitchTab={tabId => trySetTab(tabId)}
-                  onEditProject={openEdit}
-                />
-              )}
               {tab === 'keuangan' && (
                 <TabV2Keuangan
                   normalized={normalized}
@@ -699,7 +638,6 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
               {tab === 'laporan' && (
                 <TabV2Laporan project={project} normalized={normalized} rapItems={rapItems} />
               )}
-            </div>
           </div>
         )}
       </main>
