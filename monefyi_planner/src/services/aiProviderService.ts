@@ -98,7 +98,7 @@ const DEFAULT_CONFIG: AIConfig = {
   activeProvider: 'openrouter',
   keys: {},
   models: {},
-  executionMode: 'review',
+  executionMode: 'auto',
   autoLimit: 5_000_000,
 };
 
@@ -152,8 +152,19 @@ export function getActiveModel(config: AIConfig, provider = config.activeProvide
   return resolved;
 }
 
+export function resolveWorkingProvider(config = loadAIConfig()): AIProviderId {
+  if (config.keys[config.activeProvider]?.trim()) {
+    return config.activeProvider;
+  }
+  for (const p of AI_PROVIDERS) {
+    if (config.keys[p.id]?.trim()) return p.id;
+  }
+  return config.activeProvider;
+}
+
 export function hasActiveKey(config = loadAIConfig()): boolean {
-  return Boolean(config.keys[config.activeProvider]?.trim());
+  const provider = resolveWorkingProvider(config);
+  return Boolean(config.keys[provider]?.trim());
 }
 
 export interface ChatMessage {
@@ -189,22 +200,29 @@ function openAICompatible(
     messages: ChatMessage[],
     opts: CallOptions,
   ): Promise<string> => {
-    const res = await fetch(url, {
-      method: 'POST',
-      signal: opts.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${key}`,
-        ...extraHeaders,
-      },
-      body: JSON.stringify({
-        model,
-        messages,
-        temperature: opts.temperature ?? 0.3,
-        max_tokens: opts.maxTokens ?? 1500,
-        ...(opts.json ? { response_format: { type: 'json_object' } } : {}),
-      }),
-    });
+    const sendReq = async (useJsonFormat: boolean) =>
+      fetch(url, {
+        method: 'POST',
+        signal: opts.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${key}`,
+          ...extraHeaders,
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          temperature: opts.temperature ?? 0.35,
+          max_tokens: opts.maxTokens ?? 4096,
+          ...(useJsonFormat ? { response_format: { type: 'json_object' } } : {}),
+        }),
+      });
+
+    let res = await sendReq(Boolean(opts.json));
+    if (!res.ok && opts.json && (res.status === 400 || res.status === 422)) {
+      // Beberapa model di OpenRouter / Groq tidak mendukung response_format json_object
+      res = await sendReq(false);
+    }
     if (!res.ok) throw new Error(`${res.status}: ${await readError(res)}`);
     const data = await res.json();
     const text = data?.choices?.[0]?.message?.content;
@@ -241,7 +259,7 @@ async function callAnthropic(
       system,
       messages: convo,
       temperature: opts.temperature ?? 0.3,
-      max_tokens: opts.maxTokens ?? 1500,
+      max_tokens: opts.maxTokens ?? 4096,
     }),
   });
   if (!res.ok) throw new Error(`${res.status}: ${await readError(res)}`);
@@ -267,9 +285,6 @@ async function callGeminiOnce(
   const contents = messages
     .filter(m => m.role !== 'system')
     .map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
-  // #region agent log
-  fetch('http://127.0.0.1:7456/ingest/64ec47ef-1a63-485e-909c-4ab70260afe3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'735de3'},body:JSON.stringify({sessionId:'735de3',hypothesisId:'A',location:'aiProviderService.ts:callGemini',message:'gemini request',data:{model},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
     {
@@ -280,8 +295,8 @@ async function callGeminiOnce(
         ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
         contents,
         generationConfig: {
-          temperature: opts.temperature ?? 0.3,
-          maxOutputTokens: opts.maxTokens ?? 1500,
+          temperature: opts.temperature ?? 0.35,
+          maxOutputTokens: opts.maxTokens ?? 4096,
           ...(opts.json ? { responseMimeType: 'application/json' } : {}),
         },
       }),
@@ -289,9 +304,6 @@ async function callGeminiOnce(
   );
   if (!res.ok) {
     const errText = await readError(res);
-    // #region agent log
-    fetch('http://127.0.0.1:7456/ingest/64ec47ef-1a63-485e-909c-4ab70260afe3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'735de3'},body:JSON.stringify({sessionId:'735de3',hypothesisId:'B',location:'aiProviderService.ts:callGemini',message:'gemini error',data:{model,status:res.status,errPreview:errText.slice(0,120)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     throw new Error(`${res.status}: ${errText}`);
   }
   const data = await res.json();
@@ -310,13 +322,7 @@ async function callGemini(
   let lastError = 'Gagal menghubungi Gemini';
   for (const candidate of tryModels) {
     try {
-      const text = await callGeminiOnce(key, candidate, messages, opts);
-      if (candidate !== model) {
-        // #region agent log
-        fetch('http://127.0.0.1:7456/ingest/64ec47ef-1a63-485e-909c-4ab70260afe3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'735de3'},body:JSON.stringify({sessionId:'735de3',hypothesisId:'F',location:'aiProviderService.ts:callGemini',message:'gemini fallback ok',data:{from:model,to:candidate},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
-      }
-      return text;
+      return await callGeminiOnce(key, candidate, messages, opts);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       lastError = msg;
@@ -334,20 +340,16 @@ export class MissingAIKeyError extends Error {
   }
 }
 
-/** Panggil provider aktif (atau yang ditentukan) dengan key milik pengguna. */
+/** Panggil provider aktif (atau provider lain yang sudah memiliki key) dengan key milik pengguna. */
 export async function callUnifiedAI(
   messages: ChatMessage[],
   opts: CallOptions = {},
   config: AIConfig = loadAIConfig(),
 ): Promise<string> {
-  const provider = config.activeProvider;
+  const provider = resolveWorkingProvider(config);
   const key = config.keys[provider]?.trim();
   if (!key) throw new MissingAIKeyError(provider);
   const model = getActiveModel(config, provider);
-  const storedRaw = config.models[provider]?.trim() || '';
-  // #region agent log
-  fetch('http://127.0.0.1:7456/ingest/64ec47ef-1a63-485e-909c-4ab70260afe3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'735de3'},body:JSON.stringify({sessionId:'735de3',hypothesisId:'C',location:'aiProviderService.ts:callUnifiedAI',message:'unified ai call',data:{provider,model,storedRaw,migrated:storedRaw!==model},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   switch (provider) {
     case 'openrouter': return callOpenRouter(key, model, messages, opts);
     case 'groq': return callGroq(key, model, messages, opts);
@@ -370,17 +372,61 @@ export async function testAIConnection(config: AIConfig): Promise<{ ok: boolean;
   }
 }
 
-/** Ekstrak objek JSON dari teks model (toleran terhadap code fence / teks tambahan). */
+/** Ekstrak objek JSON dari teks model (toleran terhadap code fence, teks tambahan, atau JSON yang terpotong). */
 export function extractJson<T = unknown>(text: string): T | null {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const candidate = fenced ? fenced[1] : text;
+  const candidate = (fenced ? fenced[1] : text).trim();
   const start = candidate.indexOf('{');
   const end = candidate.lastIndexOf('}');
-  if (start < 0 || end <= start) return null;
-  try {
-    return JSON.parse(candidate.slice(start, end + 1)) as T;
-  } catch {
-    return null;
+  if (start >= 0 && end > start) {
+    try {
+      return JSON.parse(candidate.slice(start, end + 1)) as T;
+    } catch {
+      // lanjut ke ekstraksi parsial di bawah
+    }
   }
+
+  // Toleran jika JSON terpotong di tengah stream (misal terpotong di delegations/actions)
+  if (start >= 0) {
+    const replyMatch = candidate.match(/"reply"\s*:\s*"((?:[^"\\]|\\.)*?)(?:"|,|\n|$)/s);
+    if (replyMatch && replyMatch[1]) {
+      let cleanReply = replyMatch[1]
+        .replace(/\\n/g, '\n')
+        .replace(/\\"/g, '"')
+        .replace(/\\\\/g, '\\')
+        .trim();
+      return { reply: cleanReply } as T;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Membersihkan teks respons bila masih mengandung fragmen JSON mentah seperti:
+ * { "reply": "...", atau "delegations": [ ...
+ * agar antarmuka chat selalu menampilkan narasi manusia yang bersih dan luwes.
+ */
+export function cleanRawAssistantReply(raw: string): string {
+  if (!raw) return 'Siap Pak/Bu Owner, saya sudah cek kondisi proyek Anda.';
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('{') || trimmed.includes('"reply"')) {
+    const m = trimmed.match(/"reply"\s*:\s*"((?:[^"\\]|\\.)*?)(?:"|\s*,\s*"delegations"|\s*,\s*"actions"|\s*,\s*"followUps"|$)/s);
+    if (m && m[1]) {
+      return m[1]
+        .replace(/\\n/g, '\n')
+        .replace(/\\"/g, '"')
+        .replace(/\\\\/g, '\\')
+        .trim();
+    }
+    // Jika format JSON sangat hancur, buang semua tanda kurung kurawal & properti JSON
+    return trimmed
+      .replace(/\{[\s\S]*?"reply"\s*:\s*"/i, '')
+      .replace(/"\s*,\s*"delegations"[\s\S]*/i, '')
+      .replace(/"\s*,\s*"actions"[\s\S]*/i, '')
+      .replace(/[{}\[\]"]/g, '')
+      .trim();
+  }
+  return trimmed;
 }
 

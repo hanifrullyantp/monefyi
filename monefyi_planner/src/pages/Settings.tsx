@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { User, Globe, LogOut, Edit3, Check, Building2, Bell, Shield,
   Info, RefreshCw, Loader2, ChevronRight, Lock, Users, Wifi, WifiOff, Sparkles, Wallet,
-  CreditCard, FlaskConical,
+  CreditCard, FlaskConical, Bot, Bug,
 } from 'lucide-react';
 import { setActiveOrgTimeZone } from '../lib/adapters';
 import { useAppStore } from '../store/appStore';
@@ -28,13 +28,15 @@ import FinanceIntegrationPanel from '../components/finance-v2/FinanceIntegration
 import UpgradePlansPanel from '../components/settings/UpgradePlansPanel';
 import CustomDomainPanel from '../components/settings/CustomDomainPanel';
 import TelegramLinkPanel from '../components/settings/TelegramLinkPanel';
+import FieldCoordinationPanel from '../components/settings/FieldCoordinationPanel';
+import ErrorTraceDiagnosticsPanel from '../components/settings/ErrorTraceDiagnosticsPanel';
 import { formatPlanPriceIdr, planForOrg, type PricingPlan } from '../lib/pricingPlans';
 import { countProjectsCreatedThisMonth, loadPricingPlans } from '../services/pricingPlanService';
 
-type SettingsTab = 'profil' | 'akun' | 'organisasi' | 'pricelist' | 'domain' | 'notifikasi' | 'keamanan' | 'tentang' | 'developer';
+type SettingsTab = 'profil' | 'akun' | 'koordinasi' | 'organisasi' | 'pricelist' | 'domain' | 'notifikasi' | 'keamanan' | 'diagnostik' | 'tentang' | 'developer';
 
 const VALID_SETTINGS_TABS: SettingsTab[] = [
-  'profil', 'akun', 'organisasi', 'pricelist', 'domain', 'notifikasi', 'keamanan', 'tentang', 'developer',
+  'profil', 'akun', 'koordinasi', 'organisasi', 'pricelist', 'domain', 'notifikasi', 'keamanan', 'diagnostik', 'tentang', 'developer',
 ];
 
 const TIMEZONES = [
@@ -338,11 +340,13 @@ export default function Settings() {
   const tabs: { id: SettingsTab; label: string; icon: typeof User; show: boolean }[] = [
     { id: 'profil', label: 'Profil', icon: User, show: true },
     { id: 'akun', label: 'Akun & AI', icon: Sparkles, show: true },
+    { id: 'koordinasi', label: 'Koordinasi AI & Tim', icon: Bot, show: true },
     { id: 'organisasi', label: 'Organisasi', icon: Building2, show: canEditOrg },
     { id: 'pricelist', label: 'Pricelist', icon: CreditCard, show: canEditOrg },
     { id: 'domain', label: 'Custom Domain', icon: Globe, show: canEditOrg },
     { id: 'notifikasi', label: 'Notifikasi', icon: Bell, show: true },
     { id: 'keamanan', label: 'Keamanan', icon: Shield, show: true },
+    { id: 'diagnostik', label: 'Trace & Error', icon: Bug, show: true },
     { id: 'developer', label: 'Developer', icon: FlaskConical, show: isOwner },
     { id: 'tentang', label: 'Tentang', icon: Info, show: true },
   ];
@@ -528,6 +532,12 @@ export default function Settings() {
         </div>
       )}
 
+      {tab === 'koordinasi' && (
+        <div className="bg-white rounded-2xl border border-slate-100 p-6">
+          <FieldCoordinationPanel />
+        </div>
+      )}
+
       {tab === 'organisasi' && canEditOrg && (
         <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-5">
           <div>
@@ -705,6 +715,10 @@ export default function Settings() {
             Keluar dari semua perangkat
           </button>
         </div>
+      )}
+
+      {tab === 'diagnostik' && (
+        <ErrorTraceDiagnosticsPanel />
       )}
 
       {tab === 'developer' && isOwner && user?.id && (

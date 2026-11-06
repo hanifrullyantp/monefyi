@@ -733,7 +733,7 @@ export async function executeIntent(
       const name = String(params.name || '').trim();
       if (!name) return { success: false, message: 'Nama karyawan/tukang wajib diisi.' };
       const roleRaw = String(params.role || 'worker').toLowerCase();
-      const role = (['owner', 'admin', 'manager', 'staff', 'worker'].includes(roleRaw) ? roleRaw : 'worker') as 'worker' | 'staff' | 'manager';
+      const role = (['owner', 'manager', 'worker'].includes(roleRaw) ? roleRaw : 'worker') as 'owner' | 'manager' | 'worker';
       const res = await createHrMemberQuick({
         orgId: ctx.orgId,
         name,

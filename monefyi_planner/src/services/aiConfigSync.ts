@@ -37,9 +37,14 @@ export function mergeCloudAIConfig(
     if (fromCloud) keys[id] = fromCloud;
     else if (!fromLocal && id === 'gemini' && geminiColumn?.trim()) keys[id] = geminiColumn.trim();
   }
+  let activeProvider = cloud?.activeProvider ?? local.activeProvider;
+  if (!keys[activeProvider]?.trim()) {
+    const withKey = PROVIDERS.find(id => Boolean(keys[id]?.trim()));
+    if (withKey) activeProvider = withKey;
+  }
   return {
     ...local,
-    activeProvider: cloud?.activeProvider ?? local.activeProvider,
+    activeProvider,
     executionMode: cloud?.executionMode ?? local.executionMode,
     autoLimit: cloud?.autoLimit ?? local.autoLimit,
     models: { ...(cloud?.models ?? {}), ...local.models },
@@ -48,7 +53,7 @@ export function mergeCloudAIConfig(
 }
 
 export async function hydrateAIConfigFromAccount(userId: string): Promise<AIConfig> {
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from('profiles')
     .select('settings, gemini_key')
     .eq('id', userId)
@@ -56,9 +61,6 @@ export async function hydrateAIConfigFromAccount(userId: string): Promise<AIConf
   const settings = (data?.settings ?? {}) as Record<string, unknown>;
   const cloud = cloudSlice(settings[SETTINGS_KEY]);
   const merged = mergeCloudAIConfig(loadAIConfig(), cloud, data?.gemini_key ?? null);
-  // #region agent log
-  fetch('http://127.0.0.1:7456/ingest/64ec47ef-1a63-485e-909c-4ab70260afe3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'735de3'},body:JSON.stringify({sessionId:'735de3',hypothesisId:'D',location:'aiConfigSync.ts:hydrate',message:'hydrate ai config',data:{dbError:error?.message??null,hasCloud:!!cloud,cloudProviders:cloud?.keys?Object.keys(cloud.keys).filter(k=>Boolean(cloud.keys?.[k as AIProviderId]?.trim())):[],hasGeminiColumn:Boolean(data?.gemini_key?.trim()),activeAfter:merged.activeProvider,keyReady:Boolean(merged.keys[merged.activeProvider]?.trim())},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   saveAIConfig(merged);
   return merged;
 }
@@ -75,7 +77,4 @@ export async function persistAIConfigToAccount(userId: string, config: AIConfig)
   });
   const gemini = config.keys.gemini?.trim();
   if (gemini) await updateUserAccount({ gemini_key: gemini });
-  // #region agent log
-  fetch('http://127.0.0.1:7456/ingest/64ec47ef-1a63-485e-909c-4ab70260afe3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'735de3'},body:JSON.stringify({sessionId:'735de3',hypothesisId:'E',location:'aiConfigSync.ts:persist',message:'persist ai config',data:{activeProvider:config.activeProvider,providersWithKey:PROVIDERS.filter(p=>Boolean(config.keys[p]?.trim()))},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
 }
