@@ -8,6 +8,7 @@ interface LeadsStore {
   addLead: (lead: Omit<Lead, "id" | "createdAt" | "updatedAt" | "activities">) => void;
   updateLead: (id: string, updates: Partial<Lead>) => void;
   deleteLead: (id: string) => void;
+  deleteLeads: (ids: string[]) => void;
   updateLeadStatus: (id: string, status: LeadStatus) => void;
   addActivity: (leadId: string, activity: Omit<Lead["activities"][0], "id">) => void;
   getLead: (id: string) => Lead | undefined;
@@ -43,6 +44,13 @@ export const useLeadsStore = create<LeadsStore>()(
       deleteLead: (id) => {
         set((state) => ({
           leads: state.leads.filter((lead) => lead.id !== id),
+        }));
+      },
+
+      deleteLeads: (ids) => {
+        const idSet = new Set(ids);
+        set((state) => ({
+          leads: state.leads.filter((lead) => !idSet.has(lead.id)),
         }));
       },
 

@@ -261,6 +261,42 @@ export default function ConversationalCheckout({
     }).catch(() => {});
   };
 
+  // Otomatis Kirim Email via Resend saat Pembayaran Berhasil / Akun Free Aktif
+  const sendAutoResendEmails = (isFreePlan: boolean) => {
+    if (!email.trim() || !email.includes('@')) return;
+    const activeSid = sessionId || (typeof window !== 'undefined' ? sessionStorage.getItem('monefyi_checkout_session') || '' : '');
+
+    // 1. Kirim Konfirmasi Pembayaran
+    fetch('/api/email/resend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: email.trim(),
+        name: fullName.trim() || 'Pelanggan Estimator',
+        type: 'payment_confirmation',
+        planTier: product,
+        amount: isFreePlan ? 0 : finalPrice,
+        paymentMethod: isFreePlan ? 'Gratis 100%' : paymentMethod,
+        sessionId: activeSid,
+      }),
+    }).catch(() => {});
+
+    // 2. Kirim Akses Akun & Password Sementara
+    fetch('/api/email/resend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: email.trim(),
+        name: fullName.trim() || 'Pelanggan Estimator',
+        type: 'account_access',
+        planTier: product,
+        amount: isFreePlan ? 0 : finalPrice,
+        password: 'Estimator2026!',
+        sessionId: activeSid,
+      }),
+    }).catch(() => {});
+  };
+
   // Auto-fill jika user / admin sudah terautentikasi (Hanif Rullyant)
   useEffect(() => {
     if (authUser) {
@@ -298,6 +334,7 @@ export default function ConversationalCheckout({
           setPaymentSuccess(true);
           syncLeadProgress(5, 'won');
           trackFunnelEvent('checkout_completed', { paymentId: paymentData.paymentId, method: paymentMethod });
+          sendAutoResendEmails(false);
           clearInterval(checkInterval);
           setTimeout(() => {
             window.location.href = 'https://estimator.monefyi.com/app/estimator?status=activated';
@@ -456,6 +493,7 @@ export default function ConversationalCheckout({
         });
         syncLeadProgress(5, 'won');
         trackFunnelEvent('checkout_completed', { isFree: true });
+        sendAutoResendEmails(true);
         if (onSuccess) onSuccess(resData);
         setTimeout(() => {
           window.location.href = resData.redirectUrl || 'https://estimator.monefyi.com/app/estimator?status=activated&plan=free';
@@ -499,6 +537,7 @@ export default function ConversationalCheckout({
         setPaymentSuccess(true);
         syncLeadProgress(5, 'won');
         trackFunnelEvent('checkout_completed', { paymentId: paymentData.paymentId, manual: true });
+        sendAutoResendEmails(false);
         setTimeout(() => {
           window.location.href = 'https://estimator.monefyi.com/app/estimator?status=activated';
         }, 2000);

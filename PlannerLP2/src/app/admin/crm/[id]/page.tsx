@@ -63,6 +63,16 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
 
   const handleSave = () => {
     updateLead(id, form as Partial<typeof lead>);
+    fetch("/api/crm/lead", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id,
+        sessionId: lead?.sessionId,
+        status: (form as any)?.status,
+        notes: (form as any)?.notes,
+      }),
+    }).catch(() => {});
     setEditing(false);
   };
 
@@ -76,8 +86,20 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
     setNewActivity("");
   };
 
-  const handleDelete = () => {
-    if (confirm("Hapus lead ini?")) {
+  const handleDelete = async () => {
+    if (confirm("Hapus lead ini secara permanen dari server?")) {
+      try {
+        await fetch("/api/crm/lead", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ids: [id],
+            sessionIds: lead?.sessionId ? [lead.sessionId] : [],
+          }),
+        });
+      } catch (e) {
+        console.warn("Delete server warning:", e);
+      }
       deleteLead(id);
       router.push("/admin/crm");
     }

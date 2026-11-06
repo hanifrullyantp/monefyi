@@ -10,6 +10,7 @@ import {
   HelpCircle,
   FileText,
   PanelLeftOpen,
+  PanelLeftClose,
   Code,
   Image,
   Users,
@@ -64,6 +65,7 @@ export function Sidebar({ onClose }: SidebarProps) {
   const router = useRouter();
   const logout = useAuthStore((s) => s.logout);
   const setAdmin = useUIStore((s) => s.setAdmin);
+  const setAdminSidebarOpen = useUIStore((s) => s.setAdminSidebarOpen);
   const { isDirty, lastSaved, isSaving, publishContent, publishError, dbSynced } = useContentStore();
 
   const handleLogout = async () => {
@@ -84,14 +86,27 @@ export function Sidebar({ onClose }: SidebarProps) {
               <p className="text-[10px] text-slate-400 leading-tight">Admin Panel</p>
             </div>
           </Link>
-          {onClose && (
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+          <div className="flex items-center gap-1">
+            {onClose ? (
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                title="Tutup Menu"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAdminSidebarOpen(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                title="Sembunyikan Menu Sidebar"
+              >
+                <PanelLeftClose className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
         
         <SaveIndicator isDirty={isDirty} lastSaved={lastSaved} isSaving={isSaving} dbSynced={dbSynced} />

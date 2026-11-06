@@ -30,6 +30,17 @@ export interface LeadActivity {
   by?: string;
 }
 
+export interface LeadEmailLog {
+  id: string;
+  resendId?: string;
+  type: "payment_confirmation" | "account_access" | "password_reset" | "followup";
+  subject: string;
+  to: string;
+  status: "sent" | "delivered" | "failed" | "simulated";
+  sentAt: string;
+  error?: string;
+}
+
 export interface Lead {
   id: string;
   name: string;
@@ -57,6 +68,8 @@ export interface Lead {
   paymentMethod?: string;
   amount?: number;
   paymentId?: string;
+  // Resend Email Logs
+  emails?: LeadEmailLog[];
 }
 
 export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {

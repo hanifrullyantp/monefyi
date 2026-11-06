@@ -191,6 +191,7 @@ export async function GET() {
                   : r.status === "pending"
                   ? "pending_payment"
                   : raw.status || "abandoned_checkout",
+              emails: Array.isArray(raw.emails) ? raw.emails : [],
               createdAt: r.created_at,
               updatedAt: raw.updatedAt || r.created_at,
             });
@@ -217,4 +218,176 @@ export async function GET() {
     );
   }
 }
+
+// DELETE: Hapus lead tunggal atau masal dari memory & Supabase orders
+export async function DELETE(req: NextRequest) {
+  try {
+    const body = await req.json().catch(() => ({}));
+    const rawIds: string[] = Array.isArray(body?.ids)
+      ? body.ids
+      : body?.id
+      ? [String(body.id)]
+      : [];
+
+    const rawSessionIds: string[] = Array.isArray(body?.sessionIds)
+      ? body.sessionIds
+      : body?.sessionId
+      ? [String(body.sessionId)]
+      : [];
+
+    const ids = rawIds.filter(Boolean);
+    const sessionIds = rawSessionIds.filter(Boolean);
+
+    if (ids.length === 0 && sessionIds.length === 0) {
+      return NextResponse.json(
+        { ok: false, error: "Parameter 'id', 'ids', atau 'sessionId' wajib diisi" },
+        { status: 400 }
+      );
+    }
+
+    // 1. Hapus dari in-memory cache
+    for (const [key, val] of memoryLeads.entries()) {
+      if (
+        ids.includes(key) ||
+        ids.includes(val.id) ||
+        ids.includes(val.sessionId) ||
+        sessionIds.includes(key) ||
+        sessionIds.includes(val.sessionId)
+      ) {
+        memoryLeads.delete(key);
+      }
+    }
+
+    // 2. Hapus dari Supabase orders table
+    const supabase = getSupabaseClient();
+    let deletedCount = 0;
+    if (supabase) {
+      try {
+        if (ids.length > 0) {
+          const { count, error } = await supabase
+            .from("orders")
+            .delete({ count: "exact" })
+            .in("id", ids);
+
+          if (!error && count) {
+            deletedCount += count;
+          }
+
+          // Cek juga jika ada id yang tersimpan sebagai sessionId di raw_payload
+          for (const idItem of ids) {
+            const { count: c } = await supabase
+              .from("orders")
+              .delete({ count: "exact" })
+              .contains("raw_payload", { sessionId: idItem });
+            if (c) deletedCount += c;
+          }
+        }
+
+        if (sessionIds.length > 0) {
+          for (const sid of sessionIds) {
+            const { count: c } = await supabase
+              .from("orders")
+              .delete({ count: "exact" })
+              .contains("raw_payload", { sessionId: sid });
+            if (c) deletedCount += c;
+          }
+        }
+      } catch (dbErr) {
+        console.warn("Supabase orders delete warning:", dbErr);
+      }
+    }
+
+    return NextResponse.json({
+      ok: true,
+      deletedCount: Math.max(deletedCount, ids.length + sessionIds.length),
+    });
+  } catch (err: any) {
+    return NextResponse.json(
+      { ok: false, error: err?.message || "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH: Perbarui status atau catatan lead langsung ke memory & Supabase orders
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json().catch(() => ({}));
+    const { id, sessionId, status, notes } = body;
+
+    if (!id && !sessionId) {
+      return NextResponse.json(
+        { ok: false, error: "Parameter 'id' atau 'sessionId' wajib diisi" },
+        { status: 400 }
+      );
+    }
+
+    // 1. Update memory leads
+    for (const [key, val] of memoryLeads.entries()) {
+      if (
+        key === id ||
+        key === sessionId ||
+        val.id === id ||
+        val.sessionId === sessionId
+      ) {
+        memoryLeads.set(key, {
+          ...val,
+          ...(status ? { status } : {}),
+          ...(notes !== undefined ? { notes } : {}),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    }
+
+    // 2. Update Supabase orders table
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        const orderStatus =
+          status === "won"
+            ? "paid"
+            : status === "pending_payment"
+            ? "pending"
+            : status === "abandoned_checkout"
+            ? "abandoned"
+            : status || "pending";
+
+        let query = supabase.from("orders").select("id, raw_payload");
+        if (id) {
+          query = query.eq("id", id);
+        } else if (sessionId) {
+          query = query.contains("raw_payload", { sessionId });
+        }
+
+        const { data: matched } = await query.limit(1);
+        if (matched && matched.length > 0) {
+          const row = matched[0];
+          const raw = row.raw_payload || {};
+          await supabase
+            .from("orders")
+            .update({
+              status: orderStatus,
+              raw_payload: {
+                ...raw,
+                ...(status ? { status } : {}),
+                ...(notes !== undefined ? { notes } : {}),
+                updatedAt: new Date().toISOString(),
+              },
+            })
+            .eq("id", row.id);
+        }
+      } catch (dbErr) {
+        console.warn("Could not patch Supabase orders:", dbErr);
+      }
+    }
+
+    return NextResponse.json({ ok: true, status });
+  } catch (err: any) {
+    return NextResponse.json(
+      { ok: false, error: err?.message || "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
 
