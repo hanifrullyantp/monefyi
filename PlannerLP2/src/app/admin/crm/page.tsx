@@ -588,12 +588,13 @@ export default function CRMPage() {
       if (data?.ok && Array.isArray(data.leads)) {
         const store = useLeadsStore.getState();
         data.leads.forEach((remote: any) => {
+          // Cocokkan HANYA berdasarkan ID unik (id, sessionId, atau paymentId)
+          // JANGAN PERNAH mencocokkan berdasarkan nama/email agar lead dengan nama/email sama tidak tertukar ID-nya!
           const exists = store.leads.find(
             (l) =>
               (remote.id && l.id === remote.id) ||
-              (remote.paymentId && (l.paymentId === remote.paymentId || l.id === remote.paymentId)) ||
-              (remote.sessionId && l.sessionId === remote.sessionId) ||
-              (remote.email && l.email && l.email.toLowerCase() === remote.email.toLowerCase())
+              (remote.paymentId && l.paymentId === remote.paymentId) ||
+              (remote.sessionId && l.sessionId === remote.sessionId)
           );
 
           if (!exists) {
@@ -641,6 +642,8 @@ export default function CRMPage() {
   };
 
   useEffect(() => {
+    // Bersihkan dan perbaiki ID duplikat / ID yang keliru sama dengan nama di localStorage
+    useLeadsStore.getState().cleanDuplicateIds();
     syncServerLeads(true);
     fetchMayarStats(true);
   }, []);
@@ -672,8 +675,8 @@ export default function CRMPage() {
   });
 
   // Checklist Selection Logic
-  const isAllSelected = filtered.length > 0 && filtered.every((l) => selectedIds.has(l.id));
-  const isSomeSelected = filtered.some((l) => selectedIds.has(l.id)) && !isAllSelected;
+  const isAllSelected = filtered.length > 0 && filtered.every((l) => l.id && selectedIds.has(l.id));
+  const isSomeSelected = filtered.some((l) => l.id && selectedIds.has(l.id)) && !isAllSelected;
 
   useEffect(() => {
     if (headerCheckboxRef.current) {
@@ -685,19 +688,24 @@ export default function CRMPage() {
     if (isAllSelected) {
       setSelectedIds((prev) => {
         const next = new Set(prev);
-        filtered.forEach((l) => next.delete(l.id));
+        filtered.forEach((l) => {
+          if (l.id) next.delete(l.id);
+        });
         return next;
       });
     } else {
       setSelectedIds((prev) => {
         const next = new Set(prev);
-        filtered.forEach((l) => next.add(l.id));
+        filtered.forEach((l) => {
+          if (l.id) next.add(l.id);
+        });
         return next;
       });
     }
   };
 
   const toggleSelect = (id: string) => {
+    if (!id) return;
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);

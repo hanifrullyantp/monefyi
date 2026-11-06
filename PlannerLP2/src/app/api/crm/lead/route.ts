@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { randomUUID } from "crypto";
 
 export interface CrmLeadPayload {
   sessionId: string;
@@ -116,9 +117,8 @@ export async function POST(req: NextRequest) {
             })
             .eq("id", rowId);
         } else if (name.trim() || email.trim() || formattedPhone) {
-          // Buat record order baru
-          // UUID v4 format
-          const newId = "00000000-0000-4000-8000-" + String(Date.now()).padStart(12, "0").slice(-12);
+          // Buat record order baru dengan UUID v4 unik
+          const newId = randomUUID();
           await supabase.from("orders").insert([
             {
               id: newId,
@@ -128,7 +128,10 @@ export async function POST(req: NextRequest) {
               product_title: productTitle,
               grand_total: Math.round(amount),
               status: orderStatus,
-              raw_payload: leadRecord,
+              raw_payload: {
+                ...leadRecord,
+                id: newId,
+              },
             },
           ]);
         }
@@ -167,7 +170,12 @@ export async function GET(req: NextRequest) {
 
     // 1. Masukkan memory leads dulu
     for (const [sid, item] of memoryLeads.entries()) {
-      leadsMap.set(sid, item);
+      const memId = item.id || `mem_${sid}`;
+      leadsMap.set(memId, {
+        ...item,
+        id: memId,
+        sessionId: sid,
+      });
     }
 
     // 2. Query dari Supabase orders
@@ -221,7 +229,8 @@ export async function GET(req: NextRequest) {
               }
             }
 
-            leadsMap.set(sid, {
+            // Gunakan r.id asli sebagai ID unik setiap pesanan di tabel
+            leadsMap.set(r.id, {
               id: r.id,
               sessionId: sid,
               name: r.full_name || raw.name || "Anonim",
@@ -284,20 +293,26 @@ export async function GET(req: NextRequest) {
                 : new Date(String(tx.createdAt)).toISOString()
               : new Date().toISOString();
 
-            // Cari apakah lead ini sudah ada di leadsMap
+            // Cari apakah lead ini sudah ada di leadsMap (prioritas ID transaksi / paymentId)
             let matchedKey: string | null = null;
             for (const [key, existing] of leadsMap.entries()) {
-              const exEmail = (existing.email || "").trim().toLowerCase();
-              const exPhone = (existing.phone || "").replace(/[^0-9]/g, "");
               const exPayId = existing.paymentId || "";
-
               if (
-                (txId && (exPayId === txId || existing.id === txId || existing.sessionId === txId)) ||
-                (txEmail && exEmail === txEmail) ||
-                (txPhone && exPhone && (exPhone.slice(-8) === txPhone.slice(-8)))
+                txId && (exPayId === txId || existing.id === txId || existing.sessionId === txId)
               ) {
                 matchedKey = key;
                 break;
+              }
+            }
+
+            // Jika belum cocok via ID, cocokkan pesanan yang statusnya masih menunggu pembayaran
+            if (!matchedKey && txEmail) {
+              for (const [key, existing] of leadsMap.entries()) {
+                const exEmail = (existing.email || "").trim().toLowerCase();
+                if (exEmail === txEmail && existing.status === "pending_payment") {
+                  matchedKey = key;
+                  break;
+                }
               }
             }
 

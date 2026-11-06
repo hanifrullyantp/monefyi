@@ -3,6 +3,41 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Lead, LeadStatus } from "@/lib/types/leads";
 
+export const generateUniqueId = (): string => {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `lead_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+};
+
+/**
+ * Sanitasi dan pastikan semua lead memiliki ID unik,
+ * serta TIDAK PERNAH menjadikan nama lead sebagai ID (mencegah bug seleksi checklist pada nama yang identik).
+ */
+export const sanitizeAndEnsureUniqueLeads = (leadsList: Lead[]): Lead[] => {
+  if (!Array.isArray(leadsList)) return [];
+  const seenIds = new Set<string>();
+  return leadsList.map((lead) => {
+    const leadName = (lead.name || "").trim().toLowerCase();
+    const currentId = (lead.id || "").trim();
+
+    // Jika ID kosong, sudah pernah dipakai oleh lead lain, atau sama persis dengan nama lead:
+    // Buat UUID baru yang pasti unik!
+    const isInvalidOrDuplicate =
+      !currentId ||
+      seenIds.has(currentId) ||
+      (leadName.length > 0 && currentId.toLowerCase() === leadName);
+
+    const finalId = isInvalidOrDuplicate ? generateUniqueId() : currentId;
+    seenIds.add(finalId);
+
+    return {
+      ...lead,
+      id: finalId,
+    };
+  });
+};
+
 interface LeadsStore {
   leads: Lead[];
   addLead: (lead: Omit<Lead, "id" | "createdAt" | "updatedAt" | "activities"> & { id?: string; createdAt?: string; updatedAt?: string; activities?: Lead["activities"] }) => void;
@@ -13,6 +48,7 @@ interface LeadsStore {
   addActivity: (leadId: string, activity: Omit<Lead["activities"][0], "id">) => void;
   getLead: (id: string) => Lead | undefined;
   getLeadsByStatus: (status: LeadStatus) => Lead[];
+  cleanDuplicateIds: () => void;
 }
 
 export const useLeadsStore = create<LeadsStore>()(
@@ -21,12 +57,19 @@ export const useLeadsStore = create<LeadsStore>()(
       leads: [],
 
       addLead: (leadData) => {
-        const id = (leadData as any).id || Date.now().toString();
+        // Validasi ID: Jangan pernah gunakan nama sebagai ID!
+        let id = (leadData as any).id;
+        const leadName = (leadData.name || "").trim().toLowerCase();
+        if (!id || (leadName && String(id).trim().toLowerCase() === leadName)) {
+          id = generateUniqueId();
+        }
+
         const existingIndex = get().leads.findIndex((l) => l.id === id);
         if (existingIndex !== -1) {
           get().updateLead(id, leadData);
           return;
         }
+
         const newLead: Lead = {
           ...leadData,
           id,
@@ -35,6 +78,10 @@ export const useLeadsStore = create<LeadsStore>()(
           updatedAt: (leadData as any).updatedAt || new Date().toISOString(),
         };
         set((state) => ({ leads: [newLead, ...state.leads] }));
+      },
+
+      cleanDuplicateIds: () => {
+        set((state) => ({ leads: sanitizeAndEnsureUniqueLeads(state.leads) }));
       },
 
       updateLead: (id, updates) => {
@@ -74,7 +121,7 @@ export const useLeadsStore = create<LeadsStore>()(
                   activities: [
                     ...l.activities,
                     {
-                      id: Date.now().toString(),
+                      id: generateUniqueId(),
                       type: "status_change" as const,
                       content: `Status berubah ke ${status}`,
                       timestamp: new Date().toISOString(),
@@ -94,7 +141,7 @@ export const useLeadsStore = create<LeadsStore>()(
                   ...lead,
                   activities: [
                     ...lead.activities,
-                    { ...activity, id: Date.now().toString() },
+                    { ...activity, id: generateUniqueId() },
                   ],
                   updatedAt: new Date().toISOString(),
                 }
@@ -109,6 +156,11 @@ export const useLeadsStore = create<LeadsStore>()(
     }),
     {
       name: "monefyi-leads",
+      onRehydrateStorage: () => (state) => {
+        if (state && Array.isArray(state.leads)) {
+          state.leads = sanitizeAndEnsureUniqueLeads(state.leads);
+        }
+      },
     },
   ),
 );
