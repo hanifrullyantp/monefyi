@@ -72,24 +72,24 @@ export default function EstimatorLaunchPromoAdminModal() {
         <div className="flex items-start gap-3 px-4 py-4 bg-amber-50 border-b border-amber-100">
           <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
-            <h2 id="launch-promo-admin-title" className="font-bold text-slate-900">
+            <h2 id="launch-promo-admin-title" className="font-bold text-[#0F172A]">
               {title}
             </h2>
-            <p className="text-sm text-slate-600 mt-1">
+            <p className="text-sm text-[#5B6B7A] mt-1">
               Promo Estimator Standard Rp 93.000 (coret Rp 99.000) untuk{' '}
-              <strong>100 organisasi pertama</strong>.
+              <strong className="text-[#0F172A]">100 organisasi pertama</strong>.
             </p>
           </div>
           <button
             type="button"
             onClick={dismiss}
-            className="p-1 rounded-lg text-slate-500 hover:bg-white/80"
+            className="p-2 min-h-11 min-w-11 flex items-center justify-center rounded-xl text-[#5B6B7A] hover:bg-white/80"
             aria-label="Tutup"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="px-4 py-4 space-y-3 text-sm text-slate-700">
+        <div className="px-5 py-4 space-y-3 text-sm text-[#0F172A]">
           <p>
             Terpakai: <strong>{status.used}</strong> / {status.limit} org
             {status.promoActive ? (
@@ -99,7 +99,7 @@ export default function EstimatorLaunchPromoAdminModal() {
             )}
           </p>
           {status.remaining <= 10 && status.promoActive && (
-            <p className="text-amber-800 bg-amber-50 rounded-lg px-3 py-2">
+            <p className="text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs">
               Setelah slot ke-100 terisi, checkout otomatis memakai harga normal. Pastikan halaman Lynk
               dan landing sudah selaras.
             </p>
@@ -107,7 +107,7 @@ export default function EstimatorLaunchPromoAdminModal() {
           <button
             type="button"
             onClick={dismiss}
-            className="w-full py-2.5 rounded-xl bg-slate-900 text-white font-semibold text-sm"
+            className="w-full min-h-11 rounded-xl bg-[#0F172A] text-white font-semibold text-sm hover:bg-slate-800"
           >
             Mengerti
           </button>
