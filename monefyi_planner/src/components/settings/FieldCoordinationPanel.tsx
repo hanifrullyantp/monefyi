@@ -233,6 +233,28 @@ export default function FieldCoordinationPanel() {
       {/* SUB-TAB 1: DAFTAR ANGGOTA TIM & PENGATURAN PEMICU RELEVANSI JABATAN */}
       {activeSubTab === 'members' && (
         <div className="space-y-4">
+          {/* Card Shortcut: AI HRD Penggajian Lapangan & Payout Mayar */}
+          <div className="bg-gradient-to-r from-slate-900 via-rose-950 to-slate-900 border border-rose-500/30 rounded-2xl p-4 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-300 flex items-center justify-center font-bold shrink-0">
+                <Bot className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-extrabold text-xs text-white">Alokasi Saldo &amp; Penggajian Lapangan via AI HRD</h4>
+                <p className="text-[11px] text-slate-300">
+                  Manager lapangan kirim saldo ➔ AI HRD hitung gaji &amp; minta konfirmasi kebenaran ➔ Payout langsung ke rekening pekerja dengan sistem Mayar.
+                </p>
+              </div>
+            </div>
+            <a
+              href="/hr"
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-extrabold text-xs transition-all shrink-0 flex items-center gap-1.5 cursor-pointer shadow-md shadow-rose-950"
+            >
+              <span>Buka AI HRD di HR</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+
           <div className="bg-emerald-50/60 border border-emerald-200 rounded-2xl p-3.5 text-xs text-emerald-900 flex items-start gap-2.5">
             <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
             <div className="leading-relaxed">

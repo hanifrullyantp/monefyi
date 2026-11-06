@@ -2,8 +2,9 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   Users, UserPlus, Loader2, RefreshCw, Clock, Wallet, Briefcase,
-  CheckCircle2, XCircle, AlertCircle, Search, UserCheck,
+  CheckCircle2, XCircle, AlertCircle, Search, UserCheck, Bot, Sparkles,
 } from 'lucide-react';
+import AiHrdPayrollModal from '../components/hr/AiHrdPayrollModal';
 import { useAppStore } from '../store/appStore';
 import { listMembers, changeMemberRole, removeMember, transferOwnership, updateOrgAccessSettings } from '../services/memberService';
 import { listJoinRequests, approveJoinRequest, rejectJoinRequest } from '../services/joinRequestService';
@@ -89,6 +90,7 @@ export default function HrEmployees() {
     is_public_discoverable: false,
   });
   const [undoableActions, setUndoableActions] = useState<ReversibleAction[]>([]);
+  const [showAiHrdModal, setShowAiHrdModal] = useState(false);
 
   const { notifyUndoable } = useUndoableAction();
 
@@ -559,6 +561,35 @@ export default function HrEmployees() {
 
           {canInvite && (
             <>
+              {/* AI HRD Banner: Alur Saldo Manager Lapangan ➔ AI HRD Pilah & Konfirmasi ➔ Payout Rekening Mayar */}
+              <div className="bg-gradient-to-r from-slate-900 via-rose-950 to-slate-900 border border-rose-500/30 rounded-2xl p-5 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-rose-500 to-amber-500 flex items-center justify-center shrink-0 shadow-lg shadow-rose-500/20">
+                    <Bot className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-black text-base text-white">AI HRD: Saldo Lapangan &amp; Payout Mayar</h4>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                        Otomasi Mayar
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-300 mt-1 max-w-xl">
+                      Manager HR lapangan mengirimkan saldo ➔ AI HRD menghitung, memilah potongan kasbon/lembur &amp; meminta konfirmasi kebenaran ➔ Cairkan langsung ke rekening karyawan dengan sistem Mayar.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowAiHrdModal(true)}
+                  className="px-5 py-3 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-rose-950 flex items-center gap-2 shrink-0 transition-all cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Jalankan AI HRD Lapangan</span>
+                </button>
+              </div>
+
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -932,6 +963,20 @@ export default function HrEmployees() {
         onClose={() => setSelectedMember(null)}
         onUpdated={load}
       />
+
+      {showAiHrdModal && (
+        <AiHrdPayrollModal
+          open={showAiHrdModal}
+          onClose={() => setShowAiHrdModal(false)}
+          orgId={tenant?.id || ''}
+          actorId={user?.id || ''}
+          members={members}
+          attendanceRecords={monthAttendanceRecords}
+          compensationList={compensation}
+          bonRequests={bonRequests}
+          onDisbursementCompleted={load}
+        />
+      )}
     </div>
     </div>
   );
