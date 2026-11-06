@@ -11,13 +11,13 @@ export interface CSMessage {
 }
 
 export const CS_AGENT_PROFILE = {
-  name: 'Mbak Nisa',
+  name: 'Mbak Esti',
   title: 'Customer Concierge & Support Monefyi',
   avatar: '👩‍💼',
   badge: 'Orang Rumah Monefyi',
   status: 'Online Siap Membantu',
   greeting:
-    'Halo Mas/Mbak! Saya Nisa dari Monefyi. Anggap aja rumah sendiri ya 😊 Mau tanya-tanya soal cara pakai aplikasi, fitur estimator/proyek, atau info paket upgrade? Nisa siap jelaskan santai sampai paham!',
+    'Halo Mas/Mbak! Saya Esti dari Monefyi. Anggap aja rumah sendiri ya 😊 Mau tanya-tanya soal cara pakai aplikasi, fitur estimator/proyek, atau info paket upgrade? Esti siap jelaskan santai sampai paham!',
 };
 
 export const POPULAR_CS_QUESTIONS = [
@@ -44,7 +44,7 @@ export function getCustomerSupportReply(query: string): {
       text: `Soal paket di Monefyi simpel banget kok Mas/Mbak, ga ada biaya tersembunyi:\n\n✨ **Paket Standard:**\n• Cocok untuk Anda yang fokus hitung HPP cepat di HP dan kirim PDF penawaran resmi berlogo sendiri saat survei lokasi.\n• Proyek & penawaran unlimited tanpa batas.\n\n🚀 **Paket Pro (Paling Favorit Kontraktor):**\n• Semua fitur Standard + akses multi-user untuk staf, mandor, dan tukang lapangan.\n• Manajemen kasbon tukang, absensi GPS, dan kurva S progres proyek.\n• Laporan Keuangan Bisnis lengkap (neraca, laba/rugi, arus kas).\n\n💳 **Cara Upgradenya:**\nBisa langsung lewat menu Akun/Pricing di aplikasi atau klik checkout di landing page. Pembayaran otomatis via QRIS (Gopay/OVO/BCA), Virtual Account, atau Kartu. Langsung aktif detik itu juga!`,
       suggestedActions: [
         { label: '🚀 Lihat Halaman Upgrade / Checkout', action: 'link_upgrade', payload: '/checkout' },
-        { label: '💬 Tanya Detail via WhatsApp', action: 'link_whatsapp', payload: 'https://wa.me/6281234567890?text=Halo%20Mbak%20Nisa,%20mau%20tanya%20detail%20upgrade%20paket%20Pro' },
+        { label: '💬 Tanya Detail via WhatsApp', action: 'link_whatsapp', payload: 'https://wa.me/6281234567890?text=Halo%20Mbak%20Esti,%20mau%20tanya%20detail%20upgrade%20paket%20Pro' },
       ],
     };
   }
@@ -93,11 +93,11 @@ export function getCustomerSupportReply(query: string): {
 
   // 6. Default Friendly Response
   return {
-    text: `Paham Mas/Mbak! Di Monefyi kita bantu kontraktor, desainer interior, dan arsitek agar kerjaan ga bocor dan closing lebih cepat:\n\n1. **Estimator:** Hitung cepat HPP dan kirim PDF resmi berlogo sendiri saat survei lokasi.\n2. **Planner Proyek:** Pantau kurva S, opname progres fisik, dan kasbon tukang.\n3. **Keuangan Bisnis:** Arus kas dan neraca proyek real-time.\n\nBagian mana yang paling Mas/Mbak ingin tahu lebih dalam? Nisa bantu pandu step-by-step ya!`,
+    text: `Paham Mas/Mbak! Di Monefyi kita bantu kontraktor, desainer interior, dan arsitek agar kerjaan ga bocor dan closing lebih cepat:\n\n1. **Estimator:** Hitung cepat HPP dan kirim PDF resmi berlogo sendiri saat survei lokasi.\n2. **Planner Proyek:** Pantau kurva S, opname progres fisik, dan kasbon tukang.\n3. **Keuangan Bisnis:** Arus kas dan neraca proyek real-time.\n\nBagian mana yang paling Mas/Mbak ingin tahu lebih dalam? Esti bantu pandu step-by-step ya!`,
     suggestedActions: [
       { label: 'Cara bikin PDF penawaran di HP', action: 'ask', payload: 'Cara bikin PDF penawaran di HP' },
       { label: 'Info paket upgrade ke Pro', action: 'ask', payload: 'Apa keuntungan upgrade ke Pro?' },
-      { label: 'Hubungkan ke WhatsApp Support', action: 'link_whatsapp', payload: 'https://wa.me/6281234567890?text=Halo%20Mbak%20Nisa,%20mau%20tanya%20seputar%20Monefyi' },
+      { label: 'Hubungkan ke WhatsApp Support', action: 'link_whatsapp', payload: 'https://wa.me/6281234567890?text=Halo%20Mbak%20Esti,%20mau%20tanya%20seputar%20Monefyi' },
     ],
   };
 }

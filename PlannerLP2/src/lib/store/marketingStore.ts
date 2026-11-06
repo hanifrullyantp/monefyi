@@ -10,6 +10,8 @@ import {
   MetaCapiStatus,
   MarketingAutomationRules,
   CampaignStatus,
+  AgentCustomNames,
+  DEFAULT_AGENT_CUSTOM_NAMES,
 } from '../types/marketing';
 import {
   INITIAL_BENCHMARK_CAMPAIGNS,
@@ -68,6 +70,10 @@ interface MarketingStore {
   updateRules: (rules: Partial<MarketingAutomationRules>) => void;
   apiConfig: MarketingApiConfig;
   updateApiConfig: (config: Partial<MarketingApiConfig>) => void;
+
+  // Custom Agent Names
+  customAgentNames: AgentCustomNames;
+  updateAgentNames: (names: Partial<AgentCustomNames>) => void;
 }
 
 export const useMarketingStore = create<MarketingStore>()(
@@ -285,12 +291,20 @@ export const useMarketingStore = create<MarketingStore>()(
       },
       updateApiConfig: (updates) =>
         set((state) => ({ apiConfig: { ...state.apiConfig, ...updates } })),
+
+      // Custom Agent Names
+      customAgentNames: DEFAULT_AGENT_CUSTOM_NAMES,
+      updateAgentNames: (names) =>
+        set((state) => ({
+          customAgentNames: { ...state.customAgentNames, ...names },
+        })),
     }),
     {
       name: 'monefyi_marketing_store',
       partialize: (state) => ({
         rules: state.rules,
         apiConfig: state.apiConfig,
+        customAgentNames: state.customAgentNames,
         orderBumpConfig: state.orderBumpConfig,
         upsellConfig: state.upsellConfig,
         adBank: state.adBank,

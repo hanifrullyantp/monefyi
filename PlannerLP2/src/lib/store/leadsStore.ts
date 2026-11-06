@@ -5,7 +5,7 @@ import type { Lead, LeadStatus } from "@/lib/types/leads";
 
 interface LeadsStore {
   leads: Lead[];
-  addLead: (lead: Omit<Lead, "id" | "createdAt" | "updatedAt" | "activities">) => void;
+  addLead: (lead: Omit<Lead, "id" | "createdAt" | "updatedAt" | "activities"> & { id?: string; createdAt?: string; updatedAt?: string; activities?: Lead["activities"] }) => void;
   updateLead: (id: string, updates: Partial<Lead>) => void;
   deleteLead: (id: string) => void;
   deleteLeads: (ids: string[]) => void;
@@ -21,12 +21,18 @@ export const useLeadsStore = create<LeadsStore>()(
       leads: [],
 
       addLead: (leadData) => {
+        const id = (leadData as any).id || Date.now().toString();
+        const existingIndex = get().leads.findIndex((l) => l.id === id);
+        if (existingIndex !== -1) {
+          get().updateLead(id, leadData);
+          return;
+        }
         const newLead: Lead = {
           ...leadData,
-          id: Date.now().toString(),
-          activities: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          id,
+          activities: (leadData as any).activities || [],
+          createdAt: (leadData as any).createdAt || new Date().toISOString(),
+          updatedAt: (leadData as any).updatedAt || new Date().toISOString(),
         };
         set((state) => ({ leads: [newLead, ...state.leads] }));
       },

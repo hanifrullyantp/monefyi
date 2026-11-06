@@ -590,13 +590,15 @@ export default function CRMPage() {
         data.leads.forEach((remote: any) => {
           const exists = store.leads.find(
             (l) =>
+              (remote.id && l.id === remote.id) ||
+              (remote.paymentId && (l.paymentId === remote.paymentId || l.id === remote.paymentId)) ||
               (remote.sessionId && l.sessionId === remote.sessionId) ||
-              l.id === remote.id ||
               (remote.email && l.email && l.email.toLowerCase() === remote.email.toLowerCase())
           );
 
           if (!exists) {
             store.addLead({
+              id: remote.id,
               name: remote.name || "Lead Checkout",
               phone: remote.phone || "-",
               email: remote.email || undefined,
@@ -609,17 +611,21 @@ export default function CRMPage() {
               bumpTaken: remote.bumpTaken,
               paymentMethod: remote.paymentMethod,
               amount: remote.amount,
+              paymentId: remote.paymentId,
               emails: Array.isArray(remote.emails) ? remote.emails : [],
+              createdAt: remote.createdAt,
+              updatedAt: remote.updatedAt,
             });
           } else {
             store.updateLead(exists.id, {
-              name: remote.name && remote.name !== "Lead Checkout (Draft)" ? remote.name : exists.name,
+              name: remote.name && remote.name !== "Lead Checkout (Draft)" && remote.name !== "Anonim" ? remote.name : exists.name,
               phone: remote.phone && remote.phone !== "-" ? remote.phone : exists.phone,
               email: remote.email || exists.email,
               status: remote.status || exists.status,
               bumpTaken: remote.bumpTaken ?? exists.bumpTaken,
               paymentMethod: remote.paymentMethod || exists.paymentMethod,
               amount: remote.amount ?? exists.amount,
+              paymentId: remote.paymentId || exists.paymentId,
               checkoutStep: remote.checkoutStep ?? exists.checkoutStep,
               planTier: remote.planTier || exists.planTier,
               emails: Array.isArray(remote.emails) && remote.emails.length > 0 ? remote.emails : exists.emails,

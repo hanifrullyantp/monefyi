@@ -245,6 +245,152 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // 3. Sinkronisasi Langsung dari Mayar Transactions API
+    // Memastikan seluruh transaksi yang sudah dibayar di Mayar (seperti Abe) selalu masuk ke CRM
+    if (mayarApiKey) {
+      try {
+        const mayarTxRes = await fetch(`${mayarApiUrl}/hl/v2/transactions?limit=50`, {
+          headers: {
+            Authorization: `Bearer ${mayarApiKey}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (mayarTxRes.ok) {
+          const txJson = await mayarTxRes.json();
+          const txList = Array.isArray(txJson?.data) ? txJson.data : [];
+
+          for (const tx of txList) {
+            const txStatus = String(tx?.status || "").toLowerCase();
+            const isPaid = txStatus === "paid" || txStatus === "settled" || txStatus === "success";
+            if (!isPaid) continue;
+
+            const txCustomer = tx.customer || {};
+            const txEmail = (txCustomer.email || "").trim().toLowerCase();
+            const txName = (txCustomer.name || "Pelanggan Mayar").trim();
+            const txPhoneRaw = (txCustomer.mobile || "").replace(/[^0-9]/g, "");
+            const txPhone = txPhoneRaw.startsWith("62")
+              ? txPhoneRaw
+              : txPhoneRaw.startsWith("0")
+              ? `62${txPhoneRaw.slice(1)}`
+              : txPhoneRaw ? `62${txPhoneRaw}` : "";
+
+            const txAmount = Number(tx.amount || tx.credit || 0);
+            const txMethod = String(tx.paymentMethod || "qris").toLowerCase();
+            const txId = String(tx.id || "");
+            const txCreatedAt = tx.createdAt
+              ? typeof tx.createdAt === "number"
+                ? new Date(tx.createdAt).toISOString()
+                : new Date(String(tx.createdAt)).toISOString()
+              : new Date().toISOString();
+
+            // Cari apakah lead ini sudah ada di leadsMap
+            let matchedKey: string | null = null;
+            for (const [key, existing] of leadsMap.entries()) {
+              const exEmail = (existing.email || "").trim().toLowerCase();
+              const exPhone = (existing.phone || "").replace(/[^0-9]/g, "");
+              const exPayId = existing.paymentId || "";
+
+              if (
+                (txId && (exPayId === txId || existing.id === txId || existing.sessionId === txId)) ||
+                (txEmail && exEmail === txEmail) ||
+                (txPhone && exPhone && (exPhone.slice(-8) === txPhone.slice(-8)))
+              ) {
+                matchedKey = key;
+                break;
+              }
+            }
+
+            if (matchedKey) {
+              const existing = leadsMap.get(matchedKey);
+              const updatedLead = {
+                ...existing,
+                status: "won",
+                paymentId: txId,
+                amount: txAmount || existing.amount,
+                paymentMethod: txMethod || existing.paymentMethod,
+                name: existing.name && existing.name !== "Lead Checkout (Draft)" && existing.name !== "Anonim" ? existing.name : txName,
+                email: existing.email || txEmail,
+                phone: existing.phone && existing.phone !== "-" ? existing.phone : txPhone,
+                checkoutStep: 5,
+                updatedAt: txCreatedAt,
+              };
+              leadsMap.set(matchedKey, updatedLead);
+
+              // Update baris di Supabase jika status order belum 'paid'
+              if (supabase && existing.id) {
+                try {
+                  await supabase
+                    .from("orders")
+                    .update({
+                      status: "paid",
+                      grand_total: updatedLead.amount,
+                      raw_payload: {
+                        ...(existing.raw_payload || {}),
+                        ...updatedLead,
+                        status: "won",
+                        verifiedViaMayar: true,
+                        paidAt: txCreatedAt,
+                      },
+                    })
+                    .eq("id", existing.id);
+                } catch (updErr) {
+                  console.warn("Could not sync order update to Supabase:", updErr);
+                }
+              }
+            } else {
+              // Transaksi baru yang belum ada di local/Supabase
+              const newTier = txAmount >= 290000 ? "pro" : "standard";
+              const newLead = {
+                id: txId,
+                sessionId: txId,
+                name: txName,
+                email: txEmail,
+                phone: txPhone,
+                planTier: newTier,
+                bumpTaken: false,
+                paymentMethod: txMethod,
+                amount: txAmount,
+                paymentId: txId,
+                checkoutStep: 5,
+                status: "won",
+                emails: [],
+                createdAt: txCreatedAt,
+                updatedAt: txCreatedAt,
+              };
+
+              leadsMap.set(txId, newLead);
+
+              // Simpan langsung ke Supabase orders agar permanen
+              if (supabase) {
+                try {
+                  await supabase.from("orders").upsert(
+                    [
+                      {
+                        id: txId,
+                        email: txEmail || `mayar_${txId.slice(0, 8)}@monefyi.temp`,
+                        full_name: txName,
+                        phone: txPhone || "-",
+                        product_title: `Monefyi Estimator ${newTier.toUpperCase()}`,
+                        grand_total: txAmount,
+                        status: "paid",
+                        raw_payload: newLead,
+                      },
+                    ],
+                    { onConflict: "id" }
+                  );
+                } catch (insErr) {
+                  console.warn("Could not upsert Mayar tx to Supabase orders:", insErr);
+                }
+              }
+            }
+          }
+        }
+      } catch (mayarErr) {
+        console.warn("Could not fetch Mayar transactions:", mayarErr);
+      }
+    }
+
     const leads = Array.from(leadsMap.values()).sort(
       (a, b) => new Date(b.createdAt || b.updatedAt).getTime() - new Date(a.createdAt || a.updatedAt).getTime()
     );

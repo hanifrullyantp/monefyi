@@ -157,7 +157,7 @@ export function LiveChatWidget() {
               className="hidden sm:flex items-center gap-2 bg-white text-slate-800 px-3.5 py-2 rounded-2xl shadow-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition-all text-xs font-bold"
             >
               <span className="text-base">👩‍💼</span>
-              <span>Mau tanya isi app &amp; paket? Tanya Mbak Nisa</span>
+              <span>Mau tanya isi app &amp; paket? Tanya Mbak Esti</span>
             </div>
 
             <button
@@ -268,7 +268,7 @@ export function LiveChatWidget() {
               {isTyping && (
                 <div className="flex items-center gap-2 p-3 bg-white rounded-2xl border border-slate-200 text-xs text-slate-500 w-fit">
                   <span className="text-base animate-bounce">👩‍💼</span>
-                  <span>Mbak Nisa sedang mengetik...</span>
+                  <span>Mbak Esti sedang mengetik...</span>
                 </div>
               )}
 
@@ -301,7 +301,7 @@ export function LiveChatWidget() {
                     handleSendMessage();
                   }
                 }}
-                placeholder="Tanya Mbak Nisa seputar Monefyi..."
+                placeholder="Tanya Mbak Esti seputar Monefyi..."
                 className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm focus:outline-none focus:border-emerald-500"
               />
               <button

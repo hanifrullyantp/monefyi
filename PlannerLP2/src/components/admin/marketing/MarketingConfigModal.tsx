@@ -21,7 +21,8 @@ interface MarketingConfigModalProps {
 }
 
 export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalProps) {
-  const { apiConfig, updateApiConfig, rules, updateRules } = useMarketingStore();
+  const { apiConfig, updateApiConfig, rules, updateRules, customAgentNames, updateAgentNames } =
+    useMarketingStore();
 
   const [metaToken, setMetaToken] = useState(apiConfig.metaAccessToken || "");
   const [adAccountId, setAdAccountId] = useState(apiConfig.adAccountId || "");
@@ -34,6 +35,13 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
   const [minRoas, setMinRoas] = useState(rules.minRoasScaleThreshold);
   const [scaleBudgetPct, setScaleBudgetPct] = useState(rules.scaleBudgetPercentage);
   const [freqThreshold, setFreqThreshold] = useState(rules.frequencyFatigueThreshold);
+
+  // Custom Agent Names
+  const [cmoName, setCmoName] = useState(customAgentNames?.cmo || "Mas Danu");
+  const [mediaBuyerName, setMediaBuyerName] = useState(customAgentNames?.media_buyer || "Bima");
+  const [copywriterName, setCopywriterName] = useState(customAgentNames?.copywriter || "Sinta");
+  const [funnelName, setFunnelName] = useState(customAgentNames?.funnel_aov || "Aris");
+  const [csName, setCsName] = useState(customAgentNames?.cs || "Mbak Esti");
 
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -54,6 +62,14 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
       minRoasScaleThreshold: Number(minRoas),
       scaleBudgetPercentage: Number(scaleBudgetPct),
       frequencyFatigueThreshold: Number(freqThreshold),
+    });
+
+    updateAgentNames({
+      cmo: cmoName.trim() || "Mas Danu",
+      media_buyer: mediaBuyerName.trim() || "Bima",
+      copywriter: copywriterName.trim() || "Sinta",
+      funnel_aov: funnelName.trim() || "Aris",
+      cs: csName.trim() || "Mbak Esti",
     });
 
     setSavedSuccess(true);
@@ -256,6 +272,83 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
                   value={freqThreshold}
                   onChange={(e) => setFreqThreshold(Number(e.target.value))}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 4: Kustomisasi Nama Agen */}
+          <div className="space-y-3 pt-3 border-t border-slate-800">
+            <h3 className="text-xs font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+              <span>🎭 4. Kustomisasi Nama Semua Agen</span>
+            </h3>
+            <p className="text-[11px] text-slate-400">
+              Anda bebas mengubah nama panggilan agen sesuai selera atau kultur perusahaan Anda.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div>
+                <label className="text-[11px] font-bold text-purple-300 block mb-1">
+                  🎯 CMO AI (Strategi &amp; Budget)
+                </label>
+                <input
+                  type="text"
+                  value={cmoName}
+                  onChange={(e) => setCmoName(e.target.value)}
+                  placeholder="Mas Danu"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-white focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-blue-300 block mb-1">
+                  📊 Media Buyer (Meta Ads)
+                </label>
+                <input
+                  type="text"
+                  value={mediaBuyerName}
+                  onChange={(e) => setMediaBuyerName(e.target.value)}
+                  placeholder="Bima"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-white focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-emerald-300 block mb-1">
+                  🎨 Copywriter (Winning Ads)
+                </label>
+                <input
+                  type="text"
+                  value={copywriterName}
+                  onChange={(e) => setCopywriterName(e.target.value)}
+                  placeholder="Sinta"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-white focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-amber-300 block mb-1">
+                  🚀 Funnel &amp; AOV (Scale Model)
+                </label>
+                <input
+                  type="text"
+                  value={funnelName}
+                  onChange={(e) => setFunnelName(e.target.value)}
+                  placeholder="Aris"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-white focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-teal-300 block mb-1">
+                  👩‍💼 Customer Support (Orang Rumah)
+                </label>
+                <input
+                  type="text"
+                  value={csName}
+                  onChange={(e) => setCsName(e.target.value)}
+                  placeholder="Mbak Esti"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-white focus:border-amber-500"
                 />
               </div>
             </div>

@@ -18,7 +18,7 @@ import {
 import { cn } from "@/lib/utils/cn";
 
 export function MarketingWarRoom() {
-  const { chatMessages, addChatMessage, clearChatMessages, campaigns, rules } =
+  const { chatMessages, addChatMessage, clearChatMessages, campaigns, rules, customAgentNames } =
     useMarketingStore();
   const [inputText, setInputText] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -102,7 +102,7 @@ export function MarketingWarRoom() {
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              CMO (Mas Danu) • Media Buyer (Bima) • Copywriter (Sinta) • Funnel (Aris)
+              CMO ({customAgentNames?.cmo || "Mas Danu"}) • Media Buyer ({customAgentNames?.media_buyer || "Bima"}) • Copywriter ({customAgentNames?.copywriter || "Sinta"}) • Funnel ({customAgentNames?.funnel_aov || "Aris"})
             </p>
           </div>
         </div>
@@ -121,6 +121,7 @@ export function MarketingWarRoom() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 bg-slate-950/40 border-b border-slate-800/80">
         {(Object.keys(MARKETING_AGENTS) as MarketingAgentRole[]).map((role) => {
           const agent = MARKETING_AGENTS[role];
+          const dynamicName = customAgentNames?.[role] || agent.name;
           return (
             <div
               key={role}
@@ -129,7 +130,7 @@ export function MarketingWarRoom() {
               <div className="text-lg">{agent.avatar}</div>
               <div className="min-w-0">
                 <div className="text-xs font-bold text-white truncate">
-                  {agent.name}
+                  {dynamicName}
                 </div>
                 <div className="text-[10px] text-slate-400 truncate">
                   {agent.title}
@@ -168,7 +169,7 @@ export function MarketingWarRoom() {
                 {!isUser && agent && (
                   <div className="flex items-center gap-2 mb-1.5 pb-1 border-b border-slate-700/50">
                     <span className="font-extrabold text-xs text-emerald-400">
-                      {agent.name}
+                      {customAgentNames?.[msg.sender as MarketingAgentRole] || agent.name}
                     </span>
                     <span className="text-[10px] text-slate-400">
                       ({agent.title})

@@ -1,5 +1,21 @@
 export type MarketingAgentRole = 'cmo' | 'media_buyer' | 'copywriter' | 'funnel_aov';
 
+export interface AgentCustomNames {
+  cmo: string;
+  media_buyer: string;
+  copywriter: string;
+  funnel_aov: string;
+  cs: string;
+}
+
+export const DEFAULT_AGENT_CUSTOM_NAMES: AgentCustomNames = {
+  cmo: 'Mas Danu',
+  media_buyer: 'Bima',
+  copywriter: 'Sinta',
+  funnel_aov: 'Aris',
+  cs: 'Mbak Esti',
+};
+
 export interface AgentInfo {
   role: MarketingAgentRole;
   name: string;
