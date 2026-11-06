@@ -84,3 +84,4 @@ export default function HealthChips({ counts, activeFilter, onSelectFilter }: Pr
     </div>
   );
 }
+

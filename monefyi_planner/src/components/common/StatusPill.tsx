@@ -41,3 +41,4 @@ export default function StatusPill({ status, className = '' }: Props) {
     </span>
   );
 }
+

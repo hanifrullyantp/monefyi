@@ -52,3 +52,4 @@ export default function HealthPill({ status, showDot = false, className = '' }: 
     </span>
   );
 }
+

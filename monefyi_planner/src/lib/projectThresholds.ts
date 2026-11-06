@@ -16,3 +16,4 @@ export const PROJECT_THRESHOLDS = {
   /** Ambang budget terpakai overbudget (> 100%). */
   budgetOverPercent: 100,
 } as const;
+
