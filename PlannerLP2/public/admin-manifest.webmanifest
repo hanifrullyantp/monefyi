@@ -1,0 +1,33 @@
+{
+  "name": "Monefyi Admin CRM",
+  "short_name": "Admin CRM",
+  "description": "Panel Admin & CRM Monefyi untuk kelola leads, transaksi Mayar, dan landing page langsung dari HP.",
+  "start_url": "/admin?source=pwa",
+  "scope": "/admin",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#0f172a",
+  "background_color": "#0f172a",
+  "lang": "id",
+  "categories": ["business", "finance", "productivity"],
+  "icons": [
+    {
+      "src": "/brand/estimator/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/estimator/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/estimator/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

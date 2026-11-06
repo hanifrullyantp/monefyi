@@ -35,24 +35,24 @@ import { INLINE_EDIT_LANDING_PATH } from "@/lib/hooks/useLandingAdmin";
 import { SaveIndicator } from "./SaveIndicator";
 
 const navItems = [
-  { href: "/admin", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/admin", icon: LayoutDashboard, label: "Dashboard CRM" },
+  { href: "/admin/crm", icon: Users, label: "CRM & Leads" },
   { href: "/admin/marketing", icon: Megaphone, label: "Marketing AI & Meta Ads" },
+  { href: "/admin/crm-template", icon: MessageSquare, label: "Template WA" },
+  { href: "/admin/pricing", icon: DollarSign, label: "Pricing & Paket" },
+  { href: "/admin/konten", icon: PanelLeftOpen, label: "Konten Visual" },
+  { href: "/admin/konten-json", icon: Code, label: "Konten JSON" },
+  { href: "/admin/analytics", icon: BarChart3, label: "Analytics" },
   { href: "/admin/global", icon: Globe, label: "Global & Merek" },
   { href: "/admin/kontak", icon: Phone, label: "Kontak & Sosial" },
   { href: "/admin/seo", icon: Search, label: "SEO & Tracking" },
   { href: "/admin/toast", icon: Bell, label: "Toast Notifikasi" },
   { href: "/admin/relink-popup", icon: Sparkles, label: "Popup Relink" },
   { href: "/admin/faq", icon: HelpCircle, label: "FAQ Editor" },
-  { href: "/admin/footer", icon: FileText, label: "Footer & Privasi" },
-  { href: "/admin/konten", icon: PanelLeftOpen, label: "Konten Visual" },
-  { href: "/admin/konten-json", icon: Code, label: "Konten JSON" },
-  { href: "/admin/media", icon: Image, label: "Media Library" },
-  { href: "/admin/crm", icon: Users, label: "CRM & Leads" },
-  { href: "/admin/crm-template", icon: MessageSquare, label: "Template WA" },
   { href: "/admin/testimonial", icon: Star, label: "Testimonial" },
-  { href: "/admin/pricing", icon: DollarSign, label: "Pricing" },
   { href: "/admin/features", icon: Sparkles, label: "Fitur" },
-  { href: "/admin/analytics", icon: BarChart3, label: "Analytics" },
+  { href: "/admin/media", icon: Image, label: "Media Library" },
+  { href: "/admin/footer", icon: FileText, label: "Footer & Privasi" },
   { href: "/admin/settings", icon: Settings, label: "Settings" },
 ];
 
