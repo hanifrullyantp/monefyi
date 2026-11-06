@@ -1,14 +1,31 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, MoreVertical, LayoutGrid, Wallet, BarChart3, FileSpreadsheet, Brain, FileText, Pencil, Coins,
-  Undo2, Redo2, Save, Paperclip,
+  ArrowLeft,
+  MoreVertical,
+  LayoutGrid,
+  Wallet,
+  BarChart3,
+  FileSpreadsheet,
+  Brain,
+  FileText,
+  Pencil,
+  Coins,
+  Undo2,
+  Redo2,
+  Save,
+  Paperclip,
+  MapPin,
+  Sparkles,
+  X,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { Project } from '../../../store/appStore';
 import { useAppStore } from '../../../store/appStore';
 import { useShellStore } from '../../../store/shellStore';
-import { updateProject as updateProjectApi, getProject, archiveProject } from '../../../services/projectService';
+import {
+  getProject,
+} from '../../../services/projectService';
 import { showToast } from '../../../store/uiStore';
 import { loadRapItems } from '../../../services/rapService';
 import { loadWorkItems } from '../../../services/workItemService';
@@ -16,7 +33,11 @@ import { loadCostRealizations, aggregateCostByRapItem } from '../../../services/
 import { loadProjectIncomes } from '../../../services/incomeService';
 import { loadReceivablesByProject } from '../../../services/financeV2/receivableService';
 import { loadPayablesByProject } from '../../../services/financeV2/payableService';
-import { loadSourceEstimationForProject, type SourceEstimationInfo } from '../../../services/estimationConvertService';
+import {
+  loadSourceEstimationForProject,
+  type SourceEstimationInfo,
+} from '../../../services/estimationConvertService';
+import { loadDailyLogs, createDailyLog, type DailyLog } from '../../../services/dailyLogService';
 import { mapPlannerProject } from '../../../lib/migration/planner-mapper';
 import { normalizeProjectView } from '../../../lib/migration/project-normalize';
 import { validateProjectBalance } from '../../../lib/migration/balance-sheet';
@@ -30,6 +51,9 @@ import TabV2Analisa from './TabV2Analisa';
 import TabV2Laporan from './TabV2Laporan';
 import TabV2Deviden from './TabV2Deviden';
 import ProjectEditModal from '../ProjectEditModal';
+import ProjectTransactionModals, { type ModalKind } from './ProjectTransactionModals';
+import { HealthPill, StatusPill } from '../../common';
+import { formatRupiah } from '../../../utils/projectUi';
 
 type TabId = 'overview' | 'keuangan' | 'deviden' | 'progress' | 'rap' | 'analisa' | 'laporan';
 
@@ -42,6 +66,14 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutGrid }[] = [
   { id: 'analisa', label: 'Analisa', icon: Brain },
   { id: 'laporan', label: 'Laporan', icon: FileText },
 ];
+
+function formatCompact(num: number): string {
+  const abs = Math.abs(num);
+  if (abs >= 1_000_000_000) return `Rp ${(num / 1_000_000_000).toFixed(1)}M`;
+  if (abs >= 1_000_000) return `Rp ${(num / 1_000_000).toFixed(1)}jt`;
+  if (abs >= 1_000) return `Rp ${(num / 1_000).toFixed(0)}rb`;
+  return formatRupiah(num);
+}
 
 type Props = {
   project: Project;
@@ -60,9 +92,19 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
   const [mapped, setMapped] = useState<ReturnType<typeof mapPlannerProject> | null>(null);
   const [rapItems, setRapItems] = useState<Awaited<ReturnType<typeof loadRapItems>>>([]);
   const [workItems, setWorkItems] = useState<Awaited<ReturnType<typeof loadWorkItems>>>([]);
+  const [projectLogs, setProjectLogs] = useState<DailyLog[]>([]);
   const [rapActuals, setRapActuals] = useState<Record<string, { qty: number; amount: number }>>({});
   const [rapDraft, setRapDraft] = useState<RapDraftControls | null>(null);
   const [sourceEstimation, setSourceEstimation] = useState<SourceEstimationInfo | null>(null);
+
+  // Modals for mobile bottom actions
+  const [txModal, setTxModal] = useState<{
+    open: boolean;
+    kind: ModalKind;
+  }>({ open: false, kind: null });
+  const [logModalOpen, setLogModalOpen] = useState(false);
+  const [logText, setLogText] = useState('');
+
   const loadedOnceRef = useRef(false);
   const projectRef = useRef(project);
   projectRef.current = project;
@@ -75,7 +117,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
       if (fresh) setProject(fresh);
 
       const orgId = tenant?.id;
-      const [rap, costs, incomes, wi, recs, pays, sourceEst] = await Promise.all([
+      const [rap, costs, incomes, wi, recs, pays, sourceEst, logs] = await Promise.all([
         loadRapItems(proj.id),
         loadCostRealizations(proj.id),
         loadProjectIncomes(proj.id),
@@ -83,10 +125,12 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
         orgId ? loadReceivablesByProject(orgId, proj.id).catch(() => []) : Promise.resolve([]),
         orgId ? loadPayablesByProject(orgId, proj.id).catch(() => []) : Promise.resolve([]),
         loadSourceEstimationForProject(proj.id).catch(() => null),
+        loadDailyLogs(proj.id).catch(() => []),
       ]);
       setRapItems(rap);
       setSourceEstimation(sourceEst);
       setWorkItems(wi);
+      setProjectLogs(logs);
       setRapActuals(await aggregateCostByRapItem(proj.id));
       const view = mapPlannerProject({
         project: {
@@ -120,100 +164,78 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
           id: c.id,
           project_id: c.project_id,
           rap_item_id: c.rap_item_id,
-          date: c.date,
+          cost_type: c.cost_type,
           description: c.description,
-          quantity: c.quantity,
-          unit_price: c.unit_price,
-          total_amount: c.total_amount,
-          supplier: c.supplier,
+          amount: c.amount,
+          date: c.date,
+          paid_from_account_id: c.paid_from_account_id,
+          vendor: c.vendor,
         })),
         incomes: incomes.map(i => ({
           id: i.id,
           project_id: i.project_id,
-          date: i.date,
           amount: i.amount,
-          category: i.category,
-          description: i.description,
-          status: i.status,
+          date: i.date,
+          deposit_to_account_id: i.deposit_to_account_id,
+          notes: i.notes,
         })),
-        workItems: wi.map(w => ({
-          id: w.id,
-          project_id: w.project_id,
-          name: w.name,
-          planned_start: w.planned_start,
-          planned_end: w.planned_end,
-          progress_pct: w.progress_pct,
-          weight: w.weight,
-          status: w.status,
+        receivables: recs.map(rc => ({
+          id: rc.id,
+          amount: rc.amount,
+          paid_amount: rc.paid_amount,
+          status: rc.status,
         })),
-        payables: pays.length > 0
-          ? pays.map(p => ({
-              id: p.id,
-              creditor_name: p.creditor_name,
-              amount: p.amount,
-              paid_amount: p.paid_amount,
-              due_date: p.due_date,
-              status: p.status,
-            }))
-          : undefined,
-        receivables: recs.length > 0
-          ? recs.map(r => ({
-              id: r.id,
-              debtor_name: r.debtor_name,
-              amount: r.amount,
-              paid_amount: r.paid_amount,
-              due_date: r.due_date,
-              status: r.status,
-            }))
-          : undefined,
+        payables: pays.map(py => ({
+          id: py.id,
+          amount: py.amount,
+          paid_amount: py.paid_amount,
+          status: py.status,
+        })),
       });
       setMapped(view);
-    } finally {
       loadedOnceRef.current = true;
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal memuat detail proyek', 'error');
+    } finally {
       setLoading(false);
     }
-  }, [project.id, tenant?.currency, tenant?.id]);
-
-  useEffect(() => { void reload(); }, [reload]);
+  }, [project.id, tenant?.currency, tenant?.id, showToast]);
 
   useEffect(() => {
-    setShellMeta({
-      breadcrumb: [{ label: 'Proyek' }, { label: project.name }],
-      projectId: project.id,
-      onOpenRap: () => trySetTab('rap'),
-      onOpenProgress: () => trySetTab('progress'),
-    });
-    return () => clearShellMeta();
-  }, [project.id, project.name, setShellMeta, clearShellMeta]);
+    void reload();
+  }, [reload]);
 
-  const normalized = mapped ? normalizeProjectView(mapped) : null;
-  const balanceCheck = mapped ? validateProjectBalance(mapped) : null;
-  const keuanganBadge =
-    balanceCheck && !balanceCheck.isBalanced ? Math.max(1, balanceCheck.issues.length) : undefined;
-  const rapBadge = rapItems.length > 0 ? rapItems.length : undefined;
+  const normalized = useMemo(() => {
+    if (!mapped) return null;
+    return normalizeProjectView(mapped);
+  }, [mapped]);
+
+  const balanceCheck = useMemo(() => {
+    if (!normalized) return null;
+    return validateProjectBalance(normalized);
+  }, [normalized]);
+
   const progressSummary = useMemo(
     () => computeProgressSummary(project, workItems),
     [project, workItems],
   );
-  const progressBadge = progressSummary.overdue > 0 ? progressSummary.overdue : undefined;
 
-  const handleSaveProject = async (patch: Partial<Project>) => {
-    const updated = await updateProjectApi(project.id, patch, tenant?.currency);
-    setProject(updated);
-    updateProject(project.id, updated);
-    showToast('Detail proyek disimpan', 'success');
-    await reload();
-  };
-
-  const handleArchiveProject = async () => {
-    if (!user?.id) return;
-    await archiveProject(project.id, user.id);
-    deleteProject(project.id);
-    showToast('Proyek diarsipkan', 'success');
-    onClose();
-  };
+  const budgetPlanned = project.total_budget_planned || project.contract_value || 0;
+  const budgetSpent = project.spent_amount || (normalized ? normalized.totalRealisasi : 0);
+  const budgetPct = budgetPlanned > 0 ? Math.round((budgetSpent / budgetPlanned) * 100) : 0;
 
   const openEdit = () => setEditOpen(true);
+
+  const handleSavedEdit = (updated: Project) => {
+    setProject(updated);
+    updateProject(updated.id, updated);
+    void reload();
+  };
+
+  const handleDeleted = () => {
+    deleteProject(project.id);
+    onClose();
+  };
 
   const confirmDiscardRapDraft = (): boolean => {
     if (tab !== 'rap' || !rapDraft?.hasChanges) return true;
@@ -235,6 +257,28 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
     onClose();
   };
 
+  const handleSaveDailyLog = async () => {
+    if (!logText.trim() || !user || !tenant) return;
+    try {
+      await createDailyLog({
+        org_id: tenant.id,
+        project_id: project.id,
+        user_id: user.id,
+        date: new Date().toISOString().slice(0, 10),
+        description: logText.trim(),
+        work_category: 'general',
+      });
+      setLogText('');
+      setLogModalOpen(false);
+      showToast('Log harian berhasil disimpan', 'success');
+      const freshLogs = await loadDailyLogs(project.id);
+      setProjectLogs(freshLogs);
+    } catch (e) {
+      console.error(e);
+      showToast('Gagal menyimpan log harian', 'error');
+    }
+  };
+
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
       if (tab === 'rap' && rapDraft?.hasChanges) {
@@ -246,9 +290,49 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, [tab, rapDraft?.hasChanges]);
 
+  // AI analysis text for mobile overview
+  const analysisText = useMemo(() => {
+    if (budgetPct >= 100 && progressSummary.actual === 0) {
+      return 'Budget sudah terpakai 100% sementara progres masih 0%. Periksa RAP dan catat progres terbaru.';
+    }
+    if (budgetPct > 100) {
+      return `Realisasi biaya (${budgetPct}%) telah melampaui rencana budget. Evaluasi pengeluaran dan sesuaikan RAP.`;
+    }
+    if (progressSummary.deviation < -10) {
+      return `Progres terlambat ${Math.abs(progressSummary.deviation)}% dari rencana jadwal. Prioritaskan pekerjaan kritis.`;
+    }
+    return 'Proyek berjalan terkendali. Lanjutkan pemantauan realisasi biaya dan log harian berkala.';
+  }, [budgetPct, progressSummary.actual, progressSummary.deviation]);
+
   return (
-    <div className="flex flex-col min-h-0">
-      <header className="surface-panel px-4 py-3 flex items-center justify-between shrink-0 sticky top-0 z-10 mx-2 mt-2 rounded-2xl">
+    <div className="flex flex-col min-h-0 pb-28 md:pb-10">
+      {/* ─── MOBILE HEADER (Design Redesign Mobile) ─── */}
+      <header className="md:hidden shrink-0 h-14 flex items-center justify-between px-2 bg-white border-b border-[#E5EAE8] sticky top-0 z-20">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <button
+            type="button"
+            onClick={tryClose}
+            aria-label="Kembali ke daftar proyek"
+            className="w-11 h-11 border-0 bg-transparent flex items-center justify-center p-0 text-slate-700 active:scale-95 transition-transform"
+          >
+            <ArrowLeft className="w-5 h-5 stroke-[2.4]" />
+          </button>
+          <div className="text-xs font-bold text-[#047857] bg-[#ECFDF5] px-2.5 py-1 rounded-[7px] truncate max-w-[12rem]">
+            {project.code || 'PRJ'}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={openEdit}
+          aria-label="Menu proyek"
+          className="w-11 h-11 border-0 bg-transparent flex items-center justify-center p-0 text-slate-700 active:scale-95 transition-transform"
+        >
+          <MoreVertical className="w-5 h-5" />
+        </button>
+      </header>
+
+      {/* ─── DESKTOP HEADER (Preserve full desktop UI) ─── */}
+      <header className="hidden md:flex surface-panel px-4 py-3 items-center justify-between shrink-0 sticky top-0 z-10 mx-2 mt-2 rounded-2xl">
         <div className="flex items-center gap-3 min-w-0">
           <button
             type="button"
@@ -271,7 +355,9 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
               type="button"
               onClick={() => setBalanceOpen(true)}
               className={`text-xs font-bold px-3 py-1.5 rounded-full ${
-                balanceCheck.isBalanced ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                balanceCheck.isBalanced
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : 'bg-rose-100 text-rose-700'
               }`}
             >
               {balanceCheck.isBalanced ? 'Balance' : 'Tidak Balance'}
@@ -281,7 +367,9 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
             type="button"
             onClick={() => trySetTab('progress')}
             className={`hidden sm:inline-flex text-xs font-bold px-3 py-1.5 rounded-full ${
-              progressSummary.deviation >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+              progressSummary.deviation >= 0
+                ? 'bg-emerald-100 text-emerald-700'
+                : 'bg-amber-100 text-amber-700'
             }`}
             title="Buka tab Progress"
           >
@@ -324,10 +412,22 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
               </button>
             </>
           )}
-          <button type="button" onClick={openEdit} className="p-2 hover:bg-slate-100 rounded-xl" aria-label="Edit proyek" title="Edit proyek">
+          <button
+            type="button"
+            onClick={openEdit}
+            className="p-2 hover:bg-slate-100 rounded-xl"
+            aria-label="Edit proyek"
+            title="Edit proyek"
+          >
             <Pencil className="w-5 h-5 text-slate-500" />
           </button>
-          <button type="button" onClick={openEdit} className="p-2 hover:bg-slate-100 rounded-xl" aria-label="Pengaturan Proyek" title="Pengaturan & Arsip Proyek">
+          <button
+            type="button"
+            onClick={openEdit}
+            className="p-2 hover:bg-slate-100 rounded-xl"
+            aria-label="Pengaturan Proyek"
+            title="Pengaturan & Arsip Proyek"
+          >
             <MoreVertical className="w-5 h-5 text-slate-500" />
           </button>
         </div>
@@ -337,114 +437,260 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
         <button
           type="button"
           onClick={() => navigate(`/app/estimator/${sourceEstimation.id}`)}
-          className="mx-4 mt-2 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-left text-sm text-emerald-800 hover:bg-emerald-100 transition-colors flex items-center gap-2"
+          className="mx-3.5 sm:mx-4 mt-2 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-left text-xs sm:text-sm text-emerald-800 hover:bg-emerald-100 transition-colors flex items-center gap-2"
         >
           <Paperclip className="w-4 h-4 shrink-0" />
           Dibuat dari Estimasi {sourceEstimation.code} →
         </button>
       )}
 
-      <nav className="tab-pills mx-4 mt-3 mb-1 overflow-x-auto shrink-0 sticky top-[4.5rem] z-10">
-        {TABS.map(t => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => trySetTab(t.id)}
-            className={`tab-pill flex items-center gap-1.5 whitespace-nowrap ${
-              tab === t.id ? 'tab-pill-active' : ''
-            }`}
-          >
-            <t.icon className="w-4 h-4" /> {t.label}
-            {t.id === 'keuangan' && keuanganBadge != null && keuanganBadge > 0 && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600">
-                {keuanganBadge}
-              </span>
-            )}
-            {t.id === 'rap' && rapBadge != null && rapBadge > 0 && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                {rapBadge}
-              </span>
-            )}
-            {t.id === 'progress' && progressBadge != null && progressBadge > 0 && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600">
-                {progressBadge}
-              </span>
-            )}
-          </button>
-        ))}
+      {/* ─── MOBILE HERO GREEN CARD ─── */}
+      <div className="md:hidden px-4 pt-3.5 space-y-3 max-w-[420px] mx-auto w-full">
+        <div className="relative overflow-hidden rounded-[20px] p-4 text-white bg-gradient-to-br from-[#064E3B] via-[#065F46] to-[#047857] shadow-[0_14px_28px_-14px_rgba(4,120,87,0.7)]">
+          <div
+            aria-hidden="true"
+            className="absolute -right-10 -top-14 w-40 h-40 rounded-full bg-white/10 pointer-events-none"
+          />
+          <div className="relative flex items-center gap-2">
+            <HealthPill status={project.health_status} />
+            <StatusPill status={project.status} />
+          </div>
+
+          <h2 className="relative text-2xl font-extrabold tracking-tight mt-3 text-white">
+            {project.name}
+          </h2>
+
+          <div className="relative text-[13px] text-[#ECFDF5] mt-1 flex items-center gap-1.5 truncate">
+            <MapPin className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">{project.location || project.client_name || '—'}</span>
+          </div>
+
+          {/* Progress */}
+          <div className="relative mt-4 flex justify-between text-xs font-bold text-[#D1FAE5]">
+            <span>Progress</span>
+            <span className="text-white">{Math.round(progressSummary.actual)}%</span>
+          </div>
+          <div className="relative h-1.5 rounded-full bg-white/25 mt-1.5 overflow-hidden">
+            <div
+              className="h-full bg-white rounded-full transition-all"
+              style={{ width: `${Math.min(100, Math.round(progressSummary.actual))}%` }}
+            />
+          </div>
+
+          {/* Budget Terpakai */}
+          <div className="relative mt-3 flex justify-between text-xs font-bold text-[#D1FAE5]">
+            <span>Budget terpakai</span>
+            <span className="text-white">{budgetPct}%</span>
+          </div>
+          <div className="relative h-1.5 rounded-full bg-white/25 mt-1.5 overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all"
+              style={{
+                width: `${Math.min(100, budgetPct)}%`,
+                backgroundColor: budgetPct > 100 ? '#EF4444' : budgetPct > 90 ? '#FCD34D' : '#10B981',
+              }}
+            />
+          </div>
+          <div className="relative mt-1.5 flex justify-between text-xs text-[#D1FAE5] tabular-nums">
+            <span>{formatCompact(budgetSpent)}</span>
+            <span>{formatCompact(budgetPlanned)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── TAB NAVIGATION (Horizontal Scroll Pills) ─── */}
+      <nav
+        aria-label="Tab Detail Proyek"
+        className="flex gap-1.5 overflow-x-auto px-4 py-2 mt-2 scrollbar-none sticky top-14 md:top-[4.5rem] bg-[#F4F7F5] z-10"
+      >
+        {TABS.map(t => {
+          const isActive = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => trySetTab(t.id)}
+              className={`shrink-0 h-10 px-3.5 rounded-full font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95 whitespace-nowrap ${
+                isActive
+                  ? 'bg-[#0F172A] text-white shadow-xs'
+                  : 'bg-white border border-[#E5EAE8] text-[#5B6B7A] hover:text-[#0F172A]'
+              }`}
+            >
+              <t.icon className="w-3.5 h-3.5 shrink-0" />
+              <span>{t.label}</span>
+            </button>
+          );
+        })}
       </nav>
 
-      <main className="flex-1 overflow-y-auto p-4 md:p-5">
+      {/* ─── MAIN CONTENT ─── */}
+      <main className="flex-1 overflow-y-auto px-4 py-2 md:p-5">
         {loading || !normalized ? (
           <div className="text-center py-16 text-slate-500">Memuat...</div>
         ) : (
-          <motion.div key={tab} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <div>
+            {/* If on mobile and in 'overview' tab, show new mobile overview widgets */}
             {tab === 'overview' && (
-              <TabV2Overview
-                normalized={normalized}
-                project={project}
-                orgId={tenant?.id || ''}
-                userId={user?.id || ''}
-                rapItems={rapItems}
-                workItems={workItems}
-                onRefresh={reload}
-                onSwitchTab={tabId => trySetTab(tabId)}
-                onEditProject={openEdit}
-              />
+              <div className="md:hidden space-y-3 max-w-[420px] mx-auto">
+                {/* Analisa Monefyi Purple Card */}
+                <div className="bg-[#F5F3FF] border border-[#DDD6FE] rounded-2xl p-3.5 space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-[#6D28D9] tracking-[0.06em]">
+                    <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+                    ANALISA MONEFYI
+                  </div>
+                  <div className="text-[13px] font-semibold text-[#0F172A] leading-snug">
+                    {analysisText}
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => trySetTab('rap')}
+                      className="h-11 px-3.5 rounded-xl bg-[#6D28D9] text-white font-bold text-xs flex items-center justify-center active:scale-95 transition-transform"
+                    >
+                      Buka RAP
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => trySetTab('progress')}
+                      className="h-11 px-3.5 rounded-xl border border-[#DDD6FE] bg-white text-[#4C1D95] font-bold text-xs flex items-center justify-center active:scale-95 transition-transform"
+                    >
+                      Update progres
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2 Metrik Cards */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="bg-white border border-[#E5EAE8] rounded-2xl p-3 flex flex-col justify-between">
+                    <div className="text-[10px] font-bold text-[#5B6B7A] tracking-[0.05em] uppercase">
+                      NILAI PROYEK
+                    </div>
+                    <div className="text-base font-extrabold text-[#0F172A] mt-1 tabular-nums truncate">
+                      {formatCompact(budgetPlanned)}
+                    </div>
+                  </div>
+                  <div className="bg-white border border-[#E5EAE8] rounded-2xl p-3 flex flex-col justify-between">
+                    <div className="text-[10px] font-bold text-[#5B6B7A] tracking-[0.05em] uppercase">
+                      REALISASI BIAYA
+                    </div>
+                    <div className="text-base font-extrabold text-[#0F172A] mt-1 tabular-nums truncate">
+                      {formatCompact(budgetSpent)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Aktivitas Terbaru Card */}
+                <div className="bg-white border border-[#E5EAE8] rounded-2xl overflow-hidden shadow-xs">
+                  <div className="px-3.5 py-3 text-xs font-extrabold text-[#0F172A] border-b border-[#EDF1EF]">
+                    Aktivitas terbaru
+                  </div>
+                  {projectLogs.length === 0 ? (
+                    <div className="p-5 text-center text-xs text-[#5B6B7A]">
+                      Belum ada log harian untuk proyek ini.
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-[#EDF1EF] p-2 text-xs">
+                      {projectLogs.slice(0, 5).map(log => (
+                        <div key={log.id} className="py-2 px-1 flex justify-between gap-2">
+                          <span className="text-[#0F172A] font-medium truncate">
+                            {log.description}
+                          </span>
+                          <span className="text-[#8A99A6] shrink-0">{log.date}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
-            {tab === 'keuangan' && (
-              <TabV2Keuangan
-                normalized={normalized}
-                balanceCheck={balanceCheck!}
-                onOpenDiagnosis={() => setBalanceOpen(true)}
-                project={project}
-                orgId={tenant?.id || ''}
-                userId={user?.id || ''}
-                canManage
-                onRefresh={reload}
-                onEditProject={openEdit}
-              />
-            )}
-            {tab === 'deviden' && (
-              <TabV2Deviden
-                project={project}
-                normalized={normalized}
-                orgId={tenant?.id || ''}
-                userId={user?.id || ''}
-                canManage
-                onRefresh={reload}
-              />
-            )}
-            {tab === 'progress' && (
-              <TabV2Progress
-                normalized={normalized}
-                project={project}
-                workItems={workItems}
-                userId={user?.id || ''}
-                canManage
-                onRefresh={reload}
-              />
-            )}
-            {tab === 'rap' && (
-              <TabV2Rap
-                projectId={project.id}
-                normalized={normalized}
-                rapItems={rapItems}
-                rapActuals={rapActuals}
-                onRefresh={reload}
-                userId={user?.id || ''}
-                onDraftChange={setRapDraft}
-              />
-            )}
-            {tab === 'analisa' && (
-              <TabV2Analisa projectId={project.id} normalized={normalized} />
-            )}
-            {tab === 'laporan' && (
-              <TabV2Laporan project={project} normalized={normalized} rapItems={rapItems} />
-            )}
-          </motion.div>
+
+            {/* Desktop Overview Tab / Other Tabs on both */}
+            <div className={tab === 'overview' ? 'hidden md:block' : ''}>
+              {tab === 'overview' && (
+                <TabV2Overview
+                  normalized={normalized}
+                  project={project}
+                  orgId={tenant?.id || ''}
+                  userId={user?.id || ''}
+                  rapItems={rapItems}
+                  workItems={workItems}
+                  onRefresh={reload}
+                  onSwitchTab={tabId => trySetTab(tabId)}
+                  onEditProject={openEdit}
+                />
+              )}
+              {tab === 'keuangan' && (
+                <TabV2Keuangan
+                  normalized={normalized}
+                  balanceCheck={balanceCheck!}
+                  onOpenDiagnosis={() => setBalanceOpen(true)}
+                  project={project}
+                  orgId={tenant?.id || ''}
+                  userId={user?.id || ''}
+                  canManage
+                  onRefresh={reload}
+                  onEditProject={openEdit}
+                />
+              )}
+              {tab === 'deviden' && (
+                <TabV2Deviden
+                  project={project}
+                  normalized={normalized}
+                  orgId={tenant?.id || ''}
+                  userId={user?.id || ''}
+                  canManage
+                  onRefresh={reload}
+                />
+              )}
+              {tab === 'progress' && (
+                <TabV2Progress
+                  normalized={normalized}
+                  project={project}
+                  workItems={workItems}
+                  userId={user?.id || ''}
+                  canManage
+                  onRefresh={reload}
+                />
+              )}
+              {tab === 'rap' && (
+                <TabV2Rap
+                  projectId={project.id}
+                  normalized={normalized}
+                  rapItems={rapItems}
+                  rapActuals={rapActuals}
+                  onRefresh={reload}
+                  userId={user?.id || ''}
+                  onDraftChange={setRapDraft}
+                />
+              )}
+              {tab === 'analisa' && (
+                <TabV2Analisa projectId={project.id} normalized={normalized} />
+              )}
+              {tab === 'laporan' && (
+                <TabV2Laporan project={project} normalized={normalized} rapItems={rapItems} />
+              )}
+            </div>
+          </div>
         )}
       </main>
+
+      {/* ─── MOBILE BOTTOM ACTION BAR ─── */}
+      <div className="md:hidden fixed bottom-3 inset-x-3 z-30 rounded-[18px] p-2 bg-white border border-[#E5EAE8] shadow-[0_-6px_24px_-10px_rgba(15,23,42,0.25)] flex gap-2">
+        <button
+          type="button"
+          onClick={() => setTxModal({ open: true, kind: 'cost' })}
+          className="flex-1 h-11 rounded-xl bg-[#059669] text-white font-bold text-xs flex items-center justify-center active:scale-95 transition-transform"
+        >
+          + Catat biaya
+        </button>
+        <button
+          type="button"
+          onClick={() => setLogModalOpen(true)}
+          className="flex-1 h-11 rounded-xl border border-[#D5DDDA] bg-white text-[#0F172A] font-bold text-xs flex items-center justify-center active:scale-95 transition-transform"
+        >
+          Log harian
+        </button>
+      </div>
 
       <BalanceDiagnosisModal
         open={balanceOpen}
@@ -455,11 +701,70 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
       {editOpen && (
         <ProjectEditModal
           project={project}
-          canArchive={user?.role === 'owner' || user?.role === 'manager'}
           onClose={() => setEditOpen(false)}
-          onSave={handleSaveProject}
-          onArchive={handleArchiveProject}
+          onSaved={handleSavedEdit}
+          onDeleted={handleDeleted}
         />
+      )}
+
+      {/* Quick Cost Realization Modal from Bottom Bar */}
+      {txModal.open && tenant?.id && user?.id && (
+        <ProjectTransactionModals
+          open={txModal.open}
+          kind={txModal.kind}
+          onClose={() => setTxModal({ open: false, kind: null })}
+          project={project}
+          orgId={tenant.id}
+          userId={user.id}
+          canManage={true}
+          onUpdated={() => {
+            setTxModal({ open: false, kind: null });
+            void reload();
+          }}
+        />
+      )}
+
+      {/* Quick Daily Log Modal from Bottom Bar */}
+      {logModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-4 space-y-3 shadow-xl">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-sm text-[#0F172A]">Log Harian: {project.name}</h3>
+              <button
+                type="button"
+                onClick={() => setLogModalOpen(false)}
+                aria-label="Tutup"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <textarea
+              value={logText}
+              onChange={e => setLogText(e.target.value)}
+              placeholder="Catat aktivitas atau progres hari ini..."
+              rows={3}
+              className="w-full p-3 rounded-xl border border-[#E5EAE8] text-sm outline-none focus:border-[#059669]"
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setLogModalOpen(false)}
+                className="flex-1 h-11 rounded-xl border border-[#D5DDDA] font-semibold text-xs"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveDailyLog}
+                disabled={!logText.trim()}
+                className="flex-1 h-11 rounded-xl bg-[#059669] text-white font-bold text-xs disabled:opacity-50"
+              >
+                Simpan Log
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
