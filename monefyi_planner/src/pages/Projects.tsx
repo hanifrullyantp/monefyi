@@ -18,9 +18,11 @@ import {
   Columns3,
   Calendar,
   GanttChart,
+  Tag,
+  Trash2,
 } from 'lucide-react';
 import { useAppStore, type Project } from '../store/appStore';
-import { createProject, updateProject as updateProjectApi } from '../services/projectService';
+import { createProject, updateProject as updateProjectApi, archiveProject } from '../services/projectService';
 import ProjectDetailV2 from '../components/projects/v2/ProjectDetailV2';
 import CreateProjectRapDraft from '../components/projects/CreateProjectRapDraft';
 import { createProjectWithRap } from '../lib/migration/create-project';
@@ -380,6 +382,7 @@ export default function Projects({
     setSelectedProjectId,
     user,
     updateProject,
+    removeProject,
     tenant,
     platformRole,
     entitlementPreviewMode,
@@ -400,6 +403,17 @@ export default function Projects({
   const [listSectionOpen, setListSectionOpen] = useState(true);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
+  // Status modal state
+  const [statusModalProject, setStatusModalProject] = useState<Project | null>(null);
+  const [selectedNewStatus, setSelectedNewStatus] = useState<Project['status']>('active');
+  const [statusSaving, setStatusSaving] = useState(false);
+
+  // Delete project multi-layered safety modal state
+  const [deleteModalProject, setDeleteModalProject] = useState<Project | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleteAcknowledged, setDeleteAcknowledged] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   // Group collapses for mobile
   const [planningOpen, setPlanningOpen] = useState(false);
   const [otherOpen, setOtherOpen] = useState(false);
@@ -419,6 +433,41 @@ export default function Projects({
 
   const canCreate = user?.role === 'owner' || user?.role === 'manager' || user?.role === 'admin';
   const showToast = useUiStore(s => s.showToast);
+
+  const handleConfirmStatusChange = async () => {
+    if (!statusModalProject) return;
+    setStatusSaving(true);
+    try {
+      await handleStatusChange(statusModalProject.id, selectedNewStatus);
+      setStatusModalProject(null);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setStatusSaving(false);
+    }
+  };
+
+  const handleConfirmDeleteProject = async () => {
+    if (!deleteModalProject) return;
+    const isMatch = deleteConfirmText.trim().toLowerCase() === deleteModalProject.name.trim().toLowerCase();
+    if (!isMatch || !deleteAcknowledged) {
+      showToast('Konfirmasi keamanan belum lengkap', 'error');
+      return;
+    }
+    setDeleting(true);
+    try {
+      await archiveProject(deleteModalProject.id, user?.id || '');
+      removeProject(deleteModalProject.id);
+      showToast(`Proyek "${deleteModalProject.name}" berhasil diarsipkan`, 'success');
+      setDeleteModalProject(null);
+      setDeleteConfirmText('');
+      setDeleteAcknowledged(false);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Gagal menghapus proyek', 'error');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   useEffect(() => {
     if (!initialProjectId) {
@@ -1249,6 +1298,184 @@ export default function Projects({
           </div>
         </div>
       )}
+
+      {/* Ubah Status Modal */}
+      {statusModalProject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl border border-[#E5EAE8] animate-fadeIn">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <h3 className="font-bold text-base text-[#0F172A]">Ubah Status Proyek</h3>
+                <p className="text-xs text-[#5B6B7A] mt-0.5 truncate max-w-[240px]">
+                  {statusModalProject.name}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStatusModalProject(null)}
+                aria-label="Tutup"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-[#F4F7F5]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {(
+                [
+                  { id: 'planning', label: 'Planning', desc: 'Tahap perencanaan / tender' },
+                  { id: 'active', label: 'Aktif', desc: 'Pekerjaan sedang berlangsung' },
+                  { id: 'on_hold', label: 'On Hold', desc: 'Tertunda sementara' },
+                  { id: 'completed', label: 'Selesai', desc: 'Pekerjaan fisik telah selesai' },
+                  { id: 'cancelled', label: 'Dibatalkan', desc: 'Proyek tidak dilanjutkan' },
+                ] as const
+              ).map(opt => {
+                const isSelected = selectedNewStatus === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setSelectedNewStatus(opt.id)}
+                    className={`w-full p-3 text-left rounded-xl border transition-all flex items-center justify-between ${
+                      isSelected
+                        ? 'border-[#059669] bg-emerald-50/60 text-[#0F172A]'
+                        : 'border-[#E5EAE8] bg-white text-[#5B6B7A] hover:bg-slate-50'
+                    }`}
+                  >
+                    <div>
+                      <div className="text-xs font-bold">{opt.label}</div>
+                      <div className="text-[10px] text-[#5B6B7A]">{opt.desc}</div>
+                    </div>
+                    {isSelected && (
+                      <div className="w-5 h-5 rounded-full bg-[#059669] text-white flex items-center justify-center text-xs">
+                        ✓
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setStatusModalProject(null)}
+                className="flex-1 h-11 border border-[#E5EAE8] rounded-xl text-xs font-bold text-[#5B6B7A] hover:bg-[#F4F7F5]"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={statusSaving}
+                onClick={handleConfirmStatusChange}
+                className="flex-1 h-11 bg-[#059669] hover:bg-[#047857] text-white rounded-xl text-xs font-bold disabled:opacity-50"
+              >
+                {statusSaving ? 'Menyimpan...' : 'Simpan Status'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Hapus / Arsip Proyek (Pengaman Berlapis) */}
+      {deleteModalProject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl border border-rose-200 animate-fadeIn">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-base text-[#0F172A]">Hapus / Arsipkan Proyek</h3>
+                <p className="text-xs text-[#5B6B7A] mt-0.5">
+                  Pengaman ganda untuk mencegah kehilangan data secara tidak sengaja.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteModalProject(null);
+                  setDeleteConfirmText('');
+                  setDeleteAcknowledged(false);
+                }}
+                aria-label="Tutup"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-[#F4F7F5]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="bg-rose-50 border border-rose-200 rounded-xl p-3.5 text-xs text-rose-900 space-y-1">
+              <p className="font-semibold">Perhatian:</p>
+              <p>
+                Proyek ini akan dipindahkan ke arsip selama <strong>30 hari</strong>. Setelah itu, proyek dapat dihapus permanen oleh Super Admin.
+              </p>
+            </div>
+
+            {/* Pengaman Layer 1: Ketik nama proyek persis */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-[#0F172A] block">
+                1. Ketik ulang nama proyek di bawah ini untuk konfirmasi:
+              </label>
+              <div className="px-3 py-1.5 bg-[#F4F7F5] border border-[#E5EAE8] rounded-lg text-xs font-mono font-bold text-[#0F172A] select-all">
+                {deleteModalProject.name}
+              </div>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={e => setDeleteConfirmText(e.target.value)}
+                placeholder="Ketik nama proyek persis..."
+                className="w-full h-11 px-3.5 rounded-xl border border-[#E5EAE8] text-sm text-[#0F172A] focus:outline-none focus:border-rose-500"
+                autoComplete="off"
+              />
+              {deleteConfirmText.length > 0 && deleteConfirmText.trim().toLowerCase() !== deleteModalProject.name.trim().toLowerCase() && (
+                <p className="text-[11px] text-rose-600 font-medium">Teks belum cocok dengan nama proyek</p>
+              )}
+            </div>
+
+            {/* Pengaman Layer 2: Checkbox acknowledgement */}
+            <label className="flex items-start gap-2.5 cursor-pointer pt-1">
+              <input
+                type="checkbox"
+                checked={deleteAcknowledged}
+                onChange={e => setDeleteAcknowledged(e.target.checked)}
+                className="mt-0.5 rounded text-rose-600 focus:ring-rose-500"
+              />
+              <span className="text-xs text-[#5B6B7A] leading-snug">
+                2. Saya mengerti bahwa proyek ini akan dihapus dari daftar aktif dan dipindahkan ke arsip sistem.
+              </span>
+            </label>
+
+            {/* Tombol aksi */}
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteModalProject(null);
+                  setDeleteConfirmText('');
+                  setDeleteAcknowledged(false);
+                }}
+                className="flex-1 h-11 border border-[#E5EAE8] rounded-xl text-xs font-bold text-[#5B6B7A] hover:bg-[#F4F7F5]"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={
+                  deleting ||
+                  deleteConfirmText.trim().toLowerCase() !== deleteModalProject.name.trim().toLowerCase() ||
+                  !deleteAcknowledged
+                }
+                onClick={handleConfirmDeleteProject}
+                className="flex-1 h-11 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                {deleting ? 'Menghapus...' : 'Hapus Proyek'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -1303,38 +1530,69 @@ export default function Projects({
             : undefined
         }
         actions={
-          <>
-            <button
-              type="button"
-              onClick={e => {
-                e.stopPropagation();
-                openProjectDetail(proj);
-              }}
-              className="flex-1 h-11 rounded-xl bg-[#059669] text-white font-bold text-xs flex items-center justify-center active:scale-95 transition-transform"
-            >
-              Buka proyek
-            </button>
-            <button
-              type="button"
-              onClick={e => {
-                e.stopPropagation();
-                setTxModal({ open: true, kind: 'cost', project: proj });
-              }}
-              className="flex-1 h-11 rounded-xl border border-[#D5DDDA] bg-white text-[#0F172A] font-semibold text-xs flex items-center justify-center active:scale-95 transition-transform"
-            >
-              Catat biaya
-            </button>
-            <button
-              type="button"
-              onClick={e => {
-                e.stopPropagation();
-                setLogModalProj(proj);
-              }}
-              className="flex-1 h-11 rounded-xl border border-[#D5DDDA] bg-white text-[#0F172A] font-semibold text-xs flex items-center justify-center active:scale-95 transition-transform"
-            >
-              Log harian
-            </button>
-          </>
+          <div className="w-full space-y-2">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
+                  openProjectDetail(proj);
+                }}
+                className="flex-1 h-11 rounded-xl bg-[#059669] hover:bg-[#047857] text-white font-bold text-xs flex items-center justify-center active:scale-95 transition-transform"
+              >
+                Buka proyek
+              </button>
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
+                  setTxModal({ open: true, kind: 'cost', project: proj });
+                }}
+                className="flex-1 h-11 rounded-xl border border-[#E5EAE8] bg-white text-[#0F172A] font-semibold text-xs flex items-center justify-center hover:bg-slate-50 active:scale-95 transition-transform"
+              >
+                Catat biaya
+              </button>
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
+                  setLogModalProj(proj);
+                }}
+                className="flex-1 h-11 rounded-xl border border-[#E5EAE8] bg-white text-[#0F172A] font-semibold text-xs flex items-center justify-center hover:bg-slate-50 active:scale-95 transition-transform"
+              >
+                Log harian
+              </button>
+            </div>
+            <div className="flex gap-2 pt-1.5 border-t border-[#E5EAE8]">
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
+                  setSelectedNewStatus(proj.status);
+                  setStatusModalProject(proj);
+                }}
+                className="flex-1 h-11 rounded-xl border border-[#E5EAE8] bg-[#F4F7F5] hover:bg-slate-100 text-[#0F172A] font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
+              >
+                <Tag className="w-3.5 h-3.5 text-[#059669]" />
+                Ubah Status
+              </button>
+              {canCreate && (
+                <button
+                  type="button"
+                  onClick={e => {
+                    e.stopPropagation();
+                    setDeleteConfirmText('');
+                    setDeleteAcknowledged(false);
+                    setDeleteModalProject(proj);
+                  }}
+                  className="flex-1 h-11 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                  Hapus Proyek
+                </button>
+              )}
+            </div>
+          </div>
         }
       />
     );
