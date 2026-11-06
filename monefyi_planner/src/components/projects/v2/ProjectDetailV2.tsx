@@ -164,37 +164,57 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
           id: c.id,
           project_id: c.project_id,
           rap_item_id: c.rap_item_id,
-          cost_type: c.cost_type,
-          description: c.description,
-          amount: c.amount,
           date: c.date,
-          paid_from_account_id: c.paid_from_account_id,
-          vendor: c.vendor,
+          description: c.description,
+          quantity: c.quantity,
+          unit_price: c.unit_price,
+          total_amount: c.total_amount,
+          supplier: c.supplier,
         })),
         incomes: incomes.map(i => ({
           id: i.id,
           project_id: i.project_id,
-          amount: i.amount,
           date: i.date,
-          deposit_to_account_id: i.deposit_to_account_id,
-          notes: i.notes,
+          amount: i.amount,
+          category: i.category,
+          description: i.description,
+          status: i.status,
         })),
-        receivables: recs.map(rc => ({
-          id: rc.id,
-          amount: rc.amount,
-          paid_amount: rc.paid_amount,
-          status: rc.status,
+        workItems: wi.map(w => ({
+          id: w.id,
+          project_id: w.project_id,
+          name: w.name,
+          planned_start: w.planned_start,
+          planned_end: w.planned_end,
+          progress_pct: w.progress_pct,
+          weight: w.weight,
+          status: w.status,
         })),
-        payables: pays.map(py => ({
-          id: py.id,
-          amount: py.amount,
-          paid_amount: py.paid_amount,
-          status: py.status,
-        })),
+        payables: pays.length > 0
+          ? pays.map(p => ({
+              id: p.id,
+              creditor_name: p.creditor_name,
+              amount: p.amount,
+              paid_amount: p.paid_amount,
+              due_date: p.due_date,
+              status: p.status,
+            }))
+          : undefined,
+        receivables: recs.length > 0
+          ? recs.map(r => ({
+              id: r.id,
+              debtor_name: r.debtor_name,
+              amount: r.amount,
+              paid_amount: r.paid_amount,
+              due_date: r.due_date,
+              status: r.status,
+            }))
+          : undefined,
       });
       setMapped(view);
       loadedOnceRef.current = true;
     } catch (e) {
+      console.error('ProjectDetail reload error:', e);
       showToast(e instanceof Error ? e.message : 'Gagal memuat detail proyek', 'error');
     } finally {
       setLoading(false);
@@ -205,15 +225,25 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
     void reload();
   }, [reload]);
 
+  useEffect(() => {
+    setShellMeta({
+      breadcrumb: [{ label: 'Proyek' }, { label: project.name }],
+      projectId: project.id,
+      onOpenRap: () => trySetTab('rap'),
+      onOpenProgress: () => trySetTab('progress'),
+    });
+    return () => clearShellMeta();
+  }, [project.id, project.name, setShellMeta, clearShellMeta]);
+
   const normalized = useMemo(() => {
     if (!mapped) return null;
     return normalizeProjectView(mapped);
   }, [mapped]);
 
   const balanceCheck = useMemo(() => {
-    if (!normalized) return null;
-    return validateProjectBalance(normalized);
-  }, [normalized]);
+    if (!mapped) return null;
+    return validateProjectBalance(mapped);
+  }, [mapped]);
 
   const progressSummary = useMemo(
     () => computeProgressSummary(project, workItems),
