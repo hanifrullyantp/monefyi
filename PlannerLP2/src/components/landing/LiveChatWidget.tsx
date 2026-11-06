@@ -1,26 +1,24 @@
 "use client";
+
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Send, Minimize2 } from "lucide-react";
-import { useSettingsStore } from "@/lib/store/settingsStore";
-
-interface Message {
-  id: string;
-  text: string;
-  sender: "user" | "bot";
-  timestamp: Date;
-}
-
-const botReplies = [
-  "Halo! Saya Mona, asisten virtual Monefyi Estimator. Ada yang bisa saya bantu?",
-  "Untuk informasi lebih lanjut tentang paket pricing, silakan hubungi tim kami via WhatsApp ya! 😊",
-  "Terima kasih telah menghubungi Monefyi Estimator! Tim kami akan segera membalas pesan Anda.",
-];
+import {
+  MessageCircle,
+  X,
+  Send,
+  Sparkles,
+  ChevronRight,
+} from "lucide-react";
+import {
+  CSMessage,
+  CS_AGENT_PROFILE,
+  POPULAR_CS_QUESTIONS,
+  getCustomerSupportReply,
+} from "@/lib/services/customerSupportService";
 
 export function LiveChatWidget() {
-  const liveChatEnabled = useSettingsStore((s) => s.settings.liveChatEnabled);
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<CSMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -28,77 +26,119 @@ export function LiveChatWidget() {
   useEffect(() => {
     if (messages.length === 0 && isOpen) {
       setTimeout(() => {
-        addBotMessage(botReplies[0]);
-      }, 500);
+        setMessages([
+          {
+            id: "initial_greeting",
+            sender: "cs",
+            text: CS_AGENT_PROFILE.greeting,
+            timestamp: new Date(),
+            suggestedActions: [
+              {
+                label: "📄 Cara bikin PDF penawaran di HP?",
+                action: "ask",
+                payload: "Cara bikin PDF penawaran di HP",
+              },
+              {
+                label: "🚀 Apa bedanya Standard vs Pro?",
+                action: "ask",
+                payload: "Apa bedanya paket Standard vs Pro?",
+              },
+              {
+                label: "👷 Bisa untuk mandor & tukang?",
+                action: "ask",
+                payload: "Bisa dipakai mandor dan tukang lapangan?",
+              },
+              {
+                label: "📲 Chat WhatsApp Langsung",
+                action: "link_whatsapp",
+                payload:
+                  "https://wa.me/6281234567890?text=Halo%20Mbak%20Nisa,%20mau%20tanya%20seputar%20Monefyi",
+              },
+            ],
+          },
+        ]);
+      }, 300);
     }
   }, [isOpen, messages.length]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, isTyping]);
 
-  const addBotMessage = (text: string) => {
-    setIsTyping(true);
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now().toString(),
-          text,
-          sender: "bot",
-          timestamp: new Date(),
-        },
-      ]);
-      setIsTyping(false);
-    }, 1000);
-  };
+  const handleSendMessage = (textToSend?: string) => {
+    const text = (textToSend || inputValue).trim();
+    if (!text || isTyping) return;
 
-  const handleSend = () => {
-    if (!inputValue.trim()) return;
+    const userMsg: CSMessage = {
+      id: `usr_${Date.now()}`,
+      sender: "user",
+      text,
+      timestamp: new Date(),
+    };
 
-    // Add user message
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now().toString(),
-        text: inputValue,
-        sender: "user",
-        timestamp: new Date(),
-      },
-    ]);
-
+    setMessages((prev) => [...prev, userMsg]);
     setInputValue("");
+    setIsTyping(true);
 
-    // Simulate bot reply
-    const replyIndex = Math.floor(Math.random() * (botReplies.length - 1)) + 1;
-    addBotMessage(botReplies[replyIndex]);
+    setTimeout(() => {
+      const replyData = getCustomerSupportReply(text);
+      const botMsg: CSMessage = {
+        id: `cs_${Date.now()}`,
+        sender: "cs",
+        text: replyData.text,
+        timestamp: new Date(),
+        suggestedActions: replyData.suggestedActions,
+      };
+      setMessages((prev) => [...prev, botMsg]);
+      setIsTyping(false);
+    }, 600);
   };
 
-  if (!liveChatEnabled) return null;
+  const handleActionClick = (action: {
+    label: string;
+    action: string;
+    payload: string;
+  }) => {
+    if (action.action === "ask") {
+      handleSendMessage(action.payload);
+    } else if (action.action === "link_whatsapp") {
+      window.open(action.payload, "_blank");
+    } else if (action.action === "link_upgrade") {
+      window.location.href = action.payload;
+    }
+  };
 
   return (
     <>
-      {/* Chat Button */}
+      {/* Floating Chat Button */}
       <AnimatePresence>
         {!isOpen && (
-          <motion.button
+          <motion.div
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setIsOpen(true)}
-            className="fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full gradient-premium shadow-glow flex items-center justify-center group"
+            className="fixed bottom-6 right-6 z-50 flex items-center gap-3"
           >
-            <MessageCircle className="w-7 h-7 text-white" />
-            <motion.div
-              className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center"
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
+            {/* Pop-up pill notification */}
+            <div
+              onClick={() => setIsOpen(true)}
+              className="hidden sm:flex items-center gap-2 bg-white text-slate-800 px-3.5 py-2 rounded-2xl shadow-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition-all text-xs font-bold"
             >
-              <span className="text-white text-xs font-bold">1</span>
-            </motion.div>
-          </motion.button>
+              <span className="text-base">👩‍💼</span>
+              <span>Mau tanya isi app &amp; paket? Tanya Mbak Nisa</span>
+            </div>
+
+            <button
+              onClick={() => setIsOpen(true)}
+              className="w-16 h-16 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 shadow-xl shadow-emerald-900/30 flex items-center justify-center text-white hover:scale-105 active:scale-95 transition-all relative group"
+              aria-label="Buka Chat Customer Support"
+            >
+              <MessageCircle className="w-7 h-7" />
+              <div className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-400 text-slate-900 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-white shadow">
+                1
+              </div>
+            </button>
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -109,60 +149,78 @@ export function LiveChatWidget() {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-6 right-6 z-50 w-[380px] h-[600px] flex flex-col glass rounded-3xl shadow-premium border-2 border-white/50 overflow-hidden"
+            className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-50 w-[92vw] sm:w-[400px] h-[600px] max-h-[85vh] flex flex-col bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden"
           >
-            {/* Header */}
-            <div className="gradient-premium p-5 flex items-center justify-between">
+            {/* Header Concierge */}
+            <div className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 p-4 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center font-bold text-emerald-600">
-                    M
+                  <div className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-2xl border border-white/30 shadow-inner">
+                    {CS_AGENT_PROFILE.avatar}
                   </div>
-                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-white" />
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-400 rounded-full border-2 border-emerald-700 animate-pulse" />
                 </div>
                 <div>
-                  <p className="font-bold text-white">Mona Assistant</p>
-                  <p className="text-xs text-emerald-100 flex items-center gap-1">
-                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                    Online
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-extrabold text-sm">{CS_AGENT_PROFILE.name}</p>
+                    <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold">
+                      {CS_AGENT_PROFILE.badge}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-emerald-100 mt-0.5">
+                    {CS_AGENT_PROFILE.status}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+
+              <div className="flex items-center gap-1">
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+                  className="p-2 hover:bg-white/20 rounded-xl transition-colors text-white"
+                  title="Tutup Chat"
                 >
-                  <Minimize2 className="w-4 h-4 text-white" />
-                </button>
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
-                >
-                  <X className="w-4 h-4 text-white" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-gradient-to-b from-white/50 to-white/80">
+            {/* Chat Body Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
               {messages.map((msg) => (
-                <motion.div
+                <div
                   key={msg.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
+                  className={`flex ${
+                    msg.sender === "user" ? "justify-end" : "justify-start"
+                  }`}
                 >
                   <div
-                    className={`max-w-[75%] rounded-2xl px-4 py-3 ${
+                    className={`max-w-[85%] rounded-2xl px-4 py-3 text-xs sm:text-sm leading-relaxed shadow-sm ${
                       msg.sender === "user"
-                        ? "gradient-premium text-white shadow-md"
-                        : "bg-white text-slate-700 shadow-sm border border-slate-100"
+                        ? "bg-emerald-600 text-white rounded-tr-sm"
+                        : "bg-white text-slate-800 border border-slate-200/80 rounded-tl-sm space-y-2.5"
                     }`}
                   >
-                    <p className="text-sm leading-relaxed">{msg.text}</p>
-                    <p
-                      className={`text-[10px] mt-1 ${
+                    <div className="whitespace-pre-wrap">{msg.text}</div>
+
+                    {/* Action buttons if offered by CS */}
+                    {msg.suggestedActions && msg.suggestedActions.length > 0 && (
+                      <div className="pt-2 border-t border-slate-100 flex flex-col gap-1.5">
+                        {msg.suggestedActions.map((act, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => handleActionClick(act)}
+                            className="flex items-center justify-between text-left p-2 rounded-xl bg-emerald-50/70 hover:bg-emerald-100 border border-emerald-200/80 text-emerald-800 font-bold text-xs transition-colors"
+                          >
+                            <span>{act.label}</span>
+                            <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    <div
+                      className={`text-[10px] mt-1 text-right ${
                         msg.sender === "user" ? "text-emerald-100" : "text-slate-400"
                       }`}
                     >
@@ -170,76 +228,57 @@ export function LiveChatWidget() {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
-                    </p>
+                    </div>
                   </div>
-                </motion.div>
+                </div>
               ))}
 
               {isTyping && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex justify-start"
-                >
-                  <div className="bg-white rounded-2xl px-5 py-3 shadow-sm border border-slate-100">
-                    <div className="flex gap-1">
-                      {[0, 1, 2].map((i) => (
-                        <motion.div
-                          key={i}
-                          className="w-2 h-2 bg-slate-400 rounded-full"
-                          animate={{ y: [0, -6, 0] }}
-                          transition={{
-                            duration: 0.6,
-                            repeat: Infinity,
-                            delay: i * 0.15,
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
+                <div className="flex items-center gap-2 p-3 bg-white rounded-2xl border border-slate-200 text-xs text-slate-500 w-fit">
+                  <span className="text-base animate-bounce">👩‍💼</span>
+                  <span>Mbak Nisa sedang mengetik...</span>
+                </div>
               )}
 
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Quick Replies */}
-            <div className="px-5 py-3 border-t border-slate-100 bg-white/60">
-              <div className="flex gap-2 overflow-x-auto pb-2">
-                {["Harga Paket", "Demo Gratis", "Hubungi Tim"].map((quick) => (
-                  <button
-                    key={quick}
-                    onClick={() => {
-                      setInputValue(quick);
-                      setTimeout(() => handleSend(), 100);
-                    }}
-                    className="px-3 py-1.5 text-xs font-medium bg-white border border-emerald-200 text-emerald-700 rounded-full hover:bg-emerald-50 transition-colors whitespace-nowrap"
-                  >
-                    {quick}
-                  </button>
-                ))}
-              </div>
+            {/* Quick Questions Carousel */}
+            <div className="p-2.5 bg-white border-t border-slate-100 flex gap-1.5 overflow-x-auto scrollbar-none">
+              {POPULAR_CS_QUESTIONS.map((q, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleSendMessage(q)}
+                  className="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 border border-slate-200 text-[11px] font-semibold text-slate-700 whitespace-nowrap transition-colors shrink-0"
+                >
+                  {q}
+                </button>
+              ))}
             </div>
 
-            {/* Input */}
-            <div className="p-4 bg-white border-t border-slate-100">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && handleSend()}
-                  placeholder="Ketik pesan..."
-                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
-                />
-                <button
-                  onClick={handleSend}
-                  disabled={!inputValue.trim()}
-                  className="w-12 h-12 rounded-xl gradient-premium text-white flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
-                >
-                  <Send className="w-5 h-5" />
-                </button>
-              </div>
+            {/* Input Bar */}
+            <div className="p-3 bg-white border-t border-slate-100 flex items-center gap-2">
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+                placeholder="Tanya Mbak Nisa seputar Monefyi..."
+                className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm focus:outline-none focus:border-emerald-500"
+              />
+              <button
+                onClick={() => handleSendMessage()}
+                disabled={!inputValue.trim() || isTyping}
+                className="p-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-all disabled:opacity-40"
+              >
+                <Send className="w-4 h-4" />
+              </button>
             </div>
           </motion.div>
         )}
