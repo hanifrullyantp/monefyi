@@ -10,6 +10,7 @@ import { useAppStore } from '../store/appStore';
 import { useUiStore } from '../store/uiStore';
 import { isPlatformAdmin } from '../services/adminService';
 import { showWorkerShell, canAccessManagerFeatures } from '../utils/platformUi';
+import { AppHeader, AccountMenu, BottomNav } from './common';
 import CommandModal from './CommandModal';
 import NotificationPanel from './NotificationPanel';
 import PreviewModeMenu from './layout/PreviewModeMenu';
@@ -48,12 +49,14 @@ export default function Layout({ children }: LayoutProps) {
     syncStatus, pendingSyncCount, isOnline, lastSynced, unreadCount, commandModalOpen,
     setCommandModalOpen, sidebarOpen, setSidebarOpen, navSidebarCollapsed, toggleNavSidebarCollapsed,
     rightPanelHidden, toggleRightPanelHidden,
-    platformRole, uiViewMode, entitlementPreviewMode,
+    platformRole, uiViewMode, setUiViewMode, entitlementPreviewMode,
+    selectedProjectId, logout,
   } = useAppStore();
   const navigate = useNavigate();
   const location = useLocation();
 
   const [notifOpen, setNotifOpen] = useState(false);
+  const [previewSheetOpen, setPreviewSheetOpen] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeTrigger, setUpgradeTrigger] = useState<UpgradeModalTrigger>('pro_feature');
   const [upgradeFeatureName, setUpgradeFeatureName] = useState<string | undefined>();
@@ -308,6 +311,7 @@ export default function Layout({ children }: LayoutProps) {
     onEstimatorBack,
   } = useShellStore();
   const isEstimatorDetail = /^\/app\/estimator\/(?!pricelist(?:\/|$)|settings(?:\/|$)).+/.test(location.pathname);
+  const isProjectDetail = /^\/app\/projects\/[^/]+$/.test(location.pathname) || (activeTab === 'projects' && Boolean(selectedProjectId));
 
   const headerTitle = (() => {
     if (breadcrumb.length > 0) {
@@ -463,180 +467,109 @@ export default function Layout({ children }: LayoutProps) {
         )}
       </aside>
 
-      {/* Mobile Sidebar Overlay */}
-      <AnimatePresence>
-        {sidebarOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-              onClick={() => setSidebarOpen(false)}
-            />
-            <motion.aside
-              initial={{ x: -280 }}
-              animate={{ x: 0 }}
-              exit={{ x: -280 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed left-0 top-0 bottom-0 w-72 bg-white z-50 shadow-2xl lg:hidden flex flex-col"
-            >
-              <div className="p-6 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  {showEstimatorBrand ? (
-                    <EstimatorLogo className="w-9 h-9 rounded-xl object-contain" />
-                  ) : (
-                    <PlannerLogo className="w-9 h-9 rounded-xl object-contain" />
-                  )}
-                  <div>
-                    <div
-                      className="font-black"
-                      style={{ color: showEstimatorBrand ? ESTIMATOR_THEME_COLOR : undefined }}
-                    >
-                      {showEstimatorBrand ? 'Estimator' : 'Planner'}
-                    </div>
-                  </div>
-                </div>
-                <button onClick={() => setSidebarOpen(false)} className="p-2 rounded-lg hover:bg-slate-100">
-                  <X className="w-5 h-5 text-slate-500" />
-                </button>
-              </div>
-
-              <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-                {sidebarItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => handleNav(item.id)}
-                    className={`w-full min-h-11 flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${
-                      isTabActive(item.id)
-                        ? 'bg-org-soft text-org-dark'
-                        : 'text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    <item.icon className="w-5 h-5" />
-                    {item.label}
-                    {isNavLocked(item.id) && (
-                      <Lock className="w-3.5 h-3.5 text-slate-400 ml-auto" />
-                    )}
-                  </button>
-                ))}
-                {isEstimatorShell && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigate('/app/estimator/settings');
-                      setSidebarOpen(false);
-                    }}
-                    className="w-full min-h-11 flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50"
-                  >
-                    <Settings className="w-5 h-5" />
-                    Pengaturan Estimator
-                  </button>
-                )}
-              </nav>
-
-              {isSuperAdmin && <EntitlementPreviewPanel />}
-
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
+      {/* Mobile Drawer (Account Menu) */}
+      <AccountMenu
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        activeTab={activeTab}
+        onSelectTab={(tab) => {
+          handleNav(tab);
+          setSidebarOpen(false);
+        }}
+        userName={user?.name || 'User'}
+        userRole={user?.role === 'owner' ? 'Pemilik' : user?.role === 'manager' ? 'Manajer' : user?.role === 'admin' ? 'Admin' : 'Staff'}
+        tenantName={tenant?.name || 'Monefyi'}
+        isSuperAdmin={isSuperAdmin}
+        onOpenPreviewMode={() => setPreviewSheetOpen(true)}
+        onOpenAdmin={() => {
+          navigate('/admin');
+          setSidebarOpen(false);
+        }}
+        onOpenSettings={() => {
+          if (isEstimatorShell) {
+            navigate('/app/estimator/settings');
+          } else {
+            goSettingsTab('organisasi');
+          }
+          setSidebarOpen(false);
+        }}
+        onLogout={() => {
+          setSidebarOpen(false);
+          void logout();
+        }}
+        isOnline={isOnline}
+        isEstimator={showEstimatorBrand}
+      />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Bar */}
-        <header className={`shell-header px-4 lg:px-6 h-14 flex items-center justify-between shrink-0 z-20 ${
-          isEstimatorShell ? 'lg:hidden bg-white/80 backdrop-blur-md border-b border-slate-100' : ''
-        }`}>
-          <div className="flex items-center gap-2 min-w-0">
-            {isEstimatorDetail ? (
+        {/* Mobile Header (Design System) */}
+        {!isProjectDetail && !isEstimatorDetail && (
+          <div className="lg:hidden">
+            <AppHeader
+              title={showEstimatorBrand ? 'Estimator' : 'Planner'}
+              isEstimator={showEstimatorBrand}
+              onOpenMenu={() => setSidebarOpen(true)}
+              onOpenNotif={() => setNotifOpen(v => !v)}
+              unreadCount={unreadCount}
+              userName={user?.name}
+              isOnline={isOnline}
+            />
+          </div>
+        )}
+
+        {/* Mobile Header for Estimator Detail */}
+        {isEstimatorDetail && (
+          <header className="lg:hidden flex-shrink-0 h-14 flex items-center justify-between px-3 bg-white border-b border-[#E5EAE8] z-20">
+            <div className="flex items-center gap-2 min-w-0">
               <button
                 type="button"
                 onClick={() => onEstimatorBack?.() ?? navigate('/app/estimator')}
-                className="inline-flex items-center justify-center min-h-11 min-w-11 rounded-lg hover:bg-slate-100 lg:hidden transition-colors active:scale-95"
+                className="w-11 h-11 flex items-center justify-center rounded-xl text-slate-700 active:scale-95 transition-transform"
                 aria-label="Kembali ke daftar estimasi"
               >
-                <ArrowLeft className="w-5 h-5 text-slate-600" />
+                <ArrowLeft className="w-5 h-5" />
               </button>
-            ) : (
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="inline-flex items-center justify-center min-h-11 min-w-11 rounded-lg hover:bg-slate-100 lg:hidden transition-colors active:scale-95"
-                aria-label="Buka menu"
-              >
-                <Menu className="w-5 h-5 text-slate-600" />
-              </button>
-            )}
-            <div className="hidden lg:block">
-              <div className="text-sm font-semibold capitalize flex items-center flex-wrap gap-0.5">
-                {headerTitle}
-              </div>
+              {estimatorCode && (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold font-mono truncate max-w-[12rem]">
+                  {estimatorCode}
+                </span>
+              )}
             </div>
-            {isEstimatorDetail ? (
-              <div className="lg:hidden min-w-0">
-                {estimatorCode && (
-                  <span className="inline-flex items-center min-h-8 px-2.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold font-mono truncate max-w-[11rem]">
-                    {estimatorCode}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setNotifOpen(v => !v)}
+                aria-label={unreadCount > 0 ? `Notifikasi, ${unreadCount} baru` : 'Notifikasi'}
+                className="relative w-11 h-11 flex items-center justify-center text-slate-700 active:scale-95 transition-transform"
+              >
+                <Bell className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
-              </div>
-            ) : isEstimatorShell ? (
-              <div className="lg:hidden flex items-center gap-2 min-w-0">
-                {showEstimatorBrand ? (
-                  <EstimatorLogo className="w-7 h-7 rounded-lg object-contain shrink-0" />
-                ) : (
-                  <PlannerLogo className="w-7 h-7 rounded-lg object-contain shrink-0" />
-                )}
-                <span className="font-bold text-slate-900 text-sm truncate">
-                  {showEstimatorBrand ? 'Estimator' : 'Planner'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(true)}
+                className="w-11 h-11 flex items-center justify-center active:scale-95 transition-transform"
+                aria-label="Menu akun"
+              >
+                <span className="w-8 h-8 rounded-full bg-[#1D4ED8] text-white font-bold text-sm flex items-center justify-center capitalize">
+                  {user?.name?.charAt(0) || 'U'}
                 </span>
-                <span
-                  className={`w-2 h-2 rounded-full shrink-0 ${sync.color}`}
-                  title={sync.text}
-                  aria-label={sync.text}
-                />
-              </div>
-            ) : (
-              <div className="lg:hidden flex items-center gap-2">
-                {showEstimatorBrand ? (
-                  <EstimatorLogo className="w-7 h-7 rounded-lg object-contain" />
-                ) : (
-                  <PlannerLogo className="w-7 h-7 rounded-lg object-contain" />
-                )}
-                <span className="font-bold text-slate-900 text-sm">
-                  {showEstimatorBrand ? 'Estimator' : 'Planner'}
-                </span>
-              </div>
-            )}
-          </div>
+              </button>
+            </div>
+          </header>
+        )}
 
+        {/* Desktop Top Bar (Shared across all pages) */}
+        <header className="hidden lg:flex shell-header px-6 h-14 items-center justify-between shrink-0 z-20">
+          <div className="text-sm font-semibold capitalize flex items-center flex-wrap gap-0.5">
+            {headerTitle}
+          </div>
           <div className="flex items-center gap-2">
-            {isEstimatorShell ? (
-              <>
-                <div className="relative lg:hidden">
-                  <button
-                    onClick={() => setNotifOpen(!notifOpen)}
-                    className="relative inline-flex items-center justify-center min-h-11 min-w-11 rounded-xl hover:bg-slate-100 transition-all duration-200 active:scale-95"
-                    aria-label="Notifikasi"
-                  >
-                    <Bell className="w-5 h-5 text-slate-600" />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-rose-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                      </span>
-                    )}
-                  </button>
-                  <AnimatePresence>
-                    {notifOpen && <NotificationPanel onClose={() => setNotifOpen(false)} />}
-                  </AnimatePresence>
-                </div>
-                <div className="lg:hidden">
-                  <UserMenuDropdown userName={user?.name} items={userMenuItems} />
-                </div>
-              </>
-            ) : (
-              <>
-            {/* Sync Status — desktop & tablet */}
             <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${sync.bg} ${sync.textColor}`}>
               <div className={`w-1.5 h-1.5 rounded-full ${sync.color}`} />
               <span className="hidden sm:block">{sync.text}</span>
@@ -644,7 +577,6 @@ export default function Layout({ children }: LayoutProps) {
               {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
             </div>
 
-            {/* Notifications */}
             {showRightPanel && (
               <button
                 type="button"
@@ -658,10 +590,13 @@ export default function Layout({ children }: LayoutProps) {
                   : <PanelRightClose className="w-5 h-5 text-slate-600" />}
               </button>
             )}
+
             <div className="relative">
               <button
-                onClick={() => setNotifOpen(!notifOpen)}
+                type="button"
+                onClick={() => setNotifOpen(v => !v)}
                 className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors"
+                aria-label="Notifikasi"
               >
                 <Bell className="w-5 h-5 text-slate-600" />
                 {unreadCount > 0 && (
@@ -706,57 +641,17 @@ export default function Layout({ children }: LayoutProps) {
               aria-label="Profil saya"
               title={user?.name || 'Profil'}
             >
-              {user?.name.charAt(0) || 'U'}
+              {user?.name?.charAt(0) || 'U'}
             </button>
-              </>
-            )}
           </div>
         </header>
 
-        {/* Desktop header for estimator shell */}
-        {isEstimatorShell && (
-          <header className="hidden lg:flex shell-header px-6 h-14 items-center justify-between shrink-0 z-20">
-            <div className="text-sm font-semibold capitalize flex items-center flex-wrap gap-0.5">
-              {headerTitle}
-            </div>
-            <div className="flex items-center gap-2">
-              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${sync.bg} ${sync.textColor}`}>
-                <div className={`w-1.5 h-1.5 rounded-full ${sync.color}`} />
-                <span>{sync.text}</span>
-                <span className="text-slate-600 font-normal">· {lastSyncText}</span>
-                {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-              </div>
-              <div className="relative">
-                <button
-                  onClick={() => setNotifOpen(!notifOpen)}
-                  className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors"
-                >
-                  <Bell className="w-5 h-5 text-slate-600" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-rose-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                  )}
-                </button>
-                <AnimatePresence>
-                  {notifOpen && <NotificationPanel onClose={() => setNotifOpen(false)} />}
-                </AnimatePresence>
-              </div>
-              {isSuperAdmin && <PreviewModeMenu />}
-              {isSuperAdmin && (
-                <button type="button" onClick={() => navigate('/admin')} className="p-2 rounded-xl hover:bg-slate-100 text-slate-600" aria-label="Super Admin">
-                  <Shield className="w-5 h-5" />
-                </button>
-              )}
-              <button type="button" onClick={() => goSettingsTab('organisasi')} className="p-2 rounded-xl hover:bg-slate-100" aria-label="Pengaturan">
-                <Settings className="w-5 h-5 text-slate-600" />
-              </button>
-              <button type="button" onClick={() => goSettingsTab('profil')} className="w-8 h-8 rounded-full bg-org-primary flex items-center justify-center text-org-on-primary text-xs font-bold">
-                {user?.name.charAt(0) || 'U'}
-              </button>
-            </div>
-          </header>
-        )}
+        {/* Mobile Notification Panel overlay */}
+        <div className="lg:hidden">
+          <AnimatePresence>
+            {notifOpen && <NotificationPanel onClose={() => setNotifOpen(false)} />}
+          </AnimatePresence>
+        </div>
 
         {/* Page Content + Right Panel */}
         <div className="flex-1 flex overflow-hidden min-h-0">
@@ -784,57 +679,117 @@ export default function Layout({ children }: LayoutProps) {
         </div>
 
         {/* Bottom Navigation — Mobile (Estimator-only: sembunyikan di shell Estimator) */}
-        {!hideMobileProductNav && (
-        <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-lg border-t border-slate-100 safe-bottom shrink-0 shadow-[0_-4px_24px_rgba(15,23,42,0.06)]">
-          <div className="flex items-center justify-around h-16 px-2">
-            {mobileTabs.map((tab) => (
-              tab.special ? (
-                <button
-                  key={tab.id}
-                  onClick={openCommandModal}
-                  className="relative -mt-6 flex flex-col items-center active:scale-95 transition-all duration-200"
-                >
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-xl shadow-emerald-300/40 animate-breathe relative">
-                    <Sparkles className="w-6 h-6 text-white" />
-                    {pendingSyncCount > 0 && (
-                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                        {pendingSyncCount > 9 ? '9+' : pendingSyncCount}
+        {!hideMobileProductNav && !isProjectDetail && !isEstimatorDetail && (
+          isWorker ? (
+            <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-lg border-t border-slate-100 safe-bottom shrink-0 shadow-[0_-4px_24px_rgba(15,23,42,0.06)]">
+              <div className="flex items-center justify-around h-16 px-2">
+                {workerTabs.map((tab) => (
+                  tab.special ? (
+                    <button
+                      key={tab.id}
+                      onClick={openCommandModal}
+                      className="relative -mt-6 flex flex-col items-center active:scale-95 transition-all duration-200"
+                    >
+                      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-xl shadow-emerald-300/40 relative">
+                        <Sparkles className="w-6 h-6 text-white" />
+                        {pendingSyncCount > 0 && (
+                          <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                            {pendingSyncCount > 9 ? '9+' : pendingSyncCount}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-emerald-600 font-bold mt-1">Monefyi</span>
+                    </button>
+                  ) : (
+                    <button
+                      key={tab.id}
+                      onClick={() => handleNav(tab.id)}
+                      className={`flex flex-col items-center gap-0.5 px-3 py-1 transition-all duration-200 rounded-xl active:scale-95 ${
+                        isTabActive(tab.id)
+                          ? 'text-emerald-600 bg-emerald-50'
+                          : 'text-slate-600 hover:text-slate-800'
+                      }`}
+                    >
+                      <tab.icon className="w-5 h-5" />
+                      <span className={`text-[10px] font-semibold ${isTabActive(tab.id) ? 'font-bold' : ''}`}>
+                        {tab.label}
                       </span>
-                    )}
-                  </div>
-                  <span className="text-xs text-emerald-600 font-bold mt-1">Monefyi</span>
-                </button>
-              ) : showEstimatorBrand ? (
-                <EstimatorBottomNavItem
-                  key={tab.id}
-                  icon={tab.icon}
-                  label={tab.label}
-                  active={isTabActive(tab.id)}
-                  locked={isNavLocked(tab.id)}
-                  onClick={() => handleNav(tab.id)}
-                />
-              ) : (
-                <button
-                  key={tab.id}
-                  onClick={() => handleNav(tab.id)}
-                  className={`flex flex-col items-center gap-0.5 px-3 py-1 transition-all duration-200 rounded-xl active:scale-95 ${
-                    isTabActive(tab.id)
-                      ? 'text-emerald-600 bg-emerald-50'
-                      : 'text-slate-600 hover:text-slate-800'
-                  }`}
-                >
-                  <tab.icon className="w-5 h-5" />
-                  <span className={`text-[10px] font-semibold flex items-center gap-0.5 ${isTabActive(tab.id) ? 'font-bold' : ''}`}>
-                    {tab.label}
-                    {isNavLocked(tab.id) && <Lock className="w-2.5 h-2.5" />}
-                  </span>
-                </button>
-              )
-            ))}
-          </div>
-        </nav>
+                    </button>
+                  )
+                ))}
+              </div>
+            </nav>
+          ) : (
+            <BottomNav
+              activeTab={activeTab}
+              onSelectTab={(tab) => handleNav(tab)}
+              onOpenMonefyiAi={openCommandModal}
+              pendingSyncCount={pendingSyncCount}
+            />
+          )
         )}
       </div>
+
+      {/* Mobile Preview Mode Picker Sheet */}
+      <AnimatePresence>
+        {previewSheetOpen && (
+          <div className="fixed inset-0 z-50 lg:hidden flex flex-col justify-end">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-[#0F172A]/70 backdrop-blur-xs"
+              onClick={() => setPreviewSheetOpen(false)}
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+              className="relative bg-white rounded-t-2xl p-5 shadow-2xl z-10 space-y-3"
+            >
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <div>
+                  <div className="font-bold text-base text-[#0F172A]">Mode Pratinjau</div>
+                  <div className="text-xs text-[#5B6B7A]">Lihat aplikasi dari perspektif peran berbeda</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPreviewSheetOpen(false)}
+                  className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100"
+                  aria-label="Tutup"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex flex-col gap-2 pt-1">
+                {([
+                  { id: 'auto' as const, label: 'Otomatis (Sesuai peran akun)' },
+                  { id: 'owner' as const, label: 'Pemilik (Owner)' },
+                  { id: 'worker' as const, label: 'Pekerja Lapangan (Worker)' },
+                ]).map(m => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => {
+                      setUiViewMode(m.id);
+                      setPreviewSheetOpen(false);
+                    }}
+                    className={`min-h-[46px] w-full rounded-xl px-4 flex items-center justify-between text-sm transition-all ${
+                      uiViewMode === m.id
+                        ? 'bg-emerald-50 text-emerald-800 font-bold border border-emerald-300'
+                        : 'text-slate-700 hover:bg-slate-50 border border-slate-200'
+                    }`}
+                  >
+                    <span>{m.label}</span>
+                    {uiViewMode === m.id && <span className="text-emerald-600 font-extrabold text-xs">Aktif</span>}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Command Modal */}
       <AnimatePresence>
