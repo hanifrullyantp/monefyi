@@ -168,3 +168,30 @@ export interface MarketingAutomationRules {
   requireApproval: boolean;
 }
 
+export interface VideoAuditReport {
+  id: string;
+  videoTitle: string;
+  targetNiche: string;
+  currentIssue: string;
+  overallScore: number; // 0 - 100
+  breakdown: {
+    thumbstopScore: number; // 0 - 100
+    retentionScore: number; // 0 - 100
+    clarityScore: number; // 0 - 100
+    offerScore: number; // 0 - 100
+  };
+  keyFindings: {
+    hookVerdict: string;
+    dropOffWarning: string;
+    proofVerdict: string;
+    ctaVerdict: string;
+  };
+  recommendedFixes: {
+    newHooks: string[];
+    bRollSuggestions: string[];
+    revisedVoiceover: string;
+    onScreenTextFixes: string[];
+  };
+  auditedAt: string;
+}
+

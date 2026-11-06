@@ -5,6 +5,7 @@ import { useMarketingStore } from "@/lib/store/marketingStore";
 import { MarketingWarRoom } from "@/components/admin/marketing/MarketingWarRoom";
 import { MetaAdsCommanderTable } from "@/components/admin/marketing/MetaAdsCommanderTable";
 import { WinningAdCreator } from "@/components/admin/marketing/WinningAdCreator";
+import { VideoAdAuditor } from "@/components/admin/marketing/VideoAdAuditor";
 import { FunnelAovPanel } from "@/components/admin/marketing/FunnelAovPanel";
 import { MarketingConfigModal } from "@/components/admin/marketing/MarketingConfigModal";
 import {
@@ -17,10 +18,11 @@ import {
   Zap,
   Flame,
   ShieldCheck,
+  Video,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
-type ActiveTab = "war_room" | "commander" | "creative" | "funnel_aov";
+type ActiveTab = "war_room" | "commander" | "creative" | "video_audit" | "funnel_aov";
 
 export default function MarketingAdminPage() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("war_room");
@@ -94,7 +96,13 @@ export default function MarketingAdminPage() {
             id: "creative" as const,
             label: "Pabrik Iklan Winning",
             icon: Sparkles,
-            badge: "Hook & Video",
+            badge: "Hook & Copy",
+          },
+          {
+            id: "video_audit" as const,
+            label: "Review Video Iklan",
+            icon: Video,
+            badge: "AI Auditor",
           },
           {
             id: "funnel_aov" as const,
@@ -136,6 +144,7 @@ export default function MarketingAdminPage() {
       {activeTab === "war_room" && <MarketingWarRoom />}
       {activeTab === "commander" && <MetaAdsCommanderTable />}
       {activeTab === "creative" && <WinningAdCreator />}
+      {activeTab === "video_audit" && <VideoAdAuditor />}
       {activeTab === "funnel_aov" && <FunnelAovPanel />}
 
       {/* Config Modal */}

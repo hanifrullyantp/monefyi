@@ -5,6 +5,7 @@ import {
   MetaCampaign,
   MarketingAutomationRules,
   MARKETING_AGENTS,
+  VideoAuditReport,
 } from '../types/marketing';
 
 export interface GenerateAdParams {
@@ -280,4 +281,117 @@ export function processAgentWarRoomMessage(
 
   return responses;
 }
+
+export interface VideoAuditInput {
+  title: string;
+  targetNiche: string;
+  videoUrl?: string;
+  scriptOrDescription: string;
+  currentMetricsIssue?: string;
+}
+
+export function auditVideoAdContent(input: VideoAuditInput): VideoAuditReport {
+  const isInterior = input.targetNiche.toLowerCase().includes('interior') || input.targetNiche.toLowerCase().includes('kitchen');
+  const issueLower = (input.currentMetricsIssue || '').toLowerCase();
+  const descLower = input.scriptOrDescription.toLowerCase();
+
+  // Basic diagnostic heuristics
+  let thumbstopScore = 58;
+  let retentionScore = 52;
+  let clarityScore = 72;
+  let offerScore = 65;
+
+  if (descLower.includes('stop') || descLower.includes('tekor') || descLower.includes('bocor') || descLower.includes('rahasia')) {
+    thumbstopScore += 18;
+  }
+  if (descLower.includes('pdf') || descLower.includes('hp') || descLower.includes('demo') || descLower.includes('otomatis')) {
+    clarityScore += 14;
+  }
+  if (issueLower.includes('ctr rendah') || issueLower.includes('scroll lewat')) {
+    thumbstopScore = Math.min(thumbstopScore, 48);
+  }
+  if (issueLower.includes('drop') || issueLower.includes('nonton bentar')) {
+    retentionScore = Math.min(retentionScore, 42);
+  }
+
+  const overallScore = Math.round((thumbstopScore * 0.35) + (retentionScore * 0.25) + (clarityScore * 0.2) + (offerScore * 0.2));
+
+  let hookVerdict = 'Hook 3 detik pertama masih kurang kontras. Penonton di feed/reels butuh pemicu emosi kuat (rasa takut rugi atau kepraktisan luar biasa) agar tidak langsung menggeser layar.';
+  if (thumbstopScore >= 75) {
+    hookVerdict = 'Hook pembuka sudah cukup menggigit dengan menyinggung pain-point nyata!';
+  }
+
+  let dropOffWarning = 'Ada indikasi jeda tempo di detik 04 - 12 (terlalu banyak penjelasan konsep sebelum memperlihatkan layar aplikasi di HP). Penonton digital mudah bosan jika tidak langsung melihat bukti nyata.';
+  let proofVerdict = 'Demonstrasi kepraktisan fitur di HP sudah bagus, namun kop PDF berlogo sendiri perlu di-zoom lebih dekat untuk menonjolkan prestige profesional.';
+  let ctaVerdict = 'Call to Action di akhir video perlu dipertegas dengan batasan waktu promo atau penawaran add-on khusus.';
+
+  let newHooks: string[] = [];
+  let bRollSuggestions: string[] = [];
+  let revisedVoiceover = '';
+  let onScreenTextFixes: string[] = [];
+
+  if (isInterior) {
+    newHooks = [
+      'Stop bikin penawaran kitchen set seharian cuma buat dighosting klien!',
+      'Kelihatannya proyek interior untung 30 juta, pas serah terima malah nombok 7 juta. Ini sebabnya...',
+      'Cara cerdas workshop interior kirim PDF resmi berlogo sendiri sebelum pulang survei lokasi.',
+    ];
+    bRollSuggestions = [
+      'Detik 01: Close-up meteran laser menempel di sudut dapur kosong dengan teks merah tebal.',
+      'Detik 06: Tangan mengetik ukuran di smartphone, angka HPP langsung terhitung otomatis.',
+      'Detik 16: Notifikasi WhatsApp terkirim dan klien tersenyum melihat lembar penawaran rapi.',
+    ];
+    revisedVoiceover = `Berapa kali Anda lembur semalaman bikin RAB kitchen set, tapi besoknya klien bilang "kemahalan ya mas"?\n\nTinggalkan cara lama. Dengan Monefyi Estimator, input ukuran ruangan di HP saat survei, hitung HPP bahan dan ongkos tukang langsung beres.\n\nKlik 1 tombol, PDF resmi berlogo workshop Anda langsung terkirim ke WA klien sebelum Anda pulang. Dapatkan promo lisensinya hari ini!`;
+    onScreenTextFixes = [
+      'Ubah teks pembuka jadi: "STOP LEMBUR BIKIN RAB KITCHEN SET! 🛑"',
+      'Di detik 10 pasang teks: "Hitung HPP & Upah Tukang di HP 📱"',
+      'Di penutup pasang teks: "KLIK LINK DI BAWAH UNTUK AMANKAN PROMO 👉"',
+    ];
+  } else {
+    newHooks = [
+      'Proyek miliaran rupiah tapi pas opname akhir rekening kas malah kosong? Cek 1 kebocoran ini!',
+      'Kontraktor modern sudah tinggalkan buku nota basah dan rumus Excel rumit sejak pakai ini.',
+      'Rahasia pemborong menang tender tanpa banting harga dan anti boncos saat harga material naik.',
+    ];
+    bRollSuggestions = [
+      'Detik 01: Raut muka kontraktor mengecek kertas nota berantakan di meja proyek.',
+      'Detik 07: Tampilan layar HP membuka dashboard proyek Monefyi (progres fisik vs pengeluaran kas).',
+      'Detik 20: Bangunan selesai rapi dan tanda tangan serah terima kunci.',
+    ];
+    revisedVoiceover = `Pernah ngalamin proyek rame tapi pas tutup buku saldo kas habis buat nomboki semen dan besi?\n\nTernyata pengeluaran kecil tak terduga dan rumus Excel lama yang bikin margin profit Anda amblas!\n\nMonefyi Planner mengunci margin Anda dari awal: hitung RAP otomatis, pantau progres lapangan, dan kendalikan pengeluaran harian langsung di genggaman.\n\nCegah tekor di proyek berikutnya. Coba Monefyi sekarang!`;
+    onScreenTextFixes = [
+      'Ganti teks pembuka jadi: "PROYEK RAME TAPI KAS TEKOR? 📉"',
+      'Di detik 08 sisipkan teks: "RAP & Arus Kas Terkunci Otomatis 🏗️"',
+      'Di detik akhir sisipkan teks: "AMANKAN AKSES MONEFYI HARI INI 👉"',
+    ];
+  }
+
+  return {
+    id: `audit_${Date.now()}`,
+    videoTitle: input.title || 'Video Iklan Meta Ads',
+    targetNiche: input.targetNiche,
+    currentIssue: input.currentMetricsIssue || 'Optimasi Winning Ads',
+    overallScore,
+    breakdown: {
+      thumbstopScore,
+      retentionScore,
+      clarityScore,
+      offerScore,
+    },
+    keyFindings: {
+      hookVerdict,
+      dropOffWarning,
+      proofVerdict,
+      ctaVerdict,
+    },
+    recommendedFixes: {
+      newHooks,
+      bRollSuggestions,
+      revisedVoiceover,
+      onScreenTextFixes,
+    },
+    auditedAt: new Date().toISOString(),
+  };
+}
+
 
