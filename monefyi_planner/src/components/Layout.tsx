@@ -37,6 +37,7 @@ import { applyEstimatorDocumentBrand } from '../lib/estimatorBrand';
 import { isAdminFullAccess, canAccessPlannerNavModule, plannerNavModuleLabel, isEstimatorOnlyPlan, type PlannerNavModule } from '../lib/entitlement';
 import UserMenuDropdown from './estimator/shell/UserMenuDropdown';
 import EstimatorBottomNavItem from './estimator/shell/EstimatorBottomNavItem';
+import CustomerSupportWidget from './common/CustomerSupportWidget';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -798,6 +799,7 @@ export default function Layout({ children }: LayoutProps) {
       <ToastHost />
       <EstimatorLaunchPromoAdminModal />
       <UndoToast />
+      <CustomerSupportWidget />
       <UpgradeModal
         open={upgradeOpen}
         trigger={upgradeTrigger}

@@ -432,102 +432,198 @@ export default function FieldCoordinationPanel() {
         </div>
       )}
 
-      {/* SUB-TAB 2: KONFIGURASI INTEGRASI TELEGRAM BOT */}
+      {/* SUB-TAB 2: KONFIGURASI INTEGRASI TELEGRAM BOT & TUTORIAL */}
       {activeSubTab === 'telegram' && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h4 className="font-bold text-slate-800 text-sm">Pengaturan Bot Telegram Monefyi</h4>
-              <p className="text-xs text-slate-500">
-                Hubungkan bot Telegram Anda agar AI bisa mengirim pesan notifikasi & koordinasi dua arah dengan tim.
-              </p>
-            </div>
-            <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-xl">
-              <input
-                type="checkbox"
-                checked={teleConfig.enabled}
-                onChange={e => setTeleConfig(prev => ({ ...prev, enabled: e.target.checked }))}
-                className="rounded text-emerald-600"
-              />
-              Aktifkan Integrasi Telegram
-            </label>
-          </div>
-
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs font-semibold text-slate-600 block">
-                Telegram Bot Token (dari @BotFather)
-              </label>
-              <input
-                type="password"
-                autoComplete="off"
-                value={teleConfig.botToken}
-                onChange={e => setTeleConfig(prev => ({ ...prev, botToken: e.target.value }))}
-                placeholder="1234567890:ABCdefGhIJKlmNoPQRsTUVwxyZ..."
-                className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-              <p className="text-[11px] text-slate-500 mt-1">
-                Cara buat bot: Buka Telegram &gt; Cari <b>@BotFather</b> &gt; Ketik <code>/newbot</code> &gt; Salin HTTP API
-                Token ke kolom ini.
-              </p>
-            </div>
-
-            <div className="grid sm:grid-cols-2 gap-3">
+        <div className="space-y-5">
+          {/* Form Konfigurasi Bot */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
               <div>
-                <label className="text-xs font-semibold text-slate-600 block">Username Bot</label>
-                <input
-                  value={teleConfig.botUsername || ''}
-                  onChange={e => setTeleConfig(prev => ({ ...prev, botUsername: e.target.value.replace(/^@/, '') }))}
-                  placeholder="MonefyiAssistantBot"
-                  className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
+                <h4 className="font-bold text-slate-800 text-sm">Pengaturan Bot Telegram Monefyi</h4>
+                <p className="text-xs text-slate-500">
+                  Hubungkan bot Telegram Anda agar AI bisa mengirim notifikasi ke mandor, menerima pesan lapangan, dan meneruskan pertanyaan sulit dari user langsung ke Telegram Owner.
+                </p>
               </div>
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-xl">
+                <input
+                  type="checkbox"
+                  checked={teleConfig.enabled}
+                  onChange={e => setTeleConfig(prev => ({ ...prev, enabled: e.target.checked }))}
+                  className="rounded text-emerald-600"
+                />
+                Aktifkan Integrasi Telegram
+              </label>
+            </div>
 
+            <div className="space-y-3">
               <div>
-                <label className="text-xs font-semibold text-slate-600 block">
-                  Default Channel / Group Chat ID (Opsional)
+                <label className="text-xs font-semibold text-slate-700 block">
+                  Telegram Bot Token (dari @BotFather) <span className="text-rose-500">*</span>
                 </label>
                 <input
-                  value={teleConfig.defaultChannelChatId || ''}
-                  onChange={e => setTeleConfig(prev => ({ ...prev, defaultChannelChatId: e.target.value }))}
-                  placeholder="-100123456789"
+                  type="password"
+                  autoComplete="off"
+                  value={teleConfig.botToken}
+                  onChange={e => setTeleConfig(prev => ({ ...prev, botToken: e.target.value }))}
+                  placeholder="1234567890:ABCdefGhIJKlmNoPQRsTUVwxyZ..."
                   className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
+
+              <div className="grid sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 block">Username Bot</label>
+                  <input
+                    value={teleConfig.botUsername || ''}
+                    onChange={e => setTeleConfig(prev => ({ ...prev, botUsername: e.target.value.replace(/^@/, '') }))}
+                    placeholder="MonefyiAssistantBot"
+                    className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 block">
+                    Chat ID Owner (Pribadi Anda) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    value={teleConfig.ownerChatId || ''}
+                    onChange={e => setTeleConfig(prev => ({ ...prev, ownerChatId: e.target.value }))}
+                    placeholder="123456789 (ID Angka Anda)"
+                    className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <span className="text-[10px] text-slate-500">Menerima eskalasi pertanyaan sulit dari user</span>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 block">
+                    Grup/Channel Mandor ID (Opsional)
+                  </label>
+                  <input
+                    value={teleConfig.defaultChannelChatId || ''}
+                    onChange={e => setTeleConfig(prev => ({ ...prev, defaultChannelChatId: e.target.value }))}
+                    placeholder="-100123456789"
+                    className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <span className="text-[10px] text-slate-500">Grup koordinasi lapangan</span>
+                </div>
+              </div>
+
+              {botTestResult && (
+                <div
+                  className={`p-3 rounded-xl border text-xs flex items-center gap-2 ${
+                    botTestResult.ok ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-800 border-rose-200'
+                  }`}
+                >
+                  {botTestResult.ok ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  )}
+                  <span>{botTestResult.message}</span>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleSaveTeleConfig}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm"
+                >
+                  Simpan Konfigurasi Telegram
+                </button>
+                <button
+                  type="button"
+                  disabled={testingBot || !teleConfig.botToken.trim()}
+                  onClick={() => void handleTestBot()}
+                  className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {testingBot ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                  Tes Koneksi Bot
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* TUTORIAL LANGKAH DEMI LANGKAH SETTING TELEGRAM */}
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-6 space-y-4 shadow-xl border border-slate-700">
+            <div className="flex items-center gap-2 border-b border-slate-700 pb-3">
+              <Bot className="w-5 h-5 text-emerald-400" />
+              <div>
+                <h4 className="font-extrabold text-sm text-white">
+                  Panduan Lengkap: Cara Membuat &amp; Menghubungkan Bot Telegram (5 Menit)
+                </h4>
+                <p className="text-xs text-slate-400">
+                  Ikuti langkah mudah berikut agar bot Telegram Anda aktif dan siap menerima notifikasi serta eskalasi pesan dari user.
+                </p>
+              </div>
             </div>
 
-            {botTestResult && (
-              <div
-                className={`p-3 rounded-xl border text-xs flex items-center gap-2 ${
-                  botTestResult.ok ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-800 border-rose-200'
-                }`}
-              >
-                {botTestResult.ok ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                ) : (
-                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                )}
-                <span>{botTestResult.message}</span>
+            <div className="grid sm:grid-cols-2 gap-4 text-xs">
+              {/* Langkah 1 */}
+              <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-700/60 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-emerald-400 text-xs">LANGKAH 1</span>
+                  <a
+                    href="https://t.me/BotFather"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] text-emerald-400 hover:underline inline-flex items-center gap-1"
+                  >
+                    Buka @BotFather <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+                <p className="text-slate-200 font-semibold">Buat Bot Baru di @BotFather</p>
+                <p className="text-slate-400 leading-relaxed text-[11px]">
+                  Buka aplikasi Telegram Anda, cari akun resmi <b>@BotFather</b> (centang biru), lalu kirim perintah: <code className="bg-slate-800 px-1 py-0.5 rounded text-emerald-300">/newbot</code>
+                </p>
               </div>
-            )}
 
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={handleSaveTeleConfig}
-                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm"
-              >
-                Simpan Konfigurasi Telegram
-              </button>
-              <button
-                type="button"
-                disabled={testingBot || !teleConfig.botToken.trim()}
-                onClick={() => void handleTestBot()}
-                className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50"
-              >
-                {testingBot ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                Tes Koneksi Bot
-              </button>
+              {/* Langkah 2 */}
+              <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-700/60 space-y-1.5">
+                <span className="font-bold text-emerald-400 text-xs">LANGKAH 2</span>
+                <p className="text-slate-200 font-semibold">Tentukan Nama &amp; Username Bot</p>
+                <p className="text-slate-400 leading-relaxed text-[11px]">
+                  Ketik nama bot Anda (contoh: <i>Monefyi Proyek Bot</i>), lalu buat username unik yang wajib diakhiri kata <b>bot</b> (contoh: <i>monefyi_proyek_bot</i>).
+                </p>
+              </div>
+
+              {/* Langkah 3 */}
+              <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-700/60 space-y-1.5">
+                <span className="font-bold text-emerald-400 text-xs">LANGKAH 3</span>
+                <p className="text-slate-200 font-semibold">Salin HTTP API Token</p>
+                <p className="text-slate-400 leading-relaxed text-[11px]">
+                  BotFather akan memberikan pesan berisi <b>HTTP API Token</b> (diawali angka panjang seperti <code>7123456789:ABC...</code>). Salin token tersebut dan tempel ke kolom <b>Telegram Bot Token</b> di atas.
+                </p>
+              </div>
+
+              {/* Langkah 4 */}
+              <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-700/60 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-emerald-400 text-xs">LANGKAH 4</span>
+                  <a
+                    href="https://t.me/getmyid_bot"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] text-emerald-400 hover:underline inline-flex items-center gap-1"
+                  >
+                    Buka @getmyid_bot <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+                <p className="text-slate-200 font-semibold">Dapatkan Chat ID Pribadi Anda</p>
+                <p className="text-slate-400 leading-relaxed text-[11px]">
+                  Buka bot <b>@getmyid_bot</b> atau <b>@userinfobot</b> di Telegram, klik <i>Start</i>. Bot akan membalas dengan angka ID Anda (contoh: <code>123456789</code>). Tempelkan angka ini ke kolom <b>Chat ID Owner</b>.
+                </p>
+              </div>
+            </div>
+
+            {/* PENTING */}
+            <div className="p-3 bg-amber-950/40 border border-amber-600/40 rounded-xl text-xs space-y-1">
+              <span className="font-extrabold text-amber-300 flex items-center gap-1.5">
+                ⚠️ PENTING: Klik "START" di Bot Anda Sendiri!
+              </span>
+              <p className="text-slate-300 text-[11px] leading-relaxed">
+                Telegram melarang bot mengirim pesan pertama ke seseorang sebelum orang tersebut menekan tombol <b>START</b>. Jadi, setelah membuat bot di BotFather, silakan cari username bot Anda di Telegram (misal <i>@monefyi_proyek_bot</i>), lalu klik <b>Start</b>. Setelah itu, klik tombol <b>"Tes Koneksi Bot"</b> di atas. Pesan tes akan langsung masuk ke Telegram Anda!
+              </p>
             </div>
           </div>
         </div>

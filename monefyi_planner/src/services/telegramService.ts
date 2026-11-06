@@ -12,6 +12,7 @@ export interface TelegramConfig {
   botUsername?: string;
   enabled: boolean;
   defaultChannelChatId?: string;
+  ownerChatId?: string; // Chat ID pribadi Owner untuk menerima eskalasi pertanyaan sulit
 }
 
 export interface FieldMemberContact {
@@ -58,6 +59,7 @@ export function loadTelegramConfig(): TelegramConfig {
     botUsername: '',
     enabled: false,
     defaultChannelChatId: '',
+    ownerChatId: '',
   };
 }
 
@@ -259,4 +261,28 @@ export async function dispatchProactiveAIOutreach(params: {
     summary: `Pesan koordinasi AI disimulasikan & dicatat di antrean sistem (${member.name} - ${member.position || member.role}).`,
   };
 }
+
+/**
+ * Mengirimkan pesan eskalasi pertanyaan sulit / permintaan khusus user langsung ke Telegram Owner.
+ */
+export async function escalateQuestionToOwnerTelegram(
+  userQuestion: string,
+  userIdentifier: string = 'User Aplikasi Monefyi',
+  contextNotes?: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const config = loadTelegramConfig();
+  if (!config.enabled || !config.botToken.trim()) {
+    return { ok: false, error: 'Telegram bot belum diaktifkan di Pengaturan' };
+  }
+  const targetChatId = (config.ownerChatId || config.defaultChannelChatId || '').trim();
+  if (!targetChatId) {
+    return { ok: false, error: 'Chat ID Owner Telegram belum diatur di Pengaturan' };
+  }
+
+  const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  const text = `🚨 *[ESKALASI PERTANYAAN USER - MONEFYI]*\n\n👤 *Dari:* ${userIdentifier}\n🕒 *Waktu:* ${timeStr} WIB\n\n❓ *Pertanyaan User:*\n"${userQuestion}"\n\n💡 *Catatan AI:* Pertanyaan ini membutuhkan keputusan Owner (misal: negosiasi diskon khusus, kustomisasi fitur, atau persetujuan tender).\n${contextNotes ? `📌 *Detail Tambahan:* ${contextNotes}\n` : ''}\n👉 Mohon berikan arahan atau hubungi user langsung.`;
+
+  return sendTelegramMessage(config.botToken, targetChatId, text);
+}
+
 
