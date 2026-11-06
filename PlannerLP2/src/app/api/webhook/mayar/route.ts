@@ -113,10 +113,9 @@ export async function POST(req: NextRequest) {
           // 1. Email Konfirmasi Pembayaran
           const res1 = await sendResendEmail({
             to: recipientEmail,
-            customerName: buyerName,
+            name: buyerName,
             type: "payment_confirmation",
             amount: finalAmount,
-            planName,
             paymentMethod: currentRaw.paymentMethod || "QRIS / Mayar",
           });
 
@@ -134,10 +133,10 @@ export async function POST(req: NextRequest) {
           // 2. Email Akun & Password
           const res2 = await sendResendEmail({
             to: recipientEmail,
-            customerName: buyerName,
+            name: buyerName,
             type: "account_access",
-            temporaryPassword: "Estimator2026!",
-            loginUrl: "https://estimator.monefyi.com/app/estimator?status=activated",
+            password: "Estimator2026!",
+            appUrl: "https://estimator.monefyi.com/app/estimator?status=activated",
           });
 
           newEmailLogs.push({
@@ -171,7 +170,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       message: "Webhook processed successfully",
-      matchedOrderId,
+      matchedOrderId: updatedOrderId,
       event,
     });
   } catch (err: any) {
