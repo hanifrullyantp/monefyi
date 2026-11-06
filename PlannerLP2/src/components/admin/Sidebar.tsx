@@ -22,6 +22,7 @@ import {
   X,
   LogOut,
   Edit3,
+  Megaphone,
 } from "lucide-react";
 import { EstimatorLogo } from "@/components/brand/EstimatorLogo";
 import { cn } from "@/lib/utils/cn";
@@ -34,6 +35,7 @@ import { SaveIndicator } from "./SaveIndicator";
 
 const navItems = [
   { href: "/admin", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/admin/marketing", icon: Megaphone, label: "Marketing AI & Meta Ads" },
   { href: "/admin/global", icon: Globe, label: "Global & Merek" },
   { href: "/admin/kontak", icon: Phone, label: "Kontak & Sosial" },
   { href: "/admin/seo", icon: Search, label: "SEO & Tracking" },

@@ -1,0 +1,283 @@
+import {
+  MarketingAgentRole,
+  MarketingChatMessage,
+  WinningAdTemplate,
+  MetaCampaign,
+  MarketingAutomationRules,
+  MARKETING_AGENTS,
+} from '../types/marketing';
+
+export interface GenerateAdParams {
+  targetNiche: 'kontraktor_umum' | 'interior_kitchen' | 'arsitek_desain' | 'subkon_sipil';
+  angle: 'takut_rugi_proyek' | 'efisiensi_rab_cepat' | 'kalah_tender' | 'standar_profesional';
+  format: 'reels_ugc_9_16' | 'feed_carousel_1_1' | 'single_image_banner';
+  customOfferPrompt?: string;
+}
+
+export function generateWinningAdLocally(params: GenerateAdParams): WinningAdTemplate {
+  const isInterior = params.targetNiche === 'interior_kitchen';
+  const isArsitek = params.targetNiche === 'arsitek_desain';
+  const isSubkon = params.targetNiche === 'subkon_sipil';
+
+  let title = 'Iklan Winning - Kontraktor Bangunan';
+  let hooks: string[] = [];
+  let primaryTexts: { framework: 'PAS' | 'HSO' | 'BAB'; text: string }[] = [];
+  let headlines: string[] = [];
+  let visualBeats: { time: string; visual: string; voiceover: string; onScreenText: string }[] = [];
+
+  if (isInterior) {
+    title = '🔥 Winning Ad - Interior & Kitchen Set Custom';
+    hooks = [
+      'Stop bikin RAB kitchen set seharian cuma buat dighosting calon klien!',
+      'Kelihatannya untung 35 juta di depan, pas serah terima malah tekor 8 juta. Kenapa?',
+      'Cara cerdas desainer interior kirim penawaran rapi berlogo sendiri sebelum pulang dari survei lokasi.',
+      'Kenapa 80% workshop interior selalu pusing pas gajian tukang padahal proyek lagi rame?',
+      'Jangan mau disuruh revisi desain & RAB 5 kali tanpa ada kepastian DP masuk!',
+    ];
+    primaryTexts = [
+      {
+        framework: 'PAS',
+        text: `Bikin penawaran kitchen set butuh waktu 2 hari, pas dikirim klien bilang: "Kemahalan mas, saya bandingin sama sebelah dulu ya." 😭\n\nRugi waktu, bahan material naik diam-diam, tukang nuntut upah harian jalan terus.\n\nDengan Monefyi Estimator, Anda bisa hitung harga modal bahan + upah tukang langsung di HP saat survei lokasi. Klik 1 tombol, PDF penawaran profesional dengan merek Anda langsung meluncur ke WhatsApp klien sebelum Anda pulang. Lebih cepat, dipercaya, anti-boncos!\n\n👉 Amankan lisensinya sekarang dengan promo khusus hari ini.`,
+      },
+      {
+        framework: 'HSO',
+        text: `Tahun lalu workshop interior saya hampir kolaps. Orderan keliatan banyak, tapi tiap tutup buku saldo rekening kas selalu tipis.\n\nSetelah diaudit, ternyata bocor di sisa potongan multiplek, aksesoris lambat dihitung, dan biaya tukang lembur yang tidak tercatat di awal.\n\nSekarang pakai Monefyi: rumus meter lari, HPP bahan, upah borongan tukang sudah otomatis. Margin laba bersih terkunci 30%. Hasilnya? Klien kagum penawaran secepat kilat, omset naik tanpa pusing nomboki proyek.`,
+      },
+      {
+        framework: 'BAB',
+        text: `DULU: Pulang survei malam, masih lembur buka laptop ketik Excel sampai jam 1 pagi. Besoknya klien batalin sepihak.\n\nSEKARANG: Selesai ukur ruangan di lokasi, input ukuran di HP, PDF resmi terkirim saat itu juga di depan klien. DP masuk sebelum besok pagi!\n\nMonefyi Estimator dirancang khusus untuk pebisnis interior & furniture yang ingin kerja lebih santai tapi hasil maksimal.`,
+      },
+    ];
+    headlines = [
+      'Kirim Penawaran Kitchen Set Sebelum Pulang Survei 🚀',
+      'Anti Tekor Proyek Interior: Hitung HPP Akurat di HP',
+      'Software Wajib Workshop Interior & Kitchen Set 2026',
+      'Tinggalkan Excel! Cara Cepat Bikin RAB Rapi & Elegan',
+      'Saring Klien Serius Lewat Penawaran Profesional Otomatis',
+    ];
+    visualBeats = [
+      {
+        time: '00:00 - 00:03',
+        visual: 'Tangan memegang meteran laser di dapur kosong, lalu frustasi melihat laptop penuh rumus Excel rumit.',
+        voiceover: 'Masih lembur semalaman cuma buat bikin RAB kitchen set yang akhirnya dighosting klien?',
+        onScreenText: 'STOP BIKIN RAB MANUAL! 🛑',
+      },
+      {
+        time: '00:03 - 00:10',
+        visual: 'Beralih ke layar HP membuka aplikasi Monefyi. Memilih template Kitchen Set Atas & Bawah, input ukuran panjang.',
+        voiceover: 'Tinggalkan cara lama. Sekarang cukup pilih template, ketik ukuran panjang, harga material dan upah tukang langsung keluar otomatis.',
+        onScreenText: 'Hitung HPP & Margin di HP 📱',
+      },
+      {
+        time: '00:10 - 00:20',
+        visual: 'Klik tombol "Generate PDF", muncul dokumen penawaran rapi lengkap dengan kop nama usaha sendiri dan rincian kerja.',
+        voiceover: 'PDF penawaran resmi berlogo workshop Anda langsung jadi dan bisa dikirim ke WA klien sebelum Anda beranjak dari lokasi survei.',
+        onScreenText: 'Kirim PDF Rapi Saat Survei 📄✨',
+      },
+      {
+        time: '00:20 - 00:30',
+        visual: 'Klien tersenyum menyetujui, notifikasi transfer DP masuk ke layar HP. Logo Monefyi Estimator muncul.',
+        voiceover: 'Klien lebih percaya, closing lebih cepat, dan margin laba Anda terkunci aman. Coba Monefyi hari ini!',
+        onScreenText: 'AMANKAN PROMO SEKARANG 👉',
+      },
+    ];
+  } else {
+    // Kontraktor Umum / Arsitek / Sipil
+    title = '🔥 Winning Ad - Kontraktor & Pemborong Bangunan';
+    hooks = [
+      'Proyek miliaran rupiah tapi pas opname akhir malah minus? Cek 1 kesalahan fatal ini!',
+      'Kontraktor cerdas sudah tinggalkan laptop dan buku nota di lapangan sejak ada ini.',
+      'Rahasia pemborong menang tender proyek tanpa perlu banting-bantingan harga.',
+      'Gara-gara salah rumus di Excel, tekor 40 juta beli semen dan besi. Jangan sampai Anda alami!',
+      'Cara bikin RAB rumah 2 lantai tuntas dalam 7 menit dengan rincian material real-time.',
+    ];
+    primaryTexts = [
+      {
+        framework: 'PAS',
+        text: `Berapa kali Anda tekor di proyek karena harga besi dan semen naik, tapi Anda tidak sempat update perhitungan di penawaran lama?\n\nKlien tidak mau tahu kenaikan harga, upah tukang harian nuntut dibayar tiap Sabtu. Kalau terus begini, Anda kerja keras cuma buat nomboki kontraktor lain!\n\nMonefyi Planner & Estimator adalah senjata rahasia kontraktor modern: buat RAP otomatis, monitor progres lapangan, dan pantau arus kas proyek langsung dari smartphone Anda.\n\nKendalikan keuntungan proyek Anda sebelum terlambat. Klik link di bawah untuk akses langsung!`,
+      },
+      {
+        framework: 'HSO',
+        text: `Dulu saya sering bangga menang proyek besar. Tapi pas proyek selesai 100%, sisa uang di rekening proyek cuma cukup buat bayar tukang terakhir. Untung saya ke mana?\n\nTernyata pengeluaran kecil tak terduga, sisa buangan material, dan kasbon tukang yang berceceran menghabiskan seluruh laba bersih.\n\nBegitu beralih ke Monefyi, setiap sak semen dan jam kerja tercatat rapi. Margin profit 18% terkunci dari awal sampai serah terima kunci. Kontraktor tenang, keluarga senang.`,
+      },
+      {
+        framework: 'BAB',
+        text: `DULU: Setiap tender pusing kalkulasi rumus Excel berjam-jam, data harga material ketinggalan zaman, resiko salah hitung tinggi.\n\nSEKARANG: Database harga material terstandarisasi, tinggal klik tambah pekerjaan, PDF penawaran siap presentasi ke owner dalam hitungan menit.\n\nJadilah kontraktor profesional yang dipercaya klien kelas atas dengan Monefyi.`,
+      },
+    ];
+    headlines = [
+      'Kendalikan Laba Proyek Konstruksi Langsung di HP 🏗️',
+      'RAB Akurat 7 Menit, Selamat Tinggal Rumus Excel Rumit',
+      'Software Manajemen Proyek & Estimasi Wajib Kontraktor',
+      'Cegah Boncos Proyek Bangunan Sebelum Mulai Kerja',
+      'Kirim Penawaran Elegan & Profesional ke Calon Owner',
+    ];
+    visualBeats = [
+      {
+        time: '00:00 - 00:03',
+        visual: 'Tumpukan kertas nota basah dan helm proyek kusam di atas meja, raut muka kontraktor kebingungan mengecek buku kas.',
+        voiceover: 'Capek kerja di proyek berbulan-bulan, pas tutup buku malah tekor nomboki material?',
+        onScreenText: 'PROYEK RAME TAPI KAS KOSONG? 📉',
+      },
+      {
+        time: '00:03 - 00:10',
+        visual: 'Beralih ke rekaman screen HP: membuka proyek di Monefyi, melihat dashboard progres, cashflow, dan RAB terhubung.',
+        voiceover: 'Semua kontraktor sukses punya satu kesamaan: mereka tahu persis ke mana perginya setiap rupiah di proyek mereka.',
+        onScreenText: 'Kendalikan Proyek Real-Time 🏗️',
+      },
+      {
+        time: '00:10 - 00:20',
+        visual: 'Mengetuk fitur Estimator cepat: menghitung volume dinding, beton bertulang, langsung keluar kebutuhan sak semen dan besi.',
+        voiceover: 'Dengan Monefyi, estimasi harga modal, kasbon tukang, hingga laporan opname mingguan terkontrol rapi tanpa pusing buka Excel.',
+        onScreenText: 'Hitung Volume & Kebutuhan Otomatis ⚡',
+      },
+      {
+        time: '00:20 - 00:30',
+        visual: 'Bangunan rumah modern jadi rapi, pemilik proyek bersalaman dengan kontraktor, download Monefyi di App Store / Web.',
+        voiceover: 'Tingkatkan reputasi Anda, menangkan tender bergengsi, dan amankan profit proyek Anda mulai sekarang!',
+        onScreenText: 'DAPATKAN AKSES SEKARANG 👉',
+      },
+    ];
+  }
+
+  return {
+    id: `ad_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    title,
+    targetNiche: params.targetNiche,
+    angle: params.angle,
+    format: params.format,
+    hooks,
+    primaryTexts,
+    headlines,
+    ctaText: 'Dapatkan Akses Sekarang',
+    videoScript: {
+      durationSec: 30,
+      visualBeats,
+    },
+    metricsEstimate: {
+      expectedCtr: '2.4% - 3.8%',
+      targetCpa: 'Rp 18.000 - Rp 28.000',
+    },
+    createdAt: new Date().toISOString(),
+    savedInBank: false,
+  };
+}
+
+export function processAgentWarRoomMessage(
+  userQuery: string,
+  campaigns: MetaCampaign[],
+  rules: MarketingAutomationRules
+): MarketingChatMessage[] {
+  const query = userQuery.toLowerCase();
+  const responses: MarketingChatMessage[] = [];
+  const now = new Date().toISOString();
+
+  // Scenario 1: Kill bleeding / pause request
+  if (query.includes('mati') || query.includes('pause') || query.includes('boncos') || query.includes('kill')) {
+    const bleedingCampaigns = campaigns.filter(c => c.healthStatus === 'bleeding' || c.cpa > rules.maxCpaThreshold);
+    
+    responses.push({
+      id: `msg_${Date.now()}_1`,
+      sender: 'cmo',
+      text: `Siap, Pak/Bu. Saya instruksikan Bima (Media Buyer) untuk memprioritaskan efisiensi anggaran dan mengamankan kas dari kampanye yang membakar budget tanpa konversi memadai.`,
+      timestamp: now,
+    });
+
+    if (bleedingCampaigns.length > 0) {
+      const names = bleedingCampaigns.map(c => `• **${c.name}** (CPA: Rp ${c.cpa.toLocaleString('id-ID')} | ROAS: ${c.roas}x)`).join('\n');
+      responses.push({
+        id: `msg_${Date.now()}_2`,
+        sender: 'media_buyer',
+        text: `Lapor, saya sudah mengidentifikasi ${bleedingCampaigns.length} kampanye yang CPA-nya melebihi batas toleransi kita (Rp ${rules.maxCpaThreshold.toLocaleString('id-ID')}):\n\n${names}\n\nSaya telah mengeksekusi perintah **PAUSE** agar budget tidak bocor. Penghematan harian sekitar Rp ${bleedingCampaigns.reduce((acc, c) => acc + c.dailyBudget, 0).toLocaleString('id-ID')}/hari.`,
+        timestamp: now,
+        actionTaken: {
+          type: 'pause_campaign',
+          details: `Mematikan ${bleedingCampaigns.length} kampanye bleeding`,
+        },
+      });
+    } else {
+      responses.push({
+        id: `msg_${Date.now()}_2`,
+        sender: 'media_buyer',
+        text: `Semua kampanye saat ini masih berada di bawah batas maksimal CPA (Rp ${rules.maxCpaThreshold.toLocaleString('id-ID')}). Tidak ada iklan bleeding akut yang perlu dimatikan darurat.`,
+        timestamp: now,
+      });
+    }
+    return responses;
+  }
+
+  // Scenario 2: Scale winning campaign
+  if (query.includes('scale') || query.includes('naikkan') || query.includes('tambah budget') || query.includes('winning')) {
+    const winningCampaigns = campaigns.filter(c => c.healthStatus === 'winning' || c.healthStatus === 'scale_ready' || c.roas >= 3.0);
+    
+    responses.push({
+      id: `msg_${Date.now()}_1`,
+      sender: 'cmo',
+      text: `Sangat setuju! Kita ada momentum positif pada beberapa kampanye dengan ROAS di atas 3x. Saya minta Bima eksekusi vertical scale bertahap (+20%) agar tidak merusak learning phase Meta AI.`,
+      timestamp: now,
+    });
+
+    if (winningCampaigns.length > 0) {
+      const details = winningCampaigns.map(c => {
+        const newBudget = Math.round(c.dailyBudget * 1.2);
+        return `• **${c.name}**: Rp ${c.dailyBudget.toLocaleString('id-ID')} ➔ **Rp ${newBudget.toLocaleString('id-ID')}/hari** (ROAS: ${c.roas}x | CPA: Rp ${c.cpa.toLocaleString('id-ID')})`;
+      }).join('\n');
+
+      responses.push({
+        id: `msg_${Date.now()}_2`,
+        sender: 'media_buyer',
+        text: `Penyesuaian anggaran berhasil diaplikasikan ke ${winningCampaigns.length} kampanye winning:\n\n${details}\n\nKenaikan 20% ini aman dari lonjakan CPM tiba-tiba. Kami pantau kestabilannya dalam 24 jam ke depan.`,
+        timestamp: now,
+        actionTaken: {
+          type: 'scale_budget',
+          details: `Menaikkan budget 20% pada ${winningCampaigns.length} winning campaigns`,
+        },
+      });
+    }
+    return responses;
+  }
+
+  // Scenario 3: Creative / Copy / Hook request
+  if (query.includes('hook') || query.includes('iklan') || query.includes('copy') || query.includes('kreatif') || query.includes('video') || query.includes('reels')) {
+    responses.push({
+      id: `msg_${Date.now()}_1`,
+      sender: 'cmo',
+      text: `Ide bagus! Kunci menurunkan CPA di Meta Ads saat ini ada di 3-detik pertama (Thumbstop Rate). Saya serahkan ke Sinta (Creative Strategist) untuk meracik materi iklan winning spesifik audiens Monefyi.`,
+      timestamp: now,
+    });
+
+    responses.push({
+      id: `msg_${Date.now()}_2`,
+      sender: 'copywriter',
+      text: `Halo Pak/Bu! Ini 3 formula hook penahan scroll dan angle tajam yang siap diuji:\n\n1. 🎯 **Hook Emosional**: *"Kelihatannya untung 50 juta di depan, pas serah terima kunci malah nomboki 15 juta. Ternyata bocornya di sini..."*\n2. ⏱️ **Hook Efisiensi**: *"Kirim penawaran RAB berlogo workshop sendiri ke WA klien SEBELUM Anda pulang dari survei lokasi."*\n3. 💸 **Hook Kontroversial**: *"Stop banting harga tender kalau rumus Excel Anda sendiri masih rawan salah hitung!"*\n\nSaya juga sudah menyiapkan draft script Reels 30 detik di tab **Pabrik Iklan (Winning Ad Studio)**. Mau saya siapkan format carousel atau video UGC?`,
+      timestamp: now,
+      actionTaken: {
+        type: 'generate_ad',
+        details: 'Menghasilkan 3 variasi hook penahan scroll & konsep Reels',
+      },
+    });
+    return responses;
+  }
+
+  // Scenario 4: Funnel, Scale.co.id, Order Bump, Abandoned Cart
+  if (query.includes('scale') || query.includes('bump') || query.includes('upsell') || query.includes('checkout') || query.includes('capi') || query.includes('aov') || query.includes('konversi')) {
+    responses.push({
+      id: `msg_${Date.now()}_1`,
+      sender: 'funnel_aov',
+      text: `Lapor dari meja Funnel & AOV (Model Scale.co.id), Pak/Bu! Ada 3 rekomendasi taktis untuk melipatgandakan profit tanpa menaikkan biaya iklan:\n\n1. 🛍️ **Order Bump di Checkout**: Pasang add-on *"Template Database Harga 500+ Material & SOP Proyek 2026"* seharga **Rp 49.000**. Berdasarkan benchmark Scale.co.id, take-rate rata-rata mencapai 28-35% sehingga langsung menaikkan profit bersih per transaksi.\n2. 🔒 **Meta Conversions API (CAPI)**: Sistem CAPI server-side kita aktif dengan Event Match Quality (EMQ) **8.6/10**, memangkas kebocoran tracking iOS 14 sebesar 98%.\n3. 📲 **Abandoned Checkout Recovery**: Ada calon pembeli yang sudah input nomor WhatsApp di checkout tapi belum transfer. Sekali klik kirim reminder WA personal dapat menyelamatkan 15-20% penjualan yang hilang!`,
+      timestamp: now,
+    });
+    return responses;
+  }
+
+  // Default General Advice from CMO
+  responses.push({
+    id: `msg_${Date.now()}_1`,
+    sender: 'cmo',
+    text: `Halo! Saya Mas Danu, CMO AI Anda. Bersama Bima (Media Buyer), Sinta (Creative Strategist), dan Aris (Funnel Specialist model Scale.co.id), kami siap mengawal full funnel marketing Monefyi:\n\n• **Bima** siap membaca metrik Meta Ads, mematikan iklan boncos, dan scaling iklan winning.\n• **Sinta** siap membuat hook 3-detik, copywriter PAS/HSO, dan script video Reels.\n• **Aris** siap mengoptimalkan Order Bump, Upsell OTO, dan menyelamatkan abandoned checkout.\n\nApa arahan prioritas Anda hari ini?`,
+    timestamp: now,
+  });
+
+  return responses;
+}
+
