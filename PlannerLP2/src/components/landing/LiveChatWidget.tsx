@@ -82,12 +82,25 @@ export function LiveChatWidget() {
 
     setTimeout(() => {
       const replyData = getCustomerSupportReply(text);
+      const isComplexQuery = /diskon|kurang|spesial|khusus|custom|kerjasama|tender besar|komplain|nego|partnership|kantor kami/i.test(text);
+
+      const actions = [...(replyData.suggestedActions || [])];
+      if (isComplexQuery && !actions.some(a => a.action === "escalate_telegram")) {
+        actions.unshift({
+          label: "🚨 Teruskan Pertanyaan ke Telegram Owner",
+          action: "escalate_telegram",
+          payload: text,
+        });
+      }
+
       const botMsg: CSMessage = {
         id: `cs_${Date.now()}`,
         sender: "cs",
-        text: replyData.text,
+        text: isComplexQuery
+          ? `${replyData.text}\n\n💡 *Catatan:* Karena ini menyangkut penawaran atau keputusan khusus, Mas/Mbak bisa klik tombol **"🚨 Teruskan Pertanyaan ke Telegram Owner"** di bawah agar pesan ini diteruskan ke Telegram Owner Monefyi ya!`
+          : replyData.text,
         timestamp: new Date(),
-        suggestedActions: replyData.suggestedActions,
+        suggestedActions: actions,
       };
       setMessages((prev) => [...prev, botMsg]);
       setIsTyping(false);
@@ -105,6 +118,25 @@ export function LiveChatWidget() {
       window.open(action.payload, "_blank");
     } else if (action.action === "link_upgrade") {
       window.location.href = action.payload;
+    } else if (action.action === "escalate_telegram") {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `cs_${Date.now()}`,
+          sender: "cs",
+          text: `✅ *Permintaan Anda sudah Nisa teruskan ke Owner Monefyi!* 🚀\n\nUntuk respon langsung detik ini, Mas/Mbak juga bisa langsung kirim via WhatsApp Owner melalui tombol di bawah:`,
+          timestamp: new Date(),
+          suggestedActions: [
+            {
+              label: "💬 Hubungi Owner via WhatsApp",
+              action: "link_whatsapp",
+              payload: `https://wa.me/6281234567890?text=${encodeURIComponent(
+                `Halo Owner Monefyi, saya dari web landing mau konfirmasi: "${action.payload}"`
+              )}`,
+            },
+          ],
+        },
+      ]);
     }
   };
 

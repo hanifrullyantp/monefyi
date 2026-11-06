@@ -4,6 +4,7 @@ import ConversationalCheckoutClient from './ConversationalCheckoutClient';
 import { AuthHydrator } from '@/components/landing/AuthHydrator';
 import { ContentHydrator } from '@/components/landing/ContentHydrator';
 import { AdminSaveNotice } from '@/components/landing/AdminSaveNotice';
+import { TrackingScripts } from '@/components/landing/TrackingScripts';
 
 export const metadata: Metadata = {
   title: 'Checkout Resmi — Estimator',
@@ -25,6 +26,7 @@ export default async function CheckoutPage({
 
   return (
     <>
+      <TrackingScripts />
       <AuthHydrator />
       <ContentHydrator />
       <AdminSaveNotice />

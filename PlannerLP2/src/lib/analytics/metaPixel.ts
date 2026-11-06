@@ -49,3 +49,86 @@ export function trackLynkCheckoutIntent(
     value: options?.value,
   });
 }
+
+/**
+ * Facebook Pixel: InitiateCheckout (IC)
+ * Dipicu ketika user mengisi form di checkout page
+ */
+export function trackMetaInitiateCheckout(params: {
+  content_name?: string;
+  content_category?: string;
+  content_ids?: string[];
+  value?: number;
+  currency?: string;
+  num_items?: number;
+}) {
+  if (typeof window === "undefined") return;
+  try {
+    window.fbq?.("track", "InitiateCheckout", {
+      content_name: params.content_name || "Monefyi Estimator",
+      content_category: params.content_category || "SaaS / Digital",
+      content_ids: params.content_ids || ["estimator"],
+      value: params.value ?? 149000,
+      currency: params.currency ?? "IDR",
+      num_items: params.num_items ?? 1,
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Facebook Pixel: AddPaymentInfo
+ * Dipicu ketika user sudah checkout (memilih metode bayar / tagihan terbit) tapi belum bayar
+ */
+export function trackMetaAddPaymentInfo(params: {
+  content_name?: string;
+  content_category?: string;
+  content_ids?: string[];
+  value?: number;
+  currency?: string;
+  payment_method?: string;
+}) {
+  if (typeof window === "undefined") return;
+  try {
+    window.fbq?.("track", "AddPaymentInfo", {
+      content_name: params.content_name || "Monefyi Estimator",
+      content_category: params.content_category || "SaaS / Digital",
+      content_ids: params.content_ids || ["estimator"],
+      value: params.value ?? 149000,
+      currency: params.currency ?? "IDR",
+      payment_method: params.payment_method || "qris",
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Facebook Pixel: Purchase
+ * Dipicu ketika pembayaran berhasil dikonfirmasi atau aktivasi sukses
+ */
+export function trackMetaPurchase(params: {
+  content_name?: string;
+  content_category?: string;
+  content_ids?: string[];
+  value: number;
+  currency?: string;
+  num_items?: number;
+  order_id?: string;
+}) {
+  if (typeof window === "undefined") return;
+  try {
+    window.fbq?.("track", "Purchase", {
+      content_name: params.content_name || "Monefyi Estimator",
+      content_category: params.content_category || "SaaS / Digital",
+      content_ids: params.content_ids || ["estimator"],
+      value: params.value,
+      currency: params.currency ?? "IDR",
+      num_items: params.num_items ?? 1,
+      ...(params.order_id ? { order_id: params.order_id } : {}),
+    });
+  } catch {
+    /* ignore */
+  }
+}

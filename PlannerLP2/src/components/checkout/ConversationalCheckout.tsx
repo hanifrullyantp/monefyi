@@ -9,6 +9,11 @@ import { useLandingAdmin } from '@/lib/hooks/useLandingAdmin';
 import { defaultContent } from '@/data/defaultContent';
 import { EditableText } from '@/components/shared/EditableText';
 import {
+  trackMetaInitiateCheckout,
+  trackMetaAddPaymentInfo,
+  trackMetaPurchase,
+} from '@/lib/analytics/metaPixel';
+import {
   ArrowLeft,
   ArrowRight,
   Check,
@@ -154,6 +159,29 @@ export default function ConversationalCheckout({
   const inputRef = useRef<HTMLInputElement>(null);
   const authUser = useAuthStore((s) => s.user);
 
+  // 2. Kalkulasi Harga Dinamis
+  const basePrice = product === 'free' ? 0 : product === 'standard' ? 99000 : 199000;
+  const bumpPrice = product === 'free' ? 99000 : product === 'standard' ? 50000 : 99000;
+  const finalPrice = takeOrderBump ? basePrice + bumpPrice : basePrice;
+
+  // Meta Pixel Deduplication Flags
+  const hasTrackedIC = useRef(false);
+  const hasTrackedPurchase = useRef(false);
+
+  // Helper trigger Meta Purchase Pixel (pembayaran berhasil)
+  const triggerPurchasePixel = (amt: number, orderId?: string) => {
+    if (hasTrackedPurchase.current) return;
+    hasTrackedPurchase.current = true;
+    trackMetaPurchase({
+      content_name: `Estimator ${product.toUpperCase()}`,
+      content_ids: [product],
+      value: amt,
+      currency: 'IDR',
+      num_items: 1,
+      order_id: orderId,
+    });
+  };
+
   // Inisialisasi sessionId untuk Funnel Analytics & Progressive Lead Sync
   useEffect(() => {
     let sid = '';
@@ -164,6 +192,18 @@ export default function ConversationalCheckout({
         sessionStorage.setItem('monefyi_checkout_session', sid);
       }
       setSessionId(sid);
+
+      // Facebook Pixel: InitiateCheckout (IC) saat user membuka form checkout
+      if (!hasTrackedIC.current) {
+        hasTrackedIC.current = true;
+        trackMetaInitiateCheckout({
+          content_name: `Estimator ${product.toUpperCase()}`,
+          content_ids: [product],
+          value: finalPrice,
+          currency: 'IDR',
+          num_items: 1,
+        });
+      }
 
       // Kirim event pertama: checkout_landed
       fetch('/api/analytics/funnel', {
@@ -334,6 +374,8 @@ export default function ConversationalCheckout({
           setPaymentSuccess(true);
           syncLeadProgress(5, 'won');
           trackFunnelEvent('checkout_completed', { paymentId: paymentData.paymentId, method: paymentMethod });
+          // Facebook Pixel: Purchase (pembayaran berhasil)
+          triggerPurchasePixel(paymentData.amount || finalPrice, paymentData.paymentId);
           sendAutoResendEmails(false);
           clearInterval(checkInterval);
           setTimeout(() => {
@@ -367,11 +409,6 @@ export default function ConversationalCheckout({
     setAdmin(true);
   };
 
-  // 2. Kalkulasi Harga Dinamis
-  const basePrice = product === 'free' ? 0 : product === 'standard' ? 99000 : 199000;
-  const bumpPrice = product === 'free' ? 99000 : product === 'standard' ? 50000 : 99000;
-  const finalPrice = takeOrderBump ? basePrice + bumpPrice : basePrice;
-
   // Format IDR
   const formatIDR = (val: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -400,6 +437,14 @@ export default function ConversationalCheckout({
       setTimeout(() => setFloatingPill(null), 650);
       syncLeadProgress(1, 'new');
       trackFunnelEvent('step1_completed');
+      // Facebook Pixel: InitiateCheckout (IC) saat user mengisi form
+      trackMetaInitiateCheckout({
+        content_name: `Estimator ${product.toUpperCase()}`,
+        content_ids: [product],
+        value: finalPrice,
+        currency: 'IDR',
+        num_items: 1,
+      });
     } else if (currentStep === 2) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!email.trim() || !emailRegex.test(email.trim())) {
@@ -493,6 +538,8 @@ export default function ConversationalCheckout({
         });
         syncLeadProgress(5, 'won');
         trackFunnelEvent('checkout_completed', { isFree: true });
+        // Facebook Pixel: Purchase (pembayaran paket free berhasil)
+        triggerPurchasePixel(0, resData.paymentId || resData.sessionId);
         sendAutoResendEmails(true);
         if (onSuccess) onSuccess(resData);
         setTimeout(() => {
@@ -516,6 +563,15 @@ export default function ConversationalCheckout({
         paymentId: resData.paymentId,
       });
 
+      // Facebook Pixel: AddPaymentInfo (user sudah checkout tapi belum bayar)
+      trackMetaAddPaymentInfo({
+        content_name: `Estimator ${product.toUpperCase()}`,
+        content_ids: [product],
+        value: resData.amount || finalPrice,
+        currency: 'IDR',
+        payment_method: paymentMethod,
+      });
+
       if (onSuccess) {
         onSuccess(resData);
       }
@@ -537,6 +593,8 @@ export default function ConversationalCheckout({
         setPaymentSuccess(true);
         syncLeadProgress(5, 'won');
         trackFunnelEvent('checkout_completed', { paymentId: paymentData.paymentId, manual: true });
+        // Facebook Pixel: Purchase (pembayaran berhasil dikonfirmasi manual)
+        triggerPurchasePixel(paymentData.amount || finalPrice, paymentData.paymentId);
         sendAutoResendEmails(false);
         setTimeout(() => {
           window.location.href = 'https://estimator.monefyi.com/app/estimator?status=activated';

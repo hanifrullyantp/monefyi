@@ -5,7 +5,7 @@ export interface CSMessage {
   timestamp: Date;
   suggestedActions?: {
     label: string;
-    action: 'ask' | 'link_whatsapp' | 'link_upgrade' | 'navigate';
+    action: 'ask' | 'link_whatsapp' | 'link_upgrade' | 'navigate' | 'escalate_telegram';
     payload: string;
   }[];
 }
@@ -32,7 +32,7 @@ export function getCustomerSupportReply(query: string): {
   text: string;
   suggestedActions?: {
     label: string;
-    action: 'ask' | 'link_whatsapp' | 'link_upgrade' | 'navigate';
+    action: 'ask' | 'link_whatsapp' | 'link_upgrade' | 'navigate' | 'escalate_telegram';
     payload: string;
   }[];
 } {
@@ -101,3 +101,4 @@ export function getCustomerSupportReply(query: string): {
     ],
   };
 }
+
