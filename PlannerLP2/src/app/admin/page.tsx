@@ -40,6 +40,7 @@ import {
   LEAD_STATUS_LABELS,
   LEAD_STATUS_COLORS,
 } from "@/lib/types/leads";
+import { getLeadPixelStage, META_PIXEL_ID } from "@/lib/analytics/metaPixel";
 import { MayarPayoutGuideModal } from "@/components/admin/MayarPayoutGuideModal";
 import { cn } from "@/lib/utils/cn";
 
@@ -341,10 +342,13 @@ export default function AdminDashboard() {
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
           <div>
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
               <span className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping" />
               <span className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-400">
                 Monefyi Executive CRM Hub
+              </span>
+              <span className="text-[10px] font-mono bg-slate-800 text-blue-400 px-2 py-0.5 rounded border border-slate-700">
+                Meta Pixel: {META_PIXEL_ID} (🟢 Aktif)
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight">
@@ -644,6 +648,15 @@ export default function AdminDashboard() {
                               {formatCurrency(lead.amount || lead.estimatedValue || 0)}
                             </span>
                           ) : null}
+                          <span
+                            className={cn(
+                              "text-[9px] font-black px-1.5 py-0.5 rounded border inline-flex items-center",
+                              getLeadPixelStage(lead).badgeClass
+                            )}
+                            title={getLeadPixelStage(lead).desc}
+                          >
+                            Pixel: {getLeadPixelStage(lead).label}
+                          </span>
                         </div>
 
                         <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">

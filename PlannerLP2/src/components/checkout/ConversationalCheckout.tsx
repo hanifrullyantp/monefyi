@@ -12,6 +12,7 @@ import {
   trackMetaInitiateCheckout,
   trackMetaAddPaymentInfo,
   trackMetaPurchase,
+  trackMetaCompleteRegistration,
 } from '@/lib/analytics/metaPixel';
 import {
   ArrowLeft,
@@ -168,8 +169,14 @@ export default function ConversationalCheckout({
   const hasTrackedIC = useRef(false);
   const hasTrackedPurchase = useRef(false);
 
-  // Helper trigger Meta Purchase Pixel (pembayaran berhasil)
+  // Helper trigger Meta Purchase Pixel (HANYA saat pembayaran uang riil > Rp 0 telah terkonfirmasi lunas)
   const triggerPurchasePixel = (amt: number, orderId?: string) => {
+    // KEAMANAN KETAT:
+    // Event Purchase HANYA boleh dipicu jika:
+    // 1. Nominal lebih dari 0 (> Rp 0)
+    // 2. Pembayaran sudah lunas / terkonfirmasi
+    // 3. Belum pernah ditrack pada sesi ini
+    if (!amt || amt <= 0) return;
     if (hasTrackedPurchase.current) return;
     hasTrackedPurchase.current = true;
     trackMetaPurchase({
@@ -538,8 +545,11 @@ export default function ConversationalCheckout({
         });
         syncLeadProgress(5, 'won');
         trackFunnelEvent('checkout_completed', { isFree: true });
-        // Facebook Pixel: Purchase (pembayaran paket free berhasil)
-        triggerPurchasePixel(0, resData.paymentId || resData.sessionId);
+        // Facebook Pixel: CompleteRegistration (BUKAN Purchase karena registrasi free / Rp 0!)
+        trackMetaCompleteRegistration({
+          content_name: 'Estimator Free Plan',
+          status: 'free_activated',
+        });
         sendAutoResendEmails(true);
         if (onSuccess) onSuccess(resData);
         setTimeout(() => {

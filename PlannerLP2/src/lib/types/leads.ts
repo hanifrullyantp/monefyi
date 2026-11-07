@@ -68,6 +68,9 @@ export interface Lead {
   paymentMethod?: string;
   amount?: number;
   paymentId?: string;
+  productId?: string;
+  paymentName?: string;
+  verifiedViaMayar?: boolean;
   // Resend Email Logs
   emails?: LeadEmailLog[];
 }

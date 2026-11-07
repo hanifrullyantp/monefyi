@@ -105,8 +105,28 @@ export function trackMetaAddPaymentInfo(params: {
 }
 
 /**
+ * Facebook Pixel: CompleteRegistration
+ * Dipicu saat registrasi akun gratis berhasil (BUKAN Purchase karena Rp 0 / tidak ada uang keluar)
+ */
+export function trackMetaCompleteRegistration(params?: {
+  content_name?: string;
+  status?: string;
+}) {
+  if (typeof window === "undefined") return;
+  try {
+    window.fbq?.("track", "CompleteRegistration", {
+      content_name: params?.content_name || "Monefyi Estimator Free",
+      status: params?.status || "free_activated",
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
  * Facebook Pixel: Purchase
- * Dipicu ketika pembayaran berhasil dikonfirmasi atau aktivasi sukses
+ * HANYA boleh dipicu ketika PEMBAYARAN SUDAH BENAR-BENAR BERHASIL DIBAYAR (uang riil > Rp 0).
+ * JANGAN PERNAH panggil Purchase saat user baru checkout/pending, atau untuk akun gratis Rp 0.
  */
 export function trackMetaPurchase(params: {
   content_name?: string;
@@ -118,6 +138,17 @@ export function trackMetaPurchase(params: {
   order_id?: string;
 }) {
   if (typeof window === "undefined") return;
+
+  // KEAMANAN KETAT: JANGAN PERNAH mengirim event Purchase jika nominal <= 0 atau belum bayar!
+  if (!params.value || params.value <= 0) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn(
+        "[Meta Pixel] Event Purchase DITOLAK: Nominal Rp 0 atau belum bayar. Purchase hanya untuk transaksi berhasil."
+      );
+    }
+    return;
+  }
+
   try {
     window.fbq?.("track", "Purchase", {
       content_name: params.content_name || "Monefyi Estimator",
@@ -131,4 +162,61 @@ export function trackMetaPurchase(params: {
   } catch {
     /* ignore */
   }
+}
+
+export type MetaPixelFunnelStage = "InitiateCheckout" | "AddPaymentInfo" | "Purchase" | "CompleteRegistration";
+
+/**
+ * Helper untuk admin membaca stage Pixel yang terdata untuk setiap lead
+ */
+export function getLeadPixelStage(lead: {
+  status: string;
+  checkoutStep?: number;
+  amount?: number;
+  planTier?: string;
+  paymentMethod?: string;
+}): { stage: MetaPixelFunnelStage; label: string; badgeClass: string; desc: string } {
+  const amt = Number(lead.amount || 0);
+
+  // 1. Purchase: Transaksi lunas dengan uang riil (> Rp 0)
+  if (lead.status === "won" && amt > 0) {
+    return {
+      stage: "Purchase",
+      label: "Purchase (Lunas)",
+      badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-300",
+      desc: "Pembayaran terverifikasi lunas di Mayar / gateway",
+    };
+  }
+
+  // 2. Akun Free: Registrasi gratis (Bukan Purchase)
+  if (lead.status === "won" && (amt === 0 || lead.planTier === "free")) {
+    return {
+      stage: "CompleteRegistration",
+      label: "Reg. Free",
+      badgeClass: "bg-teal-100 text-teal-800 border-teal-300",
+      desc: "User aktivasi akun gratis (bukan transaksi Purchase)",
+    };
+  }
+
+  // 3. AddPaymentInfo: User sudah checkout / buka QRIS tapi belum bayar
+  if (
+    lead.status === "pending_payment" ||
+    (lead.checkoutStep && lead.checkoutStep >= 4) ||
+    Boolean(lead.paymentMethod)
+  ) {
+    return {
+      stage: "AddPaymentInfo",
+      label: "Add Payment Info",
+      badgeClass: "bg-amber-100 text-amber-900 border-amber-300",
+      desc: "Sudah checkout & tagihan terbit, menunggu pembayaran",
+    };
+  }
+
+  // 4. InitiateCheckout: User mengisi form checkout
+  return {
+    stage: "InitiateCheckout",
+    label: "Initiate Checkout (IC)",
+    badgeClass: "bg-blue-100 text-blue-800 border-blue-300",
+    desc: "User mengisi form pendaftaran / checkout",
+  };
 }
