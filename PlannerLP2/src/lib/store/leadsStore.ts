@@ -73,6 +73,8 @@ export const useLeadsStore = create<LeadsStore>()(
         const newLead: Lead = {
           ...leadData,
           id,
+          amount: (leadData as any).amount ?? (leadData as any).estimatedValue,
+          estimatedValue: (leadData as any).estimatedValue ?? (leadData as any).amount,
           activities: (leadData as any).activities || [],
           createdAt: (leadData as any).createdAt || new Date().toISOString(),
           updatedAt: (leadData as any).updatedAt || new Date().toISOString(),
@@ -88,7 +90,13 @@ export const useLeadsStore = create<LeadsStore>()(
         set((state) => ({
           leads: state.leads.map((lead) =>
             lead.id === id
-              ? { ...lead, ...updates, updatedAt: new Date().toISOString() }
+              ? {
+                  ...lead,
+                  ...updates,
+                  amount: (updates as any).amount ?? lead.amount ?? (updates as any).estimatedValue,
+                  estimatedValue: (updates as any).estimatedValue ?? (updates as any).amount ?? lead.estimatedValue,
+                  updatedAt: new Date().toISOString(),
+                }
               : lead,
           ),
         }));

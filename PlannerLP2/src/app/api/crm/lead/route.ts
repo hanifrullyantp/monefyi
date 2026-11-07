@@ -175,6 +175,7 @@ export async function GET(req: NextRequest) {
         ...item,
         id: memId,
         sessionId: sid,
+        estimatedValue: item.amount || item.estimatedValue || 0,
       });
     }
 
@@ -191,6 +192,16 @@ export async function GET(req: NextRequest) {
           for (const r of rows) {
             const raw = r.raw_payload || {};
             const sid = raw.sessionId || r.id;
+
+            // Hapus memory lead jika sessionId ini sudah ada di Supabase orders
+            if (sid) {
+              for (const [mk, mv] of leadsMap.entries()) {
+                if (mv.sessionId === sid || mk === `mem_${sid}`) {
+                  leadsMap.delete(mk);
+                }
+              }
+            }
+
             let currentStatus =
               r.status === "paid"
                 ? "won"
@@ -240,6 +251,7 @@ export async function GET(req: NextRequest) {
               bumpTaken: Boolean(raw.bumpTaken),
               paymentMethod: raw.paymentMethod || "qris",
               amount: r.grand_total || raw.amount || 0,
+              estimatedValue: r.grand_total || raw.amount || 0,
               paymentId: raw.paymentId || null,
               checkoutStep: raw.checkoutStep || (currentStatus === "won" ? 5 : 3),
               status: currentStatus,

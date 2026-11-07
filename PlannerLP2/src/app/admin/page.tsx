@@ -204,6 +204,7 @@ export default function AdminDashboard() {
     isConfigured: false,
     loading: false,
   });
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const fetchMayarStats = async () => {
     try {
@@ -225,7 +226,70 @@ export default function AdminDashboard() {
     }
   };
 
+  const syncServerLeads = async (verifyMayar: boolean = false) => {
+    try {
+      setIsSyncing(true);
+      const res = await fetch(`/api/crm/lead${verifyMayar ? "?verifyMayar=true" : ""}`);
+      const data = await res.json();
+      if (data?.ok && Array.isArray(data.leads)) {
+        const store = useLeadsStore.getState();
+        data.leads.forEach((remote: any) => {
+          const exists = store.leads.find(
+            (l) =>
+              (remote.id && l.id === remote.id) ||
+              (remote.paymentId && l.paymentId === remote.paymentId) ||
+              (remote.sessionId && l.sessionId === remote.sessionId)
+          );
+
+          if (!exists) {
+            store.addLead({
+              id: remote.id,
+              name: remote.name || "Lead Checkout",
+              phone: remote.phone || "-",
+              email: remote.email || undefined,
+              projectType: `Estimator ${(remote.planTier || "standard").toUpperCase()}`,
+              source: "checkout",
+              status: remote.status || "abandoned_checkout",
+              sessionId: remote.sessionId,
+              checkoutStep: remote.checkoutStep,
+              planTier: remote.planTier,
+              bumpTaken: remote.bumpTaken,
+              paymentMethod: remote.paymentMethod,
+              amount: remote.amount,
+              estimatedValue: remote.amount ?? remote.estimatedValue,
+              paymentId: remote.paymentId,
+              emails: Array.isArray(remote.emails) ? remote.emails : [],
+              createdAt: remote.createdAt,
+              updatedAt: remote.updatedAt,
+            });
+          } else {
+            store.updateLead(exists.id, {
+              name: remote.name && remote.name !== "Lead Checkout (Draft)" && remote.name !== "Anonim" ? remote.name : exists.name,
+              phone: remote.phone && remote.phone !== "-" ? remote.phone : exists.phone,
+              email: remote.email || exists.email,
+              status: remote.status || exists.status,
+              bumpTaken: remote.bumpTaken ?? exists.bumpTaken,
+              paymentMethod: remote.paymentMethod || exists.paymentMethod,
+              amount: remote.amount ?? exists.amount,
+              estimatedValue: remote.amount ?? exists.estimatedValue ?? exists.amount,
+              paymentId: remote.paymentId || exists.paymentId,
+              checkoutStep: remote.checkoutStep ?? exists.checkoutStep,
+              planTier: remote.planTier || exists.planTier,
+              emails: Array.isArray(remote.emails) && remote.emails.length > 0 ? remote.emails : exists.emails,
+            });
+          }
+        });
+      }
+    } catch (err) {
+      console.warn("Could not sync server leads in dashboard:", err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   useEffect(() => {
+    useLeadsStore.getState().cleanDuplicateIds();
+    syncServerLeads(true);
     fetchMayarStats();
   }, []);
 
@@ -243,7 +307,7 @@ export default function AdminDashboard() {
   const closingRate = totalLeads > 0 ? ((wonLeads / totalLeads) * 100).toFixed(1) : "0";
   const totalRevenue = leads
     .filter((l) => l.status === "won")
-    .reduce((sum, l) => sum + (l.estimatedValue || 0), 0);
+    .reduce((sum, l) => sum + (l.amount || l.estimatedValue || 0), 0);
 
   // Filtered Leads
   const filteredLeads = useMemo(() => {
@@ -292,6 +356,20 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => {
+                syncServerLeads(true);
+                fetchMayarStats();
+              }}
+              disabled={isSyncing}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 font-bold rounded-xl text-xs transition-all cursor-pointer disabled:opacity-50"
+              title="Sinkronkan database dengan transaksi Mayar terbaru"
+            >
+              <RefreshCw className={cn("w-3.5 h-3.5 text-emerald-400", isSyncing && "animate-spin")} />
+              <span>{isSyncing ? "Sinkron..." : "Update Live"}</span>
+            </button>
+
             <button
               type="button"
               onClick={() => setShowAddLeadModal(true)}
@@ -455,6 +533,16 @@ export default function AdminDashboard() {
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => syncServerLeads(true)}
+                  disabled={isSyncing}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+                  title="Perbarui daftar lead dari database dan Mayar"
+                >
+                  <RefreshCw className={cn("w-3.5 h-3.5 text-emerald-600", isSyncing && "animate-spin")} />
+                  <span>{isSyncing ? "Menyinkronkan..." : "Perbarui"}</span>
+                </button>
                 <Link
                   href="/admin/crm"
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors"
@@ -546,9 +634,14 @@ export default function AdminDashboard() {
                           >
                             {LEAD_STATUS_LABELS[lead.status] || lead.status}
                           </span>
-                          {lead.estimatedValue ? (
-                            <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                              {formatCurrency(lead.estimatedValue)}
+                          {(lead.planTier || lead.projectType) && (
+                            <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md uppercase">
+                              {lead.planTier || lead.projectType}
+                            </span>
+                          )}
+                          {(lead.amount || lead.estimatedValue) ? (
+                            <span className="text-[11px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                              {formatCurrency(lead.amount || lead.estimatedValue || 0)}
                             </span>
                           ) : null}
                         </div>
