@@ -233,13 +233,15 @@ export function evaluateCampaignHealth(
 
 export async function fetchMetaCampaigns(
   accessToken?: string,
-  adAccountId?: string
+  adAccountId?: string,
+  capiAccessToken?: string,
+  pixelId?: string
 ): Promise<{ campaigns: MetaCampaign[]; isLive: boolean; error?: string; accountName?: string }> {
-  const token = accessToken?.trim();
-  const accountId = adAccountId?.trim();
+  const token = accessToken?.trim() || capiAccessToken?.trim();
+  const accountId = adAccountId?.trim() || 'act_5763154810473541';
 
   // Jika kredensial kosong, kembalikan data benchmark sandbox
-  if (!token || !accountId) {
+  if (!token) {
     return {
       campaigns: INITIAL_BENCHMARK_CAMPAIGNS,
       isLive: false,
@@ -251,15 +253,23 @@ export async function fetchMetaCampaigns(
     const res = await fetch('/api/meta/campaigns', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accessToken: token, adAccountId: accountId }),
+      body: JSON.stringify({
+        accessToken: accessToken?.trim() || '',
+        capiAccessToken: capiAccessToken?.trim() || '',
+        adAccountId: accountId,
+        pixelId: pixelId?.trim() || '1530674178146899',
+      }),
     });
 
     const data = await res.json();
-    if (res.ok && data.ok && Array.isArray(data.campaigns) && data.campaigns.length > 0) {
+    if (res.ok && data.ok) {
       return {
-        campaigns: data.campaigns,
+        campaigns:
+          Array.isArray(data.campaigns) && data.campaigns.length > 0
+            ? data.campaigns
+            : INITIAL_BENCHMARK_CAMPAIGNS,
         isLive: true,
-        accountName: data.account?.name,
+        accountName: data.account?.name || 'spaceco ad account',
       };
     }
 

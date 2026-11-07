@@ -66,16 +66,18 @@ export default function MarketingAdminPage() {
 
   useEffect(() => {
     setLastRefreshed(new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
-    // Panggil refresh sekali saat halaman pertama kali dibuka
+    // Panggil refresh saat halaman dibuka atau ketika kredensial di localStorage selesai dimuat/diperbarui
     refreshCampaigns().catch(() => undefined);
-  }, []);
+  }, [apiConfig.metaAccessToken, apiConfig.capiAccessToken, apiConfig.adAccountId]);
 
   const handleManualRefresh = async () => {
     await refreshCampaigns();
     setLastRefreshed(new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
   };
 
-  const hasConfiguredCredentials = Boolean(apiConfig.metaAccessToken && apiConfig.adAccountId);
+  const hasConfiguredCredentials = Boolean(
+    (apiConfig.metaAccessToken || apiConfig.capiAccessToken) && apiConfig.adAccountId
+  );
 
   return (
     <div className="p-4 md:p-8 max-w-[1700px] mx-auto space-y-6 relative">

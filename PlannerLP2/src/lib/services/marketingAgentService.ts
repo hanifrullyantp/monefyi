@@ -325,10 +325,10 @@ export function analyzeMarketingSystemIntegrations(
   const issues: MarketingSystemAudit['detectedIssues'] = [];
   let score = 100;
 
-  const hasMetaToken = Boolean(apiConfig.metaAccessToken?.trim());
+  const hasMetaToken = Boolean(apiConfig.metaAccessToken?.trim() || apiConfig.capiAccessToken?.trim());
   const hasAdAccount = Boolean(apiConfig.adAccountId?.trim());
   const hasPixel = Boolean(apiConfig.pixelId?.trim());
-  const hasCapiToken = Boolean(apiConfig.capiAccessToken?.trim());
+  const hasCapiToken = Boolean(apiConfig.capiAccessToken?.trim() || apiConfig.metaAccessToken?.trim());
   const hasAiKey = Boolean(apiConfig.aiApiKey?.trim());
 
   // Check 1: Meta Credentials

@@ -91,8 +91,13 @@ export const useMarketingStore = create<MarketingStore>()(
       refreshCampaigns: async () => {
         set({ isRefreshingCampaigns: true, metaSyncError: null });
         try {
-          const { metaAccessToken, adAccountId } = get().apiConfig;
-          const result = await fetchMetaCampaigns(metaAccessToken, adAccountId);
+          const { metaAccessToken, adAccountId, capiAccessToken, pixelId } = get().apiConfig;
+          const result = await fetchMetaCampaigns(
+            metaAccessToken,
+            adAccountId,
+            capiAccessToken,
+            pixelId
+          );
           set({
             campaigns: result.campaigns,
             isLiveMeta: result.isLive,
@@ -294,7 +299,7 @@ export const useMarketingStore = create<MarketingStore>()(
       // API Config
       apiConfig: {
         metaAccessToken: '',
-        adAccountId: '',
+        adAccountId: 'act_5763154810473541',
         pixelId: '1530674178146899',
         capiAccessToken: '',
         aiProvider: 'gemini',

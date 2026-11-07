@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMarketingStore } from "@/lib/store/marketingStore";
 import {
   Settings,
@@ -19,6 +19,8 @@ import {
   Headphones,
   Cpu,
   Info,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
@@ -37,16 +39,26 @@ const OPENROUTER_POPULAR_MODELS = [
 ];
 
 export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalProps) {
-  const { apiConfig, updateApiConfig, rules, updateRules, customAgentNames, updateAgentNames } =
-    useMarketingStore();
+  const {
+    apiConfig,
+    updateApiConfig,
+    rules,
+    updateRules,
+    customAgentNames,
+    updateAgentNames,
+    refreshCampaigns,
+  } = useMarketingStore();
 
   const [metaToken, setMetaToken] = useState(apiConfig.metaAccessToken || "");
-  const [adAccountId, setAdAccountId] = useState(apiConfig.adAccountId || "");
+  const [adAccountId, setAdAccountId] = useState(apiConfig.adAccountId || "act_5763154810473541");
   const [pixelId, setPixelId] = useState(apiConfig.pixelId || "1530674178146899");
   const [capiToken, setCapiToken] = useState(apiConfig.capiAccessToken || "");
   const [aiProvider, setAiProvider] = useState(apiConfig.aiProvider || "gemini");
   const [aiKey, setAiKey] = useState(apiConfig.aiApiKey || "");
   const [openRouterModel, setOpenRouterModel] = useState("openai/gpt-5.6-luna");
+
+  const [showMetaToken, setShowMetaToken] = useState(false);
+  const [showCapiToken, setShowCapiToken] = useState(false);
 
   const [maxCpa, setMaxCpa] = useState(rules.maxCpaThreshold);
   const [minRoas, setMinRoas] = useState(rules.minRoasScaleThreshold);
@@ -64,13 +76,28 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
   const [isTestingMeta, setIsTestingMeta] = useState(false);
   const [metaTestMsg, setMetaTestMsg] = useState<{ ok: boolean; message: string; details?: any } | null>(null);
 
+  // Sinkronkan state ketika modal dibuka setelah store terhidrasi dari localStorage
+  useEffect(() => {
+    if (isOpen) {
+      setMetaToken(apiConfig.metaAccessToken || "");
+      setAdAccountId(apiConfig.adAccountId || "act_5763154810473541");
+      setPixelId(apiConfig.pixelId || "1530674178146899");
+      setCapiToken(apiConfig.capiAccessToken || "");
+      setAiProvider(apiConfig.aiProvider || "gemini");
+      setAiKey(apiConfig.aiApiKey || "");
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleTestMeta = async () => {
-    if (!metaToken.trim() || !adAccountId.trim()) {
+    const activeToken = metaToken.trim() || capiToken.trim();
+    const activeAccountId = adAccountId.trim() || "act_5763154810473541";
+
+    if (!activeToken) {
       setMetaTestMsg({
         ok: false,
-        message: "Masukkan Ad Account ID dan Access Token terlebih dahulu untuk mengetes.",
+        message: "Masukkan Access Token terlebih dahulu untuk mengetes koneksi.",
       });
       return;
     }
@@ -84,16 +111,38 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           accessToken: metaToken.trim(),
-          adAccountId: adAccountId.trim(),
+          capiAccessToken: capiToken.trim(),
+          adAccountId: activeAccountId,
+          pixelId: pixelId.trim() || "1530674178146899",
           testOnly: true,
         }),
       });
 
       const data = await res.json();
       if (res.ok && data.ok) {
+        const resolvedToken = data.resolvedToken || activeToken;
+        const resolvedActId = data.account?.id || activeAccountId;
+
+        setMetaToken(resolvedToken);
+        setAdAccountId(resolvedActId);
+
+        // Simpan otomatis & sinkronkan langsung kampanye ke tabel utama
+        updateApiConfig({
+          metaAccessToken: resolvedToken,
+          adAccountId: resolvedActId,
+          pixelId: pixelId.trim() || "1530674178146899",
+          capiAccessToken: capiToken.trim() || resolvedToken,
+          aiProvider,
+          aiApiKey: aiKey.trim(),
+        });
+
+        await refreshCampaigns();
+
         setMetaTestMsg({
           ok: true,
-          message: data.message || `Terhubung sukses ke ${data.account?.name} (${data.account?.currency})!`,
+          message:
+            data.message ||
+            `Terhubung sukses ke ${data.account?.name} (${data.account?.currency})! Data kampanye telah disinkronkan.`,
           details: data.account,
         });
       } else {
@@ -112,12 +161,15 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    const cleanToken = metaToken.trim() || capiToken.trim();
+    const cleanActId = adAccountId.trim() || "act_5763154810473541";
+
     updateApiConfig({
-      metaAccessToken: metaToken.trim(),
-      adAccountId: adAccountId.trim(),
-      pixelId: pixelId.trim(),
-      capiAccessToken: capiToken.trim(),
+      metaAccessToken: cleanToken,
+      adAccountId: cleanActId,
+      pixelId: pixelId.trim() || "1530674178146899",
+      capiAccessToken: capiToken.trim() || cleanToken,
       aiProvider,
       aiApiKey: aiKey.trim(),
     });
@@ -137,11 +189,13 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
       cs: csName.trim() || "Mbak Esti",
     });
 
+    await refreshCampaigns();
+
     setSavedSuccess(true);
     setTimeout(() => {
       setSavedSuccess(false);
       onClose();
-    }, 1200);
+    }, 1000);
   };
 
   return (
@@ -214,32 +268,74 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
               </div>
 
               <div className="md:col-span-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                  Meta User / System User Access Token
-                </label>
-                <input
-                  type="password"
-                  placeholder="EAA... (Token dengan scope ads_read, ads_management)"
-                  value={metaToken}
-                  onChange={(e) => setMetaToken(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 font-mono"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Meta User / System User Access Token
+                  </label>
+                  {metaToken && (
+                    <button
+                      type="button"
+                      onClick={() => setMetaToken("")}
+                      className="text-[10px] font-bold text-rose-600 hover:underline cursor-pointer"
+                    >
+                      Bersihkan Token
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    type={showMetaToken ? "text" : "password"}
+                    placeholder="EAA... (Token dengan scope ads_read, ads_management)"
+                    value={metaToken}
+                    onChange={(e) => setMetaToken(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 pr-10 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowMetaToken((v) => !v)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+                    title={showMetaToken ? "Sembunyikan Token" : "Lihat Token"}
+                  >
+                    {showMetaToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
                 <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
                   Jika dibiarkan kosong, dashboard otomatis berjalan dalam mode simulator sandbox dengan data benchmark Monefyi.
                 </p>
               </div>
 
               <div className="md:col-span-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                  Meta Conversions API (CAPI) Server Token
-                </label>
-                <input
-                  type="password"
-                  placeholder="EAA... (Token CAPI server dari Events Manager)"
-                  value={capiToken}
-                  onChange={(e) => setCapiToken(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 font-mono"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Meta Conversions API (CAPI) Server Token
+                  </label>
+                  {capiToken && (
+                    <button
+                      type="button"
+                      onClick={() => setCapiToken("")}
+                      className="text-[10px] font-bold text-rose-600 hover:underline cursor-pointer"
+                    >
+                      Bersihkan Token
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    type={showCapiToken ? "text" : "password"}
+                    placeholder="EAA... (Token CAPI server dari Events Manager)"
+                    value={capiToken}
+                    onChange={(e) => setCapiToken(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 pr-10 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCapiToken((v) => !v)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+                    title={showCapiToken ? "Sembunyikan Token" : "Lihat Token"}
+                  >
+                    {showCapiToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               <div className="md:col-span-2 pt-1 flex flex-col gap-2">
