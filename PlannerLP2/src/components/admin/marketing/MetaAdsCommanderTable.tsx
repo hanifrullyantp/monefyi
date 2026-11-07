@@ -290,8 +290,8 @@ export function MetaAdsCommanderTable() {
           ))}
         </div>
 
-        {/* Filter Akun, Tanggal, Search & Tombol AI: Seluruhnya 1 Baris */}
-        <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap shrink-0">
+        {/* Filter Akun, Tanggal, Search & Tombol AI: Responsif di Mobile & Desktop */}
+        <div className="flex items-center gap-1.5 overflow-x-auto w-full lg:w-auto scrollbar-none py-0.5 shrink-0">
           {/* Pemilih Ad Account */}
           {discoveredAccounts.length > 0 && (
             <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 max-w-[170px]">
