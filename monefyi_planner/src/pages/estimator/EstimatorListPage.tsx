@@ -874,16 +874,43 @@ export default function EstimatorListPage() {
           />
         </div>
       ) : !listSectionOpen ? null : groupMode === 'none' ? (
-        <div className="px-4 space-y-2">
-          {visibleRows.map(est => renderCard(est))}
-          <EstimatorListExpandBar
-            totalCount={sortedRows.length}
-            visibleCount={visibleRows.length}
-            pageSize={ESTIMATOR_LIST_PAGE_SIZE}
-            onShowAll={() => setVisibleCount(sortedRows.length)}
-            onShowLess={() => setVisibleCount(ESTIMATOR_LIST_PAGE_SIZE)}
-          />
-        </div>
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Droppable droppableId="estimator-list" isDropDisabled={selectionMode}>
+            {provided => (
+              <div
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className="px-4 space-y-2"
+              >
+                {visibleRows.map((est, idx) => (
+                  <Draggable
+                    key={est.id}
+                    draggableId={est.id}
+                    index={idx}
+                    isDragDisabled={selectionMode}
+                  >
+                    {dragProvided => (
+                      <div
+                        ref={dragProvided.innerRef}
+                        {...dragProvided.draggableProps}
+                      >
+                        {renderCard(est, dragProvided.dragHandleProps)}
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+                <EstimatorListExpandBar
+                  totalCount={sortedRows.length}
+                  visibleCount={visibleRows.length}
+                  pageSize={ESTIMATOR_LIST_PAGE_SIZE}
+                  onShowAll={() => setVisibleCount(sortedRows.length)}
+                  onShowLess={() => setVisibleCount(ESTIMATOR_LIST_PAGE_SIZE)}
+                />
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
       ) : (
         <div className="px-4 space-y-4">
           {groupedRows.map(group => (
@@ -960,6 +987,8 @@ export default function EstimatorListPage() {
         busy={bulkBusy}
         onClose={() => setBulkStatusOpen(false)}
         onPick={next => { void handleBulkStatusPick(next); }}
+        onArchive={() => { void handleBulkArchive(); }}
+        onDelete={() => { void handleBulkDelete(); }}
       />
 
       <EstimatorStatusPickerSheet
@@ -972,6 +1001,14 @@ export default function EstimatorListPage() {
           const id = statusPickerId;
           setStatusPickerId(null);
           void handleStatusChange(id, next);
+        }}
+        onArchive={() => {
+          if (!statusPickerEst) return;
+          void handleArchive(statusPickerEst);
+        }}
+        onDelete={() => {
+          if (!statusPickerEst) return;
+          void handleDelete(statusPickerEst.id, statusPickerEst.title);
         }}
       />
 

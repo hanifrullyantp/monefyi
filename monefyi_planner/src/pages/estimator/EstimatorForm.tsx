@@ -826,10 +826,10 @@ export default function EstimatorForm() {
 
   const handleDelete = async () => {
     if (isNew || !id || !draft) return;
-    if (!window.confirm(`Hapus estimasi "${draft.title}"?`)) return;
+    if (!window.confirm(`Hapus estimasi "${draft.title}"?\nEstimasi akan dipindahkan ke arsip selama 30 hari sebelum dihapus permanen.`)) return;
     try {
-      await deleteEstimation(id);
-      showToast('Estimasi dihapus', 'success');
+      await deleteEstimation(id, user?.id);
+      showToast('Estimasi dipindahkan ke arsip (dihapus setelah 30 hari)', 'success');
       navigate('/app/estimator');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal menghapus', 'error');

@@ -13,3 +13,4 @@ CREATE INDEX IF NOT EXISTS idx_planner_estimations_deleted
 
 CREATE INDEX IF NOT EXISTS idx_planner_estimations_sort_order
   ON planner_estimations (org_id, sort_order ASC);
+
