@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useMarketingStore } from "@/lib/store/marketingStore";
 import { MarketingWarRoom } from "@/components/admin/marketing/MarketingWarRoom";
 import { MetaAdsCommanderTable } from "@/components/admin/marketing/MetaAdsCommanderTable";
+import { MetaAdsDeepInsights } from "@/components/admin/marketing/MetaAdsDeepInsights";
 import { WinningAdCreator } from "@/components/admin/marketing/WinningAdCreator";
 import { VideoAdAuditor } from "@/components/admin/marketing/VideoAdAuditor";
 import { FunnelAovPanel } from "@/components/admin/marketing/FunnelAovPanel";
@@ -36,10 +37,11 @@ import {
   X,
   ExternalLink,
   ShieldAlert,
+  Target,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
-type ActiveTab = "commander" | "creative" | "video_audit" | "funnel_aov";
+type ActiveTab = "commander" | "insights" | "creative" | "video_audit" | "funnel_aov";
 
 export default function MarketingAdminPage() {
   // Tab utama default adalah Meta Ads Commander
@@ -59,6 +61,7 @@ export default function MarketingAdminPage() {
     metaAccountName,
     metaSyncError,
     refreshCampaigns,
+    refreshInsights,
   } = useMarketingStore();
 
   // Audit Kesiapan Sistem & Diagnosa Tim AI
@@ -66,17 +69,18 @@ export default function MarketingAdminPage() {
 
   useEffect(() => {
     setLastRefreshed(new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
-    // Panggil refresh saat halaman dibuka atau ketika kredensial di localStorage selesai dimuat/diperbarui
+    // Panggil refresh kampanye & breakdown demografi ketika halaman dibuka atau kredensial diperbarui
     refreshCampaigns().catch(() => undefined);
+    refreshInsights().catch(() => undefined);
   }, [apiConfig.metaAccessToken, apiConfig.capiAccessToken, apiConfig.adAccountId]);
 
   const handleManualRefresh = async () => {
-    await refreshCampaigns();
+    await Promise.all([refreshCampaigns(), refreshInsights()]);
     setLastRefreshed(new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
   };
 
   const hasConfiguredCredentials = Boolean(
-    (apiConfig.metaAccessToken || apiConfig.capiAccessToken) && apiConfig.adAccountId
+    apiConfig.metaAccessToken || apiConfig.capiAccessToken
   );
 
   return (
@@ -305,6 +309,12 @@ export default function MarketingAdminPage() {
             badge: `${campaigns.length} Kampanye`,
           },
           {
+            id: "insights" as const,
+            label: "Ads Insight & Demografi",
+            icon: Target,
+            badge: "Lokasi, Umur & Gender",
+          },
+          {
             id: "creative" as const,
             label: "Pabrik Iklan Winning",
             icon: Sparkles,
@@ -355,6 +365,7 @@ export default function MarketingAdminPage() {
       {/* Konten Tab Aktif (Lebar Penuh 100%, TIDAK tergeser oleh Chat) */}
       <div className="w-full space-y-6">
         {activeTab === "commander" && <MetaAdsCommanderTable />}
+        {activeTab === "insights" && <MetaAdsDeepInsights />}
         {activeTab === "creative" && <WinningAdCreator />}
         {activeTab === "video_audit" && <VideoAdAuditor />}
         {activeTab === "funnel_aov" && <FunnelAovPanel />}

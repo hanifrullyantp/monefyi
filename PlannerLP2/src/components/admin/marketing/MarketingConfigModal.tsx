@@ -47,6 +47,7 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
     customAgentNames,
     updateAgentNames,
     refreshCampaigns,
+    refreshInsights,
   } = useMarketingStore();
 
   const [metaToken, setMetaToken] = useState(apiConfig.metaAccessToken || "");
@@ -136,7 +137,7 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
           aiApiKey: aiKey.trim(),
         });
 
-        await refreshCampaigns();
+        await Promise.all([refreshCampaigns(), refreshInsights()]);
 
         setMetaTestMsg({
           ok: true,

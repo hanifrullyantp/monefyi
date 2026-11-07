@@ -235,21 +235,28 @@ export async function fetchMetaCampaigns(
   accessToken?: string,
   adAccountId?: string,
   capiAccessToken?: string,
-  pixelId?: string
-): Promise<{ campaigns: MetaCampaign[]; isLive: boolean; error?: string; accountName?: string }> {
+  pixelId?: string,
+  datePreset: string = 'data_maximum'
+): Promise<{
+  campaigns: MetaCampaign[];
+  isLive: boolean;
+  error?: string;
+  accountName?: string;
+  resolvedAccountId?: string;
+  discoveredAccounts?: any[];
+}> {
   const token = accessToken?.trim() || capiAccessToken?.trim();
-  const accountId = adAccountId?.trim() || 'act_5763154810473541';
+  const accountId = adAccountId?.trim() || '';
 
-  // Jika kredensial kosong, kembalikan data benchmark sandbox
+  // Jika belum ada token, kembalikan array kosong (TANPA MOCKUP)
   if (!token) {
     return {
-      campaigns: INITIAL_BENCHMARK_CAMPAIGNS,
+      campaigns: [],
       isLive: false,
     };
   }
 
   try {
-    // Panggil proxy Next.js server-side untuk menghindari CORS dan menangani rate limit
     const res = await fetch('/api/meta/campaigns', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -258,38 +265,30 @@ export async function fetchMetaCampaigns(
         capiAccessToken: capiAccessToken?.trim() || '',
         adAccountId: accountId,
         pixelId: pixelId?.trim() || '1530674178146899',
+        datePreset,
       }),
     });
 
     const data = await res.json();
     if (res.ok && data.ok) {
       return {
-        campaigns:
-          Array.isArray(data.campaigns) && data.campaigns.length > 0
-            ? data.campaigns
-            : INITIAL_BENCHMARK_CAMPAIGNS,
+        campaigns: Array.isArray(data.campaigns) ? data.campaigns : [],
         isLive: true,
-        accountName: data.account?.name || 'spaceco ad account',
-      };
-    }
-
-    if (!res.ok || !data.ok) {
-      console.warn('Meta API error:', data.error);
-      return {
-        campaigns: INITIAL_BENCHMARK_CAMPAIGNS,
-        isLive: false,
-        error: data.error || 'Gagal menyinkronkan data dari Meta Ads.',
+        accountName: data.account?.name,
+        resolvedAccountId: data.account?.id,
+        discoveredAccounts: Array.isArray(data.discoveredAccounts) ? data.discoveredAccounts : [],
       };
     }
 
     return {
-      campaigns: INITIAL_BENCHMARK_CAMPAIGNS,
+      campaigns: [],
       isLive: false,
+      error: data.error || 'Gagal menyinkronkan data dari Meta Ads.',
     };
   } catch (err: any) {
     console.error('Error fetching live Meta API via server route:', err);
     return {
-      campaigns: INITIAL_BENCHMARK_CAMPAIGNS,
+      campaigns: [],
       isLive: false,
       error: err?.message || 'Koneksi ke Meta Ads terputus.',
     };
@@ -299,42 +298,58 @@ export async function fetchMetaCampaigns(
 export async function updateRemoteCampaignStatus(
   campaignId: string,
   newStatus: 'ACTIVE' | 'PAUSED',
-  accessToken?: string
-): Promise<boolean> {
-  if (!accessToken?.trim()) return true; // Simulated success in sandbox
+  accessToken?: string,
+  campaignName?: string,
+  actor: string = 'human'
+): Promise<{ ok: boolean; log?: any; error?: string }> {
+  if (!accessToken?.trim()) return { ok: false, error: 'Token Meta belum terpasang' };
   try {
-    const res = await fetch(`https://graph.facebook.com/v20.0/${campaignId}`, {
+    const res = await fetch('/api/meta/actions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        action: 'update_status',
+        campaignId,
+        campaignName,
         status: newStatus,
-        access_token: accessToken,
+        accessToken,
+        actor,
       }),
     });
-    return res.ok;
-  } catch {
-    return false;
+    const data = await res.json().catch(() => ({}));
+    return { ok: Boolean(res.ok && data.ok), log: data.log, error: data.error };
+  } catch (err: any) {
+    return { ok: false, error: err?.message };
   }
 }
 
 export async function updateRemoteCampaignBudget(
   campaignId: string,
   newDailyBudget: number,
-  accessToken?: string
-): Promise<boolean> {
-  if (!accessToken?.trim()) return true; // Simulated success in sandbox
+  accessToken?: string,
+  campaignName?: string,
+  previousBudget?: number,
+  actor: string = 'human'
+): Promise<{ ok: boolean; log?: any; error?: string }> {
+  if (!accessToken?.trim()) return { ok: false, error: 'Token Meta belum terpasang' };
   try {
-    const res = await fetch(`https://graph.facebook.com/v20.0/${campaignId}`, {
+    const res = await fetch('/api/meta/actions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        daily_budget: Math.round(newDailyBudget),
-        access_token: accessToken,
+        action: 'update_budget',
+        campaignId,
+        campaignName,
+        dailyBudget: Math.round(newDailyBudget),
+        previousBudget,
+        accessToken,
+        actor,
       }),
     });
-    return res.ok;
-  } catch {
-    return false;
+    const data = await res.json().catch(() => ({}));
+    return { ok: Boolean(res.ok && data.ok), log: data.log, error: data.error };
+  } catch (err: any) {
+    return { ok: false, error: err?.message };
   }
 }
 
