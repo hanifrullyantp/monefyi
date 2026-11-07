@@ -61,8 +61,56 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
   const [csName, setCsName] = useState(customAgentNames?.cs || "Mbak Esti");
 
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [isTestingMeta, setIsTestingMeta] = useState(false);
+  const [metaTestMsg, setMetaTestMsg] = useState<{ ok: boolean; message: string; details?: any } | null>(null);
 
   if (!isOpen) return null;
+
+  const handleTestMeta = async () => {
+    if (!metaToken.trim() || !adAccountId.trim()) {
+      setMetaTestMsg({
+        ok: false,
+        message: "Masukkan Ad Account ID dan Access Token terlebih dahulu untuk mengetes.",
+      });
+      return;
+    }
+
+    setIsTestingMeta(true);
+    setMetaTestMsg(null);
+
+    try {
+      const res = await fetch("/api/meta/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accessToken: metaToken.trim(),
+          adAccountId: adAccountId.trim(),
+          testOnly: true,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setMetaTestMsg({
+          ok: true,
+          message: data.message || `Terhubung sukses ke ${data.account?.name} (${data.account?.currency})!`,
+          details: data.account,
+        });
+      } else {
+        setMetaTestMsg({
+          ok: false,
+          message: data.error || "Gagal menghubungkan ke Meta Graph API.",
+        });
+      }
+    } catch (err: any) {
+      setMetaTestMsg({
+        ok: false,
+        message: err.message || "Gagal menghubungi server proxy Meta.",
+      });
+    } finally {
+      setIsTestingMeta(false);
+    }
+  };
 
   const handleSave = () => {
     updateApiConfig({
@@ -192,6 +240,48 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
                   onChange={(e) => setCapiToken(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 font-mono"
                 />
+              </div>
+
+              <div className="md:col-span-2 pt-1 flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleTestMeta}
+                    disabled={isTestingMeta}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-xs"
+                  >
+                    <Key className="w-3.5 h-3.5" />
+                    <span>{isTestingMeta ? "Menguji Koneksi ke Meta..." : "Tes Koneksi Meta Sekarang"}</span>
+                  </button>
+                  <span className="text-[11px] text-slate-500">
+                    Memverifikasi langsung ke server Facebook Graph API.
+                  </span>
+                </div>
+
+                {metaTestMsg && (
+                  <div
+                    className={cn(
+                      "p-3 rounded-xl border text-xs leading-relaxed flex items-start gap-2",
+                      metaTestMsg.ok
+                        ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300"
+                        : "bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300"
+                    )}
+                  >
+                    {metaTestMsg.ok ? (
+                      <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    ) : (
+                      <X className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    )}
+                    <div>
+                      <p className="font-bold">{metaTestMsg.message}</p>
+                      {metaTestMsg.details && (
+                        <p className="text-[11px] opacity-80 mt-1 font-mono">
+                          Akun: {metaTestMsg.details.name} | ID: {metaTestMsg.details.id} | Mata Uang: {metaTestMsg.details.currency} | Status: {metaTestMsg.details.status}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

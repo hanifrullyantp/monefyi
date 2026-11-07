@@ -234,83 +234,55 @@ export function evaluateCampaignHealth(
 export async function fetchMetaCampaigns(
   accessToken?: string,
   adAccountId?: string
-): Promise<MetaCampaign[]> {
+): Promise<{ campaigns: MetaCampaign[]; isLive: boolean; error?: string; accountName?: string }> {
   const token = accessToken?.trim();
   const accountId = adAccountId?.trim();
 
-  // If no live credentials provided, return benchmark sandbox campaigns
+  // Jika kredensial kosong, kembalikan data benchmark sandbox
   if (!token || !accountId) {
-    return INITIAL_BENCHMARK_CAMPAIGNS;
+    return {
+      campaigns: INITIAL_BENCHMARK_CAMPAIGNS,
+      isLive: false,
+    };
   }
 
   try {
-    const formattedId = accountId.startsWith('act_') ? accountId : `act_${accountId}`;
-    const url = `https://graph.facebook.com/v20.0/${formattedId}/campaigns?fields=id,name,objective,status,daily_budget,insights{spend,impressions,clicks,cpc,ctr,actions,purchase_roas,frequency}&access_token=${token}`;
-    
-    const res = await fetch(url);
-    if (!res.ok) {
-      console.warn('Meta API call failed, fallback to sandbox', await res.text());
-      return INITIAL_BENCHMARK_CAMPAIGNS;
-    }
+    // Panggil proxy Next.js server-side untuk menghindari CORS dan menangani rate limit
+    const res = await fetch('/api/meta/campaigns', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessToken: token, adAccountId: accountId }),
+    });
 
     const data = await res.json();
-    if (!data.data || !Array.isArray(data.data)) {
-      return INITIAL_BENCHMARK_CAMPAIGNS;
+    if (res.ok && data.ok && Array.isArray(data.campaigns) && data.campaigns.length > 0) {
+      return {
+        campaigns: data.campaigns,
+        isLive: true,
+        accountName: data.account?.name,
+      };
     }
 
-    return data.data.map((item: any, idx: number) => {
-      const insights = item.insights?.data?.[0] || {};
-      const spend = Number(insights.spend || 0);
-      const impressions = Number(insights.impressions || 1);
-      const clicks = Number(insights.clicks || 0);
-      const ctr = Number(insights.ctr || (clicks / impressions) * 100);
-      const cpc = Number(insights.cpc || (clicks > 0 ? spend / clicks : 0));
-      
-      const purchaseAction = (insights.actions || []).find((a: any) => a.action_type === 'purchase');
-      const purchases = Number(purchaseAction?.value || 0);
-      const cpa = purchases > 0 ? Math.round(spend / purchases) : spend;
-      const roasData = insights.purchase_roas?.[0]?.value || 0;
-      const roas = Number(roasData) || (spend > 0 && purchases > 0 ? (purchases * 299000) / spend : 0);
-
-      const campaign: MetaCampaign = {
-        id: item.id,
-        name: item.name,
-        objective: item.objective || 'OUTCOME_SALES',
-        status: item.status === 'ACTIVE' ? 'ACTIVE' : 'PAUSED',
-        dailyBudget: Number(item.daily_budget || 200000),
-        spend,
-        impressions,
-        clicks,
-        linkClicks: Math.round(clicks * 0.8),
-        ctr: Number(ctr.toFixed(2)),
-        cpc: Math.round(cpc),
-        leads: Math.round(purchases * 2.2),
-        purchases,
-        cpa: Math.round(cpa),
-        roas: Number(Number(roas).toFixed(2)),
-        frequency: Number(Number(insights.frequency || 1.4).toFixed(2)),
-        thumbstopRate: 28.5,
-        healthStatus: 'winning',
-        targetAudience: 'Live Meta Audience Target',
-        creativeHook: 'Direct from Meta Ads Manager',
-        lastUpdated: new Date().toISOString(),
+    if (!res.ok || !data.ok) {
+      console.warn('Meta API error:', data.error);
+      return {
+        campaigns: INITIAL_BENCHMARK_CAMPAIGNS,
+        isLive: false,
+        error: data.error || 'Gagal menyinkronkan data dari Meta Ads.',
       };
+    }
 
-      campaign.healthStatus = evaluateCampaignHealth(campaign, {
-        autoKillBleeding: true,
-        maxCpaThreshold: 50000,
-        autoScaleWinning: true,
-        minRoasScaleThreshold: 3.0,
-        scaleBudgetPercentage: 20,
-        frequencyFatigueThreshold: 3.5,
-        requireApproval: false,
-      });
-
-      return enrichCampaignWithScaleMetrics(campaign);
-    });
-  } catch (err) {
-    console.error('Error fetching live Meta API:', err);
-    return INITIAL_BENCHMARK_CAMPAIGNS;
+    return {
+      campaigns: INITIAL_BENCHMARK_CAMPAIGNS,
+      isLive: false,
+    };
+  } catch (err: any) {
+    console.error('Error fetching live Meta API via server route:', err);
+    return {
+      campaigns: INITIAL_BENCHMARK_CAMPAIGNS,
+      isLive: false,
+      error: err?.message || 'Koneksi ke Meta Ads terputus.',
+    };
   }
 }
 

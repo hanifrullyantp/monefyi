@@ -35,6 +35,9 @@ interface MarketingStore {
   // Campaigns
   campaigns: MetaCampaign[];
   isRefreshingCampaigns: boolean;
+  isLiveMeta: boolean;
+  metaAccountName?: string;
+  metaSyncError?: string | null;
   refreshCampaigns: () => Promise<void>;
   toggleCampaignStatus: (campaignId: string) => Promise<void>;
   updateCampaignDailyBudget: (campaignId: string, newBudget: number) => Promise<void>;
@@ -81,13 +84,21 @@ export const useMarketingStore = create<MarketingStore>()(
     (set, get) => ({
       campaigns: INITIAL_BENCHMARK_CAMPAIGNS,
       isRefreshingCampaigns: false,
+      isLiveMeta: false,
+      metaAccountName: undefined,
+      metaSyncError: null,
 
       refreshCampaigns: async () => {
-        set({ isRefreshingCampaigns: true });
+        set({ isRefreshingCampaigns: true, metaSyncError: null });
         try {
           const { metaAccessToken, adAccountId } = get().apiConfig;
-          const fresh = await fetchMetaCampaigns(metaAccessToken, adAccountId);
-          set({ campaigns: fresh });
+          const result = await fetchMetaCampaigns(metaAccessToken, adAccountId);
+          set({
+            campaigns: result.campaigns,
+            isLiveMeta: result.isLive,
+            metaAccountName: result.accountName,
+            metaSyncError: result.error || null,
+          });
         } finally {
           set({ isRefreshingCampaigns: false });
         }

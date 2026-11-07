@@ -119,11 +119,11 @@ export function MarketingWarRoom({ variant = "standalone", onClose }: MarketingW
           <div className="min-w-0 truncate">
             <div className="flex items-center gap-2">
               <h2 className="text-xs font-black text-slate-900 dark:text-white tracking-wide uppercase truncate">
-                War Room Tim Marketing
+                Monefyi Adspert
               </h2>
-              <span className="flex items-center gap-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-500/20">
+              <span className="flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                4 Agen Aktif
+                4 Agen Siaga
               </span>
             </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
