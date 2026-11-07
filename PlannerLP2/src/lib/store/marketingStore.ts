@@ -101,6 +101,7 @@ interface MarketingStore {
   // Holistic 5-Pillar Winning Engine (Mode Cuan & Mode Advance)
   winningEngineConfig: WinningEngineConfig;
   updateWinningEngineConfig: (updates: Partial<WinningEngineConfig>) => void;
+  loadConfigFromCloud: () => Promise<void>;
   winningOverallScore: number;
   winningPillars: PillarHealthScore[];
   winningPlans: WinningActionPlan[];
@@ -241,6 +242,65 @@ export const useMarketingStore = create<MarketingStore>()(
           };
           return { winningEngineConfig: nextConfig };
         }),
+
+      loadConfigFromCloud: async () => {
+        try {
+          const res = await fetch('/api/engine/config');
+          const data = await res.json().catch(() => ({}));
+          if (res.ok && data.ok && data.config) {
+            const c = data.config;
+            set((state) => ({
+              apiConfig: {
+                ...state.apiConfig,
+                adAccountId: c.adAccountId || state.apiConfig.adAccountId,
+                metaAccessToken: c.metaAccessToken || state.apiConfig.metaAccessToken,
+                capiAccessToken: c.metaCapiToken || state.apiConfig.capiAccessToken,
+                pixelId: c.metaPixelId || state.apiConfig.pixelId,
+                aiApiKey: c.openRouterApiKey || state.apiConfig.aiApiKey,
+              },
+              winningEngineConfig: {
+                ...state.winningEngineConfig,
+                mode: c.mode || state.winningEngineConfig.mode,
+                minDailyBudget: c.minDailyBudget || state.winningEngineConfig.minDailyBudget,
+                maxDailyBudget: c.maxDailyBudget || state.winningEngineConfig.maxDailyBudget,
+                approvedDailyCeiling:
+                  c.approvedDailyCeiling || state.winningEngineConfig.approvedDailyCeiling,
+                monthlySpendCap: c.monthlySpendCap || state.winningEngineConfig.monthlySpendCap,
+                targetCpa: c.targetCpa || state.winningEngineConfig.targetCpa,
+                targetRoas: c.targetRoas || state.winningEngineConfig.targetRoas,
+                killSwitch: Boolean(c.killSwitch),
+                advanceMasterPlanApproved: Boolean(c.advanceMasterPlanApproved),
+                llmRouting: {
+                  openRouterApiKey:
+                    c.openRouterApiKey || state.winningEngineConfig.llmRouting.openRouterApiKey,
+                  strategist: {
+                    provider: 'openrouter',
+                    model: c.strategistModel || 'anthropic/claude-3.5-sonnet',
+                  },
+                  processor: {
+                    provider: 'openrouter',
+                    model: c.processorModel || 'openai/gpt-5.6-luna',
+                  },
+                  technical: {
+                    provider: 'openrouter',
+                    model: c.technicalModel || 'google/gemini-2.5-flash',
+                  },
+                },
+                notifications: {
+                  ...state.winningEngineConfig.notifications,
+                  whatsappAdminPhone:
+                    c.whatsappAdminPhone ||
+                    state.winningEngineConfig.notifications.whatsappAdminPhone,
+                  telegramChatId:
+                    c.telegramChatId || state.winningEngineConfig.notifications.telegramChatId,
+                },
+              },
+            }));
+          }
+        } catch {
+          // Abaikan jika offline
+        }
+      },
 
       runWinningEngineTick: async (sendNotification = false) => {
         set({ isRunningEngineTick: true });

@@ -1,4 +1,4 @@
-import { Bell } from 'lucide-react';
+import { Bell, Eye } from 'lucide-react';
 
 type Props = {
   title?: string;
@@ -8,6 +8,9 @@ type Props = {
   unreadCount?: number;
   userName?: string;
   isOnline?: boolean;
+  isSuperAdmin?: boolean;
+  uiViewMode?: 'auto' | 'owner' | 'worker';
+  onOpenPreviewMode?: () => void;
 };
 
 export default function AppHeader({
@@ -18,6 +21,9 @@ export default function AppHeader({
   unreadCount = 0,
   userName = 'User',
   isOnline = true,
+  isSuperAdmin = false,
+  uiViewMode = 'auto',
+  onOpenPreviewMode,
 }: Props) {
   const initial = userName.charAt(0).toLowerCase() || 'u';
 
@@ -66,7 +72,19 @@ export default function AppHeader({
         </div>
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
+        {onOpenPreviewMode && (
+          <button
+            type="button"
+            onClick={onOpenPreviewMode}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[11px] font-black active:scale-95 transition-all shadow-2xs"
+            title="Klik untuk ubah Mode Admin / Pratinjau (Auto/Owner/Worker)"
+          >
+            <Eye className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span className="capitalize">{uiViewMode === 'worker' ? 'Worker' : uiViewMode === 'owner' ? 'Owner' : 'Auto'}</span>
+          </button>
+        )}
+
         <button
           type="button"
           onClick={onOpenNotif}

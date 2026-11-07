@@ -1,5 +1,5 @@
 import {
-  AlignJustify, Columns3, List, RefreshCw, Settings,
+  AlignJustify, Columns3, List, RefreshCw, Settings, Eye, Send, Sliders,
 } from 'lucide-react';
 import BottomSheet from '../../ui/BottomSheet';
 import {
@@ -34,6 +34,9 @@ type Props = {
   onRefresh: () => void;
   onOpenPricelist: () => void;
   onOpenSettings: () => void;
+  onOpenPreviewMode?: () => void;
+  onOpenTelegramSettings?: () => void;
+  onOpenFullSettings?: () => void;
 };
 
 const viewIcons: Record<EstimationListViewMode, typeof AlignJustify> = {
@@ -62,6 +65,9 @@ export default function EstimatorListOptionsSheet({
   onRefresh,
   onOpenPricelist,
   onOpenSettings,
+  onOpenPreviewMode,
+  onOpenTelegramSettings,
+  onOpenFullSettings,
 }: Props) {
   const pickStatus = (value: '' | EstimationStatus) => {
     onStatusFilterChange(value);
@@ -216,25 +222,69 @@ export default function EstimatorListOptionsSheet({
                 onClick={() => { onRefresh(); onClose(); }}
                 className="w-full min-h-11 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 hover:bg-slate-50 active:scale-[0.98] transition-all duration-200"
               >
-                <RefreshCw className="w-4 h-4" />
-                Refresh data
+                <RefreshCw className="w-4 h-4 text-slate-500" />
+                <span>Refresh data</span>
               </button>
               <button
                 type="button"
                 onClick={() => { onOpenPricelist(); onClose(); }}
                 className="w-full min-h-11 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 hover:bg-slate-50 active:scale-[0.98] transition-all duration-200"
               >
-                <List className="w-4 h-4" />
-                Pricelist
+                <List className="w-4 h-4 text-emerald-600" />
+                <span>Pricelist Master</span>
+              </button>
+              {onOpenPreviewMode && (
+                <button
+                  type="button"
+                  onClick={() => { onOpenPreviewMode(); onClose(); }}
+                  className="w-full min-h-11 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 active:scale-[0.98] transition-all duration-200"
+                >
+                  <Eye className="w-4 h-4 text-emerald-600" />
+                  <div className="flex-1 text-left flex items-center justify-between">
+                    <span>Pilihan Mode Admin</span>
+                    <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 uppercase">Peran</span>
+                  </div>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  if (onOpenTelegramSettings) {
+                    onOpenTelegramSettings();
+                  } else {
+                    onOpenSettings();
+                  }
+                  onClose();
+                }}
+                className="w-full min-h-11 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 hover:bg-sky-50 hover:text-sky-800 active:scale-[0.98] transition-all duration-200"
+              >
+                <Send className="w-4 h-4 text-sky-600" />
+                <div className="flex-1 text-left flex items-center justify-between">
+                  <span>Pengaturan Telegram & Bot</span>
+                  <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 uppercase">Telegram</span>
+                </div>
               </button>
               <button
                 type="button"
                 onClick={() => { onOpenSettings(); onClose(); }}
                 className="w-full min-h-11 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 hover:bg-slate-50 active:scale-[0.98] transition-all duration-200"
               >
-                <Settings className="w-4 h-4" />
-                Pengaturan Estimator
+                <Settings className="w-4 h-4 text-slate-500" />
+                <span>Pengaturan Estimator (Branding & PDF)</span>
               </button>
+              {onOpenFullSettings && (
+                <button
+                  type="button"
+                  onClick={() => { onOpenFullSettings(); onClose(); }}
+                  className="w-full min-h-11 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-800 active:scale-[0.98] transition-all duration-200"
+                >
+                  <Sliders className="w-4 h-4 text-indigo-600" />
+                  <div className="flex-1 text-left flex items-center justify-between">
+                    <span>Pengaturan Lengkap Workspace</span>
+                    <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800">Semua Tab</span>
+                  </div>
+                </button>
+              )}
             </section>
           </>
         )}

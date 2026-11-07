@@ -473,6 +473,7 @@ export default function Layout({ children }: LayoutProps) {
         userRole={user?.role === 'owner' ? 'Pemilik' : user?.role === 'manager' ? 'Manajer' : user?.role === 'admin' ? 'Admin' : 'Staff'}
         tenantName={tenant?.name || 'Monefyi'}
         isSuperAdmin={isSuperAdmin}
+        uiViewMode={uiViewMode}
         onOpenPreviewMode={() => setPreviewSheetOpen(true)}
         onOpenAdmin={() => {
           navigate('/admin');
@@ -484,6 +485,14 @@ export default function Layout({ children }: LayoutProps) {
           } else {
             goSettingsTab('organisasi');
           }
+          setSidebarOpen(false);
+        }}
+        onOpenTelegramSettings={() => {
+          navigate('/app/estimator/settings?tab=telegram');
+          setSidebarOpen(false);
+        }}
+        onOpenFullSettings={() => {
+          navigate('/app?tab=settings');
           setSidebarOpen(false);
         }}
         onLogout={() => {
@@ -507,6 +516,9 @@ export default function Layout({ children }: LayoutProps) {
               unreadCount={unreadCount}
               userName={user?.name}
               isOnline={isOnline}
+              isSuperAdmin={isSuperAdmin}
+              uiViewMode={uiViewMode}
+              onOpenPreviewMode={() => setPreviewSheetOpen(true)}
             />
           </div>
         )}
@@ -529,7 +541,16 @@ export default function Layout({ children }: LayoutProps) {
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setPreviewSheetOpen(true)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[11px] font-black active:scale-95 transition-all shadow-2xs"
+                title="Pilihan Mode Admin"
+              >
+                <Eye className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span className="capitalize">{uiViewMode === 'worker' ? 'Worker' : uiViewMode === 'owner' ? 'Owner' : 'Auto'}</span>
+              </button>
               <button
                 type="button"
                 onClick={() => setNotifOpen(v => !v)}

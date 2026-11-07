@@ -1,12 +1,33 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, List, Rocket, Save } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  ArrowLeft,
+  Loader2,
+  List,
+  Rocket,
+  Save,
+  Send,
+  Eye,
+  Shield,
+  CheckCircle2,
+  AlertCircle,
+  ExternalLink,
+  Sliders,
+  Building2,
+  User as UserIcon,
+  Globe,
+  Bell,
+  Bug,
+  Lock,
+  Bot,
+} from 'lucide-react';
 import { redirectToCheckout } from '../../lib/checkout';
 import {
   canUseCustomBranding,
   computeEstimatorProCheckoutAmount,
   isAdminFullAccess,
   isEstimatorProUpgrade,
+  ENTITLEMENT_PREVIEW_OPTIONS,
 } from '../../lib/entitlement';
 import { useEntitlement } from '../../hooks/useEntitlement';
 import EstimatorOnboardingWizard from '../../components/estimator/EstimatorOnboardingWizard';
@@ -24,6 +45,14 @@ import {
   saveWhatsAppTemplate,
   defaultWhatsAppTemplateConfig,
 } from '../../services/quotationTemplateService';
+import {
+  loadTelegramConfig,
+  saveTelegramConfig,
+  testTelegramBot,
+  sendTelegramMessage,
+  type TelegramConfig,
+} from '../../services/telegramService';
+import { isPlatformAdmin } from '../../services/adminService';
 import type { WhatsAppTemplateConfig } from '../../lib/whatsappQuotationMessage';
 import { billingConfigFromOrgDefaults } from '../../lib/estimationBillingConfig';
 import EstimationBillingScheduleEditor from '../../components/estimator/detail/EstimationBillingScheduleEditor';
@@ -32,19 +61,46 @@ import type { PdfSettings } from '../../types/pdfSettings';
 
 export default function EstimatorSettings() {
   const navigate = useNavigate();
-  const { tenant, user, platformRole, entitlementPreviewMode } = useAppStore();
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+
+  const {
+    tenant,
+    user,
+    platformRole,
+    entitlementPreviewMode,
+    setEntitlementPreviewMode,
+    uiViewMode,
+    setUiViewMode,
+  } = useAppStore();
+
   const showToast = useUiStore(s => s.showToast);
   const entitlement = useEntitlement();
+  const isSuperAdmin = isPlatformAdmin(platformRole, user?.email);
   const showProUpgrade = !isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode)
     && isEstimatorProUpgrade(entitlement);
   const allowBranding = canUseCustomBranding(entitlement);
   const proUpgradeAmount = computeEstimatorProCheckoutAmount(entitlement);
+
   const [settings, setSettings] = useState<PdfSettings | null>(null);
   const [waTemplate, setWaTemplate] = useState<WhatsAppTemplateConfig>(defaultWhatsAppTemplateConfig());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'company' | 'whatsapp' | 'billing' | 'tools'>('company');
+
+  // Active Tab State
+  const [activeTab, setActiveTab] = useState<
+    'company' | 'whatsapp' | 'billing' | 'tools' | 'telegram' | 'admin-mode' | 'all-settings'
+  >(() => {
+    if (tabParam === 'telegram') return 'telegram';
+    if (tabParam === 'admin-mode' || tabParam === 'mode') return 'admin-mode';
+    if (tabParam === 'all-settings' || tabParam === 'all') return 'all-settings';
+    if (tabParam === 'whatsapp') return 'whatsapp';
+    if (tabParam === 'billing') return 'billing';
+    if (tabParam === 'tools') return 'tools';
+    return 'company';
+  });
+
   const [pdfKind, setPdfKind] = useState<'quotation' | 'invoice'>('quotation');
   const [previewDisplay, setPreviewDisplay] = useState<PreviewDisplayToggles>({
     showLogo: true,
@@ -52,6 +108,13 @@ export default function EstimatorSettings() {
     showStamp: true,
     showFooter: true,
   });
+
+  // Telegram Config State
+  const [teleConfig, setTeleConfig] = useState<TelegramConfig>(() => loadTelegramConfig());
+  const [testingBot, setTestingBot] = useState(false);
+  const [botTestResult, setBotTestResult] = useState<{ ok: boolean; username?: string; name?: string; error?: string } | null>(null);
+  const [testChatMsg, setTestChatMsg] = useState('Halo dari Monefyi Estimator! Notifikasi bot Telegram berhasil terhubung. 🚀');
+  const [sendingTestMsg, setSendingTestMsg] = useState(false);
 
   const load = useCallback(async () => {
     if (!tenant?.id) return;
@@ -106,12 +169,60 @@ export default function EstimatorSettings() {
         default_billing_milestones: settings.default_billing_milestones ?? null,
       });
       await saveWhatsAppTemplate(tenant.id, waTemplate);
+      saveTelegramConfig(teleConfig);
       setSettings(updated);
-      showToast('Pengaturan disimpan', 'success');
+      showToast('Seluruh pengaturan berhasil disimpan', 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal menyimpan', 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveTelegram = () => {
+    saveTelegramConfig(teleConfig);
+    showToast('Pengaturan Telegram berhasil disimpan', 'success');
+  };
+
+  const handleTestBot = async () => {
+    if (!teleConfig.botToken.trim()) {
+      showToast('Masukkan token bot Telegram terlebih dahulu', 'error');
+      return;
+    }
+    setTestingBot(true);
+    setBotTestResult(null);
+    try {
+      const res = await testTelegramBot(teleConfig.botToken.trim());
+      setBotTestResult(res);
+      if (res.ok) {
+        showToast(`Bot terhubung: @${res.username || res.name}`, 'success');
+        if (res.username) {
+          setTeleConfig(prev => ({ ...prev, botUsername: res.username }));
+        }
+      } else {
+        showToast(res.error || 'Gagal memverifikasi token bot', 'error');
+      }
+    } finally {
+      setTestingBot(false);
+    }
+  };
+
+  const handleSendTestMessage = async () => {
+    const targetChatId = teleConfig.ownerChatId || teleConfig.defaultChannelChatId;
+    if (!teleConfig.botToken || !targetChatId) {
+      showToast('Token bot dan Chat ID wajib diisi untuk tes kirim pesan', 'error');
+      return;
+    }
+    setSendingTestMsg(true);
+    try {
+      const res = await sendTelegramMessage(teleConfig.botToken, targetChatId, testChatMsg);
+      if (res.ok) {
+        showToast('Pesan berhasil terkirim ke Telegram!', 'success');
+      } else {
+        showToast(res.error || 'Gagal mengirim pesan ke Telegram', 'error');
+      }
+    } finally {
+      setSendingTestMsg(false);
     }
   };
 
@@ -135,11 +246,10 @@ export default function EstimatorSettings() {
     Boolean(waTemplate.body?.trim()),
   ];
   const progressDone = progressFields.filter(Boolean).length;
-
   const showSetupBanner = !settings.company_name?.trim();
 
   return (
-    <div className="max-w-5xl mx-auto p-4 sm:p-6">
+    <div className="max-w-5xl mx-auto p-4 sm:p-6 pb-20">
       <EstimatorBreadcrumb items={[{ label: 'Pengaturan' }]} />
 
       {showSetupBanner && (
@@ -175,7 +285,7 @@ export default function EstimatorSettings() {
 
       <div className="mb-4">
         <div className="flex justify-between text-xs font-semibold text-slate-600 mb-1">
-          <span>Profil perusahaan</span>
+          <span>Profil perusahaan & identitas</span>
           <span>{progressDone}/9 lengkap</span>
         </div>
         <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -187,48 +297,60 @@ export default function EstimatorSettings() {
       </div>
 
       <div className="flex items-center gap-3 mb-6">
-        <button type="button" onClick={() => navigate('/app/estimator')} className="p-2 rounded-xl hover:bg-slate-100">
+        <button type="button" onClick={() => navigate('/app/estimator')} className="p-2 rounded-xl hover:bg-slate-100 cursor-pointer">
           <ArrowLeft className="w-5 h-5 text-slate-500" />
         </button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-black text-slate-900">Pengaturan Estimator</h1>
-          <p className="text-sm text-slate-500">Branding & default tampilan PDF penawaran</p>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl font-black text-slate-900 truncate">Pengaturan Estimator & Workspace</h1>
+          <p className="text-xs sm:text-sm text-slate-500 truncate">Branding PDF, WhatsApp, Bot Telegram & Pilihan Mode Admin</p>
         </div>
         <button
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-sm font-bold shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          Simpan
+          <span className="hidden sm:inline">Simpan Semua</span>
+          <span className="sm:hidden">Simpan</span>
         </button>
       </div>
 
-      <div className="flex gap-1 overflow-x-auto mb-6 pb-1 -mx-1 px-1">
+      {/* Tabs Menu Responsif (Horizontal Scrollable pada Tampilan Mobile) */}
+      <div className="flex gap-1.5 overflow-x-auto mb-6 pb-1.5 -mx-1 px-1 no-scrollbar">
         {([
-          ['company', 'Perusahaan & PDF'],
-          ['whatsapp', 'WhatsApp'],
-          ['billing', 'Pembayaran'],
-          ['tools', 'Pricelist & Lainnya'],
-        ] as const).map(([id, label]) => (
+          ['company', 'Perusahaan & PDF', null],
+          ['whatsapp', 'WhatsApp', null],
+          ['billing', 'Pembayaran', null],
+          ['tools', 'Pricelist & Tools', null],
+          ['telegram', '🤖 Telegram & Bot', 'Bot'],
+          ['admin-mode', '👑 Pilihan Mode Admin', 'Peran'],
+          ['all-settings', '⚙️ Pengaturan Lengkap', 'Semua'],
+        ] as const).map(([id, label, badge]) => (
           <button
             key={id}
             type="button"
             onClick={() => setActiveTab(id)}
-            className={`shrink-0 px-3 py-2 rounded-xl text-xs font-bold transition-colors ${
+            className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
               activeTab === id
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-500'
+                : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
             }`}
           >
-            {label}
+            <span>{label}</span>
+            {badge && (
+              <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${
+                activeTab === id ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'
+              }`}>
+                {badge}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="space-y-4">
+        <div className={`space-y-4 ${activeTab === 'company' ? '' : 'lg:col-span-2'}`}>
         {activeTab === 'company' && (
         <>
         <Section title="Identitas Perusahaan">
@@ -299,7 +421,7 @@ export default function EstimatorSettings() {
               key={id}
               type="button"
               onClick={() => setPdfKind(id)}
-              className={`flex-1 py-2 rounded-lg text-xs font-bold ${
+              className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
                 pdfKind === id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
               }`}
             >
@@ -361,7 +483,7 @@ export default function EstimatorSettings() {
           <button
             type="button"
             onClick={() => setWaTemplate(defaultWhatsAppTemplateConfig())}
-            className="text-xs text-emerald-600 font-semibold"
+            className="text-xs text-emerald-600 font-semibold cursor-pointer"
           >
             Reset template default
           </button>
@@ -399,7 +521,7 @@ export default function EstimatorSettings() {
           <button
             type="button"
             onClick={() => navigate('/app/estimator/pricelist')}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border border-slate-200 hover:bg-slate-50"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border border-slate-200 hover:bg-slate-50 cursor-pointer"
           >
             <List className="w-4 h-4" />
             Buka Pricelist
@@ -417,15 +539,276 @@ export default function EstimatorSettings() {
               resetEstimatorOnboarding(user.id);
               setOnboardingOpen(true);
             }}
-            className="px-4 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 text-slate-700 hover:bg-slate-50"
+            className="px-4 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer"
           >
             Buka Ulang Onboarding
           </button>
         </section>
         </>
         )}
+
+        {/* TAB TELEGRAM & BOT SETTINGS */}
+        {activeTab === 'telegram' && (
+          <div className="space-y-4">
+            <Section title="Status & Kredensial Bot Telegram">
+              <div className="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                <div>
+                  <div className="text-sm font-bold text-slate-900">Aktifkan Notifikasi Telegram</div>
+                  <div className="text-xs text-slate-500">Kirim update estimasi dan laporan RAB ke bot / channel Telegram</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={teleConfig.enabled}
+                  onChange={e => setTeleConfig(prev => ({ ...prev, enabled: e.target.checked }))}
+                  className="w-5 h-5 accent-emerald-600 rounded cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Telegram Bot Token (@BotFather)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    value={teleConfig.botToken}
+                    onChange={e => setTeleConfig(prev => ({ ...prev, botToken: e.target.value.trim() }))}
+                    placeholder="Contoh: 1234567890:ABCdefGHIjklMNOpqrSTUvwxyz"
+                    className="flex-1 px-3 py-2.5 border border-slate-200 rounded-xl text-xs font-mono font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleTestBot}
+                    disabled={testingBot || !teleConfig.botToken}
+                    className="px-4 py-2.5 bg-sky-600 hover:bg-sky-700 active:scale-95 disabled:opacity-50 text-white rounded-xl text-xs font-bold shrink-0 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                  >
+                    {testingBot ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                    <span>Tes Bot</span>
+                  </button>
+                </div>
+                {botTestResult && (
+                  <div className={`mt-2 p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${
+                    botTestResult.ok ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
+                  }`}>
+                    {botTestResult.ok ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                        <span>Bot Aktif: <strong>@{botTestResult.username || botTestResult.name}</strong></span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                        <span>{botTestResult.error || 'Gagal koneksi ke bot'}</span>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Chat ID Owner / Admin
+                  </label>
+                  <input
+                    value={teleConfig.ownerChatId || ''}
+                    onChange={e => setTeleConfig(prev => ({ ...prev, ownerChatId: e.target.value.trim() }))}
+                    placeholder="Contoh: 123456789"
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-xs font-mono font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  />
+                  <span className="text-[10px] text-slate-500 mt-1 block">Chat ID akun Telegram Anda (didapat via @userinfobot)</span>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Chat ID Grup / Channel Estimator
+                  </label>
+                  <input
+                    value={teleConfig.defaultChannelChatId || ''}
+                    onChange={e => setTeleConfig(prev => ({ ...prev, defaultChannelChatId: e.target.value.trim() }))}
+                    placeholder="Contoh: -100123456789"
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-xs font-mono font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  />
+                  <span className="text-[10px] text-slate-500 mt-1 block">Untuk broadcast otomatis penawaran ke grup tim proyek</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSaveTelegram}
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs sm:text-sm shadow-sm transition-all cursor-pointer"
+              >
+                Simpan Konfigurasi Bot Telegram
+              </button>
+            </Section>
+
+            <Section title="Tes Pengiriman Pesan ke Telegram">
+              <label className="block">
+                <span className="text-xs text-slate-600 font-medium">Pesan Uji Coba:</span>
+                <textarea
+                  value={testChatMsg}
+                  onChange={e => setTestChatMsg(e.target.value)}
+                  rows={2}
+                  className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl text-xs resize-none"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={handleSendTestMessage}
+                disabled={sendingTestMsg || !teleConfig.botToken}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-sky-600 hover:bg-sky-700 active:scale-95 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
+              >
+                {sendingTestMsg ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                <span>Kirim Pesan Uji Coba ke Telegram</span>
+              </button>
+            </Section>
+
+            <Section title="Panduan Menghubungkan Telegram">
+              <div className="space-y-2 text-xs text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <p>1. Buka aplikasi Telegram, cari <strong>@BotFather</strong>, kirim perintah <code>/newbot</code>, lalu ikuti instruksi untuk membuat bot dan menyalin <strong>Bot Token</strong>.</p>
+                <p>2. Mulai chat dengan bot Anda (buka bot dan tekan <strong>Start</strong>) atau undang bot ke grup proyek Anda.</p>
+                <p>3. Cari <strong>@userinfobot</strong> di Telegram untuk mengetahui Chat ID Anda, atau <strong>@getidsbot</strong> untuk Chat ID grup.</p>
+                <p>4. Masukkan Token dan Chat ID pada form di atas, lalu klik <strong>Tes Bot</strong> &amp; <strong>Simpan</strong>.</p>
+              </div>
+            </Section>
+          </div>
+        )}
+
+        {/* TAB PILIHAN MODE ADMIN & PRATINJAU */}
+        {activeTab === 'admin-mode' && (
+          <div className="space-y-4">
+            <Section title="Mode Pratinjau Peran (Role View Mode)">
+              <p className="text-xs text-slate-500 mb-2">
+                Pilih peran tampilan antarmuka aplikasi. Berguna untuk melihat aplikasi dari sudut pandang peran yang berbeda di mobile.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  { id: 'auto' as const, label: 'Otomatis', desc: 'Sesuai peran akun login Anda' },
+                  { id: 'owner' as const, label: 'Pemilik (Owner)', desc: 'Tampilan penuh admin & manajemen' },
+                  { id: 'worker' as const, label: 'Pekerja (Worker)', desc: 'Tampilan ringkas khusus mandor/tukang' },
+                ].map(m => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => {
+                      setUiViewMode(m.id);
+                      showToast(`Mode tampilan diubah ke: ${m.label}`, 'success');
+                    }}
+                    className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+                      uiViewMode === m.id
+                        ? 'border-emerald-600 bg-emerald-50 text-emerald-900 shadow-sm ring-1 ring-emerald-500'
+                        : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-extrabold text-sm">{m.label}</span>
+                      {uiViewMode === m.id && (
+                        <span className="text-[10px] font-black bg-emerald-600 text-white px-2 py-0.5 rounded-full">
+                          Aktif
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500">{m.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </Section>
+
+            <Section title="Skenario Paket Entitlement (Admin Test)">
+              <p className="text-xs text-slate-500 mb-2">
+                Uji coba batasan fitur paket (Free, Standard, Pro, Enterprise) tanpa harus mengubah data database akun.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {ENTITLEMENT_PREVIEW_OPTIONS.map(opt => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => {
+                      setEntitlementPreviewMode(opt.id);
+                      showToast(`Skenario paket diubah ke: ${opt.label}`, 'success');
+                    }}
+                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                      entitlementPreviewMode === opt.id
+                        ? 'border-emerald-600 bg-emerald-50 text-emerald-900 ring-1 ring-emerald-500 shadow-2xs'
+                        : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-xs sm:text-sm">{opt.label}</span>
+                      {entitlementPreviewMode === opt.id && (
+                        <span className="text-[10px] font-black bg-emerald-600 text-white px-2 py-0.5 rounded-full">
+                          Aktif
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-snug">{opt.hint}</p>
+                  </button>
+                ))}
+              </div>
+            </Section>
+
+            {isSuperAdmin && (
+              <Section title="Super Admin Platform">
+                <p className="text-xs text-slate-500 mb-3">
+                  Kelola integrasi AI Dual-LLM, Meta Ads API, CAPI Token, dan monitoring server.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigate('/admin')}
+                  className="px-5 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs sm:text-sm font-black flex items-center gap-2 transition-all cursor-pointer shadow-md"
+                >
+                  <Shield className="w-4 h-4 text-amber-400" />
+                  <span>Buka Panel Super Admin →</span>
+                </button>
+              </Section>
+            )}
+          </div>
+        )}
+
+        {/* TAB PENGATURAN LENGKAP WORKSPACE */}
+        {activeTab === 'all-settings' && (
+          <div className="space-y-4">
+            <Section title="Direktori Pengaturan Lengkap Workspace">
+              <p className="text-xs text-slate-500 mb-3">
+                Akses semua halaman pengaturan aplikasi monefyi langsung dari mobile:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  { href: '/app?tab=settings&st=profil', label: 'Profil Saya', desc: 'Nama lengkap, email, nomor HP & kata sandi', icon: UserIcon, color: 'text-blue-600 bg-blue-50' },
+                  { href: '/app?tab=settings&st=organisasi', label: 'Organisasi & Brand', desc: 'Nama perusahaan, zona waktu, mata uang & warna tema', icon: Building2, color: 'text-emerald-600 bg-emerald-50' },
+                  { href: '/app?tab=settings&st=koordinasi', label: 'Koordinasi Tim & AI', desc: 'Pengingat mandor, absensi tukang & bot Telegram', icon: Bot, color: 'text-sky-600 bg-sky-50' },
+                  { href: '/app/estimator/pricelist', label: 'Pricelist Master', desc: 'Katalog harga material, upah kerja & subkon', icon: List, color: 'text-purple-600 bg-purple-50' },
+                  { href: '/app?tab=settings&st=domain', label: 'Custom Domain', desc: 'Domain kustom mandiri untuk organisasi', icon: Globe, color: 'text-teal-600 bg-teal-50' },
+                  { href: '/app?tab=settings&st=notifikasi', label: 'Preferensi Notifikasi', desc: 'Pengaturan email notifikasi & pengingat sistem', icon: Bell, color: 'text-amber-600 bg-amber-50' },
+                  { href: '/app?tab=settings&st=keamanan', label: 'Keamanan Akun', desc: 'Ganti password dan sign-out semua perangkat', icon: Lock, color: 'text-rose-600 bg-rose-50' },
+                  { href: '/app?tab=settings&st=diagnostik', label: 'Trace & Diagnostik', desc: 'Pelacak error real-time & log sistem', icon: Bug, color: 'text-slate-600 bg-slate-100' },
+                  { href: '/admin', label: 'Super Admin & AI Config', desc: 'Pengaturan Multi-LLM, API Key & Meta CAPI', icon: Shield, color: 'text-amber-700 bg-amber-100' },
+                ].map(item => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => navigate(item.href)}
+                    className="p-3.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-left flex items-start gap-3 transition-all cursor-pointer group"
+                  >
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${item.color}`}>
+                      <item.icon className="w-4.5 h-4.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-extrabold text-sm text-slate-900 group-hover:text-emerald-700 flex items-center gap-1">
+                        <span>{item.label}</span>
+                        <ExternalLink className="w-3 h-3 opacity-40 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5 leading-snug">{item.desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </Section>
+          </div>
+        )}
+
         </div>
-        {(activeTab === 'company') && (
+
+        {activeTab === 'company' && (
         <TemplatePreview
           kind={pdfKind}
           template={pdfKind === 'quotation' ? settings.default_pdf_template : settings.default_invoice_template}

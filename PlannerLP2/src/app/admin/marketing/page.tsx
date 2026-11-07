@@ -60,11 +60,20 @@ export default function MarketingAdminPage() {
     metaSyncError,
     refreshCampaigns,
     refreshInsights,
+    loadConfigFromCloud,
   } = useMarketingStore();
 
   // Audit Kesiapan Sistem & Diagnosa Tim AI
   const auditReport = analyzeMarketingSystemIntegrations(apiConfig, campaigns, rules);
   const pendingApprovalCount = winningPlans.filter((p) => p.status === "pending").length;
+
+  useEffect(() => {
+    // Muat setting dari Supabase Cloud untuk multi-device sync
+    loadConfigFromCloud().then(() => {
+      refreshCampaigns().catch(() => undefined);
+      refreshInsights().catch(() => undefined);
+    });
+  }, []);
 
   useEffect(() => {
     setLastRefreshed(

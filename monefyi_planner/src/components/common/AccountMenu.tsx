@@ -10,6 +10,8 @@ import {
   Eye,
   Shield,
   Settings,
+  Send,
+  Sliders,
 } from 'lucide-react';
 
 export type AccountMenuTab =
@@ -29,9 +31,12 @@ type Props = {
   userRole?: string;
   tenantName?: string;
   isSuperAdmin?: boolean;
+  uiViewMode?: 'auto' | 'owner' | 'worker';
   onOpenPreviewMode?: () => void;
   onOpenAdmin?: () => void;
   onOpenSettings?: () => void;
+  onOpenTelegramSettings?: () => void;
+  onOpenFullSettings?: () => void;
   onLogout?: () => void;
   isOnline?: boolean;
   isEstimator?: boolean;
@@ -46,9 +51,12 @@ export default function AccountMenu({
   userRole = 'Pemilik',
   tenantName = 'Monefyi',
   isSuperAdmin = false,
+  uiViewMode = 'auto',
   onOpenPreviewMode,
   onOpenAdmin,
   onOpenSettings,
+  onOpenTelegramSettings,
+  onOpenFullSettings,
   onLogout,
   isOnline = true,
   isEstimator = false,
@@ -163,13 +171,42 @@ export default function AccountMenu({
                       onOpenPreviewMode?.();
                       onClose();
                     }}
+                    className="min-h-[52px] w-full rounded-xl flex items-center justify-between gap-3 px-3 py-1.5 text-left text-[#334155] hover:bg-[#F4F7F5] transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Eye className="w-5 h-5 shrink-0 text-emerald-600" />
+                      <div className="min-w-0">
+                        <div className="font-bold text-sm text-[#0F172A]">Mode Pratinjau Admin</div>
+                        <div className="text-[11px] text-[#5B6B7A] truncate">
+                          Ganti peran tampilan (Auto/Owner/Worker)
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 uppercase shrink-0">
+                      {uiViewMode}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onOpenTelegramSettings) {
+                        onOpenTelegramSettings();
+                      } else {
+                        onOpenSettings?.();
+                      }
+                      onClose();
+                    }}
                     className="min-h-[52px] w-full rounded-xl flex items-center gap-3 px-3 py-1.5 text-left text-[#334155] hover:bg-[#F4F7F5] transition-colors"
                   >
-                    <Eye className="w-5 h-5 shrink-0 text-slate-600" />
-                    <div className="min-w-0">
-                      <div className="font-semibold text-sm text-[#0F172A]">Mode pratinjau</div>
+                    <Send className="w-5 h-5 shrink-0 text-sky-600" />
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-sm text-[#0F172A] flex items-center gap-1.5">
+                        <span>Pengaturan Telegram & Bot</span>
+                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 uppercase">Bot</span>
+                      </div>
                       <div className="text-[11px] text-[#5B6B7A] truncate">
-                        Lihat tampilan seperti peran lain
+                        Bot Token, Chat ID & Notifikasi
                       </div>
                     </div>
                   </button>
@@ -183,11 +220,11 @@ export default function AccountMenu({
                       }}
                       className="min-h-[52px] w-full rounded-xl flex items-center gap-3 px-3 py-1.5 text-left text-[#334155] hover:bg-[#F4F7F5] transition-colors"
                     >
-                      <Shield className="w-5 h-5 shrink-0 text-slate-600" />
+                      <Shield className="w-5 h-5 shrink-0 text-amber-600" />
                       <div className="min-w-0">
-                        <div className="font-semibold text-sm text-[#0F172A]">Admin</div>
+                        <div className="font-semibold text-sm text-[#0F172A]">Super Admin</div>
                         <div className="text-[11px] text-[#5B6B7A] truncate">
-                          Khusus pengelola platform
+                          Kendali platform & marketing
                         </div>
                       </div>
                     </button>
@@ -202,10 +239,31 @@ export default function AccountMenu({
                     className="min-h-[52px] w-full rounded-xl flex items-center gap-3 px-3 py-1.5 text-left text-[#334155] hover:bg-[#F4F7F5] transition-colors"
                   >
                     <Settings className="w-5 h-5 shrink-0 text-slate-600" />
-                    <div className="min-w-0">
-                      <div className="font-semibold text-sm text-[#0F172A]">Pengaturan</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-sm text-[#0F172A]">Pengaturan Estimator</div>
                       <div className="text-[11px] text-[#5B6B7A] truncate">
-                        Akun, tim, dan preferensi
+                        PDF, branding, WA & pembayaran
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onOpenFullSettings) {
+                        onOpenFullSettings();
+                      } else {
+                        onOpenSettings?.();
+                      }
+                      onClose();
+                    }}
+                    className="min-h-[52px] w-full rounded-xl flex items-center gap-3 px-3 py-1.5 text-left text-[#334155] hover:bg-[#F4F7F5] transition-colors"
+                  >
+                    <Sliders className="w-5 h-5 shrink-0 text-indigo-600" />
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-sm text-[#0F172A]">Pengaturan Lengkap</div>
+                      <div className="text-[11px] text-[#5B6B7A] truncate">
+                        Organisasi, AI provider & domain
                       </div>
                     </div>
                   </button>

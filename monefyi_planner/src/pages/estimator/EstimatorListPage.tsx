@@ -961,6 +961,9 @@ export default function EstimatorListPage() {
         onRefresh={() => void load()}
         onOpenPricelist={() => navigate('/app/estimator/pricelist')}
         onOpenSettings={() => navigate('/app/estimator/settings')}
+        onOpenPreviewMode={() => navigate('/app/estimator/settings?tab=admin-mode')}
+        onOpenTelegramSettings={() => navigate('/app/estimator/settings?tab=telegram')}
+        onOpenFullSettings={() => navigate('/app?tab=settings')}
       />
 
       {selectionMode && (

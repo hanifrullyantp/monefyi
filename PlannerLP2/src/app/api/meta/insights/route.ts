@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { extractCandidateTokens, buildGraphUrl } from "@/lib/meta/graph";
+
+function getSupabaseServerClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://zzwqfmdyncxbolestkqp.supabase.co";
+  const supabaseKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    "";
+  return createClient(supabaseUrl, supabaseKey);
+}
 
 export interface DemographicBreakdownRow {
   key: string;
@@ -147,11 +157,31 @@ async function fetchBreakdownWithFallback(
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const rawAccessToken = body.accessToken || process.env.META_ACCESS_TOKEN || "";
-    const rawCapiToken = body.capiAccessToken || process.env.META_CAPI_TOKEN || "";
-    const adAccountIdRaw = (body.adAccountId || process.env.META_AD_ACCOUNT_ID || "").trim();
+    let rawAccessToken = body.accessToken || process.env.META_ACCESS_TOKEN || "";
+    let rawCapiToken = body.capiAccessToken || process.env.META_CAPI_TOKEN || "";
+    let adAccountIdRaw = (body.adAccountId || process.env.META_AD_ACCOUNT_ID || "").trim();
     const datePreset = (body.datePreset || "data_maximum").trim();
     const appSecret = (body.appSecret || process.env.META_APP_SECRET || "").trim() || undefined;
+
+    // Fallback otomatis dari Supabase Cloud Database jika di request body kosong (Multi-Device Persistence)
+    if (!rawAccessToken && !rawCapiToken) {
+      try {
+        const supabase = getSupabaseServerClient();
+        const { data: dbConfig } = await supabase
+          .from("winning_engine_config")
+          .select("meta_access_token, meta_capi_token, ad_account_id")
+          .eq("id", "default")
+          .maybeSingle();
+
+        if (dbConfig) {
+          if (dbConfig.meta_access_token) rawAccessToken = dbConfig.meta_access_token;
+          if (dbConfig.meta_capi_token) rawCapiToken = dbConfig.meta_capi_token;
+          if (!adAccountIdRaw && dbConfig.ad_account_id) adAccountIdRaw = dbConfig.ad_account_id;
+        }
+      } catch {
+        // Abaikan jika database belum siap
+      }
+    }
 
     const candidateTokens = extractCandidateTokens(rawAccessToken, rawCapiToken);
     if (candidateTokens.length === 0) {

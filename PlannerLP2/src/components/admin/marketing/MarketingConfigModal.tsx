@@ -211,8 +211,8 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
           adAccountId: resolvedActId,
           pixelId: pixelId.trim() || "1530674178146899",
           capiAccessToken: capiToken.trim() || resolvedToken,
-          aiProvider: strategistProvider,
-          aiApiKey: strategistKey.trim() || technicalKey.trim(),
+          aiProvider: "openrouter",
+          aiApiKey: openRouterKey.trim(),
         });
 
         await Promise.all([refreshCampaigns(), refreshInsights()]);
@@ -284,6 +284,31 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
         telegramChatId: tgChatId.trim(),
       },
     });
+
+    // Simpan permanen ke Supabase Cloud Database (Sinkron Multi-Device)
+    try {
+      await fetch("/api/engine/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          adAccountId: cleanActId,
+          metaAccessToken: cleanToken,
+          metaCapiToken: capiToken.trim() || cleanToken,
+          metaPixelId: pixelId.trim() || "1530674178146899",
+          openRouterApiKey: openRouterKey.trim(),
+          strategistModel: strategistModel.trim() || "anthropic/claude-3.5-sonnet",
+          processorModel: processorModel.trim() || "openai/gpt-5.6-luna",
+          technicalModel: technicalModel.trim() || "google/gemini-2.5-flash",
+          whatsappAdminPhone: waPhone.trim(),
+          telegramChatId: tgChatId.trim(),
+          targetCpa: Number(maxCpa),
+          targetRoas: Number(minRoas),
+          maxScalePctPerStep: Number(scaleBudgetPct),
+        }),
+      });
+    } catch {
+      // Abaikan jika offline
+    }
 
     updateRules({
       maxCpaThreshold: Number(maxCpa),
