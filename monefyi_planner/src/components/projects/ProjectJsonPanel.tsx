@@ -76,7 +76,7 @@ export default function ProjectJsonPanel({
   // Tanpa exported_at — agar perubahan timestamp tidak memicu effect berulang (React #185).
   const snapshotContentKey = useMemo(() => {
     const { meta, ...rest } = snapshot;
-    return JSON.stringify({ ...rest, meta: { project_id: meta.project_id } });
+    return JSON.stringify({ ...rest, meta: { project_id: meta?.project_id } });
   }, [snapshot]);
 
   const template = useMemo(() => getProjectJsonTemplate(project), [project]);

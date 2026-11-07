@@ -40,12 +40,12 @@ export default function WorkerDashboard() {
   const [loading, setLoading] = useState(false);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [status, setStatus] = useState({
+  const [status, setStatus] = useState<Awaited<ReturnType<typeof getUserTodayStatus>>>({
     checkedIn: false,
-    checkInTime: undefined as string | undefined,
-    checkOutTime: undefined as string | undefined,
-    checkInAtIso: undefined as string | undefined,
-    checkOutAtIso: undefined as string | undefined,
+    checkInTime: undefined,
+    checkOutTime: undefined,
+    checkInAtIso: undefined,
+    checkOutAtIso: undefined,
   });
   const [history, setHistory] = useState<AttendanceRecord[]>([]);
   const [payroll, setPayroll] = useState<PayrollEntry | null>(null);

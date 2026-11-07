@@ -29,7 +29,7 @@ export function JoinByTokenPage() {
     }
     validateInvitation({ token })
       .then(data => {
-        setPreview(data as InvitationPreview);
+        setPreview(data as unknown as InvitationPreview);
         if (data.email) setForm(f => ({ ...f, email: String(data.email) }));
       })
       .catch(e => setError(e instanceof Error ? e.message : 'Gagal memuat undangan'))

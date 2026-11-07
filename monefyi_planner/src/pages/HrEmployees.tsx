@@ -341,7 +341,7 @@ export default function HrEmployees() {
                         <span className="font-medium text-[#0F172A]">{projectNameMap[log.project_id] || 'Proyek'}</span>
                         <span className="text-xs text-[#5B6B7A]">{log.date}</span>
                       </div>
-                      <div className="text-xs text-[#5B6B7A] mt-0.5">{log.workers_present} pekerja · {log.work_description?.slice(0, 60) || '—'}</div>
+                      <div className="text-xs text-[#5B6B7A] mt-0.5">{log.workers_present} pekerja · {log.description?.slice(0, 60) || '—'}</div>
                     </div>
                   ))}
                 </div>
@@ -516,7 +516,7 @@ export default function HrEmployees() {
                       <td className="p-3">{log.date}</td>
                       <td className="p-3">{projectNameMap[log.project_id] || '—'}</td>
                       <td className="p-3 font-semibold">{log.workers_present}</td>
-                      <td className="p-3 hidden md:table-cell text-slate-500 truncate max-w-xs">{log.work_description || '—'}</td>
+                      <td className="p-3 hidden md:table-cell text-slate-500 truncate max-w-xs">{log.description || '—'}</td>
                     </tr>
                   ))}
                 </tbody>

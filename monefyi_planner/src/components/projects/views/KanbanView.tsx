@@ -1,6 +1,5 @@
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
-import { motion } from 'framer-motion';
-import type { Project } from '../../store/appStore';
+import type { Project } from '../../../store/appStore';
 import { formatRupiah, HEALTH_CONFIG, daysUntil, PROJECT_STATUSES } from '../../../utils/projectUi';
 
 interface KanbanViewProps {
@@ -37,17 +36,17 @@ export default function KanbanView({ projects, onOpenProject, onStatusChange }: 
                 {provided => (
                   <div ref={provided.innerRef} {...provided.droppableProps} className="p-2 space-y-2 flex-1 min-h-[120px]">
                     {items.map((p, i) => {
-                      const health = HEALTH_CONFIG[p.health_status];
+                      const health = HEALTH_CONFIG[(p.health_status as keyof typeof HEALTH_CONFIG) || 'on_track'] || HEALTH_CONFIG.on_track;
                       const budgetPct = p.total_budget_planned ? Math.min(100, (p.spent_amount / p.total_budget_planned) * 100) : 0;
                       return (
                         <Draggable key={p.id} draggableId={p.id} index={i}>
                           {(drag, snapshot) => (
-                            <motion.div
+                            <div
                               ref={drag.innerRef}
                               {...drag.draggableProps}
                               {...drag.dragHandleProps}
                               onClick={() => onOpenProject(p)}
-                              className={`bg-white rounded-xl p-3 border cursor-grab active:cursor-grabbing shadow-sm ${snapshot.isDragging ? 'shadow-lg ring-2 ring-emerald-200' : 'hover:border-emerald-100'}`}
+                              className={`bg-white rounded-xl p-3 border cursor-grab active:cursor-grabbing shadow-sm transition-all ${snapshot.isDragging ? 'shadow-lg ring-2 ring-emerald-200' : 'hover:border-emerald-100'}`}
                             >
                               <div className="flex items-center gap-2 mb-1">
                                 <div className={`w-2 h-2 rounded-full ${health.dot}`} />
@@ -59,7 +58,7 @@ export default function KanbanView({ projects, onOpenProject, onStatusChange }: 
                                 <div className="h-full bg-emerald-500" style={{ width: `${budgetPct}%` }} />
                               </div>
                               <div className="text-[10px] text-slate-600 mt-1">{daysUntil(p.end_date)} hari</div>
-                            </motion.div>
+                            </div>
                           )}
                         </Draggable>
                       );

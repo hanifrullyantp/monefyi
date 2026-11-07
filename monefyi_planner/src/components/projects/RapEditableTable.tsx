@@ -262,7 +262,7 @@ export default function RapEditableTable({
     snapshotRef.current = serverRows;
     setCellErrors({});
     gridApiRef.current?.setGridOption('rowData', serverRows);
-    showToast('Perubahan dibatalkan', 'warning');
+    showToast('Perubahan dibatalkan', 'info');
   }, [discard, serverRows, showToast, onPendingChangeCount]);
 
   const handleManualSave = useCallback(async () => {
@@ -331,7 +331,7 @@ export default function RapEditableTable({
     if (!api) return;
     const csv = api.getDataAsCsv({ skipColumnHeaders: false });
     try {
-      await navigator.clipboard.writeText(csv);
+      await navigator.clipboard.writeText(csv || '');
       showToast('Disalin ke clipboard', 'success');
     } catch {
       showToast('Gagal menyalin', 'error');

@@ -466,7 +466,7 @@ export async function groupTodayByUser(orgId: string) {
   >();
 
   for (const r of data || []) {
-    const row = r as DbAttendanceRow;
+    const row = r as unknown as DbAttendanceRow;
     const cur = map.get(row.user_id) || {
       name: row.profiles?.name || 'Karyawan',
       status: 'none' as const,

@@ -4,6 +4,7 @@ import type { MappedRapItem } from './migration/planner-mapper';
 
 function item(name: string): MappedRapItem {
   return {
+    id: 1,
     name,
     plannerId: name,
     unit: 'unit',

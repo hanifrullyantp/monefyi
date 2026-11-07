@@ -248,7 +248,10 @@ export function buildRapColumnDefs(
       cellEditor: 'agDateCellEditor',
       cellEditorParams: { max: new Date().toISOString().slice(0, 10) },
       valueFormatter: dateOrDash,
-      valueParser: p => (p.newValue instanceof Date ? p.newValue.toISOString().slice(0, 10) : String(p.newValue || '')),
+      valueParser: p => {
+        const val = p.newValue as unknown;
+        return val instanceof Date ? val.toISOString().slice(0, 10) : String(p.newValue || '');
+      },
       minWidth: 120,
       cellClassRules: errClass('tanggal_realisasi'),
     },

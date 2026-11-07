@@ -45,8 +45,9 @@ export function onAuthStateChange(
   return data.subscription;
 }
 
-export function getAuthUser(): SupabaseUser | null {
-  return supabase.auth.getUser().then(({ data }) => data.user);
+export async function getAuthUser(): Promise<SupabaseUser | null> {
+  const { data } = await supabase.auth.getUser();
+  return data.user;
 }
 
 export async function resetPasswordForEmail(email: string) {

@@ -659,12 +659,10 @@ export default function Projects({
     try {
       const { createDailyLog } = await import('../services/dailyLogService');
       await createDailyLog({
-        org_id: tenant.id,
         project_id: logModalProj.id,
-        user_id: user.id,
+        recorded_by: user.id,
         date: new Date().toISOString().slice(0, 10),
         description: logText.trim(),
-        work_category: 'general',
       });
       setLogModalProj(null);
       setLogText('');
@@ -1464,7 +1462,7 @@ export default function Projects({
                   { id: 'active', label: 'Aktif', desc: 'Pekerjaan sedang berlangsung' },
                   { id: 'on_hold', label: 'On Hold', desc: 'Tertunda sementara' },
                   { id: 'completed', label: 'Selesai', desc: 'Pekerjaan fisik telah selesai' },
-                  { id: 'cancelled', label: 'Dibatalkan', desc: 'Proyek tidak dilanjutkan' },
+                  { id: 'archived', label: 'Diarsipkan / Batal', desc: 'Proyek diarsipkan atau tidak dilanjutkan' },
                 ] as const
               ).map(opt => {
                 const isSelected = selectedNewStatus === opt.id;

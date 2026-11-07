@@ -34,7 +34,7 @@ import BottomActionBar from '../../components/sandbox-ui/BottomActionBar';
 import BudgetHeader from '../../components/finance-v2/budget/BudgetHeader';
 import BudgetBuilder from '../../components/finance-v2/budget/BudgetBuilder';
 import BudgetAnalysisDivider from '../../components/finance-v2/budget/BudgetAnalysisDivider';
-import BudgetAnalysis from '../../components/finance-v2/budget/BudgetAnalysis';
+import BudgetAnalysisSection from '../../components/finance-v2/budget/BudgetAnalysis';
 import BudgetInsights from '../../components/finance-v2/budget/BudgetInsights';
 import BudgetScenarioSelector from '../../components/finance-v2/budget/BudgetScenarioSelector';
 import BudgetTemplateModal from '../../components/finance-v2/budget/BudgetTemplateModal';
@@ -310,7 +310,7 @@ export default function FinanceBudgetPage() {
 
         <BudgetAnalysisDivider />
 
-        <BudgetAnalysis
+        <BudgetAnalysisSection
           analysis={analysis}
           viewMode={viewMode}
           lastUpdated={doc.metadata.lastCalculatedAt}

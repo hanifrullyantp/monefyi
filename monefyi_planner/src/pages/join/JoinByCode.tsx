@@ -25,7 +25,7 @@ export function JoinByCodePage() {
     try {
       const data = await validateInvitation({ code: formatInviteCode(code) });
       if (!data.valid) throw new Error(String(data.error || 'Kode tidak valid'));
-      setPreview(data as InvitationPreview);
+      setPreview(data as unknown as InvitationPreview);
       setStep('form');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Kode tidak valid');

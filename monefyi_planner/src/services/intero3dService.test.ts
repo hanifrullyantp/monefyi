@@ -6,7 +6,7 @@ import {
   generateInteroLaunchUrl,
 } from './intero3dService';
 import { isSuperAdminHanif, SUPER_ADMIN_LAUNCH_ALERT_EMAIL } from '../lib/estimatorLaunchPromo';
-import type { EstimationFormDraft, EstimationItem } from '../types/estimator';
+import type { EstimationFormDraft, EstimationItem, EstimationItemDraft } from '../types/estimator';
 
 describe('isSuperAdminHanif', () => {
   it('memberikan akses untuk email resmi Super Admin Hanif', () => {
@@ -40,7 +40,7 @@ describe('analyzeEstimationForIntero & buildInteroProjectData', () => {
     margin_pct: 30,
     discount_pct: 0,
     discount_amount: 0,
-    adjustments: null,
+    adjustments: [],
     tax_pct: 0,
     total_selling_price: 21500000,
     total_profit: 6500000,
@@ -112,21 +112,21 @@ describe('analyzeEstimationForIntero & buildInteroProjectData', () => {
         notes: null,
         created_at: new Date().toISOString(),
       },
-    ] as EstimationItem[],
+    ] as unknown as EstimationItemDraft[],
     image_1_url: null,
     image_1_caption: null,
     image_2_url: null,
     image_2_caption: null,
     image_3_url: null,
     image_3_caption: null,
-    pdf_primary_color: null,
-    pdf_secondary_color: null,
+    pdf_primary_color: '#059669',
+    pdf_secondary_color: '#1e293b',
     pdf_template: 'modern',
-    pdf_invoice_template: null,
-    status: 'draft',
+    pdf_invoice_template: 'modern',
+    status: 'wa',
     updated_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
-  };
+  } as unknown as EstimationFormDraft;
 
   it('mendeteksi bentuk L, appliances, dan material dengan tepat', () => {
     const proposal = analyzeEstimationForIntero(dummyDraft, dummyDraft.items);

@@ -116,7 +116,7 @@ export function getBarStyle(
   const left = ((parseDate(task.startDate) - range.minDate) / DAY_MS) * pxPerDay;
   const width = Math.max(12, daysBetween(task.startDate, task.endDate) * pxPerDay - 2);
 
-  let color = GANTT_COLORS.onTrack;
+  let color: string = GANTT_COLORS.onTrack;
   if (task.barColor) color = task.barColor;
   else if (selected) color = GANTT_COLORS.selected;
   else if (task.status === 'completed' || task.status === 'archived') color = GANTT_COLORS.completed;

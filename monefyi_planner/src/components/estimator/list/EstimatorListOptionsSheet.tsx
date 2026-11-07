@@ -11,7 +11,7 @@ import type { PipelineTabId } from '../EstimationPipelineTabs';
 import type { EstimationGroupMode } from '../../../lib/estimationListGrouping';
 import type { EstimationStatus } from '../../../types/estimator';
 
-type SortKey = 'newest' | 'oldest' | 'value_desc' | 'value_asc' | 'profit_desc' | 'status';
+export type SortKey = 'manual' | 'newest' | 'oldest' | 'value_desc' | 'value_asc' | 'profit_desc' | 'status';
 
 type Props = {
   open: boolean;

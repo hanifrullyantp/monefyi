@@ -137,14 +137,15 @@ export default function DatabaseMaster() {
         await createPricelistItem({
           org_id: orgId,
           name: m.name.trim(),
+          product: null,
           category: 'material',
           unit: m.unit || 'pcs',
           base_cost: baseCost,
           default_margin_pct: 20,
           selling_price: calcPricelistSelling(baseCost, 20),
-          supplier: m.vendor || null,
-          notes: null,
+          notes: m.vendor ? `Supplier: ${m.vendor}` : null,
           is_active: true,
+          created_by: null,
         });
         plNames.add(key);
         exportedToPricelist++;
@@ -157,14 +158,15 @@ export default function DatabaseMaster() {
         await createPricelistItem({
           org_id: orgId,
           name: w.name.trim(),
+          product: null,
           category: 'upah',
           unit: 'hari',
           base_cost: baseCost,
           default_margin_pct: 20,
           selling_price: calcPricelistSelling(baseCost, 20),
-          supplier: null,
-          notes: w.level || null,
+          notes: w.level ? `Keahlian: ${w.level}` : null,
           is_active: true,
+          created_by: null,
         });
         plNames.add(key);
         exportedToPricelist++;
@@ -469,15 +471,15 @@ function DataTable({ headers, rows }: { headers: string[]; rows: ReactNode[][] }
   );
 }
 
-function MetaList({
+function MetaList<T extends { id: number; name: string }>({
   items, icon: Icon, placeholder, onAdd, onRemove, renderMeta,
 }: {
-  items: Array<{ id: number; name: string }>;
+  items: T[];
   icon: typeof Wrench;
   placeholder: string;
   onAdd: (name: string) => void;
   onRemove: (id: number) => void;
-  renderMeta: (item: { id: number; name: string }) => string;
+  renderMeta: (item: T) => string;
 }) {
   const [name, setName] = useState('');
   return (

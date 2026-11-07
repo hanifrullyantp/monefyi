@@ -13,7 +13,7 @@ function row(status: Estimation['status'], id = '1'): Estimation {
     total_selling_price: 0,
     total_profit: 0,
     updated_at: new Date().toISOString(),
-  } as Estimation;
+  } as unknown as Estimation;
 }
 
 describe('getEstimationListStats - pipeline counts - returns totals', () => {

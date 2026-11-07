@@ -56,6 +56,7 @@ const draft: EstimationFormDraft = {
     item_discount_amount: 0,
     pricelist_item_id: null,
     sort_order: 0,
+    notes: '',
   }],
 };
 

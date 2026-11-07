@@ -37,7 +37,7 @@ type Props = {
   selectionMode?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
-  dragHandleProps?: Record<string, unknown> | null;
+  dragHandleProps?: any;
   dragHandle?: ReactNode;
 };
 
@@ -129,7 +129,7 @@ export default function EstimationListCard({
         }`}
     >
       <div className="flex items-stretch">
-        {dragHandleProps && !selectionMode && (
+        {Boolean(dragHandleProps) && !selectionMode && (
           <div
             {...dragHandleProps}
             className="shrink-0 flex items-center justify-center pl-2 pr-1 text-slate-300 hover:text-slate-600 cursor-grab active:cursor-grabbing transition-colors"

@@ -27,6 +27,13 @@ Duit keluar :
 - 63.500 belanja ferum (indra)
 - 33.000 ultraflex 3 pcs (indra)`;
 
+const mockCtx = {
+  orgId: 'org-1',
+  projects: [],
+  work_items: [],
+  current_project: null,
+};
+
 describe('runNeverFailPipeline', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -35,14 +42,14 @@ describe('runNeverFailPipeline', () => {
   });
 
   it('always returns a usable intent for gibberish input', async () => {
-    const result = await runNeverFailPipeline('asdf qwerty zzz', { orgId: 'org-1' }, []);
+    const result = await runNeverFailPipeline('asdf qwerty zzz', mockCtx, []);
     expect(result.intent).not.toBe('unknown');
     expect(result.confidence).toBeGreaterThan(0);
     expect(result.layer).toBeGreaterThanOrEqual(2);
   });
 
   it('parses WhatsApp batch via rule layer without AI', async () => {
-    const result = await runNeverFailPipeline(WHATSAPP_SAMPLE, { orgId: 'org-1' }, []);
+    const result = await runNeverFailPipeline(WHATSAPP_SAMPLE, mockCtx, []);
     expect(result.intent).toBe('record_cost_batch');
     expect(result.source).toBe('rule');
     expect(result.layer).toBe(2);
@@ -51,7 +58,7 @@ describe('runNeverFailPipeline', () => {
   });
 
   it('parses simple cost command via rules', async () => {
-    const result = await runNeverFailPipeline('catat semen 10 sak 65000', { orgId: 'org-1' }, []);
+    const result = await runNeverFailPipeline('catat semen 10 sak 65000', mockCtx, []);
     expect(result.intent).toBe('record_cost');
     expect(result.source).toBe('rule');
     expect(result.confidence).toBeGreaterThanOrEqual(0.75);
@@ -69,7 +76,7 @@ describe('runNeverFailPipeline', () => {
       accuracyScore: 1,
       memoryId: 'mem-salah',
     });
-    const result = await runNeverFailPipeline('beli semen 10 sak 65000', { orgId: 'org-1' }, []);
+    const result = await runNeverFailPipeline('beli semen 10 sak 65000', mockCtx, []);
     expect(result.source).toBe('rule');
     expect(result.params.total).toBe(650_000);
     expect(result.memoryId).toBeUndefined();
@@ -85,7 +92,7 @@ describe('runNeverFailPipeline', () => {
       accuracyScore: 1,
       memoryId: 'mem-benar',
     });
-    const result = await runNeverFailPipeline('beli semen 10 sak 65000', { orgId: 'org-1' }, []);
+    const result = await runNeverFailPipeline('beli semen 10 sak 65000', mockCtx, []);
     expect(result.source).toBe('memory');
     expect(result.params.total).toBe(650_000);
     expect(result.memoryId).toBe('mem-benar');

@@ -350,12 +350,14 @@ export default function LaborTenagaWizardModal({
         onMonthChange={setMonth}
         plannedSlots={data.plannedSlots}
         actualSlots={data.actualSlots}
-        onPlannedChange={s => patch({
-          plannedSlots: typeof s === 'function' ? s(data.plannedSlots) : s,
-        })}
-        onActualChange={s => patch({
-          actualSlots: typeof s === 'function' ? s(data.actualSlots) : s,
-        })}
+        onPlannedChange={s => {
+          const next = typeof s === 'function' ? (s as (prev: Record<string, LaborSlotDraft>) => Record<string, LaborSlotDraft>)(data.plannedSlots) : s;
+          patch({ plannedSlots: next });
+        }}
+        onActualChange={s => {
+          const next = typeof s === 'function' ? (s as (prev: Record<string, LaborSlotDraft>) => Record<string, LaborSlotDraft>)(data.actualSlots) : s;
+          patch({ actualSlots: next });
+        }}
         unitRate={rateNum}
         rateLabel={rateSuffix}
         onImportAttendance={() => void handleImportAttendance()}

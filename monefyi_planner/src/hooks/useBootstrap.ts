@@ -112,7 +112,7 @@ async function bootstrapSession(session: Session) {
       }
     }
 
-    const platformAdmin = resolvePlatformRole(profile, authUser.email) === 'admin';
+    const platformAdmin = resolvePlatformRole(profile) === 'admin';
     if (!orgCtx && platformAdmin) {
       const orgName =
         String(metadata.org_name || profile.name || 'Platform Admin Workspace').trim() ||

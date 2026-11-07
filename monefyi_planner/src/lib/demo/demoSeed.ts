@@ -87,6 +87,8 @@ export function createDemoPricelistItems(): PricelistItem[] {
     base_cost: Math.round(spec.selling * 0.65),
     default_margin_pct: 35,
     selling_price: spec.selling,
+    notes: null,
+    created_by: null,
     is_active: true,
     created_at: now,
     updated_at: now,

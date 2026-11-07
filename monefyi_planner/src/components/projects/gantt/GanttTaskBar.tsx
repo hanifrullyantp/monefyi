@@ -107,7 +107,7 @@ export default function GanttTaskBar({
       ? (['planning', 'active', 'on_hold', 'completed'] as const)
       : (['pending', 'in_progress', 'completed'] as const);
 
-    const statusLabels = isProject ? STATUS_LABEL : WORK_ITEM_STATUS_LABEL;
+    const statusLabels: Record<string, string> = isProject ? STATUS_LABEL : WORK_ITEM_STATUS_LABEL;
 
     const statusItems: GanttContextMenuItem[] = statusOptions.map(status => ({
       id: `status-${status}`,

@@ -27,6 +27,8 @@ function defaultDraft(date: string): LaborSlotDraft {
   return { work_date: date, day_fraction: 1, regular_hours: 8, overtime_hours: 0 };
 }
 
+export type SlotsUpdater = Record<string, LaborSlotDraft> | ((prev: Record<string, LaborSlotDraft>) => Record<string, LaborSlotDraft>);
+
 type Props = {
   variant: WizardVariant;
   slotKind: LaborSlotKind;
@@ -35,8 +37,8 @@ type Props = {
   onMonthChange: (d: Date) => void;
   plannedSlots: Record<string, LaborSlotDraft>;
   actualSlots: Record<string, LaborSlotDraft>;
-  onPlannedChange: (s: Record<string, LaborSlotDraft>) => void;
-  onActualChange: (s: Record<string, LaborSlotDraft>) => void;
+  onPlannedChange: (s: SlotsUpdater) => void;
+  onActualChange: (s: SlotsUpdater) => void;
   unitRate: number;
   rateLabel: string;
   onImportAttendance?: () => void;
@@ -53,7 +55,10 @@ export default function MultiDatePicker({
   const isMobile = variant === 'mobile';
   const isWide = variant === 'wide';
   const slots = slotKind === 'planned' ? plannedSlots : actualSlots;
-  const setSlots = slotKind === 'planned' ? onPlannedChange : onActualChange;
+  const setSlots = (updater: SlotsUpdater) => {
+    const fn = slotKind === 'planned' ? onPlannedChange : onActualChange;
+    fn(updater);
+  };
 
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; date: string } | null>(null);
@@ -96,7 +101,7 @@ export default function MultiDatePicker({
   };
 
   const toggleDate = (date: string, forceAdd?: boolean) => {
-    setSlots(prev => {
+    setSlots((prev: Record<string, LaborSlotDraft>) => {
       if (prev[date] && !forceAdd) {
         const next = { ...prev };
         delete next[date];
@@ -262,9 +267,9 @@ export default function MultiDatePicker({
         <div className="mt-3 border rounded-xl shadow-lg bg-white">
           <LaborDayEditor
             draft={slots[editingDate]}
-            onChange={patch => setSlots(prev => ({ ...prev, [editingDate]: { ...prev[editingDate], ...patch } }))}
+            onChange={patch => setSlots((prev: Record<string, LaborSlotDraft>) => ({ ...prev, [editingDate]: { ...prev[editingDate], ...patch } }))}
             onRemove={() => {
-              setSlots(prev => { const n = { ...prev }; delete n[editingDate]; return n; });
+              setSlots((prev: Record<string, LaborSlotDraft>) => { const n = { ...prev }; delete n[editingDate]; return n; });
               setEditingDate(null);
             }}
           />
@@ -314,11 +319,11 @@ export default function MultiDatePicker({
         >
           <button type="button" className="block w-full text-left px-3 py-2 hover:bg-slate-50" onClick={() => { setEditingDate(contextMenu.date); setContextMenu(null); }}>Edit detail</button>
           <button type="button" className="block w-full text-left px-3 py-2 hover:bg-slate-50" onClick={() => {
-            setSlots(prev => { const n = { ...prev }; const d = n[contextMenu.date]; if (d) n[contextMenu.date] = { ...d, day_fraction: 0.5, regular_hours: 4 }; return n; });
+            setSlots((prev: Record<string, LaborSlotDraft>) => { const n = { ...prev }; const d = n[contextMenu.date]; if (d) n[contextMenu.date] = { ...d, day_fraction: 0.5, regular_hours: 4 }; return n; });
             setContextMenu(null);
           }}>Set ½ hari</button>
           <button type="button" className="block w-full text-left px-3 py-2 text-rose-600 hover:bg-rose-50" onClick={() => {
-            setSlots(prev => { const n = { ...prev }; delete n[contextMenu.date]; return n; });
+            setSlots((prev: Record<string, LaborSlotDraft>) => { const n = { ...prev }; delete n[contextMenu.date]; return n; });
             setContextMenu(null);
           }}>Hapus</button>
         </div>

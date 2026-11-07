@@ -40,7 +40,7 @@ export interface QuotationPdfContext {
   bankName: string;
   bankAccount: string;
   bankAccountName: string;
-  items: Array<{ no: number; name: string; qty: string; unit: string; unitPrice: string; total: string }>;
+  items: Array<{ no: number; name: string; qty: string; unit: string; unitPrice: string; total: string; description?: string }>;
   subtotalLabel: string;
   overheadLabel: string | null;
   discountLabel: string | null;
@@ -149,6 +149,7 @@ export async function buildQuotationPdfContext(
         unit: item.unit,
         unitPrice: item.is_bonus ? '—' : rp(item.selling_price_per_unit),
         total: item.is_bonus ? 'BONUS' : rp(net),
+        description: item.notes || undefined,
       };
     }),
     subtotalLabel: rp(summary.subtotalBeforeDiscount),

@@ -316,44 +316,18 @@ export async function createProjectTransfer(params: {
     }
   }
 
-  const insertRow = sourceType === 'project'
-    ? {
-        org_id: params.org_id,
-        source_type: 'project',
-        from_project_id: params.from_project_id,
-        to_project_id: params.to_project_id,
-        counterparty_name: null,
-        amount,
-        type: params.type,
-        date: params.date || new Date().toISOString().slice(0, 10),
-        description: params.description || null,
-        recorded_by: params.recorded_by,
-      }
-    : params.type === 'loan'
-      ? {
-          org_id: params.org_id,
-          source_type: 'external',
-          from_project_id: null,
-          to_project_id: params.to_project_id,
-          counterparty_name: params.counterparty_name!.trim(),
-          amount,
-          type: 'loan',
-          date: params.date || new Date().toISOString().slice(0, 10),
-          description: params.description || null,
-          recorded_by: params.recorded_by,
-        }
-      : {
-          org_id: params.org_id,
-          source_type: 'external',
-          from_project_id: params.from_project_id,
-          to_project_id: null,
-          counterparty_name: params.counterparty_name!.trim(),
-          amount,
-          type: 'repayment',
-          date: params.date || new Date().toISOString().slice(0, 10),
-          description: params.description || null,
-          recorded_by: params.recorded_by,
-        };
+  const insertRow = {
+    org_id: params.org_id,
+    source_type: sourceType,
+    from_project_id: sourceType === 'project' ? params.from_project_id : (params.type === 'loan' ? null : params.from_project_id),
+    to_project_id: sourceType === 'project' ? params.to_project_id : (params.type === 'loan' ? params.to_project_id : null),
+    counterparty_name: sourceType === 'project' ? null : (params.counterparty_name?.trim() || null),
+    amount,
+    type: params.type,
+    date: params.date || new Date().toISOString().slice(0, 10),
+    description: params.description || null,
+    recorded_by: params.recorded_by,
+  };
 
   const { data, error } = await supabase
     .from('planner_project_transfers')

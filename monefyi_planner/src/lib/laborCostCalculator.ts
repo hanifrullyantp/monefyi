@@ -27,8 +27,16 @@ export function hourlyEquivalent(rateType: LaborRateType, unitRate: number, hour
   return unitRate / (workingDaysInMonth() * hoursPerDay);
 }
 
+export interface SlotCostInput {
+  rate_type: LaborRateType;
+  unit_rate: number;
+  day_fraction?: number;
+  regular_hours?: number;
+  overtime_hours?: number;
+}
+
 export function slotCost(
-  slot: Pick<LaborSlot | LaborSlotDraft, 'rate_type' | 'day_fraction' | 'regular_hours' | 'overtime_hours' | 'unit_rate'>,
+  slot: SlotCostInput,
   refDate = new Date(),
   hoursPerDay = DEFAULT_HOURS_PER_DAY,
   overtimeMultiplier = DEFAULT_OVERTIME_MULTIPLIER,

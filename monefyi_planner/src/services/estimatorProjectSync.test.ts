@@ -81,9 +81,14 @@ describe('Estimator - Edit & Project Price Sync', () => {
       ],
       products: [],
       images: [],
-      pdf_template: 'standard',
-      pdf_invoice_template: 'standard',
-      billing_config: null,
+      pdf_template: 'modern',
+      pdf_invoice_template: 'modern',
+      billing_config: {
+        milestones: [],
+        billing_discount_amount: 0,
+        billing_bonus_note: '',
+        payments: [],
+      },
     };
 
     let updatedProjectSettings: any = null;

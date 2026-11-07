@@ -15,7 +15,7 @@ import {
   Play,
   FolderKanban,
 } from 'lucide-react';
-import { useAppStore } from '../../store/appStore';
+import { useAppStore, type Project } from '../../store/appStore';
 import {
   loadAIConfig,
   getActiveModel,
@@ -80,9 +80,7 @@ export default function ManagerWorkspaceModal({
     setSelectedProjectId,
     refreshData,
     setCommandModalOpen,
-  } = useAppStore() as ReturnType<typeof useAppStore> & {
-    refreshData?: () => Promise<void>;
-  };
+  } = useAppStore();
 
   const [items, setItems] = useState<ChatItem[]>([]);
   const [input, setInput] = useState('');
@@ -100,12 +98,12 @@ export default function ManagerWorkspaceModal({
   const config = useMemo(() => loadAIConfig(), [configVersion, showKeyConfig]);
 
   const liveProjects = useMemo(
-    () => projects.filter(p => p.status !== 'archived'),
+    () => projects.filter((p: Project) => p.status !== 'archived'),
     [projects],
   );
 
   const focusedProject = useMemo(
-    () => liveProjects.find(p => p.id === selectedProjectId) || liveProjects[0] || null,
+    () => liveProjects.find((p: Project) => p.id === selectedProjectId) || liveProjects[0] || null,
     [liveProjects, selectedProjectId],
   );
 
@@ -427,7 +425,7 @@ export default function ManagerWorkspaceModal({
                 }}
                 className="text-xs font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               >
-                {liveProjects.map((p, idx) => (
+                {liveProjects.map((p: Project, idx: number) => (
                   <option key={p.id} value={p.id}>
                     [P{idx + 1}] {p.name}
                   </option>

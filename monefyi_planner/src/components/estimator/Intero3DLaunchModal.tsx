@@ -1,7 +1,7 @@
 // monefyi_planner/src/components/estimator/Intero3DLaunchModal.tsx
 import { useEffect, useState } from 'react';
 import { Box, Download, ExternalLink, Layers, Sparkles, X } from 'lucide-react';
-import type { EstimationFormDraft, EstimationItem } from '../../types/estimator';
+import type { EstimationFormDraft, EstimationItem, EstimationItemDraft } from '../../types/estimator';
 import {
   analyzeEstimationForIntero,
   buildInteroProjectData,
@@ -17,7 +17,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   draft: EstimationFormDraft;
-  items: EstimationItem[];
+  items: Array<EstimationItem | EstimationItemDraft>;
 }
 
 export default function Intero3DLaunchModal({ open, onClose, draft, items }: Props) {

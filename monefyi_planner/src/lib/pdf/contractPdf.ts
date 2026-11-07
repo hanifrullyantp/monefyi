@@ -483,7 +483,7 @@ function signatureBlock(ctx: BuildCtx): Content {
       } as Content]
     : [{ text: ' ', margin: m(0, 0, 0, 38) }];
 
-  const col = (role: string, mid: Content[], name: string, sub: string): Content => ({
+  const col = (role: string, mid: Content[], name: string, sub: string) => ({
     width: '*',
     stack: [
       { text: role, bold: true, fontSize: 10, color: ctx.accent },

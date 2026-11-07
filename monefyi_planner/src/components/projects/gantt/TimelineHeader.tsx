@@ -69,7 +69,7 @@ export default function TimelineHeader({ range, viewMode, zoomScale = 1, scrollL
                 }`}
                 style={{ width: pxPerDay, borderColor: GANTT_COLORS.grid }}
               >
-                {showLabel ? d.getDate() : viewMode === 'day' ? d.getDate() : ''}
+                {showLabel ? d.getDate() : ''}
               </div>
             );
           })}

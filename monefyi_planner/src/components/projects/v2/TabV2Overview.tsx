@@ -42,12 +42,12 @@ export default function TabV2Overview({
   normalized, project, orgId, userId, rapItems, workItems = [], canManage = true, onRefresh, onSwitchTab, onEditProject,
 }: Props) {
   const showToast = useUiStore(s => s.showToast);
-  const [popup, setPopup] = useState<PopupKind>(null);
+  const [popup, setPopup] = useState<PopupKind | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'ok' | 'over' | 'pending'>('all');
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [toggleBusy, setToggleBusy] = useState<string | null>(null);
-  const [modal, setModal] = useState<ModalKind>(null);
+  const [modal, setModal] = useState<ModalKind | null>(null);
   const [partyName, setPartyName] = useState<string | null>(null);
 
   const rapByPlannerId = useMemo(() => {

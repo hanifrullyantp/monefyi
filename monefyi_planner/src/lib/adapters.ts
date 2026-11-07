@@ -227,7 +227,7 @@ export function toProject(row: DbProject, currency = 'IDR'): Project {
     contract_value: contractValue > 0 ? contractValue : undefined,
     source_estimation_id: row.source_estimation_id || undefined,
     currency,
-    manager_id: settings.manager_id,
+    manager_id: settings.manager_id != null ? String(settings.manager_id) : undefined,
     progress_percentage: progress,
     health_status: computeHealthStatus(progress, plannedProgress, spent, budget),
     planned_progress: plannedProgress,

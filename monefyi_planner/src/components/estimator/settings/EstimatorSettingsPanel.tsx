@@ -14,8 +14,8 @@ import { resetEstimatorOnboarding } from '../../../lib/estimatorOnboarding';
 import LogoUpload from '../LogoUpload';
 import TemplateSelector from '../pdf-settings/TemplateSelector';
 import TemplateCustomizer from '../pdf-settings/TemplateCustomizer';
+import type { PreviewDisplayToggles } from '../pdf-settings/TemplateCustomizer';
 import TemplatePreview from '../pdf-settings/TemplatePreview';
-import type { PreviewDisplayToggles } from '../pdf-settings/TemplatePreview';
 import { loadPdfSettings, updatePdfSettings } from '../../../services/pdfSettingsService';
 import {
   loadWhatsAppTemplate,
@@ -25,7 +25,7 @@ import {
 import type { WhatsAppTemplateConfig } from '../../../lib/whatsappQuotationMessage';
 import { billingConfigFromOrgDefaults } from '../../../lib/estimationBillingConfig';
 import EstimationBillingScheduleEditor from '../detail/EstimationBillingScheduleEditor';
-import type { EstimationBillingConfig } from '../../../types/estimationBilling';
+import type { EstimationBillingConfig } from '../../../types/estimator';
 import { useAppStore } from '../../../store/appStore';
 import { useUiStore } from '../../../store/uiStore';
 import type { PdfSettings } from '../../../types/pdfSettings';
@@ -50,8 +50,8 @@ export default function EstimatorSettingsPanel() {
   const [pdfKind, setPdfKind] = useState<'quotation' | 'invoice'>('quotation');
   const [previewDisplay, setPreviewDisplay] = useState<PreviewDisplayToggles>({
     showLogo: true,
-    showHeader: true,
     showSignature: true,
+    showStamp: true,
     showFooter: true,
   });
 
@@ -315,7 +315,7 @@ export default function EstimatorSettingsPanel() {
                 settings={settings}
                 onChange={patch}
                 display={previewDisplay}
-                onDisplayChange={p => setPreviewDisplay(prev => ({ ...prev, ...p }))}
+                onDisplayChange={p => setPreviewDisplay((prev: PreviewDisplayToggles) => ({ ...prev, ...p }))}
               />
             </>
           )}
@@ -376,7 +376,7 @@ export default function EstimatorSettingsPanel() {
                   settings.default_dp_pct ?? 50,
                 )}
                 onChange={(cfg: EstimationBillingConfig) => {
-                  const dpPct = cfg.milestones.find(m => m.key === 'dp')?.pct ?? settings.default_dp_pct ?? 50;
+                  const dpPct = cfg.milestones.find((m: any) => m.key === 'dp')?.pct ?? settings.default_dp_pct ?? 50;
                   patch({
                     default_billing_milestones: cfg.milestones,
                     default_dp_pct: dpPct,

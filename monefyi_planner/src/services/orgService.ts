@@ -32,7 +32,7 @@ export async function loadOrg(userId: string): Promise<OrgContext | null> {
     return null;
   }
 
-  const orgRow = membership.planner_organizations as DbOrganization & {
+  const orgRow = membership.planner_organizations as unknown as DbOrganization & {
     onboarding_completed?: boolean;
     logo_url?: string;
     brand_color?: string;

@@ -140,7 +140,7 @@ function summaryBlock(ctx: ProformaPdfContext): Content {
     margin: [0, 8, 0, 0] as [number, number, number, number],
   });
 
-  return { stack: summaryRows, width: 220 };
+  return { stack: summaryRows };
 }
 
 function summaryRow(label: string, value: string, color = '#475569'): Content {

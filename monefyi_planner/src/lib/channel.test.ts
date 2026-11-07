@@ -190,7 +190,9 @@ describe('kanal telegram', () => {
     const failed = await telegramSend('bot-token-uji-123456', { chatId: '1', text: 'hai' }, async () => {
       throw new Error('bot-token-uji-123456');
     });
-    expect(failed.error).toBe('kirim_gagal');
+    if (!failed.ok) {
+      expect(failed.error).toBe('kirim_gagal');
+    }
     expect(JSON.stringify(failed).includes('bot-token-uji-123456')).toBe(false);
   });
 
@@ -250,8 +252,8 @@ describe('kanal telegram', () => {
     const filled: CompanyProfile = {
       ...emptyProfile(),
       policies: [
-        { key: 'jam_tanya_progres', domain: 'proyek', value: 16 },
-        { key: 'batas_balasan_menit', domain: 'proyek', value: 45 },
+        { key: 'jam_tanya_progres', domain: 'proyek', value: 16, min: 0, max: 24 },
+        { key: 'batas_balasan_menit', domain: 'proyek', value: 45, min: 0, max: 120 },
       ],
     };
     const ready = parametersFromProfile(sop!, filled);

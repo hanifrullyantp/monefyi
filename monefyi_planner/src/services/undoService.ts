@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { assertNoDbError } from '../lib/supabaseErrors';
+import type { UserRole } from '../store/appStore';
 import { deleteProjectIncome, recalcTotalReceived } from './incomeService';
 import { deleteProjectTransfer } from './projectTransferService';
 
@@ -166,7 +167,7 @@ async function applyCompensation(before: Record<string, unknown> | null, entityI
 export async function undoReversibleAction(
   actionId: string,
   undoneBy: string,
-  actorRole: 'owner' | 'manager' | 'worker' | 'admin',
+  actorRole: UserRole,
 ): Promise<void> {
   if (actorRole !== 'owner' && actorRole !== 'manager' && actorRole !== 'admin') {
     throw new Error('Hanya owner/manager yang dapat undo.');

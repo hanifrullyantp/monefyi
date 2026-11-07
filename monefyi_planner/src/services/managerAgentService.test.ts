@@ -41,6 +41,7 @@ function createMockContextPack(): ContextPack {
     spent_amount: 40_000_000,
     total_received: 65_000_000,
     created_at: '2026-10-01T00:00:00Z',
+    updated_at: '2026-10-01T00:00:00Z',
   };
 
   const bon1: BonRequest = {

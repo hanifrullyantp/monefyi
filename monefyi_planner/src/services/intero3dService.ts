@@ -1,7 +1,7 @@
 // monefyi_planner/src/services/intero3dService.ts
 // Service jembatan antara Monefyi Estimator dan 3D Intero (3d.intero.id)
 import { compressToEncodedURIComponent } from 'lz-string';
-import type { EstimationFormDraft, EstimationItem } from '../types/estimator';
+import type { EstimationFormDraft, EstimationItem, EstimationItemDraft } from '../types/estimator';
 import { parseDimensionInput } from '../lib/estimatorDimension';
 
 export type InteroKitchenShape = 'I' | 'L' | 'U' | 'G';
@@ -146,7 +146,7 @@ export interface InteroProjectData {
  */
 export function analyzeEstimationForIntero(
   draft: EstimationFormDraft,
-  items: EstimationItem[]
+  items: Array<EstimationItem | EstimationItemDraft>
 ): InteroDimensionProposal {
   let totalBaseM = 0;
   let totalWallM = 0;

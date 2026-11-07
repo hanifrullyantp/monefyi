@@ -227,7 +227,7 @@ export default function PricelistPage({ embedded = false }: PricelistPageProps) 
       });
       savedSnapshots.current.set(created.id, rowSnapshot(created));
       setRows(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
-      analytics.pricelistItemAdded({ category: created.category, source: 'manual' });
+      analytics.pricelistItemAdded({ category: created.category || undefined, source: 'manual' });
       showToast('Item ditambahkan — edit lalu klik Simpan', 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal menambah', 'error');

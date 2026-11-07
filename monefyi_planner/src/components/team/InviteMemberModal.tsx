@@ -258,8 +258,8 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
             { id: 'link', icon: Link2, label: 'Link' },
             { id: 'email', icon: Mail, label: 'Email' },
             { id: 'code', icon: Hash, label: 'Kode' },
-            ...(canDirectCreate ? [{ id: 'direct', icon: UserRoundPlus, label: 'Direct' }] : []),
-          ] as const).map(t => (
+            ...(canDirectCreate ? [{ id: 'direct' as const, icon: UserRoundPlus, label: 'Direct' }] : []),
+          ] as Array<{ id: Tab; icon: any; label: string }>).map(t => (
             <button
               key={t.id}
               type="button"

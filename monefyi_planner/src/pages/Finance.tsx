@@ -247,7 +247,7 @@ export default function Finance() {
                         <CartesianGrid strokeDasharray="3 3" stroke="#F4F7F5" />
                         <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#5B6B7A' }} />
                         <YAxis tick={{ fontSize: 10, fill: '#5B6B7A' }} unit=" jt" />
-                        <Tooltip formatter={(v: number, name: string) => [`Rp ${v.toFixed(2)} jt`, name === 'inflow' ? 'Masuk' : name === 'outflow' ? 'Keluar' : 'Net']} />
+                        <Tooltip formatter={(v: any, name: any) => [`Rp ${Number(v || 0).toFixed(2)} jt`, name === 'inflow' ? 'Masuk' : name === 'outflow' ? 'Keluar' : 'Net']} />
                         <Area type="monotone" dataKey="inflow" name="inflow" stroke="#059669" fill="#05966920" strokeWidth={2} />
                         <Area type="monotone" dataKey="outflow" name="outflow" stroke="#EF4444" fill="#EF444415" strokeWidth={2} />
                         <Line type="monotone" dataKey="net" name="net" stroke="#059669" strokeWidth={2} dot={false} />
@@ -268,7 +268,7 @@ export default function Finance() {
                     <BarChart data={supplierBreakdown} layout="vertical" margin={{ left: 0, right: 8 }}>
                       <XAxis type="number" hide />
                       <YAxis type="category" dataKey="name" width={72} tick={{ fontSize: 10, fill: '#5B6B7A' }} />
-                      <Tooltip formatter={(v: number) => formatRupiah(v)} />
+                      <Tooltip formatter={(v: any) => formatRupiah(Number(v || 0))} />
                       <Bar dataKey="amount" radius={4}>
                         {supplierBreakdown.map((_, i) => (
                           <Cell key={i} fill={['#059669', '#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5'][i] || '#059669'} />

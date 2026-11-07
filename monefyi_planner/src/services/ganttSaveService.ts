@@ -11,13 +11,18 @@ import { supabase } from '../lib/supabase';
 /**
  * Persist all gantt changes vs baseline snapshot to Supabase.
  */
+export interface SaveGanttResult {
+  workItems: WorkItem[];
+  projectProgress: Record<string, number>;
+}
+
 export async function saveGanttChanges(
   orgId: string,
   current: GanttSnapshot,
   baseline: GanttSnapshot,
   workItems: WorkItem[],
   currency?: string,
-): Promise<WorkItem[]> {
+): Promise<SaveGanttResult> {
   const wiMap = new Map(workItems.map(w => [w.id, { ...w }]));
 
   for (const task of current.tasks) {

@@ -140,7 +140,7 @@ describe('Integrasi 3D Intero dengan Dimensi Segmen L', () => {
       margin_pct: 0,
       discount_pct: 0,
       discount_amount: 0,
-      adjustments: null,
+      adjustments: [],
       tax_pct: 0,
       total_selling_price: 0,
       total_profit: 0,
@@ -176,14 +176,14 @@ describe('Integrasi 3D Intero dengan Dimensi Segmen L', () => {
       image_2_caption: null,
       image_3_url: null,
       image_3_caption: null,
-      pdf_primary_color: null,
-      pdf_secondary_color: null,
+      pdf_primary_color: '#059669',
+      pdf_secondary_color: '#1e293b',
       pdf_template: 'modern',
-      pdf_invoice_template: null,
-      status: 'draft',
+      pdf_invoice_template: 'modern',
+      status: 'wa',
       updated_at: '',
       created_at: '',
-    };
+    } as unknown as EstimationFormDraft;
 
     const proposal = analyzeEstimationForIntero(draft, draft.items as any);
     expect(proposal.shape).toBe('L');

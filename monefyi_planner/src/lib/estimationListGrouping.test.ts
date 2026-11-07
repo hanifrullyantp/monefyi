@@ -32,7 +32,7 @@ function mockEstimation(overrides: Partial<Estimation>): Estimation {
     image_3_caption: null,
     pdf_primary_color: null,
     pdf_secondary_color: null,
-    pdf_template: null,
+    pdf_template: 'modern',
     notes: null,
     terms_conditions: null,
     validity_days: 14,
@@ -42,7 +42,7 @@ function mockEstimation(overrides: Partial<Estimation>): Estimation {
     created_by: null,
     converted_project_id: null,
     ...overrides,
-  };
+  } as unknown as Estimation;
 }
 
 describe('estimationListGrouping', () => {

@@ -376,7 +376,7 @@ export function mapPlannerProject(input: {
     id: p.id,
     name: p.name,
     client: p.client_name || '-',
-    type: settings.type || 'Konstruksi',
+    type: settings.type ? String(settings.type) : 'Konstruksi',
     startDate: start,
     endDate: end,
     duration: daysBetween(start, end),

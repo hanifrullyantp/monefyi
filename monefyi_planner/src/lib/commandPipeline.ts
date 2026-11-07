@@ -120,7 +120,7 @@ export async function runNeverFailPipeline(
     if (lead) {
       return withSop({
         intent: 'create_lead',
-        params: lead,
+        params: lead as unknown as Record<string, unknown>,
         confidence: 0.93,
         raw: rawInput,
         source: 'rule',

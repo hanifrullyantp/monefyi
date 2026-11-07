@@ -7,6 +7,7 @@ import {
   paletteFor,
 } from '../shared';
 import {
+  invoiceBreakdownTable,
   invoiceInstallmentsTable,
   invoicePaymentInfoBox,
   invoiceSignatureBlock,
@@ -56,11 +57,11 @@ export function buildInvoiceRealEstate(ctx: InvoicePdfContext): TDocumentDefinit
           width: 'auto',
           stack: [
             ...(ctx.logoDataUri
-              ? [{ image: ctx.logoDataUri, width: 44, alignment: 'right', margin: [0, 0, 0, 2] as [number, number, number, number] }]
+              ? [{ image: ctx.logoDataUri, width: 44, alignment: 'right' as const, margin: [0, 0, 0, 2] as [number, number, number, number] }]
               : []),
-            { text: ctx.companyName, fontSize: 13, bold: true, color: navy, alignment: 'right' },
+            { text: ctx.companyName, fontSize: 13, bold: true, color: navy, alignment: 'right' as const },
             ...(ctx.companyTagline
-              ? [{ text: ctx.companyTagline, fontSize: 8, color: '#64748b', alignment: 'right' }]
+              ? [{ text: ctx.companyTagline, fontSize: 8, color: '#64748b', alignment: 'right' as const }]
               : []),
             invoiceStatusBadge(ctx, navy),
           ],
