@@ -4,7 +4,7 @@
   "description": "Kirim penawaran PDF sebelum kamu pulang survei.",
   "start_url": "/app/estimator?utm_source=pwa",
   "scope": "/",
-  "id": "/app/estimator",
+  "id": "monefyi-estimator-pwa",
   "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#157F5F",

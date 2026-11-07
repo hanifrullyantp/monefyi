@@ -1,19 +1,17 @@
-// Service Worker for Monefyi Admin PWA
-const CACHE_NAME = 'monefyi-admin-cache-v1';
+// Service Worker for Monefyi Estimator PWA (Scoped to /)
+const CACHE_NAME = 'monefyi-estimator-v2';
 const PRECACHE_URLS = [
-  '/admin',
+  '/',
+  '/manifest.webmanifest',
   '/brand/estimator/icon-192.png',
-  '/brand/estimator/icon-512.png',
-  '/admin-manifest.webmanifest'
+  '/brand/estimator/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_URLS).catch(() => {
-        // Tolerant if some assets aren't yet accessible at install time
-      });
+      return cache.addAll(PRECACHE_URLS).catch(() => {});
     })
   );
 });
@@ -22,23 +20,27 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+        keys.filter((key) => key !== CACHE_NAME && key.startsWith('monefyi-estimator')).map((key) => caches.delete(key))
       );
     }).then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests and http/https scheme
   if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) {
     return;
   }
 
-  // Network-first strategy with cache fallback
+  // JANGAN intercept rute /admin dari service worker Estimator
+  const url = new URL(event.request.url);
+  if (url.pathname.startsWith('/admin')) {
+    return;
+  }
+
+  // Network-first with cache fallback
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Cache valid basic responses for static assets
         if (response && response.status === 200 && response.type === 'basic') {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -47,8 +49,6 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       })
-      .catch(() => {
-        return caches.match(event.request);
-      })
+      .catch(() => caches.match(event.request))
   );
 });

@@ -63,6 +63,35 @@ export default function RootLayout({
           rel="stylesheet"
         />
         <meta name="apple-mobile-web-app-title" content="Estimator" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                window.__pwaPrompts = window.__pwaPrompts || {};
+                window.addEventListener('beforeinstallprompt', function(e) {
+                  e.preventDefault();
+                  var path = window.location.pathname || '';
+                  var key = path.startsWith('/admin') ? 'admin' : 'estimator';
+                  window.__pwaPrompts[key] = e;
+                  window.__pwaLastPrompt = e;
+                  window.dispatchEvent(new CustomEvent('pwa-prompt-ready', { detail: { key: key, prompt: e } }));
+                });
+
+                // Auto register SW sesuai path
+                if ('serviceWorker' in navigator) {
+                  window.addEventListener('load', function() {
+                    var path = window.location.pathname || '';
+                    if (path.startsWith('/admin')) {
+                      navigator.serviceWorker.register('/admin-sw.js', { scope: '/admin' }).catch(function(){});
+                    } else {
+                      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(){});
+                    }
+                  });
+                }
+              })();
+            `,
+          }}
+        />
       </head>
       <body
         className="font-sans antialiased bg-[var(--bg)] text-[var(--ink)]"

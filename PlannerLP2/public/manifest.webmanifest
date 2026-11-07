@@ -1,4 +1,5 @@
 {
+  "id": "monefyi-estimator-pwa",
   "name": "Monefyi Estimator",
   "short_name": "Estimator",
   "description": "Kirim penawaran PDF sebelum kamu pulang survei.",
@@ -9,6 +10,7 @@
   "theme_color": "#157F5F",
   "background_color": "#FFFFFF",
   "lang": "id",
+  "categories": ["business", "productivity", "finance"],
   "icons": [
     {
       "src": "/brand/estimator/icon-192.png?v=2026-10-28",

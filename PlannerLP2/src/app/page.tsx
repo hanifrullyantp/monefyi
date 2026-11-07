@@ -14,6 +14,7 @@ import { MobileAdminToolbar } from "@/components/landing/MobileAdminToolbar";
 import { AdminSaveNotice } from "@/components/landing/AdminSaveNotice";
 import { EditModeRedirect } from "@/components/landing/EditModeRedirect";
 import EstimatorPwaLaunchRedirect from "@/components/brand/EstimatorPwaLaunchRedirect";
+import { EstimatorPwaInstallPrompt } from "@/components/landing/EstimatorPwaInstallPrompt";
 import { BrandHead } from "@/components/brand/BrandHead";
 import { TrackingScripts } from "@/components/landing/TrackingScripts";
 import { MetaPixelNoscript } from "@/components/landing/MetaPixelNoscript";
@@ -44,6 +45,7 @@ export default function LandingPage() {
       <BackToTop />
       <WhatsAppFloat />
       <LiveChatWidget />
+      <EstimatorPwaInstallPrompt />
       <MobileAdminToolbar />
     </PublicLandingRoot>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download, Smartphone, X, Check, Share, PlusSquare, ArrowUpRight } from "lucide-react";
+import { Download, Smartphone, X, Share, PlusSquare, Sparkles } from "lucide-react";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -14,6 +14,7 @@ export function AdminPwaInstallPrompt() {
   const [isIOS, setIsIOS] = useState(false);
   const [showIOSModal, setShowIOSModal] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+  const [isWaitingPrompt, setIsWaitingPrompt] = useState(false);
 
   useEffect(() => {
     // Check if already in standalone / installed mode
@@ -27,39 +28,85 @@ export function AdminPwaInstallPrompt() {
     const isAppleMobile = /iphone|ipad|ipod/.test(ua) && !((window as unknown as { MSStream?: unknown }).MSStream);
     setIsIOS(isAppleMobile);
 
-    // Register Service Worker for PWA
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => {
+    // Register Service Worker for Admin PWA scoped to /admin
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/admin-sw.js", { scope: "/admin" }).catch(() => {
         // Silently tolerate if SW registration is restricted
       });
     }
 
-    // Catch Chrome/Android install event
+    // 1. Ambil prompt yang sudah ditangkap lebih awal di head
+    const preCaptured =
+      (window as any).__pwaPrompts?.admin ||
+      (window as any).__pwaLastPrompt ||
+      null;
+    if (preCaptured) {
+      setDeferredPrompt(preCaptured);
+    }
+
+    // 2. Catch Chrome/Android install event
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      const p = e as BeforeInstallPromptEvent;
+      setDeferredPrompt(p);
+      (window as any).__pwaPrompts = (window as any).__pwaPrompts || {};
+      (window as any).__pwaPrompts.admin = p;
     };
-
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+
+    // 3. Catch custom event dari script head
+    const handlePromptReady = (e: any) => {
+      if (e?.detail?.prompt) {
+        setDeferredPrompt(e.detail.prompt);
+      }
+    };
+    window.addEventListener("pwa-prompt-ready", handlePromptReady);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("pwa-prompt-ready", handlePromptReady);
     };
   }, []);
 
   const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      await deferredPrompt.prompt();
-      const choice = await deferredPrompt.userChoice;
-      if (choice.outcome === "accepted") {
-        setDeferredPrompt(null);
+    const promptToUse =
+      deferredPrompt ||
+      (window as any).__pwaPrompts?.admin ||
+      (window as any).__pwaLastPrompt;
+
+    if (promptToUse && typeof promptToUse.prompt === "function") {
+      try {
+        await promptToUse.prompt();
+        const choice = await promptToUse.userChoice;
+        if (choice.outcome === "accepted") {
+          setDeferredPrompt(null);
+          setIsDismissed(true);
+        }
+        return;
+      } catch (err) {
+        console.warn("[pwa-admin] Native prompt error:", err);
       }
-    } else if (isIOS) {
-      setShowIOSModal(true);
-    } else {
-      // General fallback guide
-      setShowIOSModal(true);
     }
+
+    if (isIOS) {
+      setShowIOSModal(true);
+      return;
+    }
+
+    // Tunggu sesaat jika Chrome sedang evaluasi installability
+    setIsWaitingPrompt(true);
+    setTimeout(async () => {
+      const retryPrompt =
+        deferredPrompt ||
+        (window as any).__pwaPrompts?.admin ||
+        (window as any).__pwaLastPrompt;
+      setIsWaitingPrompt(false);
+      if (retryPrompt && typeof retryPrompt.prompt === "function") {
+        await retryPrompt.prompt();
+      } else {
+        setShowIOSModal(true);
+      }
+    }, 1000);
   };
 
   if (isStandalone || isDismissed) {
@@ -76,9 +123,9 @@ export function AdminPwaInstallPrompt() {
               <Smartphone className="w-4 h-4" />
             </div>
             <div className="truncate">
-              <span className="font-bold text-white">Pasang Aplikasi Admin di HP</span>
+              <span className="font-bold text-white">Pasang Aplikasi Admin CRM di HP</span>
               <span className="hidden sm:inline text-slate-300 ml-1.5">
-                — Akses CRM & Kelola Leads lebih cepat tanpa buka browser.
+                — Terpisah dari Estimator, langsung klik untuk instal tanpa setting browser.
               </span>
             </div>
           </div>
@@ -87,15 +134,16 @@ export function AdminPwaInstallPrompt() {
             <button
               type="button"
               onClick={handleInstallClick}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-slate-950 font-bold rounded-lg text-xs transition-all shadow-sm cursor-pointer"
+              disabled={isWaitingPrompt}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-black rounded-lg text-xs transition-all shadow-sm cursor-pointer disabled:opacity-50"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Install di HP</span>
+              <span>{isWaitingPrompt ? "Membuka..." : "Install di HP"}</span>
             </button>
             <button
               type="button"
               onClick={() => setIsDismissed(true)}
-              className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors"
+              className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors cursor-pointer"
               title="Tutup pemberitahuan"
             >
               <X className="w-3.5 h-3.5" />
@@ -104,13 +152,13 @@ export function AdminPwaInstallPrompt() {
         </div>
       </div>
 
-      {/* Modal Panduan Install di HP (iOS & Fallback) */}
+      {/* Modal Panduan Install di HP (Khusus iOS / Fallback) */}
       {showIOSModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-slate-100 text-slate-900 animate-slide-up">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">
                   <Smartphone className="w-5 h-5" />
                 </div>
                 <div>
@@ -169,7 +217,7 @@ export function AdminPwaInstallPrompt() {
                 <div>
                   <p className="font-semibold text-slate-900">Ketuk 'Tambah' (Add)</p>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Aplikasi Admin CRM akan terpasang di HP Anda seperti aplikasi native tanpa perlu App Store!
+                    Aplikasi Admin CRM akan terpasang di HP Anda terpisah dari Estimator!
                   </p>
                 </div>
               </div>
@@ -178,7 +226,7 @@ export function AdminPwaInstallPrompt() {
             <button
               type="button"
               onClick={() => setShowIOSModal(false)}
-              className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-bold text-sm transition-all"
+              className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-bold text-sm transition-all cursor-pointer"
             >
               Mengerti, Tutup Panduan
             </button>
