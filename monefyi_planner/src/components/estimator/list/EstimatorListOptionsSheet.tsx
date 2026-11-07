@@ -260,8 +260,8 @@ export default function EstimatorListOptionsSheet({
               >
                 <Send className="w-4 h-4 text-sky-600" />
                 <div className="flex-1 text-left flex items-center justify-between">
-                  <span>Pengaturan Telegram & Bot</span>
-                  <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 uppercase">Telegram</span>
+                  <span>Bot Telegram &amp; Tim</span>
+                  <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 uppercase">Cloud</span>
                 </div>
               </button>
               <button
@@ -269,19 +269,18 @@ export default function EstimatorListOptionsSheet({
                 onClick={() => { onOpenSettings(); onClose(); }}
                 className="w-full min-h-11 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 hover:bg-slate-50 active:scale-[0.98] transition-all duration-200"
               >
-                <Settings className="w-4 h-4 text-slate-500" />
-                <span>Pengaturan Estimator (Branding & PDF)</span>
+                <Settings className="w-4 h-4 text-emerald-600" />
+                <span>Penawaran &amp; PDF (Branding Kop Surat)</span>
               </button>
               {onOpenFullSettings && (
                 <button
                   type="button"
                   onClick={() => { onOpenFullSettings(); onClose(); }}
-                  className="w-full min-h-11 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-800 active:scale-[0.98] transition-all duration-200"
+                  className="w-full min-h-11 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 hover:bg-slate-50 active:scale-[0.98] transition-all duration-200"
                 >
-                  <Sliders className="w-4 h-4 text-indigo-600" />
+                  <Sliders className="w-4 h-4 text-slate-500" />
                   <div className="flex-1 text-left flex items-center justify-between">
-                    <span>Pengaturan Lengkap Workspace</span>
-                    <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800">Semua Tab</span>
+                    <span>Semua Pengaturan Workspace</span>
                   </div>
                 </button>
               )}

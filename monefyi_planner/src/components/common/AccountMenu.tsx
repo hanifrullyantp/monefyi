@@ -202,11 +202,49 @@ export default function AccountMenu({
                     <Send className="w-5 h-5 shrink-0 text-sky-600" />
                     <div className="min-w-0 flex-1">
                       <div className="font-semibold text-sm text-[#0F172A] flex items-center gap-1.5">
-                        <span>Pengaturan Telegram & Bot</span>
-                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 uppercase">Bot</span>
+                        <span>Bot Telegram &amp; Tim</span>
+                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 uppercase">Cloud</span>
                       </div>
                       <div className="text-[11px] text-[#5B6B7A] truncate">
-                        Bot Token, Chat ID & Notifikasi
+                        Bot Token, Chat ID &amp; notifikasi
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOpenSettings?.();
+                      onClose();
+                    }}
+                    className="min-h-[52px] w-full rounded-xl flex items-center gap-3 px-3 py-1.5 text-left text-[#334155] hover:bg-[#F4F7F5] transition-colors"
+                  >
+                    <Settings className="w-5 h-5 shrink-0 text-emerald-600" />
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-sm text-[#0F172A]">Penawaran &amp; PDF</div>
+                      <div className="text-[11px] text-[#5B6B7A] truncate">
+                        Kop surat, logo, WA &amp; pembayaran
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onOpenFullSettings) {
+                        onOpenFullSettings();
+                      } else {
+                        onOpenSettings?.();
+                      }
+                      onClose();
+                    }}
+                    className="min-h-[52px] w-full rounded-xl flex items-center gap-3 px-3 py-1.5 text-left text-[#334155] hover:bg-[#F4F7F5] transition-colors"
+                  >
+                    <Sliders className="w-5 h-5 shrink-0 text-slate-600" />
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-sm text-[#0F172A]">Semua Pengaturan</div>
+                      <div className="text-[11px] text-[#5B6B7A] truncate">
+                        Profil, AI provider, domain &amp; notifikasi
                       </div>
                     </div>
                   </button>
@@ -224,49 +262,11 @@ export default function AccountMenu({
                       <div className="min-w-0">
                         <div className="font-semibold text-sm text-[#0F172A]">Super Admin</div>
                         <div className="text-[11px] text-[#5B6B7A] truncate">
-                          Kendali platform & marketing
+                          Kendali platform &amp; API AI
                         </div>
                       </div>
                     </button>
                   )}
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onOpenSettings?.();
-                      onClose();
-                    }}
-                    className="min-h-[52px] w-full rounded-xl flex items-center gap-3 px-3 py-1.5 text-left text-[#334155] hover:bg-[#F4F7F5] transition-colors"
-                  >
-                    <Settings className="w-5 h-5 shrink-0 text-slate-600" />
-                    <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-sm text-[#0F172A]">Pengaturan Estimator</div>
-                      <div className="text-[11px] text-[#5B6B7A] truncate">
-                        PDF, branding, WA & pembayaran
-                      </div>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (onOpenFullSettings) {
-                        onOpenFullSettings();
-                      } else {
-                        onOpenSettings?.();
-                      }
-                      onClose();
-                    }}
-                    className="min-h-[52px] w-full rounded-xl flex items-center gap-3 px-3 py-1.5 text-left text-[#334155] hover:bg-[#F4F7F5] transition-colors"
-                  >
-                    <Sliders className="w-5 h-5 shrink-0 text-indigo-600" />
-                    <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-sm text-[#0F172A]">Pengaturan Lengkap</div>
-                      <div className="text-[11px] text-[#5B6B7A] truncate">
-                        Organisasi, AI provider & domain
-                      </div>
-                    </div>
-                  </button>
                 </div>
               </div>
             </div>

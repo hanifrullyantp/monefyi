@@ -241,10 +241,6 @@ export default function Layout({ children }: LayoutProps) {
       const canLeave = await navigationGuard.promptLeave();
       if (!canLeave) return;
     }
-    if (estimatorOnly) {
-      openUpgrade('pro_feature', 'Pengaturan');
-      return;
-    }
     setActiveTab('settings');
     navigate(`/app?tab=settings&st=${st}`);
     setSidebarOpen(false);
@@ -279,13 +275,13 @@ export default function Layout({ children }: LayoutProps) {
     },
     ...(isEstimatorShell ? [{
       id: 'estimator-settings',
-      label: 'Pengaturan Estimator',
+      label: 'Pengaturan Penawaran & PDF',
       icon: <Settings className="w-4 h-4 shrink-0" />,
-      onClick: () => navigate('/app/estimator/settings'),
+      onClick: () => goSettingsTab('estimator'),
     }] : []),
     {
       id: 'settings',
-      label: 'Pengaturan',
+      label: isEstimatorShell ? 'Semua Pengaturan' : 'Pengaturan',
       icon: <Settings className="w-4 h-4 shrink-0" />,
       onClick: () => goSettingsTab('organisasi'),
     },
@@ -481,18 +477,18 @@ export default function Layout({ children }: LayoutProps) {
         }}
         onOpenSettings={() => {
           if (isEstimatorShell) {
-            navigate('/app/estimator/settings');
+            void goSettingsTab('estimator');
           } else {
-            goSettingsTab('organisasi');
+            void goSettingsTab('organisasi');
           }
           setSidebarOpen(false);
         }}
         onOpenTelegramSettings={() => {
-          navigate('/app/estimator/settings?tab=telegram');
+          void goSettingsTab('koordinasi');
           setSidebarOpen(false);
         }}
         onOpenFullSettings={() => {
-          navigate('/app?tab=settings');
+          void goSettingsTab('organisasi');
           setSidebarOpen(false);
         }}
         onLogout={() => {

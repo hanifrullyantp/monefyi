@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2, ExternalLink } from 'lucide-react';
 import {
   AI_PROVIDERS,
@@ -10,7 +10,7 @@ import {
   type AIConfig,
   type AIProviderId,
 } from '../../services/aiProviderService';
-import { persistAIConfigToAccount } from '../../services/aiConfigSync';
+import { persistAIConfigToAccount, hydrateAIConfigFromAccount } from '../../services/aiConfigSync';
 import { useAppStore } from '../../store/appStore';
 import { showToast } from '../../store/uiStore';
 
@@ -19,6 +19,14 @@ export default function AIProviderPanel() {
   const [config, setConfig] = useState<AIConfig>(() => loadAIConfig());
   const [testing, setTesting] = useState(false);
   const [testMsg, setTestMsg] = useState<{ ok: boolean; message: string } | null>(null);
+
+  useEffect(() => {
+    if (userId) {
+      hydrateAIConfigFromAccount(userId).then(remote => {
+        if (remote) setConfig(remote);
+      });
+    }
+  }, [userId]);
 
   const provider = config.activeProvider;
   const meta = getProviderMeta(provider);

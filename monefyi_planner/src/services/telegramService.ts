@@ -63,7 +63,7 @@ export function loadTelegramConfig(): TelegramConfig {
   };
 }
 
-export function saveTelegramConfig(config: TelegramConfig): void {
+export async function saveTelegramConfig(config: TelegramConfig, orgId?: string): Promise<void> {
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(STORAGE_TELEGRAM_CFG, JSON.stringify(config));
@@ -71,6 +71,56 @@ export function saveTelegramConfig(config: TelegramConfig): void {
   } catch {
     /* ignore */
   }
+
+  if (!orgId) return;
+
+  try {
+    const { data: org } = await supabase
+      .from('planner_organizations')
+      .select('settings')
+      .eq('id', orgId)
+      .maybeSingle();
+    const existing = (org?.settings as Record<string, unknown>) || {};
+    await supabase
+      .from('planner_organizations')
+      .update({
+        settings: {
+          ...existing,
+          telegram_config: config,
+        },
+      })
+      .eq('id', orgId);
+  } catch (err) {
+    console.warn('Failed to sync telegram config to Supabase:', err);
+  }
+}
+
+export async function fetchTelegramConfigFromSupabase(orgId: string): Promise<TelegramConfig | null> {
+  if (!orgId) return null;
+  try {
+    const { data: org, error } = await supabase
+      .from('planner_organizations')
+      .select('settings')
+      .eq('id', orgId)
+      .maybeSingle();
+
+    if (error || !org?.settings) return null;
+    const settings = org.settings as Record<string, unknown>;
+    if (settings.telegram_config) {
+      const config = settings.telegram_config as TelegramConfig;
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(STORAGE_TELEGRAM_CFG, JSON.stringify(config));
+        }
+      } catch {
+        /* ignore */
+      }
+      return config;
+    }
+  } catch (err) {
+    console.warn('Failed to fetch telegram config from Supabase:', err);
+  }
+  return null;
 }
 
 export function loadFieldMemberContacts(): Record<string, FieldMemberContact> {
@@ -83,7 +133,10 @@ export function loadFieldMemberContacts(): Record<string, FieldMemberContact> {
   return {};
 }
 
-export function saveFieldMemberContacts(contacts: Record<string, FieldMemberContact>): void {
+export async function saveFieldMemberContacts(
+  contacts: Record<string, FieldMemberContact>,
+  orgId?: string,
+): Promise<void> {
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(STORAGE_FIELD_CONTACTS, JSON.stringify(contacts));
@@ -91,6 +144,58 @@ export function saveFieldMemberContacts(contacts: Record<string, FieldMemberCont
   } catch {
     /* ignore */
   }
+
+  if (!orgId) return;
+
+  try {
+    const { data: org } = await supabase
+      .from('planner_organizations')
+      .select('settings')
+      .eq('id', orgId)
+      .maybeSingle();
+    const existing = (org?.settings as Record<string, unknown>) || {};
+    await supabase
+      .from('planner_organizations')
+      .update({
+        settings: {
+          ...existing,
+          field_member_contacts: contacts,
+        },
+      })
+      .eq('id', orgId);
+  } catch (err) {
+    console.warn('Failed to sync field member contacts to Supabase:', err);
+  }
+}
+
+export async function fetchFieldMemberContactsFromSupabase(
+  orgId: string,
+): Promise<Record<string, FieldMemberContact> | null> {
+  if (!orgId) return null;
+  try {
+    const { data: org, error } = await supabase
+      .from('planner_organizations')
+      .select('settings')
+      .eq('id', orgId)
+      .maybeSingle();
+
+    if (error || !org?.settings) return null;
+    const settings = org.settings as Record<string, unknown>;
+    if (settings.field_member_contacts) {
+      const contacts = settings.field_member_contacts as Record<string, FieldMemberContact>;
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(STORAGE_FIELD_CONTACTS, JSON.stringify(contacts));
+        }
+      } catch {
+        /* ignore */
+      }
+      return contacts;
+    }
+  } catch (err) {
+    console.warn('Failed to fetch field member contacts from Supabase:', err);
+  }
+  return null;
 }
 
 export function loadProactiveTriggers(): ProactiveTriggerRecord[] {
@@ -103,7 +208,40 @@ export function loadProactiveTriggers(): ProactiveTriggerRecord[] {
   return [];
 }
 
-export function addProactiveTriggerLog(log: Omit<ProactiveTriggerRecord, 'id' | 'timestamp'>): ProactiveTriggerRecord {
+export async function fetchProactiveTriggersFromSupabase(
+  orgId: string,
+): Promise<ProactiveTriggerRecord[] | null> {
+  if (!orgId) return null;
+  try {
+    const { data: org, error } = await supabase
+      .from('planner_organizations')
+      .select('settings')
+      .eq('id', orgId)
+      .maybeSingle();
+
+    if (error || !org?.settings) return null;
+    const settings = org.settings as Record<string, unknown>;
+    if (settings.proactive_triggers) {
+      const logs = settings.proactive_triggers as ProactiveTriggerRecord[];
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(STORAGE_PROACTIVE_LOGS, JSON.stringify(logs));
+        }
+      } catch {
+        /* ignore */
+      }
+      return logs;
+    }
+  } catch (err) {
+    console.warn('Failed to fetch proactive triggers from Supabase:', err);
+  }
+  return null;
+}
+
+export function addProactiveTriggerLog(
+  log: Omit<ProactiveTriggerRecord, 'id' | 'timestamp'>,
+  orgId?: string,
+): ProactiveTriggerRecord {
   const item: ProactiveTriggerRecord = {
     ...log,
     id: `pt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -117,6 +255,27 @@ export function addProactiveTriggerLog(log: Omit<ProactiveTriggerRecord, 'id' | 
   } catch {
     /* ignore */
   }
+
+  if (orgId) {
+    void supabase
+      .from('planner_organizations')
+      .select('settings')
+      .eq('id', orgId)
+      .maybeSingle()
+      .then(({ data: org }) => {
+        const existing = (org?.settings as Record<string, unknown>) || {};
+        return supabase
+          .from('planner_organizations')
+          .update({
+            settings: {
+              ...existing,
+              proactive_triggers: list,
+            },
+          })
+          .eq('id', orgId);
+      });
+  }
+
   return item;
 }
 

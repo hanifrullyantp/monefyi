@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { User, Globe, LogOut, Edit3, Check, Building2, Bell, Shield,
   Info, RefreshCw, Loader2, ChevronRight, Lock, Users, Wifi, WifiOff, Sparkles, Wallet,
-  CreditCard, FlaskConical, Bot, Bug,
+  CreditCard, FlaskConical, Bot, Bug, FileSpreadsheet,
 } from 'lucide-react';
 import { setActiveOrgTimeZone } from '../lib/adapters';
 import { useAppStore } from '../store/appStore';
@@ -13,7 +13,7 @@ import { loadOrgDetails, updateOrgFields, mergeOrgSettingsJson } from '../servic
 import { signOutGlobal, updatePassword } from '../services/authService';
 import { validatePassword } from '../lib/validators';
 import {
-  loadNotificationPrefs, saveNotificationPrefs, type NotificationPrefs,
+  loadNotificationPrefs, saveNotificationPrefs, fetchNotificationPrefsFromSupabase, type NotificationPrefs,
 } from '../services/settingsPrefsService';
 import UserAccountPanel from '../components/account/UserAccountPanel';
 import AIProviderPanel from '../components/account/AIProviderPanel';
@@ -29,14 +29,15 @@ import UpgradePlansPanel from '../components/settings/UpgradePlansPanel';
 import CustomDomainPanel from '../components/settings/CustomDomainPanel';
 import TelegramLinkPanel from '../components/settings/TelegramLinkPanel';
 import FieldCoordinationPanel from '../components/settings/FieldCoordinationPanel';
+import EstimatorSettingsPanel from '../components/estimator/settings/EstimatorSettingsPanel';
 import ErrorTraceDiagnosticsPanel from '../components/settings/ErrorTraceDiagnosticsPanel';
 import { formatPlanPriceIdr, planForOrg, type PricingPlan } from '../lib/pricingPlans';
 import { countProjectsCreatedThisMonth, loadPricingPlans } from '../services/pricingPlanService';
 
-type SettingsTab = 'profil' | 'akun' | 'koordinasi' | 'organisasi' | 'pricelist' | 'domain' | 'notifikasi' | 'keamanan' | 'diagnostik' | 'tentang' | 'developer';
+type SettingsTab = 'profil' | 'estimator' | 'akun' | 'koordinasi' | 'organisasi' | 'pricelist' | 'domain' | 'notifikasi' | 'keamanan' | 'diagnostik' | 'tentang' | 'developer';
 
 const VALID_SETTINGS_TABS: SettingsTab[] = [
-  'profil', 'akun', 'koordinasi', 'organisasi', 'pricelist', 'domain', 'notifikasi', 'keamanan', 'diagnostik', 'tentang', 'developer',
+  'profil', 'estimator', 'akun', 'koordinasi', 'organisasi', 'pricelist', 'domain', 'notifikasi', 'keamanan', 'diagnostik', 'tentang', 'developer',
 ];
 
 const TIMEZONES = [
@@ -128,9 +129,11 @@ export default function Settings() {
   };
 
   useEffect(() => {
-    const st = searchParams.get('st');
-    if (st && VALID_SETTINGS_TABS.includes(st as SettingsTab)) {
-      setTab(st as SettingsTab);
+    const rawSt = searchParams.get('st') || searchParams.get('tab');
+    if (rawSt === 'telegram' || rawSt === 'bot') {
+      setTab('koordinasi');
+    } else if (rawSt && VALID_SETTINGS_TABS.includes(rawSt as SettingsTab)) {
+      setTab(rawSt as SettingsTab);
     }
   }, [searchParams]);
 
@@ -138,6 +141,9 @@ export default function Settings() {
     if (!user?.id) return;
     setLoading(true);
     try {
+      fetchNotificationPrefsFromSupabase(user.id).then(remotePrefs => {
+        if (remotePrefs) setNotifPrefs(remotePrefs);
+      });
       const profile = await loadProfileWithSettings(user.id);
       const settings = (profile?.settings || {}) as Record<string, string>;
       setName(profile?.name || user.name || '');
@@ -286,10 +292,10 @@ export default function Settings() {
     }
   };
 
-  const handleSaveNotif = () => {
-    saveNotificationPrefs(notifPrefs);
+  const handleSaveNotif = async () => {
+    await saveNotificationPrefs(notifPrefs, user?.id);
     setNotifSaved(true);
-    showToast('Preferensi notifikasi disimpan', 'success');
+    showToast('Preferensi notifikasi disimpan ke Supabase Cloud', 'success');
   };
 
   const handleNotifChange = (key: keyof NotificationPrefs, value: boolean) => {
@@ -339,8 +345,9 @@ export default function Settings() {
 
   const tabs: { id: SettingsTab; label: string; icon: typeof User; show: boolean }[] = [
     { id: 'profil', label: 'Profil', icon: User, show: true },
+    { id: 'estimator', label: 'Estimator & PDF', icon: FileSpreadsheet, show: true },
     { id: 'akun', label: 'Akun & AI', icon: Sparkles, show: true },
-    { id: 'koordinasi', label: 'Koordinasi AI & Tim', icon: Bot, show: true },
+    { id: 'koordinasi', label: 'Koordinasi AI & Bot Telegram', icon: Bot, show: true },
     { id: 'organisasi', label: 'Organisasi', icon: Building2, show: canEditOrg },
     { id: 'pricelist', label: 'Pricelist', icon: CreditCard, show: canEditOrg },
     { id: 'domain', label: 'Custom Domain', icon: Globe, show: canEditOrg },
@@ -530,6 +537,12 @@ export default function Settings() {
           <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
             <AIProviderPanel />
           </div>
+        </div>
+      )}
+
+      {tab === 'estimator' && (
+        <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
+          <EstimatorSettingsPanel />
         </div>
       )}
 

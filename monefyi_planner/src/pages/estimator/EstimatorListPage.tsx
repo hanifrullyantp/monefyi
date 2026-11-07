@@ -960,9 +960,9 @@ export default function EstimatorListPage() {
         groupOptions={GROUP_OPTIONS}
         onRefresh={() => void load()}
         onOpenPricelist={() => navigate('/app/estimator/pricelist')}
-        onOpenSettings={() => navigate('/app/estimator/settings')}
-        onOpenPreviewMode={() => navigate('/app/estimator/settings?tab=admin-mode')}
-        onOpenTelegramSettings={() => navigate('/app/estimator/settings?tab=telegram')}
+        onOpenSettings={() => navigate('/app?tab=settings&st=estimator')}
+        onOpenPreviewMode={() => navigate('/app?tab=settings')}
+        onOpenTelegramSettings={() => navigate('/app?tab=settings&st=koordinasi')}
         onOpenFullSettings={() => navigate('/app?tab=settings')}
       />
 

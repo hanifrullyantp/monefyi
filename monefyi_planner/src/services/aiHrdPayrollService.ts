@@ -357,18 +357,38 @@ export async function executeMayarDisbursementBatch(params: {
     items,
   };
 
-  // 3. Simpan riwayat disbursement ke Local Storage
-  saveDisbursementRecord(batchRecord);
+  // 3. Simpan riwayat disbursement ke Local Storage & Supabase Cloud
+  saveDisbursementRecord(batchRecord, orgId);
 
   return batchRecord;
 }
 
-export function saveDisbursementRecord(record: DisbursementBatchRecord) {
+export function saveDisbursementRecord(record: DisbursementBatchRecord, orgId?: string) {
   try {
     if (typeof window === 'undefined' || !window.localStorage) return;
     const list = loadDisbursementRecords();
     const updated = [record, ...list].slice(0, 50);
     window.localStorage.setItem(STORAGE_KEY_DISBURSEMENTS, JSON.stringify(updated));
+
+    if (orgId) {
+      void supabase
+        .from('planner_organizations')
+        .select('settings')
+        .eq('id', orgId)
+        .maybeSingle()
+        .then(({ data: org }) => {
+          const existing = (org?.settings as Record<string, unknown>) || {};
+          return supabase
+            .from('planner_organizations')
+            .update({
+              settings: {
+                ...existing,
+                payroll_disbursements: updated,
+              },
+            })
+            .eq('id', orgId);
+        });
+    }
   } catch (err) {
     console.warn('Could not save disbursement record:', err);
   }
@@ -383,6 +403,34 @@ export function loadDisbursementRecords(): DisbursementBatchRecord[] {
   } catch {
     return [];
   }
+}
+
+export async function fetchDisbursementRecordsFromSupabase(orgId: string): Promise<DisbursementBatchRecord[]> {
+  if (!orgId) return [];
+  try {
+    const { data: org, error } = await supabase
+      .from('planner_organizations')
+      .select('settings')
+      .eq('id', orgId)
+      .maybeSingle();
+
+    if (error || !org?.settings) return [];
+    const settings = org.settings as Record<string, unknown>;
+    if (settings.payroll_disbursements) {
+      const records = settings.payroll_disbursements as DisbursementBatchRecord[];
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem(STORAGE_KEY_DISBURSEMENTS, JSON.stringify(records));
+        }
+      } catch {
+        /* ignore */
+      }
+      return records;
+    }
+  } catch (err) {
+    console.warn('Failed to fetch disbursement records from Supabase:', err);
+  }
+  return [];
 }
 
 /**

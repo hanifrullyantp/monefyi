@@ -13,6 +13,7 @@ import {
   Bell,
   RefreshCw,
   Phone,
+  Save,
 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { listMembers } from '../../services/memberService';
@@ -20,10 +21,14 @@ import type { OrgMember } from '../../types/onboarding';
 import {
   loadTelegramConfig,
   saveTelegramConfig,
+  fetchTelegramConfigFromSupabase,
   testTelegramBot,
+  sendTelegramMessage,
   loadFieldMemberContacts,
   saveFieldMemberContacts,
+  fetchFieldMemberContactsFromSupabase,
   loadProactiveTriggers,
+  fetchProactiveTriggersFromSupabase,
   dispatchProactiveAIOutreach,
   type TelegramConfig,
   type FieldMemberContact,
@@ -49,11 +54,28 @@ export default function FieldCoordinationPanel() {
   const [triggerLogs, setTriggerLogs] = useState<ProactiveTriggerRecord[]>(() => loadProactiveTriggers());
   const [dispatchingId, setDispatchingId] = useState<string | null>(null);
 
+  const [savingTele, setSavingTele] = useState(false);
+  const [testChatMsg, setTestChatMsg] = useState('Halo dari Monefyi! Bot koordinasi AI berhasil terhubung.');
+  const [sendingTestMsg, setSendingTestMsg] = useState(false);
+
   const orgId = tenant?.id;
 
   useEffect(() => {
     if (!orgId) return;
     let cancelled = false;
+
+    // 1. Fetch remote telegram config & contacts from Supabase
+    fetchTelegramConfigFromSupabase(orgId).then(remoteCfg => {
+      if (!cancelled && remoteCfg) setTeleConfig(remoteCfg);
+    });
+    fetchFieldMemberContactsFromSupabase(orgId).then(remoteContacts => {
+      if (!cancelled && remoteContacts) setContacts(remoteContacts);
+    });
+    fetchProactiveTriggersFromSupabase(orgId).then(remoteLogs => {
+      if (!cancelled && remoteLogs) setTriggerLogs(remoteLogs);
+    });
+
+    // 2. Load members from DB
     setLoadingMembers(true);
     listMembers(orgId)
       .then(res => {
@@ -83,7 +105,7 @@ export default function FieldCoordinationPanel() {
                 };
               }
             }
-            saveFieldMemberContacts(next);
+            void saveFieldMemberContacts(next, orgId);
             return next;
           });
         }
@@ -100,9 +122,16 @@ export default function FieldCoordinationPanel() {
     };
   }, [orgId]);
 
-  const handleSaveTeleConfig = () => {
-    saveTelegramConfig(teleConfig);
-    showToast('Konfigurasi Telegram disimpan', 'success');
+  const handleSaveTeleConfig = async () => {
+    setSavingTele(true);
+    try {
+      await saveTelegramConfig(teleConfig, orgId);
+      showToast('Konfigurasi Telegram tersimpan ke Supabase Cloud & sinkron antar-perangkat!', 'success');
+    } catch {
+      showToast('Gagal menyimpan konfigurasi Telegram ke server', 'error');
+    } finally {
+      setSavingTele(false);
+    }
   };
 
   const handleTestBot = async () => {
@@ -111,24 +140,41 @@ export default function FieldCoordinationPanel() {
     const res = await testTelegramBot(teleConfig.botToken);
     setTestingBot(false);
     if (res.ok) {
-      setTeleConfig(prev => ({
-        ...prev,
-        botUsername: res.username || prev.botUsername,
-      }));
-      saveTelegramConfig({
+      const updatedConfig = {
         ...teleConfig,
         botUsername: res.username || teleConfig.botUsername,
-      });
+      };
+      setTeleConfig(updatedConfig);
+      await saveTelegramConfig(updatedConfig, orgId);
       setBotTestResult({
         ok: true,
         message: `Terhubung ke @${res.username} (${res.name})`,
       });
-      showToast('Bot Telegram terverifikasi!', 'success');
+      showToast('Bot Telegram terverifikasi & disimpan ke Supabase!', 'success');
     } else {
       setBotTestResult({
         ok: false,
         message: res.error || 'Gagal terhubung ke bot',
       });
+    }
+  };
+
+  const handleSendTestMessage = async () => {
+    const targetChatId = teleConfig.ownerChatId || teleConfig.defaultChannelChatId;
+    if (!teleConfig.botToken || !targetChatId) {
+      showToast('Token bot dan Chat ID wajib diisi untuk tes kirim pesan', 'error');
+      return;
+    }
+    setSendingTestMsg(true);
+    try {
+      const res = await sendTelegramMessage(teleConfig.botToken, targetChatId, testChatMsg);
+      if (res.ok) {
+        showToast('Pesan berhasil terkirim ke Telegram!', 'success');
+      } else {
+        showToast(res.error || 'Gagal mengirim pesan ke Telegram', 'error');
+      }
+    } finally {
+      setSendingTestMsg(false);
     }
   };
 
@@ -145,7 +191,7 @@ export default function FieldCoordinationPanel() {
         },
       };
       const next = { ...prev, [memberId]: updated };
-      saveFieldMemberContacts(next);
+      void saveFieldMemberContacts(next, orgId);
       return next;
     });
   };
@@ -548,9 +594,11 @@ export default function FieldCoordinationPanel() {
               <div className="flex flex-wrap items-center gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={handleSaveTeleConfig}
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm"
+                  disabled={savingTele}
+                  onClick={() => void handleSaveTeleConfig()}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm inline-flex items-center gap-1.5 disabled:opacity-50"
                 >
+                  {savingTele ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                   Simpan Konfigurasi Telegram
                 </button>
                 <button
@@ -562,6 +610,28 @@ export default function FieldCoordinationPanel() {
                   {testingBot ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
                   Tes Koneksi Bot
                 </button>
+              </div>
+
+              {/* Input Tes Kirim Pesan */}
+              <div className="pt-3 border-t border-slate-100 space-y-2">
+                <label className="text-xs font-semibold text-slate-700 block">Kirim Pesan Tes ke Telegram Anda</label>
+                <div className="flex gap-2">
+                  <input
+                    value={testChatMsg}
+                    onChange={e => setTestChatMsg(e.target.value)}
+                    placeholder="Tulis pesan pengujian..."
+                    className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                  <button
+                    type="button"
+                    disabled={sendingTestMsg || !teleConfig.botToken.trim()}
+                    onClick={() => void handleSendTestMessage()}
+                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shrink-0 inline-flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {sendingTestMsg ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                    Kirim Tes
+                  </button>
+                </div>
               </div>
             </div>
           </div>

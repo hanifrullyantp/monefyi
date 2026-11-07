@@ -20,18 +20,26 @@ import { isAdminFullAccess, isEstimatorOnlyPlan } from '../lib/entitlement';
 import PlannerModuleGuard from './entitlement/PlannerModuleGuard';
 import AgentTrialPage from '../pages/AgentTrialPage';
 import { hydrateAIConfigFromAccount } from '../services/aiConfigSync';
+import { fetchTelegramConfigFromSupabase, fetchFieldMemberContactsFromSupabase } from '../services/telegramService';
 
 function AppContent() {
   const { id: projectIdParam } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, activeTab, setOnline, setSyncStatus, setSelectedProjectId, setActiveTab, platformRole, uiViewMode, financeVersion, entitlementPreviewMode } = useAppStore();
+  const { user, tenant, activeTab, setOnline, setSyncStatus, setSelectedProjectId, setActiveTab, platformRole, uiViewMode, financeVersion, entitlementPreviewMode } = useAppStore();
   const entitlement = useEntitlement();
   const adminFullAccess = isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode);
 
   useEffect(() => {
     if (user?.id) void hydrateAIConfigFromAccount(user.id);
   }, [user?.id]);
+
+  useEffect(() => {
+    if (tenant?.id) {
+      void fetchTelegramConfigFromSupabase(tenant.id);
+      void fetchFieldMemberContactsFromSupabase(tenant.id);
+    }
+  }, [tenant?.id]);
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -76,10 +84,11 @@ function AppContent() {
   useEffect(() => {
     if (isWorker || entitlement.isLoading || adminFullAccess) return;
     if (!isEstimatorOnlyPlan(entitlement)) return;
-    const blockedTabs = new Set(['home', 'database', 'finance', 'hr', 'team', 'settings']);
+    const blockedTabs = new Set(['home', 'database', 'finance', 'hr', 'team']);
     const onAllowedModule =
       activeTab === 'projects'
       || activeTab === 'estimator'
+      || activeTab === 'settings'
       || Boolean(projectIdParam);
     if (!onAllowedModule || blockedTabs.has(activeTab)) {
       setActiveTab('projects');
@@ -127,11 +136,7 @@ function AppContent() {
           </PlannerModuleGuard>
         );
       case 'settings':
-        return (
-          <PlannerModuleGuard module="home">
-            <Settings />
-          </PlannerModuleGuard>
-        );
+        return <Settings />;
       case 'estimator':
         return null;
       default:
