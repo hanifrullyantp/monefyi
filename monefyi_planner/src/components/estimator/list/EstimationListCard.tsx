@@ -1,5 +1,5 @@
-import { type KeyboardEvent, type MouseEvent } from 'react';
-import { ChevronDown, Copy, ExternalLink, Receipt, Rocket, Trash2 } from 'lucide-react';
+import { type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
+import { ChevronDown, Copy, ExternalLink, GripVertical, Receipt, Rocket, Trash2 } from 'lucide-react';
 import {
   dashboardPillForRow,
   estimationMarginPct,
@@ -36,6 +36,8 @@ type Props = {
   selectionMode?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
+  dragHandleProps?: Record<string, unknown> | null;
+  dragHandle?: ReactNode;
 };
 
 const PILL_CLASS: Record<Exclude<DashboardPill, null>, string> = {
@@ -99,6 +101,8 @@ export default function EstimationListCard({
   selectionMode = false,
   selected = false,
   onToggleSelect,
+  dragHandleProps,
+  dragHandle,
 }: Props) {
   const status = normalizeEstimationStatus(est.status);
   const isConverted = status === 'converted';
@@ -124,6 +128,15 @@ export default function EstimationListCard({
       }`}
     >
       <div className="flex items-stretch">
+        {dragHandleProps && !selectionMode && (
+          <div
+            {...dragHandleProps}
+            className="shrink-0 flex items-center justify-center pl-2 pr-1 text-slate-300 hover:text-slate-600 cursor-grab active:cursor-grabbing transition-colors"
+            title="Tahan dan geser untuk ubah urutan"
+          >
+            <GripVertical className="w-4 h-4" />
+          </div>
+        )}
         {selectionMode && (
           <label
             className="shrink-0 flex items-center justify-center min-w-12 px-1"

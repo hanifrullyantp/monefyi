@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { Loader2 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
@@ -60,6 +61,7 @@ import {
   estimationToFormDraft,
   loadEstimation,
   loadEstimations,
+  updateEstimationOrder,
   updateEstimationStatus,
 } from '../../services/estimatorService';
 import { assertEstimationConvertible } from '../../services/estimationConvertService';
@@ -97,9 +99,10 @@ const STATUS_FILTERS: Array<{ value: '' | EstimationStatus; label: string }> = [
   { value: 'converted', label: 'Jadi Proyek' },
 ];
 
-type SortKey = 'newest' | 'oldest' | 'value_desc' | 'value_asc' | 'profit_desc' | 'status';
+type SortKey = 'manual' | 'newest' | 'oldest' | 'value_desc' | 'value_asc' | 'profit_desc' | 'status';
 
 const SORT_OPTIONS: Array<{ value: SortKey; label: string }> = [
+  { value: 'manual', label: 'Urutan Custom (Drag & Drop)' },
   { value: 'newest', label: 'Terbaru' },
   { value: 'oldest', label: 'Terlama' },
   { value: 'status', label: 'Status pipeline' },
@@ -126,6 +129,14 @@ function matchesSearch(est: Estimation, query: string): boolean {
 }
 
 function sortRows(rows: Estimation[], key: SortKey): Estimation[] {
+  if (key === 'manual') {
+    return [...rows].sort((a, b) => {
+      const orderA = Number(a.sort_order ?? 0);
+      const orderB = Number(b.sort_order ?? 0);
+      if (orderA !== orderB) return orderA - orderB;
+      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+    });
+  }
   if (key === 'newest') return sortEstimationsForDashboard(rows);
   const copy = [...rows];
   switch (key) {
@@ -399,10 +410,10 @@ export default function EstimatorListPage() {
   };
 
   const handleDelete = async (id: string, title: string) => {
-    if (!window.confirm(`Hapus estimasi "${title}"?`)) return;
+    if (!window.confirm(`Hapus estimasi "${title}"?\nEstimasi akan dipindahkan ke arsip selama 30 hari sebelum dihapus permanen.`)) return;
     try {
-      await deleteEstimation(id);
-      showToast('Estimasi dihapus', 'success');
+      await deleteEstimation(id, user?.id);
+      showToast('Estimasi dipindahkan ke arsip (dihapus setelah 30 hari)', 'success');
       void load();
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal menghapus', 'error');
@@ -558,6 +569,32 @@ export default function EstimatorListPage() {
     });
   };
 
+  const handleBulkDelete = () => {
+    const targets = bulkSelectedEstimations();
+    if (targets.length === 0) {
+      showToast('Tidak ada estimasi yang dipilih', 'info');
+      return;
+    }
+    if (!window.confirm(`Hapus ${targets.length} estimasi terpilih?\nEstimasi akan dipindahkan ke arsip selama 30 hari sebelum dihapus permanen.`)) return;
+    setBulkBusy(true);
+    (async () => {
+      try {
+        for (const est of targets) {
+          await deleteEstimation(est.id, user?.id);
+        }
+        showToast(`${targets.length} estimasi dipindahkan ke arsip (30 hari)`, 'success');
+        setSelectedIds(new Set());
+        setSelectionMode(false);
+        void load();
+      } catch (e) {
+        showToast(e instanceof Error ? e.message : 'Gagal menghapus estimasi', 'error');
+        void load();
+      } finally {
+        setBulkBusy(false);
+      }
+    })();
+  };
+
   const bulkSelectedEstimations = useCallback(() => {
     return rows.filter(r => selectedIds.has(r.id) && normalizeEstimationStatus(r.status) !== 'converted');
   }, [rows, selectedIds]);
@@ -643,7 +680,7 @@ export default function EstimatorListPage() {
     void load();
   };
 
-  const renderCard = (est: Estimation) => {
+  const renderCard = (est: Estimation, dragHandleProps?: Record<string, unknown> | null) => {
     const linkedProjId = est.converted_project_id || est.project_id || null;
     const linkedProj = linkedProjId ? projects.find(p => p.id === linkedProjId) : null;
 
@@ -652,6 +689,7 @@ export default function EstimatorListPage() {
         key={est.id}
         estimation={est}
         newestId={newestId}
+        dragHandleProps={dragHandleProps}
         expanded={!selectionMode && expandedId === est.id}
         onToggleExpand={() => setExpandedId(prev => (prev === est.id ? null : est.id))}
         onOpen={() => navigate(`/app/estimator/${est.id}`)}
@@ -675,6 +713,36 @@ export default function EstimatorListPage() {
         statusDisabled={normalizeEstimationStatus(est.status) === 'converted'}
       />
     );
+  };
+
+  const handleDragEnd = async (result: DropResult) => {
+    if (!result.destination) return;
+    const sourceIdx = result.source.index;
+    const destIdx = result.destination.index;
+    if (sourceIdx === destIdx) return;
+
+    const reordered = Array.from(sortedRows);
+    const [moved] = reordered.splice(sourceIdx, 1);
+    reordered.splice(destIdx, 0, moved);
+
+    if (sortKey !== 'manual') {
+      setSortKey('manual');
+    }
+
+    const updatedRows = rows.map(r => {
+      const foundIdx = reordered.findIndex(item => item.id === r.id);
+      if (foundIdx !== -1) {
+        return { ...r, sort_order: foundIdx };
+      }
+      return r;
+    });
+    setRows(updatedRows);
+
+    const payload = reordered.map((item, idx) => ({
+      id: item.id,
+      sort_order: idx,
+    }));
+    await updateEstimationOrder(payload);
   };
 
   const quotaUsed = lifetimeCount ?? listStats.total;

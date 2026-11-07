@@ -112,6 +112,10 @@ export interface Estimation {
   rejected_at: string | null;
   converted_at: string | null;
   converted_project_id: string | null;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
+  archive_purge_at?: string | null;
+  sort_order?: number;
   billing_config?: EstimationBillingConfig | Record<string, unknown> | null;
   created_by: string | null;
   created_at: string;

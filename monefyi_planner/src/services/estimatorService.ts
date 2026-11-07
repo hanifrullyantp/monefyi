@@ -80,30 +80,56 @@ export async function generateEstimationCode(orgId: string): Promise<string> {
 
 export async function loadEstimations(
   orgId: string,
-  opts?: { status?: EstimationStatus; search?: string },
+  opts?: { status?: EstimationStatus; search?: string; includeArchived?: boolean },
 ): Promise<Estimation[]> {
   let q = supabase
     .from('planner_estimations')
     .select('*')
-    .eq('org_id', orgId)
-    .order('updated_at', { ascending: false });
+    .eq('org_id', orgId);
+
+  // Default: sembunyikan yang sudah di-soft delete (deleted_at IS NULL)
+  if (!opts?.includeArchived) {
+    q = q.is('deleted_at', null);
+  }
+
+  q = q.order('updated_at', { ascending: false });
 
   if (opts?.status) q = q.eq('status', opts.status);
 
   const { data, error } = await q;
-  if (error) throw new Error(error.message);
+  if (error) {
+    // Graceful fallback jika kolom deleted_at belum ada di schema database
+    if (error.message.includes('deleted_at') || error.code === '42703') {
+      let retryQ = supabase
+        .from('planner_estimations')
+        .select('*')
+        .eq('org_id', orgId)
+        .order('updated_at', { ascending: false });
+      if (opts?.status) retryQ = retryQ.eq('status', opts.status);
+      const { data: retryData, error: retryErr } = await retryQ;
+      if (retryErr) throw new Error(retryErr.message);
+      return processEstimationRows(retryData, opts?.search);
+    }
+    throw new Error(error.message);
+  }
 
+  return processEstimationRows(data, opts?.search);
+}
+
+function processEstimationRows(data: any[] | null, search?: string): Estimation[] {
   let rows = (data || []).map(row => ({
     ...(row as Estimation),
     status: normalizeEstimationStatus((row as Estimation).status),
+    sort_order: Number((row as any).sort_order ?? 0),
   }));
-  const search = opts?.search?.toLowerCase().trim();
-  if (search) {
+
+  const cleanSearch = search?.toLowerCase().trim();
+  if (cleanSearch) {
     rows = rows.filter(
       e =>
-        e.code.toLowerCase().includes(search) ||
-        e.title.toLowerCase().includes(search) ||
-        (e.customer_name || '').toLowerCase().includes(search),
+        e.code.toLowerCase().includes(cleanSearch) ||
+        e.title.toLowerCase().includes(cleanSearch) ||
+        (e.customer_name || '').toLowerCase().includes(cleanSearch),
     );
   }
   return rows;
@@ -283,9 +309,81 @@ export async function updateEstimation(
   return (await loadEstimation(id)) as Estimation;
 }
 
-export async function deleteEstimation(id: string): Promise<void> {
+export async function deleteEstimation(id: string, userId?: string): Promise<void> {
+  const now = new Date();
+  const purgeAt = new Date();
+  purgeAt.setDate(purgeAt.getDate() + 30);
+
+  // Soft-delete ke arsip 30 hari
+  const updatePayload: Record<string, unknown> = {
+    deleted_at: now.toISOString(),
+    archive_purge_at: purgeAt.toISOString(),
+    status: 'rejected',
+    updated_at: now.toISOString(),
+  };
+  if (userId) {
+    updatePayload.deleted_by = userId;
+  }
+
+  const { error } = await supabase
+    .from('planner_estimations')
+    .update(updatePayload)
+    .eq('id', id);
+
+  if (error) {
+    // Jika kolom deleted_at belum ada di DB, fallback ke status rejected / hard delete jika perlu
+    if (error.message.includes('deleted_at') || error.code === '42703') {
+      const { error: fallbackErr } = await supabase
+        .from('planner_estimations')
+        .update({ status: 'rejected', updated_at: now.toISOString() })
+        .eq('id', id);
+      if (fallbackErr) throw new Error(fallbackErr.message);
+      return;
+    }
+    throw new Error(error.message);
+  }
+}
+
+/** Hard delete langsung (misal saat purge permanen setelah 30 hari atau pembersihan) */
+export async function hardDeleteEstimation(id: string): Promise<void> {
   const { error } = await supabase.from('planner_estimations').delete().eq('id', id);
   if (error) throw new Error(error.message);
+}
+
+/** Pulihkan estimasi yang diarsipkan */
+export async function restoreArchivedEstimation(id: string): Promise<Estimation> {
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from('planner_estimations')
+    .update({
+      deleted_at: null,
+      deleted_by: null,
+      archive_purge_at: null,
+      status: 'wa',
+      updated_at: now,
+    })
+    .eq('id', id);
+
+  if (error) throw new Error(error.message);
+  return (await loadEstimation(id)) as Estimation;
+}
+
+/** Simpan urutan drag & drop kartu estimasi */
+export async function updateEstimationOrder(
+  items: Array<{ id: string; sort_order: number }>,
+): Promise<void> {
+  if (!items.length) return;
+  try {
+    const promises = items.map(item =>
+      supabase
+        .from('planner_estimations')
+        .update({ sort_order: item.sort_order })
+        .eq('id', item.id),
+    );
+    await Promise.all(promises);
+  } catch (err) {
+    console.error('Peringatan: Gagal memperbarui urutan estimasi:', err);
+  }
 }
 
 export async function updateEstimationStatus(
