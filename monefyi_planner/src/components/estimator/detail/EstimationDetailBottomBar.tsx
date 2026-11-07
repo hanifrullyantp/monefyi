@@ -4,10 +4,7 @@ import {
 } from 'lucide-react';
 import EstimationDetailBreakdown from './EstimationDetailBreakdown';
 import { formatRupiahFull } from '../../../lib/estimatorFormat';
-import { useLocation } from 'react-router-dom';
-import { useEntitlement } from '../../../hooks/useEntitlement';
 import { isDemoEmbedActive } from '../../../lib/demo/demoMode';
-import { isEstimatorOnlyPlan } from '../../../lib/entitlement';
 import type { EstimationFormDraft, EstimationSummary } from '../../../types/estimator';
 
 type Props = {
@@ -77,14 +74,8 @@ export default function EstimationDetailBottomBar({
   onWhatsApp,
   onDocument,
 }: Props) {
-  const location = useLocation();
-  const entitlement = useEntitlement();
   const embed = embedMode || isDemoEmbedActive();
-  const hideAppNav = !embed
-    && !entitlement.isLoading
-    && isEstimatorOnlyPlan(entitlement)
-    && location.pathname.startsWith('/app/estimator');
-  const bottomClass = embed || hideAppNav ? 'bottom-0' : 'bottom-[5.5rem] lg:bottom-0';
+  const bottomClass = 'bottom-2 sm:bottom-3 lg:bottom-4 pb-[env(safe-area-inset-bottom)]';
   const horizontalClass = embed ? 'left-0' : navSidebarCollapsed ? 'lg:left-[4.5rem]' : 'lg:left-64';
 
   return (
