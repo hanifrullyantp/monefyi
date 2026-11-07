@@ -222,7 +222,7 @@ export const useMarketingStore = create<MarketingStore>()(
         heroTitle: 'Kirim Penawaran Sebelum Kamu Pulang Survei',
         heroSubtitle:
           'Hitung harga langsung di HP saat survei, lalu kirim PDF penawaran berlogo kamu sebelum klien sempat membandingkan dengan vendor lain.',
-        ctaText: 'Coba Gratis',
+        ctaText: 'Lihat Pilihan Paket',
         standardPrice: 'Rp 93.000',
         proPrice: 'Rp 199.000',
       },

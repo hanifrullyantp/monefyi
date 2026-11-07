@@ -8,7 +8,7 @@ import { useLandingAdmin } from "@/lib/hooks/useLandingAdmin";
 import { ownsEstimator } from "@/lib/permissions";
 import { trackEvent } from "@/lib/analytics/events";
 
-/** Sticky bottom bar mobile — Coba Gratis setelah lewati hero */
+/** Sticky bottom bar mobile — Pilih Paket setelah lewati hero */
 export function FloatingCTA() {
   const hydrated = useAuthStore((s) => s.hydrated);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -70,10 +70,10 @@ export function FloatingCTA() {
             onClick={handleClick}
             className="flex w-full items-center justify-center gap-2 btn-brand rounded-full shadow-2xl shadow-[var(--brand-600)]/40 text-sm"
           >
-            Coba Gratis Sekarang
+            Pilih Paket Sekarang
             <ArrowRight className="w-4 h-4 shrink-0" />
           </button>
-          <p className="text-center text-[10px] text-[var(--muted)] mt-1.5">Tanpa kartu · 3 estimasi gratis</p>
+          <p className="text-center text-[10px] text-[var(--muted)] mt-1.5">Mulai Rp 93.000 · Akses selamanya</p>
         </motion.div>
       )}
     </AnimatePresence>

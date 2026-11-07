@@ -76,9 +76,9 @@ export function Navbar() {
   const showBonusLink = Boolean(hydrated && isAuthenticated && canClaimBonusApps(user));
   const desktopNav = navbar.menuItems.filter((item) => DESKTOP_NAV_HREFS.has(item.href));
   const heroCopy = getActiveHeroCopy();
-  const showCobaGratis = !(hydrated && isAuthenticated);
+  const showPilihPaket = !(hydrated && isAuthenticated);
 
-  const cobaGratis = () => {
+  const handlePilihPaket = () => {
     scrollTo("#harga");
   };
 
@@ -146,10 +146,10 @@ export function Navbar() {
           </nav>
 
           <div className="flex items-center gap-2 shrink-0">
-            {showCobaGratis && (
+            {showPilihPaket && (
               <button
                 type="button"
-                onClick={cobaGratis}
+                onClick={handlePilihPaket}
                 className="lp-btn-nav btn-brand lg:hidden"
               >
                 {heroCopy.ctaPrimary}
@@ -171,8 +171,8 @@ export function Navbar() {
                   Klaim Bonus
                 </Link>
               )}
-              {showCobaGratis && (
-                <button type="button" onClick={cobaGratis} className="lp-btn-nav btn-brand">
+              {showPilihPaket && (
+                <button type="button" onClick={handlePilihPaket} className="lp-btn-nav btn-brand">
                   {heroCopy.ctaPrimary}
                 </button>
               )}
@@ -310,13 +310,13 @@ export function Navbar() {
                 </>
               )}
             </nav>
-            {showCobaGratis && (
+            {showPilihPaket && (
               <div className="p-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => {
                     setIsMobileOpen(false);
-                    cobaGratis();
+                    handlePilihPaket();
                   }}
                   className="w-full flex items-center justify-center gap-2 btn-brand lp-btn-hero"
                 >

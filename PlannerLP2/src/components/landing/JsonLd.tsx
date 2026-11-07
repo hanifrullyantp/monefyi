@@ -48,7 +48,7 @@ export function JsonLd() {
         name: "Ada garansi uang kembali?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Tidak ada garansi refund. Gunakan paket Gratis (3 estimasi) untuk mencoba alur hitung dan PDF sebelum membeli Standard atau Pro.",
+          text: "Tidak ada biaya bulanan. Sekali bayar untuk akses seumur hidup ke paket Standard atau Pro.",
         },
       },
     ],

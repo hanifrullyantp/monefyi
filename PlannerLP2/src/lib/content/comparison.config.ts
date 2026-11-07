@@ -30,7 +30,7 @@ export const COMPARISON_SECTION = {
   },
   closingLine:
     "Mulai dari satu proyek: hitung, kirim penawaran, dan lanjut tanpa input ulang yang melelahkan.",
-  ctaLabel: "Coba Gratis",
+  ctaLabel: "Pilih Paket Sekarang",
   expandLabel: "Lihat semua perbandingan",
   collapseLabel: "Sembunyikan",
   mobileLabels: {

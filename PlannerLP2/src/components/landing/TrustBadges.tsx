@@ -5,7 +5,7 @@ import { ShieldCheck, Lock, CreditCard, MessageCircle } from "lucide-react";
 import { Container } from "@/components/shared/Container";
 
 const badges = [
-  { Icon: ShieldCheck, text: "3 estimasi gratis — coba dulu tanpa bayar" },
+  { Icon: ShieldCheck, text: "Akses selamanya — tanpa biaya langganan bulanan" },
   { Icon: CreditCard, text: "Bayar via QRIS / BCA / Mandiri / GoPay" },
   { Icon: Lock, text: "Data akun terenkripsi" },
   { Icon: MessageCircle, text: "Support WhatsApp responsif" },

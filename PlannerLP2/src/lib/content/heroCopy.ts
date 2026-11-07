@@ -3,7 +3,7 @@
  * ganti ACTIVE_HERO_VARIANT_ID saat A/B aktif. Jangan hardcode di komponen.
  */
 
-export const FREE_PLAN_ENABLED = true;
+export const FREE_PLAN_ENABLED = false;
 
 export type HeroVariantId = "H1" | "H2" | "H3" | "H0";
 
@@ -32,10 +32,10 @@ export const HERO_VARIANTS: Record<HeroVariantId, HeroVariantCopy> = {
       "Harga muncul dalam 1 menit, tanpa kalkulator",
       "PDF berlogo & bertanda tangan, langsung kirim ke WA",
     ],
-    ctaPrimary: "Coba Gratis",
+    ctaPrimary: "Lihat Pilihan Paket",
     ctaSecondary: "Demo 1 Menit",
     loginLink: "Sudah punya akun? Masuk",
-    microcopyFree: "Tanpa kartu kredit · 3 estimasi gratis",
+    microcopyFree: "Promo terbatas · Sekali bayar",
     microcopyGuarantee: "Sekali bayar · akses selamanya",
   },
   H2: {
@@ -49,10 +49,10 @@ export const HERO_VARIANTS: Record<HeroVariantId, HeroVariantCopy> = {
       "Harga muncul dalam 1 menit, tanpa kalkulator",
       "PDF berlogo & bertanda tangan, langsung kirim ke WA",
     ],
-    ctaPrimary: "Coba Gratis",
+    ctaPrimary: "Lihat Pilihan Paket",
     ctaSecondary: "Demo 1 Menit",
     loginLink: "Sudah punya akun? Masuk",
-    microcopyFree: "Tanpa kartu kredit · 3 estimasi gratis",
+    microcopyFree: "Promo terbatas · Sekali bayar",
     microcopyGuarantee: "Sekali bayar · akses selamanya",
   },
   H3: {
@@ -66,26 +66,26 @@ export const HERO_VARIANTS: Record<HeroVariantId, HeroVariantCopy> = {
       "Harga muncul dalam 1 menit, tanpa kalkulator",
       "PDF berlogo & bertanda tangan, langsung kirim ke WA",
     ],
-    ctaPrimary: "Coba Gratis",
+    ctaPrimary: "Lihat Pilihan Paket",
     ctaSecondary: "Demo 1 Menit",
     loginLink: "Sudah punya akun? Masuk",
-    microcopyFree: "Tanpa kartu kredit · 3 estimasi gratis",
+    microcopyFree: "Promo terbatas · Sekali bayar",
     microcopyGuarantee: "Sekali bayar · akses selamanya",
   },
   H0: {
     id: "H0",
     eyebrow: "Untuk kontraktor, interior & kitchen set",
     headline: 'Bisa Buat Estimasi Project Dalam 1 Menit, Mau?',
-    subheadline: "Coba gratis 3 estimasi. Standard Rp 93.000 · Pro Rp 199.000 — sekali bayar.",
+    subheadline: "Standard Rp 93.000 · Pro Rp 199.000 — sekali bayar tanpa langganan.",
     points: [
       "Saring calon klien di WA, survei hanya yang serius",
       "Harga muncul dalam 1 menit, tanpa kalkulator",
       "PDF berlogo & bertanda tangan, langsung kirim ke WA",
     ],
-    ctaPrimary: "Coba Gratis",
+    ctaPrimary: "Lihat Pilihan Paket",
     ctaSecondary: "Demo 1 Menit",
     loginLink: "Sudah punya akun? Masuk",
-    microcopyFree: "Tanpa kartu kredit · 3 estimasi gratis",
+    microcopyFree: "Promo terbatas · Sekali bayar",
     microcopyGuarantee: "Sekali bayar · akses selamanya",
   },
 };
