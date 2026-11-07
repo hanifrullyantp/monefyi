@@ -8,6 +8,7 @@ import {
   paletteFor,
 } from '../shared';
 import {
+  invoiceBreakdownTable,
   invoiceInstallmentsTable,
   invoicePaymentInfoBox,
   invoiceSignatureBlock,
@@ -113,24 +114,24 @@ export function buildInvoiceCardBlue(ctx: InvoicePdfContext): TDocumentDefinitio
                       [
                         { text: '#', bold: true, fontSize: 8, color: '#334155' },
                         { text: 'ITEM DESCRIPTION', bold: true, fontSize: 8, color: '#334155' },
-                        { text: 'QTY', bold: true, fontSize: 8, color: '#334155', alignment: 'center' },
+                        { text: 'QTY', bold: true, fontSize: 8, color: '#334155', alignment: 'center' as const },
                         { text: 'UNIT', bold: true, fontSize: 8, color: '#334155' },
-                        { text: 'UNIT PRICE', bold: true, fontSize: 8, color: '#334155', alignment: 'right' },
-                        { text: 'TOTAL', bold: true, fontSize: 8, color: '#334155', alignment: 'right' },
+                        { text: 'UNIT PRICE', bold: true, fontSize: 8, color: '#334155', alignment: 'right' as const },
+                        { text: 'TOTAL', bold: true, fontSize: 8, color: '#334155', alignment: 'right' as const },
                       ],
                       ...(ctx.items.length
                         ? ctx.items.map((row) => [
-                            { text: String(row.no), fontSize: 8 },
-                            { text: row.name, fontSize: 8 },
-                            { text: row.qty, alignment: 'center', fontSize: 8 },
-                            { text: row.unit, fontSize: 8 },
-                            { text: row.unitPrice, alignment: 'right', fontSize: 8 },
-                            { text: row.total, alignment: 'right', bold: true, fontSize: 8 },
-                          ])
+                          { text: String(row.no), fontSize: 8 },
+                          { text: row.name, fontSize: 8 },
+                          { text: row.qty, alignment: 'center' as const, fontSize: 8 },
+                          { text: row.unit, fontSize: 8 },
+                          { text: row.unitPrice, alignment: 'right' as const, fontSize: 8 },
+                          { text: row.total, alignment: 'right' as const, bold: true, fontSize: 8 },
+                        ])
                         : [[
-                            { text: 'Tidak ada item', italics: true, color: '#94a3b8', colSpan: 6, alignment: 'center', fontSize: 8 } as Content,
-                            { text: '' }, { text: '' }, { text: '' }, { text: '' }, { text: '' },
-                          ]]),
+                          { text: 'Tidak ada item', italics: true, color: '#94a3b8', colSpan: 6, alignment: 'center' as const, fontSize: 8 } as Content,
+                          { text: '' }, { text: '' }, { text: '' }, { text: '' }, { text: '' },
+                        ]]),
                     ],
                   },
                   layout: {
@@ -150,18 +151,7 @@ export function buildInvoiceCardBlue(ctx: InvoicePdfContext): TDocumentDefinitio
                     {
                       width: 220,
                       stack: [
-                        {
-                          table: {
-                            widths: ['*', 'auto'],
-                            body: [
-                              [{ text: 'SUB TOTAL', fontSize: 8, bold: true, color: '#475569' }, { text: ctx.subtotalLabel, fontSize: 8, bold: true, alignment: 'right' }],
-                              ...(ctx.taxLabel ? [[{ text: 'TAX / PPN', fontSize: 8, bold: true, color: '#475569' }, { text: ctx.taxLabel, fontSize: 8, bold: true, alignment: 'right' }]] : []),
-                              ...(ctx.discountLabel ? [[{ text: 'DISKON', fontSize: 8, bold: true, color: '#e11d48' }, { text: ctx.discountLabel, fontSize: 8, bold: true, color: '#e11d48', alignment: 'right' }]] : []),
-                            ],
-                          },
-                          layout: 'noBorders',
-                          margin: [0, 4, 0, 4] as [number, number, number, number],
-                        },
+                        invoiceBreakdownTable(ctx),
                         // Pill Bar Kuning TOTAL
                         {
                           table: {
@@ -173,7 +163,7 @@ export function buildInvoiceCardBlue(ctx: InvoicePdfContext): TDocumentDefinitio
                                     {
                                       columns: [
                                         { text: 'TOTAL TAGIHAN', bold: true, fontSize: 9, color: '#1E293B' },
-                                        { text: ctx.grandTotal, bold: true, fontSize: 13, color: '#1E293B', alignment: 'right' },
+                                        { text: ctx.grandTotal, bold: true, fontSize: 13, color: '#1E293B', alignment: 'right' as const },
                                       ],
                                     },
                                   ],

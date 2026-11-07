@@ -112,9 +112,9 @@ export function buildRapColumnDefs(
       valueSetter: makeSetter('name', mode),
       ...(materialSuggestions?.length
         ? {
-            cellEditor: 'agRichSelectCellEditor',
-            cellEditorParams: { values: materialSuggestions, allowTyping: true, filterList: true },
-          }
+          cellEditor: 'agRichSelectCellEditor',
+          cellEditorParams: { values: materialSuggestions, allowTyping: true, filterList: true },
+        }
         : {}),
     },
     {

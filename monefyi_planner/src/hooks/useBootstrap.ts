@@ -89,14 +89,14 @@ async function bootstrapSession(session: Session) {
     store.setPlatformRole(platformRole);
     store.setEmailVerified(
       !!authUser.email_confirmed_at ||
-        config.skipEmailVerify ||
-        platformRole === 'admin',
+      config.skipEmailVerify ||
+      platformRole === 'admin',
     );
 
     let orgCtx = await loadOrg(authUser.id);
 
     if (!orgCtx) {
-      await tryDomainJoin().catch(() => {});
+      await tryDomainJoin().catch(() => { });
       orgCtx = await loadOrg(authUser.id);
     }
 
@@ -196,7 +196,7 @@ export function useBootstrap() {
 
     bootstrapCustomDomainContext()
       .then(ctx => useAppStore.getState().setCustomDomainContext(ctx))
-      .catch(() => {});
+      .catch(() => { });
 
     let initSettled = globalAuthInitDone;
     const settleInit = (reason: string) => {

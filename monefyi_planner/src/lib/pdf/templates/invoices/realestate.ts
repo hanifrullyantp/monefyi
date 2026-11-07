@@ -88,8 +88,8 @@ export function buildInvoiceRealEstate(ctx: InvoicePdfContext): TDocumentDefinit
               table: {
                 widths: ['*', 'auto'],
                 body: [
-                  [{ text: 'Invoice #', fontSize: 8.5, color: navy }, { text: ctx.invoiceNumber, fontSize: 8.5, bold: true, color: navy, alignment: 'right' }],
-                  [{ text: 'Date', fontSize: 8.5, color: navy }, { text: ctx.dateLabel, fontSize: 8.5, color: navy, alignment: 'right' }],
+                  [{ text: 'Invoice #', fontSize: 8.5, color: navy }, { text: ctx.invoiceNumber, fontSize: 8.5, bold: true, color: navy, alignment: 'right' as const }],
+                  [{ text: 'Date', fontSize: 8.5, color: navy }, { text: ctx.dateLabel, fontSize: 8.5, color: navy, alignment: 'right' as const }],
                 ],
               },
               layout: 'noBorders',
@@ -109,22 +109,22 @@ export function buildInvoiceRealEstate(ctx: InvoicePdfContext): TDocumentDefinit
           [
             { text: 'SL.', bold: true, color: '#ffffff', fillColor: navy, fontSize: 8 },
             { text: 'Deskripsi Item', bold: true, color: '#ffffff', fillColor: navy, fontSize: 8 },
-            { text: 'Qty', bold: true, color: '#ffffff', fillColor: navy, fontSize: 8, alignment: 'center' },
+            { text: 'Qty', bold: true, color: '#ffffff', fillColor: navy, fontSize: 8, alignment: 'center' as const },
             { text: 'Satuan', bold: true, color: '#ffffff', fillColor: navy, fontSize: 8 },
-            { text: 'Harga Satuan', bold: true, color: '#ffffff', fillColor: navy, fontSize: 8, alignment: 'right' },
-            { text: 'Total', bold: true, color: '#ffffff', fillColor: navy, fontSize: 8, alignment: 'right' },
+            { text: 'Harga Satuan', bold: true, color: '#ffffff', fillColor: navy, fontSize: 8, alignment: 'right' as const },
+            { text: 'Total', bold: true, color: '#ffffff', fillColor: navy, fontSize: 8, alignment: 'right' as const },
           ],
           ...(ctx.items.length
             ? ctx.items.map((row) => [
                 { text: String(row.no), fontSize: 8 },
                 { text: row.name, fontSize: 8 },
-                { text: row.qty, alignment: 'center', fontSize: 8 },
+                { text: row.qty, alignment: 'center' as const, fontSize: 8 },
                 { text: row.unit, fontSize: 8 },
-                { text: row.unitPrice, alignment: 'right', fontSize: 8 },
-                { text: row.total, alignment: 'right', bold: true, fontSize: 8 },
+                { text: row.unitPrice, alignment: 'right' as const, fontSize: 8 },
+                { text: row.total, alignment: 'right' as const, bold: true, fontSize: 8 },
               ])
             : [[
-                { text: 'Tidak ada item', italics: true, color: '#94a3b8', colSpan: 6, alignment: 'center', fontSize: 8 } as Content,
+                { text: 'Tidak ada item', italics: true, color: '#94a3b8', colSpan: 6, alignment: 'center' as const, fontSize: 8 } as Content,
                 { text: '' }, { text: '' }, { text: '' }, { text: '' }, { text: '' },
               ]]),
         ],
@@ -157,19 +157,7 @@ export function buildInvoiceRealEstate(ctx: InvoicePdfContext): TDocumentDefinit
         {
           width: 180,
           stack: [
-            {
-              table: {
-                widths: ['*', 'auto'],
-                body: [
-                  [{ text: 'Subtotal', fontSize: 8.5, color: navy }, { text: ctx.subtotalLabel, fontSize: 8.5, bold: true, color: navy, alignment: 'right' }],
-                  ...(ctx.discountLabel ? [[{ text: 'Diskon', fontSize: 8.5, color: '#e11d48' }, { text: ctx.discountLabel, fontSize: 8.5, color: '#e11d48', alignment: 'right' }]] : []),
-                  ...(ctx.taxLabel ? [[{ text: 'PPN', fontSize: 8.5, color: navy }, { text: ctx.taxLabel, fontSize: 8.5, color: navy, alignment: 'right' }]] : []),
-                  ...(ctx.billingDiscountLabel ? [[{ text: 'Potongan', fontSize: 8.5, color: '#e11d48' }, { text: ctx.billingDiscountLabel, fontSize: 8.5, color: '#e11d48', alignment: 'right' }]] : []),
-                ],
-              },
-              layout: 'noBorders',
-              margin: [0, 0, 0, 6] as [number, number, number, number],
-            },
+            invoiceBreakdownTable(ctx, navy),
             // TOTAL Box Navy Solid
             {
               table: {
@@ -177,9 +165,13 @@ export function buildInvoiceRealEstate(ctx: InvoicePdfContext): TDocumentDefinit
                 body: [
                   [
                     {
-                      columns: [
-                        { text: 'TOTAL', fontSize: 9, bold: true, color: '#ffffff' },
-                        { text: ctx.grandTotal, fontSize: 12, bold: true, color: '#ffffff', alignment: 'right' },
+                      stack: [
+                        {
+                          columns: [
+                            { text: 'TOTAL', fontSize: 9, bold: true, color: '#ffffff' },
+                            { text: ctx.grandTotal, fontSize: 12, bold: true, color: '#ffffff', alignment: 'right' as const },
+                          ],
+                        },
                       ],
                       fillColor: navy,
                       margin: [10, 6, 10, 6] as [number, number, number, number],

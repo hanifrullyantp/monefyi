@@ -35,14 +35,10 @@ export function PricingSection() {
   const [desktopFeaturesOpen, setDesktopFeaturesOpen] = useState(false);
 
   const activeProvider = resolvePaymentProvider(pricing.plannerPaymentProvider);
+  const visibleCards = pricing.cards.filter((c) => c.id !== "free");
 
   const onCta = (planId: string) => {
     if (isAdmin && isEditMode) return;
-    if (planId === "free") {
-      trackEvent("free_signup", { source: "pricing_free" });
-      window.location.href = "/checkout?plan=free";
-      return;
-    }
     if (planId === "estimator-standard" || planId === "estimator-pro") {
       void startCheckout(planId);
     }
@@ -114,8 +110,8 @@ export function PricingSection() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-3 gap-6 items-stretch mb-8">
-          {pricing.cards.map((card, index) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto items-stretch mb-8">
+          {visibleCards.map((card, index) => (
             <PricingPlanCard
               key={card.id}
               card={card}
@@ -153,7 +149,6 @@ function PricingPlanCard({
 }) {
   const { isAdmin, isEditMode } = useLandingAdmin();
   const cardPath = `cards.${index}`;
-  const isFree = card.id === "free";
   const highlighted = card.highlighted;
   const [mobileFeaturesOpen, setMobileFeaturesOpen] = useState(false);
   const featuresOpen = syncFeaturesOnDesktop ? desktopFeaturesOpen : mobileFeaturesOpen;
@@ -309,7 +304,7 @@ function PricingPlanCard({
 
       <button
         type="button"
-        onClick={() => onCta(isFree ? "free" : card.id)}
+        onClick={() => onCta(card.id)}
         className={cn(
           "w-full min-h-[48px] rounded-xl font-bold text-sm md:text-base transition-colors",
           highlighted ? "btn-brand" : "bg-white/10 hover:bg-white/20 text-white border border-white/20",

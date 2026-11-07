@@ -757,8 +757,8 @@ export default function Projects({
             }}
             aria-label={`Total proyek: ${stats.total}`}
             className={`rounded-2xl p-2.5 sm:p-3 text-left border transition-all active:scale-95 ${filter === 'all'
-                ? 'bg-slate-50 border-[#0F172A]'
-                : 'bg-white border-[#E5EAE8]'
+              ? 'bg-slate-50 border-[#0F172A]'
+              : 'bg-white border-[#E5EAE8]'
               }`}
           >
             <div className="text-[10px] font-bold text-[#5B6B7A] tracking-[0.05em] uppercase">
@@ -779,8 +779,8 @@ export default function Projects({
             }}
             aria-label={`Proyek aktif: ${stats.active}`}
             className={`rounded-2xl p-2.5 sm:p-3 text-left border transition-all active:scale-95 ${filter === 'active'
-                ? 'bg-emerald-50 border-[#059669]'
-                : 'bg-white border-[#E5EAE8]'
+              ? 'bg-emerald-50 border-[#059669]'
+              : 'bg-white border-[#E5EAE8]'
               }`}
           >
             <div className="text-[10px] font-bold text-[#047857] tracking-[0.05em] uppercase">
@@ -801,8 +801,8 @@ export default function Projects({
             }}
             aria-label={`Proyek perlu perhatian: ${stats.atRisk}`}
             className={`rounded-2xl p-2.5 sm:p-3 text-left border transition-all active:scale-95 ${filter === 'at_risk'
-                ? 'bg-amber-50 border-[#D97706]'
-                : 'bg-white border-[#E5EAE8]'
+              ? 'bg-amber-50 border-[#D97706]'
+              : 'bg-white border-[#E5EAE8]'
               }`}
           >
             <div className="text-[10px] font-bold text-[#B45309] tracking-[0.05em] uppercase">
@@ -869,8 +869,8 @@ export default function Projects({
                     setViewPickerOpen(false);
                   }}
                   className={`flex-1 h-9 rounded-lg font-bold text-xs transition-all ${projectView === v.id
-                      ? 'bg-white text-[#059669] shadow-xs'
-                      : 'text-[#5B6B7A] hover:text-[#0F172A]'
+                    ? 'bg-white text-[#059669] shadow-xs'
+                    : 'text-[#5B6B7A] hover:text-[#0F172A]'
                     }`}
                 >
                   {v.label}
@@ -894,8 +894,8 @@ export default function Projects({
                     setProjectsListFilter(f.id);
                   }}
                   className={`h-10 px-3.5 rounded-full text-xs font-bold flex items-center gap-1.5 whitespace-nowrap transition-all active:scale-95 shrink-0 ${isActive
-                      ? 'bg-[#0F172A] text-white shadow-xs'
-                      : 'bg-white border border-[#E5EAE8] text-[#334155] hover:bg-slate-50'
+                    ? 'bg-[#0F172A] text-white shadow-xs'
+                    : 'bg-white border border-[#E5EAE8] text-[#334155] hover:bg-slate-50'
                     }`}
                 >
                   <span>{f.label}</span>
@@ -1167,8 +1167,8 @@ export default function Projects({
                       onClick={() => setView(v.id)}
                       title={v.label}
                       className={`p-2 min-h-9 min-w-9 rounded-lg transition-colors flex items-center justify-center ${projectView === v.id
-                          ? 'bg-white text-[#059669] shadow-xs'
-                          : 'text-[#5B6B7A] hover:text-[#0F172A]'
+                        ? 'bg-white text-[#059669] shadow-xs'
+                        : 'text-[#5B6B7A] hover:text-[#0F172A]'
                         }`}
                       aria-label={v.label}
                     >
@@ -1181,8 +1181,8 @@ export default function Projects({
                         type="button"
                         onClick={() => setListLayout('card')}
                         className={`p-2 min-h-9 min-w-9 rounded-lg transition-colors flex items-center justify-center ${listLayout === 'card'
-                            ? 'bg-white text-[#059669] shadow-xs'
-                            : 'text-[#5B6B7A] hover:text-[#0F172A]'
+                          ? 'bg-white text-[#059669] shadow-xs'
+                          : 'text-[#5B6B7A] hover:text-[#0F172A]'
                           }`}
                         aria-label="Kartu"
                       >
@@ -1192,8 +1192,8 @@ export default function Projects({
                         type="button"
                         onClick={() => setListLayout('compact')}
                         className={`p-2 min-h-9 min-w-9 rounded-lg transition-colors flex items-center justify-center ${listLayout === 'compact'
-                            ? 'bg-white text-[#059669] shadow-xs'
-                            : 'text-[#5B6B7A] hover:text-[#0F172A]'
+                          ? 'bg-white text-[#059669] shadow-xs'
+                          : 'text-[#5B6B7A] hover:text-[#0F172A]'
                           }`}
                         aria-label="Baris"
                       >
@@ -1214,8 +1214,8 @@ export default function Projects({
                     setProjectsListFilter(f.id);
                   }}
                   className={`flex items-center gap-2 h-10 px-4 rounded-full text-xs font-bold whitespace-nowrap transition-all active:scale-95 ${filter === f.id
-                      ? 'bg-[#0F172A] text-white shadow-xs'
-                      : 'bg-white border border-[#E5EAE8] text-[#5B6B7A] hover:bg-slate-50'
+                    ? 'bg-[#0F172A] text-white shadow-xs'
+                    : 'bg-white border border-[#E5EAE8] text-[#5B6B7A] hover:bg-slate-50'
                     }`}
                 >
                   <span>{f.label}</span>
@@ -1472,8 +1472,8 @@ export default function Projects({
                     type="button"
                     onClick={() => setSelectedNewStatus(opt.id)}
                     className={`w-full p-3 text-left rounded-xl border transition-all flex items-center justify-between ${isSelected
-                        ? 'border-[#059669] bg-emerald-50/60 text-[#0F172A]'
-                        : 'border-[#E5EAE8] bg-white text-[#5B6B7A] hover:bg-slate-50'
+                      ? 'border-[#059669] bg-emerald-50/60 text-[#0F172A]'
+                      : 'border-[#E5EAE8] bg-white text-[#5B6B7A] hover:bg-slate-50'
                       }`}
                   >
                     <div>

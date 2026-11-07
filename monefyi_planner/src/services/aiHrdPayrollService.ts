@@ -446,9 +446,8 @@ export function generateSlipGajiMessage(item: EmployeePayrollCalculation, period
 ⏱️ *Hari Hadir:* ${item.daysPresent} Hari Kerja
 
 💵 *Gaji Pokok:* Rp ${item.grossSalary.toLocaleString('id-ID')}
-${item.overtimeBonus > 0 ? `✨ *Lembur / Bonus:* +Rp ${item.overtimeBonus.toLocaleString('id-ID')}\n` : ''}${
-    item.kasbonDeduction > 0 ? `✂️ *Potongan Kasbon:* -Rp ${item.kasbonDeduction.toLocaleString('id-ID')}\n` : ''
-  }━━━━━━━━━━━━━━━━━━━━━
+${item.overtimeBonus > 0 ? `✨ *Lembur / Bonus:* +Rp ${item.overtimeBonus.toLocaleString('id-ID')}\n` : ''}${item.kasbonDeduction > 0 ? `✂️ *Potongan Kasbon:* -Rp ${item.kasbonDeduction.toLocaleString('id-ID')}\n` : ''
+    }━━━━━━━━━━━━━━━━━━━━━
 💰 *TOTAL GAJI BERSIH (THP):*
 👉 *Rp ${item.netSalary.toLocaleString('id-ID')}*
 

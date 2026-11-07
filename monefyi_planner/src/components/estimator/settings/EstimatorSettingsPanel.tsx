@@ -213,11 +213,10 @@ export default function EstimatorSettingsPanel() {
             key={id}
             type="button"
             onClick={() => setActiveTab(id)}
-            className={`shrink-0 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-              activeTab === id
+            className={`shrink-0 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${activeTab === id
                 ? 'bg-emerald-600 text-white shadow-sm'
                 : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-            }`}
+              }`}
           >
             {label}
           </button>
@@ -296,9 +295,8 @@ export default function EstimatorSettingsPanel() {
                     key={id}
                     type="button"
                     onClick={() => setPdfKind(id)}
-                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
-                      pdfKind === id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
-                    }`}
+                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${pdfKind === id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+                      }`}
                   >
                     {id === 'quotation' ? 'Format Penawaran' : 'Format Invoice'}
                   </button>

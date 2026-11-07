@@ -280,11 +280,10 @@ export default function DatabaseMaster() {
               key={t.id}
               type="button"
               onClick={() => setTab(t.id)}
-              className={`min-h-11 flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap border transition-all ${
-                tab === t.id
+              className={`min-h-11 flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap border transition-all ${tab === t.id
                   ? 'bg-[#059669] text-white border-[#059669] shadow-sm'
                   : 'bg-white text-[#5B6B7A] border-[#E5EAE8] hover:bg-slate-50'
-              }`}
+                }`}
             >
               <t.icon className="w-4 h-4" /> {t.label}
             </button>

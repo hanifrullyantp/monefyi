@@ -326,10 +326,10 @@ function partyBlock(role: string, rows: Array<[string, string]>, accent: string,
   }));
   const tag: Content = design === 'bold'
     ? {
-        table: { body: [[{ text: role, bold: true, fontSize: 8.5, color: '#ffffff', fillColor: accent, margin: m(6, 2, 6, 2) }]] },
-        layout: 'noBorders',
-        margin: m(0, 0, 0, 4),
-      }
+      table: { body: [[{ text: role, bold: true, fontSize: 8.5, color: '#ffffff', fillColor: accent, margin: m(6, 2, 6, 2) }]] },
+      layout: 'noBorders',
+      margin: m(0, 0, 0, 4),
+    }
     : { text: role, bold: true, fontSize: 10, color: accent, margin: m(0, 0, 0, 3) };
   return { stack: [tag, ...body], margin: m(0, 4, 0, 6) } as Content;
 }
@@ -473,14 +473,14 @@ function signatureBlock(ctx: BuildCtx): Content {
 
   const materai: Content[] = f.showMaterai
     ? [{
-        table: { widths: [66], body: [[{ text: 'MATERAI\nRp 10.000', alignment: 'center', fontSize: 7, color: '#94a3b8', margin: m(0, 12, 0, 12) }]] },
-        layout: {
-          hLineWidth: () => 0.6, vLineWidth: () => 0.6,
-          hLineColor: () => '#cbd5e1', vLineColor: () => '#cbd5e1',
-          hLineStyle: () => ({ dash: { length: 3 } }), vLineStyle: () => ({ dash: { length: 3 } }),
-        },
-        margin: m(0, 4, 0, 4),
-      } as Content]
+      table: { widths: [66], body: [[{ text: 'MATERAI\nRp 10.000', alignment: 'center', fontSize: 7, color: '#94a3b8', margin: m(0, 12, 0, 12) }]] },
+      layout: {
+        hLineWidth: () => 0.6, vLineWidth: () => 0.6,
+        hLineColor: () => '#cbd5e1', vLineColor: () => '#cbd5e1',
+        hLineStyle: () => ({ dash: { length: 3 } }), vLineStyle: () => ({ dash: { length: 3 } }),
+      },
+      margin: m(0, 4, 0, 4),
+    } as Content]
     : [{ text: ' ', margin: m(0, 0, 0, 38) }];
 
   const col = (role: string, mid: Content[], name: string, sub: string) => ({

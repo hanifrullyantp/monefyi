@@ -353,9 +353,8 @@ export default function TabV2Progress({
               return (
                 <div key={wiId || item.id} className="p-4 hover:bg-slate-50/50">
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                    <div className={`w-9 h-9 rounded-full shrink-0 flex items-center justify-center ${
-                      item.status === 'done' ? 'bg-emerald-500' : behind ? 'bg-rose-500' : item.status === 'active' ? 'bg-blue-500' : 'bg-slate-200'
-                    }`}>
+                    <div className={`w-9 h-9 rounded-full shrink-0 flex items-center justify-center ${item.status === 'done' ? 'bg-emerald-500' : behind ? 'bg-rose-500' : item.status === 'active' ? 'bg-blue-500' : 'bg-slate-200'
+                      }`}>
                       {item.status === 'done' ? <Check className="w-4 h-4 text-white" /> : (
                         <span className="text-[10px] font-black text-white">{item.progress}%</span>
                       )}
@@ -457,11 +456,10 @@ export default function TabV2Progress({
                   <div className="font-semibold text-slate-800">{d.label}</div>
                   <div className="text-xs text-slate-500">{formatDateId(d.date)}</div>
                 </div>
-                <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                  d.severity === 'overdue' ? 'bg-rose-100 text-rose-700'
+                <span className={`text-xs font-bold px-2 py-1 rounded-full ${d.severity === 'overdue' ? 'bg-rose-100 text-rose-700'
                     : d.severity === 'urgent' ? 'bg-amber-100 text-amber-700'
                       : 'bg-slate-100 text-slate-600'
-                }`}>
+                  }`}>
                   {d.daysLeft < 0 ? `${Math.abs(d.daysLeft)}h telat` : `${d.daysLeft}h`}
                 </span>
               </div>

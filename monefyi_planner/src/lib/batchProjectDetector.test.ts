@@ -30,6 +30,7 @@ const projects: Project[] = [
     total_received: 0,
     progress_percentage: 0,
     planned_progress: 0,
+    currency: 'IDR',
     health_status: 'on_track',
     finance_status: 'active',
     created_at: '',

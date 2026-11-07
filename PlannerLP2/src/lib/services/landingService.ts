@@ -66,7 +66,7 @@ export function mergeSiteContent(raw: Partial<SiteContent> | null | undefined): 
     pricing: {
       ...defaultContent.pricing,
       ...(raw.pricing || {}),
-      cards: raw.pricing?.cards?.length
+      cards: (raw.pricing?.cards?.length
         ? [
             ...defaultContent.pricing.cards.map((defaultCard) => ({
               ...defaultCard,
@@ -76,7 +76,8 @@ export function mergeSiteContent(raw: Partial<SiteContent> | null | undefined): 
               (card) => !defaultContent.pricing.cards.some((defaultCard) => defaultCard.id === card.id),
             ),
           ]
-        : defaultContent.pricing.cards,
+        : defaultContent.pricing.cards
+      ).filter((card) => card.id !== "free"),
       lynkCheckoutUrls: {
         ...defaultContent.pricing.lynkCheckoutUrls,
         ...Object.fromEntries(

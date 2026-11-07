@@ -30,34 +30,6 @@ export type EstimatorPlan = {
 
 export const ESTIMATOR_PLANS: EstimatorPlan[] = [
   {
-    id: "free",
-    lynkProduct: null,
-    badge: "COBA DULU",
-    title: "Gratis",
-    subtitle: "Coba alur survei → PDF tanpa kartu",
-    priceIdr: 0,
-    originalPriceIdr: null,
-    pricePeriod: "Gratis selamanya",
-    priceNote: "3 estimasi · PDF berwatermark",
-    highlighted: false,
-    ctaText: "Mulai Hitung Gratis",
-    fitFor: "Freelancer yang ingin coba sebelum bayar",
-    whyChoose: [
-      "3 estimasi gratis",
-      "PDF penawaran berwatermark Estimator",
-      "Tanpa kartu kredit",
-    ],
-    features: [
-      { text: "Estimator harga proyek", included: true },
-      { text: "3 estimasi / organisasi, seumur hidup", included: true },
-      { text: "PDF penawaran (watermark)", included: true },
-      { text: "Custom logo & tanda tangan", included: false },
-      { text: "Riwayat penawaran", included: false },
-      { text: "Kustom pricelist", included: false },
-      { text: "Surat perjanjian kerja (PKWT/PKB)", included: false },
-    ],
-  },
-  {
     id: "estimator-standard",
     lynkProduct: "estimator_standard",
     title: "Estimator Standard",

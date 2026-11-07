@@ -6,7 +6,9 @@ import type { PricingCard } from "@/lib/types/content";
 
 export default function PricingAdminPage() {
   const { content, updateSection, publishContent } = useContentStore();
-  const [cards, setCards] = useState<PricingCard[]>(content.pricing.cards);
+  const [cards, setCards] = useState<PricingCard[]>(
+    content.pricing.cards.filter((c) => c.id !== "free"),
+  );
   const [lynkUrls, setLynkUrls] = useState(content.pricing.lynkCheckoutUrls ?? {});
   const [paymentProvider, setPaymentProvider] = useState<"lynk" | "mayar">(
     content.pricing.plannerPaymentProvider ?? "lynk",
@@ -35,7 +37,7 @@ export default function PricingAdminPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">Pricing Editor</h1>
-          <p className="text-slate-500 text-sm mt-1">Edit 3 paket harga</p>
+          <p className="text-slate-500 text-sm mt-1">Edit 2 paket harga (Standard & Pro)</p>
         </div>
         <button
           onClick={save}
@@ -46,7 +48,7 @@ export default function PricingAdminPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {cards.map((card) => (
           <div
             key={card.id}

@@ -385,8 +385,8 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
               type="button"
               onClick={() => setBalanceOpen(true)}
               className={`text-xs font-bold px-3 py-1.5 rounded-full ${balanceCheck.isBalanced
-                  ? 'bg-emerald-100 text-emerald-700'
-                  : 'bg-rose-100 text-rose-700'
+                ? 'bg-emerald-100 text-emerald-700'
+                : 'bg-rose-100 text-rose-700'
                 }`}
             >
               {balanceCheck.isBalanced ? 'Balance' : 'Tidak Balance'}
@@ -396,8 +396,8 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
             type="button"
             onClick={() => trySetTab('progress')}
             className={`hidden sm:inline-flex text-xs font-bold px-3 py-1.5 rounded-full ${progressSummary.deviation >= 0
-                ? 'bg-emerald-100 text-emerald-700'
-                : 'bg-amber-100 text-amber-700'
+              ? 'bg-emerald-100 text-emerald-700'
+              : 'bg-amber-100 text-amber-700'
               }`}
             title="Buka tab Progress"
           >
@@ -571,8 +571,8 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
               type="button"
               onClick={() => trySetTab(t.id)}
               className={`shrink-0 h-10 px-3.5 rounded-full font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95 whitespace-nowrap ${isActive
-                  ? 'bg-[#0F172A] text-white shadow-xs'
-                  : 'bg-white border border-[#E5EAE8] text-[#5B6B7A] hover:text-[#0F172A]'
+                ? 'bg-[#0F172A] text-white shadow-xs'
+                : 'bg-white border border-[#E5EAE8] text-[#5B6B7A] hover:text-[#0F172A]'
                 }`}
             >
               <t.icon className="w-3.5 h-3.5 shrink-0" />

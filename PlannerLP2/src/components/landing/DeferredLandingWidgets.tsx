@@ -3,16 +3,16 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 
+const FreeTrialPopup = dynamic(
+  () => import("@/components/landing/FreeTrialPopup").then((m) => m.FreeTrialPopup),
+  { ssr: false }
+);
 const ToastNotification = dynamic(
   () => import("@/components/landing/ToastNotification").then((m) => m.ToastNotification),
   { ssr: false }
 );
 const FloatingCTA = dynamic(
   () => import("@/components/landing/FloatingCTA").then((m) => m.FloatingCTA),
-  { ssr: false }
-);
-const FreeTrialPopup = dynamic(
-  () => import("@/components/landing/FreeTrialPopup").then((m) => m.FreeTrialPopup),
   { ssr: false }
 );
 const ScrollProgress = dynamic(
@@ -90,12 +90,12 @@ export function DeferredLandingWidgets() {
       <AdminSaveNotice />
       <ToastNotification />
       <FloatingCTA />
-      <FreeTrialPopup />
       <BackToTop />
       <WhatsAppFloat />
       <LiveChatWidget />
       <EstimatorPwaInstallPrompt />
       <MobileAdminToolbar />
+      <FreeTrialPopup />
     </>
   );
 }

@@ -64,9 +64,8 @@ export default function TimelineHeader({ range, viewMode, zoomScale = 1, scrollL
             return (
               <div
                 key={i}
-                className={`border-r text-center text-[9px] flex items-center justify-center ${
-                  isToday ? 'bg-rose-50 text-rose-600 font-bold' : weekend ? 'bg-slate-50 text-slate-400' : 'text-slate-500'
-                }`}
+                className={`border-r text-center text-[9px] flex items-center justify-center ${isToday ? 'bg-rose-50 text-rose-600 font-bold' : weekend ? 'bg-slate-50 text-slate-400' : 'text-slate-500'
+                  }`}
                 style={{ width: pxPerDay, borderColor: GANTT_COLORS.grid }}
               >
                 {showLabel ? d.getDate() : ''}

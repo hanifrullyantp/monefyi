@@ -111,12 +111,16 @@ export function trackMetaAddPaymentInfo(params: {
 export function trackMetaCompleteRegistration(params?: {
   content_name?: string;
   status?: string;
+  currency?: string;
+  value?: number;
 }) {
   if (typeof window === "undefined") return;
   try {
     window.fbq?.("track", "CompleteRegistration", {
-      content_name: params?.content_name || "Monefyi Estimator Free",
-      status: params?.status || "free_activated",
+      content_name: params?.content_name || "Monefyi Estimator Free Trial",
+      status: params?.status || "completed",
+      currency: params?.currency || "IDR",
+      value: params?.value ?? 0,
     });
   } catch {
     /* ignore */

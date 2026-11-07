@@ -485,28 +485,6 @@ Jika iya, saya jadwalkan survei pekan ini."`,
     },
     cards: [
       {
-        id: "free",
-        badge: "COBA DULU",
-        title: "Gratis",
-        subtitle: "Coba alur estimasi sebelum memilih paket berbayar",
-        price: "Gratis",
-        pricePeriod: "Gratis selamanya",
-        priceNote: "3 estimasi · PDF berwatermark",
-        whyChoose: [
-          "Coba alur survei hingga PDF tanpa kartu kredit",
-          "Kenali proses Estimator sebelum upgrade",
-        ],
-        features: [
-          { text: "3 estimasi / organisasi, seumur hidup", included: true },
-          { text: "PDF penawaran berwatermark", included: true },
-          { text: "Estimasi unlimited", included: false },
-          { text: "Custom logo & tanda tangan", included: false },
-          { text: "Surat perjanjian kerja (PKWT/PKB)", included: false },
-        ],
-        ctaText: "Mulai Gratis",
-        highlighted: false,
-      },
-      {
         id: "estimator-standard",
         badge: "PALING POPULER",
         title: "Estimator Standard",

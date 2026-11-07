@@ -79,7 +79,7 @@ export function Navbar() {
   const showCobaGratis = !(hydrated && isAuthenticated);
 
   const cobaGratis = () => {
-    window.location.href = "/checkout?plan=free";
+    scrollTo("#harga");
   };
 
   if (hideNavbarForEstimatorCustomer) {

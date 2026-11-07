@@ -9,6 +9,7 @@ import {
   paletteFor,
 } from '../shared';
 import {
+  invoiceBreakdownTable,
   invoiceInstallmentsTable,
   invoicePaymentInfoBox,
   invoiceSignatureBlock,
@@ -140,19 +141,7 @@ export function buildInvoiceWellness(ctx: InvoicePdfContext): TDocumentDefinitio
         {
           width: 190,
           stack: [
-            {
-              table: {
-                widths: ['*', 'auto'],
-                body: [
-                  [{ text: 'Subtotal', fontSize: 8 }, { text: ctx.subtotalLabel, fontSize: 8, alignment: 'right' }],
-                  ...(ctx.discountLabel ? [[{ text: 'Diskon', fontSize: 8, color: '#e11d48' }, { text: ctx.discountLabel, fontSize: 8, alignment: 'right', color: '#e11d48' }]] : []),
-                  ...(ctx.taxLabel ? [[{ text: 'PPN', fontSize: 8 }, { text: ctx.taxLabel, fontSize: 8, alignment: 'right' }]] : []),
-                  ...(ctx.billingDiscountLabel ? [[{ text: 'Potongan', fontSize: 8, color: '#e11d48' }, { text: ctx.billingDiscountLabel, fontSize: 8, alignment: 'right', color: '#e11d48' }]] : []),
-                ],
-              },
-              layout: 'noBorders',
-              margin: [0, 0, 0, 4] as [number, number, number, number],
-            },
+            invoiceBreakdownTable(ctx),
             { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 190, y2: 0, lineWidth: 0.8, lineColor: '#CFCFCB' }], margin: [0, 2, 0, 4] as [number, number, number, number] },
             {
               table: {
@@ -160,7 +149,7 @@ export function buildInvoiceWellness(ctx: InvoicePdfContext): TDocumentDefinitio
                 body: [
                   [
                     { text: 'TOTAL HARGA', fontSize: 9, bold: true, color: darkInk },
-                    { text: ctx.grandTotal, fontSize: 13, bold: true, color: teal, alignment: 'right' },
+                    { text: ctx.grandTotal, fontSize: 13, bold: true, color: teal, alignment: 'right' as const },
                   ],
                 ],
               },

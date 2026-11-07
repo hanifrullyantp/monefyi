@@ -128,11 +128,10 @@ export default function Intero3DLaunchModal({ open, onClose, draft, items }: Pro
                   key={item.id}
                   type="button"
                   onClick={() => handleShapeChange(item.id)}
-                  className={`p-3 rounded-2xl border text-left transition-all ${
-                    proposal.shape === item.id
+                  className={`p-3 rounded-2xl border text-left transition-all ${proposal.shape === item.id
                       ? 'border-emerald-600 bg-emerald-50/60 ring-2 ring-emerald-500/20'
                       : 'border-slate-200 hover:border-slate-300 bg-slate-50/50'
-                  }`}
+                    }`}
                 >
                   <p className="font-bold text-slate-900 text-xs">{item.label}</p>
                   <p className="text-[10px] text-slate-500 mt-0.5">{item.desc}</p>
@@ -319,11 +318,10 @@ export default function Intero3DLaunchModal({ open, onClose, draft, items }: Pro
                         },
                       })
                     }
-                    className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition-all ${
-                      active
+                    className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition-all ${active
                         ? 'border-emerald-600 bg-emerald-50 text-emerald-900 font-bold'
                         : 'border-slate-200 bg-slate-50 text-slate-400'
-                    }`}
+                      }`}
                   >
                     <span>{active ? '✓' : '+'}</span>
                     <span>{label}</span>

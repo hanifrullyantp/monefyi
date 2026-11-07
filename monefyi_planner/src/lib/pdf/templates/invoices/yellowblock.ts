@@ -8,6 +8,7 @@ import {
   paletteFor,
 } from '../shared';
 import {
+  invoiceBreakdownTable,
   invoiceInstallmentsTable,
   invoicePaymentInfoBox,
   invoiceSignatureBlock,
@@ -155,19 +156,7 @@ export function buildInvoiceYellowBlock(ctx: InvoicePdfContext): TDocumentDefini
         {
           width: 195,
           stack: [
-            {
-              table: {
-                widths: ['*', 'auto'],
-                body: [
-                  [{ text: 'Sub Total', fontSize: 8, color: '#4B5563' }, { text: ctx.subtotalLabel, fontSize: 8, bold: true, alignment: 'right', color: charcoal }],
-                  ...(ctx.discountLabel ? [[{ text: 'Diskon', fontSize: 8, color: '#e11d48' }, { text: ctx.discountLabel, fontSize: 8, bold: true, alignment: 'right', color: '#e11d48' }]] : []),
-                  ...(ctx.taxLabel ? [[{ text: 'PPN / Pajak', fontSize: 8, color: '#4B5563' }, { text: ctx.taxLabel, fontSize: 8, bold: true, alignment: 'right', color: charcoal }]] : []),
-                  ...(ctx.billingDiscountLabel ? [[{ text: 'Potongan Tagihan', fontSize: 8, color: '#e11d48' }, { text: ctx.billingDiscountLabel, fontSize: 8, bold: true, alignment: 'right', color: '#e11d48' }]] : []),
-                ],
-              },
-              layout: 'noBorders',
-              margin: [0, 0, 0, 4] as [number, number, number, number],
-            },
+            invoiceBreakdownTable(ctx, charcoal),
             // Pill Box Kuning Total
             {
               table: {
@@ -175,9 +164,13 @@ export function buildInvoiceYellowBlock(ctx: InvoicePdfContext): TDocumentDefini
                 body: [
                   [
                     {
-                      columns: [
-                        { text: 'TOTAL', fontSize: 9, bold: true, color: charcoal },
-                        { text: ctx.grandTotal, fontSize: 13, bold: true, color: charcoal, alignment: 'right' },
+                      stack: [
+                        {
+                          columns: [
+                            { text: 'TOTAL', fontSize: 9, bold: true, color: charcoal },
+                            { text: ctx.grandTotal, fontSize: 13, bold: true, color: charcoal, alignment: 'right' as const },
+                          ],
+                        },
                       ],
                       fillColor: yellow,
                       margin: [8, 6, 8, 6] as [number, number, number, number],

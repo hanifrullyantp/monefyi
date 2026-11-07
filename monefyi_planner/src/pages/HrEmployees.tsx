@@ -237,11 +237,10 @@ export default function HrEmployees() {
               key={t.id}
               type="button"
               onClick={() => setTab(t.id)}
-              className={`min-h-11 flex items-center px-4 py-2 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap border transition-all ${
-                tab === t.id
+              className={`min-h-11 flex items-center px-4 py-2 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap border transition-all ${tab === t.id
                   ? 'bg-[#059669] text-white border-[#059669] shadow-sm'
                   : 'bg-white text-[#5B6B7A] border-[#E5EAE8] hover:bg-slate-50'
-              }`}
+                }`}
             >
               {t.label}
               {t.id === 'requests' && requests.length > 0 && (
@@ -251,733 +250,733 @@ export default function HrEmployees() {
           ))}
         </div>
 
-      {tab === 'overview' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-            {[
-              { label: 'Total Anggota', value: members.length, icon: Users, color: 'text-emerald-700 bg-emerald-50' },
-              { label: 'Karyawan', value: workers.length, icon: Briefcase, color: 'text-emerald-700 bg-emerald-50' },
-              { label: 'Manager', value: managers.length, icon: UserCheck, color: 'text-emerald-700 bg-emerald-50' },
-              { label: 'Check-in Hari Ini', value: checkedInToday, icon: Clock, color: 'text-amber-700 bg-amber-50' },
-              { label: 'Work Items Aktif', value: workItemCount, icon: CheckCircle2, color: 'text-sky-700 bg-sky-50' },
-            ].map((kpi, i) => (
-              <motion.div key={kpi.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                className="bg-white rounded-2xl border border-[#E5EAE8] p-4 shadow-sm">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-2 ${kpi.color}`}>
-                  <kpi.icon className="w-4 h-4" />
-                </div>
-                <div className="text-2xl font-black text-[#0F172A]">{kpi.value}</div>
-                <div className="text-xs text-[#5B6B7A]">{kpi.label}</div>
-              </motion.div>
-            ))}
-          </div>
+        {tab === 'overview' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+              {[
+                { label: 'Total Anggota', value: members.length, icon: Users, color: 'text-emerald-700 bg-emerald-50' },
+                { label: 'Karyawan', value: workers.length, icon: Briefcase, color: 'text-emerald-700 bg-emerald-50' },
+                { label: 'Manager', value: managers.length, icon: UserCheck, color: 'text-emerald-700 bg-emerald-50' },
+                { label: 'Check-in Hari Ini', value: checkedInToday, icon: Clock, color: 'text-amber-700 bg-amber-50' },
+                { label: 'Work Items Aktif', value: workItemCount, icon: CheckCircle2, color: 'text-sky-700 bg-sky-50' },
+              ].map((kpi, i) => (
+                <motion.div key={kpi.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                  className="bg-white rounded-2xl border border-[#E5EAE8] p-4 shadow-sm">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-2 ${kpi.color}`}>
+                    <kpi.icon className="w-4 h-4" />
+                  </div>
+                  <div className="text-2xl font-black text-[#0F172A]">{kpi.value}</div>
+                  <div className="text-xs text-[#5B6B7A]">{kpi.label}</div>
+                </motion.div>
+              ))}
+            </div>
 
-          {tenant?.id && (
-            <TeamTodoBoard orgId={tenant.id} members={members} title="Todo Tim (Semua Proyek)" />
-          )}
-
-          <div className="grid md:grid-cols-2 gap-4">
-            {canInvite && undoableActions.length > 0 && (
-              <div className="bg-white rounded-2xl border border-[#E5EAE8] p-5 md:col-span-2 shadow-sm">
-                <h3 className="font-bold text-[#0F172A] mb-3 text-sm">Aksi Terakhir (Undo)</h3>
-                <div className="space-y-2">
-                  {undoableActions.map(a => (
-                    <div key={a.id} className="flex items-center justify-between gap-2 text-sm border border-[#E5EAE8] rounded-xl px-3 py-2 bg-slate-50">
-                      <div>
-                        <div className="font-medium text-[#0F172A]">{actionTypeLabel(a.action_type)}</div>
-                        <div className="text-xs text-[#5B6B7A]">{new Date(a.created_at).toLocaleString('id-ID')}</div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          try {
-                            await undoReversibleAction(a.id, user!.id, user!.role);
-                            showToast('Aksi dibatalkan', 'success');
-                            load();
-                          } catch (e) {
-                            showToast(e instanceof Error ? e.message : 'Gagal undo', 'error');
-                          }
-                        }}
-                        className="px-3 py-1.5 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-lg border border-amber-200"
-                      >
-                        Undo
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {tenant?.id && (
+              <TeamTodoBoard orgId={tenant.id} members={members} title="Todo Tim (Semua Proyek)" />
             )}
-            <div className="bg-white rounded-2xl border border-[#E5EAE8] p-5 shadow-sm">
-              <h3 className="font-bold text-[#0F172A] mb-3 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-[#059669]" /> Absensi Hari Ini
-              </h3>
-              {todayAttendance.size === 0 ? (
-                <p className="text-sm text-[#5B6B7A]">Belum ada check-in hari ini. Karyawan dapat check-in dari aplikasi mobile.</p>
-              ) : (
-                <div className="space-y-2">
-                  {[...todayAttendance.entries()].slice(0, 6).map(([uid, info]) => (
-                    <div key={uid} className="flex items-center justify-between text-sm py-2 border-b border-[#E5EAE8] last:border-0">
-                      <span className="font-medium text-[#0F172A]">{info.name}</span>
-                      <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${info.status === 'in' ? 'bg-emerald-50 text-[#059669]' : 'bg-slate-100 text-[#5B6B7A]'}`}>
-                        {info.status === 'in' ? `Masuk ${info.checkIn}` : info.checkOut ? `Keluar ${info.checkOut}` : '—'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
 
-            <div className="bg-white rounded-2xl border border-[#E5EAE8] p-5 shadow-sm">
-              <h3 className="font-bold text-[#0F172A] mb-3 flex items-center gap-2">
-                <Briefcase className="w-4 h-4 text-[#059669]" /> Laporan Harian Proyek
-              </h3>
-              {workerLogs.length === 0 ? (
-                <p className="text-sm text-[#5B6B7A]">Belum ada log pekerja di proyek. Catat di daily log proyek.</p>
-              ) : (
-                <div className="space-y-2">
-                  {workerLogs.slice(0, 5).map(log => (
-                    <div key={log.id} className="text-sm py-2 border-b border-[#E5EAE8] last:border-0">
-                      <div className="flex justify-between">
-                        <span className="font-medium text-[#0F172A]">{projectNameMap[log.project_id] || 'Proyek'}</span>
-                        <span className="text-xs text-[#5B6B7A]">{log.date}</span>
-                      </div>
-                      <div className="text-xs text-[#5B6B7A] mt-0.5">{log.workers_present} pekerja · {log.description?.slice(0, 60) || '—'}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {requests.length > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm text-amber-800">
-                <AlertCircle className="w-4 h-4" />
-                {requests.length} permintaan join menunggu persetujuan
-              </div>
-              <button type="button" onClick={() => setTab('requests')} className="text-sm font-bold text-amber-700">Review →</button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {tab === 'karyawan' && (
-        <>
-          <div className="flex flex-wrap gap-3">
-            <div className="relative flex-1 min-w-[200px] max-w-xs">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8A99A6]" />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari nama karyawan..." className="w-full h-11 pl-10 pr-4 rounded-xl border border-[#E5EAE8] bg-white text-sm text-[#0F172A] placeholder:text-[#8A99A6] focus:border-[#059669] focus:outline-none" />
-            </div>
-            <select value={roleFilter} onChange={e => setRoleFilter(e.target.value as RoleFilter)} className="h-11 px-4 rounded-xl border border-[#E5EAE8] bg-white text-sm text-[#0F172A] focus:border-[#059669] focus:outline-none">
-              <option value="all">Semua role</option>
-              <option value="worker">Karyawan</option>
-              <option value="manager">Manager</option>
-              <option value="owner">Owner</option>
-            </select>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map(m => {
-              const att = todayAttendance.get(m.user_id);
-              const comp = compByUser[m.user_id];
-              const monthAtt = monthAttendanceStats.get(m.user_id);
-              return (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => setSelectedMember(m)}
-                  className="bg-white rounded-2xl border border-[#E5EAE8] p-4 hover:border-[#059669] hover:shadow-md transition-all text-left w-full shadow-sm"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="w-11 h-11 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-800 font-bold text-lg shrink-0">
-                      {(m.profile?.name || '?')[0]?.toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-bold text-[#0F172A] truncate">{m.profile?.name || '—'}</div>
-                      <div className="text-xs text-[#5B6B7A] truncate">{m.position || m.department || '—'}</div>
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full capitalize ${roleBadge(m.role)}`}>{m.role}</span>
-                        {att?.status === 'in' && (
-                          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#059669]">
-                            Hadir {att.checkIn}
-                          </span>
-                        )}
-                        {(monthAtt?.partialCount ?? 0) > 0 && (
-                          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
-                            {monthAtt!.partialCount} hari kurang jam
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-[#E5EAE8] grid grid-cols-2 gap-2 text-xs text-[#5B6B7A]">
-                    <span>Gaji: {formatSalaryLabel(comp)}</span>
-                    <span>Absensi: {monthAtt?.daysPresent ?? 0} hari</span>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between text-xs text-[#5B6B7A]">
-                    <span>Last seen: {lastSeenLabel(m.last_active_at)}</span>
-                    <span className="text-[#059669] font-bold">Detail →</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {filtered.length === 0 && (
-            <div className="bg-white rounded-2xl border border-[#E5EAE8] p-12 text-center shadow-sm">
-              <Users className="w-10 h-10 text-[#8A99A6] mx-auto mb-3" />
-              <p className="text-[#5B6B7A]">Belum ada karyawan.</p>
-              {canInvite && (
-                <button type="button" onClick={() => setInviteOpen(true)} className="min-h-11 mt-3 text-[#059669] font-bold text-sm hover:underline">
-                  Undang karyawan pertama →
-                </button>
-              )}
-            </div>
-          )}
-        </>
-      )}
-
-      {tab === 'absensi' && (
-        <div className="space-y-4">
-          <p className="text-sm text-slate-500">
-            Jam kerja per hari: <strong>{attendanceSettings?.hours_per_day ?? 8} jam</strong>.
-            Hari dengan jam kerja kurang dari target ditandai di bawah.
-          </p>
-
-          {(() => {
-            const hoursPerDay = attendanceSettings?.hours_per_day ?? 8;
-            const partialByUser = new Map<string, ReturnType<typeof getPartialDays>>();
-            for (const m of members) {
-              const recs = monthAttendanceRecords.filter(r => r.user_id === m.user_id);
-              const partial = getPartialDays(recs, hoursPerDay);
-              if (partial.length) partialByUser.set(m.user_id, partial);
-            }
-            if (partialByUser.size === 0) return null;
-            return (
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3">
-                <div className="font-bold text-amber-900 text-sm">Hari dengan jam kerja kurang</div>
-                {[...partialByUser.entries()].map(([uid, days]) => {
-                  const name = members.find(x => x.user_id === uid)?.profile?.name || 'Karyawan';
-                  return (
-                    <div key={uid} className="text-xs text-amber-900">
-                      <div className="font-semibold mb-1">{name}</div>
-                      {days.map(d => (
-                        <div key={d.date} className="ml-2 py-0.5">
-                          {d.date}: {d.hoursWorked}j / {d.requiredHours}j
-                          {d.checkIn && ` · masuk ${d.checkIn}`}
-                          {d.checkOut && ` · keluar ${d.checkOut}`}
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })()}
-
-          <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-            <div className="p-4 border-b border-slate-50 font-bold text-slate-800">Riwayat Check-in (30 hari)</div>
-            {recentAttendance.length === 0 ? (
-              <div className="p-8 text-center text-slate-600 text-sm">Belum ada data absensi.</div>
-            ) : (
-              <div className="divide-y divide-slate-50">
-                {recentAttendance.slice(0, 20).map(r => (
-                  <div key={r.id} className="px-4 py-3 flex items-center justify-between text-sm">
-                    <div>
-                      <div className="font-medium">{r.user_name}</div>
-                      <div className="text-xs text-slate-600">{formatAttendanceTime(r.timestamp)}{r.project_name ? ` · ${r.project_name}` : ''}{r.is_offsite ? ' · ⚠️ luar lokasi' : ''}</div>
-                    </div>
-                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${r.type === 'check_in' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
-                      {r.type === 'check_in' ? 'Check In' : 'Check Out'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-            <div className="p-4 border-b border-slate-50 font-bold text-slate-800">Kehadiran dari Daily Log Proyek</div>
-            {workerLogs.length === 0 ? (
-              <div className="p-8 text-center text-slate-600 text-sm">Belum ada log pekerja.</div>
-            ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 text-slate-500 text-left">
-                  <tr>
-                    <th className="p-3">Tanggal</th>
-                    <th className="p-3">Proyek</th>
-                    <th className="p-3">Pekerja</th>
-                    <th className="p-3 hidden md:table-cell">Keterangan</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {workerLogs.map(log => (
-                    <tr key={log.id} className="border-t border-slate-50">
-                      <td className="p-3">{log.date}</td>
-                      <td className="p-3">{projectNameMap[log.project_id] || '—'}</td>
-                      <td className="p-3 font-semibold">{log.workers_present}</td>
-                      <td className="p-3 hidden md:table-cell text-slate-500 truncate max-w-xs">{log.description || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
-      )}
-
-      {tab === 'payroll' && (
-        <div className="space-y-4">
-          {canInvite && tenant?.id && (
-            <AttendanceSettingsPanel orgId={tenant.id} canEdit={canInvite} actorId={user?.id} />
-          )}
-
-          <div className="grid md:grid-cols-3 gap-4">
-            {[
-              {
-                label: 'Total Gaji Bulan Ini',
-                value: canInvite ? formatCurrency(totalPayrollNet) : '—',
-                sub: `${currentMonthPayroll.length} slip draft/final`,
-              },
-              {
-                label: 'Bon Pending',
-                value: String(pendingBon.length),
-                sub: pendingBon.length ? 'Perlu review' : 'Tidak ada pengajuan',
-              },
-              {
-                label: 'Karyawan dengan gaji',
-                value: String(compensation.length),
-                sub: 'Atur gaji pokok di bawah',
-              },
-            ].map(item => (
-              <div key={item.label} className="bg-white rounded-2xl border border-slate-100 p-5">
-                <Wallet className="w-5 h-5 text-emerald-400 mb-2" />
-                <div className="text-2xl font-black text-slate-900">{item.value}</div>
-                <div className="font-semibold text-slate-700">{item.label}</div>
-                <div className="text-xs text-slate-600 mt-1">{item.sub}</div>
-              </div>
-            ))}
-          </div>
-
-          {canInvite && (
-            <>
-              {/* AI HRD Banner: Alur Saldo Manager Lapangan ➔ AI HRD Pilah & Konfirmasi ➔ Payout Rekening Mayar */}
-              <div className="bg-gradient-to-r from-slate-900 via-rose-950 to-slate-900 border border-rose-500/30 rounded-2xl p-5 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-rose-500 to-amber-500 flex items-center justify-center shrink-0 shadow-lg shadow-rose-500/20">
-                    <Bot className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-black text-base text-white">AI HRD: Saldo Lapangan &amp; Payout Mayar</h4>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                        Otomasi Mayar
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-300 mt-1 max-w-xl">
-                      Manager HR lapangan mengirimkan saldo ➔ AI HRD menghitung, memilah potongan kasbon/lembur &amp; meminta konfirmasi kebenaran ➔ Cairkan langsung ke rekening karyawan dengan sistem Mayar.
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setShowAiHrdModal(true)}
-                  className="px-5 py-3 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-rose-950 flex items-center gap-2 shrink-0 transition-all cursor-pointer"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Jalankan AI HRD Lapangan</span>
-                </button>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={payrollBusy}
-                  onClick={async () => {
-                    if (!tenant?.id) return;
-                    setPayrollBusy(true);
-                    try {
-                      await generatePayrollForOrg(
-                        tenant.id,
-                        members.map(m => ({ id: m.id, user_id: m.user_id, role: m.role })),
-                        undefined,
-                        attendanceSettings?.hours_per_day ?? 8,
-                      );
-                      showToast('Payroll bulan ini di-generate', 'success');
-                      load();
-                    } catch (e) {
-                      showToast(e instanceof Error ? e.message : 'Gagal generate payroll', 'error');
-                    } finally {
-                      setPayrollBusy(false);
-                    }
-                  }}
-                  className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-60"
-                >
-                  {payrollBusy ? 'Memproses…' : 'Generate Payroll Bulan Ini'}
-                </button>
-              </div>
-
-              <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-                <div className="p-4 border-b border-slate-50 font-bold text-slate-800">Gaji Pokok Karyawan</div>
-                <div className="divide-y divide-slate-50">
-                  {workers.map(w => {
-                    const comp = compByUser[w.user_id];
-                    const salaryType = salaryTypeDraft[w.id] ?? comp?.salary_type ?? 'monthly';
-                    const defaultAmount = salaryType === 'daily'
-                      ? (comp?.daily_rate || 0)
-                      : (comp?.monthly_salary || 0);
-                    return (
-                    <div key={w.id} className="px-4 py-3 flex flex-wrap items-center gap-3 text-sm">
-                      <span className="font-medium flex-1 min-w-[120px]">{w.profile?.name || '—'}</span>
-                      <select
-                        value={salaryType}
-                        onChange={e => setSalaryTypeDraft({ ...salaryTypeDraft, [w.id]: e.target.value as 'daily' | 'monthly' })}
-                        className="px-2 py-1.5 rounded-lg border border-slate-200 text-xs"
-                      >
-                        <option value="monthly">Bulanan</option>
-                        <option value="daily">Harian</option>
-                      </select>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        placeholder={String(defaultAmount)}
-                        value={salaryDraft[w.id] ?? ''}
-                        onChange={e => setSalaryDraft({ ...salaryDraft, [w.id]: e.target.value })}
-                        className="w-36 px-3 py-1.5 rounded-lg border border-slate-200 text-sm"
-                      />
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const raw = salaryDraft[w.id] ?? String(defaultAmount);
-                          const amount = Number(raw.replace(/\D/g, ''));
-                          if (!amount) {
-                            showToast(`Masukkan gaji ${salaryType === 'daily' ? 'harian' : 'bulanan'}`, 'error');
-                            return;
-                          }
-                          try {
-                            const { undoActionId } = await upsertCompensation({
-                              org_id: tenant!.id,
-                              member_id: w.id,
-                              user_id: w.user_id,
-                              salary_type: salaryType,
-                              monthly_salary: salaryType === 'monthly' ? amount : 0,
-                              daily_rate: salaryType === 'daily' ? amount : undefined,
-                            }, user ? { actorId: user.id } : undefined);
-                            showToast('Gaji disimpan', 'success');
-                            notifyUndoable('Gaji pokok disimpan', undoActionId);
-                            load();
-                          } catch (e) {
-                            showToast(e instanceof Error ? e.message : 'Gagal simpan', 'error');
-                          }
-                        }}
-                        className="text-emerald-600 font-semibold text-xs"
-                      >
-                        Simpan
-                      </button>
-                    </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-                <div className="p-4 border-b border-slate-50 font-bold text-slate-800">Slip Gaji ({monthStartIso()})</div>
-                {currentMonthPayroll.length === 0 ? (
-                  <div className="p-8 text-center text-slate-600 text-sm">Belum ada payroll. Set gaji pokok lalu generate.</div>
-                ) : (
-                  <div className="divide-y divide-slate-50">
-                    {currentMonthPayroll.map(p => (
-                      <div key={p.id} className="px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+            <div className="grid md:grid-cols-2 gap-4">
+              {canInvite && undoableActions.length > 0 && (
+                <div className="bg-white rounded-2xl border border-[#E5EAE8] p-5 md:col-span-2 shadow-sm">
+                  <h3 className="font-bold text-[#0F172A] mb-3 text-sm">Aksi Terakhir (Undo)</h3>
+                  <div className="space-y-2">
+                    {undoableActions.map(a => (
+                      <div key={a.id} className="flex items-center justify-between gap-2 text-sm border border-[#E5EAE8] rounded-xl px-3 py-2 bg-slate-50">
                         <div>
-                          <div className="font-medium">{p.profiles?.name || p.user_id.slice(0, 8)}</div>
-                          <div className="text-xs text-slate-600">
-                            {p.days_present} hari hadir · {formatCurrency(p.net_amount)}
-                          </div>
+                          <div className="font-medium text-[#0F172A]">{actionTypeLabel(a.action_type)}</div>
+                          <div className="text-xs text-[#5B6B7A]">{new Date(a.created_at).toLocaleString('id-ID')}</div>
                         </div>
-                        <div className="flex gap-2">
-                          {p.status === 'draft' && (
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                const { undoActionId } = await updatePayrollStatus(p.id, 'approved', undefined, tenant && user ? { orgId: tenant.id, actorId: user.id } : undefined);
-                                showToast('Disetujui', 'success');
-                                notifyUndoable('Payroll disetujui', undoActionId);
-                                load();
-                              }}
-                              className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold"
-                            >
-                              Approve
-                            </button>
-                          )}
-                          {p.status === 'approved' && (
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                const { undoActionId } = await updatePayrollStatus(p.id, 'paid', undefined, tenant && user ? { orgId: tenant.id, actorId: user.id } : undefined);
-                                showToast('Ditandai lunas', 'success');
-                                notifyUndoable('Payroll ditandai lunas', undoActionId);
-                                load();
-                              }}
-                              className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold"
-                            >
-                              Tandai Lunas
-                            </button>
-                          )}
-                          <span className="text-xs capitalize text-slate-500">{p.status}</span>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await undoReversibleAction(a.id, user!.id, user!.role);
+                              showToast('Aksi dibatalkan', 'success');
+                              load();
+                            } catch (e) {
+                              showToast(e instanceof Error ? e.message : 'Gagal undo', 'error');
+                            }
+                          }}
+                          className="px-3 py-1.5 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-lg border border-amber-200"
+                        >
+                          Undo
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="bg-white rounded-2xl border border-[#E5EAE8] p-5 shadow-sm">
+                <h3 className="font-bold text-[#0F172A] mb-3 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-[#059669]" /> Absensi Hari Ini
+                </h3>
+                {todayAttendance.size === 0 ? (
+                  <p className="text-sm text-[#5B6B7A]">Belum ada check-in hari ini. Karyawan dapat check-in dari aplikasi mobile.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {[...todayAttendance.entries()].slice(0, 6).map(([uid, info]) => (
+                      <div key={uid} className="flex items-center justify-between text-sm py-2 border-b border-[#E5EAE8] last:border-0">
+                        <span className="font-medium text-[#0F172A]">{info.name}</span>
+                        <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${info.status === 'in' ? 'bg-emerald-50 text-[#059669]' : 'bg-slate-100 text-[#5B6B7A]'}`}>
+                          {info.status === 'in' ? `Masuk ${info.checkIn}` : info.checkOut ? `Keluar ${info.checkOut}` : '—'}
+                        </span>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
 
-              {pendingBon.length > 0 && (
-                <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-                  <div className="p-4 border-b border-slate-50 font-bold text-slate-800">Pengajuan Bon</div>
-                  <div className="divide-y divide-slate-50">
-                    {pendingBon.map(b => (
-                      <div key={b.id} className="px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-sm">
-                        <div>
-                          <div className="font-medium">{b.profiles?.name || 'Karyawan'}</div>
-                          <div className="text-xs text-slate-600">{formatCurrency(b.amount)}{b.reason ? ` · ${b.reason}` : ''}</div>
+              <div className="bg-white rounded-2xl border border-[#E5EAE8] p-5 shadow-sm">
+                <h3 className="font-bold text-[#0F172A] mb-3 flex items-center gap-2">
+                  <Briefcase className="w-4 h-4 text-[#059669]" /> Laporan Harian Proyek
+                </h3>
+                {workerLogs.length === 0 ? (
+                  <p className="text-sm text-[#5B6B7A]">Belum ada log pekerja di proyek. Catat di daily log proyek.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {workerLogs.slice(0, 5).map(log => (
+                      <div key={log.id} className="text-sm py-2 border-b border-[#E5EAE8] last:border-0">
+                        <div className="flex justify-between">
+                          <span className="font-medium text-[#0F172A]">{projectNameMap[log.project_id] || 'Proyek'}</span>
+                          <span className="text-xs text-[#5B6B7A]">{log.date}</span>
                         </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              const { undoActionId } = await reviewBonRequest(b.id, 'approved', user!.id, undefined, tenant ? { orgId: tenant.id, actorId: user!.id } : undefined);
-                              showToast('Bon disetujui', 'success');
-                              notifyUndoable('Bon disetujui', undoActionId);
-                              load();
-                            }}
-                            className="px-2 py-1 bg-emerald-600 text-white rounded-lg text-xs font-bold"
-                          >
-                            Approve
-                          </button>
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              const { undoActionId } = await reviewBonRequest(b.id, 'rejected', user!.id, 'Ditolak', tenant ? { orgId: tenant.id, actorId: user!.id } : undefined);
-                              showToast('Bon ditolak', 'info');
-                              notifyUndoable('Bon ditolak', undoActionId);
-                              load();
-                            }}
-                            className="px-2 py-1 border rounded-lg text-xs"
-                          >
-                            Tolak
-                          </button>
-                        </div>
+                        <div className="text-xs text-[#5B6B7A] mt-0.5">{log.workers_present} pekerja · {log.description?.slice(0, 60) || '—'}</div>
                       </div>
                     ))}
                   </div>
+                )}
+              </div>
+            </div>
+
+            {requests.length > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm text-amber-800">
+                  <AlertCircle className="w-4 h-4" />
+                  {requests.length} permintaan join menunggu persetujuan
+                </div>
+                <button type="button" onClick={() => setTab('requests')} className="text-sm font-bold text-amber-700">Review →</button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === 'karyawan' && (
+          <>
+            <div className="flex flex-wrap gap-3">
+              <div className="relative flex-1 min-w-[200px] max-w-xs">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8A99A6]" />
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari nama karyawan..." className="w-full h-11 pl-10 pr-4 rounded-xl border border-[#E5EAE8] bg-white text-sm text-[#0F172A] placeholder:text-[#8A99A6] focus:border-[#059669] focus:outline-none" />
+              </div>
+              <select value={roleFilter} onChange={e => setRoleFilter(e.target.value as RoleFilter)} className="h-11 px-4 rounded-xl border border-[#E5EAE8] bg-white text-sm text-[#0F172A] focus:border-[#059669] focus:outline-none">
+                <option value="all">Semua role</option>
+                <option value="worker">Karyawan</option>
+                <option value="manager">Manager</option>
+                <option value="owner">Owner</option>
+              </select>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filtered.map(m => {
+                const att = todayAttendance.get(m.user_id);
+                const comp = compByUser[m.user_id];
+                const monthAtt = monthAttendanceStats.get(m.user_id);
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setSelectedMember(m)}
+                    className="bg-white rounded-2xl border border-[#E5EAE8] p-4 hover:border-[#059669] hover:shadow-md transition-all text-left w-full shadow-sm"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-11 h-11 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-800 font-bold text-lg shrink-0">
+                        {(m.profile?.name || '?')[0]?.toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-[#0F172A] truncate">{m.profile?.name || '—'}</div>
+                        <div className="text-xs text-[#5B6B7A] truncate">{m.position || m.department || '—'}</div>
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full capitalize ${roleBadge(m.role)}`}>{m.role}</span>
+                          {att?.status === 'in' && (
+                            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#059669]">
+                              Hadir {att.checkIn}
+                            </span>
+                          )}
+                          {(monthAtt?.partialCount ?? 0) > 0 && (
+                            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                              {monthAtt!.partialCount} hari kurang jam
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-[#E5EAE8] grid grid-cols-2 gap-2 text-xs text-[#5B6B7A]">
+                      <span>Gaji: {formatSalaryLabel(comp)}</span>
+                      <span>Absensi: {monthAtt?.daysPresent ?? 0} hari</span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between text-xs text-[#5B6B7A]">
+                      <span>Last seen: {lastSeenLabel(m.last_active_at)}</span>
+                      <span className="text-[#059669] font-bold">Detail →</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {filtered.length === 0 && (
+              <div className="bg-white rounded-2xl border border-[#E5EAE8] p-12 text-center shadow-sm">
+                <Users className="w-10 h-10 text-[#8A99A6] mx-auto mb-3" />
+                <p className="text-[#5B6B7A]">Belum ada karyawan.</p>
+                {canInvite && (
+                  <button type="button" onClick={() => setInviteOpen(true)} className="min-h-11 mt-3 text-[#059669] font-bold text-sm hover:underline">
+                    Undang karyawan pertama →
+                  </button>
+                )}
+              </div>
+            )}
+          </>
+        )}
+
+        {tab === 'absensi' && (
+          <div className="space-y-4">
+            <p className="text-sm text-slate-500">
+              Jam kerja per hari: <strong>{attendanceSettings?.hours_per_day ?? 8} jam</strong>.
+              Hari dengan jam kerja kurang dari target ditandai di bawah.
+            </p>
+
+            {(() => {
+              const hoursPerDay = attendanceSettings?.hours_per_day ?? 8;
+              const partialByUser = new Map<string, ReturnType<typeof getPartialDays>>();
+              for (const m of members) {
+                const recs = monthAttendanceRecords.filter(r => r.user_id === m.user_id);
+                const partial = getPartialDays(recs, hoursPerDay);
+                if (partial.length) partialByUser.set(m.user_id, partial);
+              }
+              if (partialByUser.size === 0) return null;
+              return (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3">
+                  <div className="font-bold text-amber-900 text-sm">Hari dengan jam kerja kurang</div>
+                  {[...partialByUser.entries()].map(([uid, days]) => {
+                    const name = members.find(x => x.user_id === uid)?.profile?.name || 'Karyawan';
+                    return (
+                      <div key={uid} className="text-xs text-amber-900">
+                        <div className="font-semibold mb-1">{name}</div>
+                        {days.map(d => (
+                          <div key={d.date} className="ml-2 py-0.5">
+                            {d.date}: {d.hoursWorked}j / {d.requiredHours}j
+                            {d.checkIn && ` · masuk ${d.checkIn}`}
+                            {d.checkOut && ` · keluar ${d.checkOut}`}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
+            <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+              <div className="p-4 border-b border-slate-50 font-bold text-slate-800">Riwayat Check-in (30 hari)</div>
+              {recentAttendance.length === 0 ? (
+                <div className="p-8 text-center text-slate-600 text-sm">Belum ada data absensi.</div>
+              ) : (
+                <div className="divide-y divide-slate-50">
+                  {recentAttendance.slice(0, 20).map(r => (
+                    <div key={r.id} className="px-4 py-3 flex items-center justify-between text-sm">
+                      <div>
+                        <div className="font-medium">{r.user_name}</div>
+                        <div className="text-xs text-slate-600">{formatAttendanceTime(r.timestamp)}{r.project_name ? ` · ${r.project_name}` : ''}{r.is_offsite ? ' · ⚠️ luar lokasi' : ''}</div>
+                      </div>
+                      <span className={`text-xs font-bold px-2 py-1 rounded-full ${r.type === 'check_in' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                        {r.type === 'check_in' ? 'Check In' : 'Check Out'}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               )}
-            </>
-          )}
+            </div>
 
-          {!canInvite && (
-            <p className="text-sm text-slate-500">Hanya owner/manager yang dapat mengelola payroll.</p>
-          )}
-        </div>
-      )}
+            <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+              <div className="p-4 border-b border-slate-50 font-bold text-slate-800">Kehadiran dari Daily Log Proyek</div>
+              {workerLogs.length === 0 ? (
+                <div className="p-8 text-center text-slate-600 text-sm">Belum ada log pekerja.</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 text-slate-500 text-left">
+                    <tr>
+                      <th className="p-3">Tanggal</th>
+                      <th className="p-3">Proyek</th>
+                      <th className="p-3">Pekerja</th>
+                      <th className="p-3 hidden md:table-cell">Keterangan</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {workerLogs.map(log => (
+                      <tr key={log.id} className="border-t border-slate-50">
+                        <td className="p-3">{log.date}</td>
+                        <td className="p-3">{projectNameMap[log.project_id] || '—'}</td>
+                        <td className="p-3 font-semibold">{log.workers_present}</td>
+                        <td className="p-3 hidden md:table-cell text-slate-500 truncate max-w-xs">{log.description || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        )}
 
-      {tab === 'requests' && (
-        <div className="space-y-3">
-          {requests.map(r => (
-            <div key={r.id} className="bg-white p-4 rounded-xl border border-slate-100 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="font-semibold">{r.profile?.name || r.user_id}</div>
-                {r.message && <p className="text-sm text-slate-500">{r.message}</p>}
+        {tab === 'payroll' && (
+          <div className="space-y-4">
+            {canInvite && tenant?.id && (
+              <AttendanceSettingsPanel orgId={tenant.id} canEdit={canInvite} actorId={user?.id} />
+            )}
+
+            <div className="grid md:grid-cols-3 gap-4">
+              {[
+                {
+                  label: 'Total Gaji Bulan Ini',
+                  value: canInvite ? formatCurrency(totalPayrollNet) : '—',
+                  sub: `${currentMonthPayroll.length} slip draft/final`,
+                },
+                {
+                  label: 'Bon Pending',
+                  value: String(pendingBon.length),
+                  sub: pendingBon.length ? 'Perlu review' : 'Tidak ada pengajuan',
+                },
+                {
+                  label: 'Karyawan dengan gaji',
+                  value: String(compensation.length),
+                  sub: 'Atur gaji pokok di bawah',
+                },
+              ].map(item => (
+                <div key={item.label} className="bg-white rounded-2xl border border-slate-100 p-5">
+                  <Wallet className="w-5 h-5 text-emerald-400 mb-2" />
+                  <div className="text-2xl font-black text-slate-900">{item.value}</div>
+                  <div className="font-semibold text-slate-700">{item.label}</div>
+                  <div className="text-xs text-slate-600 mt-1">{item.sub}</div>
+                </div>
+              ))}
+            </div>
+
+            {canInvite && (
+              <>
+                {/* AI HRD Banner: Alur Saldo Manager Lapangan ➔ AI HRD Pilah & Konfirmasi ➔ Payout Rekening Mayar */}
+                <div className="bg-gradient-to-r from-slate-900 via-rose-950 to-slate-900 border border-rose-500/30 rounded-2xl p-5 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-rose-500 to-amber-500 flex items-center justify-center shrink-0 shadow-lg shadow-rose-500/20">
+                      <Bot className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-black text-base text-white">AI HRD: Saldo Lapangan &amp; Payout Mayar</h4>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                          Otomasi Mayar
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-300 mt-1 max-w-xl">
+                        Manager HR lapangan mengirimkan saldo ➔ AI HRD menghitung, memilah potongan kasbon/lembur &amp; meminta konfirmasi kebenaran ➔ Cairkan langsung ke rekening karyawan dengan sistem Mayar.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowAiHrdModal(true)}
+                    className="px-5 py-3 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-rose-950 flex items-center gap-2 shrink-0 transition-all cursor-pointer"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>Jalankan AI HRD Lapangan</span>
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={payrollBusy}
+                    onClick={async () => {
+                      if (!tenant?.id) return;
+                      setPayrollBusy(true);
+                      try {
+                        await generatePayrollForOrg(
+                          tenant.id,
+                          members.map(m => ({ id: m.id, user_id: m.user_id, role: m.role })),
+                          undefined,
+                          attendanceSettings?.hours_per_day ?? 8,
+                        );
+                        showToast('Payroll bulan ini di-generate', 'success');
+                        load();
+                      } catch (e) {
+                        showToast(e instanceof Error ? e.message : 'Gagal generate payroll', 'error');
+                      } finally {
+                        setPayrollBusy(false);
+                      }
+                    }}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-60"
+                  >
+                    {payrollBusy ? 'Memproses…' : 'Generate Payroll Bulan Ini'}
+                  </button>
+                </div>
+
+                <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+                  <div className="p-4 border-b border-slate-50 font-bold text-slate-800">Gaji Pokok Karyawan</div>
+                  <div className="divide-y divide-slate-50">
+                    {workers.map(w => {
+                      const comp = compByUser[w.user_id];
+                      const salaryType = salaryTypeDraft[w.id] ?? comp?.salary_type ?? 'monthly';
+                      const defaultAmount = salaryType === 'daily'
+                        ? (comp?.daily_rate || 0)
+                        : (comp?.monthly_salary || 0);
+                      return (
+                        <div key={w.id} className="px-4 py-3 flex flex-wrap items-center gap-3 text-sm">
+                          <span className="font-medium flex-1 min-w-[120px]">{w.profile?.name || '—'}</span>
+                          <select
+                            value={salaryType}
+                            onChange={e => setSalaryTypeDraft({ ...salaryTypeDraft, [w.id]: e.target.value as 'daily' | 'monthly' })}
+                            className="px-2 py-1.5 rounded-lg border border-slate-200 text-xs"
+                          >
+                            <option value="monthly">Bulanan</option>
+                            <option value="daily">Harian</option>
+                          </select>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            placeholder={String(defaultAmount)}
+                            value={salaryDraft[w.id] ?? ''}
+                            onChange={e => setSalaryDraft({ ...salaryDraft, [w.id]: e.target.value })}
+                            className="w-36 px-3 py-1.5 rounded-lg border border-slate-200 text-sm"
+                          />
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const raw = salaryDraft[w.id] ?? String(defaultAmount);
+                              const amount = Number(raw.replace(/\D/g, ''));
+                              if (!amount) {
+                                showToast(`Masukkan gaji ${salaryType === 'daily' ? 'harian' : 'bulanan'}`, 'error');
+                                return;
+                              }
+                              try {
+                                const { undoActionId } = await upsertCompensation({
+                                  org_id: tenant!.id,
+                                  member_id: w.id,
+                                  user_id: w.user_id,
+                                  salary_type: salaryType,
+                                  monthly_salary: salaryType === 'monthly' ? amount : 0,
+                                  daily_rate: salaryType === 'daily' ? amount : undefined,
+                                }, user ? { actorId: user.id } : undefined);
+                                showToast('Gaji disimpan', 'success');
+                                notifyUndoable('Gaji pokok disimpan', undoActionId);
+                                load();
+                              } catch (e) {
+                                showToast(e instanceof Error ? e.message : 'Gagal simpan', 'error');
+                              }
+                            }}
+                            className="text-emerald-600 font-semibold text-xs"
+                          >
+                            Simpan
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+                  <div className="p-4 border-b border-slate-50 font-bold text-slate-800">Slip Gaji ({monthStartIso()})</div>
+                  {currentMonthPayroll.length === 0 ? (
+                    <div className="p-8 text-center text-slate-600 text-sm">Belum ada payroll. Set gaji pokok lalu generate.</div>
+                  ) : (
+                    <div className="divide-y divide-slate-50">
+                      {currentMonthPayroll.map(p => (
+                        <div key={p.id} className="px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+                          <div>
+                            <div className="font-medium">{p.profiles?.name || p.user_id.slice(0, 8)}</div>
+                            <div className="text-xs text-slate-600">
+                              {p.days_present} hari hadir · {formatCurrency(p.net_amount)}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            {p.status === 'draft' && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  const { undoActionId } = await updatePayrollStatus(p.id, 'approved', undefined, tenant && user ? { orgId: tenant.id, actorId: user.id } : undefined);
+                                  showToast('Disetujui', 'success');
+                                  notifyUndoable('Payroll disetujui', undoActionId);
+                                  load();
+                                }}
+                                className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold"
+                              >
+                                Approve
+                              </button>
+                            )}
+                            {p.status === 'approved' && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  const { undoActionId } = await updatePayrollStatus(p.id, 'paid', undefined, tenant && user ? { orgId: tenant.id, actorId: user.id } : undefined);
+                                  showToast('Ditandai lunas', 'success');
+                                  notifyUndoable('Payroll ditandai lunas', undoActionId);
+                                  load();
+                                }}
+                                className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold"
+                              >
+                                Tandai Lunas
+                              </button>
+                            )}
+                            <span className="text-xs capitalize text-slate-500">{p.status}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {pendingBon.length > 0 && (
+                  <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+                    <div className="p-4 border-b border-slate-50 font-bold text-slate-800">Pengajuan Bon</div>
+                    <div className="divide-y divide-slate-50">
+                      {pendingBon.map(b => (
+                        <div key={b.id} className="px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+                          <div>
+                            <div className="font-medium">{b.profiles?.name || 'Karyawan'}</div>
+                            <div className="text-xs text-slate-600">{formatCurrency(b.amount)}{b.reason ? ` · ${b.reason}` : ''}</div>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const { undoActionId } = await reviewBonRequest(b.id, 'approved', user!.id, undefined, tenant ? { orgId: tenant.id, actorId: user!.id } : undefined);
+                                showToast('Bon disetujui', 'success');
+                                notifyUndoable('Bon disetujui', undoActionId);
+                                load();
+                              }}
+                              className="px-2 py-1 bg-emerald-600 text-white rounded-lg text-xs font-bold"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const { undoActionId } = await reviewBonRequest(b.id, 'rejected', user!.id, 'Ditolak', tenant ? { orgId: tenant.id, actorId: user!.id } : undefined);
+                                showToast('Bon ditolak', 'info');
+                                notifyUndoable('Bon ditolak', undoActionId);
+                                load();
+                              }}
+                              className="px-2 py-1 border rounded-lg text-xs"
+                            >
+                              Tolak
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {!canInvite && (
+              <p className="text-sm text-slate-500">Hanya owner/manager yang dapat mengelola payroll.</p>
+            )}
+          </div>
+        )}
+
+        {tab === 'requests' && (
+          <div className="space-y-3">
+            {requests.map(r => (
+              <div key={r.id} className="bg-white p-4 rounded-xl border border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="font-semibold">{r.profile?.name || r.user_id}</div>
+                  {r.message && <p className="text-sm text-slate-500">{r.message}</p>}
+                </div>
+                <div className="flex gap-2">
+                  <button type="button" onClick={async () => { await approveJoinRequest(r.id); showToast('Disetujui', 'success'); load(); }} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Approve
+                  </button>
+                  <button type="button" onClick={async () => { await rejectJoinRequest(r.id, 'Ditolak owner'); showToast('Ditolak', 'info'); load(); }} className="px-3 py-1.5 border rounded-lg text-xs flex items-center gap-1">
+                    <XCircle className="w-3.5 h-3.5" /> Reject
+                  </button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <button type="button" onClick={async () => { await approveJoinRequest(r.id); showToast('Disetujui', 'success'); load(); }} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Approve
+            ))}
+            {requests.length === 0 && <p className="text-sm text-slate-500">Tidak ada permintaan pending.</p>}
+          </div>
+        )}
+
+        {tab === 'audit' && (
+          <div className="space-y-3">
+            <button type="button" onClick={() => { const csv = exportAuditCsv(audit); const blob = new Blob([csv], { type: 'text/csv' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'audit.csv'; a.click(); }} className="text-sm text-emerald-600 font-semibold">Export CSV</button>
+            {undoableActions.map(a => (
+              <div key={a.id} className="bg-emerald-50 p-3 rounded-xl border border-emerald-100 text-sm flex justify-between gap-2">
+                <div>
+                  <div className="font-semibold">{actionTypeLabel(a.action_type)}</div>
+                  <div className="font-mono text-xs text-slate-600">{a.created_at}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await undoReversibleAction(a.id, user!.id, user!.role);
+                      showToast('Aksi dibatalkan', 'success');
+                      load();
+                    } catch (e) {
+                      showToast(e instanceof Error ? e.message : 'Gagal undo', 'error');
+                    }
+                  }}
+                  className="px-2 py-1 text-xs font-bold text-emerald-700 border border-emerald-200 rounded-lg shrink-0"
+                >
+                  Undo
                 </button>
-                <button type="button" onClick={async () => { await rejectJoinRequest(r.id, 'Ditolak owner'); showToast('Ditolak', 'info'); load(); }} className="px-3 py-1.5 border rounded-lg text-xs flex items-center gap-1">
-                  <XCircle className="w-3.5 h-3.5" /> Reject
-                </button>
               </div>
-            </div>
-          ))}
-          {requests.length === 0 && <p className="text-sm text-slate-500">Tidak ada permintaan pending.</p>}
-        </div>
-      )}
-
-      {tab === 'audit' && (
-        <div className="space-y-3">
-          <button type="button" onClick={() => { const csv = exportAuditCsv(audit); const blob = new Blob([csv], { type: 'text/csv' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'audit.csv'; a.click(); }} className="text-sm text-emerald-600 font-semibold">Export CSV</button>
-          {undoableActions.map(a => (
-            <div key={a.id} className="bg-emerald-50 p-3 rounded-xl border border-emerald-100 text-sm flex justify-between gap-2">
-              <div>
-                <div className="font-semibold">{actionTypeLabel(a.action_type)}</div>
-                <div className="font-mono text-xs text-slate-600">{a.created_at}</div>
+            ))}
+            {audit.map(l => (
+              <div key={l.id} className="bg-white p-3 rounded-xl border border-slate-100 text-sm">
+                <div className="font-mono text-xs text-slate-600">{l.created_at}</div>
+                <div className="font-semibold">{l.action}</div>
               </div>
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    await undoReversibleAction(a.id, user!.id, user!.role);
-                    showToast('Aksi dibatalkan', 'success');
-                    load();
-                  } catch (e) {
-                    showToast(e instanceof Error ? e.message : 'Gagal undo', 'error');
-                  }
-                }}
-                className="px-2 py-1 text-xs font-bold text-emerald-700 border border-emerald-200 rounded-lg shrink-0"
-              >
-                Undo
-              </button>
-            </div>
-          ))}
-          {audit.map(l => (
-            <div key={l.id} className="bg-white p-3 rounded-xl border border-slate-100 text-sm">
-              <div className="font-mono text-xs text-slate-600">{l.created_at}</div>
-              <div className="font-semibold">{l.action}</div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
 
-      {tab === 'access' && isOwner && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 space-y-4 max-w-lg">
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={access.allow_join_request} onChange={e => setAccess({ ...access, allow_join_request: e.target.checked })} />
-            Izinkan request join
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={access.is_public_discoverable} onChange={e => setAccess({ ...access, is_public_discoverable: e.target.checked })} />
-            Tampilkan di public directory
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={access.allow_email_domain_signup} onChange={e => setAccess({ ...access, allow_email_domain_signup: e.target.checked })} />
-            Auto-join by email domain
-          </label>
-          {access.allow_email_domain_signup && (
-            <>
-              <input value={access.allowed_email_domains} onChange={e => setAccess({ ...access, allowed_email_domains: e.target.value })} placeholder="domain.com, perusahaan.co.id" className="w-full px-4 py-2 rounded-xl border text-sm" />
-              <select value={access.default_role_for_domain} onChange={e => setAccess({ ...access, default_role_for_domain: e.target.value })} className="w-full px-4 py-2 rounded-xl border text-sm">
-                <option value="worker">Default: Worker</option>
-                <option value="manager">Default: Manager</option>
-              </select>
-            </>
-          )}
-          <button
-            type="button"
-            onClick={async () => {
-              const org = await loadOrgDetails(tenant!.id);
-              const before = {
-                allow_join_request: org.allow_join_request,
-                allow_email_domain_signup: org.allow_email_domain_signup,
-                allowed_email_domains: org.allowed_email_domains,
-                default_role_for_domain: org.default_role_for_domain,
-                is_public_discoverable: org.is_public_discoverable,
-              };
-              const payload = {
-                ...access,
-                allowed_email_domains: access.allowed_email_domains.split(',').map(d => d.trim()).filter(Boolean),
-              };
-              await updateOrgAccessSettings(tenant!.id, payload);
-              if (user?.id) {
-                const { recordReversibleAction } = await import('../services/undoService');
-                const action = await recordReversibleAction({
-                  orgId: tenant!.id,
-                  actorId: user.id,
-                  actionType: 'org_access',
-                  entityType: 'planner_organizations',
-                  entityId: tenant!.id,
-                  beforeState: before as Record<string, unknown>,
-                  afterState: payload as Record<string, unknown>,
-                });
-                useUiStore.getState().showUndoToast('Pengaturan akses disimpan', action.id);
-              }
-              showToast('Pengaturan disimpan', 'success');
-            }}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold"
-          >
-            Simpan
-          </button>
-        </div>
-      )}
-
-      {inviteOpen && tenant && user && (
-        <InviteMemberModal orgId={tenant.id} actorRole={user.role} onClose={() => setInviteOpen(false)} onCreated={load} />
-      )}
-
-      {tab === 'karyawan' && canInvite && (
-        <button
-          type="button"
-          onClick={() => setInviteOpen(true)}
-          className="fixed bottom-24 md:bottom-8 right-6 z-40 w-14 h-14 bg-emerald-600 text-white rounded-full shadow-xl flex items-center justify-center hover:bg-emerald-700"
-          aria-label="Tambah karyawan"
-        >
-          <UserPlus className="w-6 h-6" />
-        </button>
-      )}
-
-      {tab === 'laporan' && (
-        <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4">
-          <h3 className="font-bold text-slate-800">Laporan HR</h3>
-          <p className="text-sm text-slate-500">Export data absensi dan audit untuk arsip organisasi.</p>
-          <div className="flex flex-wrap gap-3">
-            {isOwner && (
-              <button
-                type="button"
-                onClick={() => {
-                  const csv = exportAuditCsv(audit);
-                  const blob = new Blob([csv], { type: 'text/csv' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `audit_${tenant?.slug || 'org'}.csv`;
-                  a.click();
-                  URL.revokeObjectURL(url);
-                }}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold"
-              >
-                Export Audit CSV
-              </button>
+        {tab === 'access' && isOwner && (
+          <div className="bg-white p-6 rounded-2xl border border-slate-100 space-y-4 max-w-lg">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={access.allow_join_request} onChange={e => setAccess({ ...access, allow_join_request: e.target.checked })} />
+              Izinkan request join
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={access.is_public_discoverable} onChange={e => setAccess({ ...access, is_public_discoverable: e.target.checked })} />
+              Tampilkan di public directory
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={access.allow_email_domain_signup} onChange={e => setAccess({ ...access, allow_email_domain_signup: e.target.checked })} />
+              Auto-join by email domain
+            </label>
+            {access.allow_email_domain_signup && (
+              <>
+                <input value={access.allowed_email_domains} onChange={e => setAccess({ ...access, allowed_email_domains: e.target.value })} placeholder="domain.com, perusahaan.co.id" className="w-full px-4 py-2 rounded-xl border text-sm" />
+                <select value={access.default_role_for_domain} onChange={e => setAccess({ ...access, default_role_for_domain: e.target.value })} className="w-full px-4 py-2 rounded-xl border text-sm">
+                  <option value="worker">Default: Worker</option>
+                  <option value="manager">Default: Manager</option>
+                </select>
+              </>
             )}
             <button
               type="button"
-              onClick={() => setTab('absensi')}
-              className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-700"
+              onClick={async () => {
+                const org = await loadOrgDetails(tenant!.id);
+                const before = {
+                  allow_join_request: org.allow_join_request,
+                  allow_email_domain_signup: org.allow_email_domain_signup,
+                  allowed_email_domains: org.allowed_email_domains,
+                  default_role_for_domain: org.default_role_for_domain,
+                  is_public_discoverable: org.is_public_discoverable,
+                };
+                const payload = {
+                  ...access,
+                  allowed_email_domains: access.allowed_email_domains.split(',').map(d => d.trim()).filter(Boolean),
+                };
+                await updateOrgAccessSettings(tenant!.id, payload);
+                if (user?.id) {
+                  const { recordReversibleAction } = await import('../services/undoService');
+                  const action = await recordReversibleAction({
+                    orgId: tenant!.id,
+                    actorId: user.id,
+                    actionType: 'org_access',
+                    entityType: 'planner_organizations',
+                    entityId: tenant!.id,
+                    beforeState: before as Record<string, unknown>,
+                    afterState: payload as Record<string, unknown>,
+                  });
+                  useUiStore.getState().showUndoToast('Pengaturan akses disimpan', action.id);
+                }
+                showToast('Pengaturan disimpan', 'success');
+              }}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold"
             >
-              Lihat absensi lengkap
+              Simpan
             </button>
           </div>
-          <div className="text-sm text-slate-600">
-            <div>Log harian proyek: {workerLogs.length} entri (30 hari)</div>
-            <div>Work items aktif: {workItemCount}</div>
+        )}
+
+        {inviteOpen && tenant && user && (
+          <InviteMemberModal orgId={tenant.id} actorRole={user.role} onClose={() => setInviteOpen(false)} onCreated={load} />
+        )}
+
+        {tab === 'karyawan' && canInvite && (
+          <button
+            type="button"
+            onClick={() => setInviteOpen(true)}
+            className="fixed bottom-24 md:bottom-8 right-6 z-40 w-14 h-14 bg-emerald-600 text-white rounded-full shadow-xl flex items-center justify-center hover:bg-emerald-700"
+            aria-label="Tambah karyawan"
+          >
+            <UserPlus className="w-6 h-6" />
+          </button>
+        )}
+
+        {tab === 'laporan' && (
+          <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4">
+            <h3 className="font-bold text-slate-800">Laporan HR</h3>
+            <p className="text-sm text-slate-500">Export data absensi dan audit untuk arsip organisasi.</p>
+            <div className="flex flex-wrap gap-3">
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const csv = exportAuditCsv(audit);
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `audit_${tenant?.slug || 'org'}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold"
+                >
+                  Export Audit CSV
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setTab('absensi')}
+                className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-700"
+              >
+                Lihat absensi lengkap
+              </button>
+            </div>
+            <div className="text-sm text-slate-600">
+              <div>Log harian proyek: {workerLogs.length} entri (30 hari)</div>
+              <div>Work items aktif: {workItemCount}</div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <EmployeeDetailSheet
-        member={selectedMember}
-        orgId={tenant?.id || ''}
-        open={!!selectedMember}
-        canManage={canInvite}
-        compensation={selectedMember ? compByUser[selectedMember.user_id] : undefined}
-        hoursPerDay={attendanceSettings?.hours_per_day ?? 8}
-        onClose={() => setSelectedMember(null)}
-        onUpdated={load}
-      />
-
-      {showAiHrdModal && (
-        <AiHrdPayrollModal
-          open={showAiHrdModal}
-          onClose={() => setShowAiHrdModal(false)}
+        <EmployeeDetailSheet
+          member={selectedMember}
           orgId={tenant?.id || ''}
-          actorId={user?.id || ''}
-          members={members}
-          attendanceRecords={monthAttendanceRecords}
-          compensationList={compensation}
-          bonRequests={bonRequests}
-          onDisbursementCompleted={load}
+          open={!!selectedMember}
+          canManage={canInvite}
+          compensation={selectedMember ? compByUser[selectedMember.user_id] : undefined}
+          hoursPerDay={attendanceSettings?.hours_per_day ?? 8}
+          onClose={() => setSelectedMember(null)}
+          onUpdated={load}
         />
-      )}
-    </div>
+
+        {showAiHrdModal && (
+          <AiHrdPayrollModal
+            open={showAiHrdModal}
+            onClose={() => setShowAiHrdModal(false)}
+            orgId={tenant?.id || ''}
+            actorId={user?.id || ''}
+            members={members}
+            attendanceRecords={monthAttendanceRecords}
+            compensationList={compensation}
+            bonRequests={bonRequests}
+            onDisbursementCompleted={load}
+          />
+        )}
+      </div>
     </div>
   );
 }

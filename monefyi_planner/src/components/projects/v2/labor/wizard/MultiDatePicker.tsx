@@ -214,42 +214,42 @@ export default function MultiDatePicker({
           handleSwipeEnd(t.clientX, t.clientY);
         }}
       >
-      <div className="wz-cal-grid">
-        {(isMobile ? WEEKDAYS_MOBILE : WEEKDAYS_DESKTOP).map(w => (
-          <div key={w} className="wz-cal-dow">{w}</div>
-        ))}
-        {cells.map((cell, idx) => {
-          if (!cell.date) return <div key={`e-${idx}`} />;
-          const draft = slots[cell.date];
-          const selected = Boolean(draft);
-          return (
-            <button
-              key={cell.date}
-              type="button"
-              className={`wz-cal-cell${selected ? ' selected' : ''}`}
-              onClick={() => toggleDate(cell.date!)}
-              onContextMenu={e => {
-                if (!isMobile && selected) {
-                  e.preventDefault();
-                  setContextMenu({ x: e.clientX, y: e.clientY, date: cell.date! });
-                }
-              }}
-              onMouseDown={() => { if (!isMobile) dragRef.current = { active: true, add: !selected }; }}
-              onMouseEnter={() => {
-                if (!isMobile && dragRef.current?.active) toggleDate(cell.date!, true);
-              }}
-              onMouseUp={() => { dragRef.current = null; }}
-              onTouchStart={() => {
-                if (isMobile && selected) {
-                  window.setTimeout(() => setEditingDate(cell.date), 500);
-                }
-              }}
-            >
-              {cell.day}
-            </button>
-          );
-        })}
-      </div>
+        <div className="wz-cal-grid">
+          {(isMobile ? WEEKDAYS_MOBILE : WEEKDAYS_DESKTOP).map(w => (
+            <div key={w} className="wz-cal-dow">{w}</div>
+          ))}
+          {cells.map((cell, idx) => {
+            if (!cell.date) return <div key={`e-${idx}`} />;
+            const draft = slots[cell.date];
+            const selected = Boolean(draft);
+            return (
+              <button
+                key={cell.date}
+                type="button"
+                className={`wz-cal-cell${selected ? ' selected' : ''}`}
+                onClick={() => toggleDate(cell.date!)}
+                onContextMenu={e => {
+                  if (!isMobile && selected) {
+                    e.preventDefault();
+                    setContextMenu({ x: e.clientX, y: e.clientY, date: cell.date! });
+                  }
+                }}
+                onMouseDown={() => { if (!isMobile) dragRef.current = { active: true, add: !selected }; }}
+                onMouseEnter={() => {
+                  if (!isMobile && dragRef.current?.active) toggleDate(cell.date!, true);
+                }}
+                onMouseUp={() => { dragRef.current = null; }}
+                onTouchStart={() => {
+                  if (isMobile && selected) {
+                    window.setTimeout(() => setEditingDate(cell.date), 500);
+                  }
+                }}
+              >
+                {cell.day}
+              </button>
+            );
+          })}
+        </div>
       </div>
       <div className="wz-quick-actions">
         <button type="button" className="wz-quick-btn" onClick={selectWeekdays}>Sen–Jum bulan ini</button>

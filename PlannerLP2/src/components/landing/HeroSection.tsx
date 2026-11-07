@@ -87,7 +87,7 @@ export function HeroSection() {
 
   const primary = () => {
     trackEvent("hero_cta_primary_click", { variant_id: copy.id, source: "hero" });
-    window.location.href = "/checkout?plan=free";
+    scrollTo("harga");
   };
 
   const demo = () => {

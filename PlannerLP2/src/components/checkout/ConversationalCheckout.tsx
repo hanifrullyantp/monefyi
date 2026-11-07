@@ -218,8 +218,8 @@ export default function ConversationalCheckout({
       }
       setSessionId(sid);
 
-      // Facebook Pixel: InitiateCheckout (IC) saat user membuka form checkout
-      if (!hasTrackedIC.current) {
+      // Facebook Pixel: InitiateCheckout (IC) hanya untuk paket berbayar, BUKAN untuk Free Trial
+      if (!hasTrackedIC.current && product !== 'free') {
         hasTrackedIC.current = true;
         trackMetaInitiateCheckout({
           content_name: `Estimator ${product.toUpperCase()}`,

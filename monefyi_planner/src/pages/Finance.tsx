@@ -179,18 +179,16 @@ export default function Finance() {
         <button
           type="button"
           onClick={() => setView('dashboard')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-            view === 'dashboard' ? 'bg-white text-[#059669] shadow-xs' : 'text-[#5B6B7A] hover:text-[#0F172A]'
-          }`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${view === 'dashboard' ? 'bg-white text-[#059669] shadow-xs' : 'text-[#5B6B7A] hover:text-[#0F172A]'
+            }`}
         >
           <LayoutDashboard className="w-4 h-4" /> Ringkasan
         </button>
         <button
           type="button"
           onClick={() => setView('laporan')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-            view === 'laporan' ? 'bg-white text-[#059669] shadow-xs' : 'text-[#5B6B7A] hover:text-[#0F172A]'
-          }`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${view === 'laporan' ? 'bg-white text-[#059669] shadow-xs' : 'text-[#5B6B7A] hover:text-[#0F172A]'
+            }`}
         >
           <BarChart3 className="w-4 h-4" /> Laporan Bisnis
         </button>
@@ -360,21 +358,21 @@ export default function Finance() {
                     ? (t.counterparty_name || 'Eksternal')
                     : (t.to_project_id ? (projectNameMap[t.to_project_id] || 'Proyek') : '—');
                   return (
-                  <div key={t.id} className="p-4 text-sm flex justify-between gap-2">
-                    <div>
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${t.type === 'loan' ? 'bg-blue-50 text-[#1D4ED8] border border-blue-200' : 'bg-emerald-50 text-[#059669] border border-emerald-200'}`}>
-                        {t.type === 'loan' ? 'Pinjaman' : 'Pelunasan'}
-                      </span>
-                      {t.source_type === 'external' && (
-                        <span className="ml-1 text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full">Eksternal</span>
-                      )}
-                      <span className="ml-2 font-medium text-[#0F172A]">
-                        {fromLabel} → {toLabel}
-                      </span>
-                      <div className="text-xs text-[#5B6B7A] mt-0.5">{t.date}</div>
+                    <div key={t.id} className="p-4 text-sm flex justify-between gap-2">
+                      <div>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${t.type === 'loan' ? 'bg-blue-50 text-[#1D4ED8] border border-blue-200' : 'bg-emerald-50 text-[#059669] border border-emerald-200'}`}>
+                          {t.type === 'loan' ? 'Pinjaman' : 'Pelunasan'}
+                        </span>
+                        {t.source_type === 'external' && (
+                          <span className="ml-1 text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full">Eksternal</span>
+                        )}
+                        <span className="ml-2 font-medium text-[#0F172A]">
+                          {fromLabel} → {toLabel}
+                        </span>
+                        <div className="text-xs text-[#5B6B7A] mt-0.5">{t.date}</div>
+                      </div>
+                      <div className="font-bold text-[#0F172A]">{formatRupiah(t.amount)}</div>
                     </div>
-                    <div className="font-bold text-[#0F172A]">{formatRupiah(t.amount)}</div>
-                  </div>
                   );
                 })}
               </div>

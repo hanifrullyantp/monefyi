@@ -234,9 +234,8 @@ export default function TabV2Overview({
           </div>
           <div className="text-right text-xs">
             <p className="text-slate-500">Rencana <span className="font-bold text-slate-700">{progressSummary.plan}%</span></p>
-            <p className={`font-bold flex items-center justify-end gap-0.5 mt-0.5 ${
-              progressSummary.deviation >= 0 ? 'text-emerald-600' : 'text-amber-600'
-            }`}>
+            <p className={`font-bold flex items-center justify-end gap-0.5 mt-0.5 ${progressSummary.deviation >= 0 ? 'text-emerald-600' : 'text-amber-600'
+              }`}>
               {progressSummary.deviation >= 0
                 ? <TrendingUp className="w-3 h-3" />
                 : <TrendingDown className="w-3 h-3" />}
@@ -291,9 +290,8 @@ export default function TabV2Overview({
           <div className={`text-xl font-black mb-2 ${contractCheck.cash < 0 ? 'text-rose-600' : 'text-slate-900'}`}>
             {formatRupiah(contractCheck.cash)}
           </div>
-          <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${
-            contractCheck.cash < 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'
-          }`}>
+          <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${contractCheck.cash < 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'
+            }`}>
             {contractCheck.cash < 0 ? 'Defisit' : 'Tersedia'}
           </span>
         </button>
@@ -369,19 +367,19 @@ export default function TabV2Overview({
           actions={
             popup === 'pembayaran' && canManage
               ? [{ label: 'Tambah Pembayaran', variant: 'primary' as const, onClick: () => { setPopup(null); setModal('income'); } }]
-                : popup === 'piutang' && canManage
-                  ? [
-                      { label: 'Tambah Piutang', variant: 'primary' as const, onClick: () => { setPopup(null); setModal('receivable'); } },
-                      { label: 'Catat Pembayaran', onClick: () => { setPopup(null); setModal('receivable'); } },
+              : popup === 'piutang' && canManage
+                ? [
+                  { label: 'Tambah Piutang', variant: 'primary' as const, onClick: () => { setPopup(null); setModal('receivable'); } },
+                  { label: 'Catat Pembayaran', onClick: () => { setPopup(null); setModal('receivable'); } },
+                ]
+                : popup === 'saldo' && canManage
+                  ? [{ label: 'Tambah Dana Masuk', variant: 'primary' as const, onClick: () => { setPopup(null); setModal('income'); } }]
+                  : popup === 'kontrak' && canManage
+                    ? [
+                      { label: 'Periksa Piutang', variant: 'primary' as const, onClick: () => setPopup('piutang') },
+                      { label: 'Edit Nilai Kontrak', onClick: () => { setPopup(null); onEditProject?.(); } },
                     ]
-                  : popup === 'saldo' && canManage
-                    ? [{ label: 'Tambah Dana Masuk', variant: 'primary' as const, onClick: () => { setPopup(null); setModal('income'); } }]
-                    : popup === 'kontrak' && canManage
-                      ? [
-                          { label: 'Periksa Piutang', variant: 'primary' as const, onClick: () => setPopup('piutang') },
-                          { label: 'Edit Nilai Kontrak', onClick: () => { setPopup(null); onEditProject?.(); } },
-                        ]
-                      : undefined
+                    : undefined
           } />
       )}
 

@@ -275,221 +275,220 @@ export default function WorkerDashboard() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`min-h-11 flex-1 px-3 py-2 text-xs sm:text-sm font-bold rounded-full border transition-all ${
-                workerTab === tab.id
+              className={`min-h-11 flex-1 px-3 py-2 text-xs sm:text-sm font-bold rounded-full border transition-all ${workerTab === tab.id
                   ? 'bg-[#059669] text-white border-[#059669] shadow-sm'
                   : 'bg-white text-[#5B6B7A] border-[#E5EAE8] hover:bg-slate-50'
-              }`}
+                }`}
             >
               {tab.label}
             </button>
           ))}
         </div>
 
-      {workerTab === 'home' && (
-        <div className="space-y-4">
-          {projects.length > 1 && (
-            <div className="bg-white border border-[#E5EAE8] rounded-2xl p-3.5 flex items-center justify-between gap-2 shadow-sm">
-              <span className="text-xs font-bold text-[#5B6B7A]">Lokasi Proyek Hari Ini</span>
-              <select
-                value={defaultProject?.id || ''}
-                onChange={e => setChosenProjectId(e.target.value)}
-                className="h-10 text-xs font-bold border border-[#E5EAE8] rounded-xl px-3 bg-white text-[#0F172A] max-w-[65%] focus:border-[#059669] focus:outline-none"
-              >
-                {projects.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
-          <WorkerWorkTimer
-            checkedIn={status.checkedIn}
-            checkInAtIso={status.checkInAtIso}
-            checkOutAtIso={status.checkOutAtIso}
-            checkInTimeLabel={status.checkInTime}
-            checkOutTimeLabel={status.checkOutTime}
-            projectName={defaultProjectName}
-            loading={attendanceLoading}
-            onCheckIn={handleCheckIn}
-            onCheckOut={handleCheckOut}
-            shiftStart={tenant?.workHours?.start}
-            shiftEnd={tenant?.workHours?.end}
-          />
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white border border-[#E5EAE8] rounded-2xl p-4 text-center shadow-sm">
-              <div className="text-2xl font-black text-[#059669]">{activeTasks.length}</div>
-              <div className="text-xs text-[#5B6B7A] mt-0.5">Task Aktif</div>
-            </div>
-            <div className="bg-white border border-[#E5EAE8] rounded-2xl p-4 text-center shadow-sm">
-              <div className="text-2xl font-black text-[#059669]">{monthDaysPresent}</div>
-              <div className="text-xs text-[#5B6B7A] mt-0.5">Hari Hadir (bulan ini)</div>
-            </div>
-          </div>
-
-          {partialDays.length > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 text-xs text-amber-900 shadow-sm">
-              <div className="font-bold mb-1">Jam kerja kurang dari {hoursPerDay} jam</div>
-              {partialDays.slice(0, 4).map(d => (
-                <div key={d.date}>{d.date}: {d.hoursWorked}j{d.checkIn ? ` (${d.checkIn}` : ''}{d.checkOut ? `–${d.checkOut})` : d.checkIn ? ')' : ''}</div>
-              ))}
-            </div>
-          )}
-
-          {attendanceSettings?.auto_wifi_checkin && (
-            <p className="text-[11px] text-[#5B6B7A] text-center font-medium">Auto absensi WiFi kantor aktif</p>
-          )}
-
-          <div>
-            <h2 className="font-bold text-[#0F172A] mb-3 text-base">Pekerjaan Aktif</h2>
-            {loading && activeTasks.length === 0 ? (
-              <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-[#059669]" /></div>
-            ) : activeTasks.length === 0 ? (
-              <p className="text-sm text-[#5B6B7A] bg-white border border-[#E5EAE8] rounded-2xl p-5 text-center shadow-sm">
-                Belum ada pekerjaan dari proyek. Owner/manager perlu menambahkan work items.
-              </p>
-            ) : (
-              activeTasks.slice(0, 5).map(wi => (
-                <div key={wi.id} className="bg-white border border-[#E5EAE8] rounded-2xl p-4 mb-3 shadow-sm">
-                  <div className="flex justify-between mb-2">
-                    <div>
-                      <div className="font-semibold text-sm text-[#0F172A]">{wi.name}</div>
-                      <div className="text-xs text-[#5B6B7A]">{projectName(wi.project_id)}</div>
-                    </div>
-                    <span className="font-black text-[#059669]">{Number(wi.progress_pct) || 0}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={5}
-                    value={Number(wi.progress_pct) || 0}
-                    disabled={updatingId === wi.id}
-                    onChange={e => handleProgressChange(wi, Number(e.target.value))}
-                    className="w-full accent-[#059669] mb-2"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCommandModalOpen(true);
-                      showToast(`Gunakan: update progress ${wi.name} 75%`, 'info');
-                    }}
-                    className="min-h-11 w-full py-2.5 border border-[#E5EAE8] text-[#059669] bg-emerald-50/50 hover:bg-emerald-50 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
-                  >
-                    <TrendingUp className="w-4 h-4" /> Update via Monefyi Button
-                  </button>
-                </div>
-              ))
+        {workerTab === 'home' && (
+          <div className="space-y-4">
+            {projects.length > 1 && (
+              <div className="bg-white border border-[#E5EAE8] rounded-2xl p-3.5 flex items-center justify-between gap-2 shadow-sm">
+                <span className="text-xs font-bold text-[#5B6B7A]">Lokasi Proyek Hari Ini</span>
+                <select
+                  value={defaultProject?.id || ''}
+                  onChange={e => setChosenProjectId(e.target.value)}
+                  className="h-10 text-xs font-bold border border-[#E5EAE8] rounded-xl px-3 bg-white text-[#0F172A] max-w-[65%] focus:border-[#059669] focus:outline-none"
+                >
+                  {projects.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
             )}
-          </div>
-        </div>
-      )}
+            <WorkerWorkTimer
+              checkedIn={status.checkedIn}
+              checkInAtIso={status.checkInAtIso}
+              checkOutAtIso={status.checkOutAtIso}
+              checkInTimeLabel={status.checkInTime}
+              checkOutTimeLabel={status.checkOutTime}
+              projectName={defaultProjectName}
+              loading={attendanceLoading}
+              onCheckIn={handleCheckIn}
+              onCheckOut={handleCheckOut}
+              shiftStart={tenant?.workHours?.start}
+              shiftEnd={tenant?.workHours?.end}
+            />
 
-      {workerTab === 'attendance' && (
-        <div className="space-y-4">
-          <div className="bg-white border border-[#E5EAE8] rounded-2xl p-5 shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <Calendar className="w-5 h-5 text-[#059669]" />
-              <h3 className="font-bold text-[#0F172A]">Riwayat Absensi</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white border border-[#E5EAE8] rounded-2xl p-4 text-center shadow-sm">
+                <div className="text-2xl font-black text-[#059669]">{activeTasks.length}</div>
+                <div className="text-xs text-[#5B6B7A] mt-0.5">Task Aktif</div>
+              </div>
+              <div className="bg-white border border-[#E5EAE8] rounded-2xl p-4 text-center shadow-sm">
+                <div className="text-2xl font-black text-[#059669]">{monthDaysPresent}</div>
+                <div className="text-xs text-[#5B6B7A] mt-0.5">Hari Hadir (bulan ini)</div>
+              </div>
             </div>
-            {attendanceLoading && history.length === 0 ? (
-              <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-[#059669]" /></div>
-            ) : history.length === 0 ? (
-              <p className="text-sm text-[#5B6B7A] text-center py-4">Belum ada riwayat. Check-in dari tab Home.</p>
-            ) : (
-              <div className="space-y-2 max-h-80 overflow-y-auto">
-                {history.slice(0, 30).map(r => (
-                  <div key={r.id} className="flex items-center justify-between py-2 border-b border-[#E5EAE8] last:border-0 text-sm">
-                    <div>
-                      <div className="font-medium text-[#0F172A]">{r.type === 'check_in' ? 'Check In' : 'Check Out'}</div>
-                      <div className="text-xs text-[#5B6B7A]">
-                        {formatAttendanceTime(r.timestamp)}
-                        {r.project_name ? ` · ${r.project_name}` : ''}
+
+            {partialDays.length > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 text-xs text-amber-900 shadow-sm">
+                <div className="font-bold mb-1">Jam kerja kurang dari {hoursPerDay} jam</div>
+                {partialDays.slice(0, 4).map(d => (
+                  <div key={d.date}>{d.date}: {d.hoursWorked}j{d.checkIn ? ` (${d.checkIn}` : ''}{d.checkOut ? `–${d.checkOut})` : d.checkIn ? ')' : ''}</div>
+                ))}
+              </div>
+            )}
+
+            {attendanceSettings?.auto_wifi_checkin && (
+              <p className="text-[11px] text-[#5B6B7A] text-center font-medium">Auto absensi WiFi kantor aktif</p>
+            )}
+
+            <div>
+              <h2 className="font-bold text-[#0F172A] mb-3 text-base">Pekerjaan Aktif</h2>
+              {loading && activeTasks.length === 0 ? (
+                <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-[#059669]" /></div>
+              ) : activeTasks.length === 0 ? (
+                <p className="text-sm text-[#5B6B7A] bg-white border border-[#E5EAE8] rounded-2xl p-5 text-center shadow-sm">
+                  Belum ada pekerjaan dari proyek. Owner/manager perlu menambahkan work items.
+                </p>
+              ) : (
+                activeTasks.slice(0, 5).map(wi => (
+                  <div key={wi.id} className="bg-white border border-[#E5EAE8] rounded-2xl p-4 mb-3 shadow-sm">
+                    <div className="flex justify-between mb-2">
+                      <div>
+                        <div className="font-semibold text-sm text-[#0F172A]">{wi.name}</div>
+                        <div className="text-xs text-[#5B6B7A]">{projectName(wi.project_id)}</div>
                       </div>
+                      <span className="font-black text-[#059669]">{Number(wi.progress_pct) || 0}%</span>
                     </div>
-                    <Clock className={`w-4 h-4 ${r.type === 'check_in' ? 'text-[#059669]' : 'text-[#8A99A6]'}`} />
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={5}
+                      value={Number(wi.progress_pct) || 0}
+                      disabled={updatingId === wi.id}
+                      onChange={e => handleProgressChange(wi, Number(e.target.value))}
+                      className="w-full accent-[#059669] mb-2"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCommandModalOpen(true);
+                        showToast(`Gunakan: update progress ${wi.name} 75%`, 'info');
+                      }}
+                      className="min-h-11 w-full py-2.5 border border-[#E5EAE8] text-[#059669] bg-emerald-50/50 hover:bg-emerald-50 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <TrendingUp className="w-4 h-4" /> Update via Monefyi Button
+                    </button>
                   </div>
-                ))}
-              </div>
-            )}
+                ))
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {workerTab === 'payroll' && (
-        <div className="space-y-4">
-          <div className="bg-white border border-[#E5EAE8] rounded-2xl p-5 shadow-sm">
-            <Wallet className="w-8 h-8 text-[#059669] mx-auto mb-2" />
-            <h3 className="font-bold text-[#0F172A] text-center">Payroll & Bon</h3>
-            <div className="mt-4 grid grid-cols-2 gap-3 text-center">
-              <div className="bg-slate-50 border border-[#E5EAE8] rounded-xl p-3">
-                <div className="text-lg font-black text-[#059669]">
-                  {payroll ? formatCurrency(payroll.net_amount) : '—'}
+        {workerTab === 'attendance' && (
+          <div className="space-y-4">
+            <div className="bg-white border border-[#E5EAE8] rounded-2xl p-5 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <Calendar className="w-5 h-5 text-[#059669]" />
+                <h3 className="font-bold text-[#0F172A]">Riwayat Absensi</h3>
+              </div>
+              {attendanceLoading && history.length === 0 ? (
+                <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-[#059669]" /></div>
+              ) : history.length === 0 ? (
+                <p className="text-sm text-[#5B6B7A] text-center py-4">Belum ada riwayat. Check-in dari tab Home.</p>
+              ) : (
+                <div className="space-y-2 max-h-80 overflow-y-auto">
+                  {history.slice(0, 30).map(r => (
+                    <div key={r.id} className="flex items-center justify-between py-2 border-b border-[#E5EAE8] last:border-0 text-sm">
+                      <div>
+                        <div className="font-medium text-[#0F172A]">{r.type === 'check_in' ? 'Check In' : 'Check Out'}</div>
+                        <div className="text-xs text-[#5B6B7A]">
+                          {formatAttendanceTime(r.timestamp)}
+                          {r.project_name ? ` · ${r.project_name}` : ''}
+                        </div>
+                      </div>
+                      <Clock className={`w-4 h-4 ${r.type === 'check_in' ? 'text-[#059669]' : 'text-[#8A99A6]'}`} />
+                    </div>
+                  ))}
                 </div>
-                <div className="text-xs text-[#5B6B7A]">Gaji Bulan Ini</div>
-                {payroll && (
-                  <div className="text-[10px] text-[#5B6B7A] mt-1">
-                    {payroll.days_present} hari hadir · {payroll.status}
-                  </div>
-                )}
-              </div>
-              <div className="bg-slate-50 border border-[#E5EAE8] rounded-xl p-3">
-                <div className="text-lg font-black text-amber-600">{pendingBon}</div>
-                <div className="text-xs text-[#5B6B7A]">Bon Pending</div>
-              </div>
+              )}
             </div>
-
-            <div className="mt-4 space-y-2.5">
-              <input
-                type="text"
-                inputMode="numeric"
-                value={bonAmount}
-                onChange={e => setBonAmount(e.target.value)}
-                placeholder="Nominal bon (Rp)"
-                className="w-full h-11 px-3.5 rounded-xl border border-[#E5EAE8] text-sm text-[#0F172A] focus:border-[#059669] focus:outline-none"
-              />
-              <input
-                type="text"
-                value={bonReason}
-                onChange={e => setBonReason(e.target.value)}
-                placeholder="Alasan (opsional)"
-                className="w-full h-11 px-3.5 rounded-xl border border-[#E5EAE8] text-sm text-[#0F172A] focus:border-[#059669] focus:outline-none"
-              />
-              <button
-                type="button"
-                onClick={handleBonRequest}
-                disabled={bonSubmitting}
-                className="min-h-11 w-full py-2.5 bg-[#059669] hover:bg-emerald-700 text-white font-bold rounded-xl text-sm disabled:opacity-60 shadow-sm transition-colors"
-              >
-                Ajukan Bon / Pinjaman
-              </button>
-            </div>
-
-            {bonRequests.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-[#E5EAE8] space-y-2">
-                <p className="text-xs font-semibold text-[#5B6B7A]">Riwayat pengajuan</p>
-                {bonRequests.slice(0, 5).map(b => (
-                  <div key={b.id} className="flex justify-between text-xs">
-                    <span className="font-medium text-[#0F172A]">{formatCurrency(b.amount)}</span>
-                    <span className="capitalize text-[#5B6B7A]">{b.status}</span>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
-        </div>
-      )}
+        )}
 
-      {workerTab === 'todos' && tenant?.id && user?.id && (
-        <TeamTodoBoard
-          orgId={tenant.id}
-          members={members}
-          title="Task Saya"
-          filterUserId={user.id}
-          hideAssigneeFilter
-        />
-      )}
-    </div>
+        {workerTab === 'payroll' && (
+          <div className="space-y-4">
+            <div className="bg-white border border-[#E5EAE8] rounded-2xl p-5 shadow-sm">
+              <Wallet className="w-8 h-8 text-[#059669] mx-auto mb-2" />
+              <h3 className="font-bold text-[#0F172A] text-center">Payroll & Bon</h3>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-center">
+                <div className="bg-slate-50 border border-[#E5EAE8] rounded-xl p-3">
+                  <div className="text-lg font-black text-[#059669]">
+                    {payroll ? formatCurrency(payroll.net_amount) : '—'}
+                  </div>
+                  <div className="text-xs text-[#5B6B7A]">Gaji Bulan Ini</div>
+                  {payroll && (
+                    <div className="text-[10px] text-[#5B6B7A] mt-1">
+                      {payroll.days_present} hari hadir · {payroll.status}
+                    </div>
+                  )}
+                </div>
+                <div className="bg-slate-50 border border-[#E5EAE8] rounded-xl p-3">
+                  <div className="text-lg font-black text-amber-600">{pendingBon}</div>
+                  <div className="text-xs text-[#5B6B7A]">Bon Pending</div>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-2.5">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={bonAmount}
+                  onChange={e => setBonAmount(e.target.value)}
+                  placeholder="Nominal bon (Rp)"
+                  className="w-full h-11 px-3.5 rounded-xl border border-[#E5EAE8] text-sm text-[#0F172A] focus:border-[#059669] focus:outline-none"
+                />
+                <input
+                  type="text"
+                  value={bonReason}
+                  onChange={e => setBonReason(e.target.value)}
+                  placeholder="Alasan (opsional)"
+                  className="w-full h-11 px-3.5 rounded-xl border border-[#E5EAE8] text-sm text-[#0F172A] focus:border-[#059669] focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleBonRequest}
+                  disabled={bonSubmitting}
+                  className="min-h-11 w-full py-2.5 bg-[#059669] hover:bg-emerald-700 text-white font-bold rounded-xl text-sm disabled:opacity-60 shadow-sm transition-colors"
+                >
+                  Ajukan Bon / Pinjaman
+                </button>
+              </div>
+
+              {bonRequests.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-[#E5EAE8] space-y-2">
+                  <p className="text-xs font-semibold text-[#5B6B7A]">Riwayat pengajuan</p>
+                  {bonRequests.slice(0, 5).map(b => (
+                    <div key={b.id} className="flex justify-between text-xs">
+                      <span className="font-medium text-[#0F172A]">{formatCurrency(b.amount)}</span>
+                      <span className="capitalize text-[#5B6B7A]">{b.status}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {workerTab === 'todos' && tenant?.id && user?.id && (
+          <TeamTodoBoard
+            orgId={tenant.id}
+            members={members}
+            title="Task Saya"
+            filterUserId={user.id}
+            hideAssigneeFilter
+          />
+        )}
+      </div>
     </div>
   );
 }

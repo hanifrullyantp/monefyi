@@ -368,11 +368,10 @@ export default function RapEditableTable({
         <button
           type="button"
           onClick={() => setGroupByType(v => !v)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold border rounded-lg ${
-            groupByType
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold border rounded-lg ${groupByType
               ? 'bg-emerald-600 text-white border-emerald-600'
               : 'text-slate-700 dark:text-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
-          }`}
+            }`}
         >
           <Rows3 className="w-3.5 h-3.5" /> Group
         </button>

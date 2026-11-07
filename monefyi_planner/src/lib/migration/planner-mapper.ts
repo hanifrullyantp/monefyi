@@ -354,13 +354,13 @@ export function mapPlannerProject(input: {
 
   const derivedList = (!useLedgerHutang || !useLedgerPiutang)
     ? buildHutangPiutangList({
-        costs: input.costs,
-        hutang: useLedgerHutang ? 0 : hutang,
-        spent,
-        piutang: useLedgerPiutang ? 0 : piutang,
-        clientName: p.client_name || 'Klien',
-        end,
-      })
+      costs: input.costs,
+      hutang: useLedgerHutang ? 0 : hutang,
+      spent,
+      piutang: useLedgerPiutang ? 0 : piutang,
+      clientName: p.client_name || 'Klien',
+      end,
+    })
     : [];
 
   const hutangPiutang: MappedProjectView['hutangPiutang'] = [

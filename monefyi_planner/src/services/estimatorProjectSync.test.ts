@@ -29,7 +29,6 @@ describe('Estimator - Edit & Project Price Sync', () => {
       status: 'converted',
       converted_project_id: mockProjectId,
       items: [],
-      products: [],
       images: [],
       adjustments: [],
       billing_config: null,
@@ -79,7 +78,6 @@ describe('Estimator - Edit & Project Price Sync', () => {
           notes: '',
         },
       ],
-      products: [],
       images: [],
       pdf_template: 'modern',
       pdf_invoice_template: 'modern',
@@ -89,7 +87,7 @@ describe('Estimator - Edit & Project Price Sync', () => {
         billing_bonus_note: '',
         payments: [],
       },
-    };
+    } as unknown as EstimationFormDraft;
 
     let updatedProjectSettings: any = null;
 

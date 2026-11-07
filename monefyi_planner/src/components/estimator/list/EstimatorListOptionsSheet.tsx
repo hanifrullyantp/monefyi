@@ -124,9 +124,8 @@ export default function EstimatorListOptionsSheet({
                       key={option.value}
                       type="button"
                       onClick={() => pickView(option.value)}
-                      className={`w-full min-h-11 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 active:scale-[0.98] ${
-                        active ? 'bg-slate-900 text-white font-semibold' : 'text-slate-700 hover:bg-slate-50'
-                      }`}
+                      className={`w-full min-h-11 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 active:scale-[0.98] ${active ? 'bg-slate-900 text-white font-semibold' : 'text-slate-700 hover:bg-slate-50'
+                        }`}
                     >
                       <Icon className="w-4 h-4 shrink-0" />
                       {option.label}
@@ -144,9 +143,8 @@ export default function EstimatorListOptionsSheet({
                     key={o.value}
                     type="button"
                     onClick={() => pickSort(o.value)}
-                    className={`w-full min-h-11 text-left px-3 py-2.5 rounded-xl text-sm transition-all duration-200 active:scale-[0.98] ${
-                      sortKey === o.value ? 'bg-emerald-50 text-emerald-800 font-semibold' : 'text-slate-700 hover:bg-slate-50'
-                    }`}
+                    className={`w-full min-h-11 text-left px-3 py-2.5 rounded-xl text-sm transition-all duration-200 active:scale-[0.98] ${sortKey === o.value ? 'bg-emerald-50 text-emerald-800 font-semibold' : 'text-slate-700 hover:bg-slate-50'
+                      }`}
                   >
                     {o.label}
                   </button>
@@ -162,9 +160,8 @@ export default function EstimatorListOptionsSheet({
                     key={g.value}
                     type="button"
                     onClick={() => pickGroup(g.value)}
-                    className={`w-full min-h-11 text-left px-3 py-2.5 rounded-xl text-sm transition-all duration-200 active:scale-[0.98] ${
-                      groupMode === g.value ? 'bg-emerald-50 text-emerald-800 font-semibold' : 'text-slate-700 hover:bg-slate-50'
-                    }`}
+                    className={`w-full min-h-11 text-left px-3 py-2.5 rounded-xl text-sm transition-all duration-200 active:scale-[0.98] ${groupMode === g.value ? 'bg-emerald-50 text-emerald-800 font-semibold' : 'text-slate-700 hover:bg-slate-50'
+                      }`}
                   >
                     {g.label}
                   </button>
@@ -184,11 +181,10 @@ export default function EstimatorListOptionsSheet({
                     key={tab.id}
                     type="button"
                     onClick={() => pickPipeline(tab.id)}
-                    className={`w-full min-h-11 flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-all duration-200 active:scale-[0.98] ${
-                      pipelineTab === tab.id && !statusFilter
+                    className={`w-full min-h-11 flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-all duration-200 active:scale-[0.98] ${pipelineTab === tab.id && !statusFilter
                         ? 'bg-emerald-50 text-emerald-800 font-semibold'
                         : 'text-slate-700 hover:bg-slate-50'
-                    }`}
+                      }`}
                   >
                     <span>{tab.label}</span>
                     <span className="text-slate-400 tabular-nums text-xs">{pipelineCounts[tab.id] ?? 0}</span>
@@ -205,9 +201,8 @@ export default function EstimatorListOptionsSheet({
                     key={f.value || 'all'}
                     type="button"
                     onClick={() => pickStatus(f.value)}
-                    className={`w-full min-h-11 flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-all duration-200 active:scale-[0.98] ${
-                      statusFilter === f.value ? 'bg-emerald-50 text-emerald-800 font-semibold' : 'text-slate-700 hover:bg-slate-50'
-                    }`}
+                    className={`w-full min-h-11 flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-all duration-200 active:scale-[0.98] ${statusFilter === f.value ? 'bg-emerald-50 text-emerald-800 font-semibold' : 'text-slate-700 hover:bg-slate-50'
+                      }`}
                   >
                     <span>{f.label}</span>
                     <span className="text-slate-400 tabular-nums text-xs">{f.count}</span>

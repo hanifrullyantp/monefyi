@@ -170,9 +170,8 @@ export default function GanttTaskBar({
           setContextMenu({ x: e.clientX, y: e.clientY });
         }}
         title={`${task.name}\n${task.startDate} – ${task.endDate}\n${dayCount} hari · ${Math.round(task.progress)}%`}
-        className={`gantt-bar absolute rounded-md flex items-center overflow-hidden transition-shadow ${
-          hovered || isSelected ? 'shadow-md z-10' : 'shadow-sm'
-        } ${depth > 0 ? 'opacity-90' : ''}`}
+        className={`gantt-bar absolute rounded-md flex items-center overflow-hidden transition-shadow ${hovered || isSelected ? 'shadow-md z-10' : 'shadow-sm'
+          } ${depth > 0 ? 'opacity-90' : ''}`}
         style={{
           left: left + depth * 8,
           width: barW,
