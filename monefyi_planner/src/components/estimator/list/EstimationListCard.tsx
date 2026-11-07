@@ -27,6 +27,7 @@ type Props = {
   onKwitansi?: () => void;
   onOpenProject?: () => void;
   linkedProjectName?: string | null;
+  isLinkedProjectActive?: boolean;
   waLoading?: boolean;
   kwitansiLoading?: boolean;
   statusBusy?: boolean;
@@ -92,6 +93,7 @@ export default function EstimationListCard({
   onKwitansi,
   onOpenProject,
   linkedProjectName,
+  isLinkedProjectActive = true,
   waLoading = false,
   kwitansiLoading = false,
   statusBusy = false,
@@ -105,7 +107,7 @@ export default function EstimationListCard({
   dragHandle,
 }: Props) {
   const status = normalizeEstimationStatus(est.status);
-  const isConverted = status === 'converted';
+  const isConverted = status === 'converted' && isLinkedProjectActive;
   const value = Number(est.total_selling_price) || 0;
   const profit = Number(est.total_profit) || 0;
   const margin = estimationMarginPct(value, profit);

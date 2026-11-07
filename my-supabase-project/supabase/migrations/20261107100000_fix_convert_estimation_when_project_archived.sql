@@ -172,3 +172,4 @@ $$;
 GRANT EXECUTE ON FUNCTION public.convert_estimation_to_project(
   UUID, TEXT, TEXT, TEXT, TEXT, DATE, DATE, TEXT, UUID[]
 ) TO authenticated;
+

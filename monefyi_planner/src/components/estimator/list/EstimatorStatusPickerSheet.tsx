@@ -1,4 +1,4 @@
-import { AlertTriangle, Archive, Trash2 } from 'lucide-react';
+import { AlertTriangle, Archive, Trash2, Unlink } from 'lucide-react';
 import BottomSheet from '../../ui/BottomSheet';
 import {
   ESTIMATION_STATUS_DESCRIPTION,
@@ -16,6 +16,8 @@ type Props = {
   onPick: (status: EstimationWorkflowStatus | 'rejected') => void;
   onArchive?: () => void;
   onDelete?: () => void;
+  onUnlinkProject?: () => void;
+  isProjectActive?: boolean;
   busy?: boolean;
 };
 
@@ -31,16 +33,37 @@ export default function EstimatorStatusPickerSheet({
   onPick,
   onArchive,
   onDelete,
+  onUnlinkProject,
+  isProjectActive = false,
   busy = false,
 }: Props) {
   const current = estimation ? normalizeEstimationStatus(estimation.status) : 'wa';
-  const readOnly = estimation ? isStatusReadOnly(current) : true;
+  // Read-only hanya jika status memang converted DAN proyek pasangannya masih aktif di sistem
+  const readOnly = estimation ? (isStatusReadOnly(current) && isProjectActive) : true;
 
   return (
     <BottomSheet open={open} onClose={onClose} title="Ubah Status Estimasi" height="auto">
       <div className="px-4 pb-6 space-y-1">
         {readOnly ? (
-          <p className="text-sm text-slate-500 py-4">Status estimasi ini tidak bisa diubah karena sudah menjadi proyek.</p>
+          <div className="py-4 space-y-3">
+            <p className="text-sm text-slate-500">
+              Status estimasi ini terhubung dengan proyek aktif. Jika Anda ingin mengubah status atau melepaskan tautan proyek, silakan lepas koneksi proyek terlebih dahulu.
+            </p>
+            {onUnlinkProject && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  onClose();
+                  onUnlinkProject();
+                }}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-sm font-semibold transition-colors"
+              >
+                <Unlink className="w-4 h-4" />
+                Lepas Hubungan Proyek & Buka Kunci Status
+              </button>
+            )}
+          </div>
         ) : (
           <>
             {OPTIONS.map(status => {

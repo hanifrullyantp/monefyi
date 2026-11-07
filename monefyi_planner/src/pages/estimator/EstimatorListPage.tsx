@@ -684,6 +684,8 @@ export default function EstimatorListPage() {
     const linkedProjId = est.converted_project_id || est.project_id || null;
     const linkedProj = linkedProjId ? projects.find(p => p.id === linkedProjId) : null;
 
+    const isProjectActive = Boolean(linkedProj);
+
     return (
       <EstimationListCard
         key={est.id}
@@ -703,14 +705,15 @@ export default function EstimatorListPage() {
         onChangeStatus={() => setStatusPickerId(est.id)}
         onArchive={() => { void handleArchive(est); }}
         onKwitansi={() => handleKwitansi(est.id)}
-        onOpenProject={linkedProjId ? () => navigate(`/app/projects/${linkedProjId}`) : undefined}
+        onOpenProject={linkedProjId && isProjectActive ? () => navigate(`/app/projects/${linkedProjId}`) : undefined}
         linkedProjectName={linkedProj?.name ?? null}
+        isLinkedProjectActive={isProjectActive}
         waLoading={waLoadingId === est.id}
         kwitansiLoading={kwitansiLoadingId === est.id}
         statusBusy={statusUpdatingId === est.id}
         archiveBusy={statusUpdatingId === est.id || archiveBusy}
         archiveDisabled={isEstimationArchived(est.status)}
-        statusDisabled={normalizeEstimationStatus(est.status) === 'converted'}
+        statusDisabled={normalizeEstimationStatus(est.status) === 'converted' && isProjectActive}
       />
     );
   };
@@ -748,6 +751,8 @@ export default function EstimatorListPage() {
   const quotaUsed = lifetimeCount ?? listStats.total;
   const visibleRows = sortedRows.slice(0, visibleCount);
   const statusPickerEst = rows.find(r => r.id === statusPickerId) ?? null;
+  const statusPickerProjectId = statusPickerEst ? (statusPickerEst.converted_project_id || statusPickerEst.project_id) : null;
+  const isStatusPickerProjectActive = statusPickerProjectId ? projects.some(p => p.id === statusPickerProjectId) : false;
 
   const goNew = () => {
     if (!canCreateEstimation(entitlement, quotaUsed)) {
@@ -995,6 +1000,17 @@ export default function EstimatorListPage() {
         open={Boolean(statusPickerId)}
         estimation={statusPickerEst}
         busy={Boolean(statusUpdatingId)}
+        isProjectActive={isStatusPickerProjectActive}
+        onUnlinkProject={async () => {
+          if (!statusPickerEst) return;
+          try {
+            await updateEstimationStatus(statusPickerEst.id, 'selesai');
+            showToast('Kaitan proyek dilepas. Status diubah ke Selesai', 'success');
+            void load();
+          } catch (e) {
+            showToast(e instanceof Error ? e.message : 'Gagal melepas kaitan proyek', 'error');
+          }
+        }}
         onClose={() => setStatusPickerId(null)}
         onPick={next => {
           if (!statusPickerId) return;
