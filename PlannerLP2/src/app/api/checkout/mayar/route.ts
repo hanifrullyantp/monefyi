@@ -17,21 +17,28 @@ export async function POST(req: NextRequest) {
     const body = (await req.json()) as MayarCheckoutPayload;
     const { product, customerName, email, mobile, bumpTaken, amount } = body;
 
-    if (!email || !email.includes("@")) {
+    if (!customerName || customerName.trim().length < 2) {
       return NextResponse.json(
-        { ok: false, error: "Alamat email wajib diisi dengan benar" },
+        { ok: false, error: "Nama lengkap wajib diisi (minimal 2 karakter)" },
         { status: 400 }
       );
     }
 
-    if (!customerName || customerName.trim().length < 2) {
+    if (!email || !email.includes("@")) {
       return NextResponse.json(
-        { ok: false, error: "Nama lengkap wajib diisi" },
+        { ok: false, error: "Alamat email aktif wajib diisi" },
         { status: 400 }
       );
     }
 
     const cleanMobile = (mobile || "").replace(/[^0-9]/g, "");
+    if (!cleanMobile || cleanMobile.length < 8) {
+      return NextResponse.json(
+        { ok: false, error: "Nomor WhatsApp / HP wajib diisi (minimal 9 digit)" },
+        { status: 400 }
+      );
+    }
+
     const formattedMobile = cleanMobile.startsWith("62")
       ? cleanMobile
       : cleanMobile.startsWith("0")

@@ -528,11 +528,11 @@ export async function DELETE(req: NextRequest) {
   }
 }
 
-// PATCH: Perbarui status atau catatan lead langsung ke memory & Supabase orders
+// PATCH: Perbarui status, catatan, atau password akun lead langsung ke memory & Supabase orders
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const { id, sessionId, status, notes } = body;
+    const { id, sessionId, status, notes, accountPassword } = body;
 
     if (!id && !sessionId) {
       return NextResponse.json(
@@ -553,6 +553,7 @@ export async function PATCH(req: NextRequest) {
           ...val,
           ...(status ? { status } : {}),
           ...(notes !== undefined ? { notes } : {}),
+          ...(accountPassword !== undefined ? { accountPassword } : {}),
           updatedAt: new Date().toISOString(),
         });
       }
@@ -590,6 +591,7 @@ export async function PATCH(req: NextRequest) {
                 ...raw,
                 ...(status ? { status } : {}),
                 ...(notes !== undefined ? { notes } : {}),
+                ...(accountPassword !== undefined ? { accountPassword } : {}),
                 updatedAt: new Date().toISOString(),
               },
             })
@@ -600,7 +602,7 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ ok: true, status });
+    return NextResponse.json({ ok: true, status, accountPassword });
   } catch (err: any) {
     return NextResponse.json(
       { ok: false, error: err?.message || "Internal server error" },

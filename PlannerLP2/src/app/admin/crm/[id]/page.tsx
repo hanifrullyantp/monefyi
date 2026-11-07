@@ -15,6 +15,7 @@ import {
   User,
   Hash,
   Clock,
+  Key,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -105,10 +106,38 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
     }
   };
 
+  const handleSendAccountWa = () => {
+    const password = lead?.accountPassword || "Estimator2026!";
+    const msg = `Halo Kak ${lead.name}! 🙌
+Terima kasih telah memesan ${lead.projectType || "Monefyi Estimator"}.
+
+Berikut adalah data akses login akun Estimator Kakak:
+👤 *Nama*: ${lead.name}
+📧 *Email / User*: ${lead.email || "-"}
+🔑 *Password*: ${password}
+🌐 *Link Login*: https://estimator.monefyi.com/app/estimator
+
+💡 *Panduan Akses:*
+1. Buka tautan di atas melalui browser HP atau Laptop Anda.
+2. Masukkan Email dan Password di atas.
+3. Setelah masuk, Kakak bisa langsung membuat estimasi RAB Proyek otomatis & mengubah kata sandi di menu profil.
+
+Jika ada pertanyaan atau butuh bantuan teknis, tim kami siap membantu melalui chat ini ya Kak. Selamat berkarya! 🚀`;
+
+    openWhatsApp(lead.phone, msg);
+
+    addActivity(id, {
+      type: "whatsapp",
+      content: `Kirim nama & password akun (${password}) via WhatsApp ke ${lead.phone}`,
+      timestamp: new Date().toISOString(),
+      by: "Admin",
+    });
+  };
+
   return (
     <div className="p-6 md:p-8 max-w-6xl mx-auto">
       {/* Top Navigation & Actions */}
-      <div className="flex items-center justify-between mb-8 bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
+      <div className="flex items-center justify-between mb-8 bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex-wrap gap-4">
         <Link
           href="/admin/crm"
           className="flex items-center gap-2 text-slate-500 hover:text-emerald-600 font-bold text-sm transition-all group"
@@ -119,13 +148,21 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
           BACK TO PIPELINE
         </Link>
 
-        <div className="flex items-center gap-3">
-           <button
-            onClick={() => openWhatsApp(lead.phone, `Halo ${lead.name}, ...`)}
-            className="flex items-center gap-2 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-2xl px-5 py-2.5 text-sm font-bold hover:bg-emerald-100 transition-all"
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <button
+            onClick={handleSendAccountWa}
+            className="flex items-center gap-2 bg-gradient-to-r from-[#065f46] to-emerald-700 hover:from-emerald-800 hover:to-emerald-900 text-white rounded-2xl px-5 py-2.5 text-xs sm:text-sm font-black shadow-md shadow-emerald-900/15 transition-all active:scale-95 cursor-pointer"
+            title="Kirim nama dan password akun langsung via WhatsApp"
           >
-            <MessageCircle className="w-5 h-5" />
-            WHATSAPP
+            <Key className="w-4 h-4 text-amber-300" />
+            <span>KIRIM AKUN & PW (WA)</span>
+          </button>
+          <button
+            onClick={() => openWhatsApp(lead.phone, `Halo Kak ${lead.name}, salam dari tim Monefyi Estimator! 🙌`)}
+            className="flex items-center gap-2 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-2xl px-4 py-2.5 text-xs sm:text-sm font-bold hover:bg-emerald-100 transition-all cursor-pointer"
+          >
+            <MessageCircle className="w-4 h-4 text-emerald-600" />
+            <span>CHAT WA</span>
           </button>
           {editing ? (
             <button

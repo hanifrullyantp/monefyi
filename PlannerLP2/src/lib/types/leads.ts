@@ -73,6 +73,8 @@ export interface Lead {
   verifiedViaMayar?: boolean;
   // Resend Email Logs
   emails?: LeadEmailLog[];
+  // Account Credential for WA / Resend Delivery
+  accountPassword?: string;
 }
 
 export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {

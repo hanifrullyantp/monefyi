@@ -511,18 +511,38 @@ export default function ConversationalCheckout({
       return;
     }
 
+    // Wajib: Data pelanggan nama, email, dan no hp harus terisi lengkap & valid
+    if (!fullName.trim() || fullName.trim().length < 2) {
+      setErrorMsg('Nama lengkap wajib diisi (minimal 2 karakter).');
+      setCurrentStep(1);
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email.trim() || !emailRegex.test(email.trim())) {
+      setErrorMsg('Email aktif wajib diisi dengan format valid (contoh: nama@gmail.com).');
+      setCurrentStep(2);
+      return;
+    }
+    const cleanPhone = whatsapp.replace(/[^0-9]/g, '');
+    if (!cleanPhone || cleanPhone.length < 8) {
+      setErrorMsg('Nomor WhatsApp / HP aktif wajib diisi (minimal 9 digit).');
+      setCurrentStep(3);
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMsg('');
 
     try {
+      const formattedMobile = whatsapp.trim().startsWith('0') ? whatsapp.trim() : `0${whatsapp.trim()}`;
       const response = await fetch('/api/checkout/mayar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           product,
-          customerName: fullName.trim() || 'Pelanggan Estimator',
+          customerName: fullName.trim(),
           email: email.trim(),
-          mobile: whatsapp.trim() || '081234567890',
+          mobile: formattedMobile,
           bumpTaken: takeOrderBump,
           amount: finalPrice,
           paymentMethod,

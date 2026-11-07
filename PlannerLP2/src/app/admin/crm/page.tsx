@@ -34,6 +34,7 @@ import {
   FileText,
   Wallet,
   TrendingUp,
+  Copy,
 } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
@@ -96,17 +97,17 @@ function AddLeadModal({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1.5">Nama</label>
-              <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" placeholder="Nama lengkap" />
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1.5">Nama Lengkap (Wajib)</label>
+              <input required minLength={2} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" placeholder="Nama lengkap" />
             </div>
             <div>
-              <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1.5">No. HP / WA</label>
-              <input required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" placeholder="08xxxxxxxxxx" />
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1.5">No. HP / WA (Wajib)</label>
+              <input required minLength={8} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" placeholder="08xxxxxxxxxx" />
             </div>
           </div>
           <div>
-            <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1.5">Email</label>
-            <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" placeholder="email@contoh.com" />
+            <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1.5">Email Aktif (Wajib)</label>
+            <input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" placeholder="email@contoh.com" />
           </div>
           <div>
             <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1.5">Paket / Layanan</label>
@@ -476,6 +477,213 @@ function ResendEmailModal({
   );
 }
 
+// Modal: Kirim Nama & Password Akun Pelanggan via WhatsApp
+function SendAccountWaModal({
+  lead,
+  onClose,
+  onAccountSent,
+}: {
+  lead: Lead;
+  onClose: () => void;
+  onAccountSent: (password: string) => void;
+}) {
+  const [password, setPassword] = useState(lead.accountPassword || "Estimator2026!");
+  const [recipientName, setRecipientName] = useState(lead.name || "");
+  const [recipientPhone, setRecipientPhone] = useState(lead.phone || "");
+  const [recipientEmail, setRecipientEmail] = useState(lead.email || "");
+  const [copied, setCopied] = useState(false);
+
+  const cleanPhone = (recipientPhone || "").replace(/[^0-9]/g, "");
+  const formattedPhone = cleanPhone.startsWith("62")
+    ? cleanPhone
+    : cleanPhone.startsWith("0")
+    ? `62${cleanPhone.slice(1)}`
+    : cleanPhone
+    ? `62${cleanPhone}`
+    : "";
+
+  const loginUrl = "https://estimator.monefyi.com/app/estimator";
+
+  const messageText = `Halo Kak ${recipientName.trim()}! 🙌
+Terima kasih telah memesan ${lead.projectType || "Monefyi Estimator"}.
+
+Berikut adalah data akses login akun Estimator Kakak:
+👤 *Nama*: ${recipientName.trim()}
+📧 *Email / User*: ${recipientEmail.trim() || "-"}
+🔑 *Password*: ${password}
+🌐 *Link Login*: ${loginUrl}
+
+💡 *Panduan Akses:*
+1. Buka tautan di atas melalui browser HP atau Laptop Anda.
+2. Masukkan Email dan Password di atas.
+3. Setelah masuk, Kakak bisa langsung membuat estimasi RAB Proyek otomatis & mengubah kata sandi di menu profil.
+
+Jika ada pertanyaan atau butuh bantuan teknis, tim kami siap membantu melalui chat ini ya Kak. Selamat berkarya! 🚀`;
+
+  const handleSendViaWhatsApp = () => {
+    if (!formattedPhone) {
+      alert("Nomor WhatsApp belum valid.");
+      return;
+    }
+    const waUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(messageText)}`;
+    window.open(waUrl, "_blank");
+    onAccountSent(password);
+    onClose();
+  };
+
+  const handleCopyMessage = () => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(messageText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="bg-white rounded-[32px] p-6 sm:p-8 w-full max-w-xl shadow-2xl border border-slate-200 overflow-hidden relative max-h-[92vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-bold shadow-md shadow-emerald-600/25">
+              <Key className="w-5 h-5 text-amber-300" />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-slate-900 leading-tight">
+                Kirim Akun & Password via WhatsApp
+              </h3>
+              <p className="text-xs text-slate-500 font-medium">
+                Kirim nama, user login, dan password akun Estimator langsung ke nomor WhatsApp pembeli
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 cursor-pointer transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Content Scrollable */}
+        <div className="flex-1 overflow-y-auto py-5 space-y-4 pr-1 no-scrollbar">
+          {/* Form Recipient */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-wider block mb-1">
+                Nama Pelanggan
+              </label>
+              <input
+                value={recipientName}
+                onChange={(e) => setRecipientName(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-900"
+                placeholder="Nama Lengkap"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-wider block mb-1">
+                No. WhatsApp (Tujuan)
+              </label>
+              <input
+                value={recipientPhone}
+                onChange={(e) => setRecipientPhone(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-emerald-800 font-mono"
+                placeholder="08xxxxxxxxxx"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-wider block mb-1">
+                Email Pelanggan
+              </label>
+              <input
+                type="email"
+                value={recipientEmail}
+                onChange={(e) => setRecipientEmail(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-900"
+                placeholder="nama@email.com"
+              />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-black text-slate-400 uppercase tracking-wider block">
+                  Password Akun
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setPassword(`Monefyi${Math.floor(1000 + Math.random() * 9000)}!`)}
+                  className="text-[10px] font-bold text-emerald-700 hover:underline cursor-pointer"
+                >
+                  Acak Otomatis 🎲
+                </button>
+              </div>
+              <input
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-slate-900"
+                placeholder="Estimator2026!"
+              />
+            </div>
+          </div>
+
+          {/* Preview Box */}
+          <div className="space-y-1.5 pt-1">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-black text-slate-500 uppercase tracking-wider">
+                Preview Template Pesan WhatsApp:
+              </label>
+              <button
+                type="button"
+                onClick={handleCopyMessage}
+                className="text-[11px] font-bold text-slate-600 hover:text-slate-900 inline-flex items-center gap-1 cursor-pointer"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="text-emerald-700">Tersalin!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Salin Teks</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            <div className="bg-[#e7f8ef]/80 border border-emerald-200/80 rounded-2xl p-4 text-xs font-medium text-slate-800 whitespace-pre-wrap leading-relaxed shadow-inner">
+              {messageText}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 text-xs transition-colors cursor-pointer"
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            onClick={handleSendViaWhatsApp}
+            disabled={!formattedPhone}
+            className="flex-1 py-3 bg-[#065f46] hover:bg-emerald-800 disabled:opacity-50 text-white rounded-xl font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/15 transition-all active:scale-[0.98] cursor-pointer"
+          >
+            <MessageCircle className="w-4 h-4 fill-white" />
+            <span>Kirim via WhatsApp (+{formattedPhone || "-"})</span>
+            <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 import { MayarPayoutGuideModal } from "@/components/admin/MayarPayoutGuideModal";
 
 export default function CRMPage() {
@@ -492,6 +700,8 @@ export default function CRMPage() {
 
   // State untuk Modal Resend Email
   const [selectedLeadForEmail, setSelectedLeadForEmail] = useState<Lead | null>(null);
+  // State untuk Modal Kirim Akun & Password via WhatsApp
+  const [selectedLeadForAccountWa, setSelectedLeadForAccountWa] = useState<Lead | null>(null);
   const [showPayoutModal, setShowPayoutModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -906,6 +1116,33 @@ export default function CRMPage() {
     });
 
     showToast(`Email ${newLog.type.replace("_", " ")} berhasil dikirim via Resend!`);
+  };
+
+  const handleAccountWaSentCallback = (pwd: string) => {
+    if (!selectedLeadForAccountWa) return;
+
+    useLeadsStore.getState().updateLead(selectedLeadForAccountWa.id, {
+      accountPassword: pwd,
+    });
+
+    addActivity(selectedLeadForAccountWa.id, {
+      type: "whatsapp",
+      content: `Nama & Password (${pwd}) akun Estimator dikirim ke WA (+${selectedLeadForAccountWa.phone})`,
+      timestamp: new Date().toISOString(),
+      by: "Admin",
+    });
+
+    fetch("/api/crm/lead", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: selectedLeadForAccountWa.id,
+        sessionId: selectedLeadForAccountWa.sessionId,
+        accountPassword: pwd,
+      }),
+    }).catch(() => {});
+
+    showToast(`Akun & password untuk ${selectedLeadForAccountWa.name} berhasil diarahkan ke WhatsApp!`);
   };
 
   return (
@@ -1626,24 +1863,36 @@ export default function CRMPage() {
                         )}
                       </td>
 
-                      {/* Direct WhatsApp Follow-up */}
+                      {/* Direct WhatsApp Follow-up & Kirim Akun */}
                       <td className="py-4 px-4 text-center">
-                        {hasWa ? (
-                          <a
-                            href={generateWhatsAppLink(lead)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={() => handleWhatsAppClick(lead)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-extrabold text-xs shadow-sm shadow-emerald-600/20 transition-all active:scale-95 cursor-pointer"
-                            title="Buka WhatsApp dengan pesan template otomatis"
+                        <div className="flex flex-col gap-1.5 items-center min-w-[125px]">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedLeadForAccountWa(lead)}
+                            disabled={!hasWa}
+                            className="w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-xl font-black text-[11px] shadow-sm shadow-emerald-700/20 transition-all active:scale-95 disabled:opacity-40 cursor-pointer"
+                            title="Kirim nama, user email, dan password akun Estimator langsung via WhatsApp"
                           >
-                            <MessageCircle className="w-3.5 h-3.5" />
-                            <span>Chat WA</span>
-                            <ExternalLink className="w-3 h-3 opacity-70" />
-                          </a>
-                        ) : (
-                          <span className="text-[11px] text-slate-400 italic">-</span>
-                        )}
+                            <Key className="w-3 h-3 text-amber-300" />
+                            <span>Kirim Akun (WA)</span>
+                          </button>
+                          {hasWa ? (
+                            <a
+                              href={generateWhatsAppLink(lead)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={() => handleWhatsAppClick(lead)}
+                              className="w-full inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-[10px] transition-all cursor-pointer"
+                              title="Buka chat WhatsApp follow-up umum"
+                            >
+                              <MessageCircle className="w-3 h-3 text-emerald-600" />
+                              <span>Follow-up WA</span>
+                              <ExternalLink className="w-2.5 h-2.5 opacity-60" />
+                            </a>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 italic">Tanpa nomor WA</span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Trigger Manual Email Resend */}
@@ -1771,25 +2020,38 @@ export default function CRMPage() {
                           </button>
                         )}
 
-                        <div className="pt-2 flex items-center justify-between gap-2">
+                        {/* Action WhatsApp & Email Buttons */}
+                        <div className="pt-2 space-y-1.5">
                           {lead.phone && lead.phone !== "-" && (
-                            <a
-                              href={generateWhatsAppLink(lead)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={() => handleWhatsAppClick(lead)}
-                              className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-[11px] flex items-center justify-center gap-1 shadow-xs"
+                            <button
+                              type="button"
+                              onClick={() => setSelectedLeadForAccountWa(lead)}
+                              className="w-full py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-xl font-black text-[11px] flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-all active:scale-[0.98]"
                             >
-                              <MessageCircle className="w-3.5 h-3.5" /> WA
-                            </a>
+                              <Key className="w-3.5 h-3.5 text-amber-300" />
+                              <span>Kirim Akun & Password (WA)</span>
+                            </button>
                           )}
-                          <button
-                            onClick={() => setSelectedLeadForEmail(lead)}
-                            disabled={!lead.email}
-                            className="flex-1 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl font-bold text-[11px] flex items-center justify-center gap-1 disabled:opacity-40 cursor-pointer"
-                          >
-                            <Mail className="w-3.5 h-3.5" /> Email
-                          </button>
+                          <div className="flex items-center justify-between gap-2">
+                            {lead.phone && lead.phone !== "-" && (
+                              <a
+                                href={generateWhatsAppLink(lead)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={() => handleWhatsAppClick(lead)}
+                                className="flex-1 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-[11px] flex items-center justify-center gap-1 transition-colors"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5 text-emerald-600" /> WA
+                              </a>
+                            )}
+                            <button
+                              onClick={() => setSelectedLeadForEmail(lead)}
+                              disabled={!lead.email}
+                              className="flex-1 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl font-bold text-[11px] flex items-center justify-center gap-1 disabled:opacity-40 cursor-pointer"
+                            >
+                              <Mail className="w-3.5 h-3.5" /> Email
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -1816,6 +2078,15 @@ export default function CRMPage() {
           lead={selectedLeadForEmail}
           onClose={() => setSelectedLeadForEmail(null)}
           onEmailSent={handleEmailSentCallback}
+        />
+      )}
+
+      {/* Modal Kirim Nama & Password Akun via WhatsApp */}
+      {selectedLeadForAccountWa && (
+        <SendAccountWaModal
+          lead={selectedLeadForAccountWa}
+          onClose={() => setSelectedLeadForAccountWa(null)}
+          onAccountSent={handleAccountWaSentCallback}
         />
       )}
 
