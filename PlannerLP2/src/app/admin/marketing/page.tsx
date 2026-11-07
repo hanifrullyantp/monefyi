@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useMarketingStore } from "@/lib/store/marketingStore";
 import { MarketingWarRoom } from "@/components/admin/marketing/MarketingWarRoom";
+import { WinningEngineCommandCenter } from "@/components/admin/marketing/WinningEngineCommandCenter";
 import { MetaAdsCommanderTable } from "@/components/admin/marketing/MetaAdsCommanderTable";
 import { MetaAdsDeepInsights } from "@/components/admin/marketing/MetaAdsDeepInsights";
 import { WinningAdCreator } from "@/components/admin/marketing/WinningAdCreator";
@@ -11,44 +12,38 @@ import { FunnelAovPanel } from "@/components/admin/marketing/FunnelAovPanel";
 import { MarketingConfigModal } from "@/components/admin/marketing/MarketingConfigModal";
 import { analyzeMarketingSystemIntegrations } from "@/lib/services/marketingAgentService";
 import {
-  MessageSquare,
   BarChart3,
   Sparkles,
   ShoppingBag,
   Settings,
   Bot,
   Zap,
-  Flame,
-  ShieldCheck,
   Video,
   RefreshCw,
   AlertTriangle,
-  CheckCircle2,
-  XCircle,
   Info,
-  Layers,
-  ChevronRight,
-  ChevronDown,
-  ChevronUp,
-  PanelRightClose,
-  PanelRightOpen,
   Wifi,
   Cpu,
   X,
-  ExternalLink,
   ShieldAlert,
   Target,
   Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
-type ActiveTab = "commander" | "insights" | "creative" | "video_audit" | "funnel_aov";
+type ActiveTab =
+  | "winning_engine"
+  | "commander"
+  | "insights"
+  | "creative"
+  | "video_audit"
+  | "funnel_aov";
 
 export default function MarketingAdminPage() {
-  // Tab utama default adalah Meta Ads Commander
-  const [activeTab, setActiveTab] = useState<ActiveTab>("commander");
+  // Tab utama default adalah Winning Engine (Mesin 5 Pilar: Mode Cuan & Mode Advance)
+  const [activeTab, setActiveTab] = useState<ActiveTab>("winning_engine");
   const [isConfigOpen, setIsConfigOpen] = useState(false);
-  const [isAdspertOpen, setIsAdspertOpen] = useState(false); // Default popup chat tertutup (bisa dibuka menimpa konten)
+  const [isAdspertOpen, setIsAdspertOpen] = useState(false); // Popup chat di kanan bawah (menimpa konten)
   const [isNotifOpen, setIsNotifOpen] = useState(false); // Dropdown popover notifikasi di lonceng
   const [lastRefreshed, setLastRefreshed] = useState<string>("Baru saja");
 
@@ -56,6 +51,9 @@ export default function MarketingAdminPage() {
     apiConfig,
     campaigns,
     rules,
+    winningEngineConfig,
+    winningOverallScore,
+    winningPlans,
     isRefreshingCampaigns,
     isLiveMeta,
     metaAccountName,
@@ -66,17 +64,29 @@ export default function MarketingAdminPage() {
 
   // Audit Kesiapan Sistem & Diagnosa Tim AI
   const auditReport = analyzeMarketingSystemIntegrations(apiConfig, campaigns, rules);
+  const pendingApprovalCount = winningPlans.filter((p) => p.status === "pending").length;
 
   useEffect(() => {
-    setLastRefreshed(new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
-    // Panggil refresh kampanye & breakdown demografi ketika halaman dibuka atau kredensial diperbarui
+    setLastRefreshed(
+      new Date().toLocaleTimeString("id-ID", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      })
+    );
     refreshCampaigns().catch(() => undefined);
     refreshInsights().catch(() => undefined);
   }, [apiConfig.metaAccessToken, apiConfig.capiAccessToken, apiConfig.adAccountId]);
 
   const handleManualRefresh = async () => {
     await Promise.all([refreshCampaigns(), refreshInsights()]);
-    setLastRefreshed(new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+    setLastRefreshed(
+      new Date().toLocaleTimeString("id-ID", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      })
+    );
   };
 
   const hasConfiguredCredentials = Boolean(
@@ -93,9 +103,9 @@ export default function MarketingAdminPage() {
             <BarChart3 className="w-4 h-4" />
           </span>
           <h1 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5">
-            <span>Meta Ads Commander</span>
+            <span>Meta Ads &amp; Winning Engine</span>
             <span className="hidden sm:inline-block text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.2 rounded">
-              Live Ops
+              {winningEngineConfig.mode === "cuan" ? "Mode Cuan" : "Mode Advance"}
             </span>
           </h1>
         </div>
@@ -112,24 +122,36 @@ export default function MarketingAdminPage() {
                 ? "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
                 : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
             )}
-            title={isLiveMeta ? `Meta API: Live (${metaAccountName || "Terhubung"})` : "Mode Simulator"}
+            title={
+              isLiveMeta
+                ? `Meta API: Live (${metaAccountName || "Terhubung"})`
+                : "Mode Simulator"
+            }
           >
-            <Wifi className={cn("w-3 h-3", isLiveMeta ? "text-emerald-600 animate-pulse" : "text-slate-400")} />
+            <Wifi
+              className={cn(
+                "w-3 h-3",
+                isLiveMeta ? "text-emerald-600 animate-pulse" : "text-slate-400"
+              )}
+            />
             <span className="text-[11px] hidden sm:inline max-w-[120px] truncate">
-              {isLiveMeta ? (metaAccountName || "Meta Live") : "Sandbox"}
+              {isLiveMeta ? metaAccountName || "Meta Live" : "Sandbox"}
             </span>
           </div>
 
-          {/* Status AI Engine */}
-          <div
-            className="px-2 py-1 rounded-xl text-xs font-bold border bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 flex items-center gap-1"
-            title={`AI Engine: ${apiConfig.aiProvider ? apiConfig.aiProvider.toUpperCase() : "GEMINI"} Ready`}
+          {/* Status Dual-LLM Engine */}
+          <button
+            type="button"
+            onClick={() => setIsConfigOpen(true)}
+            className="px-2 py-1 rounded-xl text-xs font-bold border bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 flex items-center gap-1 cursor-pointer"
+            title="Klik untuk ganti model AI Strategist (Claude) & AI Teknis (Gemini)"
           >
             <Cpu className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
             <span className="text-[11px] hidden md:inline">
-              {apiConfig.aiProvider ? apiConfig.aiProvider.toUpperCase() : "GEMINI"}
+              {winningEngineConfig.llmRouting.strategist.provider.toUpperCase()} +{" "}
+              {winningEngineConfig.llmRouting.technical.provider.toUpperCase()}
             </span>
-          </div>
+          </button>
 
           {/* Tombol Refresh Data */}
           <button
@@ -139,8 +161,15 @@ export default function MarketingAdminPage() {
             className="p-1.5 sm:px-2.5 sm:py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold rounded-xl transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
             title={`Refresh data real-time (Terakhir: ${lastRefreshed})`}
           >
-            <RefreshCw className={cn("w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400", isRefreshingCampaigns && "animate-spin")} />
-            <span className="text-[11px] hidden lg:inline">{isRefreshingCampaigns ? "Sync..." : "Refresh"}</span>
+            <RefreshCw
+              className={cn(
+                "w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400",
+                isRefreshingCampaigns && "animate-spin"
+              )}
+            />
+            <span className="text-[11px] hidden lg:inline">
+              {isRefreshingCampaigns ? "Sync..." : "Refresh"}
+            </span>
           </button>
 
           {/* Icon Lonceng: Notifikasi & Alert Jumlah Notif Popover */}
@@ -157,9 +186,9 @@ export default function MarketingAdminPage() {
               title="Notifikasi & Rekomendasi Optimasi Adspert"
             >
               <Bell className="w-4 h-4" />
-              {auditReport.detectedIssues.length > 0 && (
+              {auditReport.detectedIssues.length + pendingApprovalCount > 0 && (
                 <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center animate-pulse shadow-xs">
-                  {auditReport.detectedIssues.length}
+                  {auditReport.detectedIssues.length + pendingApprovalCount}
                 </span>
               )}
             </button>
@@ -171,10 +200,10 @@ export default function MarketingAdminPage() {
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 text-amber-500" />
                     <span className="font-extrabold text-xs text-slate-900 dark:text-white">
-                      Notifikasi Adspert ({auditReport.detectedIssues.length})
+                      Notifikasi Adspert &amp; Rencana ({pendingApprovalCount} Pending)
                     </span>
                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
-                      Skor: {auditReport.score}%
+                      5 Pilar: {winningOverallScore}%
                     </span>
                   </div>
                   <button
@@ -188,7 +217,9 @@ export default function MarketingAdminPage() {
 
                 <div className="mt-2.5 space-y-2 max-h-72 overflow-y-auto pr-1">
                   {auditReport.detectedIssues.length === 0 ? (
-                    <p className="text-xs text-slate-500 p-2 text-center">Semua sistem & kampanye optimal.</p>
+                    <p className="text-xs text-slate-500 p-2 text-center">
+                      Semua sistem &amp; kampanye optimal.
+                    </p>
                   ) : (
                     auditReport.detectedIssues.map((issue, idx) => (
                       <div
@@ -215,8 +246,12 @@ export default function MarketingAdminPage() {
                             {issue.severity === "critical" ? "Penting" : "Saran"}
                           </span>
                         </div>
-                        <p className="font-bold text-slate-900 dark:text-white text-[11px] leading-tight">{issue.title}</p>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">{issue.diagnosis}</p>
+                        <p className="font-bold text-slate-900 dark:text-white text-[11px] leading-tight">
+                          {issue.title}
+                        </p>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
+                          {issue.diagnosis}
+                        </p>
                         <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
                           Solusi: {issue.actionableFix}
                         </p>
@@ -244,15 +279,15 @@ export default function MarketingAdminPage() {
             <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 animate-pulse border-2 border-white dark:border-slate-900" />
           </button>
 
-          {/* Konfigurasi & Rules */}
+          {/* Konfigurasi & Rules AI (Terlihat Jelas di Mobile & Desktop) */}
           <button
             type="button"
             onClick={() => setIsConfigOpen(true)}
-            className="p-1.5 sm:px-2.5 sm:py-1 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1"
-            title="Konfigurasi & Rules"
+            className="px-2.5 py-1 sm:px-3 sm:py-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-black rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1.5 shrink-0 active:scale-95"
+            title="Konfigurasi Meta API, Multi-LLM & Notifikasi (Super Admin)"
           >
-            <Settings className="w-3.5 h-3.5" />
-            <span className="text-[11px] hidden sm:inline">Rules</span>
+            <Cpu className="w-3.5 h-3.5 text-indigo-200" />
+            <span className="text-[11px] font-black">AI Rules</span>
           </button>
         </div>
       </div>
@@ -264,10 +299,10 @@ export default function MarketingAdminPage() {
             <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
             <div>
               <span className="font-bold text-slate-800 dark:text-white">
-                Dashboard saat ini menampilkan Data Simulasi Benchmark Monefyi.
+                Token Meta Ads belum terhubung.
               </span>
               <p className="text-slate-500 dark:text-slate-400 mt-0.5">
-                Kredensial Meta Ads asli belum terpasang atau sedang diverifikasi. Data di bawah adalah simulasi model Scale.co.id.
+                Masukkan Access Token Meta di menu Rules &amp; AI Key agar seluruh metrik kampanye riil dan eksekusi anggaran terhubung langsung ke akun Meta Ads Anda.
               </p>
             </div>
           </div>
@@ -305,8 +340,14 @@ export default function MarketingAdminPage() {
       <div className="flex gap-1.5 overflow-x-auto pb-0.5 border-b border-slate-200 dark:border-slate-800 scrollbar-none">
         {[
           {
+            id: "winning_engine" as const,
+            label: "Winning Engine (5 Pilar)",
+            icon: Zap,
+            badge: `${pendingApprovalCount} Rencana`,
+          },
+          {
             id: "commander" as const,
-            label: "Commander",
+            label: "Tabel Ads Commander",
             icon: BarChart3,
             badge: `${campaigns.length}`,
           },
@@ -343,7 +384,14 @@ export default function MarketingAdminPage() {
                   : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"
               )}
             >
-              <t.icon className={cn("w-3.5 h-3.5", isActive ? "text-emerald-400 dark:text-white" : "text-slate-500 dark:text-slate-400")} />
+              <t.icon
+                className={cn(
+                  "w-3.5 h-3.5",
+                  isActive
+                    ? "text-emerald-400 dark:text-white"
+                    : "text-slate-500 dark:text-slate-400"
+                )}
+              />
               <span>{t.label}</span>
               {t.badge && (
                 <span
@@ -362,8 +410,11 @@ export default function MarketingAdminPage() {
         })}
       </div>
 
-      {/* Konten Tab Aktif (Lebar Penuh 100%, TIDAK tergeser oleh Chat) */}
+      {/* Konten Tab Aktif */}
       <div className="w-full space-y-6">
+        {activeTab === "winning_engine" && (
+          <WinningEngineCommandCenter onOpenConfigModal={() => setIsConfigOpen(true)} />
+        )}
         {activeTab === "commander" && <MetaAdsCommanderTable />}
         {activeTab === "insights" && <MetaAdsDeepInsights />}
         {activeTab === "creative" && <WinningAdCreator />}
@@ -371,7 +422,7 @@ export default function MarketingAdminPage() {
         {activeTab === "funnel_aov" && <FunnelAovPanel />}
       </div>
 
-      {/* Monefyi Adspert: POPUP CHAT MENIMPA KONTEN DI KANAN BAWAH (Bukan menggeser layout) */}
+      {/* Monefyi Adspert: POPUP CHAT MENIMPA KONTEN DI KANAN BAWAH */}
       {isAdspertOpen && (
         <div className="fixed bottom-6 right-6 z-50 w-[440px] max-w-[calc(100vw-32px)] h-[640px] max-h-[85vh] shadow-2xl rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 animate-slide-up">
           <MarketingWarRoom

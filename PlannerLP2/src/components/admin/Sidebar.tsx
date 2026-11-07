@@ -26,6 +26,8 @@ import {
   Megaphone,
   Sun,
   Moon,
+  Cpu,
+  Bot,
 } from "lucide-react";
 import { EstimatorLogo } from "@/components/brand/EstimatorLogo";
 import { cn } from "@/lib/utils/cn";
@@ -39,10 +41,11 @@ import { SaveIndicator } from "./SaveIndicator";
 const navItems = [
   { href: "/admin", icon: LayoutDashboard, label: "Dashboard CRM" },
   { href: "/admin/crm", icon: Users, label: "CRM & Leads" },
+  { href: "/admin/settings?tab=ai", icon: Cpu, label: "Pengaturan AI (Super Admin)", badge: "Multi-LLM", highlight: true },
   { href: "/admin/marketing", icon: Megaphone, label: "Marketing AI & Meta Ads" },
-  { href: "/admin/whatsapp", icon: MessageSquare, label: "Bot WhatsApp CS & Tim" },
+  { href: "/admin/whatsapp", icon: Bot, label: "Bot WhatsApp CS & Tim" },
   { href: "/admin/crm-template", icon: MessageSquare, label: "Template WA" },
-  { href: "/admin/pricing", icon: DollarSign, label: "Pricing & Paket" },
+  { href: "/admin/pricing", icon: DollarSign, label: "Pricing & Gateway Mayar" },
   { href: "/admin/konten", icon: PanelLeftOpen, label: "Konten Visual" },
   { href: "/admin/konten-json", icon: Code, label: "Konten JSON" },
   { href: "/admin/analytics", icon: BarChart3, label: "Analytics" },
@@ -56,7 +59,7 @@ const navItems = [
   { href: "/admin/features", icon: Sparkles, label: "Fitur" },
   { href: "/admin/media", icon: Image, label: "Media Library" },
   { href: "/admin/footer", icon: FileText, label: "Footer & Privasi" },
-  { href: "/admin/settings", icon: Settings, label: "Settings" },
+  { href: "/admin/settings", icon: Settings, label: "Settings Sistem" },
 ];
 
 interface SidebarProps {
@@ -114,6 +117,26 @@ export function Sidebar({ onClose }: SidebarProps) {
           </div>
         </div>
         
+        {/* Quick Card: Super Admin AI Shortcut */}
+        <Link
+          href="/admin/settings?tab=ai"
+          onClick={onClose}
+          className="flex items-center justify-between p-2.5 rounded-2xl bg-gradient-to-r from-indigo-950/80 to-purple-950/80 border border-indigo-500/40 text-white hover:from-indigo-900 hover:to-purple-900 transition-all text-xs font-bold shadow-xs group"
+        >
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-xl bg-indigo-600 text-white shadow-xs">
+              <Cpu className="w-3.5 h-3.5 animate-pulse" />
+            </div>
+            <div>
+              <p className="text-xs font-black text-indigo-100">Super Admin AI</p>
+              <p className="text-[10px] text-indigo-300 font-medium">Model &amp; Dual-LLM</p>
+            </div>
+          </div>
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 font-black">
+            Atur ⚡
+          </span>
+        </Link>
+
         <SaveIndicator isDirty={isDirty} lastSaved={lastSaved} isSaving={isSaving} dbSynced={dbSynced} />
         {publishError && (
           <p className="text-[10px] text-red-400 leading-snug">{publishError}</p>
@@ -140,14 +163,23 @@ export function Sidebar({ onClose }: SidebarProps) {
               href={item.href}
               onClick={onClose}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
+                "flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all group",
                 isActive
-                  ? "bg-emerald-600 text-white"
+                  ? "bg-emerald-600 text-white font-bold"
+                  : (item as any).highlight
+                  ? "bg-indigo-950/40 text-indigo-200 border border-indigo-500/30 hover:bg-indigo-900/40 hover:text-white"
                   : "text-slate-300 hover:bg-slate-800 hover:text-white"
               )}
             >
-              <item.icon className="w-4 h-4 flex-shrink-0" />
-              {item.label}
+              <div className="flex items-center gap-3">
+                <item.icon className={cn("w-4 h-4 flex-shrink-0", (item as any).highlight ? "text-indigo-400" : "")} />
+                <span>{item.label}</span>
+              </div>
+              {(item as any).badge && (
+                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-indigo-500 text-white">
+                  {(item as any).badge}
+                </span>
+              )}
             </Link>
           );
         })}

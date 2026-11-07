@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Edit3, PanelLeftOpen, LayoutDashboard, Users, Megaphone, MoreHorizontal, Sun, Moon } from "lucide-react";
+import { Menu, Edit3, PanelLeftOpen, LayoutDashboard, Users, Megaphone, MoreHorizontal, Sun, Moon, Cpu } from "lucide-react";
 import { Sidebar } from "@/components/admin/Sidebar";
 import { AdminAuthGuard } from "@/components/admin/AdminAuthGuard";
 import { ContentHydrator } from "@/components/landing/ContentHydrator";
@@ -10,10 +10,12 @@ import { AuthHydrator } from "@/components/landing/AuthHydrator";
 import { INLINE_EDIT_LANDING_PATH } from "@/lib/hooks/useLandingAdmin";
 import { useUIStore } from "@/lib/store/uiStore";
 import { AdminPwaInstallPrompt } from "@/components/admin/AdminPwaInstallPrompt";
+import { MarketingConfigModal } from "@/components/admin/marketing/MarketingConfigModal";
 import { cn } from "@/lib/utils/cn";
 
 export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isGlobalAiConfigOpen, setIsGlobalAiConfigOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const isAdminSidebarOpen = useUIStore((s) => s.isAdminSidebarOpen);
@@ -116,23 +118,34 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
             )}
           >
             {/* Top Bar Mobile */}
-            <div className="sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between gap-2 lg:hidden">
-              <div className="flex items-center gap-2.5 min-w-0">
+            <div className="sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-3.5 py-2.5 flex items-center justify-between gap-2 lg:hidden">
+              <div className="flex items-center gap-2 min-w-0">
                 <button
                   type="button"
                   onClick={() => setMobileSidebarOpen(true)}
-                  className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex-shrink-0"
+                  className="p-1.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex-shrink-0"
                   aria-label="Buka menu"
                 >
                   <Menu className="w-5 h-5" />
                 </button>
                 <div className="truncate">
-                  <p className="font-extrabold text-slate-900 dark:text-white text-sm leading-tight truncate">Monefyi Admin</p>
-                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">CRM Active</p>
+                  <p className="font-extrabold text-slate-900 dark:text-white text-xs leading-tight truncate">Monefyi Admin</p>
+                  <p className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">CRM Active</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {/* Tombol Super Admin: Pengaturan AI Cepat di Mobile */}
+                <button
+                  type="button"
+                  onClick={() => setIsGlobalAiConfigOpen(true)}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-[11px] font-black shadow-xs active:scale-95 transition-all cursor-pointer"
+                  title="Buka Pengaturan AI & Multi-LLM"
+                >
+                  <Cpu className="w-3.5 h-3.5 text-indigo-200 animate-pulse" />
+                  <span>AI Config</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={toggleAdminTheme}
@@ -143,10 +156,10 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
                 </button>
                 <Link
                   href={INLINE_EDIT_LANDING_PATH}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all"
                 >
                   <Edit3 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>Edit Site</span>
+                  <span className="text-[11px]">Edit</span>
                 </Link>
               </div>
             </div>
@@ -155,58 +168,74 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        {/* Mobile Bottom Navigation Bar (Native App Style) */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-t border-slate-200/80 dark:border-slate-800 px-2 py-1.5 shadow-lg safe-bottom">
-          <div className="grid grid-cols-4 gap-1">
+        {/* Mobile Bottom Navigation Bar (5 Tab Native App Style Termasuk Super AI) */}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-t border-slate-200/80 dark:border-slate-800 px-1.5 py-1 shadow-lg safe-bottom">
+          <div className="grid grid-cols-5 gap-1 text-center">
             <Link
               href="/admin"
               className={cn(
-                "flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-[10px] font-bold transition-all",
+                "flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl text-[9px] font-extrabold transition-all",
                 pathname === "/admin"
                   ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40"
                   : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
               )}
             >
-              <LayoutDashboard className="w-5 h-5 mb-0.5" />
-              <span>Dashboard</span>
+              <LayoutDashboard className="w-4 h-4 mb-0.5" />
+              <span>Dash</span>
             </Link>
 
             <Link
               href="/admin/crm"
               className={cn(
-                "flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-[10px] font-bold transition-all relative",
+                "flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl text-[9px] font-extrabold transition-all relative",
                 pathname.startsWith("/admin/crm")
-                  ? "text-emerald-600 bg-emerald-50"
-                  : "text-slate-500 hover:text-slate-900"
+                  ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400"
+                  : "text-slate-500 hover:text-slate-900 dark:text-slate-400"
               )}
             >
-              <Users className="w-5 h-5 mb-0.5" />
-              <span>CRM Leads</span>
+              <Users className="w-4 h-4 mb-0.5" />
+              <span>CRM</span>
             </Link>
 
             <Link
               href="/admin/marketing"
               className={cn(
-                "flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-[10px] font-bold transition-all",
+                "flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl text-[9px] font-extrabold transition-all",
                 pathname.startsWith("/admin/marketing")
-                  ? "text-emerald-600 bg-emerald-50"
-                  : "text-slate-500 hover:text-slate-900"
+                  ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400"
+                  : "text-slate-500 hover:text-slate-900 dark:text-slate-400"
               )}
             >
-              <Megaphone className="w-5 h-5 mb-0.5" />
-              <span>Marketing</span>
+              <Megaphone className="w-4 h-4 mb-0.5" />
+              <span>Ads AI</span>
             </Link>
+
+            {/* Tab Super Admin: Pengaturan AI & Multi-LLM */}
+            <button
+              type="button"
+              onClick={() => setIsGlobalAiConfigOpen(true)}
+              className="flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl text-[9px] font-black text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-all cursor-pointer group"
+            >
+              <Cpu className="w-4 h-4 mb-0.5 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform" />
+              <span>Super AI</span>
+            </button>
 
             <button
               type="button"
               onClick={() => setMobileSidebarOpen(true)}
-              className="flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-[10px] font-bold text-slate-500 hover:text-slate-900 transition-all cursor-pointer"
+              className="flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl text-[9px] font-extrabold text-slate-500 hover:text-slate-900 dark:text-slate-400 transition-all cursor-pointer"
             >
-              <MoreHorizontal className="w-5 h-5 mb-0.5" />
+              <MoreHorizontal className="w-4 h-4 mb-0.5" />
               <span>Menu</span>
             </button>
           </div>
         </div>
+
+        {/* Global Super Admin AI & Multi-LLM Config Modal */}
+        <MarketingConfigModal
+          isOpen={isGlobalAiConfigOpen}
+          onClose={() => setIsGlobalAiConfigOpen(false)}
+        />
       </div>
     </AdminAuthGuard>
   );

@@ -20,6 +20,14 @@ import {
   evaluateCampaignHealth,
 } from '../services/metaAdsService';
 import { getMockCapiStatus } from '../services/metaCapiService';
+import {
+  WinningEngineConfig,
+  DEFAULT_WINNING_ENGINE_CONFIG,
+  PillarHealthScore,
+  WinningActionPlan,
+  WinningLearningItem,
+  runFivePillarDiagnostics,
+} from '../engine/winningEngine';
 
 interface MarketingApiConfig {
   metaAccessToken?: string;
@@ -90,6 +98,39 @@ interface MarketingStore {
   isLoadingInsights: boolean;
   refreshInsights: () => Promise<void>;
 
+  // Holistic 5-Pillar Winning Engine (Mode Cuan & Mode Advance)
+  winningEngineConfig: WinningEngineConfig;
+  updateWinningEngineConfig: (updates: Partial<WinningEngineConfig>) => void;
+  winningOverallScore: number;
+  winningPillars: PillarHealthScore[];
+  winningPlans: WinningActionPlan[];
+  winningLearnings: WinningLearningItem[];
+  winningExecutiveBrief: string;
+  winningLlmInfo: {
+    strategistProvider: string;
+    strategistModel: string;
+    technicalProvider: string;
+    technicalModel: string;
+  };
+  isRunningEngineTick: boolean;
+  executingPlanId: string | null;
+  currentLpCopySnapshot: {
+    heroTitle: string;
+    heroSubtitle: string;
+    ctaText: string;
+    standardPrice: string;
+    proPrice: string;
+  };
+  runWinningEngineTick: (sendNotification?: boolean) => Promise<{
+    ok: boolean;
+    message?: string;
+  }>;
+  approveAndExecutePlan: (
+    planId: string,
+    customPayloadOverrides?: Record<string, any>
+  ) => Promise<{ ok: boolean; message: string }>;
+  rejectPlan: (planId: string) => void;
+
   // Action Audit Logs (Pergerakan AI & Manusia)
   actionLogs: ActionAuditLog[];
   addActionLog: (log: ActionAuditLog) => void;
@@ -130,6 +171,11 @@ interface MarketingStore {
   updateAgentNames: (names: Partial<AgentCustomNames>) => void;
 }
 
+const initialDiagnostics = runFivePillarDiagnostics({
+  campaigns: [],
+  config: DEFAULT_WINNING_ENGINE_CONFIG,
+});
+
 export const useMarketingStore = create<MarketingStore>()(
   persist(
     (set, get) => ({
@@ -143,6 +189,271 @@ export const useMarketingStore = create<MarketingStore>()(
       insightsData: null,
       isLoadingInsights: false,
       actionLogs: [],
+
+      // Holistic 5-Pillar Winning Engine Initial State
+      winningEngineConfig: DEFAULT_WINNING_ENGINE_CONFIG,
+      winningOverallScore: initialDiagnostics.overallScore,
+      winningPillars: initialDiagnostics.pillars,
+      winningPlans: initialDiagnostics.plans,
+      winningLearnings: initialDiagnostics.learnings,
+      winningExecutiveBrief:
+        '1. Diagnosa 5 Pilar: Mesin siap mengevaluasi Produk & Offer, Kecepatan/Copywriting Landing Page, Checkout Funnel, Meta Ads Testing, dan Tracking Pixel + CAPI.\n\n2. Mode Aktif: Mode Cuan (Aman & Terkendali di rentang Rp 100.000 - Rp 1.000.000/hari). Seluruh rekomendasi strategis di bawah menunggu persetujuan Anda sebelum dieksekusi.',
+      winningLlmInfo: {
+        strategistProvider: 'Anthropic Claude',
+        strategistModel: 'claude-3-7-sonnet-latest',
+        technicalProvider: 'Google Gemini',
+        technicalModel: 'gemini-2.5-flash',
+      },
+      isRunningEngineTick: false,
+      executingPlanId: null,
+      currentLpCopySnapshot: {
+        heroTitle: 'Kelola Uang Tanpa Ribet, Cukup Chat WhatsApp!',
+        heroSubtitle:
+          'Malas buka aplikasi keuangan yang rumit? Monefyi hadir sebagai asisten pribadi di WhatsApp Anda.',
+        ctaText: 'Coba Gratis Sekarang',
+        standardPrice: 'Rp 150.000',
+        proPrice: 'Rp 250.000',
+      },
+
+      updateWinningEngineConfig: (updates) =>
+        set((state) => {
+          const nextConfig: WinningEngineConfig = {
+            ...state.winningEngineConfig,
+            ...updates,
+            llmRouting: {
+              strategist: {
+                ...state.winningEngineConfig.llmRouting.strategist,
+                ...(updates.llmRouting?.strategist || {}),
+              },
+              technical: {
+                ...state.winningEngineConfig.llmRouting.technical,
+                ...(updates.llmRouting?.technical || {}),
+              },
+            },
+            notifications: {
+              ...state.winningEngineConfig.notifications,
+              ...(updates.notifications || {}),
+            },
+          };
+          return { winningEngineConfig: nextConfig };
+        }),
+
+      runWinningEngineTick: async (sendNotification = false) => {
+        set({ isRunningEngineTick: true });
+        try {
+          const {
+            campaigns,
+            insightsData,
+            orderBumpConfig,
+            upsellConfig,
+            capiStatus,
+            winningEngineConfig,
+            currentLpCopySnapshot,
+          } = get();
+
+          const res = await fetch('/api/engine/tick', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              campaigns,
+              insightsData,
+              orderBumpConfig,
+              upsellConfig,
+              capiStatus,
+              config: winningEngineConfig,
+              currentLpCopy: currentLpCopySnapshot,
+              sendNotification,
+            }),
+          });
+
+          const data = await res.json().catch(() => ({}));
+          if (res.ok && data.ok) {
+            set({
+              winningOverallScore: data.overallScore,
+              winningPillars: data.pillars || [],
+              winningPlans: data.plans || [],
+              winningLearnings: data.learnings || [],
+              winningExecutiveBrief: data.executiveBrief || '',
+              winningLlmInfo: data.llmInfo || get().winningLlmInfo,
+            });
+            return {
+              ok: true,
+              message: sendNotification
+                ? 'Analisa 5 Pilar selesai dan laporan telah dikirim ke WhatsApp & Telegram.'
+                : 'Analisa 5 Pilar berhasil diperbarui.',
+            };
+          }
+          return {
+            ok: false,
+            message: data.error || 'Gagal menjalankan analisa Winning Engine.',
+          };
+        } catch (err: any) {
+          return {
+            ok: false,
+            message: err?.message || 'Gagal menghubungi server Winning Engine.',
+          };
+        } finally {
+          set({ isRunningEngineTick: false });
+        }
+      },
+
+      approveAndExecutePlan: async (planId, customPayloadOverrides) => {
+        const {
+          winningPlans,
+          winningEngineConfig,
+          apiConfig,
+          addActionLog,
+          refreshCampaigns,
+        } = get();
+        const targetPlan = winningPlans.find((p) => p.id === planId);
+        if (!targetPlan) {
+          return { ok: false, message: 'Rencana tidak ditemukan.' };
+        }
+
+        const mergedPlan: WinningActionPlan = {
+          ...targetPlan,
+          actionPayload: {
+            ...targetPlan.actionPayload,
+            ...(customPayloadOverrides || {}),
+          },
+        };
+
+        set({ executingPlanId: planId });
+        try {
+          // Jika rencana menaikkan plafon dan disetujui user, naikkan approvedDailyCeiling
+          let activeConfig = winningEngineConfig;
+          if (mergedPlan.requiresCeilingReapproval) {
+            const newCeiling = Math.max(
+              winningEngineConfig.approvedDailyCeiling,
+              Number(
+                mergedPlan.actionPayload.newBudget ||
+                  mergedPlan.actionPayload.dailyBudget ||
+                  winningEngineConfig.maxDailyBudget
+              )
+            );
+            activeConfig = {
+              ...winningEngineConfig,
+              approvedDailyCeiling: newCeiling,
+              maxDailyBudget: Math.max(winningEngineConfig.maxDailyBudget, newCeiling),
+            };
+            set({ winningEngineConfig: activeConfig });
+          }
+
+          const res = await fetch('/api/engine/apply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              plan: mergedPlan,
+              config: activeConfig,
+              userApproved: true,
+              accessToken: apiConfig.metaAccessToken,
+              capiAccessToken: apiConfig.capiAccessToken,
+              adAccountId: apiConfig.adAccountId,
+              sendNotification: true,
+            }),
+          });
+
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.ok) {
+            return {
+              ok: false,
+              message: data.error || 'Gagal mengeksekusi rencana.',
+            };
+          }
+
+          // Perbarui state lokal sesuai hasil eksekusi 5 pilar
+          const nowIso = data.executedAt || new Date().toISOString();
+          set((state) => ({
+            winningPlans: state.winningPlans.map((p) =>
+              p.id === planId
+                ? {
+                    ...mergedPlan,
+                    status: 'executed',
+                    executedAt: nowIso,
+                    executionNote: data.summary,
+                  }
+                : p
+            ),
+            currentLpCopySnapshot:
+              mergedPlan.actionType === 'update_lp_copy'
+                ? {
+                    ...state.currentLpCopySnapshot,
+                    heroTitle:
+                      mergedPlan.actionPayload.afterHeroTitle ||
+                      state.currentLpCopySnapshot.heroTitle,
+                    heroSubtitle:
+                      mergedPlan.actionPayload.afterHeroSubtitle ||
+                      state.currentLpCopySnapshot.heroSubtitle,
+                    ctaText:
+                      mergedPlan.actionPayload.afterCtaText ||
+                      state.currentLpCopySnapshot.ctaText,
+                  }
+                : mergedPlan.actionType === 'update_offer_pricing'
+                ? {
+                    ...state.currentLpCopySnapshot,
+                    standardPrice:
+                      mergedPlan.actionPayload.recommendedEntryPrice ||
+                      state.currentLpCopySnapshot.standardPrice,
+                    proPrice:
+                      mergedPlan.actionPayload.recommendedProPrice ||
+                      state.currentLpCopySnapshot.proPrice,
+                  }
+                : state.currentLpCopySnapshot,
+            orderBumpConfig: data.orderBumpUpdates
+              ? { ...state.orderBumpConfig, ...data.orderBumpUpdates }
+              : state.orderBumpConfig,
+            capiStatus: data.capiUpdates
+              ? { ...state.capiStatus, ...data.capiUpdates }
+              : state.capiStatus,
+          }));
+
+          addActionLog({
+            id: `win_${Date.now()}`,
+            timestamp: nowIso,
+            actor: 'ai_danu',
+            actorLabel: 'Winning Engine (Disetujui User)',
+            actionType:
+              mergedPlan.actionType === 'scale_campaign_budget'
+                ? 'scale_budget'
+                : mergedPlan.actionType === 'pause_bleeding_campaign'
+                ? 'update_status'
+                : 'create_campaign',
+            campaignId: String(mergedPlan.actionPayload.campaignId || mergedPlan.pillar),
+            campaignName: String(
+              mergedPlan.actionPayload.campaignName || mergedPlan.pillarLabel
+            ),
+            summary: data.summary || mergedPlan.title,
+            liveExecuted: Boolean(data.liveExecuted),
+          });
+
+          if (
+            mergedPlan.actionType === 'scale_campaign_budget' ||
+            mergedPlan.actionType === 'pause_bleeding_campaign' ||
+            mergedPlan.actionType === 'create_rapid_test_campaign'
+          ) {
+            await refreshCampaigns();
+          }
+
+          return {
+            ok: true,
+            message: data.summary || 'Rencana berhasil dijalankan.',
+          };
+        } catch (err: any) {
+          return {
+            ok: false,
+            message: err?.message || 'Terjadi kesalahan saat mengeksekusi rencana.',
+          };
+        } finally {
+          set({ executingPlanId: null });
+        }
+      },
+
+      rejectPlan: (planId) =>
+        set((state) => ({
+          winningPlans: state.winningPlans.map((p) =>
+            p.id === planId ? { ...p, status: 'rejected' } : p
+          ),
+        })),
 
       addActionLog: (log) =>
         set((state) => ({ actionLogs: [log, ...state.actionLogs].slice(0, 100) })),
@@ -172,20 +483,36 @@ export const useMarketingStore = create<MarketingStore>()(
             pixelId,
             datePreset
           );
-          set((state) => ({
-            campaigns: result.campaigns,
-            isLiveMeta: result.isLive,
-            metaAccountName: result.accountName,
-            metaSyncError: result.error || null,
-            discoveredAccounts:
-              result.discoveredAccounts && result.discoveredAccounts.length > 0
-                ? result.discoveredAccounts
-                : state.discoveredAccounts,
-            apiConfig:
-              result.resolvedAccountId && result.resolvedAccountId !== state.apiConfig.adAccountId
-                ? { ...state.apiConfig, adAccountId: result.resolvedAccountId }
-                : state.apiConfig,
-          }));
+          set((state) => {
+            const nextDiagnostics = runFivePillarDiagnostics({
+              campaigns: result.campaigns,
+              insightsData: state.insightsData,
+              orderBumpConfig: state.orderBumpConfig,
+              upsellConfig: state.upsellConfig,
+              capiStatus: state.capiStatus,
+              config: state.winningEngineConfig,
+              currentLpCopy: state.currentLpCopySnapshot,
+            });
+            return {
+              campaigns: result.campaigns,
+              isLiveMeta: result.isLive,
+              metaAccountName: result.accountName,
+              metaSyncError: result.error || null,
+              winningOverallScore: nextDiagnostics.overallScore,
+              winningPillars: nextDiagnostics.pillars,
+              winningPlans: nextDiagnostics.plans,
+              winningLearnings: nextDiagnostics.learnings,
+              discoveredAccounts:
+                result.discoveredAccounts && result.discoveredAccounts.length > 0
+                  ? result.discoveredAccounts
+                  : state.discoveredAccounts,
+              apiConfig:
+                result.resolvedAccountId &&
+                result.resolvedAccountId !== state.apiConfig.adAccountId
+                  ? { ...state.apiConfig, adAccountId: result.resolvedAccountId }
+                  : state.apiConfig,
+            };
+          });
         } finally {
           set({ isRefreshingCampaigns: false });
         }
@@ -210,13 +537,29 @@ export const useMarketingStore = create<MarketingStore>()(
           });
           const data = await res.json().catch(() => ({}));
           if (res.ok && data.ok) {
-            set({
-              insightsData: {
-                ageGender: data.ageGender || [],
-                regions: data.regions || [],
-                placements: data.placements || [],
-                recommendation: data.recommendation || null,
-              },
+            const newInsights = {
+              ageGender: data.ageGender || [],
+              regions: data.regions || [],
+              placements: data.placements || [],
+              recommendation: data.recommendation || null,
+            };
+            set((state) => {
+              const nextDiagnostics = runFivePillarDiagnostics({
+                campaigns: state.campaigns,
+                insightsData: newInsights,
+                orderBumpConfig: state.orderBumpConfig,
+                upsellConfig: state.upsellConfig,
+                capiStatus: state.capiStatus,
+                config: state.winningEngineConfig,
+                currentLpCopy: state.currentLpCopySnapshot,
+              });
+              return {
+                insightsData: newInsights,
+                winningOverallScore: nextDiagnostics.overallScore,
+                winningPillars: nextDiagnostics.pillars,
+                winningPlans: nextDiagnostics.plans,
+                winningLearnings: nextDiagnostics.learnings,
+              };
             });
           }
         } catch {
@@ -374,7 +717,7 @@ export const useMarketingStore = create<MarketingStore>()(
         {
           id: 'welcome_1',
           sender: 'cmo',
-          text: `Selamat datang di **Monefyi Adspert**.\n\nSaya **Mas Danu** (CMO AI), memimpin tim spesialis untuk menganalisa data riil Meta Ads, demografi pemenang, dan mengeksekusi optimasi kampanye Anda:\n- **Bima (Media Buyer)**: Membaca metrik 26 kolom, menaikkan budget kampanye winning, dan mematikan iklan boncos.\n- **Sinta (Creative)**: Merancang hook 3-detik, copywriting PAS/HSO, dan skrip video.\n- **Aris (Funnel Specialist)**: Mengoptimalkan OCLP, Order Bump, Upsell OTO, dan CAPI server-side.\n\nTanyakan analisa kampanye atau minta kami menaikkan budget iklan terbaik Anda sekarang.`,
+          text: `Selamat datang di **Monefyi Adspert**.\n\nSaya **Mas Danu** (CMO AI), memimpin tim spesialis untuk menganalisa data riil Meta Ads, demografi pemenang, dan mengeksekusi optimasi 5 Pilar Winning Anda:\n- **Bima (Media Buyer)**: Membaca metrik 26 kolom, menaikkan budget kampanye winning, dan mematikan iklan boncos.\n- **Sinta (Creative & LP Copywriter)**: Merancang hook 3-detik, copywriting Landing Page PAS/HSO, dan evaluasi Offer.\n- **Aris (Funnel & Tracking Specialist)**: Mengoptimalkan kecepatan OCLP, Order Bump, Upsell OTO, dan CAPI server-side.\n\nBuka tab **Winning Engine** atau tanyakan strategi kampanye Anda sekarang.`,
           timestamp: new Date().toISOString(),
         },
       ],
@@ -504,6 +847,8 @@ export const useMarketingStore = create<MarketingStore>()(
       partialize: (state) => ({
         rules: state.rules,
         apiConfig: state.apiConfig,
+        winningEngineConfig: state.winningEngineConfig,
+        currentLpCopySnapshot: state.currentLpCopySnapshot,
         customAgentNames: state.customAgentNames,
         orderBumpConfig: state.orderBumpConfig,
         upsellConfig: state.upsellConfig,

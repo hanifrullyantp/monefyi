@@ -1,55 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHmac } from "crypto";
+import { extractCandidateTokens, buildGraphUrl } from "@/lib/meta/graph";
 
 interface MetaActionItem {
   action_type: string;
   value: string | number;
-}
-
-/**
- * Mengekstrak kandidat token dari input (mengatasi masalah penggabungan token
- * saat pengguna melakukan paste berulang ke kolom input bertipe password, misal "EAAB...EAAG...").
- */
-export function extractCandidateTokens(...rawInputs: (string | undefined)[]): string[] {
-  const candidates: string[] = [];
-  const seen = new Set<string>();
-
-  const addCandidate = (val: string) => {
-    const cleaned = val
-      .replace(/^Bearer\s+/i, "")
-      .replace(/["'\s\r\n]+/g, "")
-      .trim();
-    if (cleaned && cleaned.length >= 10 && !seen.has(cleaned)) {
-      seen.add(cleaned);
-      candidates.push(cleaned);
-    }
-  };
-
-  for (const raw of rawInputs) {
-    if (!raw) continue;
-    const trimmed = raw.replace(/^Bearer\s+/i, "").replace(/["'\s\r\n]+/g, "").trim();
-    if (!trimmed) continue;
-
-    const eaaSegments = trimmed.match(/EAA[A-Za-z0-9+/=_|-]+?(?=EAA|$)/g);
-    if (eaaSegments && eaaSegments.length > 1) {
-      for (let i = eaaSegments.length - 1; i >= 0; i--) {
-        addCandidate(eaaSegments[i]);
-      }
-    }
-    addCandidate(trimmed);
-  }
-
-  return candidates;
-}
-
-export function buildGraphUrl(baseUrl: string, token: string, appSecret?: string): string {
-  const sep = baseUrl.includes("?") ? "&" : "?";
-  let url = `${baseUrl}${sep}access_token=${encodeURIComponent(token)}`;
-  if (appSecret) {
-    const proof = createHmac("sha256", appSecret).update(token).digest("hex");
-    url += `&appsecret_proof=${proof}`;
-  }
-  return url;
 }
 
 /**

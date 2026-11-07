@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useMarketingStore } from "@/lib/store/marketingStore";
+import { LlmProviderType } from "@/lib/engine/llmRouter";
 import {
   Settings,
   Key,
-  Shield,
-  Layers,
   Save,
   Check,
   Bot,
@@ -18,9 +17,9 @@ import {
   Zap,
   Headphones,
   Cpu,
-  Info,
   Eye,
   EyeOff,
+  Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
@@ -29,14 +28,49 @@ interface MarketingConfigModalProps {
   onClose: () => void;
 }
 
-const OPENROUTER_POPULAR_MODELS = [
-  { id: "openai/gpt-5.6-luna", label: "OpenAI Luna (Promo Efisien & Cepat)" },
-  { id: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash (Sangat Murah)" },
-  { id: "anthropic/claude-3.5-haiku", label: "Claude 3.5 Haiku (Copywriting Cepat)" },
-  { id: "deepseek/deepseek-chat", label: "DeepSeek V3 (Ekonomis & Kuat)" },
-  { id: "meta-llama/llama-3.3-70b-instruct", label: "Llama 3.3 70B (Open Weights)" },
-  { id: "openai/gpt-4o-mini", label: "GPT-4o mini" },
-];
+const STRATEGIST_MODEL_PRESETS: Record<LlmProviderType, { id: string; label: string }[]> = {
+  claude: [
+    { id: "claude-3-7-sonnet-latest", label: "Claude 3.7 Sonnet (Rekomendasi Strategist & Copywriting)" },
+    { id: "claude-3-5-sonnet-latest", label: "Claude 3.5 Sonnet (Tajam & Stabil)" },
+  ],
+  openrouter: [
+    { id: "anthropic/claude-3.7-sonnet", label: "OpenRouter: Claude 3.7 Sonnet (Strategist)" },
+    { id: "anthropic/claude-3.5-sonnet", label: "OpenRouter: Claude 3.5 Sonnet" },
+    { id: "openai/gpt-4o", label: "OpenRouter: GPT-4o" },
+  ],
+  gemini: [
+    { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro (Deep Reasoning)" },
+    { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+  ],
+  openai: [
+    { id: "gpt-4o", label: "OpenAI GPT-4o" },
+    { id: "gpt-4o-mini", label: "OpenAI GPT-4o Mini" },
+  ],
+  groq: [
+    { id: "llama-3.3-70b-versatile", label: "Llama 3.3 70B Versatile" },
+  ],
+};
+
+const TECHNICAL_MODEL_PRESETS: Record<LlmProviderType, { id: string; label: string }[]> = {
+  gemini: [
+    { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash (Rekomendasi: Sangat Cepat & Murah)" },
+    { id: "gemini-2.0-flash-lite", label: "Gemini 2.0 Flash Lite (Ekstra Hemat)" },
+  ],
+  openrouter: [
+    { id: "google/gemini-2.5-flash", label: "OpenRouter: Gemini 2.5 Flash (Murah)" },
+    { id: "deepseek/deepseek-chat", label: "OpenRouter: DeepSeek V3 (Sangat Ekonomis)" },
+    { id: "openai/gpt-5.6-luna", label: "OpenRouter: Luna (Cepat)" },
+  ],
+  groq: [
+    { id: "llama-3.3-70b-versatile", label: "Groq: Llama 3.3 70B (Instan)" },
+  ],
+  claude: [
+    { id: "claude-3-5-haiku-latest", label: "Claude 3.5 Haiku (Cepat)" },
+  ],
+  openai: [
+    { id: "gpt-4o-mini", label: "GPT-4o Mini (Hemat)" },
+  ],
+};
 
 export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalProps) {
   const {
@@ -44,6 +78,8 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
     updateApiConfig,
     rules,
     updateRules,
+    winningEngineConfig,
+    updateWinningEngineConfig,
     customAgentNames,
     updateAgentNames,
     refreshCampaigns,
@@ -54,9 +90,41 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
   const [adAccountId, setAdAccountId] = useState(apiConfig.adAccountId || "act_5763154810473541");
   const [pixelId, setPixelId] = useState(apiConfig.pixelId || "1530674178146899");
   const [capiToken, setCapiToken] = useState(apiConfig.capiAccessToken || "");
-  const [aiProvider, setAiProvider] = useState(apiConfig.aiProvider || "gemini");
-  const [aiKey, setAiKey] = useState(apiConfig.aiApiKey || "");
-  const [openRouterModel, setOpenRouterModel] = useState("openai/gpt-5.6-luna");
+
+  // Dual-Slot Multi-LLM State (Strategist vs Technical)
+  const [strategistProvider, setStrategistProvider] = useState<LlmProviderType>(
+    winningEngineConfig.llmRouting.strategist.provider || "claude"
+  );
+  const [strategistKey, setStrategistKey] = useState(
+    winningEngineConfig.llmRouting.strategist.apiKey || ""
+  );
+  const [strategistModel, setStrategistModel] = useState(
+    winningEngineConfig.llmRouting.strategist.model || "claude-3-7-sonnet-latest"
+  );
+
+  const [technicalProvider, setTechnicalProvider] = useState<LlmProviderType>(
+    winningEngineConfig.llmRouting.technical.provider || "gemini"
+  );
+  const [technicalKey, setTechnicalKey] = useState(
+    winningEngineConfig.llmRouting.technical.apiKey || apiConfig.aiApiKey || ""
+  );
+  const [technicalModel, setTechnicalModel] = useState(
+    winningEngineConfig.llmRouting.technical.model || "gemini-2.5-flash"
+  );
+
+  // WhatsApp & Telegram Notification State
+  const [waPhone, setWaPhone] = useState(
+    winningEngineConfig.notifications.whatsappAdminPhone || ""
+  );
+  const [waApiKey, setWaApiKey] = useState(
+    winningEngineConfig.notifications.whatsappApiKey || ""
+  );
+  const [tgBotToken, setTgBotToken] = useState(
+    winningEngineConfig.notifications.telegramBotToken || ""
+  );
+  const [tgChatId, setTgChatId] = useState(
+    winningEngineConfig.notifications.telegramChatId || ""
+  );
 
   const [showMetaToken, setShowMetaToken] = useState(false);
   const [showCapiToken, setShowCapiToken] = useState(false);
@@ -75,17 +143,37 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
 
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [isTestingMeta, setIsTestingMeta] = useState(false);
-  const [metaTestMsg, setMetaTestMsg] = useState<{ ok: boolean; message: string; details?: any } | null>(null);
+  const [metaTestMsg, setMetaTestMsg] = useState<{
+    ok: boolean;
+    message: string;
+    details?: any;
+  } | null>(null);
 
-  // Sinkronkan state ketika modal dibuka setelah store terhidrasi dari localStorage
   useEffect(() => {
     if (isOpen) {
       setMetaToken(apiConfig.metaAccessToken || "");
       setAdAccountId(apiConfig.adAccountId || "act_5763154810473541");
       setPixelId(apiConfig.pixelId || "1530674178146899");
       setCapiToken(apiConfig.capiAccessToken || "");
-      setAiProvider(apiConfig.aiProvider || "gemini");
-      setAiKey(apiConfig.aiApiKey || "");
+
+      setStrategistProvider(winningEngineConfig.llmRouting.strategist.provider || "claude");
+      setStrategistKey(winningEngineConfig.llmRouting.strategist.apiKey || "");
+      setStrategistModel(
+        winningEngineConfig.llmRouting.strategist.model || "claude-3-7-sonnet-latest"
+      );
+
+      setTechnicalProvider(winningEngineConfig.llmRouting.technical.provider || "gemini");
+      setTechnicalKey(
+        winningEngineConfig.llmRouting.technical.apiKey || apiConfig.aiApiKey || ""
+      );
+      setTechnicalModel(
+        winningEngineConfig.llmRouting.technical.model || "gemini-2.5-flash"
+      );
+
+      setWaPhone(winningEngineConfig.notifications.whatsappAdminPhone || "");
+      setWaApiKey(winningEngineConfig.notifications.whatsappApiKey || "");
+      setTgBotToken(winningEngineConfig.notifications.telegramBotToken || "");
+      setTgChatId(winningEngineConfig.notifications.telegramChatId || "");
     }
   }, [isOpen]);
 
@@ -127,14 +215,13 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
         setMetaToken(resolvedToken);
         setAdAccountId(resolvedActId);
 
-        // Simpan otomatis & sinkronkan langsung kampanye ke tabel utama
         updateApiConfig({
           metaAccessToken: resolvedToken,
           adAccountId: resolvedActId,
           pixelId: pixelId.trim() || "1530674178146899",
           capiAccessToken: capiToken.trim() || resolvedToken,
-          aiProvider,
-          aiApiKey: aiKey.trim(),
+          aiProvider: strategistProvider,
+          aiApiKey: strategistKey.trim() || technicalKey.trim(),
         });
 
         await Promise.all([refreshCampaigns(), refreshInsights()]);
@@ -171,8 +258,34 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
       adAccountId: cleanActId,
       pixelId: pixelId.trim() || "1530674178146899",
       capiAccessToken: capiToken.trim() || cleanToken,
-      aiProvider,
-      aiApiKey: aiKey.trim(),
+      aiProvider: strategistProvider,
+      aiApiKey: strategistKey.trim() || technicalKey.trim(),
+    });
+
+    updateWinningEngineConfig({
+      targetCpa: Number(maxCpa),
+      targetRoas: Number(minRoas),
+      maxScalePctPerStep: Number(scaleBudgetPct),
+      llmRouting: {
+        strategist: {
+          provider: strategistProvider,
+          apiKey: strategistKey.trim(),
+          model: strategistModel.trim(),
+        },
+        technical: {
+          provider: technicalProvider,
+          apiKey: technicalKey.trim(),
+          model: technicalModel.trim(),
+        },
+      },
+      notifications: {
+        whatsappEnabled: true,
+        whatsappAdminPhone: waPhone.trim(),
+        whatsappApiKey: waApiKey.trim(),
+        telegramEnabled: true,
+        telegramBotToken: tgBotToken.trim(),
+        telegramChatId: tgChatId.trim(),
+      },
     });
 
     updateRules({
@@ -196,12 +309,12 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
     setTimeout(() => {
       setSavedSuccess(false);
       onClose();
-    }, 1000);
+    }, 900);
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-2xl w-full p-6 space-y-6 shadow-2xl max-h-[90vh] overflow-y-auto transition-colors">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-3xl w-full p-6 space-y-6 shadow-2xl max-h-[90vh] overflow-y-auto transition-colors">
         {/* Header Modal */}
         <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
           <div className="flex items-center gap-3">
@@ -210,10 +323,10 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
             </div>
             <div>
               <h2 className="text-base font-black text-slate-900 dark:text-white">
-                Konfigurasi Meta Ads API, Multi-AI &amp; Otomasi Rules
+                Konfigurasi Meta Ads API, Dual-LLM Switcher &amp; Notifikasi WA/Telegram
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Hubungkan kredensial akun live Meta Ads atau aktifkan simulator sandbox mandiri.
+                Atur kredensial Meta Graph API, pembagian tugas LLM (Claude Strategist vs Gemini Teknis), dan kanal laporan otomatis.
               </p>
             </div>
           </div>
@@ -229,7 +342,7 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
         {savedSuccess && (
           <div className="p-3 bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-700 rounded-xl text-xs font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
             <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span>Pengaturan berhasil disimpan dan disinkronkan ke seluruh sistem!</span>
+            <span>Pengaturan berhasil disimpan dan disinkronkan ke Winning Engine!</span>
           </div>
         )}
 
@@ -295,14 +408,10 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
                     type="button"
                     onClick={() => setShowMetaToken((v) => !v)}
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
-                    title={showMetaToken ? "Sembunyikan Token" : "Lihat Token"}
                   >
                     {showMetaToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
-                  Jika dibiarkan kosong, dashboard otomatis berjalan dalam mode simulator sandbox dengan data benchmark Monefyi.
-                </p>
               </div>
 
               <div className="md:col-span-2">
@@ -332,7 +441,6 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
                     type="button"
                     onClick={() => setShowCapiToken((v) => !v)}
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
-                    title={showCapiToken ? "Sembunyikan Token" : "Lihat Token"}
                   >
                     {showCapiToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -348,10 +456,12 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
                     className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-xs"
                   >
                     <Key className="w-3.5 h-3.5" />
-                    <span>{isTestingMeta ? "Menguji Koneksi ke Meta..." : "Tes Koneksi Meta Sekarang"}</span>
+                    <span>
+                      {isTestingMeta ? "Menguji Koneksi ke Meta..." : "Tes Koneksi Meta Sekarang"}
+                    </span>
                   </button>
                   <span className="text-[11px] text-slate-500">
-                    Memverifikasi langsung ke server Facebook Graph API.
+                    Memverifikasi langsung ke server Facebook Graph API v20.0.
                   </span>
                 </div>
 
@@ -373,7 +483,8 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
                       <p className="font-bold">{metaTestMsg.message}</p>
                       {metaTestMsg.details && (
                         <p className="text-[11px] opacity-80 mt-1 font-mono">
-                          Akun: {metaTestMsg.details.name} | ID: {metaTestMsg.details.id} | Mata Uang: {metaTestMsg.details.currency} | Status: {metaTestMsg.details.status}
+                          Akun: {metaTestMsg.details.name} | ID: {metaTestMsg.details.id} | Mata Uang:{" "}
+                          {metaTestMsg.details.currency} | Status: {metaTestMsg.details.status}
                         </p>
                       )}
                     </div>
@@ -383,96 +494,214 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
             </div>
           </div>
 
-          {/* Section 2: Multi-AI & OpenRouter Model Selector */}
+          {/* Section 2: Dual-Slot Multi-LLM Routing (Strategist vs Technical) */}
           <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-800">
             <h3 className="text-xs font-black text-purple-600 dark:text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
               <Bot className="w-3.5 h-3.5" />
-              <span>2. Multi-Provider AI (BYOK &amp; Model Routing)</span>
+              <span>2. Multi-Key LLM Switcher (Strategist Claude vs Teknis Gemini Murah)</span>
             </h3>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Pisahkan otak AI agar kualitas strategi &amp; copywriting maksimal namun biaya token harian tetap sangat hemat.
+            </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                  Penyedia AI
-                </label>
-                <select
-                  value={aiProvider}
-                  onChange={(e) => setAiProvider(e.target.value as any)}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 font-semibold"
-                >
-                  <option value="gemini">Google Gemini (Tugas Teknis &amp; Keuangan)</option>
-                  <option value="openrouter">OpenRouter (Mendukung Luna &amp; Multi-Model)</option>
-                  <option value="claude">Anthropic Claude (Ide Kreatif &amp; Copywriting)</option>
-                  <option value="openai">OpenAI (GPT-4o &amp; GPT-4o mini)</option>
-                  <option value="groq">Groq (Inference Ekstra Cepat)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                  API Key AI
-                </label>
-                <input
-                  type="password"
-                  placeholder="sk-or-... / AIzaSy... / sk-ant-..."
-                  value={aiKey}
-                  onChange={(e) => setAiKey(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 font-mono"
-                />
-              </div>
-
-              {/* Khusus OpenRouter: Pilihan Model Spesifik & Luna */}
-              {aiProvider === "openrouter" && (
-                <div className="md:col-span-2 p-3 bg-purple-50/60 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800/60 rounded-2xl space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-purple-900 dark:text-purple-300 flex items-center gap-1.5">
-                      <Cpu className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                      Model OpenRouter Pilihan (Termasuk Promo Luna)
-                    </span>
-                    <span className="text-[10px] text-purple-700 dark:text-purple-400">
-                      Format: provider/model-id
-                    </span>
-                  </div>
-
-                  <div className="grid sm:grid-cols-2 gap-2">
-                    <div>
-                      <select
-                        value={OPENROUTER_POPULAR_MODELS.some(m => m.id === openRouterModel) ? openRouterModel : "__custom"}
-                        onChange={(e) => {
-                          if (e.target.value !== "__custom") setOpenRouterModel(e.target.value);
-                        }}
-                        className="w-full bg-white dark:bg-slate-900 border border-purple-200 dark:border-purple-800 rounded-xl p-2 text-xs text-slate-900 dark:text-white"
-                      >
-                        {OPENROUTER_POPULAR_MODELS.map((m) => (
-                          <option key={m.id} value={m.id}>{m.label}</option>
-                        ))}
-                        <option value="__custom">Input Model Kustom...</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <input
-                        type="text"
-                        value={openRouterModel}
-                        onChange={(e) => setOpenRouterModel(e.target.value)}
-                        placeholder="Contoh: openai/gpt-5.6-luna"
-                        className="w-full bg-white dark:bg-slate-900 border border-purple-200 dark:border-purple-800 rounded-xl p-2 text-xs font-mono text-slate-900 dark:text-white"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                    Model Luna di OpenRouter memiliki efisiensi tinggi, latency cepat, dan dukungan output terstruktur untuk pembacaan metrik serta bot pesan.
-                  </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Slot 1: AI Strategist */}
+              <div className="p-3.5 rounded-2xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/60 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-purple-900 dark:text-purple-300 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                    <span>Slot 1: AI Strategist &amp; Copywriter</span>
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200">
+                    5 Pilar &amp; Copy LP
+                  </span>
                 </div>
-              )}
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                    Provider Strategist
+                  </label>
+                  <select
+                    value={strategistProvider}
+                    onChange={(e) => {
+                      const nextProv = e.target.value as LlmProviderType;
+                      setStrategistProvider(nextProv);
+                      setStrategistModel(STRATEGIST_MODEL_PRESETS[nextProv]?.[0]?.id || "");
+                    }}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 text-xs font-bold text-slate-900 dark:text-white"
+                  >
+                    <option value="claude">Anthropic Claude (Rekomendasi Utama)</option>
+                    <option value="openrouter">OpenRouter (Claude / Multi-Model)</option>
+                    <option value="gemini">Google Gemini Pro</option>
+                    <option value="openai">OpenAI (GPT-4o)</option>
+                    <option value="groq">Groq</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                    Model Strategist
+                  </label>
+                  <select
+                    value={strategistModel}
+                    onChange={(e) => setStrategistModel(e.target.value)}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 text-xs text-slate-900 dark:text-white font-mono"
+                  >
+                    {(STRATEGIST_MODEL_PRESETS[strategistProvider] || []).map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                    API Key Strategist
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="sk-ant-... / sk-or-... / AIza..."
+                    value={strategistKey}
+                    onChange={(e) => setStrategistKey(e.target.value)}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 text-xs font-mono text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              {/* Slot 2: AI Teknis Cepat & Ekonomis */}
+              <div className="p-3.5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/60 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
+                    <Cpu className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Slot 2: AI Teknis &amp; Diagnostik Cepat</span>
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200">
+                    Hemat Biaya
+                  </span>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                    Provider Teknis
+                  </label>
+                  <select
+                    value={technicalProvider}
+                    onChange={(e) => {
+                      const nextProv = e.target.value as LlmProviderType;
+                      setTechnicalProvider(nextProv);
+                      setTechnicalModel(TECHNICAL_MODEL_PRESETS[nextProv]?.[0]?.id || "");
+                    }}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 text-xs font-bold text-slate-900 dark:text-white"
+                  >
+                    <option value="gemini">Google Gemini Flash (Rekomendasi Murah &amp; Cepat)</option>
+                    <option value="openrouter">OpenRouter (Gemini Flash / DeepSeek V3)</option>
+                    <option value="groq">Groq (Llama 3.3 Super Cepat)</option>
+                    <option value="claude">Anthropic Claude Haiku</option>
+                    <option value="openai">OpenAI GPT-4o Mini</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                    Model Teknis
+                  </label>
+                  <select
+                    value={technicalModel}
+                    onChange={(e) => setTechnicalModel(e.target.value)}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 text-xs text-slate-900 dark:text-white font-mono"
+                  >
+                    {(TECHNICAL_MODEL_PRESETS[technicalProvider] || []).map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                    API Key Teknis
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="AIzaSy... / sk-or-... / gsk_..."
+                    value={technicalKey}
+                    onChange={(e) => setTechnicalKey(e.target.value)}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 text-xs font-mono text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Section 3: Automation Rules */}
+          {/* Section 3: Notifikasi WhatsApp & Telegram */}
+          <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <h3 className="text-xs font-black text-teal-600 dark:text-teal-400 uppercase tracking-wider flex items-center gap-1.5">
+              <Send className="w-3.5 h-3.5" />
+              <span>3. Kanal Notifikasi Otomatis (WhatsApp &amp; Telegram)</span>
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">
+                  Nomor WhatsApp Admin Penerima Laporan
+                </label>
+                <input
+                  type="text"
+                  placeholder="6281234567890"
+                  value={waPhone}
+                  onChange={(e) => setWaPhone(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2 text-xs text-slate-900 dark:text-white font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">
+                  API Token WhatsApp Gateway (Fonnte / Wablas)
+                </label>
+                <input
+                  type="password"
+                  placeholder="Token Fonnte atau set di ENV FONNTE_TOKEN"
+                  value={waApiKey}
+                  onChange={(e) => setWaApiKey(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2 text-xs text-slate-900 dark:text-white font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">
+                  Telegram Bot Token
+                </label>
+                <input
+                  type="password"
+                  placeholder="123456789:ABCdefGHIjklMNO..."
+                  value={tgBotToken}
+                  onChange={(e) => setTgBotToken(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2 text-xs text-slate-900 dark:text-white font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">
+                  Telegram Chat ID Penerima
+                </label>
+                <input
+                  type="text"
+                  placeholder="Contoh: 987654321 atau -100123456789"
+                  value={tgChatId}
+                  onChange={(e) => setTgChatId(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2 text-xs text-slate-900 dark:text-white font-mono"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 4: Automation Rules */}
           <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-800">
             <h3 className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
               <Sliders className="w-3.5 h-3.5" />
-              <span>3. Parameter Otomasi Pengendalian Iklan (Scale Model)</span>
+              <span>4. Parameter Otomasi Pengendalian Iklan (Scale Model)</span>
             </h3>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -528,14 +757,11 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
             </div>
           </div>
 
-          {/* Section 4: Kustomisasi Nama Agen (Bebas Emoticon) */}
+          {/* Section 5: Kustomisasi Nama Agen (Bebas Emoticon) */}
           <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-800">
             <h3 className="text-xs font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-              <span>4. Kustomisasi Nama Panggilan Tim AI</span>
+              <span>5. Kustomisasi Nama Panggilan Tim AI</span>
             </h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Ubah nama panggilan agen agar sesuai dengan kultur komunikasi tim Anda.
-            </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               <div>
@@ -623,7 +849,7 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
           <button
             type="button"
             onClick={handleSave}
-            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-900/20 transition-all"
+            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-900/20 transition-all cursor-pointer"
           >
             <Save className="w-4 h-4" />
             <span>Simpan Konfigurasi</span>

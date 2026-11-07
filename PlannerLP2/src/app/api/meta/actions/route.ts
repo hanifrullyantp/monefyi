@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { extractCandidateTokens, buildGraphUrl } from "../campaigns/route";
+import { extractCandidateTokens, buildGraphUrl } from "@/lib/meta/graph";
 
 export interface MetaActionLogEntry {
   id: string;
