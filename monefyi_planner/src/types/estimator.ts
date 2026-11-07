@@ -240,6 +240,19 @@ export interface EstimationImageDraft {
   compressInfo?: { before: number; after: number };
 }
 
+export interface DigitalSignatureData {
+  dataUri: string;
+  signerName: string;
+  signerTitle: string;
+  signedAt?: string;
+}
+
+export interface DocumentSignatures {
+  userSignature?: DigitalSignatureData | null;
+  buyerSignature?: DigitalSignatureData | null;
+  showBuyerSignature?: boolean;
+}
+
 export interface EstimationFormDraft {
   code: string;
   title: string;
@@ -269,6 +282,10 @@ export interface EstimationFormDraft {
   pdf_show_logo: boolean;
   pdf_show_stamp: boolean;
   pdf_show_footer: boolean;
+  pdf_show_buyer_signature?: boolean;
+  signatures?: DocumentSignatures;
+  user_signature_url?: string | null;
+  buyer_signature_url?: string | null;
   images: EstimationImageDraft[];
   items: EstimationItemDraft[];
   billing_config: EstimationBillingConfig;
