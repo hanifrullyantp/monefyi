@@ -685,7 +685,7 @@ export default function Layout({ children }: LayoutProps) {
         </div>
 
         {/* Bottom Navigation — Mobile (Estimator-only: sembunyikan di shell Estimator) */}
-        {!hideMobileProductNav && !isProjectDetail && !isEstimatorDetail && (
+        {!hideMobileProductNav && !isEstimatorDetail && (
           isWorker ? (
             <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-lg border-t border-slate-100 safe-bottom shrink-0 shadow-[0_-4px_24px_rgba(15,23,42,0.06)]">
               <div className="flex items-center justify-around h-16 px-2">

@@ -643,7 +643,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
       </main>
 
       {/* ─── MOBILE BOTTOM ACTION BAR ─── */}
-      <div className="md:hidden fixed bottom-3 inset-x-3 z-30 rounded-[18px] p-2 bg-white border border-[#E5EAE8] shadow-[0_-6px_24px_-10px_rgba(15,23,42,0.25)] flex gap-2">
+      <div className="md:hidden fixed bottom-[84px] inset-x-3 z-30 rounded-[18px] p-2 bg-white/95 backdrop-blur-md border border-[#E5EAE8] shadow-[0_4px_20px_rgba(15,23,42,0.12)] flex gap-2">
         <button
           type="button"
           onClick={() => setTxModal({ open: true, kind: 'cost' })}

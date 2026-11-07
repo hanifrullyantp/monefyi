@@ -70,13 +70,19 @@ export async function archiveProject(projectId: string, userId: string): Promise
   if (error) throw new Error(error.message);
 }
 
-/** Daftar proyek terarsip — hanya platform admin (RLS) */
-export async function loadArchivedProjects(): Promise<ArchivedProjectRow[]> {
-  const { data, error } = await supabase
+/** Daftar proyek terarsip (platform admin atau owner/manager organisasi) */
+export async function loadArchivedProjects(orgId?: string): Promise<ArchivedProjectRow[]> {
+  let q = supabase
     .from('planner_projects')
     .select('id, name, org_id, deleted_at, archive_purge_at, deleted_by, planner_organizations(name)')
     .not('deleted_at', 'is', null)
     .order('deleted_at', { ascending: false });
+
+  if (orgId) {
+    q = q.eq('org_id', orgId);
+  }
+
+  const { data, error } = await q;
 
   if (error) throw new Error(error.message);
   return (data || []).map((r: Record<string, unknown>) => ({
@@ -90,7 +96,7 @@ export async function loadArchivedProjects(): Promise<ArchivedProjectRow[]> {
   }));
 }
 
-/** Pulihkan proyek dari arsip — hanya platform admin */
+/** Pulihkan proyek dari arsip */
 export async function restoreArchivedProject(projectId: string): Promise<void> {
   const { data: row, error: fetchErr } = await supabase
     .from('planner_projects')

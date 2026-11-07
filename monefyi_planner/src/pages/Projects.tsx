@@ -20,9 +20,20 @@ import {
   GanttChart,
   Tag,
   Trash2,
+  Archive,
+  RotateCcw,
+  Loader2,
+  ChevronDown,
 } from 'lucide-react';
 import { useAppStore, type Project } from '../store/appStore';
-import { createProject, updateProject as updateProjectApi, archiveProject } from '../services/projectService';
+import {
+  createProject,
+  updateProject as updateProjectApi,
+  archiveProject,
+  loadArchivedProjects,
+  restoreArchivedProject,
+  type ArchivedProjectRow,
+} from '../services/projectService';
 import ProjectDetailV2 from '../components/projects/v2/ProjectDetailV2';
 import CreateProjectRapDraft from '../components/projects/CreateProjectRapDraft';
 import { createProjectWithRap } from '../lib/migration/create-project';
@@ -383,6 +394,7 @@ export default function Projects({
     user,
     updateProject,
     removeProject,
+    refreshData,
     tenant,
     platformRole,
     entitlementPreviewMode,
@@ -413,6 +425,12 @@ export default function Projects({
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleteAcknowledged, setDeleteAcknowledged] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Archived projects list state
+  const [archivedProjects, setArchivedProjects] = useState<ArchivedProjectRow[]>([]);
+  const [archivedLoading, setArchivedLoading] = useState(false);
+  const [archivedSectionOpen, setArchivedSectionOpen] = useState(false);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
 
   // Group collapses for mobile
   const [planningOpen, setPlanningOpen] = useState(false);
@@ -462,10 +480,44 @@ export default function Projects({
       setDeleteModalProject(null);
       setDeleteConfirmText('');
       setDeleteAcknowledged(false);
+      void fetchArchivedList();
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Gagal menghapus proyek', 'error');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const fetchArchivedList = async () => {
+    if (!tenant?.id) return;
+    setArchivedLoading(true);
+    try {
+      const data = await loadArchivedProjects(tenant.id);
+      setArchivedProjects(data);
+    } catch (err) {
+      console.warn('Gagal memuat arsip proyek:', err);
+    } finally {
+      setArchivedLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tenant?.id) {
+      void fetchArchivedList();
+    }
+  }, [tenant?.id]);
+
+  const handleRestoreProject = async (row: ArchivedProjectRow) => {
+    setRestoringId(row.id);
+    try {
+      await restoreArchivedProject(row.id);
+      showToast(`Proyek "${row.name}" berhasil dipulihkan`, 'success');
+      setArchivedProjects(prev => prev.filter(p => p.id !== row.id));
+      await refreshData();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Gagal memulihkan proyek', 'error');
+    } finally {
+      setRestoringId(null);
     }
   };
 
@@ -1233,6 +1285,105 @@ export default function Projects({
             ))}
           </div>
         )}
+
+        {/* ─── ARSIP PROYEK (SOFT DELETE 30 HARI) ─── */}
+        <section className="mt-8 pt-6 border-t border-[#E5EAE8]">
+          <button
+            type="button"
+            onClick={() => {
+              const next = !archivedSectionOpen;
+              setArchivedSectionOpen(next);
+              if (next) void fetchArchivedList();
+            }}
+            className="w-full flex items-center justify-between p-4 bg-white hover:bg-slate-50 border border-[#E5EAE8] rounded-2xl shadow-xs transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <Archive className="w-5 h-5" />
+              </div>
+              <div className="text-left">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-sm text-[#0F172A]">Proyek Diarsipkan</span>
+                  <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                    {archivedProjects.length}
+                  </span>
+                </div>
+                <p className="text-xs text-[#5B6B7A] mt-0.5">
+                  Proyek yang dihapus tersimpan di sini selama 30 hari sebelum dihapus permanen
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <ChevronDown
+                className={`w-5 h-5 text-slate-400 transition-transform duration-200 ${
+                  archivedSectionOpen ? 'rotate-180' : ''
+                }`}
+              />
+            </div>
+          </button>
+
+          {archivedSectionOpen && (
+            <div className="mt-3 bg-white border border-[#E5EAE8] rounded-2xl divide-y divide-[#E5EAE8] shadow-xs overflow-hidden">
+              {archivedLoading ? (
+                <div className="p-8 flex items-center justify-center gap-2 text-xs text-[#5B6B7A]">
+                  <Loader2 className="w-4 h-4 animate-spin text-[#059669]" />
+                  <span>Memuat arsip...</span>
+                </div>
+              ) : archivedProjects.length === 0 ? (
+                <div className="p-8 text-center text-xs text-[#5B6B7A]">
+                  Tidak ada proyek di arsip. Proyek yang dihapus akan disimpan di sini selama 30 hari.
+                </div>
+              ) : (
+                archivedProjects.map(row => {
+                  const purgeDate = row.archive_purge_at ? new Date(row.archive_purge_at) : null;
+                  const daysLeft = purgeDate
+                    ? Math.max(0, Math.ceil((purgeDate.getTime() - Date.now()) / 86400000))
+                    : null;
+                  return (
+                    <div
+                      key={row.id}
+                      className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/60 transition-colors"
+                    >
+                      <div className="min-w-0">
+                        <div className="font-bold text-sm text-[#0F172A] truncate">
+                          {row.name}
+                        </div>
+                        <div className="text-xs text-[#5B6B7A] flex items-center flex-wrap gap-x-2 gap-y-0.5 mt-1">
+                          <span>Diarsipkan: {new Date(row.deleted_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                          {daysLeft != null && (
+                            <span
+                              className={`font-semibold ${
+                                daysLeft <= 7 ? 'text-rose-600 font-bold' : 'text-amber-700'
+                              }`}
+                            >
+                              · {daysLeft} hari tersisa sebelum dihapus permanen
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {canCreate && (
+                        <button
+                          type="button"
+                          disabled={restoringId === row.id}
+                          onClick={() => handleRestoreProject(row)}
+                          className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-50 text-[#047857] hover:bg-emerald-100 border border-emerald-200 text-xs font-bold transition-all disabled:opacity-50 shrink-0 self-start sm:self-auto"
+                        >
+                          {restoringId === row.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <RotateCcw className="w-3.5 h-3.5" />
+                          )}
+                          Pulihkan
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </section>
       </div>
 
       {/* Create Project Modal */}
