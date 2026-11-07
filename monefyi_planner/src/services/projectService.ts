@@ -68,6 +68,44 @@ export async function archiveProject(projectId: string, userId: string): Promise
     .is('deleted_at', null);
 
   if (error) throw new Error(error.message);
+
+  // Jika proyek ini di-convert dari estimasi, lepaskan kaitan estimasi atau reset statusnya
+  // agar estimasi tidak terkunci mati di status converted saat proyeknya diarsipkan/dihapus
+  try {
+    const { data: estRows } = await supabase
+      .from('planner_estimations')
+      .select('id, status')
+      .or(`converted_project_id.eq.${projectId},project_id.eq.${projectId}`);
+
+    if (estRows && estRows.length > 0) {
+      for (const est of estRows) {
+        // Cek apakah ada proyek aktif lain yang masih terhubung dengan estimasi ini
+        const { data: otherActiveProjects } = await supabase
+          .from('planner_projects')
+          .select('id')
+          .eq('source_estimation_id', est.id)
+          .neq('id', projectId)
+          .is('deleted_at', null)
+          .limit(1);
+
+        if (!otherActiveProjects || otherActiveProjects.length === 0) {
+          // Tidak ada proyek aktif lain yang terhubung: kembalikan status estimasi ke 'selesai' / workflow
+          // dan kosongkan link converted_project_id / project_id
+          await supabase
+            .from('planner_estimations')
+            .update({
+              status: est.status === 'converted' ? 'selesai' : est.status,
+              converted_project_id: null,
+              project_id: null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', est.id);
+        }
+      }
+    }
+  } catch (unlinkErr) {
+    console.warn('Gagal melepaskan kaitan estimasi saat proyek diarsipkan:', unlinkErr);
+  }
 }
 
 /** Daftar proyek terarsip (platform admin atau owner/manager organisasi) */
@@ -125,6 +163,29 @@ export async function restoreArchivedProject(projectId: string): Promise<void> {
     .not('deleted_at', 'is', null);
 
   if (error) throw new Error(error.message);
+
+  // Jika proyek ini memiliki kaitan dengan estimasi, sambungkan kembali
+  try {
+    const { data: proj } = await supabase
+      .from('planner_projects')
+      .select('source_estimation_id')
+      .eq('id', projectId)
+      .maybeSingle();
+
+    if (proj?.source_estimation_id) {
+      await supabase
+        .from('planner_estimations')
+        .update({
+          status: 'converted',
+          converted_project_id: projectId,
+          project_id: projectId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', proj.source_estimation_id);
+    }
+  } catch (relinkErr) {
+    console.warn('Gagal menautkan ulang estimasi saat proyek dipulihkan:', relinkErr);
+  }
 }
 
 export async function getProject(projectId: string, currency = 'IDR'): Promise<Project | null> {

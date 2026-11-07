@@ -442,7 +442,7 @@ export default function EstimatorListPage() {
     try {
       const est = await loadEstimation(id);
       if (!est) throw new Error('Estimasi tidak ditemukan');
-      assertEstimationConvertible(est);
+      assertEstimationConvertible(est, projects);
       setConvertEstimation(est);
       setConvertOpen(true);
     } catch (e) {

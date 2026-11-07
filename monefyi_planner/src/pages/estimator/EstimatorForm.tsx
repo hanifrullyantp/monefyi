@@ -376,7 +376,16 @@ export default function EstimatorForm() {
           setConvertedProjectId(est.converted_project_id ?? null);
           if (est.converted_project_id) {
             const linked = useAppStore.getState().projects.find(p => p.id === est.converted_project_id);
-            setConvertedProjectName(linked?.name || est.title);
+            if (linked) {
+              setConvertedProjectName(linked.name || est.title);
+            } else {
+              // Jika proyek terkait sudah dihapus atau tidak ditemukan di daftar proyek aktif:
+              setConvertedProjectName(null);
+              // Otomatis bebaskan status converted pada draft jika proyek sudah tidak ada
+              if (loadedDraft.status === 'converted') {
+                loadedDraft.status = 'selesai';
+              }
+            }
           } else {
             setConvertedProjectName(null);
           }
@@ -777,7 +786,7 @@ export default function EstimatorForm() {
       }
       const est = await loadEstimation(id);
       if (!est) throw new Error('Estimasi tidak ditemukan');
-      assertEstimationConvertible(est);
+      assertEstimationConvertible(est, projects);
       setConvertEstimation(est);
       setConvertOpen(true);
     } catch (e) {

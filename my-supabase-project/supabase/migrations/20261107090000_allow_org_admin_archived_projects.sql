@@ -29,3 +29,4 @@ CREATE POLICY planner_projects_archive_restore ON planner_projects
       OR org_id IN (SELECT public.planner_auth_admin_org_ids())
     )
   );
+

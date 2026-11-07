@@ -123,6 +123,15 @@ function processEstimationRows(data: any[] | null, search?: string): Estimation[
     sort_order: Number((row as any).sort_order ?? 0),
   }));
 
+  // Sanitasi orphaning: jika status 'converted' namun tidak ada converted_project_id atau project_id,
+  // ubah status tampilannya ke 'selesai' agar user dapat mengubah status atau me-launch ulang.
+  rows = rows.map(r => {
+    if (r.status === 'converted' && !r.converted_project_id && !r.project_id) {
+      return { ...r, status: 'selesai' as EstimationStatus };
+    }
+    return r;
+  });
+
   const cleanSearch = search?.toLowerCase().trim();
   if (cleanSearch) {
     rows = rows.filter(
@@ -392,16 +401,51 @@ export async function updateEstimationStatus(
 ): Promise<Estimation> {
   const current = await loadEstimation(id);
   if (!current) throw new Error('Estimasi tidak ditemukan');
-  const fromStatus = normalizeEstimationStatus(current.status);
+  let fromStatus = normalizeEstimationStatus(current.status);
+
+  // Jika status estimasi tercatat 'converted', cek apakah proyek yang dituju masih ada & belum dihapus
   if (fromStatus === 'converted') {
-    throw new Error('Estimasi sudah menjadi proyek');
+    const targetProjId = current.converted_project_id || current.project_id;
+    if (targetProjId) {
+      const { data: projRow } = await supabase
+        .from('planner_projects')
+        .select('id, deleted_at')
+        .eq('id', targetProjId)
+        .maybeSingle();
+
+      // Jika proyek tidak ditemukan sama sekali atau sudah terhapus/diarsipkan
+      if (!projRow || projRow.deleted_at !== null) {
+        // Otomatis bebaskan estimasi dari status converted agar user bisa mengubah status atau launch ulang!
+        await supabase
+          .from('planner_estimations')
+          .update({
+            converted_project_id: null,
+            project_id: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', id);
+        fromStatus = 'selesai';
+      } else {
+        throw new Error('Estimasi sudah menjadi proyek aktif');
+      }
+    } else {
+      // Tidak ada target project id sama sekali
+      fromStatus = 'selesai';
+    }
   }
+
   const toStatus = normalizeEstimationStatus(newStatus);
   if (!isStatusTransitionAllowed(fromStatus, toStatus)) {
     throw new Error('Transisi status tidak valid');
   }
 
   const payload = buildStatusUpdatePayload(fromStatus, toStatus);
+  // Pastikan membersihkan kaitan proyek jika berpindah status dari converted
+  if (current.status === 'converted' && toStatus !== 'converted') {
+    payload.converted_project_id = null;
+    payload.project_id = null;
+  }
+
   const { error } = await supabase
     .from('planner_estimations')
     .update(payload)

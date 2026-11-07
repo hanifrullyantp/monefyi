@@ -309,9 +309,19 @@ export async function linkEstimationToExistingProject({
   };
 }
 
-export function assertEstimationConvertible(est: Estimation): void {
+export function assertEstimationConvertible(est: Estimation, activeProjects?: Array<{ id: string; deleted_at?: string | null }>): void {
   if (est.status === 'converted' || est.converted_project_id) {
-    throw new Error('Estimasi sudah menjadi proyek');
+    const targetProjId = est.converted_project_id || est.project_id;
+    // Jika ada daftar activeProjects, periksa apakah proyek tersebut benar-benar aktif
+    if (activeProjects && targetProjId) {
+      const match = activeProjects.find(p => p.id === targetProjId && !p.deleted_at);
+      if (match) {
+        throw new Error('Estimasi sudah menjadi proyek aktif');
+      }
+      // Jika tidak ditemukan di activeProjects, berarti proyek sudah terhapus/diarsipkan -> izinkan convert ulang!
+    } else {
+      throw new Error('Estimasi sudah menjadi proyek');
+    }
   }
   const namedItems = (est.items || []).filter(i => i.name.trim());
   if (!namedItems.length) {

@@ -181,7 +181,7 @@ export default function ConvertEstimationWizard({
         return;
       }
       try {
-        assertEstimationConvertible(estimation);
+        assertEstimationConvertible(estimation, projects);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Estimasi tidak bisa dikonversi');
         return;
@@ -213,7 +213,7 @@ export default function ConvertEstimationWizard({
       if (!ok) return;
     }
     try {
-      assertEstimationConvertible(estimation);
+      assertEstimationConvertible(estimation, projects);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Estimasi tidak bisa dikonversi');
       return;
@@ -230,7 +230,7 @@ export default function ConvertEstimationWizard({
     }
     setSubmitting(true);
     try {
-      assertEstimationConvertible(estimation);
+      assertEstimationConvertible(estimation, projects);
       const res = await linkEstimationToExistingProject({
         estimationId: estimation.id,
         projectId: targetProject.id,
@@ -271,7 +271,7 @@ export default function ConvertEstimationWizard({
     }
     setSubmitting(true);
     try {
-      assertEstimationConvertible(estimation);
+      assertEstimationConvertible(estimation, projects);
       if (tenant?.id) {
         await assertCanCreateProjectByEntitlement(tenant.id, tenant.plan);
       }
