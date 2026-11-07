@@ -144,6 +144,79 @@ export function invoiceSignatureBlock(
   signLabel = 'Authorised Sign',
   accentColor = '#64748b',
 ): Content {
+  const hasUserSig = ctx.options.showSignature;
+  const hasBuyerSig = Boolean(ctx.buyerSignatureDataUri || ctx.showBuyerSignature);
+
+  if (hasBuyerSig) {
+    const vendorElements: Content[] = [];
+    if (hasUserSig && ctx.signatureDataUri) {
+      vendorElements.push({
+        image: ctx.signatureDataUri,
+        width: 70,
+        alignment: 'center',
+        margin: [0, 0, 0, 2] as [number, number, number, number],
+      });
+    } else {
+      vendorElements.push({ text: ' ', margin: [0, 16, 0, 0] as [number, number, number, number] });
+    }
+    vendorElements.push({
+      canvas: [{ type: 'line', x1: 0, y1: 0, x2: 110, y2: 0, lineWidth: 0.8, lineColor: accentColor }],
+      alignment: 'center',
+      margin: [0, 2, 0, 2] as [number, number, number, number],
+    });
+    vendorElements.push({
+      text: ctx.signatureName || ctx.companyName,
+      fontSize: 8,
+      bold: true,
+      alignment: 'center',
+      color: '#0f172a',
+    });
+    vendorElements.push({
+      text: ctx.signatureTitle || signLabel,
+      fontSize: 7,
+      color: '#64748b',
+      alignment: 'center',
+    });
+
+    const buyerElements: Content[] = [];
+    if (ctx.buyerSignatureDataUri) {
+      buyerElements.push({
+        image: ctx.buyerSignatureDataUri,
+        width: 70,
+        alignment: 'center',
+        margin: [0, 0, 0, 2] as [number, number, number, number],
+      });
+    } else {
+      buyerElements.push({ text: ' ', margin: [0, 16, 0, 0] as [number, number, number, number] });
+    }
+    buyerElements.push({
+      canvas: [{ type: 'line', x1: 0, y1: 0, x2: 110, y2: 0, lineWidth: 0.8, lineColor: accentColor }],
+      alignment: 'center',
+      margin: [0, 2, 0, 2] as [number, number, number, number],
+    });
+    buyerElements.push({
+      text: ctx.buyerSignatureName || 'Klien / Pembayar',
+      fontSize: 8,
+      bold: true,
+      alignment: 'center',
+      color: '#0f172a',
+    });
+    buyerElements.push({
+      text: ctx.buyerSignedAt ? `Tgl: ${ctx.buyerSignedAt}` : (ctx.buyerSignatureTitle || 'Tanda Terima Klien'),
+      fontSize: 7,
+      color: '#64748b',
+      alignment: 'center',
+    });
+
+    return {
+      columns: [
+        { stack: vendorElements, width: '*', alignment: 'center' },
+        { stack: buyerElements, width: '*', alignment: 'center' },
+      ],
+      columnGap: 20,
+    };
+  }
+
   const elements: Content[] = [];
 
   if (ctx.options.showSignature && ctx.signatureDataUri) {

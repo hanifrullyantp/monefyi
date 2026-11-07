@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Download, Edit3, Loader2, MessageCircle, X } from 'lucide-react';
+import { ArrowLeft, Download, Edit3, FileSignature, Loader2, MessageCircle, X } from 'lucide-react';
 import type { EstimationFormDraft } from '../../../types/estimator';
 import { displayOptionsFromDraft, type PdfSettings } from '../../../types/pdfSettings';
 import type { DocumentType } from './EstimationDocumentMenu';
@@ -13,6 +13,7 @@ import {
 import { downloadBlob } from '../../../lib/pdf/pdfMakeSetup';
 import { isDemoEmbedActive } from '../../../lib/demo/demoMode';
 import { loadEstimationProjectPayments, type ProjectIncome } from '../../../services/estimationPaymentService';
+import DigitalSignatureModal from '../signature/DigitalSignatureModal';
 import { useEntitlement } from '../../../hooks/useEntitlement';
 import { canGenerateKwitansi } from '../../../lib/entitlement';
 import { pdfPlanPolicyFromEntitlement, type PdfPlanPolicy } from '../../../lib/pdf/pdfPlanPolicy';
@@ -97,6 +98,8 @@ export default function EstimationDocumentPreviewModal({
   const [projectPayments, setProjectPayments] = useState<ProjectIncome[]>([]);
   const [customAmountInput, setCustomAmountInput] = useState('');
   const [customAmount, setCustomAmount] = useState(0);
+  const [signatureModalOpen, setSignatureModalOpen] = useState(false);
+  const [sigVersion, setSigVersion] = useState(0);
 
   const showCustomAmount = type === 'kwitansi' && Boolean(kwitansiChoice?.customAmount);
 
@@ -176,6 +179,7 @@ export default function EstimationDocumentPreviewModal({
     effectiveKwitansiAmount,
     showCustomAmount,
     customAmount,
+    sigVersion,
   ]);
 
   if (!open) return null;
@@ -279,6 +283,15 @@ export default function EstimationDocumentPreviewModal({
             <>
               <button
                 type="button"
+                onClick={() => setSignatureModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100 transition mr-auto"
+                title="Tanda tangan langsung di layar HP (User & Klien)"
+              >
+                <FileSignature className="w-4 h-4 text-amber-700" />
+                <span>Tanda Tangan (HP)</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => onEdit(type)}
                 className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 hover:bg-slate-50"
               >
@@ -315,6 +328,17 @@ export default function EstimationDocumentPreviewModal({
           )}
         </div>
       </div>
+
+      <DigitalSignatureModal
+        open={signatureModalOpen}
+        draft={draft}
+        settings={settings}
+        onClose={() => setSignatureModalOpen(false)}
+        onSaveSignatures={(newSigs) => {
+          draft.signatures = newSigs;
+          setSigVersion((v) => v + 1);
+        }}
+      />
     </div>
   );
 }

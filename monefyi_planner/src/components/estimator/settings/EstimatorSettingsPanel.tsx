@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, List, Rocket, Save } from 'lucide-react';
+import { Loader2, List, Rocket, Save, FileSignature, X, Check } from 'lucide-react';
+import { SignaturePadCanvas, type SignaturePadHandle } from '../signature/SignaturePadCanvas';
 import { redirectToCheckout } from '../../../lib/checkout';
 import {
   canUseCustomBranding,
@@ -45,6 +46,8 @@ export default function EstimatorSettingsPanel() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [settingsPadOpen, setSettingsPadOpen] = useState(false);
+  const settingsPadRef = useRef<SignaturePadHandle | null>(null);
 
   const [activeTab, setActiveTab] = useState<'company' | 'whatsapp' | 'billing' | 'tools'>('company');
   const [pdfKind, setPdfKind] = useState<'quotation' | 'invoice'>('quotation');
@@ -272,6 +275,18 @@ export default function EstimatorSettingsPanel() {
                     previewClassName="w-32 h-16"
                   />
                 )}
+                {tenant?.id && allowBranding && (
+                  <div className="mt-1">
+                    <button
+                      type="button"
+                      onClick={() => setSettingsPadOpen(true)}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition border border-slate-200 cursor-pointer"
+                    >
+                      <FileSignature className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Buat Tanda Tangan Langsung di Layar HP</span>
+                    </button>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Field label="Nama Pejabat" value={settings.signature_name || ''} onChange={v => patch({ signature_name: v })} />
                   <Field label="Jabatan" value={settings.signature_title || ''} onChange={v => patch({ signature_title: v })} />
@@ -443,6 +458,58 @@ export default function EstimatorSettingsPanel() {
             void load();
           }}
         />
+      )}
+
+      {settingsPadOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl p-5 w-full max-w-md shadow-2xl space-y-4 border border-slate-200">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <FileSignature className="w-5 h-5 text-emerald-600" />
+                <h4 className="font-bold text-slate-800 text-sm">Gores Tanda Tangan di Layar HP</h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSettingsPadOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <SignaturePadCanvas
+              ref={settingsPadRef}
+              initialDataUri={settings?.signature_url}
+              height={170}
+              label="Tanda Tangan Pejabat / Perusahaan"
+            />
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setSettingsPadOpen(false)}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const uri = settingsPadRef.current?.getDataUri();
+                  if (uri) {
+                    patch({ signature_url: uri });
+                    showToast('Tanda tangan digital berhasil dipilih. Klik Simpan di atas untuk menyimpan.', 'success');
+                  }
+                  setSettingsPadOpen(false);
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 shadow-sm"
+              >
+                <Check className="w-4 h-4" />
+                Gunakan Tanda Tangan Ini
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

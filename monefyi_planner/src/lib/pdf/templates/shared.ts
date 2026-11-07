@@ -35,6 +35,11 @@ export type PdfBrandFields = {
   stampDataUri: string | null;
   signatureName: string;
   signatureTitle: string;
+  buyerSignatureDataUri?: string | null;
+  buyerSignatureName?: string | null;
+  buyerSignatureTitle?: string | null;
+  buyerSignedAt?: string | null;
+  showBuyerSignature?: boolean;
   bankName: string;
   bankAccount: string;
   bankAccountName: string;
@@ -273,7 +278,53 @@ export function bankBlock(ctx: PdfBrandFields, titleColor?: string): Content[] {
 }
 
 export function signatureStampBlock(ctx: PdfBrandFields, muted = '#64748b'): Content[] {
-  if (!ctx.options.showSignature && !ctx.options.showStamp) return [];
+  const hasUserSig = ctx.options.showSignature;
+  const hasStamp = ctx.options.showStamp && Boolean(ctx.stampDataUri);
+  const hasBuyerSig = Boolean(ctx.buyerSignatureDataUri || ctx.showBuyerSignature);
+
+  if (!hasUserSig && !hasStamp && !hasBuyerSig) return [];
+
+  // 1. DUA PIHAK: Tanda tangan Penyedia (User) & Pembeli (Buyer)
+  if (hasBuyerSig) {
+    const leftParty: Content[] = [];
+    if (hasUserSig) {
+      leftParty.push({ text: 'Dibuat Oleh (Penyedia),', fontSize: 9, bold: true, margin: [0, 8, 0, 8] as [number, number, number, number] });
+      if (ctx.signatureDataUri) {
+        leftParty.push({ image: ctx.signatureDataUri, width: 95, margin: [0, 0, 0, 4] as [number, number, number, number] });
+      } else {
+        leftParty.push({ text: '_________________', fontSize: 9, margin: [0, 24, 0, 4] as [number, number, number, number] });
+      }
+      if (ctx.signatureName) leftParty.push({ text: ctx.signatureName, bold: true, fontSize: 10 });
+      if (ctx.signatureTitle) leftParty.push({ text: ctx.signatureTitle, fontSize: 9, color: muted });
+      if (hasStamp && ctx.stampDataUri) {
+        leftParty.push({ image: ctx.stampDataUri, width: 65, margin: [0, 4, 0, 0] as [number, number, number, number] });
+      }
+    }
+
+    const rightParty: Content[] = [];
+    rightParty.push({ text: 'Disetujui Oleh (Klien / Buyer),', fontSize: 9, bold: true, margin: [0, 8, 0, 8] as [number, number, number, number] });
+    if (ctx.buyerSignatureDataUri) {
+      rightParty.push({ image: ctx.buyerSignatureDataUri, width: 95, margin: [0, 0, 0, 4] as [number, number, number, number] });
+    } else {
+      rightParty.push({ text: '_________________', fontSize: 9, margin: [0, 24, 0, 4] as [number, number, number, number] });
+    }
+    rightParty.push({ text: ctx.buyerSignatureName || 'Klien / Buyer', bold: true, fontSize: 10 });
+    rightParty.push({
+      text: ctx.buyerSignedAt ? `Tgl: ${ctx.buyerSignedAt}` : (ctx.buyerSignatureTitle || 'Pemilik Proyek / Klien'),
+      fontSize: 9,
+      color: muted,
+    });
+
+    return [{
+      columns: [
+        { width: '*', stack: leftParty },
+        { width: '*', stack: rightParty },
+      ],
+      margin: [0, 10, 0, 0] as [number, number, number, number],
+    }];
+  }
+
+  // 2. SATU PIHAK (Default klasik: User di kiri, Cap di kanan)
   const left: Content[] = [];
   if (ctx.options.showSignature) {
     left.push({ text: 'Hormat kami,', fontSize: 9, margin: [0, 8, 0, 8] as [number, number, number, number] });

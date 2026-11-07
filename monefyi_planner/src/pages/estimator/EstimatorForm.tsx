@@ -25,6 +25,7 @@ import RupiahInput from '../../components/estimator/RupiahInput';
 import EstimationAdjustmentsPanel from '../../components/estimator/EstimationAdjustmentsPanel';
 import EstimationImageSlots from '../../components/estimator/EstimationImageSlots';
 import PdfDesignCustomizer from '../../components/estimator/PdfDesignCustomizer';
+import DigitalSignatureModal from '../../components/estimator/signature/DigitalSignatureModal';
 import KwitansiModal from '../../components/estimator/KwitansiModal';
 import ContractModal from '../../components/estimator/ContractModal';
 import EstimationPaymentPanel from '../../components/estimator/EstimationPaymentPanel';
@@ -48,7 +49,7 @@ import {
 import type { WhatsAppTemplateConfig } from '../../lib/whatsappQuotationMessage';
 import { uploadPendingImages } from '../../services/estimationImageService';
 import { downloadQuotationPdf } from '../../lib/pdf/generateQuotationPdf';
-import { loadPdfSettings } from '../../services/pdfSettingsService';
+import { loadPdfSettings, updatePdfSettings } from '../../services/pdfSettingsService';
 import { displayOptionsFromDraft, type PdfSettings } from '../../types/pdfSettings';
 import {
   createEstimation,
@@ -109,6 +110,7 @@ export default function EstimatorForm() {
     addItemRef.current = fn;
   }, []);
   const [pdfDesignOpen, setPdfDesignOpen] = useState(false);
+  const [signatureModalOpen, setSignatureModalOpen] = useState(false);
   const [documentMenuOpen, setDocumentMenuOpen] = useState(false);
   const [documentPreviewOpen, setDocumentPreviewOpen] = useState(false);
   const [documentPreviewType, setDocumentPreviewType] = useState<DocumentType>('penawaran');
@@ -1101,6 +1103,7 @@ export default function EstimatorForm() {
             onChange={patch}
             open={pdfDesignOpen}
             onToggle={() => setPdfDesignOpen(v => !v)}
+            onOpenSignatureModal={() => setSignatureModalOpen(true)}
           />
           <section className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
             <h3 className="text-xs font-bold text-slate-500 uppercase">Catatan & Syarat</h3>
@@ -1174,6 +1177,30 @@ export default function EstimatorForm() {
           draft={draft}
           settings={pdfSettings}
           onClose={() => setContractOpen(false)}
+          onToast={(msg, type) => showToast(msg, type)}
+        />
+      )}
+
+      {signatureModalOpen && pdfSettings && draft && (
+        <DigitalSignatureModal
+          open={signatureModalOpen}
+          draft={draft}
+          settings={pdfSettings}
+          onClose={() => setSignatureModalOpen(false)}
+          onSaveSignatures={(newSigs) => {
+            patch({ signatures: newSigs });
+          }}
+          onSaveAsDefaultUserSignature={async (dataUri, name, title) => {
+            if (!tenant?.id) return;
+            const updated = {
+              ...pdfSettings,
+              signature_url: dataUri,
+              signature_name: name,
+              signature_title: title,
+            };
+            setPdfSettings(updated);
+            await updatePdfSettings(tenant.id, updated).catch(() => {});
+          }}
           onToast={(msg, type) => showToast(msg, type)}
         />
       )}

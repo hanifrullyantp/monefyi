@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Download, Loader2 } from 'lucide-react';
+import { X, Download, Loader2, FileSignature } from 'lucide-react';
 import type { EstimationFormDraft } from '../../types/estimator';
 import type { PdfSettings } from '../../types/pdfSettings';
 import { displayOptionsFromDraft } from '../../types/pdfSettings';
@@ -9,6 +9,7 @@ import { downloadBlob } from '../../lib/pdf/pdfMakeSetup';
 import { useEntitlement } from '../../hooks/useEntitlement';
 import { pdfPlanPolicyFromEntitlement } from '../../lib/pdf/pdfPlanPolicy';
 import PdfBlobCanvasViewer from './detail/PdfBlobCanvasViewer';
+import DigitalSignatureModal from './signature/DigitalSignatureModal';
 
 interface Props {
   draft: EstimationFormDraft;
@@ -26,6 +27,8 @@ export default function PdfPreviewModal({ draft, settings, projectName, onClose 
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [signatureModalOpen, setSignatureModalOpen] = useState(false);
+  const [sigVersion, setSigVersion] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,7 +51,7 @@ export default function PdfPreviewModal({ draft, settings, projectName, onClose 
     return () => {
       cancelled = true;
     };
-  }, [draft, settings, policy]);
+  }, [draft, settings, policy, sigVersion]);
 
   const handleDownload = async () => {
     try {
@@ -74,7 +77,16 @@ export default function PdfPreviewModal({ draft, settings, projectName, onClose 
             <h2 className="font-bold text-slate-900">Preview PDF</h2>
             <p className="text-xs text-slate-500">{draft.code} · Template {draft.pdf_template}</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setSignatureModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-bold bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100 rounded-xl transition"
+              title="Tanda tangan langsung di layar HP (User & Klien)"
+            >
+              <FileSignature className="w-4 h-4 text-amber-700" />
+              <span>Tanda Tangan (HP)</span>
+            </button>
             <button
               type="button"
               onClick={handleDownload}
@@ -105,6 +117,17 @@ export default function PdfPreviewModal({ draft, settings, projectName, onClose 
           )}
         </div>
       </motion.div>
+
+      <DigitalSignatureModal
+        open={signatureModalOpen}
+        draft={draft}
+        settings={settings}
+        onClose={() => setSignatureModalOpen(false)}
+        onSaveSignatures={(newSigs) => {
+          draft.signatures = newSigs;
+          setSigVersion((v) => v + 1);
+        }}
+      />
     </div>
   );
 }

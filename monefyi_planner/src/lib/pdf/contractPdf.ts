@@ -6,6 +6,7 @@ import { buildEstimationBillingSnapshot } from '../estimationBillingSchedule';
 import type { EstimationFormDraft } from '../../types/estimator';
 import type { PdfSettings } from '../../types/pdfSettings';
 import { urlToDataUri } from './pdfImageUtils';
+import { getEstimationSignatures } from './digitalSignatureStorage';
 import { initPdfMake, pdfToBlob, downloadBlob } from './pdfMakeSetup';
 import {
   getContractTemplate,
@@ -235,6 +236,7 @@ interface BuildCtx {
   draft: EstimationFormDraft;
   logo: string | null;
   signature: string | null;
+  buyerSignature: string | null;
 }
 
 const BULLET = /^\s*((?:\d{1,2}|[a-z])[.)]|[-•])\s+(.*)$/;
@@ -483,6 +485,10 @@ function signatureBlock(ctx: BuildCtx): Content {
     } as Content]
     : [{ text: ' ', margin: m(0, 0, 0, 38) }];
 
+  const clientSign: Content[] = ctx.buyerSignature && f.showSignature
+    ? [{ image: ctx.buyerSignature, width: 90, margin: m(0, 2, 0, 2) }]
+    : materai;
+
   const col = (role: string, mid: Content[], name: string, sub: string) => ({
     width: '*',
     stack: [
@@ -499,7 +505,7 @@ function signatureBlock(ctx: BuildCtx): Content {
     {
       columns: [
         col('PIHAK PERTAMA', vendorSign, v.vendor_name, v.vendor_position),
-        col('PIHAK KEDUA', materai, v.client_name, 'Klien'),
+        col('PIHAK KEDUA', clientSign, v.client_name, 'Klien'),
       ],
       columnGap: 30,
     },
@@ -627,9 +633,27 @@ export function contractPdfFilename(draft: EstimationFormDraft): string {
 export async function generateContractPdfBlob(input: ContractPdfInput): Promise<Blob> {
   const template = getContractTemplate(input.templateId);
   const logo = input.settings.logo_url ? await urlToDataUri(input.settings.logo_url).catch(() => null) : null;
-  const signature = input.fields.showSignature && input.settings.signature_url
-    ? await urlToDataUri(input.settings.signature_url).catch(() => null)
-    : null;
+
+  const storedSigs = getEstimationSignatures(input.draft.code || 'draft') || input.draft.signatures;
+  let signature: string | null = null;
+  if (input.fields.showSignature) {
+    if (storedSigs?.userSignature?.dataUri) {
+      signature = storedSigs.userSignature.dataUri;
+    } else if (input.draft.user_signature_url) {
+      signature = await urlToDataUri(input.draft.user_signature_url).catch(() => null);
+    } else if (input.settings.signature_url) {
+      signature = await urlToDataUri(input.settings.signature_url).catch(() => null);
+    }
+  }
+
+  let buyerSignature: string | null = null;
+  if (input.fields.showSignature) {
+    if (storedSigs?.buyerSignature?.dataUri) {
+      buyerSignature = storedSigs.buyerSignature.dataUri;
+    } else if (input.draft.buyer_signature_url) {
+      buyerSignature = await urlToDataUri(input.draft.buyer_signature_url).catch(() => null);
+    }
+  }
 
   const ctx: BuildCtx = {
     design: template.design,
@@ -640,6 +664,7 @@ export async function generateContractPdfBlob(input: ContractPdfInput): Promise<
     draft: input.draft,
     logo,
     signature,
+    buyerSignature,
   };
   const pdf = initPdfMake().createPdf(buildContractDocumentDefinition(ctx));
   return pdfToBlob(pdf);

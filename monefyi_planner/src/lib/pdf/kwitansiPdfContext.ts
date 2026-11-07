@@ -2,6 +2,7 @@ import convertTerbilang from 'terbilang-ts';
 import { calcEstimationSummary, countedEstimationItems, summaryOptsFromDraft } from '../estimatorCalc';
 import { formatDateId, formatRupiahForPdf } from '../estimatorFormat';
 import { urlToDataUri } from './pdfImageUtils';
+import { getEstimationSignatures } from './digitalSignatureStorage';
 import type { EstimationFormDraft } from '../../types/estimator';
 import type { PdfDisplayOptions, PdfSettings } from '../../types/pdfSettings';
 
@@ -90,9 +91,19 @@ export async function buildKwitansiPdfContext(input: KwitansiPdfInput): Promise<
   const accent = settings.accent_color || '#ecfdf5';
 
   const logoDataUri = settings.logo_url ? await urlToDataUri(settings.logo_url) : null;
-  const signatureDataUri = settings.signature_url && options.showSignature
-    ? await urlToDataUri(settings.signature_url)
-    : null;
+  const storedSigs = getEstimationSignatures(draft.code || 'draft') || draft.signatures;
+  const userSig = storedSigs?.userSignature;
+
+  let signatureDataUri: string | null = null;
+  if (options.showSignature) {
+    if (userSig?.dataUri) {
+      signatureDataUri = userSig.dataUri;
+    } else if (draft.user_signature_url) {
+      signatureDataUri = await urlToDataUri(draft.user_signature_url);
+    } else if (settings.signature_url) {
+      signatureDataUri = await urlToDataUri(settings.signature_url);
+    }
+  }
 
   const parsedDate = paymentDate ? new Date(`${paymentDate}T12:00:00`) : new Date();
   const safeAmount = Math.max(0, Math.round(amount));
@@ -124,8 +135,8 @@ export async function buildKwitansiPdfContext(input: KwitansiPdfInput): Promise<
     companyWebsite: settings.website || '',
     logoDataUri,
     signatureDataUri,
-    signatureName: settings.signature_name || '',
-    signatureTitle: settings.signature_title || 'Account Manager',
+    signatureName: userSig?.signerName || settings.signature_name || 'Penerima Pembayaran',
+    signatureTitle: userSig?.signerTitle || settings.signature_title || 'Kasir / Finance',
     bankName: settings.bank_name || '—',
     bankAccount: settings.bank_account || '—',
     bankAccountName: settings.bank_account_name || settings.company_name || '—',

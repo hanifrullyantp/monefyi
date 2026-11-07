@@ -160,4 +160,39 @@ describe('generate blobs - tiga jenis dokumen', () => {
     await expect(generateQuotationPdfBlob(draft, settings, opts)).resolves.toBeInstanceOf(Blob);
     await expect(generateInvoicePdfBlob(draft, settings, opts)).resolves.toBeInstanceOf(Blob);
   });
+
+  it('renders dual digital signatures (user & buyer) in quotation and invoice', async () => {
+    const draft = previewEstimationDraft('modern');
+    const dummySig = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    draft.signatures = {
+      userSignature: {
+        dataUri: dummySig,
+        signerName: 'Pak Budi (Kontraktor)',
+        signerTitle: 'Direktur',
+        signedAt: '08 Nov 2026',
+      },
+      buyerSignature: {
+        dataUri: dummySig,
+        signerName: 'Ibu Anita (Pemilik Rumah)',
+        signerTitle: 'Disetujui Oleh (Klien)',
+        signedAt: '08 Nov 2026',
+      },
+      showBuyerSignature: true,
+    };
+    const settings = previewPdfSettings(defaultPdfSettings('org', 'CV Test'));
+    const opts = displayOptionsFromDraft(draft);
+
+    const ctx = await buildQuotationPdfContext(draft, settings, opts);
+    expect(ctx.signatureDataUri).toBe(dummySig);
+    expect(ctx.signatureName).toBe('Pak Budi (Kontraktor)');
+    expect(ctx.buyerSignatureDataUri).toBe(dummySig);
+    expect(ctx.buyerSignatureName).toBe('Ibu Anita (Pemilik Rumah)');
+    expect(ctx.showBuyerSignature).toBe(true);
+
+    const quotationBlob = await generateQuotationPdfBlob(draft, settings, opts);
+    expect(quotationBlob.size).toBeGreaterThan(100);
+
+    const invoiceBlob = await generateInvoicePdfBlob(draft, settings, opts);
+    expect(invoiceBlob.size).toBeGreaterThan(100);
+  });
 });

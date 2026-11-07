@@ -1,16 +1,23 @@
+import { FileSignature, CheckCircle2 } from 'lucide-react';
 import ColorPickerField from './ColorPickerField';
 import { PDF_TEMPLATE_OPTIONS, normalizePdfTemplate, type EstimationFormDraft } from '../../types/estimator';
+import { getEstimationSignatures } from '../../lib/pdf/digitalSignatureStorage';
 
 interface Props {
   draft: EstimationFormDraft;
   onChange: (patch: Partial<EstimationFormDraft>) => void;
   open: boolean;
   onToggle: () => void;
+  onOpenSignatureModal?: () => void;
 }
 
-export default function PdfDesignCustomizer({ draft, onChange, open, onToggle }: Props) {
+export default function PdfDesignCustomizer({ draft, onChange, open, onToggle, onOpenSignatureModal }: Props) {
   const quotation = normalizePdfTemplate(draft.pdf_template);
   const invoice = normalizePdfTemplate(draft.pdf_invoice_template || draft.pdf_template);
+
+  const sigs = getEstimationSignatures(draft.code || 'draft') || draft.signatures;
+  const hasUserSig = Boolean(sigs?.userSignature?.dataUri || draft.user_signature_url);
+  const hasBuyerSig = Boolean(sigs?.buyerSignature?.dataUri || draft.buyer_signature_url);
 
   return (
     <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
@@ -56,6 +63,31 @@ export default function PdfDesignCustomizer({ draft, onChange, open, onToggle }:
             <ToggleRow label="Tampilkan info rekening bank" checked={draft.pdf_show_bank} onChange={v => onChange({ pdf_show_bank: v })} />
             <ToggleRow label="Tampilkan logo" checked={draft.pdf_show_logo !== false} onChange={v => onChange({ pdf_show_logo: v })} />
             <ToggleRow label="Tampilkan tanda tangan" checked={draft.pdf_show_signature} onChange={v => onChange({ pdf_show_signature: v })} />
+            {onOpenSignatureModal && (
+              <div className="mt-2 p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-700">Tanda Tangan Digital (HP)</span>
+                  <div className="flex items-center gap-2 text-[11px]">
+                    <span className={hasUserSig ? 'text-emerald-700 font-semibold' : 'text-slate-400'}>
+                      User: {hasUserSig ? '✓ Ada' : 'Belum'}
+                    </span>
+                    <span className="text-slate-300">|</span>
+                    <span className={hasBuyerSig ? 'text-emerald-700 font-semibold' : 'text-slate-400'}>
+                      Klien: {hasBuyerSig ? '✓ Ada' : 'Belum'}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={onOpenSignatureModal}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition cursor-pointer shadow-sm"
+                >
+                  <FileSignature className="w-3.5 h-3.5" />
+                  <span>Buka Pad Tanda Tangan di Layar HP</span>
+                </button>
+              </div>
+            )}
             <ToggleRow label="Tampilkan cap" checked={draft.pdf_show_stamp !== false} onChange={v => onChange({ pdf_show_stamp: v })} />
             <ToggleRow label="Tampilkan footer" checked={draft.pdf_show_footer !== false} onChange={v => onChange({ pdf_show_footer: v })} />
           </div>

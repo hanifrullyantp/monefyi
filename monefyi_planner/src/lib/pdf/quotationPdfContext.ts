@@ -2,6 +2,7 @@ import convertTerbilang from 'terbilang-ts';
 import { calcEstimationSummary, countedEstimationItems, effectiveItemSelling, summaryOptsFromDraft } from '../estimatorCalc';
 import { formatDateId, formatRupiahForPdf } from '../estimatorFormat';
 import { urlToDataUri, fileToDataUri } from './pdfImageUtils';
+import { getEstimationSignatures } from './digitalSignatureStorage';
 import { normalizePdfTemplate, type EstimationFormDraft, type PdfTemplate } from '../../types/estimator';
 import {
   resolvePdfDisplayOptions,
@@ -37,6 +38,11 @@ export interface QuotationPdfContext {
   stampDataUri: string | null;
   signatureName: string;
   signatureTitle: string;
+  buyerSignatureDataUri: string | null;
+  buyerSignatureName: string;
+  buyerSignatureTitle: string;
+  buyerSignedAt: string;
+  showBuyerSignature: boolean;
   bankName: string;
   bankAccount: string;
   bankAccountName: string;
@@ -101,9 +107,39 @@ export async function buildQuotationPdfContext(
   const logoDataUri = allowBranding && settings.logo_url && resolved.showLogo
     ? await urlToDataUri(settings.logo_url)
     : null;
-  const signatureDataUri = allowBranding && settings.signature_url && resolved.showSignature
-    ? await urlToDataUri(settings.signature_url)
-    : null;
+
+  // Resolusi tanda tangan digital (User & Buyer) dari draft atau localStorage
+  const storedSigs = getEstimationSignatures(draft.code || 'draft') || draft.signatures;
+  const userSig = storedSigs?.userSignature;
+  const buyerSig = storedSigs?.buyerSignature;
+
+  let signatureDataUri: string | null = null;
+  if (allowBranding && resolved.showSignature) {
+    if (userSig?.dataUri) {
+      signatureDataUri = userSig.dataUri;
+    } else if (draft.user_signature_url) {
+      signatureDataUri = await urlToDataUri(draft.user_signature_url);
+    } else if (settings.signature_url) {
+      signatureDataUri = await urlToDataUri(settings.signature_url);
+    }
+  }
+
+  const showBuyerSignature = Boolean(
+    allowBranding &&
+      (draft.pdf_show_buyer_signature !== false) &&
+      (storedSigs?.showBuyerSignature !== false) &&
+      (buyerSig?.dataUri || draft.buyer_signature_url),
+  );
+
+  let buyerSignatureDataUri: string | null = null;
+  if (showBuyerSignature) {
+    if (buyerSig?.dataUri) {
+      buyerSignatureDataUri = buyerSig.dataUri;
+    } else if (draft.buyer_signature_url) {
+      buyerSignatureDataUri = await urlToDataUri(draft.buyer_signature_url);
+    }
+  }
+
   const stampDataUri = allowBranding && settings.stamp_url && resolved.showStamp
     ? await urlToDataUri(settings.stamp_url)
     : null;
@@ -131,8 +167,13 @@ export async function buildQuotationPdfContext(
     logoDataUri,
     signatureDataUri,
     stampDataUri,
-    signatureName: settings.signature_name || '',
-    signatureTitle: settings.signature_title || '',
+    signatureName: userSig?.signerName || settings.signature_name || settings.company_name || 'Hormat Kami',
+    signatureTitle: userSig?.signerTitle || settings.signature_title || 'Penanggung Jawab / Estimator',
+    buyerSignatureDataUri,
+    buyerSignatureName: buyerSig?.signerName || draft.customer_name || 'Klien / Buyer',
+    buyerSignatureTitle: buyerSig?.signerTitle || 'Disetujui Oleh (Klien)',
+    buyerSignedAt: buyerSig?.signedAt || '',
+    showBuyerSignature,
     bankName: settings.bank_name || '',
     bankAccount: settings.bank_account || '',
     bankAccountName: settings.bank_account_name || '',
