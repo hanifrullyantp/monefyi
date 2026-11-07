@@ -38,6 +38,7 @@ const navItems = [
   { href: "/admin", icon: LayoutDashboard, label: "Dashboard CRM" },
   { href: "/admin/crm", icon: Users, label: "CRM & Leads" },
   { href: "/admin/marketing", icon: Megaphone, label: "Marketing AI & Meta Ads" },
+  { href: "/admin/whatsapp", icon: MessageSquare, label: "Bot WhatsApp CS & Tim" },
   { href: "/admin/crm-template", icon: MessageSquare, label: "Template WA" },
   { href: "/admin/pricing", icon: DollarSign, label: "Pricing & Paket" },
   { href: "/admin/konten", icon: PanelLeftOpen, label: "Konten Visual" },

@@ -185,6 +185,8 @@ export interface EstimationItemDraft {
   total_profit: number;
   sort_order: number;
   notes: string;
+  /** Ekspresi dimensi segmen (misal "2+2", "2.4+1.8" untuk bentuk L). Kosong jika total biasa. */
+  dimension_expr?: string;
 }
 
 export interface EstimationImageDraft {

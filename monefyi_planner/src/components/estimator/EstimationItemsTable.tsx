@@ -16,6 +16,7 @@ import { COMMON_UNITS, pricelistToEstimationItem, PRICELIST_CATEGORIES } from '.
 import { ENABLE_ESTIMATOR_SMART_INPUT } from '../../lib/estimatorFeatureFlags';
 import RupiahInput from './RupiahInput';
 import QtyInput from './QtyInput';
+import { applyCabinetPairSync } from '../../lib/estimatorDimension';
 import SmartInputModal from './SmartInputModal';
 import PricelistPickerModal from './PricelistPickerModal';
 import { useUiStore } from '../../store/uiStore';
@@ -126,12 +127,32 @@ export default function EstimationItemsTable({
 
   const updateItem = (index: number, patch: Partial<EstimationItemDraft>, editField: ItemPriceEdit = 'selling') => {
     if (readOnly) return;
-    const next = [...items];
+    let next = [...items];
     const merged = { ...next[index], ...patch };
     const calc = calcItemRow(merged, editField);
     const row = { ...merged, ...calc };
     row.total_profit = effectiveItemSelling(row) - (Number(row.total_hpp) || 0);
     next[index] = row;
+
+    // Jika ukuran (qty / dimension_expr) diubah pada kabinet atas atau bawah:
+    // sinkronkan pasangannya secara otomatis jika pasangannya masih kosong atau nilainya sebelumnya sama
+    if (patch.qty !== undefined && editField === 'qty') {
+      const { updatedItems, mirroredIndex } = applyCabinetPairSync(
+        next,
+        index,
+        patch.qty,
+        patch.dimension_expr
+      );
+      if (mirroredIndex != null) {
+        const mirroredItem = updatedItems[mirroredIndex];
+        const mirrorCalc = calcItemRow(mirroredItem, 'qty');
+        const finalMirrored = { ...mirroredItem, ...mirrorCalc };
+        finalMirrored.total_profit = effectiveItemSelling(finalMirrored) - (Number(finalMirrored.total_hpp) || 0);
+        updatedItems[mirroredIndex] = finalMirrored;
+        next = updatedItems;
+      }
+    }
+
     onChange(next);
   };
 
@@ -473,7 +494,8 @@ export default function EstimationItemsTable({
                           Ukuran
                           <QtyInput
                             value={item.qty}
-                            onChange={v => updateItem(idx, { qty: v }, 'qty')}
+                            dimensionExpr={item.dimension_expr}
+                            onChange={(v, expr) => updateItem(idx, { qty: v, dimension_expr: expr }, 'qty')}
                             className="mt-1 w-full min-h-11 px-2 border border-[#E5EAE8] rounded-xl text-right text-sm tabular-nums focus:border-emerald-400 outline-none"
                           />
                         </label>
@@ -715,7 +737,8 @@ export default function EstimationItemsTable({
                           <QtyInput
                             inputRef={registerRef(`${idx}-qty`)}
                             value={item.qty}
-                            onChange={v => updateItem(idx, { qty: v }, 'qty')}
+                            dimensionExpr={item.dimension_expr}
+                            onChange={(v, expr) => updateItem(idx, { qty: v, dimension_expr: expr }, 'qty')}
                             onKeyDown={e => handleKeyDown(e, idx, 'qty', fields)}
                             className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-right tabular-nums focus:border-emerald-400 outline-none"
                           />

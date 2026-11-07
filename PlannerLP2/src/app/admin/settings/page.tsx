@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Save } from "lucide-react";
+import { MessageSquare, Save } from "lucide-react";
 import { defaultSettings } from "@/lib/types/settings";
 
 import { useSettingsStore } from "@/lib/store/settingsStore";
@@ -85,6 +85,29 @@ export default function SettingsPage() {
               {tempSettings.waFloatEnabled ? "Aktif" : "Nonaktif"}
             </button>
           </div>
+        </div>
+
+        {/* Banner Pintasan Bot WhatsApp */}
+        <div className="pt-4 border-t border-slate-100 flex items-center justify-between p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-emerald-600 text-white rounded-xl">
+              <MessageSquare className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-extrabold text-sm text-emerald-950">
+                Bot WhatsApp AI (CS &amp; Koordinasi Karyawan)
+              </p>
+              <p className="text-xs text-emerald-800">
+                Hubungkan gateway WhatsApp non-resmi (Fonnte/Wablas) untuk auto-reply CS 24/7 dan koordinasi tim finance/mandor.
+              </p>
+            </div>
+          </div>
+          <a
+            href="/admin/whatsapp"
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shrink-0"
+          >
+            Buka Pengaturan Bot &rarr;
+          </a>
         </div>
       </div>
     </div>

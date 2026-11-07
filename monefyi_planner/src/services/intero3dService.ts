@@ -2,6 +2,7 @@
 // Service jembatan antara Monefyi Estimator dan 3D Intero (3d.intero.id)
 import { compressToEncodedURIComponent } from 'lz-string';
 import type { EstimationFormDraft, EstimationItem } from '../types/estimator';
+import { parseDimensionInput } from '../lib/estimatorDimension';
 
 export type InteroKitchenShape = 'I' | 'L' | 'U' | 'G';
 export type InteroDoorMaterial = 'HPL' | 'Duco' | 'PVC' | 'ACP' | 'Solid Wood' | 'Glass';
@@ -151,6 +152,7 @@ export function analyzeEstimationForIntero(
   let totalWallM = 0;
   let hasLHint = false;
   let hasUHint = false;
+  let explicitSegments: number[] = [];
 
   const activeItems = items.filter((i) => i.included !== false);
   const textPool = [
@@ -161,11 +163,21 @@ export function analyzeEstimationForIntero(
     .join(' ')
     .toLowerCase();
 
-  // 1. Hitung total volume meter lari kabinet bawah & atas
+  // 1. Hitung total volume meter lari kabinet bawah & atas serta baca segmen L jika ada
   for (const item of activeItems) {
     const name = item.name.toLowerCase();
     const qty = Number(item.qty) || 0;
     const isMeter = /m|meter|m1|m'|ml/i.test(item.unit || '');
+
+    // Cek apakah item memiliki segmen L eksplisit (misal "2+2", "2.4+1.8")
+    const itemWithDim = item as unknown as { dimension_expr?: string };
+    if (itemWithDim.dimension_expr) {
+      const parsedDim = parseDimensionInput(itemWithDim.dimension_expr);
+      if (parsedDim.isL && parsedDim.segments.length >= 2 && explicitSegments.length === 0) {
+        explicitSegments = parsedDim.segments;
+        hasLHint = true;
+      }
+    }
 
     if (name.includes('bawah') || name.includes('base') || name.includes('bottom')) {
       totalBaseM += isMeter ? qty : qty * 0.6; // default 60cm jika per unit
@@ -201,15 +213,22 @@ export function analyzeEstimationForIntero(
 
   // 3. Tentukan bentuk dapur
   let shape: InteroKitchenShape = 'I';
-  if (hasUHint || totalBaseM >= 5.0) {
+  if (hasUHint || (explicitSegments.length >= 3) || totalBaseM >= 5.0) {
     shape = 'U';
-  } else if (hasLHint || totalBaseM >= 3.2) {
+  } else if (hasLHint || explicitSegments.length === 2 || totalBaseM >= 3.2) {
     shape = 'L';
   }
 
-  // 4. Hitung panjang dinding dalam cm
+  // 4. Hitung panjang dinding dalam cm (utamakan segmen eksplisit dari input 2+2)
   const lengthsCm = { left: 180, back: 240, right: 180, front: 240 };
-  if (shape === 'I') {
+  if (explicitSegments.length >= 2 && (shape === 'L' || shape === 'U')) {
+    // Presisi langsung dari input estimator (misal 2+2 => back: 200, left: 200)
+    lengthsCm.back = Math.round(explicitSegments[0] * 100);
+    lengthsCm.left = Math.round(explicitSegments[1] * 100);
+    if (explicitSegments.length >= 3) {
+      lengthsCm.right = Math.round(explicitSegments[2] * 100);
+    }
+  } else if (shape === 'I') {
     lengthsCm.back = Math.max(160, Math.round(totalBaseM * 100));
   } else if (shape === 'L') {
     // Rasio standar: dinding belakang 60%, dinding kiri 40%
