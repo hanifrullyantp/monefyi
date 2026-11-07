@@ -171,11 +171,6 @@ interface MarketingStore {
   updateAgentNames: (names: Partial<AgentCustomNames>) => void;
 }
 
-const initialDiagnostics = runFivePillarDiagnostics({
-  campaigns: [],
-  config: DEFAULT_WINNING_ENGINE_CONFIG,
-});
-
 export const useMarketingStore = create<MarketingStore>()(
   persist(
     (set, get) => ({
@@ -192,27 +187,26 @@ export const useMarketingStore = create<MarketingStore>()(
 
       // Holistic 5-Pillar Winning Engine Initial State
       winningEngineConfig: DEFAULT_WINNING_ENGINE_CONFIG,
-      winningOverallScore: initialDiagnostics.overallScore,
-      winningPillars: initialDiagnostics.pillars,
-      winningPlans: initialDiagnostics.plans,
-      winningLearnings: initialDiagnostics.learnings,
-      winningExecutiveBrief:
-        '1. Diagnosa 5 Pilar: Mesin siap mengevaluasi Produk & Offer, Kecepatan/Copywriting Landing Page, Checkout Funnel, Meta Ads Testing, dan Tracking Pixel + CAPI.\n\n2. Mode Aktif: Mode Cuan (Aman & Terkendali di rentang Rp 100.000 - Rp 1.000.000/hari). Seluruh rekomendasi strategis di bawah menunggu persetujuan Anda sebelum dieksekusi.',
+      winningOverallScore: 0,
+      winningPillars: [],
+      winningPlans: [],
+      winningLearnings: [],
+      winningExecutiveBrief: '',
       winningLlmInfo: {
-        strategistProvider: 'Anthropic Claude',
-        strategistModel: 'claude-3-7-sonnet-latest',
+        strategistProvider: 'Google Gemini Pro',
+        strategistModel: 'gemini-2.5-pro',
         technicalProvider: 'Google Gemini',
         technicalModel: 'gemini-2.5-flash',
       },
       isRunningEngineTick: false,
       executingPlanId: null,
       currentLpCopySnapshot: {
-        heroTitle: 'Kelola Uang Tanpa Ribet, Cukup Chat WhatsApp!',
+        heroTitle: 'Kirim Penawaran Sebelum Kamu Pulang Survei',
         heroSubtitle:
-          'Malas buka aplikasi keuangan yang rumit? Monefyi hadir sebagai asisten pribadi di WhatsApp Anda.',
-        ctaText: 'Coba Gratis Sekarang',
-        standardPrice: 'Rp 150.000',
-        proPrice: 'Rp 250.000',
+          'Hitung harga langsung di HP saat survei, lalu kirim PDF penawaran berlogo kamu sebelum klien sempat membandingkan dengan vendor lain.',
+        ctaText: 'Coba Gratis',
+        standardPrice: 'Rp 93.000',
+        proPrice: 'Rp 199.000',
       },
 
       updateWinningEngineConfig: (updates) =>
@@ -484,24 +478,11 @@ export const useMarketingStore = create<MarketingStore>()(
             datePreset
           );
           set((state) => {
-            const nextDiagnostics = runFivePillarDiagnostics({
-              campaigns: result.campaigns,
-              insightsData: state.insightsData,
-              orderBumpConfig: state.orderBumpConfig,
-              upsellConfig: state.upsellConfig,
-              capiStatus: state.capiStatus,
-              config: state.winningEngineConfig,
-              currentLpCopy: state.currentLpCopySnapshot,
-            });
             return {
               campaigns: result.campaigns,
               isLiveMeta: result.isLive,
               metaAccountName: result.accountName,
               metaSyncError: result.error || null,
-              winningOverallScore: nextDiagnostics.overallScore,
-              winningPillars: nextDiagnostics.pillars,
-              winningPlans: nextDiagnostics.plans,
-              winningLearnings: nextDiagnostics.learnings,
               discoveredAccounts:
                 result.discoveredAccounts && result.discoveredAccounts.length > 0
                   ? result.discoveredAccounts
@@ -543,24 +524,7 @@ export const useMarketingStore = create<MarketingStore>()(
               placements: data.placements || [],
               recommendation: data.recommendation || null,
             };
-            set((state) => {
-              const nextDiagnostics = runFivePillarDiagnostics({
-                campaigns: state.campaigns,
-                insightsData: newInsights,
-                orderBumpConfig: state.orderBumpConfig,
-                upsellConfig: state.upsellConfig,
-                capiStatus: state.capiStatus,
-                config: state.winningEngineConfig,
-                currentLpCopy: state.currentLpCopySnapshot,
-              });
-              return {
-                insightsData: newInsights,
-                winningOverallScore: nextDiagnostics.overallScore,
-                winningPillars: nextDiagnostics.pillars,
-                winningPlans: nextDiagnostics.plans,
-                winningLearnings: nextDiagnostics.learnings,
-              };
-            });
+            set({ insightsData: newInsights });
           }
         } catch {
           // Abaikan jika gagal memuat breakdown

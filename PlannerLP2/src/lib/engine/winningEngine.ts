@@ -88,8 +88,8 @@ export const DEFAULT_WINNING_ENGINE_CONFIG: WinningEngineConfig = {
   advanceMasterPlanApproved: false,
   llmRouting: {
     strategist: {
-      provider: "claude",
-      model: "claude-3-7-sonnet-latest",
+      provider: "gemini",
+      model: "gemini-2.5-pro",
       apiKey: "",
     },
     technical: {
@@ -281,27 +281,31 @@ export function runFivePillarDiagnostics(params: {
   // ==========================================================================
   // PILAR 1: WINNING OFFER & PRODUCT PRICING ANALYZER
   // ==========================================================================
+  // Konteks Produk Spesifik: Monefyi Estimator (estimator.monefyi.com)
+  // Produk: Web app & tool hitung estimasi harga proyek (RAB / Penawaran cepat di HP saat survei lokasi)
+  // Target Audiens: Kontraktor umum, Interior, Kitchen set, Subkon sipil
+  // Harga Resmi: Paket Standard Rp 93.000 / Rp 150.000 sekali bayar, Paket Pro Rp 199.000 / Rp 250.000 sekali bayar.
   let offerScore = 78;
   let offerDiagnosis =
-    "Struktur paket harga (Rp 150.000 Mandiri vs Rp 250.000 Prioritas) cukup jelas, namun daya tarik bonus dan urgensi harga coret masih bisa ditingkatkan agar konversi trafik dingin melonjak.";
+    "Struktur penawaran Monefyi Estimator (Paket Standard Rp 93.000 / Rp 150.000 vs Paket Pro Rp 199.000 / Rp 249.000 Sekali Bayar) sangat menarik bagi kontraktor & interior. Daya tarik bisa dilipatgandakan dengan mempertegas garansi survei & bonus template SOP RAB kontraktor.";
   let offerRecommendation =
-    "Tambahkan Value Stack Bonus (Template + Garansi 30 Hari Uang Kembali) dan perjelas perbandingan penghematan di paket Rp 250.000.";
+    "Pertahankan harga Monefyi Estimator dan perjelas perbandingan penghematan di Paket Pro (Kalkulator Margin + Custom Logo & Tanda Tangan PDF).";
 
   if (totalLinkClicks >= 30 && lpToCheckoutRate < 2.0 && totalPurchases === 0) {
     offerScore = 48;
     offerDiagnosis =
-      "DIAGNOSA JUJUR PRODUK & HARGA: Iklan berhasil mendatangkan klik, tetapi rasio ketertarikan membeli di bawah 2%. Artinya di mata pengunjung baru, harga saat ini terasa terlalu mahal dibanding nilai yang mereka pahami, atau produk/offer belum menyentuh masalah paling mendesak mereka.";
+      "DIAGNOSA JUJUR PRODUK & HARGA: Iklan Meta telah mendatangkan klik kontraktor/interior, namun konversi ke checkout masih di bawah 2%. Artinya di mata pengunjung baru estimator.monefyi.com, kejelasan solusi 'kirim PDF penawaran saat survei' atau perbandingan paket Standard vs Pro perlu dipertajam agar tidak ragu.";
     offerRecommendation =
-      "Uji penurunan friksi harga masuk (Entry Offer Rp 99.000 - Rp 149.000) atau lipat gandakan bonus praktis siap pakai agar nilai produk terlihat 10x lipat dari harganya.";
+      "Gunakan penawaran promo perdana Paket Standard Rp 93.000 atau Rp 129.000 sekali bayar dengan bonus template RAP proyek kontraktor agar offer sulit ditolak.";
   } else if (totalPurchases > 0 && blendedCpa <= config.targetCpa) {
     offerScore = 88;
-    offerDiagnosis = `Offer terbukti laku di pasar dengan CPA rata-rata Rp ${Math.round(
+    offerDiagnosis = `Monefyi Estimator terbukti diminati kontraktor dengan CPA rata-rata Rp ${Math.round(
       blendedCpa
     ).toLocaleString("id-ID")} (masuk target Rp ${config.targetCpa.toLocaleString(
       "id-ID"
-    )}). Peluang terbesar sekarang adalah menaikkan nilai belanja rata-rata (AOV) lewat Bundling Paket Prioritas.`;
+    )}). Peluang terbesar saat ini adalah mendorong kontraktor mengambil Paket Pro via Order Bump atau Upsell.`;
     offerRecommendation =
-      "Pertahankan harga utama dan tonjolkan badge 'Paling Banyak Dipilih' beserta bonus eksklusif pada Paket Prioritas.";
+      "Pertahankan harga utama Monefyi Estimator dan tonjolkan badge 'Paling Populer' pada paket Estimator Pro.";
   }
 
   plans.push({
@@ -311,10 +315,10 @@ export function runFivePillarDiagnostics(params: {
     priority: offerScore < 60 ? "critical" : "high",
     title:
       offerScore < 60
-        ? "Restrukturisasi Harga Promo & Bonus Stacking Agar Produk Lebih Mudah Laku"
-        : "Optimasi Value Anchoring & Paket Bundling Winning Offer",
+        ? "Restrukturisasi Harga Promo & Value Stack Monefyi Estimator (Kontraktor & Interior)"
+        : "Optimasi Value Anchoring & Paket Pro Monefyi Estimator",
     whatToDo:
-      "Memperbarui penawaran di Landing Page: memperkuat kontras Harga Coret (Price Anchoring), menambahkan 3 Bonus Praktis bernilai tinggi tanpa menambah HPP, dan mempertegas Garansi 100% Tanpa Risiko.",
+      "Memperbarui penawaran di Landing Page estimator.monefyi.com: memperjelas bahwa produk adalah tool hitung estimasi proyek & kirim PDF penawaran sebelum pulang survei, memperkuat kontras Harga Promo vs Normal, dan menambahkan 3 Bonus Praktis Kontraktor.",
     whyEvidence:
       totalLinkClicks > 0
         ? `Dari ${totalLinkClicks.toLocaleString("id-ID")} klik iklan dan ${totalLpViews.toLocaleString(
@@ -324,36 +328,37 @@ export function runFivePillarDiagnostics(params: {
           )}%. ${offerDiagnosis}`
         : offerDiagnosis,
     expectedImpact:
-      "Meningkatkan rasio pengunjung yang menekan tombol beli sebesar +25% s/d +40% tanpa perlu mengganti produk inti.",
+      "Meningkatkan rasio kontraktor/interior yang menekan tombol beli di estimator.monefyi.com sebesar +25% s/d +40%.",
     actionType: "update_offer_pricing",
     actionPayload: {
-      recommendedEntryPrice: offerScore < 60 ? "Rp 129.000" : "Rp 150.000",
-      recommendedProPrice: "Rp 249.000",
-      anchorOriginalPrice: "Rp 600.000",
+      productContext: "Monefyi Estimator (estimator.monefyi.com)",
+      recommendedEntryPrice: offerScore < 60 ? "Rp 93.000" : "Rp 150.000",
+      recommendedProPrice: "Rp 199.000",
+      anchorOriginalPrice: "Rp 499.000",
       bonusStack: [
-        "Template Perencanaan Keuangan & Kalkulator Otomatis Siap Pakai",
-        "Panduan Strategi Bebas Kebocoran Gaji Bulanan",
-        "Garansi Kepuasan 30 Hari & Akses Update Seumur Hidup",
+        "Database 500+ Standar Harga Material & Upah Tukang Lokal",
+        "Script WhatsApp Screening Calon Klien Proyek",
+        "Template Kwitansi & Surat Perjanjian Kerja Kontraktor (PKWT/PKB)",
       ],
     },
     requiresCeilingReapproval: false,
     status: "pending",
-    confidence: 89,
+    confidence: 90,
     createdAt: nowIso,
   });
 
   learnings.push({
     id: "learn_offer_1",
     pillar: "offer",
-    category: "Elastisitas Harga & Offer",
+    category: "Elastisitas Harga & Offer Estimator",
     finding:
       offerScore < 60
-        ? "Trafik dingin membutuhkan penawaran entry-level di bawah Rp 150.000 atau bonus konkret agar tidak ragu saat melihat harga."
-        : "Kombinasi harga Rp 150rb - Rp 250rb dengan garansi 30 hari menghasilkan rasio konversi terbaik untuk audiens keluarga muda.",
+        ? "Kontraktor & vendor interior membutuhkan penawaran sekali bayar di bawah Rp 150.000 (promo Rp 93rb - Rp 149rb) agar langsung closing tanpa mikir biaya langganan bulanan."
+        : "Format sekali bayar (Lifetime) untuk tool hitung cepat saat survei menghasilkan conversion rate tertinggi di segmen kontraktor & interior.",
     evidenceMetric: `Konversi LP ke Checkout: ${lpToCheckoutRate.toFixed(1)}% | CPA: Rp ${Math.round(
       blendedCpa || config.targetCpa
     ).toLocaleString("id-ID")}`,
-    confidence: 87,
+    confidence: 88,
   });
 
   // ==========================================================================
@@ -365,14 +370,14 @@ export function runFivePillarDiagnostics(params: {
   );
 
   const lpDiagnosis = !lpSpeedHealthy
-    ? `OCLP tercatat ${oclpRate.toFixed(
+    ? `OCLP landing page tercatat ${oclpRate.toFixed(
         1
-      )}% (di bawah standar sehat 75%). Artinya sekitar ${(100 - oclpRate).toFixed(
+      )}% (di bawah standar sehat 75%). Sekitar ${(100 - oclpRate).toFixed(
         0
-      )}% orang yang klik iklan batal masuk karena halaman lambat terbuka di jaringan seluler.`
+      )}% kontraktor yang klik iklan batal masuk ke estimator.monefyi.com karena halaman lambat terbuka di jaringan seluler saat mereka di lapangan.`
     : `Kecepatan muat halaman sehat (OCLP ${oclpRate.toFixed(
         1
-      )}%). Fokus utama ada pada penajaman Headline & Copywriting agar pembaca langsung merasa relevan dalam 3 detik pertama.`;
+      )}%). Fokus utama adalah menyelaraskan Headline agar kontraktor langsung paham keunggulan 'Kirim Penawaran Sebelum Pulang Survei'.`;
 
   if (!lpSpeedHealthy) {
     plans.push({
@@ -380,13 +385,13 @@ export function runFivePillarDiagnostics(params: {
       pillar: "landing_page",
       pillarLabel: "Pilar 2: Kecepatan & Copywriting Landing Page",
       priority: "critical",
-      title: "Perbaikan Otomatis Kecepatan Landing Page (Naikkan OCLP > 85%)",
+      title: "Perbaikan Otomatis Kecepatan Landing Page estimator.monefyi.com (Naikkan OCLP > 85%)",
       whatToDo:
-        "Mengaktifkan mode prioritas render Hero Section, menunda skrip non-esensial di bawah lipatan layar, dan memangkas beban visual awal agar halaman terbuka di bawah 1,5 detik.",
+        "Mengaktifkan mode prioritas render Hero Section estimator.monefyi.com, menunda skrip demo interaktif di bawah lipatan layar, dan memangkas beban visual awal agar halaman terbuka cepat di HP kontraktor di lokasi survei.",
       whyEvidence: `Data Meta menunjukkan OCLP saat ini ${oclpRate.toFixed(
         1
-      )}% (${totalLpViews} LP View dari ${totalLinkClicks} Link Click). Setiap kenaikan 10% OCLP langsung menurunkan biaya per prospek tanpa menambah budget iklan.`,
-      expectedImpact: "Memulihkan 15% - 25% trafik iklan yang sebelumnya hilang sebelum halaman selesai dimuat.",
+      )}% (${totalLpViews} LP View dari ${totalLinkClicks} Link Click). Mempercepat loading langsung menyelamatkan calon pembeli yang keluar sebelum melihat demo.`,
+      expectedImpact: "Memulihkan 15% - 25% trafik iklan kontraktor yang sebelumnya terpental karena halaman lambat.",
       actionType: "optimize_lp_speed",
       actionPayload: {
         currentOclp: Number(oclpRate.toFixed(1)),
@@ -406,26 +411,26 @@ export function runFivePillarDiagnostics(params: {
     pillar: "landing_page",
     pillarLabel: "Pilar 2: Kecepatan & Copywriting Landing Page",
     priority: "high",
-    title: "Upgrade Copywriting Headline & Subheadline Berpola PAS (Problem-Agitation-Solution)",
+    title: "Upgrade Headline & Copywriting Monefyi Estimator (Selaras Iklan Survei)",
     whatToDo:
-      "Mengganti Headline, Subheadline, dan kalimat tombol CTA di Landing Page dengan sudut pandang yang langsung menjawab ketakutan terbesar audiens (gaji numpang lewat & tabungan bocor) dan menawarkan solusi 30 detik via WhatsApp.",
+      "Memastikan Headline, Subheadline, dan CTA di estimator.monefyi.com 100% fokus pada masalah utama kontraktor: 'Kirim Penawaran Sebelum Kamu Pulang Survei, Closing Duluan Sebelum Klien Bandingkan Vendor Lain'.",
     whyEvidence: `Headline saat ini ("${
-      currentLpCopy?.heroTitle || "Kelola Uang Tanpa Ribet, Cukup Chat WhatsApp!"
-    }") masih bersifat fitur umum. Mengubahnya menjadi manfaat spesifik yang selaras dengan hook iklan terbukti mendongkrak rasio scroll dan klik tombol beli.`,
-    expectedImpact: "Meningkatkan konversi pengunjung Landing Page ke halaman Checkout sebesar +20% s/d +35%.",
+      currentLpCopy?.heroTitle || "Kirim Penawaran Sebelum Kamu Pulang Survei"
+    }") perlu terus diperkuat agar selaras dengan sudut pandang iklan video/gambar yang tayang di Meta Ads Manager.`,
+    expectedImpact: "Meningkatkan konversi pengunjung kontraktor/interior ke tombol order sebesar +20% s/d +35%.",
     actionType: "update_lp_copy",
     actionPayload: {
       beforeHeroTitle:
-        currentLpCopy?.heroTitle || "Kelola Uang Tanpa Ribet, Cukup Chat WhatsApp!",
+        currentLpCopy?.heroTitle || "Kirim Penawaran Sebelum Kamu Pulang Survei",
       afterHeroTitle:
-        "Gaji Sering Habis Tanpa Jejak? Catat & Kunci Kebocoran Uang Anda Cukup Lewat Chat WhatsApp dalam 30 Detik",
+        "Kirim Penawaran PDF Berlogo Sebelum Kamu Pulang Survei — Closing Sebelum Klien Sempat Bandingkan Vendor",
       afterHeroSubtitle:
-        "Tanpa perlu rumus Excel rumit atau instal aplikasi berat. Kirim foto struk atau pesan suara ke WhatsApp, dan biarkan Asisten AI Monefyi merapikan anggaran bulanan keluarga Anda secara otomatis.",
-      afterCtaText: "Amankan Akses & Coba Sekarang (Garansi 30 Hari)",
+        "Khusus kontraktor, interior & kitchen set: Hitung harga proyek dalam 1 menit langsung di HP saat survei. PDF penawaran otomatis siap kirim ke WhatsApp klien tanpa perlu buka laptop di rumah.",
+      afterCtaText: "Coba Estimator Sekarang (Sekali Bayar)",
     },
     requiresCeilingReapproval: false,
     status: "pending",
-    confidence: 90,
+    confidence: 92,
     createdAt: nowIso,
   });
 
@@ -446,24 +451,24 @@ export function runFivePillarDiagnostics(params: {
     pillar: "checkout",
     pillarLabel: "Pilar 3: Checkout Page & AOV Funnel",
     priority: "medium",
-    title: "Optimasi Copywriting Checkout & Penawaran Impulsif Order Bump",
+    title: "Optimasi Order Bump: Database 500+ Material & SOP Kontraktor Lengkap",
     whatToDo:
-      "Memperbarui kotak Order Bump di halaman Checkout agar menonjolkan penghematan langsung (Rp 49.000 dari Rp 399.000) serta menyederhanakan langkah pengisian data agar pembeli tidak batal di tengah jalan.",
-    whyEvidence: `Take-rate Order Bump saat ini berada di ${bumpTakeRate}% dan Upsell di ${upsellTakeRate}%. Dengan meningkatkan daya tarik Order Bump, profit bersih per transaksi naik sehingga Anda sanggup membayar CPA iklan lebih tinggi dari kompetitor.`,
-    expectedImpact: "Meningkatkan nilai rata-rata order (AOV) sebesar +18% s/d +28% dari setiap pembeli yang masuk.",
+      "Memperbarui penawaran add-on Order Bump di halaman checkout estimator.monefyi.com agar kontraktor langsung menambahkan template SOP tender & database harga material cukup dengan centang 1 kotak (Rp 49.000).",
+    whyEvidence: `Take-rate Order Bump saat ini berada di ${bumpTakeRate}% dan Upsell di ${upsellTakeRate}%. Menaikkan take-rate ini mendongkrak margin per transaksi sehingga biaya iklan (CPA) terlindungi.`,
+    expectedImpact: "Meningkatkan nilai transaksi rata-rata (AOV) sebesar +18% s/d +28% dari setiap pembeli yang checkout.",
     actionType: "optimize_checkout_funnel",
     actionPayload: {
       headline:
-        "YA! Tambahkan Paket Template Anggaran Tahunan + Kalkulator Dana Darurat Otomatis (Hanya +Rp 49.000)",
+        "YA! Tambahkan Template Database 500+ Material & SOP Tender Kontraktor (Hanya +Rp 49.000)",
       description:
-        "Centang kotak ini untuk langsung mendapatkan 12 template siap pakai yang mempercepat perencanaan keuangan Anda 3x lipat.",
+        "Dapatkan 10 template RAP siap pakai, rumus otomatis waste material, dan SOP tender proyek langsung ke akun Anda.",
       price: 49000,
       originalPrice: 399000,
-      badgeText: "PENAWARAN KHUSUS SAAT CHECKOUT",
+      badgeText: "ADD-ON SPESIAL CHECKOUT",
     },
     requiresCeilingReapproval: false,
     status: "pending",
-    confidence: 86,
+    confidence: 88,
     createdAt: nowIso,
   });
 
@@ -685,7 +690,7 @@ export function runFivePillarDiagnostics(params: {
       headlineMetric: `OCLP Speed: ${oclpRate.toFixed(1)}%`,
       honestDiagnosis: lpDiagnosis,
       keyRecommendation:
-        "Selaraskan Headline utama dengan masalah paling menyakitkan di iklan dan jaga OCLP di atas 80%.",
+        "Pertahankan Headline 'Kirim Penawaran Sebelum Kamu Pulang Survei' di estimator.monefyi.com dan jaga OCLP di atas 80%.",
     },
     {
       id: "checkout",
@@ -693,9 +698,9 @@ export function runFivePillarDiagnostics(params: {
       score: checkoutScore,
       status: checkoutScore >= 80 ? "winning" : checkoutScore >= 65 ? "perlu_optimasi" : "kritis",
       headlineMetric: `Order Bump: ${bumpTakeRate}% | Upsell: ${upsellTakeRate}%`,
-      honestDiagnosis: `Konversi halaman checkout berjalan stabil dengan peluang kenaikan nilai transaksi dari Order Bump Rp 49.000.`,
+      honestDiagnosis: `Checkout estimator.monefyi.com stabil dengan peluang kenaikan AOV lewat Order Bump Database Material & SOP Rp 49.000.`,
       keyRecommendation:
-        "Tonjolkan penghematan langsung pada kotak Order Bump dan tindak lanjuti prospek yang berhenti di langkah pembayaran via WhatsApp.",
+        "Tawarkan add-on template tender proyek di halaman checkout dan follow-up kontraktor yang terhenti di langkah pembayaran Mayar via WhatsApp.",
     },
     {
       id: "ads_testing",

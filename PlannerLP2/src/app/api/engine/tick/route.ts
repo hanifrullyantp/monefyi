@@ -54,17 +54,24 @@ export async function POST(req: NextRequest) {
       currentLpCopy,
     });
 
-    // 2. Panggil AI Strategist (misal Claude) untuk menyusun Ringkasan Eksekutif 10-Tahun Expert
+    // 2. Panggil AI Strategist (Gemini 2.5 Pro / Claude) untuk menyusun Ringkasan Eksekutif 10-Tahun Expert
     //    serta validasi mendalam terhadap 5 pilar
     const systemPrompt = `Anda adalah Monefyi Winning Engine (Facebook/Meta Ads & Growth Expert pengalaman 10 tahun mengelola budget hingga miliaran Rupiah).
+KONTEKS PRODUK YANG DIJUAL:
+- Produk Inti: Monefyi Estimator (website: estimator.monefyi.com)
+- Target Audiens Iklan: Kontraktor Umum, Interior Designer, Kitchen Set Vendor, dan Subkontraktor Sipil.
+- Nilai & Masalah Utama: Kontraktor sering kalah tender atau telat closing karena butuh 2-3 hari hitung RAB manual di rumah. Monefyi Estimator memampukan mereka hitung harga akurat dalam 1 menit langsung di HP saat survei lokasi, lalu kirim PDF penawaran berlogo ke WhatsApp klien sebelum mereka sempat membandingkan dengan vendor lain.
+- Struktur Harga: Sekali Bayar (Lifetime) — Paket Standard Rp 93.000 / Rp 150.000, Paket Pro Rp 199.000 / Rp 250.000. Add-on Order Bump: Template Database Material & SOP Rp 49.000.
+PERINGATAN PENTING: JANGAN menyamakan produk ini dengan aplikasi pengatur keuangan pribadi atau chat bot personal finance monefyi.com. Segala evaluasi Offer, Copywriting Landing Page, Funnel, dan Iklan WAJIB 100% berfokus pada Monefyi Estimator (estimator.monefyi.com) untuk kontraktor/interior.
+
 ATURAN KOMUNIKASI WAJIB:
 1. DILARANG menggunakan emoticon/emoji sama sekali.
 2. Gunakan bahasa Indonesia bisnis yang jernih, tegas, mudah dipahami oleh pemilik bisnis (tidak membuat pusing), namun berbasis angka riil.
-3. Anda menilai 5 Pilar secara utuh: (1) Produk, Harga & Offer, (2) Kecepatan & Copywriting Landing Page, (3) Checkout & AOV Funnel, (4) Meta Ads & Rapid Testing, (5) Tracking Pixel + CAPI.
+3. Anda menilai 5 Pilar secara utuh: (1) Produk, Harga & Offer Estimator, (2) Kecepatan & Copywriting Landing Page estimator.monefyi.com, (3) Checkout & AOV Funnel (Order Bump Mayar), (4) Meta Ads & Rapid Testing, (5) Tracking Pixel + CAPI.
 4. Berikan ringkasan eksekutif maksimal 4 poin singkat:
-   - Diagnosa Jujur Saat Ini (Apa penghambat terbesar menuju winning)
-   - Strategi Produk & Offer
-   - Strategi Copywriting Landing Page & Checkout
+   - Diagnosa Jujur Saat Ini (Apa penghambat terbesar menuju winning kampanye Monefyi Estimator)
+   - Strategi Produk & Offer (Paket Standard vs Pro & Bonus Stacking Kontraktor)
+   - Strategi Copywriting Landing Page estimator.monefyi.com & Checkout
    - Langkah Meta Ads sesuai ${
      config.mode === "cuan"
        ? `Mode Cuan (Aman di rentang Rp ${config.minDailyBudget.toLocaleString(

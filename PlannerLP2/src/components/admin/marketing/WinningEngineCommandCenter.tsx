@@ -411,543 +411,578 @@ export function WinningEngineCommandCenter({
       {/* =====================================================================
           PANEL 2: RADAR KESEHATAN 5 PILAR WINNING (KLIK UNTUK FILTER)
           ===================================================================== */}
-      <div className="space-y-2.5">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
-              Radar Audit 5 Pilar Winning (Skor Total: {winningOverallScore}/100)
-            </h3>
+      {winningPillars.length === 0 ? (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 text-center space-y-4 shadow-xs">
+          <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <Target className="w-6 h-6" />
           </div>
-          {selectedPillarFilter !== "all" && (
+          <div className="max-w-md mx-auto space-y-1.5">
+            <h3 className="text-base font-black text-slate-900 dark:text-white">
+              Belum Ada Analisa 5 Pilar Aktif
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              Monefyi Winning Engine siap menganalisa data riil kampanye Meta Ads untuk <strong>Monefyi Estimator (estimator.monefyi.com)</strong>. Klik tombol di bawah untuk meminta AI Strategist ({winningEngineConfig.llmRouting.strategist.provider.toUpperCase()} {winningEngineConfig.llmRouting.strategist.model}) membuat evaluasi dan rencana winning.
+            </p>
+          </div>
+          <div className="pt-2">
             <button
               type="button"
-              onClick={() => setSelectedPillarFilter("all")}
-              className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+              onClick={() => handleRunTick(false)}
+              disabled={isRunningEngineTick}
+              className="inline-flex items-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-xs font-black shadow-lg shadow-emerald-950/20 transition-all cursor-pointer disabled:opacity-50"
             >
-              Tampilkan Semua Pilar ({winningPlans.length})
+              <RefreshCw className={cn("w-4 h-4", isRunningEngineTick && "animate-spin")} />
+              <span>
+                {isRunningEngineTick
+                  ? "AI Sedang Menganalisa 5 Pilar..."
+                  : "Mulai Planning & Generate Analisa 5 Pilar Sekarang"}
+              </span>
             </button>
-          )}
+          </div>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {winningPillars.map((pillar) => {
-            const Icon = getPillarIcon(pillar.id);
-            const isSelected = selectedPillarFilter === pillar.id;
-            const pillarPlanCount = winningPlans.filter(
-              (p) => p.pillar === pillar.id && p.status === "pending"
-            ).length;
-
-            return (
+      ) : (
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <Layers className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                Radar Audit 5 Pilar Winning (Skor Total: {winningOverallScore}/100)
+              </h3>
+            </div>
+            {selectedPillarFilter !== "all" && (
               <button
-                key={pillar.id}
                 type="button"
-                onClick={() =>
-                  setSelectedPillarFilter(isSelected ? "all" : pillar.id)
-                }
-                className={cn(
-                  "text-left p-4 rounded-2xl border transition-all flex flex-col justify-between gap-2.5 cursor-pointer",
-                  isSelected
-                    ? "bg-slate-900 dark:bg-emerald-950/60 text-white border-slate-900 dark:border-emerald-500 shadow-md"
-                    : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-emerald-400"
-                )}
+                onClick={() => setSelectedPillarFilter("all")}
+                className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
               >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span
-                      className={cn(
-                        "p-2 rounded-xl",
-                        isSelected
-                          ? "bg-white/15 text-white"
-                          : pillar.status === "winning"
-                          ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400"
-                          : pillar.status === "perlu_optimasi"
-                          ? "bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400"
-                          : "bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400"
-                      )}
-                    >
-                      <Icon className="w-4 h-4" />
-                    </span>
+                Tampilkan Semua Pilar ({winningPlans.length})
+              </button>
+            )}
+          </div>
 
-                    <div className="text-right">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            {winningPillars.map((pillar) => {
+              const Icon = getPillarIcon(pillar.id);
+              const isSelected = selectedPillarFilter === pillar.id;
+              const pillarPlanCount = winningPlans.filter(
+                (p) => p.pillar === pillar.id && p.status === "pending"
+              ).length;
+
+              return (
+                <button
+                  key={pillar.id}
+                  type="button"
+                  onClick={() =>
+                    setSelectedPillarFilter(isSelected ? "all" : pillar.id)
+                  }
+                  className={cn(
+                    "text-left p-4 rounded-2xl border transition-all flex flex-col justify-between gap-2.5 cursor-pointer",
+                    isSelected
+                      ? "bg-slate-900 dark:bg-emerald-950/60 text-white border-slate-900 dark:border-emerald-500 shadow-md"
+                      : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-emerald-400"
+                  )}
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
                       <span
                         className={cn(
-                          "text-base font-black",
+                          "p-2 rounded-xl",
                           isSelected
-                            ? "text-white"
-                            : pillar.score >= 80
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : pillar.score >= 65
-                            ? "text-amber-600 dark:text-amber-400"
-                            : "text-rose-600 dark:text-rose-400"
+                            ? "bg-white/15 text-white"
+                            : pillar.status === "winning"
+                            ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400"
+                            : pillar.status === "perlu_optimasi"
+                            ? "bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400"
+                            : "bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400"
                         )}
                       >
-                        {pillar.score}%
+                        <Icon className="w-4 h-4" />
                       </span>
+
+                      <div className="text-right">
+                        <span
+                          className={cn(
+                            "text-base font-black",
+                            isSelected
+                              ? "text-white"
+                              : pillar.score >= 80
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : pillar.score >= 65
+                              ? "text-amber-600 dark:text-amber-400"
+                              : "text-rose-600 dark:text-rose-400"
+                          )}
+                        >
+                          {pillar.score}%
+                        </span>
+                        <p
+                          className={cn(
+                            "text-[9px] font-bold uppercase",
+                            isSelected ? "text-slate-300" : "text-slate-400"
+                          )}
+                        >
+                          {pillar.status === "winning"
+                            ? "Sehat / Winning"
+                            : pillar.status === "perlu_optimasi"
+                            ? "Perlu Optimasi"
+                            : "Butuh Perbaikan"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4
+                        className={cn(
+                          "text-xs font-extrabold leading-snug",
+                          isSelected ? "text-white" : "text-slate-900 dark:text-white"
+                        )}
+                      >
+                        {pillar.label}
+                      </h4>
                       <p
                         className={cn(
-                          "text-[9px] font-bold uppercase",
-                          isSelected ? "text-slate-300" : "text-slate-400"
+                          "text-[11px] font-mono font-bold mt-0.5",
+                          isSelected
+                            ? "text-emerald-300"
+                            : "text-emerald-600 dark:text-emerald-400"
                         )}
                       >
-                        {pillar.status === "winning"
-                          ? "Sehat / Winning"
-                          : pillar.status === "perlu_optimasi"
-                          ? "Perlu Optimasi"
-                          : "Butuh Perbaikan"}
+                        {pillar.headlineMetric}
                       </p>
                     </div>
-                  </div>
 
-                  <div>
-                    <h4
-                      className={cn(
-                        "text-xs font-extrabold leading-snug",
-                        isSelected ? "text-white" : "text-slate-900 dark:text-white"
-                      )}
-                    >
-                      {pillar.label}
-                    </h4>
                     <p
                       className={cn(
-                        "text-[11px] font-mono font-bold mt-0.5",
+                        "text-[11px] leading-relaxed line-clamp-3",
                         isSelected
-                          ? "text-emerald-300"
-                          : "text-emerald-600 dark:text-emerald-400"
+                          ? "text-slate-200"
+                          : "text-slate-500 dark:text-slate-400"
                       )}
                     >
-                      {pillar.headlineMetric}
+                      {pillar.honestDiagnosis}
                     </p>
                   </div>
 
-                  <p
-                    className={cn(
-                      "text-[11px] leading-relaxed line-clamp-3",
-                      isSelected
-                        ? "text-slate-200"
-                        : "text-slate-500 dark:text-slate-400"
-                    )}
-                  >
-                    {pillar.honestDiagnosis}
-                  </p>
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] font-bold">
-                  <span
-                    className={cn(
-                      isSelected ? "text-emerald-300" : "text-slate-500 dark:text-slate-400"
-                    )}
-                  >
-                    {pillarPlanCount > 0
-                      ? `${pillarPlanCount} Rencana Siap Disetujui`
-                      : "Sudah Optimal"}
-                  </span>
-                  <ArrowRight className="w-3 h-3" />
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Ringkasan Strategis AI Strategist (Claude / Model Strategist) */}
-      <div className="bg-slate-900 dark:bg-slate-900/95 text-white border border-slate-800 rounded-3xl p-5 space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
-          <div className="flex items-center gap-2">
-            <Target className="w-4 h-4 text-emerald-400" />
-            <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-emerald-400">
-              Evaluasi &amp; Arahan Strategis 10-Tahun Expert ({winningLlmInfo.strategistProvider})
-            </h3>
-          </div>
-          <span className="text-[11px] text-slate-400 font-mono">
-            Model Strategist: {winningLlmInfo.strategistModel} | Model Teknis: {winningLlmInfo.technicalModel}
-          </span>
-        </div>
-        <div className="text-xs text-slate-200 leading-relaxed whitespace-pre-line">
-          {winningExecutiveBrief}
-        </div>
-      </div>
-
-      {/* =====================================================================
-          PANEL 3: KOTAK PERSETUJUAN RENCANA AI (APPROVAL INBOX) & MEMORI BELAJAR AI
-          ===================================================================== */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Kiri (2 Kolom): Daftar Rencana Tindakan yang Menunggu Persetujuan / Sudah Dieksekusi */}
-        <div className="lg:col-span-2 space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-black text-slate-900 dark:text-white">
-                Daftar Rencana Tindakan AI ({filteredPlans.length})
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {pendingPlansCount} menunggu persetujuan Anda, {executedPlansCount} telah dijalankan. Anda dapat meninjau atau mengubah angka sebelum menyetujui.
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {filteredPlans.map((plan) => {
-              const isExecuting = executingPlanId === plan.id;
-              const edits = customEdits[plan.id] || {};
-
-              return (
-                <div
-                  key={plan.id}
-                  className={cn(
-                    "bg-white dark:bg-slate-900 border rounded-2xl p-4 space-y-3 transition-all",
-                    plan.status === "executed"
-                      ? "border-emerald-200 dark:border-emerald-900/60 opacity-90"
-                      : plan.status === "rejected"
-                      ? "border-slate-200 dark:border-slate-800 opacity-60"
-                      : plan.priority === "critical"
-                      ? "border-rose-300 dark:border-rose-800 shadow-xs"
-                      : "border-slate-200 dark:border-slate-800 shadow-xs"
-                  )}
-                >
-                  {/* Header Kartu Plan */}
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={cn(
-                          "text-[10px] font-black uppercase px-2 py-0.5 rounded-md",
-                          plan.priority === "critical"
-                            ? "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300"
-                            : plan.priority === "high"
-                            ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
-                            : "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-                        )}
-                      >
-                        {plan.pillarLabel}
-                      </span>
-                      <span className="text-[11px] font-bold text-slate-400">
-                        Confidence: {plan.confidence}%
-                      </span>
-                      {plan.requiresCeilingReapproval && (
-                        <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300">
-                          Butuh Persetujuan Kenaikan Plafon Budget
-                        </span>
-                      )}
-                    </div>
-
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] font-bold">
                     <span
                       className={cn(
-                        "text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full",
-                        plan.status === "executed"
-                          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                          : plan.status === "rejected"
-                          ? "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-                          : "bg-amber-50 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
+                        isSelected ? "text-emerald-300" : "text-slate-500 dark:text-slate-400"
                       )}
                     >
-                      {plan.status === "executed"
-                        ? "Sudah Dijalankan"
-                        : plan.status === "rejected"
-                        ? "Dilewati"
-                        : "Menunggu Persetujuan Anda"}
+                      {pillarPlanCount > 0
+                        ? `${pillarPlanCount} Rencana Siap Disetujui`
+                        : "Sudah Optimal"}
                     </span>
+                    <ArrowRight className="w-3 h-3" />
                   </div>
-
-                  {/* Judul & Penjelasan Bahasa Manusia */}
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-black text-slate-900 dark:text-white">
-                      {plan.title}
-                    </h4>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs">
-                      <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-800">
-                        <p className="text-[10px] font-black uppercase text-slate-400 mb-0.5">
-                          Apa Yang Akan Dilakukan AI
-                        </p>
-                        <p className="text-slate-700 dark:text-slate-200 leading-relaxed">
-                          {plan.whatToDo}
-                        </p>
-                      </div>
-
-                      <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-800">
-                        <p className="text-[10px] font-black uppercase text-slate-400 mb-0.5">
-                          Kenapa Dilakukan (Bukti Data)
-                        </p>
-                        <p className="text-slate-700 dark:text-slate-200 leading-relaxed">
-                          {plan.whyEvidence}
-                        </p>
-                      </div>
-
-                      <div className="p-2.5 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/50">
-                        <p className="text-[10px] font-black uppercase text-emerald-700 dark:text-emerald-400 mb-0.5">
-                          Estimasi Dampak Winning
-                        </p>
-                        <p className="text-emerald-900 dark:text-emerald-200 leading-relaxed font-medium">
-                          {plan.expectedImpact}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Pratinjau & Editor Cepat Sesuai Pilar Sebelum Disetujui */}
-                  {plan.status === "pending" && plan.actionType === "update_lp_copy" && (
-                    <div className="p-3 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200/70 dark:border-indigo-900/50 space-y-2 text-xs">
-                      <p className="font-extrabold text-indigo-900 dark:text-indigo-300">
-                        Pratinjau Copywriting Landing Page Baru (Bisa Anda Sesuaikan Sebelum Klik Setujui):
-                      </p>
-                      <div className="grid grid-cols-1 gap-2">
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
-                            Headline Utama Baru (PAS Hook):
-                          </label>
-                          <input
-                            type="text"
-                            value={
-                              edits.afterHeroTitle ?? plan.actionPayload.afterHeroTitle ?? ""
-                            }
-                            onChange={(e) =>
-                              setPlanFieldEdit(plan.id, "afterHeroTitle", e.target.value)
-                            }
-                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-900 dark:text-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
-                            Subheadline Penjelas Solusi:
-                          </label>
-                          <input
-                            type="text"
-                            value={
-                              edits.afterHeroSubtitle ??
-                              plan.actionPayload.afterHeroSubtitle ??
-                              ""
-                            }
-                            onChange={(e) =>
-                              setPlanFieldEdit(plan.id, "afterHeroSubtitle", e.target.value)
-                            }
-                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {plan.status === "pending" && plan.actionType === "update_offer_pricing" && (
-                    <div className="p-3 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/50 space-y-2 text-xs">
-                      <p className="font-extrabold text-amber-900 dark:text-amber-300">
-                        Rekomendasi Penyesuaian Harga &amp; Offer Stack:
-                      </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
-                            Harga Paket Entry / Mandiri
-                          </label>
-                          <input
-                            type="text"
-                            value={
-                              edits.recommendedEntryPrice ??
-                              plan.actionPayload.recommendedEntryPrice ??
-                              "Rp 150.000"
-                            }
-                            onChange={(e) =>
-                              setPlanFieldEdit(
-                                plan.id,
-                                "recommendedEntryPrice",
-                                e.target.value
-                              )
-                            }
-                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
-                            Harga Paket Prioritas (Winning)
-                          </label>
-                          <input
-                            type="text"
-                            value={
-                              edits.recommendedProPrice ??
-                              plan.actionPayload.recommendedProPrice ??
-                              "Rp 249.000"
-                            }
-                            onChange={(e) =>
-                              setPlanFieldEdit(plan.id, "recommendedProPrice", e.target.value)
-                            }
-                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
-                            Harga Coret (Anchor Value)
-                          </label>
-                          <input
-                            type="text"
-                            value={
-                              edits.anchorOriginalPrice ??
-                              plan.actionPayload.anchorOriginalPrice ??
-                              "Rp 600.000"
-                            }
-                            onChange={(e) =>
-                              setPlanFieldEdit(plan.id, "anchorOriginalPrice", e.target.value)
-                            }
-                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {plan.status === "pending" &&
-                    (plan.actionType === "scale_campaign_budget" ||
-                      plan.actionType === "create_rapid_test_campaign") && (
-                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                        <span className="font-bold text-slate-700 dark:text-slate-300">
-                          Anggaran Harian yang Akan Diterapkan (IDR):
-                        </span>
-                        <input
-                          type="number"
-                          step={25000}
-                          value={
-                            edits.newBudget ??
-                            edits.dailyBudget ??
-                            plan.actionPayload.newBudget ??
-                            plan.actionPayload.dailyBudget ??
-                            winningEngineConfig.minDailyBudget
-                          }
-                          onChange={(e) => {
-                            const val = Number(e.target.value || 0);
-                            setPlanFieldEdit(plan.id, "newBudget", val);
-                            setPlanFieldEdit(plan.id, "dailyBudget", val);
-                          }}
-                          className="w-full sm:w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-slate-900 dark:text-white"
-                        />
-                      </div>
-                    )}
-
-                  {/* Catatan Eksekusi Jika Sudah Dijalankan */}
-                  {plan.executionNote && (
-                    <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 font-semibold flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>{plan.executionNote}</span>
-                    </div>
-                  )}
-
-                  {/* Tombol Persetujuan User */}
-                  {plan.status === "pending" && (
-                    <div className="flex items-center justify-end gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => rejectPlan(plan.id)}
-                        disabled={isExecuting}
-                        className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                      >
-                        Lewati
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleApprovePlan(plan)}
-                        disabled={isExecuting}
-                        className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all disabled:opacity-50 cursor-pointer"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                        <span>
-                          {isExecuting
-                            ? "Menjalankan..."
-                            : plan.requiresCeilingReapproval
-                            ? "Setujui Kenaikan Plafon & Jalankan"
-                            : "Setujui & Jalankan Sekarang"}
-                        </span>
-                      </button>
-                    </div>
-                  )}
-                </div>
+                </button>
               );
             })}
           </div>
         </div>
+      )}
 
-        {/* Kanan (1 Kolom): Memori Pembelajaran AI & Riwayat Audit Eksekusi */}
-        <div className="space-y-4">
-          {/* Memori Pembelajaran AI */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3">
-            <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
-              <BookOpen className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+      {/* Ringkasan Strategis AI Strategist (Gemini Pro / Claude) */}
+      {winningExecutiveBrief && (
+        <div className="bg-slate-900 dark:bg-slate-900/95 text-white border border-slate-800 rounded-3xl p-5 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+            <div className="flex items-center gap-2">
+              <Target className="w-4 h-4 text-emerald-400" />
+              <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-emerald-400">
+                Evaluasi &amp; Arahan Strategis 10-Tahun Expert ({winningLlmInfo.strategistProvider})
+              </h3>
+            </div>
+            <span className="text-[11px] text-slate-400 font-mono">
+              Model Strategist: {winningLlmInfo.strategistModel} | Model Teknis: {winningLlmInfo.technicalModel}
+            </span>
+          </div>
+          <div className="text-xs text-slate-200 leading-relaxed whitespace-pre-line">
+            {winningExecutiveBrief}
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          PANEL 3: KOTAK PERSETUJUAN RENCANA AI (APPROVAL INBOX) & MEMORI BELAJAR AI
+          ===================================================================== */}
+      {winningPlans.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          {/* Kiri (2 Kolom): Daftar Rencana Tindakan yang Menunggu Persetujuan / Sudah Dieksekusi */}
+          <div className="lg:col-span-2 space-y-3">
+            <div className="flex items-center justify-between">
               <div>
-                <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
-                  Hasil Belajar AI (Winning Memory)
-                </h4>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Pola offer, demografi, dan iklan yang terbukti menghasilkan konversi.
+                <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                  Daftar Rencana Tindakan AI ({filteredPlans.length})
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {pendingPlansCount} menunggu persetujuan Anda, {executedPlansCount} telah dijalankan. Anda dapat meninjau atau mengubah angka sebelum menyetujui.
                 </p>
               </div>
             </div>
 
-            <div className="space-y-2.5">
-              {winningLearnings.map((item) => (
-                <div
-                  key={item.id}
-                  className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800 space-y-1 text-xs"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400">
-                      {item.category}
-                    </span>
-                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                      Akurasi {item.confidence}%
-                    </span>
+            <div className="space-y-3">
+              {filteredPlans.map((plan) => {
+                const isExecuting = executingPlanId === plan.id;
+                const edits = customEdits[plan.id] || {};
+
+                return (
+                  <div
+                    key={plan.id}
+                    className={cn(
+                      "bg-white dark:bg-slate-900 border rounded-2xl p-4 space-y-3 transition-all",
+                      plan.status === "executed"
+                        ? "border-emerald-200 dark:border-emerald-900/60 opacity-90"
+                        : plan.status === "rejected"
+                        ? "border-slate-200 dark:border-slate-800 opacity-60"
+                        : plan.priority === "critical"
+                        ? "border-rose-300 dark:border-rose-800 shadow-xs"
+                        : "border-slate-200 dark:border-slate-800 shadow-xs"
+                    )}
+                  >
+                    {/* Header Kartu Plan */}
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            "text-[10px] font-black uppercase px-2 py-0.5 rounded-md",
+                            plan.priority === "critical"
+                              ? "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300"
+                              : plan.priority === "high"
+                              ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                              : "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                          )}
+                        >
+                          {plan.pillarLabel}
+                        </span>
+                        <span className="text-[11px] font-bold text-slate-400">
+                          Confidence: {plan.confidence}%
+                        </span>
+                        {plan.requiresCeilingReapproval && (
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300">
+                            Butuh Persetujuan Kenaikan Plafon Budget
+                          </span>
+                        )}
+                      </div>
+
+                      <span
+                        className={cn(
+                          "text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full",
+                          plan.status === "executed"
+                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                            : plan.status === "rejected"
+                            ? "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                            : "bg-amber-50 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
+                        )}
+                      >
+                        {plan.status === "executed"
+                          ? "Sudah Dijalankan"
+                          : plan.status === "rejected"
+                          ? "Dilewati"
+                          : "Menunggu Persetujuan Anda"}
+                      </span>
+                    </div>
+
+                    {/* Judul & Penjelasan Bahasa Manusia */}
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white">
+                        {plan.title}
+                      </h4>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs">
+                        <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-800">
+                          <p className="text-[10px] font-black uppercase text-slate-400 mb-0.5">
+                            Apa Yang Akan Dilakukan AI
+                          </p>
+                          <p className="text-slate-700 dark:text-slate-200 leading-relaxed">
+                            {plan.whatToDo}
+                          </p>
+                        </div>
+
+                        <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-800">
+                          <p className="text-[10px] font-black uppercase text-slate-400 mb-0.5">
+                            Kenapa Dilakukan (Bukti Data)
+                          </p>
+                          <p className="text-slate-700 dark:text-slate-200 leading-relaxed">
+                            {plan.whyEvidence}
+                          </p>
+                        </div>
+
+                        <div className="p-2.5 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/50">
+                          <p className="text-[10px] font-black uppercase text-emerald-700 dark:text-emerald-400 mb-0.5">
+                            Estimasi Dampak Winning
+                          </p>
+                          <p className="text-emerald-900 dark:text-emerald-200 leading-relaxed font-medium">
+                            {plan.expectedImpact}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Pratinjau & Editor Cepat Sesuai Pilar Sebelum Disetujui */}
+                    {plan.status === "pending" && plan.actionType === "update_lp_copy" && (
+                      <div className="p-3 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200/70 dark:border-indigo-900/50 space-y-2 text-xs">
+                        <p className="font-extrabold text-indigo-900 dark:text-indigo-300">
+                          Pratinjau Copywriting Landing Page estimator.monefyi.com (Bisa Anda Sesuaikan Sebelum Klik Setujui):
+                        </p>
+                        <div className="grid grid-cols-1 gap-2">
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
+                              Headline Utama Baru (PAS Hook Kontraktor):
+                            </label>
+                            <input
+                              type="text"
+                              value={
+                                edits.afterHeroTitle ?? plan.actionPayload.afterHeroTitle ?? ""
+                              }
+                              onChange={(e) =>
+                                setPlanFieldEdit(plan.id, "afterHeroTitle", e.target.value)
+                              }
+                              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-900 dark:text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
+                              Subheadline Penjelas Solusi:
+                            </label>
+                            <input
+                              type="text"
+                              value={
+                                edits.afterHeroSubtitle ??
+                                plan.actionPayload.afterHeroSubtitle ??
+                                ""
+                              }
+                              onChange={(e) =>
+                                setPlanFieldEdit(plan.id, "afterHeroSubtitle", e.target.value)
+                              }
+                              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {plan.status === "pending" && plan.actionType === "update_offer_pricing" && (
+                      <div className="p-3 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/50 space-y-2 text-xs">
+                        <p className="font-extrabold text-amber-900 dark:text-amber-300">
+                          Rekomendasi Penyesuaian Harga &amp; Value Stack Monefyi Estimator:
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
+                              Harga Paket Standard
+                            </label>
+                            <input
+                              type="text"
+                              value={
+                                edits.recommendedEntryPrice ??
+                                plan.actionPayload.recommendedEntryPrice ??
+                                "Rp 93.000"
+                              }
+                              onChange={(e) =>
+                                setPlanFieldEdit(
+                                  plan.id,
+                                  "recommendedEntryPrice",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
+                              Harga Paket Pro (Winning)
+                            </label>
+                            <input
+                              type="text"
+                              value={
+                                edits.recommendedProPrice ??
+                                plan.actionPayload.recommendedProPrice ??
+                                "Rp 199.000"
+                              }
+                              onChange={(e) =>
+                                setPlanFieldEdit(plan.id, "recommendedProPrice", e.target.value)
+                              }
+                              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
+                              Harga Normal (Anchor Value)
+                            </label>
+                            <input
+                              type="text"
+                              value={
+                                edits.anchorOriginalPrice ??
+                                plan.actionPayload.anchorOriginalPrice ??
+                                "Rp 499.000"
+                              }
+                              onChange={(e) =>
+                                setPlanFieldEdit(plan.id, "anchorOriginalPrice", e.target.value)
+                              }
+                              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {plan.status === "pending" &&
+                      (plan.actionType === "scale_campaign_budget" ||
+                        plan.actionType === "create_rapid_test_campaign") && (
+                        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                          <span className="font-bold text-slate-700 dark:text-slate-300">
+                            Anggaran Harian yang Akan Diterapkan (IDR):
+                          </span>
+                          <input
+                            type="number"
+                            step={25000}
+                            value={
+                              edits.newBudget ??
+                              edits.dailyBudget ??
+                              plan.actionPayload.newBudget ??
+                              plan.actionPayload.dailyBudget ??
+                              winningEngineConfig.minDailyBudget
+                            }
+                            onChange={(e) => {
+                              const val = Number(e.target.value || 0);
+                              setPlanFieldEdit(plan.id, "newBudget", val);
+                              setPlanFieldEdit(plan.id, "dailyBudget", val);
+                            }}
+                            className="w-full sm:w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-slate-900 dark:text-white"
+                          />
+                        </div>
+                      )}
+
+                    {/* Catatan Eksekusi Jika Sudah Dijalankan */}
+                    {plan.executionNote && (
+                      <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 font-semibold flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>{plan.executionNote}</span>
+                      </div>
+                    )}
+
+                    {/* Tombol Persetujuan User */}
+                    {plan.status === "pending" && (
+                      <div className="flex items-center justify-end gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => rejectPlan(plan.id)}
+                          disabled={isExecuting}
+                          className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                        >
+                          Lewati
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleApprovePlan(plan)}
+                          disabled={isExecuting}
+                          className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>
+                            {isExecuting
+                              ? "Menjalankan..."
+                              : plan.requiresCeilingReapproval
+                              ? "Setujui Kenaikan Plafon & Jalankan"
+                              : "Setujui & Jalankan Sekarang"}
+                          </span>
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <p className="font-semibold text-slate-800 dark:text-slate-200 leading-snug">
-                    {item.finding}
-                  </p>
-                  <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/60 dark:border-slate-800">
-                    {item.evidenceMetric}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
-          {/* Log Eksekusi Terbaru */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3">
-            <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
-              <Clock className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <div>
-                <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
-                  Riwayat Eksekusi &amp; Guardrail Log
-                </h4>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Semua perubahan tercatat transparan.
-                </p>
+          {/* Kanan (1 Kolom): Memori Pembelajaran AI & Riwayat Audit Eksekusi */}
+          <div className="space-y-4">
+            {/* Memori Pembelajaran AI */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                <BookOpen className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <div>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                    Hasil Belajar AI (Winning Memory)
+                  </h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Pola offer, demografi, dan iklan yang terbukti menghasilkan konversi.
+                  </p>
+                </div>
               </div>
-            </div>
 
-            {actionLogs.length === 0 ? (
-              <p className="text-xs text-slate-500 dark:text-slate-400 py-4 text-center">
-                Belum ada aksi yang dieksekusi. Setujui salah satu rencana di sebelah kiri untuk memulai.
-              </p>
-            ) : (
-              <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-                {actionLogs.slice(0, 12).map((log) => (
+              <div className="space-y-2.5">
+                {winningLearnings.map((item) => (
                   <div
-                    key={log.id}
-                    className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-800 text-xs space-y-1"
+                    key={item.id}
+                    className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800 space-y-1 text-xs"
                   >
-                    <div className="flex items-center justify-between text-[10px]">
-                      <span className="font-black text-emerald-700 dark:text-emerald-400">
-                        {log.actorLabel}
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400">
+                        {item.category}
                       </span>
-                      <span className="text-slate-400 font-mono">
-                        {new Date(log.timestamp).toLocaleTimeString("id-ID", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                        Akurasi {item.confidence}%
                       </span>
                     </div>
-                    <p className="text-slate-800 dark:text-slate-200 font-medium leading-snug">
-                      {log.summary}
+                    <p className="font-semibold text-slate-800 dark:text-slate-200 leading-snug">
+                      {item.finding}
+                    </p>
+                    <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/60 dark:border-slate-800">
+                      {item.evidenceMetric}
                     </p>
                   </div>
                 ))}
               </div>
-            )}
+            </div>
+
+            {/* Log Eksekusi Terbaru */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                <Clock className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <div>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                    Riwayat Eksekusi &amp; Guardrail Log
+                  </h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Semua perubahan tercatat transparan.
+                  </p>
+                </div>
+              </div>
+
+              {actionLogs.length === 0 ? (
+                <p className="text-xs text-slate-500 dark:text-slate-400 py-4 text-center">
+                  Belum ada aksi yang dieksekusi. Setujui salah satu rencana di sebelah kiri untuk memulai.
+                </p>
+              ) : (
+                <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                  {actionLogs.slice(0, 12).map((log) => (
+                    <div
+                      key={log.id}
+                      className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-800 text-xs space-y-1"
+                    >
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="font-black text-emerald-700 dark:text-emerald-400">
+                          {log.actorLabel}
+                        </span>
+                        <span className="text-slate-400 font-mono">
+                          {new Date(log.timestamp).toLocaleTimeString("id-ID", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                      <p className="text-slate-800 dark:text-slate-200 font-medium leading-snug">
+                        {log.summary}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
