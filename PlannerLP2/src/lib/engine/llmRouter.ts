@@ -1,15 +1,17 @@
 /**
  * Multi-LLM Task Router untuk Monefyi Winning Engine.
  *
- * Memisahkan tugas menjadi 2 peran (Role) yang bisa di-switch dengan mudah oleh user:
- * 1. "strategist" -> Untuk analisa mendalam 5 Pilar (Offer, Copywriting Landing Page,
- *    Strategi Funnel Checkout, dan Perencanaan Winning Campaign). Default direkomendasikan: Claude / OpenRouter Claude.
- * 2. "technical"  -> Untuk pembacaan metrik cepat, skoring rutin, klasifikasi data,
- *    dan ringkasan teknis hemat biaya. Default direkomendasikan: Gemini 2.5 Flash / DeepSeek / Groq.
+ * 3-Tier Model Architecture via OpenRouter (atau Direct Key):
+ * 1. "strategist" -> Anthropic Claude 3.5 Sonnet / 3.7 Sonnet:
+ *    Khusus Analisa Mendalam, Perencanaan Winning, Evaluasi Offer & Copywriting LP.
+ * 2. "processor"  -> Luna 6 Pro / OpenAI Luna:
+ *    Prapemrosesan & Filter Data Massal, Analisis Visual & Tren Real-time.
+ * 3. "technical"  -> Google Gemini 2.5 Flash / Gemini Pro:
+ *    Komunikasi interaktif chat dengan user, pembacaan metrik rutin, dan tugas cepat.
  */
 
-export type LlmProviderType = "claude" | "gemini" | "openrouter" | "openai" | "groq";
-export type LlmTaskRole = "strategist" | "technical";
+export type LlmProviderType = "openrouter" | "gemini" | "claude" | "openai" | "groq";
+export type LlmTaskRole = "strategist" | "processor" | "technical";
 
 export interface LlmSlotConfig {
   provider: LlmProviderType;
@@ -18,7 +20,9 @@ export interface LlmSlotConfig {
 }
 
 export interface MultiLlmRoutingConfig {
+  openRouterApiKey?: string;
   strategist: LlmSlotConfig;
+  processor?: LlmSlotConfig;
   technical: LlmSlotConfig;
 }
 
@@ -40,33 +44,26 @@ export interface LlmCallOutput {
   error?: string;
 }
 
-const DEFAULT_MODELS: Record<LlmProviderType, { strategist: string; technical: string }> = {
-  claude: {
-    strategist: "claude-3-7-sonnet-latest",
-    technical: "claude-3-5-haiku-latest",
+export const DEFAULT_ROUTING_CONFIG: MultiLlmRoutingConfig = {
+  openRouterApiKey: "",
+  strategist: {
+    provider: "openrouter",
+    model: "anthropic/claude-3.5-sonnet",
   },
-  gemini: {
-    strategist: "gemini-2.5-pro",
-    technical: "gemini-2.5-flash",
+  processor: {
+    provider: "openrouter",
+    model: "openai/gpt-5.6-luna",
   },
-  openrouter: {
-    strategist: "anthropic/claude-3.7-sonnet",
-    technical: "google/gemini-2.5-flash",
-  },
-  openai: {
-    strategist: "gpt-4o",
-    technical: "gpt-4o-mini",
-  },
-  groq: {
-    strategist: "llama-3.3-70b-versatile",
-    technical: "llama-3.3-70b-versatile",
+  technical: {
+    provider: "openrouter",
+    model: "google/gemini-2.5-flash",
   },
 };
 
 function resolveEnvKey(provider: LlmProviderType): string {
   switch (provider) {
-    case "claude":
-      return process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || "";
+    case "openrouter":
+      return process.env.OPENROUTER_API_KEY || "";
     case "gemini":
       return (
         process.env.GEMINI_API_KEY ||
@@ -74,8 +71,8 @@ function resolveEnvKey(provider: LlmProviderType): string {
         process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
         ""
       );
-    case "openrouter":
-      return process.env.OPENROUTER_API_KEY || "";
+    case "claude":
+      return process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || "";
     case "openai":
       return process.env.OPENAI_API_KEY || "";
     case "groq":
@@ -91,14 +88,24 @@ async function callSingleProvider(
   systemPrompt: string,
   userPrompt: string,
   temperature: number,
-  maxTokens: number
+  maxTokens: number,
+  sharedOpenRouterKey?: string
 ): Promise<LlmCallOutput> {
   const provider = slot.provider;
-  const apiKey = (slot.apiKey || resolveEnvKey(provider) || "").trim();
-  const model =
-    slot.model?.trim() ||
-    DEFAULT_MODELS[provider]?.[role] ||
-    DEFAULT_MODELS.gemini.technical;
+  // Jika provider openrouter, utamakan openRouterApiKey bersama
+  const apiKey = (
+    provider === "openrouter"
+      ? slot.apiKey || sharedOpenRouterKey || resolveEnvKey("openrouter")
+      : slot.apiKey || resolveEnvKey(provider)
+  ).trim();
+
+  const model = slot.model?.trim() || (
+    role === "strategist"
+      ? "anthropic/claude-3.5-sonnet"
+      : role === "processor"
+      ? "openai/gpt-5.6-luna"
+      : "google/gemini-2.5-flash"
+  );
 
   if (!apiKey) {
     return {
@@ -107,11 +114,133 @@ async function callSingleProvider(
       providerUsed: provider,
       modelUsed: model,
       role,
-      error: `API Key untuk provider ${provider.toUpperCase()} (${role}) belum diatur.`,
+      error: `API Key untuk provider ${provider.toUpperCase()} (${role}) belum diatur. Masukkan OpenRouter API Key Anda di menu Rules & AI Key.`,
     };
   }
 
   try {
+    if (provider === "openrouter" || provider === "openai" || provider === "groq") {
+      const endpoint =
+        provider === "openrouter"
+          ? "https://openrouter.ai/api/v1/chat/completions"
+          : provider === "groq"
+          ? "https://api.groq.com/openai/v1/chat/completions"
+          : "https://api.openai.com/v1/chat/completions";
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+          ...(provider === "openrouter"
+            ? {
+                "HTTP-Referer": "https://monefyi.com",
+                "X-Title": "Monefyi Winning Engine",
+              }
+            : {}),
+        },
+        body: JSON.stringify({
+          model,
+          temperature,
+          max_tokens: maxTokens,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      const text = data?.choices?.[0]?.message?.content || "";
+      if (res.ok && text) {
+        return {
+          ok: true,
+          text: String(text),
+          providerUsed: `OpenRouter (${model})`,
+          modelUsed: model,
+          role,
+        };
+      }
+
+      // Bila model Claude 3.5 Sonnet di OpenRouter terkena rate-limit / overload, coba fallback ke Claude 3.7
+      if (!res.ok && model.includes("claude-3.5-sonnet")) {
+        const altModel = "anthropic/claude-3.7-sonnet";
+        const resAlt = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: altModel,
+            temperature,
+            max_tokens: maxTokens,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+          }),
+        });
+        const dataAlt = await resAlt.json().catch(() => ({}));
+        const textAlt = dataAlt?.choices?.[0]?.message?.content || "";
+        if (resAlt.ok && textAlt) {
+          return {
+            ok: true,
+            text: String(textAlt),
+            providerUsed: `OpenRouter (${altModel})`,
+            modelUsed: altModel,
+            role,
+          };
+        }
+      }
+
+      return {
+        ok: false,
+        text: "",
+        providerUsed: provider.toUpperCase(),
+        modelUsed: model,
+        role,
+        error: data?.error?.message || `Gagal memanggil API ${provider.toUpperCase()}.`,
+      };
+    }
+
+    if (provider === "gemini") {
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+        model.replace(/^google\//, "")
+      )}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+      const res = await fetch(geminiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+          generationConfig: { temperature, maxOutputTokens: maxTokens },
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      if (res.ok && text) {
+        return {
+          ok: true,
+          text: String(text),
+          providerUsed: "Google Gemini Direct",
+          modelUsed: model,
+          role,
+        };
+      }
+
+      return {
+        ok: false,
+        text: "",
+        providerUsed: "Google Gemini",
+        modelUsed: model,
+        role,
+        error: data?.error?.message || "Gagal memanggil Google Gemini API.",
+      };
+    }
+
     if (provider === "claude") {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -133,39 +262,10 @@ async function callSingleProvider(
         return {
           ok: true,
           text: String(data.content[0].text),
-          providerUsed: "Anthropic Claude",
+          providerUsed: "Anthropic Claude Direct",
           modelUsed: model,
           role,
         };
-      }
-      // Fallback ke claude-3-5-sonnet-latest bila claude-3-7 belum aktif di akun user
-      if (!res.ok && model.includes("3-7")) {
-        const fallbackModel = "claude-3-5-sonnet-latest";
-        const res2 = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": apiKey,
-            "anthropic-version": "2023-06-01",
-          },
-          body: JSON.stringify({
-            model: fallbackModel,
-            max_tokens: maxTokens,
-            temperature,
-            system: systemPrompt,
-            messages: [{ role: "user", content: userPrompt }],
-          }),
-        });
-        const data2 = await res2.json().catch(() => ({}));
-        if (res2.ok && data2?.content?.[0]?.text) {
-          return {
-            ok: true,
-            text: String(data2.content[0].text),
-            providerUsed: "Anthropic Claude",
-            modelUsed: fallbackModel,
-            role,
-          };
-        }
       }
       return {
         ok: false,
@@ -177,108 +277,13 @@ async function callSingleProvider(
       };
     }
 
-    if (provider === "gemini") {
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
-        model
-      )}:generateContent?key=${encodeURIComponent(apiKey)}`;
-      const res = await fetch(geminiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-          generationConfig: { temperature, maxOutputTokens: maxTokens },
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      if (res.ok && text) {
-        return {
-          ok: true,
-          text: String(text),
-          providerUsed: "Google Gemini",
-          modelUsed: model,
-          role,
-        };
-      }
-      // Fallback ke gemini-2.5-flash jika pro terkena limit kuota
-      if (!res.ok && model !== "gemini-2.5-flash") {
-        const fbUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(
-          apiKey
-        )}`;
-        const res2 = await fetch(fbUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-            generationConfig: { temperature, maxOutputTokens: maxTokens },
-          }),
-        });
-        const data2 = await res2.json().catch(() => ({}));
-        const text2 = data2?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-        if (res2.ok && text2) {
-          return {
-            ok: true,
-            text: String(text2),
-            providerUsed: "Google Gemini",
-            modelUsed: "gemini-2.5-flash",
-            role,
-          };
-        }
-      }
-      return {
-        ok: false,
-        text: "",
-        providerUsed: "Google Gemini",
-        modelUsed: model,
-        role,
-        error: data?.error?.message || "Gagal memanggil Google Gemini API.",
-      };
-    }
-
-    // OpenRouter / OpenAI / Groq (OpenAI-compatible endpoint)
-    const endpoint =
-      provider === "openrouter"
-        ? "https://openrouter.ai/api/v1/chat/completions"
-        : provider === "groq"
-        ? "https://api.groq.com/openai/v1/chat/completions"
-        : "https://api.openai.com/v1/chat/completions";
-
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        temperature,
-        max_tokens: maxTokens,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-      }),
-    });
-    const data = await res.json().catch(() => ({}));
-    const text = data?.choices?.[0]?.message?.content || "";
-    if (res.ok && text) {
-      return {
-        ok: true,
-        text: String(text),
-        providerUsed: provider.toUpperCase(),
-        modelUsed: model,
-        role,
-      };
-    }
     return {
       ok: false,
       text: "",
-      providerUsed: provider.toUpperCase(),
+      providerUsed: provider,
       modelUsed: model,
       role,
-      error: data?.error?.message || `Gagal memanggil ${provider.toUpperCase()} API.`,
+      error: `Provider ${provider} tidak dikenali.`,
     };
   } catch (err: any) {
     return {
@@ -293,47 +298,79 @@ async function callSingleProvider(
 }
 
 /**
- * Menjalankan LLM sesuai role tugas ("strategist" vs "technical") dengan fallback otomatis
- * ke slot sebelahnya jika slot utama kehabisan kredit atau belum diisi key-nya.
+ * Menjalankan LLM dengan model routing 3-peran (Strategist Sonnet, Processor Luna, Technical Gemini)
+ * melalui 1 OpenRouter API Key.
  */
 export async function runRoutedLlm(input: LlmCallInput): Promise<LlmCallOutput> {
   const temperature = input.temperature ?? (input.role === "strategist" ? 0.35 : 0.2);
-  const maxTokens = input.maxTokens ?? (input.role === "strategist" ? 2600 : 1200);
+  const maxTokens = input.maxTokens ?? (input.role === "strategist" ? 2800 : 1200);
+
+  const sharedOpenRouterKey = (
+    input.routing?.openRouterApiKey ||
+    process.env.OPENROUTER_API_KEY ||
+    ""
+  ).trim();
 
   const strategistSlot: LlmSlotConfig = input.routing?.strategist || {
-    provider: "claude",
-    model: "claude-3-7-sonnet-latest",
+    provider: "openrouter",
+    model: "anthropic/claude-3.5-sonnet",
+  };
+  const processorSlot: LlmSlotConfig = input.routing?.processor || {
+    provider: "openrouter",
+    model: "openai/gpt-5.6-luna",
   };
   const technicalSlot: LlmSlotConfig = input.routing?.technical || {
-    provider: "gemini",
-    model: "gemini-2.5-flash",
+    provider: "openrouter",
+    model: "google/gemini-2.5-flash",
   };
 
-  const primarySlot = input.role === "strategist" ? strategistSlot : technicalSlot;
-  const secondarySlot = input.role === "strategist" ? technicalSlot : strategistSlot;
+  const targetSlot =
+    input.role === "strategist"
+      ? strategistSlot
+      : input.role === "processor"
+      ? processorSlot
+      : technicalSlot;
 
-  // 1. Coba slot utama sesuai role
-  const primaryResult = await callSingleProvider(
-    primarySlot,
+  // Jalankan slot target
+  const result = await callSingleProvider(
+    targetSlot,
     input.role,
     input.systemPrompt,
     input.userPrompt,
     temperature,
-    maxTokens
+    maxTokens,
+    sharedOpenRouterKey
   );
-  if (primaryResult.ok) return primaryResult;
 
-  // 2. Fallback otomatis ke slot pendamping bila slot utama belum memiliki key atau gagal
-  const secondaryResult = await callSingleProvider(
-    secondarySlot,
-    input.role,
-    input.systemPrompt,
-    input.userPrompt,
-    temperature,
-    maxTokens
-  );
-  if (secondaryResult.ok) return secondaryResult;
+  if (result.ok) return result;
 
-  return primaryResult;
+  // Jika gagal dan slot lain memiliki provider openrouter dengan key yang sama, fallback otomatis
+  if (sharedOpenRouterKey && targetSlot.provider === "openrouter") {
+    const fallbackModel =
+      input.role === "strategist"
+        ? "anthropic/claude-3.7-sonnet"
+        : input.role === "processor"
+        ? "google/gemini-2.5-flash"
+        : "openai/gpt-5.6-luna";
+
+    const fbSlot: LlmSlotConfig = {
+      provider: "openrouter",
+      model: fallbackModel,
+      apiKey: sharedOpenRouterKey,
+    };
+
+    const fbResult = await callSingleProvider(
+      fbSlot,
+      input.role,
+      input.systemPrompt,
+      input.userPrompt,
+      temperature,
+      maxTokens,
+      sharedOpenRouterKey
+    );
+
+    if (fbResult.ok) return fbResult;
+  }
+
+  return result;
 }
-

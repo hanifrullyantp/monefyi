@@ -177,8 +177,9 @@ Jumlah Rencana Tindakan yang Disiapkan: ${diagnostics.plans.length}
       llmInfo: {
         strategistProvider: llmStrategistResult.providerUsed,
         strategistModel: llmStrategistResult.modelUsed,
-        technicalProvider: config.llmRouting.technical.provider.toUpperCase(),
-        technicalModel: config.llmRouting.technical.model || "gemini-2.5-flash",
+        processorModel: config.llmRouting.processor?.model || "openai/gpt-5.6-luna",
+        technicalProvider: "OpenRouter",
+        technicalModel: config.llmRouting.technical?.model || "google/gemini-2.5-flash",
       },
       autoExecutedCount: autoExecutedIds.length,
       notificationResult,

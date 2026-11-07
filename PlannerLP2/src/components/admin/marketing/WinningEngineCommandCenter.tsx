@@ -155,8 +155,7 @@ export function WinningEngineCommandCenter({
               >
                 <Cpu className="w-3 h-3" />
                 <span>
-                  Strategist: {winningEngineConfig.llmRouting.strategist.provider.toUpperCase()} | Teknis:{" "}
-                  {winningEngineConfig.llmRouting.technical.provider.toUpperCase()}
+                  OpenRouter: Sonnet 3.5 (Strategi) | Luna 6 Pro | Gemini
                 </span>
               </button>
             </div>

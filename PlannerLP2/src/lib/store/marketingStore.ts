@@ -193,10 +193,10 @@ export const useMarketingStore = create<MarketingStore>()(
       winningLearnings: [],
       winningExecutiveBrief: '',
       winningLlmInfo: {
-        strategistProvider: 'Google Gemini Pro',
-        strategistModel: 'gemini-2.5-pro',
-        technicalProvider: 'Google Gemini',
-        technicalModel: 'gemini-2.5-flash',
+        strategistProvider: 'OpenRouter (Claude 3.5 Sonnet)',
+        strategistModel: 'anthropic/claude-3.5-sonnet',
+        technicalProvider: 'OpenRouter (Gemini 2.5 Flash)',
+        technicalModel: 'google/gemini-2.5-flash',
       },
       isRunningEngineTick: false,
       executingPlanId: null,
@@ -215,9 +215,19 @@ export const useMarketingStore = create<MarketingStore>()(
             ...state.winningEngineConfig,
             ...updates,
             llmRouting: {
+              openRouterApiKey:
+                updates.llmRouting?.openRouterApiKey ??
+                state.winningEngineConfig.llmRouting.openRouterApiKey,
               strategist: {
                 ...state.winningEngineConfig.llmRouting.strategist,
                 ...(updates.llmRouting?.strategist || {}),
+              },
+              processor: {
+                ...(state.winningEngineConfig.llmRouting.processor || {
+                  provider: 'openrouter',
+                  model: 'openai/gpt-5.6-luna',
+                }),
+                ...(updates.llmRouting?.processor || {}),
               },
               technical: {
                 ...state.winningEngineConfig.llmRouting.technical,

@@ -91,25 +91,17 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
   const [pixelId, setPixelId] = useState(apiConfig.pixelId || "1530674178146899");
   const [capiToken, setCapiToken] = useState(apiConfig.capiAccessToken || "");
 
-  // Dual-Slot Multi-LLM State (Strategist vs Technical)
-  const [strategistProvider, setStrategistProvider] = useState<LlmProviderType>(
-    winningEngineConfig.llmRouting.strategist.provider || "claude"
-  );
-  const [strategistKey, setStrategistKey] = useState(
-    winningEngineConfig.llmRouting.strategist.apiKey || ""
+  const [openRouterKey, setOpenRouterKey] = useState(
+    winningEngineConfig.llmRouting.openRouterApiKey || apiConfig.aiApiKey || ""
   );
   const [strategistModel, setStrategistModel] = useState(
-    winningEngineConfig.llmRouting.strategist.model || "claude-3-7-sonnet-latest"
+    winningEngineConfig.llmRouting.strategist.model || "anthropic/claude-3.5-sonnet"
   );
-
-  const [technicalProvider, setTechnicalProvider] = useState<LlmProviderType>(
-    winningEngineConfig.llmRouting.technical.provider || "gemini"
-  );
-  const [technicalKey, setTechnicalKey] = useState(
-    winningEngineConfig.llmRouting.technical.apiKey || apiConfig.aiApiKey || ""
+  const [processorModel, setProcessorModel] = useState(
+    winningEngineConfig.llmRouting.processor?.model || "openai/gpt-5.6-luna"
   );
   const [technicalModel, setTechnicalModel] = useState(
-    winningEngineConfig.llmRouting.technical.model || "gemini-2.5-flash"
+    winningEngineConfig.llmRouting.technical.model || "google/gemini-2.5-flash"
   );
 
   // WhatsApp & Telegram Notification State
@@ -156,18 +148,17 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
       setPixelId(apiConfig.pixelId || "1530674178146899");
       setCapiToken(apiConfig.capiAccessToken || "");
 
-      setStrategistProvider(winningEngineConfig.llmRouting.strategist.provider || "claude");
-      setStrategistKey(winningEngineConfig.llmRouting.strategist.apiKey || "");
-      setStrategistModel(
-        winningEngineConfig.llmRouting.strategist.model || "claude-3-7-sonnet-latest"
+      setOpenRouterKey(
+        winningEngineConfig.llmRouting.openRouterApiKey || apiConfig.aiApiKey || ""
       );
-
-      setTechnicalProvider(winningEngineConfig.llmRouting.technical.provider || "gemini");
-      setTechnicalKey(
-        winningEngineConfig.llmRouting.technical.apiKey || apiConfig.aiApiKey || ""
+      setStrategistModel(
+        winningEngineConfig.llmRouting.strategist.model || "anthropic/claude-3.5-sonnet"
+      );
+      setProcessorModel(
+        winningEngineConfig.llmRouting.processor?.model || "openai/gpt-5.6-luna"
       );
       setTechnicalModel(
-        winningEngineConfig.llmRouting.technical.model || "gemini-2.5-flash"
+        winningEngineConfig.llmRouting.technical.model || "google/gemini-2.5-flash"
       );
 
       setWaPhone(winningEngineConfig.notifications.whatsappAdminPhone || "");
@@ -258,8 +249,8 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
       adAccountId: cleanActId,
       pixelId: pixelId.trim() || "1530674178146899",
       capiAccessToken: capiToken.trim() || cleanToken,
-      aiProvider: strategistProvider,
-      aiApiKey: strategistKey.trim() || technicalKey.trim(),
+      aiProvider: "openrouter",
+      aiApiKey: openRouterKey.trim(),
     });
 
     updateWinningEngineConfig({
@@ -267,15 +258,21 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
       targetRoas: Number(minRoas),
       maxScalePctPerStep: Number(scaleBudgetPct),
       llmRouting: {
+        openRouterApiKey: openRouterKey.trim(),
         strategist: {
-          provider: strategistProvider,
-          apiKey: strategistKey.trim(),
-          model: strategistModel.trim(),
+          provider: "openrouter",
+          apiKey: openRouterKey.trim(),
+          model: strategistModel.trim() || "anthropic/claude-3.5-sonnet",
+        },
+        processor: {
+          provider: "openrouter",
+          apiKey: openRouterKey.trim(),
+          model: processorModel.trim() || "openai/gpt-5.6-luna",
         },
         technical: {
-          provider: technicalProvider,
-          apiKey: technicalKey.trim(),
-          model: technicalModel.trim(),
+          provider: "openrouter",
+          apiKey: openRouterKey.trim(),
+          model: technicalModel.trim() || "google/gemini-2.5-flash",
         },
       },
       notifications: {
@@ -494,141 +491,91 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
             </div>
           </div>
 
-          {/* Section 2: Dual-Slot Multi-LLM Routing (Strategist vs Technical) */}
+          {/* Section 2: OpenRouter Unified Multi-LLM (Sonnet 3.5 + Luna 6 Pro + Gemini 2.5) */}
           <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-800">
-            <h3 className="text-xs font-black text-purple-600 dark:text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Bot className="w-3.5 h-3.5" />
-              <span>2. Multi-Key LLM Switcher (Strategist Claude vs Teknis Gemini Murah)</span>
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-black text-purple-600 dark:text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Bot className="w-3.5 h-3.5" />
+                <span>2. OpenRouter Multi-LLM (1 Key untuk Sonnet 3.5, Luna &amp; Gemini)</span>
+              </h3>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
+                Cukup 1 OpenRouter API Key
+              </span>
+            </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Pisahkan otak AI agar kualitas strategi &amp; copywriting maksimal namun biaya token harian tetap sangat hemat.
+              Anda cukup memasukkan satu API Key OpenRouter. Sistem otomatis membagi tugas: <strong>Sonnet 3.5</strong> untuk strategi &amp; planning, <strong>Luna 6 Pro</strong> untuk filter data massal &amp; tren, dan <strong>Gemini 2.5</strong> untuk komunikasi user &amp; tugas rutin.
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Slot 1: AI Strategist */}
-              <div className="p-3.5 rounded-2xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/60 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black text-purple-900 dark:text-purple-300 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-                    <span>Slot 1: AI Strategist &amp; Copywriter</span>
-                  </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200">
-                    5 Pilar &amp; Copy LP
-                  </span>
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                    Provider Strategist
-                  </label>
-                  <select
-                    value={strategistProvider}
-                    onChange={(e) => {
-                      const nextProv = e.target.value as LlmProviderType;
-                      setStrategistProvider(nextProv);
-                      setStrategistModel(STRATEGIST_MODEL_PRESETS[nextProv]?.[0]?.id || "");
-                    }}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 text-xs font-bold text-slate-900 dark:text-white"
-                  >
-                    <option value="claude">Anthropic Claude (Rekomendasi Utama)</option>
-                    <option value="openrouter">OpenRouter (Claude / Multi-Model)</option>
-                    <option value="gemini">Google Gemini Pro</option>
-                    <option value="openai">OpenAI (GPT-4o)</option>
-                    <option value="groq">Groq</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                    Model Strategist
-                  </label>
-                  <select
-                    value={strategistModel}
-                    onChange={(e) => setStrategistModel(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 text-xs text-slate-900 dark:text-white font-mono"
-                  >
-                    {(STRATEGIST_MODEL_PRESETS[strategistProvider] || []).map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                    API Key Strategist
-                  </label>
-                  <input
-                    type="password"
-                    placeholder="sk-ant-... / sk-or-... / AIza..."
-                    value={strategistKey}
-                    onChange={(e) => setStrategistKey(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 text-xs font-mono text-slate-900 dark:text-white"
-                  />
-                </div>
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
+              <div>
+                <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block mb-1">
+                  OpenRouter API Key (sk-or-v1-...)
+                </label>
+                <input
+                  type="password"
+                  placeholder="sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxx"
+                  value={openRouterKey}
+                  onChange={(e) => setOpenRouterKey(e.target.value)}
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
+                />
               </div>
 
-              {/* Slot 2: AI Teknis Cepat & Ekonomis */}
-              <div className="p-3.5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/60 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
-                    <Cpu className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Slot 2: AI Teknis &amp; Diagnostik Cepat</span>
+              {/* 3 Kartu Pembagian Model Sesuai Tugas */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1">
+                {/* 1. Strategist: Sonnet 3.5 */}
+                <div className="p-3 rounded-xl bg-purple-50/70 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900/60 space-y-1.5">
+                  <span className="text-[10px] font-black uppercase text-purple-700 dark:text-purple-300 block">
+                    AI Strategist &amp; Planning
                   </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200">
-                    Hemat Biaya
-                  </span>
+                  <p className="text-[11px] font-extrabold text-slate-900 dark:text-white">
+                    Anthropic Claude 3.5 Sonnet
+                  </p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
+                    Membuat analisa 5 pilar, menyusun rencana winning, evaluasi offer &amp; copywriting.
+                  </p>
+                  <input
+                    type="text"
+                    value={strategistModel}
+                    onChange={(e) => setStrategistModel(e.target.value)}
+                    className="w-full bg-white dark:bg-slate-900 border border-purple-200 dark:border-purple-800 rounded-lg p-1.5 text-[10px] font-mono text-slate-800 dark:text-slate-200"
+                  />
                 </div>
 
-                <div>
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                    Provider Teknis
-                  </label>
-                  <select
-                    value={technicalProvider}
-                    onChange={(e) => {
-                      const nextProv = e.target.value as LlmProviderType;
-                      setTechnicalProvider(nextProv);
-                      setTechnicalModel(TECHNICAL_MODEL_PRESETS[nextProv]?.[0]?.id || "");
-                    }}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 text-xs font-bold text-slate-900 dark:text-white"
-                  >
-                    <option value="gemini">Google Gemini Flash (Rekomendasi Murah &amp; Cepat)</option>
-                    <option value="openrouter">OpenRouter (Gemini Flash / DeepSeek V3)</option>
-                    <option value="groq">Groq (Llama 3.3 Super Cepat)</option>
-                    <option value="claude">Anthropic Claude Haiku</option>
-                    <option value="openai">OpenAI GPT-4o Mini</option>
-                  </select>
+                {/* 2. Processor: Luna 6 Pro */}
+                <div className="p-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 space-y-1.5">
+                  <span className="text-[10px] font-black uppercase text-blue-700 dark:text-blue-300 block">
+                    Prapemrosesan &amp; Filter Massal
+                  </span>
+                  <p className="text-[11px] font-extrabold text-slate-900 dark:text-white">
+                    Luna 6 Pro / OpenAI Luna
+                  </p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
+                    Prapemrosesan metrik ribuan baris, analisis visual adset &amp; tren real-time.
+                  </p>
+                  <input
+                    type="text"
+                    value={processorModel}
+                    onChange={(e) => setProcessorModel(e.target.value)}
+                    className="w-full bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-800 rounded-lg p-1.5 text-[10px] font-mono text-slate-800 dark:text-slate-200"
+                  />
                 </div>
 
-                <div>
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                    Model Teknis
-                  </label>
-                  <select
+                {/* 3. Technical: Gemini 2.5 Flash */}
+                <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 space-y-1.5">
+                  <span className="text-[10px] font-black uppercase text-emerald-700 dark:text-emerald-300 block">
+                    Komunikasi &amp; Tugas Cepat
+                  </span>
+                  <p className="text-[11px] font-extrabold text-slate-900 dark:text-white">
+                    Google Gemini 2.5 Flash
+                  </p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
+                    Komunikasi interaktif chat dengan user, bot notifikasi, dan skoring cepat.
+                  </p>
+                  <input
+                    type="text"
                     value={technicalModel}
                     onChange={(e) => setTechnicalModel(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 text-xs text-slate-900 dark:text-white font-mono"
-                  >
-                    {(TECHNICAL_MODEL_PRESETS[technicalProvider] || []).map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                    API Key Teknis
-                  </label>
-                  <input
-                    type="password"
-                    placeholder="AIzaSy... / sk-or-... / gsk_..."
-                    value={technicalKey}
-                    onChange={(e) => setTechnicalKey(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 text-xs font-mono text-slate-900 dark:text-white"
+                    className="w-full bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800 rounded-lg p-1.5 text-[10px] font-mono text-slate-800 dark:text-slate-200"
                   />
                 </div>
               </div>

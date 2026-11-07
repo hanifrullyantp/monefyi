@@ -87,14 +87,20 @@ export const DEFAULT_WINNING_ENGINE_CONFIG: WinningEngineConfig = {
   killSwitch: false,
   advanceMasterPlanApproved: false,
   llmRouting: {
+    openRouterApiKey: "",
     strategist: {
-      provider: "gemini",
-      model: "gemini-2.5-pro",
+      provider: "openrouter",
+      model: "anthropic/claude-3.5-sonnet",
+      apiKey: "",
+    },
+    processor: {
+      provider: "openrouter",
+      model: "openai/gpt-5.6-luna",
       apiKey: "",
     },
     technical: {
-      provider: "gemini",
-      model: "gemini-2.5-flash",
+      provider: "openrouter",
+      model: "google/gemini-2.5-flash",
       apiKey: "",
     },
   },
